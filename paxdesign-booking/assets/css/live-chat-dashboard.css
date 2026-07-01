@@ -251,13 +251,13 @@
   background: #fff;
 }
 
-.pax-live-dashboard__item.is-stale {
+.pax-live-dashboard__item.is-stale:not(.is-closed):not(.is-handler-closed) {
   background: rgba(0, 0, 0, 0.22);
   border-color: rgba(255, 255, 255, 0.04);
   opacity: 0.68;
 }
 
-.pax-live-dashboard--admin .pax-live-dashboard__item.is-stale {
+.pax-live-dashboard--admin .pax-live-dashboard__item.is-stale:not(.is-closed):not(.is-handler-closed) {
   background: #f3f4f6;
   border-color: #e5e7eb;
   opacity: 0.82;
@@ -2302,6 +2302,11 @@ body.pax-live-agent-profile-open {
 
 .pax-live-dashboard--admin .pax-live-dashboard__shell {
   background: var(--pax-admin-bg);
+}
+
+.pax-admin--live-chat .pax-live-dashboard__layout {
+  background: var(--pax-admin-bg);
+  border-radius: var(--pax-admin-radius);
 }
 
 .pax-live-dashboard--admin .pax-live-dashboard__sidebar,

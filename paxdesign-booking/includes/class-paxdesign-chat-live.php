@@ -2039,6 +2039,14 @@ class PAXdesign_Chat_Live {
             return new WP_Error('not_found', 'Session nicht gefunden.', array('status' => 404));
         }
 
+        $handler = isset($row->handler) ? $row->handler : self::HANDLER_AI;
+        if ($handler === self::HANDLER_CLOSED) {
+            return array(
+                'handler' => self::HANDLER_CLOSED,
+                'message' => null,
+            );
+        }
+
         global $wpdb;
         $wpdb->update(
             PAXdesign_Chat_Log::table_name(),

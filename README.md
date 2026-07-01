@@ -12,8 +12,8 @@ Production-ready real-time customer support platform with AI Assistant, Live Age
 
 | Component | Version |
 |-----------|---------|
-| WordPress plugin | 3.42.0 |
-| iOS app | 1.3.0 (build 5) |
+| WordPress plugin | 3.43.0 |
+| iOS app | 1.3.1 (build 6) |
 
 ## Production release
 
@@ -22,7 +22,7 @@ chmod +x scripts/build-release.sh
 ./scripts/build-release.sh
 ```
 
-WordPress ZIP output: `dist/paxdesign-booking-v3.42.0.zip`
+WordPress ZIP output: `dist/paxdesign-booking-v3.43.0.zip`
 
 iOS IPA (macOS + Xcode only):
 

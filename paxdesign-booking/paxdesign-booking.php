@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.42.0
+Version: 3.43.0
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.42.0');
+define('PAXDESIGN_BOOKING_VERSION', '3.43.0');
 define('PAXDESIGN_BOOKING_DB_VERSION', '1.7');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -1058,6 +1058,12 @@ class PAXdesign_Booking {
                 array(),
                 PAXDESIGN_BOOKING_VERSION
             );
+            wp_enqueue_style(
+                'paxdesign-live-chat-app',
+                PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/css/live-chat-app.css',
+                array('paxdesign-live-chat-dashboard'),
+                PAXDESIGN_BOOKING_VERSION
+            );
             wp_enqueue_script(
                 'paxdesign-chat-live-admin',
                 PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/js/chat-live-admin.js',
@@ -1066,6 +1072,10 @@ class PAXdesign_Booking {
                 true
             );
             wp_localize_script('paxdesign-chat-live-admin', 'paxdesignAdmin', $admin_data);
+            if (class_exists('PAXdesign_Live_Chat_PWA')) {
+                PAXdesign_Live_Chat_PWA::enqueue_assets();
+                add_action('admin_head', array('PAXdesign_Live_Chat_PWA', 'print_admin_head_tags'), 2);
+            }
             return;
         }
 

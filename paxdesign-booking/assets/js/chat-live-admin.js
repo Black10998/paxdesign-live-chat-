@@ -1,6 +1,6 @@
 /**
  * PAXdesign Live Chat — Admin console + shortcode dashboard
- * Version: 3.42.0
+ * Version: 3.43.0
  */
 (function ($) {
   'use strict';
@@ -310,7 +310,8 @@
     function shouldPlayMessageNotification() {
       if (Date.now() < suppressMessageSoundsUntil) return false;
       if (document.hidden) return true;
-      return !selectedSession;
+      if (selectedSession) return false;
+      return true;
     }
 
     function invalidateListCache() {
@@ -370,6 +371,8 @@
       typingTimer = setTimeout(function () {
         typingTimer = null;
         adminTypingActive = false;
+        stopAdminTypingSound();
+        pingAdminTyping(true);
       }, 1800);
     }
 
@@ -1397,6 +1400,7 @@
       loadSession(sessionId, true);
       if (msgTimer) clearInterval(msgTimer);
       msgTimer = setInterval(pollMessages, 650);
+      syncSelectedListItem();
       updateMobilePanels();
     }
 
@@ -1599,5 +1603,10 @@
         selectSession(window.paxLiveOpenSession);
       }, 400);
     }
+
+    window.addEventListener('pax-open-session', function (event) {
+      var session = event.detail && event.detail.session;
+      if (session) selectSession(session);
+    });
   });
 })(jQuery);

@@ -6,6 +6,7 @@
 
   var cfg = window.paxLivePwa || {};
   var adminUrl = cfg.adminUrl || '/live-chat-admin/';
+  var deferredInstallPrompt = null;
 
   function urlBase64ToUint8Array(base64String) {
     var padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -87,8 +88,9 @@
     bar.innerHTML =
       '<div class="pax-live-app-banner__text">' +
         '<strong>Als App installieren</strong>' +
-        '<span>Für Vollbild & Push: Teilen → „Zum Home-Bildschirm“</span>' +
+        '<span id="paxPwaInstallHint">Für Vollbild & Push: Teilen → „Zum Home-Bildschirm“</span>' +
       '</div>' +
+      '<button type="button" class="pax-live-app-banner__btn" id="paxPwaInstallBtn" hidden>App installieren</button>' +
       '<button type="button" class="pax-live-app-banner__btn" id="paxPwaEnablePush">Push aktivieren</button>' +
       '<button type="button" class="pax-live-app-banner__close" id="paxPwaDismiss" aria-label="Schließen">×</button>';
 
@@ -99,6 +101,18 @@
       localStorage.setItem('pax_pwa_install_dismissed', '1');
       bar.remove();
     });
+
+    var installBtn = bar.querySelector('#paxPwaInstallBtn');
+    if (installBtn) {
+      installBtn.addEventListener('click', function () {
+        if (!deferredInstallPrompt) return;
+        deferredInstallPrompt.prompt();
+        deferredInstallPrompt.userChoice.finally(function () {
+          deferredInstallPrompt = null;
+          installBtn.hidden = true;
+        });
+      });
+    }
 
     bar.querySelector('#paxPwaEnablePush').addEventListener('click', function () {
       requestNotificationPermission().then(function () {
@@ -141,6 +155,23 @@
   };
 
   openSessionFromQuery();
+
+  window.addEventListener('beforeinstallprompt', function (event) {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    var installBtn = document.getElementById('paxPwaInstallBtn');
+    var hint = document.getElementById('paxPwaInstallHint');
+    if (installBtn) installBtn.hidden = false;
+    if (hint) hint.textContent = 'Installieren Sie die App für Vollbild und schnelleren Zugriff.';
+  });
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', function (event) {
+      if (!event.data || event.data.type !== 'pax-open-session' || !event.data.session) return;
+      window.paxLiveOpenSession = event.data.session;
+      window.dispatchEvent(new CustomEvent('pax-open-session', { detail: { session: event.data.session } }));
+    });
+  }
 
   document.addEventListener('DOMContentLoaded', function () {
     if (window.matchMedia('(display-mode: standalone)').matches) {

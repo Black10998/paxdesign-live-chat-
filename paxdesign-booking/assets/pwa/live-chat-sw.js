@@ -71,12 +71,24 @@ self.addEventListener('push', function (event) {
 
 self.addEventListener('notificationclick', function (event) {
   event.notification.close();
-  var target = (event.notification.data && event.notification.data.url) || ADMIN_URL;
+  var data = event.notification.data || {};
+  var target = data.url || ADMIN_URL;
+  if (data.session) {
+    try {
+      var url = new URL(target, self.location.origin);
+      url.searchParams.set('session', data.session);
+      target = url.toString();
+    } catch (e) {}
+  }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
       for (var i = 0; i < list.length; i++) {
         if (list[i].url.indexOf('live-chat-admin') !== -1 && 'focus' in list[i]) {
+          if (data.session && 'navigate' in list[i]) {
+            return list[i].navigate(target).then(function (client) { return client.focus(); });
+          }
+          list[i].postMessage({ type: 'pax-open-session', session: data.session || '' });
           return list[i].focus();
         }
       }

@@ -121,12 +121,23 @@ struct ChatView: View {
                     Task { try? await auth.api?.release(thread.sessionId) }
                 }
             }
-            Button("Schließen") {
-                PAXHaptics.warning()
-                Task {
-                    try? await auth.api?.close(thread.sessionId)
-                    await coordinator.refreshSessions(auth: auth)
-                    dismiss()
+            if thread.handler == "closed" {
+                Button("Wiederöffnen") {
+                    PAXHaptics.light()
+                    Task {
+                        try? await auth.api?.reopen(thread.sessionId)
+                        await thread.reloadAfterTakeover(auth: auth)
+                        await coordinator.refreshSessions(auth: auth)
+                    }
+                }
+            } else {
+                Button("Schließen") {
+                    PAXHaptics.warning()
+                    Task {
+                        try? await auth.api?.close(thread.sessionId)
+                        await coordinator.refreshSessions(auth: auth)
+                        dismiss()
+                    }
                 }
             }
         }

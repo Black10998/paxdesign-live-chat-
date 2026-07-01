@@ -177,6 +177,14 @@ final class LiveChatAPI {
         _ = try await perform(request, as: EmptyResponse.self)
     }
 
+    func reopen(_ sessionId: String) async throws {
+        let url = restBase
+            .appendingPathComponent("sessions")
+            .appendingPathComponent(sessionId)
+            .appendingPathComponent("reopen")
+        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), as: EmptyResponse.self)
+    }
+
     func release(_ sessionId: String) async throws {
         let url = restBase
             .appendingPathComponent("sessions")

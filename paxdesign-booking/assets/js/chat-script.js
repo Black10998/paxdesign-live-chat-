@@ -941,7 +941,7 @@
       var preview = item.preview || 'Chat-Verlauf';
       var btn = document.createElement('button');
       btn.type = 'button';
-      btn.className = 'paxdesign-booking-chat-history-item';
+      btn.className = 'paxdesign-booking-chat-history-item paxdesign-booking-chat-history-item--archived';
       btn.setAttribute('data-history-id', item.session_id || item.sessionId || '');
       btn.setAttribute('role', 'listitem');
       btn.innerHTML =
@@ -1240,7 +1240,10 @@
   }
 
   function shouldPlayMessageNotification() {
-    return document.hidden;
+    if (document.hidden) return true;
+    if (root.classList.contains('paxdesign-widget-open')) return false;
+    if (root.classList.contains('paxdesign-chat-entry-active')) return false;
+    return false;
   }
 
   function playMessengerPop(preview) {
@@ -1371,8 +1374,6 @@
         showRatingUi();
         archiveClosedSession();
       }
-    } else if (transitioningToAdmin && previousHandler === 'live_request') {
-      playAgentJoinedSoundOnce();
     }
     prevChatHandler = chatHandler;
     chatHandler = handler;
@@ -1621,10 +1622,6 @@
         }
       } else {
         renderMessageDom(msg.role, msg.content, msg.id, { reaction: msg.reaction || '', reply_to: msg.reply_to || 0, image_url: msg.image_url || '' });
-        if (msg.role === 'system' && msg.content.indexOf('beigetreten') !== -1 && !played) {
-          playMessengerPop(false);
-          played = true;
-        }
       }
 
       if (msg.role === 'assistant' || msg.role === 'admin') {

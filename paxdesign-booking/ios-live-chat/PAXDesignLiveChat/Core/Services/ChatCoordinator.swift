@@ -120,11 +120,10 @@ final class ChatCoordinator: ObservableObject {
     func archiveSession(auth: AuthStore, session: LiveSession) async {
         guard let api = auth.api else { return }
         let sessionId = session.sessionId
-        sessions.removeAll { $0.sessionId == sessionId }
-        if activeSessionId == sessionId { activeSessionId = nil }
         do {
             try await api.archive(sessionId)
             await refreshSessions(auth: auth)
+            if activeSessionId == sessionId { activeSessionId = nil }
             PAXHaptics.light()
         } catch {
             errorMessage = error.localizedDescription
@@ -205,6 +204,7 @@ final class ChatThreadModel: ObservableObject {
     let sessionId: String
     private var pollSeq = 0
     private var pollTask: Task<Void, Never>?
+    private var typingStopTask: Task<Void, Never>?
 
     init(sessionId: String) {
         self.sessionId = sessionId
@@ -225,6 +225,8 @@ final class ChatThreadModel: ObservableObject {
     func stop() {
         pollTask?.cancel()
         pollTask = nil
+        typingStopTask?.cancel()
+        typingStopTask = nil
     }
 
     private func loadFull(auth: AuthStore) async {
@@ -264,6 +266,7 @@ final class ChatThreadModel: ObservableObject {
     func send(auth: AuthStore) async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, let api = auth.api else { return }
+        await notifyTypingStop(auth: auth)
         isSending = true
         defer { isSending = false }
         do {
@@ -277,7 +280,19 @@ final class ChatThreadModel: ObservableObject {
     }
 
     func notifyTyping(auth: AuthStore) async {
+        typingStopTask?.cancel()
         try? await auth.api?.setTyping(sessionId)
+        typingStopTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard !Task.isCancelled, let self else { return }
+            try? await auth.api?.setTyping(self.sessionId, stop: true)
+        }
+    }
+
+    func notifyTypingStop(auth: AuthStore) async {
+        typingStopTask?.cancel()
+        typingStopTask = nil
+        try? await auth.api?.setTyping(sessionId, stop: true)
     }
 
     func reloadAfterTakeover(auth: AuthStore) async {

@@ -892,6 +892,20 @@ body.paxdesign-agent-profile-open {
   background: rgba(255, 255, 255, 0.08);
 }
 
+#paxdesign-booking-root .paxdesign-booking-chat-history-item--archived {
+  opacity: 0.58;
+  filter: saturate(0.8);
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-history-item--archived:hover {
+  opacity: 0.72;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-history-item--archived .paxdesign-booking-chat-history-item-preview,
+#paxdesign-booking-root .paxdesign-booking-chat-history-item--archived .paxdesign-booking-chat-history-item-meta {
+  color: var(--pax-gray-mid);
+}
+
 #paxdesign-booking-root .paxdesign-booking-chat-history-item-meta {
   display: flex;
   justify-content: space-between;

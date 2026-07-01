@@ -112,6 +112,13 @@ class PAXdesign_Live_Chat_PWA {
         echo '<link rel="canonical" href="' . esc_url($admin_url) . '" />' . "\n";
     }
 
+    public static function print_admin_head_tags() {
+        echo '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />' . "\n";
+        echo '<meta name="theme-color" content="#f5f5f7" />' . "\n";
+        echo '<meta name="apple-mobile-web-app-capable" content="yes" />' . "\n";
+        echo '<meta name="apple-mobile-web-app-status-bar-style" content="default" />' . "\n";
+    }
+
     public static function enqueue_assets() {
         wp_enqueue_script(
             'paxdesign-live-chat-pwa',

@@ -6,19 +6,32 @@ struct SessionListView: View {
     var onOpenSession: (String) -> Void = { _ in }
 
     var body: some View {
-        ScrollView {
-            LazyVStack(spacing: 14) {
+        List {
+            Section {
                 header
+                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
 
-                if coordinator.liveCount > 0 {
+            if coordinator.liveCount > 0 {
+                Section {
                     liveBanner
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                 }
+            }
 
-                if coordinator.sessions.isEmpty {
+            if coordinator.sessions.isEmpty {
+                Section {
                     emptyState
-                        .padding(.top, 40)
-                } else {
+                        .listRowInsets(EdgeInsets(top: 24, leading: 0, bottom: 24, trailing: 0))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            } else {
+                Section {
                     ForEach(coordinator.sessions) { session in
                         Button {
                             PAXHaptics.light()
@@ -29,6 +42,9 @@ struct SessionListView: View {
                         }
                         .buttonStyle(PAXPressButtonStyle())
                         .opacity(session.isClosed ? 0.56 : 1)
+                        .listRowInsets(EdgeInsets(top: 7, leading: 0, bottom: 7, trailing: 0))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                             Button(role: .destructive) {
                                 PAXHaptics.warning()
@@ -48,9 +64,9 @@ struct SessionListView: View {
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 24)
         }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
         .background(PAXBackground())
         .navigationTitle("Live Chat")
         .navigationBarTitleDisplayMode(.large)
@@ -83,7 +99,6 @@ struct SessionListView: View {
                 }
             }
         }
-        .padding(.top, 8)
     }
 
     private var liveBanner: some View {
