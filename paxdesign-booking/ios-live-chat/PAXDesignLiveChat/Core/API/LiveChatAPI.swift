@@ -30,7 +30,9 @@ final class LiveChatAPI {
     private let session: URLSession
 
     init(siteURL: URL, username: String, appPassword: String, session: URLSession? = nil) {
-        self.siteURL = Self.normalizeSiteURL(siteURL)
+        let normalized = Self.normalizeSiteURL(siteURL)
+        precondition(normalized.scheme?.lowercased() == "https", "LiveChatAPI requires HTTPS")
+        self.siteURL = normalized
         self.username = Self.normalizeUsername(username)
         self.appPassword = Self.normalizeAppPassword(appPassword)
         self.session = session ?? Self.apiSession

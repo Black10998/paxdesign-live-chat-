@@ -32,8 +32,8 @@ struct LoginView: View {
 
                     PAXGlassCard {
                         VStack(spacing: 18) {
-                            PAXField(title: "Website", icon: "globe", text: $auth.siteURLString)
-                            PAXField(title: "Benutzername oder E-Mail", icon: "person.crop.circle", text: $auth.username)
+                            PAXField(title: "Website (HTTPS)", icon: "globe", text: $auth.siteURLString, keyboardType: .URL)
+                            PAXField(title: "Benutzername oder E-Mail", icon: "person.crop.circle", text: $auth.username, keyboardType: .emailAddress)
                             PAXField(title: "Application Password", icon: "key.fill", text: $auth.appPassword, isSecure: true)
 
                             if let error {
@@ -58,6 +58,13 @@ struct LoginView: View {
                         .foregroundStyle(PAXTheme.textTertiary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 28)
+
+                    VStack(spacing: 8) {
+                        Link("Datenschutzerklärung", destination: PAXLegalLinks.privacyPolicy)
+                        Link("Nutzungsbedingungen & Impressum", destination: PAXLegalLinks.impressum)
+                    }
+                    .font(.caption)
+                    .padding(.horizontal, 28)
 
                     Spacer(minLength: 24)
                 }

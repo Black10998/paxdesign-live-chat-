@@ -38,6 +38,12 @@ struct AccountHubView: View {
             }
 
             Section("Rechtliches") {
+                Link(destination: PAXLegalLinks.privacyPolicy) {
+                    Label("Datenschutz (Web)", systemImage: "safari")
+                }
+                Link(destination: PAXLegalLinks.impressum) {
+                    Label("Impressum (Web)", systemImage: "safari")
+                }
                 NavigationLink {
                     SecurityView()
                 } label: {

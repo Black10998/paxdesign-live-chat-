@@ -5,14 +5,11 @@ import Security
 final class AuthStore: ObservableObject {
     static let shared = AuthStore()
 
-    static let defaultSiteURL = "https://paxdesign.at"
-    static let defaultUsername = "sarah.gta1995@gmail.com"
-
     @Published private(set) var isLoggedIn = false
     @Published private(set) var profile: AdminProfile?
     @Published private(set) var isBootstrapping = true
-    @Published var siteURLString = AuthStore.defaultSiteURL
-    @Published var username = AuthStore.defaultUsername
+    @Published var siteURLString = ""
+    @Published var username = ""
     @Published var appPassword = ""
 
     private(set) var api: LiveChatAPI?
@@ -22,7 +19,7 @@ final class AuthStore: ObservableObject {
     func loadStoredCredentials() {
         guard let data = KeychainHelper.read(service: service),
               let dict = try? JSONDecoder().decode(StoredCredentials.self, from: data) else {
-            applyDefaults()
+            clearFormFields()
             return
         }
         siteURLString = dict.siteURL
@@ -35,21 +32,18 @@ final class AuthStore: ObservableObject {
         defer { isBootstrapping = false }
 
         guard !isLoggedIn else { return }
-        guard !username.isEmpty, !appPassword.isEmpty else { return }
+        guard !username.isEmpty, !appPassword.isEmpty, !siteURLString.isEmpty else { return }
 
         do {
             try await login()
         } catch {
-            clearStoredCredentials()
+            invalidateStoredSession(keepFormFields: true)
         }
     }
 
     func login() async throws {
-        guard let rawURL = URL(string: siteURLString.trimmingCharacters(in: .whitespacesAndNewlines)) else {
-            throw LiveChatAPIError.server("Ungültige Server-URL.")
-        }
-
-        let site = LiveChatAPI.normalizeSiteURL(rawURL)
+        let site = try SecureURLValidator.validateHTTPS(siteURLString)
+        let normalizedSite = LiveChatAPI.normalizeSiteURL(site)
         let user = LiveChatAPI.normalizeUsername(username)
         let password = LiveChatAPI.normalizeAppPassword(appPassword)
 
@@ -57,11 +51,11 @@ final class AuthStore: ObservableObject {
             throw LiveChatAPIError.server("Bitte alle Felder ausfüllen.")
         }
 
-        siteURLString = site.absoluteString
+        siteURLString = normalizedSite.absoluteString
         username = user
         appPassword = password
 
-        let client = LiveChatAPI(siteURL: site, username: user, appPassword: password)
+        let client = LiveChatAPI(siteURL: normalizedSite, username: user, appPassword: password)
         do {
             let me = try await client.validateLogin()
             api = client
@@ -73,31 +67,34 @@ final class AuthStore: ObservableObject {
                 KeychainHelper.save(data, service: service)
             }
         } catch {
-            invalidateStoredSession()
+            invalidateStoredSession(keepFormFields: true)
             throw error
         }
     }
 
-    func invalidateStoredSession() {
+    /// Called when the server rejects stored credentials (HTTP 401/403).
+    func handleUnauthorized() {
+        invalidateStoredSession(keepFormFields: true)
+    }
+
+    func invalidateStoredSession(keepFormFields: Bool = false) {
         api = nil
         profile = nil
         isLoggedIn = false
-        clearStoredCredentials()
+        KeychainHelper.delete(service: service)
+        if !keepFormFields {
+            clearFormFields()
+        }
     }
 
     func logout() {
-        invalidateStoredSession()
-        applyDefaults()
+        invalidateStoredSession(keepFormFields: false)
     }
 
-    private func applyDefaults() {
-        siteURLString = Self.defaultSiteURL
-        username = Self.defaultUsername
+    private func clearFormFields() {
+        siteURLString = ""
+        username = ""
         appPassword = ""
-    }
-
-    private func clearStoredCredentials() {
-        KeychainHelper.delete(service: service)
     }
 }
 

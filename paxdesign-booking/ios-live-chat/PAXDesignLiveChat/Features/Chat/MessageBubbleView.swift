@@ -95,7 +95,7 @@ struct MessageBubbleView: View {
                     .fill(PAXMessageStyle.bubbleColor(role: message.role, isOutgoing: isOutgoing))
             )
             .frame(
-                maxWidth: UIScreen.main.bounds.width * PAXMessageStyle.maxBubbleWidthRatio,
+                maxWidth: min(300, UIScreen.main.bounds.width * PAXMessageStyle.maxBubbleWidthRatio),
                 alignment: isOutgoing ? .trailing : .leading
             )
 

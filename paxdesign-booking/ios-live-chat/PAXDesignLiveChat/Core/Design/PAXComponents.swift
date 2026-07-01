@@ -65,6 +65,7 @@ struct PAXField: View {
     let icon: String
     @Binding var text: String
     var isSecure = false
+    var keyboardType: UIKeyboardType = .default
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -79,6 +80,7 @@ struct PAXField: View {
                     TextField("", text: $text)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
+                        .keyboardType(keyboardType)
                 }
             }
             .font(.body)

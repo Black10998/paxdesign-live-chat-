@@ -9,7 +9,7 @@ struct PrivacyBannerView: View {
                 .font(.caption)
                 .foregroundStyle(PAXTheme.success)
 
-            Text("Unterhaltungen sind TLS-verschlüsselt. Nachrichten werden sicher übertragen.")
+            Text("Nachrichten werden per TLS (HTTPS) übertragen. Keine Ende-zu-Ende-Verschlüsselung.")
                 .font(.caption2)
                 .foregroundStyle(PAXTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -35,6 +35,6 @@ struct PrivacyBannerView: View {
                 )
         )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Sicherheitshinweis: Unterhaltungen sind TLS-verschlüsselt.")
+        .accessibilityLabel("Sicherheitshinweis: Nachrichten werden per TLS übertragen.")
     }
 }

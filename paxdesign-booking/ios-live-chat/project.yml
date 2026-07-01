@@ -8,8 +8,8 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     TARGETED_DEVICE_FAMILY: "1"
-    MARKETING_VERSION: "1.6.0"
-    CURRENT_PROJECT_VERSION: "14"
+    MARKETING_VERSION: "1.7.0"
+    CURRENT_PROJECT_VERSION: "15"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
 targets:
@@ -27,7 +27,8 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_NSUserNotificationsUsageDescription: "Benachrichtigungen für Live-Agent-Anfragen und neue Kundennachrichten."
-        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Fotos auswählen, um sie im Live-Chat an Kunden zu senden."
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Fotos aus der Mediathek auswählen, um sie im Live-Chat an Kunden zu senden."
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         ENABLE_PREVIEWS: YES
     entitlements:
@@ -41,3 +42,5 @@ targets:
           - CFBundleURLName: at.paxdesign.livechat
             CFBundleURLSchemes:
               - paxlivechat
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: false

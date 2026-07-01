@@ -56,6 +56,9 @@ final class ChatCoordinator: ObservableObject {
             errorMessage = nil
             detectIncomingLiveRequests(response.sessions)
         } catch {
+            if case LiveChatAPIError.unauthorized = error {
+                auth.handleUnauthorized()
+            }
             errorMessage = error.localizedDescription
         }
     }
@@ -287,6 +290,9 @@ final class ChatThreadModel: ObservableObject {
                 maybeFetchSuggestionsForLatestUserMessage()
             }
         } catch {
+            if case LiveChatAPIError.unauthorized = error, let auth = self.auth {
+                auth.handleUnauthorized()
+            }
             errorMessage = error.localizedDescription
         }
     }
@@ -297,6 +303,9 @@ final class ChatThreadModel: ObservableObject {
             let data = try await api.pollSession(sessionId, since: pollSeq)
             applyPoll(data)
         } catch {
+            if case LiveChatAPIError.unauthorized = error {
+                auth.handleUnauthorized()
+            }
             errorMessage = error.localizedDescription
         }
     }
