@@ -28,8 +28,9 @@ struct FullScreenImageView: View {
                     }
                 }
             }
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
+                ToolbarItem(placement: .cancellationAction) {
                     Button("Schließen") { dismiss() }
                         .foregroundStyle(.white)
                 }
