@@ -1,6 +1,6 @@
 /**
  * PAXdesign Live Chat — Admin console + shortcode dashboard
- * Version: 3.43.0
+ * Version: 3.44.0
  */
 (function ($) {
   'use strict';

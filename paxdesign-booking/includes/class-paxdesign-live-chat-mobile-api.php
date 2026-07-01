@@ -213,7 +213,10 @@ class PAXdesign_Live_Chat_Mobile_API {
         if (is_wp_error($result)) {
             return $result;
         }
-        return rest_ensure_response($result);
+        $response = rest_ensure_response($result);
+        $response->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        $response->header('Pragma', 'no-cache');
+        return $response;
     }
 
     public static function route_me(WP_REST_Request $request) {

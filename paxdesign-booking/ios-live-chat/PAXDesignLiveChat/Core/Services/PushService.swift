@@ -172,4 +172,5 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 extension Notification.Name {
     static let paxPushOpened = Notification.Name("paxPushOpened")
     static let paxPushReceived = Notification.Name("paxPushReceived")
+    static let paxSessionSync = Notification.Name("paxSessionSync")
 }

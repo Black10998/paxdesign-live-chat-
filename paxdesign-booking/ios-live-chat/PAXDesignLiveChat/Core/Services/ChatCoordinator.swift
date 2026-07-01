@@ -27,7 +27,7 @@ final class ChatCoordinator: ObservableObject {
         listTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refreshSessions(auth: auth)
-                try? await Task.sleep(nanoseconds: 800_000_000)
+                try? await Task.sleep(nanoseconds: 400_000_000)
             }
         }
     }
@@ -152,12 +152,28 @@ final class ChatCoordinator: ObservableObject {
             await presentLiveRequest(sessionId: sessionId, auth: auth, payload: payload)
         case "new_chat", "message":
             await refreshSessions(auth: auth)
-            if type == "message" {
-                activeSessionId = sessionId
+            if type == "message" || type == "new_chat" {
+                if type == "message" {
+                    activeSessionId = sessionId
+                }
+                postSessionSync(sessionId: sessionId)
             }
+        case "session_sync":
+            await refreshSessions(auth: auth)
+            postSessionSync(sessionId: sessionId)
         default:
+            await refreshSessions(auth: auth)
             activeSessionId = sessionId
+            postSessionSync(sessionId: sessionId)
         }
+    }
+
+    private func postSessionSync(sessionId: String) {
+        NotificationCenter.default.post(
+            name: .paxSessionSync,
+            object: nil,
+            userInfo: ["session_id": sessionId]
+        )
     }
 
     func handlePushAction(_ action: String, sessionId: String, auth: AuthStore) async {
@@ -220,6 +236,10 @@ final class ChatThreadModel: ObservableObject {
                 try? await Task.sleep(nanoseconds: 650_000_000)
             }
         }
+    }
+
+    func refreshNow(auth: AuthStore) async {
+        await poll(auth: auth)
     }
 
     func stop() {

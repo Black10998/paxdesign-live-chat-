@@ -7,6 +7,7 @@ struct PAXDesignLiveChatApp: App {
     @StateObject private var coordinator = ChatCoordinator()
     @StateObject private var push = PushService.shared
     @StateObject private var settings = AppSettingsStore.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
@@ -19,6 +20,10 @@ struct PAXDesignLiveChatApp: App {
                 .task {
                     await push.requestAuthorization()
                     await auth.bootstrapSession()
+                    if auth.isLoggedIn {
+                        coordinator.start(auth: auth)
+                        await push.registerTokenWithBackend(auth: auth)
+                    }
                 }
                 .onChange(of: auth.isLoggedIn) { loggedIn in
                     if loggedIn {
@@ -27,6 +32,10 @@ struct PAXDesignLiveChatApp: App {
                     } else {
                         coordinator.stop()
                     }
+                }
+                .onChange(of: scenePhase) { phase in
+                    guard phase == .active, auth.isLoggedIn else { return }
+                    Task { await coordinator.refreshSessions(auth: auth) }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .paxPushReceived)) { note in
                     handlePushNotification(note, opened: false)

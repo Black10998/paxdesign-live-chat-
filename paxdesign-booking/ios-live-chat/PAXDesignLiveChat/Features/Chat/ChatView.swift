@@ -57,6 +57,11 @@ struct ChatView: View {
         .toolbar { toolbarContent }
         .onAppear { thread.start(auth: auth) }
         .onDisappear { thread.stop() }
+        .onReceive(NotificationCenter.default.publisher(for: .paxSessionSync)) { note in
+            guard let syncedId = note.userInfo?["session_id"] as? String,
+                  syncedId == thread.sessionId else { return }
+            Task { await thread.refreshNow(auth: auth) }
+        }
         .animation(PAXTheme.spring, value: thread.messages.count)
         .animation(PAXTheme.fade, value: thread.userTyping)
     }

@@ -196,15 +196,28 @@ class PAXdesign_Chat_Log {
         }
 
         $sanitized = $this->sanitize_messages($messages);
+        $consult   = !empty($payload['consultation_started']) ? 1 : 0;
+        if (empty($sanitized) && $consult) {
+            $sanitized = array(
+                array(
+                    'role'    => 'system',
+                    'content' => 'Chat-Session gestartet.',
+                    'id'      => 1,
+                    'ts'      => time(),
+                ),
+            );
+        }
         if (empty($sanitized)) {
             return false;
         }
 
         $table = self::table_name();
+        if (class_exists('PAXdesign_Chat_Live')) {
+            PAXdesign_Chat_Live::upgrade_schema();
+        }
         $now   = current_time('mysql');
         $service = isset($payload['detected_service']) ? sanitize_text_field($payload['detected_service']) : '';
         $booking = !empty($payload['booking_triggered']) ? 1 : 0;
-        $consult = !empty($payload['consultation_started']) ? 1 : 0;
 
         $existing = $wpdb->get_row(
             $wpdb->prepare("SELECT * FROM $table WHERE session_id = %s LIMIT 1", $session_id)
@@ -238,6 +251,7 @@ class PAXdesign_Chat_Log {
                 array('%s', '%s', '%s', '%d', '%d', '%d', '%d'),
                 array('%d')
             );
+            self::broadcast_session_sync($session_id, $sanitized, $existing, false);
             return (int) $existing->id;
         }
 
@@ -272,10 +286,62 @@ class PAXdesign_Chat_Log {
                     break;
                 }
             }
+            if ($preview === '') {
+                foreach ($sanitized as $msg) {
+                    if (is_array($msg) && !empty($msg['content'])) {
+                        $preview = wp_html_excerpt((string) $msg['content'], 120, '…');
+                        break;
+                    }
+                }
+            }
             do_action('paxdesign_new_chat_session', $session_id, $service, $preview);
+            self::broadcast_session_sync($session_id, $sanitized, null, true);
         }
 
         return $insert_id;
+    }
+
+    /**
+     * Notify admin clients (web + iOS) that a session changed.
+     *
+     * @param object|null $previous
+     * @param array<int, array<string, mixed>> $messages
+     */
+    private static function broadcast_session_sync($session_id, $messages, $previous, $is_new) {
+        $seq = 0;
+        $preview = '';
+        $last_role = '';
+
+        if (!empty($messages)) {
+            $last = end($messages);
+            if (is_array($last)) {
+                $seq = isset($last['id']) ? (int) $last['id'] : 0;
+                $preview = !empty($last['content']) ? wp_html_excerpt((string) $last['content'], 120, '…') : '';
+                $last_role = isset($last['role']) ? (string) $last['role'] : '';
+            }
+        }
+
+        $prev_seq = 0;
+        $prev_count = 0;
+        if ($previous) {
+            $prev_count = isset($previous->message_count) ? (int) $previous->message_count : 0;
+            $prev_seq = isset($previous->message_seq) ? (int) $previous->message_seq : 0;
+        }
+
+        if (!$is_new && $seq <= $prev_seq && count($messages) <= $prev_count) {
+            return;
+        }
+
+        $handler = ($previous && isset($previous->handler)) ? (string) $previous->handler : 'ai';
+
+        do_action('paxdesign_session_sync', $session_id, array(
+            'is_new'    => (bool) $is_new,
+            'seq'       => $seq,
+            'preview'   => $preview,
+            'last_role' => $last_role,
+            'handler'   => $handler,
+            'service'   => ($previous && isset($previous->detected_service)) ? (string) $previous->detected_service : '',
+        ));
     }
 
     public function handle_sync() {

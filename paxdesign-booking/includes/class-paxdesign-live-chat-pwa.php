@@ -22,6 +22,8 @@ class PAXdesign_Live_Chat_PWA {
         add_action('wp_ajax_paxdesign_live_push_vapid', array(__CLASS__, 'handle_vapid_public'));
 
         add_action('paxdesign_live_agent_requested', array(__CLASS__, 'on_live_agent_requested'), 10, 4);
+        add_action('paxdesign_new_chat_session', array(__CLASS__, 'on_new_chat_session'), 10, 3);
+        add_action('paxdesign_session_sync', array(__CLASS__, 'on_session_sync'), 10, 2);
     }
 
     public static function register_rewrites() {
@@ -384,6 +386,54 @@ class PAXdesign_Live_Chat_PWA {
             array(
                 'session_id' => $session_id,
                 'tag'        => 'live-request-' . $session_id,
+                'badge'      => 1,
+            )
+        );
+    }
+
+    /**
+     * @param string $session_id
+     * @param string $service
+     * @param string $preview
+     */
+    public static function on_new_chat_session($session_id, $service, $preview) {
+        $service = (string) $service;
+        $preview = (string) $preview;
+        self::send_push_to_admins(
+            'Neuer Live-Chat',
+            ($service !== '' ? $service . ' — ' : '') . ($preview !== '' ? $preview : 'Neues Kundengespräch'),
+            array(
+                'session_id' => (string) $session_id,
+                'tag'        => 'new-chat-' . $session_id,
+                'badge'      => 1,
+            )
+        );
+    }
+
+    /**
+     * @param string               $session_id
+     * @param array<string, mixed> $meta
+     */
+    public static function on_session_sync($session_id, $meta) {
+        if (!is_array($meta)) {
+            return;
+        }
+        $handler = isset($meta['handler']) ? (string) $meta['handler'] : 'ai';
+        if ($handler === 'live_request') {
+            return;
+        }
+        if (!empty($meta['is_new'])) {
+            return;
+        }
+
+        $service = isset($meta['service']) ? (string) $meta['service'] : '';
+        $preview = isset($meta['preview']) ? (string) $meta['preview'] : '';
+        self::send_push_to_admins(
+            'Chat aktualisiert',
+            ($service !== '' ? $service . ' — ' : '') . ($preview !== '' ? $preview : 'Neue Nachricht'),
+            array(
+                'session_id' => (string) $session_id,
+                'tag'        => 'sync-' . $session_id,
                 'badge'      => 1,
             )
         );

@@ -593,6 +593,17 @@ class PAXdesign_Chat_Live {
             array('%d')
         );
 
+        $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
+        $preview = $content !== '' ? wp_html_excerpt($content, 120, '…') : '';
+        do_action('paxdesign_session_sync', $session_id, array(
+            'is_new'    => false,
+            'seq'       => $id,
+            'preview'   => $preview,
+            'last_role' => $role,
+            'handler'   => $handler,
+            'service'   => isset($row->detected_service) ? (string) $row->detected_service : '',
+        ));
+
         return $entry;
     }
 

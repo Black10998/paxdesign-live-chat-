@@ -55,6 +55,7 @@ final class LiveChatAPI {
     private func authRequest(url: URL, method: String = "GET", body: Data? = nil) -> URLRequest {
         var request = URLRequest(url: url)
         request.httpMethod = method
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if body != nil {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")

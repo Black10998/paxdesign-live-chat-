@@ -2293,11 +2293,11 @@
 
   function syncChatLog(extra) {
     extra = extra || {};
-    if (!config.ajaxUrl || messages.length === 0) return Promise.resolve();
+    if (!config.ajaxUrl) return Promise.resolve();
     var syncMessages = messages.filter(function (m) {
       return m.role === 'user' || m.role === 'assistant';
     });
-    if (!syncMessages.length) return Promise.resolve();
+    if (!syncMessages.length && !consultationLogged) return Promise.resolve();
     var formData = new FormData();
     formData.append('action', 'paxdesign_chat_log');
     formData.append('nonce', config.nonce);

@@ -14,6 +14,7 @@ class PAXdesign_APNS {
     public static function init() {
         add_action('paxdesign_live_agent_requested', array(__CLASS__, 'on_live_agent_requested'), 20, 5);
         add_action('paxdesign_new_chat_session', array(__CLASS__, 'on_new_chat_session'), 20, 3);
+        add_action('paxdesign_session_sync', array(__CLASS__, 'on_session_sync'), 20, 2);
     }
 
     /**
@@ -102,7 +103,8 @@ class PAXdesign_APNS {
                 'customer_name' => $customer,
                 'service'       => $service,
                 'preview'       => $preview,
-            )
+            ),
+            false
         );
     }
 
@@ -115,7 +117,43 @@ class PAXdesign_APNS {
                 'session_id' => (string) $session_id,
                 'service'    => (string) $service,
                 'preview'    => (string) $preview,
-            )
+            ),
+            false
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $meta
+     */
+    public static function on_session_sync($session_id, $meta) {
+        if (!is_array($meta)) {
+            return;
+        }
+
+        $preview = isset($meta['preview']) ? (string) $meta['preview'] : '';
+        $service = isset($meta['service']) ? (string) $meta['service'] : '';
+        $handler = isset($meta['handler']) ? (string) $meta['handler'] : 'ai';
+        $seq     = isset($meta['seq']) ? (int) $meta['seq'] : 0;
+        $is_new  = !empty($meta['is_new']);
+
+        if ($handler === 'live_request') {
+            return;
+        }
+
+        $body = ($service !== '' ? $service . ' — ' : '') . ($preview !== '' ? $preview : 'Chat aktualisiert');
+
+        self::send_to_admins(
+            $is_new ? 'Neuer Live-Chat' : 'Chat aktualisiert',
+            $body,
+            array(
+                'type'       => $is_new ? 'new_chat' : 'session_sync',
+                'session_id' => (string) $session_id,
+                'service'    => $service,
+                'preview'    => $preview,
+                'seq'        => $seq,
+                'handler'    => $handler,
+            ),
+            !$is_new
         );
     }
 
@@ -127,7 +165,8 @@ class PAXdesign_APNS {
                 'type'       => 'message',
                 'session_id' => (string) $session_id,
                 'preview'    => wp_html_excerpt((string) $content, 160, '…'),
-            )
+            ),
+            false
         );
     }
 
@@ -148,7 +187,7 @@ class PAXdesign_APNS {
     /**
      * @param array<string, mixed> $data
      */
-    public static function send_to_admins($title, $body, $data = array()) {
+    public static function send_to_admins($title, $body, $data = array(), $silent = false) {
         if (!self::is_configured()) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('[PAXdesign APNs] skipped — not configured');
@@ -159,7 +198,7 @@ class PAXdesign_APNS {
         foreach (self::get_admin_user_ids() as $user_id) {
             $devices = self::get_user_devices($user_id);
             foreach ($devices as $device) {
-                $result = self::send($device, $title, $body, $data, $user_id);
+                $result = self::send($device, $title, $body, $data, $user_id, $silent);
                 if (is_wp_error($result) && $result->get_error_code() === 'apns_invalid_token') {
                     self::unregister_device($user_id, (string) $device['token']);
                 }
@@ -172,7 +211,7 @@ class PAXdesign_APNS {
      * @param array<string, mixed> $data
      * @return true|WP_Error
      */
-    public static function send($device, $title, $body, $data = array(), $user_id = 0) {
+    public static function send($device, $title, $body, $data = array(), $user_id = 0, $silent = false) {
         if (!self::is_configured() || empty($device['token'])) {
             return new WP_Error('apns_not_ready', 'APNs not configured.');
         }
@@ -191,19 +230,19 @@ class PAXdesign_APNS {
         $category = ($type === 'live_request') ? 'PAX_LIVE_REQUEST' : 'PAX_MESSAGE';
 
         $aps = array(
-            'alert'              => array(
-                'title' => (string) $title,
-                'body'  => (string) $body,
-            ),
-            'sound'              => $sound,
             'badge'              => self::count_pending_badge(),
             'mutable-content'    => 1,
-            'interruption-level' => 'time-sensitive',
-            'category'           => $category,
+            'content-available'  => 1,
         );
 
-        if ($type === 'live_request') {
-            $aps['content-available'] = 1;
+        if (!$silent) {
+            $aps['alert'] = array(
+                'title' => (string) $title,
+                'body'  => (string) $body,
+            );
+            $aps['sound'] = $sound;
+            $aps['interruption-level'] = 'time-sensitive';
+            $aps['category'] = $category;
         }
 
         $payload = array(
@@ -212,14 +251,16 @@ class PAXdesign_APNS {
         );
 
         $url = $host . '/3/device/' . $device['token'];
+        $push_type = $silent ? 'background' : 'alert';
+        $priority  = $silent ? '5' : '10';
 
         $response = wp_remote_post($url, array(
             'timeout' => 12,
             'headers' => array(
                 'authorization'  => 'bearer ' . $jwt,
                 'apns-topic'     => $bundle,
-                'apns-push-type' => 'alert',
-                'apns-priority'  => '10',
+                'apns-push-type' => $push_type,
+                'apns-priority'  => $priority,
                 'apns-expiration'=> (string) (time() + 120),
                 'content-type'   => 'application/json',
             ),
