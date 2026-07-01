@@ -1,0 +1,32 @@
+name: Production Release Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-ios-ipa:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Build unsigned IPA
+        run: |
+          cd paxdesign-booking/ios-live-chat
+          chmod +x scripts/build-ipa.sh
+          ./scripts/build-ipa.sh
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PAXDesignLiveChat-ipa
+          path: paxdesign-booking/ios-live-chat/build/output/PAXDesignLiveChat.ipa
+          if-no-files-found: error

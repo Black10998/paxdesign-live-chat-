@@ -1,0 +1,42 @@
+name: PAXDesignLiveChat
+options:
+  bundleIdPrefix: at.paxdesign
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    TARGETED_DEVICE_FAMILY: "1"
+    MARKETING_VERSION: "1.3.0"
+    CURRENT_PROJECT_VERSION: "5"
+    DEVELOPMENT_TEAM: ""
+    CODE_SIGN_STYLE: Automatic
+targets:
+  PAXDesignLiveChat:
+    type: application
+    platform: iOS
+    sources:
+      - path: PAXDesignLiveChat
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: at.paxdesign.livechat
+        TARGETED_DEVICE_FAMILY: "1"
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        INFOPLIST_KEY_CFBundleDisplayName: PAXDesign Live Chat
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_NSUserNotificationsUsageDescription: "Benachrichtigungen für Live-Agent-Anfragen und neue Kundennachrichten."
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        ENABLE_PREVIEWS: YES
+    entitlements:
+      path: PAXDesignLiveChat/PAXDesignLiveChat.entitlements
+    info:
+      path: PAXDesignLiveChat/Info.plist
+      properties:
+        UIBackgroundModes:
+          - remote-notification
+        CFBundleURLTypes:
+          - CFBundleURLName: at.paxdesign.livechat
+            CFBundleURLSchemes:
+              - paxlivechat

@@ -1,0 +1,1039 @@
+/**
+ * PAXdesign Booking — Admin UI v2.6.0
+ * Full isolation from WordPress. Zero WP style inheritance.
+ */
+
+/* ============================================================
+   HARD RESET — everything inside .pax-admin starts from zero
+   ============================================================ */
+.pax-admin,
+.pax-admin *,
+.pax-admin *::before,
+.pax-admin *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+  -webkit-font-smoothing: antialiased;
+}
+.pax-admin { all: initial; display: block; }
+
+/* ============================================================
+   ROOT SHELL
+   ============================================================ */
+.pax-admin {
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #111827;
+  background: #f6f7f9;
+  min-height: 100vh;
+  padding: 32px 32px 64px 32px;
+}
+
+/* ============================================================
+   PAGE HEADER
+   ============================================================ */
+.pax-admin .pa-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+.pax-admin .pa-header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.pax-admin .pa-logo {
+  width: 48px;
+  height: 48px;
+  background: #C2FF00;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(194,255,0,.35);
+}
+.pax-admin .pa-logo svg { display: block; }
+.pax-admin .pa-title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #0a0a0a;
+  letter-spacing: -0.4px;
+  line-height: 1.2;
+  display: block;
+}
+.pax-admin .pa-subtitle {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 2px;
+  display: block;
+}
+.pax-admin .pa-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.pax-admin .pa-badge-green { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+.pax-admin .pa-badge-amber { background: #fef9c3; color: #854d0e; border: 1px solid #fde68a; }
+.pax-admin .pa-badge-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.7;
+}
+
+/* ============================================================
+   TWO-COLUMN LAYOUT
+   ============================================================ */
+.pax-admin .pa-layout {
+  display: grid;
+  grid-template-columns: 1fr 288px;
+  gap: 24px;
+  align-items: start;
+  max-width: 1200px;
+}
+.pax-admin .pa-main { min-width: 0; }
+.pax-admin .pa-sidebar { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+.pax-admin .pa-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04), 0 4px 16px rgba(0,0,0,.03);
+  margin-bottom: 20px;
+}
+.pax-admin .pa-card:last-child { margin-bottom: 0; }
+
+.pax-admin .pa-card-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 24px;
+  border-bottom: 1px solid #f3f4f6;
+  background: #fafafa;
+}
+.pax-admin .pa-card-icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.pax-admin .pa-icon-purple { background: #f3f0ff; color: #7c3aed; }
+.pax-admin .pa-icon-blue   { background: #eff6ff; color: #2563eb; }
+.pax-admin .pa-icon-green  { background: #f0fdf4; color: #16a34a; }
+.pax-admin .pa-icon-slate  { background: #f8fafc; color: #475569; }
+.pax-admin .pa-icon-lime   { background: #f7ffe0; color: #4d7c0f; }
+
+.pax-admin .pa-card-head-info { flex: 1; min-width: 0; }
+.pax-admin .pa-card-head-info h2 {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.3;
+  display: block;
+}
+.pax-admin .pa-card-head-info p {
+  font-size: 12px;
+  color: #9ca3af;
+  margin-top: 2px;
+  display: block;
+}
+.pax-admin .pa-card-body { padding: 24px; }
+.pax-admin .pa-card-body-flush { padding: 0; }
+
+/* ============================================================
+   FORM ELEMENTS — fully custom, zero WP inheritance
+   ============================================================ */
+.pax-admin .pa-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+.pax-admin .pa-field:last-child { margin-bottom: 0; }
+
+.pax-admin .pa-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  letter-spacing: 0.1px;
+  display: block;
+}
+.pax-admin .pa-required { color: #ef4444; margin-left: 2px; }
+.pax-admin .pa-hint {
+  font-size: 11px;
+  color: #9ca3af;
+  line-height: 1.5;
+  display: block;
+}
+
+/* Input wrapper */
+.pax-admin .pa-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.pax-admin .pa-input-wrap input {
+  all: unset;
+  display: block;
+  width: 100%;
+  padding: 10px 14px;
+  background: #fff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #111827;
+  line-height: 1.5;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+}
+.pax-admin .pa-input-wrap input:focus {
+  border-color: #C2FF00;
+  box-shadow: 0 0 0 3px rgba(194,255,0,.2);
+  outline: none;
+}
+.pax-admin .pa-has-icon input { padding-left: 38px; }
+.pax-admin .pa-pw-wrap input  { padding-right: 40px; }
+
+.pax-admin .pa-input-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+.pax-admin .pa-eye-btn {
+  all: unset;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+}
+.pax-admin .pa-eye-btn:hover { color: #374151; }
+
+/* Custom select */
+.pax-admin .pa-select-wrap { position: relative; display: block; }
+.pax-admin .pa-select-wrap select {
+  all: unset;
+  display: block;
+  width: 100%;
+  padding: 10px 32px 10px 14px;
+  background: #fff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #111827;
+  line-height: 1.5;
+  box-shadow: 0 1px 2px rgba(0,0,0,.04);
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.pax-admin .pa-select-wrap select:focus {
+  border-color: #C2FF00;
+  box-shadow: 0 0 0 3px rgba(194,255,0,.2);
+  outline: none;
+}
+.pax-admin .pa-select-arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+}
+
+/* Inline row */
+.pax-admin .pa-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.pax-admin .pa-row .pa-field { margin-bottom: 20px; }
+.pax-admin .pa-grow   { flex: 1 1 220px; min-width: 0; }
+.pax-admin .pa-narrow { flex: 0 0 110px; }
+.pax-admin .pa-half   { flex: 1 1 180px; min-width: 0; }
+
+/* ============================================================
+   TOGGLE SWITCH — custom, no WP checkbox
+   ============================================================ */
+.pax-admin .pa-toggle {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.pax-admin .pa-toggle input {
+  all: unset;
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.pax-admin .pa-toggle-track {
+  position: absolute;
+  inset: 0;
+  background: #d1d5db;
+  border-radius: 24px;
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+.pax-admin .pa-toggle-track::after {
+  content: "";
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+.pax-admin .pa-toggle input:checked + .pa-toggle-track { background: #C2FF00; }
+.pax-admin .pa-toggle input:checked + .pa-toggle-track::after { transform: translateX(20px); }
+.pax-admin .pa-toggle input:focus + .pa-toggle-track { box-shadow: 0 0 0 3px rgba(194,255,0,.3); }
+
+/* Large toggle for SMTP */
+.pax-admin .pa-toggle-lg { width: 52px; height: 28px; }
+.pax-admin .pa-toggle-lg .pa-toggle-track::after { width: 22px; height: 22px; }
+.pax-admin .pa-toggle-lg input:checked + .pa-toggle-track::after { transform: translateX(24px); }
+
+.pax-admin .pa-toggle-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.pax-admin .pa-toggle-label.on { color: #16a34a; }
+.pax-admin .pa-smtp-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.pax-admin .pa-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  box-sizing: border-box;
+  line-height: 1.4;
+}
+.pax-admin .pa-btn-primary {
+  background: #C2FF00;
+  border: 1.5px solid #a3e635;
+  color: #1a2e05;
+  box-shadow: 0 1px 3px rgba(0,0,0,.1);
+}
+.pax-admin .pa-btn-primary:hover {
+  background: #a3e635;
+  border-color: #84cc16;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+  transform: translateY(-1px);
+}
+.pax-admin .pa-btn-primary:active { transform: translateY(0); }
+.pax-admin .pa-btn-primary.full { width: 100%; justify-content: center; }
+.pax-admin .pa-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.pax-admin .pa-btn-ghost {
+  background: #fff;
+  border: 1.5px solid #e5e7eb;
+  color: #374151;
+}
+.pax-admin .pa-btn-ghost:hover { background: #f9fafb; border-color: #d1d5db; }
+
+/* ============================================================
+   ALERTS
+   ============================================================ */
+.pax-admin .pa-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+.pax-admin .pa-alert svg { flex-shrink: 0; }
+.pax-admin .pa-alert-ok   { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.pax-admin .pa-alert-warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
+
+/* Info blocks — settings sections */
+.pax-admin .pa-info-block {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+.pax-admin .pa-info-block strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 6px;
+}
+.pax-admin .pa-info-block p {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.55;
+  margin: 0;
+}
+.pax-admin .pa-info-block-muted {
+  background: #fff;
+  margin-bottom: 0;
+  margin-top: 4px;
+}
+.pax-admin .pa-info-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pax-admin .pa-info-list li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 12px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin-bottom: 4px;
+}
+.pax-admin .pa-info-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #C2FF00;
+}
+.pax-admin .pa-hint code {
+  font-size: 11px;
+  background: #f3f4f6;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: #374151;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.pax-admin .pa-card-chat .pa-card-body > .pa-field:first-of-type,
+.pax-admin .pa-card-chat .pa-divider:first-of-type {
+  margin-top: 0;
+}
+
+/* ============================================================
+   DIVIDER
+   ============================================================ */
+.pax-admin .pa-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0 18px;
+}
+.pax-admin .pa-divider::before,
+.pax-admin .pa-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #f3f4f6;
+}
+.pax-admin .pa-divider span {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #d1d5db;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   TEAM TABLE — SaaS style, 64px rows
+   ============================================================ */
+.pax-admin .pa-table-wrap { overflow-x: auto; }
+.pax-admin .pa-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+/* Column widths */
+.pax-admin .pa-table .tc-drag     { width: 44px; }
+.pax-admin .pa-table .tc-num      { width: 52px; }
+.pax-admin .pa-table .tc-member   { width: auto; }
+.pax-admin .pa-table .tc-role     { width: 180px; }
+.pax-admin .pa-table .tc-services { width: 90px; }
+.pax-admin .pa-table .tc-avail    { width: 160px; }
+.pax-admin .pa-table .tc-active   { width: 72px; }
+
+/* Header */
+.pax-admin .pa-table thead tr {
+  background: #f9fafb;
+  border-bottom: 1px solid #f3f4f6;
+}
+.pax-admin .pa-table thead th {
+  padding: 12px 16px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: #9ca3af;
+  text-align: left;
+  white-space: nowrap;
+}
+.pax-admin .pa-table thead .tc-drag,
+.pax-admin .pa-table thead .tc-num,
+.pax-admin .pa-table thead .tc-services,
+.pax-admin .pa-table thead .tc-active { text-align: center; }
+
+/* Body rows — 64px height */
+.pax-admin .pa-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background 0.15s ease;
+  height: 64px;
+}
+.pax-admin .pa-table tbody tr:last-child { border-bottom: none; }
+.pax-admin .pa-table tbody tr:hover { background: #fafbfc; }
+.pax-admin .pa-table tbody tr.pa-row-off { opacity: 0.45; }
+
+.pax-admin .pa-table tbody td {
+  padding: 0 16px;
+  vertical-align: middle;
+  font-size: 13px;
+  color: #1e293b;
+}
+
+/* Drag handle */
+.pax-admin .pa-table .tc-drag { text-align: center; cursor: grab; }
+.pax-admin .pa-table .tc-drag:active { cursor: grabbing; }
+.pax-admin .pa-drag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: #d1d5db;
+  transition: color 0.15s, background 0.15s;
+}
+.pax-admin .pa-table tbody tr:hover .pa-drag { color: #6b7280; background: #f3f4f6; }
+
+/* Order number */
+.pax-admin .pa-table .tc-num { text-align: center; }
+.pax-admin .pa-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: #f3f4f6;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+/* Member cell */
+.pax-admin .pa-member-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.pax-admin .pa-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+}
+.pax-admin .pa-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: center top;
+  border: 2px solid #e5e7eb;
+  display: block;
+  background: #f3f4f6;
+}
+.pax-admin .pa-online {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+.pax-admin .pa-online.on  { background: #22c55e; }
+.pax-admin .pa-online.off { background: #d1d5db; }
+
+.pax-admin .pa-cell-text { min-width: 0; overflow: hidden; }
+.pax-admin .pa-cell-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+.pax-admin .pa-cell-email {
+  font-size: 12px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  margin-top: 1px;
+}
+
+/* Role */
+.pax-admin .pa-role { font-size: 12px; color: #64748b; }
+
+/* Pills */
+.pax-admin .pa-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.pax-admin .pa-pill-green { background: #dcfce7; color: #15803d; }
+.pax-admin .pa-pill-gray  { background: #f1f5f9; color: #64748b; }
+.pax-admin .pa-table .tc-services { text-align: center; }
+
+/* Availability select — custom styled */
+.pax-admin .pa-avail {
+  all: unset;
+  display: block;
+  width: 100%;
+  max-width: 148px;
+  padding: 7px 28px 7px 10px;
+  background: #f9fafb;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 7px;
+  font-size: 12px;
+  color: #374151;
+  cursor: pointer;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  transition: border-color 0.15s ease;
+}
+.pax-admin .pa-avail:focus {
+  border-color: #C2FF00;
+  box-shadow: 0 0 0 3px rgba(194,255,0,.2);
+  outline: none;
+  background-color: #fff;
+}
+
+/* Active column */
+.pax-admin .pa-table .tc-active { text-align: center; }
+
+/* Table footer */
+.pax-admin .pa-table-foot {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  border-top: 1px solid #f3f4f6;
+  background: #fafafa;
+}
+.pax-admin .pa-save-msg {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+.pax-admin .pa-save-msg.show    { opacity: 1; }
+.pax-admin .pa-save-msg.success { color: #16a34a; }
+.pax-admin .pa-save-msg.error   { color: #dc2626; }
+.pax-admin .pa-save-msg.saving  { color: #6b7280; }
+
+/* ============================================================
+   HOW-TO STRIP
+   ============================================================ */
+.pax-admin .pa-howto {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 18px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.pax-admin .pa-howto-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #6b7280;
+  font-weight: 500;
+}
+.pax-admin .pa-howto-item svg { color: #9ca3af; flex-shrink: 0; }
+
+/* ============================================================
+   STATS GRID
+   ============================================================ */
+.pax-admin .pa-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.pax-admin .pa-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18px 10px;
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  border-radius: 10px;
+  text-align: center;
+}
+.pax-admin .pa-stat-val {
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1;
+  margin-bottom: 5px;
+  color: #0f172a;
+}
+.pax-admin .pa-stat-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+}
+.pax-admin .pa-stat-val.c-green { color: #16a34a; }
+.pax-admin .pa-stat-val.c-red   { color: #dc2626; }
+.pax-admin .pa-stat-val.c-blue  { color: #2563eb; }
+
+/* ============================================================
+   SIDEBAR COMPONENTS
+   ============================================================ */
+.pax-admin .pa-save-hint {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 14px;
+  line-height: 1.5;
+  display: block;
+}
+
+.pax-admin .pa-flow-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pax-admin .pa-flow-list li {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.pax-admin .pa-flow-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+.pax-admin .pa-dot-purple { background: #7c3aed; }
+.pax-admin .pa-dot-green  { background: #16a34a; }
+.pax-admin .pa-dot-amber  { background: #d97706; }
+.pax-admin .pa-dot-blue   { background: #2563eb; }
+.pax-admin .pa-flow-list li > div strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+.pax-admin .pa-flow-list li > div p {
+  font-size: 11px;
+  color: #6b7280;
+  line-height: 1.5;
+}
+.pax-admin .pa-flow-list li > div a { color: #2563eb; text-decoration: none; }
+.pax-admin .pa-flow-list li > div a:hover { text-decoration: underline; }
+
+.pax-admin .pa-links-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #9ca3af;
+  margin-bottom: 8px;
+  display: block;
+}
+.pax-admin .pa-qlink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  text-decoration: none;
+  transition: background 0.12s ease;
+  margin-bottom: 2px;
+}
+.pax-admin .pa-qlink:last-child { margin-bottom: 0; }
+.pax-admin .pa-qlink:hover { background: #f3f4f6; color: #0f172a; }
+.pax-admin .pa-qlink svg { flex-shrink: 0; color: #9ca3af; }
+
+/* ============================================================
+   SETTINGS — member email rows
+   ============================================================ */
+.pax-admin .pa-member-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pax-admin .pa-member-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: #f9fafb;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.pax-admin .pa-member-row:hover {
+  border-color: #C2FF00;
+  box-shadow: 0 0 0 3px rgba(194,255,0,.12);
+}
+.pax-admin .pa-member-ava {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #e5e7eb;
+  flex-shrink: 0;
+  background: #f3f4f6;
+}
+.pax-admin .pa-member-ava img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+.pax-admin .pa-member-meta {
+  flex: 0 0 190px;
+  min-width: 0;
+}
+.pax-admin .pa-member-meta strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pax-admin .pa-member-meta span {
+  display: block;
+  font-size: 11px;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+.pax-admin .pa-member-email { flex: 1; min-width: 0; }
+.pax-admin .pa-member-email input {
+  all: unset;
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #111827;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+}
+.pax-admin .pa-member-email input:focus {
+  border-color: #C2FF00;
+  box-shadow: 0 0 0 3px rgba(194,255,0,.2);
+  outline: none;
+}
+
+/* ============================================================
+   PROVIDER CHIPS
+   ============================================================ */
+.pax-admin .pa-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.pax-admin .pa-chips-lbl {
+  font-size: 11px;
+  color: #9ca3af;
+  font-weight: 600;
+}
+.pax-admin .pa-chip {
+  all: unset;
+  padding: 5px 13px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 100px;
+  background: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+.pax-admin .pa-chip:hover,
+.pax-admin .pa-chip.active {
+  background: #C2FF00;
+  border-color: #a3e635;
+  color: #1a2e05;
+}
+
+/* ============================================================
+   TEST EMAIL BAR
+   ============================================================ */
+.pax-admin .pa-test-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 18px;
+  background: #f9fafb;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+.pax-admin .pa-test-lbl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+}
+.pax-admin .pa-test-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pax-admin .pa-test-controls input {
+  all: unset;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 12px;
+  color: #111827;
+  width: 210px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease;
+}
+.pax-admin .pa-test-controls input:focus {
+  border-color: #C2FF00;
+  box-shadow: 0 0 0 3px rgba(194,255,0,.2);
+  outline: none;
+}
+.pax-admin .pa-test-result { font-size: 12px; font-weight: 600; }
+.pax-admin .pa-test-result.ok    { color: #16a34a; }
+.pax-admin .pa-test-result.error { color: #dc2626; }
+
+/* ============================================================
+   SORTABLE
+   ============================================================ */
+.ui-sortable-placeholder {
+  background: #f0f9ff !important;
+  border: 2px dashed #93c5fd !important;
+  visibility: visible !important;
+  height: 64px !important;
+}
+.ui-sortable-helper {
+  box-shadow: 0 8px 32px rgba(0,0,0,.14) !important;
+  border-radius: 8px !important;
+  opacity: 0.97 !important;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 1100px) {
+  .pax-admin .pa-layout { grid-template-columns: 1fr; }
+  .pax-admin .pa-sidebar { flex-direction: row; flex-wrap: wrap; }
+  .pax-admin .pa-sidebar .pa-card { flex: 1 1 280px; margin-bottom: 0; }
+}
+@media (max-width: 900px) {
+  .pax-admin .pa-table .tc-role,
+  .pax-admin .pa-table .tc-services { display: none; }
+}
+@media (max-width: 640px) {
+  .pax-admin { padding: 16px 16px 48px; }
+  .pax-admin .pa-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .pax-admin .pa-sidebar { flex-direction: column; }
+  .pax-admin .pa-row { flex-direction: column; }
+  .pax-admin .pa-narrow, .pax-admin .pa-half { flex: 1 1 100%; }
+  .pax-admin .pa-member-row { flex-wrap: wrap; }
+  .pax-admin .pa-member-meta { flex: 1 1 100%; }
+  .pax-admin .pa-test-bar { flex-direction: column; align-items: flex-start; }
+  .pax-admin .pa-test-controls input { width: 100%; }
+}
