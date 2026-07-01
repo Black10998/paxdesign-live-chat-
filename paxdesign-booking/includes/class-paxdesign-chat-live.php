@@ -626,46 +626,17 @@ class PAXdesign_Chat_Live {
 
         $since = isset($_POST['since']) ? (int) $_POST['since'] : 0;
         $full  = isset($_POST['full']) && wp_unslash($_POST['full']) === '1';
-        $row   = $this->get_session_row($session_id);
-
-        if (!$row) {
-            wp_send_json_success(array(
-                'handler'     => self::HANDLER_AI,
-                'admin_name'  => '',
-                'seq'         => 0,
-                'messages'    => array(),
-            ));
-        }
-
-        $messages = $this->sort_messages($this->decode_messages($row->messages));
-        $new      = array();
-        if ($full) {
-            $new = $messages;
-        } else {
-            foreach ($messages as $msg) {
-                $mid = isset($msg['id']) ? (int) $msg['id'] : 0;
-                if ($mid > $since) {
-                    $new[] = $msg;
-                }
+        $data  = $this->get_poll_data($session_id, $since, $full);
+        if (is_wp_error($data)) {
+            $status = 400;
+            $error_data = $data->get_error_data();
+            if (is_array($error_data) && !empty($error_data['status'])) {
+                $status = (int) $error_data['status'];
             }
+            wp_send_json_error(array('message' => $data->get_error_message()), $status);
         }
 
-        $handler = isset($row->handler) ? $row->handler : self::HANDLER_AI;
-
-        wp_send_json_success(array(
-            'handler'        => $handler,
-            'handler_label'  => self::handler_label($handler),
-            'admin_name'     => isset($row->admin_name) ? $row->admin_name : '',
-            'customer_name'  => isset($row->customer_name) ? (string) $row->customer_name : '',
-            'session_rating' => isset($row->session_rating) ? (int) $row->session_rating : 0,
-            'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
-            'updated_at'     => isset($row->updated_at) ? (string) $row->updated_at : '',
-            'seq'            => isset($row->message_seq) ? (int) $row->message_seq : 0,
-            'messages'       => $new,
-            'admin_typing'   => $this->is_typing($session_id, 'admin'),
-            'user_typing'    => $this->is_typing($session_id, 'user'),
-            'reactions'      => $this->extract_message_reactions($messages),
-        ));
+        wp_send_json_success($data);
     }
 
     /**
@@ -928,71 +899,17 @@ class PAXdesign_Chat_Live {
     public function handle_live_list() {
         $this->verify_admin_nonce();
 
-        PAXdesign_Chat_Log::create_table();
-        self::upgrade_schema();
-
-        global $wpdb;
-        $table = PAXdesign_Chat_Log::table_name();
-        $since = $this->active_since_sql();
-
-        $rows = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT * FROM $table
-                 WHERE handler IN ('live_request', 'admin', 'closed')
-                 OR (COALESCE(handler, 'ai') = %s AND updated_at >= %s)
-                 ORDER BY
-                   CASE COALESCE(handler, 'ai')
-                     WHEN 'live_request' THEN 0
-                     WHEN 'admin' THEN 1
-                     WHEN 'closed' THEN 3
-                     ELSE 2
-                   END,
-                   updated_at DESC
-                 LIMIT 100",
-                self::HANDLER_AI,
-                $since
-            )
-        );
-
-        if ($rows === null && $wpdb->last_error) {
-            wp_send_json_error(array('message' => 'Datenbankfehler: ' . $wpdb->last_error), 500);
-        }
-
-        $sessions = array();
-        $live_count = 0;
-        foreach ($rows as $row) {
-            $messages = $this->sort_messages($this->decode_messages($row->messages));
-            $last     = !empty($messages) ? end($messages) : null;
-            $preview  = is_array($last) && !empty($last['content'])
-                ? wp_html_excerpt($last['content'], 100, '…')
-                : '';
-
-            $handler = isset($row->handler) ? $row->handler : self::HANDLER_AI;
-            if ($handler === self::HANDLER_LIVE) {
-                $live_count++;
+        $data = $this->get_live_list_data();
+        if (is_wp_error($data)) {
+            $status = 500;
+            $error_data = $data->get_error_data();
+            if (is_array($error_data) && !empty($error_data['status'])) {
+                $status = (int) $error_data['status'];
             }
-
-            $sessions[] = array(
-                'id'               => (int) $row->id,
-                'session_id'       => $row->session_id,
-                'handler'          => $handler,
-                'handler_label'    => self::handler_label($handler),
-                'admin_name'       => isset($row->admin_name) ? $row->admin_name : '',
-                'customer_name'    => isset($row->customer_name) ? (string) $row->customer_name : '',
-                'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
-                'detected_service' => $row->detected_service,
-                'updated_at'       => $row->updated_at,
-                'message_count'    => (int) $row->message_count,
-                'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
-                'last_preview'     => $preview,
-                'last_role'        => is_array($last) && !empty($last['role']) ? $last['role'] : '',
-            );
+            wp_send_json_error(array('message' => $data->get_error_message()), $status);
         }
 
-        wp_send_json_success(array(
-            'sessions'   => $sessions,
-            'live_count' => $live_count,
-        ));
+        wp_send_json_success($data);
     }
 
     public function handle_live_session() {
@@ -1005,25 +922,17 @@ class PAXdesign_Chat_Live {
             wp_send_json_error(array('message' => 'Ungültige Session.'), 400);
         }
 
-        $row = $this->get_session_row($session_id);
-        if (!$row) {
-            wp_send_json_error(array('message' => 'Session nicht gefunden.'), 404);
+        $data = $this->get_session_detail_data($session_id);
+        if (is_wp_error($data)) {
+            $status = 404;
+            $error_data = $data->get_error_data();
+            if (is_array($error_data) && !empty($error_data['status'])) {
+                $status = (int) $error_data['status'];
+            }
+            wp_send_json_error(array('message' => $data->get_error_message()), $status);
         }
 
-        $handler = isset($row->handler) ? $row->handler : self::HANDLER_AI;
-
-        wp_send_json_success(array(
-            'session_id'       => $row->session_id,
-            'handler'          => $handler,
-            'handler_label'    => self::handler_label($handler),
-            'admin_name'       => isset($row->admin_name) ? $row->admin_name : '',
-            'customer_name'    => isset($row->customer_name) ? (string) $row->customer_name : '',
-            'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
-            'detected_service' => $row->detected_service,
-            'updated_at'       => $row->updated_at,
-            'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
-            'messages'         => $this->sort_messages($this->decode_messages($row->messages)),
-        ));
+        wp_send_json_success($data);
     }
 
     public function handle_customer_history_list() {
@@ -1864,37 +1773,95 @@ class PAXdesign_Chat_Live {
         $sessions   = array();
         $live_count = 0;
         foreach ((array) $rows as $row) {
-            $messages = $this->sort_messages($this->decode_messages($row->messages));
-            $last     = !empty($messages) ? end($messages) : null;
-            $preview  = is_array($last) && !empty($last['content'])
-                ? wp_html_excerpt($last['content'], 100, '…')
-                : '';
-
-            $handler = isset($row->handler) ? $row->handler : self::HANDLER_AI;
-            if ($handler === self::HANDLER_LIVE) {
+            $item = $this->format_live_list_session($row);
+            if ($item['handler'] === self::HANDLER_LIVE) {
                 $live_count++;
             }
-
-            $sessions[] = array(
-                'id'               => (int) $row->id,
-                'session_id'       => $row->session_id,
-                'handler'          => $handler,
-                'handler_label'    => self::handler_label($handler),
-                'admin_name'       => isset($row->admin_name) ? $row->admin_name : '',
-                'customer_name'    => isset($row->customer_name) ? (string) $row->customer_name : '',
-                'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
-                'detected_service' => $row->detected_service,
-                'updated_at'       => $row->updated_at,
-                'message_count'    => (int) $row->message_count,
-                'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
-                'last_preview'     => $preview,
-                'last_role'        => is_array($last) && !empty($last['role']) ? $last['role'] : '',
-            );
+            $sessions[] = $item;
         }
 
         return array(
-            'sessions'   => $sessions,
-            'live_count' => $live_count,
+            'sessions'    => $sessions,
+            'live_count'  => $live_count,
+            'server_time' => current_time('mysql'),
+        );
+    }
+
+    /**
+     * @param object $row
+     * @return array<string, mixed>
+     */
+    private function format_live_list_session($row) {
+        $messages = $this->sort_messages($this->decode_messages($row->messages));
+        $last     = !empty($messages) ? end($messages) : null;
+        $preview  = is_array($last) && !empty($last['content'])
+            ? wp_html_excerpt($last['content'], 100, '…')
+            : '';
+        $handler  = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
+
+        return array(
+            'id'               => isset($row->id) ? (int) $row->id : 0,
+            'session_id'       => isset($row->session_id) ? (string) $row->session_id : '',
+            'handler'          => $handler,
+            'handler_label'    => self::handler_label($handler),
+            'admin_name'       => isset($row->admin_name) ? (string) $row->admin_name : '',
+            'customer_name'    => isset($row->customer_name) ? (string) $row->customer_name : '',
+            'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
+            'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
+            'updated_at'       => isset($row->updated_at) ? (string) $row->updated_at : '',
+            'message_count'    => isset($row->message_count) ? (int) $row->message_count : 0,
+            'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
+            'last_preview'     => $preview,
+            'last_role'        => is_array($last) && !empty($last['role']) ? (string) $last['role'] : '',
+        );
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $messages
+     * @return array<int, array<string, mixed>>
+     */
+    private function format_messages_for_api($messages) {
+        $out = array();
+        foreach ($this->sort_messages($messages) as $msg) {
+            if (!is_array($msg)) {
+                continue;
+            }
+            $entry = array(
+                'id'      => isset($msg['id']) ? (int) $msg['id'] : 0,
+                'role'    => isset($msg['role']) ? sanitize_text_field($msg['role']) : 'assistant',
+                'content' => isset($msg['content']) ? (string) $msg['content'] : '',
+            );
+            if (isset($msg['ts'])) {
+                $entry['ts'] = (int) $msg['ts'];
+            }
+            if (!empty($msg['image_url'])) {
+                $entry['image_url'] = esc_url_raw($msg['image_url']);
+            }
+            if (!empty($msg['reply_to'])) {
+                $entry['reply_to'] = (int) $msg['reply_to'];
+            }
+            $out[] = $entry;
+        }
+        return $out;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function empty_poll_payload() {
+        return array(
+            'handler'          => self::HANDLER_AI,
+            'handler_label'    => self::handler_label(self::HANDLER_AI),
+            'admin_name'       => '',
+            'customer_name'    => '',
+            'session_rating'   => 0,
+            'detected_service' => '',
+            'updated_at'       => '',
+            'seq'              => 0,
+            'messages'         => array(),
+            'admin_typing'     => false,
+            'user_typing'      => false,
+            'reactions'        => array(),
         );
     }
 
@@ -1912,19 +1879,19 @@ class PAXdesign_Chat_Live {
             return new WP_Error('not_found', 'Session nicht gefunden.', array('status' => 404));
         }
 
-        $handler = isset($row->handler) ? $row->handler : self::HANDLER_AI;
+        $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
 
         return array(
-            'session_id'       => $row->session_id,
+            'session_id'       => isset($row->session_id) ? (string) $row->session_id : '',
             'handler'          => $handler,
             'handler_label'    => self::handler_label($handler),
-            'admin_name'       => isset($row->admin_name) ? $row->admin_name : '',
+            'admin_name'       => isset($row->admin_name) ? (string) $row->admin_name : '',
             'customer_name'    => isset($row->customer_name) ? (string) $row->customer_name : '',
             'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
-            'detected_service' => $row->detected_service,
-            'updated_at'       => $row->updated_at,
+            'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
+            'updated_at'       => isset($row->updated_at) ? (string) $row->updated_at : '',
             'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
-            'messages'         => $this->sort_messages($this->decode_messages($row->messages)),
+            'messages'         => $this->format_messages_for_api($this->decode_messages($row->messages)),
         );
     }
 
@@ -1941,18 +1908,14 @@ class PAXdesign_Chat_Live {
         $row   = $this->get_session_row($session_id);
 
         if (!$row) {
-            return array(
-                'handler'     => self::HANDLER_AI,
-                'admin_name'  => '',
-                'seq'         => 0,
-                'messages'    => array(),
-            );
+            return $this->empty_poll_payload();
         }
 
-        $messages = $this->sort_messages($this->decode_messages($row->messages));
-        $new      = $full ? $messages : array();
+        $messages = $this->decode_messages($row->messages);
+        $all      = $this->format_messages_for_api($messages);
+        $new      = $full ? $all : array();
         if (!$full) {
-            foreach ($messages as $msg) {
+            foreach ($all as $msg) {
                 $mid = isset($msg['id']) ? (int) $msg['id'] : 0;
                 if ($mid > $since) {
                     $new[] = $msg;
@@ -1960,12 +1923,12 @@ class PAXdesign_Chat_Live {
             }
         }
 
-        $handler = isset($row->handler) ? $row->handler : self::HANDLER_AI;
+        $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
 
         return array(
             'handler'          => $handler,
             'handler_label'    => self::handler_label($handler),
-            'admin_name'       => isset($row->admin_name) ? $row->admin_name : '',
+            'admin_name'       => isset($row->admin_name) ? (string) $row->admin_name : '',
             'customer_name'    => isset($row->customer_name) ? (string) $row->customer_name : '',
             'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
             'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',

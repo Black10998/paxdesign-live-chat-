@@ -7,6 +7,15 @@ struct SessionListView: View {
 
     var body: some View {
         List {
+            if let error = coordinator.errorMessage, !error.isEmpty {
+                Section {
+                    syncErrorBanner(error)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+            }
+
             Section {
                 header
                     .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
@@ -71,8 +80,37 @@ struct SessionListView: View {
         .navigationTitle("Live Chat")
         .navigationBarTitleDisplayMode(.large)
         .refreshable { await coordinator.refreshSessions(auth: auth) }
+        .onAppear {
+            coordinator.start(auth: auth)
+            Task { await coordinator.refreshSessions(auth: auth) }
+        }
+        .animation(PAXTheme.spring, value: coordinator.listRevision)
         .animation(PAXTheme.spring, value: coordinator.liveCount)
         .animation(PAXTheme.spring, value: coordinator.sessions.count)
+    }
+
+    private func syncErrorBanner(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Synchronisation fehlgeschlagen")
+                    .font(.subheadline.weight(.semibold))
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(PAXTheme.textSecondary)
+            }
+            Spacer()
+            Button("Erneut") {
+                Task { await coordinator.refreshSessions(auth: auth) }
+            }
+            .font(.caption.weight(.semibold))
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color.orange.opacity(0.12))
+        )
     }
 
     private var header: some View {

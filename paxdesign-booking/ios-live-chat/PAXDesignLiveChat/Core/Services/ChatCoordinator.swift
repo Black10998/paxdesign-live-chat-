@@ -6,6 +6,9 @@ final class ChatCoordinator: ObservableObject {
     @Published var sessions: [LiveSession] = []
     @Published var liveCount = 0
     @Published var isLoading = false
+    @Published var isSyncing = false
+    @Published var listRevision = 0
+    @Published var lastSyncAt: Date?
     @Published var errorMessage: String?
     @Published var incomingRequest: IncomingLiveRequest? {
         didSet {
@@ -42,10 +45,14 @@ final class ChatCoordinator: ObservableObject {
 
     func refreshSessions(auth: AuthStore) async {
         guard let api = auth.api else { return }
+        isSyncing = true
+        defer { isSyncing = false }
         do {
             let response = try await api.fetchSessions()
             sessions = response.sessions
             liveCount = response.liveCount
+            listRevision += 1
+            lastSyncAt = Date()
             errorMessage = nil
             detectIncomingLiveRequests(response.sessions)
         } catch {
@@ -274,13 +281,14 @@ final class ChatThreadModel: ObservableObject {
         customerName = data.customerName.isEmpty ? "Kunde" : data.customerName
         userTyping = data.userTyping
         pollSeq = max(pollSeq, data.seq)
-        if !data.messages.isEmpty {
-            var map = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
-            for msg in data.messages {
-                map[msg.id] = msg
-            }
-            messages = map.values.sorted { $0.id < $1.id }
+        if data.messages.isEmpty {
+            return
         }
+        var map = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
+        for msg in data.messages {
+            map[msg.id] = msg
+        }
+        messages = map.values.sorted { $0.id < $1.id }
     }
 
     func send(auth: AuthStore) async {

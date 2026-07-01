@@ -17,16 +17,23 @@ enum LiveChatAPIError: LocalizedError {
 }
 
 final class LiveChatAPI {
+    private static let apiSession: URLSession = {
+        let config = URLSessionConfiguration.ephemeral
+        config.requestCachePolicy = .reloadIgnoringLocalCacheData
+        config.urlCache = nil
+        return URLSession(configuration: config)
+    }()
+
     private let siteURL: URL
     private let username: String
     private let appPassword: String
     private let session: URLSession
 
-    init(siteURL: URL, username: String, appPassword: String, session: URLSession = .shared) {
+    init(siteURL: URL, username: String, appPassword: String, session: URLSession? = nil) {
         self.siteURL = Self.normalizeSiteURL(siteURL)
         self.username = Self.normalizeUsername(username)
         self.appPassword = Self.normalizeAppPassword(appPassword)
-        self.session = session
+        self.session = session ?? Self.apiSession
     }
 
     static func normalizeSiteURL(_ url: URL) -> URL {
@@ -49,7 +56,28 @@ final class LiveChatAPI {
     }
 
     private var restBase: URL {
-        siteURL.appendingPathComponent("wp-json/paxdesign/v1/live-admin/")
+        siteURL
+            .appendingPathComponent("wp-json", isDirectory: true)
+            .appendingPathComponent("paxdesign", isDirectory: true)
+            .appendingPathComponent("v1", isDirectory: true)
+            .appendingPathComponent("live-admin", isDirectory: true)
+    }
+
+    private func liveAdminURL(path: String, query: [URLQueryItem] = []) -> URL? {
+        let trimmed = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        var url = restBase
+        if !trimmed.isEmpty {
+            for component in trimmed.split(separator: "/") {
+                url = url.appendingPathComponent(String(component), isDirectory: false)
+            }
+        }
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            return nil
+        }
+        var items = query
+        items.append(URLQueryItem(name: "_", value: String(Int(Date().timeIntervalSince1970 * 1000))))
+        components.queryItems = items
+        return components.url
     }
 
     private func authRequest(url: URL, method: String = "GET", body: Data? = nil) -> URLRequest {
@@ -57,6 +85,7 @@ final class LiveChatAPI {
         request.httpMethod = method
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
         if body != nil {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
@@ -109,96 +138,93 @@ final class LiveChatAPI {
     }
 
     func validateLogin() async throws -> AdminProfile {
-        let url = restBase.appendingPathComponent("me")
-        let request = authRequest(url: url)
-        return try await perform(request, as: AdminProfile.self)
+        guard let url = liveAdminURL(path: "me") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), as: AdminProfile.self)
     }
 
     func fetchSessions() async throws -> SessionListResponse {
-        let url = restBase.appendingPathComponent("sessions")
+        guard let url = liveAdminURL(path: "sessions") else {
+            throw LiveChatAPIError.invalidURL
+        }
         return try await perform(authRequest(url: url), as: SessionListResponse.self)
     }
 
     func fetchSession(_ sessionId: String) async throws -> PollResponse {
-        let url = restBase
-            .appendingPathComponent("sessions")
-            .appendingPathComponent(sessionId)
-            .appendingPathComponent("poll")
-        var components = URLComponents(url: url, resolvingAgainstBaseURL: false)!
-        components.queryItems = [URLQueryItem(name: "full", value: "1")]
-        return try await perform(authRequest(url: components.url!), as: PollResponse.self)
+        guard let url = liveAdminURL(
+            path: "sessions/\(sessionId)/poll",
+            query: [URLQueryItem(name: "full", value: "1")]
+        ) else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), as: PollResponse.self)
     }
 
     func pollSession(_ sessionId: String, since: Int) async throws -> PollResponse {
-        var components = URLComponents(url: restBase
-            .appendingPathComponent("sessions")
-            .appendingPathComponent(sessionId)
-            .appendingPathComponent("poll"), resolvingAgainstBaseURL: false)!
-        components.queryItems = [URLQueryItem(name: "since", value: String(since))]
-        return try await perform(authRequest(url: components.url!), as: PollResponse.self)
+        guard let url = liveAdminURL(
+            path: "sessions/\(sessionId)/poll",
+            query: [URLQueryItem(name: "since", value: String(since))]
+        ) else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), as: PollResponse.self)
     }
 
     func takeover(_ sessionId: String) async throws {
-        let url = restBase
-            .appendingPathComponent("sessions")
-            .appendingPathComponent(sessionId)
-            .appendingPathComponent("takeover")
+        guard let url = liveAdminURL(path: "sessions/\(sessionId)/takeover") else {
+            throw LiveChatAPIError.invalidURL
+        }
         _ = try await perform(authRequest(url: url, method: "POST", body: Data()), as: EmptyResponse.self)
     }
 
     func decline(_ sessionId: String) async throws {
-        let url = restBase
-            .appendingPathComponent("sessions")
-            .appendingPathComponent(sessionId)
-            .appendingPathComponent("decline")
+        guard let url = liveAdminURL(path: "sessions/\(sessionId)/decline") else {
+            throw LiveChatAPIError.invalidURL
+        }
         _ = try await perform(authRequest(url: url, method: "POST", body: Data()), as: EmptyResponse.self)
     }
 
     func close(_ sessionId: String) async throws {
-        let url = restBase
-            .appendingPathComponent("sessions")
-            .appendingPathComponent(sessionId)
-            .appendingPathComponent("close")
+        guard let url = liveAdminURL(path: "sessions/\(sessionId)/close") else {
+            throw LiveChatAPIError.invalidURL
+        }
         _ = try await perform(authRequest(url: url, method: "POST", body: Data()), as: EmptyResponse.self)
     }
 
     func archive(_ sessionId: String) async throws {
-        let url = restBase
-            .appendingPathComponent("sessions")
-            .appendingPathComponent(sessionId)
-            .appendingPathComponent("archive")
+        guard let url = liveAdminURL(path: "sessions/\(sessionId)/archive") else {
+            throw LiveChatAPIError.invalidURL
+        }
         _ = try await perform(authRequest(url: url, method: "POST", body: Data()), as: EmptyResponse.self)
     }
 
     func deleteSession(_ sessionId: String) async throws {
-        let url = restBase
-            .appendingPathComponent("sessions")
-            .appendingPathComponent(sessionId)
+        guard let url = liveAdminURL(path: "sessions/\(sessionId)") else {
+            throw LiveChatAPIError.invalidURL
+        }
         var request = authRequest(url: url, method: "DELETE")
         _ = try await perform(request, as: EmptyResponse.self)
     }
 
     func reopen(_ sessionId: String) async throws {
-        let url = restBase
-            .appendingPathComponent("sessions")
-            .appendingPathComponent(sessionId)
-            .appendingPathComponent("reopen")
+        guard let url = liveAdminURL(path: "sessions/\(sessionId)/reopen") else {
+            throw LiveChatAPIError.invalidURL
+        }
         _ = try await perform(authRequest(url: url, method: "POST", body: Data()), as: EmptyResponse.self)
     }
 
     func release(_ sessionId: String) async throws {
-        let url = restBase
-            .appendingPathComponent("sessions")
-            .appendingPathComponent(sessionId)
-            .appendingPathComponent("release")
+        guard let url = liveAdminURL(path: "sessions/\(sessionId)/release") else {
+            throw LiveChatAPIError.invalidURL
+        }
         _ = try await perform(authRequest(url: url, method: "POST", body: Data()), as: EmptyResponse.self)
     }
 
     func sendMessage(_ sessionId: String, text: String) async throws -> LiveMessage {
-        let url = restBase
-            .appendingPathComponent("sessions")
-            .appendingPathComponent(sessionId)
-            .appendingPathComponent("messages")
+        guard let url = liveAdminURL(path: "sessions/\(sessionId)/messages") else {
+            throw LiveChatAPIError.invalidURL
+        }
         let body = try JSONEncoder().encode(["message": text])
         struct SendResponse: Codable { let message: LiveMessage }
         let response: SendResponse = try await perform(authRequest(url: url, method: "POST", body: body), as: SendResponse.self)
@@ -206,16 +232,17 @@ final class LiveChatAPI {
     }
 
     func setTyping(_ sessionId: String, stop: Bool = false) async throws {
-        let url = restBase
-            .appendingPathComponent("sessions")
-            .appendingPathComponent(sessionId)
-            .appendingPathComponent("typing")
+        guard let url = liveAdminURL(path: "sessions/\(sessionId)/typing") else {
+            throw LiveChatAPIError.invalidURL
+        }
         let body = try JSONEncoder().encode(["stop": stop])
         _ = try await perform(authRequest(url: url, method: "POST", body: body), as: EmptyResponse.self)
     }
 
     func registerAPNs(token: String, sandbox: Bool) async throws {
-        let url = restBase.appendingPathComponent("push/apns")
+        guard let url = liveAdminURL(path: "push/apns") else {
+            throw LiveChatAPIError.invalidURL
+        }
         let payload: [String: Any] = [
             "device_token": token,
             "sandbox": sandbox,
@@ -226,7 +253,9 @@ final class LiveChatAPI {
     }
 
     func unregisterAPNs(token: String) async throws {
-        let url = restBase.appendingPathComponent("push/apns")
+        guard let url = liveAdminURL(path: "push/apns") else {
+            throw LiveChatAPIError.invalidURL
+        }
         let payload: [String: Any] = ["device_token": token]
         let json = try JSONSerialization.data(withJSONObject: payload)
         var request = authRequest(url: url, method: "DELETE", body: json)
