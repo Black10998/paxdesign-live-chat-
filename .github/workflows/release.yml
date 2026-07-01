@@ -1,32 +1,48 @@
-name: Production Release Build
+name: Production Release
 
 on:
-  workflow_dispatch:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build-ios-ipa:
+  release:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read plugin version
+        id: version
+        run: |
+          VERSION=$(grep "define('PAXDESIGN_BOOKING_VERSION'" paxdesign-booking/paxdesign-booking.php | sed "s/.*'\([^']*\)'.*/\1/")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Plugin version: $VERSION"
+
+      - name: Build WordPress plugin ZIP
+        run: |
+          chmod +x scripts/build-release.sh
+          ./scripts/build-release.sh
 
       - name: Install xcodegen
         run: brew install xcodegen
 
-      - name: Build unsigned IPA
+      - name: Build iOS IPA
         run: |
           cd paxdesign-booking/ios-live-chat
           chmod +x scripts/build-ipa.sh
           ./scripts/build-ipa.sh
 
-      - name: Upload IPA artifact
-        uses: actions/upload-artifact@v4
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: PAXDesignLiveChat-ipa
-          path: paxdesign-booking/ios-live-chat/build/output/PAXDesignLiveChat.ipa
-          if-no-files-found: error
+          tag_name: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            dist/paxdesign-booking-v${{ steps.version.outputs.version }}.zip
+            paxdesign-booking/ios-live-chat/build/output/PAXDesignLiveChat.ipa

@@ -19,7 +19,6 @@ struct SettingsView: View {
             notificationSection
             soundSection
             aboutSection
-            debugSection
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -136,18 +135,8 @@ struct SettingsView: View {
 
     private var aboutSection: some View {
         Section("App") {
-            LabeledContent("Version", value: "1.4.0")
+            LabeledContent("Version", value: "1.4.1")
             LabeledContent("Plugin", value: auth.profile?.pluginVer ?? "—")
-        }
-    }
-
-    private var debugSection: some View {
-        Section("Diagnose (temporär)") {
-            NavigationLink {
-                SyncDebugView()
-            } label: {
-                Label("Sync Debug", systemImage: "waveform.path.ecg")
-            }
         }
     }
 

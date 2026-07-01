@@ -1,110 +1,87 @@
-# PAXDesign Live Chat — Native iOS App
+# PAXDesign Live Chat — Native iOS Admin App
 
-Production SwiftUI administrator app for the PAXDesign Booking Live Chat system.
-
-## Features
-
-- Native SwiftUI interface (not a web wrapper)
-- Secure login via WordPress **Application Passwords**
-- Real-time chat via REST polling (same backend as web admin)
-- Push notifications via **Apple Push Notification service (APNs)**
-- Full-screen incoming **call-style alert** for Live Agent requests
-- Accept or decline requests in-app
-- Background notifications when app is closed
+SwiftUI administrator app for the PAXdesign Booking Live Chat system.
 
 ## Requirements
 
 | Requirement | Details |
 |-------------|---------|
-| Mac | macOS with **Xcode 15+** |
-| Apple Developer | Enrolled in [Apple Developer Program](https://developer.apple.com/programs/) |
-| WordPress plugin | **PAXdesign Booking v3.39.0+** with mobile REST API |
-| Admin account | WordPress user with `manage_options` + Application Password |
+| iPhone | iOS 16+ |
+| WordPress | Plugin **v3.46.0+** with mobile REST API |
+| Account | WP admin with `manage_options` + Application Password |
+| Mac (optional) | Xcode 16+ for local builds |
 
-## Backend setup (WordPress)
+## Install (test build)
 
-1. Update the plugin to **v3.39.0+**
-2. Create an Application Password: **WordPress Admin → Users → Profile → Application Passwords**
-3. Configure APNs (for push when app is closed):
+1. Deploy the latest WordPress plugin from [GitHub Releases](https://github.com/Black10998/paxdesign-live-chat-/releases/latest)
+2. On your iPhone, download **`PAXDesignLiveChat.ipa`** from the same release
+3. Install via **LiveContainer**, AltStore, or Xcode
+4. Open the app and sign in:
+   - **Website:** `https://paxdesign.at` (or your site)
+   - **Username:** your WordPress login or email
+   - **Application Password:** from WP Admin → Users → Profile → Application Passwords
+
+## App icon
+
+The official icon is bundled in `Resources/Assets.xcassets/AppIcon.appiconset/` (1024×1024 PNG).
+
+## Build from source (Mac)
+
+```bash
+brew install xcodegen
+cd ios-live-chat
+xcodegen generate
+open PAXDesignLiveChat.xcodeproj
+```
+
+In Xcode: set your **Team**, enable **Push Notifications**, then Run on device.
+
+Unsigned IPA (CI uses the same script):
+
+```bash
+./scripts/build-ipa.sh
+# Output: build/output/PAXDesignLiveChat.ipa
+```
+
+## Push notifications (optional)
+
+Configure APNs in WordPress:
 
 ```php
-// wp-config.php or via options API
 update_option('paxdesign_apns_key_id', 'YOUR_KEY_ID');
 update_option('paxdesign_apns_team_id', 'YOUR_TEAM_ID');
 update_option('paxdesign_apns_key_p8', file_get_contents('AuthKey_XXXX.p8'));
 update_option('paxdesign_apns_bundle_id', 'at.paxdesign.livechat');
 ```
 
-4. Enable **Push Notifications** capability for the app bundle ID in Apple Developer portal
+Enable Push Notifications for bundle ID `at.paxdesign.livechat` in Apple Developer.
 
-### REST API
+## REST API
 
-Base: `https://your-site/wp-json/paxdesign/v1/live-admin/`
+Base: `https://your-site/wp-json/paxdesign/v1/live-admin/`  
+Auth: HTTP Basic (`username:application_password`)
 
-Authentication: HTTP Basic (`username:application_password`)
+## App Store preparation (later)
 
-## Build the app (Mac)
-
-```bash
-# Install XcodeGen (once)
-brew install xcodegen
-
-cd ios-live-chat
-xcodegen generate
-open PAXDesignLiveChat.xcodeproj
-```
-
-In Xcode:
-
-1. Select the **PAXDesignLiveChat** target
-2. Set your **Team** (Signing & Capabilities)
-3. Enable **Push Notifications** capability
-4. Replace `DEVELOPMENT_TEAM` in project settings if needed
-5. Add a 1024×1024 app icon to `Resources/Assets.xcassets/AppIcon.appiconset/`
-6. Build & Run on your iPhone (⌘R)
-
-## LiveContainer install (.ipa)
-
-An unsigned **`.ipa`** is built automatically by GitHub Actions and published to:
-
-**https://github.com/Black10998/paxdesign.booking/releases/download/ios-live-chat-v1.2.0/PAXDesignLiveChat.ipa**
-
-1. Download `PAXDesignLiveChat.ipa` on your iPhone (Safari).
-2. Open **LiveContainer** → import the `.ipa`.
-3. Launch **PAX Live Chat** and sign in with your WordPress Application Password.
-
-Push notifications may require additional signing configuration inside LiveContainer (JIT-less mode with your certificate). In-app polling and live-request alerts work without push.
-
-## TestFlight distribution
-
-See [TESTFLIGHT.md](./TESTFLIGHT.md) for step-by-step instructions.
-
-> **Important:** TestFlight builds require your Apple Developer account. This repository provides the complete native source code; the signed IPA/TestFlight upload must be done on your Mac with your certificates.
-
-## Default login
-
-| Field | Example |
-|-------|---------|
-| Website | `https://paxdesign.at` |
-| Username | Your WP admin username |
-| Application Password | Generated in WordPress profile |
+- Bundle ID: `at.paxdesign.livechat`
+- Signing: Apple Developer Program required
+- Push: production APNs certificate/key
+- Privacy: document camera/photos usage if profile image picker is kept
 
 ## Architecture
 
 ```
 PAXDesignLiveChat/
-├── App/                 # App entry, root navigation
+├── App/                 # Entry point
 ├── Core/
-│   ├── API/             # REST client (Application Password auth)
+│   ├── API/             # REST client
 │   ├── Models/          # Codable types
-│   └── Services/        # Auth, polling, push
+│   ├── Services/        # Auth, polling, push, audio
+│   └── Design/          # Theme + components
 └── Features/
     ├── Login/
     ├── Sessions/        # Chat list
-    ├── Chat/            # Message thread
-    └── Incoming/        # Call-style live request UI
+    ├── Chat/            # Thread + composer + AI assist
+    ├── Incoming/        # Live request alert
+    └── Settings/
 ```
-
-## Bundle ID
-
-`at.paxdesign.livechat` — change in `project.yml` if needed, and match APNs configuration.

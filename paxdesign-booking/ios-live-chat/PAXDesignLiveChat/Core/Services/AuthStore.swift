@@ -67,9 +67,6 @@ final class AuthStore: ObservableObject {
             api = client
             profile = me
             isLoggedIn = true
-            SyncDebugStore.shared.apiBaseURL = client.publicApiBaseURL
-            SyncDebugStore.shared.loggedInUser = me.name
-            SyncDebugStore.shared.pluginVersion = me.pluginVer
 
             let stored = StoredCredentials(siteURL: siteURLString, username: username, appPassword: appPassword)
             if let data = try? JSONEncoder().encode(stored) {

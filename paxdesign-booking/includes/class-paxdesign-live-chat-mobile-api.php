@@ -111,12 +111,6 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => $auth,
         ));
 
-        register_rest_route(self::REST_NAMESPACE, '/live-admin/debug/parity', array(
-            'methods'             => WP_REST_Server::READABLE,
-            'callback'            => array(__CLASS__, 'route_debug_parity'),
-            'permission_callback' => $auth,
-        ));
-
         register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions/(?P<id>[a-zA-Z0-9_\-]+)', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'route_session'),
@@ -257,27 +251,6 @@ class PAXdesign_Live_Chat_Mobile_API {
 
     public static function route_sessions(WP_REST_Request $request) {
         return self::respond(self::live()->get_live_list_data());
-    }
-
-    public static function route_debug_parity(WP_REST_Request $request) {
-        $data = self::live()->get_live_list_data();
-        if (is_wp_error($data)) {
-            return $data;
-        }
-
-        $sessions = isset($data['sessions']) && is_array($data['sessions']) ? $data['sessions'] : array();
-        $latest   = !empty($sessions) ? $sessions[0] : array();
-
-        return self::respond(array(
-            'parity_source'        => 'get_live_list_data',
-            'shortcode_equivalent' => 'paxdesign_chat_live_list',
-            'session_count'        => count($sessions),
-            'live_count'           => isset($data['live_count']) ? (int) $data['live_count'] : 0,
-            'latest_session_id'    => isset($latest['session_id']) ? (string) $latest['session_id'] : '',
-            'latest_updated_at'    => isset($latest['updated_at']) ? (string) $latest['updated_at'] : '',
-            'plugin_version'       => PAXDESIGN_BOOKING_VERSION,
-            'server_time'          => current_time('mysql'),
-        ));
     }
 
     public static function route_session(WP_REST_Request $request) {

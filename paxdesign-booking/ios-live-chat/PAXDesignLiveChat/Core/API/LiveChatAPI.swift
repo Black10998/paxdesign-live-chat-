@@ -115,11 +115,6 @@ final class LiveChatAPI {
     }
 
     private func perform<T: Decodable>(_ request: URLRequest, endpoint: String, as type: T.Type) async throws -> T {
-        let url = request.url?.absoluteString ?? "—"
-        await MainActor.run {
-            SyncDebugStore.shared.recordRequestStarted(endpoint: endpoint, url: url)
-        }
-
         let data: Data
         let http: HTTPURLResponse
         do {
@@ -130,57 +125,26 @@ final class LiveChatAPI {
             }
             http = response
         } catch {
-            await MainActor.run {
-                SyncDebugStore.shared.recordSyncFailure(endpoint: endpoint, error: error)
-            }
             throw error
-        }
-
-        await MainActor.run {
-            SyncDebugStore.shared.recordHTTPResponse(
-                endpoint: endpoint,
-                status: http.statusCode,
-                data: data,
-                url: url
-            )
         }
 
         if http.statusCode == 401 || http.statusCode == 403 {
             if let message = wpErrorMessage(from: data) {
-                let err = LiveChatAPIError.server(message)
-                await MainActor.run {
-                    SyncDebugStore.shared.recordSyncFailure(endpoint: endpoint, error: err)
-                }
-                throw err
+                throw LiveChatAPIError.server(message)
             }
-            let err = LiveChatAPIError.unauthorized
-            await MainActor.run {
-                SyncDebugStore.shared.recordSyncFailure(endpoint: endpoint, error: err)
-            }
-            throw err
+            throw LiveChatAPIError.unauthorized
         }
 
         if http.statusCode >= 400 {
             if let message = wpErrorMessage(from: data) {
-                let err = LiveChatAPIError.server(message)
-                await MainActor.run {
-                    SyncDebugStore.shared.recordSyncFailure(endpoint: endpoint, error: err)
-                }
-                throw err
+                throw LiveChatAPIError.server(message)
             }
-            let err = LiveChatAPIError.server("HTTP \(http.statusCode)")
-            await MainActor.run {
-                SyncDebugStore.shared.recordSyncFailure(endpoint: endpoint, error: err)
-            }
-            throw err
+            throw LiveChatAPIError.server("HTTP \(http.statusCode)")
         }
 
         do {
             return try decode(type, from: data)
         } catch {
-            await MainActor.run {
-                SyncDebugStore.shared.recordDecodeFailure(endpoint: endpoint, error: error, data: data)
-            }
             throw LiveChatAPIError.decoding(error)
         }
     }
@@ -197,13 +161,6 @@ final class LiveChatAPI {
             throw LiveChatAPIError.invalidURL
         }
         return try await perform(authRequest(url: url), endpoint: "sessions", as: SessionListResponse.self)
-    }
-
-    func fetchDebugParity() async throws -> DebugParityResponse {
-        guard let url = liveAdminURL(path: "debug/parity") else {
-            throw LiveChatAPIError.invalidURL
-        }
-        return try await perform(authRequest(url: url), endpoint: "debug/parity", as: DebugParityResponse.self)
     }
 
     func fetchSession(_ sessionId: String) async throws -> PollResponse {

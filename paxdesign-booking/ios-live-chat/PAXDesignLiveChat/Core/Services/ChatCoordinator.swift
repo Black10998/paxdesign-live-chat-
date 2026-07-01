@@ -27,8 +27,6 @@ final class ChatCoordinator: ObservableObject {
 
     func start(auth: AuthStore) {
         stop()
-        SyncDebugStore.shared.listPollLoopActive = true
-        SyncDebugStore.shared.setSyncEngineStatus("running")
         listTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refreshSessions(auth: auth)
@@ -40,8 +38,6 @@ final class ChatCoordinator: ObservableObject {
     func stop() {
         listTask?.cancel()
         listTask = nil
-        SyncDebugStore.shared.listPollLoopActive = false
-        SyncDebugStore.shared.setSyncEngineStatus("stopped")
         expiryTasks.values.forEach { $0.cancel() }
         expiryTasks.removeAll()
         IncomingCallRingtone.shared.stopRinging()
@@ -50,13 +46,7 @@ final class ChatCoordinator: ObservableObject {
     func refreshSessions(auth: AuthStore) async {
         guard let api = auth.api else { return }
         isSyncing = true
-        SyncDebugStore.shared.setSyncEngineStatus("syncing")
-        defer {
-            isSyncing = false
-            if SyncDebugStore.shared.listPollLoopActive {
-                SyncDebugStore.shared.setSyncEngineStatus("running")
-            }
-        }
+        defer { isSyncing = false }
         do {
             let response = try await api.fetchSessions()
             sessions = response.sessions
@@ -64,12 +54,9 @@ final class ChatCoordinator: ObservableObject {
             listRevision += 1
             lastSyncAt = Date()
             errorMessage = nil
-            SyncDebugStore.shared.recordListDisplayed(count: response.sessions.count, sessions: response.sessions)
             detectIncomingLiveRequests(response.sessions)
         } catch {
             errorMessage = error.localizedDescription
-            SyncDebugStore.shared.recordSyncFailure(endpoint: "sessions", error: error)
-            SyncDebugStore.shared.setSyncEngineStatus("error")
         }
     }
 
@@ -154,10 +141,9 @@ final class ChatCoordinator: ObservableObject {
     func deleteSession(auth: AuthStore, session: LiveSession) async {
         guard let api = auth.api else { return }
         let sessionId = session.sessionId
-        sessions.removeAll { $0.sessionId == sessionId }
-        if activeSessionId == sessionId { activeSessionId = nil }
         do {
             try await api.deleteSession(sessionId)
+            if activeSessionId == sessionId { activeSessionId = nil }
             await refreshSessions(auth: auth)
             PAXHaptics.warning()
         } catch {
@@ -258,8 +244,6 @@ final class ChatThreadModel: ObservableObject {
     func start(auth: AuthStore) {
         self.auth = auth
         pollTask?.cancel()
-        SyncDebugStore.shared.messagePollLoopActive = true
-        SyncDebugStore.shared.selectedSessionId = sessionId
         pollTask = Task { [weak self] in
             guard let self else { return }
             await self.loadQuickReplies(auth: auth)
@@ -278,7 +262,6 @@ final class ChatThreadModel: ObservableObject {
     func stop() {
         pollTask?.cancel()
         pollTask = nil
-        SyncDebugStore.shared.messagePollLoopActive = false
         typingStopTask?.cancel()
         typingStopTask = nil
         suggestionsTask?.cancel()
@@ -304,7 +287,6 @@ final class ChatThreadModel: ObservableObject {
             }
         } catch {
             errorMessage = error.localizedDescription
-            SyncDebugStore.shared.recordSyncFailure(endpoint: "poll:\(sessionId):full", error: error)
         }
     }
 
@@ -315,7 +297,6 @@ final class ChatThreadModel: ObservableObject {
             applyPoll(data)
         } catch {
             errorMessage = error.localizedDescription
-            SyncDebugStore.shared.recordSyncFailure(endpoint: "poll:\(sessionId)", error: error)
         }
     }
 
@@ -333,7 +314,6 @@ final class ChatThreadModel: ObservableObject {
         }
 
         guard !data.messages.isEmpty else {
-            SyncDebugStore.shared.recordMessagesDisplayed(count: messages.count, sessionId: sessionId)
             return
         }
 
@@ -362,8 +342,6 @@ final class ChatThreadModel: ObservableObject {
         if handler == "admin", newUserMessageId > 0 {
             fetchSuggestions(messageId: newUserMessageId)
         }
-
-        SyncDebugStore.shared.recordMessagesDisplayed(count: messages.count, sessionId: sessionId)
     }
 
     private func applyReactions(_ reactions: [String: String]) {

@@ -326,40 +326,6 @@ extension LiveSession {
     }
 }
 
-struct DebugParityResponse: Codable {
-    let paritySource: String
-    let shortcodeEquivalent: String
-    let sessionCount: Int
-    let liveCount: Int
-    let latestSessionId: String
-    let latestUpdatedAt: String
-    let pluginVersion: String
-    let serverTime: String
-
-    enum CodingKeys: String, CodingKey {
-        case paritySource = "parity_source"
-        case shortcodeEquivalent = "shortcode_equivalent"
-        case sessionCount = "session_count"
-        case liveCount = "live_count"
-        case latestSessionId = "latest_session_id"
-        case latestUpdatedAt = "latest_updated_at"
-        case pluginVersion = "plugin_version"
-        case serverTime = "server_time"
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        paritySource = LiveChatDecode.string(container, CodingKeys.paritySource)
-        shortcodeEquivalent = LiveChatDecode.string(container, CodingKeys.shortcodeEquivalent)
-        sessionCount = LiveChatDecode.int(container, CodingKeys.sessionCount)
-        liveCount = LiveChatDecode.int(container, CodingKeys.liveCount)
-        latestSessionId = LiveChatDecode.string(container, CodingKeys.latestSessionId)
-        latestUpdatedAt = LiveChatDecode.string(container, CodingKeys.latestUpdatedAt)
-        pluginVersion = LiveChatDecode.string(container, CodingKeys.pluginVersion)
-        serverTime = LiveChatDecode.string(container, CodingKeys.serverTime)
-    }
-}
-
 struct IncomingLiveRequest: Identifiable, Equatable {
     let id: String
     let session: LiveSession
