@@ -148,7 +148,7 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         self.ts = ts
         self.imageUrl = imageUrl
         self.replyTo = replyTo
-        self.reaction = reaction.map { MessageReaction.normalize($0) }
+        self.reaction = reaction.flatMap { MessageReaction.normalize($0) }
     }
 
     init(from decoder: Decoder) throws {
