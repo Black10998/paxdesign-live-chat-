@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct ChatView: View {
@@ -5,6 +6,10 @@ struct ChatView: View {
     @EnvironmentObject private var coordinator: ChatCoordinator
     @StateObject private var thread: ChatThreadModel
     @Environment(\.dismiss) private var dismiss
+    @StateObject private var settings = AppSettingsStore.shared
+
+    @State private var imageViewer: ImageViewerItem?
+    @State private var photoItem: PhotosPickerItem?
 
     init(sessionId: String) {
         _thread = StateObject(wrappedValue: ChatThreadModel(sessionId: sessionId))
@@ -12,38 +17,51 @@ struct ChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            statusBar
+            if !settings.privacyBannerDismissed {
+                PrivacyBannerView {
+                    settings.privacyBannerDismissed = true
+                }
+                .padding(.horizontal, 12)
+                .padding(.top, 8)
+                .transition(.opacity)
+            }
+
+            compactStatusBar
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 12) {
+                    LazyVStack(alignment: .leading, spacing: PAXMessageStyle.threadSpacing) {
                         ForEach(thread.messages) { message in
-                            MessageBubble(message: message)
-                                .id(message.id)
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: message.role == "admin" ? .trailing : .leading).combined(with: .opacity),
-                                    removal: .opacity
-                                ))
+                            MessageBubbleView(
+                                message: message,
+                                quotedMessage: quotedMessage(for: message),
+                                canReply: thread.handler == "admin" && message.role != "system",
+                                onReply: { thread.setReply(to: message) },
+                                onCopy: { copyMessage(message) },
+                                onImageTap: { imageViewer = ImageViewerItem(url: $0) }
+                            )
+                            .id(message.id)
                         }
                         if thread.userTyping {
                             TypingIndicator()
                                 .id("typing-indicator")
-                                .transition(.opacity.combined(with: .scale))
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
                 }
-                .onChange(of: thread.messages.count) { _ in
-                    scrollToBottom(proxy: proxy)
-                }
-                .onChange(of: thread.userTyping) { _ in
-                    scrollToBottom(proxy: proxy)
-                }
+                .onChange(of: thread.messages.count) { _ in scrollToBottom(proxy: proxy) }
+                .onChange(of: thread.userTyping) { _ in scrollToBottom(proxy: proxy) }
             }
 
             if thread.handler == "admin" {
                 assistStrip
+            }
+
+            if let reply = thread.replyToMessage {
+                ReplyBarView(message: reply) {
+                    thread.clearReply()
+                }
             }
 
             composer
@@ -62,12 +80,26 @@ struct ChatView: View {
                   syncedId == thread.sessionId else { return }
             Task { await thread.refreshNow(auth: auth) }
         }
-        .animation(PAXTheme.spring, value: thread.messages.count)
-        .animation(PAXTheme.fade, value: thread.userTyping)
+        .sheet(item: $imageViewer) { item in
+            FullScreenImageView(url: item.url)
+        }
+        .onChange(of: photoItem) { item in
+            Task { await handlePhotoSelection(item) }
+        }
+    }
+
+    private func quotedMessage(for message: LiveMessage) -> LiveMessage? {
+        guard let replyId = message.replyTo else { return nil }
+        return thread.messages.first { $0.id == replyId }
+    }
+
+    private func copyMessage(_ message: LiveMessage) {
+        UIPasteboard.general.string = message.content
+        PAXHaptics.success()
     }
 
     private func scrollToBottom(proxy: ScrollViewProxy) {
-        withAnimation(PAXTheme.spring) {
+        withAnimation(PAXTheme.quickSpring) {
             if thread.userTyping {
                 proxy.scrollTo("typing-indicator", anchor: .bottom)
             } else if let last = thread.messages.last {
@@ -76,29 +108,25 @@ struct ChatView: View {
         }
     }
 
-    private var statusBar: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(statusColor)
-                .frame(width: 8, height: 8)
+    private var compactStatusBar: some View {
+        HStack(spacing: 6) {
+            Circle().fill(statusColor).frame(width: 7, height: 7)
             Text(thread.handlerLabel)
-                .font(.caption.weight(.semibold))
+                .font(.caption2.weight(.medium))
                 .foregroundStyle(PAXTheme.textSecondary)
-
             if let ratingView = SessionRatingBadge(rating: thread.sessionRating) {
                 ratingView
             }
-
             Spacer()
             if thread.handler != "admin" {
-                Text("Nur-Lese-Modus")
-                    .font(.caption2.weight(.medium))
+                Text("Nur-Lese")
+                    .font(.caption2)
                     .foregroundStyle(PAXTheme.textTertiary)
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(PAXTheme.surface.opacity(0.72))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(PAXTheme.surface.opacity(0.65))
     }
 
     private var statusColor: Color {
@@ -155,73 +183,55 @@ struct ChatView: View {
     }
 
     private var assistStrip: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             if !thread.quickReplies.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Schnellantworten")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(PAXTheme.textTertiary)
-                    AssistChipRow {
-                        ForEach(thread.quickReplies) { item in
-                            AssistChip(title: item.label, subtitle: item.text) {
-                                thread.applyQuickReply(item.text)
-                            }
+                AssistChipRow {
+                    ForEach(thread.quickReplies) { item in
+                        AssistChip(title: item.label, subtitle: item.text) {
+                            thread.applyQuickReply(item.text)
                         }
                     }
                 }
             }
-
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(spacing: 6) {
-                    Image(systemName: "sparkles")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(PAXTheme.accent)
-                    Text("KI-Vorschläge")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(PAXTheme.textTertiary)
+            if thread.suggestionsLoading || !thread.aiSuggestions.isEmpty {
+                AssistChipRow {
                     if thread.suggestionsLoading {
-                        ProgressView()
-                            .scaleEffect(0.7)
+                        ProgressView().scaleEffect(0.8)
                     }
-                    Spacer()
-                    Text("Tippen zum Einfügen")
-                        .font(.caption2)
-                        .foregroundStyle(PAXTheme.textTertiary)
-                }
-
-                if let error = thread.suggestionsError, thread.aiSuggestions.isEmpty {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(PAXTheme.textSecondary)
-                } else if !thread.aiSuggestions.isEmpty {
-                    AssistChipRow {
-                        ForEach(Array(thread.aiSuggestions.enumerated()), id: \.offset) { _, text in
-                            AssistChip(title: String(text.prefix(72)) + (text.count > 72 ? "…" : ""), subtitle: text) {
-                                thread.applySuggestion(text)
-                            }
+                    ForEach(Array(thread.aiSuggestions.enumerated()), id: \.offset) { _, text in
+                        AssistChip(title: String(text.prefix(48)) + (text.count > 48 ? "…" : ""), subtitle: text) {
+                            thread.applySuggestion(text)
                         }
                     }
                 }
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .background(PAXTheme.surface.opacity(0.88))
     }
 
     private var composer: some View {
-        HStack(alignment: .bottom, spacing: 10) {
-            TextField("Nachricht schreiben …", text: $thread.draft, axis: .vertical)
-                .lineLimit(1...5)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
+        HStack(alignment: .bottom, spacing: 8) {
+            if thread.handler == "admin" {
+                PhotosPicker(selection: $photoItem, matching: .images) {
+                    Image(systemName: "photo")
+                        .font(.title3)
+                        .foregroundStyle(PAXTheme.accent)
+                        .frame(width: 32, height: 32)
+                }
+                .disabled(thread.isSending)
+            }
+
+            TextField("Nachricht", text: $thread.draft, axis: .vertical)
+                .font(.subheadline)
+                .lineLimit(1...4)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
                 .background(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .fill(PAXTheme.surfaceElevated)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                .stroke(PAXTheme.border, lineWidth: 1)
-                        )
+                        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(PAXTheme.border, lineWidth: 1))
                 )
                 .disabled(thread.handler != "admin")
                 .onChange(of: thread.draft) { _ in
@@ -233,13 +243,13 @@ struct ChatView: View {
                 Task { await thread.send(auth: auth) }
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 34))
+                    .font(.system(size: 30))
                     .foregroundStyle(canSend ? PAXTheme.accent : PAXTheme.textTertiary)
             }
             .disabled(!canSend)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .background(.ultraThinMaterial)
     }
 
@@ -248,106 +258,45 @@ struct ChatView: View {
             && !thread.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !thread.isSending
     }
-}
 
-private struct MessageBubble: View {
-    let message: LiveMessage
-
-    var body: some View {
-        HStack(alignment: .bottom, spacing: 8) {
-            if isOutgoing { Spacer(minLength: 48) }
-
-            VStack(alignment: isOutgoing ? .trailing : .leading, spacing: 4) {
-                HStack(alignment: .bottom, spacing: 6) {
-                    Text(message.content)
-                        .font(.body)
-                        .foregroundStyle(PAXTheme.textPrimary)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 10)
-                        .background(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .fill(bubbleColor)
-                        )
-
-                    if let reaction = message.reaction {
-                        MessageReactionBadge(reaction: reaction)
-                    }
-                }
-
-                if message.role == "system" {
-                    Text("System")
-                        .font(.caption2)
-                        .foregroundStyle(PAXTheme.textTertiary)
-                }
-            }
-
-            if !isOutgoing { Spacer(minLength: 48) }
-        }
-    }
-
-    private var isOutgoing: Bool { message.role == "admin" }
-
-    private var bubbleColor: Color {
-        switch message.role {
-        case "user": return PAXTheme.userBubble
-        case "admin": return PAXTheme.adminBubble
-        case "system": return PAXTheme.systemBubble
-        default: return PAXTheme.userBubble
-        }
+    private func handlePhotoSelection(_ item: PhotosPickerItem?) async {
+        guard let item,
+              let data = try? await item.loadTransferable(type: Data.self) else { return }
+        await thread.sendImage(auth: auth, imageData: data, filename: "photo.jpg")
+        photoItem = nil
     }
 }
 
+// Reuse existing small components from prior ChatView
 struct MessageReactionBadge: View {
     let reaction: String
-
     var body: some View {
         Image(systemName: reaction == "like" ? "heart.fill" : "hand.thumbsdown.fill")
-            .font(.caption)
+            .font(.caption2)
             .foregroundStyle(reaction == "like" ? .pink : .orange)
-            .padding(6)
-            .background(
-                Circle()
-                    .fill(PAXTheme.surfaceElevated)
-                    .overlay(Circle().stroke(PAXTheme.border, lineWidth: 1))
-            )
-            .accessibilityLabel(reaction == "like" ? "Gefällt mir" : "Gefällt mir nicht")
+            .padding(5)
+            .background(Circle().fill(PAXTheme.surfaceElevated))
     }
 }
 
 struct SessionRatingBadge: View {
     let rating: Int
-
     init?(rating: Int) {
         guard rating == 5 || rating == 1 else { return nil }
         self.rating = rating
     }
-
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: rating == 5 ? "heart.fill" : "hand.thumbsdown.fill")
-                .font(.caption2)
-            Text(rating == 5 ? "Gefällt mir" : "Gefällt mir nicht")
-                .font(.caption2.weight(.medium))
-        }
-        .foregroundStyle(rating == 5 ? .pink : .orange)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(
-            Capsule()
-                .fill((rating == 5 ? Color.pink : Color.orange).opacity(0.12))
-        )
-        .accessibilityLabel("Kundenbewertung")
+        Image(systemName: rating == 5 ? "heart.fill" : "hand.thumbsdown.fill")
+            .font(.caption2)
+            .foregroundStyle(rating == 5 ? .pink : .orange)
     }
 }
 
 private struct AssistChipRow<Content: View>: View {
     @ViewBuilder let content: Content
-
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                content
-            }
+            HStack(spacing: 6) { content }
         }
     }
 }
@@ -356,24 +305,13 @@ private struct AssistChip: View {
     let title: String
     let subtitle: String
     let action: () -> Void
-
     var body: some View {
-        Button {
-            PAXHaptics.light()
-            action()
-        } label: {
+        Button(action: action) {
             Text(title)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(PAXTheme.textPrimary)
-                .lineLimit(2)
-                .multilineTextAlignment(.leading)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    Capsule()
-                        .fill(PAXTheme.surfaceElevated)
-                        .overlay(Capsule().stroke(PAXTheme.border, lineWidth: 1))
-                )
+                .font(.caption2.weight(.medium))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(PAXTheme.surfaceElevated))
         }
         .buttonStyle(.plain)
         .accessibilityHint(subtitle)
@@ -382,29 +320,20 @@ private struct AssistChip: View {
 
 private struct TypingIndicator: View {
     @State private var animate = false
-
     var body: some View {
-        HStack(spacing: 8) {
-            HStack(spacing: 5) {
-                ForEach(0..<3, id: \.self) { index in
-                    Circle()
-                        .fill(PAXTheme.textSecondary)
-                        .frame(width: 7, height: 7)
-                        .opacity(animate ? 1 : 0.25)
-                        .animation(
-                            .easeInOut(duration: 0.45)
-                                .repeatForever(autoreverses: true)
-                                .delay(Double(index) * 0.12),
-                            value: animate
-                        )
+        HStack(spacing: 6) {
+            HStack(spacing: 4) {
+                ForEach(0..<3, id: \.self) { i in
+                    Circle().fill(PAXTheme.textSecondary).frame(width: 5, height: 5)
+                        .opacity(animate ? 1 : 0.3)
+                        .animation(.easeInOut(duration: 0.45).repeatForever().delay(Double(i) * 0.12), value: animate)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
             .background(Capsule().fill(PAXTheme.userBubble))
-
             Text("Kunde schreibt …")
-                .font(.caption)
+                .font(.caption2)
                 .foregroundStyle(PAXTheme.textSecondary)
         }
         .onAppear { animate = true }
@@ -415,9 +344,14 @@ private extension ChatThreadModel {
     var handlerLabel: String {
         switch handler {
         case "live_request": return "Live-Anfrage"
-        case "admin": return "Sie chatten aktiv"
+        case "admin": return "Aktiv"
         case "closed": return "Geschlossen"
         default: return "KI aktiv"
         }
     }
+}
+
+private struct ImageViewerItem: Identifiable {
+    let id = UUID()
+    let url: URL
 }

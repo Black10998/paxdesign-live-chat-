@@ -103,42 +103,39 @@ struct MainShellView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
     @State private var navigationPath = NavigationPath()
-    @State private var showSettings = false
+    @State private var selectedTab = 0
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            SessionListView(onOpenSession: openSession)
-                .navigationDestination(for: String.self) { sessionId in
-                    ChatView(sessionId: sessionId)
-                }
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showSettings = true
-                        } label: {
-                            ProfileAvatarView(size: 34)
-                        }
+        TabView(selection: $selectedTab) {
+            NavigationStack(path: $navigationPath) {
+                SessionListView(onOpenSession: openSession)
+                    .navigationDestination(for: String.self) { sessionId in
+                        ChatView(sessionId: sessionId)
                     }
-                }
-                .sheet(isPresented: $showSettings) {
-                    NavigationStack {
-                        SettingsView()
-                    }
-                }
+            }
+            .tabItem {
+                Label("Chats", systemImage: "bubble.left.and.bubble.right")
+            }
+            .tag(0)
+
+            NavigationStack {
+                AccountHubView()
+            }
+            .tabItem {
+                Label("Konto", systemImage: "person.crop.circle")
+            }
+            .tag(1)
         }
         .onChange(of: coordinator.activeSessionId) { sessionId in
             guard let sessionId else { return }
+            selectedTab = 0
             openSession(sessionId)
         }
     }
 
     private func openSession(_ sessionId: String) {
         coordinator.acknowledgeIncomingRequest(sessionId)
-        if navigationPath.isEmpty {
-            navigationPath.append(sessionId)
-        } else {
-            navigationPath = NavigationPath()
-            navigationPath.append(sessionId)
-        }
+        navigationPath = NavigationPath()
+        navigationPath.append(sessionId)
     }
 }

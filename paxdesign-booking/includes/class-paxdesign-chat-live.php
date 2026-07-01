@@ -1468,13 +1468,41 @@ class PAXdesign_Chat_Live {
             wp_send_json_error(array('message' => 'Kein Bild übermittelt.'), 400);
         }
 
-        if (!$this->is_admin_handler($session_id)) {
-            wp_send_json_error(array('message' => 'Chat nicht übernommen.'), 409);
+        $caption  = isset($_POST['caption']) ? sanitize_textarea_field(wp_unslash($_POST['caption'])) : '';
+        $reply_to = isset($_POST['reply_to']) ? (int) $_POST['reply_to'] : 0;
+        $result   = $this->admin_send_image($session_id, $_FILES['image'], $caption, $reply_to);
+
+        if (is_wp_error($result)) {
+            $status = 500;
+            $data   = $result->get_error_data();
+            if (is_array($data) && isset($data['status'])) {
+                $status = (int) $data['status'];
+            }
+            wp_send_json_error(array('message' => $result->get_error_message()), $status);
         }
 
-        $file = $_FILES['image'];
+        wp_send_json_success($result);
+    }
+
+    /**
+     * Admin image upload (shared by browser AJAX + mobile REST).
+     *
+     * @param array<string, mixed> $file $_FILES-style upload array
+     * @return array{message: array<string, mixed>}|WP_Error
+     */
+    public function admin_send_image($session_id, array $file, $caption = '', $reply_to = 0) {
+        $session_id = $this->sanitize_session_id($session_id);
+
+        if ($session_id === '' || empty($file)) {
+            return new WP_Error('invalid_payload', 'Kein Bild übermittelt.', array('status' => 400));
+        }
+
+        if (!$this->is_admin_handler($session_id)) {
+            return new WP_Error('not_admin', 'Chat nicht übernommen.', array('status' => 409));
+        }
+
         if (!empty($file['error'])) {
-            wp_send_json_error(array('message' => 'Upload fehlgeschlagen.'), 400);
+            return new WP_Error('upload_failed', 'Upload fehlgeschlagen.', array('status' => 400));
         }
 
         $allowed = array(
@@ -1484,13 +1512,14 @@ class PAXdesign_Chat_Live {
             'gif'          => 'image/gif',
         );
 
-        $check = wp_check_filetype($file['name'], $allowed);
+        $name = isset($file['name']) ? (string) $file['name'] : 'image.jpg';
+        $check = wp_check_filetype($name, $allowed);
         if (empty($check['type']) || !in_array($check['type'], array_values($allowed), true)) {
-            wp_send_json_error(array('message' => 'Nur JPG, PNG, WebP oder GIF erlaubt.'), 400);
+            return new WP_Error('invalid_type', 'Nur JPG, PNG, WebP oder GIF erlaubt.', array('status' => 400));
         }
 
         if (!empty($file['size']) && (int) $file['size'] > 8 * 1024 * 1024) {
-            wp_send_json_error(array('message' => 'Bild ist zu groß (max. 8 MB).'), 400);
+            return new WP_Error('too_large', 'Bild ist zu groß (max. 8 MB).', array('status' => 400));
         }
 
         require_once ABSPATH . 'wp-admin/includes/file.php';
@@ -1499,26 +1528,25 @@ class PAXdesign_Chat_Live {
 
         $upload = wp_handle_upload($file, array('test_form' => false, 'mimes' => $allowed));
         if (!empty($upload['error'])) {
-            wp_send_json_error(array('message' => $upload['error']), 500);
+            return new WP_Error('upload_failed', $upload['error'], array('status' => 500));
         }
 
         $image_url = $this->optimize_chat_image($upload['file'], $upload['url']);
-
-        $caption  = isset($_POST['caption']) ? sanitize_textarea_field(wp_unslash($_POST['caption'])) : '';
-        $reply_to = isset($_POST['reply_to']) ? (int) $_POST['reply_to'] : 0;
-        $extra    = array('image_url' => $image_url);
+        $caption   = sanitize_textarea_field((string) $caption);
+        $reply_to  = (int) $reply_to;
+        $extra     = array('image_url' => $image_url);
         if ($reply_to > 0) {
             $extra['reply_to'] = $reply_to;
         }
 
         $entry = $this->append_message($session_id, 'admin', $caption, $extra);
         if (!$entry) {
-            wp_send_json_error(array('message' => 'Speichern fehlgeschlagen.'), 500);
+            return new WP_Error('save_failed', 'Speichern fehlgeschlagen.', array('status' => 500));
         }
 
         $this->clear_typing($session_id, 'admin');
 
-        wp_send_json_success(array('message' => $entry));
+        return array('message' => $entry);
     }
 
     /**

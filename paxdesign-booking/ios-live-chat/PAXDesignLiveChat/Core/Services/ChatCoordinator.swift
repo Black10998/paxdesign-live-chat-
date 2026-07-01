@@ -223,6 +223,7 @@ final class ChatThreadModel: ObservableObject {
     @Published var draft = ""
     @Published var isSending = false
     @Published var errorMessage: String?
+    @Published var replyToMessage: LiveMessage?
     @Published var quickReplies: [QuickReply] = []
     @Published var aiSuggestions: [String] = []
     @Published var suggestionsLoading = false
@@ -364,6 +365,14 @@ final class ChatThreadModel: ObservableObject {
         draft = text
     }
 
+    func setReply(to message: LiveMessage) {
+        replyToMessage = message
+    }
+
+    func clearReply() {
+        replyToMessage = nil
+    }
+
     func fetchSuggestions(messageId: Int) {
         guard handler == "admin", messageId > 0 else { return }
         if suggestionsForMessageId == messageId && !aiSuggestions.isEmpty { return }
@@ -430,13 +439,38 @@ final class ChatThreadModel: ObservableObject {
         await notifyTypingStop(auth: auth)
         isSending = true
         defer { isSending = false }
+        let replyId = replyToMessage?.id
         do {
-            let msg = try await api.sendMessage(sessionId, text: text)
+            let msg = try await api.sendMessage(sessionId, text: text, replyTo: replyId)
             draft = ""
+            clearReply()
             messages.append(msg)
             knownMessageIds.insert(msg.id)
             pollSeq = max(pollSeq, msg.id)
             clearSuggestions()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func sendImage(auth: AuthStore, imageData: Data, filename: String) async {
+        guard let api = auth.api else { return }
+        isSending = true
+        defer { isSending = false }
+        let replyId = replyToMessage?.id
+        do {
+            let msg = try await api.sendImage(
+                sessionId,
+                imageData: imageData,
+                filename: filename,
+                caption: draft.trimmingCharacters(in: .whitespacesAndNewlines),
+                replyTo: replyId
+            )
+            draft = ""
+            clearReply()
+            messages.append(msg)
+            knownMessageIds.insert(msg.id)
+            pollSeq = max(pollSeq, msg.id)
         } catch {
             errorMessage = error.localizedDescription
         }

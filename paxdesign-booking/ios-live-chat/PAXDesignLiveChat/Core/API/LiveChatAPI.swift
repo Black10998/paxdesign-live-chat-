@@ -233,14 +233,69 @@ final class LiveChatAPI {
         _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "release", as: EmptyResponse.self)
     }
 
-    func sendMessage(_ sessionId: String, text: String) async throws -> LiveMessage {
+    func sendMessage(_ sessionId: String, text: String, replyTo: Int? = nil) async throws -> LiveMessage {
         guard let url = liveAdminURL(path: "sessions/\(sessionId)/messages") else {
             throw LiveChatAPIError.invalidURL
         }
-        let body = try JSONEncoder().encode(["message": text])
+        var payload: [String: Any] = ["message": text]
+        if let replyTo, replyTo > 0 {
+            payload["reply_to"] = replyTo
+        }
+        let body = try JSONSerialization.data(withJSONObject: payload)
         struct SendResponse: Codable { let message: LiveMessage }
         let response: SendResponse = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "send", as: SendResponse.self)
         return response.message
+    }
+
+    func sendImage(
+        _ sessionId: String,
+        imageData: Data,
+        filename: String,
+        caption: String = "",
+        replyTo: Int? = nil
+    ) async throws -> LiveMessage {
+        guard let url = liveAdminURL(path: "sessions/\(sessionId)/images") else {
+            throw LiveChatAPIError.invalidURL
+        }
+
+        let boundary = "PAXBoundary\(UUID().uuidString)"
+        var body = Data()
+        let mime = mimeType(for: filename)
+
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n".data(using: .utf8)!)
+
+        if !caption.isEmpty {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"caption\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(caption)\r\n".data(using: .utf8)!)
+        }
+
+        if let replyTo, replyTo > 0 {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"reply_to\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(replyTo)\r\n".data(using: .utf8)!)
+        }
+
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        var request = authRequest(url: url, method: "POST", body: body)
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        struct SendResponse: Codable { let message: LiveMessage }
+        let response: SendResponse = try await perform(request, endpoint: "send-image", as: SendResponse.self)
+        return response.message
+    }
+
+    private func mimeType(for filename: String) -> String {
+        let lower = filename.lowercased()
+        if lower.hasSuffix(".png") { return "image/png" }
+        if lower.hasSuffix(".gif") { return "image/gif" }
+        if lower.hasSuffix(".webp") { return "image/webp" }
+        return "image/jpeg"
     }
 
     func setTyping(_ sessionId: String, stop: Bool = false) async throws {

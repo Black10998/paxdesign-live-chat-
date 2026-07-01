@@ -135,7 +135,7 @@ struct SettingsView: View {
 
     private var aboutSection: some View {
         Section("App") {
-            LabeledContent("Version", value: "1.4.1")
+            LabeledContent("Version", value: "1.5.0")
             LabeledContent("Plugin", value: auth.profile?.pluginVer ?? "—")
         }
     }

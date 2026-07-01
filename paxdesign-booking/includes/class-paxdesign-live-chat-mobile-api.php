@@ -175,6 +175,12 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => $auth,
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions/(?P<id>[a-zA-Z0-9_\-]+)/images', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_send_image'),
+            'permission_callback' => $auth,
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions/(?P<id>[a-zA-Z0-9_\-]+)/typing', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'route_typing'),
@@ -302,6 +308,24 @@ class PAXdesign_Live_Chat_Mobile_API {
         $message  = isset($params['message']) ? $params['message'] : $request->get_param('message');
         $reply_to = isset($params['reply_to']) ? $params['reply_to'] : $request->get_param('reply_to');
         return self::respond(self::live()->admin_send_message($request['id'], $message, $reply_to));
+    }
+
+    public static function route_send_image(WP_REST_Request $request) {
+        $files = $request->get_file_params();
+        if (empty($files['image'])) {
+            return new WP_Error('invalid_payload', 'Kein Bild übermittelt.', array('status' => 400));
+        }
+
+        $params   = $request->get_body_params();
+        $caption  = isset($params['caption']) ? $params['caption'] : $request->get_param('caption');
+        $reply_to = isset($params['reply_to']) ? $params['reply_to'] : $request->get_param('reply_to');
+
+        return self::respond(self::live()->admin_send_image(
+            $request['id'],
+            $files['image'],
+            $caption,
+            $reply_to
+        ));
     }
 
     public static function route_typing(WP_REST_Request $request) {
