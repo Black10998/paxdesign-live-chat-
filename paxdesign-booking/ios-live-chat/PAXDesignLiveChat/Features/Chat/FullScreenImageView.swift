@@ -6,35 +6,36 @@ struct FullScreenImageView: View {
     @State private var scale: CGFloat = 1
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                Color.black.ignoresSafeArea()
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFit()
-                            .scaleEffect(scale)
-                            .gesture(
-                                MagnificationGesture()
-                                    .onChanged { value in scale = max(1, value) }
-                                    .onEnded { _ in withAnimation(PAXTheme.quickSpring) { scale = 1 } }
-                            )
-                    case .failure:
-                        ContentUnavailableView("Bild nicht verfügbar", systemImage: "photo")
-                    default:
-                        ProgressView().tint(.white)
-                    }
+        ZStack(alignment: .topTrailing) {
+            Color.black.ignoresSafeArea()
+
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .scaleEffect(scale)
+                        .gesture(
+                            MagnificationGesture()
+                                .onChanged { value in scale = max(1, value) }
+                                .onEnded { _ in withAnimation(PAXTheme.quickSpring) { scale = 1 } }
+                        )
+                case .failure:
+                    Text("Bild nicht verfügbar")
+                        .foregroundStyle(.white.opacity(0.7))
+                default:
+                    ProgressView().tint(.white)
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Schließen") { dismiss() }
-                        .foregroundStyle(.white)
-                }
-            }
+            .padding(.top, 48)
+
+            Button("Schließen") { dismiss() }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .padding(.top, 8)
         }
     }
 }
