@@ -15,8 +15,8 @@ Production real-time customer support: WordPress plugin with browser admin panel
 
 | Component | Version |
 |-----------|---------|
-| WordPress plugin | **3.48.0** |
-| iOS app | **1.5.0** (build 13) |
+| WordPress plugin | **3.49.0** |
+| iOS app | **1.6.0** (build 14) |
 
 ## Releases
 

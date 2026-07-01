@@ -1,15 +1,18 @@
 import SwiftUI
 
 enum PAXMessageStyle {
-    static let bubbleRadius: CGFloat = 18
-    static let bubblePaddingH: CGFloat = 12
-    static let bubblePaddingV: CGFloat = 8
-    static let rowSpacing: CGFloat = 4
-    static let threadSpacing: CGFloat = 2
-    static let maxBubbleWidthRatio: CGFloat = 0.76
-    static let imageMaxHeight: CGFloat = 220
-    static let imageCornerRadius: CGFloat = 14
-    static let quoteHeight: CGFloat = 44
+    static let bubbleRadius: CGFloat = 17
+    static let bubblePaddingH: CGFloat = 11
+    static let bubblePaddingV: CGFloat = 7
+    static let rowSpacing: CGFloat = 3
+    static let threadSpacing: CGFloat = 1
+    static let maxBubbleWidthRatio: CGFloat = 0.74
+    static let imageMaxWidth: CGFloat = 210
+    static let imageMaxHeight: CGFloat = 200
+    static let imageCornerRadius: CGFloat = 12
+    static let quoteHeight: CGFloat = 40
+    static let tailWidth: CGFloat = 6
+    static let tailHeight: CGFloat = 10
 
     static func bubbleColor(role: String, isOutgoing: Bool) -> Color {
         if isOutgoing { return PAXTheme.adminBubble }

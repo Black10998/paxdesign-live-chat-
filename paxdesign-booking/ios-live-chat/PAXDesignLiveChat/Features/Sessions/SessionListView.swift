@@ -51,7 +51,7 @@ struct SessionListView: View {
                         }
                         .buttonStyle(PAXPressButtonStyle())
                         .opacity(session.isClosed ? 0.56 : 1)
-                        .listRowInsets(EdgeInsets(top: 7, leading: 0, bottom: 7, trailing: 0))
+                        .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -191,7 +191,7 @@ private struct SessionCard: View {
             ZStack {
                 Circle()
                     .fill(statusColor.opacity(0.14))
-                    .frame(width: 48, height: 48)
+                    .frame(width: 44, height: 44)
                 Image(systemName: session.isLiveRequest ? "person.wave.2.fill" : "person.fill")
                     .foregroundStyle(statusColor)
             }
@@ -226,7 +226,7 @@ private struct SessionCard: View {
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(PAXTheme.textTertiary)
         }
-        .padding(16)
+        .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .fill(session.isClosed ? PAXTheme.surface.opacity(0.72) : PAXTheme.surface.opacity(0.94))

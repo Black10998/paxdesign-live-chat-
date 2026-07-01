@@ -31,11 +31,24 @@ struct ChatView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: PAXMessageStyle.threadSpacing) {
-                        ForEach(thread.messages) { message in
+                        ForEach(Array(thread.messages.enumerated()), id: \.element.id) { index, message in
+                            let previous = index > 0 ? thread.messages[index - 1] : nil
+                            let next = index + 1 < thread.messages.count ? thread.messages[index + 1] : nil
+
+                            if MessageTimeFormatter.shouldShowDayHeader(current: message, previous: previous),
+                               let header = MessageTimeFormatter.dayHeader(from: message.ts) {
+                                Text(header)
+                                    .font(.caption2.weight(.medium))
+                                    .foregroundStyle(PAXTheme.textTertiary)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 8)
+                            }
+
                             MessageBubbleView(
                                 message: message,
                                 quotedMessage: quotedMessage(for: message),
                                 canReply: thread.handler == "admin" && message.role != "system",
+                                showTimestamp: MessageTimeFormatter.shouldShowTimestamp(current: message, next: next),
                                 onReply: { thread.setReply(to: message) },
                                 onCopy: { copyMessage(message) },
                                 onImageTap: { imageViewer = ImageViewerItem(url: $0) }
@@ -261,8 +274,9 @@ struct ChatView: View {
 
     private func handlePhotoSelection(_ item: PhotosPickerItem?) async {
         guard let item,
-              let data = try? await item.loadTransferable(type: Data.self) else { return }
-        await thread.sendImage(auth: auth, imageData: data, filename: "photo.jpg")
+              let raw = try? await item.loadTransferable(type: Data.self),
+              let prepared = ImageUploadPreprocessor.prepareForUpload(raw) else { return }
+        await thread.sendImage(auth: auth, imageData: prepared.data, filename: prepared.filename)
         photoItem = nil
     }
 }

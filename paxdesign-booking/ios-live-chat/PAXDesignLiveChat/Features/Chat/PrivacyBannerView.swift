@@ -9,7 +9,7 @@ struct PrivacyBannerView: View {
                 .font(.caption)
                 .foregroundStyle(PAXTheme.success)
 
-            Text("Unterhaltungen sind TLS-verschlüsselt und sicher übertragen.")
+            Text("Unterhaltungen sind TLS-verschlüsselt. Nachrichten werden sicher übertragen.")
                 .font(.caption2)
                 .foregroundStyle(PAXTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)

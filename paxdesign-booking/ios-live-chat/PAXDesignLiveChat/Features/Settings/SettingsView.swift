@@ -135,7 +135,7 @@ struct SettingsView: View {
 
     private var aboutSection: some View {
         Section("App") {
-            LabeledContent("Version", value: "1.5.0")
+            LabeledContent("Version", value: PAXAppInfo.fullVersion)
             LabeledContent("Plugin", value: auth.profile?.pluginVer ?? "—")
         }
     }

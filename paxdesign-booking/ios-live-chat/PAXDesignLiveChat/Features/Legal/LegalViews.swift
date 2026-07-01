@@ -26,6 +26,19 @@ struct LegalDocumentView: View {
     }
 }
 
+struct SecurityView: View {
+    var body: some View {
+        LegalDocumentView(title: "Sicherheit", sections: [
+            ("Transportverschlüsselung", "Alle API-Anfragen erfolgen ausschließlich über HTTPS (TLS 1.2+). Ungesicherte Verbindungen werden nicht zugelassen."),
+            ("Anmeldedaten", "Das Application Password wird im iOS-Schlüsselbund gespeichert (kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly) und verlässt das Gerät nicht im Klartext."),
+            ("Geräteschutz", "Nutzen Sie Face ID, Touch ID oder einen Gerätecode. Die App speichert keine zusätzlichen Passwörter außerhalb des Schlüsselbundes."),
+            ("Kein Tracking", "Die App enthält keine Werbe-SDKs, kein Cross-App-Tracking und keine Third-Party-Analytics."),
+            ("Ende-zu-Ende", "Eine zusätzliche Ende-zu-Ende-Verschlüsselung ist nicht implementiert. Nachrichten werden serverseitig für den Support-Workflow gespeichert — analog zum Browser-Admin-Panel."),
+            ("Empfehlung", "Halten Sie iOS aktuell, melden Sie sich auf gemeinsam genutzten Geräten ab und widerrufen Sie Application Passwords in WordPress bei Verlust des Geräts."),
+        ])
+    }
+}
+
 struct PrivacyPolicyView: View {
     var body: some View {
         LegalDocumentView(title: "Datenschutz", sections: [
@@ -80,8 +93,8 @@ struct AboutView: View {
                     .multilineTextAlignment(.center)
 
                 VStack(spacing: 8) {
-                    LabeledContent("App-Version", value: "1.5.0")
-                    LabeledContent("Build", value: "13")
+                    LabeledContent("App-Version", value: PAXAppInfo.marketingVersion)
+                    LabeledContent("Build", value: PAXAppInfo.buildNumber)
                     LabeledContent("Bundle-ID", value: "at.paxdesign.livechat")
                 }
                 .padding()

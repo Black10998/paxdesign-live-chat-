@@ -39,6 +39,11 @@ struct AccountHubView: View {
 
             Section("Rechtliches") {
                 NavigationLink {
+                    SecurityView()
+                } label: {
+                    Label("Sicherheit", systemImage: "lock.shield")
+                }
+                NavigationLink {
                     PrivacyPolicyView()
                 } label: {
                     Label("Datenschutzerklärung", systemImage: "hand.raised")

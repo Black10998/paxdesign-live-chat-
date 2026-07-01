@@ -4,15 +4,18 @@ struct MessageBubbleView: View {
     let message: LiveMessage
     let quotedMessage: LiveMessage?
     let canReply: Bool
+    let showTimestamp: Bool
     let onReply: () -> Void
     let onCopy: () -> Void
     let onImageTap: (URL) -> Void
 
-    var body: some View {
-        HStack(alignment: .bottom, spacing: 6) {
-            if isOutgoing { Spacer(minLength: 56) }
+    @State private var appeared = false
 
-            VStack(alignment: isOutgoing ? .trailing : .leading, spacing: 4) {
+    var body: some View {
+        HStack(alignment: .bottom, spacing: 4) {
+            if isOutgoing { Spacer(minLength: 52) }
+
+            VStack(alignment: isOutgoing ? .trailing : .leading, spacing: 3) {
                 bubbleContent
                     .contextMenu {
                         if !message.content.isEmpty {
@@ -20,6 +23,10 @@ struct MessageBubbleView: View {
                                 onCopy()
                             } label: {
                                 Label("Kopieren", systemImage: "doc.on.doc")
+                            }
+
+                            ShareLink(item: message.content) {
+                                Label("Teilen", systemImage: "square.and.arrow.up")
                             }
                         }
                         if canReply {
@@ -31,69 +38,109 @@ struct MessageBubbleView: View {
                         }
                     }
 
-                if let reaction = message.reaction {
-                    MessageReactionBadge(reaction: reaction)
+                HStack(spacing: 6) {
+                    if let reaction = message.reaction {
+                        MessageReactionBadge(reaction: reaction)
+                    }
+                    if showTimestamp, let time = MessageTimeFormatter.timeString(from: message.ts) {
+                        Text(time)
+                            .font(.caption2)
+                            .foregroundStyle(PAXTheme.textTertiary)
+                    }
                 }
             }
 
-            if !isOutgoing { Spacer(minLength: 56) }
+            if !isOutgoing { Spacer(minLength: 52) }
+        }
+        .opacity(appeared ? 1 : 0)
+        .offset(y: appeared ? 0 : 6)
+        .onAppear {
+            withAnimation(PAXTheme.quickSpring) { appeared = true }
         }
     }
 
     @ViewBuilder
     private var bubbleContent: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if let quotedMessage {
-                QuotePreviewView(message: quotedMessage)
+        HStack(alignment: .bottom, spacing: 0) {
+            if !isOutgoing {
+                BubbleTail(isOutgoing: false)
             }
 
-            if let imageUrl = message.imageUrl, let url = URL(string: imageUrl) {
-                Button {
-                    onImageTap(url)
-                } label: {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image
-                                .resizable()
-                                .scaledToFill()
-                        case .failure:
-                            Image(systemName: "photo")
-                                .font(.title2)
-                                .foregroundStyle(PAXTheme.textTertiary)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        default:
-                            ProgressView()
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        }
-                    }
-                    .frame(maxWidth: 220, maxHeight: PAXMessageStyle.imageMaxHeight)
-                    .clipShape(RoundedRectangle(cornerRadius: PAXMessageStyle.imageCornerRadius, style: .continuous))
+            VStack(alignment: .leading, spacing: 5) {
+                if let quotedMessage {
+                    QuotePreviewView(message: quotedMessage)
                 }
-                .buttonStyle(.plain)
-            }
 
-            if !message.content.isEmpty {
-                Text(message.content)
-                    .font(.subheadline)
-                    .foregroundStyle(PAXTheme.textPrimary)
-                    .multilineTextAlignment(.leading)
-            } else if message.imageUrl != nil {
-                Text("Bild")
-                    .font(.caption)
-                    .foregroundStyle(PAXTheme.textSecondary)
+                if let imageUrl = message.imageUrl, let url = URL(string: imageUrl) {
+                    ChatThumbnailImage(url: url) {
+                        onImageTap(url)
+                    }
+                }
+
+                if !message.content.isEmpty {
+                    Text(message.content)
+                        .font(.subheadline)
+                        .foregroundStyle(PAXTheme.textPrimary)
+                        .multilineTextAlignment(.leading)
+                } else if message.imageUrl != nil {
+                    Text("Bild")
+                        .font(.caption)
+                        .foregroundStyle(PAXTheme.textSecondary)
+                }
+            }
+            .padding(.horizontal, PAXMessageStyle.bubblePaddingH)
+            .padding(.vertical, PAXMessageStyle.bubblePaddingV)
+            .background(
+                RoundedRectangle(cornerRadius: PAXMessageStyle.bubbleRadius, style: .continuous)
+                    .fill(PAXMessageStyle.bubbleColor(role: message.role, isOutgoing: isOutgoing))
+            )
+            .frame(
+                maxWidth: UIScreen.main.bounds.width * PAXMessageStyle.maxBubbleWidthRatio,
+                alignment: isOutgoing ? .trailing : .leading
+            )
+
+            if isOutgoing {
+                BubbleTail(isOutgoing: true)
             }
         }
-        .padding(.horizontal, PAXMessageStyle.bubblePaddingH)
-        .padding(.vertical, PAXMessageStyle.bubblePaddingV)
-        .background(
-            RoundedRectangle(cornerRadius: PAXMessageStyle.bubbleRadius, style: .continuous)
-                .fill(PAXMessageStyle.bubbleColor(role: message.role, isOutgoing: isOutgoing))
-        )
-        .frame(maxWidth: UIScreen.main.bounds.width * PAXMessageStyle.maxBubbleWidthRatio, alignment: isOutgoing ? .trailing : .leading)
     }
 
     private var isOutgoing: Bool { message.role == "admin" }
+}
+
+private struct BubbleTail: View {
+    let isOutgoing: Bool
+
+    var body: some View {
+        BubbleTailShape(isOutgoing: isOutgoing)
+            .fill(PAXMessageStyle.bubbleColor(role: isOutgoing ? "admin" : "user", isOutgoing: isOutgoing))
+            .frame(width: PAXMessageStyle.tailWidth, height: PAXMessageStyle.tailHeight)
+            .offset(x: isOutgoing ? 1 : -1, y: 2)
+    }
+}
+
+private struct BubbleTailShape: Shape {
+    let isOutgoing: Bool
+
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        if isOutgoing {
+            path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.addQuadCurve(
+                to: CGPoint(x: rect.maxX, y: rect.minY),
+                control: CGPoint(x: rect.minX, y: rect.minY)
+            )
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        } else {
+            path.move(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addQuadCurve(
+                to: CGPoint(x: rect.minX, y: rect.minY),
+                control: CGPoint(x: rect.maxX, y: rect.minY)
+            )
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        }
+        return path
+    }
 }
 
 private struct QuotePreviewView: View {
@@ -115,10 +162,10 @@ private struct QuotePreviewView: View {
                     .lineLimit(2)
             }
         }
-        .padding(8)
+        .padding(7)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.black.opacity(0.18))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(Color.black.opacity(0.16))
+        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
     }
 
     private var previewText: String {
@@ -136,7 +183,7 @@ struct ReplyBarView: View {
         HStack(spacing: 10) {
             RoundedRectangle(cornerRadius: 2)
                 .fill(PAXTheme.accent)
-                .frame(width: 3, height: 36)
+                .frame(width: 3, height: 34)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Antwort auf \(message.role == "admin" ? "Sie" : "Kunde")")
@@ -156,8 +203,8 @@ struct ReplyBarView: View {
             }
             .buttonStyle(.plain)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
         .background(PAXTheme.surface.opacity(0.95))
     }
 }
