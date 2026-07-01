@@ -1384,26 +1384,24 @@ class PAXdesign_Chat_Live {
 
     /**
      * AI-assisted reply suggestions for admin (never sent to customer automatically).
+     *
+     * @return array{suggestions: array<int, string>, message_id: int}|WP_Error
      */
-    public function handle_admin_suggestions() {
-        $this->verify_admin_nonce();
-
-        $session_id = $this->sanitize_session_id(
-            isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
-        );
-        $message_id = isset($_POST['message_id']) ? (int) $_POST['message_id'] : 0;
+    public function admin_get_suggestions($session_id, $message_id) {
+        $session_id = $this->sanitize_session_id($session_id);
+        $message_id = (int) $message_id;
 
         if ($session_id === '' || $message_id <= 0) {
-            wp_send_json_error(array('message' => 'Ungültige Anfrage.'), 400);
+            return new WP_Error('invalid_request', 'Ungültige Anfrage.', array('status' => 400));
         }
 
         if (!$this->is_admin_handler($session_id)) {
-            wp_send_json_error(array('message' => 'Chat nicht übernommen.'), 409);
+            return new WP_Error('not_admin', 'Chat nicht übernommen.', array('status' => 409));
         }
 
         $row = $this->get_session_row($session_id);
         if (!$row) {
-            wp_send_json_error(array('message' => 'Session nicht gefunden.'), 404);
+            return new WP_Error('not_found', 'Session nicht gefunden.', array('status' => 404));
         }
 
         $messages = $this->sort_messages($this->decode_messages($row->messages));
@@ -1416,7 +1414,7 @@ class PAXdesign_Chat_Live {
         }
 
         if (!$target || ($target['role'] ?? '') !== 'user') {
-            wp_send_json_error(array('message' => 'Kundennachricht nicht gefunden.'), 404);
+            return new WP_Error('message_not_found', 'Kundennachricht nicht gefunden.', array('status' => 404));
         }
 
         $chat = PAXdesign_Chat::get_instance();
@@ -1426,13 +1424,37 @@ class PAXdesign_Chat_Live {
         ));
 
         if (is_wp_error($result)) {
-            wp_send_json_error(array('message' => $result->get_error_message()), 500);
+            return $result;
         }
 
-        wp_send_json_success(array(
+        return array(
             'suggestions' => $result,
             'message_id'  => $message_id,
-        ));
+        );
+    }
+
+    /**
+     * AI-assisted reply suggestions for admin (never sent to customer automatically).
+     */
+    public function handle_admin_suggestions() {
+        $this->verify_admin_nonce();
+
+        $session_id = $this->sanitize_session_id(
+            isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
+        );
+        $message_id = isset($_POST['message_id']) ? (int) $_POST['message_id'] : 0;
+
+        $result = $this->admin_get_suggestions($session_id, $message_id);
+        if (is_wp_error($result)) {
+            $status = 500;
+            $data   = $result->get_error_data();
+            if (is_array($data) && isset($data['status'])) {
+                $status = (int) $data['status'];
+            }
+            wp_send_json_error(array('message' => $result->get_error_message()), $status);
+        }
+
+        wp_send_json_success($result);
     }
 
     public function handle_admin_image() {

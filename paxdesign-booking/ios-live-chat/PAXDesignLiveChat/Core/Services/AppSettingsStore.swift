@@ -14,6 +14,9 @@ final class AppSettingsStore: ObservableObject {
     @Published var messageSoundEnabled: Bool {
         didSet { UserDefaults.standard.set(messageSoundEnabled, forKey: Keys.messageSound) }
     }
+    @Published var typingSoundEnabled: Bool {
+        didSet { UserDefaults.standard.set(typingSoundEnabled, forKey: Keys.typingSound) }
+    }
     @Published var ringtoneVolume: Float {
         didSet { UserDefaults.standard.set(ringtoneVolume, forKey: Keys.volume) }
     }
@@ -25,6 +28,7 @@ final class AppSettingsStore: ObservableObject {
         static let notifications = "pax.settings.notifications"
         static let incomingSound = "pax.settings.incomingSound"
         static let messageSound = "pax.settings.messageSound"
+        static let typingSound = "pax.settings.typingSound"
         static let volume = "pax.settings.ringVolume"
         static let profileImage = "pax.settings.profileImage"
     }
@@ -34,6 +38,7 @@ final class AppSettingsStore: ObservableObject {
         notificationsEnabled = defaults.object(forKey: Keys.notifications) as? Bool ?? true
         incomingCallSoundEnabled = defaults.object(forKey: Keys.incomingSound) as? Bool ?? true
         messageSoundEnabled = defaults.object(forKey: Keys.messageSound) as? Bool ?? true
+        typingSoundEnabled = defaults.object(forKey: Keys.typingSound) as? Bool ?? true
         ringtoneVolume = defaults.object(forKey: Keys.volume) as? Float ?? 0.9
         profileImageData = defaults.data(forKey: Keys.profileImage)
     }

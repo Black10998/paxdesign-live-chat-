@@ -294,6 +294,23 @@ final class LiveChatAPI {
         _ = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "typing", as: EmptyResponse.self)
     }
 
+    func fetchQuickReplies() async throws -> QuickRepliesResponse {
+        guard let url = liveAdminURL(path: "quick-replies") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "quick-replies", as: QuickRepliesResponse.self)
+    }
+
+    func fetchSuggestions(sessionId: String, messageId: Int) async throws -> SuggestionsResponse {
+        guard let url = liveAdminURL(
+            path: "sessions/\(sessionId)/suggestions",
+            query: [URLQueryItem(name: "message_id", value: String(messageId))]
+        ) else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "suggestions", as: SuggestionsResponse.self)
+    }
+
     func registerAPNs(token: String, sandbox: Bool) async throws {
         guard let url = liveAdminURL(path: "push/apns") else {
             throw LiveChatAPIError.invalidURL

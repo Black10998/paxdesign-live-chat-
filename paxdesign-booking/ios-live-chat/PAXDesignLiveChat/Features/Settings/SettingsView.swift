@@ -117,6 +117,7 @@ struct SettingsView: View {
     private var soundSection: some View {
         Section {
             Toggle("Klingelton bei Live-Anfrage", isOn: $settings.incomingCallSoundEnabled)
+            Toggle("Tippgeräusch beim Schreiben", isOn: $settings.typingSoundEnabled)
             VStack(alignment: .leading, spacing: 8) {
                 Text("Lautstärke")
                     .font(.subheadline)
@@ -135,7 +136,7 @@ struct SettingsView: View {
 
     private var aboutSection: some View {
         Section("App") {
-            LabeledContent("Version", value: "1.3.4-debug")
+            LabeledContent("Version", value: "1.4.0")
             LabeledContent("Plugin", value: auth.profile?.pluginVer ?? "—")
         }
     }

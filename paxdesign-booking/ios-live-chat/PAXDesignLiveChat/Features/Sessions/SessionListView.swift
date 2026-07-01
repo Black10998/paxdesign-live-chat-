@@ -202,6 +202,9 @@ private struct SessionCard: View {
                         .font(.headline)
                         .foregroundStyle(PAXTheme.textPrimary)
                     Spacer()
+                    if let rating = SessionRatingBadge(rating: session.sessionRating) {
+                        rating
+                    }
                     PAXStatusBadge(text: session.handlerLabel, color: statusColor)
                 }
 

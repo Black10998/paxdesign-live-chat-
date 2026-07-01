@@ -232,26 +232,37 @@ final class ChatThreadModel: ObservableObject {
     @Published var messages: [LiveMessage] = []
     @Published var handler = "ai"
     @Published var customerName = "Kunde"
+    @Published var sessionRating = 0
     @Published var userTyping = false
     @Published var draft = ""
     @Published var isSending = false
     @Published var errorMessage: String?
+    @Published var quickReplies: [QuickReply] = []
+    @Published var aiSuggestions: [String] = []
+    @Published var suggestionsLoading = false
+    @Published var suggestionsError: String?
 
     let sessionId: String
+    private weak var auth: AuthStore?
     private var pollSeq = 0
     private var pollTask: Task<Void, Never>?
     private var typingStopTask: Task<Void, Never>?
+    private var suggestionsTask: Task<Void, Never>?
+    private var suggestionsForMessageId = 0
+    private var knownMessageIds = Set<Int>()
 
     init(sessionId: String) {
         self.sessionId = sessionId
     }
 
     func start(auth: AuthStore) {
+        self.auth = auth
         pollTask?.cancel()
         SyncDebugStore.shared.messagePollLoopActive = true
         SyncDebugStore.shared.selectedSessionId = sessionId
         pollTask = Task { [weak self] in
             guard let self else { return }
+            await self.loadQuickReplies(auth: auth)
             await self.loadFull(auth: auth)
             while !Task.isCancelled {
                 await self.poll(auth: auth)
@@ -270,6 +281,16 @@ final class ChatThreadModel: ObservableObject {
         SyncDebugStore.shared.messagePollLoopActive = false
         typingStopTask?.cancel()
         typingStopTask = nil
+        suggestionsTask?.cancel()
+        suggestionsTask = nil
+        AdminTypingSound.shared.stop()
+    }
+
+    private func loadQuickReplies(auth: AuthStore) async {
+        guard let api = auth.api, quickReplies.isEmpty else { return }
+        if let response = try? await api.fetchQuickReplies() {
+            quickReplies = response.quickReplies
+        }
     }
 
     private func loadFull(auth: AuthStore) async {
@@ -277,6 +298,10 @@ final class ChatThreadModel: ObservableObject {
         do {
             let data = try await api.fetchSession(sessionId)
             applyPoll(data)
+            knownMessageIds = Set(messages.map(\.id))
+            if handler == "admin" {
+                maybeFetchSuggestionsForLatestUserMessage()
+            }
         } catch {
             errorMessage = error.localizedDescription
             SyncDebugStore.shared.recordSyncFailure(endpoint: "poll:\(sessionId):full", error: error)
@@ -297,23 +322,133 @@ final class ChatThreadModel: ObservableObject {
     private func applyPoll(_ data: PollResponse) {
         handler = data.handler
         customerName = data.customerName.isEmpty ? "Kunde" : data.customerName
+        if data.sessionRating > 0 {
+            sessionRating = data.sessionRating
+        }
         userTyping = data.userTyping
         pollSeq = max(pollSeq, data.seq)
-        if data.messages.isEmpty {
+
+        if !data.reactions.isEmpty {
+            applyReactions(data.reactions)
+        }
+
+        guard !data.messages.isEmpty else {
             SyncDebugStore.shared.recordMessagesDisplayed(count: messages.count, sessionId: sessionId)
             return
         }
+
+        var newUserMessageId = 0
+        for msg in data.messages {
+            if msg.role == "user" && !knownMessageIds.contains(msg.id) {
+                newUserMessageId = msg.id
+            }
+            knownMessageIds.insert(msg.id)
+        }
+
         var map = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
         for msg in data.messages {
-            map[msg.id] = msg
+            var merged = msg
+            if let existing = map[msg.id], merged.reaction == nil {
+                merged.reaction = existing.reaction
+            }
+            map[msg.id] = merged
         }
         messages = map.values.sorted { $0.id < $1.id }
+
+        if newUserMessageId > 0 {
+            userTyping = false
+        }
+
+        if handler == "admin", newUserMessageId > 0 {
+            fetchSuggestions(messageId: newUserMessageId)
+        }
+
         SyncDebugStore.shared.recordMessagesDisplayed(count: messages.count, sessionId: sessionId)
+    }
+
+    private func applyReactions(_ reactions: [String: String]) {
+        guard !reactions.isEmpty else { return }
+        var map = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
+        for (key, raw) in reactions {
+            guard let messageId = Int(key), let reaction = MessageReaction.normalize(raw) else { continue }
+            guard var msg = map[messageId], msg.role == "admin" else { continue }
+            msg.reaction = reaction
+            map[messageId] = msg
+        }
+        messages = map.values.sorted { $0.id < $1.id }
+    }
+
+    func applyQuickReply(_ text: String) {
+        draft = text
+    }
+
+    func applySuggestion(_ text: String) {
+        draft = text
+    }
+
+    func fetchSuggestions(messageId: Int) {
+        guard handler == "admin", messageId > 0 else { return }
+        if suggestionsForMessageId == messageId && !aiSuggestions.isEmpty { return }
+
+        suggestionsTask?.cancel()
+        suggestionsForMessageId = messageId
+        suggestionsLoading = true
+        suggestionsError = nil
+        aiSuggestions = []
+
+        suggestionsTask = Task { [weak self] in
+            guard let self else { return }
+            defer { self.suggestionsLoading = false }
+            guard !Task.isCancelled else { return }
+            guard let api = self.auth?.api else { return }
+            do {
+                let response = try await api.fetchSuggestions(sessionId: self.sessionId, messageId: messageId)
+                guard !Task.isCancelled, response.messageId == messageId else { return }
+                self.aiSuggestions = response.suggestions
+                self.suggestionsError = response.suggestions.isEmpty ? "Keine Vorschläge verfügbar." : nil
+            } catch {
+                guard !Task.isCancelled else { return }
+                self.suggestionsError = error.localizedDescription
+            }
+        }
+    }
+
+    func maybeFetchSuggestionsForLatestUserMessage() {
+        guard handler == "admin" else {
+            clearSuggestions()
+            return
+        }
+        guard let lastUser = messages.last(where: { $0.role == "user" }) else {
+            clearSuggestions()
+            return
+        }
+        fetchSuggestions(messageId: lastUser.id)
+    }
+
+    func clearSuggestions() {
+        suggestionsTask?.cancel()
+        suggestionsTask = nil
+        aiSuggestions = []
+        suggestionsLoading = false
+        suggestionsError = nil
+        suggestionsForMessageId = 0
+    }
+
+    func handleDraftChange(auth: AuthStore) {
+        let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            AdminTypingSound.shared.stop()
+            Task { await notifyTypingStop(auth: auth) }
+            return
+        }
+        AdminTypingSound.shared.typingActivity()
+        Task { await notifyTyping(auth: auth) }
     }
 
     func send(auth: AuthStore) async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, let api = auth.api else { return }
+        AdminTypingSound.shared.stop()
         await notifyTypingStop(auth: auth)
         isSending = true
         defer { isSending = false }
@@ -321,7 +456,9 @@ final class ChatThreadModel: ObservableObject {
             let msg = try await api.sendMessage(sessionId, text: text)
             draft = ""
             messages.append(msg)
+            knownMessageIds.insert(msg.id)
             pollSeq = max(pollSeq, msg.id)
+            clearSuggestions()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -331,7 +468,7 @@ final class ChatThreadModel: ObservableObject {
         typingStopTask?.cancel()
         try? await auth.api?.setTyping(sessionId)
         typingStopTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            try? await Task.sleep(nanoseconds: 1_800_000_000)
             guard !Task.isCancelled, let self else { return }
             try? await auth.api?.setTyping(self.sessionId, stop: true)
         }
@@ -348,8 +485,19 @@ final class ChatThreadModel: ObservableObject {
         if let data = try? await api.fetchSession(sessionId) {
             handler = data.handler
             customerName = data.customerName.isEmpty ? "Kunde" : data.customerName
+            sessionRating = data.sessionRating
             messages = data.messages
+            knownMessageIds = Set(messages.map(\.id))
             pollSeq = data.seq
+            if !data.reactions.isEmpty {
+                applyReactions(data.reactions)
+            }
+            if handler == "admin" {
+                await loadQuickReplies(auth: auth)
+                maybeFetchSuggestionsForLatestUserMessage()
+            } else {
+                clearSuggestions()
+            }
         }
     }
 }

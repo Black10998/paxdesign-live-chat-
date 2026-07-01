@@ -133,20 +133,22 @@ struct LiveMessage: Identifiable, Codable, Hashable {
     let ts: Int?
     let imageUrl: String?
     let replyTo: Int?
+    var reaction: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, role, content, ts
+        case id, role, content, ts, reaction
         case imageUrl = "image_url"
         case replyTo = "reply_to"
     }
 
-    init(id: Int, role: String, content: String, ts: Int? = nil, imageUrl: String? = nil, replyTo: Int? = nil) {
+    init(id: Int, role: String, content: String, ts: Int? = nil, imageUrl: String? = nil, replyTo: Int? = nil, reaction: String? = nil) {
         self.id = id
         self.role = role
         self.content = content
         self.ts = ts
         self.imageUrl = imageUrl
         self.replyTo = replyTo
+        self.reaction = reaction.map { MessageReaction.normalize($0) }
     }
 
     init(from decoder: Decoder) throws {
@@ -157,6 +159,21 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         ts = try container.decodeIfPresent(Int.self, forKey: .ts)
         imageUrl = try container.decodeIfPresent(String.self, forKey: .imageUrl)
         replyTo = try container.decodeIfPresent(Int.self, forKey: .replyTo)
+        if let raw = try container.decodeIfPresent(String.self, forKey: .reaction) {
+            reaction = MessageReaction.normalize(raw)
+        } else {
+            reaction = nil
+        }
+    }
+}
+
+enum MessageReaction {
+    static func normalize(_ value: String) -> String? {
+        switch value {
+        case "like", "pax-love": return "like"
+        case "dislike", "pax-top", "pax-thanks", "pax-clear": return "dislike"
+        default: return nil
+        }
     }
 }
 
@@ -188,6 +205,7 @@ struct PollResponse: Codable {
     let messages: [LiveMessage]
     let adminTyping: Bool
     let userTyping: Bool
+    let reactions: [String: String]
 
     enum CodingKeys: String, CodingKey {
         case handler
@@ -197,7 +215,7 @@ struct PollResponse: Codable {
         case sessionRating = "session_rating"
         case detectedService = "detected_service"
         case updatedAt = "updated_at"
-        case seq, messages
+        case seq, messages, reactions
         case adminTyping = "admin_typing"
         case userTyping = "user_typing"
     }
@@ -215,6 +233,44 @@ struct PollResponse: Codable {
         messages = (try? container.decode([LiveMessage].self, forKey: .messages)) ?? []
         adminTyping = LiveChatDecode.bool(container, CodingKeys.adminTyping)
         userTyping = LiveChatDecode.bool(container, CodingKeys.userTyping)
+        reactions = (try? container.decode([String: String].self, forKey: .reactions)) ?? [:]
+    }
+}
+
+struct QuickReply: Identifiable, Codable, Hashable {
+    let label: String
+    let text: String
+    let lang: String
+
+    var id: String { "\(lang)-\(label)" }
+}
+
+struct QuickRepliesResponse: Codable {
+    let quickReplies: [QuickReply]
+
+    enum CodingKeys: String, CodingKey {
+        case quickReplies = "quick_replies"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        quickReplies = (try? container.decode([QuickReply].self, forKey: .quickReplies)) ?? []
+    }
+}
+
+struct SuggestionsResponse: Codable {
+    let suggestions: [String]
+    let messageId: Int
+
+    enum CodingKeys: String, CodingKey {
+        case suggestions
+        case messageId = "message_id"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        suggestions = (try? container.decode([String].self, forKey: .suggestions)) ?? []
+        messageId = LiveChatDecode.int(container, CodingKeys.messageId)
     }
 }
 

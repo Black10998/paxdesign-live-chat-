@@ -187,6 +187,21 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => $auth,
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/quick-replies', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'route_quick_replies'),
+            'permission_callback' => $auth,
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions/(?P<id>[a-zA-Z0-9_\-]+)/suggestions', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'route_suggestions'),
+            'permission_callback' => $auth,
+            'args'                => array(
+                'message_id' => array('required' => true, 'sanitize_callback' => 'absint'),
+            ),
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/push/apns', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'route_apns_register'),
@@ -323,6 +338,19 @@ class PAXdesign_Live_Chat_Mobile_API {
         }
         $stop = !empty($params['stop']) || $request->get_param('stop');
         return self::respond(self::live()->admin_set_typing($request['id'], (bool) $stop));
+    }
+
+    public static function route_quick_replies(WP_REST_Request $request) {
+        return self::respond(array(
+            'quick_replies' => PAXdesign_Chat_Live::get_admin_quick_replies(),
+        ));
+    }
+
+    public static function route_suggestions(WP_REST_Request $request) {
+        return self::respond(self::live()->admin_get_suggestions(
+            $request['id'],
+            (int) $request->get_param('message_id')
+        ));
     }
 
     public static function route_apns_register(WP_REST_Request $request) {
