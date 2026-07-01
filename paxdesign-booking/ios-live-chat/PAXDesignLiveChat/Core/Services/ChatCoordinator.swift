@@ -27,6 +27,8 @@ final class ChatCoordinator: ObservableObject {
 
     func start(auth: AuthStore) {
         stop()
+        SyncDebugStore.shared.listPollLoopActive = true
+        SyncDebugStore.shared.setSyncEngineStatus("running")
         listTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refreshSessions(auth: auth)
@@ -38,6 +40,8 @@ final class ChatCoordinator: ObservableObject {
     func stop() {
         listTask?.cancel()
         listTask = nil
+        SyncDebugStore.shared.listPollLoopActive = false
+        SyncDebugStore.shared.setSyncEngineStatus("stopped")
         expiryTasks.values.forEach { $0.cancel() }
         expiryTasks.removeAll()
         IncomingCallRingtone.shared.stopRinging()
@@ -46,7 +50,13 @@ final class ChatCoordinator: ObservableObject {
     func refreshSessions(auth: AuthStore) async {
         guard let api = auth.api else { return }
         isSyncing = true
-        defer { isSyncing = false }
+        SyncDebugStore.shared.setSyncEngineStatus("syncing")
+        defer {
+            isSyncing = false
+            if SyncDebugStore.shared.listPollLoopActive {
+                SyncDebugStore.shared.setSyncEngineStatus("running")
+            }
+        }
         do {
             let response = try await api.fetchSessions()
             sessions = response.sessions
@@ -54,9 +64,12 @@ final class ChatCoordinator: ObservableObject {
             listRevision += 1
             lastSyncAt = Date()
             errorMessage = nil
+            SyncDebugStore.shared.recordListDisplayed(count: response.sessions.count, sessions: response.sessions)
             detectIncomingLiveRequests(response.sessions)
         } catch {
             errorMessage = error.localizedDescription
+            SyncDebugStore.shared.recordSyncFailure(endpoint: "sessions", error: error)
+            SyncDebugStore.shared.setSyncEngineStatus("error")
         }
     }
 
@@ -235,6 +248,8 @@ final class ChatThreadModel: ObservableObject {
 
     func start(auth: AuthStore) {
         pollTask?.cancel()
+        SyncDebugStore.shared.messagePollLoopActive = true
+        SyncDebugStore.shared.selectedSessionId = sessionId
         pollTask = Task { [weak self] in
             guard let self else { return }
             await self.loadFull(auth: auth)
@@ -252,6 +267,7 @@ final class ChatThreadModel: ObservableObject {
     func stop() {
         pollTask?.cancel()
         pollTask = nil
+        SyncDebugStore.shared.messagePollLoopActive = false
         typingStopTask?.cancel()
         typingStopTask = nil
     }
@@ -263,6 +279,7 @@ final class ChatThreadModel: ObservableObject {
             applyPoll(data)
         } catch {
             errorMessage = error.localizedDescription
+            SyncDebugStore.shared.recordSyncFailure(endpoint: "poll:\(sessionId):full", error: error)
         }
     }
 
@@ -273,6 +290,7 @@ final class ChatThreadModel: ObservableObject {
             applyPoll(data)
         } catch {
             errorMessage = error.localizedDescription
+            SyncDebugStore.shared.recordSyncFailure(endpoint: "poll:\(sessionId)", error: error)
         }
     }
 
@@ -282,6 +300,7 @@ final class ChatThreadModel: ObservableObject {
         userTyping = data.userTyping
         pollSeq = max(pollSeq, data.seq)
         if data.messages.isEmpty {
+            SyncDebugStore.shared.recordMessagesDisplayed(count: messages.count, sessionId: sessionId)
             return
         }
         var map = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
@@ -289,6 +308,7 @@ final class ChatThreadModel: ObservableObject {
             map[msg.id] = msg
         }
         messages = map.values.sorted { $0.id < $1.id }
+        SyncDebugStore.shared.recordMessagesDisplayed(count: messages.count, sessionId: sessionId)
     }
 
     func send(auth: AuthStore) async {

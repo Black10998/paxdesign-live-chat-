@@ -110,29 +110,77 @@ final class LiveChatAPI {
         return message.isEmpty ? nil : message
     }
 
-    private func perform<T: Decodable>(_ request: URLRequest, as type: T.Type) async throws -> T {
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw LiveChatAPIError.server("Keine Server-Antwort.")
+    var publicApiBaseURL: String {
+        restBase.absoluteString
+    }
+
+    private func perform<T: Decodable>(_ request: URLRequest, endpoint: String, as type: T.Type) async throws -> T {
+        let url = request.url?.absoluteString ?? "—"
+        await MainActor.run {
+            SyncDebugStore.shared.recordRequestStarted(endpoint: endpoint, url: url)
+        }
+
+        let data: Data
+        let http: HTTPURLResponse
+        do {
+            let pair = try await session.data(for: request)
+            data = pair.0
+            guard let response = pair.1 as? HTTPURLResponse else {
+                throw LiveChatAPIError.server("Keine Server-Antwort.")
+            }
+            http = response
+        } catch {
+            await MainActor.run {
+                SyncDebugStore.shared.recordSyncFailure(endpoint: endpoint, error: error)
+            }
+            throw error
+        }
+
+        await MainActor.run {
+            SyncDebugStore.shared.recordHTTPResponse(
+                endpoint: endpoint,
+                status: http.statusCode,
+                data: data,
+                url: url
+            )
         }
 
         if http.statusCode == 401 || http.statusCode == 403 {
             if let message = wpErrorMessage(from: data) {
-                throw LiveChatAPIError.server(message)
+                let err = LiveChatAPIError.server(message)
+                await MainActor.run {
+                    SyncDebugStore.shared.recordSyncFailure(endpoint: endpoint, error: err)
+                }
+                throw err
             }
-            throw LiveChatAPIError.unauthorized
+            let err = LiveChatAPIError.unauthorized
+            await MainActor.run {
+                SyncDebugStore.shared.recordSyncFailure(endpoint: endpoint, error: err)
+            }
+            throw err
         }
 
         if http.statusCode >= 400 {
             if let message = wpErrorMessage(from: data) {
-                throw LiveChatAPIError.server(message)
+                let err = LiveChatAPIError.server(message)
+                await MainActor.run {
+                    SyncDebugStore.shared.recordSyncFailure(endpoint: endpoint, error: err)
+                }
+                throw err
             }
-            throw LiveChatAPIError.server("HTTP \(http.statusCode)")
+            let err = LiveChatAPIError.server("HTTP \(http.statusCode)")
+            await MainActor.run {
+                SyncDebugStore.shared.recordSyncFailure(endpoint: endpoint, error: err)
+            }
+            throw err
         }
 
         do {
             return try decode(type, from: data)
         } catch {
+            await MainActor.run {
+                SyncDebugStore.shared.recordDecodeFailure(endpoint: endpoint, error: error, data: data)
+            }
             throw LiveChatAPIError.decoding(error)
         }
     }
@@ -141,14 +189,21 @@ final class LiveChatAPI {
         guard let url = liveAdminURL(path: "me") else {
             throw LiveChatAPIError.invalidURL
         }
-        return try await perform(authRequest(url: url), as: AdminProfile.self)
+        return try await perform(authRequest(url: url), endpoint: "me", as: AdminProfile.self)
     }
 
     func fetchSessions() async throws -> SessionListResponse {
         guard let url = liveAdminURL(path: "sessions") else {
             throw LiveChatAPIError.invalidURL
         }
-        return try await perform(authRequest(url: url), as: SessionListResponse.self)
+        return try await perform(authRequest(url: url), endpoint: "sessions", as: SessionListResponse.self)
+    }
+
+    func fetchDebugParity() async throws -> DebugParityResponse {
+        guard let url = liveAdminURL(path: "debug/parity") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "debug/parity", as: DebugParityResponse.self)
     }
 
     func fetchSession(_ sessionId: String) async throws -> PollResponse {
@@ -158,7 +213,7 @@ final class LiveChatAPI {
         ) else {
             throw LiveChatAPIError.invalidURL
         }
-        return try await perform(authRequest(url: url), as: PollResponse.self)
+        return try await perform(authRequest(url: url), endpoint: "poll:\(sessionId):full", as: PollResponse.self)
     }
 
     func pollSession(_ sessionId: String, since: Int) async throws -> PollResponse {
@@ -168,35 +223,35 @@ final class LiveChatAPI {
         ) else {
             throw LiveChatAPIError.invalidURL
         }
-        return try await perform(authRequest(url: url), as: PollResponse.self)
+        return try await perform(authRequest(url: url), endpoint: "poll:\(sessionId)", as: PollResponse.self)
     }
 
     func takeover(_ sessionId: String) async throws {
         guard let url = liveAdminURL(path: "sessions/\(sessionId)/takeover") else {
             throw LiveChatAPIError.invalidURL
         }
-        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), as: EmptyResponse.self)
+        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "takeover", as: EmptyResponse.self)
     }
 
     func decline(_ sessionId: String) async throws {
         guard let url = liveAdminURL(path: "sessions/\(sessionId)/decline") else {
             throw LiveChatAPIError.invalidURL
         }
-        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), as: EmptyResponse.self)
+        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "decline", as: EmptyResponse.self)
     }
 
     func close(_ sessionId: String) async throws {
         guard let url = liveAdminURL(path: "sessions/\(sessionId)/close") else {
             throw LiveChatAPIError.invalidURL
         }
-        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), as: EmptyResponse.self)
+        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "close", as: EmptyResponse.self)
     }
 
     func archive(_ sessionId: String) async throws {
         guard let url = liveAdminURL(path: "sessions/\(sessionId)/archive") else {
             throw LiveChatAPIError.invalidURL
         }
-        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), as: EmptyResponse.self)
+        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "archive", as: EmptyResponse.self)
     }
 
     func deleteSession(_ sessionId: String) async throws {
@@ -204,21 +259,21 @@ final class LiveChatAPI {
             throw LiveChatAPIError.invalidURL
         }
         var request = authRequest(url: url, method: "DELETE")
-        _ = try await perform(request, as: EmptyResponse.self)
+        _ = try await perform(request, endpoint: "delete", as: EmptyResponse.self)
     }
 
     func reopen(_ sessionId: String) async throws {
         guard let url = liveAdminURL(path: "sessions/\(sessionId)/reopen") else {
             throw LiveChatAPIError.invalidURL
         }
-        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), as: EmptyResponse.self)
+        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "reopen", as: EmptyResponse.self)
     }
 
     func release(_ sessionId: String) async throws {
         guard let url = liveAdminURL(path: "sessions/\(sessionId)/release") else {
             throw LiveChatAPIError.invalidURL
         }
-        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), as: EmptyResponse.self)
+        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "release", as: EmptyResponse.self)
     }
 
     func sendMessage(_ sessionId: String, text: String) async throws -> LiveMessage {
@@ -227,7 +282,7 @@ final class LiveChatAPI {
         }
         let body = try JSONEncoder().encode(["message": text])
         struct SendResponse: Codable { let message: LiveMessage }
-        let response: SendResponse = try await perform(authRequest(url: url, method: "POST", body: body), as: SendResponse.self)
+        let response: SendResponse = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "send", as: SendResponse.self)
         return response.message
     }
 
@@ -236,7 +291,7 @@ final class LiveChatAPI {
             throw LiveChatAPIError.invalidURL
         }
         let body = try JSONEncoder().encode(["stop": stop])
-        _ = try await perform(authRequest(url: url, method: "POST", body: body), as: EmptyResponse.self)
+        _ = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "typing", as: EmptyResponse.self)
     }
 
     func registerAPNs(token: String, sandbox: Bool) async throws {
@@ -249,7 +304,7 @@ final class LiveChatAPI {
             "bundle_id": Bundle.main.bundleIdentifier ?? "at.paxdesign.livechat"
         ]
         let json = try JSONSerialization.data(withJSONObject: payload)
-        _ = try await perform(authRequest(url: url, method: "POST", body: json), as: EmptyResponse.self)
+        _ = try await perform(authRequest(url: url, method: "POST", body: json), endpoint: "apns-register", as: EmptyResponse.self)
     }
 
     func unregisterAPNs(token: String) async throws {
@@ -259,7 +314,7 @@ final class LiveChatAPI {
         let payload: [String: Any] = ["device_token": token]
         let json = try JSONSerialization.data(withJSONObject: payload)
         var request = authRequest(url: url, method: "DELETE", body: json)
-        _ = try await perform(request, as: EmptyResponse.self)
+        _ = try await perform(request, endpoint: "apns-unregister", as: EmptyResponse.self)
     }
 }
 
