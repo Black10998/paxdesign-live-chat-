@@ -13,6 +13,7 @@ enum PrivacyMask {
         let domainLabel = parts[1]
 
         let visible = String(local.prefix(min(3, local.count)))
+        let maskedLocal = local.count <= 3 ? "\(visible)*" : "\(visible)***"
         let formattedDomain: String
         if let dot = domainLabel.firstIndex(of: ".") {
             let name = String(domainLabel[..<dot])

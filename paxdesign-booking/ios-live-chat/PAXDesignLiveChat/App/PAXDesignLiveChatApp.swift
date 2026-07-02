@@ -166,3 +166,15 @@ struct MainShellView: View {
         path.wrappedValue.append(sessionId)
     }
 }
+
+private struct LiveTabBadge: ViewModifier {
+    let count: Int
+
+    func body(content: Content) -> some View {
+        if count > 0 {
+            content.badge(count)
+        } else {
+            content
+        }
+    }
+}
