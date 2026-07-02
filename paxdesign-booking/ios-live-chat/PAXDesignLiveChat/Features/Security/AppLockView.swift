@@ -30,14 +30,8 @@ struct AppLockView: View {
                 if appLock.biometricEnabled {
                     Button {
                         Task {
-                            do {
-                                if try await appLock.evaluateBiometrics() {
-                                    appLock.unlock()
-                                    PAXHaptics.success()
-                                }
-                            } catch {
-                                // User cancelled — PIN remains available
-                            }
+                            let success = await appLock.requestDeviceAuthentication()
+                            if success { PAXHaptics.success() }
                         }
                     } label: {
                         Label(appLock.canUseBiometrics ? appLock.biometricTypeLabel : "Gerätecode", systemImage: biometricIcon)
@@ -68,10 +62,9 @@ struct AppLockView: View {
                 Spacer()
             }
         }
-        .onAppear {
-            if appLock.biometricEnabled {
-                Task { await appLock.attemptBiometricUnlock() }
-            }
+        .task(id: appLock.shouldOfferBiometricUnlock) {
+            guard appLock.shouldOfferBiometricUnlock else { return }
+            await appLock.requestBiometricUnlockIfNeeded()
         }
     }
 

@@ -66,9 +66,6 @@ struct PAXDesignLiveChatApp: App {
         if auth.isLoggedIn {
             coordinator.start(auth: auth)
             appLock.prepareForLogin()
-            if appLock.isActive && appLock.isLocked {
-                await appLock.attemptBiometricUnlock()
-            }
             permissions.presentNotificationPromptIfNeeded(isLoggedIn: true)
             await push.registerTokenWithBackend(auth: auth)
         }

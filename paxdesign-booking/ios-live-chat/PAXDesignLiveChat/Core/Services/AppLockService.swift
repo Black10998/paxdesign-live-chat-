@@ -27,8 +27,14 @@ final class AppLockService: ObservableObject {
     }
 
     private var lastUnlockedAt = Date()
+    private var lastUnlockCompletedAt: Date?
+    private var isAuthenticating = false
+    private var autoLockSuppressedUntil: Date?
     private let pinService = "at.paxdesign.livechat.applock.pin"
     private let saltService = "at.paxdesign.livechat.applock.salt"
+
+    private let autoLockSuppressInterval: TimeInterval = 3.0
+    private let postUnlockGraceInterval: TimeInterval = 1.5
 
     enum AutoLockInterval: Int, CaseIterable, Identifiable {
         case immediate = 0
@@ -74,6 +80,10 @@ final class AppLockService: ObservableObject {
         lockEnabled && (biometricEnabled || pinEnabled)
     }
 
+    var shouldOfferBiometricUnlock: Bool {
+        isLocked && biometricEnabled && canUseBiometrics
+    }
+
     var biometricTypeLabel: String {
         let context = LAContext()
         _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
@@ -92,13 +102,15 @@ final class AppLockService: ObservableObject {
 
     func prepareForLogin() {
         isUnlockedThisSession = false
+        isAuthenticating = false
+        autoLockSuppressedUntil = nil
         if isActive && lockOnLaunch {
             isLocked = true
         }
     }
 
     func lock() {
-        guard isActive else { return }
+        guard isActive, !shouldSuppressAutoLock() else { return }
         isLocked = true
         isUnlockedThisSession = false
     }
@@ -106,7 +118,11 @@ final class AppLockService: ObservableObject {
     func unlock() {
         isLocked = false
         isUnlockedThisSession = true
-        lastUnlockedAt = Date()
+        isAuthenticating = false
+        let now = Date()
+        lastUnlockedAt = now
+        lastUnlockCompletedAt = now
+        extendAutoLockSuppression(for: postUnlockGraceInterval)
     }
 
     func recordActivity() {
@@ -115,17 +131,20 @@ final class AppLockService: ObservableObject {
 
     func handleScenePhase(_ phase: ScenePhase, isLoggedIn: Bool) {
         guard isLoggedIn, isActive else { return }
+
         switch phase {
-        case .background, .inactive:
+        case .background:
+            guard !shouldSuppressAutoLock() else { return }
             if autoLockInterval == .immediate {
                 lock()
             }
+        case .inactive:
+            // Do not lock while inactive. Face ID and system sheets move the app here.
+            break
         case .active:
+            guard !shouldSuppressAutoLock() else { return }
             if shouldLockDueToInactivity() {
                 lock()
-            }
-            if isLocked {
-                Task { await attemptBiometricUnlock() }
             }
         @unknown default:
             break
@@ -136,6 +155,57 @@ final class AppLockService: ObservableObject {
         guard isActive, autoLockInterval != .never else { return false }
         let elapsed = Date().timeIntervalSince(lastUnlockedAt)
         return elapsed >= TimeInterval(autoLockInterval.rawValue)
+    }
+
+    /// Presents the native Face ID / Touch ID sheet once. Ignores duplicate calls while in flight.
+    func requestBiometricUnlockIfNeeded() async {
+        guard shouldOfferBiometricUnlock else { return }
+        guard !isAuthenticating else { return }
+
+        isAuthenticating = true
+        extendAutoLockSuppression(for: autoLockSuppressInterval)
+
+        defer { isAuthenticating = false }
+
+        do {
+            let context = LAContext()
+            context.localizedCancelTitle = "Abbrechen"
+            let success = try await context.evaluatePolicy(
+                .deviceOwnerAuthenticationWithBiometrics,
+                localizedReason: "PAXDesign Live Chat entsperren"
+            )
+            if success {
+                unlock()
+            }
+        } catch {
+            // Cancellation or failure — stay on lock screen; PIN remains available.
+        }
+    }
+
+    /// User-initiated native device authentication (Face ID, Touch ID, or device passcode).
+    func requestDeviceAuthentication() async -> Bool {
+        guard isLocked else { return false }
+        guard !isAuthenticating else { return false }
+
+        isAuthenticating = true
+        extendAutoLockSuppression(for: autoLockSuppressInterval)
+
+        defer { isAuthenticating = false }
+
+        do {
+            let context = LAContext()
+            context.localizedCancelTitle = "Abbrechen"
+            let success = try await context.evaluatePolicy(
+                .deviceOwnerAuthentication,
+                localizedReason: "PAXDesign Live Chat entsperren"
+            )
+            if success {
+                unlock()
+            }
+            return success
+        } catch {
+            return false
+        }
     }
 
     func hasPINConfigured() -> Bool {
@@ -170,42 +240,23 @@ final class AppLockService: ObservableObject {
         return hashPIN(pin, salt: salt) == stored
     }
 
-    func attemptBiometricUnlock() async {
-        guard isLocked, biometricEnabled, canUseBiometrics else { return }
-        do {
-            let success = try await evaluateBiometrics()
-            if success { unlock() }
-        } catch {
-            // User cancelled or failed — fall back to PIN UI
+    private func shouldSuppressAutoLock() -> Bool {
+        if isAuthenticating { return true }
+        if let until = autoLockSuppressedUntil, Date() < until { return true }
+        if let completed = lastUnlockCompletedAt,
+           Date().timeIntervalSince(completed) < postUnlockGraceInterval {
+            return true
         }
+        return false
     }
 
-    func evaluateBiometrics() async throws -> Bool {
-        let context = LAContext()
-        context.localizedCancelTitle = "Abbrechen"
-
-        if biometricEnabled && canUseBiometrics {
-            do {
-                return try await context.evaluatePolicy(
-                    .deviceOwnerAuthenticationWithBiometrics,
-                    localizedReason: "PAXDesign Live Chat entsperren"
-                )
-            } catch {
-                // Fall through to device passcode
-            }
+    private func extendAutoLockSuppression(for interval: TimeInterval) {
+        let until = Date().addingTimeInterval(interval)
+        if let existing = autoLockSuppressedUntil {
+            autoLockSuppressedUntil = max(existing, until)
+        } else {
+            autoLockSuppressedUntil = until
         }
-
-        return try await context.evaluatePolicy(
-            .deviceOwnerAuthentication,
-            localizedReason: "PAXDesign Live Chat entsperren"
-        )
-    }
-
-    private func evaluateDevicePasscode(context: LAContext) async throws -> Bool {
-        try await context.evaluatePolicy(
-            .deviceOwnerAuthentication,
-            localizedReason: "PAXDesign Live Chat entsperren"
-        )
     }
 
     private func hashPIN(_ pin: String, salt: String) -> String {
