@@ -48,7 +48,7 @@ struct GeneralSettingsView: View {
             }
 
             if canManageSettings {
-                Section(L10n.SettingsAccount) {
+                Section {
                     LabeledContent(L10n.CommonWebsite) {
                         Text(auth.siteURLString)
                             .foregroundStyle(PAXTheme.textSecondary)
@@ -67,6 +67,8 @@ struct GeneralSettingsView: View {
                             .font(.footnote)
                             .foregroundStyle(PAXTheme.textSecondary)
                     }
+                } header: {
+                    Text(L10n.SettingsAccount)
                 } footer: {
                     Text(L10n.SettingsCredentialsFooter)
                 }

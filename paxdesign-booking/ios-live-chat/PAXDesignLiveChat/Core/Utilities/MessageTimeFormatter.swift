@@ -2,7 +2,11 @@ import Foundation
 
 enum MessageTimeFormatter {
     private static var locale: Locale {
-        AppSettingsStore.shared.resolvedLocale
+        if let raw = UserDefaults.standard.string(forKey: "pax.settings.language"),
+           raw != AppSettingsStore.LanguageMode.system.rawValue {
+            return Locale(identifier: raw)
+        }
+        return Locale.autoupdatingCurrent
     }
 
     private static let timeFormatter: DateFormatter = {

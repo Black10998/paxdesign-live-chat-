@@ -3,7 +3,10 @@ import UIKit
 
 enum PAXTheme {
     private static var palette: PAXThemePalette {
-        AppSettingsStore.shared.palette
+        let raw = UserDefaults.standard.string(forKey: "pax.settings.visualTheme")
+            ?? AppSettingsStore.VisualTheme.classic.rawValue
+        let theme = AppSettingsStore.VisualTheme(rawValue: raw) ?? .classic
+        return PAXThemePalette.palette(for: theme)
     }
 
     static var accent: Color { palette.accent }
