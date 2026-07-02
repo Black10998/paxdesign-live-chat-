@@ -15,8 +15,28 @@ Production real-time customer support: WordPress plugin with browser admin panel
 
 | Component | Version |
 |-----------|---------|
-| WordPress plugin | **3.51.0** |
-| iOS app | **1.8.0** (build 16) |
+| WordPress plugin | **3.56.0** |
+| iOS app | **1.12.1** (build 22) |
+
+## WordPress automatic updates (permanent)
+
+The plugin checks [GitHub Releases](https://github.com/Black10998/paxdesign-live-chat-/releases/latest) and shows one-click updates in **Dashboard → Updates** — no manual ZIP upload required.
+
+**Production workflow (do not change):**
+
+1. Bump `Version:` and `PAXDESIGN_BOOKING_VERSION` in `paxdesign-booking/paxdesign-booking.php` (must match)
+2. Commit and push to `main`
+3. Tag `vX.Y.Z` matching the plugin version and push the tag
+4. GitHub Actions publishes `paxdesign-booking-vX.Y.Z.zip` → WordPress detects it automatically
+
+Protected files (validated by CI on every `main` push and every release):
+
+- `paxdesign-booking/includes/class-paxdesign-update-checker.php`
+- `scripts/build-release.sh`
+- `scripts/validate-release-contract.sh`
+- `.github/workflows/release.yml`
+
+After installing an update, WordPress clears the update cache and stops showing the notice until a newer production release is published.
 
 ## Releases
 
@@ -53,11 +73,7 @@ cd paxdesign-booking/ios-live-chat && ./scripts/build-ipa.sh
 
 ## WordPress deployment
 
-1. Download the latest plugin ZIP from [Releases](https://github.com/Black10998/paxdesign-live-chat-/releases)
-2. WordPress Admin → Plugins → Add New → Upload Plugin
-3. Activate **PAXdesign Booking System**
-
-The plugin checks GitHub Releases for one-click updates from the WordPress dashboard.
+Install once from [Releases](https://github.com/Black10998/paxdesign-live-chat-/releases), then use **Dashboard → Updates** for all future plugin versions. Manual ZIP upload is only needed for the initial install.
 
 ## iOS app
 

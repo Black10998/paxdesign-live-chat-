@@ -1,0 +1,27 @@
+name: Validate Release Contract
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'paxdesign-booking/**'
+      - 'scripts/**'
+      - '.github/workflows/**'
+  pull_request:
+    paths:
+      - 'paxdesign-booking/**'
+      - 'scripts/**'
+      - '.github/workflows/**'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate WordPress auto-update contract
+        run: |
+          chmod +x scripts/validate-release-contract.sh
+          ./scripts/validate-release-contract.sh

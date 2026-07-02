@@ -16,6 +16,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate release contract
+        run: |
+          chmod +x scripts/validate-release-contract.sh
+          ./scripts/validate-release-contract.sh "${{ github.ref_name }}"
+
       - name: Read plugin version
         id: version
         run: |
@@ -27,6 +32,9 @@ jobs:
         run: |
           chmod +x scripts/build-release.sh
           ./scripts/build-release.sh
+          SHA256=$(sha256sum "dist/paxdesign-booking-v${{ steps.version.outputs.version }}.zip" | awk '{print $1}')
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+        id: zip
 
       - name: Install xcodegen
         run: brew install xcodegen
@@ -42,7 +50,17 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
-          generate_release_notes: true
+          body: |
+            ## WordPress plugin
+
+            Automatic one-click update via the WordPress Dashboard (Plugins → Updates).
+
+            **Plugin ZIP:** `paxdesign-booking-v${{ steps.version.outputs.version }}.zip`
+            **SHA256:** `${{ steps.zip.outputs.sha256 }}`
+
+            ## iOS app
+
+            `PAXDesignLiveChat.ipa` — install via LiveContainer, AltStore, or Xcode.
           files: |
             dist/paxdesign-booking-v${{ steps.version.outputs.version }}.zip
             paxdesign-booking/ios-live-chat/build/output/PAXDesignLiveChat.ipa
