@@ -62,8 +62,8 @@ struct AppLockView: View {
                 Spacer()
             }
         }
-        .task(id: appLock.shouldOfferBiometricUnlock) {
-            guard appLock.shouldOfferBiometricUnlock else { return }
+        .task(id: appLock.lockEpoch) {
+            guard appLock.isLocked, !appLock.isUnlocked else { return }
             await appLock.requestBiometricUnlockIfNeeded()
         }
     }

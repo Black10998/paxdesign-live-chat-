@@ -10,6 +10,7 @@ final class AppLockService: ObservableObject {
 
     @Published private(set) var isLocked = false
     @Published private(set) var isUnlockedThisSession = false
+    @Published private(set) var lockEpoch = 0
     @Published var lockEnabled: Bool {
         didSet { persistBool(Keys.enabled, lockEnabled) }
     }
@@ -30,11 +31,12 @@ final class AppLockService: ObservableObject {
     private var lastUnlockCompletedAt: Date?
     private var isAuthenticating = false
     private var autoLockSuppressedUntil: Date?
+    private var biometricPromptIssuedForEpoch: Int?
     private let pinService = "at.paxdesign.livechat.applock.pin"
     private let saltService = "at.paxdesign.livechat.applock.salt"
 
     private let autoLockSuppressInterval: TimeInterval = 3.0
-    private let postUnlockGraceInterval: TimeInterval = 1.5
+    private let postUnlockGraceInterval: TimeInterval = 2.0
 
     enum AutoLockInterval: Int, CaseIterable, Identifiable {
         case immediate = 0
@@ -80,8 +82,9 @@ final class AppLockService: ObservableObject {
         lockEnabled && (biometricEnabled || pinEnabled)
     }
 
-    var shouldOfferBiometricUnlock: Bool {
-        isLocked && biometricEnabled && canUseBiometrics
+    /// Single source of truth: app content may be used without another unlock prompt.
+    var isUnlocked: Bool {
+        !isLocked && isUnlockedThisSession
     }
 
     var biometricTypeLabel: String {
@@ -100,33 +103,18 @@ final class AppLockService: ObservableObject {
         return context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil)
     }
 
+    /// Called once when a logged-in session starts. Never re-locks after a successful unlock.
     func prepareForLogin() {
+        guard isActive, lockOnLaunch else { return }
+        guard !isUnlockedThisSession else { return }
+        guard !isLocked else { return }
+        engageLock()
+    }
+
+    func lockFromSettings() {
+        guard isActive else { return }
         isUnlockedThisSession = false
-        isAuthenticating = false
-        autoLockSuppressedUntil = nil
-        if isActive && lockOnLaunch {
-            isLocked = true
-        }
-    }
-
-    func lock() {
-        guard isActive, !shouldSuppressAutoLock() else { return }
-        isLocked = true
-        isUnlockedThisSession = false
-    }
-
-    func unlock() {
-        isLocked = false
-        isUnlockedThisSession = true
-        isAuthenticating = false
-        let now = Date()
-        lastUnlockedAt = now
-        lastUnlockCompletedAt = now
-        extendAutoLockSuppression(for: postUnlockGraceInterval)
-    }
-
-    func recordActivity() {
-        lastUnlockedAt = Date()
+        engageLock()
     }
 
     func handleScenePhase(_ phase: ScenePhase, isLoggedIn: Bool) {
@@ -136,33 +124,57 @@ final class AppLockService: ObservableObject {
         case .background:
             guard !shouldSuppressAutoLock() else { return }
             if autoLockInterval == .immediate {
-                lock()
+                isUnlockedThisSession = false
+                engageLock()
             }
         case .inactive:
-            // Do not lock while inactive. Face ID and system sheets move the app here.
             break
         case .active:
             guard !shouldSuppressAutoLock() else { return }
             if shouldLockDueToInactivity() {
-                lock()
+                engageLock()
             }
         @unknown default:
             break
         }
     }
 
+    func unlock() {
+        guard isLocked else { return }
+
+        isLocked = false
+        isUnlockedThisSession = true
+        isAuthenticating = false
+        biometricPromptIssuedForEpoch = lockEpoch
+
+        let now = Date()
+        lastUnlockedAt = now
+        lastUnlockCompletedAt = now
+        extendAutoLockSuppression(for: postUnlockGraceInterval)
+    }
+
+    func recordActivity() {
+        guard isUnlocked else { return }
+        lastUnlockedAt = Date()
+    }
+
     func shouldLockDueToInactivity() -> Bool {
-        guard isActive, autoLockInterval != .never else { return false }
+        guard isActive, isUnlockedThisSession else { return false }
+        guard autoLockInterval != .never, autoLockInterval != .immediate else { return false }
+
         let elapsed = Date().timeIntervalSince(lastUnlockedAt)
         return elapsed >= TimeInterval(autoLockInterval.rawValue)
     }
 
-    /// Presents the native Face ID / Touch ID sheet once. Ignores duplicate calls while in flight.
+    /// Native Face ID / Touch ID — at most once per lock epoch while locked.
     func requestBiometricUnlockIfNeeded() async {
-        guard shouldOfferBiometricUnlock else { return }
+        guard isLocked, !isUnlockedThisSession else { return }
+        guard biometricEnabled, canUseBiometrics else { return }
         guard !isAuthenticating else { return }
+        guard biometricPromptIssuedForEpoch != lockEpoch else { return }
 
         isAuthenticating = true
+        biometricPromptIssuedForEpoch = lockEpoch
         extendAutoLockSuppression(for: autoLockSuppressInterval)
 
         defer { isAuthenticating = false }
@@ -178,13 +190,13 @@ final class AppLockService: ObservableObject {
                 unlock()
             }
         } catch {
-            // Cancellation or failure — stay on lock screen; PIN remains available.
+            // Stay locked; user may retry manually or use PIN.
         }
     }
 
-    /// User-initiated native device authentication (Face ID, Touch ID, or device passcode).
+    /// User-initiated native device authentication.
     func requestDeviceAuthentication() async -> Bool {
-        guard isLocked else { return false }
+        guard isLocked, !isUnlockedThisSession else { return false }
         guard !isAuthenticating else { return false }
 
         isAuthenticating = true
@@ -206,6 +218,14 @@ final class AppLockService: ObservableObject {
         } catch {
             return false
         }
+    }
+
+    func resetOnLogout() {
+        isAuthenticating = false
+        autoLockSuppressedUntil = nil
+        biometricPromptIssuedForEpoch = nil
+        isLocked = false
+        isUnlockedThisSession = false
     }
 
     func hasPINConfigured() -> Bool {
@@ -238,6 +258,17 @@ final class AppLockService: ObservableObject {
             return false
         }
         return hashPIN(pin, salt: salt) == stored
+    }
+
+    private func engageLock() {
+        guard isActive else { return }
+        guard !isLocked else { return }
+
+        isLocked = true
+        isUnlockedThisSession = false
+        isAuthenticating = false
+        lockEpoch += 1
+        biometricPromptIssuedForEpoch = nil
     }
 
     private func shouldSuppressAutoLock() -> Bool {

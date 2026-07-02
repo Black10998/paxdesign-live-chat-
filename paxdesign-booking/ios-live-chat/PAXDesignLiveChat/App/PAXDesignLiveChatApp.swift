@@ -35,7 +35,7 @@ struct PAXDesignLiveChatApp: App {
                         }
                     } else {
                         coordinator.stop()
-                        appLock.unlock()
+                        appLock.resetOnLogout()
                     }
                 }
                 .onChange(of: scenePhase) { phase in
@@ -65,7 +65,6 @@ struct PAXDesignLiveChatApp: App {
 
         if auth.isLoggedIn {
             coordinator.start(auth: auth)
-            appLock.prepareForLogin()
             permissions.presentNotificationPromptIfNeeded(isLoggedIn: true)
             await push.registerTokenWithBackend(auth: auth)
         }
@@ -123,7 +122,7 @@ struct RootView: View {
                     .zIndex(10)
             }
 
-            if auth.isLoggedIn, appLock.isActive, appLock.isLocked {
+            if auth.isLoggedIn, appLock.isActive, appLock.isLocked, !appLock.isUnlocked {
                 AppLockView()
                     .transition(.opacity)
                     .zIndex(100)

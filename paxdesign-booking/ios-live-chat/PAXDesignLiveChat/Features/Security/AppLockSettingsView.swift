@@ -51,7 +51,7 @@ struct AppLockSettingsView: View {
 
                 Section {
                     Button("Jetzt sperren") {
-                        appLock.lock()
+                        appLock.lockFromSettings()
                         statusMessage = "App wurde gesperrt."
                     }
                 }
