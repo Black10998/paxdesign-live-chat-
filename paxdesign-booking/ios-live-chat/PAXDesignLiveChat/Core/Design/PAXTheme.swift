@@ -60,7 +60,7 @@ enum PAXTheme {
         })
     }
 
-    private static func adaptivePalette(_ builder: (PAXThemePalette, Bool) -> Color) -> Color {
+    private static func adaptivePalette(_ builder: @escaping (PAXThemePalette, Bool) -> Color) -> Color {
         let currentPalette = palette
         return Color(UIColor { traits in
             let isDark = traits.userInterfaceStyle == .dark
