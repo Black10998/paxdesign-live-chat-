@@ -184,39 +184,7 @@ struct PAXAvatar: View {
 }
 
 struct PAXSplashView: View {
-    @State private var appear = false
-
     var body: some View {
-        ZStack {
-            PAXBackground()
-            VStack(spacing: 18) {
-                Group {
-                    if let icon = UIImage(named: "AppIcon") {
-                        Image(uiImage: icon)
-                            .resizable()
-                            .scaledToFit()
-                            .frame(width: 112, height: 112)
-                            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-                    } else {
-                        PAXClockLogo(size: 112, animate: true)
-                    }
-                }
-                .scaleEffect(appear ? 1 : 0.82)
-                .opacity(appear ? 1 : 0)
-
-                VStack(spacing: 6) {
-                    Text("PAXDesign")
-                        .font(.system(size: 28, weight: .semibold, design: .rounded))
-                    Text("Live Chat")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(PAXTheme.textSecondary)
-                }
-                .opacity(appear ? 1 : 0)
-                .offset(y: appear ? 0 : 8)
-            }
-        }
-        .onAppear {
-            withAnimation(PAXTheme.spring) { appear = true }
-        }
+        PAXLaunchView()
     }
 }

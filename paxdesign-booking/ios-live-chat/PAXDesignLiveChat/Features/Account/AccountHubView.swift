@@ -45,6 +45,11 @@ struct AccountHubView: View {
             }
 
             Section("App") {
+                NavigationLink {
+                    AppLockSettingsView()
+                } label: {
+                    Label("App-Sperre", systemImage: "lock.shield")
+                }
                 if canManageUsers {
                     NavigationLink {
                         StaffManagementView()

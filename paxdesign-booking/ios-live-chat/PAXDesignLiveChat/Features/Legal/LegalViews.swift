@@ -57,14 +57,33 @@ struct LegalDocumentView: View {
 
 struct SecurityView: View {
     var body: some View {
-        LegalDocumentView(title: "Sicherheit", sections: [
-            ("Transportverschlüsselung", "Alle API-Anfragen erfolgen ausschließlich über HTTPS (TLS). Ungesicherte HTTP-Verbindungen werden von der App abgelehnt."),
-            ("Anmeldedaten", "Das Application Password wird im iOS-Schlüsselbund gespeichert (kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly) und verlässt das Gerät nicht im Klartext."),
-            ("Geräteschutz", "Nutzen Sie Face ID, Touch ID oder einen Gerätecode. Die App speichert keine zusätzlichen Passwörter außerhalb des Schlüsselbundes."),
-            ("Kein Tracking", "Die App enthält keine Werbe-SDKs, kein Cross-App-Tracking und keine Third-Party-Analytics."),
-            ("Keine Ende-zu-Ende-Verschlüsselung", "Eine zusätzliche Ende-zu-Ende-Verschlüsselung ist nicht implementiert. Nachrichten werden serverseitig für den Support-Workflow gespeichert — analog zum Browser-Admin-Panel."),
-            ("Empfehlung", "Halten Sie iOS aktuell, melden Sie sich auf gemeinsam genutzten Geräten ab und widerrufen Sie Application Passwords in WordPress bei Verlust des Geräts."),
-        ])
+        List {
+            Section {
+                NavigationLink {
+                    AppLockSettingsView()
+                } label: {
+                    Label("App-Sperre", systemImage: "lock.shield.fill")
+                }
+            } footer: {
+                Text("Face ID, Touch ID oder App-PIN mit automatischer Sperre nach Inaktivität.")
+            }
+
+            Section("Hinweise") {
+                Text("Transportverschlüsselung: Alle API-Anfragen erfolgen ausschließlich über HTTPS (TLS).")
+                    .font(.footnote)
+                    .foregroundStyle(PAXTheme.textSecondary)
+                Text("Anmeldedaten werden im iOS-Schlüsselbund gespeichert. App-PINs werden gehasht im Schlüsselbund abgelegt.")
+                    .font(.footnote)
+                    .foregroundStyle(PAXTheme.textSecondary)
+                Text("Kein Tracking. Keine Third-Party-Analytics.")
+                    .font(.footnote)
+                    .foregroundStyle(PAXTheme.textSecondary)
+            }
+        }
+        .navigationTitle("Sicherheit")
+        .navigationBarTitleDisplayMode(.inline)
+        .scrollContentBackground(.hidden)
+        .background(PAXBackground())
     }
 }
 

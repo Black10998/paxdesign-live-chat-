@@ -5,6 +5,7 @@ import UIKit
 struct SettingsView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var push: PushService
+    @EnvironmentObject private var permissions: PermissionCoordinator
     @StateObject private var settings = AppSettingsStore.shared
     @Environment(\.dismiss) private var dismiss
 
@@ -48,6 +49,7 @@ struct SettingsView: View {
         List {
             profileSection
             accountSection
+            securitySection
             notificationSection
             soundSection
             aboutSection
@@ -132,10 +134,45 @@ struct SettingsView: View {
         }
     }
 
+    private var securitySection: some View {
+        Section {
+            NavigationLink {
+                AppLockSettingsView()
+            } label: {
+                Label("App-Sperre", systemImage: "lock.shield")
+            }
+        } header: {
+            Text("Sicherheit")
+        } footer: {
+            Text("Face ID, Touch ID oder App-PIN. Automatische Sperre nach Inaktivität.")
+        }
+    }
+
     private var notificationSection: some View {
-        Section("Benachrichtigungen") {
+        Section {
             Toggle("Push-Benachrichtigungen", isOn: $settings.notificationsEnabled)
+                .onChange(of: settings.notificationsEnabled) { enabled in
+                    if enabled {
+                        Task {
+                            await permissions.refreshStatuses()
+                            if permissions.notificationStatus == .notDetermined {
+                                _ = await permissions.requestNotifications(push: push)
+                            }
+                        }
+                    }
+                }
             Toggle("Neue Nachrichten", isOn: $settings.messageSoundEnabled)
+
+            if permissions.notificationStatus == .denied {
+                Button("Benachrichtigungen in iOS-Einstellungen öffnen") {
+                    permissions.openSystemSettings()
+                }
+                .font(.footnote)
+            }
+        } header: {
+            Text("Benachrichtigungen")
+        } footer: {
+            Text("Push-Benachrichtigungen benachrichtigen Sie über Live-Anfragen und neue Kundennachrichten.")
         }
     }
 

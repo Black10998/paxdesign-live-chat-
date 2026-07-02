@@ -15,13 +15,13 @@ struct LoginView: View {
                     Spacer(minLength: 24)
 
                     VStack(spacing: 18) {
-                        PAXClockLogo(size: 108, animate: true)
+                        PAXAppMarkView(size: 108, showGlow: true)
                             .scaleEffect(appear ? 1 : 0.88)
                             .opacity(appear ? 1 : 0)
 
                         VStack(spacing: 8) {
                             Text("PAXDesign Live Chat")
-                                .font(.system(size: 30, weight: .bold, design: .rounded))
+                                .font(.system(size: 28, weight: .bold, design: .rounded))
                             Text("Offizielle Administrator-App")
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(PAXTheme.textSecondary)

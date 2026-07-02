@@ -1,0 +1,82 @@
+import SwiftUI
+
+struct NotificationPermissionPromptView: View {
+    @EnvironmentObject private var push: PushService
+    @ObservedObject private var permissions = PermissionCoordinator.shared
+    @State private var isRequesting = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Capsule()
+                .fill(PAXTheme.textTertiary.opacity(0.5))
+                .frame(width: 36, height: 5)
+                .padding(.top, 10)
+
+            VStack(spacing: 22) {
+                ZStack {
+                    Circle()
+                        .fill(PAXTheme.accentSoft)
+                        .frame(width: 72, height: 72)
+                    Image(systemName: "bell.badge.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(PAXTheme.accent)
+                }
+
+                VStack(spacing: 8) {
+                    Text("Benachrichtigungen")
+                        .font(.title3.weight(.semibold))
+                    Text("Erhalten Sie sofort eine Meldung bei Live-Agent-Anfragen und neuen Kundennachrichten — auch wenn die App im Hintergrund ist.")
+                        .font(.subheadline)
+                        .foregroundStyle(PAXTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                VStack(spacing: 10) {
+                    PAXPrimaryButton(title: isRequesting ? "Wird angefragt …" : "Benachrichtigungen erlauben", isLoading: isRequesting) {
+                        Task {
+                            isRequesting = true
+                            defer { isRequesting = false }
+                            _ = await permissions.requestNotifications(push: push)
+                        }
+                    }
+
+                    Button("Später") {
+                        permissions.skipNotificationOnboarding()
+                    }
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(PAXTheme.textSecondary)
+                }
+            }
+            .padding(24)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(PAXTheme.surfaceElevated)
+        )
+        .padding(.horizontal, 12)
+    }
+}
+
+struct PAXLoadingOverlay: View {
+    let message: String
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35).ignoresSafeArea()
+            VStack(spacing: 14) {
+                ProgressView()
+                    .controlSize(.large)
+                    .tint(PAXTheme.accent)
+                Text(message)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(PAXTheme.textSecondary)
+            }
+            .padding(28)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(PAXTheme.surfaceElevated)
+            )
+        }
+    }
+}

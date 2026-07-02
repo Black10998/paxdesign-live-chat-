@@ -7,6 +7,8 @@ struct PAXDesignLiveChatApp: App {
     @StateObject private var coordinator = ChatCoordinator()
     @StateObject private var push = PushService.shared
     @StateObject private var settings = AppSettingsStore.shared
+    @StateObject private var permissions = PermissionCoordinator.shared
+    @StateObject private var appLock = AppLockService.shared
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -16,28 +18,33 @@ struct PAXDesignLiveChatApp: App {
                 .environmentObject(coordinator)
                 .environmentObject(push)
                 .environmentObject(settings)
+                .environmentObject(permissions)
+                .environmentObject(appLock)
                 .preferredColorScheme(.dark)
                 .task {
-                    await push.requestAuthorization()
-                    await auth.bootstrapSession()
-                    if auth.isLoggedIn {
-                        coordinator.start(auth: auth)
-                        await push.registerTokenWithBackend(auth: auth)
-                    }
+                    await runStartupSequence()
                 }
                 .onChange(of: auth.isLoggedIn) { loggedIn in
                     if loggedIn {
                         coordinator.start(auth: auth)
-                        Task { await push.registerTokenWithBackend(auth: auth) }
+                        appLock.prepareForLogin()
+                        Task {
+                            await permissions.refreshStatuses()
+                            permissions.presentNotificationPromptIfNeeded(isLoggedIn: true)
+                            await push.registerTokenWithBackend(auth: auth)
+                        }
                     } else {
                         coordinator.stop()
+                        appLock.unlock()
                     }
                 }
                 .onChange(of: scenePhase) { phase in
+                    appLock.handleScenePhase(phase, isLoggedIn: auth.isLoggedIn)
                     guard phase == .active, auth.isLoggedIn else { return }
                     Task {
                         await auth.refreshProfile()
                         await coordinator.refreshSessions(auth: auth)
+                        await permissions.refreshStatuses()
                     }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .paxPushReceived)) { note in
@@ -46,6 +53,23 @@ struct PAXDesignLiveChatApp: App {
                 .onReceive(NotificationCenter.default.publisher(for: .paxPushOpened)) { note in
                     handlePushNotification(note, opened: true)
                 }
+        }
+    }
+
+    private func runStartupSequence() async {
+        await permissions.refreshStatuses()
+        async let bootstrap: Void = auth.bootstrapSession()
+        async let minimumSplash: Void = Task.sleep(nanoseconds: 1_250_000_000)
+        _ = await (bootstrap, minimumSplash)
+
+        if auth.isLoggedIn {
+            coordinator.start(auth: auth)
+            appLock.prepareForLogin()
+            if appLock.isActive && appLock.isLocked {
+                await appLock.attemptBiometricUnlock()
+            }
+            permissions.presentNotificationPromptIfNeeded(isLoggedIn: true)
+            await push.registerTokenWithBackend(auth: auth)
         }
     }
 
@@ -75,12 +99,15 @@ struct PAXDesignLiveChatApp: App {
 struct RootView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
+    @EnvironmentObject private var permissions: PermissionCoordinator
+    @EnvironmentObject private var appLock: AppLockService
 
     var body: some View {
         ZStack {
             Group {
                 if auth.isBootstrapping {
-                    PAXSplashView()
+                    PAXLaunchView()
+                        .transition(.opacity)
                 } else if auth.isLoggedIn {
                     MainShellView()
                         .transition(.opacity.combined(with: .move(edge: .trailing)))
@@ -97,15 +124,32 @@ struct RootView: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.96)))
                     .zIndex(10)
             }
+
+            if auth.isLoggedIn, appLock.isActive, appLock.isLocked {
+                AppLockView()
+                    .transition(.opacity)
+                    .zIndex(100)
+            }
         }
         .animation(PAXTheme.spring, value: coordinator.incomingRequest?.id)
         .animation(PAXTheme.spring, value: coordinator.showIncomingFullscreen)
+        .animation(PAXTheme.fade, value: appLock.isLocked)
+        .sheet(isPresented: $permissions.showNotificationPrompt) {
+            NotificationPermissionPromptView()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+                .presentationBackground(PAXTheme.surface)
+        }
+        .simultaneousGesture(
+            TapGesture().onEnded { appLock.recordActivity() }
+        )
     }
 }
 
 struct MainShellView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
+    @EnvironmentObject private var appLock: AppLockService
     @StateObject private var settings = AppSettingsStore.shared
     @State private var chatsPath = NavigationPath()
     @State private var livePath = NavigationPath()
@@ -174,9 +218,11 @@ struct MainShellView: View {
                 PAXHaptics.medium()
             }
         }
+        .onChange(of: selectedTab) { _ in appLock.recordActivity() }
     }
 
     private func openSession(_ sessionId: String, path: Binding<NavigationPath>) {
+        appLock.recordActivity()
         coordinator.acknowledgeIncomingRequest(sessionId)
         settings.readSessionIds.insert(sessionId)
         path.wrappedValue = NavigationPath()
