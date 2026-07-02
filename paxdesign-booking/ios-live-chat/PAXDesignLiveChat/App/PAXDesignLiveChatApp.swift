@@ -138,7 +138,7 @@ struct MainShellView: View {
                 }
                 .tabItem { Label("Live", systemImage: "dot.radiowaves.left.and.right") }
                 .tag(1)
-                .badge(coordinator.liveCount > 0 ? coordinator.liveCount : nil)
+                .modifier(LiveTabBadge(count: coordinator.liveCount))
 
                 NavigationStack {
                     AccountHubView()
