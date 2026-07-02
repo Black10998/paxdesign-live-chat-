@@ -140,9 +140,6 @@ struct RootView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
-        .simultaneousGesture(
-            TapGesture().onEnded { appLock.recordActivity() }
-        )
     }
 }
 
@@ -165,7 +162,38 @@ struct MainShellView: View {
     private var canReplyChats: Bool { auth.canReplyChats }
 
     var body: some View {
-        VStack(spacing: 0) {
+        TabView(selection: $selectedTab) {
+            if canViewChats {
+                NavigationStack(path: $chatsPath) {
+                    SessionListView(onOpenSession: { openSession($0, path: $chatsPath) })
+                        .navigationDestination(for: String.self) { sessionId in
+                            ChatView(sessionId: sessionId)
+                        }
+                }
+                .tabItem { Label("Chats", systemImage: "bubble.left.and.bubble.right") }
+                .tag(0)
+                .modifier(ChatsTabBadge(count: unreadChatCount))
+            }
+
+            NavigationStack(path: $livePath) {
+                LiveTabView(onOpenSession: { openSession($0, path: $livePath) })
+                    .navigationDestination(for: String.self) { sessionId in
+                        if canViewChats {
+                            ChatView(sessionId: sessionId)
+                        }
+                    }
+            }
+            .tabItem { Label("Live", systemImage: "bell.and.waves.left.and.right.fill") }
+            .tag(canViewChats ? 1 : 0)
+            .modifier(LiveTabBadge(count: coordinator.liveCount))
+
+            NavigationStack {
+                AccountHubView()
+            }
+            .tabItem { Label("Konto", systemImage: "person.crop.circle") }
+            .tag(canViewChats ? 2 : 1)
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
             if canReplyChats, let incoming = coordinator.incomingRequest, !coordinator.incomingBannerDismissed {
                 LiveRequestTopBanner(request: incoming) {
                     coordinator.presentIncomingFullscreen()
@@ -173,39 +201,6 @@ struct MainShellView: View {
                     coordinator.dismissIncomingBanner()
                 }
                 .transition(.move(edge: .top).combined(with: .opacity))
-                .zIndex(5)
-            }
-
-            TabView(selection: $selectedTab) {
-                if canViewChats {
-                    NavigationStack(path: $chatsPath) {
-                        SessionListView(onOpenSession: { openSession($0, path: $chatsPath) })
-                            .navigationDestination(for: String.self) { sessionId in
-                                ChatView(sessionId: sessionId)
-                            }
-                    }
-                    .tabItem { Label("Chats", systemImage: "bubble.left.and.bubble.right") }
-                    .tag(0)
-                    .modifier(ChatsTabBadge(count: unreadChatCount))
-                }
-
-                NavigationStack(path: $livePath) {
-                    LiveTabView(onOpenSession: { openSession($0, path: $livePath) })
-                        .navigationDestination(for: String.self) { sessionId in
-                            if canViewChats {
-                                ChatView(sessionId: sessionId)
-                            }
-                        }
-                }
-                .tabItem { Label("Live", systemImage: "bell.and.waves.left.and.right.fill") }
-                .tag(canViewChats ? 1 : 0)
-                .modifier(LiveTabBadge(count: coordinator.liveCount))
-
-                NavigationStack {
-                    AccountHubView()
-                }
-                .tabItem { Label("Konto", systemImage: "person.crop.circle") }
-                .tag(canViewChats ? 2 : 1)
             }
         }
         .onChange(of: coordinator.activeSessionId) { sessionId in
