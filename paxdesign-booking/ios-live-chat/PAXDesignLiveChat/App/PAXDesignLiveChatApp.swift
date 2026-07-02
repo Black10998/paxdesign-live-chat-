@@ -58,9 +58,10 @@ struct PAXDesignLiveChatApp: App {
 
     private func runStartupSequence() async {
         await permissions.refreshStatuses()
-        async let bootstrap: Void = auth.bootstrapSession()
-        async let minimumSplash: Void = Task.sleep(nanoseconds: 1_250_000_000)
-        _ = await (bootstrap, minimumSplash)
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await auth.bootstrapSession() }
+            group.addTask { try? await Task.sleep(nanoseconds: 1_250_000_000) }
+        }
 
         if auth.isLoggedIn {
             coordinator.start(auth: auth)
@@ -138,7 +139,6 @@ struct RootView: View {
             NotificationPermissionPromptView()
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
-                .presentationBackground(PAXTheme.surface)
         }
         .simultaneousGesture(
             TapGesture().onEnded { appLock.recordActivity() }
