@@ -168,7 +168,6 @@
     initCustomerClose();
     initRatingUi();
     initSoundToggle();
-    initHistoryUi();
     initPlusToggle();
     bindAudioUnlock();
     bindVisibilityResume();
@@ -1185,15 +1184,35 @@
       updateSoundToggleUi();
       if (soundEnabled) {
         playNotificationSound(true);
+        showChatStatusNotice('Benachrichtigungen aktiviert');
       } else {
         stopTypingSound();
+        showChatStatusNotice('Benachrichtigungen deaktiviert');
       }
     });
   }
 
+  function showChatStatusNotice(text) {
+    if (!messagesEl) return;
+    var note = document.createElement('div');
+    note.className = 'paxdesign-booking-chat-status-notice';
+    note.setAttribute('role', 'status');
+    note.textContent = text;
+    messagesEl.appendChild(note);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    setTimeout(function () {
+      if (note.parentNode) note.parentNode.removeChild(note);
+    }, 3200);
+  }
+
   function updateSoundToggleUi() {
     if (!notifyBtn) return;
+    var onIcon = notifyBtn.querySelector('.paxdesign-bell-icon--on');
+    var offIcon = notifyBtn.querySelector('.paxdesign-bell-icon--off');
+    if (onIcon) onIcon.hidden = !soundEnabled;
+    if (offIcon) offIcon.hidden = soundEnabled;
     notifyBtn.classList.toggle('paxdesign-is-muted', !soundEnabled);
+    notifyBtn.classList.toggle('paxdesign-is-active', soundEnabled);
     notifyBtn.setAttribute('aria-pressed', soundEnabled ? 'true' : 'false');
     notifyBtn.title = soundEnabled ? 'Benachrichtigungston aus' : 'Benachrichtigungston an';
   }

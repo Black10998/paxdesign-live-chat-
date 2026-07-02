@@ -89,53 +89,80 @@ struct RootView: View {
             .animation(PAXTheme.spring, value: auth.isBootstrapping)
             .animation(PAXTheme.spring, value: auth.isLoggedIn)
 
-            if let incoming = coordinator.incomingRequest {
+            if coordinator.showIncomingFullscreen, let incoming = coordinator.incomingRequest {
                 IncomingLiveRequestView(request: incoming)
                     .transition(.opacity.combined(with: .scale(scale: 0.96)))
                     .zIndex(10)
             }
         }
         .animation(PAXTheme.spring, value: coordinator.incomingRequest?.id)
+        .animation(PAXTheme.spring, value: coordinator.showIncomingFullscreen)
     }
 }
 
 struct MainShellView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
-    @State private var navigationPath = NavigationPath()
+    @StateObject private var settings = AppSettingsStore.shared
+    @State private var chatsPath = NavigationPath()
+    @State private var livePath = NavigationPath()
     @State private var selectedTab = 0
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            NavigationStack(path: $navigationPath) {
-                SessionListView(onOpenSession: openSession)
-                    .navigationDestination(for: String.self) { sessionId in
-                        ChatView(sessionId: sessionId)
-                    }
+        VStack(spacing: 0) {
+            if let incoming = coordinator.incomingRequest, !coordinator.incomingBannerDismissed {
+                LiveRequestTopBanner(request: incoming) {
+                    coordinator.presentIncomingFullscreen()
+                } onDismiss: {
+                    coordinator.dismissIncomingBanner()
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(5)
             }
-            .tabItem {
-                Label("Chats", systemImage: "bubble.left.and.bubble.right")
-            }
-            .tag(0)
 
-            NavigationStack {
-                AccountHubView()
+            TabView(selection: $selectedTab) {
+                NavigationStack(path: $chatsPath) {
+                    SessionListView(onOpenSession: { openSession($0, path: $chatsPath) })
+                        .navigationDestination(for: String.self) { sessionId in
+                            ChatView(sessionId: sessionId)
+                        }
+                }
+                .tabItem { Label("Chats", systemImage: "bubble.left.and.bubble.right") }
+                .tag(0)
+
+                NavigationStack(path: $livePath) {
+                    LiveTabView(onOpenSession: { openSession($0, path: $livePath) })
+                        .navigationDestination(for: String.self) { sessionId in
+                            ChatView(sessionId: sessionId)
+                        }
+                }
+                .tabItem { Label("Live", systemImage: "dot.radiowaves.left.and.right") }
+                .tag(1)
+                .badge(coordinator.liveCount > 0 ? coordinator.liveCount : nil)
+
+                NavigationStack {
+                    AccountHubView()
+                }
+                .tabItem { Label("Konto", systemImage: "person.crop.circle") }
+                .tag(2)
             }
-            .tabItem {
-                Label("Konto", systemImage: "person.crop.circle")
-            }
-            .tag(1)
         }
         .onChange(of: coordinator.activeSessionId) { sessionId in
             guard let sessionId else { return }
             selectedTab = 0
-            openSession(sessionId)
+            openSession(sessionId, path: $chatsPath)
+        }
+        .onChange(of: coordinator.liveCount) { count in
+            if count > 0 && selectedTab != 1 {
+                PAXHaptics.medium()
+            }
         }
     }
 
-    private func openSession(_ sessionId: String) {
+    private func openSession(_ sessionId: String, path: Binding<NavigationPath>) {
         coordinator.acknowledgeIncomingRequest(sessionId)
-        navigationPath = NavigationPath()
-        navigationPath.append(sessionId)
+        settings.readSessionIds.insert(sessionId)
+        path.wrappedValue = NavigationPath()
+        path.wrappedValue.append(sessionId)
     }
 }

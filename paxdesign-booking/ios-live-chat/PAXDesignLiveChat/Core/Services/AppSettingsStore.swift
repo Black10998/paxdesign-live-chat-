@@ -23,6 +23,14 @@ final class AppSettingsStore: ObservableObject {
     @Published var ringtoneVolume: Float {
         didSet { UserDefaults.standard.set(ringtoneVolume, forKey: Keys.volume) }
     }
+    @Published var sendSoundEnabled: Bool {
+        didSet { UserDefaults.standard.set(sendSoundEnabled, forKey: Keys.sendSound) }
+    }
+    @Published var readSessionIds: Set<String> {
+        didSet {
+            UserDefaults.standard.set(Array(readSessionIds), forKey: Keys.readSessions)
+        }
+    }
     @Published var profileImageData: Data? {
         didSet { UserDefaults.standard.set(profileImageData, forKey: Keys.profileImage) }
     }
@@ -32,6 +40,8 @@ final class AppSettingsStore: ObservableObject {
         static let incomingSound = "pax.settings.incomingSound"
         static let messageSound = "pax.settings.messageSound"
         static let typingSound = "pax.settings.typingSound"
+        static let sendSound = "pax.settings.sendSound"
+        static let readSessions = "pax.settings.readSessions"
         static let privacyBanner = "pax.settings.privacyBanner"
         static let volume = "pax.settings.ringVolume"
         static let profileImage = "pax.settings.profileImage"
@@ -43,7 +53,13 @@ final class AppSettingsStore: ObservableObject {
         incomingCallSoundEnabled = defaults.object(forKey: Keys.incomingSound) as? Bool ?? true
         messageSoundEnabled = defaults.object(forKey: Keys.messageSound) as? Bool ?? true
         typingSoundEnabled = defaults.object(forKey: Keys.typingSound) as? Bool ?? true
+        sendSoundEnabled = defaults.object(forKey: Keys.sendSound) as? Bool ?? true
         privacyBannerDismissed = defaults.object(forKey: Keys.privacyBanner) as? Bool ?? false
+        if let read = defaults.array(forKey: Keys.readSessions) as? [String] {
+            readSessionIds = Set(read)
+        } else {
+            readSessionIds = []
+        }
         ringtoneVolume = defaults.object(forKey: Keys.volume) as? Float ?? 0.9
         profileImageData = defaults.data(forKey: Keys.profileImage)
     }

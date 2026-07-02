@@ -1752,38 +1752,14 @@ class PAXdesign_Chat_Live {
      * @return true|WP_Error
      */
     public static function rest_admin_authorized($detailed_errors = false) {
-        if (!is_user_logged_in()) {
-            if (!$detailed_errors) {
-                return false;
-            }
-
-            $hint = __('Use your WordPress username (or account email) and a valid Application Password via HTTP Basic Auth.', 'paxdesign-booking');
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[PAXdesign Live Chat Mobile API] auth_failed not_logged_in');
-            }
-            return new WP_Error(
-                'rest_not_logged_in',
-                $hint,
-                array('status' => 401)
-            );
+        $result = PAXdesign_Live_Chat_Permissions::authorize_api_access();
+        if ($result === true) {
+            return true;
         }
-
-        if (!current_user_can('manage_options')) {
-            if (!$detailed_errors) {
-                return false;
-            }
-
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[PAXdesign Live Chat Mobile API] auth_failed missing manage_options user_id=' . get_current_user_id());
-            }
-            return new WP_Error(
-                'rest_forbidden',
-                __('Your WordPress account must have Administrator permissions.', 'paxdesign-booking'),
-                array('status' => 403)
-            );
+        if (!$detailed_errors) {
+            return false;
         }
-
-        return true;
+        return $result;
     }
 
     /**

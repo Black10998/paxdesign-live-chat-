@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.50.0
+Version: 3.51.0
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.50.0');
+define('PAXDESIGN_BOOKING_VERSION', '3.51.0');
 define('PAXDESIGN_BOOKING_DB_VERSION', '1.7');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -36,6 +36,7 @@ require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-live-chat-
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-web-push.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-live-chat-pwa.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-apns.php';
+require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-live-chat-permissions.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-live-chat-mobile-api.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-icons.php';
@@ -47,6 +48,7 @@ PAXdesign_Chat_Live::get_instance();
 PAXdesign_Live_Chat_Shortcode::init();
 PAXdesign_Live_Chat_PWA::init();
 PAXdesign_APNS::init();
+PAXdesign_Live_Chat_Permissions::init();
 PAXdesign_Live_Chat_Mobile_API::init();
 
 /**

@@ -38,7 +38,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(auth.profile?.name ?? "Administrator")
                         .font(.headline)
-                    Text(auth.profile?.email ?? auth.username)
+                    Text(auth.profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
                         .font(.subheadline)
                         .foregroundStyle(PAXTheme.textSecondary)
                     if let username = auth.profile?.username, !username.isEmpty {
@@ -116,6 +116,7 @@ struct SettingsView: View {
     private var soundSection: some View {
         Section {
             Toggle("Klingelton bei Live-Anfrage", isOn: $settings.incomingCallSoundEnabled)
+            Toggle("Sendeton", isOn: $settings.sendSoundEnabled)
             Toggle("Tippgeräusch beim Schreiben", isOn: $settings.typingSoundEnabled)
             VStack(alignment: .leading, spacing: 8) {
                 Text("Lautstärke")

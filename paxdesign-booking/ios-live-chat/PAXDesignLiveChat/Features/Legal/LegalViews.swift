@@ -122,25 +122,32 @@ struct DataHandlingView: View {
 struct AboutView: View {
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: 22) {
                 PAXClockLogo(size: 72)
 
                 Text("PAXDesign Live Chat")
                     .font(.title2.weight(.semibold))
 
-                Text("Native SwiftUI-App für Echtzeit-Kundensupport.")
+                Text("Die offizielle native iOS-Administrations-App für das PAXdesign Live-Chat-System. Entwickelt für autorisierte Support-Mitarbeiter — nicht für Endkunden.")
                     .font(.subheadline)
                     .foregroundStyle(PAXTheme.textSecondary)
                     .multilineTextAlignment(.center)
 
-                VStack(spacing: 8) {
-                    LabeledContent("App-Version", value: PAXAppInfo.marketingVersion)
-                    LabeledContent("Build", value: PAXAppInfo.buildNumber)
-                    LabeledContent("Bundle-ID", value: "at.paxdesign.livechat")
+                VStack(alignment: .leading, spacing: 12) {
+                    aboutRow("Version", PAXAppInfo.fullVersion)
+                    aboutRow("Website", "https://paxdesign.at")
+                    aboutRow("Hersteller", "PAXdesign / PrimoJob GmbH")
+                    aboutRow("Technologie", "100 % native SwiftUI-App")
+                    aboutRow("Sicherheit", "HTTPS/TLS, iOS-Schlüsselbund")
                 }
                 .padding()
                 .background(PAXTheme.surface)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                Text("Diese App ist das offizielle mobile Admin-Panel für Echtzeit-Kundensupport — mit Push-Benachrichtigungen, Live-Agent-Übernahme, KI-Vorschlägen und voller Parität zum Browser-Dashboard.")
+                    .font(.footnote)
+                    .foregroundStyle(PAXTheme.textSecondary)
+                    .multilineTextAlignment(.center)
 
                 LegalFooterLinks()
             }
@@ -150,17 +157,34 @@ struct AboutView: View {
         .navigationTitle("Über")
         .navigationBarTitleDisplayMode(.inline)
     }
+
+    private func aboutRow(_ title: String, _ value: String) -> some View {
+        HStack(alignment: .top) {
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+            Spacer()
+            Text(value)
+                .font(.subheadline)
+                .foregroundStyle(PAXTheme.textSecondary)
+                .multilineTextAlignment(.trailing)
+        }
+    }
 }
 
 struct HelpView: View {
     var body: some View {
         LegalDocumentView(title: "Hilfe", sections: [
-            ("Anmeldung", "HTTPS-Website-URL, WordPress-Benutzername und Application Password eingeben. Das Passwort wird unter Benutzer → Profil in WordPress erstellt."),
-            ("Live-Anfragen", "Bei neuen Anfragen erscheint ein Vollbild-Alarm. Übernehmen oder ablehnen."),
-            ("Chatten", "Nach Übernahme Nachrichten senden, Bilder anhängen, auf Nachrichten antworten, kopieren oder teilen."),
-            ("KI-Vorschläge", "Vorschläge antippen, um den Text in das Eingabefeld zu übernehmen — sie werden nicht automatisch gesendet."),
-            ("Synchronisation", "Die App aktualisiert Chats automatisch im Hintergrund."),
-            ("Support", "Technische Probleme: https://paxdesign.at"),
+            ("Über diese App", "PAXDesign Live Chat ist die offizielle iOS-App für autorisierte Mitarbeiter. Sie verbindet sich sicher per HTTPS mit Ihrem WordPress-Backend und spiegelt die Funktionen des Browser-Live-Admin-Panels — optimiert für unterwegs und mit Push-Benachrichtigungen."),
+            ("Anmeldung & Konto", "Geben Sie die HTTPS-URL Ihrer Website, Ihren WordPress-Benutzernamen (oder E-Mail) und ein Application Password ein. Das Passwort erstellen Sie in WordPress unter Benutzer → Profil. Nach erfolgreicher Anmeldung bleiben die Zugangsdaten verschlüsselt im iOS-Schlüsselbund."),
+            ("Live-Anfragen", "Wenn ein Kunde einen Live-Agenten anfordert, erscheint ein Premium-Banner oben in der App sowie ein Vollbild-Alarm mit Klingelton. Wechseln Sie zum Live-Tab, um alle offenen Anfragen zu sehen. Übernehmen oder lehnen Sie Anfragen ab — übernommene Chats öffnen sich automatisch."),
+            ("Chats & Nachrichten", "Im Chats-Tab sehen Sie alle aktiven Gespräche. Nutzen Sie Suche und Filter (Alle, Live, Offen, Aktiv, Geschlossen). Ungelesene Kundennachrichten werden mit einem Badge markiert. Lang drücken auf eine Nachricht: Kopieren, Teilen oder Antworten."),
+            ("Bilder senden", "Tippen Sie auf das Foto-Symbol im Composer, um ein Bild aus der Mediathek zu senden. Bilder werden vor dem Upload optimiert und im Chat als Vorschaubild angezeigt. Tippen Sie auf ein Bild für die Vollbild-Ansicht."),
+            ("KI-Assistent & Schnellantworten", "Nach Kundennachrichten erscheinen KI-Vorschläge und Schnellantworten oberhalb des Eingabefelds. Antippen übernimmt den Text — es wird nichts automatisch gesendet. Berechtigungen können vom Hauptadministrator eingeschränkt werden."),
+            ("Benachrichtigungen & Töne", "Push-Benachrichtigungen informieren über Live-Anfragen und neue Nachrichten. In den Einstellungen können Klingelton, Sendeton, Tippgeräusch und Lautstärke angepasst werden."),
+            ("Team & Berechtigungen", "Der Hauptadministrator verwaltet Mitarbeiter-Zugang und Berechtigungen (Chats ansehen, antworten, KI, Bilder, Einstellungen, Bewertungen, Team-Verwaltung, Sicherheit). Unter Konto → Team & Berechtigungen oder im WordPress-Admin."),
+            ("Datenschutz & Sicherheit", "Alle Kommunikation erfolgt über TLS (HTTPS). Es gibt keine Ende-zu-Ende-Verschlüsselung — Nachrichten werden serverseitig für den Support gespeichert. E-Mail-Adressen werden in der App teilweise maskiert angezeigt. Details unter Konto → Sicherheit und Datenschutz."),
+            ("Best Practices für Admins", "Melden Sie sich auf gemeinsam genutzten Geräten ab. Widerrufen Sie Application Passwords bei Verlust. Antworten Sie zeitnah auf Live-Anfragen. Nutzen Sie die KI-Vorschläge als Hilfe, prüfen Sie Inhalte vor dem Senden. Halten Sie Plugin und App aktuell."),
+            ("Support", "Technische Fragen: https://paxdesign.at — Plugin-Updates werden automatisch über GitHub Releases bereitgestellt."),
         ])
     }
 }

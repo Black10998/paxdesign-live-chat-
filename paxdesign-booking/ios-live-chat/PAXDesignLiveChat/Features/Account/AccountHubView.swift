@@ -3,6 +3,13 @@ import SwiftUI
 struct AccountHubView: View {
     @EnvironmentObject private var auth: AuthStore
 
+    private var canManageUsers: Bool { auth.profile?.perms.manageUsers ?? false }
+    private var canAccessSecurity: Bool { auth.profile?.perms.accessSecurity ?? true }
+    private var websiteURL: URL {
+        if let url = URL(string: auth.siteURLString), !auth.siteURLString.isEmpty { return url }
+        return PAXLegalLinks.support
+    }
+
     var body: some View {
         List {
             Section {
@@ -11,15 +18,39 @@ struct AccountHubView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(auth.profile?.name ?? "Administrator")
                             .font(.headline)
-                        Text(auth.profile?.email ?? auth.username)
+                        Text(auth.profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
                             .font(.subheadline)
                             .foregroundStyle(PAXTheme.textSecondary)
+                        if auth.profile?.isSuperAdmin == true {
+                            Text("Hauptadministrator")
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(PAXTheme.accent)
+                        }
                     }
                 }
                 .padding(.vertical, 4)
             }
 
+            Section("Website") {
+                Link(destination: websiteURL) {
+                    HStack {
+                        Label("Offizielle Website", systemImage: "globe")
+                        Spacer()
+                        Text(websiteURL.host ?? "paxdesign.at")
+                            .font(.caption)
+                            .foregroundStyle(PAXTheme.textTertiary)
+                    }
+                }
+            }
+
             Section("App") {
+                if canManageUsers {
+                    NavigationLink {
+                        StaffManagementView()
+                    } label: {
+                        Label("Team & Berechtigungen", systemImage: "person.3")
+                    }
+                }
                 NavigationLink {
                     SettingsView()
                 } label: {
@@ -44,10 +75,12 @@ struct AccountHubView: View {
                 Link(destination: PAXLegalLinks.impressum) {
                     Label("Impressum (Web)", systemImage: "safari")
                 }
-                NavigationLink {
-                    SecurityView()
-                } label: {
-                    Label("Sicherheit", systemImage: "lock.shield")
+                if canAccessSecurity {
+                    NavigationLink {
+                        SecurityView()
+                    } label: {
+                        Label("Sicherheit", systemImage: "lock.shield")
+                    }
                 }
                 NavigationLink {
                     PrivacyPolicyView()

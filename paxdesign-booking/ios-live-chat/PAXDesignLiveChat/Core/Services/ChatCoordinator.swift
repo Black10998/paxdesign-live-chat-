@@ -13,17 +13,42 @@ final class ChatCoordinator: ObservableObject {
     @Published var incomingRequest: IncomingLiveRequest? {
         didSet {
             if incomingRequest != nil {
+                incomingBannerDismissed = false
+                showIncomingFullscreen = false
                 IncomingCallRingtone.shared.startRinging()
+                scheduleFullscreenPresentation()
             } else {
+                showIncomingFullscreen = false
                 IncomingCallRingtone.shared.stopRinging()
             }
         }
     }
     @Published var activeSessionId: String?
+    @Published var showIncomingFullscreen = false
+    @Published var incomingBannerDismissed = false
 
     private var listTask: Task<Void, Never>?
     private var knownLiveRequests = Set<String>()
     private var expiryTasks: [String: Task<Void, Never>] = [:]
+    private var fullscreenTask: Task<Void, Never>?
+
+    private func scheduleFullscreenPresentation() {
+        fullscreenTask?.cancel()
+        fullscreenTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 2_500_000_000)
+            guard !Task.isCancelled, self?.incomingRequest != nil else { return }
+            await MainActor.run { self?.showIncomingFullscreen = true }
+        }
+    }
+
+    func presentIncomingFullscreen() {
+        fullscreenTask?.cancel()
+        showIncomingFullscreen = true
+    }
+
+    func dismissIncomingBanner() {
+        incomingBannerDismissed = true
+    }
 
     func start(auth: AuthStore) {
         stop()
@@ -457,6 +482,7 @@ final class ChatThreadModel: ObservableObject {
             knownMessageIds.insert(msg.id)
             pollSeq = max(pollSeq, msg.id)
             clearSuggestions()
+            MessageSendSound.shared.playIfEnabled()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -480,6 +506,7 @@ final class ChatThreadModel: ObservableObject {
             messages.append(msg)
             knownMessageIds.insert(msg.id)
             pollSeq = max(pollSeq, msg.id)
+            MessageSendSound.shared.playIfEnabled()
         } catch {
             errorMessage = error.localizedDescription
         }

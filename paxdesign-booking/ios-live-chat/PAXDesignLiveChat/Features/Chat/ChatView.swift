@@ -47,7 +47,7 @@ struct ChatView: View {
                             MessageBubbleView(
                                 message: message,
                                 quotedMessage: quotedMessage(for: message),
-                                canReply: thread.handler == "admin" && message.role != "system",
+                                canReply: thread.handler == "admin" && canReply && message.role != "system",
                                 showTimestamp: MessageTimeFormatter.shouldShowTimestamp(current: message, next: next),
                                 onReply: { thread.setReply(to: message) },
                                 onCopy: { copyMessage(message) },
@@ -67,7 +67,7 @@ struct ChatView: View {
                 .onChange(of: thread.userTyping) { _ in scrollToBottom(proxy: proxy) }
             }
 
-            if thread.handler == "admin" {
+            if thread.handler == "admin", canUseAI {
                 assistStrip
             }
 
@@ -127,7 +127,7 @@ struct ChatView: View {
             Text(thread.handlerLabel)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(PAXTheme.textSecondary)
-            if let ratingView = SessionRatingBadge(rating: thread.sessionRating) {
+            if let ratingView = SessionRatingBadge(rating: thread.sessionRating), canViewRatings {
                 ratingView
             }
             Spacer()
@@ -224,9 +224,14 @@ struct ChatView: View {
         .background(PAXTheme.surface.opacity(0.88))
     }
 
+    private var canReply: Bool { auth.profile?.perms.replyChats ?? true }
+    private var canUseAI: Bool { auth.profile?.perms.useAI ?? true }
+    private var canSendImages: Bool { auth.profile?.perms.sendImages ?? true }
+    private var canViewRatings: Bool { auth.profile?.perms.viewRatings ?? true }
+
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            if thread.handler == "admin" {
+            if thread.handler == "admin", canSendImages {
                 PhotosPicker(selection: $photoItem, matching: .images) {
                     Image(systemName: "photo")
                         .font(.title3)
@@ -246,7 +251,7 @@ struct ChatView: View {
                         .fill(PAXTheme.surfaceElevated)
                         .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(PAXTheme.border, lineWidth: 1))
                 )
-                .disabled(thread.handler != "admin")
+                .disabled(thread.handler != "admin" || !canReply)
                 .onChange(of: thread.draft) { _ in
                     thread.handleDraftChange(auth: auth)
                 }
@@ -268,6 +273,7 @@ struct ChatView: View {
 
     private var canSend: Bool {
         thread.handler == "admin"
+            && canReply
             && !thread.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !thread.isSending
     }

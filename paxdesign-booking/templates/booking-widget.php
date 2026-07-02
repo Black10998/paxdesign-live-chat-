@@ -75,18 +75,13 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
           </div>
           <div class="paxdesign-booking-header-actions">
             <?php if (PAXdesign_Chat::get_instance()->is_enabled()) : ?>
-            <button type="button" class="paxdesign-booking-chat-notify" aria-label="Benachrichtigungston ein/aus" aria-pressed="true" title="Benachrichtigungston">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                <path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/>
-                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
-              </svg>
-            </button>
-            <button type="button" class="paxdesign-booking-chat-history" id="paxdesignChatHistoryBtn" aria-label="<?php echo esc_attr__('Chat-Verlauf', 'paxdesign-booking'); ?>" title="<?php echo esc_attr__('Chat-Verlauf', 'paxdesign-booking'); ?>">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                <path d="M3 3v5h5"/>
-                <path d="M12 7v5l4 2"/>
-              </svg>
+            <button type="button" class="paxdesign-booking-chat-notify" aria-label="Benachrichtigungston ein/aus" aria-pressed="true" title="Benachrichtigungston an">
+              <span class="paxdesign-bell-icon paxdesign-bell-icon--on" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+              </span>
+              <span class="paxdesign-bell-icon paxdesign-bell-icon--off" aria-hidden="true" hidden>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/><line x1="4" y1="4" x2="20" y2="20" stroke="#e74c3c" stroke-width="2"/></svg>
+              </span>
             </button>
             <?php endif; ?>
             <button type="button" class="paxdesign-booking-close" aria-label="Schließen">
@@ -368,18 +363,6 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
                 <p class="paxdesign-booking-chat-welcome-text"><?php echo esc_html(PAXdesign_Chat::get_instance()->get_greeting()); ?></p>
               </div>
               <div class="paxdesign-booking-chat-thread" aria-live="polite"></div>
-            </div>
-            <div class="paxdesign-booking-chat-history-panel" id="paxdesignChatHistoryPanel" hidden>
-              <div class="paxdesign-booking-chat-history-header">
-                <button type="button" class="paxdesign-booking-chat-history-back" id="paxdesignChatHistoryBack" aria-label="<?php echo esc_attr__('Zurück', 'paxdesign-booking'); ?>">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
-                </button>
-                <h4 class="paxdesign-booking-chat-history-title" id="paxdesignChatHistoryTitle"><?php echo esc_html__('Chat-Verlauf', 'paxdesign-booking'); ?></h4>
-              </div>
-              <div class="paxdesign-booking-chat-history-list" id="paxdesignChatHistoryList" role="list"></div>
-              <div class="paxdesign-booking-chat-history-detail" id="paxdesignChatHistoryDetail" hidden>
-                <div class="paxdesign-booking-chat-history-messages" id="paxdesignChatHistoryMessages" aria-live="polite"></div>
-              </div>
             </div>
           </div>
 

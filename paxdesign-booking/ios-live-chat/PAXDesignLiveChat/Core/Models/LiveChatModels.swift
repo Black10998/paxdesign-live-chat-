@@ -124,6 +124,7 @@ struct LiveSession: Identifiable, Codable, Hashable {
     var isLiveRequest: Bool { handler == "live_request" }
     var isAdmin: Bool { handler == "admin" }
     var isClosed: Bool { handler == "closed" }
+    var needsReply: Bool { lastRole == "user" && !isClosed }
 }
 
 struct LiveMessage: Identifiable, Codable, Hashable {
@@ -283,6 +284,8 @@ struct AdminProfile: Codable {
     let siteUrl: String
     let restBase: String
     let pluginVer: String
+    let isSuperAdmin: Bool
+    let permissions: AdminPermissions
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -291,6 +294,8 @@ struct AdminProfile: Codable {
         case siteUrl = "site_url"
         case restBase = "rest_base"
         case pluginVer = "plugin_ver"
+        case isSuperAdmin = "is_super_admin"
+        case permissions
     }
 
     init(from decoder: Decoder) throws {
@@ -303,7 +308,36 @@ struct AdminProfile: Codable {
         siteUrl = LiveChatDecode.string(container, CodingKeys.siteUrl)
         restBase = LiveChatDecode.string(container, CodingKeys.restBase)
         pluginVer = LiveChatDecode.string(container, CodingKeys.pluginVer)
+        isSuperAdmin = (try? container.decode(Bool.self, forKey: .isSuperAdmin)) ?? false
+        permissions = (try? container.decode(AdminPermissions.self, forKey: .permissions)) ?? .full
     }
+
+    var displayEmail: String {
+        PrivacyMask.email(email, revealFull: isSuperAdmin)
+    }
+}
+
+extension AdminProfile {
+    var perms: AdminPermissions { permissions }
+}
+
+struct StaffMember: Codable, Identifiable {
+    var id: Int { userId }
+    let userId: Int
+    let name: String
+    let email: String
+    let username: String
+    let enabled: Bool
+    let permissions: AdminPermissions
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case name, email, username, enabled, permissions
+    }
+}
+
+struct StaffListResponse: Codable {
+    let staff: [StaffMember]
 }
 
 extension LiveSession {

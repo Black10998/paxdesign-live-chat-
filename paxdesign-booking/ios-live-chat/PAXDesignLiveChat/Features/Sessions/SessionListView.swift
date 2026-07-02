@@ -3,7 +3,38 @@ import SwiftUI
 struct SessionListView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
+    @StateObject private var settings = AppSettingsStore.shared
+    @State private var searchText = ""
+    @State private var filter: SessionFilter = .all
     var onOpenSession: (String) -> Void = { _ in }
+
+    private enum SessionFilter: String, CaseIterable {
+        case all = "Alle"
+        case live = "Live"
+        case unread = "Offen"
+        case active = "Aktiv"
+        case closed = "Geschlossen"
+    }
+
+    private var filteredSessions: [LiveSession] {
+        var items = coordinator.sessions
+        if !searchText.isEmpty {
+            let q = searchText.lowercased()
+            items = items.filter {
+                $0.displayName.lowercased().contains(q)
+                    || $0.detectedService.lowercased().contains(q)
+                    || $0.lastPreview.lowercased().contains(q)
+            }
+        }
+        switch filter {
+        case .all: break
+        case .live: items = items.filter { $0.isLiveRequest }
+        case .unread: items = items.filter { $0.needsReply && !settings.readSessionIds.contains($0.sessionId) }
+        case .active: items = items.filter { $0.isAdmin || $0.isLiveRequest }
+        case .closed: items = items.filter { $0.isClosed }
+        }
+        return items
+    }
 
     var body: some View {
         List {
@@ -14,6 +45,13 @@ struct SessionListView: View {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                 }
+            }
+
+            Section {
+                searchAndFilters
+                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 8, trailing: 0))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
 
             Section {
@@ -32,7 +70,7 @@ struct SessionListView: View {
                 }
             }
 
-            if coordinator.sessions.isEmpty {
+            if filteredSessions.isEmpty {
                 Section {
                     emptyState
                         .listRowInsets(EdgeInsets(top: 24, leading: 0, bottom: 24, trailing: 0))
@@ -41,13 +79,16 @@ struct SessionListView: View {
                 }
             } else {
                 Section {
-                    ForEach(coordinator.sessions) { session in
+                    ForEach(filteredSessions) { session in
                         Button {
                             PAXHaptics.light()
                             coordinator.activeSessionId = session.sessionId
                             onOpenSession(session.sessionId)
                         } label: {
-                            SessionCard(session: session)
+                            SessionCard(
+                                session: session,
+                                isUnread: session.needsReply && !settings.readSessionIds.contains(session.sessionId)
+                            )
                         }
                         .buttonStyle(PAXPressButtonStyle())
                         .opacity(session.isClosed ? 0.56 : 1)
@@ -87,6 +128,40 @@ struct SessionListView: View {
         .animation(PAXTheme.spring, value: coordinator.listRevision)
         .animation(PAXTheme.spring, value: coordinator.liveCount)
         .animation(PAXTheme.spring, value: coordinator.sessions.count)
+        .animation(PAXTheme.spring, value: filter)
+    }
+
+    private var searchAndFilters: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(PAXTheme.textTertiary)
+                TextField("Suchen …", text: $searchText)
+                    .textInputAutocapitalization(.never)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(PAXTheme.surface))
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(SessionFilter.allCases, id: \.self) { item in
+                        Button {
+                            filter = item
+                            PAXHaptics.light()
+                        } label: {
+                            Text(item.rawValue)
+                                .font(.caption.weight(.semibold))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(Capsule().fill(filter == item ? PAXTheme.accentSoft : PAXTheme.surface))
+                                .overlay(Capsule().stroke(filter == item ? PAXTheme.accent.opacity(0.4) : PAXTheme.border, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
     }
 
     private func syncErrorBanner(_ message: String) -> some View {
@@ -121,7 +196,7 @@ struct SessionListView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(auth.profile?.name ?? "Administrator")
                         .font(.headline)
-                    Text(auth.profile?.email ?? auth.username)
+                    Text(auth.profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
                         .font(.caption)
                         .foregroundStyle(PAXTheme.textSecondary)
                 }
@@ -185,15 +260,24 @@ struct SessionListView: View {
 
 private struct SessionCard: View {
     let session: LiveSession
+    var isUnread: Bool = false
 
     var body: some View {
         HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(statusColor.opacity(0.14))
-                    .frame(width: 44, height: 44)
-                Image(systemName: session.isLiveRequest ? "person.wave.2.fill" : "person.fill")
-                    .foregroundStyle(statusColor)
+            ZStack(alignment: .topTrailing) {
+                ZStack {
+                    Circle()
+                        .fill(statusColor.opacity(0.14))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: session.isLiveRequest ? "person.wave.2.fill" : "person.fill")
+                        .foregroundStyle(statusColor)
+                }
+                if isUnread {
+                    Circle()
+                        .fill(PAXTheme.accent)
+                        .frame(width: 10, height: 10)
+                        .offset(x: 2, y: -2)
+                }
             }
 
             VStack(alignment: .leading, spacing: 6) {

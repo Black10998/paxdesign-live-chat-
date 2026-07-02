@@ -325,6 +325,13 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url), endpoint: "suggestions", as: SuggestionsResponse.self)
     }
 
+    func fetchStaff() async throws -> StaffListResponse {
+        guard let url = liveAdminURL(path: "staff") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "staff", as: StaffListResponse.self)
+    }
+
     func registerAPNs(token: String, sandbox: Bool) async throws {
         guard let url = liveAdminURL(path: "push/apns") else {
             throw LiveChatAPIError.invalidURL

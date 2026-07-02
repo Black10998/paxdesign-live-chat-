@@ -1,0 +1,152 @@
+import SwiftUI
+
+struct LiveTabView: View {
+    @EnvironmentObject private var auth: AuthStore
+    @EnvironmentObject private var coordinator: ChatCoordinator
+    var onOpenSession: (String) -> Void = { _ in }
+
+    private var liveSessions: [LiveSession] {
+        coordinator.sessions.filter { $0.isLiveRequest }
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                liveHero
+
+                if liveSessions.isEmpty {
+                    emptyLiveState
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(liveSessions) { session in
+                            LiveRequestCard(session: session) {
+                                PAXHaptics.medium()
+                                Task { await coordinator.acceptLiveRequest(auth: auth, session: session) }
+                                onOpenSession(session.sessionId)
+                            } onDecline: {
+                                PAXHaptics.warning()
+                                Task { await coordinator.declineLiveRequest(auth: auth, session: session) }
+                            } onOpen: {
+                                onOpenSession(session.sessionId)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .background(PAXBackground())
+        .navigationTitle("Live")
+        .navigationBarTitleDisplayMode(.large)
+        .refreshable { await coordinator.refreshSessions(auth: auth) }
+        .onAppear {
+            coordinator.start(auth: auth)
+            Task { await coordinator.refreshSessions(auth: auth) }
+        }
+    }
+
+    private var liveHero: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(PAXTheme.accentSoft)
+                    .frame(width: 52, height: 52)
+                Image(systemName: "antenna.radiowaves.left.and.right")
+                    .font(.title2)
+                    .foregroundStyle(PAXTheme.accent)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Live-Support")
+                    .font(.headline)
+                Text(coordinator.liveCount > 0
+                     ? "\(coordinator.liveCount) Kunde(n) warten auf einen Agenten"
+                     : "Keine offenen Live-Anfragen")
+                    .font(.subheadline)
+                    .foregroundStyle(PAXTheme.textSecondary)
+            }
+            Spacer()
+            if coordinator.liveCount > 0 {
+                Text("\(coordinator.liveCount)")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(PAXTheme.accent)
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(PAXTheme.surface.opacity(0.94))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(PAXTheme.border, lineWidth: 1))
+        )
+    }
+
+    private var emptyLiveState: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "checkmark.seal.fill")
+                .font(.system(size: 44))
+                .foregroundStyle(PAXTheme.success.opacity(0.85))
+            Text("Alles erledigt")
+                .font(.title3.weight(.semibold))
+            Text("Sobald ein Kunde einen Live-Agenten anfordert, erscheint die Anfrage hier und als Banner oben in der App.")
+                .font(.subheadline)
+                .foregroundStyle(PAXTheme.textSecondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 48)
+    }
+}
+
+private struct LiveRequestCard: View {
+    let session: LiveSession
+    let onAccept: () -> Void
+    let onDecline: () -> Void
+    let onOpen: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(session.displayName)
+                        .font(.headline)
+                    if !session.detectedService.isEmpty {
+                        Text(session.detectedService)
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(PAXTheme.textSecondary)
+                    }
+                }
+                Spacer()
+                Text("LIVE")
+                    .font(.caption2.weight(.heavy))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(PAXTheme.accent))
+            }
+
+            if !session.lastPreview.isEmpty {
+                Text(session.lastPreview)
+                    .font(.subheadline)
+                    .foregroundStyle(PAXTheme.textTertiary)
+                    .lineLimit(2)
+            }
+
+            HStack(spacing: 10) {
+                Button("Ablehnen", role: .destructive, action: onDecline)
+                    .buttonStyle(.bordered)
+                Button("Übernehmen", action: onAccept)
+                    .buttonStyle(.borderedProminent)
+                    .tint(PAXTheme.accent)
+                Spacer()
+                Button("Öffnen", action: onOpen)
+                    .font(.caption.weight(.semibold))
+            }
+        }
+        .padding(16)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(PAXTheme.accentSoft.opacity(0.55))
+                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(PAXTheme.accent.opacity(0.3), lineWidth: 1))
+        )
+    }
+}
