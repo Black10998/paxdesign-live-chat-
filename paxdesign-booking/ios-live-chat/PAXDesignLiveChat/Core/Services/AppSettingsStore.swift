@@ -29,8 +29,85 @@ final class AppSettingsStore: ObservableObject {
         }
     }
 
+    enum LanguageMode: String, CaseIterable, Identifiable {
+        case system
+        case en
+        case de
+        case ar
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .system: return L10n.LanguageSystem
+            case .en: return L10n.LanguageEnglish
+            case .de: return L10n.LanguageGerman
+            case .ar: return L10n.LanguageArabic
+            }
+        }
+
+        var localeIdentifier: String? {
+            switch self {
+            case .system: return nil
+            case .en: return "en"
+            case .de: return "de"
+            case .ar: return "ar"
+            }
+        }
+
+        var layoutDirectionOverride: LayoutDirection? {
+            switch self {
+            case .system: return nil
+            case .ar: return .rightToLeft
+            case .en, .de: return .leftToRight
+            }
+        }
+    }
+
+    enum VisualTheme: String, CaseIterable, Identifiable {
+        case classic
+        case aurora
+        case midnight
+        case ocean
+        case rosegold
+        case forest
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .classic: return L10n.ThemeClassic
+            case .aurora: return L10n.ThemeAurora
+            case .midnight: return L10n.ThemeMidnight
+            case .ocean: return L10n.ThemeOcean
+            case .rosegold: return L10n.ThemeRosegold
+            case .forest: return L10n.ThemeForest
+            }
+        }
+
+        var subtitle: String {
+            switch self {
+            case .classic: return L10n.ThemeClassicSubtitle
+            case .aurora: return L10n.ThemeAuroraSubtitle
+            case .midnight: return L10n.ThemeMidnightSubtitle
+            case .ocean: return L10n.ThemeOceanSubtitle
+            case .rosegold: return L10n.ThemeRosegoldSubtitle
+            case .forest: return L10n.ThemeForestSubtitle
+            }
+        }
+    }
+
     @Published var appearanceMode: AppearanceMode {
         didSet { UserDefaults.standard.set(appearanceMode.rawValue, forKey: Keys.appearance) }
+    }
+    @Published var languageMode: LanguageMode {
+        didSet { UserDefaults.standard.set(languageMode.rawValue, forKey: Keys.language) }
+    }
+    @Published var visualTheme: VisualTheme {
+        didSet { UserDefaults.standard.set(visualTheme.rawValue, forKey: Keys.visualTheme) }
+    }
+    @Published var aiSuggestionsEnabled: Bool {
+        didSet { UserDefaults.standard.set(aiSuggestionsEnabled, forKey: Keys.aiSuggestions) }
     }
     @Published var notificationsEnabled: Bool {
         didSet { UserDefaults.standard.set(notificationsEnabled, forKey: Keys.notifications) }
@@ -62,8 +139,22 @@ final class AppSettingsStore: ObservableObject {
         didSet { UserDefaults.standard.set(profileImageData, forKey: Keys.profileImage) }
     }
 
+    var palette: PAXThemePalette {
+        PAXThemePalette.palette(for: visualTheme)
+    }
+
+    var resolvedLocale: Locale {
+        if let id = languageMode.localeIdentifier {
+            return Locale(identifier: id)
+        }
+        return Locale.autoupdatingCurrent
+    }
+
     private enum Keys {
         static let appearance = "pax.settings.appearance"
+        static let language = "pax.settings.language"
+        static let visualTheme = "pax.settings.visualTheme"
+        static let aiSuggestions = "pax.settings.aiSuggestions"
         static let notifications = "pax.settings.notifications"
         static let incomingSound = "pax.settings.incomingSound"
         static let messageSound = "pax.settings.messageSound"
@@ -83,6 +174,19 @@ final class AppSettingsStore: ObservableObject {
         } else {
             appearanceMode = .system
         }
+        if let raw = defaults.string(forKey: Keys.language),
+           let mode = LanguageMode(rawValue: raw) {
+            languageMode = mode
+        } else {
+            languageMode = .system
+        }
+        if let raw = defaults.string(forKey: Keys.visualTheme),
+           let theme = VisualTheme(rawValue: raw) {
+            visualTheme = theme
+        } else {
+            visualTheme = .classic
+        }
+        aiSuggestionsEnabled = defaults.object(forKey: Keys.aiSuggestions) as? Bool ?? true
         notificationsEnabled = defaults.object(forKey: Keys.notifications) as? Bool ?? true
         incomingCallSoundEnabled = defaults.object(forKey: Keys.incomingSound) as? Bool ?? true
         messageSoundEnabled = defaults.object(forKey: Keys.messageSound) as? Bool ?? true

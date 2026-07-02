@@ -2,23 +2,15 @@ import SwiftUI
 import UIKit
 
 enum PAXTheme {
-    static let accent = Color(red: 1.0, green: 0.55, blue: 0.0)
-    static let success = Color(red: 0.20, green: 0.78, blue: 0.45)
-    static let danger = Color(red: 0.95, green: 0.30, blue: 0.28)
-    static let adminBubble = Color(red: 0.12, green: 0.45, blue: 0.95)
+    private static var palette: PAXThemePalette {
+        AppSettingsStore.shared.palette
+    }
 
-    static let background = adaptive(
-        light: UIColor(red: 0.96, green: 0.97, blue: 0.98, alpha: 1),
-        dark: UIColor(red: 0.06, green: 0.07, blue: 0.09, alpha: 1)
-    )
-    static let surface = adaptive(
-        light: UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1),
-        dark: UIColor(red: 0.10, green: 0.11, blue: 0.14, alpha: 1)
-    )
-    static let surfaceElevated = adaptive(
-        light: UIColor(red: 0.94, green: 0.95, blue: 0.97, alpha: 1),
-        dark: UIColor(red: 0.14, green: 0.15, blue: 0.19, alpha: 1)
-    )
+    static var accent: Color { palette.accent }
+    static var success: Color { palette.success }
+    static var danger: Color { palette.danger }
+    static var adminBubble: Color { palette.adminBubble }
+
     static let border = adaptive(
         light: UIColor(white: 0.0, alpha: 0.10),
         dark: UIColor(white: 1.0, alpha: 0.08)
@@ -39,8 +31,20 @@ enum PAXTheme {
         light: UIColor(white: 0.0, alpha: 0.06),
         dark: UIColor(white: 1.0, alpha: 0.10)
     )
-    static let systemBubble = Color.orange.opacity(0.18)
 
+    static var background: Color {
+        adaptivePalette { palette, isDark in palette.background(isDark: isDark) }
+    }
+
+    static var surface: Color {
+        adaptivePalette { palette, isDark in palette.surface(isDark: isDark) }
+    }
+
+    static var surfaceElevated: Color {
+        adaptivePalette { palette, isDark in palette.surfaceElevated(isDark: isDark) }
+    }
+
+    static var systemBubble: Color { accent.opacity(0.18) }
     static var accentSoft: Color { accent.opacity(0.16) }
 
     static let spring = Animation.spring(response: 0.42, dampingFraction: 0.82)
@@ -52,26 +56,93 @@ enum PAXTheme {
             traits.userInterfaceStyle == .dark ? dark : light
         })
     }
+
+    private static func adaptivePalette(_ builder: (PAXThemePalette, Bool) -> Color) -> Color {
+        let currentPalette = palette
+        return Color(UIColor { traits in
+            let isDark = traits.userInterfaceStyle == .dark
+            return UIColor(builder(currentPalette, isDark))
+        })
+    }
 }
 
 struct PAXBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @ObservedObject private var settings = AppSettingsStore.shared
+
     var body: some View {
+        let palette = settings.palette
+        let isDark = colorScheme == .dark
+
         ZStack {
-            PAXTheme.background
+            palette.background(isDark: isDark)
+
             RadialGradient(
-                colors: [PAXTheme.accent.opacity(0.12), .clear],
+                colors: [palette.glowPrimary.opacity(isDark ? 0.18 : 0.14), .clear],
                 center: .topLeading,
-                startRadius: 20,
+                startRadius: 24,
+                endRadius: 480
+            )
+
+            RadialGradient(
+                colors: [palette.glowSecondary.opacity(isDark ? 0.14 : 0.10), .clear],
+                center: .bottomTrailing,
+                startRadius: 16,
                 endRadius: 420
             )
+
             RadialGradient(
-                colors: [Color.blue.opacity(0.08), .clear],
-                center: .bottomTrailing,
-                startRadius: 10,
-                endRadius: 360
+                colors: [palette.glowTertiary.opacity(isDark ? 0.10 : 0.06), .clear],
+                center: .center,
+                startRadius: 40,
+                endRadius: 520
             )
+
+            if palette.usesGlass {
+                LinearGradient(
+                    colors: [
+                        palette.accent.opacity(isDark ? 0.04 : 0.03),
+                        .clear,
+                        palette.accentSecondary.opacity(isDark ? 0.05 : 0.04)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
         }
         .ignoresSafeArea()
+        .animation(PAXTheme.fade, value: settings.visualTheme)
+    }
+}
+
+struct PAXGlassSurface: ViewModifier {
+    @Environment(\.colorScheme) private var colorScheme
+    @ObservedObject private var settings = AppSettingsStore.shared
+
+    func body(content: Content) -> some View {
+        let palette = settings.palette
+        let isDark = colorScheme == .dark
+
+        content
+            .background {
+                if palette.usesGlass {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(palette.accent.opacity(isDark ? 0.12 : 0.08), lineWidth: 0.5)
+                        )
+                } else {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(palette.surface(isDark: isDark))
+                }
+            }
+    }
+}
+
+extension View {
+    func paxGlassSurface() -> some View {
+        modifier(PAXGlassSurface())
     }
 }
 

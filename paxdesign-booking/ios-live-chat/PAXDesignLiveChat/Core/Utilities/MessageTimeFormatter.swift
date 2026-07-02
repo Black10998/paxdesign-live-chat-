@@ -1,7 +1,9 @@
 import Foundation
 
 enum MessageTimeFormatter {
-    private static var locale: Locale { .autoupdatingCurrent }
+    private static var locale: Locale {
+        AppSettingsStore.shared.resolvedLocale
+    }
 
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()

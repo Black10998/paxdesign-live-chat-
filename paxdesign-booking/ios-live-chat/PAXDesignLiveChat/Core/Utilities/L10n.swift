@@ -166,6 +166,49 @@ enum L10n {
     static var SettingsTitle: String { t("settings.title") }
     static var SettingsTypingSound: String { t("settings.typing_sound") }
     static var SettingsVolume: String { t("settings.volume") }
+    static var SettingsDisabled: String { t("settings.disabled") }
+    static var SettingsSectionGeneral: String { t("settings.section.general") }
+    static var SettingsSectionAppearance: String { t("settings.section.appearance") }
+    static var SettingsSectionLanguage: String { t("settings.section.language") }
+    static var SettingsSectionNotifications: String { t("settings.section.notifications") }
+    static var SettingsSectionSecurity: String { t("settings.section.security") }
+    static var SettingsSectionLiveChat: String { t("settings.section.live_chat") }
+    static var SettingsSectionAI: String { t("settings.section.ai") }
+    static var SettingsSectionPrivacy: String { t("settings.section.privacy") }
+    static var SettingsSectionAbout: String { t("settings.section.about") }
+    static var SettingsGeneralSubtitle: String { t("settings.general_subtitle") }
+    static var SettingsSecuritySubtitle: String { t("settings.security_subtitle") }
+    static var SettingsSoundSubtitle: String { t("settings.sound_subtitle") }
+    static var SettingsLiveChatSubtitle: String { t("settings.live_chat_subtitle") }
+    static var SettingsPrivacySubtitle: String { t("settings.privacy_subtitle") }
+    static var SettingsSoundDetailFooter: String { t("settings.sound_detail_footer") }
+    static var SettingsResetPrivacyBanner: String { t("settings.reset_privacy_banner") }
+    static var SettingsClearReadState: String { t("settings.clear_read_state") }
+    static var SettingsLiveChatBehavior: String { t("settings.live_chat_behavior") }
+    static var SettingsLiveChatFooter: String { t("settings.live_chat_footer") }
+    static var SettingsAISuggestions: String { t("settings.ai_suggestions") }
+    static var SettingsAIFooter: String { t("settings.ai_footer") }
+    static var SettingsAIInfo: String { t("settings.ai_info") }
+    static var LanguageSystem: String { t("language.system") }
+    static var LanguageEnglish: String { t("language.english") }
+    static var LanguageGerman: String { t("language.german") }
+    static var LanguageArabic: String { t("language.arabic") }
+    static var LanguageFooter: String { t("language.footer") }
+    static var AppearanceColorScheme: String { t("appearance.color_scheme") }
+    static var ThemeTitle: String { t("theme.title") }
+    static var ThemeFooter: String { t("theme.footer") }
+    static var ThemeClassic: String { t("theme.classic") }
+    static var ThemeClassicSubtitle: String { t("theme.classic_subtitle") }
+    static var ThemeAurora: String { t("theme.aurora") }
+    static var ThemeAuroraSubtitle: String { t("theme.aurora_subtitle") }
+    static var ThemeMidnight: String { t("theme.midnight") }
+    static var ThemeMidnightSubtitle: String { t("theme.midnight_subtitle") }
+    static var ThemeOcean: String { t("theme.ocean") }
+    static var ThemeOceanSubtitle: String { t("theme.ocean_subtitle") }
+    static var ThemeRosegold: String { t("theme.rosegold") }
+    static var ThemeRosegoldSubtitle: String { t("theme.rosegold_subtitle") }
+    static var ThemeForest: String { t("theme.forest") }
+    static var ThemeForestSubtitle: String { t("theme.forest_subtitle") }
     static var StaffActive: String { t("staff.active") }
     static var StaffEdit: String { t("staff.edit") }
     static var StaffInactive: String { t("staff.inactive") }

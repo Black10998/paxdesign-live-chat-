@@ -20,7 +20,12 @@ struct PAXDesignLiveChatApp: App {
                 .environmentObject(settings)
                 .environmentObject(permissions)
                 .environmentObject(appLock)
+                .environment(\.locale, settings.resolvedLocale)
+                .environment(\.paxPalette, settings.palette)
+                .modifier(PAXLayoutDirectionModifier())
                 .preferredColorScheme(settings.appearanceMode.colorScheme)
+                .animation(PAXTheme.fade, value: settings.languageMode)
+                .animation(PAXTheme.fade, value: settings.visualTheme)
                 .task {
                     await runStartupSequence()
                 }

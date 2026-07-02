@@ -1,267 +1,209 @@
-import PhotosUI
 import SwiftUI
-import UIKit
 
-struct SettingsView: View {
+struct SettingsRootView: View {
     @EnvironmentObject private var auth: AuthStore
-    @EnvironmentObject private var push: PushService
-    @EnvironmentObject private var permissions: PermissionCoordinator
     @StateObject private var settings = AppSettingsStore.shared
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var appPasswordDraft = ""
-    @State private var statusMessage: String?
-    @State private var photoItem: PhotosPickerItem?
 
     private var canManageSettings: Bool { auth.canManageSettings }
 
     var body: some View {
-        Group {
-            if canManageSettings {
-                settingsContent
-            } else {
-                settingsRestrictedView
-            }
-        }
-        .background(PAXBackground())
-        .navigationTitle(L10n.SettingsTitle)
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            appPasswordDraft = auth.appPassword
-        }
-    }
-
-    private var settingsRestrictedView: some View {
         List {
-            appearanceSection
-            profileSection
-            Section {
-                Text(L10n.SettingsNoPermission)
-                    .font(.footnote)
-                    .foregroundStyle(PAXTheme.textSecondary)
-            }
-            aboutSection
-        }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-    }
+            profileHeaderSection
 
-    private var settingsContent: some View {
-        List {
-            appearanceSection
-            profileSection
-            accountSection
-            securitySection
-            notificationSection
-            soundSection
-            aboutSection
-        }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-    }
+            Section(L10n.SettingsSectionGeneral) {
+                NavigationLink {
+                    GeneralSettingsView()
+                } label: {
+                    SettingsRowLabel(
+                        title: L10n.SettingsSectionGeneral,
+                        subtitle: L10n.SettingsGeneralSubtitle,
+                        systemImage: "gearshape"
+                    )
+                }
 
-    private var appearanceSection: some View {
-        Section {
-            Picker(L10n.AppearanceTitle, selection: $settings.appearanceMode) {
-                ForEach(AppSettingsStore.AppearanceMode.allCases) { mode in
-                    Text(mode.title).tag(mode)
+                NavigationLink {
+                    AppearanceSettingsView()
+                } label: {
+                    SettingsRowLabel(
+                        title: L10n.SettingsSectionAppearance,
+                        subtitle: settings.visualTheme.title,
+                        systemImage: "paintbrush"
+                    )
+                }
+
+                NavigationLink {
+                    LanguageSettingsView()
+                } label: {
+                    SettingsRowLabel(
+                        title: L10n.SettingsSectionLanguage,
+                        subtitle: settings.languageMode.title,
+                        systemImage: "globe"
+                    )
                 }
             }
-            .pickerStyle(.inline)
-        } footer: {
-            Text(L10n.AppearanceFooter)
+
+            Section(L10n.SettingsSectionNotifications) {
+                NavigationLink {
+                    NotificationSettingsView()
+                } label: {
+                    SettingsRowLabel(
+                        title: L10n.SettingsSectionNotifications,
+                        subtitle: settings.notificationsEnabled ? L10n.CommonActive : L10n.SettingsDisabled,
+                        systemImage: "bell.badge"
+                    )
+                }
+
+                NavigationLink {
+                    SoundSettingsView()
+                } label: {
+                    SettingsRowLabel(
+                        title: L10n.SettingsSound,
+                        subtitle: L10n.SettingsSoundSubtitle,
+                        systemImage: "speaker.wave.2"
+                    )
+                }
+            }
+
+            Section(L10n.SettingsSectionSecurity) {
+                NavigationLink {
+                    AppLockSettingsView()
+                } label: {
+                    SettingsRowLabel(
+                        title: L10n.SettingsAppLock,
+                        subtitle: L10n.SettingsSecuritySubtitle,
+                        systemImage: "lock.shield"
+                    )
+                }
+            }
+
+            Section(L10n.SettingsSectionLiveChat) {
+                NavigationLink {
+                    LiveChatSettingsView()
+                } label: {
+                    SettingsRowLabel(
+                        title: L10n.SettingsSectionLiveChat,
+                        subtitle: L10n.SettingsLiveChatSubtitle,
+                        systemImage: "bubble.left.and.bubble.right"
+                    )
+                }
+            }
+
+            if auth.canUseAI {
+                Section(L10n.SettingsSectionAI) {
+                    NavigationLink {
+                        AIAssistantSettingsView()
+                    } label: {
+                        SettingsRowLabel(
+                            title: L10n.SettingsSectionAI,
+                            subtitle: settings.aiSuggestionsEnabled ? L10n.CommonActive : L10n.SettingsDisabled,
+                            systemImage: "sparkles"
+                        )
+                    }
+                }
+            }
+
+            Section(L10n.SettingsSectionPrivacy) {
+                NavigationLink {
+                    PrivacySettingsView()
+                } label: {
+                    SettingsRowLabel(
+                        title: L10n.SettingsSectionPrivacy,
+                        subtitle: L10n.SettingsPrivacySubtitle,
+                        systemImage: "hand.raised"
+                    )
+                }
+            }
+
+            Section(L10n.SettingsSectionAbout) {
+                NavigationLink {
+                    AboutSettingsView()
+                } label: {
+                    SettingsRowLabel(
+                        title: L10n.SettingsSectionAbout,
+                        subtitle: PAXAppInfo.fullVersion,
+                        systemImage: "info.circle"
+                    )
+                }
+            }
+
+            if canManageUsersSection {
+                Section(L10n.AccountTeam) {
+                    NavigationLink {
+                        StaffManagementView()
+                    } label: {
+                        Label(L10n.AccountTeam, systemImage: "person.3")
+                    }
+                }
+            }
+
+            if !canManageSettings {
+                Section {
+                    Text(L10n.SettingsNoPermission)
+                        .font(.footnote)
+                        .foregroundStyle(PAXTheme.textSecondary)
+                }
+            }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(PAXBackground())
+        .navigationTitle(L10n.SettingsTitle)
+        .navigationBarTitleDisplayMode(.large)
     }
 
-    private var profileSection: some View {
+    private var canManageUsersSection: Bool { auth.canManageUsers }
+
+    private var profileHeaderSection: some View {
         Section {
             HStack(spacing: 16) {
-                ProfileAvatarView(size: 72)
-
+                ProfileAvatarView(size: 64)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(auth.profile?.name ?? L10n.CommonAdministrator)
-                        .font(.headline)
+                        .font(.title3.weight(.semibold))
                     Text(auth.profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
                         .font(.subheadline)
                         .foregroundStyle(PAXTheme.textSecondary)
-                    if let username = auth.profile?.username, !username.isEmpty {
-                        Text("@\(username)")
-                            .font(.caption)
-                            .foregroundStyle(PAXTheme.textTertiary)
+                    if auth.profile?.isSuperAdmin == true {
+                        Text(L10n.AccountSuperAdmin)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(PAXTheme.accent)
                     }
                 }
             }
-            .padding(.vertical, 6)
-
-            PhotosPicker(selection: $photoItem, matching: .images) {
-                Label(L10n.SettingsChangePhoto, systemImage: "photo.circle")
-            }
-            .onChange(of: photoItem) { item in
-                Task {
-                    if let data = try? await item?.loadTransferable(type: Data.self) {
-                        settings.profileImageData = data
-                    }
-                }
-            }
-
-            if settings.profileImageData != nil {
-                Button(L10n.SettingsResetPhoto, role: .destructive) {
-                    settings.profileImageData = nil
-                }
-            }
-        } header: {
-            Text(L10n.SettingsProfile)
-        }
-    }
-
-    private var accountSection: some View {
-        Section {
-            LabeledContent(L10n.CommonWebsite) {
-                Text(auth.siteURLString)
-                    .foregroundStyle(PAXTheme.textSecondary)
-                    .multilineTextAlignment(.trailing)
-            }
-
-            SecureField(L10n.LoginAppPassword, text: $appPasswordDraft)
-                .textInputAutocapitalization(.never)
-
-            Button(L10n.SettingsSaveCredentials) {
-                Task { await saveCredentials() }
-            }
-
-            if let statusMessage {
-                Text(statusMessage)
-                    .font(.footnote)
-                    .foregroundStyle(PAXTheme.textSecondary)
-            }
-
-            Button(L10n.SettingsSignOut, role: .destructive) {
-                Task {
-                    await push.unregisterTokenFromBackend(auth: auth)
-                    auth.logout()
-                    dismiss()
-                }
-            }
-        } header: {
-            Text(L10n.SettingsAccount)
-        } footer: {
-            Text(L10n.SettingsCredentialsFooter)
-        }
-    }
-
-    private var securitySection: some View {
-        Section {
-            NavigationLink {
-                AppLockSettingsView()
-            } label: {
-                Label(L10n.SettingsAppLock, systemImage: "lock.shield")
-            }
-        } header: {
-            Text(L10n.SettingsSecurity)
-        } footer: {
-            Text(L10n.SettingsAppLockFooter)
-        }
-    }
-
-    private var notificationSection: some View {
-        Section {
-            Toggle(L10n.SettingsPush, isOn: $settings.notificationsEnabled)
-                .onChange(of: settings.notificationsEnabled) { enabled in
-                    if enabled {
-                        Task {
-                            await permissions.refreshStatuses()
-                            if permissions.notificationStatus == .notDetermined {
-                                _ = await permissions.requestNotifications(push: push)
-                            }
-                        }
-                    }
-                }
-            Toggle(L10n.SettingsNewMessages, isOn: $settings.messageSoundEnabled)
-
-            if permissions.notificationStatus == .denied {
-                Button(L10n.SettingsOpenIosSettings) {
-                    permissions.openSystemSettings()
-                }
-                .font(.footnote)
-            }
-        } header: {
-            Text(L10n.SettingsNotifications)
-        } footer: {
-            Text(L10n.SettingsNotificationsFooter)
-        }
-    }
-
-    private var soundSection: some View {
-        Section {
-            Toggle(L10n.SettingsIncomingRingtone, isOn: $settings.incomingCallSoundEnabled)
-            Toggle(L10n.SettingsSendSound, isOn: $settings.sendSoundEnabled)
-            Toggle(L10n.SettingsTypingSound, isOn: $settings.typingSoundEnabled)
-            VStack(alignment: .leading, spacing: 8) {
-                Text(L10n.SettingsVolume)
-                    .font(.subheadline)
-                Slider(value: $settings.ringtoneVolume, in: 0.2...1.0)
-            }
-            Button(L10n.SettingsTestRingtone) {
-                IncomingCallRingtone.shared.startRinging()
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                    IncomingCallRingtone.shared.stopRinging()
-                }
-            }
-        } header: {
-            Text(L10n.SettingsSound)
-        }
-    }
-
-    private var aboutSection: some View {
-        Section(L10n.SettingsAppSection) {
-            LabeledContent(L10n.CommonVersion, value: PAXAppInfo.fullVersion)
-            LabeledContent(L10n.CommonPlugin, value: auth.profile?.pluginVer ?? "—")
-        }
-    }
-
-    private func saveCredentials() async {
-        auth.appPassword = appPasswordDraft
-        do {
-            try await auth.login()
-            statusMessage = L10n.SettingsCredentialsSaved
-            PAXHaptics.success()
-        } catch {
-            statusMessage = error.localizedDescription
-            PAXHaptics.warning()
+            .padding(.vertical, 4)
+            .accessibilityElement(children: .combine)
         }
     }
 }
 
-struct ProfileAvatarView: View {
-    @EnvironmentObject private var auth: AuthStore
-    @StateObject private var settings = AppSettingsStore.shared
-    var size: CGFloat = 40
+struct SettingsRowLabel: View {
+    let title: String
+    let subtitle: String
+    let systemImage: String
 
     var body: some View {
-        Group {
-            if let data = settings.profileImageData, let uiImage = UIImage(data: data) {
-                Image(uiImage: uiImage)
-                    .resizable()
-                    .scaledToFill()
-            } else if let urlString = auth.profile?.avatarUrl, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    default:
-                        fallback
-                    }
-                }
-            } else {
-                fallback
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.medium))
+                .foregroundStyle(PAXTheme.accent)
+                .frame(width: 28, height: 28)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .foregroundStyle(PAXTheme.textPrimary)
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(PAXTheme.textSecondary)
             }
         }
-        .frame(width: size, height: size)
-        .clipShape(Circle())
-        .overlay(Circle().stroke(PAXTheme.border, lineWidth: 1))
+        .padding(.vertical, 2)
     }
+}
 
-    private var fallback: some View {
-        PAXAvatar(name: auth.profile?.name ?? "PAX", size: size)
+// Legacy entry point — redirects to the new root layout.
+struct SettingsView: View {
+    var body: some View {
+        SettingsRootView()
     }
 }

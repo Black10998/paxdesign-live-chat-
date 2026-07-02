@@ -72,7 +72,7 @@ struct ChatView: View {
                 .onChange(of: thread.userTyping) { _ in scrollToBottom(proxy: proxy) }
             }
 
-            if thread.handler == "admin", canUseAI {
+            if thread.handler == "admin", canUseAI, settings.aiSuggestionsEnabled {
                 assistStrip
             }
 
