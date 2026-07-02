@@ -332,6 +332,37 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url), endpoint: "staff", as: StaffListResponse.self)
     }
 
+    func saveStaff(
+        userId: Int = 0,
+        email: String = "",
+        enabled: Bool,
+        permissions: AdminPermissions
+    ) async throws {
+        guard let url = liveAdminURL(path: "staff") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        var payload: [String: Any] = [
+            "enabled": enabled,
+            "permissions": permissions.apiDictionary,
+        ]
+        if userId > 0 {
+            payload["user_id"] = userId
+        }
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedEmail.isEmpty {
+            payload["email"] = trimmedEmail
+        }
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        _ = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "staff-save", as: EmptyResponse.self)
+    }
+
+    func removeStaff(userId: Int) async throws {
+        guard let url = liveAdminURL(path: "staff/\(userId)") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        _ = try await perform(authRequest(url: url, method: "DELETE"), endpoint: "staff-remove", as: EmptyResponse.self)
+    }
+
     func registerAPNs(token: String, sandbox: Bool) async throws {
         guard let url = liveAdminURL(path: "push/apns") else {
             throw LiveChatAPIError.invalidURL

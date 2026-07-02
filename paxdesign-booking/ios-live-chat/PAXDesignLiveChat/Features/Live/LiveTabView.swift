@@ -52,7 +52,7 @@ struct LiveTabView: View {
                 Circle()
                     .fill(PAXTheme.accentSoft)
                     .frame(width: 52, height: 52)
-                Image(systemName: "antenna.radiowaves.left.and.right")
+                Image(systemName: "bell.and.waves.left.and.right.fill")
                     .font(.title2)
                     .foregroundStyle(PAXTheme.accent)
             }

@@ -10,6 +10,7 @@ struct ChatView: View {
 
     @State private var imageViewer: ImageViewerItem?
     @State private var photoItem: PhotosPickerItem?
+    @State private var showCustomerOverview = true
 
     init(sessionId: String) {
         _thread = StateObject(wrappedValue: ChatThreadModel(sessionId: sessionId))
@@ -27,6 +28,10 @@ struct ChatView: View {
             }
 
             compactStatusBar
+
+            if showCustomerOverview {
+                customerOverviewPanel
+            }
 
             ScrollViewReader { proxy in
                 ScrollView {
@@ -142,6 +147,61 @@ struct ChatView: View {
         .background(PAXTheme.surface.opacity(0.65))
     }
 
+    private var customerOverviewPanel: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Kundenübersicht")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(PAXTheme.textSecondary)
+                Spacer()
+                Button {
+                    withAnimation(PAXTheme.quickSpring) { showCustomerOverview = false }
+                } label: {
+                    Image(systemName: "chevron.up")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(PAXTheme.textTertiary)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if !thread.detectedService.isEmpty {
+                overviewRow(icon: "sparkles", title: "Thema", value: thread.detectedService)
+            }
+            overviewRow(icon: "number", title: "Session", value: thread.sessionId)
+            overviewRow(icon: "bubble.left.and.bubble.right", title: "Nachrichten", value: "\(thread.messages.count)")
+            if !thread.adminName.isEmpty, thread.handler == "admin" {
+                overviewRow(icon: "person.badge.shield.checkmark", title: "Agent", value: thread.adminName)
+            }
+            if let updated = MessageTimeFormatter.relativeUpdatedLabel(from: thread.updatedAt) {
+                overviewRow(icon: "clock", title: "Aktualisiert", value: updated)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(PAXTheme.surface.opacity(0.55))
+        .overlay(alignment: .bottom) {
+            Divider().background(PAXTheme.border.opacity(0.5))
+        }
+    }
+
+    private func overviewRow(icon: String, title: String, value: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundStyle(PAXTheme.accent)
+                .frame(width: 16)
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(PAXTheme.textTertiary)
+                .frame(width: 72, alignment: .leading)
+            Text(value)
+                .font(.caption)
+                .foregroundStyle(PAXTheme.textPrimary)
+                .lineLimit(2)
+            Spacer(minLength: 0)
+        }
+    }
+
     private var statusColor: Color {
         switch thread.handler {
         case "live_request": return PAXTheme.accent
@@ -153,6 +213,16 @@ struct ChatView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarLeading) {
+            Button {
+                withAnimation(PAXTheme.quickSpring) {
+                    showCustomerOverview.toggle()
+                }
+            } label: {
+                Image(systemName: showCustomerOverview ? "person.crop.circle.fill" : "person.crop.circle")
+            }
+            .accessibilityLabel("Kundenübersicht")
+        }
         ToolbarItemGroup(placement: .topBarTrailing) {
             if thread.handler == "live_request" {
                 Button("Übernehmen") {

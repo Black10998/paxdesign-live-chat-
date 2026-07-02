@@ -19,13 +19,6 @@
   var sendBtn      = root.querySelector('.paxdesign-booking-chat-send');
   var plusBtn      = root.querySelector('.paxdesign-booking-chat-plus');
   var notifyBtn    = root.querySelector('.paxdesign-booking-chat-notify');
-  var historyBtn   = root.querySelector('#paxdesignChatHistoryBtn');
-  var historyPanel = root.querySelector('#paxdesignChatHistoryPanel');
-  var historyList  = root.querySelector('#paxdesignChatHistoryList');
-  var historyDetail = root.querySelector('#paxdesignChatHistoryDetail');
-  var historyMessages = root.querySelector('#paxdesignChatHistoryMessages');
-  var historyBackBtn = root.querySelector('#paxdesignChatHistoryBack');
-  var historyTitle = root.querySelector('#paxdesignChatHistoryTitle');
   var honeypot     = root.querySelector('.paxdesign-booking-chat-honeypot');
   var closedBar    = root.querySelector('.paxdesign-booking-chat-closed-bar');
   var newSessionBtn = root.querySelector('.paxdesign-booking-chat-new-session');
@@ -78,12 +71,6 @@
   var sessionRating      = 0;
   var ratingSubmitted    = false;
   var prevChatHandler    = '';
-  var historyView        = 'list';
-  var historyOpen        = false;
-  var historyCache       = null;
-  var historyCacheAt     = 0;
-  var historyFetchPromise = null;
-  var HISTORY_CACHE_MS   = 30000;
   var mp3AudioCache      = {};
 
   var SOUND_URLS = (config && config.sounds) ? config.sounds : {
@@ -138,7 +125,6 @@
   var LIVE_AGENT_KEY    = 'paxdesign-chat-live-agent-phase';
   var CUSTOMER_NAME_KEY = 'paxdesign-chat-customer-name';
   var DEVICE_TOKEN_KEY  = 'paxdesign-chat-device-token';
-  var HISTORY_INDEX_KEY = 'paxdesign-chat-history-index';
   var ARCHIVED_IDS_KEY  = 'paxdesign-chat-archived-ids';
   var BOOKING_MARKER_RE = /\[\[BOOKING:([^\]]+)\]\]/gi;
   var USER_BOOKING_RE   = /(?:termin\s*(?:buch|vereinbar|machen|wunsch)?|beratung\s*buchen|kontakt\s*aufnehmen|ruf(?:en)?\s*(?:mich\s*)?an|(?:ein\s*)?angebot|möchte\s*(?:einen?\s*)?termin|ja[\s,]*(?:bitte|gerne|ok)?\s*(?:termin|buchen)?)/i;
@@ -828,22 +814,6 @@
     return formData;
   }
 
-  function loadHistoryIndex() {
-    try {
-      var raw = localStorage.getItem(HISTORY_INDEX_KEY);
-      var parsed = raw ? JSON.parse(raw) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch (e) {
-      return [];
-    }
-  }
-
-  function saveHistoryIndex(items) {
-    try {
-      localStorage.setItem(HISTORY_INDEX_KEY, JSON.stringify(items.slice(0, 50)));
-    } catch (e) {}
-  }
-
   function loadArchivedIds() {
     try {
       var raw = localStorage.getItem(ARCHIVED_IDS_KEY);
@@ -865,20 +835,6 @@
     return loadArchivedIds().indexOf(sessionId) !== -1;
   }
 
-  function getLastMessagePreview(sourceMessages) {
-    var list = sourceMessages || messages;
-    for (var i = list.length - 1; i >= 0; i--) {
-      var msg = list[i];
-      if (!msg) continue;
-      if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'admin') {
-        var text = String(msg.content || '').trim();
-        if (text) return text.length > 120 ? text.slice(0, 120) + '…' : text;
-        if (msg.image_url) return 'Bild';
-      }
-    }
-    return '';
-  }
-
   function archiveClosedSession(sessionId, snap) {
     var sid = sessionId || getSessionId();
     if (!sid || isSessionArchived(sid)) return;
@@ -888,272 +844,6 @@
     saveArchivedIds(archivedIds.filter(function (id, idx, arr) {
       return arr.indexOf(id) === idx;
     }).slice(0, 100));
-
-    var preview = getLastMessagePreview(snap && snap.messages ? snap.messages : null);
-    var meta = {
-      sessionId: sid,
-      archivedAt: Date.now(),
-      preview: preview,
-      customerName: (snap && snap.customerName) || customerName || '',
-      messageCount: (snap && snap.messages) ? snap.messages.length : messages.length,
-      sessionRating: (snap && typeof snap.sessionRating === 'number') ? snap.sessionRating : sessionRating,
-    };
-
-    var index = loadHistoryIndex().filter(function (item) {
-      return item && item.sessionId !== sid;
-    });
-    index.unshift(meta);
-    saveHistoryIndex(index.slice(0, 50));
-    historyCache = null;
-    historyCacheAt = 0;
-  }
-
-  function formatHistoryDate(value) {
-    if (!value) return '';
-    var date = typeof value === 'number' ? new Date(value) : new Date(String(value).replace(' ', 'T'));
-    if (isNaN(date.getTime())) return '';
-    try {
-      return date.toLocaleString('de-AT', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
-      return date.toLocaleString();
-    }
-  }
-
-  function feedbackLabelFromRating(rating) {
-    var r = parseInt(rating, 10);
-    if (r === RATING_LIKE) return '<span class="paxdesign-booking-chat-history-feedback paxdesign-booking-chat-history-feedback--like" title="Gefällt mir">' + ACTION_ICONS.like + '</span>';
-    if (r === RATING_DISLIKE) return '<span class="paxdesign-booking-chat-history-feedback paxdesign-booking-chat-history-feedback--dislike" title="Gefällt mir nicht">' + ACTION_ICONS.dislike + '</span>';
-    return '';
-  }
-
-  function renderHistoryListItems(items) {
-    if (!historyList) return;
-    if (!items.length) {
-      historyList.innerHTML = '<p class="paxdesign-booking-chat-history-empty">Noch keine abgeschlossenen Gespräche in Ihrem Verlauf.</p>';
-      return;
-    }
-    var frag = document.createDocumentFragment();
-    items.forEach(function (item) {
-      var rating = item.session_rating || item.sessionRating || 0;
-      var label = item.customer_name || item.customerName || 'Gespräch';
-      var when = formatHistoryDate(item.updated_at || item.archivedAt);
-      var preview = item.preview || 'Chat-Verlauf';
-      var btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'paxdesign-booking-chat-history-item paxdesign-booking-chat-history-item--archived';
-      btn.setAttribute('data-history-id', item.session_id || item.sessionId || '');
-      btn.setAttribute('role', 'listitem');
-      btn.innerHTML =
-        '<div class="paxdesign-booking-chat-history-item-meta"><span>' + escapeHtml(label) + '</span><span>' +
-        escapeHtml(when) + '</span></div>' +
-        '<div class="paxdesign-booking-chat-history-item-preview">' + escapeHtml(preview) + '</div>' +
-        feedbackLabelFromRating(rating);
-      frag.appendChild(btn);
-    });
-    historyList.innerHTML = '';
-    historyList.appendChild(frag);
-  }
-
-  function fetchHistoryList(force) {
-    var now = Date.now();
-    if (!force && historyCache && (now - historyCacheAt) < HISTORY_CACHE_MS) {
-      renderHistoryListItems(historyCache);
-      return Promise.resolve(historyCache);
-    }
-    if (!force && historyFetchPromise) {
-      return historyFetchPromise;
-    }
-
-    var localItems = loadHistoryIndex();
-    if (localItems.length) {
-      renderHistoryListItems(localItems);
-    }
-
-    if (!config.ajaxUrl) {
-      historyCache = localItems;
-      historyCacheAt = now;
-      return Promise.resolve(localItems);
-    }
-
-    var formData = new FormData();
-    formData.append('action', 'paxdesign_chat_customer_history_list');
-    formData.append('nonce', config.nonce);
-    stampChatRequest(formData);
-
-    historyFetchPromise = fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return res.json(); })
-      .then(function (json) {
-        var remote = (json && json.success && json.data && Array.isArray(json.data.sessions)) ? json.data.sessions : [];
-        var merged = mergeHistoryItems(localItems, remote);
-        saveHistoryIndex(merged);
-        historyCache = merged;
-        historyCacheAt = Date.now();
-        renderHistoryListItems(merged);
-        return merged;
-      })
-      .catch(function () {
-        historyCache = localItems;
-        historyCacheAt = Date.now();
-        renderHistoryListItems(localItems);
-        return localItems;
-      })
-      .finally(function () {
-        historyFetchPromise = null;
-      });
-
-    return historyFetchPromise;
-  }
-
-  function mergeHistoryItems(localItems, remoteItems) {
-    var map = {};
-    (localItems || []).forEach(function (item) {
-      if (!item || !item.sessionId) return;
-      map[item.sessionId] = item;
-    });
-    (remoteItems || []).forEach(function (item) {
-      if (!item || !item.session_id) return;
-      var existing = map[item.session_id];
-      var preview = item.preview || '';
-      if (existing && existing.preview && !preview) {
-        preview = existing.preview;
-      }
-      map[item.session_id] = {
-        sessionId: item.session_id,
-        session_id: item.session_id,
-        customerName: item.customer_name || (existing && existing.customerName) || '',
-        customer_name: item.customer_name || (existing && existing.customer_name) || '',
-        updated_at: item.updated_at || (existing && existing.updated_at),
-        archivedAt: item.updated_at || (existing && existing.archivedAt),
-        preview: preview,
-        messageCount: item.message_count || (existing && existing.messageCount) || 0,
-        sessionRating: item.session_rating || (existing && existing.sessionRating) || 0,
-        session_rating: item.session_rating || (existing && existing.session_rating) || 0,
-      };
-    });
-    return Object.keys(map).map(function (key) { return map[key]; }).sort(function (a, b) {
-      var ta = new Date(a.updated_at || a.archivedAt || 0).getTime();
-      var tb = new Date(b.updated_at || b.archivedAt || 0).getTime();
-      return tb - ta;
-    });
-  }
-
-  function renderHistoryMessages(list) {
-    if (!historyMessages) return;
-    var frag = document.createDocumentFragment();
-    (list || []).forEach(function (msg) {
-      if (!msg || !msg.content) {
-        if (!msg || !msg.image_url) return;
-      }
-      if (msg.role === 'system' && msg.content === 'Chat-Session gestartet.') return;
-      var role = msg.role || 'assistant';
-      var wrap = document.createElement('div');
-      wrap.className = 'paxdesign-booking-chat-history-msg paxdesign-booking-chat-history-msg--' + role;
-      var bubble = document.createElement('div');
-      bubble.className = 'paxdesign-booking-chat-history-msg-bubble';
-      bubble.textContent = String(msg.content || '').trim();
-      if (!bubble.textContent && msg.image_url) bubble.textContent = 'Bild';
-      wrap.appendChild(bubble);
-      frag.appendChild(wrap);
-    });
-    historyMessages.innerHTML = '';
-    historyMessages.appendChild(frag);
-    historyMessages.scrollTop = historyMessages.scrollHeight;
-  }
-
-  function openHistoryPanel() {
-    if (!historyPanel) return;
-    historyOpen = true;
-    historyView = 'list';
-    historyPanel.hidden = false;
-    if (historyDetail) historyDetail.hidden = true;
-    if (historyList) historyList.hidden = false;
-    if (historyTitle) historyTitle.textContent = 'Chat-Verlauf';
-    root.classList.add('paxdesign-chat-history-open');
-    if (historyBtn) historyBtn.classList.add('paxdesign-is-active');
-    fetchHistoryList();
-    notifyLayout();
-  }
-
-  function closeHistoryPanel() {
-    if (!historyPanel) return;
-    historyOpen = false;
-    historyView = 'list';
-    historyPanel.hidden = true;
-    if (historyDetail) historyDetail.hidden = true;
-    if (historyList) historyList.hidden = false;
-    if (historyTitle) historyTitle.textContent = 'Chat-Verlauf';
-    root.classList.remove('paxdesign-chat-history-open');
-    if (historyBtn) historyBtn.classList.remove('paxdesign-is-active');
-    notifyLayout();
-  }
-
-  function openHistorySession(sessionId) {
-    if (!sessionId || !historyDetail || !historyList) return;
-    historyView = 'detail';
-    historyList.hidden = true;
-    historyDetail.hidden = false;
-    if (historyTitle) historyTitle.textContent = 'Gespräch';
-    historyMessages.innerHTML = '<p class="paxdesign-booking-chat-history-empty">Lade Verlauf …</p>';
-
-    var snap = loadSessionSnapshot(sessionId);
-    if (snap && Array.isArray(snap.messages) && snap.messages.length) {
-      renderHistoryMessages(snap.messages);
-    }
-
-    if (!config.ajaxUrl) return;
-    var formData = new FormData();
-    formData.append('action', 'paxdesign_chat_customer_history_session');
-    formData.append('nonce', config.nonce);
-    stampChatRequest(formData);
-    formData.append('session_id', sessionId);
-    fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return res.json(); })
-      .then(function (json) {
-        if (!json || !json.success || !json.data || !Array.isArray(json.data.messages)) {
-          if (!snap || !snap.messages || !snap.messages.length) {
-            historyMessages.innerHTML = '<p class="paxdesign-booking-chat-history-empty">Dieser Verlauf ist nicht verfügbar.</p>';
-          }
-          return;
-        }
-        renderHistoryMessages(json.data.messages);
-      })
-      .catch(function () {
-        if (!snap || !snap.messages || !snap.messages.length) {
-          historyMessages.innerHTML = '<p class="paxdesign-booking-chat-history-empty">Verlauf konnte nicht geladen werden.</p>';
-        }
-      });
-  }
-
-  function initHistoryUi() {
-    if (historyBtn) {
-      historyBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        unlockAudio();
-        if (historyOpen) closeHistoryPanel();
-        else openHistoryPanel();
-      });
-    }
-    if (historyBackBtn) {
-      historyBackBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        if (historyView === 'detail') {
-          historyView = 'list';
-          if (historyDetail) historyDetail.hidden = true;
-          if (historyList) historyList.hidden = false;
-          if (historyTitle) historyTitle.textContent = 'Chat-Verlauf';
-          return;
-        }
-        closeHistoryPanel();
-      });
-    }
-    if (historyList) {
-      historyList.addEventListener('click', function (e) {
-        var btn = e.target.closest('[data-history-id]');
-        if (!btn) return;
-        e.preventDefault();
-        openHistorySession(btn.getAttribute('data-history-id'));
-      });
-    }
   }
 
   function isHumanMode() {
@@ -1489,7 +1179,6 @@
   }
 
   function beginFreshSessionSilently() {
-    closeHistoryPanel();
     var newId = createNewSessionId();
     try {
       localStorage.setItem(SESSION_KEY, newId);

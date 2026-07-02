@@ -43,4 +43,29 @@ enum MessageTimeFormatter {
         guard let nextTs = next?.ts else { return true }
         return nextTs - currentTs > 300
     }
+
+    static func relativeUpdatedLabel(from raw: String) -> String? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let iso = ISO8601DateFormatter()
+        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = iso.date(from: trimmed)
+        if date == nil {
+            iso.formatOptions = [.withInternetDateTime]
+            date = iso.date(from: trimmed)
+        }
+        if date == nil {
+            let fallback = DateFormatter()
+            fallback.locale = Locale(identifier: "de_AT")
+            fallback.dateFormat = "yyyy-MM-dd HH:mm:ss"
+            date = fallback.date(from: trimmed)
+        }
+        guard let date else { return trimmed }
+
+        let relative = RelativeDateTimeFormatter()
+        relative.locale = Locale(identifier: "de_AT")
+        relative.unitsStyle = .short
+        return relative.localizedString(for: date, relativeTo: Date())
+    }
 }

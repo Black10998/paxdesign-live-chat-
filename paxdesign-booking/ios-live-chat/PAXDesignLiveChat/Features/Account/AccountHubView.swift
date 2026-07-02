@@ -4,6 +4,7 @@ struct AccountHubView: View {
     @EnvironmentObject private var auth: AuthStore
 
     private var canManageUsers: Bool { auth.profile?.perms.manageUsers ?? false }
+    private var canManageSettings: Bool { auth.profile?.perms.manageSettings ?? true }
     private var canAccessSecurity: Bool { auth.profile?.perms.accessSecurity ?? true }
     private var websiteURL: URL {
         if let url = URL(string: auth.siteURLString), !auth.siteURLString.isEmpty { return url }
@@ -51,10 +52,12 @@ struct AccountHubView: View {
                         Label("Team & Berechtigungen", systemImage: "person.3")
                     }
                 }
-                NavigationLink {
-                    SettingsView()
-                } label: {
-                    Label("Einstellungen", systemImage: "gearshape")
+                if canManageSettings {
+                    NavigationLink {
+                        SettingsView()
+                    } label: {
+                        Label("Einstellungen", systemImage: "gearshape")
+                    }
                 }
                 NavigationLink {
                     HelpView()
@@ -65,6 +68,15 @@ struct AccountHubView: View {
                     AboutView()
                 } label: {
                     Label("Über die App", systemImage: "info.circle")
+                }
+            }
+
+            Section {
+                Button("Abmelden", role: .destructive) {
+                    Task {
+                        await PushService.shared.unregisterTokenFromBackend(auth: auth)
+                        auth.logout()
+                    }
                 }
             }
 

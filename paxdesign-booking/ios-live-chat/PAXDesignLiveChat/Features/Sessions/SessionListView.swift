@@ -36,7 +36,22 @@ struct SessionListView: View {
         return items
     }
 
+    private var canViewChats: Bool { auth.profile?.perms.viewChats ?? true }
+
     var body: some View {
+        Group {
+            if canViewChats {
+                sessionListContent
+            } else {
+                noAccessView
+            }
+        }
+        .background(PAXBackground())
+        .navigationTitle("Live Chat")
+        .navigationBarTitleDisplayMode(.large)
+    }
+
+    private var sessionListContent: some View {
         List {
             if let error = coordinator.errorMessage, !error.isEmpty {
                 Section {
@@ -117,9 +132,6 @@ struct SessionListView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
-        .navigationTitle("Live Chat")
-        .navigationBarTitleDisplayMode(.large)
         .refreshable { await coordinator.refreshSessions(auth: auth) }
         .onAppear {
             coordinator.start(auth: auth)
@@ -129,6 +141,22 @@ struct SessionListView: View {
         .animation(PAXTheme.spring, value: coordinator.liveCount)
         .animation(PAXTheme.spring, value: coordinator.sessions.count)
         .animation(PAXTheme.spring, value: filter)
+    }
+
+    private var noAccessView: some View {
+        VStack(spacing: 14) {
+            Image(systemName: "lock.fill")
+                .font(.system(size: 42))
+                .foregroundStyle(PAXTheme.textTertiary)
+            Text("Kein Chat-Zugriff")
+                .font(.title3.weight(.semibold))
+            Text("Ihr Konto hat keine Berechtigung, Chats anzuzeigen. Wenden Sie sich an den Hauptadministrator.")
+                .font(.subheadline)
+                .foregroundStyle(PAXTheme.textSecondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var searchAndFilters: some View {

@@ -108,6 +108,14 @@ struct MainShellView: View {
     @State private var livePath = NavigationPath()
     @State private var selectedTab = 0
 
+    private var unreadChatCount: Int {
+        coordinator.sessions.filter {
+            $0.needsReply && !settings.readSessionIds.contains($0.sessionId)
+        }.count
+    }
+
+    private var canViewChats: Bool { auth.profile?.perms.viewChats ?? true }
+
     var body: some View {
         VStack(spacing: 0) {
             if let incoming = coordinator.incomingRequest, !coordinator.incomingBannerDismissed {
@@ -121,14 +129,17 @@ struct MainShellView: View {
             }
 
             TabView(selection: $selectedTab) {
-                NavigationStack(path: $chatsPath) {
-                    SessionListView(onOpenSession: { openSession($0, path: $chatsPath) })
-                        .navigationDestination(for: String.self) { sessionId in
-                            ChatView(sessionId: sessionId)
-                        }
+                if canViewChats {
+                    NavigationStack(path: $chatsPath) {
+                        SessionListView(onOpenSession: { openSession($0, path: $chatsPath) })
+                            .navigationDestination(for: String.self) { sessionId in
+                                ChatView(sessionId: sessionId)
+                            }
+                    }
+                    .tabItem { Label("Chats", systemImage: "bubble.left.and.bubble.right") }
+                    .tag(0)
+                    .modifier(ChatsTabBadge(count: unreadChatCount))
                 }
-                .tabItem { Label("Chats", systemImage: "bubble.left.and.bubble.right") }
-                .tag(0)
 
                 NavigationStack(path: $livePath) {
                     LiveTabView(onOpenSession: { openSession($0, path: $livePath) })
@@ -136,19 +147,19 @@ struct MainShellView: View {
                             ChatView(sessionId: sessionId)
                         }
                 }
-                .tabItem { Label("Live", systemImage: "dot.radiowaves.left.and.right") }
-                .tag(1)
+                .tabItem { Label("Live", systemImage: "bell.and.waves.left.and.right.fill") }
+                .tag(canViewChats ? 1 : 0)
                 .modifier(LiveTabBadge(count: coordinator.liveCount))
 
                 NavigationStack {
                     AccountHubView()
                 }
                 .tabItem { Label("Konto", systemImage: "person.crop.circle") }
-                .tag(2)
+                .tag(canViewChats ? 2 : 1)
             }
         }
         .onChange(of: coordinator.activeSessionId) { sessionId in
-            guard let sessionId else { return }
+            guard let sessionId, canViewChats else { return }
             selectedTab = 0
             openSession(sessionId, path: $chatsPath)
         }
@@ -168,6 +179,18 @@ struct MainShellView: View {
 }
 
 private struct LiveTabBadge: ViewModifier {
+    let count: Int
+
+    func body(content: Content) -> some View {
+        if count > 0 {
+            content.badge(count)
+        } else {
+            content
+        }
+    }
+}
+
+private struct ChatsTabBadge: ViewModifier {
     let count: Int
 
     func body(content: Content) -> some View {

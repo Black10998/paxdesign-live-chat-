@@ -246,6 +246,9 @@ final class ChatThreadModel: ObservableObject {
     @Published var messages: [LiveMessage] = []
     @Published var handler = "ai"
     @Published var customerName = "Kunde"
+    @Published var adminName = ""
+    @Published var detectedService = ""
+    @Published var updatedAt = ""
     @Published var sessionRating = 0
     @Published var userTyping = false
     @Published var draft = ""
@@ -338,6 +341,9 @@ final class ChatThreadModel: ObservableObject {
     private func applyPoll(_ data: PollResponse) {
         handler = data.handler
         customerName = data.customerName.isEmpty ? "Kunde" : data.customerName
+        adminName = data.adminName
+        detectedService = data.detectedService
+        updatedAt = data.updatedAt
         if data.sessionRating > 0 {
             sessionRating = data.sessionRating
         }
@@ -533,6 +539,9 @@ final class ChatThreadModel: ObservableObject {
         if let data = try? await api.fetchSession(sessionId) {
             handler = data.handler
             customerName = data.customerName.isEmpty ? "Kunde" : data.customerName
+            adminName = data.adminName
+            detectedService = data.detectedService
+            updatedAt = data.updatedAt
             sessionRating = data.sessionRating
             messages = data.messages
             knownMessageIds = Set(messages.map(\.id))

@@ -5,13 +5,30 @@ struct StaffManagementView: View {
     @State private var staff: [StaffMember] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var addEmail = ""
+    @State private var isSaving = false
+    @State private var editingMember: StaffMember?
+    @State private var editEnabled = true
+    @State private var editPermissions = AdminPermissions()
 
     var body: some View {
         List {
             Section {
-                Text("Verwalten Sie Mitarbeiter-Zugang zur Live-Chat-App. Der Hauptadministrator hat immer volle Rechte. Erweiterte Bearbeitung auch im WordPress-Admin unter Live Chat Team.")
+                Text("Verwalten Sie Mitarbeiter-Zugang zur Live-Chat-App. Der Hauptadministrator hat immer volle Rechte.")
                     .font(.footnote)
                     .foregroundStyle(PAXTheme.textSecondary)
+            }
+
+            Section("Mitarbeiter hinzufügen") {
+                HStack {
+                    TextField("WordPress E-Mail", text: $addEmail)
+                        .textInputAutocapitalization(.never)
+                        .keyboardType(.emailAddress)
+                    Button("Hinzufügen") {
+                        Task { await addStaff() }
+                    }
+                    .disabled(addEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
+                }
             }
 
             if isLoading {
@@ -22,33 +39,28 @@ struct StaffManagementView: View {
                 }
             } else if staff.isEmpty {
                 Section {
-                    Text("Noch keine Mitarbeiter konfiguriert. Fügen Sie Teammitglieder im WordPress-Admin hinzu.")
+                    Text("Noch keine Mitarbeiter konfiguriert.")
                         .foregroundStyle(PAXTheme.textSecondary)
                 }
             } else {
                 Section("Team") {
                     ForEach(staff) { member in
-                        VStack(alignment: .leading, spacing: 6) {
-                            HStack {
-                                Text(member.name)
-                                    .font(.headline)
-                                Spacer()
-                                Text(member.enabled ? "Aktiv" : "Inaktiv")
-                                    .font(.caption2.weight(.semibold))
-                                    .foregroundStyle(member.enabled ? PAXTheme.success : PAXTheme.textTertiary)
-                            }
-                            Text(PrivacyMask.email(member.email, revealFull: auth.profile?.isSuperAdmin == true))
-                                .font(.caption)
-                                .foregroundStyle(PAXTheme.textSecondary)
+                        Button {
+                            editingMember = member
+                            editEnabled = member.enabled
+                            editPermissions = member.permissions
+                        } label: {
+                            staffRow(member)
                         }
-                        .padding(.vertical, 4)
+                        .buttonStyle(.plain)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                Task { await removeStaff(member) }
+                            } label: {
+                                Label("Entfernen", systemImage: "trash")
+                            }
+                        }
                     }
-                }
-            }
-
-            Section {
-                Link(destination: PAXLegalLinks.support) {
-                    Label("WordPress Admin öffnen", systemImage: "safari")
                 }
             }
         }
@@ -56,6 +68,37 @@ struct StaffManagementView: View {
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
         .refreshable { await load() }
+        .sheet(item: $editingMember) { member in
+            StaffEditSheet(
+                member: member,
+                enabled: $editEnabled,
+                permissions: $editPermissions,
+                isSaving: isSaving,
+                onSave: { Task { await saveMember(member) } },
+                onCancel: { editingMember = nil }
+            )
+        }
+    }
+
+    private func staffRow(_ member: StaffMember) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(member.name)
+                    .font(.headline)
+                    .foregroundStyle(PAXTheme.textPrimary)
+                Spacer()
+                Text(member.enabled ? "Aktiv" : "Inaktiv")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(member.enabled ? PAXTheme.success : PAXTheme.textTertiary)
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(PAXTheme.textTertiary)
+            }
+            Text(PrivacyMask.email(member.email, revealFull: auth.profile?.isSuperAdmin == true))
+                .font(.caption)
+                .foregroundStyle(PAXTheme.textSecondary)
+        }
+        .padding(.vertical, 4)
     }
 
     private func load() async {
@@ -70,4 +113,122 @@ struct StaffManagementView: View {
             errorMessage = error.localizedDescription
         }
     }
+
+    private func addStaff() async {
+        guard let api = auth.api else { return }
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            try await api.saveStaff(
+                email: addEmail,
+                enabled: true,
+                permissions: AdminPermissions(viewChats: true, replyChats: true)
+            )
+            addEmail = ""
+            await load()
+            PAXHaptics.success()
+        } catch {
+            errorMessage = error.localizedDescription
+            PAXHaptics.warning()
+        }
+    }
+
+    private func saveMember(_ member: StaffMember) async {
+        guard let api = auth.api else { return }
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            try await api.saveStaff(
+                userId: member.userId,
+                enabled: editEnabled,
+                permissions: editPermissions
+            )
+            editingMember = nil
+            await load()
+            PAXHaptics.success()
+        } catch {
+            errorMessage = error.localizedDescription
+            PAXHaptics.warning()
+        }
+    }
+
+    private func removeStaff(_ member: StaffMember) async {
+        guard let api = auth.api else { return }
+        do {
+            try await api.removeStaff(userId: member.userId)
+            await load()
+            PAXHaptics.warning()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct StaffEditSheet: View {
+    let member: StaffMember
+    @Binding var enabled: Bool
+    @Binding var permissions: AdminPermissions
+    let isSaving: Bool
+    let onSave: () -> Void
+    let onCancel: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section(member.name) {
+                    Toggle("Aktiv", isOn: $enabled)
+                }
+                Section("Berechtigungen") {
+                    PermissionToggle("Chats ansehen", keyPath: \.viewChats, permissions: $permissions)
+                    PermissionToggle("Antworten & Chat führen", keyPath: \.replyChats, permissions: $permissions)
+                    PermissionToggle("KI-Assistent", keyPath: \.useAI, permissions: $permissions)
+                    PermissionToggle("Bilder senden", keyPath: \.sendImages, permissions: $permissions)
+                    PermissionToggle("Einstellungen", keyPath: \.manageSettings, permissions: $permissions)
+                    PermissionToggle("Bewertungen", keyPath: \.viewRatings, permissions: $permissions)
+                    PermissionToggle("Team verwalten", keyPath: \.manageUsers, permissions: $permissions)
+                    PermissionToggle("Sicherheit", keyPath: \.accessSecurity, permissions: $permissions)
+                }
+            }
+            .navigationTitle("Bearbeiten")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Abbrechen", action: onCancel)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Speichern", action: onSave)
+                        .disabled(isSaving)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
+private struct PermissionToggle: View {
+    let title: String
+    let keyPath: WritableKeyPath<AdminPermissions, Bool>
+    @Binding var permissions: AdminPermissions
+
+    init(_ title: String, keyPath: WritableKeyPath<AdminPermissions, Bool>, permissions: Binding<AdminPermissions>) {
+        self.title = title
+        self.keyPath = keyPath
+        self._permissions = permissions
+    }
+
+    var body: some View {
+        Toggle(title, isOn: Binding(
+            get: { permissions[keyPath: keyPath] },
+            set: { newValue in
+                var copy = permissions
+                copy[keyPath: keyPath] = newValue
+                permissions = copy
+            }
+        ))
+    }
+}
+
+extension StaffMember: Hashable {
+    static func == (lhs: StaffMember, rhs: StaffMember) -> Bool { lhs.userId == rhs.userId }
+    func hash(into hasher: inout Hasher) { hasher.combine(userId) }
 }

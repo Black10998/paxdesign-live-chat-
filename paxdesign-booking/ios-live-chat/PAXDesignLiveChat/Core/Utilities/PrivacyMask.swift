@@ -28,14 +28,14 @@ enum PrivacyMask {
 }
 
 struct AdminPermissions: Codable, Equatable {
-    let viewChats: Bool
-    let replyChats: Bool
-    let useAI: Bool
-    let sendImages: Bool
-    let manageSettings: Bool
-    let viewRatings: Bool
-    let manageUsers: Bool
-    let accessSecurity: Bool
+    var viewChats: Bool
+    var replyChats: Bool
+    var useAI: Bool
+    var sendImages: Bool
+    var manageSettings: Bool
+    var viewRatings: Bool
+    var manageUsers: Bool
+    var accessSecurity: Bool
 
     enum CodingKeys: String, CodingKey {
         case viewChats = "view_chats"
@@ -81,4 +81,17 @@ struct AdminPermissions: Codable, Equatable {
     }
 
     static let full = AdminPermissions()
+
+    var apiDictionary: [String: Bool] {
+        [
+            CodingKeys.viewChats.rawValue: viewChats,
+            CodingKeys.replyChats.rawValue: replyChats,
+            CodingKeys.useAI.rawValue: useAI,
+            CodingKeys.sendImages.rawValue: sendImages,
+            CodingKeys.manageSettings.rawValue: manageSettings,
+            CodingKeys.viewRatings.rawValue: viewRatings,
+            CodingKeys.manageUsers.rawValue: manageUsers,
+            CodingKeys.accessSecurity.rawValue: accessSecurity,
+        ]
+    }
 }
