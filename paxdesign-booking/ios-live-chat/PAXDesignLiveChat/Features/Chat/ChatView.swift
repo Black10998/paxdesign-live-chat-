@@ -137,7 +137,7 @@ struct ChatView: View {
             }
             Spacer()
             if thread.handler != "admin" {
-                Text("Nur-Lese")
+                Text(L10n.ChatReadOnly)
                     .font(.caption2)
                     .foregroundStyle(PAXTheme.textTertiary)
             }
@@ -150,7 +150,7 @@ struct ChatView: View {
     private var customerOverviewPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Kundenübersicht")
+                Text(L10n.ChatCustomerOverview)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(PAXTheme.textSecondary)
                 Spacer()
@@ -422,7 +422,7 @@ private struct TypingIndicator: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(Capsule().fill(PAXTheme.userBubble))
-            Text("Kunde schreibt …")
+            Text(L10n.ChatCustomerTyping)
                 .font(.caption2)
                 .foregroundStyle(PAXTheme.textSecondary)
         }
@@ -432,12 +432,7 @@ private struct TypingIndicator: View {
 
 private extension ChatThreadModel {
     var handlerLabel: String {
-        switch handler {
-        case "live_request": return "Live-Anfrage"
-        case "admin": return "Aktiv"
-        case "closed": return "Geschlossen"
-        default: return "KI aktiv"
-        }
+        SessionHandlerLocalization.label(handler: handler)
     }
 }
 

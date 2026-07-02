@@ -20,9 +20,9 @@ struct LoginView: View {
                             .opacity(appear ? 1 : 0)
 
                         VStack(spacing: 8) {
-                            Text("PAXDesign Live Chat")
+                            Text(L10n.LoginTitle)
                                 .font(.system(size: 28, weight: .bold, design: .rounded))
-                            Text("Offizielle Administrator-App")
+                            Text(L10n.LoginSubtitle)
                                 .font(.subheadline.weight(.medium))
                                 .foregroundStyle(PAXTheme.textSecondary)
                         }
@@ -32,9 +32,9 @@ struct LoginView: View {
 
                     PAXGlassCard {
                         VStack(spacing: 18) {
-                            PAXField(title: "Website (HTTPS)", icon: "globe", text: $auth.siteURLString, keyboardType: .URL)
-                            PAXField(title: "Benutzername oder E-Mail", icon: "person.crop.circle", text: $auth.username, keyboardType: .emailAddress)
-                            PAXField(title: "Application Password", icon: "key.fill", text: $auth.appPassword, isSecure: true)
+                            PAXField(title: L10n.LoginWebsite, icon: "globe", text: $auth.siteURLString, keyboardType: .URL)
+                            PAXField(title: L10n.LoginUsername, icon: "person.crop.circle", text: $auth.username, keyboardType: .emailAddress)
+                            PAXField(title: L10n.LoginAppPassword, icon: "key.fill", text: $auth.appPassword, isSecure: true)
 
                             if let error {
                                 Text(error)
@@ -44,7 +44,10 @@ struct LoginView: View {
                                     .transition(.opacity.combined(with: .move(edge: .top)))
                             }
 
-                            PAXPrimaryButton(title: isLoading ? "Anmelden …" : "Anmelden", isLoading: isLoading) {
+                            PAXPrimaryButton(
+                                title: isLoading ? L10n.LoginSigningIn : L10n.LoginSignIn,
+                                isLoading: isLoading
+                            ) {
                                 Task { await signIn() }
                             }
                         }
@@ -53,15 +56,15 @@ struct LoginView: View {
                     .opacity(appear ? 1 : 0)
                     .offset(y: appear ? 0 : 16)
 
-                    Text("Application Password aus WordPress kopieren (Leerzeichen werden automatisch entfernt).")
+                    Text(L10n.LoginHint)
                         .font(.caption)
                         .foregroundStyle(PAXTheme.textTertiary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 28)
 
                     VStack(spacing: 8) {
-                        Link("Datenschutzerklärung", destination: PAXLegalLinks.privacyPolicy)
-                        Link("Nutzungsbedingungen & Impressum", destination: PAXLegalLinks.impressum)
+                        Link(L10n.LoginPrivacy, destination: PAXLegalLinks.privacyPolicy)
+                        Link(L10n.LoginTerms, destination: PAXLegalLinks.impressum)
                     }
                     .font(.caption)
                     .padding(.horizontal, 28)
@@ -69,6 +72,7 @@ struct LoginView: View {
                     Spacer(minLength: 24)
                 }
             }
+            .scrollDismissesKeyboard(.interactively)
         }
         .onAppear {
             withAnimation(PAXTheme.spring.delay(0.05)) {

@@ -23,9 +23,9 @@ struct NotificationPermissionPromptView: View {
                 }
 
                 VStack(spacing: 8) {
-                    Text("Benachrichtigungen")
+                    Text(L10n.PermissionsNotificationsTitle)
                         .font(.title3.weight(.semibold))
-                    Text("Erhalten Sie sofort eine Meldung bei Live-Agent-Anfragen und neuen Kundennachrichten — auch wenn die App im Hintergrund ist.")
+                    Text(L10n.PermissionsNotificationsBody)
                         .font(.subheadline)
                         .foregroundStyle(PAXTheme.textSecondary)
                         .multilineTextAlignment(.center)
@@ -33,7 +33,10 @@ struct NotificationPermissionPromptView: View {
                 }
 
                 VStack(spacing: 10) {
-                    PAXPrimaryButton(title: isRequesting ? "Wird angefragt …" : "Benachrichtigungen erlauben", isLoading: isRequesting) {
+                    PAXPrimaryButton(
+                        title: isRequesting ? L10n.PermissionsRequesting : L10n.PermissionsEnable,
+                        isLoading: isRequesting
+                    ) {
                         Task {
                             isRequesting = true
                             defer { isRequesting = false }
@@ -41,7 +44,7 @@ struct NotificationPermissionPromptView: View {
                         }
                     }
 
-                    Button("Später") {
+                    Button(L10n.CommonLater) {
                         permissions.skipNotificationOnboarding()
                     }
                     .font(.subheadline.weight(.medium))

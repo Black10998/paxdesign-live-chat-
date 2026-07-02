@@ -1,9 +1,11 @@
 import Foundation
 
 enum MessageTimeFormatter {
+    private static var locale: Locale { .autoupdatingCurrent }
+
     private static let timeFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "de_AT")
+        f.locale = locale
         f.dateStyle = .none
         f.timeStyle = .short
         return f
@@ -11,7 +13,7 @@ enum MessageTimeFormatter {
 
     private static let dayFormatter: DateFormatter = {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "de_AT")
+        f.locale = locale
         f.dateStyle = .medium
         f.timeStyle = .none
         return f
@@ -19,14 +21,16 @@ enum MessageTimeFormatter {
 
     static func timeString(from ts: Int?) -> String? {
         guard let ts else { return nil }
+        timeFormatter.locale = locale
         return timeFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ts)))
     }
 
     static func dayHeader(from ts: Int?) -> String? {
         guard let ts else { return nil }
         let date = Date(timeIntervalSince1970: TimeInterval(ts))
-        if Calendar.current.isDateInToday(date) { return "Heute" }
-        if Calendar.current.isDateInYesterday(date) { return "Gestern" }
+        if Calendar.current.isDateInToday(date) { return L10n.TimeToday }
+        if Calendar.current.isDateInYesterday(date) { return L10n.TimeYesterday }
+        dayFormatter.locale = locale
         return dayFormatter.string(from: date)
     }
 
@@ -57,14 +61,14 @@ enum MessageTimeFormatter {
         }
         if date == nil {
             let fallback = DateFormatter()
-            fallback.locale = Locale(identifier: "de_AT")
+            fallback.locale = locale
             fallback.dateFormat = "yyyy-MM-dd HH:mm:ss"
             date = fallback.date(from: trimmed)
         }
         guard let date else { return trimmed }
 
         let relative = RelativeDateTimeFormatter()
-        relative.locale = Locale(identifier: "de_AT")
+        relative.locale = locale
         relative.unitsStyle = .short
         return relative.localizedString(for: date, relativeTo: Date())
     }

@@ -18,9 +18,9 @@ struct AppLockView: View {
 
                 VStack(spacing: 16) {
                     PAXAppMarkView(size: 72, showGlow: true)
-                    Text("Gesperrt")
+                    Text(L10n.ApplockLocked)
                         .font(.title2.weight(.semibold))
-                    Text("Authentifizieren Sie sich, um fortzufahren.")
+                    Text(L10n.ApplockPrompt)
                         .font(.subheadline)
                         .foregroundStyle(PAXTheme.textSecondary)
                         .multilineTextAlignment(.center)
@@ -34,10 +34,13 @@ struct AppLockView: View {
                             if success { PAXHaptics.success() }
                         }
                     } label: {
-                        Label(appLock.canUseBiometrics ? appLock.biometricTypeLabel : "Gerätecode", systemImage: biometricIcon)
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
+                        Label(
+                            appLock.canUseBiometrics ? appLock.biometricTypeLabel : L10n.ApplockDevicePasscode,
+                            systemImage: biometricIcon
+                        )
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(PAXTheme.accent)
@@ -136,7 +139,7 @@ struct AppLockView: View {
             pin = ""
             PAXHaptics.success()
         } else if pin.count == 6 {
-            errorMessage = "Falscher PIN"
+            errorMessage = L10n.ApplockWrongPin
             withAnimation(.default) { shake = true }
             PAXHaptics.warning()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {

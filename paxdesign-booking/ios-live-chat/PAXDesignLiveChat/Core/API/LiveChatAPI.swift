@@ -8,8 +8,8 @@ enum LiveChatAPIError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidURL: return "Ungültige Server-URL."
-        case .unauthorized: return "Anmeldung fehlgeschlagen. Bitte Zugangsdaten prüfen."
+        case .invalidURL: return L10n.ApiErrorInvalidUrl
+        case .unauthorized: return L10n.ApiErrorLoginFailed
         case .server(let msg): return msg
         case .decoding(let err): return "Antwort konnte nicht gelesen werden: \(err.localizedDescription)"
         }

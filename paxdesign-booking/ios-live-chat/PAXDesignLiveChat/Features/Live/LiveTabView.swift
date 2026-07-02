@@ -44,9 +44,10 @@ struct LiveTabView: View {
             .padding(.vertical, 12)
         }
         .background(PAXBackground())
-        .navigationTitle("Live")
+        .navigationTitle(L10n.LiveTitle)
         .navigationBarTitleDisplayMode(.large)
         .refreshable { await coordinator.refreshSessions(auth: auth) }
+        .scrollDismissesKeyboard(.interactively)
         .onAppear {
             coordinator.start(auth: auth)
             Task { await coordinator.refreshSessions(auth: auth) }
@@ -64,11 +65,11 @@ struct LiveTabView: View {
                     .foregroundStyle(PAXTheme.accent)
             }
             VStack(alignment: .leading, spacing: 4) {
-                Text("Live-Support")
+                Text(L10n.LiveSupport)
                     .font(.headline)
                 Text(coordinator.liveCount > 0
-                     ? "\(coordinator.liveCount) Kunde(n) warten auf einen Agenten"
-                     : "Keine offenen Live-Anfragen")
+                     ? L10n.LiveWaitingCount(coordinator.liveCount)
+                     : L10n.LiveNoRequests)
                     .font(.subheadline)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
@@ -92,9 +93,9 @@ struct LiveTabView: View {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 44))
                 .foregroundStyle(PAXTheme.success.opacity(0.85))
-            Text("Alles erledigt")
+            Text(L10n.LiveAllClear)
                 .font(.title3.weight(.semibold))
-            Text("Sobald ein Kunde einen Live-Agenten anfordert, erscheint die Anfrage hier und als Banner oben in der App.")
+            Text(L10n.LiveEmptyHint)
                 .font(.subheadline)
                 .foregroundStyle(PAXTheme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -125,7 +126,7 @@ private struct LiveRequestCard: View {
                     }
                 }
                 Spacer()
-                Text("LIVE")
+                Text(L10n.LiveBadge)
                     .font(.caption2.weight(.heavy))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
@@ -142,15 +143,15 @@ private struct LiveRequestCard: View {
 
             HStack(spacing: 10) {
                 if canReply {
-                    Button("Ablehnen", role: .destructive, action: onDecline)
+                    Button(L10n.CommonDecline, role: .destructive, action: onDecline)
                         .buttonStyle(.bordered)
-                    Button("Übernehmen", action: onAccept)
+                    Button(L10n.CommonTakeover, action: onAccept)
                         .buttonStyle(.borderedProminent)
                         .tint(PAXTheme.accent)
                 }
                 Spacer()
                 if canOpenChat {
-                    Button("Öffnen", action: onOpen)
+                    Button(L10n.CommonOpen, action: onOpen)
                         .font(.caption.weight(.semibold))
                 }
             }
@@ -161,5 +162,11 @@ private struct LiveRequestCard: View {
                 .fill(PAXTheme.accentSoft.opacity(0.55))
                 .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(PAXTheme.accent.opacity(0.3), lineWidth: 1))
         )
+    }
+}
+
+private extension L10n {
+    static func LiveWaitingCount(_ count: Int) -> String {
+        String(format: String(localized: "live.waiting_count"), count)
     }
 }

@@ -1,0 +1,3 @@
+"NSFaceIDUsageDescription" = "يُستخدم Face ID لفتح التطبيق بعد فترة الخمول.";
+"NSPhotoLibraryUsageDescription" = "اختر صوراً من المكتبة لإرسالها في الدردشة المباشرة.";
+"NSUserNotificationsUsageDescription" = "إشعارات لطلبات الوكيل المباشر ورسائل العملاء الجديدة.";

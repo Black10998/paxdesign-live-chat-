@@ -9,22 +9,22 @@ struct AppLockSettingsView: View {
     var body: some View {
         List {
             Section {
-                Toggle("App-Sperre aktivieren", isOn: $appLock.lockEnabled)
+                Toggle(L10n.ApplockEnable, isOn: $appLock.lockEnabled)
             } footer: {
-                Text("Schützt die App mit Face ID, Touch ID oder einem App-PIN nach Inaktivität oder beim erneuten Öffnen.")
+                Text(L10n.ApplockFooter)
             }
 
             if appLock.lockEnabled {
-                Section("Entsperren") {
+                Section(L10n.ApplockUnlockSection) {
                     if appLock.canUseBiometrics {
                         Toggle(appLock.biometricTypeLabel, isOn: $appLock.biometricEnabled)
                     } else {
-                        Label("Biometrie auf diesem Gerät nicht verfügbar", systemImage: "exclamationmark.triangle")
+                        Label(L10n.ApplockBiometryUnavailable, systemImage: "exclamationmark.triangle")
                             .font(.footnote)
                             .foregroundStyle(PAXTheme.textSecondary)
                     }
 
-                    Toggle("App-PIN", isOn: $appLock.pinEnabled)
+                    Toggle(L10n.ApplockAppPin, isOn: $appLock.pinEnabled)
                         .onChange(of: appLock.pinEnabled) { enabled in
                             if enabled && !appLock.hasPINConfigured() {
                                 showSetPIN = true
@@ -34,25 +34,25 @@ struct AppLockSettingsView: View {
                         }
 
                     if appLock.pinEnabled {
-                        Button("PIN ändern") { showChangePIN = true }
+                        Button(L10n.ApplockChangePin) { showChangePIN = true }
                     } else if !appLock.hasPINConfigured() {
-                        Button("PIN festlegen") { showSetPIN = true }
+                        Button(L10n.ApplockSetPin) { showSetPIN = true }
                     }
                 }
 
-                Section("Automatische Sperre") {
-                    Picker("Nach Inaktivität", selection: $appLock.autoLockInterval) {
+                Section(L10n.ApplockAutoLock) {
+                    Picker(L10n.ApplockAfterInactivity, selection: $appLock.autoLockInterval) {
                         ForEach(AppLockService.AutoLockInterval.allCases) { item in
                             Text(item.label).tag(item)
                         }
                     }
-                    Toggle("Beim erneuten Öffnen sperren", isOn: $appLock.lockOnLaunch)
+                    Toggle(L10n.ApplockLockOnReopen, isOn: $appLock.lockOnLaunch)
                 }
 
                 Section {
-                    Button("Jetzt sperren") {
+                    Button(L10n.ApplockLockNow) {
                         appLock.lockFromSettings()
-                        statusMessage = "App wurde gesperrt."
+                        statusMessage = L10n.ApplockLockedMessage
                     }
                 }
             }
@@ -65,7 +65,7 @@ struct AppLockSettingsView: View {
                 }
             }
         }
-        .navigationTitle("App-Sperre")
+        .navigationTitle(L10n.ApplockSettingsTitle)
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
         .background(PAXBackground())
@@ -93,9 +93,9 @@ private struct SetPINView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
-                Text(step == 1 ? "Neuen PIN eingeben" : "PIN bestätigen")
+                Text(step == 1 ? L10n.ApplockEnterNewPin : L10n.ApplockConfirmPin)
                     .font(.headline)
-                SecureField("PIN", text: step == 1 ? $pin : $confirm)
+                SecureField(L10n.ApplockPinField, text: step == 1 ? $pin : $confirm)
                     .keyboardType(.numberPad)
                     .textContentType(.oneTimeCode)
                     .multilineTextAlignment(.center)
@@ -114,14 +114,14 @@ private struct SetPINView: View {
             .background(PAXBackground())
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen") { dismiss(); onDone() }
+                    Button(L10n.CommonCancel) { dismiss(); onDone() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Weiter") { advance() }
+                    Button(L10n.CommonNext) { advance() }
                         .disabled((step == 1 ? pin : confirm).count < 4)
                 }
             }
-            .navigationTitle(mode == .create ? "PIN festlegen" : "PIN ändern")
+            .navigationTitle(mode == .create ? L10n.ApplockSetPin : L10n.ApplockChangePin)
             .navigationBarTitleDisplayMode(.inline)
         }
         .presentationDetents([.medium])

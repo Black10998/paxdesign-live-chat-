@@ -22,7 +22,7 @@ struct FullScreenImageView: View {
                                 .onEnded { _ in withAnimation(PAXTheme.quickSpring) { scale = 1 } }
                         )
                 case .failure:
-                    Text("Bild nicht verfügbar")
+                    Text(L10n.ChatImageUnavailable)
                         .foregroundStyle(.white.opacity(0.7))
                 default:
                     ProgressView().tint(.white)

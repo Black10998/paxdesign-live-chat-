@@ -17,13 +17,13 @@ struct AccountHubView: View {
                 HStack(spacing: 14) {
                     ProfileAvatarView(size: 56)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(auth.profile?.name ?? "Administrator")
+                        Text(auth.profile?.name ?? L10n.CommonAdministrator)
                             .font(.headline)
                         Text(auth.profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
                             .font(.subheadline)
                             .foregroundStyle(PAXTheme.textSecondary)
                         if auth.profile?.isSuperAdmin == true {
-                            Text("Hauptadministrator")
+                            Text(L10n.AccountSuperAdmin)
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(PAXTheme.accent)
                         }
@@ -32,10 +32,10 @@ struct AccountHubView: View {
                 .padding(.vertical, 4)
             }
 
-            Section("Website") {
+            Section(L10n.CommonWebsite) {
                 Link(destination: websiteURL) {
                     HStack {
-                        Label("Offizielle Website", systemImage: "globe")
+                        Label(L10n.AccountOfficialWebsite, systemImage: "globe")
                         Spacer()
                         Text(websiteURL.host ?? "paxdesign.at")
                             .font(.caption)
@@ -44,40 +44,40 @@ struct AccountHubView: View {
                 }
             }
 
-            Section("App") {
+            Section(L10n.SettingsAppSection) {
                 NavigationLink {
                     AppLockSettingsView()
                 } label: {
-                    Label("App-Sperre", systemImage: "lock.shield")
+                    Label(L10n.SettingsAppLock, systemImage: "lock.shield")
                 }
                 if canManageUsers {
                     NavigationLink {
                         StaffManagementView()
                     } label: {
-                        Label("Team & Berechtigungen", systemImage: "person.3")
+                        Label(L10n.AccountTeam, systemImage: "person.3")
                     }
                 }
                 if canManageSettings {
                     NavigationLink {
                         SettingsView()
                     } label: {
-                        Label("Einstellungen", systemImage: "gearshape")
+                        Label(L10n.AccountSettings, systemImage: "gearshape")
                     }
                 }
                 NavigationLink {
                     HelpView()
                 } label: {
-                    Label("Hilfe", systemImage: "questionmark.circle")
+                    Label(L10n.AccountHelp, systemImage: "questionmark.circle")
                 }
                 NavigationLink {
                     AboutView()
                 } label: {
-                    Label("Über die App", systemImage: "info.circle")
+                    Label(L10n.AccountAbout, systemImage: "info.circle")
                 }
             }
 
             Section {
-                Button("Abmelden", role: .destructive) {
+                Button(L10n.SettingsSignOut, role: .destructive) {
                     Task {
                         await PushService.shared.unregisterTokenFromBackend(auth: auth)
                         auth.logout()
@@ -85,40 +85,40 @@ struct AccountHubView: View {
                 }
             }
 
-            Section("Rechtliches") {
+            Section(L10n.AccountLegal) {
                 Link(destination: PAXLegalLinks.privacyPolicy) {
-                    Label("Datenschutz (Web)", systemImage: "safari")
+                    Label(L10n.AccountPrivacyWeb, systemImage: "safari")
                 }
                 Link(destination: PAXLegalLinks.impressum) {
-                    Label("Impressum (Web)", systemImage: "safari")
+                    Label(L10n.AccountImprintWeb, systemImage: "safari")
                 }
                 if canAccessSecurity {
                     NavigationLink {
                         SecurityView()
                     } label: {
-                        Label("Sicherheit", systemImage: "lock.shield")
+                        Label(L10n.SettingsSecurity, systemImage: "lock.shield")
                     }
                 }
                 NavigationLink {
                     PrivacyPolicyView()
                 } label: {
-                    Label("Datenschutzerklärung", systemImage: "hand.raised")
+                    Label(L10n.AccountPrivacy, systemImage: "hand.raised")
                 }
                 NavigationLink {
                     TermsOfServiceView()
                 } label: {
-                    Label("Nutzungsbedingungen", systemImage: "doc.text")
+                    Label(L10n.AccountTerms, systemImage: "doc.text")
                 }
                 NavigationLink {
                     DataHandlingView()
                 } label: {
-                    Label("Datenverarbeitung", systemImage: "externaldrive")
+                    Label(L10n.AccountDataHandling, systemImage: "externaldrive")
                 }
             }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .background(PAXBackground())
-        .navigationTitle("Konto")
+        .navigationTitle(L10n.TabAccount)
     }
 }

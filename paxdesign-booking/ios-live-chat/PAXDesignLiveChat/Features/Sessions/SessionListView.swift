@@ -8,12 +8,18 @@ struct SessionListView: View {
     @State private var filter: SessionFilter = .all
     var onOpenSession: (String) -> Void = { _ in }
 
-    private enum SessionFilter: String, CaseIterable {
-        case all = "Alle"
-        case live = "Live"
-        case unread = "Offen"
-        case active = "Aktiv"
-        case closed = "Geschlossen"
+    private enum SessionFilter: CaseIterable, Hashable {
+        case all, live, unread, active, closed
+
+        var title: String {
+            switch self {
+            case .all: return L10n.FilterAll
+            case .live: return L10n.FilterLive
+            case .unread: return L10n.FilterUnread
+            case .active: return L10n.FilterActive
+            case .closed: return L10n.FilterClosed
+            }
+        }
     }
 
     private var filteredSessions: [LiveSession] {
@@ -49,8 +55,10 @@ struct SessionListView: View {
             }
         }
         .background(PAXBackground())
-        .navigationTitle("Live Chat")
+        .navigationTitle(L10n.SessionTitle)
         .navigationBarTitleDisplayMode(.large)
+        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: L10n.SearchPrompt)
+        .scrollDismissesKeyboard(.interactively)
     }
 
     private var sessionListContent: some View {
@@ -65,7 +73,7 @@ struct SessionListView: View {
             }
 
             Section {
-                searchAndFilters
+                filterChips
                     .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 8, trailing: 0))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -119,14 +127,14 @@ struct SessionListView: View {
                                     PAXHaptics.warning()
                                     Task { await coordinator.deleteSession(auth: auth, session: session) }
                                 } label: {
-                                    Label("Löschen", systemImage: "trash")
+                                    Label(L10n.CommonDelete, systemImage: "trash")
                                 }
 
                                 Button {
                                     PAXHaptics.light()
                                     Task { await coordinator.archiveSession(auth: auth, session: session) }
                                 } label: {
-                                    Label("Archivieren", systemImage: "archivebox")
+                                    Label(L10n.CommonArchive, systemImage: "archivebox")
                                 }
                                 .tint(.orange)
                             }
@@ -153,9 +161,9 @@ struct SessionListView: View {
             Image(systemName: "lock.fill")
                 .font(.system(size: 42))
                 .foregroundStyle(PAXTheme.textTertiary)
-            Text("Kein Chat-Zugriff")
+            Text(L10n.SessionNoAccessTitle)
                 .font(.title3.weight(.semibold))
-            Text("Ihr Konto hat keine Berechtigung, Chats anzuzeigen. Wenden Sie sich an den Hauptadministrator.")
+            Text(L10n.SessionNoAccessMessage)
                 .font(.subheadline)
                 .foregroundStyle(PAXTheme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -164,34 +172,22 @@ struct SessionListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var searchAndFilters: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(PAXTheme.textTertiary)
-                TextField("Suchen …", text: $searchText)
-                    .textInputAutocapitalization(.never)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(PAXTheme.surface))
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(SessionFilter.allCases, id: \.self) { item in
-                        Button {
-                            filter = item
-                            PAXHaptics.light()
-                        } label: {
-                            Text(item.rawValue)
-                                .font(.caption.weight(.semibold))
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
-                                .background(Capsule().fill(filter == item ? PAXTheme.accentSoft : PAXTheme.surface))
-                                .overlay(Capsule().stroke(filter == item ? PAXTheme.accent.opacity(0.4) : PAXTheme.border, lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
+    private var filterChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(SessionFilter.allCases, id: \.self) { item in
+                    Button {
+                        filter = item
+                        PAXHaptics.light()
+                    } label: {
+                        Text(item.title)
+                            .font(.caption.weight(.semibold))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(Capsule().fill(filter == item ? PAXTheme.accentSoft : PAXTheme.surface))
+                            .overlay(Capsule().stroke(filter == item ? PAXTheme.accent.opacity(0.4) : PAXTheme.border, lineWidth: 1))
                     }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -202,14 +198,14 @@ struct SessionListView: View {
             Image(systemName: "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
             VStack(alignment: .leading, spacing: 4) {
-                Text("Synchronisation fehlgeschlagen")
+                Text(L10n.SessionSyncFailed)
                     .font(.subheadline.weight(.semibold))
                 Text(message)
                     .font(.caption)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
             Spacer()
-            Button("Erneut") {
+            Button(L10n.CommonRetry) {
                 Task { await coordinator.refreshSessions(auth: auth) }
             }
             .font(.caption.weight(.semibold))
@@ -227,7 +223,7 @@ struct SessionListView: View {
                 ProfileAvatarView(size: 52)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(auth.profile?.name ?? "Administrator")
+                    Text(auth.profile?.name ?? L10n.CommonAdministrator)
                         .font(.headline)
                     Text(auth.profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
                         .font(.caption)
@@ -239,7 +235,7 @@ struct SessionListView: View {
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("\(coordinator.sessions.count)")
                         .font(.title3.weight(.bold))
-                    Text("Aktiv")
+                    Text(L10n.CommonActive)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(PAXTheme.textSecondary)
                 }
@@ -256,9 +252,9 @@ struct SessionListView: View {
                 .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: coordinator.liveCount)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("\(coordinator.liveCount) Live-Anfrage(n)")
+                Text(L10n.SessionLiveRequests(coordinator.liveCount))
                     .font(.headline)
-                Text("Kunden warten auf einen Agenten")
+                Text(L10n.SessionLiveWaiting)
                     .font(.caption)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
@@ -280,9 +276,9 @@ struct SessionListView: View {
             Image(systemName: "bubble.left.and.bubble.right.fill")
                 .font(.system(size: 42))
                 .foregroundStyle(PAXTheme.textTertiary)
-            Text("Keine Chats")
+            Text(L10n.SessionNoChats)
                 .font(.title3.weight(.semibold))
-            Text("Neue Gespräche erscheinen hier automatisch.")
+            Text(L10n.SessionNoChatsHint)
                 .font(.subheadline)
                 .foregroundStyle(PAXTheme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -323,7 +319,7 @@ private struct SessionCard: View {
                     if showRating, let rating = SessionRatingBadge(rating: session.sessionRating) {
                         rating
                     }
-                    PAXStatusBadge(text: session.handlerLabel, color: statusColor)
+                    PAXStatusBadge(text: SessionHandlerLocalization.label(handler: session.handler), color: statusColor)
                 }
 
                 if !session.detectedService.isEmpty {
@@ -343,6 +339,7 @@ private struct SessionCard: View {
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(PAXTheme.textTertiary)
+                .flipsForRightToLeftLayoutDirection(true)
         }
         .padding(14)
         .background(
@@ -360,5 +357,11 @@ private struct SessionCard: View {
         if session.isAdmin { return PAXTheme.success }
         if session.isClosed { return .gray }
         return .blue
+    }
+}
+
+private extension L10n {
+    static func SessionLiveRequests(_ count: Int) -> String {
+        String(format: String(localized: "session.live_requests"), count)
     }
 }

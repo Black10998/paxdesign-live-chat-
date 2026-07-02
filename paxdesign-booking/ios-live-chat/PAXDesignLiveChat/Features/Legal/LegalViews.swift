@@ -16,7 +16,7 @@ struct LegalDocumentView: View {
             VStack(alignment: .leading, spacing: 20) {
                 if !webLinks.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
-                        Text("Online")
+                        Text(L10n.CommonOnline)
                             .font(.headline)
                         ForEach(webLinks) { link in
                             Link(destination: link.url) {
@@ -80,7 +80,7 @@ struct SecurityView: View {
                     .foregroundStyle(PAXTheme.textSecondary)
             }
         }
-        .navigationTitle("Sicherheit")
+        .navigationTitle(L10n.LegalSecurity)
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
         .background(PAXBackground())
@@ -90,7 +90,7 @@ struct SecurityView: View {
 struct PrivacyPolicyView: View {
     var body: some View {
         LegalDocumentView(
-            title: "Datenschutz",
+            title: L10n.LegalPrivacy,
             sections: [
                 ("Verantwortlicher", "PAXdesign / PrimoJob GmbH\nFranzensbrückenstraße 14, 1020 Wien\nhttps://paxdesign.at"),
                 ("Zweck", "Die App dient autorisierten Mitarbeitern zur Bearbeitung von Live-Chat-Anfragen. Es werden nur Daten verarbeitet, die für den Support erforderlich sind."),
@@ -111,7 +111,7 @@ struct PrivacyPolicyView: View {
 struct TermsOfServiceView: View {
     var body: some View {
         LegalDocumentView(
-            title: "Nutzungsbedingungen",
+            title: L10n.LegalTerms,
             sections: [
                 ("Geltungsbereich", "Diese App ist ausschließlich für autorisierte PAXdesign-Mitarbeiter bestimmt."),
                 ("Zugang", "Der Zugang erfordert gültige WordPress-Administrator-Anmeldedaten und ein Application Password."),

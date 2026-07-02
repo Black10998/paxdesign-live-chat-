@@ -23,13 +23,13 @@ struct LiveRequestTopBanner: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
-                        Text("LIVE")
+                        Text(L10n.LiveBadge)
                             .font(.caption2.weight(.heavy))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(Capsule().fill(PAXTheme.accent))
-                        Text("Neue Live-Anfrage")
+                        Text(L10n.LiveNewRequest)
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(PAXTheme.textPrimary)
                     }

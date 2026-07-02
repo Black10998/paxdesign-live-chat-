@@ -9,7 +9,7 @@ struct PrivacyBannerView: View {
                 .font(.caption)
                 .foregroundStyle(PAXTheme.success)
 
-            Text("Nachrichten werden per TLS (HTTPS) übertragen. Keine Ende-zu-Ende-Verschlüsselung.")
+            Text(L10n.ChatPrivacyBanner)
                 .font(.caption2)
                 .foregroundStyle(PAXTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)

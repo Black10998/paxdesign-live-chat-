@@ -83,7 +83,7 @@ struct MessageBubbleView: View {
                         .foregroundStyle(PAXTheme.textPrimary)
                         .multilineTextAlignment(.leading)
                 } else if message.imageUrl != nil {
-                    Text("Bild")
+                    Text(L10n.ChatImage)
                         .font(.caption)
                         .foregroundStyle(PAXTheme.textSecondary)
                 }

@@ -24,7 +24,7 @@ struct SettingsView: View {
             }
         }
         .background(PAXBackground())
-        .navigationTitle("Profil & Einstellungen")
+        .navigationTitle(L10n.SettingsTitle)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             appPasswordDraft = auth.appPassword
@@ -33,9 +33,10 @@ struct SettingsView: View {
 
     private var settingsRestrictedView: some View {
         List {
+            appearanceSection
             profileSection
             Section {
-                Text("Sie haben keine Berechtigung, App-Einstellungen zu ändern. Wenden Sie sich an den Hauptadministrator.")
+                Text(L10n.SettingsNoPermission)
                     .font(.footnote)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
@@ -47,6 +48,7 @@ struct SettingsView: View {
 
     private var settingsContent: some View {
         List {
+            appearanceSection
             profileSection
             accountSection
             securitySection
@@ -58,13 +60,26 @@ struct SettingsView: View {
         .scrollContentBackground(.hidden)
     }
 
+    private var appearanceSection: some View {
+        Section {
+            Picker(L10n.AppearanceTitle, selection: $settings.appearanceMode) {
+                ForEach(AppSettingsStore.AppearanceMode.allCases) { mode in
+                    Text(mode.title).tag(mode)
+                }
+            }
+            .pickerStyle(.inline)
+        } footer: {
+            Text(L10n.AppearanceFooter)
+        }
+    }
+
     private var profileSection: some View {
         Section {
             HStack(spacing: 16) {
                 ProfileAvatarView(size: 72)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(auth.profile?.name ?? "Administrator")
+                    Text(auth.profile?.name ?? L10n.CommonAdministrator)
                         .font(.headline)
                     Text(auth.profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
                         .font(.subheadline)
@@ -79,7 +94,7 @@ struct SettingsView: View {
             .padding(.vertical, 6)
 
             PhotosPicker(selection: $photoItem, matching: .images) {
-                Label("Profilbild ändern", systemImage: "photo.circle")
+                Label(L10n.SettingsChangePhoto, systemImage: "photo.circle")
             }
             .onChange(of: photoItem) { item in
                 Task {
@@ -90,27 +105,27 @@ struct SettingsView: View {
             }
 
             if settings.profileImageData != nil {
-                Button("Profilbild zurücksetzen", role: .destructive) {
+                Button(L10n.SettingsResetPhoto, role: .destructive) {
                     settings.profileImageData = nil
                 }
             }
         } header: {
-            Text("Profil")
+            Text(L10n.SettingsProfile)
         }
     }
 
     private var accountSection: some View {
         Section {
-            LabeledContent("Website") {
+            LabeledContent(L10n.CommonWebsite) {
                 Text(auth.siteURLString)
                     .foregroundStyle(PAXTheme.textSecondary)
                     .multilineTextAlignment(.trailing)
             }
 
-            SecureField("Application Password", text: $appPasswordDraft)
+            SecureField(L10n.LoginAppPassword, text: $appPasswordDraft)
                 .textInputAutocapitalization(.never)
 
-            Button("Zugangsdaten speichern") {
+            Button(L10n.SettingsSaveCredentials) {
                 Task { await saveCredentials() }
             }
 
@@ -120,7 +135,7 @@ struct SettingsView: View {
                     .foregroundStyle(PAXTheme.textSecondary)
             }
 
-            Button("Abmelden", role: .destructive) {
+            Button(L10n.SettingsSignOut, role: .destructive) {
                 Task {
                     await push.unregisterTokenFromBackend(auth: auth)
                     auth.logout()
@@ -128,9 +143,9 @@ struct SettingsView: View {
                 }
             }
         } header: {
-            Text("Konto")
+            Text(L10n.SettingsAccount)
         } footer: {
-            Text("Das Application Password wird in WordPress unter Benutzer → Profil erstellt. Leerzeichen werden automatisch entfernt.")
+            Text(L10n.SettingsCredentialsFooter)
         }
     }
 
@@ -139,18 +154,18 @@ struct SettingsView: View {
             NavigationLink {
                 AppLockSettingsView()
             } label: {
-                Label("App-Sperre", systemImage: "lock.shield")
+                Label(L10n.SettingsAppLock, systemImage: "lock.shield")
             }
         } header: {
-            Text("Sicherheit")
+            Text(L10n.SettingsSecurity)
         } footer: {
-            Text("Face ID, Touch ID oder App-PIN. Automatische Sperre nach Inaktivität.")
+            Text(L10n.SettingsAppLockFooter)
         }
     }
 
     private var notificationSection: some View {
         Section {
-            Toggle("Push-Benachrichtigungen", isOn: $settings.notificationsEnabled)
+            Toggle(L10n.SettingsPush, isOn: $settings.notificationsEnabled)
                 .onChange(of: settings.notificationsEnabled) { enabled in
                     if enabled {
                         Task {
@@ -161,46 +176,46 @@ struct SettingsView: View {
                         }
                     }
                 }
-            Toggle("Neue Nachrichten", isOn: $settings.messageSoundEnabled)
+            Toggle(L10n.SettingsNewMessages, isOn: $settings.messageSoundEnabled)
 
             if permissions.notificationStatus == .denied {
-                Button("Benachrichtigungen in iOS-Einstellungen öffnen") {
+                Button(L10n.SettingsOpenIosSettings) {
                     permissions.openSystemSettings()
                 }
                 .font(.footnote)
             }
         } header: {
-            Text("Benachrichtigungen")
+            Text(L10n.SettingsNotifications)
         } footer: {
-            Text("Push-Benachrichtigungen benachrichtigen Sie über Live-Anfragen und neue Kundennachrichten.")
+            Text(L10n.SettingsNotificationsFooter)
         }
     }
 
     private var soundSection: some View {
         Section {
-            Toggle("Klingelton bei Live-Anfrage", isOn: $settings.incomingCallSoundEnabled)
-            Toggle("Sendeton", isOn: $settings.sendSoundEnabled)
-            Toggle("Tippgeräusch beim Schreiben", isOn: $settings.typingSoundEnabled)
+            Toggle(L10n.SettingsIncomingRingtone, isOn: $settings.incomingCallSoundEnabled)
+            Toggle(L10n.SettingsSendSound, isOn: $settings.sendSoundEnabled)
+            Toggle(L10n.SettingsTypingSound, isOn: $settings.typingSoundEnabled)
             VStack(alignment: .leading, spacing: 8) {
-                Text("Lautstärke")
+                Text(L10n.SettingsVolume)
                     .font(.subheadline)
                 Slider(value: $settings.ringtoneVolume, in: 0.2...1.0)
             }
-            Button("Klingelton testen") {
+            Button(L10n.SettingsTestRingtone) {
                 IncomingCallRingtone.shared.startRinging()
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                     IncomingCallRingtone.shared.stopRinging()
                 }
             }
         } header: {
-            Text("Ton")
+            Text(L10n.SettingsSound)
         }
     }
 
     private var aboutSection: some View {
-        Section("App") {
-            LabeledContent("Version", value: PAXAppInfo.fullVersion)
-            LabeledContent("Plugin", value: auth.profile?.pluginVer ?? "—")
+        Section(L10n.SettingsAppSection) {
+            LabeledContent(L10n.CommonVersion, value: PAXAppInfo.fullVersion)
+            LabeledContent(L10n.CommonPlugin, value: auth.profile?.pluginVer ?? "—")
         }
     }
 
@@ -208,7 +223,7 @@ struct SettingsView: View {
         auth.appPassword = appPasswordDraft
         do {
             try await auth.login()
-            statusMessage = "Zugangsdaten gespeichert."
+            statusMessage = L10n.SettingsCredentialsSaved
             PAXHaptics.success()
         } catch {
             statusMessage = error.localizedDescription

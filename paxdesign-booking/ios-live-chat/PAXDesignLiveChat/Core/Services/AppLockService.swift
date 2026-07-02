@@ -50,12 +50,12 @@ final class AppLockService: ObservableObject {
 
         var label: String {
             switch self {
-            case .immediate: return "Sofort"
-            case .oneMinute: return "1 Minute"
-            case .fiveMinutes: return "5 Minuten"
-            case .fifteenMinutes: return "15 Minuten"
-            case .thirtyMinutes: return "30 Minuten"
-            case .never: return "Nie (nur beim Verlassen)"
+            case .immediate: return L10n.ApplockIntervalImmediate
+            case .oneMinute: return L10n.ApplockInterval1min
+            case .fiveMinutes: return L10n.ApplockInterval5min
+            case .fifteenMinutes: return L10n.ApplockInterval15min
+            case .thirtyMinutes: return L10n.ApplockInterval30min
+            case .never: return L10n.ApplockIntervalNever
             }
         }
     }
@@ -184,7 +184,7 @@ final class AppLockService: ObservableObject {
             context.localizedCancelTitle = "Abbrechen"
             let success = try await context.evaluatePolicy(
                 .deviceOwnerAuthenticationWithBiometrics,
-                localizedReason: "PAXDesign Live Chat entsperren"
+                localizedReason: L10n.ApplockAuthReason
             )
             if success {
                 unlock()
@@ -209,7 +209,7 @@ final class AppLockService: ObservableObject {
             context.localizedCancelTitle = "Abbrechen"
             let success = try await context.evaluatePolicy(
                 .deviceOwnerAuthentication,
-                localizedReason: "PAXDesign Live Chat entsperren"
+                localizedReason: L10n.ApplockAuthReason
             )
             if success {
                 unlock()
@@ -312,9 +312,9 @@ enum AppLockError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .invalidPIN: return "PIN muss 4–8 Ziffern enthalten."
-        case .keychainFailed: return "PIN konnte nicht gespeichert werden."
-        case .pinMismatch: return "PINs stimmen nicht überein."
+        case .invalidPIN: return L10n.ApplockErrorInvalidPin
+        case .keychainFailed: return L10n.ApplockErrorInvalidPin
+        case .pinMismatch: return L10n.ApplockErrorPinMismatch
         }
     }
 }

@@ -20,7 +20,7 @@ struct PAXDesignLiveChatApp: App {
                 .environmentObject(settings)
                 .environmentObject(permissions)
                 .environmentObject(appLock)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(settings.appearanceMode.colorScheme)
                 .task {
                     await runStartupSequence()
                 }
@@ -166,7 +166,7 @@ struct MainShellView: View {
                             ChatView(sessionId: sessionId)
                         }
                 }
-                .tabItem { Label("Chats", systemImage: "bubble.left.and.bubble.right") }
+                .tabItem { Label(L10n.TabChats, systemImage: "bubble.left.and.bubble.right") }
                 .tag(0)
                 .modifier(ChatsTabBadge(count: unreadChatCount))
             }
@@ -179,14 +179,14 @@ struct MainShellView: View {
                         }
                     }
             }
-            .tabItem { Label("Live", systemImage: "bell.and.waves.left.and.right.fill") }
+            .tabItem { Label(L10n.TabLive, systemImage: "bell.and.waves.left.and.right.fill") }
             .tag(canViewChats ? 1 : 0)
             .modifier(LiveTabBadge(count: coordinator.liveCount))
 
             NavigationStack {
                 AccountHubView()
             }
-            .tabItem { Label("Konto", systemImage: "person.crop.circle") }
+            .tabItem { Label(L10n.TabAccount, systemImage: "person.crop.circle") }
             .tag(canViewChats ? 2 : 1)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -209,7 +209,10 @@ struct MainShellView: View {
                 PAXHaptics.medium()
             }
         }
-        .onChange(of: selectedTab) { _ in appLock.recordActivity() }
+        .onChange(of: selectedTab) { _ in
+            appLock.recordActivity()
+            PAXKeyboard.dismiss()
+        }
     }
 
     private func openSession(_ sessionId: String, path: Binding<NavigationPath>) {

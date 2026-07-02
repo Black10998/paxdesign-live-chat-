@@ -43,7 +43,7 @@ struct IncomingLiveRequestView: View {
                 }
 
                 VStack(spacing: 10) {
-                    Text("Live-Agent-Anfrage")
+                    Text(L10n.LiveAgentRequest)
                         .font(.title2.weight(.bold))
                     Text(request.session.displayName)
                         .font(.title3.weight(.semibold))
@@ -88,7 +88,7 @@ struct IncomingLiveRequestView: View {
                     .opacity(appear ? 1 : 0)
                     .offset(y: appear ? 0 : 20)
                 } else {
-                    Text("Sie haben keine Berechtigung, Live-Anfragen anzunehmen.")
+                    Text(L10n.LiveNoPermission)
                         .font(.footnote)
                         .foregroundStyle(PAXTheme.textSecondary)
                         .multilineTextAlignment(.center)

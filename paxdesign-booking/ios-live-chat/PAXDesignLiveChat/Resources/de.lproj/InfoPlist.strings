@@ -1,0 +1,3 @@
+"NSFaceIDUsageDescription" = "Face ID wird verwendet, um die App nach Inaktivität zu entsperren.";
+"NSPhotoLibraryUsageDescription" = "Fotos aus der Mediathek auswählen, um sie im Live-Chat an Kunden zu senden.";
+"NSUserNotificationsUsageDescription" = "Benachrichtigungen für Live-Agent-Anfragen und neue Kundennachrichten.";
