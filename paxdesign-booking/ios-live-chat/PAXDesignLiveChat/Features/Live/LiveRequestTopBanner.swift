@@ -15,7 +15,7 @@ struct LiveRequestTopBanner: View {
                         .fill(PAXTheme.accent.opacity(pulse ? 0.28 : 0.12))
                         .frame(width: 40, height: 40)
                         .scaleEffect(pulse ? 1.08 : 1)
-                    Image(systemName: "dot.radiowaves.left.and.right")
+                    Image(systemName: "bell.and.waves.left.and.right.fill")
                         .font(.body.weight(.semibold))
                         .foregroundStyle(PAXTheme.accent)
                         .scaleEffect(pulse ? 1.06 : 0.94)

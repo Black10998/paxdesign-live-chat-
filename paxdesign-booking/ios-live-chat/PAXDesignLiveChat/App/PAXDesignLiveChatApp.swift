@@ -35,7 +35,10 @@ struct PAXDesignLiveChatApp: App {
                 }
                 .onChange(of: scenePhase) { phase in
                     guard phase == .active, auth.isLoggedIn else { return }
-                    Task { await coordinator.refreshSessions(auth: auth) }
+                    Task {
+                        await auth.refreshProfile()
+                        await coordinator.refreshSessions(auth: auth)
+                    }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .paxPushReceived)) { note in
                     handlePushNotification(note, opened: false)
@@ -89,7 +92,7 @@ struct RootView: View {
             .animation(PAXTheme.spring, value: auth.isBootstrapping)
             .animation(PAXTheme.spring, value: auth.isLoggedIn)
 
-            if coordinator.showIncomingFullscreen, let incoming = coordinator.incomingRequest {
+            if coordinator.showIncomingFullscreen, let incoming = coordinator.incomingRequest, auth.canReplyChats {
                 IncomingLiveRequestView(request: incoming)
                     .transition(.opacity.combined(with: .scale(scale: 0.96)))
                     .zIndex(10)
@@ -114,11 +117,12 @@ struct MainShellView: View {
         }.count
     }
 
-    private var canViewChats: Bool { auth.profile?.perms.viewChats ?? true }
+    private var canViewChats: Bool { auth.canViewChats }
+    private var canReplyChats: Bool { auth.canReplyChats }
 
     var body: some View {
         VStack(spacing: 0) {
-            if let incoming = coordinator.incomingRequest, !coordinator.incomingBannerDismissed {
+            if canReplyChats, let incoming = coordinator.incomingRequest, !coordinator.incomingBannerDismissed {
                 LiveRequestTopBanner(request: incoming) {
                     coordinator.presentIncomingFullscreen()
                 } onDismiss: {
@@ -144,7 +148,9 @@ struct MainShellView: View {
                 NavigationStack(path: $livePath) {
                     LiveTabView(onOpenSession: { openSession($0, path: $livePath) })
                         .navigationDestination(for: String.self) { sessionId in
-                            ChatView(sessionId: sessionId)
+                            if canViewChats {
+                                ChatView(sessionId: sessionId)
+                            }
                         }
                 }
                 .tabItem { Label("Live", systemImage: "bell.and.waves.left.and.right.fill") }

@@ -42,9 +42,16 @@ class PAXdesign_APNS {
         $ids   = array();
         foreach ($users as $user) {
             $uid = (int) $user->ID;
-            if ($uid > 0 && user_can($uid, 'manage_options')) {
-                $ids[] = $uid;
+            if ($uid <= 0) {
+                continue;
             }
+            if (!PAXdesign_Live_Chat_Permissions::has_live_chat_access($uid)) {
+                continue;
+            }
+            if (empty(self::get_user_devices($uid))) {
+                continue;
+            }
+            $ids[] = $uid;
         }
         return $ids;
     }

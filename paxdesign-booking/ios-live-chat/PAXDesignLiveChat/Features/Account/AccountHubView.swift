@@ -3,9 +3,9 @@ import SwiftUI
 struct AccountHubView: View {
     @EnvironmentObject private var auth: AuthStore
 
-    private var canManageUsers: Bool { auth.profile?.perms.manageUsers ?? false }
-    private var canManageSettings: Bool { auth.profile?.perms.manageSettings ?? true }
-    private var canAccessSecurity: Bool { auth.profile?.perms.accessSecurity ?? true }
+    private var canManageUsers: Bool { auth.canManageUsers }
+    private var canManageSettings: Bool { auth.canManageSettings }
+    private var canAccessSecurity: Bool { auth.canAccessSecurity }
     private var websiteURL: URL {
         if let url = URL(string: auth.siteURLString), !auth.siteURLString.isEmpty { return url }
         return PAXLegalLinks.support

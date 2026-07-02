@@ -302,30 +302,58 @@ class PAXdesign_Live_Chat_Mobile_API {
     }
 
     public static function route_takeover(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_REPLY_CHATS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
         return self::respond(self::live()->admin_takeover($request['id']));
     }
 
     public static function route_decline(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_REPLY_CHATS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
         return self::respond(self::live()->admin_decline_live_request($request['id']));
     }
 
     public static function route_close(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_REPLY_CHATS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
         return self::respond(self::live()->admin_close($request['id']));
     }
 
     public static function route_release(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_REPLY_CHATS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
         return self::respond(self::live()->admin_release($request['id']));
     }
 
     public static function route_reopen(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_REPLY_CHATS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
         return self::respond(self::live()->admin_reopen($request['id']));
     }
 
     public static function route_archive(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_REPLY_CHATS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
         return self::respond(self::live()->admin_archive_session($request['id']));
     }
 
     public static function route_delete(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_REPLY_CHATS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
         return self::respond(self::live()->admin_delete_session($request['id']));
     }
 
@@ -366,6 +394,10 @@ class PAXdesign_Live_Chat_Mobile_API {
     }
 
     public static function route_typing(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_REPLY_CHATS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
         $params = $request->get_json_params();
         if (!is_array($params)) {
             $params = array();

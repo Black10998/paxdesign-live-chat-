@@ -8,6 +8,8 @@ struct IncomingLiveRequestView: View {
     @State private var pulse = false
     @State private var appear = false
 
+    private var canReply: Bool { auth.canReplyChats }
+
     var body: some View {
         ZStack {
             Color.black.opacity(0.94).ignoresSafeArea()
@@ -63,27 +65,35 @@ struct IncomingLiveRequestView: View {
 
                 Spacer()
 
-                HStack(spacing: 56) {
-                    callAction(
-                        title: "Ablehnen",
-                        icon: "phone.down.fill",
-                        color: PAXTheme.danger
-                    ) {
-                        PAXHaptics.warning()
-                        Task { await coordinator.declineLiveRequest(auth: auth, session: request.session) }
-                    }
+                if canReply {
+                    HStack(spacing: 56) {
+                        callAction(
+                            title: "Ablehnen",
+                            icon: "phone.down.fill",
+                            color: PAXTheme.danger
+                        ) {
+                            PAXHaptics.warning()
+                            Task { await coordinator.declineLiveRequest(auth: auth, session: request.session) }
+                        }
 
-                    callAction(
-                        title: "Annehmen",
-                        icon: "phone.fill",
-                        color: PAXTheme.success
-                    ) {
-                        PAXHaptics.success()
-                        Task { await coordinator.acceptLiveRequest(auth: auth, session: request.session) }
+                        callAction(
+                            title: "Annehmen",
+                            icon: "phone.fill",
+                            color: PAXTheme.success
+                        ) {
+                            PAXHaptics.success()
+                            Task { await coordinator.acceptLiveRequest(auth: auth, session: request.session) }
+                        }
                     }
+                    .opacity(appear ? 1 : 0)
+                    .offset(y: appear ? 0 : 20)
+                } else {
+                    Text("Sie haben keine Berechtigung, Live-Anfragen anzunehmen.")
+                        .font(.footnote)
+                        .foregroundStyle(PAXTheme.textSecondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 24)
                 }
-                .opacity(appear ? 1 : 0)
-                .offset(y: appear ? 0 : 20)
 
                 Spacer().frame(height: 48)
             }
@@ -91,7 +101,7 @@ struct IncomingLiveRequestView: View {
         }
         .onAppear {
             withAnimation(PAXTheme.spring) { appear = true }
-            PAXHaptics.medium()
+            if canReply { PAXHaptics.medium() }
         }
     }
 

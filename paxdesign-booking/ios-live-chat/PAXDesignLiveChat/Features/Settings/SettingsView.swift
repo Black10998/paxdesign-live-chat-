@@ -12,7 +12,39 @@ struct SettingsView: View {
     @State private var statusMessage: String?
     @State private var photoItem: PhotosPickerItem?
 
+    private var canManageSettings: Bool { auth.canManageSettings }
+
     var body: some View {
+        Group {
+            if canManageSettings {
+                settingsContent
+            } else {
+                settingsRestrictedView
+            }
+        }
+        .background(PAXBackground())
+        .navigationTitle("Profil & Einstellungen")
+        .navigationBarTitleDisplayMode(.inline)
+        .onAppear {
+            appPasswordDraft = auth.appPassword
+        }
+    }
+
+    private var settingsRestrictedView: some View {
+        List {
+            profileSection
+            Section {
+                Text("Sie haben keine Berechtigung, App-Einstellungen zu ändern. Wenden Sie sich an den Hauptadministrator.")
+                    .font(.footnote)
+                    .foregroundStyle(PAXTheme.textSecondary)
+            }
+            aboutSection
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+    }
+
+    private var settingsContent: some View {
         List {
             profileSection
             accountSection
@@ -22,12 +54,6 @@ struct SettingsView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
-        .navigationTitle("Profil & Einstellungen")
-        .navigationBarTitleDisplayMode(.inline)
-        .onAppear {
-            appPasswordDraft = auth.appPassword
-        }
     }
 
     private var profileSection: some View {

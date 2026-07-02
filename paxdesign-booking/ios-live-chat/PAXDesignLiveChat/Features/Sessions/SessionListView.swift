@@ -36,7 +36,9 @@ struct SessionListView: View {
         return items
     }
 
-    private var canViewChats: Bool { auth.profile?.perms.viewChats ?? true }
+    private var canViewChats: Bool { auth.canViewChats }
+    private var canReplyChats: Bool { auth.canReplyChats }
+    private var canViewRatings: Bool { auth.canViewRatings }
 
     var body: some View {
         Group {
@@ -102,7 +104,8 @@ struct SessionListView: View {
                         } label: {
                             SessionCard(
                                 session: session,
-                                isUnread: session.needsReply && !settings.readSessionIds.contains(session.sessionId)
+                                isUnread: session.needsReply && !settings.readSessionIds.contains(session.sessionId),
+                                showRating: canViewRatings
                             )
                         }
                         .buttonStyle(PAXPressButtonStyle())
@@ -111,20 +114,22 @@ struct SessionListView: View {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                PAXHaptics.warning()
-                                Task { await coordinator.deleteSession(auth: auth, session: session) }
-                            } label: {
-                                Label("Löschen", systemImage: "trash")
-                            }
+                            if canReplyChats {
+                                Button(role: .destructive) {
+                                    PAXHaptics.warning()
+                                    Task { await coordinator.deleteSession(auth: auth, session: session) }
+                                } label: {
+                                    Label("Löschen", systemImage: "trash")
+                                }
 
-                            Button {
-                                PAXHaptics.light()
-                                Task { await coordinator.archiveSession(auth: auth, session: session) }
-                            } label: {
-                                Label("Archivieren", systemImage: "archivebox")
+                                Button {
+                                    PAXHaptics.light()
+                                    Task { await coordinator.archiveSession(auth: auth, session: session) }
+                                } label: {
+                                    Label("Archivieren", systemImage: "archivebox")
+                                }
+                                .tint(.orange)
                             }
-                            .tint(.orange)
                         }
                     }
                 }
@@ -289,6 +294,7 @@ struct SessionListView: View {
 private struct SessionCard: View {
     let session: LiveSession
     var isUnread: Bool = false
+    var showRating: Bool = true
 
     var body: some View {
         HStack(spacing: 14) {
@@ -314,7 +320,7 @@ private struct SessionCard: View {
                         .font(.headline)
                         .foregroundStyle(PAXTheme.textPrimary)
                     Spacer()
-                    if let rating = SessionRatingBadge(rating: session.sessionRating) {
+                    if showRating, let rating = SessionRatingBadge(rating: session.sessionRating) {
                         rating
                     }
                     PAXStatusBadge(text: session.handlerLabel, color: statusColor)

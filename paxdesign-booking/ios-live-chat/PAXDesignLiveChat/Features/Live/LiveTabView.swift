@@ -9,6 +9,9 @@ struct LiveTabView: View {
         coordinator.sessions.filter { $0.isLiveRequest }
     }
 
+    private var canReply: Bool { auth.canReplyChats }
+    private var canViewChats: Bool { auth.canViewChats }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
@@ -19,15 +22,19 @@ struct LiveTabView: View {
                 } else {
                     VStack(spacing: 10) {
                         ForEach(liveSessions) { session in
-                            LiveRequestCard(session: session) {
+                            LiveRequestCard(
+                                session: session,
+                                canReply: canReply,
+                                canOpenChat: canViewChats
+                            ) {
                                 PAXHaptics.medium()
                                 Task { await coordinator.acceptLiveRequest(auth: auth, session: session) }
-                                onOpenSession(session.sessionId)
+                                if canViewChats { onOpenSession(session.sessionId) }
                             } onDecline: {
                                 PAXHaptics.warning()
                                 Task { await coordinator.declineLiveRequest(auth: auth, session: session) }
                             } onOpen: {
-                                onOpenSession(session.sessionId)
+                                if canViewChats { onOpenSession(session.sessionId) }
                             }
                         }
                     }
@@ -99,6 +106,8 @@ struct LiveTabView: View {
 
 private struct LiveRequestCard: View {
     let session: LiveSession
+    var canReply: Bool = true
+    var canOpenChat: Bool = true
     let onAccept: () -> Void
     let onDecline: () -> Void
     let onOpen: () -> Void
@@ -132,14 +141,18 @@ private struct LiveRequestCard: View {
             }
 
             HStack(spacing: 10) {
-                Button("Ablehnen", role: .destructive, action: onDecline)
-                    .buttonStyle(.bordered)
-                Button("Übernehmen", action: onAccept)
-                    .buttonStyle(.borderedProminent)
-                    .tint(PAXTheme.accent)
+                if canReply {
+                    Button("Ablehnen", role: .destructive, action: onDecline)
+                        .buttonStyle(.bordered)
+                    Button("Übernehmen", action: onAccept)
+                        .buttonStyle(.borderedProminent)
+                        .tint(PAXTheme.accent)
+                }
                 Spacer()
-                Button("Öffnen", action: onOpen)
-                    .font(.caption.weight(.semibold))
+                if canOpenChat {
+                    Button("Öffnen", action: onOpen)
+                        .font(.caption.weight(.semibold))
+                }
             }
         }
         .padding(16)

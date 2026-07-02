@@ -224,7 +224,7 @@ struct ChatView: View {
             .accessibilityLabel("Kundenübersicht")
         }
         ToolbarItemGroup(placement: .topBarTrailing) {
-            if thread.handler == "live_request" {
+            if thread.handler == "live_request", canReply {
                 Button("Übernehmen") {
                     PAXHaptics.medium()
                     Task {
@@ -237,13 +237,13 @@ struct ChatView: View {
                 }
                 .font(.subheadline.weight(.semibold))
             }
-            if thread.handler == "admin" {
+            if thread.handler == "admin", canReply {
                 Button("Freigeben") {
                     PAXHaptics.light()
                     Task { try? await auth.api?.release(thread.sessionId) }
                 }
             }
-            if thread.handler == "closed" {
+            if thread.handler == "closed", canReply {
                 Button("Wiederöffnen") {
                     PAXHaptics.light()
                     Task {
@@ -252,7 +252,7 @@ struct ChatView: View {
                         await coordinator.refreshSessions(auth: auth)
                     }
                 }
-            } else {
+            } else if canReply {
                 Button("Schließen") {
                     PAXHaptics.warning()
                     Task {
@@ -294,10 +294,10 @@ struct ChatView: View {
         .background(PAXTheme.surface.opacity(0.88))
     }
 
-    private var canReply: Bool { auth.profile?.perms.replyChats ?? true }
-    private var canUseAI: Bool { auth.profile?.perms.useAI ?? true }
-    private var canSendImages: Bool { auth.profile?.perms.sendImages ?? true }
-    private var canViewRatings: Bool { auth.profile?.perms.viewRatings ?? true }
+    private var canReply: Bool { auth.canReplyChats }
+    private var canUseAI: Bool { auth.canUseAI }
+    private var canSendImages: Bool { auth.canSendImages }
+    private var canViewRatings: Bool { auth.canViewRatings }
 
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 8) {
