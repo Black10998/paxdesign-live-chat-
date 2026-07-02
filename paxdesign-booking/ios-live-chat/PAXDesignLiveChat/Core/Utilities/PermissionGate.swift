@@ -15,11 +15,4 @@ extension AuthStore {
     var canViewRatings: Bool { hasPermission(\.viewRatings) }
     var canManageUsers: Bool { hasPermission(\.manageUsers) }
     var canAccessSecurity: Bool { hasPermission(\.accessSecurity) }
-
-    func refreshProfile() async {
-        guard let api else { return }
-        if let me = try? await api.validateLogin() {
-            profile = me
-        }
-    }
 }

@@ -91,6 +91,13 @@ final class AuthStore: ObservableObject {
         invalidateStoredSession(keepFormFields: false)
     }
 
+    func refreshProfile() async {
+        guard let api else { return }
+        if let me = try? await api.validateLogin() {
+            profile = me
+        }
+    }
+
     private func clearFormFields() {
         siteURLString = ""
         username = ""
