@@ -6,6 +6,7 @@ struct SessionListView: View {
     @StateObject private var settings = AppSettingsStore.shared
     @State private var searchText = ""
     @State private var filter: SessionFilter = .all
+    @FocusState private var isSearchFocused: Bool
     var onOpenSession: (String) -> Void = { _ in }
 
     private enum SessionFilter: CaseIterable, Hashable {
@@ -57,8 +58,6 @@ struct SessionListView: View {
         .background(PAXBackground())
         .navigationTitle(L10n.SessionTitle)
         .navigationBarTitleDisplayMode(.large)
-        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: L10n.SearchPrompt)
-        .scrollDismissesKeyboard(.interactively)
     }
 
     private var sessionListContent: some View {
@@ -73,7 +72,7 @@ struct SessionListView: View {
             }
 
             Section {
-                filterChips
+                searchAndFilters
                     .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 8, trailing: 0))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
@@ -107,6 +106,8 @@ struct SessionListView: View {
                     ForEach(filteredSessions) { session in
                         Button {
                             PAXHaptics.light()
+                            isSearchFocused = false
+                            PAXKeyboard.dismiss()
                             coordinator.activeSessionId = session.sessionId
                             onOpenSession(session.sessionId)
                         } label: {
@@ -145,6 +146,7 @@ struct SessionListView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
         .refreshable { await coordinator.refreshSessions(auth: auth) }
         .onAppear {
             coordinator.start(auth: auth)
@@ -170,6 +172,18 @@ struct SessionListView: View {
                 .padding(.horizontal, 24)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var searchAndFilters: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            PAXNativeSearchField(
+                text: $searchText,
+                prompt: L10n.SearchPrompt,
+                isFocused: $isSearchFocused
+            )
+
+            filterChips
+        }
     }
 
     private var filterChips: some View {

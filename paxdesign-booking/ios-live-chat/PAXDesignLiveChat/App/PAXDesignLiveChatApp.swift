@@ -24,8 +24,6 @@ struct PAXDesignLiveChatApp: App {
                 .environment(\.paxPalette, settings.palette)
                 .modifier(PAXLayoutDirectionModifier())
                 .preferredColorScheme(settings.appearanceMode.colorScheme)
-                .animation(PAXTheme.fade, value: settings.languageMode)
-                .animation(PAXTheme.fade, value: settings.visualTheme)
                 .task {
                     await runStartupSequence()
                 }
@@ -204,6 +202,7 @@ struct MainShellView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
+        .tint(PAXTheme.accent)
         .onChange(of: coordinator.activeSessionId) { sessionId in
             guard let sessionId, canViewChats else { return }
             selectedTab = 0
