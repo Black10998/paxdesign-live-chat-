@@ -150,6 +150,15 @@ struct SettingsRootView: View {
 
             Section(L10n.SettingsSupport) {
                 NavigationLink {
+                    ModuleSettingsHubView()
+                } label: {
+                    SettingsRowLabel(
+                        title: L10n.ModuleSettingsTitle,
+                        subtitle: L10n.ModuleSettingsIntroBody,
+                        systemImage: "slider.horizontal.3"
+                    )
+                }
+                NavigationLink {
                     SupportSettingsView()
                 } label: {
                     SettingsRowLabel(

@@ -5349,310 +5349,3742 @@
     },
     "tab.team": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Team" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Team" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الفريق" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الفريق"
+          }
+        }
       }
     },
     "tab.platform": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Platform" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Plattform" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "المنصة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Platform"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plattform"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المنصة"
+          }
+        }
       }
     },
     "platform.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Platform" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Plattform" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "المنصة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Platform"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plattform"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المنصة"
+          }
+        }
       }
     },
     "platform.modules": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Modules" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Module" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الوحدات" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modules"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Module"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الوحدات"
+          }
+        }
       }
     },
     "platform.notifications": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Notifications" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Benachrichtigungen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الإشعارات" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtigungen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإشعارات"
+          }
+        }
       }
     },
     "platform.notifications_subtitle": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Alerts, activity & preferences" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Hinweise, Aktivität & Einstellungen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "التنبيهات والنشاط والتفضيلات" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alerts, activity & preferences"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinweise, Aktivität & Einstellungen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التنبيهات والنشاط والتفضيلات"
+          }
+        }
       }
     },
     "platform.settings_subtitle": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "App, chat & privacy" } },
-        "de": { "stringUnit": { "state": "translated", "value": "App, Chat & Datenschutz" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "التطبيق والمحادثة والخصوصية" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App, chat & privacy"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App, Chat & Datenschutz"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التطبيق والمحادثة والخصوصية"
+          }
+        }
       }
     },
     "platform.devices": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Device Management" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Geräteverwaltung" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "إدارة الأجهزة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device Management"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geräteverwaltung"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إدارة الأجهزة"
+          }
+        }
       }
     },
     "platform.devices_subtitle": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Registered mobile devices" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Registrierte Mobilgeräte" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الأجهزة المحمولة المسجلة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registered mobile devices"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrierte Mobilgeräte"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأجهزة المحمولة المسجلة"
+          }
+        }
       }
     },
     "platform.administration": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Administration" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Administration" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الإدارة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Administration"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Administration"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإدارة"
+          }
+        }
       }
     },
     "platform.administration_subtitle": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Team, staff & activity" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Team, Mitarbeiter & Aktivität" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الفريق والموظفون والنشاط" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team, staff & activity"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team, Mitarbeiter & Aktivität"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الفريق والموظفون والنشاط"
+          }
+        }
       }
     },
     "platform.help_subtitle": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Guides & support" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Anleitungen & Support" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الأدلة والدعم" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guides & support"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anleitungen & Support"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأدلة والدعم"
+          }
+        }
       }
     },
     "platform.legal": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Legal & Website" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Rechtliches & Website" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "القانون والموقع" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Legal & Website"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechtliches & Website"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "القانون والموقع"
+          }
+        }
       }
     },
     "team.hub.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Team Messages" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Team-Nachrichten" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "رسائل الفريق" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team Messages"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team-Nachrichten"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رسائل الفريق"
+          }
+        }
       }
     },
     "team.hub.subtitle": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Internal conversations with your team" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Interne Gespräche mit Ihrem Team" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "محادثات داخلية مع فريقك" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Internal conversations with your team"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interne Gespräche mit Ihrem Team"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "محادثات داخلية مع فريقك"
+          }
+        }
       }
     },
     "team.hub.conversations": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Conversations" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Gespräche" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "المحادثات" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversations"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gespräche"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المحادثات"
+          }
+        }
       }
     },
     "team.hub.empty": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "No team conversations yet" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Noch keine Team-Gespräche" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "لا توجد محادثات فريق بعد" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No team conversations yet"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Team-Gespräche"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد محادثات فريق بعد"
+          }
+        }
       }
     },
     "team.hub.empty_hint": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Start a private conversation with a team member." } },
-        "de": { "stringUnit": { "state": "translated", "value": "Starten Sie ein privates Gespräch mit einem Teammitglied." } },
-        "ar": { "stringUnit": { "state": "translated", "value": "ابدأ محادثة خاصة مع عضو في الفريق." } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start a private conversation with a team member."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starten Sie ein privates Gespräch mit einem Teammitglied."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ابدأ محادثة خاصة مع عضو في الفريق."
+          }
+        }
       }
     },
     "profile.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Profile" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Profil" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الملف الشخصي" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profile"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profil"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الملف الشخصي"
+          }
+        }
       }
     },
     "profile.account_info": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Account Information" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Kontoinformationen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "معلومات الحساب" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account Information"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kontoinformationen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "معلومات الحساب"
+          }
+        }
       }
     },
     "profile.permissions": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Permissions" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Berechtigungen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الصلاحيات" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permissions"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berechtigungen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الصلاحيات"
+          }
+        }
       }
     },
     "profile.role.manager": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Manager" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Manager" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "مدير" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manager"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manager"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مدير"
+          }
+        }
       }
     },
     "profile.role.staff": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Staff Member" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Mitarbeiter" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "عضو فريق" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Staff Member"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitarbeiter"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عضو فريق"
+          }
+        }
       }
     },
     "notifications.center.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Notifications" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Benachrichtigungen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الإشعارات" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtigungen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإشعارات"
+          }
+        }
       }
     },
     "notifications.center.subtitle": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Stay on top of customer activity" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Kundenaktivität im Blick behalten" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تابع نشاط العملاء" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stay on top of customer activity"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kundenaktivität im Blick behalten"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تابع نشاط العملاء"
+          }
+        }
       }
     },
     "notifications.summary": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Summary" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Übersicht" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "ملخص" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Summary"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersicht"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملخص"
+          }
+        }
       }
     },
     "notifications.unread_chats": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Unread Chats" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Ungelesene Chats" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "محادثات غير مقروءة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unread Chats"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ungelesene Chats"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "محادثات غير مقروءة"
+          }
+        }
       }
     },
     "notifications.live_requests": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Live Requests" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Live-Anfragen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "طلبات مباشرة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live Requests"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live-Anfragen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "طلبات مباشرة"
+          }
+        }
       }
     },
     "notifications.mark_all_read": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Mark All Chats as Read" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Alle Chats als gelesen markieren" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "وضع علامة مقروء على جميع المحادثات" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark All Chats as Read"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle Chats als gelesen markieren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وضع علامة مقروء على جميع المحادثات"
+          }
+        }
       }
     },
     "notifications.recent_activity": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Recent Activity" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Letzte Aktivität" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "النشاط الأخير" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recent Activity"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzte Aktivität"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "النشاط الأخير"
+          }
+        }
       }
     },
     "admin.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Administration" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Administration" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الإدارة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Administration"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Administration"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإدارة"
+          }
+        }
       }
     },
     "admin.subtitle": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Manage your business platform" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Verwalten Sie Ihre Business-Plattform" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "إدارة منصة أعمالك" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage your business platform"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwalten Sie Ihre Business-Plattform"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إدارة منصة أعمالك"
+          }
+        }
       }
     },
     "admin.activity": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Activity Overview" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Aktivitätsübersicht" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "نظرة عامة على النشاط" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activity Overview"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktivitätsübersicht"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نظرة عامة على النشاط"
+          }
+        }
       }
     },
     "admin.activity_sessions": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Customer Sessions" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Kunden-Sitzungen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "جلسات العملاء" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Customer Sessions"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunden-Sitzungen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جلسات العملاء"
+          }
+        }
       }
     },
     "admin.activity_live": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Waiting Live Requests" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Wartende Live-Anfragen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "طلبات مباشرة قيد الانتظار" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting Live Requests"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wartende Live-Anfragen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "طلبات مباشرة قيد الانتظار"
+          }
+        }
       }
     },
     "admin.activity_team": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Active Team Members" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Aktive Teammitglieder" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "أعضاء الفريق النشطون" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active Team Members"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktive Teammitglieder"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أعضاء الفريق النشطون"
+          }
+        }
       }
     },
     "admin.management": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Management" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Verwaltung" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الإدارة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Management"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwaltung"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإدارة"
+          }
+        }
       }
     },
     "admin.team_management": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Team Management" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Team-Verwaltung" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "إدارة الفريق" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team Management"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team-Verwaltung"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إدارة الفريق"
+          }
+        }
       }
     },
     "admin.employee_management": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Employee Management" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Mitarbeiterverwaltung" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "إدارة الموظفين" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Employee Management"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitarbeiterverwaltung"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إدارة الموظفين"
+          }
+        }
       }
     },
     "admin.permissions_overview": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Permissions Overview" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Berechtigungsübersicht" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "نظرة عامة على الصلاحيات" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permissions Overview"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berechtigungsübersicht"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نظرة عامة على الصلاحيات"
+          }
+        }
       }
     },
     "admin.settings": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Administrative Settings" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Administrative Einstellungen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الإعدادات الإدارية" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Administrative Settings"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Administrative Einstellungen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإعدادات الإدارية"
+          }
+        }
       }
     },
     "common.mark_read": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Mark as Read" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Als gelesen markieren" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "وضع علامة مقروء" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark as Read"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als gelesen markieren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وضع علامة مقروء"
+          }
+        }
       }
     },
     "common.mark_unread": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Mark as Unread" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Als ungelesen markieren" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "وضع علامة غير مقروء" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark as Unread"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als ungelesen markieren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وضع علامة غير مقروء"
+          }
+        }
       }
     },
-    "common.open": {
+    "tab.dashboard": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Open" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Öffnen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "فتح" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لوحة التحكم"
+          }
+        }
+      }
+    },
+    "module.dashboard": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لوحة التحكم"
+          }
+        }
+      }
+    },
+    "module.dashboard_subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistics, charts & business overview"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Statistiken, Diagramme & Übersicht"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إحصائيات ورسوم ونظرة عامة"
+          }
+        }
+      }
+    },
+    "module.calendar": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calendar"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalender"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التقويم"
+          }
+        }
+      }
+    },
+    "module.calendar_subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scheduling & appointments"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine & Planung"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الجدولة والمواعيد"
+          }
+        }
+      }
+    },
+    "module.tasks": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tasks"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgaben"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المهام"
+          }
+        }
+      }
+    },
+    "module.tasks_subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team task management"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team-Aufgabenverwaltung"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إدارة مهام الفريق"
+          }
+        }
+      }
+    },
+    "module.files": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dateien"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الملفات"
+          }
+        }
+      }
+    },
+    "module.files_subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documents & resources"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokumente & Ressourcen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المستندات والموارد"
+          }
+        }
+      }
+    },
+    "module.reports": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reports"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berichte"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التقارير"
+          }
+        }
+      }
+    },
+    "module.reports_subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analytics & insights"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysen & Einblicke"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التحليلات والرؤى"
+          }
+        }
+      }
+    },
+    "module.activity_log": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Activity Log"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktivitätsprotokoll"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سجل النشاط"
+          }
+        }
+      }
+    },
+    "module.activity_log_subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full platform activity history"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vollständiger Aktivitätsverlauf"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سجل نشاط المنصة"
+          }
+        }
+      }
+    },
+    "module.employee": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Employee Dashboard"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mitarbeiter-Dashboard"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لوحة الموظف"
+          }
+        }
+      }
+    },
+    "module.employee_subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your work overview"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihre Arbeitsübersicht"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نظرة عامة على عملك"
+          }
+        }
+      }
+    },
+    "module.category.insights": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insights"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einblicke"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رؤى"
+          }
+        }
+      }
+    },
+    "module.category.workspace": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Workspace"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arbeitsbereich"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مساحة العمل"
+          }
+        }
+      }
+    },
+    "module.category.communication": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Communication"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kommunikation"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التواصل"
+          }
+        }
+      }
+    },
+    "module.category.management": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Management"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verwaltung"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإدارة"
+          }
+        }
+      }
+    },
+    "module.category.system": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "النظام"
+          }
+        }
+      }
+    },
+    "dashboard.welcome": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welcome, %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Willkommen, %@"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مرحبًا، %@"
+          }
+        }
+      }
+    },
+    "dashboard.subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your business command center"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihre Business-Kommandozentrale"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مركز قيادة أعمالك"
+          }
+        }
+      }
+    },
+    "dashboard.metric.sessions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessions"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sitzungen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الجلسات"
+          }
+        }
+      }
+    },
+    "dashboard.metric.unread": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unread"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ungelesen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "غير مقروء"
+          }
+        }
+      }
+    },
+    "dashboard.metric.live": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مباشر"
+          }
+        }
+      }
+    },
+    "dashboard.metric.tasks": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Tasks"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offene Aufgaben"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مهام مفتوحة"
+          }
+        }
+      }
+    },
+    "dashboard.chart.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7-Day Activity"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7-Tage-Aktivität"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نشاط 7 أيام"
+          }
+        }
+      }
+    },
+    "dashboard.quick_access": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quick Access"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schnellzugriff"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وصول سريع"
+          }
+        }
+      }
+    },
+    "dashboard.upcoming": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upcoming"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demnächst"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "القادم"
+          }
+        }
+      }
+    },
+    "search.global.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بحث"
+          }
+        }
+      }
+    },
+    "search.global.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search everywhere"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überall suchen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ابحث في كل مكان"
+          }
+        }
+      }
+    },
+    "search.global.prompt": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search chats, tasks, files, modules…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chats, Aufgaben, Dateien, Module…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ابحث في المحادثات والمهام والملفات…"
+          }
+        }
+      }
+    },
+    "search.global.no_results": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No results found"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Ergebnisse"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد نتائج"
+          }
+        }
+      }
+    },
+    "search.global.results": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Results"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ergebnisse"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "النتائج"
+          }
+        }
+      }
+    },
+    "calendar.selected_day": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selected Day"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgewählter Tag"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اليوم المحدد"
+          }
+        }
+      }
+    },
+    "calendar.day_events": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Events"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termine"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأحداث"
+          }
+        }
+      }
+    },
+    "calendar.no_events": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No events on this day"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Termine an diesem Tag"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا أحداث في هذا اليوم"
+          }
+        }
+      }
+    },
+    "calendar.upcoming": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Upcoming Events"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kommende Termine"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأحداث القادمة"
+          }
+        }
+      }
+    },
+    "calendar.no_upcoming": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No upcoming events"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine kommenden Termine"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا أحداث قادمة"
+          }
+        }
+      }
+    },
+    "calendar.add_event": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Event"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin hinzufügen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة حدث"
+          }
+        }
+      }
+    },
+    "calendar.event_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Event title"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Titel"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عنوان الحدث"
+          }
+        }
+      }
+    },
+    "calendar.add_event_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a new calendar entry"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neuen Kalendereintrag erstellen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إنشاء إدخال تقويم جديد"
+          }
+        }
+      }
+    },
+    "calendar.category.meeting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meeting"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اجتماع"
+          }
+        }
+      }
+    },
+    "calendar.category.appointment": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appointment"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "موعد"
+          }
+        }
+      }
+    },
+    "calendar.category.reminder": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminder"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erinnerung"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تذكير"
+          }
+        }
+      }
+    },
+    "calendar.category.live": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live Session"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live-Sitzung"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جلسة مباشرة"
+          }
+        }
+      }
+    },
+    "calendar.sample.team_sync": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team Sync"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team-Sync"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مزامنة الفريق"
+          }
+        }
+      }
+    },
+    "calendar.sample.team_sync_note": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weekly team coordination"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wöchentliche Teamkoordination"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تنسيق الفريق الأسبوعي"
+          }
+        }
+      }
+    },
+    "calendar.sample.follow_up": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Customer Follow-up"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunden-Follow-up"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متابعة العميل"
+          }
+        }
+      }
+    },
+    "tasks.empty": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No tasks yet"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Aufgaben"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا مهام بعد"
+          }
+        }
+      }
+    },
+    "tasks.add": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Task"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgabe hinzufügen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة مهمة"
+          }
+        }
+      }
+    },
+    "tasks.title_field": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Task title"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgabentitel"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عنوان المهمة"
+          }
+        }
+      }
+    },
+    "tasks.priority.low": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niedrig"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "منخفض"
+          }
+        }
+      }
+    },
+    "tasks.priority.medium": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medium"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mittel"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متوسط"
+          }
+        }
+      }
+    },
+    "tasks.priority.high": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "High"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoch"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عالي"
+          }
+        }
+      }
+    },
+    "tasks.sample.follow_up": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow up with customer"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunde nachfassen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متابعة العميل"
+          }
+        }
+      }
+    },
+    "tasks.sample.follow_up_note": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check open chat from yesterday"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offenen Chat von gestern prüfen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مراجعة المحادثة المفتوحة"
+          }
+        }
+      }
+    },
+    "tasks.sample.review": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review weekly reports"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wochenberichte prüfen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مراجعة التقارير الأسبوعية"
+          }
+        }
+      }
+    },
+    "files.empty": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No documents yet"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Dokumente"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا مستندات بعد"
+          }
+        }
+      }
+    },
+    "files.details": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Document Details"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dokumentdetails"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تفاصيل المستند"
+          }
+        }
+      }
+    },
+    "files.size": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Size"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Größe"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الحجم"
+          }
+        }
+      }
+    },
+    "files.modified": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modified"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geändert"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "معدّل"
+          }
+        }
+      }
+    },
+    "files.category.contracts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contracts"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verträge"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "العقود"
+          }
+        }
+      }
+    },
+    "files.category.invoices": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invoices"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechnungen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الفواتير"
+          }
+        }
+      }
+    },
+    "files.category.guides": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guides"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anleitungen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأدلة"
+          }
+        }
+      }
+    },
+    "files.category.media": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Media"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Medien"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الوسائط"
+          }
+        }
+      }
+    },
+    "files.category.other": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sonstiges"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أخرى"
+          }
+        }
+      }
+    },
+    "files.sample.contract": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard service agreement"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard-Servicevertrag"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اتفاقية خدمة قياسية"
+          }
+        }
+      }
+    },
+    "files.sample.guide": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onboarding documentation"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onboarding-Dokumentation"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وثائق الإعداد"
+          }
+        }
+      }
+    },
+    "files.sample.invoice": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quarterly summary"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quartalsübersicht"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ملخص ربع سنوي"
+          }
+        }
+      }
+    },
+    "files.sample.media": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brand asset archive"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marken-Asset-Archiv"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أرشيف أصول العلامة"
+          }
+        }
+      }
+    },
+    "reports.overview": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overview"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Übersicht"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نظرة عامة"
+          }
+        }
+      }
+    },
+    "reports.total_sessions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total Sessions"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sitzungen gesamt"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إجمالي الجلسات"
+          }
+        }
+      }
+    },
+    "reports.live_queue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live Queue"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live-Warteschlange"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قائمة الانتظار"
+          }
+        }
+      }
+    },
+    "reports.open_tasks": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Tasks"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offene Aufgaben"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مهام مفتوحة"
+          }
+        }
+      }
+    },
+    "reports.overdue_tasks": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overdue Tasks"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überfällige Aufgaben"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مهام متأخرة"
+          }
+        }
+      }
+    },
+    "reports.session_mix": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session Mix"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sitzungsmix"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مزيج الجلسات"
+          }
+        }
+      }
+    },
+    "reports.insights": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Insights"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einblicke"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رؤى"
+          }
+        }
+      }
+    },
+    "reports.insight_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analytics are generated from your current live chat sessions and workspace modules."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysen basieren auf aktuellen Live-Chat-Sitzungen und Arbeitsbereichsmodulen."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يتم إنشاء التحليلات من جلسات الدردشة الحية ووحدات مساحة العمل."
+          }
+        }
+      }
+    },
+    "activity_log.empty": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No activity recorded yet"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch keine Aktivität"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا نشاط مسجل بعد"
+          }
+        }
+      }
+    },
+    "activity_log.clear": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear Log"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protokoll leeren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مسح السجل"
+          }
+        }
+      }
+    },
+    "activity.dashboard_opened": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard opened"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard geöffnet"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم فتح لوحة التحكم"
+          }
+        }
+      }
+    },
+    "activity.task_created": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Task created"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgabe erstellt"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم إنشاء مهمة"
+          }
+        }
+      }
+    },
+    "activity.task_completed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Task completed"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgabe erledigt"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم إكمال المهمة"
+          }
+        }
+      }
+    },
+    "activity.task_reopened": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Task reopened"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufgabe wieder geöffnet"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أعيد فتح المهمة"
+          }
+        }
+      }
+    },
+    "activity.event_created": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Event created"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Termin erstellt"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم إنشاء حدث"
+          }
+        }
+      }
+    },
+    "activity.file_added": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File added"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei hinzugefügt"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تمت إضافة ملف"
+          }
+        }
+      }
+    },
+    "employee.welcome": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hello, %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hallo, %@"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مرحبًا، %@"
+          }
+        }
+      }
+    },
+    "employee.today": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اليوم"
+          }
+        }
+      }
+    },
+    "employee.assigned_chats": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Assigned Chats"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zugewiesene Chats"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المحادثات المعينة"
+          }
+        }
+      }
+    },
+    "employee.unread": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unread"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ungelesen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "غير مقروء"
+          }
+        }
+      }
+    },
+    "employee.open_tasks": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Tasks"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offene Aufgaben"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مهام مفتوحة"
+          }
+        }
+      }
+    },
+    "employee.role": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Role"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rolle"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الدور"
+          }
+        }
+      }
+    },
+    "employee.permissions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Permissions"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihre Berechtigungen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "صلاحياتك"
+          }
+        }
+      }
+    },
+    "employee.shortcuts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shortcuts"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schnellzugriffe"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اختصارات"
+          }
+        }
+      }
+    },
+    "module_settings.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Module Settings"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modul-Einstellungen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إعدادات الوحدات"
+          }
+        }
+      }
+    },
+    "module_settings.intro": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Advanced Settings"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erweiterte Einstellungen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إعدادات متقدمة"
+          }
+        }
+      }
+    },
+    "module_settings.intro_body": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configure each business module independently."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jedes Business-Modul separat konfigurieren."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اضبط كل وحدة أعمال بشكل مستقل."
+          }
+        }
+      }
+    },
+    "module_settings.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Module settings are stored on this device."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modul-Einstellungen werden auf diesem Gerät gespeichert."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يتم تخزين إعدادات الوحدات على هذا الجهاز."
+          }
+        }
+      }
+    },
+    "module_settings.week_start_monday": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Week starts on Monday"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Woche beginnt montags"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يبدأ الأسبوع يوم الاثنين"
+          }
+        }
+      }
+    },
+    "module_settings.show_week_numbers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show week numbers"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kalenderwochen anzeigen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إظهار أرقام الأسابيع"
+          }
+        }
+      }
+    },
+    "module_settings.sort_due_date": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sort by due date"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach Fälligkeit sortieren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الترتيب حسب تاريخ الاستحقاق"
+          }
+        }
+      }
+    },
+    "module_settings.show_completed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show completed tasks"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erledigte Aufgaben anzeigen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إظهار المهام المكتملة"
+          }
+        }
+      }
+    },
+    "module_settings.group_by_category": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Group by category"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nach Kategorie gruppieren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "التجميع حسب الفئة"
+          }
+        }
+      }
+    },
+    "module_settings.include_closed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Include closed sessions"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geschlossene Sitzungen einbeziehen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تضمين الجلسات المغلقة"
+          }
+        }
+      }
+    },
+    "module_settings.verbose_activity": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbose activity logging"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausführliches Aktivitätsprotokoll"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تسجيل نشاط مفصل"
+          }
+        }
+      }
+    },
+    "module_settings.show_chart": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show dashboard chart"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard-Diagramm anzeigen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إظهار مخطط لوحة التحكم"
+          }
+        }
+      }
+    },
+    "module_settings.show_upcoming": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show upcoming events"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kommende Termine anzeigen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إظهار الأحداث القادمة"
+          }
+        }
+      }
+    },
+    "module_settings.interactive_notifications": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interactive notification cards"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interaktive Benachrichtigungskarten"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بطاقات إشعارات تفاعلية"
+          }
+        }
+      }
+    },
+    "accent.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accent Color"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akzentfarbe"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لون التمييز"
+          }
+        }
+      }
+    },
+    "accent.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accent colors apply across the app interface."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Akzentfarben gelten in der gesamten App."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تنطبق ألوان التمييز على واجهة التطبيق."
+          }
+        }
+      }
+    },
+    "accent.theme_default": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use Theme Default"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Theme-Standard"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "افتراضي السمة"
+          }
+        }
+      }
+    },
+    "accent.orange": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orange"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orange"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "برتقالي"
+          }
+        }
+      }
+    },
+    "accent.blue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blue"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blau"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أزرق"
+          }
+        }
+      }
+    },
+    "accent.purple": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Purple"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Violett"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بنفسجي"
+          }
+        }
+      }
+    },
+    "accent.teal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teal"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Türkis"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تركواز"
+          }
+        }
+      }
+    },
+    "accent.pink": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pink"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rosa"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وردي"
+          }
+        }
+      }
+    },
+    "accent.green": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Green"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grün"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أخضر"
+          }
+        }
+      }
+    },
+    "accent.red": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Red"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rot"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أحمر"
+          }
+        }
+      }
+    },
+    "quick_action.dashboard": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لوحة التحكم"
+          }
+        }
+      }
+    },
+    "quick_action.dashboard_subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Business overview"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Business-Übersicht"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نظرة عامة"
+          }
+        }
+      }
+    },
+    "quick_action.live": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live Requests"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live-Anfragen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "طلبات مباشرة"
+          }
+        }
+      }
+    },
+    "quick_action.live_subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting customers"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wartende Kunden"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عملاء في الانتظار"
+          }
+        }
+      }
+    },
+    "quick_action.search": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suche"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بحث"
+          }
+        }
+      }
+    },
+    "quick_action.search_subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find anything"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alles finden"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ابحث عن أي شيء"
+          }
+        }
+      }
+    },
+    "quick_action.team": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team Message"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team-Nachricht"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رسالة فريق"
+          }
+        }
+      }
+    },
+    "quick_action.team_subtitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message a colleague"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kollegen schreiben"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مراسلة زميل"
+          }
+        }
       }
     }
   },

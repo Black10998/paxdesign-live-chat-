@@ -7,6 +7,11 @@ enum PAXMotion {
     )
 
     static let cardAppear = AnyTransition.opacity.combined(with: .scale(scale: 0.97))
+    static let modulePush = AnyTransition.asymmetric(
+        insertion: .opacity.combined(with: .move(edge: .trailing)).combined(with: .scale(scale: 0.98)),
+        removal: .opacity.combined(with: .move(edge: .leading))
+    )
+    static let heroReveal = AnyTransition.opacity.combined(with: .offset(y: 12))
 
     static func pressable<S: Shape>(_ shape: S, scale: CGFloat = 0.97) -> some ViewModifier {
         PressableModifier(shape: shape, scale: scale)
@@ -47,5 +52,13 @@ extension View {
                             .stroke(PAXTheme.border.opacity(0.6), lineWidth: 0.5)
                     )
             )
+    }
+
+    func paxScreenBackground() -> some View {
+        background(PAXBackground())
+    }
+
+    func paxModuleTransition() -> some View {
+        transition(PAXMotion.modulePush)
     }
 }

@@ -117,30 +117,77 @@ struct NotificationsCenterView: View {
     }
 
     private func activityRow(_ session: LiveSession, badge: String, tint: Color) -> some View {
-        HStack(spacing: 12) {
-            SessionAvatarView(
-                name: session.displayName,
-                size: 40,
-                isLive: session.isLiveRequest,
-                isTeam: session.isTeamDM
-            )
-            VStack(alignment: .leading, spacing: 3) {
-                Text(session.displayName)
-                    .font(.subheadline.weight(.semibold))
-                Text(session.lastPreview.isEmpty ? session.detectedService : session.lastPreview)
-                    .font(.caption)
-                    .foregroundStyle(PAXTheme.textSecondary)
-                    .lineLimit(1)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                SessionAvatarView(
+                    name: session.displayName,
+                    size: 40,
+                    isLive: session.isLiveRequest,
+                    isTeam: session.isTeamDM
+                )
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(session.displayName)
+                        .font(.subheadline.weight(.semibold))
+                    Text(session.lastPreview.isEmpty ? session.detectedService : session.lastPreview)
+                        .font(.caption)
+                        .foregroundStyle(PAXTheme.textSecondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Text(badge)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(tint)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(tint.opacity(0.14)))
             }
-            Spacer()
-            Text(badge)
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(tint)
-                .padding(.horizontal, 6)
-                .padding(.vertical, 2)
-                .background(Capsule().fill(tint.opacity(0.14)))
+
+            HStack(spacing: 10) {
+                Button {
+                    settings.readSessionIds.insert(session.sessionId)
+                    coordinator.activeSessionId = session.sessionId
+                    PAXHaptics.light()
+                } label: {
+                    Label(L10n.CommonMarkRead, systemImage: "envelope.open")
+                        .font(.caption.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+
+                if session.isLiveRequest {
+                    Button {
+                        coordinator.presentIncomingFullscreen()
+                        PAXHaptics.medium()
+                    } label: {
+                        Label(L10n.CommonOpen, systemImage: "bell.and.waves.left.and.right")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.orange)
+                }
+            }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
+        .contextMenu {
+            Button {
+                settings.readSessionIds.insert(session.sessionId)
+            } label: {
+                Label(L10n.CommonMarkRead, systemImage: "envelope.open")
+            }
+            Button {
+                coordinator.activeSessionId = session.sessionId
+            } label: {
+                Label(L10n.CommonOpen, systemImage: "arrow.up.right.circle")
+            }
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button {
+                settings.readSessionIds.insert(session.sessionId)
+                PAXHaptics.success()
+            } label: {
+                Label(L10n.CommonMarkRead, systemImage: "envelope.open")
+            }
+            .tint(.blue)
+        }
     }
 
     private func markAllRead() {

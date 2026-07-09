@@ -147,9 +147,12 @@ final class AppSettingsStore: ObservableObject {
     @Published var onboardingCompleted: Bool {
         didSet { UserDefaults.standard.set(onboardingCompleted, forKey: Keys.onboarding) }
     }
+    @Published var accentColorPreset: AccentColorPreset {
+        didSet { UserDefaults.standard.set(accentColorPreset.rawValue, forKey: Keys.accentPreset) }
+    }
 
     var palette: PAXThemePalette {
-        PAXThemePalette.palette(for: visualTheme)
+        effectivePalette
     }
 
     var resolvedLocale: Locale {
@@ -176,6 +179,7 @@ final class AppSettingsStore: ObservableObject {
         static let volume = "pax.settings.ringVolume"
         static let profileImage = "pax.settings.profileImage"
         static let onboarding = "pax.settings.onboardingCompleted"
+        static let accentPreset = "pax.settings.accentPreset"
     }
 
     init() {
@@ -215,5 +219,11 @@ final class AppSettingsStore: ObservableObject {
         ringtoneVolume = defaults.object(forKey: Keys.volume) as? Float ?? 0.9
         profileImageData = defaults.data(forKey: Keys.profileImage)
         onboardingCompleted = defaults.object(forKey: Keys.onboarding) as? Bool ?? false
+        if let raw = defaults.string(forKey: Keys.accentPreset),
+           let preset = AccentColorPreset(rawValue: raw) {
+            accentColorPreset = preset
+        } else {
+            accentColorPreset = .themeDefault
+        }
     }
 }

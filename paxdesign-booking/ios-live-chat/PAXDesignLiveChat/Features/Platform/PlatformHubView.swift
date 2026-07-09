@@ -4,6 +4,7 @@ struct PlatformHubView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
     @StateObject private var settings = AppSettingsStore.shared
+    @State private var showSearch = false
 
     private var canManageUsers: Bool { auth.canManageUsers }
     private var canAccessSecurity: Bool { auth.canAccessSecurity }
@@ -24,87 +25,10 @@ struct PlatformHubView: View {
             VStack(alignment: .leading, spacing: 22) {
                 profileCard
 
-                VStack(alignment: .leading, spacing: 12) {
-                    Text(L10n.PlatformModules)
-                        .font(.headline)
-                        .foregroundStyle(PAXTheme.textPrimary)
-                        .padding(.horizontal, 4)
-
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                        NavigationLink {
-                            NotificationsCenterView()
-                        } label: {
-                            PlatformModuleCard(
-                                title: L10n.PlatformNotifications,
-                                subtitle: L10n.PlatformNotificationsSubtitle,
-                                systemImage: "bell.badge.fill",
-                                tint: .orange,
-                                badge: unreadCount + coordinator.liveCount
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        NavigationLink {
-                            SettingsRootView()
-                        } label: {
-                            PlatformModuleCard(
-                                title: L10n.AccountSettings,
-                                subtitle: L10n.PlatformSettingsSubtitle,
-                                systemImage: "gearshape.fill",
-                                tint: PAXTheme.accent
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        if canManageUsers {
-                            NavigationLink {
-                                DeviceManagementView()
-                            } label: {
-                                PlatformModuleCard(
-                                    title: L10n.PlatformDevices,
-                                    subtitle: L10n.PlatformDevicesSubtitle,
-                                    systemImage: "iphone.and.arrow.forward",
-                                    tint: .blue
-                                )
-                            }
-                            .buttonStyle(.plain)
-
-                            NavigationLink {
-                                AdministrationHubView()
-                            } label: {
-                                PlatformModuleCard(
-                                    title: L10n.PlatformAdministration,
-                                    subtitle: L10n.PlatformAdministrationSubtitle,
-                                    systemImage: "shield.lefthalf.filled",
-                                    tint: .purple
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
-
-                        NavigationLink {
-                            HelpView()
-                        } label: {
-                            PlatformModuleCard(
-                                title: L10n.AccountHelp,
-                                subtitle: L10n.PlatformHelpSubtitle,
-                                systemImage: "questionmark.circle.fill",
-                                tint: .teal
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        NavigationLink {
-                            AboutView()
-                        } label: {
-                            PlatformModuleCard(
-                                title: L10n.AccountAbout,
-                                subtitle: PAXAppInfo.fullVersion,
-                                systemImage: "info.circle.fill",
-                                tint: .indigo
-                            )
-                        }
-                        .buttonStyle(.plain)
+                ForEach(PlatformModuleCategory.allCases) { category in
+                    let modules = modules(for: category)
+                    if !modules.isEmpty {
+                        moduleSection(category: category, modules: modules)
                     }
                 }
 
@@ -114,15 +38,71 @@ struct PlatformHubView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.PlatformTitle)
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { showSearch = true } label: {
+                    Image(systemName: "magnifyingglass")
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink { ModuleSettingsHubView() } label: {
+                    Image(systemName: "slider.horizontal.3")
+                }
+            }
+        }
+        .sheet(isPresented: $showSearch) {
+            NavigationStack { GlobalSearchView() }
+        }
+    }
+
+    private func modules(for category: PlatformModuleCategory) -> [PlatformModule] {
+        var items = PlatformModuleAccess.availableHubModules(auth: auth).filter { $0.category == category }
+        if category == .management {
+            items += PlatformModule.adminModules.filter { PlatformModuleAccess.isAvailable($0, auth: auth) }
+        }
+        if category == .system {
+            items += [.profile, .help, .about]
+        }
+        return items
+    }
+
+    private func moduleSection(category: PlatformModuleCategory, modules: [PlatformModule]) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(category.title)
+                .font(.headline)
+                .foregroundStyle(PAXTheme.textPrimary)
+                .padding(.horizontal, 4)
+
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                ForEach(modules) { module in
+                    NavigationLink(value: module) {
+                        PlatformModuleCard(
+                            title: module.title,
+                            subtitle: module.subtitle,
+                            systemImage: module.systemImage,
+                            tint: module.tint,
+                            badge: badge(for: module)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func badge(for module: PlatformModule) -> Int {
+        switch module {
+        case .notifications: return unreadCount + coordinator.liveCount
+        case .tasks: return TaskStore.shared.openCount
+        default: return 0
+        }
     }
 
     private var profileCard: some View {
-        NavigationLink {
-            ProfileView()
-        } label: {
+        NavigationLink(value: PlatformModule.profile) {
             HStack(spacing: 16) {
                 ProfileAvatarView(size: 64)
 

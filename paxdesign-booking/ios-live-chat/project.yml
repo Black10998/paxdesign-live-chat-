@@ -12,9 +12,9 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    TARGETED_DEVICE_FAMILY: "1"
-    MARKETING_VERSION: "1.18.0"
-    CURRENT_PROJECT_VERSION: "31"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    MARKETING_VERSION: "1.19.0"
+    CURRENT_PROJECT_VERSION: "32"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
 targets:
@@ -23,20 +23,25 @@ targets:
     platform: iOS
     sources:
       - path: PAXDesignLiveChat
+    dependencies:
+      - target: PAXWidgets
+        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: at.paxdesign.livechat
-        TARGETED_DEVICE_FAMILY: "1"
+        TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
         INFOPLIST_KEY_CFBundleDisplayName: PAXDesign Live Chat
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
-        INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_NSUserNotificationsUsageDescription: "Notifications for live agent requests and new customer messages."
         INFOPLIST_KEY_NSFaceIDUsageDescription: "Face ID is used to unlock the app after inactivity."
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Select photos from your library to send in live chat."
         INFOPLIST_KEY_NSCameraUsageDescription: "Take photos to send in live chat conversations."
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_NSSupportsLiveActivities: YES
         ENABLE_PREVIEWS: YES
     entitlements:
       path: PAXDesignLiveChat/PAXDesignLiveChat.entitlements
@@ -58,3 +63,21 @@ targets:
         UILaunchScreen:
           UIImageName: AppMark
           UIColorName: LaunchBackground
+  PAXWidgets:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: PAXWidgets
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: at.paxdesign.livechat.widgets
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
+        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
+    entitlements:
+      path: PAXWidgets/PAXWidgets.entitlements
+    info:
+      properties:
+        CFBundleDisplayName: PAXDesign Widgets
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension

@@ -40,6 +40,20 @@ struct AppearanceSettingsView: View {
             } footer: {
                 Text(L10n.ThemeFooter)
             }
+
+            Section {
+                NavigationLink {
+                    AccentColorSettingsView()
+                } label: {
+                    HStack {
+                        Text(L10n.AccentColorTitle)
+                        Spacer()
+                        Text(settings.accentColorPreset.title)
+                            .font(.caption)
+                            .foregroundStyle(PAXTheme.textSecondary)
+                    }
+                }
+            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
