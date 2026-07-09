@@ -5,5 +5,5 @@ enum PAXBrand {
     static let accent = Color(red: 194 / 255, green: 1.0, blue: 0)
     static let launchBackground = Color(red: 0.06, green: 0.07, blue: 0.09)
 
-    static let launchDuration: TimeInterval = 1.8
+    static let launchDuration: TimeInterval = 2.2
 }

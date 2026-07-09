@@ -56,7 +56,7 @@ final class ChatCoordinator: ObservableObject {
         listTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refreshSessions(auth: auth)
-                try? await Task.sleep(nanoseconds: 400_000_000)
+                try? await Task.sleep(nanoseconds: 700_000_000)
             }
         }
     }
@@ -71,16 +71,24 @@ final class ChatCoordinator: ObservableObject {
 
     func refreshSessions(auth: AuthStore) async {
         guard let api = auth.api else { return }
-        isSyncing = true
-        defer { isSyncing = false }
+        let shouldShowSync = sessions.isEmpty
+        if shouldShowSync { isSyncing = true }
+        defer { if shouldShowSync { isSyncing = false } }
         do {
             let response = try await api.fetchSessions()
-            sessions = response.sessions
-            liveCount = response.liveCount
+            let newSessions = response.sessions
+            let newLiveCount = response.liveCount
+            let changed = newSessions != sessions || newLiveCount != liveCount
+            guard changed else {
+                errorMessage = nil
+                return
+            }
+            sessions = newSessions
+            liveCount = newLiveCount
             listRevision += 1
             lastSyncAt = Date()
             errorMessage = nil
-            detectIncomingLiveRequests(response.sessions)
+            detectIncomingLiveRequests(newSessions)
         } catch {
             if case LiveChatAPIError.unauthorized = error {
                 auth.handleUnauthorized()

@@ -16,6 +16,10 @@ final class AuthStore: ObservableObject {
 
     private let service = "at.paxdesign.livechat.credentials"
 
+    private init() {
+        loadStoredCredentials()
+    }
+
     func loadStoredCredentials() {
         guard let data = KeychainHelper.read(service: service),
               let dict = try? JSONDecoder().decode(StoredCredentials.self, from: data) else {

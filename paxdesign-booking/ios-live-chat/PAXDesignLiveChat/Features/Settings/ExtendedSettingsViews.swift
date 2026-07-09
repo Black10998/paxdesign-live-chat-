@@ -92,6 +92,7 @@ struct DataStorageSettingsView: View {
         do {
             try await api.resetOnboarding(for: userId)
             settings.onboardingCompleted = false
+            settings.firstLaunchOnboardingCompleted = false
             onboardingResetMessage = "Onboarding wurde zurückgesetzt."
             PAXHaptics.success()
         } catch {
