@@ -41,7 +41,7 @@ struct ProfileView: View {
             }
 
             if auth.canCustomizeHubProfile {
-                Section("Hub Administrator") {
+                Section {
                     TextField("Anzeigename im Hub", text: $hubDisplayName)
                         .textInputAutocapitalization(.words)
                     if let hubNameError, !hubNameError.isEmpty {
@@ -53,6 +53,8 @@ struct ProfileView: View {
                         Task { await saveHubDisplayName() }
                     }
                     .disabled(isSavingHubName || hubDisplayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                } header: {
+                    Text("Hub Administrator")
                 } footer: {
                     Text("Dieser Name wird in der Hub-Profilansicht angezeigt.")
                 }

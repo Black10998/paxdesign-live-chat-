@@ -1,3 +1,5 @@
+import Foundation
+
 /// Short typing feedback while the admin composes.
 @MainActor
 final class AdminTypingSound {
