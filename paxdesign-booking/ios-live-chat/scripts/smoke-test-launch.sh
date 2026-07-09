@@ -56,7 +56,10 @@ xcodebuild \
   -derivedDataPath "$DERIVED_DATA" \
   build
 
-APP_PATH="$(find "$DERIVED_DATA/Build/Products" -path '*-iphonesimulator/*.app' -maxdepth 1 -type d | head -1)"
+APP_PATH="$(find "$DERIVED_DATA/Build/Products" -type d -name '*.app' | rg 'iphonesimulator' | head -1)"
+if [[ -z "$APP_PATH" || ! -d "$APP_PATH" ]]; then
+  APP_PATH="$(find "$DERIVED_DATA/Build/Products" -type d -name 'PAXDesignLiveChat.app' | head -1)"
+fi
 if [[ -z "$APP_PATH" || ! -d "$APP_PATH" ]]; then
   echo "Simulator .app not found" >&2
   exit 1
