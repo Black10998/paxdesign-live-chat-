@@ -23,14 +23,12 @@ targets:
     platform: iOS
     sources:
       - path: PAXDesignLiveChat
-    dependencies:
-      - target: PAXWidgets
-        embed: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: at.paxdesign.livechat
         TARGETED_DEVICE_FAMILY: "1,2"
         SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited) SIDELOAD"
         INFOPLIST_KEY_CFBundleDisplayName: PAXDesign Live Chat
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
@@ -41,10 +39,9 @@ targets:
         INFOPLIST_KEY_NSCameraUsageDescription: "Take photos to send in live chat conversations."
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
-        INFOPLIST_KEY_NSSupportsLiveActivities: YES
         ENABLE_PREVIEWS: YES
     entitlements:
-      path: PAXDesignLiveChat/PAXDesignLiveChat.entitlements
+      path: PAXDesignLiveChat/PAXDesignLiveChat.sideload.entitlements
     info:
       path: PAXDesignLiveChat/Info.plist
       properties:
@@ -54,8 +51,6 @@ targets:
           - en
           - de
           - ar
-        UIBackgroundModes:
-          - remote-notification
         CFBundleURLTypes:
           - CFBundleURLName: at.paxdesign.livechat
             CFBundleURLSchemes:
@@ -65,22 +60,3 @@ targets:
         UILaunchScreen:
           UIImageName: AppMark
           UIColorName: LaunchBackground
-  PAXWidgets:
-    type: app-extension
-    platform: iOS
-    sources:
-      - path: PAXWidgets
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: at.paxdesign.livechat.widgets
-        TARGETED_DEVICE_FAMILY: "1,2"
-        SKIP_INSTALL: YES
-        LD_RUNPATH_SEARCH_PATHS: "$(inherited) @executable_path/Frameworks @executable_path/../../Frameworks"
-    entitlements:
-      path: PAXWidgets/PAXWidgets.entitlements
-    info:
-      path: PAXWidgets/Info.plist
-      properties:
-        CFBundleDisplayName: PAXDesign Widgets
-        NSExtension:
-          NSExtensionPointIdentifier: com.apple.widgetkit-extension

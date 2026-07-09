@@ -3,13 +3,13 @@ import SwiftUI
 @main
 struct PAXDesignLiveChatApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var auth = AuthStore.shared
+    @ObservedObject private var auth = AuthStore.shared
     @StateObject private var coordinator = ChatCoordinator()
-    @StateObject private var push = PushService.shared
-    @StateObject private var settings = AppSettingsStore.shared
-    @StateObject private var permissions = PermissionCoordinator.shared
-    @StateObject private var appLock = AppLockService.shared
-    @StateObject private var teamCoordinator = TeamMessagingCoordinator.shared
+    @ObservedObject private var push = PushService.shared
+    @ObservedObject private var settings = AppSettingsStore.shared
+    @ObservedObject private var permissions = PermissionCoordinator.shared
+    @ObservedObject private var appLock = AppLockService.shared
+    @ObservedObject private var teamCoordinator = TeamMessagingCoordinator.shared
     @State private var showLaunchSplash = true
     @Environment(\.scenePhase) private var scenePhase
 
@@ -120,7 +120,7 @@ struct RootView: View {
     @EnvironmentObject private var coordinator: ChatCoordinator
     @EnvironmentObject private var permissions: PermissionCoordinator
     @EnvironmentObject private var appLock: AppLockService
-    @StateObject private var settings = AppSettingsStore.shared
+    @ObservedObject private var settings = AppSettingsStore.shared
     @State private var showOnboarding = false
 
     private var needsOnboarding: Bool {
