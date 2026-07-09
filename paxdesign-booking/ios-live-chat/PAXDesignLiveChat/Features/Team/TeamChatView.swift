@@ -147,7 +147,7 @@ struct TeamComposeView: View {
                     ForEach(filteredStaff) { member in
                         StaffComposeRow(
                             member: member,
-                            revealFullEmail: auth.isSuperAdmin,
+                            revealFullEmail: auth.profile?.isSuperAdmin == true,
                             isOpening: openingUserId == member.userId,
                             isDisabled: openingUserId != nil
                         ) {
