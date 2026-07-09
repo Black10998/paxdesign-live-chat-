@@ -117,9 +117,9 @@ class PAXdesign_Booking_Update_Checker {
         return is_string($stored) ? trim($stored) : '';
     }
 
-    private static function github_headers() {
+    private static function github_headers($for_binary = false) {
         $headers = array(
-            'Accept'     => 'application/vnd.github+json',
+            'Accept'     => $for_binary ? 'application/octet-stream' : 'application/vnd.github+json',
             'User-Agent' => 'PAXdesign-Booking-Updater/' . PAXDESIGN_BOOKING_VERSION,
         );
 
@@ -154,9 +154,11 @@ class PAXdesign_Booking_Update_Checker {
                 continue;
             }
 
-            $api_url = !empty($asset['url']) ? (string) $asset['url'] : '';
-            $browser = !empty($asset['browser_download_url']) ? (string) $asset['browser_download_url'] : '';
             $asset_id = !empty($asset['id']) ? (int) $asset['id'] : 0;
+            $api_url  = $asset_id > 0
+                ? 'https://api.github.com/repos/' . self::GITHUB_REPO . '/releases/assets/' . $asset_id
+                : (!empty($asset['url']) ? (string) $asset['url'] : '');
+            $browser  = !empty($asset['browser_download_url']) ? (string) $asset['browser_download_url'] : '';
 
             if ($api_url === '' && $browser === '') {
                 continue;
@@ -185,7 +187,6 @@ class PAXdesign_Booking_Update_Checker {
             return true;
         }
 
-        // Installed caught up to cached release — refetch in case a newer tag was published.
         if ($installed_version !== '' && version_compare($installed_version, $cached['version'], '>=')) {
             return true;
         }
@@ -205,7 +206,7 @@ class PAXdesign_Booking_Update_Checker {
             'https://api.github.com/repos/' . self::GITHUB_REPO . '/releases/latest',
             array(
                 'timeout' => 15,
-                'headers' => self::github_headers(),
+                'headers' => self::github_headers(false),
             )
         );
 
@@ -272,17 +273,165 @@ class PAXdesign_Booking_Update_Checker {
             $transient->response[self::SLUG] = self::build_update_object($release);
         }
 
-        // Do not populate no_update — WordPress 6.7+ aborts upgrades from that bucket
-        // when new_version <= installed, which breaks one-click updates with stale metadata.
-
         return $transient;
     }
 
     /**
-     * Attach GitHub auth headers when WordPress downloads the protected package.
+     * Download the GitHub release ZIP ourselves so WordPress always receives a valid binary.
+     *
+     * @param string $package
+     * @return string|WP_Error Absolute path to a temp ZIP file.
+     */
+    private static function download_github_release_zip($package) {
+        $token = self::github_token();
+        $urls  = array($package);
+
+        $cached = get_transient(self::CACHE_KEY);
+        if (is_array($cached) && !empty($cached['browser_zip'])) {
+            $urls[] = (string) $cached['browser_zip'];
+        }
+
+        $last_error = null;
+
+        foreach (array_unique(array_filter($urls)) as $url) {
+            $is_api_asset = strpos($url, 'api.github.com') !== false
+                && strpos($url, '/releases/assets/') !== false;
+
+            if ($is_api_asset && $token === '') {
+                $last_error = new WP_Error(
+                    'paxdesign_github_auth',
+                    'GitHub token required to download private release assets. Configure paxdesign_github_token or PAXDESIGN_GITHUB_TOKEN.'
+                );
+                continue;
+            }
+
+            $headers = array(
+                'User-Agent' => 'PAXdesign-Booking-Updater/' . PAXDESIGN_BOOKING_VERSION,
+            );
+            if ($token !== '') {
+                $headers['Authorization'] = 'Bearer ' . $token;
+            }
+            if ($is_api_asset) {
+                $headers['Accept'] = 'application/octet-stream';
+            }
+
+            $response = wp_remote_get($url, array(
+                'timeout'     => 300,
+                'redirection' => 5,
+                'headers'     => $headers,
+                'stream'      => false,
+            ));
+
+            if (is_wp_error($response)) {
+                $last_error = $response;
+                continue;
+            }
+
+            $code = (int) wp_remote_retrieve_response_code($response);
+            $body = wp_remote_retrieve_body($response);
+
+            if ($code < 200 || $code >= 300) {
+                $last_error = new WP_Error(
+                    'paxdesign_github_http',
+                    sprintf('GitHub download failed (HTTP %d).', $code)
+                );
+                continue;
+            }
+
+            if (!self::looks_like_zip($body)) {
+                $snippet = substr(ltrim($body), 0, 120);
+                if ($snippet !== '' && ($snippet[0] === '{' || $snippet[0] === '<')) {
+                    $last_error = new WP_Error(
+                        'paxdesign_github_not_zip',
+                        'GitHub returned metadata/HTML instead of a ZIP file. Check the GitHub token and release asset URL.'
+                    );
+                } else {
+                    $last_error = new WP_Error(
+                        'paxdesign_github_not_zip',
+                        'Downloaded file is not a valid ZIP archive.'
+                    );
+                }
+                continue;
+            }
+
+            if (is_array($cached) && !empty($cached['sha256'])) {
+                $hash = hash('sha256', $body);
+                if (!hash_equals((string) $cached['sha256'], $hash)) {
+                    $last_error = new WP_Error(
+                        'paxdesign_github_checksum',
+                        'Downloaded ZIP checksum does not match the published release.'
+                    );
+                    continue;
+                }
+            }
+
+            if (!function_exists('wp_tempnam')) {
+                require_once ABSPATH . 'wp-admin/includes/file.php';
+            }
+
+            $temp_file = wp_tempnam(self::ZIP_PREFIX);
+            if (!$temp_file) {
+                return new WP_Error('paxdesign_temp_file', 'Could not create a temporary file for the update download.');
+            }
+
+            $written = file_put_contents($temp_file, $body);
+            if ($written === false || $written < 1024) {
+                @unlink($temp_file);
+                return new WP_Error('paxdesign_write_failed', 'Could not write the downloaded plugin ZIP to disk.');
+            }
+
+            return $temp_file;
+        }
+
+        return $last_error instanceof WP_Error
+            ? $last_error
+            : new WP_Error('paxdesign_github_download', 'Could not download the plugin update package from GitHub.');
+    }
+
+    /**
+     * @param string $body
+     */
+    private static function looks_like_zip($body) {
+        if (!is_string($body) || strlen($body) < 4) {
+            return false;
+        }
+
+        // ZIP local file header (PK\x03\x04) or empty archive (PK\x05\x06).
+        return strncmp($body, "PK\x03\x04", 4) === 0 || strncmp($body, "PK\x05\x06", 4) === 0;
+    }
+
+    /**
+     * @param mixed $package
+     * @param mixed $hook_extra
+     */
+    private static function is_our_plugin_package($package, $hook_extra) {
+        if (!empty($hook_extra['plugin']) && $hook_extra['plugin'] === self::SLUG) {
+            return true;
+        }
+
+        if (!is_string($package) || $package === '') {
+            return false;
+        }
+
+        return strpos($package, self::GITHUB_REPO) !== false
+            || strpos($package, self::ZIP_PREFIX) !== false;
+    }
+
+    /**
+     * Intercept GitHub package downloads and return a validated local ZIP path.
+     *
+     * @param mixed $reply
+     * @param mixed $package
+     * @param mixed $upgrader
+     * @param mixed $hook_extra
+     * @return mixed
      */
     public static function authorize_package_download($reply, $package, $upgrader, $hook_extra) {
-        if (empty($package)) {
+        if (!is_string($package) || $package === '') {
+            return $reply;
+        }
+
+        if (!self::is_our_plugin_package($package, $hook_extra)) {
             return $reply;
         }
 
@@ -295,37 +444,12 @@ class PAXdesign_Booking_Update_Checker {
             return $reply;
         }
 
-        $token = self::github_token();
-        if ($token === '') {
-            return $reply;
+        $downloaded = self::download_github_release_zip($package);
+        if (is_wp_error($downloaded)) {
+            return $downloaded;
         }
 
-        add_filter('http_request_args', array(__CLASS__, 'inject_github_download_auth'), 10, 2);
-        return $reply;
-    }
-
-    public static function inject_github_download_auth($args, $url) {
-        $token = self::github_token();
-        if ($token === '') {
-            return $args;
-        }
-
-        if (
-            strpos($url, 'api.github.com') !== false
-            || strpos($url, 'github.com') !== false
-            || strpos($url, 'githubusercontent.com') !== false
-        ) {
-            if (!isset($args['headers']) || !is_array($args['headers'])) {
-                $args['headers'] = array();
-            }
-
-            $args['headers']['Authorization'] = 'Bearer ' . $token;
-            if (strpos($url, 'api.github.com') !== false) {
-                $args['headers']['Accept'] = 'application/octet-stream';
-            }
-        }
-
-        return $args;
+        return $downloaded;
     }
 
     public static function plugin_info($result, $action, $args) {
