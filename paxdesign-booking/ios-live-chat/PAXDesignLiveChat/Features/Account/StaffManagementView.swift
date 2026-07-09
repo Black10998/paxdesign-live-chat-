@@ -40,7 +40,15 @@ struct StaffManagementView: View {
             }
 
             if isLoading {
-                Section { ProgressView().frame(maxWidth: .infinity) }
+                Section {
+                    VStack(spacing: 12) {
+                        PAXTimelineLoaderCard(status: "Team wird geladen")
+                        ForEach(0..<4, id: \.self) { _ in
+                            PAXSkeletonListRow()
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
             } else if let errorMessage {
                 Section {
                     Text(errorMessage).foregroundStyle(PAXTheme.danger)

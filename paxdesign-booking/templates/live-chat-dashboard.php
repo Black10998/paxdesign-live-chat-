@@ -51,7 +51,7 @@ $tour_done     = (bool) get_user_meta(get_current_user_id(), 'pax_live_dashboard
     </div>
   </header>
 
-  <section class="pax-live-dashboard__activity-panel" id="paxLiveActivityPanel">
+  <section class="pax-live-dashboard__activity-panel is-loading" id="paxLiveActivityPanel" aria-busy="true">
     <article class="pax-live-activity-card">
       <span class="pax-live-activity-card__label">Wartend</span>
       <strong class="pax-live-activity-card__value" id="paxLiveActivityWaiting">0</strong>
@@ -89,8 +89,49 @@ $tour_done     = (bool) get_user_meta(get_current_user_id(), 'pax_live_dashboard
           <button type="button" class="pax-live-btn pax-live-btn--ghost pax-live-btn--icon" id="paxLiveChatRefresh" aria-label="Aktualisieren">↻</button>
         </div>
       </div>
-      <div id="paxLiveChatList" class="pax-live-dashboard__list">
-        <p class="pax-live-dashboard__empty">Lade Chats …</p>
+      <div id="paxLiveChatList" class="pax-live-dashboard__list" aria-busy="true">
+        <div class="pax-live-list-loading" role="status" aria-label="Chats werden geladen">
+          <div class="pax-live-loader pax-live-loader--compact">
+            <div class="pax-live-loader__head">
+              <div class="pax-live-loader__title sk"></div>
+              <div class="pax-live-loader__chip">Sync</div>
+            </div>
+            <div class="pax-live-loader__tracks">
+              <div class="pax-live-loader__track">
+                <span class="pax-live-loader__clip c1"></span><span class="pax-live-loader__clip c2"></span><span class="pax-live-loader__clip c3"></span>
+                <span class="pax-live-loader__playhead" aria-hidden="true"></span>
+              </div>
+              <div class="pax-live-loader__track dim">
+                <span class="pax-live-loader__clip c2"></span><span class="pax-live-loader__clip c3"></span><span class="pax-live-loader__clip c1"></span>
+                <span class="pax-live-loader__playhead" aria-hidden="true"></span>
+              </div>
+            </div>
+            <div class="pax-live-loader__meter">
+              <span class="pax-live-loader__meter-fill"></span>
+              <span class="pax-live-loader__meter-glint" aria-hidden="true"></span>
+            </div>
+          </div>
+          <div class="pax-live-loader pax-live-loader--compact">
+            <div class="pax-live-loader__head">
+              <div class="pax-live-loader__title sk"></div>
+              <div class="pax-live-loader__chip">Queue</div>
+            </div>
+            <div class="pax-live-loader__tracks">
+              <div class="pax-live-loader__track">
+                <span class="pax-live-loader__clip c3"></span><span class="pax-live-loader__clip c2"></span><span class="pax-live-loader__clip c1"></span>
+                <span class="pax-live-loader__playhead" aria-hidden="true"></span>
+              </div>
+              <div class="pax-live-loader__track dim">
+                <span class="pax-live-loader__clip c1"></span><span class="pax-live-loader__clip c2"></span><span class="pax-live-loader__clip c3"></span>
+                <span class="pax-live-loader__playhead" aria-hidden="true"></span>
+              </div>
+            </div>
+            <div class="pax-live-loader__meter">
+              <span class="pax-live-loader__meter-fill"></span>
+              <span class="pax-live-loader__meter-glint" aria-hidden="true"></span>
+            </div>
+          </div>
+        </div>
       </div>
     </aside>
 

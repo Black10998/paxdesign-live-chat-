@@ -127,7 +127,16 @@ $export_query = http_build_query(array_filter(array(
                 <details class="pax-chat-log-details" data-log-id="<?php echo (int) $row->id; ?>">
                   <summary style="cursor:pointer;font-size:13px;"><?php echo esc_html($preview ?: 'Gespräch anzeigen'); ?> (<?php echo (int) $row->message_count; ?>)</summary>
                   <div class="pax-chat-log-detail-body" style="margin-top:8px;padding:10px;background:#f9fafb;border-radius:8px;max-height:220px;overflow:auto;font-size:12px;line-height:1.5;">
-                    <p style="margin:0;color:#6b7280;">Verlauf wird geladen …</p>
+                    <div class="pa-skeleton-timeline" role="status" aria-label="Verlauf wird geladen">
+                      <div class="pa-skeleton-timeline-head">
+                        <span class="pa-skeleton-block" style="height:10px;width:42%;"></span>
+                        <span class="pa-skeleton-chip">Rendering</span>
+                      </div>
+                      <div class="pa-skeleton-tracks">
+                        <span class="pa-skeleton-track"></span>
+                        <span class="pa-skeleton-track"></span>
+                      </div>
+                    </div>
                   </div>
                 </details>
               </td>

@@ -62,6 +62,7 @@
     var $sessionRating = $('#paxLiveChatSessionRating');
     var $profileBtn = $('#paxLiveAgentProfileBtn');
     var $profileModal = $('#paxLiveAgentProfileModal');
+    var $activityPanel = $('#paxLiveActivityPanel');
     var $activityWaiting = $('#paxLiveActivityWaiting');
     var $activityOpen = $('#paxLiveActivityOpen');
     var $activityUrgent = $('#paxLiveActivityUrgent');
@@ -271,6 +272,64 @@
       if ($activityWaiting.length) $activityWaiting.text(waiting);
       if ($activityOpen.length) $activityOpen.text(open);
       if ($activityUrgent.length) $activityUrgent.text(urgent);
+      if ($activityPanel.length) {
+        $activityPanel.removeClass('is-loading').attr('aria-busy', 'false');
+      }
+    }
+
+    function timelineLoaderMarkup(chip) {
+      var safeChip = escapeHtml(chip || 'Lädt');
+      return (
+        '<div class="pax-live-loader pax-live-loader--compact">' +
+          '<div class="pax-live-loader__head">' +
+            '<div class="pax-live-loader__title sk"></div>' +
+            '<div class="pax-live-loader__chip">' + safeChip + '</div>' +
+          '</div>' +
+          '<div class="pax-live-loader__tracks">' +
+            '<div class="pax-live-loader__track">' +
+              '<span class="pax-live-loader__clip c1"></span><span class="pax-live-loader__clip c2"></span><span class="pax-live-loader__clip c3"></span>' +
+              '<span class="pax-live-loader__playhead" aria-hidden="true"></span>' +
+            '</div>' +
+            '<div class="pax-live-loader__track dim">' +
+              '<span class="pax-live-loader__clip c2"></span><span class="pax-live-loader__clip c3"></span><span class="pax-live-loader__clip c1"></span>' +
+              '<span class="pax-live-loader__playhead" aria-hidden="true"></span>' +
+            '</div>' +
+          '</div>' +
+          '<div class="pax-live-loader__meter">' +
+            '<span class="pax-live-loader__meter-fill"></span>' +
+            '<span class="pax-live-loader__meter-glint" aria-hidden="true"></span>' +
+          '</div>' +
+        '</div>'
+      );
+    }
+
+    function renderListLoadingSkeleton() {
+      if (!$list.length) return;
+      $list.attr('aria-busy', 'true').html(
+        '<div class="pax-live-list-loading" role="status" aria-label="Chats werden geladen">' +
+          timelineLoaderMarkup('Sync') +
+          timelineLoaderMarkup('Queue') +
+        '</div>'
+      );
+    }
+
+    function renderMessagesLoadingSkeleton() {
+      if (!$messages.length) return;
+      var html = '<div class="pax-live-dashboard__messages-loading" role="status" aria-label="Nachrichten werden geladen">';
+      for (var i = 0; i < 4; i++) {
+        var outgoing = (i % 2) === 1;
+        html += '<div class="pax-live-dashboard__msg-skeleton' + (outgoing ? ' is-outgoing' : '') + '">';
+        if (!outgoing) html += '<span class="pax-live-dashboard__msg-skeleton-avatar"></span>';
+        html += '<div class="pax-live-dashboard__msg-skeleton-lines">';
+        html += '<span class="pax-live-dashboard__msg-skeleton-line" style="width:' + (outgoing ? '74%' : '62%') + ';"></span>';
+        html += '<span class="pax-live-dashboard__msg-skeleton-line" style="width:' + (outgoing ? '92%' : '86%') + ';"></span>';
+        html += '<span class="pax-live-dashboard__msg-skeleton-line" style="width:' + (outgoing ? '46%' : '34%') + ';"></span>';
+        html += '</div>';
+        if (outgoing) html += '<span class="pax-live-dashboard__msg-skeleton-avatar"></span>';
+        html += '</div>';
+      }
+      html += '</div>';
+      $messages.attr('aria-busy', 'true').html(html);
     }
 
     function applyUiLanguage(lang) {
@@ -904,7 +963,8 @@
           '<span class="pax-live-ai-suggest__icon" aria-hidden="true">✦</span>' +
           '<span class="pax-live-ai-suggest__title">KI-Assistent</span>' +
           '<span class="pax-live-ai-suggest__status">Analysiert …</span>' +
-        '</div>'
+        '</div>' +
+        '<div class="pax-live-list-loading">' + timelineLoaderMarkup('Analyse') + '</div>'
       );
     }
 
@@ -1117,6 +1177,7 @@
       var filtered = filterSessions(allSessions);
       var sig = listSignature(allSessions);
       if (sig === lastListSignature && $list.children('.pax-live-dashboard__item').length) {
+        $list.attr('aria-busy', 'false');
         $count.text(allSessions.length);
         var liveTotalQuick = 0;
         allSessions.forEach(function (s) {
@@ -1139,6 +1200,7 @@
       updateActivityPanel(allSessions);
 
       if (!filtered.length) {
+        $list.attr('aria-busy', 'false');
         $list.html('<p class="pax-live-dashboard__empty">' + (allSessions.length ? 'Keine Treffer für die Suche.' : 'Derzeit keine aktiven Chats.') + '</p>');
         return;
       }
@@ -1166,6 +1228,7 @@
         html += '<div class="pax-live-dashboard__item-foot"><span>' + escapeHtml(s.detected_service || '—') + '</span><span>' + s.message_count + '</span></div>';
         html += '</button>';
       });
+      $list.attr('aria-busy', 'false');
       $list.html(html);
     }
 
@@ -1214,9 +1277,13 @@
     }
 
     function loadList() {
+      if (!$list.children('.pax-live-dashboard__item').length) {
+        renderListLoadingSkeleton();
+      }
       return ajax('paxdesign_chat_live_list')
         .done(function (res) {
           if (!res || !res.success) {
+            $list.attr('aria-busy', 'false');
             $list.html('<p class="pax-live-dashboard__error">Chats konnten nicht geladen werden.</p>');
             return;
           }
@@ -1228,6 +1295,7 @@
           }
         })
         .fail(function () {
+          $list.attr('aria-busy', 'false');
           $list.html('<p class="pax-live-dashboard__error">Verbindungsfehler beim Laden der Chats.</p>');
         });
     }
@@ -1553,9 +1621,15 @@
       ajax('paxdesign_chat_live_session', { session_id: sessionId }).done(function (res) {
         if (!res.success || !res.data) return;
         var data = res.data;
-        if (full) renderMessages(data.messages || [], true);
+        if (full) {
+          renderMessages(data.messages || [], true);
+          $messages.attr('aria-busy', 'false');
+        }
         updateHandlerUi(data.handler, data.admin_name);
         updateSessionHeader(data);
+      }).fail(function () {
+        if (!full) return;
+        $messages.attr('aria-busy', 'false').html('<p class="pax-live-dashboard__error">Nachrichten konnten nicht geladen werden.</p>');
       });
     }
 
@@ -1642,6 +1716,7 @@
       $placeholder.prop('hidden', true);
       $active.prop('hidden', false);
       updateSessionHeader({});
+      renderMessagesLoadingSkeleton();
       loadSession(sessionId, true);
       scheduleMsgPoll();
       syncSelectedListItem();

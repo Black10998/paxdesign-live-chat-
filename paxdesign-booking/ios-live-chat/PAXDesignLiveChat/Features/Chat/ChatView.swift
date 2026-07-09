@@ -283,7 +283,10 @@ struct ChatView: View {
             if thread.suggestionsLoading || !thread.aiSuggestions.isEmpty {
                 AssistChipRow {
                     if thread.suggestionsLoading {
-                        ProgressView().scaleEffect(0.8)
+                        HStack(spacing: 8) {
+                            PAXSkeletonBlock(width: 88, height: 28, cornerRadius: 14)
+                            PAXSkeletonBlock(width: 124, height: 28, cornerRadius: 14)
+                        }
                     }
                     ForEach(Array(thread.aiSuggestions.enumerated()), id: \.offset) { _, text in
                         AssistChip(title: String(text.prefix(48)) + (text.count > 48 ? "…" : ""), subtitle: text) {

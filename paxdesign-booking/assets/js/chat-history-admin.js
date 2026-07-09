@@ -48,6 +48,18 @@
 
     var $body = $details.find('.pax-chat-log-detail-body');
     loadedDetails[id] = 'loading';
+    $body.html(
+      '<div class="pa-skeleton-timeline" role="status" aria-label="Verlauf wird geladen">' +
+        '<div class="pa-skeleton-timeline-head">' +
+          '<span class="pa-skeleton-block" style="height:10px;width:42%;"></span>' +
+          '<span class="pa-skeleton-chip">Rendering</span>' +
+        '</div>' +
+        '<div class="pa-skeleton-tracks">' +
+          '<span class="pa-skeleton-track"></span>' +
+          '<span class="pa-skeleton-track"></span>' +
+        '</div>' +
+      '</div>'
+    );
 
     $.post(cfg.ajaxUrl, {
       action: 'paxdesign_chat_log_detail',

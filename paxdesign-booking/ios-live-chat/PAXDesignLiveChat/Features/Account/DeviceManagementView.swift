@@ -24,10 +24,11 @@ struct DeviceManagementView: View {
 
             if isLoading {
                 Section {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
+                    VStack(spacing: 12) {
+                        PAXTimelineLoaderCard(status: "Geräte werden synchronisiert")
+                        ForEach(0..<3, id: \.self) { _ in
+                            deviceSkeletonRow
+                        }
                     }
                 }
             } else if devices.isEmpty {
@@ -185,6 +186,34 @@ struct DeviceManagementView: View {
             }
         }
         .padding(.vertical, 4)
+    }
+
+    private var deviceSkeletonRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                PAXSkeletonCircle(size: 24)
+                PAXSkeletonBlock(width: 156, height: 11, cornerRadius: 8)
+                Spacer(minLength: 0)
+                PAXSkeletonBlock(width: 64, height: 9, cornerRadius: 999)
+            }
+            HStack(spacing: 8) {
+                PAXSkeletonBlock(width: 70, height: 18, cornerRadius: 999)
+                PAXSkeletonBlock(width: 66, height: 18, cornerRadius: 999)
+                PAXSkeletonBlock(width: 90, height: 18, cornerRadius: 999)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                PAXSkeletonBlock(width: 220, height: 8, cornerRadius: 7)
+                PAXSkeletonBlock(width: 185, height: 8, cornerRadius: 7)
+                PAXSkeletonBlock(width: 204, height: 8, cornerRadius: 7)
+                PAXSkeletonBlock(width: 170, height: 8, cornerRadius: 7)
+            }
+            HStack(spacing: 8) {
+                PAXSkeletonBlock(width: 92, height: 24, cornerRadius: 8)
+                PAXSkeletonBlock(width: 86, height: 24, cornerRadius: 8)
+            }
+            .padding(.top, 2)
+        }
+        .padding(.vertical, 6)
     }
 
     @ViewBuilder

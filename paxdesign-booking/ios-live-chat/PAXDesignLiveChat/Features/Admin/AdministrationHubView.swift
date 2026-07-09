@@ -52,7 +52,8 @@ struct AdministrationHubView: View {
                     value: isLoadingStaff ? "…" : "\(staffCount)",
                     label: L10n.AdminActivityTeam,
                     systemImage: "person.3",
-                    tint: .teal
+                    tint: .teal,
+                    isLoading: isLoadingStaff
                 )
             }
 
@@ -145,7 +146,7 @@ struct AdministrationHubView: View {
         .padding(.vertical, 4)
     }
 
-    private func activityTile(value: String, label: String, systemImage: String, tint: Color) -> some View {
+    private func activityTile(value: String, label: String, systemImage: String, tint: Color, isLoading: Bool = false) -> some View {
         HStack(spacing: 14) {
             Image(systemName: systemImage)
                 .font(.title3)
@@ -154,9 +155,13 @@ struct AdministrationHubView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.subheadline)
-                Text(value)
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(tint)
+                if isLoading {
+                    PAXSkeletonBlock(width: 44, height: 18, cornerRadius: 8)
+                } else {
+                    Text(value)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(tint)
+                }
             }
         }
         .padding(.vertical, 4)

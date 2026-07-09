@@ -95,10 +95,11 @@ struct TeamComposeView: View {
 
             if isLoading {
                 Section {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
+                    VStack(spacing: 12) {
+                        PAXTimelineLoaderCard(status: "Teamliste wird geladen")
+                        ForEach(0..<4, id: \.self) { _ in
+                            PAXSkeletonListRow()
+                        }
                     }
                 }
             } else if let errorMessage {

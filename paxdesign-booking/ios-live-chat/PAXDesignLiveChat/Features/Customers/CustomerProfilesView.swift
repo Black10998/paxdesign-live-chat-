@@ -28,8 +28,13 @@ struct CustomerProfilesView: View {
 
             if isLoading {
                 Section {
-                    ProgressView()
-                        .frame(maxWidth: .infinity)
+                    VStack(spacing: 12) {
+                        PAXTimelineLoaderCard(status: "Kundenprofile werden geladen")
+                        ForEach(0..<4, id: \.self) { _ in
+                            PAXSkeletonListRow()
+                        }
+                    }
+                    .padding(.vertical, 4)
                 }
             } else if let errorMessage {
                 Section {
