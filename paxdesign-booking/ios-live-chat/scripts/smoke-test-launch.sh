@@ -56,7 +56,7 @@ xcodebuild \
   -derivedDataPath "$DERIVED_DATA" \
   build
 
-APP_PATH="$(find "$DERIVED_DATA/Build/Products" -type d -name '*.app' | rg 'iphonesimulator' | head -1)"
+APP_PATH="$(find "$DERIVED_DATA/Build/Products" -type d -name '*.app' | grep 'iphonesimulator' | head -1)"
 if [[ -z "$APP_PATH" || ! -d "$APP_PATH" ]]; then
   APP_PATH="$(find "$DERIVED_DATA/Build/Products" -type d -name 'PAXDesignLiveChat.app' | head -1)"
 fi
