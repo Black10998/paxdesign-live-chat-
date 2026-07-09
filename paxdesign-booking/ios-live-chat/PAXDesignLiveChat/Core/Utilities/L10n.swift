@@ -247,7 +247,6 @@ enum L10n {
     static var AboutBuiltWith: String { t("about.built_with") }
     static var CommonMarkRead: String { t("common.mark_read") }
     static var CommonMarkUnread: String { t("common.mark_unread") }
-    static var CommonOpen: String { t("common.open") }
     static var TabTeam: String { t("tab.team") }
     static var TabPlatform: String { t("tab.platform") }
     static var PlatformTitle: String { t("platform.title") }

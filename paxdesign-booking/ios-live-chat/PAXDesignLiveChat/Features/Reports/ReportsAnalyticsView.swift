@@ -1,5 +1,4 @@
 import SwiftUI
-import Charts
 
 struct ReportsAnalyticsView: View {
     @EnvironmentObject private var auth: AuthStore
@@ -50,24 +49,6 @@ struct ReportsAnalyticsView: View {
 
             if !statusSlices.isEmpty {
                 Section(L10n.ReportsSessionMix) {
-                    Chart(statusSlices) { slice in
-                        SectorMark(
-                            angle: .value("Count", slice.value),
-                            innerRadius: .ratio(0.55),
-                            angularInset: 2
-                        )
-                        .foregroundStyle(slice.color)
-                        .annotation(position: .overlay) {
-                            if slice.value > 0 {
-                                Text("\(slice.value)")
-                                    .font(.caption2.weight(.bold))
-                                    .foregroundStyle(.white)
-                            }
-                        }
-                    }
-                    .frame(height: 220)
-                    .listRowBackground(Color.clear)
-
                     ForEach(statusSlices) { slice in
                         HStack {
                             Circle().fill(slice.color).frame(width: 10, height: 10)
