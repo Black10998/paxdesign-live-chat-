@@ -245,6 +245,50 @@ enum L10n {
     static var SettingsTeamMessagingSubtitle: String { t("settings.team_messaging_subtitle") }
     static var AboutTagline: String { t("about.tagline") }
     static var AboutBuiltWith: String { t("about.built_with") }
+    static var CommonMarkRead: String { t("common.mark_read") }
+    static var CommonMarkUnread: String { t("common.mark_unread") }
+    static var CommonOpen: String { t("common.open") }
+    static var TabTeam: String { t("tab.team") }
+    static var TabPlatform: String { t("tab.platform") }
+    static var PlatformTitle: String { t("platform.title") }
+    static var PlatformModules: String { t("platform.modules") }
+    static var PlatformNotifications: String { t("platform.notifications") }
+    static var PlatformNotificationsSubtitle: String { t("platform.notifications_subtitle") }
+    static var PlatformSettingsSubtitle: String { t("platform.settings_subtitle") }
+    static var PlatformDevices: String { t("platform.devices") }
+    static var PlatformDevicesSubtitle: String { t("platform.devices_subtitle") }
+    static var PlatformAdministration: String { t("platform.administration") }
+    static var PlatformAdministrationSubtitle: String { t("platform.administration_subtitle") }
+    static var PlatformHelpSubtitle: String { t("platform.help_subtitle") }
+    static var PlatformLegal: String { t("platform.legal") }
+    static var TeamHubTitle: String { t("team.hub.title") }
+    static var TeamHubSubtitle: String { t("team.hub.subtitle") }
+    static var TeamHubConversations: String { t("team.hub.conversations") }
+    static var TeamHubEmpty: String { t("team.hub.empty") }
+    static var TeamHubEmptyHint: String { t("team.hub.empty_hint") }
+    static var ProfileTitle: String { t("profile.title") }
+    static var ProfileAccountInfo: String { t("profile.account_info") }
+    static var ProfilePermissions: String { t("profile.permissions") }
+    static var ProfileRoleManager: String { t("profile.role.manager") }
+    static var ProfileRoleStaff: String { t("profile.role.staff") }
+    static var NotificationsCenterTitle: String { t("notifications.center.title") }
+    static var NotificationsCenterSubtitle: String { t("notifications.center.subtitle") }
+    static var NotificationsSummary: String { t("notifications.summary") }
+    static var NotificationsUnreadChats: String { t("notifications.unread_chats") }
+    static var NotificationsLiveRequests: String { t("notifications.live_requests") }
+    static var NotificationsMarkAllRead: String { t("notifications.mark_all_read") }
+    static var NotificationsRecentActivity: String { t("notifications.recent_activity") }
+    static var AdminTitle: String { t("admin.title") }
+    static var AdminSubtitle: String { t("admin.subtitle") }
+    static var AdminActivity: String { t("admin.activity") }
+    static var AdminActivitySessions: String { t("admin.activity_sessions") }
+    static var AdminActivityLive: String { t("admin.activity_live") }
+    static var AdminActivityTeam: String { t("admin.activity_team") }
+    static var AdminManagement: String { t("admin.management") }
+    static var AdminTeamManagement: String { t("admin.team_management") }
+    static var AdminEmployeeManagement: String { t("admin.employee_management") }
+    static var AdminPermissionsOverview: String { t("admin.permissions_overview") }
+    static var AdminSettings: String { t("admin.settings") }
     static var SessionTeamBadge: String { t("session.team_badge") }
     static var TimeToday: String { t("time.today") }
     static var TimeYesterday: String { t("time.yesterday") }

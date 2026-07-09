@@ -187,40 +187,75 @@ struct RootView: View {
     }
 }
 
+
 struct MainShellView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
+    @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
     @EnvironmentObject private var appLock: AppLockService
     @StateObject private var settings = AppSettingsStore.shared
     @State private var chatsPath = NavigationPath()
+    @State private var teamPath = NavigationPath()
     @State private var livePath = NavigationPath()
     @State private var selectedTab = 0
 
     private var unreadChatCount: Int {
         coordinator.sessions.filter {
-            $0.needsReply && !settings.readSessionIds.contains($0.sessionId)
+            !$0.isTeamDM && $0.needsReply && !settings.readSessionIds.contains($0.sessionId)
+        }.count
+    }
+
+    private var unreadTeamCount: Int {
+        coordinator.sessions.filter {
+            $0.isTeamDM && $0.needsReply && !settings.readSessionIds.contains($0.sessionId)
         }.count
     }
 
     private var canViewChats: Bool { auth.canViewChats }
     private var canReplyChats: Bool { auth.canReplyChats }
+    private var showTeamTab: Bool { canViewChats }
+
+    private var tabTags: (chats: Int?, team: Int?, live: Int, platform: Int) {
+        var tag = 0
+        var chats: Int?
+        var team: Int?
+        if canViewChats {
+            chats = tag
+            tag += 1
+            team = tag
+            tag += 1
+        }
+        let live = tag
+        tag += 1
+        let platform = tag
+        return (chats, team, live, platform)
+    }
 
     var body: some View {
+        let tags = tabTags
         TabView(selection: $selectedTab) {
-            if canViewChats {
+            if canViewChats, let chatsTag = tags.chats {
                 NavigationStack(path: $chatsPath) {
                     SessionListView(onOpenSession: { openSession($0, path: $chatsPath) })
                         .navigationDestination(for: String.self) { sessionId in
-                            if sessionId.hasPrefix("team_") {
-                                TeamChatView(sessionId: sessionId)
-                            } else {
-                                ChatView(sessionId: sessionId)
-                            }
+                            ChatView(sessionId: sessionId)
                         }
                 }
                 .tabItem { Label(L10n.TabChats, systemImage: "bubble.left.and.bubble.right") }
-                .tag(0)
+                .tag(chatsTag)
                 .modifier(ChatsTabBadge(count: unreadChatCount))
+            }
+
+            if showTeamTab, let teamTag = tags.team {
+                NavigationStack(path: $teamPath) {
+                    TeamMessagesHubView(onOpenSession: { openSession($0, path: $teamPath) })
+                        .navigationDestination(for: String.self) { sessionId in
+                            TeamChatView(sessionId: sessionId)
+                        }
+                }
+                .tabItem { Label(L10n.TabTeam, systemImage: "person.3.fill") }
+                .tag(teamTag)
+                .modifier(ChatsTabBadge(count: unreadTeamCount))
             }
 
             NavigationStack(path: $livePath) {
@@ -232,14 +267,21 @@ struct MainShellView: View {
                     }
             }
             .tabItem { Label(L10n.TabLive, systemImage: "bell.and.waves.left.and.right.fill") }
-            .tag(canViewChats ? 1 : 0)
+            .tag(tags.live)
             .modifier(LiveTabBadge(count: coordinator.liveCount))
 
             NavigationStack {
-                AccountHubView()
+                PlatformHubView()
+                    .navigationDestination(for: String.self) { sessionId in
+                        if sessionId.hasPrefix("team_") {
+                            TeamChatView(sessionId: sessionId)
+                        } else if canViewChats {
+                            ChatView(sessionId: sessionId)
+                        }
+                    }
             }
-            .tabItem { Label(L10n.TabAccount, systemImage: "person.crop.circle") }
-            .tag(canViewChats ? 2 : 1)
+            .tabItem { Label(L10n.TabPlatform, systemImage: "square.grid.2x2.fill") }
+            .tag(tags.platform)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if canReplyChats, let incoming = coordinator.incomingRequest, !coordinator.incomingBannerDismissed {
@@ -254,11 +296,17 @@ struct MainShellView: View {
         .tint(PAXTheme.accent)
         .onChange(of: coordinator.activeSessionId) { sessionId in
             guard let sessionId, canViewChats else { return }
-            selectedTab = 0
-            openSession(sessionId, path: $chatsPath)
+            let tags = tabTags
+            if sessionId.hasPrefix("team_"), let teamTag = tags.team {
+                selectedTab = teamTag
+                openSession(sessionId, path: $teamPath)
+            } else if let chatsTag = tags.chats {
+                selectedTab = chatsTag
+                openSession(sessionId, path: $chatsPath)
+            }
         }
         .onChange(of: coordinator.liveCount) { count in
-            if count > 0 && selectedTab != 1 {
+            if count > 0 && selectedTab != tabTags.live {
                 PAXHaptics.medium()
             }
         }

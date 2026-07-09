@@ -7,12 +7,11 @@ struct SessionListView: View {
     @StateObject private var settings = AppSettingsStore.shared
     @State private var searchText = ""
     @State private var filter: SessionFilter = .all
-    @State private var showTeamCompose = false
     @FocusState private var isSearchFocused: Bool
     var onOpenSession: (String) -> Void = { _ in }
 
     private enum SessionFilter: CaseIterable, Hashable {
-        case all, live, unread, active, closed, team
+        case all, live, unread, active, closed
 
         var title: String {
             switch self {
@@ -21,18 +20,14 @@ struct SessionListView: View {
             case .unread: return L10n.FilterUnread
             case .active: return L10n.FilterActive
             case .closed: return L10n.FilterClosed
-            case .team: return L10n.SessionTeamBadge
             }
         }
     }
 
     private var allSessions: [LiveSession] {
-        var items = coordinator.sessions
-        let teamOnly = teamCoordinator.teamSessions.filter { team in
-            !items.contains { $0.sessionId == team.sessionId }
-        }
-        items.append(contentsOf: teamOnly)
-        return items.sorted { $0.updatedAt > $1.updatedAt }
+        coordinator.sessions
+            .filter { !$0.isTeamDM }
+            .sorted { $0.updatedAt > $1.updatedAt }
     }
 
     private var filteredSessions: [LiveSession] {
@@ -51,7 +46,6 @@ struct SessionListView: View {
         case .unread: items = items.filter { $0.needsReply && !settings.readSessionIds.contains($0.sessionId) }
         case .active: items = items.filter { $0.isAdmin || $0.isLiveRequest }
         case .closed: items = items.filter { $0.isClosed }
-        case .team: items = items.filter { $0.isTeamDM }
         }
         return items
     }
@@ -59,7 +53,6 @@ struct SessionListView: View {
     private var canViewChats: Bool { auth.canViewChats }
     private var canReplyChats: Bool { auth.canReplyChats }
     private var canViewRatings: Bool { auth.canViewRatings }
-    private var canManageTeam: Bool { auth.canManageUsers }
 
     var body: some View {
         Group {
@@ -72,28 +65,6 @@ struct SessionListView: View {
         .background(PAXBackground())
         .navigationTitle(L10n.SessionTitle)
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            if canManageTeam {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showTeamCompose = true
-                    } label: {
-                        Image(systemName: "square.and.pencil")
-                            .font(.body.weight(.semibold))
-                    }
-                    .accessibilityLabel(L10n.TeamNewMessage)
-                }
-            }
-        }
-        .sheet(isPresented: $showTeamCompose) {
-            NavigationStack {
-                TeamComposeView { sessionId in
-                    onOpenSession(sessionId)
-                }
-            }
-            .environmentObject(auth)
-            .environmentObject(teamCoordinator)
-        }
     }
 
     private var sessionListContent: some View {
@@ -133,17 +104,20 @@ struct SessionListView: View {
             } else {
                 Section {
                     ForEach(filteredSessions) { session in
+                        let isUnread = session.needsReply && !settings.readSessionIds.contains(session.sessionId)
+
                         Button {
                             PAXHaptics.light()
                             isSearchFocused = false
                             PAXKeyboard.dismiss()
+                            settings.readSessionIds.insert(session.sessionId)
                             coordinator.activeSessionId = session.sessionId
                             onOpenSession(session.sessionId)
                         } label: {
                             SessionRow(
                                 session: session,
-                                isUnread: session.needsReply && !settings.readSessionIds.contains(session.sessionId),
-                                showRating: canViewRatings && !session.isTeamDM,
+                                isUnread: isUnread,
+                                showRating: canViewRatings,
                                 showTimestamp: settings.showListTimestamps,
                                 compact: settings.compactListMode
                             )
@@ -155,8 +129,65 @@ struct SessionListView: View {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.visible)
                         .listRowSeparatorTint(PAXTheme.border.opacity(0.5))
-                        .swipeActions(edge: .trailing, allowsFullSwipe: !session.isTeamDM) {
-                            if canReplyChats, !session.isTeamDM {
+                        .contextMenu {
+                            Button {
+                                settings.readSessionIds.insert(session.sessionId)
+                                coordinator.activeSessionId = session.sessionId
+                                onOpenSession(session.sessionId)
+                            } label: {
+                                Label(L10n.CommonOpen, systemImage: "arrow.up.right.circle")
+                            }
+                            if isUnread {
+                                Button {
+                                    settings.readSessionIds.insert(session.sessionId)
+                                    PAXHaptics.light()
+                                } label: {
+                                    Label(L10n.CommonMarkRead, systemImage: "envelope.open")
+                                }
+                            } else {
+                                Button {
+                                    settings.readSessionIds.remove(session.sessionId)
+                                    PAXHaptics.light()
+                                } label: {
+                                    Label(L10n.CommonMarkUnread, systemImage: "envelope.badge")
+                                }
+                            }
+                            if canReplyChats {
+                                Button {
+                                    PAXHaptics.light()
+                                    Task { await coordinator.archiveSession(auth: auth, session: session) }
+                                } label: {
+                                    Label(L10n.CommonArchive, systemImage: "archivebox")
+                                }
+                                Button(role: .destructive) {
+                                    PAXHaptics.warning()
+                                    Task { await coordinator.deleteSession(auth: auth, session: session) }
+                                } label: {
+                                    Label(L10n.CommonDelete, systemImage: "trash")
+                                }
+                            }
+                        }
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                            if isUnread {
+                                Button {
+                                    settings.readSessionIds.insert(session.sessionId)
+                                    PAXHaptics.success()
+                                } label: {
+                                    Label(L10n.CommonMarkRead, systemImage: "envelope.open")
+                                }
+                                .tint(.blue)
+                            } else {
+                                Button {
+                                    settings.readSessionIds.remove(session.sessionId)
+                                    PAXHaptics.light()
+                                } label: {
+                                    Label(L10n.CommonMarkUnread, systemImage: "envelope.badge")
+                                }
+                                .tint(.gray)
+                            }
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            if canReplyChats {
                                 Button(role: .destructive) {
                                     PAXHaptics.warning()
                                     Task { await coordinator.deleteSession(auth: auth, session: session) }
@@ -249,10 +280,7 @@ struct SessionListView: View {
     }
 
     private var availableFilters: [SessionFilter] {
-        if !teamCoordinator.teamSessions.isEmpty || canManageTeam {
-            return SessionFilter.allCases
-        }
-        return SessionFilter.allCases.filter { $0 != .team }
+        SessionFilter.allCases
     }
 
     private func syncErrorBanner(_ message: String) -> some View {

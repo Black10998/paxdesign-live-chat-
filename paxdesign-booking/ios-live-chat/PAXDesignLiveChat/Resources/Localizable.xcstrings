@@ -5346,6 +5346,314 @@
           }
         }
       }
+    },
+    "tab.team": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Team" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Team" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الفريق" } }
+      }
+    },
+    "tab.platform": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Platform" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Plattform" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "المنصة" } }
+      }
+    },
+    "platform.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Platform" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Plattform" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "المنصة" } }
+      }
+    },
+    "platform.modules": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Modules" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Module" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الوحدات" } }
+      }
+    },
+    "platform.notifications": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Notifications" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Benachrichtigungen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الإشعارات" } }
+      }
+    },
+    "platform.notifications_subtitle": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Alerts, activity & preferences" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Hinweise, Aktivität & Einstellungen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "التنبيهات والنشاط والتفضيلات" } }
+      }
+    },
+    "platform.settings_subtitle": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "App, chat & privacy" } },
+        "de": { "stringUnit": { "state": "translated", "value": "App, Chat & Datenschutz" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "التطبيق والمحادثة والخصوصية" } }
+      }
+    },
+    "platform.devices": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Device Management" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Geräteverwaltung" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "إدارة الأجهزة" } }
+      }
+    },
+    "platform.devices_subtitle": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Registered mobile devices" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Registrierte Mobilgeräte" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الأجهزة المحمولة المسجلة" } }
+      }
+    },
+    "platform.administration": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Administration" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Administration" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الإدارة" } }
+      }
+    },
+    "platform.administration_subtitle": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Team, staff & activity" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Team, Mitarbeiter & Aktivität" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الفريق والموظفون والنشاط" } }
+      }
+    },
+    "platform.help_subtitle": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Guides & support" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Anleitungen & Support" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الأدلة والدعم" } }
+      }
+    },
+    "platform.legal": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Legal & Website" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Rechtliches & Website" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "القانون والموقع" } }
+      }
+    },
+    "team.hub.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Team Messages" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Team-Nachrichten" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "رسائل الفريق" } }
+      }
+    },
+    "team.hub.subtitle": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Internal conversations with your team" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Interne Gespräche mit Ihrem Team" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "محادثات داخلية مع فريقك" } }
+      }
+    },
+    "team.hub.conversations": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Conversations" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Gespräche" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "المحادثات" } }
+      }
+    },
+    "team.hub.empty": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No team conversations yet" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Noch keine Team-Gespräche" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "لا توجد محادثات فريق بعد" } }
+      }
+    },
+    "team.hub.empty_hint": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Start a private conversation with a team member." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Starten Sie ein privates Gespräch mit einem Teammitglied." } },
+        "ar": { "stringUnit": { "state": "translated", "value": "ابدأ محادثة خاصة مع عضو في الفريق." } }
+      }
+    },
+    "profile.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Profile" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Profil" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الملف الشخصي" } }
+      }
+    },
+    "profile.account_info": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Account Information" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Kontoinformationen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "معلومات الحساب" } }
+      }
+    },
+    "profile.permissions": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Permissions" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Berechtigungen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الصلاحيات" } }
+      }
+    },
+    "profile.role.manager": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Manager" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Manager" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "مدير" } }
+      }
+    },
+    "profile.role.staff": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Staff Member" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Mitarbeiter" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "عضو فريق" } }
+      }
+    },
+    "notifications.center.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Notifications" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Benachrichtigungen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الإشعارات" } }
+      }
+    },
+    "notifications.center.subtitle": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Stay on top of customer activity" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Kundenaktivität im Blick behalten" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تابع نشاط العملاء" } }
+      }
+    },
+    "notifications.summary": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Summary" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Übersicht" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "ملخص" } }
+      }
+    },
+    "notifications.unread_chats": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Unread Chats" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Ungelesene Chats" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "محادثات غير مقروءة" } }
+      }
+    },
+    "notifications.live_requests": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Live Requests" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Live-Anfragen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "طلبات مباشرة" } }
+      }
+    },
+    "notifications.mark_all_read": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Mark All Chats as Read" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Alle Chats als gelesen markieren" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "وضع علامة مقروء على جميع المحادثات" } }
+      }
+    },
+    "notifications.recent_activity": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Recent Activity" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Letzte Aktivität" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "النشاط الأخير" } }
+      }
+    },
+    "admin.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Administration" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Administration" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الإدارة" } }
+      }
+    },
+    "admin.subtitle": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Manage your business platform" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Verwalten Sie Ihre Business-Plattform" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "إدارة منصة أعمالك" } }
+      }
+    },
+    "admin.activity": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Activity Overview" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Aktivitätsübersicht" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "نظرة عامة على النشاط" } }
+      }
+    },
+    "admin.activity_sessions": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Customer Sessions" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Kunden-Sitzungen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "جلسات العملاء" } }
+      }
+    },
+    "admin.activity_live": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Waiting Live Requests" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Wartende Live-Anfragen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "طلبات مباشرة قيد الانتظار" } }
+      }
+    },
+    "admin.activity_team": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Active Team Members" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Aktive Teammitglieder" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "أعضاء الفريق النشطون" } }
+      }
+    },
+    "admin.management": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Management" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Verwaltung" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الإدارة" } }
+      }
+    },
+    "admin.team_management": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Team Management" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Team-Verwaltung" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "إدارة الفريق" } }
+      }
+    },
+    "admin.employee_management": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Employee Management" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Mitarbeiterverwaltung" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "إدارة الموظفين" } }
+      }
+    },
+    "admin.permissions_overview": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Permissions Overview" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Berechtigungsübersicht" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "نظرة عامة على الصلاحيات" } }
+      }
+    },
+    "admin.settings": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Administrative Settings" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Administrative Einstellungen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الإعدادات الإدارية" } }
+      }
+    },
+    "common.mark_read": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Mark as Read" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Als gelesen markieren" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "وضع علامة مقروء" } }
+      }
+    },
+    "common.mark_unread": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Mark as Unread" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Als ungelesen markieren" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "وضع علامة غير مقروء" } }
+      }
+    },
+    "common.open": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Open" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Öffnen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "فتح" } }
+      }
     }
   },
   "version": "1.0"
