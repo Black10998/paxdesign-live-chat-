@@ -12,6 +12,8 @@ struct DashboardView: View {
     @ObservedObject private var calendar = CalendarStore.shared
     @ObservedObject private var platform = PlatformSyncService.shared
     @State private var showSearch = false
+    @State private var showDashboardTour = false
+    @State private var dashboardTourStepIndex = 0
 
     private var customerSessions: [LiveSession] {
         coordinator.sessions.filter { !$0.isTeamDM }
@@ -37,14 +39,116 @@ struct DashboardView: View {
         }
     }
 
+    private var statusChips: [DashboardStatusChip] {
+        [
+            DashboardStatusChip(
+                title: "Live",
+                value: "\(platform.dashboard?.liveCount ?? coordinator.liveCount)",
+                icon: "waveform.path.ecg",
+                tint: .red
+            ),
+            DashboardStatusChip(
+                title: "Ungelesen",
+                value: "\(unreadCount)",
+                icon: "bell.badge.fill",
+                tint: .orange
+            ),
+            DashboardStatusChip(
+                title: "Aufgaben",
+                value: "\(platform.dashboard?.openTasks ?? tasks.openCount)",
+                icon: "checklist.checked",
+                tint: .green
+            ),
+            DashboardStatusChip(
+                title: "Kalender",
+                value: "\(calendar.upcoming().count)",
+                icon: "calendar.badge.clock",
+                tint: .blue
+            )
+        ]
+    }
+
+    private var recentActivityItems: [LiveSession] {
+        customerSessions
+            .sorted {
+                MessageTimeFormatter.date(fromUpdatedAt: $0.updatedAt) ?? .distantPast >
+                MessageTimeFormatter.date(fromUpdatedAt: $1.updatedAt) ?? .distantPast
+            }
+            .prefix(5)
+            .map { $0 }
+    }
+
+    private var dashboardTourSteps: [DashboardTourStep] {
+        [
+            DashboardTourStep(
+                title: "Suche",
+                description: "Über die Suche oben rechts finden Sie Chats, Aufgaben und Kunden sofort.",
+                pointerSymbol: "arrow.up.right",
+                alignment: .topTrailing,
+                edgeInsets: EdgeInsets(top: 88, leading: 16, bottom: 0, trailing: 16)
+            ),
+            DashboardTourStep(
+                title: "Live-Chat",
+                description: "Hier sehen Sie alle aktiven Gespräche und offene Live-Anfragen in Echtzeit.",
+                pointerSymbol: "arrow.up.left",
+                alignment: .topLeading,
+                edgeInsets: EdgeInsets(top: 160, leading: 16, bottom: 0, trailing: 16)
+            ),
+            DashboardTourStep(
+                title: "Aufträge & Requests",
+                description: "Die Kennzahlenkarten zeigen aktuelle Requests, offene Tasks und Prioritäten.",
+                pointerSymbol: "arrow.up",
+                alignment: .top,
+                edgeInsets: EdgeInsets(top: 228, leading: 16, bottom: 0, trailing: 16)
+            ),
+            DashboardTourStep(
+                title: "Benachrichtigungen",
+                description: "Neue Nachrichten und Live-Events landen sofort in Ihren Benachrichtigungen.",
+                pointerSymbol: "arrow.up.right",
+                alignment: .topTrailing,
+                edgeInsets: EdgeInsets(top: 310, leading: 16, bottom: 0, trailing: 16)
+            ),
+            DashboardTourStep(
+                title: "Sprachwechsel",
+                description: "Über Einstellungen > Sprache wechseln Sie die komplette App-Sprache.",
+                pointerSymbol: "arrow.down.right",
+                alignment: .centerTrailing,
+                edgeInsets: EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16)
+            ),
+            DashboardTourStep(
+                title: "Profil & Einstellungen",
+                description: "Im Profil bearbeiten Sie Konto, Sounds, Sicherheit und Personalisierung.",
+                pointerSymbol: "arrow.down.left",
+                alignment: .bottomLeading,
+                edgeInsets: EdgeInsets(top: 0, leading: 16, bottom: 120, trailing: 16)
+            ),
+            DashboardTourStep(
+                title: "Geräteverwaltung",
+                description: "Geräte-Freigaben und Status finden Sie im Admin-Bereich unter Sicherheit.",
+                pointerSymbol: "arrow.down",
+                alignment: .bottom,
+                edgeInsets: EdgeInsets(top: 0, leading: 16, bottom: 164, trailing: 16)
+            ),
+            DashboardTourStep(
+                title: "Admin- & Team-Tools",
+                description: "Teamverwaltung, Rollen, Aufgaben und Kundentools sind zentral im Hub verfügbar.",
+                pointerSymbol: "arrow.down.left",
+                alignment: .bottomTrailing,
+                edgeInsets: EdgeInsets(top: 0, leading: 16, bottom: 94, trailing: 16)
+            )
+        ]
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 heroHeader
                 metricsGrid
+                activityPulse
                 if PlatformModuleSettingsStore.shared.dashboardShowChart {
                     activityChart
                 }
+                activityFeed
                 quickModules
                 if PlatformModuleSettingsStore.shared.dashboardShowUpcoming {
                     upcomingSection
@@ -73,6 +177,25 @@ struct DashboardView: View {
                 .environmentObject(coordinator)
                 .environmentObject(teamCoordinator)
         }
+        .overlay {
+            if showDashboardTour, dashboardTourSteps.indices.contains(dashboardTourStepIndex) {
+                DashboardTourOverlay(
+                    step: dashboardTourSteps[dashboardTourStepIndex],
+                    stepIndex: dashboardTourStepIndex,
+                    totalSteps: dashboardTourSteps.count,
+                    onBack: { dashboardTourStepIndex = max(dashboardTourStepIndex - 1, 0) },
+                    onNext: {
+                        guard dashboardTourStepIndex + 1 < dashboardTourSteps.count else {
+                            completeDashboardTour()
+                            return
+                        }
+                        dashboardTourStepIndex += 1
+                    },
+                    onSkip: completeDashboardTour,
+                    onFinish: completeDashboardTour
+                )
+            }
+        }
         .refreshable {
             await coordinator.refreshSessions(auth: auth)
             await platform.sync(auth: auth)
@@ -86,6 +209,12 @@ struct DashboardView: View {
                     module: PlatformModule.dashboard.rawValue,
                     auth: auth
                 )
+                startDashboardTourIfNeeded()
+            }
+        }
+        .onChange(of: settings.dashboardTourCompleted) { completed in
+            if !completed {
+                startDashboardTourIfNeeded()
             }
         }
     }
@@ -127,6 +256,76 @@ struct DashboardView: View {
                 icon: "checklist"
             )
         }
+    }
+
+    private var activityPulse: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Activity Pulse")
+                    .font(.headline)
+                Spacer()
+                Text("\(recentActivityItems.count) aktiv")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(PAXTheme.textSecondary)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(statusChips) { chip in
+                        DashboardStatusChipView(chip: chip)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+        }
+        .paxNativeCard()
+    }
+
+    private var activityFeed: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Live Activity Feed")
+                    .font(.headline)
+                Spacer()
+                Text("Realtime")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.mint)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.mint.opacity(0.18)))
+            }
+
+            if recentActivityItems.isEmpty {
+                Text("Noch keine aktuelle Aktivität.")
+                    .font(.subheadline)
+                    .foregroundStyle(PAXTheme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(recentActivityItems, id: \.sessionId) { session in
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(session.isLiveRequest ? Color.red : PAXTheme.accent)
+                                .frame(width: 9, height: 9)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(session.displayName)
+                                    .font(.subheadline.weight(.semibold))
+                                Text(session.lastPreview.isEmpty ? session.detectedService : session.lastPreview)
+                                    .font(.caption)
+                                    .foregroundStyle(PAXTheme.textSecondary)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            Text(MessageTimeFormatter.relativeUpdatedLabel(from: MessageTimeFormatter.date(fromUpdatedAt: session.updatedAt) ?? Date()))
+                                .font(.caption2)
+                                .foregroundStyle(PAXTheme.textTertiary)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+        }
+        .paxNativeCard()
     }
 
     private var activityChart: some View {
@@ -238,6 +437,26 @@ struct DashboardView: View {
         }
         return raw
     }
+
+    private func startDashboardTourIfNeeded() {
+        guard auth.isLoggedIn, !settings.dashboardTourCompleted else { return }
+        guard !showDashboardTour else { return }
+        dashboardTourStepIndex = 0
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 380_000_000)
+            if !settings.dashboardTourCompleted {
+                showDashboardTour = true
+            }
+        }
+    }
+
+    private func completeDashboardTour() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            showDashboardTour = false
+        }
+        settings.dashboardTourCompleted = true
+        PAXHaptics.success()
+    }
 }
 
 private struct DashboardMetric: Identifiable {
@@ -264,6 +483,114 @@ private struct DashboardMetricCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .paxNativeCard()
+    }
+}
+
+private struct DashboardStatusChip: Identifiable {
+    let id = UUID()
+    let title: String
+    let value: String
+    let icon: String
+    let tint: Color
+}
+
+private struct DashboardStatusChipView: View {
+    let chip: DashboardStatusChip
+
+    var body: some View {
+        HStack(spacing: 9) {
+            Image(systemName: chip.icon)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(chip.tint)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(chip.value)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(PAXTheme.textPrimary)
+                Text(chip.title)
+                    .font(.caption2)
+                    .foregroundStyle(PAXTheme.textSecondary)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 9)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(chip.tint.opacity(0.12))
+        )
+    }
+}
+
+private struct DashboardTourStep {
+    let title: String
+    let description: String
+    let pointerSymbol: String
+    let alignment: Alignment
+    let edgeInsets: EdgeInsets
+}
+
+private struct DashboardTourOverlay: View {
+    let step: DashboardTourStep
+    let stepIndex: Int
+    let totalSteps: Int
+    let onBack: () -> Void
+    let onNext: () -> Void
+    let onSkip: () -> Void
+    let onFinish: () -> Void
+
+    private var isLast: Bool { stepIndex == totalSteps - 1 }
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.46)
+                .ignoresSafeArea()
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 8) {
+                    Image(systemName: step.pointerSymbol)
+                        .font(.headline.weight(.bold))
+                        .foregroundStyle(PAXTheme.accent)
+                    Text("Schritt \(stepIndex + 1) von \(totalSteps)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PAXTheme.textSecondary)
+                }
+
+                Text(step.title)
+                    .font(.headline)
+                    .foregroundStyle(PAXTheme.textPrimary)
+
+                Text(step.description)
+                    .font(.subheadline)
+                    .foregroundStyle(PAXTheme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 8) {
+                    if stepIndex > 0 {
+                        Button("Back", action: onBack)
+                            .buttonStyle(.bordered)
+                    }
+                    Button("Skip", action: onSkip)
+                        .buttonStyle(.bordered)
+                    Spacer()
+                    Button(isLast ? "Finish" : "Next") {
+                        if isLast { onFinish() } else { onNext() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: 340, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(PAXTheme.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(PAXTheme.border, lineWidth: 0.7)
+                    )
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: step.alignment)
+            .padding(step.edgeInsets)
+        }
+        .transition(.opacity)
     }
 }
 

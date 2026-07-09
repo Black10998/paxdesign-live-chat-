@@ -18,6 +18,9 @@ $agent_avatar  = PAXdesign_Chat_Live::get_agent_avatar_url();
 $agent_role    = PAXdesign_Chat_Live::get_agent_role();
 $agent_tagline = PAXdesign_Chat_Live::get_agent_tagline();
 $agent_bio     = PAXdesign_Chat_Live::get_agent_bio();
+$settings_url  = admin_url('admin.php?page=paxdesign-booking-settings');
+$team_url      = admin_url('admin.php?page=paxdesign-live-chat-team');
+$tour_done     = (bool) get_user_meta(get_current_user_id(), 'pax_live_dashboard_tour_completed', true);
 ?>
 
 <div class="<?php echo esc_attr($wrapper_class); ?>" id="paxLiveChatDashboard" data-context="<?php echo esc_attr($context); ?>">
@@ -42,7 +45,37 @@ $agent_bio     = PAXdesign_Chat_Live::get_agent_bio();
       <span class="pax-live-stat pax-live-stat--live"><span id="paxLiveChatLiveCount">0</span> Live-Anfragen</span>
       <span class="pax-live-stat pax-live-stat--active"><span id="paxLiveChatCount">0</span> Chats</span>
     </div>
+    <div class="pax-live-dashboard__header-actions">
+      <button type="button" class="pax-live-btn pax-live-btn--ghost" id="paxLiveLanguageToggle" aria-label="Sprache wechseln">DE</button>
+      <button type="button" class="pax-live-btn pax-live-btn--ghost" id="paxLiveRestartTour">Tour neu starten</button>
+    </div>
   </header>
+
+  <section class="pax-live-dashboard__activity-panel" id="paxLiveActivityPanel">
+    <article class="pax-live-activity-card">
+      <span class="pax-live-activity-card__label">Wartend</span>
+      <strong class="pax-live-activity-card__value" id="paxLiveActivityWaiting">0</strong>
+      <span class="pax-live-activity-card__meta">Kunden aktuell in Warteschlange</span>
+    </article>
+    <article class="pax-live-activity-card">
+      <span class="pax-live-activity-card__label">Offen</span>
+      <strong class="pax-live-activity-card__value" id="paxLiveActivityOpen">0</strong>
+      <span class="pax-live-activity-card__meta">Aktive Konversationen heute</span>
+    </article>
+    <article class="pax-live-activity-card">
+      <span class="pax-live-activity-card__label">Sofortkritisch</span>
+      <strong class="pax-live-activity-card__value" id="paxLiveActivityUrgent">0</strong>
+      <span class="pax-live-activity-card__meta">Live-/neue Requests</span>
+    </article>
+    <article class="pax-live-activity-card pax-live-activity-card--actions">
+      <span class="pax-live-activity-card__label">Admin Schnellzugriff</span>
+      <div class="pax-live-activity-actions">
+        <a class="pax-live-activity-actions__link" href="<?php echo esc_url($settings_url); ?>">Profil & Settings</a>
+        <a class="pax-live-activity-actions__link" href="<?php echo esc_url($settings_url); ?>#security">Geräte-Management</a>
+        <a class="pax-live-activity-actions__link" href="<?php echo esc_url($team_url); ?>">Admin/Staff Tools</a>
+      </div>
+    </article>
+  </section>
 
   <div class="pax-live-dashboard__grid">
     <aside class="pax-live-dashboard__sidebar">
@@ -133,6 +166,7 @@ window.paxLiveChatAdmin = <?php echo wp_json_encode(array_merge(
     array(
         'adminName'    => PAXdesign_Chat_Live::get_agent_display_name(),
         'quickReplies' => PAXdesign_Chat_Live::get_admin_quick_replies(),
+        'tourCompleted' => $tour_done,
     )
 )); ?>;
 </script>

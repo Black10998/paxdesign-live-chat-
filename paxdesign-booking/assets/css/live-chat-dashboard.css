@@ -92,6 +92,13 @@
   flex-wrap: wrap;
 }
 
+.pax-live-dashboard__header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+
 .pax-live-stat {
   display: inline-flex;
   align-items: center;
@@ -120,6 +127,87 @@
   background: #fffbeb;
   border-color: #fcd34d;
   color: #b45309;
+}
+
+.pax-live-dashboard__activity-panel {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.pax-live-activity-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: 12px;
+  background: linear-gradient(160deg, rgba(37, 99, 235, 0.14), rgba(16, 185, 129, 0.08));
+  border: 1px solid var(--pax-live-border);
+}
+
+.pax-live-dashboard--admin .pax-live-activity-card {
+  background: linear-gradient(160deg, #f8fafc, #eef6ff);
+  border-color: #dbe4f0;
+}
+
+.pax-live-activity-card__label {
+  font-size: 0.68rem;
+  color: var(--pax-live-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+
+.pax-live-activity-card__value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--pax-live-text);
+  line-height: 1.1;
+}
+
+.pax-live-dashboard--admin .pax-live-activity-card__value {
+  color: #111827;
+}
+
+.pax-live-activity-card__meta {
+  font-size: 0.74rem;
+  color: var(--pax-live-muted);
+}
+
+.pax-live-activity-card--actions {
+  background: linear-gradient(145deg, rgba(54, 54, 54, 0.22), rgba(15, 23, 42, 0.15));
+}
+
+.pax-live-dashboard--admin .pax-live-activity-card--actions {
+  background: linear-gradient(145deg, #edf2f7, #e2e8f0);
+}
+
+.pax-live-activity-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+
+.pax-live-activity-actions__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 9px;
+  border-radius: 999px;
+  text-decoration: none;
+  border: 1px solid var(--pax-live-border);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--pax-live-text);
+  font-size: 0.69rem;
+  font-weight: 600;
+}
+
+.pax-live-dashboard--admin .pax-live-activity-actions__link {
+  color: #1f2937;
+  border-color: #cbd5e1;
+  background: #fff;
 }
 
 .pax-live-dashboard__toolbar {
@@ -912,6 +1000,10 @@
 }
 
 @media (max-width: 960px) {
+  .pax-live-dashboard__activity-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .pax-live-dashboard--shortcode {
     padding: 12px 10px calc(16px + env(safe-area-inset-bottom, 0px));
   }
@@ -1030,6 +1122,18 @@
 }
 
 @media (max-width: 640px) {
+  .pax-live-dashboard__activity-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .pax-live-dashboard__header-actions {
+    width: 100%;
+  }
+
+  .pax-live-dashboard__header-actions .pax-live-btn {
+    flex: 1 1 auto;
+  }
+
   .pax-live-dashboard__stats {
     width: 100%;
   }
@@ -2356,6 +2460,81 @@ body.pax-live-agent-profile-open {
   box-shadow: none;
   border-color: #ff9500;
   background: #fff8eb;
+}
+
+.pax-live-tour {
+  position: fixed;
+  inset: 0;
+  z-index: 100060;
+  display: flex;
+  pointer-events: none;
+}
+
+.pax-live-tour[hidden] {
+  display: none !important;
+}
+
+.pax-live-tour__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.58);
+  pointer-events: auto;
+}
+
+.pax-live-tour__card {
+  position: fixed;
+  width: min(360px, calc(100vw - 24px));
+  background: #fff;
+  border: 1px solid #dbe4f0;
+  border-radius: 14px;
+  padding: 14px;
+  box-shadow: 0 18px 45px rgba(2, 6, 23, 0.28);
+  z-index: 2;
+  pointer-events: auto;
+}
+
+.pax-live-tour__pointer {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  border-left: 1px solid #dbe4f0;
+  border-top: 1px solid #dbe4f0;
+  transform: rotate(45deg);
+}
+
+.pax-live-tour__step {
+  display: inline-block;
+  font-size: 0.68rem;
+  color: #475569;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.pax-live-tour__title {
+  margin: 0 0 5px;
+  font-size: 0.96rem;
+  color: #111827;
+}
+
+.pax-live-tour__text {
+  margin: 0 0 12px;
+  font-size: 0.8rem;
+  color: #4b5563;
+  line-height: 1.45;
+}
+
+.pax-live-tour__controls {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.pax-live-tour__controls .pax-live-btn {
+  padding: 7px 11px;
+  font-size: 0.74rem;
 }
 
 .pax-live-dashboard--admin .pax-live-stat {

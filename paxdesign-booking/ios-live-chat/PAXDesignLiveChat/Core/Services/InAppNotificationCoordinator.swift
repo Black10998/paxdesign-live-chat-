@@ -41,13 +41,79 @@ final class InAppNotificationCoordinator {
         )
     }
 
+    func handleOperationalEvent(event: String, sessionId: String, preview: String, customerName: String) {
+        guard AppSettingsStore.shared.messageSoundEnabled else { return }
+        guard shouldPlay(since: &lastAISoundAt) else { return }
+
+        let title: String
+        let body: String
+        let tone: PAXNotificationSound.Tone
+        let type: String
+
+        switch event {
+        case "customer_waiting":
+            title = "Customer waiting"
+            body = preview.isEmpty ? "Ein Kunde wartet auf schnelle Rückmeldung." : preview
+            tone = .liveRequest
+            type = "live_request"
+        case "new_chat_started":
+            title = "New chat started"
+            body = preview.isEmpty ? "Neuer Live-Chat wurde gestartet." : preview
+            tone = .message
+            type = "new_chat"
+        case "missed_chat":
+            title = "Missed chat"
+            body = preview.isEmpty ? "Eine Live-Anfrage wurde verpasst." : preview
+            tone = .aiAlert
+            type = "missed_chat"
+        case "assigned_chat_updated":
+            title = "Assigned chat updated"
+            body = preview.isEmpty ? "Zugewiesener Chat hat neue Aktivität." : preview
+            tone = .aiAlert
+            type = "session_sync"
+        case "new_lead_contact":
+            title = "New lead/contact from chat"
+            body = preview.isEmpty ? "Neuer Lead oder Kontakt aus Live-Chat." : preview
+            tone = .aiAlert
+            type = "new_lead_contact"
+        default:
+            title = customerName.isEmpty ? "Live Chat" : customerName
+            body = preview.isEmpty ? "Neue Aktivität im Live Chat." : preview
+            tone = .message
+            type = "message"
+        }
+
+        PAXNotificationSound.shared.play(tone)
+        PAXHaptics.medium()
+        postLocalNotification(
+            title: title,
+            body: body,
+            sessionId: sessionId,
+            type: type
+        )
+    }
+
     func handlePushForeground(
         type: String,
+        event: String,
         sessionId: String,
         preview: String,
         customerName: String,
         activeSessionId: String?
     ) {
+        switch event {
+        case "customer_waiting", "new_chat_started", "missed_chat", "assigned_chat_updated", "new_lead_contact":
+            handleOperationalEvent(
+                event: event,
+                sessionId: sessionId,
+                preview: preview,
+                customerName: customerName
+            )
+            return
+        default:
+            break
+        }
+
         switch type {
         case "live_request":
             break // ringtone handled by ChatCoordinator

@@ -220,6 +220,25 @@ final class AppLockService: ObservableObject {
         }
     }
 
+    /// Verification flow used during first-login security setup.
+    func verifyDeviceOwnerForSetup() async -> Bool {
+        guard !isAuthenticating else { return false }
+        isAuthenticating = true
+        defer { isAuthenticating = false }
+
+        do {
+            let context = LAContext()
+            context.localizedCancelTitle = "Abbrechen"
+            let success = try await context.evaluatePolicy(
+                .deviceOwnerAuthentication,
+                localizedReason: "Sicherheits-Setup bestätigen"
+            )
+            return success
+        } catch {
+            return false
+        }
+    }
+
     func resetOnLogout() {
         isAuthenticating = false
         autoLockSuppressedUntil = nil

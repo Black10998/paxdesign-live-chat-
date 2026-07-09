@@ -314,6 +314,11 @@ class PAXdesign_Device_Sessions {
         delete_user_meta((int) $target_user_id, 'pax_live_terms_accepted_at');
         delete_user_meta((int) $target_user_id, 'pax_live_permission_notifications');
         delete_user_meta((int) $target_user_id, 'pax_live_permission_location');
+        delete_user_meta((int) $target_user_id, 'pax_live_security_device_type');
+        delete_user_meta((int) $target_user_id, 'pax_live_security_biometric_available');
+        delete_user_meta((int) $target_user_id, 'pax_live_security_biometric_enabled');
+        delete_user_meta((int) $target_user_id, 'pax_live_security_pin_enabled');
+        delete_user_meta((int) $target_user_id, 'pax_live_security_password_confirmed');
         return rest_ensure_response(array('ok' => true));
     }
 

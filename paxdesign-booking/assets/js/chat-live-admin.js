@@ -62,6 +62,11 @@
     var $sessionRating = $('#paxLiveChatSessionRating');
     var $profileBtn = $('#paxLiveAgentProfileBtn');
     var $profileModal = $('#paxLiveAgentProfileModal');
+    var $activityWaiting = $('#paxLiveActivityWaiting');
+    var $activityOpen = $('#paxLiveActivityOpen');
+    var $activityUrgent = $('#paxLiveActivityUrgent');
+    var $restartTourBtn = $('#paxLiveRestartTour');
+    var $languageToggle = $('#paxLiveLanguageToggle');
 
     var quickReplies = (cfg && cfg.quickReplies && cfg.quickReplies.length)
       ? cfg.quickReplies
@@ -127,6 +132,7 @@
     var ADMIN_TYPING_SOUND_GAP_MS = 70;
     var suppressMessageSoundsUntil = 0;
     var mp3AudioCache = {};
+    var uiLanguage = (localStorage.getItem('pax_live_ui_lang') || 'de').toLowerCase();
     var soundUrls = {
       typing: 'https://paxdesign.at/wp-content/uploads/2026/06/freesound_community-writing-a-text-message-41141.mp3',
       openClose: 'https://paxdesign.at/wp-content/uploads/2026/06/u_8e8ungop1x-intro_cinematic-270840.mp3',
@@ -241,6 +247,215 @@
     function updateAppBadge(count) {
       if (window.PaxLivePwa && typeof window.PaxLivePwa.setBadge === 'function') {
         window.PaxLivePwa.setBadge(count);
+      }
+    }
+
+    function updateActivityPanel(items) {
+      items = items || [];
+      var waiting = 0;
+      var open = 0;
+      var urgent = 0;
+      items.forEach(function (s) {
+        if (!s) return;
+        if (s.handler === 'live_request') {
+          waiting += 1;
+          urgent += 1;
+        }
+        if (s.handler === 'admin' || s.handler === 'ai') {
+          open += 1;
+        }
+        if (!knownSessions[s.session_id]) {
+          urgent += 1;
+        }
+      });
+      if ($activityWaiting.length) $activityWaiting.text(waiting);
+      if ($activityOpen.length) $activityOpen.text(open);
+      if ($activityUrgent.length) $activityUrgent.text(urgent);
+    }
+
+    function applyUiLanguage(lang) {
+      var allowed = ['de', 'en', 'ar'];
+      if (allowed.indexOf(lang) === -1) lang = 'de';
+      uiLanguage = lang;
+      localStorage.setItem('pax_live_ui_lang', lang);
+      if ($languageToggle.length) {
+        $languageToggle.text(lang.toUpperCase());
+      }
+      $root.attr('lang', lang);
+      $root.attr('dir', lang === 'ar' ? 'rtl' : 'ltr');
+    }
+
+    function initLanguageToggle() {
+      applyUiLanguage(uiLanguage);
+      if (!$languageToggle.length) return;
+      $languageToggle.off('click.paxLang').on('click.paxLang', function () {
+        var list = ['de', 'en', 'ar'];
+        var idx = list.indexOf(uiLanguage);
+        applyUiLanguage(list[(idx + 1) % list.length]);
+      });
+    }
+
+    var tourState = {
+      active: false,
+      step: 0,
+      steps: [],
+      $overlay: null,
+      $card: null,
+      $pointer: null,
+    };
+
+    function getTourSteps() {
+      return [
+        {
+          selector: '#paxLiveChatSearch',
+          title: 'Search',
+          text: 'Use search to jump to any customer conversation instantly.'
+        },
+        {
+          selector: '#paxLiveChatLiveCount',
+          title: 'Live chat requests',
+          text: 'This indicator shows how many customers are waiting right now.'
+        },
+        {
+          selector: '#paxLiveActivityPanel',
+          title: 'Orders / requests activity',
+          text: 'Modern activity cards summarize waiting, open and urgent operations.'
+        },
+        {
+          selector: '#paxLiveChatLiveCount',
+          title: 'Notifications',
+          text: 'Live alerts trigger banner + sound so urgent chats are never missed.'
+        },
+        {
+          selector: '#paxLiveLanguageToggle',
+          title: 'Language switcher',
+          text: 'Switch UI direction/language mode from this quick control.'
+        },
+        {
+          selector: '#paxLiveAgentProfileBtn',
+          title: 'Profile / settings',
+          text: 'Open your profile here and use quick links for account settings.'
+        },
+        {
+          selector: '.pax-live-activity-actions__link[href*="#security"]',
+          title: 'Device management',
+          text: 'Review device security and approval controls from this shortcut.'
+        },
+        {
+          selector: '.pax-live-activity-actions__link[href*="paxdesign-live-chat-team"]',
+          title: 'Admin / staff tools',
+          text: 'Manage staff permissions and team operations from this area.'
+        }
+      ];
+    }
+
+    function markTourCompleted(completed) {
+      cfg.tourCompleted = !!completed;
+      ajax('paxdesign_chat_live_tour_complete', { completed: completed ? '1' : '0' });
+    }
+
+    function ensureTourOverlay() {
+      if (tourState.$overlay && tourState.$overlay.length) return;
+      tourState.$overlay = $(
+        '<div class="pax-live-tour" id="paxLiveTour" hidden>' +
+          '<div class="pax-live-tour__backdrop"></div>' +
+          '<div class="pax-live-tour__card">' +
+            '<div class="pax-live-tour__pointer"></div>' +
+            '<span class="pax-live-tour__step"></span>' +
+            '<h4 class="pax-live-tour__title"></h4>' +
+            '<p class="pax-live-tour__text"></p>' +
+            '<div class="pax-live-tour__controls">' +
+              '<button type="button" class="pax-live-btn pax-live-btn--ghost" data-tour="back">Back</button>' +
+              '<button type="button" class="pax-live-btn pax-live-btn--ghost" data-tour="skip">Skip</button>' +
+              '<div style="flex:1"></div>' +
+              '<button type="button" class="pax-live-btn pax-live-btn--primary" data-tour="next">Next</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      );
+      $('body').append(tourState.$overlay);
+      tourState.$card = tourState.$overlay.find('.pax-live-tour__card');
+      tourState.$pointer = tourState.$overlay.find('.pax-live-tour__pointer');
+
+      tourState.$overlay.on('click', '[data-tour="skip"]', function () { stopTour(true); });
+      tourState.$overlay.on('click', '[data-tour="back"]', function () {
+        if (tourState.step > 0) {
+          tourState.step -= 1;
+          renderTourStep();
+        }
+      });
+      tourState.$overlay.on('click', '[data-tour="next"]', function () {
+        if (tourState.step >= tourState.steps.length - 1) {
+          stopTour(true);
+          return;
+        }
+        tourState.step += 1;
+        renderTourStep();
+      });
+    }
+
+    function positionTourCard(step) {
+      var $target = $(step.selector).first();
+      var targetRect = null;
+      if ($target.length) {
+        targetRect = $target[0].getBoundingClientRect();
+      }
+      var cardRect = tourState.$card[0].getBoundingClientRect();
+      var top = 80;
+      var left = Math.max(12, window.innerWidth - cardRect.width - 12);
+      var pointerTop = -8;
+      var pointerLeft = 24;
+
+      if (targetRect) {
+        if (targetRect.top > window.innerHeight * 0.55) {
+          top = Math.max(12, targetRect.top - cardRect.height - 24);
+          pointerTop = cardRect.height - 8;
+        } else {
+          top = Math.min(window.innerHeight - cardRect.height - 12, targetRect.bottom + 14);
+          pointerTop = -8;
+        }
+        left = Math.min(
+          Math.max(12, targetRect.left + (targetRect.width / 2) - (cardRect.width / 2)),
+          window.innerWidth - cardRect.width - 12
+        );
+        pointerLeft = Math.min(Math.max(16, (targetRect.left + targetRect.width / 2) - left - 8), cardRect.width - 24);
+      }
+
+      tourState.$card.css({ top: top + 'px', left: left + 'px' });
+      tourState.$pointer.css({ top: pointerTop + 'px', left: pointerLeft + 'px' });
+    }
+
+    function renderTourStep() {
+      if (!tourState.active) return;
+      var step = tourState.steps[tourState.step];
+      if (!step) {
+        stopTour(true);
+        return;
+      }
+      tourState.$overlay.find('.pax-live-tour__step').text('Step ' + (tourState.step + 1) + ' of ' + tourState.steps.length);
+      tourState.$overlay.find('.pax-live-tour__title').text(step.title);
+      tourState.$overlay.find('.pax-live-tour__text').text(step.text);
+      tourState.$overlay.find('[data-tour="back"]').prop('disabled', tourState.step === 0);
+      tourState.$overlay.find('[data-tour="next"]').text(tourState.step >= tourState.steps.length - 1 ? 'Finish' : 'Next');
+      positionTourCard(step);
+    }
+
+    function startTour(force) {
+      ensureTourOverlay();
+      if (!force && cfg.tourCompleted) return;
+      tourState.steps = getTourSteps();
+      tourState.step = 0;
+      tourState.active = true;
+      tourState.$overlay.prop('hidden', false);
+      renderTourStep();
+    }
+
+    function stopTour(markDone) {
+      if (!tourState.$overlay || !tourState.$overlay.length) return;
+      tourState.active = false;
+      tourState.$overlay.prop('hidden', true);
+      if (markDone) {
+        markTourCompleted(true);
       }
     }
 
@@ -908,6 +1123,7 @@
           if (s.handler === 'live_request') liveTotalQuick++;
         });
         $liveCount.text(liveTotalQuick);
+        updateActivityPanel(allSessions);
         syncSelectedListItem();
         return;
       }
@@ -920,6 +1136,7 @@
 
       $count.text(allSessions.length);
       $liveCount.text(liveTotal);
+      updateActivityPanel(allSessions);
 
       if (!filtered.length) {
         $list.html('<p class="pax-live-dashboard__empty">' + (allSessions.length ? 'Keine Treffer für die Suche.' : 'Derzeit keine aktiven Chats.') + '</p>');
@@ -1622,8 +1839,19 @@
     initQuickReplies();
     initAiSuggestions();
     initAgentProfileModal();
+    initLanguageToggle();
+    if ($restartTourBtn.length) {
+      $restartTourBtn.on('click', function () {
+        markTourCompleted(false);
+        startTour(true);
+      });
+    }
     loadList();
     scheduleListPoll();
+
+    window.setTimeout(function () {
+      startTour(false);
+    }, 850);
 
     if (window.paxLiveOpenSession) {
       window.setTimeout(function () {
@@ -1634,6 +1862,9 @@
     window.addEventListener('pax-open-session', function (event) {
       var session = event.detail && event.detail.session;
       if (session) selectSession(session);
+    });
+    window.addEventListener('resize', function () {
+      if (tourState.active) renderTourStep();
     });
   });
 })(jQuery);

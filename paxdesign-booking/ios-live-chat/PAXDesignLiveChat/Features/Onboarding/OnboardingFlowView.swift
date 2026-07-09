@@ -1,6 +1,7 @@
 import SwiftUI
 import UserNotifications
 import CoreLocation
+import UIKit
 
 struct OnboardingPage: Identifiable {
     let id = UUID()
@@ -20,12 +21,17 @@ struct OnboardingFlowView: View {
     @EnvironmentObject private var push: PushService
     @ObservedObject private var permissions = PermissionCoordinator.shared
     @ObservedObject private var locationPermission = LocationPermissionService.shared
+    @ObservedObject private var appLock = AppLockService.shared
 
     @State private var pageIndex = 0
     @State private var acceptedTerms = false
     @State private var requestInFlight = false
     @State private var completionError: String?
     @State private var isCompleting = false
+    @State private var securityPassword = ""
+    @State private var securityPasswordConfirm = ""
+    @State private var enableBiometricProtection = true
+    @State private var biometricVerified = false
 
     let mode: Mode
     let onComplete: () -> Void
@@ -78,8 +84,41 @@ struct OnboardingFlowView: View {
         LocationPermissionService.isAuthorized(locationPermission.status)
     }
 
+    private var biometricAvailable: Bool {
+        appLock.canUseBiometrics
+    }
+
+    private var securityPasswordValid: Bool {
+        let value = securityPassword.trimmingCharacters(in: .whitespacesAndNewlines)
+        let confirm = securityPasswordConfirm.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard value == confirm else { return false }
+        guard (4...8).contains(value.count) else { return false }
+        return value.allSatisfy(\.isNumber)
+    }
+
+    private var securityReady: Bool {
+        guard securityPasswordValid else { return false }
+        if biometricAvailable, enableBiometricProtection {
+            return biometricVerified
+        }
+        return true
+    }
+
+    private var deviceSecurityLabel: String {
+        let device: String
+        switch UIDevice.current.userInterfaceIdiom {
+        case .phone: device = "iPhone"
+        case .pad: device = "iPad"
+        default: device = "Gerät"
+        }
+        if biometricAvailable {
+            return "\(device): \(appLock.biometricTypeLabel) / Gerätecode"
+        }
+        return "\(device): Gerätecode"
+    }
+
     private var canCompletePostLogin: Bool {
-        acceptedTerms && notificationsGranted && locationGranted && !isCompleting
+        acceptedTerms && notificationsGranted && locationGranted && securityReady && !isCompleting
     }
 
     var body: some View {
@@ -115,6 +154,7 @@ struct OnboardingFlowView: View {
             await permissions.refreshStatuses()
             locationPermission.refreshStatus()
             acceptedTerms = auth.profile?.termsAccepted ?? false
+            enableBiometricProtection = biometricAvailable
         }
     }
 
@@ -171,6 +211,8 @@ struct OnboardingFlowView: View {
                 action: requestLocation
             )
 
+            securitySection
+
             if let completionError, !completionError.isEmpty {
                 Text(completionError)
                     .font(.caption)
@@ -208,6 +250,43 @@ struct OnboardingFlowView: View {
                     .foregroundStyle(PAXTheme.success)
             }
         }
+    }
+
+    private var securitySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Sicherheits-Setup")
+                .font(.subheadline.weight(.semibold))
+            Text(deviceSecurityLabel)
+                .font(.caption)
+                .foregroundStyle(PAXTheme.textSecondary)
+
+            SecureField("Sicherheitscode (4-8 Ziffern)", text: $securityPassword)
+                .keyboardType(.numberPad)
+                .textContentType(.oneTimeCode)
+                .textInputAutocapitalization(.never)
+
+            SecureField("Sicherheitscode bestätigen", text: $securityPasswordConfirm)
+                .keyboardType(.numberPad)
+                .textContentType(.oneTimeCode)
+                .textInputAutocapitalization(.never)
+
+            if biometricAvailable {
+                Toggle("Biometrische Anmeldung aktivieren (\(appLock.biometricTypeLabel))", isOn: $enableBiometricProtection)
+                    .toggleStyle(.switch)
+                if enableBiometricProtection {
+                    Button(biometricVerified ? "Biometrie bestätigt" : "Biometrie jetzt aktivieren") {
+                        Task { await verifyBiometricSetup() }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(requestInFlight)
+                }
+            }
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(PAXTheme.background.opacity(0.65))
+        )
     }
 
     private var controlBar: some View {
@@ -272,6 +351,9 @@ struct OnboardingFlowView: View {
                 completionError = "Bitte Bedingungen akzeptieren und alle Berechtigungen aktivieren."
                 return
             }
+            guard configureSecuritySetup() else {
+                return
+            }
             completionError = nil
             isCompleting = true
             Task {
@@ -282,6 +364,13 @@ struct OnboardingFlowView: View {
                         permissionStatus: OnboardingPermissionStatus(
                             notifications: notificationStatusCode(permissions.notificationStatus),
                             location: locationStatusCode(locationPermission.status)
+                        ),
+                        securityStatus: [
+                            "device_type": UIDevice.current.userInterfaceIdiom == .phone ? "iphone" : "ipad",
+                            "biometric_available": biometricAvailable,
+                            "biometric_enabled": biometricAvailable ? enableBiometricProtection : false,
+                            "pin_enabled": true,
+                            "password_confirmed": securityPasswordValid
                         )
                     )
                     if let updatedProfile {
@@ -294,6 +383,39 @@ struct OnboardingFlowView: View {
                     completionError = error.localizedDescription
                 }
             }
+        }
+    }
+
+    private func verifyBiometricSetup() async {
+        requestInFlight = true
+        defer { requestInFlight = false }
+        biometricVerified = await appLock.verifyDeviceOwnerForSetup()
+        if !biometricVerified {
+            completionError = "Biometrische Aktivierung konnte nicht bestätigt werden."
+        }
+    }
+
+    private func configureSecuritySetup() -> Bool {
+        completionError = nil
+        guard securityPasswordValid else {
+            completionError = "Bitte einen gültigen Sicherheitscode (4-8 Ziffern) vergeben und bestätigen."
+            return false
+        }
+        if biometricAvailable, enableBiometricProtection, !biometricVerified {
+            completionError = "Bitte Biometrie bestätigen, bevor Sie fortfahren."
+            return false
+        }
+        do {
+            try appLock.setPIN(securityPassword)
+            appLock.pinEnabled = true
+            appLock.lockEnabled = true
+            appLock.lockOnLaunch = true
+            appLock.autoLockInterval = .oneMinute
+            appLock.biometricEnabled = biometricAvailable ? enableBiometricProtection : false
+            return true
+        } catch {
+            completionError = error.localizedDescription
+            return false
         }
     }
 

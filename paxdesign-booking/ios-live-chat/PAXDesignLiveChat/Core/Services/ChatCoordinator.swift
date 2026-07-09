@@ -223,24 +223,41 @@ final class ChatCoordinator: ObservableObject {
     }
 
     func handlePush(sessionId: String, type: String, auth: AuthStore, payload: PushService.PushPayload? = nil) async {
-        switch type {
-        case "live_request":
+        let event = payload?.event ?? type
+        switch event {
+        case "customer_waiting", "live_request":
             await presentLiveRequest(sessionId: sessionId, auth: auth, payload: payload)
-        case "new_chat", "message":
+        case "new_chat_started", "new_chat", "new_customer_message", "message":
             await refreshSessions(auth: auth)
-            if type == "message" || type == "new_chat" {
-                if type == "message" {
-                    activeSessionId = sessionId
-                }
+            if event == "new_customer_message" || type == "message" {
+                activeSessionId = sessionId
+                postSessionSync(sessionId: sessionId)
+            } else {
                 postSessionSync(sessionId: sessionId)
             }
+        case "assigned_chat_updated", "new_lead_contact", "missed_chat":
+            await refreshSessions(auth: auth)
+            postSessionSync(sessionId: sessionId)
         case "session_sync":
             await refreshSessions(auth: auth)
             postSessionSync(sessionId: sessionId)
         default:
-            await refreshSessions(auth: auth)
-            activeSessionId = sessionId
-            postSessionSync(sessionId: sessionId)
+            switch type {
+            case "live_request":
+                await presentLiveRequest(sessionId: sessionId, auth: auth, payload: payload)
+            case "new_chat", "message":
+                await refreshSessions(auth: auth)
+                if type == "message" {
+                    activeSessionId = sessionId
+                    postSessionSync(sessionId: sessionId)
+                } else {
+                    postSessionSync(sessionId: sessionId)
+                }
+            default:
+                await refreshSessions(auth: auth)
+                activeSessionId = sessionId
+                postSessionSync(sessionId: sessionId)
+            }
         }
     }
 

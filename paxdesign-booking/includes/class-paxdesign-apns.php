@@ -15,6 +15,7 @@ class PAXdesign_APNS {
         add_action('paxdesign_live_agent_requested', array(__CLASS__, 'on_live_agent_requested'), 20, 5);
         add_action('paxdesign_new_chat_session', array(__CLASS__, 'on_new_chat_session'), 20, 3);
         add_action('paxdesign_session_sync', array(__CLASS__, 'on_session_sync'), 20, 2);
+        add_action('paxdesign_chat_live_missed', array(__CLASS__, 'on_missed_chat'), 20, 4);
     }
 
     /**
@@ -107,9 +108,12 @@ class PAXdesign_APNS {
     /**
      * @return string
      */
-    private static function sound_for_type($type, $handler = '') {
-        if ($type === 'live_request') {
+    private static function sound_for_type($type, $handler = '', $event = '') {
+        if ($event === 'customer_waiting' || $type === 'live_request') {
             return 'pax-live-request.wav';
+        }
+        if ($event === 'missed_chat' || $event === 'new_lead_contact') {
+            return 'pax-ai-alert.wav';
         }
         if ($type === 'ai_attention' || ($type === 'session_sync' && $handler === 'ai')) {
             return 'pax-ai-alert.wav';
@@ -142,10 +146,11 @@ class PAXdesign_APNS {
         }
 
         self::send_to_admins(
-            'Live-Agent-Anfrage',
+            'Kunde wartet',
             $body,
             array(
                 'type'          => 'live_request',
+                'event'         => 'customer_waiting',
                 'session_id'    => (string) $session_id,
                 'customer_name' => $customer,
                 'service'       => $service,
@@ -157,10 +162,11 @@ class PAXdesign_APNS {
 
     public static function on_new_chat_session($session_id, $service, $preview) {
         self::send_to_admins(
-            'Neuer Live-Chat',
+            'Neuer Chat gestartet',
             ($service !== '' ? $service . ' — ' : '') . ($preview !== '' ? $preview : 'Neues Kundengespräch'),
             array(
                 'type'       => 'new_chat',
+                'event'      => 'new_chat_started',
                 'session_id' => (string) $session_id,
                 'service'    => (string) $service,
                 'preview'    => (string) $preview,
@@ -183,22 +189,29 @@ class PAXdesign_APNS {
         $seq     = isset($meta['seq']) ? (int) $meta['seq'] : 0;
         $is_new  = !empty($meta['is_new']);
 
-        if ($handler === 'live_request') {
-            return;
-        }
-
         $body = ($service !== '' ? $service . ' — ' : '') . ($preview !== '' ? $preview : 'Chat aktualisiert');
 
         $last_role = isset($meta['last_role']) ? (string) $meta['last_role'] : '';
         $needs_ai_attention = ($handler === 'ai' && $last_role === 'user' && $preview !== '');
         $type = $is_new ? 'new_chat' : ($needs_ai_attention ? 'ai_attention' : 'session_sync');
-        $silent = !$is_new && !$needs_ai_attention;
+        $event = $is_new ? 'new_chat_started' : 'assigned_chat_updated';
+        if ($handler === 'live_request') {
+            $type = 'live_request';
+            $event = 'customer_waiting';
+        }
+        if (preg_match('/lead|kontakt|contact/i', $preview . ' ' . $service)) {
+            $event = 'new_lead_contact';
+        }
+        $silent = !$is_new && !$needs_ai_attention && $event !== 'customer_waiting' && $event !== 'new_lead_contact';
 
         self::send_to_admins(
-            $is_new ? 'Neuer Live-Chat' : ($needs_ai_attention ? 'KI-Assistent' : 'Chat aktualisiert'),
+            $event === 'customer_waiting'
+                ? 'Kunde wartet'
+                : ($event === 'new_lead_contact' ? 'Neuer Lead/Kontakt' : ($is_new ? 'Neuer Chat gestartet' : 'Zugewiesener Chat aktualisiert')),
             $body,
             array(
                 'type'       => $type,
+                'event'      => $event,
                 'session_id' => (string) $session_id,
                 'service'    => $service,
                 'preview'    => $preview,
@@ -215,8 +228,29 @@ class PAXdesign_APNS {
             wp_html_excerpt((string) $content, 120, '…'),
             array(
                 'type'       => 'message',
+                'event'      => 'new_customer_message',
                 'session_id' => (string) $session_id,
                 'preview'    => wp_html_excerpt((string) $content, 160, '…'),
+            ),
+            false
+        );
+    }
+
+    public static function on_missed_chat($session_id, $service, $preview, $customer = '') {
+        $body = ($customer !== '' ? $customer . ' — ' : '') . ($preview !== '' ? $preview : 'Live-Anfrage wurde nicht beantwortet');
+        if ($service !== '') {
+            $body .= ' · ' . $service;
+        }
+        self::send_to_admins(
+            'Verpasster Chat',
+            $body,
+            array(
+                'type'          => 'session_sync',
+                'event'         => 'missed_chat',
+                'session_id'    => (string) $session_id,
+                'customer_name' => (string) $customer,
+                'service'       => (string) $service,
+                'preview'       => (string) $preview,
             ),
             false
         );
@@ -281,10 +315,11 @@ class PAXdesign_APNS {
         }
 
         $type     = isset($data['type']) ? (string) $data['type'] : 'message';
+        $event    = isset($data['event']) ? (string) $data['event'] : $type;
         $handler  = isset($data['handler']) ? (string) $data['handler'] : '';
-        $sound    = self::sound_for_type($type, $handler);
+        $sound    = self::sound_for_type($type, $handler, $event);
         $category = ($type === 'live_request') ? 'PAX_LIVE_REQUEST' : 'PAX_MESSAGE';
-        $interruption = ($type === 'live_request') ? 'critical' : 'time-sensitive';
+        $interruption = ($type === 'live_request' || $event === 'customer_waiting') ? 'critical' : 'time-sensitive';
 
         $aps = array(
             'badge'              => self::count_pending_badge(),

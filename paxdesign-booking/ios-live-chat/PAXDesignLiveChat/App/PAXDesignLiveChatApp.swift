@@ -99,10 +99,12 @@ struct PAXDesignLiveChatApp: App {
         guard auth.isLoggedIn,
               let sessionId = note.userInfo?["session_id"] as? String,
               let type = note.userInfo?["type"] as? String else { return }
+        let event = (note.userInfo?["event"] as? String) ?? type
 
         let payload = PushService.PushPayload(
             sessionId: sessionId,
             type: type,
+            event: event,
             customerName: note.userInfo?["customer_name"] as? String ?? "",
             service: note.userInfo?["service"] as? String ?? "",
             preview: note.userInfo?["preview"] as? String ?? ""
@@ -116,6 +118,7 @@ struct PAXDesignLiveChatApp: App {
             if !opened {
                 InAppNotificationCoordinator.shared.handlePushForeground(
                     type: type,
+                    event: event,
                     sessionId: sessionId,
                     preview: payload.preview,
                     customerName: payload.customerName,

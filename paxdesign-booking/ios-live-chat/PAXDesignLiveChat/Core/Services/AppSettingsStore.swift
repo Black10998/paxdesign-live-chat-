@@ -190,6 +190,9 @@ final class AppSettingsStore: ObservableObject {
     @Published var firstLaunchOnboardingCompleted: Bool {
         didSet { DeferredUserDefaults.set(firstLaunchOnboardingCompleted, forKey: Keys.firstLaunchOnboarding) }
     }
+    @Published var dashboardTourCompleted: Bool {
+        didSet { DeferredUserDefaults.set(dashboardTourCompleted, forKey: Keys.dashboardTourCompleted) }
+    }
     @Published var accentColorPreset: AccentColorPreset {
         didSet { DeferredUserDefaults.set(accentColorPreset.rawValue, forKey: Keys.accentPreset) }
     }
@@ -243,6 +246,7 @@ final class AppSettingsStore: ObservableObject {
         static let profileImage = "pax.settings.profileImage"
         static let onboarding = "pax.settings.onboardingCompleted"
         static let firstLaunchOnboarding = "pax.firstLaunch.onboardingCompleted"
+        static let dashboardTourCompleted = "pax.settings.dashboardTourCompleted"
         static let accentPreset = "pax.settings.accentPreset"
         static let messageToneStyle = "pax.settings.messageToneStyle"
         static let liveToneStyle = "pax.settings.liveToneStyle"
@@ -314,6 +318,7 @@ final class AppSettingsStore: ObservableObject {
         profileImageData = defaults.data(forKey: Keys.profileImage)
         onboardingCompleted = defaults.object(forKey: Keys.onboarding) as? Bool ?? false
         firstLaunchOnboardingCompleted = defaults.object(forKey: Keys.firstLaunchOnboarding) as? Bool ?? false
+        dashboardTourCompleted = defaults.object(forKey: Keys.dashboardTourCompleted) as? Bool ?? false
         if let raw = defaults.string(forKey: Keys.accentPreset),
            let preset = AccentColorPreset(rawValue: raw) {
             accentColorPreset = preset

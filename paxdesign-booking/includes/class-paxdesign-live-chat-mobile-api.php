@@ -454,6 +454,13 @@ class PAXdesign_Live_Chat_Mobile_API {
             'notifications' => sanitize_text_field((string) get_user_meta($user_id, 'pax_live_permission_notifications', true)),
             'location'      => sanitize_text_field((string) get_user_meta($user_id, 'pax_live_permission_location', true)),
         );
+        $security_status = array(
+            'device_type'         => sanitize_text_field((string) get_user_meta($user_id, 'pax_live_security_device_type', true)),
+            'biometric_available' => (bool) get_user_meta($user_id, 'pax_live_security_biometric_available', true),
+            'biometric_enabled'   => (bool) get_user_meta($user_id, 'pax_live_security_biometric_enabled', true),
+            'pin_enabled'         => (bool) get_user_meta($user_id, 'pax_live_security_pin_enabled', true),
+            'password_confirmed'  => (bool) get_user_meta($user_id, 'pax_live_security_password_confirmed', true),
+        );
         return array(
             'user_id'         => $user_id,
             'name'            => $hub_name,
@@ -471,6 +478,7 @@ class PAXdesign_Live_Chat_Mobile_API {
             'terms_accepted'  => $terms_accepted_at > 0,
             'terms_accepted_at' => $terms_accepted_at,
             'permission_status' => $permission_status,
+            'security_status' => $security_status,
         );
     }
 
@@ -818,11 +826,33 @@ class PAXdesign_Live_Chat_Mobile_API {
         $permissions = isset($params['permissions']) && is_array($params['permissions']) ? $params['permissions'] : array();
         $notifications = sanitize_text_field((string) ($permissions['notifications'] ?? 'unknown'));
         $location = sanitize_text_field((string) ($permissions['location'] ?? 'unknown'));
+        $security = isset($params['security']) && is_array($params['security']) ? $params['security'] : array();
+        $device_type = sanitize_text_field((string) ($security['device_type'] ?? 'unknown'));
+        $biometric_available = !empty($security['biometric_available']);
+        $biometric_enabled = !empty($security['biometric_enabled']);
+        $pin_enabled = !empty($security['pin_enabled']);
+        $password_confirmed = !empty($security['password_confirmed']);
+
+        $existing_pin_enabled = (bool) get_user_meta($user_id, 'pax_live_security_pin_enabled', true);
+        $existing_password_confirmed = (bool) get_user_meta($user_id, 'pax_live_security_password_confirmed', true);
+        $security_ready = ($pin_enabled && $password_confirmed) || ($existing_pin_enabled && $existing_password_confirmed);
+        if (!$security_ready) {
+            return new WP_Error(
+                'security_required',
+                'Security setup (PIN/password confirmation) is required before onboarding completion.',
+                array('status' => 400)
+            );
+        }
 
         update_user_meta($user_id, 'pax_live_onboarding_completed', 1);
         update_user_meta($user_id, 'pax_live_terms_accepted_at', time());
         update_user_meta($user_id, 'pax_live_permission_notifications', $notifications);
         update_user_meta($user_id, 'pax_live_permission_location', $location);
+        update_user_meta($user_id, 'pax_live_security_device_type', $device_type);
+        update_user_meta($user_id, 'pax_live_security_biometric_available', $biometric_available ? 1 : 0);
+        update_user_meta($user_id, 'pax_live_security_biometric_enabled', $biometric_enabled ? 1 : 0);
+        update_user_meta($user_id, 'pax_live_security_pin_enabled', $pin_enabled ? 1 : 0);
+        update_user_meta($user_id, 'pax_live_security_password_confirmed', $password_confirmed ? 1 : 0);
 
         return self::respond(self::profile_payload(wp_get_current_user()));
     }

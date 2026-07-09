@@ -94,6 +94,7 @@ class PAXdesign_Chat_Live {
         add_action('wp_ajax_paxdesign_chat_live_rating', array($this, 'handle_session_rating'));
         add_action('wp_ajax_nopriv_paxdesign_chat_live_rating', array($this, 'handle_session_rating'));
         add_action('wp_ajax_paxdesign_chat_live_admin_suggestions', array($this, 'handle_admin_suggestions'));
+        add_action('wp_ajax_paxdesign_chat_live_tour_complete', array($this, 'handle_tour_complete'));
         add_action('wp_ajax_paxdesign_chat_customer_history_list', array($this, 'handle_customer_history_list'));
         add_action('wp_ajax_nopriv_paxdesign_chat_customer_history_list', array($this, 'handle_customer_history_list'));
         add_action('wp_ajax_paxdesign_chat_customer_history_session', array($this, 'handle_customer_history_session'));
@@ -912,6 +913,13 @@ class PAXdesign_Chat_Live {
         wp_send_json_success($data);
     }
 
+    public function handle_tour_complete() {
+        $this->verify_admin_nonce();
+        $completed = isset($_POST['completed']) && (string) wp_unslash($_POST['completed']) === '1';
+        update_user_meta(get_current_user_id(), 'pax_live_dashboard_tour_completed', $completed ? 1 : 0);
+        wp_send_json_success(array('completed' => $completed));
+    }
+
     public function handle_live_session() {
         $this->verify_admin_nonce();
 
@@ -1271,6 +1279,7 @@ class PAXdesign_Chat_Live {
         if (!$row) {
             wp_send_json_error(array('message' => 'Session nicht gefunden.'), 404);
         }
+        $was_live_request = isset($row->handler) && (string) $row->handler === self::HANDLER_LIVE;
 
         global $wpdb;
         $wpdb->update(
@@ -1293,6 +1302,9 @@ class PAXdesign_Chat_Live {
         );
 
         $this->persist_session_last_preview($session_id);
+        if ($was_live_request) {
+            $this->dispatch_missed_chat_event($session_id, $row, 'Live-Anfrage geschlossen');
+        }
 
         wp_send_json_success(array(
             'handler' => self::HANDLER_CLOSED,
@@ -2038,6 +2050,7 @@ class PAXdesign_Chat_Live {
         if (!$row) {
             return new WP_Error('not_found', 'Session nicht gefunden.', array('status' => 404));
         }
+        $was_live_request = isset($row->handler) && (string) $row->handler === self::HANDLER_LIVE;
 
         $handler = isset($row->handler) ? $row->handler : self::HANDLER_AI;
         if ($handler === self::HANDLER_CLOSED) {
@@ -2068,10 +2081,32 @@ class PAXdesign_Chat_Live {
         );
 
         $this->persist_session_last_preview($session_id);
+        if ($was_live_request) {
+            $this->dispatch_missed_chat_event($session_id, $row, 'Live-Anfrage geschlossen');
+        }
 
         return array(
             'handler' => self::HANDLER_CLOSED,
             'message' => $entry,
+        );
+    }
+
+    /**
+     * Trigger explicit missed-chat notifications when a waiting live request is closed.
+     *
+     * @param string $session_id
+     * @param object $row
+     * @param string $preview
+     */
+    private function dispatch_missed_chat_event($session_id, $row, $preview = '') {
+        $service = isset($row->detected_service) ? (string) $row->detected_service : '';
+        $customer = $this->session_customer_label($row);
+        do_action(
+            'paxdesign_chat_live_missed',
+            (string) $session_id,
+            $service,
+            (string) $preview,
+            $customer
         );
     }
 

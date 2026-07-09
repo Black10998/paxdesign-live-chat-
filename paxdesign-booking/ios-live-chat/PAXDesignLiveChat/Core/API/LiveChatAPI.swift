@@ -503,18 +503,23 @@ final class LiveChatAPI {
 
     func completeOnboarding(
         termsAccepted: Bool = true,
-        permissionStatus: OnboardingPermissionStatus = .init()
+        permissionStatus: OnboardingPermissionStatus = .init(),
+        securityStatus: [String: Any]? = nil
     ) async throws -> AdminProfile {
         guard let url = liveAdminURL(path: "onboarding/complete") else {
             throw LiveChatAPIError.invalidURL
         }
-        let body = try JSONSerialization.data(withJSONObject: [
+        var payload: [String: Any] = [
             "terms_accepted": termsAccepted,
             "permissions": [
                 "notifications": permissionStatus.notifications,
                 "location": permissionStatus.location,
             ],
-        ])
+        ]
+        if let securityStatus {
+            payload["security"] = securityStatus
+        }
+        let body = try JSONSerialization.data(withJSONObject: payload)
         return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "onboarding-complete", as: AdminProfile.self)
     }
 

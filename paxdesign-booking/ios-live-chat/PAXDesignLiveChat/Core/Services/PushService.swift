@@ -62,6 +62,7 @@ final class PushService: NSObject, ObservableObject {
     struct PushPayload {
         let sessionId: String
         let type: String
+        let event: String
         let customerName: String
         let service: String
         let preview: String
@@ -71,10 +72,12 @@ final class PushService: NSObject, ObservableObject {
         guard let pax = userInfo["pax"] as? [String: Any] else { return nil }
         let sessionId = (pax["session_id"] as? String) ?? ""
         let type = (pax["type"] as? String) ?? "message"
+        let event = (pax["event"] as? String) ?? type
         guard !sessionId.isEmpty else { return nil }
         return PushPayload(
             sessionId: sessionId,
             type: type,
+            event: event,
             customerName: (pax["customer_name"] as? String) ?? "",
             service: (pax["service"] as? String) ?? "",
             preview: (pax["preview"] as? String) ?? ""
@@ -189,6 +192,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         [
             "session_id": payload.sessionId,
             "type": payload.type,
+            "event": payload.event,
             "customer_name": payload.customerName,
             "service": payload.service,
             "preview": payload.preview

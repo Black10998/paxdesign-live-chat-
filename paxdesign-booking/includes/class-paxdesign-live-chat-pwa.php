@@ -24,6 +24,7 @@ class PAXdesign_Live_Chat_PWA {
         add_action('paxdesign_live_agent_requested', array(__CLASS__, 'on_live_agent_requested'), 10, 4);
         add_action('paxdesign_new_chat_session', array(__CLASS__, 'on_new_chat_session'), 10, 3);
         add_action('paxdesign_session_sync', array(__CLASS__, 'on_session_sync'), 10, 2);
+        add_action('paxdesign_chat_live_missed', array(__CLASS__, 'on_missed_chat'), 10, 4);
     }
 
     public static function register_rewrites() {
@@ -355,6 +356,9 @@ class PAXdesign_Live_Chat_PWA {
             'badge' => $badge,
             'tag'   => $tag,
             'icon'  => self::get_icon_url(192),
+            'type'  => isset($options['type']) ? (string) $options['type'] : 'message',
+            'event' => isset($options['event']) ? (string) $options['event'] : '',
+            'session_id' => $session,
         );
 
         foreach (self::get_all_admin_subscriptions() as $sub) {
@@ -381,9 +385,11 @@ class PAXdesign_Live_Chat_PWA {
 
     public static function on_live_agent_requested($session_id, $service, $preview, $admin_url) {
         self::send_push_to_admins(
-            '🚨 Live-Agent-Anfrage',
+            '🚨 Kunde wartet',
             ($service !== '' ? $service . ' — ' : '') . ($preview !== '' ? $preview : 'Kunde wartet auf Support'),
             array(
+                'type'       => 'live_request',
+                'event'      => 'customer_waiting',
                 'session_id' => $session_id,
                 'tag'        => 'live-request-' . $session_id,
                 'badge'      => 1,
@@ -400,9 +406,11 @@ class PAXdesign_Live_Chat_PWA {
         $service = (string) $service;
         $preview = (string) $preview;
         self::send_push_to_admins(
-            'Neuer Live-Chat',
+            'Neuer Chat gestartet',
             ($service !== '' ? $service . ' — ' : '') . ($preview !== '' ? $preview : 'Neues Kundengespräch'),
             array(
+                'type'       => 'new_chat',
+                'event'      => 'new_chat_started',
                 'session_id' => (string) $session_id,
                 'tag'        => 'new-chat-' . $session_id,
                 'badge'      => 1,
@@ -419,19 +427,26 @@ class PAXdesign_Live_Chat_PWA {
             return;
         }
         $handler = isset($meta['handler']) ? (string) $meta['handler'] : 'ai';
-        if ($handler === 'live_request') {
-            return;
-        }
         if (!empty($meta['is_new'])) {
             return;
         }
 
         $service = isset($meta['service']) ? (string) $meta['service'] : '';
         $preview = isset($meta['preview']) ? (string) $meta['preview'] : '';
+        $last_role = isset($meta['last_role']) ? (string) $meta['last_role'] : '';
+        $event = $handler === 'live_request' ? 'customer_waiting' : 'assigned_chat_updated';
+        if (preg_match('/lead|kontakt|contact/i', $preview . ' ' . $service)) {
+            $event = 'new_lead_contact';
+        }
+        if ($handler === 'ai' && $last_role === 'user') {
+            $event = 'assigned_chat_updated';
+        }
         self::send_push_to_admins(
-            'Chat aktualisiert',
+            $event === 'customer_waiting' ? 'Kunde wartet' : ($event === 'new_lead_contact' ? 'Neuer Lead/Kontakt' : 'Zugewiesener Chat aktualisiert'),
             ($service !== '' ? $service . ' — ' : '') . ($preview !== '' ? $preview : 'Neue Nachricht'),
             array(
+                'type'       => $handler === 'live_request' ? 'live_request' : 'session_sync',
+                'event'      => $event,
                 'session_id' => (string) $session_id,
                 'tag'        => 'sync-' . $session_id,
                 'badge'      => 1,
@@ -444,6 +459,8 @@ class PAXdesign_Live_Chat_PWA {
             'Neue Kundennachricht',
             wp_html_excerpt($content, 120, '…'),
             array(
+                'type'       => 'message',
+                'event'      => 'new_customer_message',
                 'session_id' => $session_id,
                 'tag'        => 'msg-' . $session_id,
                 'badge'      => 1,
@@ -452,6 +469,24 @@ class PAXdesign_Live_Chat_PWA {
         if (class_exists('PAXdesign_APNS')) {
             PAXdesign_APNS::notify_new_customer_message($session_id, $content);
         }
+    }
+
+    public static function on_missed_chat($session_id, $service, $preview, $customer = '') {
+        $body = ($customer !== '' ? $customer . ' — ' : '') . ($preview !== '' ? $preview : 'Live-Anfrage wurde nicht beantwortet');
+        if ((string) $service !== '') {
+            $body .= ' · ' . (string) $service;
+        }
+        self::send_push_to_admins(
+            'Verpasster Chat',
+            $body,
+            array(
+                'type'       => 'session_sync',
+                'event'      => 'missed_chat',
+                'session_id' => (string) $session_id,
+                'tag'        => 'missed-' . (string) $session_id,
+                'badge'      => 1,
+            )
+        );
     }
 
     public static function count_pending_items() {

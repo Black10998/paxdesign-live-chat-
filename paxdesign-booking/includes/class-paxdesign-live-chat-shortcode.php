@@ -179,6 +179,7 @@ class PAXdesign_Live_Chat_Shortcode {
             'liveAgent'    => PAXdesign_Chat_Live::get_agent_public_config(),
             'adminUrl'     => PAXdesign_Live_Chat_PWA::get_admin_panel_url(),
             'quickReplies' => PAXdesign_Chat_Live::get_admin_quick_replies(),
+            'tourCompleted' => (bool) get_user_meta(get_current_user_id(), 'pax_live_dashboard_tour_completed', true),
         ));
     }
 

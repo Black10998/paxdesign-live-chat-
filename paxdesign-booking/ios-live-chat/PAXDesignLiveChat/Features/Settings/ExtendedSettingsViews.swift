@@ -102,8 +102,26 @@ struct DataStorageSettingsView: View {
 }
 
 struct SupportSettingsView: View {
+    @EnvironmentObject private var settings: AppSettingsStore
+    @State private var tourResetMessage: String?
+
     var body: some View {
         List {
+            Section("Geführte Tour") {
+                Button("Tour neu starten") {
+                    settings.dashboardTourCompleted = false
+                    tourResetMessage = "Die Tour wird auf dem Dashboard erneut angezeigt."
+                    PAXHaptics.success()
+                }
+                if let tourResetMessage {
+                    Text(tourResetMessage)
+                        .font(.caption)
+                        .foregroundStyle(PAXTheme.textSecondary)
+                }
+            } footer: {
+                Text("Zeigt die Schritt-für-Schritt-Einführung erneut auf der Startseite.")
+            }
+
             Section {
                 NavigationLink {
                     HelpView()
