@@ -50,7 +50,6 @@ PAXdesign_Chat_Live::get_instance();
 PAXdesign_Live_Chat_Shortcode::init();
 PAXdesign_Live_Chat_PWA::init();
 PAXdesign_APNS::init();
-PAXdesign_Device_Sessions::init();
 PAXdesign_Live_Chat_Permissions::init();
 PAXdesign_Live_Chat_Mobile_API::init();
 

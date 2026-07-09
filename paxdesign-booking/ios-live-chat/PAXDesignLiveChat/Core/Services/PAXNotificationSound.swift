@@ -11,7 +11,6 @@ final class PAXNotificationSound {
         case liveRequest = "pax-live-request"
         case aiAlert = "pax-ai-alert"
         case send = "pax-send"
-        case incoming = "pax-incoming"
 
         var fileExtension: String { "wav" }
     }
@@ -42,7 +41,7 @@ final class PAXNotificationSound {
     func play(_ tone: Tone, respectSettings: Bool = true) {
         if respectSettings {
             switch tone {
-            case .message, .incoming:
+            case .message:
                 guard AppSettingsStore.shared.messageSoundEnabled else { return }
             case .liveRequest:
                 guard AppSettingsStore.shared.incomingCallSoundEnabled else { return }
@@ -100,7 +99,7 @@ final class PAXNotificationSound {
         switch tone {
         case .send: id = 1004
         case .liveRequest: id = 1005
-        case .message, .incoming: id = 1003
+        case .message: id = 1003
         case .aiAlert: id = 1013
         }
         AudioServicesPlaySystemSound(id)

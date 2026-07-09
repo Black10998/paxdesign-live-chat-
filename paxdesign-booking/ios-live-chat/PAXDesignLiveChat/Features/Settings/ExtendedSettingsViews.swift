@@ -52,7 +52,7 @@ struct DataStorageSettingsView: View {
 
             if auth.canManageUsers {
                 Section("Onboarding") {
-                    Button("Einführung für alle zurücksetzen", role: .destructive) {
+                    Button("Einführung zurücksetzen", role: .destructive) {
                         showOnboardingResetConfirm = true
                     }
                     if let onboardingResetMessage {

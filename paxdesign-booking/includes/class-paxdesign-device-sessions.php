@@ -9,12 +9,6 @@ if (!defined('ABSPATH')) {
 
 class PAXdesign_Device_Sessions {
 
-    const USER_META_KEY = 'pax_live_device_sessions';
-
-    public static function init() {
-        // Loaded via plugin bootstrap.
-    }
-
     /**
      * @param array<string, mixed> $record
      * @param array<string, mixed> $meta

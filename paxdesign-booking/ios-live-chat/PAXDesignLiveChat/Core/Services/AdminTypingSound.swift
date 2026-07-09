@@ -7,7 +7,6 @@ final class AdminTypingSound {
 
     private static let soundURL = URL(string: "https://paxdesign.at/wp-content/uploads/2026/06/freesound_community-writing-a-text-message-41141.mp3")!
     private static let idleNanoseconds: UInt64 = 1_800_000_000
-    private static let volume: Float = 0.32
 
     private var player: AVAudioPlayer?
     private var idleTask: Task<Void, Never>?
