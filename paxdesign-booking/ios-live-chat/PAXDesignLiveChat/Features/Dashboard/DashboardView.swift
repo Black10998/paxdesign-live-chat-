@@ -1,5 +1,7 @@
 import SwiftUI
+#if !SIDELOAD
 import Charts
+#endif
 
 struct DashboardView: View {
     @EnvironmentObject private var auth: AuthStore
@@ -130,7 +132,31 @@ struct DashboardView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(L10n.DashboardChartTitle)
                 .font(.headline)
-
+            #if SIDELOAD
+            // Keep sideload startup conservative by avoiding extra framework links.
+            VStack(spacing: 8) {
+                ForEach(chartData) { item in
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(item.label)
+                                .font(.caption)
+                                .foregroundStyle(PAXTheme.textSecondary)
+                            Spacer()
+                            Text("\(item.value)")
+                                .font(.caption.weight(.semibold))
+                        }
+                        GeometryReader { geo in
+                            let maxValue = max(chartData.map(\.value).max() ?? 1, 1)
+                            let ratio = CGFloat(item.value) / CGFloat(maxValue)
+                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                .fill(PAXTheme.accent.gradient)
+                                .frame(width: max(6, geo.size.width * ratio), height: 10)
+                        }
+                        .frame(height: 10)
+                    }
+                }
+            }
+            #else
             Chart(chartData) { item in
                 BarMark(
                     x: .value("Day", item.label),
@@ -143,6 +169,7 @@ struct DashboardView: View {
             .chartYAxis {
                 AxisMarks(position: .leading)
             }
+            #endif
         }
         .paxNativeCard()
     }

@@ -1,5 +1,7 @@
-import PhotosUI
 import SwiftUI
+#if !SIDELOAD
+import PhotosUI
+#endif
 
 struct GeneralSettingsView: View {
     @EnvironmentObject private var auth: AuthStore
@@ -9,7 +11,11 @@ struct GeneralSettingsView: View {
 
     @State private var appPasswordDraft = ""
     @State private var statusMessage: String?
+    #if SIDELOAD
+    @State private var showPhotoLibrary = false
+    #else
     @State private var photoItem: PhotosPickerItem?
+    #endif
 
     private var canManageSettings: Bool { auth.canManageSettings }
 
@@ -28,6 +34,13 @@ struct GeneralSettingsView: View {
                 }
                 .padding(.vertical, 4)
 
+                #if SIDELOAD
+                Button {
+                    showPhotoLibrary = true
+                } label: {
+                    Label(L10n.SettingsChangePhoto, systemImage: "photo.circle")
+                }
+                #else
                 PhotosPicker(selection: $photoItem, matching: .images) {
                     Label(L10n.SettingsChangePhoto, systemImage: "photo.circle")
                 }
@@ -39,6 +52,7 @@ struct GeneralSettingsView: View {
                         }
                     }
                 }
+                #endif
 
                 if settings.profileImageData != nil {
                     Button(L10n.SettingsResetPhoto, role: .destructive) {
@@ -89,6 +103,14 @@ struct GeneralSettingsView: View {
         .background(PAXBackground())
         .navigationTitle(L10n.SettingsSectionGeneral)
         .navigationBarTitleDisplayMode(.inline)
+        #if SIDELOAD
+        .sheet(isPresented: $showPhotoLibrary) {
+            LibraryImagePicker { image in
+                settings.profileImageData = image.jpegData(compressionQuality: 0.88)
+                PAXHaptics.light()
+            }
+        }
+        #endif
         .onAppear {
             appPasswordDraft = auth.appPassword
         }

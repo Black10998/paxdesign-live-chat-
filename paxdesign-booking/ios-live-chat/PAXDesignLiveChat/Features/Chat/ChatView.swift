@@ -1,5 +1,7 @@
-import PhotosUI
 import SwiftUI
+#if !SIDELOAD
+import PhotosUI
+#endif
 
 struct ChatView: View {
     @EnvironmentObject private var auth: AuthStore
@@ -9,7 +11,11 @@ struct ChatView: View {
     @StateObject private var settings = AppSettingsStore.shared
 
     @State private var imageViewer: ImageViewerItem?
+    #if SIDELOAD
+    @State private var showPhotoLibrary = false
+    #else
     @State private var photoItem: PhotosPickerItem?
+    #endif
     @State private var showCustomerOverview = true
     @State private var pendingImage: UIImage?
     @State private var showCamera = false
@@ -126,9 +132,18 @@ struct ChatView: View {
                 showImagePreview = true
             }
         }
+        #if SIDELOAD
+        .sheet(isPresented: $showPhotoLibrary) {
+            LibraryImagePicker { image in
+                pendingImage = image
+                showImagePreview = true
+            }
+        }
+        #else
         .onChange(of: photoItem) { item in
             Task { await handlePhotoSelection(item) }
         }
+        #endif
     }
 
     private func quotedMessage(for message: LiveMessage) -> LiveMessage? {
@@ -328,9 +343,17 @@ struct ChatView: View {
         HStack(alignment: .bottom, spacing: 8) {
             if thread.handler == "admin", canSendImages {
                 Menu {
+                    #if SIDELOAD
+                    Button {
+                        showPhotoLibrary = true
+                    } label: {
+                        Label("Fotomediathek", systemImage: "photo.on.rectangle")
+                    }
+                    #else
                     PhotosPicker(selection: $photoItem, matching: .images) {
                         Label("Fotomediathek", systemImage: "photo.on.rectangle")
                     }
+                    #endif
                     Button {
                         showCamera = true
                     } label: {
@@ -382,6 +405,7 @@ struct ChatView: View {
             && !thread.isSending
     }
 
+    #if !SIDELOAD
     private func handlePhotoSelection(_ item: PhotosPickerItem?) async {
         guard let item,
               let raw = try? await item.loadTransferable(type: Data.self),
@@ -392,6 +416,7 @@ struct ChatView: View {
             photoItem = nil
         }
     }
+    #endif
 
     private func sendPendingImage(_ image: UIImage) async {
         guard let prepared = ImageUploadPreprocessor.prepareForUpload(image) else {
