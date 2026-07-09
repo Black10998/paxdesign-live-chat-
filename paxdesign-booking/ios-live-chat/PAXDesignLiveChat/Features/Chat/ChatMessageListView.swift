@@ -41,7 +41,7 @@ struct ChatMessageListView: View {
 
     private static func displayRows(for messages: [LiveMessage]) -> [MessageDisplayRow] {
         let messageLookup = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
-        messages.enumerated().map { index, message in
+        return messages.enumerated().map { index, message in
             MessageDisplayRow(
                 id: message.id,
                 message: message,
