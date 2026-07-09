@@ -784,6 +784,25 @@
   font-weight: 600;
 }
 
+#wpbody-content .wrap.pax-settings .ps-test-result.is-loading {
+  color: var(--ps-text-muted);
+  position: relative;
+  padding-left: 16px;
+}
+
+#wpbody-content .wrap.pax-settings .ps-test-result.is-loading::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: calc(50% - 5px);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(100, 116, 139, 0.35);
+  border-top-color: rgba(100, 116, 139, 0.9);
+  animation: ps-glass-spin 0.72s linear infinite;
+}
+
 #wpbody-content .wrap.pax-settings .ps-test-result.ok    { color: var(--ps-success); }
 #wpbody-content .wrap.pax-settings .ps-test-result.error { color: var(--ps-danger); }
 
@@ -1002,5 +1021,112 @@
 
   #wpbody-content .wrap.pax-settings .ps-sidebar {
     flex-direction: column;
+  }
+}
+
+/* ── Glass modernization pass ───────────────────────────────────── */
+#wpbody-content .wrap.pax-settings {
+  --ps-glass-surface: rgba(255, 255, 255, 0.78);
+  --ps-glass-surface-strong: rgba(255, 255, 255, 0.92);
+  --ps-glass-border: rgba(148, 163, 184, 0.28);
+  --ps-glass-shadow: 0 24px 40px -30px rgba(15, 23, 42, 0.44);
+  background:
+    radial-gradient(circle at 6% -12%, rgba(34, 113, 177, 0.15), transparent 42%),
+    radial-gradient(circle at 92% 0%, rgba(16, 185, 129, 0.12), transparent 35%);
+  border-radius: 14px;
+}
+
+#wpbody-content .wrap.pax-settings .ps-card,
+#wpbody-content .wrap.pax-settings .ps-status-tile,
+#wpbody-content .wrap.pax-settings .ps-member-row,
+#wpbody-content .wrap.pax-settings .ps-test-bar,
+#wpbody-content .wrap.pax-settings input[type="text"],
+#wpbody-content .wrap.pax-settings input[type="email"],
+#wpbody-content .wrap.pax-settings input[type="password"],
+#wpbody-content .wrap.pax-settings input[type="number"],
+#wpbody-content .wrap.pax-settings select,
+#wpbody-content .wrap.pax-settings textarea {
+  background: var(--ps-glass-surface);
+  border-color: var(--ps-glass-border);
+  box-shadow: var(--ps-glass-shadow);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+#wpbody-content .wrap.pax-settings .ps-card-head,
+#wpbody-content .wrap.pax-settings .ps-status-tile {
+  background: linear-gradient(175deg, var(--ps-glass-surface-strong), rgba(255, 255, 255, 0.62));
+}
+
+#wpbody-content .wrap.pax-settings .ps-card,
+#wpbody-content .wrap.pax-settings .ps-status-tile {
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+@media (hover: hover) {
+  #wpbody-content .wrap.pax-settings .ps-card:hover,
+  #wpbody-content .wrap.pax-settings .ps-status-tile:hover {
+    transform: translateY(-2px);
+    border-color: rgba(148, 163, 184, 0.5);
+    box-shadow: 0 30px 44px -30px rgba(15, 23, 42, 0.46);
+  }
+}
+
+#wpbody-content .wrap.pax-settings .button,
+#wpbody-content .wrap.pax-settings .button-primary {
+  transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+}
+
+@media (hover: hover) {
+  #wpbody-content .wrap.pax-settings .button:hover,
+  #wpbody-content .wrap.pax-settings .button-primary:hover {
+    transform: translateY(-1px);
+  }
+}
+
+#wpbody-content .wrap.pax-settings .button.is-loading,
+#wpbody-content .wrap.pax-settings .button-primary.is-loading {
+  pointer-events: none;
+  position: relative;
+}
+
+#wpbody-content .wrap.pax-settings .button.is-loading::after,
+#wpbody-content .wrap.pax-settings .button-primary.is-loading::after {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top-color: #fff;
+  position: absolute;
+  right: 10px;
+  top: calc(50% - 6px);
+  animation: ps-glass-spin 0.72s linear infinite;
+}
+
+@keyframes ps-glass-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-color-scheme: dark) {
+  #wpbody-content .wrap.pax-settings {
+    --ps-glass-surface: rgba(18, 24, 35, 0.72);
+    --ps-glass-surface-strong: rgba(20, 27, 38, 0.88);
+    --ps-glass-border: rgba(148, 163, 184, 0.2);
+    --ps-glass-shadow: 0 30px 46px -34px rgba(2, 6, 23, 0.85);
+    --ps-text: #e2e8f0;
+    --ps-text-muted: #94a3b8;
+    --ps-text-subtle: #64748b;
+    --ps-surface: #0f172a;
+    --ps-neutral-bg: #111827;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #wpbody-content .wrap.pax-settings .ps-card,
+  #wpbody-content .wrap.pax-settings .ps-status-tile,
+  #wpbody-content .wrap.pax-settings .button,
+  #wpbody-content .wrap.pax-settings .button-primary {
+    transition: none !important;
   }
 }

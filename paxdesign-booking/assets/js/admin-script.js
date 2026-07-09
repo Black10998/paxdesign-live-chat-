@@ -79,6 +79,12 @@
                 }, 3000);
             }
         }
+
+        function setBusyState($element, busy) {
+            if (!$element || !$element.length) return;
+            $element.toggleClass('is-loading', !!busy);
+            $element.attr('aria-busy', busy ? 'true' : 'false');
+        }
         
         // Collect settings data
         function collectSettings() {
@@ -104,8 +110,12 @@
             e.preventDefault();
             
             var settings = collectSettings();
+            var $form = $('#paxdesignTeamManagementForm');
+            var $submit = $form.find('button[type="submit"]').first();
             
             showSaveStatus('saving', 'Speichern…');
+            setBusyState($form, true);
+            setBusyState($submit, true);
             
             $.ajax({
                 url: paxdesignAdmin.ajaxUrl,
@@ -130,6 +140,10 @@
                 },
                 error: function() {
                     showSaveStatus('error', '✗ Verbindungsfehler');
+                },
+                complete: function() {
+                    setBusyState($submit, false);
+                    setBusyState($form, false);
                 }
             });
         });
@@ -208,6 +222,8 @@
             var $res = $('#paxdesignOpenAITestResult');
             $btn.prop('disabled', true).text('Teste\u2026');
             $res.removeClass('ok error').text('');
+            setBusyState($btn, true);
+            setBusyState($res, true);
             $.post(paxdesignAdmin.ajaxUrl, {
                 action: 'paxdesign_test_openai',
                 nonce:  paxdesignAdmin.nonce
@@ -224,6 +240,8 @@
             }).fail(function() {
                 $res.addClass('error').text('\u2717 Verbindungsfehler');
             }).always(function() {
+                setBusyState($res, false);
+                setBusyState($btn, false);
                 $btn.prop('disabled', false).text('Verbindung testen');
             });
         });
@@ -235,6 +253,8 @@
             var to   = $('#paxdesignTestEmailTo').val() || paxdesignAdmin.notifEmail;
             $btn.prop('disabled', true).text('Sende\u2026');
             $res.removeClass('ok error').text('');
+            setBusyState($btn, true);
+            setBusyState($res, true);
             $.post(paxdesignAdmin.ajaxUrl, {
                 action: 'paxdesign_send_test_email',
                 nonce:  paxdesignAdmin.nonce,
@@ -245,6 +265,8 @@
             }).fail(function() {
                 $res.addClass('error').text('\u2717 Verbindungsfehler');
             }).always(function() {
+                setBusyState($res, false);
+                setBusyState($btn, false);
                 $btn.prop('disabled', false).text('Test senden');
             });
         });

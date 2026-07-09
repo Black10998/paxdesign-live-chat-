@@ -13,6 +13,10 @@ struct PlatformModuleCard: View {
                 .font(.body.weight(.medium))
                 .foregroundStyle(tint)
                 .frame(width: 28, height: 28)
+                .background(
+                    Circle()
+                        .fill(tint.opacity(0.16))
+                )
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
@@ -42,6 +46,9 @@ struct PlatformModuleCard: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 4)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 9)
+        .paxGlassCardStyle(cornerRadius: 16, fillOpacity: 0.8, borderOpacity: 0.44, shadowOpacity: 0.16)
         .contentShape(Rectangle())
     }
 }
@@ -70,7 +77,9 @@ struct PlatformHeroHeader: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 4)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.82, borderOpacity: 0.46, shadowOpacity: 0.18)
     }
 }
 

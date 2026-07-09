@@ -29,10 +29,7 @@ struct PAXNativeSearchField: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(PAXTheme.surface)
-        )
+        .paxGlassCardStyle(cornerRadius: 12, fillOpacity: 0.78, borderOpacity: 0.44, shadowOpacity: 0.1)
         .animation(PAXTheme.quickSpring, value: isFocused)
         .animation(PAXTheme.quickSpring, value: text.isEmpty)
     }

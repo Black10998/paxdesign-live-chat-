@@ -2933,3 +2933,45 @@ body.pax-live-agent-profile-open {
   width: 14px;
   height: 14px;
 }
+
+/* Interaction polish parity for web dashboard */
+.pax-live-dashboard__item,
+.pax-live-dashboard__msg-bubble,
+.pax-live-dashboard__search,
+.pax-live-dashboard__composer textarea,
+.pax-live-dashboard__activity-actions__link,
+.pax-live-btn {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}
+
+@media (hover: hover) {
+  .pax-live-dashboard__item:hover {
+    transform: translateY(-1px) scale(1.004);
+  }
+
+  .pax-live-dashboard__activity-actions__link:hover .pax-icon,
+  .pax-live-dashboard__activity-actions__link:hover svg,
+  .pax-live-btn:hover .pax-icon,
+  .pax-live-btn:hover svg {
+    transform: translateY(-0.5px) scale(1.06);
+  }
+}
+
+.pax-live-dashboard__item.is-selected {
+  box-shadow: 0 22px 34px -26px rgba(15, 23, 42, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pax-live-dashboard *,
+  .pax-live-dashboard *::before,
+  .pax-live-dashboard *::after {
+    animation-duration: 1.2s !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}

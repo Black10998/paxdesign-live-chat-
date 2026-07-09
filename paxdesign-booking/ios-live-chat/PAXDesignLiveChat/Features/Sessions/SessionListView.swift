@@ -145,11 +145,16 @@ struct SessionListView: View {
 
             if displayedSessions.isEmpty {
                 Section {
-                    emptyState
-                        .listRowInsets(EdgeInsets(top: 32, leading: 16, bottom: 32, trailing: 16))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                    if coordinator.isLoading && searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        loadingState
+                            .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
+                    } else {
+                        emptyState
+                            .listRowInsets(EdgeInsets(top: 32, leading: 16, bottom: 32, trailing: 16))
+                    }
                 }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             } else {
                 Section {
                     ForEach(displayedSessions) { session in
@@ -171,10 +176,9 @@ struct SessionListView: View {
                         }
                         .buttonStyle(.plain)
                         .opacity(session.isClosed ? 0.55 : 1)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                        .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
                         .listRowBackground(Color.clear)
-                        .listRowSeparator(.visible)
-                        .listRowSeparatorTint(PAXTheme.border.opacity(0.5))
+                        .listRowSeparator(.hidden)
                         .contextMenu {
                             Button {
                                 onOpenSession(session.sessionId)
@@ -301,8 +305,11 @@ struct SessionListView: View {
                             .font(.caption.weight(.semibold))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 7)
-                            .background(Capsule().fill(filter == item ? PAXBrand.accent.opacity(0.18) : PAXTheme.surface))
-                            .overlay(Capsule().stroke(filter == item ? PAXBrand.accent.opacity(0.5) : PAXTheme.border, lineWidth: 1))
+                            .background(
+                                Capsule()
+                                    .fill(filter == item ? PAXBrand.accent.opacity(0.18) : .ultraThinMaterial)
+                            )
+                            .overlay(Capsule().stroke(filter == item ? PAXBrand.accent.opacity(0.5) : PAXTheme.border.opacity(0.55), lineWidth: 1))
                             .foregroundStyle(filter == item ? PAXTheme.textPrimary : PAXTheme.textSecondary)
                     }
                     .buttonStyle(.plain)
@@ -375,6 +382,21 @@ struct SessionListView: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 22)
+        .paxGlassCardStyle(cornerRadius: 20, fillOpacity: 0.78, borderOpacity: 0.5, shadowOpacity: 0.18)
+    }
+
+    private var loadingState: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            PAXTimelineLoaderCard(status: "Unterhaltungen werden geladen")
+            ForEach(0..<5, id: \.self) { _ in
+                PAXSkeletonListRow()
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .paxGlassCardStyle(cornerRadius: 16, fillOpacity: 0.8, borderOpacity: 0.42, shadowOpacity: 0.12)
+            }
+        }
     }
 }
 
@@ -441,6 +463,21 @@ private struct SessionRow: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, rowPadding)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 3)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(PAXTheme.surface.opacity(isUnread ? 0.82 : 0.74))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(isUnread ? PAXTheme.accent.opacity(0.42) : PAXTheme.border.opacity(0.42), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(isUnread ? 0.22 : 0.14), radius: 14, x: 0, y: 8)
+        )
         .contentShape(Rectangle())
     }
 

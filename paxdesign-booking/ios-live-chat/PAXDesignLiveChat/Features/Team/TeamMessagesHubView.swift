@@ -57,11 +57,16 @@ struct TeamMessagesHubView: View {
 
             if displayedSessions.isEmpty {
                 Section {
-                    teamEmptyState
-                        .listRowInsets(EdgeInsets(top: 24, leading: 0, bottom: 24, trailing: 0))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                    if teamCoordinator.isLoading && searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        teamLoadingState
+                            .listRowInsets(EdgeInsets(top: 14, leading: 0, bottom: 14, trailing: 0))
+                    } else {
+                        teamEmptyState
+                            .listRowInsets(EdgeInsets(top: 24, leading: 0, bottom: 24, trailing: 0))
+                    }
                 }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             } else {
                 Section(L10n.TeamHubConversations) {
                     ForEach(displayedSessions) { session in
@@ -111,6 +116,18 @@ struct TeamMessagesHubView: View {
         .onChange(of: teamCoordinator.teamSessions) { _ in scheduleRecompute(immediate: true) }
         .onChange(of: searchText) { _ in scheduleRecompute(immediate: false) }
         .onChange(of: settings.readSessionIds) { _ in scheduleRecompute(immediate: true) }
+    }
+
+    private var teamLoadingState: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            PAXTimelineLoaderCard(status: "Team-Unterhaltungen werden geladen")
+            ForEach(0..<4, id: \.self) { _ in
+                PAXSkeletonListRow()
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .paxGlassCardStyle(cornerRadius: 16, fillOpacity: 0.8, borderOpacity: 0.42, shadowOpacity: 0.1)
+            }
+        }
     }
 
     private func teamConversationRow(_ session: LiveSession) -> some View {
@@ -171,14 +188,28 @@ struct TeamMessagesHubView: View {
                     }
                 }
             }
-            .padding(.vertical, 4)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(PAXTheme.surface.opacity(isUnread ? 0.82 : 0.74))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(isUnread ? PAXTheme.accent.opacity(0.42) : PAXTheme.border.opacity(0.42), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(isUnread ? 0.2 : 0.12), radius: 12, x: 0, y: 8)
+            )
         }
         .buttonStyle(.plain)
-        .listRowBackground(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(PAXBrand.accent.opacity(isUnread ? 0.08 : 0.04))
-                .padding(.vertical, 2)
-        )
+        .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
         .contextMenu {
             Button {
                 settings.readSessionIds.insert(session.sessionId)

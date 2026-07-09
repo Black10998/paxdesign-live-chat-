@@ -6,6 +6,7 @@ struct AdaptiveShellView: View {
     @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
     @EnvironmentObject private var appLock: AppLockService
     @EnvironmentObject private var settings: AppSettingsStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var chatsPath = NavigationPath()
     @State private var teamPath = NavigationPath()
     @State private var livePath = NavigationPath()
@@ -51,6 +52,61 @@ struct AdaptiveShellView: View {
         return (dashboard, chats, team, live, platform)
     }
 
+    private var iPhoneTabItems: [ShellTabItem] {
+        let tags = tabTags
+        var items: [ShellTabItem] = [
+            .init(
+                tag: tags.dashboard,
+                title: L10n.TabDashboard,
+                symbol: "house",
+                selectedSymbol: "house.fill"
+            )
+        ]
+
+        if canViewChats, let chatsTag = tags.chats {
+            items.append(
+                .init(
+                    tag: chatsTag,
+                    title: L10n.TabChats,
+                    symbol: "bubble.left.and.bubble.right",
+                    selectedSymbol: "bubble.left.and.bubble.right.fill",
+                    badgeCount: unreadChatCount
+                )
+            )
+        }
+
+        if canViewChats, let teamTag = tags.team {
+            items.append(
+                .init(
+                    tag: teamTag,
+                    title: L10n.TabTeam,
+                    symbol: "person.3",
+                    selectedSymbol: "person.3.fill",
+                    badgeCount: unreadTeamCount
+                )
+            )
+        }
+
+        items.append(
+            .init(
+                tag: tags.live,
+                title: L10n.TabLive,
+                symbol: "bell.and.waves.left.and.right",
+                selectedSymbol: "bell.and.waves.left.and.right.fill",
+                badgeCount: coordinator.liveCount
+            )
+        )
+        items.append(
+            .init(
+                tag: tags.platform,
+                title: L10n.TabPlatform,
+                symbol: "square.grid.2x2",
+                selectedSymbol: "square.grid.2x2.fill"
+            )
+        )
+        return items
+    }
+
     var body: some View {
         Group {
             if isPad {
@@ -67,6 +123,15 @@ struct AdaptiveShellView: View {
                     coordinator.dismissIncomingBanner()
                 }
                 .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            if !isPad {
+                PAXBottomTabBar(
+                    items: iPhoneTabItems,
+                    selection: $selectedTab,
+                    reduceMotion: reduceMotion
+                )
             }
         }
         .tint(PAXTheme.accent)
@@ -174,6 +239,7 @@ struct AdaptiveShellView: View {
             .tabItem { Label(L10n.TabPlatform, systemImage: "square.grid.2x2.fill") }
             .tag(tags.platform)
         }
+        .toolbar(.hidden, for: .tabBar)
     }
 
     @ViewBuilder
@@ -342,5 +408,138 @@ private struct ShellTabBadge: ViewModifier {
     let count: Int
     func body(content: Content) -> some View {
         if count > 0 { content.badge(count) } else { content }
+    }
+}
+
+private struct ShellTabItem: Identifiable {
+    let tag: Int
+    let title: String
+    let symbol: String
+    let selectedSymbol: String
+    var badgeCount: Int = 0
+
+    var id: Int { tag }
+}
+
+private struct PAXBottomTabBar: View {
+    let items: [ShellTabItem]
+    @Binding var selection: Int
+    let reduceMotion: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(items) { item in
+                button(for: item)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.top, 8)
+        .padding(.bottom, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(PAXTheme.border.opacity(0.46), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.22), radius: 18, x: 0, y: 10)
+        )
+        .padding(.horizontal, 10)
+        .padding(.top, 2)
+        .padding(.bottom, 2)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func button(for item: ShellTabItem) -> some View {
+        let selected = selection == item.tag
+        return Button {
+            guard selection != item.tag else { return }
+            if reduceMotion {
+                selection = item.tag
+            } else {
+                withAnimation(.spring(response: 0.28, dampingFraction: 0.88)) {
+                    selection = item.tag
+                }
+            }
+            PAXHaptics.light()
+        } label: {
+            VStack(spacing: 3) {
+                ZStack(alignment: .topTrailing) {
+                    PAXAnimatedTabIcon(
+                        symbol: item.symbol,
+                        selectedSymbol: item.selectedSymbol,
+                        isSelected: selected,
+                        reduceMotion: reduceMotion
+                    )
+
+                    if item.badgeCount > 0 {
+                        Text("\(min(item.badgeCount, 99))")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 4.5)
+                            .padding(.vertical, 1.5)
+                            .background(Capsule().fill(PAXTheme.danger))
+                            .offset(x: 10, y: -6)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                }
+
+                Text(item.title)
+                    .font(.system(size: 11, weight: selected ? .semibold : .regular))
+                    .foregroundStyle(selected ? PAXTheme.textPrimary : PAXTheme.textSecondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 8)
+            .background(
+                Capsule(style: .continuous)
+                    .fill(selected ? PAXTheme.accent.opacity(0.18) : .clear)
+            )
+            .overlay(
+                Capsule(style: .continuous)
+                    .stroke(selected ? PAXTheme.accent.opacity(0.42) : .clear, lineWidth: 1)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(item.title)
+        .accessibilityValue(selected ? "Ausgewählt" : "")
+    }
+}
+
+private struct PAXAnimatedTabIcon: View {
+    let symbol: String
+    let selectedSymbol: String
+    let isSelected: Bool
+    let reduceMotion: Bool
+
+    @State private var pulseScale: CGFloat = 1
+
+    var body: some View {
+        Image(systemName: isSelected ? selectedSymbol : symbol)
+            .font(.system(size: 18, weight: .semibold))
+            .symbolRenderingMode(.hierarchical)
+            .foregroundStyle(isSelected ? PAXTheme.accent : PAXTheme.textSecondary)
+            .scaleEffect(pulseScale * (isSelected ? 1.04 : 1))
+            .rotationEffect(.degrees(isSelected && !reduceMotion ? -2 : 0))
+            .animation(.easeOut(duration: 0.16), value: isSelected)
+            .onAppear {
+                pulseScale = 1
+            }
+            .onChange(of: isSelected) { selected in
+                guard selected, !reduceMotion else {
+                    pulseScale = 1
+                    return
+                }
+                pulseScale = 0.9
+                withAnimation(.spring(response: 0.24, dampingFraction: 0.5)) {
+                    pulseScale = 1.16
+                }
+                withAnimation(.easeOut(duration: 0.16).delay(0.14)) {
+                    pulseScale = 1
+                }
+            }
     }
 }

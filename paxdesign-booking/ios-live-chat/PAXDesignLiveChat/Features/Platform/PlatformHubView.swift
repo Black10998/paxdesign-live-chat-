@@ -127,14 +127,7 @@ struct PlatformHubView: View {
                     .foregroundStyle(PAXTheme.textTertiary)
             }
             .padding(18)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(PAXTheme.surface.opacity(0.94))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(PAXTheme.border.opacity(0.55), lineWidth: 0.5)
-                    )
-            )
+            .paxGlassCardStyle(cornerRadius: 20, fillOpacity: 0.82, borderOpacity: 0.46, shadowOpacity: 0.22)
         }
         .buttonStyle(.plain)
         .simultaneousGesture(TapGesture().onEnded { PAXHaptics.light() })
@@ -164,10 +157,7 @@ struct PlatformHubView: View {
                     }
                 }
             }
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(PAXTheme.surface.opacity(0.92))
-            )
+            .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.8, borderOpacity: 0.44, shadowOpacity: 0.18)
         }
     }
 
@@ -183,7 +173,11 @@ struct PlatformHubView: View {
         .padding(.vertical, 14)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(PAXTheme.danger.opacity(0.12))
+                .fill(PAXTheme.danger.opacity(0.14))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(PAXTheme.danger.opacity(0.28), lineWidth: 1)
+                )
         )
         .padding(.top, 4)
     }

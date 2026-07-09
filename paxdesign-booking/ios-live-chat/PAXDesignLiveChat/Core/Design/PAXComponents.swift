@@ -11,7 +11,7 @@ struct PAXGlassCard<Content: View>: View {
     var body: some View {
         content
             .padding(16)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .paxGlassCardStyle(cornerRadius: 14, fillOpacity: 0.82, borderOpacity: 0.46, shadowOpacity: 0.18)
     }
 }
 
@@ -41,7 +41,7 @@ struct PAXField: View {
             .font(.body)
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .paxGlassCardStyle(cornerRadius: 12, fillOpacity: 0.76, borderOpacity: 0.4, shadowOpacity: 0.1)
         }
     }
 }
@@ -113,6 +113,7 @@ struct PAXAvatar: View {
 
 private struct PAXSkeletonShimmerModifier: ViewModifier {
     @State private var offsetX: CGFloat = -1.2
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
@@ -138,6 +139,10 @@ private struct PAXSkeletonShimmerModifier: ViewModifier {
             }
             .onAppear {
                 guard offsetX == -1.2 else { return }
+                guard !reduceMotion else {
+                    offsetX = 0
+                    return
+                }
                 withAnimation(.linear(duration: 1.15).repeatForever(autoreverses: false)) {
                     offsetX = 1.2
                 }
@@ -219,6 +224,7 @@ struct PAXSkeletonChatRow: View {
 
 private struct PAXLoaderPlayhead: View {
     @State private var xOffset: CGFloat = -1
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { proxy in
@@ -234,6 +240,10 @@ private struct PAXLoaderPlayhead: View {
                 .offset(x: max(proxy.size.width, 1) * xOffset)
                 .onAppear {
                     guard xOffset == -1 else { return }
+                    guard !reduceMotion else {
+                        xOffset = 0.34
+                        return
+                    }
                     withAnimation(.linear(duration: 1.25).repeatForever(autoreverses: false)) {
                         xOffset = 1.05
                     }
@@ -244,6 +254,7 @@ private struct PAXLoaderPlayhead: View {
 
 private struct PAXLoaderMeterFill: View {
     @State private var xOffset: CGFloat = -1
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { proxy in
@@ -264,6 +275,10 @@ private struct PAXLoaderMeterFill: View {
                 .offset(x: proxy.size.width * xOffset)
                 .onAppear {
                     guard xOffset == -1 else { return }
+                    guard !reduceMotion else {
+                        xOffset = 0
+                        return
+                    }
                     withAnimation(.linear(duration: 1.05).repeatForever(autoreverses: false)) {
                         xOffset = 1.0
                     }

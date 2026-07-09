@@ -34,7 +34,7 @@ extension View {
 
     func paxNativeCard() -> some View {
         padding(12)
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .paxGlassCardStyle(cornerRadius: 14, fillOpacity: 0.82, borderOpacity: 0.46, shadowOpacity: 0.18)
     }
 
     func paxScreenBackground() -> some View {

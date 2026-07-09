@@ -28,7 +28,33 @@ enum PAXTheme {
 
 struct PAXBackground: View {
     var body: some View {
-        Color(.systemGroupedBackground)
+        ZStack {
+            LinearGradient(
+                colors: [
+                    PAXTheme.background,
+                    PAXTheme.background.opacity(0.94),
+                    PAXTheme.surface.opacity(0.86)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            RadialGradient(
+                colors: [PAXTheme.accent.opacity(0.18), .clear],
+                center: .topTrailing,
+                startRadius: 20,
+                endRadius: 360
+            )
+            .blendMode(.plusLighter)
+
+            RadialGradient(
+                colors: [PAXTheme.success.opacity(0.11), .clear],
+                center: .bottomLeading,
+                startRadius: 30,
+                endRadius: 320
+            )
+            .blendMode(.plusLighter)
+        }
             .ignoresSafeArea()
     }
 }
@@ -36,13 +62,58 @@ struct PAXBackground: View {
 struct PAXGlassSurface: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .paxGlassCardStyle(cornerRadius: 14, fillOpacity: 0.82, borderOpacity: 0.45, shadowOpacity: 0.2)
+    }
+}
+
+private struct PAXGlassCardModifier: ViewModifier {
+    let cornerRadius: CGFloat
+    let fillOpacity: Double
+    let borderOpacity: Double
+    let shadowOpacity: Double
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    func body(content: Content) -> some View {
+        let effectiveFill = colorScheme == .dark ? min(fillOpacity + 0.08, 0.98) : fillOpacity
+        let effectiveShadow = colorScheme == .dark ? shadowOpacity * 1.5 : shadowOpacity
+
+        content
+            .background(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(PAXTheme.surface.opacity(effectiveFill))
+                    )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                    .stroke(PAXTheme.border.opacity(borderOpacity), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(effectiveShadow), radius: 16, x: 0, y: 10)
     }
 }
 
 extension View {
     func paxGlassSurface() -> some View {
         modifier(PAXGlassSurface())
+    }
+
+    func paxGlassCardStyle(
+        cornerRadius: CGFloat = 14,
+        fillOpacity: Double = 0.82,
+        borderOpacity: Double = 0.45,
+        shadowOpacity: Double = 0.2
+    ) -> some View {
+        modifier(
+            PAXGlassCardModifier(
+                cornerRadius: cornerRadius,
+                fillOpacity: fillOpacity,
+                borderOpacity: borderOpacity,
+                shadowOpacity: shadowOpacity
+            )
+        )
     }
 }
 

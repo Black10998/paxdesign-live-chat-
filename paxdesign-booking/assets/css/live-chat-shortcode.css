@@ -1702,3 +1702,50 @@ body.pax-live-agent-profile-open {
   line-height: 1.45;
   color: #d1d5db;
 }
+
+/* Unified glass interaction pass */
+.pax-live-console {
+  background:
+    radial-gradient(circle at 4% -8%, rgba(37, 99, 235, 0.22), transparent 35%),
+    radial-gradient(circle at 96% 0%, rgba(16, 185, 129, 0.12), transparent 30%),
+    var(--plc-bg);
+}
+
+.pax-live-console__bar,
+.pax-live-console__list-pane,
+.pax-live-console__chat-pane,
+.pax-live-console__list-head,
+.pax-live-console__thread-head,
+.pax-live-console__composer-wrap {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.pax-live-console__search,
+.pax-live-console__item,
+.pax-live-console__msg-bubble,
+.pax-live-console__action,
+.pax-live-console__icon-btn {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+@media (hover: hover) {
+  .pax-live-console__item:hover,
+  .pax-live-dashboard__item:hover {
+    transform: translateY(-1px) scale(1.004);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pax-live-console *,
+  .pax-live-console *::before,
+  .pax-live-console *::after {
+    transition: none !important;
+    animation-duration: 1.2s !important;
+    scroll-behavior: auto !important;
+  }
+}

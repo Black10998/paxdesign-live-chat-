@@ -298,7 +298,7 @@ struct ChatView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(PAXTheme.surface.opacity(0.88))
+        .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.82, borderOpacity: 0.46, shadowOpacity: 0.16)
     }
 
     private var canReply: Bool { auth.canReplyChats }
@@ -340,11 +340,7 @@ struct ChatView: View {
                 .lineLimit(1...4)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .background(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(PAXTheme.surfaceElevated)
-                        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).stroke(PAXTheme.border, lineWidth: 1))
-                )
+                .paxGlassCardStyle(cornerRadius: 20, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.08)
                 .disabled(thread.handler != "admin" || !canReply)
                 .onChange(of: thread.draft) { _ in
                     thread.handleDraftChange(auth: auth)
@@ -362,7 +358,7 @@ struct ChatView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(.ultraThinMaterial)
+        .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.8, borderOpacity: 0.4, shadowOpacity: 0.14)
     }
 
     private var canSend: Bool {
@@ -403,7 +399,12 @@ struct MessageReactionBadge: View {
             .font(.caption2)
             .foregroundStyle(reaction == "like" ? .pink : .orange)
             .padding(5)
-            .background(Circle().fill(PAXTheme.surfaceElevated))
+            .background(
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .overlay(Circle().fill(PAXTheme.surface.opacity(0.75)))
+                    .overlay(Circle().stroke(PAXTheme.border.opacity(0.42), lineWidth: 1))
+            )
     }
 }
 
@@ -439,7 +440,12 @@ private struct AssistChip: View {
                 .font(.caption2.weight(.medium))
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(Capsule().fill(PAXTheme.surfaceElevated))
+                .background(
+                    Capsule()
+                        .fill(.ultraThinMaterial)
+                        .overlay(Capsule().fill(PAXTheme.surface.opacity(0.74)))
+                        .overlay(Capsule().stroke(PAXTheme.border.opacity(0.42), lineWidth: 1))
+                )
         }
         .buttonStyle(.plain)
         .accessibilityHint(subtitle)
