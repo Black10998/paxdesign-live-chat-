@@ -79,35 +79,37 @@ if [[ -z "$APP_PID" || ! "$APP_PID" =~ ^[0-9]+$ ]]; then
 fi
 echo "Launch PID: $APP_PID"
 
-echo "==> Waiting ${LAUNCH_SETTLE_SECONDS}s for launch splash + startup sequence"
-sleep "$LAUNCH_SETTLE_SECONDS"
-
 app_is_running() {
-  # simctl launch returns a host macOS PID — check on the host, not inside the simulator guest.
-  kill -0 "$APP_PID" 2>/dev/null \
-    || pgrep -x PAXDesignLiveChat >/dev/null 2>&1
+  kill -0 "$APP_PID" 2>/dev/null || pgrep -x PAXDesignLiveChat >/dev/null 2>&1
 }
 
-if app_is_running; then
-  echo "Smoke test PASSED: PAXDesignLiveChat still running after startup window"
-else
-  echo "ERROR: App process exited during startup (likely launch crash)" >&2
-  echo "==> Recent simulator crash reports (if any)" >&2
-  CRASH_DIR="$HOME/Library/Logs/DiagnosticReports"
-  if [[ -d "$CRASH_DIR" ]]; then
-    shopt -s nullglob
-    reports=("$CRASH_DIR"/PAXDesignLiveChat*.ips "$CRASH_DIR"/PAXDesignLiveChat*.crash "$CRASH_DIR"/*livechat*.ips)
-    shopt -u nullglob
-    if ((${#reports[@]})); then
-      ls -t "${reports[@]}" | head -3 | while read -r report; do
-        echo "--- $report ---" >&2
-        head -60 "$report" >&2
-      done
-    else
-      echo "(no PAXDesignLiveChat crash reports found)" >&2
+echo "==> Waiting ${LAUNCH_SETTLE_SECONDS}s for launch splash + startup sequence"
+deadline=$((SECONDS + LAUNCH_SETTLE_SECONDS))
+while (( SECONDS < deadline )); do
+  if app_is_running; then
+    sleep 2
+    if app_is_running; then
+      echo "Smoke test PASSED: PAXDesignLiveChat still running after startup window"
+      exit 0
     fi
   fi
-  exit 1
-fi
+  sleep 1
+done
 
-echo "Smoke test complete"
+echo "ERROR: App process exited during startup (likely launch crash)" >&2
+echo "==> Recent simulator crash reports (if any)" >&2
+CRASH_DIR="$HOME/Library/Logs/DiagnosticReports"
+if [[ -d "$CRASH_DIR" ]]; then
+  shopt -s nullglob
+  reports=("$CRASH_DIR"/PAXDesignLiveChat*.ips "$CRASH_DIR"/PAXDesignLiveChat*.crash "$CRASH_DIR"/*livechat*.ips)
+  shopt -u nullglob
+  if ((${#reports[@]})); then
+    ls -t "${reports[@]}" | head -3 | while read -r report; do
+      echo "--- $report ---" >&2
+      head -60 "$report" >&2
+    done
+  else
+    echo "(no PAXDesignLiveChat crash reports found)" >&2
+  fi
+fi
+exit 1
