@@ -90,7 +90,7 @@ final class ChatCoordinator: ObservableObject {
             liveCount = newLiveCount
             lastSyncAt = Date()
             lastSessionRefreshAt = lastSyncAt
-            updateUnreadCounts()
+            updateUnreadCounts(readIds: AppSettingsStore.shared.readSessionIds)
             AppRefreshPolicy.update(liveCount: newLiveCount, openChat: activeSessionId != nil)
             errorMessage = nil
             detectIncomingLiveRequests(newSessions)
