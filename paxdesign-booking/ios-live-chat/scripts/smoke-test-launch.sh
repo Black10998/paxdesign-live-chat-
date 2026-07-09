@@ -83,7 +83,9 @@ echo "==> Waiting ${LAUNCH_SETTLE_SECONDS}s for launch splash + startup sequence
 sleep "$LAUNCH_SETTLE_SECONDS"
 
 app_is_running() {
-  xcrun simctl spawn "$UDID" kill -0 "$APP_PID" >/dev/null 2>&1
+  # simctl launch returns a host macOS PID — check on the host, not inside the simulator guest.
+  kill -0 "$APP_PID" 2>/dev/null \
+    || pgrep -x PAXDesignLiveChat >/dev/null 2>&1
 }
 
 if app_is_running; then
