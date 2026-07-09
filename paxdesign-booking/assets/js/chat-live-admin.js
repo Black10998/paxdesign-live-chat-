@@ -71,6 +71,34 @@
     var pollSeq = 0;
     var listTimer = null;
     var msgTimer = null;
+    var LIST_POLL_MS = 3500;
+    var MSG_POLL_MS = 1100;
+    var pageVisible = !document.hidden;
+
+    function scheduleListPoll() {
+      if (listTimer) clearInterval(listTimer);
+      if (!pageVisible) return;
+      listTimer = setInterval(loadList, LIST_POLL_MS);
+    }
+
+    function scheduleMsgPoll() {
+      if (msgTimer) clearInterval(msgTimer);
+      if (!pageVisible || !selectedSession) return;
+      msgTimer = setInterval(pollMessages, MSG_POLL_MS);
+    }
+
+    document.addEventListener('visibilitychange', function () {
+      pageVisible = !document.hidden;
+      if (pageVisible) {
+        loadList();
+        if (selectedSession) pollMessages();
+        scheduleListPoll();
+        scheduleMsgPoll();
+      } else {
+        if (listTimer) { clearInterval(listTimer); listTimer = null; }
+        if (msgTimer) { clearInterval(msgTimer); msgTimer = null; }
+      }
+    });
     var domMsgIds = {};
     var sessionMessageMap = {};
     var replyToId = 0;
@@ -1398,8 +1426,7 @@
       $active.prop('hidden', false);
       updateSessionHeader({});
       loadSession(sessionId, true);
-      if (msgTimer) clearInterval(msgTimer);
-      msgTimer = setInterval(pollMessages, 650);
+      scheduleMsgPoll();
       syncSelectedListItem();
       updateMobilePanels();
     }
@@ -1596,7 +1623,7 @@
     initAiSuggestions();
     initAgentProfileModal();
     loadList();
-    listTimer = setInterval(loadList, 2000);
+    scheduleListPoll();
 
     if (window.paxLiveOpenSession) {
       window.setTimeout(function () {

@@ -77,7 +77,9 @@ final class AuthStore: ObservableObject {
             if let data = try? JSONEncoder().encode(stored) {
                 KeychainHelper.save(data, service: service)
             }
-            await PlatformSyncService.shared.sync(auth: self)
+            Task(priority: .utility) {
+                await PlatformSyncService.shared.sync(auth: self)
+            }
         } catch {
             invalidateStoredSession(keepFormFields: true)
             throw error

@@ -5,9 +5,10 @@ import UserNotifications
 final class ChatCoordinator: ObservableObject {
     @Published var sessions: [LiveSession] = []
     @Published var liveCount = 0
+    @Published var unreadChatCount = 0
+    @Published var unreadTeamCount = 0
     @Published var isLoading = false
     @Published var isSyncing = false
-    @Published var listRevision = 0
     @Published var lastSyncAt: Date?
     @Published var errorMessage: String?
     @Published var incomingRequest: IncomingLiveRequest? {
@@ -32,6 +33,7 @@ final class ChatCoordinator: ObservableObject {
     private var lastKnownPreviews: [String: String] = [:]
     private var expiryTasks: [String: Task<Void, Never>] = [:]
     private var fullscreenTask: Task<Void, Never>?
+    private(set) var lastSessionRefreshAt: Date?
 
     private func scheduleFullscreenPresentation() {
         fullscreenTask?.cancel()
@@ -56,7 +58,8 @@ final class ChatCoordinator: ObservableObject {
         listTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refreshSessions(auth: auth)
-                try? await Task.sleep(nanoseconds: 700_000_000)
+                let interval = AppRefreshPolicy.sessionListInterval
+                try? await Task.sleep(nanoseconds: interval)
             }
         }
     }
@@ -85,8 +88,10 @@ final class ChatCoordinator: ObservableObject {
             }
             sessions = newSessions
             liveCount = newLiveCount
-            listRevision += 1
             lastSyncAt = Date()
+            lastSessionRefreshAt = lastSyncAt
+            updateUnreadCounts()
+            AppRefreshPolicy.update(liveCount: newLiveCount, openChat: activeSessionId != nil)
             errorMessage = nil
             detectIncomingLiveRequests(newSessions)
         } catch {
@@ -95,6 +100,15 @@ final class ChatCoordinator: ObservableObject {
             }
             errorMessage = error.localizedDescription
         }
+    }
+
+    func updateUnreadCounts(readIds: Set<String> = AppSettingsStore.shared.readSessionIds) {
+        unreadChatCount = sessions.filter {
+            !$0.isTeamDM && $0.needsReply && !readIds.contains($0.sessionId)
+        }.count
+        unreadTeamCount = sessions.filter {
+            $0.isTeamDM && $0.needsReply && !readIds.contains($0.sessionId)
+        }.count
     }
 
     private func detectIncomingLiveRequests(_ items: [LiveSession]) {
@@ -310,7 +324,7 @@ final class ChatThreadModel: ObservableObject {
             await self.loadFull(auth: auth)
             while !Task.isCancelled {
                 await self.poll(auth: auth)
-                try? await Task.sleep(nanoseconds: 650_000_000)
+                try? await Task.sleep(nanoseconds: AppRefreshPolicy.chatThreadInterval)
             }
         }
     }
@@ -367,19 +381,23 @@ final class ChatThreadModel: ObservableObject {
     }
 
     private func applyPoll(_ data: PollResponse) {
-        handler = data.handler
-        customerName = data.customerName.isEmpty ? "Kunde" : data.customerName
-        adminName = data.adminName
-        detectedService = data.detectedService
-        updatedAt = data.updatedAt
-        if data.sessionRating > 0 {
+        if handler != data.handler { handler = data.handler }
+        let resolvedName = data.customerName.isEmpty ? "Kunde" : data.customerName
+        if customerName != resolvedName { customerName = resolvedName }
+        if adminName != data.adminName { adminName = data.adminName }
+        if detectedService != data.detectedService { detectedService = data.detectedService }
+        if updatedAt != data.updatedAt { updatedAt = data.updatedAt }
+        if data.sessionRating > 0, sessionRating != data.sessionRating {
             sessionRating = data.sessionRating
         }
-        userTyping = data.userTyping
+        if userTyping != data.userTyping { userTyping = data.userTyping }
         pollSeq = max(pollSeq, data.seq)
 
         if !data.reactions.isEmpty {
-            applyReactions(data.reactions)
+            let reactionResult = MessageMerge.applyReactions(to: messages, reactions: data.reactions)
+            if reactionResult.changed {
+                messages = reactionResult.messages
+            }
         }
 
         guard !data.messages.isEmpty else {
@@ -394,15 +412,10 @@ final class ChatThreadModel: ObservableObject {
             knownMessageIds.insert(msg.id)
         }
 
-        var map = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
-        for msg in data.messages {
-            var merged = msg
-            if let existing = map[msg.id], merged.reaction == nil {
-                merged.reaction = existing.reaction
-            }
-            map[msg.id] = merged
+        let mergeResult = MessageMerge.mergeSorted(existing: messages, incoming: data.messages)
+        if mergeResult.changed {
+            messages = mergeResult.messages
         }
-        messages = map.values.sorted { $0.id < $1.id }
 
         if newUserMessageId > 0 {
             userTyping = false
@@ -414,15 +427,10 @@ final class ChatThreadModel: ObservableObject {
     }
 
     private func applyReactions(_ reactions: [String: String]) {
-        guard !reactions.isEmpty else { return }
-        var map = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
-        for (key, raw) in reactions {
-            guard let messageId = Int(key), let reaction = MessageReaction.normalize(raw) else { continue }
-            guard var msg = map[messageId], msg.role == "admin" else { continue }
-            msg.reaction = reaction
-            map[messageId] = msg
+        let result = MessageMerge.applyReactions(to: messages, reactions: reactions)
+        if result.changed {
+            messages = result.messages
         }
-        messages = map.values.sorted { $0.id < $1.id }
     }
 
     func applyQuickReply(_ text: String) {

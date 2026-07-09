@@ -136,7 +136,8 @@
     'Einen kleinen Moment bitte …',
   ];
   var LIVE_QUALIFY_TEXT   = 'Gerne. Damit ich Sie richtig weiterleiten kann: Worum geht es kurz — Website, AI Chatbot, Booking, Support oder ein anderes Thema?';
-  var POLL_INTERVAL_MS    = 600;
+  var POLL_INTERVAL_MS    = 1000;
+  var pageVisible         = !document.hidden;
 
   function init() {
     if (initialized) return;
@@ -1108,8 +1109,28 @@
   function startLivePolling() {
     if (pollTimer) return;
     pollUpdates();
+    scheduleLivePolling();
+  }
+
+  function scheduleLivePolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    if (!pageVisible) {
+      pollTimer = null;
+      return;
+    }
     pollTimer = window.setInterval(pollUpdates, POLL_INTERVAL_MS);
   }
+
+  document.addEventListener('visibilitychange', function () {
+    pageVisible = !document.hidden;
+    if (pageVisible && getSessionId()) {
+      pollUpdates();
+      scheduleLivePolling();
+    } else if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  });
 
   function applyHandlerState(handler, name) {
     if (!handler || handler === chatHandler) {

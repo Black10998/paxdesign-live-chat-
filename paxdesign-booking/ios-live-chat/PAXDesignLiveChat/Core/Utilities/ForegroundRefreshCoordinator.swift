@@ -5,14 +5,14 @@ import Foundation
 enum ForegroundRefreshCoordinator {
     private static var lastRefresh: Date?
     private static var task: Task<Void, Never>?
-    private static let minimumInterval: TimeInterval = 4
+    private static let minimumInterval: TimeInterval = 8
 
     static func schedule(
         auth: AuthStore,
         coordinator: ChatCoordinator,
         permissions: PermissionCoordinator
     ) {
-        guard auth.isLoggedIn else { return }
+        guard auth.isLoggedIn, AppRefreshPolicy.isForeground else { return }
         task?.cancel()
         task = Task {
             if let last = lastRefresh, Date().timeIntervalSince(last) < minimumInterval {
@@ -21,10 +21,20 @@ enum ForegroundRefreshCoordinator {
             }
             guard !Task.isCancelled else { return }
             lastRefresh = Date()
-            await auth.refreshProfile()
-            await coordinator.refreshSessions(auth: auth)
+
+            let recentPoll = coordinator.lastSessionRefreshAt.map {
+                Date().timeIntervalSince($0) < 2.5
+            } ?? false
+
+            if !recentPoll {
+                await coordinator.refreshSessions(auth: auth)
+            }
+
             await permissions.refreshStatuses()
-            await PlatformSyncService.shared.sync(auth: auth)
+
+            Task(priority: .utility) {
+                await PlatformSyncService.shared.sync(auth: auth)
+            }
         }
     }
 }

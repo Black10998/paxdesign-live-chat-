@@ -62,6 +62,16 @@ struct PAXDesignLiveChatApp: App {
                 }
                 .onChange(of: scenePhase) { phase in
                     let auth = AuthStore.shared
+                    switch phase {
+                    case .active:
+                        AppRefreshPolicy.update(scenePhase: .active)
+                    case .inactive:
+                        AppRefreshPolicy.update(scenePhase: .inactive)
+                    case .background:
+                        AppRefreshPolicy.update(scenePhase: .background)
+                    @unknown default:
+                        break
+                    }
                     AppLockService.shared.handleScenePhase(phase, isLoggedIn: auth.isLoggedIn)
                     guard phase == .active, auth.isLoggedIn else { return }
                     ForegroundRefreshCoordinator.schedule(

@@ -42,44 +42,16 @@ struct ChatView: View {
                 customerOverviewPanel
             }
 
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: PAXMessageStyle.threadSpacing) {
-                        ForEach(Array(thread.messages.enumerated()), id: \.element.id) { index, message in
-                            let previous = index > 0 ? thread.messages[index - 1] : nil
-                            let next = index + 1 < thread.messages.count ? thread.messages[index + 1] : nil
-
-                            if MessageTimeFormatter.shouldShowDayHeader(current: message, previous: previous),
-                               let header = MessageTimeFormatter.dayHeader(from: message.ts) {
-                                Text(header)
-                                    .font(.caption2.weight(.medium))
-                                    .foregroundStyle(PAXTheme.textTertiary)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
-                            }
-
-                            MessageBubbleView(
-                                message: message,
-                                quotedMessage: quotedMessage(for: message),
-                                canReply: thread.handler == "admin" && canReply && message.role != "system",
-                                showTimestamp: MessageTimeFormatter.shouldShowTimestamp(current: message, next: next),
-                                onReply: { thread.setReply(to: message) },
-                                onCopy: { copyMessage(message) },
-                                onImageTap: { imageViewer = ImageViewerItem(url: $0) }
-                            )
-                            .id(message.id)
-                        }
-                        if thread.userTyping {
-                            TypingIndicator()
-                                .id("typing-indicator")
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                }
-                .onChange(of: thread.messages.count) { _ in scrollToBottom(proxy: proxy) }
-                .onChange(of: thread.userTyping) { _ in scrollToBottom(proxy: proxy) }
-            }
+            ChatMessageListView(
+                messages: thread.messages,
+                userTyping: thread.userTyping,
+                canReply: canReply,
+                handler: thread.handler,
+                quotedMessage: quotedMessage(for:),
+                onReply: { thread.setReply(to: $0) },
+                onCopy: copyMessage,
+                onImageTap: { imageViewer = ImageViewerItem(url: $0) }
+            )
 
             if thread.handler == "admin", canUseAI, settings.aiSuggestionsEnabled {
                 assistStrip
@@ -97,10 +69,18 @@ struct ChatView: View {
         .navigationTitle(thread.customerName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
-        .onAppear { thread.start(auth: auth) }
+        .onAppear {
+            thread.start(auth: auth)
+            coordinator.activeSessionId = thread.sessionId
+            AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: true)
+        }
         .onDisappear {
             AdminTypingSound.shared.stop()
             thread.stop()
+            if coordinator.activeSessionId == thread.sessionId {
+                coordinator.activeSessionId = nil
+            }
+            AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: false)
         }
         .onReceive(NotificationCenter.default.publisher(for: .paxSessionSync)) { note in
             guard let syncedId = note.userInfo?["session_id"] as? String,
@@ -154,16 +134,6 @@ struct ChatView: View {
     private func copyMessage(_ message: LiveMessage) {
         UIPasteboard.general.string = message.content
         PAXHaptics.success()
-    }
-
-    private func scrollToBottom(proxy: ScrollViewProxy) {
-        withAnimation(PAXTheme.quickSpring) {
-            if thread.userTyping {
-                proxy.scrollTo("typing-indicator", anchor: .bottom)
-            } else if let last = thread.messages.last {
-                proxy.scrollTo(last.id, anchor: .bottom)
-            }
-        }
     }
 
     private var compactStatusBar: some View {
@@ -476,28 +446,6 @@ private struct AssistChip: View {
         }
         .buttonStyle(.plain)
         .accessibilityHint(subtitle)
-    }
-}
-
-private struct TypingIndicator: View {
-    @State private var animate = false
-    var body: some View {
-        HStack(spacing: 6) {
-            HStack(spacing: 4) {
-                ForEach(0..<3, id: \.self) { i in
-                    Circle().fill(PAXTheme.textSecondary).frame(width: 5, height: 5)
-                        .opacity(animate ? 1 : 0.3)
-                        .animation(.easeInOut(duration: 0.45).repeatForever().delay(Double(i) * 0.12), value: animate)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Capsule().fill(PAXTheme.userBubble))
-            Text(L10n.ChatCustomerTyping)
-                .font(.caption2)
-                .foregroundStyle(PAXTheme.textSecondary)
-        }
-        .onAppear { animate = true }
     }
 }
 

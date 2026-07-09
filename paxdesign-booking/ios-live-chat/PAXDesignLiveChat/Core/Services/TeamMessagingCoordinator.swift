@@ -16,7 +16,7 @@ final class TeamMessagingCoordinator: ObservableObject {
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.refresh(auth: auth)
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                try? await Task.sleep(nanoseconds: AppRefreshPolicy.teamListInterval)
             }
         }
     }
@@ -28,14 +28,17 @@ final class TeamMessagingCoordinator: ObservableObject {
 
     func refresh(auth: AuthStore) async {
         guard auth.isLoggedIn, let api = auth.api else {
-            teamSessions = []
+            if !teamSessions.isEmpty { teamSessions = [] }
             return
         }
-        isLoading = true
-        defer { isLoading = false }
+        let shouldShowLoading = teamSessions.isEmpty
+        if shouldShowLoading { isLoading = true }
+        defer { if shouldShowLoading { isLoading = false } }
         do {
             let response = try await api.fetchTeamSessions()
-            teamSessions = response.sessions
+            if response.sessions != teamSessions {
+                teamSessions = response.sessions
+            }
             errorMessage = nil
         } catch {
             if case LiveChatAPIError.unauthorized = error {
@@ -82,7 +85,7 @@ final class TeamChatThreadModel: ObservableObject {
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.poll(auth: auth)
-                try? await Task.sleep(nanoseconds: 800_000_000)
+                try? await Task.sleep(nanoseconds: AppRefreshPolicy.teamThreadInterval)
             }
         }
     }
@@ -126,11 +129,10 @@ final class TeamChatThreadModel: ObservableObject {
     }
 
     private func mergeMessages(_ incoming: [LiveMessage]) {
-        var map = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
-        for msg in incoming {
-            map[msg.id] = msg
+        let result = MessageMerge.mergeSorted(existing: messages, incoming: incoming)
+        if result.changed {
+            messages = result.messages
         }
-        messages = map.values.sorted { $0.id < $1.id }
     }
 }
 

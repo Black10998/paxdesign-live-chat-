@@ -65,7 +65,7 @@ struct MessageBubbleView: View {
                 }
 
                 if let imageUrl = message.imageUrl, let url = URL(string: imageUrl) {
-                    ChatThumbnailImage(url: url) {
+                    CachedChatImage(url: url) {
                         onImageTap(url)
                     }
                 }

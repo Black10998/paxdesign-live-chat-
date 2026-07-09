@@ -18,17 +18,8 @@ struct AdaptiveShellView: View {
 
     private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
-    private var unreadChatCount: Int {
-        coordinator.sessions.filter {
-            !$0.isTeamDM && $0.needsReply && !settings.readSessionIds.contains($0.sessionId)
-        }.count
-    }
-
-    private var unreadTeamCount: Int {
-        coordinator.sessions.filter {
-            $0.isTeamDM && $0.needsReply && !settings.readSessionIds.contains($0.sessionId)
-        }.count
-    }
+    private var unreadChatCount: Int { coordinator.unreadChatCount }
+    private var unreadTeamCount: Int { coordinator.unreadTeamCount }
 
     private var canViewChats: Bool { auth.canViewChats }
     private var canReplyChats: Bool { auth.canReplyChats }
@@ -80,7 +71,13 @@ struct AdaptiveShellView: View {
         .sheet(isPresented: $showGlobalSearch) {
             NavigationStack { GlobalSearchView() }
         }
-        .onAppear { schedulePlatformSync() }
+        .onAppear {
+            coordinator.updateUnreadCounts(readIds: settings.readSessionIds)
+            schedulePlatformSync()
+        }
+        .onChange(of: settings.readSessionIds) { readIds in
+            coordinator.updateUnreadCounts(readIds: readIds)
+        }
         .onChange(of: coordinator.sessions.count) { _ in schedulePlatformSync() }
         .onChange(of: coordinator.liveCount) { count in
             schedulePlatformSync()
@@ -237,7 +234,9 @@ struct AdaptiveShellView: View {
     private func openSession(_ sessionId: String, path: Binding<NavigationPath>) {
         appLock.recordActivity()
         coordinator.acknowledgeIncomingRequest(sessionId)
-        settings.readSessionIds.insert(sessionId)
+        settings.markSessionRead(sessionId)
+        coordinator.activeSessionId = sessionId
+        AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: true)
         path.wrappedValue = NavigationPath()
         path.wrappedValue.append(sessionId)
     }

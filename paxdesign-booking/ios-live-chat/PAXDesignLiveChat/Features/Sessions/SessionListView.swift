@@ -7,6 +7,7 @@ struct SessionListView: View {
     @EnvironmentObject private var settings: AppSettingsStore
     @State private var searchText = ""
     @State private var filter: SessionFilter = .all
+    @State private var displayedSessions: [LiveSession] = []
     @FocusState private var isSearchFocused: Bool
     var onOpenSession: (String) -> Void = { _ in }
 
@@ -24,14 +25,11 @@ struct SessionListView: View {
         }
     }
 
-    private var allSessions: [LiveSession] {
-        coordinator.sessions
+    private func recomputeDisplayedSessions() {
+        var items = coordinator.sessions
             .filter { !$0.isTeamDM }
             .sorted { $0.updatedAt > $1.updatedAt }
-    }
 
-    private var filteredSessions: [LiveSession] {
-        var items = allSessions
         if !searchText.isEmpty {
             let q = searchText.lowercased()
             items = items.filter {
@@ -47,7 +45,7 @@ struct SessionListView: View {
         case .active: items = items.filter { $0.isAdmin || $0.isLiveRequest }
         case .closed: items = items.filter { $0.isClosed }
         }
-        return items
+        displayedSessions = items
     }
 
     private var canViewChats: Bool { auth.canViewChats }
@@ -65,6 +63,11 @@ struct SessionListView: View {
         .background(PAXBackground())
         .navigationTitle(L10n.SessionTitle)
         .navigationBarTitleDisplayMode(.large)
+        .onAppear { recomputeDisplayedSessions() }
+        .onChange(of: coordinator.sessions) { _ in recomputeDisplayedSessions() }
+        .onChange(of: searchText) { _ in recomputeDisplayedSessions() }
+        .onChange(of: filter) { _ in recomputeDisplayedSessions() }
+        .onChange(of: settings.readSessionIds) { _ in recomputeDisplayedSessions() }
     }
 
     private var sessionListContent: some View {
@@ -94,7 +97,7 @@ struct SessionListView: View {
                 }
             }
 
-            if filteredSessions.isEmpty {
+            if displayedSessions.isEmpty {
                 Section {
                     emptyState
                         .listRowInsets(EdgeInsets(top: 32, leading: 16, bottom: 32, trailing: 16))
@@ -103,14 +106,14 @@ struct SessionListView: View {
                 }
             } else {
                 Section {
-                    ForEach(filteredSessions) { session in
+                    ForEach(displayedSessions) { session in
                         let isUnread = session.needsReply && !settings.readSessionIds.contains(session.sessionId)
 
                         Button {
                             PAXHaptics.light()
                             isSearchFocused = false
                             PAXKeyboard.dismiss()
-                            settings.readSessionIds.insert(session.sessionId)
+                            settings.markSessionRead(session.sessionId)
                             coordinator.activeSessionId = session.sessionId
                             onOpenSession(session.sessionId)
                         } label: {
@@ -131,7 +134,7 @@ struct SessionListView: View {
                         .listRowSeparatorTint(PAXTheme.border.opacity(0.5))
                         .contextMenu {
                             Button {
-                                settings.readSessionIds.insert(session.sessionId)
+                                settings.markSessionRead(session.sessionId)
                                 coordinator.activeSessionId = session.sessionId
                                 onOpenSession(session.sessionId)
                             } label: {
@@ -139,14 +142,14 @@ struct SessionListView: View {
                             }
                             if isUnread {
                                 Button {
-                                    settings.readSessionIds.insert(session.sessionId)
+                                    settings.markSessionRead(session.sessionId)
                                     PAXHaptics.light()
                                 } label: {
                                     Label(L10n.CommonMarkRead, systemImage: "envelope.open")
                                 }
                             } else {
                                 Button {
-                                    settings.readSessionIds.remove(session.sessionId)
+                                    settings.markSessionUnread(session.sessionId)
                                     PAXHaptics.light()
                                 } label: {
                                     Label(L10n.CommonMarkUnread, systemImage: "envelope.badge")
@@ -170,7 +173,7 @@ struct SessionListView: View {
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             if isUnread {
                                 Button {
-                                    settings.readSessionIds.insert(session.sessionId)
+                                    settings.markSessionRead(session.sessionId)
                                     PAXHaptics.success()
                                 } label: {
                                     Label(L10n.CommonMarkRead, systemImage: "envelope.open")
@@ -178,7 +181,7 @@ struct SessionListView: View {
                                 .tint(.blue)
                             } else {
                                 Button {
-                                    settings.readSessionIds.remove(session.sessionId)
+                                    settings.markSessionUnread(session.sessionId)
                                     PAXHaptics.light()
                                 } label: {
                                     Label(L10n.CommonMarkUnread, systemImage: "envelope.badge")

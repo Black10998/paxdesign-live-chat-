@@ -132,7 +132,7 @@ final class AppSettingsStore: ObservableObject {
     }
     @Published var readSessionIds: Set<String> {
         didSet {
-            UserDefaults.standard.set(Array(readSessionIds), forKey: Keys.readSessions)
+            scheduleReadSessionPersist()
         }
     }
     @Published var compactListMode: Bool {
@@ -165,6 +165,25 @@ final class AppSettingsStore: ObservableObject {
             return Locale(identifier: id)
         }
         return Locale.autoupdatingCurrent
+    }
+
+    private var readPersistTask: Task<Void, Never>?
+
+    func markSessionRead(_ sessionId: String) {
+        guard readSessionIds.insert(sessionId).inserted else { return }
+    }
+
+    func markSessionUnread(_ sessionId: String) {
+        guard readSessionIds.remove(sessionId) != nil else { return }
+    }
+
+    private func scheduleReadSessionPersist() {
+        readPersistTask?.cancel()
+        readPersistTask = Task { [readSessionIds] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+            UserDefaults.standard.set(Array(readSessionIds), forKey: Keys.readSessions)
+        }
     }
 
     private enum Keys {

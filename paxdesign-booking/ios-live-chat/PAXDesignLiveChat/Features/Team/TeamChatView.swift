@@ -10,45 +10,16 @@ struct TeamChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: PAXMessageStyle.threadSpacing) {
-                        ForEach(Array(thread.messages.enumerated()), id: \.element.id) { index, message in
-                            let previous = index > 0 ? thread.messages[index - 1] : nil
-                            let next = index + 1 < thread.messages.count ? thread.messages[index + 1] : nil
-
-                            if MessageTimeFormatter.shouldShowDayHeader(current: message, previous: previous),
-                               let header = MessageTimeFormatter.dayHeader(from: message.ts) {
-                                Text(header)
-                                    .font(.caption2.weight(.medium))
-                                    .foregroundStyle(PAXTheme.textTertiary)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, 8)
-                            }
-
-                            MessageBubbleView(
-                                message: message,
-                                quotedMessage: nil,
-                                canReply: false,
-                                showTimestamp: MessageTimeFormatter.shouldShowTimestamp(current: message, next: next),
-                                onReply: {},
-                                onCopy: { UIPasteboard.general.string = message.content },
-                                onImageTap: { _ in }
-                            )
-                            .id(message.id)
-                        }
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                }
-                .onChange(of: thread.messages.count) { _ in
-                    if let last = thread.messages.last {
-                        withAnimation(PAXTheme.quickSpring) {
-                            proxy.scrollTo(last.id, anchor: .bottom)
-                        }
-                    }
-                }
-            }
+            ChatMessageListView(
+                messages: thread.messages,
+                userTyping: false,
+                canReply: false,
+                handler: "team",
+                quotedMessage: { _ in nil },
+                onReply: { _ in },
+                onCopy: { UIPasteboard.general.string = $0.content },
+                onImageTap: { _ in }
+            )
 
             teamComposer
         }
