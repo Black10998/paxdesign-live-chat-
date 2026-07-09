@@ -107,15 +107,22 @@ class PAXdesign_Device_Sessions {
     }
 
     /**
-     * @param WP_User $user
+     * @param object|WP_User $user
      * @param array<string, mixed> $device
      * @return array<string, mixed>
      */
     private static function format_device_row($user_id, $user, $token, $device) {
+        $display_name = '';
+        $email        = '';
+        if (is_object($user)) {
+            $display_name = isset($user->display_name) ? (string) $user->display_name : '';
+            $email        = isset($user->user_email) ? (string) $user->user_email : '';
+        }
+
         return array(
             'user_id'        => (int) $user_id,
-            'employee_name'  => (string) $user->display_name,
-            'employee_email' => (string) $user->user_email,
+            'employee_name'  => $display_name,
+            'employee_email' => $email,
             'device_id'      => !empty($device['device_id']) ? (string) $device['device_id'] : substr($token, 0, 12),
             'device_token'   => substr($token, 0, 8) . '…',
             'device_name'    => (string) ($device['device_name'] ?? 'Unbekanntes Gerät'),
@@ -152,7 +159,7 @@ class PAXdesign_Device_Sessions {
     }
 
     public static function revoke_device($admin_id, $target_user_id, $device_id, $force_logout = true) {
-        if (!PAXdesign_Live_Chat_Permissions::user_can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)) {
+        if (!PAXdesign_Live_Chat_Permissions::can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)) {
             return new WP_Error('forbidden', 'Insufficient permissions.', array('status' => 403));
         }
 
@@ -186,7 +193,7 @@ class PAXdesign_Device_Sessions {
     }
 
     public static function reset_onboarding($admin_id, $target_user_id) {
-        if (!PAXdesign_Live_Chat_Permissions::user_can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)) {
+        if (!PAXdesign_Live_Chat_Permissions::can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)) {
             return new WP_Error('forbidden', 'Insufficient permissions.', array('status' => 403));
         }
         delete_user_meta((int) $target_user_id, 'pax_live_onboarding_completed');

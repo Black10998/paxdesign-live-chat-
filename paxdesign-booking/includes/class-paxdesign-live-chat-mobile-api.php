@@ -516,15 +516,28 @@ class PAXdesign_Live_Chat_Mobile_API {
         }
 
         $user_id = (int) get_current_user_id();
-        $can_manage = PAXdesign_Live_Chat_Permissions::user_can($user_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        $can_manage = PAXdesign_Live_Chat_Permissions::can($user_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
         $filter = $can_manage ? (int) $request->get_param('user_id') : $user_id;
 
         if (!$can_manage) {
             $filter = $user_id;
         }
 
-        return rest_ensure_response(array(
-            'devices' => PAXdesign_Device_Sessions::list_employee_devices($filter),
+        $devices = array();
+        try {
+            $devices = PAXdesign_Device_Sessions::list_employee_devices($filter);
+        } catch (Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PAXdesign Device Sessions] list failed: ' . $e->getMessage());
+            }
+        }
+
+        if (!is_array($devices)) {
+            $devices = array();
+        }
+
+        return self::respond(array(
+            'devices'    => $devices,
             'can_manage' => $can_manage,
         ));
     }

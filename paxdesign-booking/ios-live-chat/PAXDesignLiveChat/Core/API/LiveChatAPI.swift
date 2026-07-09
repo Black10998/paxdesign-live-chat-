@@ -147,6 +147,10 @@ final class LiveChatAPI {
         do {
             return try decode(type, from: data)
         } catch {
+            if let text = String(data: data, encoding: .utf8),
+               text.contains("<!DOCTYPE") || text.contains("<html") || text.contains("kritischen Fehler") {
+                throw LiveChatAPIError.server("Serverfehler auf der Website. Bitte Plugin aktualisieren oder den Administrator kontaktieren.")
+            }
             throw LiveChatAPIError.decoding(error)
         }
     }
