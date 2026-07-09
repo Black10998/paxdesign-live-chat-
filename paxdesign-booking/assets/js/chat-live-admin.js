@@ -67,6 +67,7 @@
     var $activityUrgent = $('#paxLiveActivityUrgent');
     var $restartTourBtn = $('#paxLiveRestartTour');
     var $languageToggle = $('#paxLiveLanguageToggle');
+    var $workflowList = $('#paxLiveWorkflowList');
 
     var quickReplies = (cfg && cfg.quickReplies && cfg.quickReplies.length)
       ? cfg.quickReplies
@@ -133,6 +134,8 @@
     var suppressMessageSoundsUntil = 0;
     var mp3AudioCache = {};
     var uiLanguage = (localStorage.getItem('pax_live_ui_lang') || 'de').toLowerCase();
+    var WORKFLOW_MAX_ITEMS = 3;
+    var workflowAnimatingSessions = {};
     var soundUrls = {
       typing: 'https://paxdesign.at/wp-content/uploads/2026/06/freesound_community-writing-a-text-message-41141.mp3',
       openClose: 'https://paxdesign.at/wp-content/uploads/2026/06/u_8e8ungop1x-intro_cinematic-270840.mp3',
@@ -293,6 +296,227 @@
         var idx = list.indexOf(uiLanguage);
         applyUiLanguage(list[(idx + 1) % list.length]);
       });
+    }
+
+    function workflowAvatarText(session) {
+      var source = (session.customer_name || session.session_id || '?').trim();
+      return source.slice(0, 2).toUpperCase();
+    }
+
+    function workflowTopSessions(sessions) {
+      sessions = sessions || [];
+      var ranked = sessions.slice().sort(function (a, b) {
+        function weight(s) {
+          if (!s) return 99;
+          if (s.handler === 'live_request') return 0;
+          if (s.handler === 'admin') return 1;
+          if (s.handler === 'ai') return 2;
+          return 3;
+        }
+        var diff = weight(a) - weight(b);
+        if (diff !== 0) return diff;
+        var ad = Date.parse(String(a.updated_at || '').replace(' ', 'T')) || 0;
+        var bd = Date.parse(String(b.updated_at || '').replace(' ', 'T')) || 0;
+        return bd - ad;
+      });
+      return ranked.slice(0, WORKFLOW_MAX_ITEMS);
+    }
+
+    function workflowMetaText(session) {
+      var bits = [];
+      if (session.handler_label) bits.push(session.handler_label);
+      if (session.detected_service) bits.push(session.detected_service);
+      if (session.updated_at) bits.push(formatTime(session.updated_at));
+      return bits.join(' · ');
+    }
+
+    function createDestroySvgMarkup() {
+      return (
+        '<svg class="pax-live-workflow__destroy" viewBox="0 0 500 124" preserveAspectRatio="none" aria-hidden="true">' +
+          '<path d="M-1 0l72 39 91-39z"></path>' +
+          '<path d="M287 0L47 47 162 0z"></path>' +
+          '<path d="M282 0L59 33-3 70z"></path>' +
+          '<path d="M159 29L-1 124-3 70z"></path>' +
+          '<path d="M159 29L-7 123l81-3z"></path>' +
+          '<path d="M159 29l71 56-60 41z"></path>' +
+          '<path d="M159 29l73 58-6-74z"></path>' +
+          '<path d="M299 126l-71-43L287 0z"></path>' +
+          '<path d="M298 124h96l-56-65z"></path>' +
+          '<path d="M391 1l-73 36L287 0z"></path>' +
+          '<path d="M391 1l-39 80 39 46z"></path>' +
+          '<path d="M391 1l75-1-24 42z"></path>' +
+          '<path d="M442 126l-4-84-49 86z"></path>' +
+          '<path d="M465 0l-27 42L502 0z"></path>' +
+          '<path d="M502 123l-65-83 63 16z"></path>' +
+          '<path d="M505 124l-68-84 1 85z"></path>' +
+          '<path d="M112 82l60 43-103-1z"></path>' +
+          '<path d="M301 124l-70-42-66 44z"></path>' +
+          '<path d="M298 124l44-63L287 0z"></path>' +
+          '<path d="M-1 0v73l68-36z"></path>' +
+          '<path d="M501 0l-64 41 64 20z"></path>' +
+        '</svg>'
+      );
+    }
+
+    function renderWorkflowSkeleton() {
+      if (!$workflowList.length) return;
+      var html = '';
+      for (var i = 0; i < WORKFLOW_MAX_ITEMS; i++) {
+        html += (
+          '<li class="pax-live-workflow__item is-skeleton">' +
+            '<div class="pax-live-workflow__avatar"></div>' +
+            '<div class="pax-live-workflow__lines">' +
+              '<span class="pax-live-workflow__line pax-live-workflow__line--title"></span>' +
+              '<span class="pax-live-workflow__line pax-live-workflow__line--primary"></span>' +
+              '<span class="pax-live-workflow__line pax-live-workflow__line--meta"></span>' +
+            '</div>' +
+          '</li>'
+        );
+      }
+      $workflowList.html(html);
+    }
+
+    function createWorkflowItem(session) {
+      var $item = $(
+        '<li class="pax-live-workflow__item" data-workflow-session="' + escapeHtml(session.session_id) + '">' +
+          '<div class="pax-live-workflow__avatar">' + escapeHtml(workflowAvatarText(session)) + '</div>' +
+          '<div class="pax-live-workflow__lines">' +
+            '<p class="pax-live-workflow__text pax-live-workflow__text--title"></p>' +
+            '<p class="pax-live-workflow__text pax-live-workflow__text--primary"></p>' +
+            '<p class="pax-live-workflow__text pax-live-workflow__text--meta"></p>' +
+          '</div>' +
+          createDestroySvgMarkup() +
+        '</li>'
+      );
+      updateWorkflowItem($item, session);
+      return $item;
+    }
+
+    function updateWorkflowItem($item, session) {
+      if (!$item || !$item.length || !session) return;
+      $item.attr('data-workflow-session', session.session_id);
+      $item.find('.pax-live-workflow__avatar').text(workflowAvatarText(session));
+      $item.find('.pax-live-workflow__text--title').text(
+        (session.customer_name && session.customer_name.trim()) || shortSessionId(session.session_id)
+      );
+      $item.find('.pax-live-workflow__text--primary').text(session.last_preview || 'Neue Aktivität');
+      $item.find('.pax-live-workflow__text--meta').text(workflowMetaText(session));
+    }
+
+    function destroyWorkflowItem($item, done) {
+      if (!$item || !$item.length) {
+        if (typeof done === 'function') done();
+        return;
+      }
+      var sessionId = String($item.attr('data-workflow-session') || '');
+      if (sessionId && workflowAnimatingSessions[sessionId]) {
+        return;
+      }
+      if (sessionId) workflowAnimatingSessions[sessionId] = true;
+      $item.addClass('is-destroying');
+
+      var avatar = $item.find('.pax-live-workflow__avatar')[0];
+      var lines = $item.find('.pax-live-workflow__lines')[0];
+      var destroySvg = $item.find('.pax-live-workflow__destroy');
+      destroySvg.css('opacity', '1');
+
+      if (avatar) {
+        avatar.animate(
+          [{ transform: 'translateY(0)', opacity: 1 }, { transform: 'translateY(120px)', opacity: 0 }],
+          { duration: 420, easing: 'cubic-bezier(0.35, 0, 0.25, 1)', fill: 'forwards' }
+        );
+      }
+      if (lines) {
+        lines.animate(
+          [{ transform: 'translateX(0)', opacity: 1 }, { transform: 'translateX(520px)', opacity: 0 }],
+          { duration: 460, easing: 'cubic-bezier(0.35, 0, 0.25, 1)', fill: 'forwards' }
+        );
+      }
+
+      destroySvg.find('path').each(function () {
+        var rotation = (Math.random() * 80) - 40;
+        var scale = Math.random() * 0.3;
+        this.animate(
+          [{ transform: 'scale(1) rotate(0deg)', opacity: 1 }, { transform: 'scale(' + scale + ') rotate(' + rotation + 'deg)', opacity: 0 }],
+          {
+            duration: 420 + Math.random() * 240,
+            delay: 90 + Math.random() * 220,
+            easing: 'cubic-bezier(0.4, 0, 1, 1)',
+            fill: 'forwards'
+          }
+        );
+      });
+
+      var currentHeight = $item.outerHeight();
+      var style = window.getComputedStyle($item[0]);
+      $item[0].animate(
+        [
+          {
+            height: currentHeight + 'px',
+            marginTop: style.marginTop,
+            paddingTop: style.paddingTop,
+            paddingBottom: style.paddingBottom,
+            opacity: 1
+          },
+          {
+            height: '0px',
+            marginTop: '0px',
+            paddingTop: '0px',
+            paddingBottom: '0px',
+            opacity: 0
+          }
+        ],
+        { duration: 460, delay: 280, easing: 'ease-in-out', fill: 'forwards' }
+      );
+
+      window.setTimeout(function () {
+        $item.remove();
+        if (sessionId) delete workflowAnimatingSessions[sessionId];
+        if (typeof done === 'function') done();
+      }, 820);
+    }
+
+    function syncWorkflowList(sessions) {
+      if (!$workflowList.length) return;
+      var top = workflowTopSessions(sessions);
+      if (!top.length) {
+        renderWorkflowSkeleton();
+        return;
+      }
+
+      var desiredById = {};
+      top.forEach(function (session) { desiredById[session.session_id] = session; });
+
+      $workflowList.find('.is-skeleton').remove();
+
+      $workflowList.children('.pax-live-workflow__item').each(function () {
+        var $item = $(this);
+        var sessionId = String($item.attr('data-workflow-session') || '');
+        if (!sessionId || desiredById[sessionId]) return;
+        destroyWorkflowItem($item);
+      });
+
+      top.forEach(function (session, index) {
+        var $existing = $workflowList.children('.pax-live-workflow__item').filter(function () {
+          return String($(this).attr('data-workflow-session') || '') === String(session.session_id || '');
+        }).first();
+        if (!$existing.length) {
+          $existing = createWorkflowItem(session);
+        } else {
+          updateWorkflowItem($existing, session);
+        }
+
+        var $currentAtIndex = $workflowList.children('.pax-live-workflow__item').eq(index);
+        if (!$currentAtIndex.length) {
+          $workflowList.append($existing);
+        } else if ($currentAtIndex[0] !== $existing[0]) {
+          $existing.insertBefore($currentAtIndex);
+        }
+      });
+
+      while ($workflowList.children('.pax-live-workflow__item').length > WORKFLOW_MAX_ITEMS) {
+        destroyWorkflowItem($workflowList.children('.pax-live-workflow__item').last());
+      }
     }
 
     var tourState = {
@@ -1124,6 +1348,7 @@
         });
         $liveCount.text(liveTotalQuick);
         updateActivityPanel(allSessions);
+        syncWorkflowList(allSessions);
         syncSelectedListItem();
         return;
       }
@@ -1137,6 +1362,7 @@
       $count.text(allSessions.length);
       $liveCount.text(liveTotal);
       updateActivityPanel(allSessions);
+      syncWorkflowList(allSessions);
 
       if (!filtered.length) {
         $list.html('<p class="pax-live-dashboard__empty">' + (allSessions.length ? 'Keine Treffer für die Suche.' : 'Derzeit keine aktiven Chats.') + '</p>');
@@ -1840,6 +2066,7 @@
     initAiSuggestions();
     initAgentProfileModal();
     initLanguageToggle();
+    renderWorkflowSkeleton();
     if ($restartTourBtn.length) {
       $restartTourBtn.on('click', function () {
         markTourCompleted(false);

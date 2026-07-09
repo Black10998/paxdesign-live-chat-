@@ -77,6 +77,14 @@ $tour_done     = (bool) get_user_meta(get_current_user_id(), 'pax_live_dashboard
     </article>
   </section>
 
+  <section class="pax-live-dashboard__workflow" id="paxLiveWorkflow">
+    <div class="pax-live-dashboard__workflow-head">
+      <strong>Aktivitäts-Queue</strong>
+      <span class="pax-live-dashboard__hint">Wird automatisch aus aktuellen Chats gefüllt</span>
+    </div>
+    <ul class="pax-live-workflow__list" id="paxLiveWorkflowList" aria-live="polite"></ul>
+  </section>
+
   <div class="pax-live-dashboard__grid">
     <aside class="pax-live-dashboard__sidebar">
       <div class="pax-live-dashboard__sidebar-top">
