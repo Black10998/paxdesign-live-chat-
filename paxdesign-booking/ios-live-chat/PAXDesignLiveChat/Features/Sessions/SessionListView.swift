@@ -307,7 +307,7 @@ struct SessionListView: View {
                             .padding(.vertical, 7)
                             .background(
                                 Capsule()
-                                    .fill(filter == item ? PAXBrand.accent.opacity(0.18) : .ultraThinMaterial)
+                                    .fill(filter == item ? PAXBrand.accent.opacity(0.18) : PAXTheme.surface.opacity(0.68))
                             )
                             .overlay(Capsule().stroke(filter == item ? PAXBrand.accent.opacity(0.5) : PAXTheme.border.opacity(0.55), lineWidth: 1))
                             .foregroundStyle(filter == item ? PAXTheme.textPrimary : PAXTheme.textSecondary)
