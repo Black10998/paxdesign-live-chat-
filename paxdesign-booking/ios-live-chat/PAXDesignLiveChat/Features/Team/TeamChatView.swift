@@ -59,6 +59,10 @@ struct TeamChatView: View {
         .onDisappear { thread.stop() }
     }
 
+    private var canSend: Bool {
+        !thread.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !thread.isSending
+    }
+
     private var teamComposer: some View {
         HStack(spacing: 10) {
             TextField(L10n.TeamChatPlaceholder, text: $thread.draft, axis: .vertical)
@@ -75,9 +79,9 @@ struct TeamChatView: View {
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 34))
-                    .foregroundStyle(thread.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? PAXTheme.textTertiary : PAXBrand.accent)
+                    .foregroundStyle(canSend ? PAXBrand.accent : PAXTheme.textTertiary)
             }
-            .disabled(thread.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || thread.isSending)
+            .disabled(!canSend)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
@@ -141,29 +145,14 @@ struct TeamComposeView: View {
             } else {
                 Section(L10n.TeamComposeSection) {
                     ForEach(filteredStaff) { member in
-                        Button {
+                        StaffComposeRow(
+                            member: member,
+                            revealFullEmail: auth.isSuperAdmin,
+                            isOpening: openingUserId == member.userId,
+                            isDisabled: openingUserId != nil
+                        ) {
                             Task { await openChat(with: member) }
-                        } label: {
-                            HStack(spacing: 14) {
-                                SessionAvatarView(name: member.name, size: 48, isTeam: true)
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(member.name)
-                                        .font(.body.weight(.semibold))
-                                        .foregroundStyle(PAXTheme.textPrimary)
-                                    Text(PrivacyMask.email(member.email, revealFull: auth.isSuperAdmin))
-                                        .font(.caption)
-                                        .foregroundStyle(PAXTheme.textSecondary)
-                                }
-                                Spacer()
-                                if openingUserId == member.userId {
-                                    ProgressView()
-                                } else {
-                                    Image(systemName: "message.fill")
-                                        .foregroundStyle(PAXBrand.accent)
-                                }
-                            }
                         }
-                        .disabled(openingUserId != nil)
                     }
                 }
             }
@@ -195,5 +184,40 @@ struct TeamComposeView: View {
             dismiss()
             onOpenConversation(sessionId)
         }
+    }
+}
+
+private struct StaffComposeRow: View {
+    let member: StaffMember
+    let revealFullEmail: Bool
+    let isOpening: Bool
+    let isDisabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                SessionAvatarView(name: member.name, size: 48, isTeam: true)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(member.name)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(PAXTheme.textPrimary)
+                    Text(PrivacyMask.email(member.email, revealFull: revealFullEmail))
+                        .font(.caption)
+                        .foregroundStyle(PAXTheme.textSecondary)
+                }
+
+                Spacer()
+
+                if isOpening {
+                    ProgressView()
+                } else {
+                    Image(systemName: "message.fill")
+                        .foregroundStyle(PAXBrand.accent)
+                }
+            }
+        }
+        .disabled(isDisabled)
     }
 }
