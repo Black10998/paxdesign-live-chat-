@@ -110,12 +110,12 @@ struct SessionListView: View {
                         let isUnread = session.needsReply && !settings.readSessionIds.contains(session.sessionId)
 
                         Button {
-                            PAXHaptics.light()
                             isSearchFocused = false
                             PAXKeyboard.dismiss()
-                            settings.markSessionRead(session.sessionId)
-                            coordinator.activeSessionId = session.sessionId
                             onOpenSession(session.sessionId)
+                            Task { @MainActor in
+                                PAXHaptics.light()
+                            }
                         } label: {
                             SessionRow(
                                 session: session,
@@ -134,8 +134,6 @@ struct SessionListView: View {
                         .listRowSeparatorTint(PAXTheme.border.opacity(0.5))
                         .contextMenu {
                             Button {
-                                settings.markSessionRead(session.sessionId)
-                                coordinator.activeSessionId = session.sessionId
                                 onOpenSession(session.sessionId)
                             } label: {
                                 Label(L10n.CommonOpen, systemImage: "arrow.up.right.circle")

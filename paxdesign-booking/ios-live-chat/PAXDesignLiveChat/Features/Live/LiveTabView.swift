@@ -30,9 +30,10 @@ struct LiveTabView: View {
                             canReply: canReply,
                             canOpenChat: canViewChats
                         ) {
-                            PAXHaptics.medium()
-                            Task { await coordinator.acceptLiveRequest(auth: auth, session: session) }
                             if canViewChats { onOpenSession(session.sessionId) }
+                            Task {
+                                await coordinator.acceptLiveRequest(auth: auth, session: session)
+                            }
                         } onDecline: {
                             PAXHaptics.warning()
                             Task { await coordinator.declineLiveRequest(auth: auth, session: session) }

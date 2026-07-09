@@ -66,18 +66,22 @@ final class PlatformSyncService: ObservableObject {
         employee = payload.employee
         notifications = payload.notifications
 
-        TaskStore.shared.applyServerTasks(payload.tasks.map(PAXTaskItem.init(api:)))
-        CalendarStore.shared.applyServerEvents(
-            payload.calendar.map(PAXCalendarEvent.init(api:)),
-            upcoming: payload.upcoming.map(PAXCalendarEvent.init(api:))
-        )
-        FileLibraryStore.shared.applyServerFiles(payload.files.map(PAXDocumentItem.init(api:)))
-        ActivityLogService.shared.applyServerEntries(payload.activity.map(ActivityLogEntry.init(api:)))
-        PlatformModuleSettingsStore.shared.applyServerSettings(payload.settings)
-
         if var profile = auth.profile {
             profile = profile.updating(modulePermissions: payload.permissions.modulePermissions)
             auth.applyProfileUpdate(profile)
+        }
+
+        Task(priority: .utility) {
+            await MainActor.run {
+                TaskStore.shared.applyServerTasks(payload.tasks.map(PAXTaskItem.init(api:)))
+                CalendarStore.shared.applyServerEvents(
+                    payload.calendar.map(PAXCalendarEvent.init(api:)),
+                    upcoming: payload.upcoming.map(PAXCalendarEvent.init(api:))
+                )
+                FileLibraryStore.shared.applyServerFiles(payload.files.map(PAXDocumentItem.init(api:)))
+                ActivityLogService.shared.applyServerEntries(payload.activity.map(ActivityLogEntry.init(api:)))
+                PlatformModuleSettingsStore.shared.applyServerSettings(payload.settings)
+            }
         }
     }
 

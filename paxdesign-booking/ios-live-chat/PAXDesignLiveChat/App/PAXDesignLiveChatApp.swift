@@ -32,32 +32,17 @@ struct PAXDesignLiveChatApp: App {
                     await runStartupSequence()
                 }
                 .onChange(of: AuthStore.shared.isLoggedIn) { loggedIn in
-                    let auth = AuthStore.shared
                     if loggedIn {
-                        coordinator.start(auth: auth)
-                        TeamMessagingCoordinator.shared.start(auth: auth)
-                        AppLockService.shared.prepareForLogin()
-                        #if !SIDELOAD
-                        DeviceSessionService.shared.start(auth: auth)
-                        #endif
-                        Task(priority: .utility) {
-                            await PermissionCoordinator.shared.refreshStatuses()
-                            PermissionCoordinator.shared.presentNotificationPromptIfNeeded(isLoggedIn: true)
-                            #if !SIDELOAD
-                            await DeviceSessionService.shared.registerWithPush(auth: auth)
-                            #endif
-                            await PlatformSyncService.shared.sync(auth: auth)
-                            #if !SIDELOAD
-                            SpotlightIndexer.indexAppContent(auth: auth, coordinator: coordinator)
-                            #endif
-                        }
+                        AppServicesController.startLoggedInServices(
+                            auth: AuthStore.shared,
+                            coordinator: coordinator,
+                            teamCoordinator: TeamMessagingCoordinator.shared
+                        )
                     } else {
-                        coordinator.stop()
-                        TeamMessagingCoordinator.shared.stop()
-                        #if !SIDELOAD
-                        DeviceSessionService.shared.stop()
-                        #endif
-                        AppLockService.shared.resetOnLogout()
+                        AppServicesController.stopLoggedInServices(
+                            coordinator: coordinator,
+                            teamCoordinator: TeamMessagingCoordinator.shared
+                        )
                     }
                 }
                 .onChange(of: scenePhase) { phase in
@@ -94,22 +79,18 @@ struct PAXDesignLiveChatApp: App {
         let auth = AuthStore.shared
         let permissions = PermissionCoordinator.shared
         await permissions.refreshStatuses()
+        launchSplash.markBootstrapFinished()
+
         await auth.bootstrapSession()
 
         if auth.isLoggedIn {
-            coordinator.start(auth: auth)
-            TeamMessagingCoordinator.shared.start(auth: auth)
-            #if !SIDELOAD
-            DeviceSessionService.shared.start(auth: auth)
-            permissions.presentNotificationPromptIfNeeded(isLoggedIn: true)
-            await DeviceSessionService.shared.registerWithPush(auth: auth)
-            #endif
-            Task(priority: .utility) {
-                await PlatformSyncService.shared.sync(auth: auth)
-            }
+            AppServicesController.startLoggedInServices(
+                auth: auth,
+                coordinator: coordinator,
+                teamCoordinator: TeamMessagingCoordinator.shared
+            )
         }
 
-        launchSplash.markBootstrapFinished()
         LaunchDiagnostics.mark("startup.complete")
     }
 
@@ -163,7 +144,7 @@ struct RootView: View {
     }
 
     private var phase: AppPhase {
-        if launchSplash.isVisible { return .splash }
+        if launchSplash.isVisible || auth.isBootstrapping { return .splash }
         if showFirstRunOnboarding { return .onboarding }
         if auth.isLoggedIn { return .main }
         return .login
@@ -181,7 +162,7 @@ struct RootView: View {
             case .onboarding:
                 OnboardingFlowView(mode: .firstLaunch) {
                     settings.firstLaunchOnboardingCompleted = true
-                    withAnimation(.easeInOut(duration: 0.35)) {
+                    withAnimation(.easeInOut(duration: 0.3)) {
                         showFirstRunOnboarding = false
                     }
                 }
@@ -206,6 +187,7 @@ struct RootView: View {
                     .zIndex(100)
             }
         }
+        .animation(.easeInOut(duration: 0.28), value: phaseIdentifier)
         .sheet(isPresented: $permissions.showNotificationPrompt) {
             NotificationPermissionPromptView()
                 .presentationDetents([.medium])
@@ -219,6 +201,15 @@ struct RootView: View {
             if loggedIn, auth.profile?.onboardingCompleted == true {
                 settings.onboardingCompleted = true
             }
+        }
+    }
+
+    private var phaseIdentifier: String {
+        switch phase {
+        case .splash: return "splash"
+        case .onboarding: return "onboarding"
+        case .main: return "main"
+        case .login: return "login"
         }
     }
 }

@@ -125,6 +125,6 @@ final class TaskStore: ObservableObject {
 
     private func persist() {
         guard let data = try? JSONEncoder().encode(tasks) else { return }
-        UserDefaults.standard.set(data, forKey: storageKey)
+        DeferredUserDefaults.setData(data, forKey: storageKey)
     }
 }

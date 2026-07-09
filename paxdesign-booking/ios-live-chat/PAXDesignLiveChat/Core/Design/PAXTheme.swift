@@ -47,19 +47,33 @@ extension View {
 }
 
 enum PAXHaptics {
+    private static let lightGenerator = UIImpactFeedbackGenerator(style: .light)
+    private static let mediumGenerator = UIImpactFeedbackGenerator(style: .medium)
+    private static let notificationGenerator = UINotificationFeedbackGenerator()
+
+    static func prepare() {
+        lightGenerator.prepare()
+        mediumGenerator.prepare()
+        notificationGenerator.prepare()
+    }
+
     static func light() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        lightGenerator.impactOccurred(intensity: 0.85)
+        lightGenerator.prepare()
     }
 
     static func medium() {
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        mediumGenerator.impactOccurred(intensity: 0.9)
+        mediumGenerator.prepare()
     }
 
     static func success() {
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        notificationGenerator.notificationOccurred(.success)
+        notificationGenerator.prepare()
     }
 
     static func warning() {
-        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        notificationGenerator.notificationOccurred(.warning)
+        notificationGenerator.prepare()
     }
 }

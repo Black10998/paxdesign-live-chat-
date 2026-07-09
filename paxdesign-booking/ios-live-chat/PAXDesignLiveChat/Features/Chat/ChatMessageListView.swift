@@ -53,12 +53,10 @@ struct ChatMessageListView: View {
     }
 
     private func scrollToBottom(proxy: ScrollViewProxy) {
-        withAnimation(PAXTheme.quickSpring) {
-            if userTyping {
-                proxy.scrollTo("typing-indicator", anchor: .bottom)
-            } else if let last = messages.last {
-                proxy.scrollTo(last.id, anchor: .bottom)
-            }
+        if userTyping {
+            proxy.scrollTo("typing-indicator", anchor: .bottom)
+        } else if let last = messages.last {
+            proxy.scrollTo(last.id, anchor: .bottom)
         }
     }
 }

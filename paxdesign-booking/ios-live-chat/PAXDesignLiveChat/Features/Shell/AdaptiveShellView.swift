@@ -15,6 +15,8 @@ struct AdaptiveShellView: View {
     @State private var iPadSection: PlatformShellSection = .dashboard
     @State private var showGlobalSearch = false
     @State private var syncTask: Task<Void, Never>?
+    @State private var loadedTabs: Set<Int> = [0]
+    @State private var routingSessionId: String?
 
     private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
@@ -72,8 +74,10 @@ struct AdaptiveShellView: View {
             NavigationStack { GlobalSearchView() }
         }
         .onAppear {
+            loadedTabs.insert(selectedTab)
             coordinator.updateUnreadCounts(readIds: settings.readSessionIds)
             schedulePlatformSync()
+            PAXHaptics.prepare()
         }
         .onChange(of: settings.readSessionIds) { readIds in
             coordinator.updateUnreadCounts(readIds: readIds)
@@ -84,7 +88,11 @@ struct AdaptiveShellView: View {
             if count > 0 { PAXHaptics.medium() }
         }
         .onChange(of: coordinator.activeSessionId) { sessionId in
-            guard let sessionId else { return }
+            guard let sessionId else {
+                routingSessionId = nil
+                return
+            }
+            guard routingSessionId != sessionId else { return }
             routeToSession(sessionId)
         }
         .onChange(of: auth.isLoggedIn) { loggedIn in
@@ -93,36 +101,37 @@ struct AdaptiveShellView: View {
                 canViewChats: auth.canViewChats,
                 canManageUsers: auth.canManageUsers
             )
-            if loggedIn {
-                SpotlightIndexer.indexAppContent(auth: auth, coordinator: coordinator)
-            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .paxQuickAction)) { note in
             handleQuickAction(note.object as? String, query: note.userInfo?["query"] as? String)
         }
-        .onChange(of: selectedTab) { _ in
+        .onChange(of: selectedTab) { tab in
+            loadedTabs.insert(tab)
             appLock.recordActivity()
-            PAXKeyboard.dismiss()
         }
     }
 
     private var iPhoneShell: some View {
         let tags = tabTags
         return TabView(selection: $selectedTab) {
-            NavigationStack(path: $dashboardPath) {
-                DashboardView()
-                    .navigationDestination(for: String.self, destination: sessionDestination)
-                    .navigationDestination(for: PlatformModule.self) { module in
-                        platformDestination(for: module)
-                    }
+            lazyTab(tags.dashboard) {
+                NavigationStack(path: $dashboardPath) {
+                    DashboardView()
+                        .navigationDestination(for: String.self, destination: sessionDestination)
+                        .navigationDestination(for: PlatformModule.self) { module in
+                            platformDestination(for: module)
+                        }
+                }
             }
             .tabItem { Label(L10n.TabDashboard, systemImage: "house.fill") }
             .tag(tags.dashboard)
 
             if canViewChats, let chatsTag = tags.chats {
-                NavigationStack(path: $chatsPath) {
-                    SessionListView(onOpenSession: { openSession($0, path: $chatsPath) })
-                        .navigationDestination(for: String.self, destination: sessionDestination)
+                lazyTab(chatsTag) {
+                    NavigationStack(path: $chatsPath) {
+                        SessionListView(onOpenSession: { openSession($0, path: $chatsPath) })
+                            .navigationDestination(for: String.self, destination: sessionDestination)
+                    }
                 }
                 .tabItem { Label(L10n.TabChats, systemImage: "bubble.left.and.bubble.right") }
                 .tag(chatsTag)
@@ -130,34 +139,49 @@ struct AdaptiveShellView: View {
             }
 
             if canViewChats, let teamTag = tags.team {
-                NavigationStack(path: $teamPath) {
-                    TeamMessagesHubView(onOpenSession: { openSession($0, path: $teamPath) })
-                        .navigationDestination(for: String.self, destination: teamDestination)
+                lazyTab(teamTag) {
+                    NavigationStack(path: $teamPath) {
+                        TeamMessagesHubView(onOpenSession: { openSession($0, path: $teamPath) })
+                            .navigationDestination(for: String.self, destination: teamDestination)
+                    }
                 }
                 .tabItem { Label(L10n.TabTeam, systemImage: "person.3.fill") }
                 .tag(teamTag)
                 .modifier(ShellTabBadge(count: unreadTeamCount))
             }
 
-            NavigationStack(path: $livePath) {
-                LiveTabView(onOpenSession: { openSession($0, path: $livePath) })
-                    .navigationDestination(for: String.self) { sessionId in
-                        if canViewChats { ChatView(sessionId: sessionId) }
-                    }
+            lazyTab(tags.live) {
+                NavigationStack(path: $livePath) {
+                    LiveTabView(onOpenSession: { openSession($0, path: $livePath) })
+                        .navigationDestination(for: String.self) { sessionId in
+                            if canViewChats { ChatView(sessionId: sessionId) }
+                        }
+                }
             }
             .tabItem { Label(L10n.TabLive, systemImage: "bell.and.waves.left.and.right.fill") }
             .tag(tags.live)
             .modifier(ShellTabBadge(count: coordinator.liveCount))
 
-            NavigationStack(path: $platformPath) {
-                PlatformHubView()
-                    .navigationDestination(for: String.self, destination: sessionDestination)
-                    .navigationDestination(for: PlatformModule.self) { module in
-                        platformDestination(for: module)
-                    }
+            lazyTab(tags.platform) {
+                NavigationStack(path: $platformPath) {
+                    PlatformHubView()
+                        .navigationDestination(for: String.self, destination: sessionDestination)
+                        .navigationDestination(for: PlatformModule.self) { module in
+                            platformDestination(for: module)
+                        }
+                }
             }
             .tabItem { Label(L10n.TabPlatform, systemImage: "square.grid.2x2.fill") }
             .tag(tags.platform)
+        }
+    }
+
+    @ViewBuilder
+    private func lazyTab<Content: View>(_ tag: Int, @ViewBuilder content: () -> Content) -> some View {
+        if loadedTabs.contains(tag) {
+            content()
+        } else {
+            Color.clear
         }
     }
 
@@ -232,13 +256,23 @@ struct AdaptiveShellView: View {
     }
 
     private func openSession(_ sessionId: String, path: Binding<NavigationPath>) {
+        guard routingSessionId != sessionId else { return }
+        routingSessionId = sessionId
         appLock.recordActivity()
         coordinator.acknowledgeIncomingRequest(sessionId)
-        settings.markSessionRead(sessionId)
         coordinator.activeSessionId = sessionId
         AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: true)
-        path.wrappedValue = NavigationPath()
-        path.wrappedValue.append(sessionId)
+
+        if path.wrappedValue.isEmpty {
+            path.wrappedValue.append(sessionId)
+        } else {
+            path.wrappedValue.removeLast(path.wrappedValue.count)
+            path.wrappedValue.append(sessionId)
+        }
+
+        Task { @MainActor in
+            settings.markSessionRead(sessionId)
+        }
     }
 
     private func routeToSession(_ sessionId: String) {

@@ -75,7 +75,10 @@ final class AuthStore: ObservableObject {
 
             let stored = StoredCredentials(siteURL: siteURLString, username: username, appPassword: appPassword)
             if let data = try? JSONEncoder().encode(stored) {
-                KeychainHelper.save(data, service: service)
+                let service = self.service
+                Task.detached(priority: .utility) {
+                    KeychainHelper.save(data, service: service)
+                }
             }
             Task(priority: .utility) {
                 await PlatformSyncService.shared.sync(auth: self)
@@ -95,7 +98,10 @@ final class AuthStore: ObservableObject {
         api = nil
         profile = nil
         isLoggedIn = false
-        KeychainHelper.delete(service: service)
+        let service = self.service
+        Task.detached(priority: .utility) {
+            KeychainHelper.delete(service: service)
+        }
         if !keepFormFields {
             clearFormFields()
         }

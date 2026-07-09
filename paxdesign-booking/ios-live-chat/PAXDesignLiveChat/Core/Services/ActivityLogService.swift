@@ -118,6 +118,6 @@ final class ActivityLogService: ObservableObject {
 
     private func persist() {
         guard let data = try? JSONEncoder().encode(entries) else { return }
-        UserDefaults.standard.set(data, forKey: storageKey)
+        DeferredUserDefaults.setData(data, forKey: storageKey)
     }
 }

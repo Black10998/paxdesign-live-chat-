@@ -125,7 +125,12 @@ struct TeamMessagesHubView: View {
     private func teamConversationRow(_ session: LiveSession) -> some View {
         let isUnread = session.needsReply && !settings.readSessionIds.contains(session.sessionId)
 
-        return NavigationLink(value: session.sessionId) {
+        return Button {
+            isSearchFocused = false
+            PAXKeyboard.dismiss()
+            onOpenSession(session.sessionId)
+            Task { @MainActor in PAXHaptics.light() }
+        } label: {
             HStack(spacing: 14) {
                 ZStack(alignment: .bottomTrailing) {
                     SessionAvatarView(name: session.displayName, size: 48, isTeam: true)
@@ -177,13 +182,7 @@ struct TeamMessagesHubView: View {
             }
             .padding(.vertical, 4)
         }
-        .simultaneousGesture(TapGesture().onEnded {
-            PAXHaptics.light()
-            isSearchFocused = false
-            PAXKeyboard.dismiss()
-            settings.readSessionIds.insert(session.sessionId)
-            coordinator.activeSessionId = session.sessionId
-        })
+        .buttonStyle(.plain)
         .listRowBackground(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(PAXBrand.accent.opacity(isUnread ? 0.08 : 0.04))

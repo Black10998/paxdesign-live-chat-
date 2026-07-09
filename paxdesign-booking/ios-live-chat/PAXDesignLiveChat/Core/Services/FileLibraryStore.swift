@@ -107,6 +107,6 @@ final class FileLibraryStore: ObservableObject {
 
     private func persist() {
         guard let data = try? JSONEncoder().encode(documents) else { return }
-        UserDefaults.standard.set(data, forKey: storageKey)
+        DeferredUserDefaults.setData(data, forKey: storageKey)
     }
 }

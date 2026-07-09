@@ -121,6 +121,6 @@ final class CalendarStore: ObservableObject {
 
     private func persist() {
         guard let data = try? JSONEncoder().encode(events) else { return }
-        UserDefaults.standard.set(data, forKey: storageKey)
+        DeferredUserDefaults.setData(data, forKey: storageKey)
     }
 }
