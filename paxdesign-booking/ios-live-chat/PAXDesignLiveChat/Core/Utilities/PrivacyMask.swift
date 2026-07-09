@@ -36,6 +36,10 @@ struct AdminPermissions: Codable, Equatable {
     var viewRatings: Bool
     var manageUsers: Bool
     var accessSecurity: Bool
+    var manageTeamPermissions: Bool
+    var manageCustomerProfiles: Bool
+    var assignTeamTasks: Bool
+    var customizeHubProfile: Bool
 
     enum CodingKeys: String, CodingKey {
         case viewChats = "view_chats"
@@ -46,6 +50,10 @@ struct AdminPermissions: Codable, Equatable {
         case viewRatings = "view_ratings"
         case manageUsers = "manage_users"
         case accessSecurity = "access_security"
+        case manageTeamPermissions = "manage_team_permissions"
+        case manageCustomerProfiles = "manage_customer_profiles"
+        case assignTeamTasks = "assign_team_tasks"
+        case customizeHubProfile = "customize_hub_profile"
     }
 
     init(
@@ -56,7 +64,11 @@ struct AdminPermissions: Codable, Equatable {
         manageSettings: Bool = true,
         viewRatings: Bool = true,
         manageUsers: Bool = true,
-        accessSecurity: Bool = true
+        accessSecurity: Bool = true,
+        manageTeamPermissions: Bool = true,
+        manageCustomerProfiles: Bool = true,
+        assignTeamTasks: Bool = true,
+        customizeHubProfile: Bool = true
     ) {
         self.viewChats = viewChats
         self.replyChats = replyChats
@@ -66,6 +78,10 @@ struct AdminPermissions: Codable, Equatable {
         self.viewRatings = viewRatings
         self.manageUsers = manageUsers
         self.accessSecurity = accessSecurity
+        self.manageTeamPermissions = manageTeamPermissions
+        self.manageCustomerProfiles = manageCustomerProfiles
+        self.assignTeamTasks = assignTeamTasks
+        self.customizeHubProfile = customizeHubProfile
     }
 
     init(from decoder: Decoder) throws {
@@ -78,6 +94,20 @@ struct AdminPermissions: Codable, Equatable {
         viewRatings = (try? c.decode(Bool.self, forKey: .viewRatings)) ?? false
         manageUsers = (try? c.decode(Bool.self, forKey: .manageUsers)) ?? false
         accessSecurity = (try? c.decode(Bool.self, forKey: .accessSecurity)) ?? false
+        manageTeamPermissions = (try? c.decode(Bool.self, forKey: .manageTeamPermissions)) ?? false
+        manageCustomerProfiles = (try? c.decode(Bool.self, forKey: .manageCustomerProfiles)) ?? false
+        assignTeamTasks = (try? c.decode(Bool.self, forKey: .assignTeamTasks)) ?? false
+        customizeHubProfile = (try? c.decode(Bool.self, forKey: .customizeHubProfile)) ?? false
+
+        if manageUsers {
+            manageTeamPermissions = true
+            manageCustomerProfiles = true
+            assignTeamTasks = true
+            customizeHubProfile = true
+        }
+        if manageSettings {
+            customizeHubProfile = true
+        }
     }
 
     static let full = AdminPermissions()
@@ -92,6 +122,10 @@ struct AdminPermissions: Codable, Equatable {
             CodingKeys.viewRatings.rawValue: viewRatings,
             CodingKeys.manageUsers.rawValue: manageUsers,
             CodingKeys.accessSecurity.rawValue: accessSecurity,
+            CodingKeys.manageTeamPermissions.rawValue: manageTeamPermissions,
+            CodingKeys.manageCustomerProfiles.rawValue: manageCustomerProfiles,
+            CodingKeys.assignTeamTasks.rawValue: assignTeamTasks,
+            CodingKeys.customizeHubProfile.rawValue: customizeHubProfile,
         ]
     }
 }

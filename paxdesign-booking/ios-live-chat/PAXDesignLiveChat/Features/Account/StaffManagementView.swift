@@ -122,7 +122,20 @@ struct StaffManagementView: View {
             try await api.saveStaff(
                 email: addEmail,
                 enabled: true,
-                permissions: AdminPermissions(viewChats: true, replyChats: true)
+                permissions: AdminPermissions(
+                    viewChats: true,
+                    replyChats: true,
+                    useAI: true,
+                    sendImages: true,
+                    manageSettings: false,
+                    viewRatings: false,
+                    manageUsers: false,
+                    accessSecurity: false,
+                    manageTeamPermissions: false,
+                    manageCustomerProfiles: false,
+                    assignTeamTasks: false,
+                    customizeHubProfile: false
+                )
             )
             addEmail = ""
             await load()
@@ -187,6 +200,10 @@ private struct StaffEditSheet: View {
                     PermissionToggle("Bewertungen", keyPath: \.viewRatings, permissions: $permissions)
                     PermissionToggle("Team verwalten", keyPath: \.manageUsers, permissions: $permissions)
                     PermissionToggle("Sicherheit", keyPath: \.accessSecurity, permissions: $permissions)
+                    PermissionToggle("Team-Berechtigungen", keyPath: \.manageTeamPermissions, permissions: $permissions)
+                    PermissionToggle("Kundenprofile", keyPath: \.manageCustomerProfiles, permissions: $permissions)
+                    PermissionToggle("Aufgaben zuweisen", keyPath: \.assignTeamTasks, permissions: $permissions)
+                    PermissionToggle("Hub-Profilname ändern", keyPath: \.customizeHubProfile, permissions: $permissions)
                 }
             }
             .navigationTitle("Bearbeiten")

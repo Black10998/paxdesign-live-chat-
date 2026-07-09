@@ -106,7 +106,11 @@ enum PermissionLabels {
             PermissionLabelItem(id: "manage_settings", title: L10n.StaffPermissionManageSettings, enabled: permissions.manageSettings),
             PermissionLabelItem(id: "view_ratings", title: L10n.StaffPermissionViewRatings, enabled: permissions.viewRatings),
             PermissionLabelItem(id: "manage_users", title: L10n.StaffPermissionManageUsers, enabled: permissions.manageUsers),
-            PermissionLabelItem(id: "access_security", title: L10n.LegalSecurity, enabled: permissions.accessSecurity)
+            PermissionLabelItem(id: "access_security", title: L10n.LegalSecurity, enabled: permissions.accessSecurity),
+            PermissionLabelItem(id: "manage_team_permissions", title: "Team-Berechtigungen", enabled: permissions.manageTeamPermissions),
+            PermissionLabelItem(id: "manage_customer_profiles", title: "Kundenprofile", enabled: permissions.manageCustomerProfiles),
+            PermissionLabelItem(id: "assign_team_tasks", title: "Aufgaben zuweisen", enabled: permissions.assignTeamTasks),
+            PermissionLabelItem(id: "customize_hub_profile", title: "Hub-Profilname", enabled: permissions.customizeHubProfile)
         ]
     }
 }

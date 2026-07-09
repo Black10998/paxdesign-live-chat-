@@ -105,6 +105,12 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => $auth,
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/profile', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_profile_save'),
+            'permission_callback' => $auth,
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'route_sessions'),
@@ -345,6 +351,15 @@ class PAXdesign_Live_Chat_Mobile_API {
             'callback' => array(__CLASS__, 'route_platform_task_delete'),
             'permission_callback' => $auth,
         ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/team-members', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array(__CLASS__, 'route_platform_team_members'),
+            'permission_callback' => $auth,
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/customers', array(
+            array('methods' => WP_REST_Server::READABLE, 'callback' => array(__CLASS__, 'route_platform_customers_list'), 'permission_callback' => $auth),
+            array('methods' => WP_REST_Server::CREATABLE, 'callback' => array(__CLASS__, 'route_platform_customer_save'), 'permission_callback' => $auth),
+        ));
         register_rest_route(self::REST_NAMESPACE, $base . '/calendar', array(
             array('methods' => WP_REST_Server::READABLE, 'callback' => array(__CLASS__, 'route_platform_calendar_list'), 'permission_callback' => $auth),
             array('methods' => WP_REST_Server::CREATABLE, 'callback' => array(__CLASS__, 'route_platform_calendar_save'), 'permission_callback' => $auth),
@@ -412,12 +427,18 @@ class PAXdesign_Live_Chat_Mobile_API {
         return $response;
     }
 
-    public static function route_me(WP_REST_Request $request) {
-        $user = wp_get_current_user();
+    /**
+     * @return array<string, mixed>
+     */
+    private static function profile_payload($user) {
         $perms = PAXdesign_Live_Chat_Permissions::get_effective_permissions($user);
-        return rest_ensure_response(array(
+        $hub_name = trim((string) get_user_meta((int) $user->ID, 'pax_live_hub_display_name', true));
+        if ($hub_name === '') {
+            $hub_name = $user->display_name;
+        }
+        return array(
             'user_id'         => (int) $user->ID,
-            'name'            => $user->display_name,
+            'name'            => $hub_name,
             'email'           => $user->user_email,
             'username'        => $user->user_login,
             'avatar_url'      => get_avatar_url((int) $user->ID, array('size' => 256)),
@@ -429,7 +450,39 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permissions'     => $perms,
             'module_permissions' => PAXdesign_Platform_Store::module_permissions_for_user($user),
             'onboarding_completed' => (bool) get_user_meta((int) $user->ID, 'pax_live_onboarding_completed', true),
-        ));
+        );
+    }
+
+    public static function route_me(WP_REST_Request $request) {
+        $user = wp_get_current_user();
+        return rest_ensure_response(self::profile_payload($user));
+    }
+
+    public static function route_profile_save(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_CUSTOMIZE_HUB_PROFILE);
+        if (is_wp_error($check)) {
+            $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_SETTINGS);
+        }
+        if (is_wp_error($check)) {
+            return $check;
+        }
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        $display_name = trim((string) sanitize_text_field($params['hub_display_name'] ?? $params['display_name'] ?? ''));
+        if (strlen($display_name) > 80) {
+            $display_name = substr($display_name, 0, 80);
+        }
+
+        $user_id = (int) get_current_user_id();
+        if ($display_name === '') {
+            delete_user_meta($user_id, 'pax_live_hub_display_name');
+        } else {
+            update_user_meta($user_id, 'pax_live_hub_display_name', $display_name);
+        }
+
+        return self::respond(self::profile_payload(wp_get_current_user()));
     }
 
     public static function route_sessions(WP_REST_Request $request) {
@@ -728,7 +781,10 @@ class PAXdesign_Live_Chat_Mobile_API {
     }
 
     public static function route_staff_list(WP_REST_Request $request) {
-        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_TEAM_PERMISSIONS);
+        if (is_wp_error($check)) {
+            $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        }
         if (is_wp_error($check)) {
             return $check;
         }
@@ -736,7 +792,10 @@ class PAXdesign_Live_Chat_Mobile_API {
     }
 
     public static function route_staff_save(WP_REST_Request $request) {
-        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_TEAM_PERMISSIONS);
+        if (is_wp_error($check)) {
+            $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        }
         if (is_wp_error($check)) {
             return $check;
         }
@@ -763,7 +822,10 @@ class PAXdesign_Live_Chat_Mobile_API {
     }
 
     public static function route_staff_remove(WP_REST_Request $request) {
-        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_TEAM_PERMISSIONS);
+        if (is_wp_error($check)) {
+            $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        }
         if (is_wp_error($check)) {
             return $check;
         }
@@ -845,19 +907,79 @@ class PAXdesign_Live_Chat_Mobile_API {
     }
 
     public static function route_platform_tasks_list(WP_REST_Request $request) {
-        return self::respond(array('tasks' => PAXdesign_Platform_Store::list_tasks()));
+        $user_id = (int) get_current_user_id();
+        $can_manage_all = PAXdesign_Live_Chat_Permissions::can($user_id, PAXdesign_Live_Chat_Permissions::PERM_ASSIGN_TEAM_TASKS)
+            || PAXdesign_Live_Chat_Permissions::can($user_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        return self::respond(array('tasks' => PAXdesign_Platform_Store::list_tasks($user_id, $can_manage_all)));
     }
 
     public static function route_platform_task_save(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_REPLY_CHATS);
+        if (is_wp_error($check)) {
+            $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_ASSIGN_TEAM_TASKS);
+        }
+        if (is_wp_error($check)) {
+            $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        }
+        if (is_wp_error($check)) {
+            return $check;
+        }
         $params = $request->get_json_params();
         if (!is_array($params)) {
             $params = array();
         }
-        return self::respond(PAXdesign_Platform_Store::save_task($params));
+        $user_id = (int) get_current_user_id();
+        $can_assign = PAXdesign_Live_Chat_Permissions::can($user_id, PAXdesign_Live_Chat_Permissions::PERM_ASSIGN_TEAM_TASKS)
+            || PAXdesign_Live_Chat_Permissions::can($user_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        return self::respond(PAXdesign_Platform_Store::save_task($params, $user_id, $can_assign));
     }
 
     public static function route_platform_task_delete(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_ASSIGN_TEAM_TASKS);
+        if (is_wp_error($check)) {
+            $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        }
+        if (is_wp_error($check)) {
+            return $check;
+        }
         return self::respond(PAXdesign_Platform_Store::delete_task($request['id']));
+    }
+
+    public static function route_platform_team_members(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_ASSIGN_TEAM_TASKS);
+        if (is_wp_error($check)) {
+            $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        }
+        if (is_wp_error($check)) {
+            return $check;
+        }
+        return self::respond(array('members' => PAXdesign_Platform_Store::list_team_members()));
+    }
+
+    public static function route_platform_customers_list(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_CUSTOMER_PROFILES);
+        if (is_wp_error($check)) {
+            $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        }
+        if (is_wp_error($check)) {
+            return $check;
+        }
+        return self::respond(array('customers' => PAXdesign_Platform_Store::list_customer_profiles()));
+    }
+
+    public static function route_platform_customer_save(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_CUSTOMER_PROFILES);
+        if (is_wp_error($check)) {
+            $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        }
+        if (is_wp_error($check)) {
+            return $check;
+        }
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        return self::respond(PAXdesign_Platform_Store::save_customer_profile($params));
     }
 
     public static function route_platform_calendar_list(WP_REST_Request $request) {
@@ -944,7 +1066,11 @@ class PAXdesign_Live_Chat_Mobile_API {
             'reports'      => PAXdesign_Platform_Store::reports_payload(),
             'employee'     => PAXdesign_Platform_Store::employee_payload($user_id),
             'notifications'=> PAXdesign_Platform_Store::notifications_summary(),
-            'tasks'        => PAXdesign_Platform_Store::list_tasks(),
+            'tasks'        => PAXdesign_Platform_Store::list_tasks(
+                $user_id,
+                PAXdesign_Live_Chat_Permissions::can($user_id, PAXdesign_Live_Chat_Permissions::PERM_ASSIGN_TEAM_TASKS)
+                    || PAXdesign_Live_Chat_Permissions::can($user_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)
+            ),
             'calendar'     => PAXdesign_Platform_Store::list_events(),
             'upcoming'     => PAXdesign_Platform_Store::upcoming_events(8),
             'files'        => PAXdesign_Platform_Store::list_files(),

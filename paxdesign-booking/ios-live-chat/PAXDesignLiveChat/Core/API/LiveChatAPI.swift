@@ -542,6 +542,32 @@ final class LiveChatAPI {
         _ = try await perform(authRequest(url: url, method: "DELETE"), endpoint: "platform-task-delete", as: EmptyResponse.self)
     }
 
+    func fetchPlatformTeamMembers() async throws -> [TeamMemberRecord] {
+        guard let url = liveAdminURL(path: "platform/team-members") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        struct Response: Codable { let members: [TeamMemberRecord] }
+        let response = try await perform(authRequest(url: url), endpoint: "platform-team-members", as: Response.self)
+        return response.members
+    }
+
+    func fetchPlatformCustomerProfiles() async throws -> [CustomerProfileRecord] {
+        guard let url = liveAdminURL(path: "platform/customers") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        struct Response: Codable { let customers: [CustomerProfileRecord] }
+        let response = try await perform(authRequest(url: url), endpoint: "platform-customers", as: Response.self)
+        return response.customers
+    }
+
+    func savePlatformCustomerProfile(_ payload: [String: Any]) async throws -> CustomerProfileRecord {
+        guard let url = liveAdminURL(path: "platform/customers") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "platform-customer-save", as: CustomerProfileRecord.self)
+    }
+
     func fetchPlatformCalendar() async throws -> (events: [APICalendarRecord], upcoming: [APICalendarRecord]) {
         guard let url = liveAdminURL(path: "platform/calendar") else {
             throw LiveChatAPIError.invalidURL
@@ -651,6 +677,14 @@ final class LiveChatAPI {
         struct Response: Codable { let settings: [String: Bool] }
         let response = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "platform-settings-save", as: Response.self)
         return response.settings
+    }
+
+    func updateHubDisplayName(_ displayName: String) async throws -> AdminProfile {
+        guard let url = liveAdminURL(path: "profile") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONSerialization.data(withJSONObject: ["hub_display_name": displayName])
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "profile-save", as: AdminProfile.self)
     }
 }
 

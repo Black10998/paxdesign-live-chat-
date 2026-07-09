@@ -8,6 +8,14 @@ struct PAXTaskItem: Codable, Identifiable, Hashable {
     var isCompleted: Bool
     var priority: Priority
     let createdAt: Date
+    var createdByUserId: Int
+    var assignedUserId: Int
+    var assignedUserName: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, notes, dueDate, isCompleted, priority, createdAt
+        case createdByUserId, assignedUserId, assignedUserName
+    }
 
     enum Priority: String, Codable, CaseIterable, Identifiable {
         case low, medium, high
@@ -23,7 +31,15 @@ struct PAXTaskItem: Codable, Identifiable, Hashable {
         }
     }
 
-    init(title: String, notes: String = "", dueDate: Date? = nil, priority: Priority = .medium) {
+    init(
+        title: String,
+        notes: String = "",
+        dueDate: Date? = nil,
+        priority: Priority = .medium,
+        createdByUserId: Int = 0,
+        assignedUserId: Int = 0,
+        assignedUserName: String = ""
+    ) {
         self.id = UUID().uuidString
         self.title = title
         self.notes = notes
@@ -31,6 +47,37 @@ struct PAXTaskItem: Codable, Identifiable, Hashable {
         self.isCompleted = false
         self.priority = priority
         self.createdAt = Date()
+        self.createdByUserId = createdByUserId
+        self.assignedUserId = assignedUserId
+        self.assignedUserName = assignedUserName
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        title = try container.decode(String.self, forKey: .title)
+        notes = (try? container.decode(String.self, forKey: .notes)) ?? ""
+        dueDate = try? container.decode(Date.self, forKey: .dueDate)
+        isCompleted = (try? container.decode(Bool.self, forKey: .isCompleted)) ?? false
+        priority = (try? container.decode(Priority.self, forKey: .priority)) ?? .medium
+        createdAt = (try? container.decode(Date.self, forKey: .createdAt)) ?? Date()
+        createdByUserId = (try? container.decode(Int.self, forKey: .createdByUserId)) ?? 0
+        assignedUserId = (try? container.decode(Int.self, forKey: .assignedUserId)) ?? 0
+        assignedUserName = (try? container.decode(String.self, forKey: .assignedUserName)) ?? ""
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(title, forKey: .title)
+        try container.encode(notes, forKey: .notes)
+        try container.encodeIfPresent(dueDate, forKey: .dueDate)
+        try container.encode(isCompleted, forKey: .isCompleted)
+        try container.encode(priority, forKey: .priority)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(createdByUserId, forKey: .createdByUserId)
+        try container.encode(assignedUserId, forKey: .assignedUserId)
+        try container.encode(assignedUserName, forKey: .assignedUserName)
     }
 }
 
@@ -64,8 +111,23 @@ final class TaskStore: ObservableObject {
         UserDefaults.standard.removeObject(forKey: storageKey)
     }
 
-    func add(title: String, notes: String = "", dueDate: Date? = nil, priority: PAXTaskItem.Priority = .medium, auth: AuthStore) async {
-        var task = PAXTaskItem(title: title, notes: notes, dueDate: dueDate, priority: priority)
+    func add(
+        title: String,
+        notes: String = "",
+        dueDate: Date? = nil,
+        priority: PAXTaskItem.Priority = .medium,
+        assignedUserId: Int = 0,
+        auth: AuthStore
+    ) async {
+        var task = PAXTaskItem(
+            title: title,
+            notes: notes,
+            dueDate: dueDate,
+            priority: priority,
+            createdByUserId: auth.profile?.userId ?? 0,
+            assignedUserId: assignedUserId,
+            assignedUserName: ""
+        )
         if let api = auth.api {
             do {
                 let saved = try await api.savePlatformTask(task.apiPayload())

@@ -2,6 +2,9 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject private var auth: AuthStore
+    @State private var hubDisplayName = ""
+    @State private var isSavingHubName = false
+    @State private var hubNameError: String?
 
     private var profile: AdminProfile? { auth.profile }
     private var permissions: AdminPermissions { profile?.permissions ?? .full }
@@ -35,6 +38,24 @@ struct ProfileView: View {
                     .font(.subheadline)
                 LabeledContent(L10n.CommonVersion, value: PAXAppInfo.fullVersion)
                     .font(.subheadline)
+            }
+
+            if auth.canCustomizeHubProfile {
+                Section("Hub Administrator") {
+                    TextField("Anzeigename im Hub", text: $hubDisplayName)
+                        .textInputAutocapitalization(.words)
+                    if let hubNameError, !hubNameError.isEmpty {
+                        Text(hubNameError)
+                            .font(.caption)
+                            .foregroundStyle(PAXTheme.danger)
+                    }
+                    Button("Hub-Namen speichern") {
+                        Task { await saveHubDisplayName() }
+                    }
+                    .disabled(isSavingHubName || hubDisplayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                } footer: {
+                    Text("Dieser Name wird in der Hub-Profilansicht angezeigt.")
+                }
             }
 
             Section(L10n.ProfilePermissions) {
@@ -81,6 +102,11 @@ struct ProfileView: View {
         .background(PAXBackground())
         .navigationTitle(L10n.ProfileTitle)
         .navigationBarTitleDisplayMode(.large)
+        .onAppear {
+            if hubDisplayName.isEmpty {
+                hubDisplayName = profile?.displayName ?? ""
+            }
+        }
     }
 
     @ViewBuilder
@@ -106,6 +132,24 @@ struct ProfileView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(Capsule().fill(PAXTheme.surface))
+        }
+    }
+
+    private func saveHubDisplayName() async {
+        guard let api = auth.api else { return }
+        let clean = hubDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+        isSavingHubName = true
+        defer { isSavingHubName = false }
+        do {
+            let updated = try await api.updateHubDisplayName(clean)
+            auth.applyProfileUpdate(updated)
+            hubDisplayName = updated.displayName
+            hubNameError = nil
+            PAXHaptics.success()
+        } catch {
+            hubNameError = error.localizedDescription
+            PAXHaptics.warning()
         }
     }
 }

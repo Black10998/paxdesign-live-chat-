@@ -78,9 +78,7 @@ final class InAppNotificationCoordinator {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
-        content.sound = type == "ai_attention"
-            ? UNNotificationSound(named: UNNotificationSoundName("pax-ai-alert.wav"))
-            : UNNotificationSound(named: UNNotificationSoundName("pax-message.wav"))
+        content.sound = .default
         content.userInfo = [
             "pax": [
                 "session_id": sessionId,

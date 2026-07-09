@@ -19,7 +19,9 @@ class PAXdesign_Live_Chat_Permissions {
     }
 
     public static function register_admin_menu() {
-        if (!self::can(get_current_user_id(), self::PERM_MANAGE_USERS) && !self::is_super_admin()) {
+        $can_manage = self::can(get_current_user_id(), self::PERM_MANAGE_USERS)
+            || self::can(get_current_user_id(), self::PERM_MANAGE_TEAM_PERMISSIONS);
+        if (!$can_manage && !self::is_super_admin()) {
             return;
         }
         add_submenu_page(
@@ -33,14 +35,18 @@ class PAXdesign_Live_Chat_Permissions {
     }
 
     public static function render_admin_page() {
-        if (!self::can(get_current_user_id(), self::PERM_MANAGE_USERS) && !self::is_super_admin()) {
+        $can_manage = self::can(get_current_user_id(), self::PERM_MANAGE_USERS)
+            || self::can(get_current_user_id(), self::PERM_MANAGE_TEAM_PERMISSIONS);
+        if (!$can_manage && !self::is_super_admin()) {
             wp_die(esc_html__('Keine Berechtigung.', 'paxdesign-booking'));
         }
         include PAXDESIGN_BOOKING_PLUGIN_DIR . 'templates/live-chat-permissions-page.php';
     }
 
     public static function handle_save_staff() {
-        if (!current_user_can('read') || (!self::can(get_current_user_id(), self::PERM_MANAGE_USERS) && !self::is_super_admin())) {
+        $can_manage = self::can(get_current_user_id(), self::PERM_MANAGE_USERS)
+            || self::can(get_current_user_id(), self::PERM_MANAGE_TEAM_PERMISSIONS);
+        if (!current_user_can('read') || (!$can_manage && !self::is_super_admin())) {
             wp_die(esc_html__('Keine Berechtigung.', 'paxdesign-booking'));
         }
         check_admin_referer('paxdesign_live_chat_staff');
@@ -70,7 +76,9 @@ class PAXdesign_Live_Chat_Permissions {
     }
 
     public static function handle_remove_staff() {
-        if (!current_user_can('read') || (!self::can(get_current_user_id(), self::PERM_MANAGE_USERS) && !self::is_super_admin())) {
+        $can_manage = self::can(get_current_user_id(), self::PERM_MANAGE_USERS)
+            || self::can(get_current_user_id(), self::PERM_MANAGE_TEAM_PERMISSIONS);
+        if (!current_user_can('read') || (!$can_manage && !self::is_super_admin())) {
             wp_die(esc_html__('Keine Berechtigung.', 'paxdesign-booking'));
         }
         check_admin_referer('paxdesign_live_chat_remove_staff');
@@ -88,6 +96,10 @@ class PAXdesign_Live_Chat_Permissions {
     const PERM_VIEW_RATINGS     = 'view_ratings';
     const PERM_MANAGE_USERS     = 'manage_users';
     const PERM_ACCESS_SECURITY  = 'access_security';
+    const PERM_MANAGE_TEAM_PERMISSIONS = 'manage_team_permissions';
+    const PERM_MANAGE_CUSTOMER_PROFILES = 'manage_customer_profiles';
+    const PERM_ASSIGN_TEAM_TASKS = 'assign_team_tasks';
+    const PERM_CUSTOMIZE_HUB_PROFILE = 'customize_hub_profile';
 
     /**
      * @return array<string, string>
@@ -102,6 +114,10 @@ class PAXdesign_Live_Chat_Permissions {
             self::PERM_VIEW_RATINGS    => __('Bewertungen & Feedback', 'paxdesign-booking'),
             self::PERM_MANAGE_USERS    => __('Team & Berechtigungen', 'paxdesign-booking'),
             self::PERM_ACCESS_SECURITY => __('Sicherheit & Konto', 'paxdesign-booking'),
+            self::PERM_MANAGE_TEAM_PERMISSIONS => __('Team-Berechtigungen verwalten', 'paxdesign-booking'),
+            self::PERM_MANAGE_CUSTOMER_PROFILES => __('Kundenprofile verwalten', 'paxdesign-booking'),
+            self::PERM_ASSIGN_TEAM_TASKS => __('Team-Aufgaben erstellen/zuweisen', 'paxdesign-booking'),
+            self::PERM_CUSTOMIZE_HUB_PROFILE => __('Hub-Profilname anpassen', 'paxdesign-booking'),
         );
     }
 
@@ -154,6 +170,19 @@ class PAXdesign_Live_Chat_Permissions {
         foreach (array_keys(self::permission_labels()) as $key) {
             $out[$key] = !empty($perms[$key]);
         }
+
+        // Backward-compatible defaults: existing managers keep elevated controls.
+        if (!empty($out[self::PERM_MANAGE_USERS])) {
+            $out[self::PERM_MANAGE_TEAM_PERMISSIONS] = true;
+            $out[self::PERM_MANAGE_CUSTOMER_PROFILES] = true;
+            $out[self::PERM_ASSIGN_TEAM_TASKS] = true;
+            $out[self::PERM_CUSTOMIZE_HUB_PROFILE] = true;
+        }
+
+        if (!empty($out[self::PERM_MANAGE_SETTINGS])) {
+            $out[self::PERM_CUSTOMIZE_HUB_PROFILE] = true;
+        }
+
         return $out;
     }
 
@@ -252,7 +281,9 @@ class PAXdesign_Live_Chat_Permissions {
      * @param array<string, mixed> $data
      */
     public static function save_staff_record($user_id, array $data) {
-        if (!self::can(get_current_user_id(), self::PERM_MANAGE_USERS) && !self::is_super_admin()) {
+        $can_manage = self::can(get_current_user_id(), self::PERM_MANAGE_USERS)
+            || self::can(get_current_user_id(), self::PERM_MANAGE_TEAM_PERMISSIONS);
+        if (!$can_manage && !self::is_super_admin()) {
             return new WP_Error('forbidden', __('Keine Berechtigung.', 'paxdesign-booking'), array('status' => 403));
         }
 
@@ -294,7 +325,9 @@ class PAXdesign_Live_Chat_Permissions {
      * @param int $user_id
      */
     public static function remove_staff($user_id) {
-        if (!self::can(get_current_user_id(), self::PERM_MANAGE_USERS) && !self::is_super_admin()) {
+        $can_manage = self::can(get_current_user_id(), self::PERM_MANAGE_USERS)
+            || self::can(get_current_user_id(), self::PERM_MANAGE_TEAM_PERMISSIONS);
+        if (!$can_manage && !self::is_super_admin()) {
             return new WP_Error('forbidden', __('Keine Berechtigung.', 'paxdesign-booking'), array('status' => 403));
         }
         $user_id = (int) $user_id;

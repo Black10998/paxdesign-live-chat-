@@ -15,4 +15,8 @@ extension AuthStore {
     var canViewRatings: Bool { hasPermission(\.viewRatings) }
     var canManageUsers: Bool { hasPermission(\.manageUsers) }
     var canAccessSecurity: Bool { hasPermission(\.accessSecurity) }
+    var canManageTeamPermissions: Bool { canManageUsers || hasPermission(\.manageTeamPermissions) }
+    var canManageCustomerProfiles: Bool { canManageUsers || hasPermission(\.manageCustomerProfiles) }
+    var canAssignTeamTasks: Bool { canManageUsers || hasPermission(\.assignTeamTasks) }
+    var canCustomizeHubProfile: Bool { canManageUsers || canManageSettings || hasPermission(\.customizeHubProfile) }
 }

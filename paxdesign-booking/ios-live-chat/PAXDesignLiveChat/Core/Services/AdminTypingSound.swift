@@ -1,22 +1,22 @@
-import AVFoundation
-
-/// Short typing feedback while the admin composes — stops immediately when typing stops (no looping).
+/// Short typing feedback while the admin composes.
 @MainActor
 final class AdminTypingSound {
     static let shared = AdminTypingSound()
 
-    private static let soundURL = URL(string: "https://paxdesign.at/wp-content/uploads/2026/06/freesound_community-writing-a-text-message-41141.mp3")!
-    private static let idleNanoseconds: UInt64 = 1_800_000_000
+    private static let idleNanoseconds: UInt64 = 1_500_000_000
+    private let minInterval: TimeInterval = 0.65
 
-    private var player: AVAudioPlayer?
     private var idleTask: Task<Void, Never>?
+    private var lastPlayedAt: Date = .distantPast
 
     func typingActivity() {
         guard AppSettingsStore.shared.typingSoundEnabled else { return }
 
         idleTask?.cancel()
-        if player?.isPlaying != true {
-            playOnce()
+        let now = Date()
+        if now.timeIntervalSince(lastPlayedAt) >= minInterval {
+            lastPlayedAt = now
+            PAXNotificationSound.shared.play(.typing)
         }
 
         idleTask = Task { [weak self] in
@@ -29,21 +29,5 @@ final class AdminTypingSound {
     func stop() {
         idleTask?.cancel()
         idleTask = nil
-        player?.stop()
-        player?.currentTime = 0
-        player = nil
-    }
-
-    private func playOnce() {
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
-        try? session.setActive(true)
-
-        guard let audio = try? AVAudioPlayer(contentsOf: Self.soundURL) else { return }
-        audio.volume = AppSettingsStore.shared.ringtoneVolume * 0.36
-        audio.numberOfLoops = 0
-        audio.prepareToPlay()
-        audio.play()
-        player = audio
     }
 }

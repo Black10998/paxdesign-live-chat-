@@ -21,6 +21,7 @@ class PAXdesign_Platform_Store {
             'calendar' => array(),
             'files'    => array(),
             'activity' => array(),
+            'customers' => array(),
         );
     }
 
@@ -59,6 +60,19 @@ class PAXdesign_Platform_Store {
         if (!in_array($priority, array('low', 'medium', 'high'), true)) {
             $priority = 'medium';
         }
+        $assigned_to = isset($entry['assigned_to']) ? (int) $entry['assigned_to'] : 0;
+        if ($assigned_to < 0) {
+            $assigned_to = 0;
+        }
+        $assigned_name = '';
+        if ($assigned_to > 0) {
+            $assigned = get_user_by('id', $assigned_to);
+            if ($assigned instanceof WP_User) {
+                $assigned_name = sanitize_text_field($assigned->display_name);
+            } else {
+                $assigned_to = 0;
+            }
+        }
         return array(
             'id'           => !empty($entry['id']) ? sanitize_text_field($entry['id']) : self::new_id('task'),
             'title'        => sanitize_text_field($entry['title'] ?? ''),
@@ -68,6 +82,8 @@ class PAXdesign_Platform_Store {
             'priority'     => $priority,
             'created_at'   => !empty($entry['created_at']) ? sanitize_text_field($entry['created_at']) : self::now_iso(),
             'created_by'   => isset($entry['created_by']) ? (int) $entry['created_by'] : (int) get_current_user_id(),
+            'assigned_to'  => $assigned_to,
+            'assigned_name'=> $assigned_name,
             'updated_at'   => self::now_iso(),
         );
     }
@@ -75,9 +91,17 @@ class PAXdesign_Platform_Store {
     /**
      * @return array<int, array<string, mixed>>
      */
-    public static function list_tasks() {
+    public static function list_tasks($user_id = 0, $can_manage_all = true) {
         $store = self::get_store();
         $items = isset($store['tasks']) && is_array($store['tasks']) ? $store['tasks'] : array();
+        $uid = (int) $user_id;
+        if (!$can_manage_all && $uid > 0) {
+            $items = array_values(array_filter($items, function ($task) use ($uid) {
+                $assigned_to = isset($task['assigned_to']) ? (int) $task['assigned_to'] : 0;
+                $created_by  = isset($task['created_by']) ? (int) $task['created_by'] : 0;
+                return $assigned_to === $uid || $created_by === $uid;
+            }));
+        }
         usort($items, function ($a, $b) {
             return strcmp((string) ($b['updated_at'] ?? ''), (string) ($a['updated_at'] ?? ''));
         });
@@ -88,10 +112,15 @@ class PAXdesign_Platform_Store {
      * @param array<string, mixed> $payload
      * @return array<string, mixed>|WP_Error
      */
-    public static function save_task($payload) {
+    public static function save_task($payload, $actor_user_id = 0, $can_assign = true) {
         $title = sanitize_text_field($payload['title'] ?? '');
         if ($title === '') {
             return new WP_Error('invalid_task', __('Task title is required.', 'paxdesign-booking'), array('status' => 400));
+        }
+
+        $actor_user_id = (int) $actor_user_id;
+        if ($actor_user_id <= 0) {
+            $actor_user_id = (int) get_current_user_id();
         }
 
         $store = self::get_store();
@@ -102,6 +131,12 @@ class PAXdesign_Platform_Store {
         foreach ($tasks as $index => $task) {
             if (!empty($task['id']) && $task['id'] === $id) {
                 $merged = array_merge($task, $payload);
+                if (!$can_assign) {
+                    $existing_assignee = isset($task['assigned_to']) ? (int) $task['assigned_to'] : 0;
+                    $merged['assigned_to'] = $existing_assignee > 0 ? $existing_assignee : $actor_user_id;
+                } else {
+                    $merged['assigned_to'] = isset($payload['assigned_to']) ? (int) $payload['assigned_to'] : (int) ($task['assigned_to'] ?? 0);
+                }
                 $tasks[$index] = self::normalize_task($merged);
                 $found = true;
                 $saved = $tasks[$index];
@@ -110,6 +145,12 @@ class PAXdesign_Platform_Store {
         }
 
         if (!$found) {
+            $payload['created_by'] = $actor_user_id;
+            if (!$can_assign) {
+                $payload['assigned_to'] = $actor_user_id;
+            } else {
+                $payload['assigned_to'] = isset($payload['assigned_to']) ? (int) $payload['assigned_to'] : 0;
+            }
             $saved = self::normalize_task($payload);
             array_unshift($tasks, $saved);
         }
@@ -118,6 +159,45 @@ class PAXdesign_Platform_Store {
         self::save_store($store);
         self::append_activity('tasks', __('Task saved', 'paxdesign-booking'), $title, 'action');
         return $saved;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public static function list_team_members() {
+        $members = array();
+        $seen = array();
+
+        $current = wp_get_current_user();
+        if ($current instanceof WP_User && !empty($current->ID)) {
+            $members[] = array(
+                'user_id' => (int) $current->ID,
+                'name'    => sanitize_text_field($current->display_name),
+                'email'   => sanitize_email($current->user_email),
+                'role'    => 'current',
+            );
+            $seen[(int) $current->ID] = true;
+        }
+
+        foreach (PAXdesign_Live_Chat_Permissions::list_staff_for_api() as $member) {
+            $uid = isset($member['user_id']) ? (int) $member['user_id'] : 0;
+            if ($uid <= 0 || isset($seen[$uid]) || empty($member['enabled'])) {
+                continue;
+            }
+            $members[] = array(
+                'user_id' => $uid,
+                'name'    => sanitize_text_field((string) ($member['name'] ?? '')),
+                'email'   => sanitize_email((string) ($member['email'] ?? '')),
+                'role'    => !empty($member['permissions'][PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS]) ? 'manager' : 'staff',
+            );
+            $seen[$uid] = true;
+        }
+
+        usort($members, function ($a, $b) {
+            return strcmp((string) ($a['name'] ?? ''), (string) ($b['name'] ?? ''));
+        });
+
+        return array_values($members);
     }
 
     /**
@@ -141,6 +221,151 @@ class PAXdesign_Platform_Store {
         $store['tasks'] = $next;
         self::save_store($store);
         return true;
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     * @return array<string, mixed>
+     */
+    private static function normalize_customer_profile($entry) {
+        $session_id = sanitize_text_field($entry['session_id'] ?? '');
+        $visible_raw = isset($entry['visible_details']) && is_array($entry['visible_details']) ? $entry['visible_details'] : array();
+        $visible = array(
+            'show_email'   => !empty($visible_raw['show_email']),
+            'show_phone'   => !empty($visible_raw['show_phone']),
+            'show_company' => !empty($visible_raw['show_company']),
+            'show_notes'   => !empty($visible_raw['show_notes']),
+        );
+
+        return array(
+            'session_id'       => $session_id,
+            'display_name'     => sanitize_text_field($entry['display_name'] ?? ''),
+            'avatar_url'       => esc_url_raw((string) ($entry['avatar_url'] ?? '')),
+            'email'            => sanitize_email((string) ($entry['email'] ?? '')),
+            'phone'            => sanitize_text_field((string) ($entry['phone'] ?? '')),
+            'company'          => sanitize_text_field((string) ($entry['company'] ?? '')),
+            'notes'            => sanitize_textarea_field((string) ($entry['notes'] ?? '')),
+            'visible_details'  => $visible,
+            'updated_at'       => !empty($entry['updated_at']) ? sanitize_text_field((string) $entry['updated_at']) : self::now_iso(),
+            'updated_by'       => isset($entry['updated_by']) ? (int) $entry['updated_by'] : (int) get_current_user_id(),
+        );
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private static function list_customer_session_rows() {
+        if (!class_exists('PAXdesign_Chat_Log')) {
+            return array();
+        }
+
+        PAXdesign_Chat_Log::create_table();
+        if (class_exists('PAXdesign_Chat_Live')) {
+            PAXdesign_Chat_Live::upgrade_schema();
+        }
+
+        global $wpdb;
+        $table = PAXdesign_Chat_Log::table_name();
+        $rows = $wpdb->get_results(
+            "SELECT session_id, customer_name, updated_at FROM $table WHERE customer_name <> '' ORDER BY updated_at DESC LIMIT 300",
+            ARRAY_A
+        );
+
+        if (!is_array($rows)) {
+            return array();
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public static function list_customer_profiles() {
+        $store = self::get_store();
+        $stored = isset($store['customers']) && is_array($store['customers']) ? $store['customers'] : array();
+
+        $profiles = array();
+        foreach ($stored as $session_id => $entry) {
+            $normalized = self::normalize_customer_profile(is_array($entry) ? $entry : array());
+            if ($normalized['session_id'] === '') {
+                $normalized['session_id'] = sanitize_text_field((string) $session_id);
+            }
+            if ($normalized['session_id'] === '') {
+                continue;
+            }
+            $profiles[$normalized['session_id']] = $normalized;
+        }
+
+        foreach (self::list_customer_session_rows() as $row) {
+            $session_id = sanitize_text_field((string) ($row['session_id'] ?? ''));
+            if ($session_id === '') {
+                continue;
+            }
+            $session_name = sanitize_text_field((string) ($row['customer_name'] ?? ''));
+            if (!isset($profiles[$session_id])) {
+                $profiles[$session_id] = self::normalize_customer_profile(array(
+                    'session_id' => $session_id,
+                    'display_name' => $session_name,
+                    'updated_at' => (string) ($row['updated_at'] ?? ''),
+                ));
+            } elseif ($profiles[$session_id]['display_name'] === '' && $session_name !== '') {
+                $profiles[$session_id]['display_name'] = $session_name;
+            }
+            if (!empty($row['updated_at']) && empty($profiles[$session_id]['updated_at'])) {
+                $profiles[$session_id]['updated_at'] = sanitize_text_field((string) $row['updated_at']);
+            }
+        }
+
+        $items = array_values($profiles);
+        usort($items, function ($a, $b) {
+            return strcmp((string) ($b['updated_at'] ?? ''), (string) ($a['updated_at'] ?? ''));
+        });
+
+        return $items;
+    }
+
+    /**
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function save_customer_profile($payload) {
+        $session_id = sanitize_text_field($payload['session_id'] ?? '');
+        if ($session_id === '') {
+            return new WP_Error('invalid_customer_profile', __('Session ID is required.', 'paxdesign-booking'), array('status' => 400));
+        }
+
+        $store = self::get_store();
+        $stored = isset($store['customers']) && is_array($store['customers']) ? $store['customers'] : array();
+        $previous = isset($stored[$session_id]) && is_array($stored[$session_id]) ? $stored[$session_id] : array();
+        $merged = array_merge($previous, $payload, array('session_id' => $session_id));
+        $merged['updated_at'] = self::now_iso();
+        $merged['updated_by'] = (int) get_current_user_id();
+        $saved = self::normalize_customer_profile($merged);
+        if ($saved['display_name'] === '') {
+            $saved['display_name'] = __('Kunde', 'paxdesign-booking');
+        }
+
+        $stored[$session_id] = $saved;
+        $store['customers'] = $stored;
+        self::save_store($store);
+
+        if (class_exists('PAXdesign_Chat_Log')) {
+            global $wpdb;
+            $wpdb->update(
+                PAXdesign_Chat_Log::table_name(),
+                array(
+                    'customer_name' => $saved['display_name'],
+                    'updated_at'    => current_time('mysql'),
+                ),
+                array('session_id' => $session_id),
+                array('%s', '%s'),
+                array('%s')
+            );
+        }
+
+        self::append_activity('customers', __('Customer profile saved', 'paxdesign-booking'), $saved['display_name'], 'action');
+        return $saved;
     }
 
     /**
@@ -407,6 +632,9 @@ class PAXdesign_Platform_Store {
         $manage     = !empty($perms[PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS]);
         $settings   = !empty($perms[PAXdesign_Live_Chat_Permissions::PERM_MANAGE_SETTINGS]);
         $ratings    = !empty($perms[PAXdesign_Live_Chat_Permissions::PERM_VIEW_RATINGS]);
+        $task_assign = !empty($perms[PAXdesign_Live_Chat_Permissions::PERM_ASSIGN_TEAM_TASKS]);
+        $customer_profiles = !empty($perms[PAXdesign_Live_Chat_Permissions::PERM_MANAGE_CUSTOMER_PROFILES]);
+        $team_permissions = !empty($perms[PAXdesign_Live_Chat_Permissions::PERM_MANAGE_TEAM_PERMISSIONS]);
 
         return array(
             'view_dashboard'          => $view_chats || $manage,
@@ -420,6 +648,9 @@ class PAXdesign_Platform_Store {
             'manage_calendar'         => $reply || $manage,
             'manage_files'            => $settings || $manage,
             'export_reports'          => $manage || $ratings,
+            'assign_team_tasks'       => $manage || $task_assign,
+            'manage_customer_profiles'=> $manage || $customer_profiles,
+            'manage_team_permissions' => $manage || $team_permissions,
         );
     }
 
@@ -636,6 +867,19 @@ class PAXdesign_Platform_Store {
             if (strpos($hay, $q) !== false) {
                 $results[] = array(
                     'type' => 'document', 'id' => $file['id'], 'title' => $file['name'], 'subtitle' => $file['detail'] ?? '', 'module' => 'files',
+                );
+            }
+        }
+        foreach (self::list_customer_profiles() as $profile) {
+            $hay = strtolower(
+                ($profile['display_name'] ?? '') . ' ' .
+                ($profile['email'] ?? '') . ' ' .
+                ($profile['phone'] ?? '') . ' ' .
+                ($profile['company'] ?? '')
+            );
+            if (strpos($hay, $q) !== false) {
+                $results[] = array(
+                    'type' => 'customer', 'id' => $profile['session_id'] ?? '', 'title' => $profile['display_name'] ?? '', 'subtitle' => $profile['email'] ?? '', 'module' => 'customers',
                 );
             }
         }

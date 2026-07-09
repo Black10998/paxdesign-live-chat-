@@ -97,6 +97,26 @@ final class AppSettingsStore: ObservableObject {
         }
     }
 
+    enum NotificationToneStyle: String, CaseIterable, Identifiable {
+        case classic
+        case chime
+        case pulse
+        case bell
+        case digital
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .classic: return "Classic"
+            case .chime: return "Chime"
+            case .pulse: return "Pulse"
+            case .bell: return "Bell"
+            case .digital: return "Digital"
+            }
+        }
+    }
+
     @Published var appearanceMode: AppearanceMode {
         didSet { DeferredUserDefaults.set(appearanceMode.rawValue, forKey: Keys.appearance) }
     }
@@ -129,6 +149,21 @@ final class AppSettingsStore: ObservableObject {
     }
     @Published var sendSoundEnabled: Bool {
         didSet { DeferredUserDefaults.set(sendSoundEnabled, forKey: Keys.sendSound) }
+    }
+    @Published var messageToneStyle: NotificationToneStyle {
+        didSet { DeferredUserDefaults.set(messageToneStyle.rawValue, forKey: Keys.messageToneStyle) }
+    }
+    @Published var liveToneStyle: NotificationToneStyle {
+        didSet { DeferredUserDefaults.set(liveToneStyle.rawValue, forKey: Keys.liveToneStyle) }
+    }
+    @Published var aiToneStyle: NotificationToneStyle {
+        didSet { DeferredUserDefaults.set(aiToneStyle.rawValue, forKey: Keys.aiToneStyle) }
+    }
+    @Published var sendToneStyle: NotificationToneStyle {
+        didSet { DeferredUserDefaults.set(sendToneStyle.rawValue, forKey: Keys.sendToneStyle) }
+    }
+    @Published var typingToneStyle: NotificationToneStyle {
+        didSet { DeferredUserDefaults.set(typingToneStyle.rawValue, forKey: Keys.typingToneStyle) }
     }
     @Published var readSessionIds: Set<String> {
         didSet {
@@ -205,6 +240,11 @@ final class AppSettingsStore: ObservableObject {
         static let onboarding = "pax.settings.onboardingCompleted"
         static let firstLaunchOnboarding = "pax.firstLaunch.onboardingCompleted"
         static let accentPreset = "pax.settings.accentPreset"
+        static let messageToneStyle = "pax.settings.messageToneStyle"
+        static let liveToneStyle = "pax.settings.liveToneStyle"
+        static let aiToneStyle = "pax.settings.aiToneStyle"
+        static let sendToneStyle = "pax.settings.sendToneStyle"
+        static let typingToneStyle = "pax.settings.typingToneStyle"
     }
 
     init() {
@@ -233,6 +273,31 @@ final class AppSettingsStore: ObservableObject {
         messageSoundEnabled = defaults.object(forKey: Keys.messageSound) as? Bool ?? true
         typingSoundEnabled = defaults.object(forKey: Keys.typingSound) as? Bool ?? true
         sendSoundEnabled = defaults.object(forKey: Keys.sendSound) as? Bool ?? true
+        if let raw = defaults.string(forKey: Keys.messageToneStyle), let tone = NotificationToneStyle(rawValue: raw) {
+            messageToneStyle = tone
+        } else {
+            messageToneStyle = .classic
+        }
+        if let raw = defaults.string(forKey: Keys.liveToneStyle), let tone = NotificationToneStyle(rawValue: raw) {
+            liveToneStyle = tone
+        } else {
+            liveToneStyle = .bell
+        }
+        if let raw = defaults.string(forKey: Keys.aiToneStyle), let tone = NotificationToneStyle(rawValue: raw) {
+            aiToneStyle = tone
+        } else {
+            aiToneStyle = .digital
+        }
+        if let raw = defaults.string(forKey: Keys.sendToneStyle), let tone = NotificationToneStyle(rawValue: raw) {
+            sendToneStyle = tone
+        } else {
+            sendToneStyle = .chime
+        }
+        if let raw = defaults.string(forKey: Keys.typingToneStyle), let tone = NotificationToneStyle(rawValue: raw) {
+            typingToneStyle = tone
+        } else {
+            typingToneStyle = .pulse
+        }
         privacyBannerDismissed = defaults.object(forKey: Keys.privacyBanner) as? Bool ?? false
         if let read = defaults.array(forKey: Keys.readSessions) as? [String] {
             readSessionIds = Set(read)

@@ -8,6 +8,8 @@ struct AdministrationHubView: View {
     @State private var isLoadingStaff = true
 
     private var canManageUsers: Bool { auth.canManageUsers }
+    private var canManageTeamPermissions: Bool { auth.canManageTeamPermissions || auth.canManageUsers }
+    private var canManageCustomers: Bool { auth.canManageCustomerProfiles || auth.canManageUsers }
 
     var body: some View {
         List {
@@ -55,15 +57,24 @@ struct AdministrationHubView: View {
             }
 
             Section(L10n.AdminManagement) {
-                NavigationLink {
-                    StaffManagementView()
-                } label: {
-                    Label(L10n.AdminEmployeeManagement, systemImage: "person.2.badge.gearshape")
+                if canManageTeamPermissions {
+                    NavigationLink {
+                        StaffManagementView()
+                    } label: {
+                        Label(L10n.AdminEmployeeManagement, systemImage: "person.2.badge.gearshape")
+                    }
                 }
                 NavigationLink {
                     TeamMessagesHubView()
                 } label: {
                     Label(L10n.AdminTeamManagement, systemImage: "person.3.sequence")
+                }
+                if canManageCustomers {
+                    NavigationLink {
+                        CustomerProfilesView()
+                    } label: {
+                        Label("Kundenprofile", systemImage: "person.crop.circle.badge.checkmark")
+                    }
                 }
                 NavigationLink {
                     DeviceManagementView()
@@ -152,7 +163,7 @@ struct AdministrationHubView: View {
     }
 
     private func loadStaffCount() async {
-        guard canManageUsers, let api = auth.api else {
+        guard canManageTeamPermissions, let api = auth.api else {
             isLoadingStaff = false
             return
         }

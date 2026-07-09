@@ -75,12 +75,70 @@ struct APITaskRecord: Codable {
     let priority: String
     let createdAt: String?
     let updatedAt: String?
+    let createdBy: Int?
+    let assignedTo: Int?
+    let assignedName: String?
 
     enum CodingKeys: String, CodingKey {
         case id, title, notes, priority
         case dueDate = "due_date"
         case isCompleted = "is_completed"
         case createdAt = "created_at"
+        case updatedAt = "updated_at"
+        case createdBy = "created_by"
+        case assignedTo = "assigned_to"
+        case assignedName = "assigned_name"
+    }
+}
+
+struct TeamMemberRecord: Codable, Identifiable, Hashable {
+    var id: Int { userId }
+    let userId: Int
+    let name: String
+    let email: String
+    let role: String
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case name, email, role
+    }
+}
+
+struct CustomerVisibleDetails: Codable, Hashable {
+    let showEmail: Bool
+    let showPhone: Bool
+    let showCompany: Bool
+    let showNotes: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case showEmail = "show_email"
+        case showPhone = "show_phone"
+        case showCompany = "show_company"
+        case showNotes = "show_notes"
+    }
+}
+
+struct CustomerProfileRecord: Codable, Identifiable, Hashable {
+    var id: String { sessionId }
+    let sessionId: String
+    let displayName: String
+    let avatarUrl: String
+    let email: String
+    let phone: String
+    let company: String
+    let notes: String
+    let visibleDetails: CustomerVisibleDetails
+    let updatedAt: String?
+
+    enum CodingKeys: String, CodingKey {
+        case sessionId = "session_id"
+        case displayName = "display_name"
+        case avatarUrl = "avatar_url"
+        case email
+        case phone
+        case company
+        case notes
+        case visibleDetails = "visible_details"
         case updatedAt = "updated_at"
     }
 }
@@ -247,6 +305,9 @@ extension PAXTaskItem {
         isCompleted = record.isCompleted
         priority = PAXTaskItem.Priority(rawValue: record.priority) ?? .medium
         createdAt = PlatformISO.date(from: record.createdAt) ?? Date()
+        createdByUserId = record.createdBy ?? 0
+        assignedUserId = record.assignedTo ?? 0
+        assignedUserName = record.assignedName ?? ""
     }
 
     func apiPayload() -> [String: Any] {
@@ -259,6 +320,11 @@ extension PAXTaskItem {
         ]
         if let dueDate {
             payload["due_date"] = PlatformISO.string(from: dueDate)
+        }
+        if assignedUserId > 0 {
+            payload["assigned_to"] = assignedUserId
+        } else {
+            payload["assigned_to"] = 0
         }
         return payload
     }
