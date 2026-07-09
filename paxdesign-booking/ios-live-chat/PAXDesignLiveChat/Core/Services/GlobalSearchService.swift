@@ -145,7 +145,7 @@ enum GlobalSearchService {
                 results.append(GlobalSearchResult(
                     id: "event-\(event.id)",
                     title: event.title,
-                    subtitle: MessageTimeFormatter.relativeUpdatedLabel(from: event.startDate.timeIntervalSince1970) ?? "",
+                    subtitle: MessageTimeFormatter.relativeUpdatedLabel(from: event.startDate),
                     module: .calendar,
                     destination: .event(event.id)
                 ))

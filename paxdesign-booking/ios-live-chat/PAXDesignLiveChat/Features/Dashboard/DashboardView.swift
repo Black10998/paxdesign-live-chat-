@@ -25,8 +25,11 @@ struct DashboardView: View {
         let calendar = Calendar.current
         return (0..<7).reversed().compactMap { offset -> DashboardMetric? in
             guard let day = calendar.date(byAdding: .day, value: -offset, to: Date()) else { return nil }
-            let count = customerSessions.filter { calendar.isDate(Date(timeIntervalSince1970: $0.updatedAt), inSameDayAs: day) }.count
-            let label = MessageTimeFormatter.relativeUpdatedLabel(from: day.timeIntervalSince1970) ?? ""
+            let count = customerSessions.filter {
+                guard let updated = MessageTimeFormatter.date(fromUpdatedAt: $0.updatedAt) else { return false }
+                return calendar.isDate(updated, inSameDayAs: day)
+            }.count
+            let label = MessageTimeFormatter.relativeUpdatedLabel(from: day)
             return DashboardMetric(label: label, value: count)
         }
     }
@@ -187,7 +190,7 @@ struct DashboardView: View {
                             .foregroundStyle(.red)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(event.title).font(.subheadline.weight(.semibold))
-                            Text(MessageTimeFormatter.relativeUpdatedLabel(from: event.startDate.timeIntervalSince1970) ?? "")
+                            Text(MessageTimeFormatter.relativeUpdatedLabel(from: event.startDate))
                                 .font(.caption)
                                 .foregroundStyle(PAXTheme.textSecondary)
                         }
@@ -203,7 +206,7 @@ struct DashboardView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         if let date = formatter.date(from: raw) {
-            return MessageTimeFormatter.relativeUpdatedLabel(from: date.timeIntervalSince1970) ?? raw
+            return MessageTimeFormatter.relativeUpdatedLabel(from: date)
         }
         return raw
     }

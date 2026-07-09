@@ -55,27 +55,35 @@ enum MessageTimeFormatter {
     }
 
     static func relativeUpdatedLabel(from raw: String) -> String? {
+        guard let date = date(fromUpdatedAt: raw) else { return raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : raw }
+        return relativeUpdatedLabel(from: date)
+    }
+
+    static func relativeUpdatedLabel(from date: Date) -> String {
+        let relative = RelativeDateTimeFormatter()
+        relative.locale = locale
+        relative.unitsStyle = .short
+        return relative.localizedString(for: date, relativeTo: Date())
+    }
+
+    static func date(fromUpdatedAt raw: String) -> Date? {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
         let iso = ISO8601DateFormatter()
         iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        var date = iso.date(from: trimmed)
-        if date == nil {
-            iso.formatOptions = [.withInternetDateTime]
-            date = iso.date(from: trimmed)
-        }
-        if date == nil {
-            let fallback = DateFormatter()
-            fallback.locale = locale
-            fallback.dateFormat = "yyyy-MM-dd HH:mm:ss"
-            date = fallback.date(from: trimmed)
-        }
-        guard let date else { return trimmed }
+        if let date = iso.date(from: trimmed) { return date }
+        iso.formatOptions = [.withInternetDateTime]
+        if let date = iso.date(from: trimmed) { return date }
 
-        let relative = RelativeDateTimeFormatter()
-        relative.locale = locale
-        relative.unitsStyle = .short
-        return relative.localizedString(for: date, relativeTo: Date())
+        let fallback = DateFormatter()
+        fallback.locale = locale
+        fallback.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        if let date = fallback.date(from: trimmed) { return date }
+
+        if let interval = TimeInterval(trimmed) {
+            return Date(timeIntervalSince1970: interval)
+        }
+        return nil
     }
 }

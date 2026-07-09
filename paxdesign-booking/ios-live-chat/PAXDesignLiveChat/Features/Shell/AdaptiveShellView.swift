@@ -165,10 +165,14 @@ struct AdaptiveShellView: View {
 
     private var iPadShell: some View {
         NavigationSplitView {
-            List(selection: $iPadSection) {
+            List {
                 ForEach(visibleSections) { section in
-                    Label(section.title, systemImage: section.systemImage)
-                        .tag(section)
+                    Button {
+                        iPadSection = section
+                    } label: {
+                        Label(section.title, systemImage: section.systemImage)
+                    }
+                    .foregroundStyle(iPadSection == section ? PAXTheme.accent : PAXTheme.textPrimary)
                 }
             }
             .navigationTitle("PAXDesign")
