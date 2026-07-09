@@ -298,6 +298,25 @@
       });
     }
 
+    function cleanupDuplicateWorkflowControls() {
+      $('#paxLiveWorkflow')
+        .find('.pax-live-workflow__swipe-controls, .pax-live-workflow__left-right-controls, .pax-live-workflow__controls')
+        .remove();
+    }
+
+    function animateWorkflowEntry($item) {
+      if (!$item || !$item.length) return;
+      var element = $item[0];
+      if (!element || !element.animate) return;
+      element.animate(
+        [
+          { opacity: 0, transform: 'translateY(14px) scale(0.985)' },
+          { opacity: 1, transform: 'translateY(0) scale(1)' }
+        ],
+        { duration: 320, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'both' }
+      );
+    }
+
     function workflowAvatarText(session) {
       var source = (session.customer_name || session.session_id || '?').trim();
       return source.slice(0, 2).toUpperCase();
@@ -478,6 +497,7 @@
 
     function syncWorkflowList(sessions) {
       if (!$workflowList.length) return;
+      cleanupDuplicateWorkflowControls();
       var top = workflowTopSessions(sessions);
       if (!top.length) {
         renderWorkflowSkeleton();
@@ -497,11 +517,13 @@
       });
 
       top.forEach(function (session, index) {
+        var created = false;
         var $existing = $workflowList.children('.pax-live-workflow__item').filter(function () {
           return String($(this).attr('data-workflow-session') || '') === String(session.session_id || '');
         }).first();
         if (!$existing.length) {
           $existing = createWorkflowItem(session);
+          created = true;
         } else {
           updateWorkflowItem($existing, session);
         }
@@ -511,6 +533,10 @@
           $workflowList.append($existing);
         } else if ($currentAtIndex[0] !== $existing[0]) {
           $existing.insertBefore($currentAtIndex);
+        }
+
+        if (created) {
+          animateWorkflowEntry($existing);
         }
       });
 
@@ -2066,6 +2092,7 @@
     initAiSuggestions();
     initAgentProfileModal();
     initLanguageToggle();
+    cleanupDuplicateWorkflowControls();
     renderWorkflowSkeleton();
     if ($restartTourBtn.length) {
       $restartTourBtn.on('click', function () {
