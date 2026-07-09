@@ -3,14 +3,16 @@ import SwiftUI
 struct SessionListView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
+    @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
     @StateObject private var settings = AppSettingsStore.shared
     @State private var searchText = ""
     @State private var filter: SessionFilter = .all
+    @State private var showTeamCompose = false
     @FocusState private var isSearchFocused: Bool
     var onOpenSession: (String) -> Void = { _ in }
 
     private enum SessionFilter: CaseIterable, Hashable {
-        case all, live, unread, active, closed
+        case all, live, unread, active, closed, team
 
         var title: String {
             switch self {
@@ -19,12 +21,22 @@ struct SessionListView: View {
             case .unread: return L10n.FilterUnread
             case .active: return L10n.FilterActive
             case .closed: return L10n.FilterClosed
+            case .team: return L10n.SessionTeamBadge
             }
         }
     }
 
-    private var filteredSessions: [LiveSession] {
+    private var allSessions: [LiveSession] {
         var items = coordinator.sessions
+        let teamOnly = teamCoordinator.teamSessions.filter { team in
+            !items.contains { $0.sessionId == team.sessionId }
+        }
+        items.append(contentsOf: teamOnly)
+        return items.sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    private var filteredSessions: [LiveSession] {
+        var items = allSessions
         if !searchText.isEmpty {
             let q = searchText.lowercased()
             items = items.filter {
@@ -39,6 +51,7 @@ struct SessionListView: View {
         case .unread: items = items.filter { $0.needsReply && !settings.readSessionIds.contains($0.sessionId) }
         case .active: items = items.filter { $0.isAdmin || $0.isLiveRequest }
         case .closed: items = items.filter { $0.isClosed }
+        case .team: items = items.filter { $0.isTeamDM }
         }
         return items
     }
@@ -46,6 +59,7 @@ struct SessionListView: View {
     private var canViewChats: Bool { auth.canViewChats }
     private var canReplyChats: Bool { auth.canReplyChats }
     private var canViewRatings: Bool { auth.canViewRatings }
+    private var canManageTeam: Bool { auth.canManageUsers }
 
     var body: some View {
         Group {
@@ -58,6 +72,28 @@ struct SessionListView: View {
         .background(PAXBackground())
         .navigationTitle(L10n.SessionTitle)
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            if canManageTeam {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showTeamCompose = true
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                            .font(.body.weight(.semibold))
+                    }
+                    .accessibilityLabel(L10n.TeamNewMessage)
+                }
+            }
+        }
+        .sheet(isPresented: $showTeamCompose) {
+            NavigationStack {
+                TeamComposeView { sessionId in
+                    onOpenSession(sessionId)
+                }
+            }
+            .environmentObject(auth)
+            .environmentObject(teamCoordinator)
+        }
     }
 
     private var sessionListContent: some View {
@@ -65,7 +101,7 @@ struct SessionListView: View {
             if let error = coordinator.errorMessage, !error.isEmpty {
                 Section {
                     syncErrorBanner(error)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 8, trailing: 0))
+                        .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                 }
@@ -73,14 +109,7 @@ struct SessionListView: View {
 
             Section {
                 searchAndFilters
-                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 8, trailing: 0))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
-
-            Section {
-                header
-                    .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
@@ -88,7 +117,7 @@ struct SessionListView: View {
             if coordinator.liveCount > 0 {
                 Section {
                     liveBanner
-                        .listRowInsets(EdgeInsets())
+                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                 }
@@ -97,7 +126,7 @@ struct SessionListView: View {
             if filteredSessions.isEmpty {
                 Section {
                     emptyState
-                        .listRowInsets(EdgeInsets(top: 24, leading: 0, bottom: 24, trailing: 0))
+                        .listRowInsets(EdgeInsets(top: 32, leading: 16, bottom: 32, trailing: 16))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                 }
@@ -111,19 +140,22 @@ struct SessionListView: View {
                             coordinator.activeSessionId = session.sessionId
                             onOpenSession(session.sessionId)
                         } label: {
-                            SessionCard(
+                            SessionRow(
                                 session: session,
                                 isUnread: session.needsReply && !settings.readSessionIds.contains(session.sessionId),
-                                showRating: canViewRatings
+                                showRating: canViewRatings && !session.isTeamDM,
+                                showTimestamp: settings.showListTimestamps,
+                                compact: settings.compactListMode
                             )
                         }
-                        .buttonStyle(PAXPressButtonStyle())
-                        .opacity(session.isClosed ? 0.56 : 1)
-                        .listRowInsets(EdgeInsets(top: 5, leading: 0, bottom: 5, trailing: 0))
+                        .buttonStyle(.plain)
+                        .opacity(session.isClosed ? 0.55 : 1)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                         .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            if canReplyChats {
+                        .listRowSeparator(.visible)
+                        .listRowSeparatorTint(PAXTheme.border.opacity(0.5))
+                        .swipeActions(edge: .trailing, allowsFullSwipe: !session.isTeamDM) {
+                            if canReplyChats, !session.isTeamDM {
                                 Button(role: .destructive) {
                                     PAXHaptics.warning()
                                     Task { await coordinator.deleteSession(auth: auth, session: session) }
@@ -147,14 +179,21 @@ struct SessionListView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
-        .refreshable { await coordinator.refreshSessions(auth: auth) }
+        .refreshable {
+            await coordinator.refreshSessions(auth: auth)
+            await teamCoordinator.refresh(auth: auth)
+        }
         .onAppear {
             coordinator.start(auth: auth)
-            Task { await coordinator.refreshSessions(auth: auth) }
+            teamCoordinator.start(auth: auth)
+            Task {
+                await coordinator.refreshSessions(auth: auth)
+                await teamCoordinator.refresh(auth: auth)
+            }
         }
         .animation(PAXTheme.spring, value: coordinator.listRevision)
         .animation(PAXTheme.spring, value: coordinator.liveCount)
-        .animation(PAXTheme.spring, value: coordinator.sessions.count)
+        .animation(PAXTheme.spring, value: allSessions.count)
         .animation(PAXTheme.spring, value: filter)
     }
 
@@ -189,7 +228,7 @@ struct SessionListView: View {
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(SessionFilter.allCases, id: \.self) { item in
+                ForEach(availableFilters, id: \.self) { item in
                     Button {
                         filter = item
                         PAXHaptics.light()
@@ -198,13 +237,21 @@ struct SessionListView: View {
                             .font(.caption.weight(.semibold))
                             .padding(.horizontal, 12)
                             .padding(.vertical, 7)
-                            .background(Capsule().fill(filter == item ? PAXTheme.accentSoft : PAXTheme.surface))
-                            .overlay(Capsule().stroke(filter == item ? PAXTheme.accent.opacity(0.4) : PAXTheme.border, lineWidth: 1))
+                            .background(Capsule().fill(filter == item ? PAXBrand.accent.opacity(0.18) : PAXTheme.surface))
+                            .overlay(Capsule().stroke(filter == item ? PAXBrand.accent.opacity(0.5) : PAXTheme.border, lineWidth: 1))
+                            .foregroundStyle(filter == item ? PAXTheme.textPrimary : PAXTheme.textSecondary)
                     }
                     .buttonStyle(.plain)
                 }
             }
         }
+    }
+
+    private var availableFilters: [SessionFilter] {
+        if !teamCoordinator.teamSessions.isEmpty || canManageTeam {
+            return SessionFilter.allCases
+        }
+        return SessionFilter.allCases.filter { $0 != .team }
     }
 
     private func syncErrorBanner(_ message: String) -> some View {
@@ -226,35 +273,9 @@ struct SessionListView: View {
         }
         .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color.orange.opacity(0.12))
         )
-    }
-
-    private var header: some View {
-        PAXGlassCard {
-            HStack(spacing: 14) {
-                ProfileAvatarView(size: 52)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(auth.profile?.name ?? L10n.CommonAdministrator)
-                        .font(.headline)
-                    Text(auth.profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
-                        .font(.caption)
-                        .foregroundStyle(PAXTheme.textSecondary)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text("\(coordinator.sessions.count)")
-                        .font(.title3.weight(.bold))
-                    Text(L10n.CommonActive)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(PAXTheme.textSecondary)
-                }
-            }
-        }
     }
 
     private var liveBanner: some View {
@@ -262,36 +283,31 @@ struct SessionListView: View {
             Image(systemName: "bell.and.waves.left.and.right.fill")
                 .font(.title3)
                 .foregroundStyle(PAXTheme.accent)
-                .scaleEffect(1.0)
-                .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: coordinator.liveCount)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(L10n.SessionLiveRequests(coordinator.liveCount))
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
                 Text(L10n.SessionLiveWaiting)
                     .font(.caption)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
             Spacer()
         }
-        .padding(16)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(PAXTheme.accentSoft)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(PAXTheme.accent.opacity(0.25), lineWidth: 1)
-                )
         )
     }
 
     private var emptyState: some View {
         VStack(spacing: 14) {
-            Image(systemName: "bubble.left.and.bubble.right.fill")
-                .font(.system(size: 42))
+            Image(systemName: "bubble.left.and.bubble.right")
+                .font(.system(size: 40, weight: .light))
                 .foregroundStyle(PAXTheme.textTertiary)
             Text(L10n.SessionNoChats)
-                .font(.title3.weight(.semibold))
+                .font(.headline)
             Text(L10n.SessionNoChatsHint)
                 .font(.subheadline)
                 .foregroundStyle(PAXTheme.textSecondary)
@@ -301,76 +317,95 @@ struct SessionListView: View {
     }
 }
 
-private struct SessionCard: View {
+private struct SessionRow: View {
     let session: LiveSession
     var isUnread: Bool = false
     var showRating: Bool = true
+    var showTimestamp: Bool = true
+    var compact: Bool = false
+
+    private var avatarSize: CGFloat { compact ? 44 : 52 }
+    private var rowPadding: CGFloat { compact ? 10 : 12 }
 
     var body: some View {
-        HStack(spacing: 14) {
-            ZStack(alignment: .topTrailing) {
-                ZStack {
-                    Circle()
-                        .fill(statusColor.opacity(0.14))
-                        .frame(width: 44, height: 44)
-                    Image(systemName: session.isLiveRequest ? "person.wave.2.fill" : "person.fill")
-                        .foregroundStyle(statusColor)
-                }
-                if isUnread {
-                    Circle()
-                        .fill(PAXTheme.accent)
-                        .frame(width: 10, height: 10)
-                        .offset(x: 2, y: -2)
-                }
-            }
+        HStack(alignment: .center, spacing: 14) {
+            SessionAvatarView(
+                name: session.displayName,
+                size: avatarSize,
+                isLive: session.isLiveRequest,
+                isTeam: session.isTeamDM
+            )
 
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
+            VStack(alignment: .leading, spacing: compact ? 3 : 5) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(session.displayName)
-                        .font(.headline)
+                        .font(.body.weight(isUnread ? .semibold : .regular))
                         .foregroundStyle(PAXTheme.textPrimary)
-                    Spacer()
-                    if showRating, let rating = SessionRatingBadge(rating: session.sessionRating) {
+                        .lineLimit(1)
+
+                    Spacer(minLength: 4)
+
+                    if showTimestamp, let time = MessageTimeFormatter.relativeUpdatedLabel(from: session.updatedAt) {
+                        Text(time)
+                            .font(.caption)
+                            .foregroundStyle(isUnread ? PAXBrand.accent : PAXTheme.textTertiary)
+                            .lineLimit(1)
+                    }
+                }
+
+                HStack(alignment: .center, spacing: 8) {
+                    if session.isLiveRequest {
+                        liveIndicator
+                    } else if session.isTeamDM {
+                        teamBadge
+                    } else if showRating, let rating = SessionRatingBadge(rating: session.sessionRating) {
                         rating
                     }
-                    PAXStatusBadge(text: SessionHandlerLocalization.label(handler: session.handler), color: statusColor)
-                }
 
-                if !session.detectedService.isEmpty {
-                    Text(session.detectedService)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(PAXTheme.textSecondary)
-                }
-
-                if !session.lastPreview.isEmpty {
-                    Text(session.lastPreview)
+                    Text(previewText)
                         .font(.subheadline)
-                        .foregroundStyle(PAXTheme.textTertiary)
-                        .lineLimit(2)
+                        .fontWeight(isUnread ? .medium : .regular)
+                        .foregroundStyle(isUnread ? PAXTheme.textPrimary : PAXTheme.textSecondary)
+                        .lineLimit(1)
+
+                    Spacer(minLength: 0)
+
+                    if isUnread {
+                        Circle()
+                            .fill(PAXBrand.accent)
+                            .frame(width: 10, height: 10)
+                    }
                 }
             }
-
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(PAXTheme.textTertiary)
-                .flipsForRightToLeftLayoutDirection(true)
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(session.isClosed ? PAXTheme.surface.opacity(0.72) : PAXTheme.surface.opacity(0.94))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(session.isClosed ? PAXTheme.border.opacity(0.6) : PAXTheme.border, lineWidth: 1)
-                )
-        )
+        .padding(.horizontal, 16)
+        .padding(.vertical, rowPadding)
+        .contentShape(Rectangle())
     }
 
-    private var statusColor: Color {
-        if session.isLiveRequest { return PAXTheme.accent }
-        if session.isAdmin { return PAXTheme.success }
-        if session.isClosed { return .gray }
-        return .blue
+    private var previewText: String {
+        if !session.lastPreview.isEmpty { return session.lastPreview }
+        if session.isTeamDM { return L10n.TeamChatPlaceholder }
+        if !session.detectedService.isEmpty { return session.detectedService }
+        return "—"
+    }
+
+    private var liveIndicator: some View {
+        Text(L10n.FilterLive)
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(PAXTheme.accent))
+    }
+
+    private var teamBadge: some View {
+        Text(L10n.SessionTeamBadge)
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(PAXBrand.accent)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(PAXBrand.accent.opacity(0.15)))
     }
 }
 

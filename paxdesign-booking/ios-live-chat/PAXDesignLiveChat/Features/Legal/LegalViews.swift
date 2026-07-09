@@ -141,51 +141,132 @@ struct DataHandlingView: View {
 struct AboutView: View {
     var body: some View {
         ScrollView {
-            VStack(spacing: 22) {
-                PAXClockLogo(size: 72)
+            VStack(spacing: 0) {
+                aboutHero
+                    .padding(.top, 32)
+                    .padding(.bottom, 28)
 
-                Text("PAXDesign Live Chat")
-                    .font(.title2.weight(.semibold))
-
-                Text("Die offizielle native iOS-Administrations-App für das PAXdesign Live-Chat-System. Entwickelt für autorisierte Support-Mitarbeiter — nicht für Endkunden.")
-                    .font(.subheadline)
-                    .foregroundStyle(PAXTheme.textSecondary)
-                    .multilineTextAlignment(.center)
-
-                VStack(alignment: .leading, spacing: 12) {
-                    aboutRow("Version", PAXAppInfo.fullVersion)
-                    aboutRow("Website", "https://paxdesign.at")
-                    aboutRow("Hersteller", "PAXdesign / PrimoJob GmbH")
-                    aboutRow("Technologie", "100 % native SwiftUI-App")
-                    aboutRow("Sicherheit", "HTTPS/TLS, iOS-Schlüsselbund")
+                VStack(spacing: 0) {
+                    aboutInfoCard
+                    featureHighlights
+                        .padding(.top, 20)
                 }
-                .padding()
-                .background(PAXTheme.surface)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-
-                Text("Diese App ist das offizielle mobile Admin-Panel für Echtzeit-Kundensupport — mit Push-Benachrichtigungen, Live-Agent-Übernahme, KI-Vorschlägen und voller Parität zum Browser-Dashboard.")
-                    .font(.footnote)
-                    .foregroundStyle(PAXTheme.textSecondary)
-                    .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
 
                 LegalFooterLinks()
+                    .padding(.top, 28)
+                    .padding(.bottom, 32)
             }
-            .padding(24)
         }
         .background(PAXBackground())
-        .navigationTitle("Über")
+        .navigationTitle(L10n.AccountAbout)
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    private func aboutRow(_ title: String, _ value: String) -> some View {
-        HStack(alignment: .top) {
-            Text(title)
-                .font(.subheadline.weight(.semibold))
-            Spacer()
-            Text(value)
-                .font(.subheadline)
-                .foregroundStyle(PAXTheme.textSecondary)
-                .multilineTextAlignment(.trailing)
+    private var aboutHero: some View {
+        VStack(spacing: 18) {
+            PAXAppMark.image(size: 88)
+                .shadow(color: PAXBrand.accent.opacity(0.2), radius: 16, y: 6)
+
+            VStack(spacing: 8) {
+                Text("PAXDesign Live Chat")
+                    .font(.title2.weight(.bold))
+
+                Text(L10n.AboutTagline)
+                    .font(.subheadline)
+                    .foregroundStyle(PAXTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+
+            HStack(spacing: 8) {
+                aboutPill(L10n.AboutBuiltWith, icon: "swift")
+                aboutPill(PAXAppInfo.fullVersion, icon: "number")
+            }
+        }
+    }
+
+    private func aboutPill(_ text: String, icon: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.caption2.weight(.semibold))
+            Text(text)
+                .font(.caption.weight(.semibold))
+        }
+        .foregroundStyle(PAXBrand.accent)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(PAXBrand.accent.opacity(0.12)))
+    }
+
+    private var aboutInfoCard: some View {
+        VStack(spacing: 0) {
+            aboutRow("Version", PAXAppInfo.fullVersion, showDivider: true)
+            aboutRow("Website", "https://paxdesign.at", showDivider: true)
+            aboutRow("Hersteller", "PAXdesign / PrimoJob GmbH", showDivider: true)
+            aboutRow("Sicherheit", "HTTPS/TLS, iOS-Schlüsselbund", showDivider: false)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(PAXTheme.surface)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(PAXTheme.border, lineWidth: 1)
+                )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
+    private var featureHighlights: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            featureRow(icon: "bell.badge", title: "Push-Benachrichtigungen", subtitle: "Live-Anfragen in Echtzeit")
+            featureRow(icon: "person.wave.2", title: "Live-Agent-Übernahme", subtitle: "Nahtloser Kundensupport")
+            featureRow(icon: "sparkles", title: "KI-Assistent", subtitle: "Intelligente Antwortvorschläge")
+            featureRow(icon: "lock.shield", title: "Enterprise-Sicherheit", subtitle: "Verschlüsselte Verbindung")
+        }
+        .padding(18)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(PAXTheme.surface.opacity(0.7))
+        )
+    }
+
+    private func featureRow(icon: String, title: String, subtitle: String) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.body.weight(.medium))
+                .foregroundStyle(PAXBrand.accent)
+                .frame(width: 32, height: 32)
+                .background(Circle().fill(PAXBrand.accent.opacity(0.12)))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Text(subtitle)
+                    .font(.caption)
+                    .foregroundStyle(PAXTheme.textSecondary)
+            }
+        }
+    }
+
+    private func aboutRow(_ title: String, _ value: String, showDivider: Bool) -> some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .center) {
+                Text(title)
+                    .font(.subheadline.weight(.medium))
+                Spacer()
+                Text(value)
+                    .font(.subheadline)
+                    .foregroundStyle(PAXTheme.textSecondary)
+                    .multilineTextAlignment(.trailing)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+
+            if showDivider {
+                Divider()
+                    .padding(.leading, 16)
+            }
         }
     }
 }

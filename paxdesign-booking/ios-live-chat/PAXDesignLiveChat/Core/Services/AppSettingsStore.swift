@@ -135,6 +135,12 @@ final class AppSettingsStore: ObservableObject {
             UserDefaults.standard.set(Array(readSessionIds), forKey: Keys.readSessions)
         }
     }
+    @Published var compactListMode: Bool {
+        didSet { UserDefaults.standard.set(compactListMode, forKey: Keys.compactList) }
+    }
+    @Published var showListTimestamps: Bool {
+        didSet { UserDefaults.standard.set(showListTimestamps, forKey: Keys.showTimestamps) }
+    }
     @Published var profileImageData: Data? {
         didSet { UserDefaults.standard.set(profileImageData, forKey: Keys.profileImage) }
     }
@@ -161,6 +167,8 @@ final class AppSettingsStore: ObservableObject {
         static let typingSound = "pax.settings.typingSound"
         static let sendSound = "pax.settings.sendSound"
         static let readSessions = "pax.settings.readSessions"
+        static let compactList = "pax.settings.compactList"
+        static let showTimestamps = "pax.settings.showTimestamps"
         static let privacyBanner = "pax.settings.privacyBanner"
         static let volume = "pax.settings.ringVolume"
         static let profileImage = "pax.settings.profileImage"
@@ -198,6 +206,8 @@ final class AppSettingsStore: ObservableObject {
         } else {
             readSessionIds = []
         }
+        compactListMode = defaults.object(forKey: Keys.compactList) as? Bool ?? false
+        showListTimestamps = defaults.object(forKey: Keys.showTimestamps) as? Bool ?? true
         ringtoneVolume = defaults.object(forKey: Keys.volume) as? Float ?? 0.9
         profileImageData = defaults.data(forKey: Keys.profileImage)
     }
