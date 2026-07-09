@@ -1,0 +1,47 @@
+name: Verify Sideload Build
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'paxdesign-booking/ios-live-chat/**'
+      - 'paxdesign-booking/paxdesign-booking.php'
+      - '.github/workflows/verify-sideload.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate release contract
+        run: |
+          chmod +x scripts/validate-release-contract.sh
+          ./scripts/validate-release-contract.sh
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Build sideload IPA
+        run: |
+          cd paxdesign-booking/ios-live-chat
+          chmod +x scripts/build-ipa.sh scripts/validate-ipa.sh scripts/smoke-test-launch.sh
+          ./scripts/build-ipa.sh
+
+      - name: Simulator launch smoke test
+        run: |
+          cd paxdesign-booking/ios-live-chat
+          ./scripts/smoke-test-launch.sh
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PAXDesignLiveChat-sideload-ipa
+          path: paxdesign-booking/ios-live-chat/build/output/PAXDesignLiveChat.ipa
+          if-no-files-found: error

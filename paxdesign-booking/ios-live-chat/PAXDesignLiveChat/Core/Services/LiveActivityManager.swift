@@ -11,6 +11,9 @@ final class LiveActivityManager {
     private init() {}
 
     func updateLiveRequestCount(_ count: Int, topCustomer: String?) {
+        #if SIDELOAD
+        return
+        #else
         guard #available(iOS 16.2, *) else { return }
         #if canImport(ActivityKit)
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
@@ -33,9 +36,13 @@ final class LiveActivityManager {
             _ = try? Activity.request(attributes: attributes, contentState: content, pushType: nil)
         }
         #endif
+        #endif
     }
 
     func endAll() {
+        #if SIDELOAD
+        return
+        #else
         guard #available(iOS 16.2, *) else { return }
         #if canImport(ActivityKit)
         Task {
@@ -43,6 +50,7 @@ final class LiveActivityManager {
                 await activity.end(dismissalPolicy: .immediate)
             }
         }
+        #endif
         #endif
     }
 }

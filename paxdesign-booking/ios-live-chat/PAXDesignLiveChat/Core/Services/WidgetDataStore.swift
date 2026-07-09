@@ -17,7 +17,11 @@ final class WidgetDataStore {
     }
 
     private var defaults: UserDefaults {
+        #if SIDELOAD
+        .standard
+        #else
         UserDefaults(suiteName: appGroupID) ?? .standard
+        #endif
     }
 
     func syncFromApp() {
