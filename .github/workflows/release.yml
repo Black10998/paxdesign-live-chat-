@@ -61,6 +61,42 @@ jobs:
             ## iOS app
 
             `PAXDesignLiveChat.ipa` — install via LiveContainer, AltStore, or Xcode.
+
+            **Public IPA mirror (GitHub Pages):** https://black10998.github.io/paxdesign-live-chat-/releases/${{ steps.version.outputs.version }}/PAXDesignLiveChat.ipa
+
+            > Requires GitHub Pages enabled on the `gh-pages` branch (Settings → Pages).
+            > Direct `/releases/download/` links require repository access while the repo is private.
           files: |
             dist/paxdesign-booking-v${{ steps.version.outputs.version }}.zip
             paxdesign-booking/ios-live-chat/build/output/PAXDesignLiveChat.ipa
+
+      - name: Publish public IPA mirror (GitHub Pages)
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          IPA_SRC="paxdesign-booking/ios-live-chat/build/output/PAXDesignLiveChat.ipa"
+          WORKDIR="$RUNNER_TEMP/gh-pages"
+          rm -rf "$WORKDIR"
+          git clone --depth 1 --branch gh-pages "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" "$WORKDIR" 2>/dev/null || {
+            mkdir -p "$WORKDIR"
+            cd "$WORKDIR"
+            git init
+            git checkout -b gh-pages
+            git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          }
+          cd "$WORKDIR"
+          mkdir -p "releases/$VERSION"
+          cp "$GITHUB_WORKSPACE/$IPA_SRC" "releases/$VERSION/PAXDesignLiveChat.ipa"
+          cat > index.html <<HTML
+          <!DOCTYPE html>
+          <html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+          <title>PAXDesign Live Chat — iOS Releases</title>
+          <style>body{font-family:-apple-system,BlinkMacSystemFont,sans-serif;max-width:720px;margin:48px auto;padding:0 20px;color:#111}h1{font-size:1.5rem}a{color:#5a7a00}.card{border:1px solid #e5e5e5;border-radius:12px;padding:16px 18px;margin-top:16px}</style></head>
+          <body><h1>PAXDesign Live Chat — iOS</h1><p>Public IPA downloads for sideloading.</p>
+          <div class="card"><strong>v$VERSION</strong><br/><a href="releases/$VERSION/PAXDesignLiveChat.ipa">Download PAXDesignLiveChat.ipa</a></div>
+          </body></html>
+          HTML
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Publish PAXDesignLiveChat v$VERSION IPA" || true
+          git push origin gh-pages
