@@ -4,7 +4,7 @@ struct TeamMessagesHubView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
     @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
     @State private var searchText = ""
     @State private var showCompose = false
     @FocusState private var isSearchFocused: Bool
@@ -120,15 +120,6 @@ struct TeamMessagesHubView: View {
             await coordinator.refreshSessions(auth: auth)
             await teamCoordinator.refresh(auth: auth)
         }
-        .onAppear {
-            teamCoordinator.start(auth: auth)
-            Task {
-                await coordinator.refreshSessions(auth: auth)
-                await teamCoordinator.refresh(auth: auth)
-            }
-        }
-        .animation(PAXTheme.spring, value: filteredSessions.count)
-        .animation(PAXTheme.spring, value: unreadCount)
     }
 
     private func teamConversationRow(_ session: LiveSession) -> some View {

@@ -3,9 +3,9 @@ import SwiftUI
 struct EmployeeDashboardView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
-    @StateObject private var settings = AppSettingsStore.shared
-    @StateObject private var tasks = TaskStore.shared
-    @StateObject private var platform = PlatformSyncService.shared
+    @EnvironmentObject private var settings: AppSettingsStore
+    @ObservedObject private var tasks = TaskStore.shared
+    @ObservedObject private var platform = PlatformSyncService.shared
 
     private var mySessions: [LiveSession] {
         coordinator.sessions.filter { !$0.isTeamDM && ($0.isAdmin || $0.needsReply) }

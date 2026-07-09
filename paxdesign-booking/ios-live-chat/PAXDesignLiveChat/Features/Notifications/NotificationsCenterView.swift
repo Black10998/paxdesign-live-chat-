@@ -4,8 +4,8 @@ struct NotificationsCenterView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
     @EnvironmentObject private var permissions: PermissionCoordinator
-    @StateObject private var settings = AppSettingsStore.shared
-    @StateObject private var platform = PlatformSyncService.shared
+    @EnvironmentObject private var settings: AppSettingsStore
+    @ObservedObject private var platform = PlatformSyncService.shared
 
     private var unreadSessions: [LiveSession] {
         coordinator.sessions.filter {

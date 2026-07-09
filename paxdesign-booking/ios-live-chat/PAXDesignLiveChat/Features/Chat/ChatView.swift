@@ -8,7 +8,7 @@ struct ChatView: View {
     @EnvironmentObject private var coordinator: ChatCoordinator
     @StateObject private var thread: ChatThreadModel
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
 
     @State private var imageViewer: ImageViewerItem?
     #if SIDELOAD

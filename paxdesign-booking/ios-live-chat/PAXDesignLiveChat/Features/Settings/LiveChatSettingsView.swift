@@ -2,7 +2,7 @@ import SwiftUI
 import UIKit
 
 struct LiveChatSettingsView: View {
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
 
     var body: some View {
         List {

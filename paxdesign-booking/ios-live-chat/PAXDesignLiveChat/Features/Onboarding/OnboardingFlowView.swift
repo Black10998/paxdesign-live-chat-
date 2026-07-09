@@ -10,7 +10,7 @@ struct OnboardingPage: Identifiable {
 
 struct OnboardingFlowView: View {
     @EnvironmentObject private var auth: AuthStore
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
     @State private var pageIndex = 0
     let onComplete: () -> Void
 

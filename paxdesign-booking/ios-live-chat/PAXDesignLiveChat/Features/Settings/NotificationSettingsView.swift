@@ -2,7 +2,7 @@ import SwiftUI
 
 struct NotificationSettingsView: View {
     @EnvironmentObject private var permissions: PermissionCoordinator
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
 
     var body: some View {
         List {

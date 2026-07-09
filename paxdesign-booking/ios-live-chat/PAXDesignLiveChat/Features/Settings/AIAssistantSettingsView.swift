@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct AIAssistantSettingsView: View {
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
 
     var body: some View {
         List {

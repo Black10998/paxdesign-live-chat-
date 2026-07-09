@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CalendarModuleView: View {
     @EnvironmentObject private var auth: AuthStore
-    @StateObject private var store = CalendarStore.shared
+    @ObservedObject private var store = CalendarStore.shared
     @State private var selectedDate = Date()
     @State private var showAdd = false
     @State private var newTitle = ""

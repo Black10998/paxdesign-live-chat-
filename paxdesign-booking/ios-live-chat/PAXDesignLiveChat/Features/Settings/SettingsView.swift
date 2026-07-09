@@ -2,7 +2,7 @@ import SwiftUI
 
 struct SettingsRootView: View {
     @EnvironmentObject private var auth: AuthStore
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
 
     private var canManageSettings: Bool { auth.canManageSettings }
 

@@ -6,10 +6,10 @@ import Charts
 struct DashboardView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
-    @StateObject private var settings = AppSettingsStore.shared
-    @StateObject private var tasks = TaskStore.shared
-    @StateObject private var calendar = CalendarStore.shared
-    @StateObject private var platform = PlatformSyncService.shared
+    @EnvironmentObject private var settings: AppSettingsStore
+    @ObservedObject private var tasks = TaskStore.shared
+    @ObservedObject private var calendar = CalendarStore.shared
+    @ObservedObject private var platform = PlatformSyncService.shared
     @State private var showSearch = false
 
     private var customerSessions: [LiveSession] {
@@ -77,7 +77,6 @@ struct DashboardView: View {
             WidgetDataStore.shared.syncFromApp()
         }
         .onAppear {
-            WidgetDataStore.shared.syncFromApp()
             Task {
                 await ActivityLogService.shared.log(
                     category: L10n.ModuleDashboard,

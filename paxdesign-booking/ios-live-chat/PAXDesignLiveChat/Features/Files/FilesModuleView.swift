@@ -2,7 +2,7 @@ import SwiftUI
 
 struct FilesModuleView: View {
     @EnvironmentObject private var auth: AuthStore
-    @StateObject private var store = FileLibraryStore.shared
+    @ObservedObject private var store = FileLibraryStore.shared
     @State private var selectedCategory: PAXDocumentItem.DocumentCategory?
 
     private var visibleDocuments: [PAXDocumentItem] {

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct PAXLayoutDirectionModifier: ViewModifier {
-    @ObservedObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
 
     func body(content: Content) -> some View {
         if let direction = settings.languageMode.layoutDirectionOverride {

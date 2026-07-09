@@ -9,8 +9,6 @@ struct MessageBubbleView: View {
     let onCopy: () -> Void
     let onImageTap: (URL) -> Void
 
-    @State private var appeared = false
-
     var body: some View {
         HStack(alignment: .bottom, spacing: 4) {
             if isOutgoing { Spacer(minLength: 52) }
@@ -51,11 +49,6 @@ struct MessageBubbleView: View {
             }
 
             if !isOutgoing { Spacer(minLength: 52) }
-        }
-        .opacity(appeared ? 1 : 0)
-        .offset(y: appeared ? 0 : 6)
-        .onAppear {
-            withAnimation(PAXTheme.quickSpring) { appeared = true }
         }
     }
 

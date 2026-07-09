@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ActivityLogView: View {
     @EnvironmentObject private var auth: AuthStore
-    @StateObject private var log = ActivityLogService.shared
+    @ObservedObject private var log = ActivityLogService.shared
     @State private var filterModule: String?
 
     private var filteredEntries: [ActivityLogEntry] {

@@ -3,7 +3,7 @@ import UIKit
 
 struct ProfileAvatarView: View {
     @EnvironmentObject private var auth: AuthStore
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
     var size: CGFloat = 40
 
     var body: some View {

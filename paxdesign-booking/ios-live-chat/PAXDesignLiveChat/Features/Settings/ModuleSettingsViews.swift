@@ -54,7 +54,7 @@ struct ModuleSettingsHubView: View {
 }
 
 struct AccentColorSettingsView: View {
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
 
     var body: some View {
         List {

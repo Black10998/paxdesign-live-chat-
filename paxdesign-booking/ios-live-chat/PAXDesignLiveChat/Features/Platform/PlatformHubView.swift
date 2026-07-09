@@ -3,7 +3,7 @@ import SwiftUI
 struct PlatformHubView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
     @State private var showSearch = false
 
     private var canManageUsers: Bool { auth.canManageUsers }

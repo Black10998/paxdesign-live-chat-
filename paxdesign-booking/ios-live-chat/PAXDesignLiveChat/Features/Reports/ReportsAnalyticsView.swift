@@ -3,8 +3,8 @@ import SwiftUI
 struct ReportsAnalyticsView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
-    @StateObject private var tasks = TaskStore.shared
-    @StateObject private var platform = PlatformSyncService.shared
+    @ObservedObject private var tasks = TaskStore.shared
+    @ObservedObject private var platform = PlatformSyncService.shared
 
     private var customerSessions: [LiveSession] {
         coordinator.sessions.filter { !$0.isTeamDM }

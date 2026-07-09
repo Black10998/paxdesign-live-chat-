@@ -4,7 +4,7 @@ struct SessionListView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
     @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
     @State private var searchText = ""
     @State private var filter: SessionFilter = .all
     @FocusState private var isSearchFocused: Bool
@@ -215,18 +215,6 @@ struct SessionListView: View {
             await coordinator.refreshSessions(auth: auth)
             await teamCoordinator.refresh(auth: auth)
         }
-        .onAppear {
-            coordinator.start(auth: auth)
-            teamCoordinator.start(auth: auth)
-            Task {
-                await coordinator.refreshSessions(auth: auth)
-                await teamCoordinator.refresh(auth: auth)
-            }
-        }
-        .animation(PAXTheme.spring, value: coordinator.listRevision)
-        .animation(PAXTheme.spring, value: coordinator.liveCount)
-        .animation(PAXTheme.spring, value: allSessions.count)
-        .animation(PAXTheme.spring, value: filter)
     }
 
     private var noAccessView: some View {

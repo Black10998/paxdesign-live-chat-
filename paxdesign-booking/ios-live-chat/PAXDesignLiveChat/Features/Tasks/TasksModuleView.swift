@@ -2,7 +2,7 @@ import SwiftUI
 
 struct TasksModuleView: View {
     @EnvironmentObject private var auth: AuthStore
-    @StateObject private var store = TaskStore.shared
+    @ObservedObject private var store = TaskStore.shared
     @State private var showAdd = false
     @State private var newTitle = ""
     @State private var filter: TaskFilter = .open

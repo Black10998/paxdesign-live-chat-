@@ -4,80 +4,90 @@ struct LoginView: View {
     @EnvironmentObject private var auth: AuthStore
     @State private var isLoading = false
     @State private var error: String?
-    @State private var appear = false
 
     var body: some View {
-        ZStack {
-            PAXBackground()
-
-            ScrollView(showsIndicators: false) {
-                VStack(spacing: 28) {
-                    Spacer(minLength: 24)
-
-                    VStack(spacing: 18) {
-                        PAXAppMarkView(size: 108, showGlow: true)
-                            .scaleEffect(appear ? 1 : 0.88)
-                            .opacity(appear ? 1 : 0)
-
-                        VStack(spacing: 8) {
+        NavigationStack {
+            Form {
+                Section {
+                    HStack {
+                        Spacer()
+                        VStack(spacing: 12) {
+                            Image(systemName: "bubble.left.and.bubble.right.fill")
+                                .font(.system(size: 44))
+                                .symbolRenderingMode(.hierarchical)
+                                .foregroundStyle(.tint)
                             Text(L10n.LoginTitle)
-                                .font(.system(size: 28, weight: .bold, design: .rounded))
+                                .font(.title2.weight(.semibold))
                             Text(L10n.LoginSubtitle)
-                                .font(.subheadline.weight(.medium))
-                                .foregroundStyle(PAXTheme.textSecondary)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
                         }
-                        .opacity(appear ? 1 : 0)
-                        .offset(y: appear ? 0 : 10)
+                        .padding(.vertical, 8)
+                        Spacer()
                     }
+                    .listRowBackground(Color.clear)
+                }
 
-                    PAXGlassCard {
-                        VStack(spacing: 18) {
-                            PAXField(title: L10n.LoginWebsite, icon: "globe", text: $auth.siteURLString, keyboardType: .URL)
-                            PAXField(title: L10n.LoginUsername, icon: "person.crop.circle", text: $auth.username, keyboardType: .emailAddress)
-                            PAXField(title: L10n.LoginAppPassword, icon: "key.fill", text: $auth.appPassword, isSecure: true)
+                Section {
+                    TextField(L10n.LoginWebsite, text: $auth.siteURLString)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
+                        .textContentType(.URL)
 
-                            if let error {
-                                Text(error)
-                                    .font(.footnote)
-                                    .foregroundStyle(PAXTheme.danger)
-                                    .multilineTextAlignment(.center)
-                                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    TextField(L10n.LoginUsername, text: $auth.username)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.emailAddress)
+                        .textContentType(.username)
+
+                    SecureField(L10n.LoginAppPassword, text: $auth.appPassword)
+                        .textContentType(.password)
+                }
+
+                if let error {
+                    Section {
+                        Text(error)
+                            .font(.footnote)
+                            .foregroundStyle(.red)
+                            .multilineTextAlignment(.center)
+                            .listRowBackground(Color.clear)
+                    }
+                }
+
+                Section {
+                    Button {
+                        Task { await signIn() }
+                    } label: {
+                        HStack {
+                            Spacer()
+                            if isLoading {
+                                ProgressView()
+                            } else {
+                                Text(L10n.LoginSignIn)
+                                    .fontWeight(.semibold)
                             }
-
-                            PAXPrimaryButton(
-                                title: isLoading ? L10n.LoginSigningIn : L10n.LoginSignIn,
-                                isLoading: isLoading
-                            ) {
-                                Task { await signIn() }
-                            }
+                            Spacer()
                         }
                     }
-                    .padding(.horizontal, 20)
-                    .opacity(appear ? 1 : 0)
-                    .offset(y: appear ? 0 : 16)
+                    .disabled(isLoading)
+                }
 
+                Section {
                     Text(L10n.LoginHint)
                         .font(.caption)
-                        .foregroundStyle(PAXTheme.textTertiary)
+                        .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 28)
+                        .listRowBackground(Color.clear)
 
-                    VStack(spacing: 8) {
-                        Link(L10n.LoginPrivacy, destination: PAXLegalLinks.privacyPolicy)
-                        Link(L10n.LoginTerms, destination: PAXLegalLinks.impressum)
-                    }
-                    .font(.caption)
-                    .padding(.horizontal, 28)
-
-                    Spacer(minLength: 24)
+                    Link(L10n.LoginPrivacy, destination: PAXLegalLinks.privacyPolicy)
+                    Link(L10n.LoginTerms, destination: PAXLegalLinks.impressum)
                 }
             }
-            .scrollDismissesKeyboard(.interactively)
-        }
-        .onAppear {
-            withAnimation(PAXTheme.spring.delay(0.05)) {
-                appear = true
-            }
+            .scrollContentBackground(.hidden)
+            .background(PAXBackground())
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 

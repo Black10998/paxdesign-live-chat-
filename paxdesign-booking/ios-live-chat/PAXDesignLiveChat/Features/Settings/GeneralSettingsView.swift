@@ -6,7 +6,7 @@ import PhotosUI
 struct GeneralSettingsView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var push: PushService
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var appPasswordDraft = ""

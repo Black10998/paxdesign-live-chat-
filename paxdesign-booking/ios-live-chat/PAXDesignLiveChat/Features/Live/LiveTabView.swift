@@ -13,45 +13,43 @@ struct LiveTabView: View {
     private var canViewChats: Bool { auth.canViewChats }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+        List {
+            Section {
                 liveHero
+            }
 
-                if liveSessions.isEmpty {
+            if liveSessions.isEmpty {
+                Section {
                     emptyLiveState
-                } else {
-                    VStack(spacing: 10) {
-                        ForEach(liveSessions) { session in
-                            LiveRequestCard(
-                                session: session,
-                                canReply: canReply,
-                                canOpenChat: canViewChats
-                            ) {
-                                PAXHaptics.medium()
-                                Task { await coordinator.acceptLiveRequest(auth: auth, session: session) }
-                                if canViewChats { onOpenSession(session.sessionId) }
-                            } onDecline: {
-                                PAXHaptics.warning()
-                                Task { await coordinator.declineLiveRequest(auth: auth, session: session) }
-                            } onOpen: {
-                                if canViewChats { onOpenSession(session.sessionId) }
-                            }
+                }
+            } else {
+                Section {
+                    ForEach(liveSessions) { session in
+                        LiveRequestCard(
+                            session: session,
+                            canReply: canReply,
+                            canOpenChat: canViewChats
+                        ) {
+                            PAXHaptics.medium()
+                            Task { await coordinator.acceptLiveRequest(auth: auth, session: session) }
+                            if canViewChats { onOpenSession(session.sessionId) }
+                        } onDecline: {
+                            PAXHaptics.warning()
+                            Task { await coordinator.declineLiveRequest(auth: auth, session: session) }
+                        } onOpen: {
+                            if canViewChats { onOpenSession(session.sessionId) }
                         }
                     }
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
         .background(PAXBackground())
         .navigationTitle(L10n.LiveTitle)
         .navigationBarTitleDisplayMode(.large)
         .refreshable { await coordinator.refreshSessions(auth: auth) }
         .scrollDismissesKeyboard(.interactively)
-        .onAppear {
-            coordinator.start(auth: auth)
-            Task { await coordinator.refreshSessions(auth: auth) }
-        }
     }
 
     private var liveHero: some View {

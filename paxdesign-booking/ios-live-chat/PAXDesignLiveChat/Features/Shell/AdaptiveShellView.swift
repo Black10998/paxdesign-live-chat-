@@ -5,7 +5,7 @@ struct AdaptiveShellView: View {
     @EnvironmentObject private var coordinator: ChatCoordinator
     @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
     @EnvironmentObject private var appLock: AppLockService
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
     @State private var chatsPath = NavigationPath()
     @State private var teamPath = NavigationPath()
     @State private var livePath = NavigationPath()
@@ -14,6 +14,7 @@ struct AdaptiveShellView: View {
     @State private var selectedTab = 0
     @State private var iPadSection: PlatformShellSection = .dashboard
     @State private var showGlobalSearch = false
+    @State private var syncTask: Task<Void, Never>?
 
     private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
@@ -79,10 +80,10 @@ struct AdaptiveShellView: View {
         .sheet(isPresented: $showGlobalSearch) {
             NavigationStack { GlobalSearchView() }
         }
-        .onAppear { syncPlatformServices() }
-        .onChange(of: coordinator.sessions.count) { _ in syncPlatformServices() }
+        .onAppear { schedulePlatformSync() }
+        .onChange(of: coordinator.sessions.count) { _ in schedulePlatformSync() }
         .onChange(of: coordinator.liveCount) { count in
-            syncPlatformServices()
+            schedulePlatformSync()
             if count > 0 { PAXHaptics.medium() }
         }
         .onChange(of: coordinator.activeSessionId) { sessionId in
@@ -286,15 +287,21 @@ struct AdaptiveShellView: View {
         }
     }
 
+    private func schedulePlatformSync() {
+        syncTask?.cancel()
+        syncTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            syncPlatformServices()
+        }
+    }
+
     private func syncPlatformServices() {
         ChatCoordinatorProxy.liveCount = coordinator.liveCount
         ChatCoordinatorProxy.sessions = coordinator.sessions
         WidgetDataStore.shared.syncFromApp()
         let topCustomer = coordinator.sessions.first(where: { $0.isLiveRequest })?.displayName
         LiveActivityManager.shared.updateLiveRequestCount(coordinator.liveCount, topCustomer: topCustomer)
-        if auth.isLoggedIn {
-            SpotlightIndexer.indexAppContent(auth: auth, coordinator: coordinator)
-        }
     }
 }
 

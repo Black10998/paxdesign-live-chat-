@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ChatDisplaySettingsView: View {
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
 
     var body: some View {
         List {
@@ -22,7 +22,7 @@ struct ChatDisplaySettingsView: View {
 
 struct DataStorageSettingsView: View {
     @EnvironmentObject private var auth: AuthStore
-    @StateObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
     @State private var showResetConfirm = false
     @State private var showOnboardingResetConfirm = false
     @State private var onboardingResetMessage: String?

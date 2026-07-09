@@ -1,44 +1,6 @@
 import SwiftUI
 import UIKit
 
-struct PAXClockLogo: View {
-    var size: CGFloat = 96
-    var animate: Bool = false
-    @State private var glow = false
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .fill(PAXTheme.accentSoft)
-                .frame(width: size * 1.35, height: size * 1.35)
-                .blur(radius: glow ? 18 : 8)
-                .opacity(glow ? 0.9 : 0.45)
-                .animation(animate ? .easeInOut(duration: 1.8).repeatForever(autoreverses: true) : .default, value: glow)
-
-            Circle()
-                .stroke(PAXTheme.border, lineWidth: 1.5)
-                .background(Circle().fill(PAXTheme.surface.opacity(0.85)))
-                .frame(width: size, height: size)
-
-            Circle()
-                .stroke(PAXTheme.accent.opacity(0.35), lineWidth: 1)
-                .frame(width: size * 0.72, height: size * 0.72)
-
-            Image(systemName: "clock.fill")
-                .font(.system(size: size * 0.34, weight: .light))
-                .foregroundStyle(PAXTheme.textPrimary.opacity(0.88))
-
-            Text("Chat")
-                .font(.system(size: size * 0.11, weight: .semibold, design: .rounded))
-                .foregroundStyle(PAXTheme.textTertiary)
-                .offset(y: size * 0.02)
-        }
-        .onAppear {
-            if animate { glow = true }
-        }
-    }
-}
-
 struct PAXGlassCard<Content: View>: View {
     let content: Content
 
@@ -49,14 +11,7 @@ struct PAXGlassCard<Content: View>: View {
     var body: some View {
         content
             .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(PAXTheme.surface.opacity(0.92))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
-                            .stroke(PAXTheme.border, lineWidth: 1)
-                    )
-            )
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
 
@@ -68,10 +23,10 @@ struct PAXField: View {
     var keyboardType: UIKeyboardType = .default
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 6) {
             Label(title, systemImage: icon)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(PAXTheme.textSecondary)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
 
             Group {
                 if isSecure {
@@ -84,16 +39,9 @@ struct PAXField: View {
                 }
             }
             .font(.body)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 13)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(PAXTheme.surfaceElevated)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(PAXTheme.border, lineWidth: 1)
-                    )
-            )
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color(.tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         }
     }
 }
@@ -105,30 +53,17 @@ struct PAXPrimaryButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 if isLoading {
                     ProgressView()
-                        .tint(.black)
                 }
                 Text(title)
-                    .font(.headline)
+                    .fontWeight(.semibold)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 16)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [.white, Color.white.opacity(0.92)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            )
-            .foregroundStyle(.black)
-            .shadow(color: PAXTheme.accent.opacity(0.18), radius: 16, y: 8)
         }
-        .buttonStyle(PAXPressButtonStyle())
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
         .disabled(isLoading)
     }
 }
@@ -139,10 +74,10 @@ struct PAXStatusBadge: View {
 
     var body: some View {
         Text(text)
-            .font(.caption2.weight(.bold))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            .background(Capsule().fill(color.opacity(0.16)))
+            .font(.caption2.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(color.opacity(0.12), in: Capsule())
             .foregroundStyle(color)
     }
 }
@@ -150,8 +85,7 @@ struct PAXStatusBadge: View {
 struct PAXPressButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(PAXTheme.quickSpring, value: configuration.isPressed)
+            .opacity(configuration.isPressed ? 0.85 : 1)
     }
 }
 
@@ -168,23 +102,11 @@ struct PAXAvatar: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [PAXTheme.accent.opacity(0.85), PAXTheme.accent.opacity(0.45)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+                .fill(Color.accentColor.opacity(0.85))
             Text(initials)
-                .font(.system(size: size * 0.34, weight: .semibold, design: .rounded))
+                .font(.system(size: size * 0.34, weight: .semibold))
                 .foregroundStyle(.white)
         }
         .frame(width: size, height: size)
-    }
-}
-
-struct PAXSplashView: View {
-    var body: some View {
-        PAXLaunchView()
     }
 }

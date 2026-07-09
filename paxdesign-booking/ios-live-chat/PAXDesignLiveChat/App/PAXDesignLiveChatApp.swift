@@ -144,7 +144,7 @@ struct RootView: View {
     @EnvironmentObject private var coordinator: ChatCoordinator
     @EnvironmentObject private var permissions: PermissionCoordinator
     @EnvironmentObject private var appLock: AppLockService
-    @ObservedObject private var settings = AppSettingsStore.shared
+    @EnvironmentObject private var settings: AppSettingsStore
     @State private var showOnboarding = false
 
     private var needsOnboarding: Bool {
@@ -210,37 +210,6 @@ struct RootView: View {
             if loggedIn, auth.profile?.onboardingCompleted == true {
                 settings.onboardingCompleted = true
             }
-        }
-    }
-}
-
-
-struct MainShellView: View {
-    var body: some View {
-        AdaptiveShellView()
-    }
-}
-
-private struct LiveTabBadge: ViewModifier {
-    let count: Int
-
-    func body(content: Content) -> some View {
-        if count > 0 {
-            content.badge(count)
-        } else {
-            content
-        }
-    }
-}
-
-private struct ChatsTabBadge: ViewModifier {
-    let count: Int
-
-    func body(content: Content) -> some View {
-        if count > 0 {
-            content.badge(count)
-        } else {
-            content
         }
     }
 }

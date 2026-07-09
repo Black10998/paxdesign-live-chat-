@@ -8,25 +8,21 @@ struct PlatformModuleCard: View {
     var badge: Int = 0
 
     var body: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(tint.opacity(0.16))
-                    .frame(width: 44, height: 44)
-                Image(systemName: systemImage)
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(tint)
-            }
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.medium))
+                .foregroundStyle(tint)
+                .frame(width: 28, height: 28)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(PAXTheme.textPrimary)
+                        .font(.body)
+                        .foregroundStyle(.primary)
                         .lineLimit(1)
                     if badge > 0 {
                         Text("\(badge)")
-                            .font(.caption2.weight(.bold))
+                            .font(.caption2.weight(.semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -35,27 +31,18 @@ struct PlatformModuleCard: View {
                 }
                 Text(subtitle)
                     .font(.caption)
-                    .foregroundStyle(PAXTheme.textSecondary)
+                    .foregroundStyle(.secondary)
                     .lineLimit(2)
-                    .multilineTextAlignment(.leading)
             }
 
             Spacer(minLength: 0)
 
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(PAXTheme.textTertiary)
+                .foregroundStyle(.tertiary)
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(PAXTheme.surface.opacity(0.92))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(PAXTheme.border.opacity(0.55), lineWidth: 0.5)
-                )
-        )
-        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
     }
 }
 
@@ -66,43 +53,24 @@ struct PlatformHeroHeader: View {
     let gradient: [Color]
 
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
-                    )
-                    .frame(width: 56, height: 56)
-                Image(systemName: systemImage)
-                    .font(.system(size: 24, weight: .semibold))
-                    .foregroundStyle(.white)
-            }
+        HStack(alignment: .center, spacing: 14) {
+            Image(systemName: systemImage)
+                .font(.title2)
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(gradient.first ?? .accentColor)
+                .frame(width: 36, height: 36)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(PAXTheme.textPrimary)
+                    .font(.title3.weight(.semibold))
                 Text(subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(PAXTheme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .foregroundStyle(.secondary)
             }
 
             Spacer(minLength: 0)
         }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(PAXTheme.surface.opacity(0.94))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .stroke(
-                            LinearGradient(colors: gradient.map { $0.opacity(0.35) }, startPoint: .topLeading, endPoint: .bottomTrailing),
-                            lineWidth: 1
-                        )
-                )
-        )
-        .transition(PAXMotion.cardAppear)
+        .padding(.vertical, 4)
     }
 }
 
@@ -113,11 +81,11 @@ struct PermissionOverviewRow: View {
     var body: some View {
         HStack {
             Label(title, systemImage: enabled ? "checkmark.circle.fill" : "minus.circle")
-                .foregroundStyle(enabled ? PAXTheme.success : PAXTheme.textTertiary)
+                .foregroundStyle(enabled ? .green : .secondary)
             Spacer()
             Text(enabled ? L10n.CommonActive : L10n.SettingsDisabled)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(enabled ? PAXTheme.success : PAXTheme.textTertiary)
+                .font(.caption)
+                .foregroundStyle(enabled ? .green : .secondary)
         }
     }
 }
