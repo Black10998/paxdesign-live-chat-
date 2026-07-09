@@ -80,10 +80,15 @@ final class DeviceSessionService: ObservableObject {
         do {
             try await api.sendDeviceHeartbeat(metadata: PAXDeviceInfo.registrationPayload)
         } catch {
-            if case LiveChatAPIError.server(let message) = error, message.lowercased().contains("revoked") {
-                await PushService.shared.unregisterTokenFromBackend(auth: auth)
-                auth.logout()
-                return
+            if case LiveChatAPIError.server(let message) = error {
+                let lowered = message.lowercased()
+                if lowered.contains("revoked")
+                    || lowered.contains("awaiting administrator approval")
+                    || lowered.contains("not approved") {
+                    await PushService.shared.unregisterTokenFromBackend(auth: auth)
+                    auth.logout()
+                    return
+                }
             }
             if case LiveChatAPIError.unauthorized = error {
                 auth.handleUnauthorized()

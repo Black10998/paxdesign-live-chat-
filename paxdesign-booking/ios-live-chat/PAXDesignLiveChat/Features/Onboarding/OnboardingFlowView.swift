@@ -1,4 +1,6 @@
 import SwiftUI
+import UserNotifications
+import CoreLocation
 
 struct OnboardingPage: Identifiable {
     let id = UUID()
@@ -15,7 +17,16 @@ struct OnboardingFlowView: View {
 
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var settings: AppSettingsStore
+    @EnvironmentObject private var push: PushService
+    @ObservedObject private var permissions = PermissionCoordinator.shared
+    @ObservedObject private var locationPermission = LocationPermissionService.shared
+
     @State private var pageIndex = 0
+    @State private var acceptedTerms = false
+    @State private var requestInFlight = false
+    @State private var completionError: String?
+    @State private var isCompleting = false
+
     let mode: Mode
     let onComplete: () -> Void
 
@@ -28,7 +39,7 @@ struct OnboardingFlowView: View {
         [
             OnboardingPage(
                 title: "Willkommen bei PAXDesign Live Chat",
-                subtitle: "Ihre professionelle Plattform für Kundenkommunikation, Teamarbeit und Live-Support — alles in einer App.",
+                subtitle: "Ihre professionelle Plattform für Kundenkommunikation, Teamarbeit und Live-Support.",
                 systemImage: "bubble.left.and.bubble.right.fill"
             ),
             OnboardingPage(
@@ -43,20 +54,32 @@ struct OnboardingFlowView: View {
             ),
             OnboardingPage(
                 title: "Live Chat",
-                subtitle: "Live-Anfragen erscheinen sofort mit einem deutlichen Klingelton. Übernehmen oder ablehnen — in Sekunden.",
+                subtitle: "Live-Anfragen erscheinen sofort mit Klingelton. Übernehmen oder ablehnen — in Sekunden.",
                 systemImage: "bell.and.waves.left.and.right.fill"
             ),
             OnboardingPage(
-                title: "KI-Funktionen",
-                subtitle: "KI-Vorschläge und Schnellantworten beschleunigen Ihre Antworten. Sie behalten die volle Kontrolle.",
-                systemImage: "sparkles"
-            ),
-            OnboardingPage(
                 title: "Einstellungen & Sicherheit",
-                subtitle: "Erscheinungsbild, Sprache, Sounds, App-Sperre und Datenschutz — individuell anpassbar.",
+                subtitle: "Erscheinungsbild, Sprache, Sounds, App-Sperre und Datenschutz individuell anpassen.",
                 systemImage: "lock.shield.fill"
             )
         ]
+    }
+
+    private var notificationsGranted: Bool {
+        switch permissions.notificationStatus {
+        case .authorized, .provisional, .ephemeral:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private var locationGranted: Bool {
+        LocationPermissionService.isAuthorized(locationPermission.status)
+    }
+
+    private var canCompletePostLogin: Bool {
+        acceptedTerms && notificationsGranted && locationGranted && !isCompleting
     }
 
     var body: some View {
@@ -64,7 +87,7 @@ struct OnboardingFlowView: View {
             VStack(spacing: 0) {
                 TabView(selection: $pageIndex) {
                     ForEach(Array(pages.enumerated()), id: \.offset) { index, page in
-                        onboardingPage(page)
+                        onboardingPage(page, index: index)
                             .tag(index)
                     }
                 }
@@ -88,9 +111,14 @@ struct OnboardingFlowView: View {
                 }
             }
         }
+        .task {
+            await permissions.refreshStatuses()
+            locationPermission.refreshStatus()
+            acceptedTerms = auth.profile?.termsAccepted ?? false
+        }
     }
 
-    private func onboardingPage(_ page: OnboardingPage) -> some View {
+    private func onboardingPage(_ page: OnboardingPage, index: Int) -> some View {
         VStack(spacing: 24) {
             Spacer()
 
@@ -113,10 +141,73 @@ struct OnboardingFlowView: View {
                     .padding(.horizontal, 12)
             }
 
+            if mode == .postLogin && index == pages.count - 1 {
+                complianceSection
+                    .padding(.top, 8)
+            }
+
             Spacer()
-            Spacer(minLength: 32)
+            Spacer(minLength: 24)
         }
         .padding(.horizontal, 24)
+    }
+
+    private var complianceSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Toggle("Ich akzeptiere die Nutzungsbedingungen und Datenschutzbedingungen.", isOn: $acceptedTerms)
+                .toggleStyle(.switch)
+
+            permissionRow(
+                title: "Push-Benachrichtigungen",
+                granted: notificationsGranted,
+                actionTitle: "Erlauben",
+                action: requestNotifications
+            )
+
+            permissionRow(
+                title: "Standortzugriff",
+                granted: locationGranted,
+                actionTitle: "Erlauben",
+                action: requestLocation
+            )
+
+            if let completionError, !completionError.isEmpty {
+                Text(completionError)
+                    .font(.caption)
+                    .foregroundStyle(PAXTheme.danger)
+            }
+        }
+        .padding(14)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(PAXTheme.surface)
+        )
+    }
+
+    private func permissionRow(
+        title: String,
+        granted: Bool,
+        actionTitle: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Text(granted ? "Aktiv" : "Nicht aktiv")
+                    .font(.caption)
+                    .foregroundStyle(granted ? PAXTheme.success : PAXTheme.warning)
+            }
+            Spacer()
+            if !granted {
+                Button(actionTitle, action: action)
+                    .buttonStyle(.borderedProminent)
+                    .disabled(requestInFlight)
+            } else {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundStyle(PAXTheme.success)
+            }
+        }
     }
 
     private var controlBar: some View {
@@ -138,13 +229,35 @@ struct OnboardingFlowView: View {
                 }
                 .buttonStyle(.borderedProminent)
             } else {
-                Button("Loslegen") {
+                Button(mode == .firstLaunch ? "Loslegen" : "Zugriff aktivieren") {
                     PAXHaptics.success()
                     completeOnboarding()
                 }
                 .buttonStyle(.borderedProminent)
                 .fontWeight(.semibold)
+                .disabled(mode == .postLogin ? !canCompletePostLogin : false)
             }
+        }
+    }
+
+    private func requestNotifications() {
+        Task {
+            requestInFlight = true
+            defer { requestInFlight = false }
+            await push.requestAuthorization()
+            await permissions.refreshStatuses()
+            if notificationsGranted {
+                await push.registerTokenWithBackend(auth: auth)
+            }
+        }
+    }
+
+    private func requestLocation() {
+        Task {
+            requestInFlight = true
+            defer { requestInFlight = false }
+            _ = await locationPermission.requestWhenInUse()
+            locationPermission.refreshStatus()
         }
     }
 
@@ -153,12 +266,56 @@ struct OnboardingFlowView: View {
         case .firstLaunch:
             settings.firstLaunchOnboardingCompleted = true
             settings.onboardingCompleted = true
+            onComplete()
         case .postLogin:
-            settings.onboardingCompleted = true
+            guard canCompletePostLogin else {
+                completionError = "Bitte Bedingungen akzeptieren und alle Berechtigungen aktivieren."
+                return
+            }
+            completionError = nil
+            isCompleting = true
             Task {
-                try? await auth.api?.completeOnboarding()
+                defer { isCompleting = false }
+                do {
+                    let updatedProfile = try await auth.api?.completeOnboarding(
+                        termsAccepted: true,
+                        permissionStatus: OnboardingPermissionStatus(
+                            notifications: notificationStatusCode(permissions.notificationStatus),
+                            location: locationStatusCode(locationPermission.status)
+                        )
+                    )
+                    if let updatedProfile {
+                        auth.applyProfileUpdate(updatedProfile)
+                    }
+                    settings.onboardingCompleted = true
+                    await push.registerTokenWithBackend(auth: auth)
+                    onComplete()
+                } catch {
+                    completionError = error.localizedDescription
+                }
             }
         }
-        onComplete()
+    }
+
+    private func notificationStatusCode(_ status: UNAuthorizationStatus) -> String {
+        switch status {
+        case .authorized: return "authorized"
+        case .provisional: return "provisional"
+        case .ephemeral: return "ephemeral"
+        case .denied: return "denied"
+        case .notDetermined: return "not_determined"
+        @unknown default: return "unknown"
+        }
+    }
+
+    private func locationStatusCode(_ status: CLAuthorizationStatus) -> String {
+        switch status {
+        case .authorizedAlways: return "authorized_always"
+        case .authorizedWhenInUse: return "authorized_when_in_use"
+        case .denied: return "denied"
+        case .restricted: return "restricted"
+        case .notDetermined: return "not_determined"
+        @unknown default: return "unknown"
+        }
     }
 }

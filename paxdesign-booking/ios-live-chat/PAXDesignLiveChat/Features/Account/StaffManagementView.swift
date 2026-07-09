@@ -10,11 +10,19 @@ struct StaffManagementView: View {
     @State private var editingMember: StaffMember?
     @State private var editEnabled = true
     @State private var editPermissions = AdminPermissions()
+    @State private var editDisplayName = ""
+    @State private var editEmail = ""
+    @State private var editAvatarURL = ""
+    @State private var editProfileTitle = ""
+    @State private var editProfilePhone = ""
+    @State private var editProfileNotes = ""
+    @State private var editPassword = ""
+    @State private var isForcingLogout = false
 
     var body: some View {
         List {
             Section {
-                Text("Verwalten Sie Mitarbeiter-Zugang zur Live-Chat-App. Der Hauptadministrator hat immer volle Rechte.")
+                Text("Verwalten Sie Mitarbeiter-Zugang, Profilangaben und Sicherheitseinstellungen.")
                     .font(.footnote)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
@@ -49,6 +57,13 @@ struct StaffManagementView: View {
                             editingMember = member
                             editEnabled = member.enabled
                             editPermissions = member.permissions
+                            editDisplayName = member.name
+                            editEmail = member.email
+                            editAvatarURL = member.avatarUrl ?? ""
+                            editProfileTitle = member.profileTitle ?? ""
+                            editProfilePhone = member.profilePhone ?? ""
+                            editProfileNotes = member.profileNotes ?? ""
+                            editPassword = ""
                         } label: {
                             staffRow(member)
                         }
@@ -73,30 +88,61 @@ struct StaffManagementView: View {
                 member: member,
                 enabled: $editEnabled,
                 permissions: $editPermissions,
+                displayName: $editDisplayName,
+                email: $editEmail,
+                avatarURL: $editAvatarURL,
+                profileTitle: $editProfileTitle,
+                profilePhone: $editProfilePhone,
+                profileNotes: $editProfileNotes,
+                password: $editPassword,
                 isSaving: isSaving,
+                isForcingLogout: isForcingLogout,
                 onSave: { Task { await saveMember(member) } },
+                onForceLogout: { Task { await forceLogout(member) } },
                 onCancel: { editingMember = nil }
             )
         }
     }
 
     private func staffRow(_ member: StaffMember) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(member.name)
-                    .font(.headline)
-                    .foregroundStyle(PAXTheme.textPrimary)
-                Spacer()
-                Text(member.enabled ? "Aktiv" : "Inaktiv")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(member.enabled ? PAXTheme.success : PAXTheme.textTertiary)
-                Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(PAXTheme.textTertiary)
+        HStack(spacing: 10) {
+            Group {
+                if let avatarURL = member.avatarUrl, let url = URL(string: avatarURL), !avatarURL.isEmpty {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFill()
+                        default:
+                            Circle().fill(PAXTheme.accentSoft)
+                        }
+                    }
+                } else {
+                    Circle().fill(PAXTheme.accentSoft)
+                }
             }
-            Text(PrivacyMask.email(member.email, revealFull: auth.profile?.isSuperAdmin == true))
-                .font(.caption)
-                .foregroundStyle(PAXTheme.textSecondary)
+            .frame(width: 34, height: 34)
+            .clipShape(Circle())
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(member.name)
+                        .font(.headline)
+                        .foregroundStyle(PAXTheme.textPrimary)
+                    Spacer()
+                    Text(member.enabled ? "Aktiv" : "Inaktiv")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(member.enabled ? PAXTheme.success : PAXTheme.textTertiary)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(PAXTheme.textTertiary)
+                }
+                Text(PrivacyMask.email(member.email, revealFull: auth.profile?.isSuperAdmin == true))
+                    .font(.caption)
+                    .foregroundStyle(PAXTheme.textSecondary)
+                Text(member.onboardingCompleted ? "Onboarding abgeschlossen" : "Onboarding ausstehend")
+                    .font(.caption2)
+                    .foregroundStyle(member.onboardingCompleted ? PAXTheme.textTertiary : PAXTheme.warning)
+            }
         }
         .padding(.vertical, 4)
     }
@@ -153,12 +199,33 @@ struct StaffManagementView: View {
         do {
             try await api.saveStaff(
                 userId: member.userId,
+                email: editEmail,
                 enabled: editEnabled,
-                permissions: editPermissions
+                permissions: editPermissions,
+                displayName: editDisplayName,
+                avatarURL: editAvatarURL,
+                profileTitle: editProfileTitle,
+                profilePhone: editProfilePhone,
+                profileNotes: editProfileNotes,
+                password: editPassword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : editPassword
             )
             editingMember = nil
             await load()
             PAXHaptics.success()
+        } catch {
+            errorMessage = error.localizedDescription
+            PAXHaptics.warning()
+        }
+    }
+
+    private func forceLogout(_ member: StaffMember) async {
+        guard let api = auth.api else { return }
+        isForcingLogout = true
+        defer { isForcingLogout = false }
+        do {
+            try await api.forceLogoutStaff(userId: member.userId)
+            await load()
+            PAXHaptics.warning()
         } catch {
             errorMessage = error.localizedDescription
             PAXHaptics.warning()
@@ -181,8 +248,17 @@ private struct StaffEditSheet: View {
     let member: StaffMember
     @Binding var enabled: Bool
     @Binding var permissions: AdminPermissions
+    @Binding var displayName: String
+    @Binding var email: String
+    @Binding var avatarURL: String
+    @Binding var profileTitle: String
+    @Binding var profilePhone: String
+    @Binding var profileNotes: String
+    @Binding var password: String
     let isSaving: Bool
+    let isForcingLogout: Bool
     let onSave: () -> Void
+    let onForceLogout: () -> Void
     let onCancel: () -> Void
 
     var body: some View {
@@ -190,6 +266,24 @@ private struct StaffEditSheet: View {
             List {
                 Section(member.name) {
                     Toggle("Aktiv", isOn: $enabled)
+                }
+                Section("Profil") {
+                    TextField("Anzeigename", text: $displayName)
+                    TextField("E-Mail", text: $email)
+                        .keyboardType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                    TextField("Avatar URL", text: $avatarURL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    TextField("Position", text: $profileTitle)
+                    TextField("Telefon", text: $profilePhone)
+                    TextField("Notizen", text: $profileNotes, axis: .vertical)
+                        .lineLimit(2...5)
+                }
+                Section("Sicherheit") {
+                    SecureField("Neues Passwort (optional)", text: $password)
+                    Button("Mitarbeiter sofort abmelden", role: .destructive, action: onForceLogout)
+                        .disabled(isForcingLogout)
                 }
                 Section("Berechtigungen") {
                     PermissionToggle("Chats ansehen", keyPath: \.viewChats, permissions: $permissions)
@@ -206,7 +300,7 @@ private struct StaffEditSheet: View {
                     PermissionToggle("Hub-Profilname ändern", keyPath: \.customizeHubProfile, permissions: $permissions)
                 }
             }
-            .navigationTitle("Bearbeiten")
+            .navigationTitle("Mitarbeiter")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

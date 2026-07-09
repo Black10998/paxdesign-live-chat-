@@ -289,6 +289,9 @@ struct AdminProfile: Codable {
     let permissions: AdminPermissions
     let modulePermissions: ModulePermissions?
     let onboardingCompleted: Bool
+    let termsAccepted: Bool
+    let termsAcceptedAt: Int
+    let permissionStatus: OnboardingPermissionStatus?
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -301,6 +304,9 @@ struct AdminProfile: Codable {
         case permissions
         case modulePermissions = "module_permissions"
         case onboardingCompleted = "onboarding_completed"
+        case termsAccepted = "terms_accepted"
+        case termsAcceptedAt = "terms_accepted_at"
+        case permissionStatus = "permission_status"
     }
 
     init(from decoder: Decoder) throws {
@@ -317,6 +323,9 @@ struct AdminProfile: Codable {
         permissions = (try? container.decode(AdminPermissions.self, forKey: .permissions)) ?? .full
         modulePermissions = try container.decodeIfPresent(ModulePermissions.self, forKey: .modulePermissions)
         onboardingCompleted = (try? container.decode(Bool.self, forKey: .onboardingCompleted)) ?? false
+        termsAccepted = (try? container.decode(Bool.self, forKey: .termsAccepted)) ?? onboardingCompleted
+        termsAcceptedAt = LiveChatDecode.int(container, CodingKeys.termsAcceptedAt)
+        permissionStatus = try container.decodeIfPresent(OnboardingPermissionStatus.self, forKey: .permissionStatus)
     }
 
     func updating(modulePermissions: ModulePermissions) -> AdminProfile {
@@ -332,7 +341,10 @@ struct AdminProfile: Codable {
             isSuperAdmin: isSuperAdmin,
             permissions: permissions,
             modulePermissions: modulePermissions,
-            onboardingCompleted: onboardingCompleted
+            onboardingCompleted: onboardingCompleted,
+            termsAccepted: termsAccepted,
+            termsAcceptedAt: termsAcceptedAt,
+            permissionStatus: permissionStatus
         )
     }
 
@@ -348,7 +360,10 @@ struct AdminProfile: Codable {
         isSuperAdmin: Bool,
         permissions: AdminPermissions,
         modulePermissions: ModulePermissions?,
-        onboardingCompleted: Bool
+        onboardingCompleted: Bool,
+        termsAccepted: Bool,
+        termsAcceptedAt: Int,
+        permissionStatus: OnboardingPermissionStatus?
     ) {
         self.userId = userId
         self.name = name
@@ -362,6 +377,9 @@ struct AdminProfile: Codable {
         self.permissions = permissions
         self.modulePermissions = modulePermissions
         self.onboardingCompleted = onboardingCompleted
+        self.termsAccepted = termsAccepted
+        self.termsAcceptedAt = termsAcceptedAt
+        self.permissionStatus = permissionStatus
     }
 
     var displayEmail: String {
@@ -404,12 +422,59 @@ struct StaffMember: Codable, Identifiable {
     let name: String
     let email: String
     let username: String
+    let avatarUrl: String?
+    let profileTitle: String?
+    let profilePhone: String?
+    let profileNotes: String?
+    let onboardingCompleted: Bool
     let enabled: Bool
     let permissions: AdminPermissions
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
-        case name, email, username, enabled, permissions
+        case name, email, username
+        case avatarUrl = "avatar_url"
+        case profileTitle = "profile_title"
+        case profilePhone = "profile_phone"
+        case profileNotes = "profile_notes"
+        case onboardingCompleted = "onboarding_completed"
+        case enabled, permissions
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        userId = LiveChatDecode.int(c, CodingKeys.userId)
+        name = LiveChatDecode.string(c, CodingKeys.name)
+        email = LiveChatDecode.string(c, CodingKeys.email)
+        username = LiveChatDecode.string(c, CodingKeys.username)
+        avatarUrl = try c.decodeIfPresent(String.self, forKey: .avatarUrl)
+        profileTitle = try c.decodeIfPresent(String.self, forKey: .profileTitle)
+        profilePhone = try c.decodeIfPresent(String.self, forKey: .profilePhone)
+        profileNotes = try c.decodeIfPresent(String.self, forKey: .profileNotes)
+        onboardingCompleted = (try? c.decode(Bool.self, forKey: .onboardingCompleted)) ?? false
+        enabled = (try? c.decode(Bool.self, forKey: .enabled)) ?? false
+        permissions = (try? c.decode(AdminPermissions.self, forKey: .permissions)) ?? AdminPermissions()
+    }
+}
+
+struct OnboardingPermissionStatus: Codable, Equatable {
+    let notifications: String
+    let location: String
+
+    init(notifications: String = "", location: String = "") {
+        self.notifications = notifications
+        self.location = location
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        notifications = (try? c.decode(String.self, forKey: .notifications)) ?? ""
+        location = (try? c.decode(String.self, forKey: .location)) ?? ""
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case notifications
+        case location
     }
 }
 

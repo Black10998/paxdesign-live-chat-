@@ -237,6 +237,11 @@ class PAXdesign_Live_Chat_Mobile_API {
             'callback'            => array(__CLASS__, 'route_devices_revoke'),
             'permission_callback' => $auth,
         ));
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/devices/(?P<device_id>[a-zA-Z0-9_\-]+)/approve', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_devices_approve'),
+            'permission_callback' => $auth,
+        ));
 
         register_rest_route(self::REST_NAMESPACE, '/live-admin/devices/force-logout', array(
             'methods'             => WP_REST_Server::CREATABLE,
@@ -271,6 +276,11 @@ class PAXdesign_Live_Chat_Mobile_API {
         register_rest_route(self::REST_NAMESPACE, '/live-admin/staff/(?P<user_id>\d+)', array(
             'methods'             => WP_REST_Server::DELETABLE,
             'callback'            => array(__CLASS__, 'route_staff_remove'),
+            'permission_callback' => $auth,
+        ));
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/staff/(?P<user_id>\d+)/force-logout', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_staff_force_logout'),
             'permission_callback' => $auth,
         ));
 
@@ -432,16 +442,24 @@ class PAXdesign_Live_Chat_Mobile_API {
      */
     private static function profile_payload($user) {
         $perms = PAXdesign_Live_Chat_Permissions::get_effective_permissions($user);
+        $user_id = (int) $user->ID;
         $hub_name = trim((string) get_user_meta((int) $user->ID, 'pax_live_hub_display_name', true));
         if ($hub_name === '') {
             $hub_name = $user->display_name;
         }
+        $avatar_meta = trim((string) get_user_meta($user_id, 'pax_live_avatar_url', true));
+        $avatar_url = $avatar_meta !== '' ? esc_url_raw($avatar_meta) : get_avatar_url($user_id, array('size' => 256));
+        $terms_accepted_at = (int) get_user_meta($user_id, 'pax_live_terms_accepted_at', true);
+        $permission_status = array(
+            'notifications' => sanitize_text_field((string) get_user_meta($user_id, 'pax_live_permission_notifications', true)),
+            'location'      => sanitize_text_field((string) get_user_meta($user_id, 'pax_live_permission_location', true)),
+        );
         return array(
-            'user_id'         => (int) $user->ID,
+            'user_id'         => $user_id,
             'name'            => $hub_name,
             'email'           => $user->user_email,
             'username'        => $user->user_login,
-            'avatar_url'      => get_avatar_url((int) $user->ID, array('size' => 256)),
+            'avatar_url'      => $avatar_url,
             'site_url'        => home_url('/'),
             'rest_base'       => rest_url(self::REST_NAMESPACE . '/live-admin/'),
             'live_agent'      => PAXdesign_Chat_Live::get_agent_public_config(),
@@ -450,6 +468,9 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permissions'     => $perms,
             'module_permissions' => PAXdesign_Platform_Store::module_permissions_for_user($user),
             'onboarding_completed' => (bool) get_user_meta((int) $user->ID, 'pax_live_onboarding_completed', true),
+            'terms_accepted'  => $terms_accepted_at > 0,
+            'terms_accepted_at' => $terms_accepted_at,
+            'permission_status' => $permission_status,
         );
     }
 
@@ -652,8 +673,10 @@ class PAXdesign_Live_Chat_Mobile_API {
         }
 
         $user_id = (int) get_current_user_id();
-        $can_manage = PAXdesign_Live_Chat_Permissions::can($user_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        $can_manage = PAXdesign_Live_Chat_Permissions::can($user_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)
+            || PAXdesign_Live_Chat_Permissions::can($user_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_TEAM_PERMISSIONS);
         $filter = $can_manage ? (int) $request->get_param('user_id') : $user_id;
+        $current_device_id = sanitize_text_field((string) $request->get_param('current_device_id'));
 
         if (!$can_manage) {
             $filter = $user_id;
@@ -661,7 +684,7 @@ class PAXdesign_Live_Chat_Mobile_API {
 
         $devices = array();
         try {
-            $devices = PAXdesign_Device_Sessions::list_employee_devices($filter);
+            $devices = PAXdesign_Device_Sessions::list_employee_devices($filter, $current_device_id);
         } catch (Exception $e) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('[PAXdesign Device Sessions] list failed: ' . $e->getMessage());
@@ -715,6 +738,23 @@ class PAXdesign_Live_Chat_Mobile_API {
         );
     }
 
+    public static function route_devices_approve(WP_REST_Request $request) {
+        if (!class_exists('PAXdesign_Device_Sessions')) {
+            return new WP_Error('unavailable', 'Device management unavailable.', array('status' => 501));
+        }
+
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        $target_user = isset($params['user_id']) ? (int) $params['user_id'] : (int) get_current_user_id();
+        return PAXdesign_Device_Sessions::approve_device(
+            (int) get_current_user_id(),
+            $target_user,
+            sanitize_text_field($request['device_id'])
+        );
+    }
+
     public static function route_devices_force_logout(WP_REST_Request $request) {
         if (!class_exists('PAXdesign_Device_Sessions')) {
             return new WP_Error('unavailable', 'Device management unavailable.', array('status' => 501));
@@ -728,8 +768,12 @@ class PAXdesign_Live_Chat_Mobile_API {
         $target_user = isset($params['user_id']) ? (int) $params['user_id'] : 0;
         $device_ids  = isset($params['device_ids']) && is_array($params['device_ids']) ? $params['device_ids'] : array();
 
-        if ($target_user <= 0 || empty($device_ids)) {
-            return new WP_Error('invalid_request', 'user_id and device_ids required.', array('status' => 400));
+        if ($target_user <= 0) {
+            return new WP_Error('invalid_request', 'user_id required.', array('status' => 400));
+        }
+
+        if (empty($device_ids)) {
+            return PAXdesign_Device_Sessions::force_logout_user((int) get_current_user_id(), $target_user);
         }
 
         $results = array();
@@ -760,8 +804,27 @@ class PAXdesign_Live_Chat_Mobile_API {
     }
 
     public static function route_onboarding_complete(WP_REST_Request $request) {
-        update_user_meta((int) get_current_user_id(), 'pax_live_onboarding_completed', 1);
-        return rest_ensure_response(array('ok' => true));
+        $user_id = (int) get_current_user_id();
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+
+        $terms_accepted = isset($params['terms_accepted']) ? !empty($params['terms_accepted']) : true;
+        if (!$terms_accepted) {
+            return new WP_Error('terms_required', 'Terms must be accepted before continuing.', array('status' => 400));
+        }
+
+        $permissions = isset($params['permissions']) && is_array($params['permissions']) ? $params['permissions'] : array();
+        $notifications = sanitize_text_field((string) ($permissions['notifications'] ?? 'unknown'));
+        $location = sanitize_text_field((string) ($permissions['location'] ?? 'unknown'));
+
+        update_user_meta($user_id, 'pax_live_onboarding_completed', 1);
+        update_user_meta($user_id, 'pax_live_terms_accepted_at', time());
+        update_user_meta($user_id, 'pax_live_permission_notifications', $notifications);
+        update_user_meta($user_id, 'pax_live_permission_location', $location);
+
+        return self::respond(self::profile_payload(wp_get_current_user()));
     }
 
     public static function route_apns_unregister(WP_REST_Request $request) {
@@ -811,6 +874,16 @@ class PAXdesign_Live_Chat_Mobile_API {
                 $user_id = (int) $found->ID;
             }
         }
+
+        if ($user_id <= 0) {
+            return new WP_Error('invalid_user', 'Valid user_id or known email required.', array('status' => 400));
+        }
+
+        $profile_result = self::update_staff_user_details($user_id, $params);
+        if (is_wp_error($profile_result)) {
+            return $profile_result;
+        }
+
         $result = PAXdesign_Live_Chat_Permissions::save_staff_record($user_id, array(
             'enabled'     => !empty($params['enabled']),
             'permissions' => isset($params['permissions']) ? $params['permissions'] : array(),
@@ -834,6 +907,99 @@ class PAXdesign_Live_Chat_Mobile_API {
             return $result;
         }
         return rest_ensure_response(array('ok' => true));
+    }
+
+    public static function route_staff_force_logout(WP_REST_Request $request) {
+        if (!class_exists('PAXdesign_Device_Sessions')) {
+            return new WP_Error('unavailable', 'Device management unavailable.', array('status' => 501));
+        }
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_TEAM_PERMISSIONS);
+        if (is_wp_error($check)) {
+            $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        }
+        if (is_wp_error($check)) {
+            return $check;
+        }
+
+        $target_user = (int) $request['user_id'];
+        if ($target_user <= 0) {
+            return new WP_Error('invalid_user', 'Valid user_id required.', array('status' => 400));
+        }
+        return PAXdesign_Device_Sessions::force_logout_user((int) get_current_user_id(), $target_user);
+    }
+
+    /**
+     * @param int                  $user_id
+     * @param array<string, mixed> $params
+     * @return true|WP_Error
+     */
+    private static function update_staff_user_details($user_id, $params) {
+        $user = get_user_by('id', (int) $user_id);
+        if (!$user) {
+            return new WP_Error('invalid_user', 'User not found.', array('status' => 404));
+        }
+
+        $update_payload = array('ID' => (int) $user_id);
+        $has_wp_update = false;
+
+        if (array_key_exists('display_name', $params)) {
+            $display_name = trim((string) sanitize_text_field($params['display_name']));
+            if ($display_name !== '') {
+                $update_payload['display_name'] = $display_name;
+                $has_wp_update = true;
+            }
+        }
+
+        if (array_key_exists('email', $params)) {
+            $new_email = sanitize_email((string) $params['email']);
+            if ($new_email !== '') {
+                if (!is_email($new_email)) {
+                    return new WP_Error('invalid_email', 'Invalid email format.', array('status' => 400));
+                }
+                $email_owner = get_user_by('email', $new_email);
+                if ($email_owner && (int) $email_owner->ID !== (int) $user_id) {
+                    return new WP_Error('email_taken', 'Email address already in use.', array('status' => 400));
+                }
+                $update_payload['user_email'] = $new_email;
+                $has_wp_update = true;
+            }
+        }
+
+        if ($has_wp_update) {
+            $updated = wp_update_user($update_payload);
+            if (is_wp_error($updated)) {
+                return $updated;
+            }
+        }
+
+        if (array_key_exists('avatar_url', $params)) {
+            $avatar_url = esc_url_raw((string) $params['avatar_url']);
+            if ($avatar_url === '') {
+                delete_user_meta((int) $user_id, 'pax_live_avatar_url');
+            } else {
+                update_user_meta((int) $user_id, 'pax_live_avatar_url', $avatar_url);
+            }
+        }
+
+        if (array_key_exists('profile_title', $params)) {
+            update_user_meta((int) $user_id, 'pax_live_profile_title', sanitize_text_field((string) $params['profile_title']));
+        }
+        if (array_key_exists('profile_phone', $params)) {
+            update_user_meta((int) $user_id, 'pax_live_profile_phone', sanitize_text_field((string) $params['profile_phone']));
+        }
+        if (array_key_exists('profile_notes', $params)) {
+            update_user_meta((int) $user_id, 'pax_live_profile_notes', sanitize_textarea_field((string) $params['profile_notes']));
+        }
+
+        if (!empty($params['password']) && is_string($params['password'])) {
+            $password = trim((string) $params['password']);
+            if (strlen($password) < 8) {
+                return new WP_Error('weak_password', 'Password must contain at least 8 characters.', array('status' => 400));
+            }
+            wp_set_password($password, (int) $user_id);
+        }
+
+        return true;
     }
 
     public static function route_team_sessions(WP_REST_Request $request) {

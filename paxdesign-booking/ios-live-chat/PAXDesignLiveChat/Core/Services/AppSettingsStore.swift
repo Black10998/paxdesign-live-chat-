@@ -103,6 +103,8 @@ final class AppSettingsStore: ObservableObject {
         case pulse
         case bell
         case digital
+        case soft
+        case echo
 
         var id: String { rawValue }
 
@@ -113,6 +115,8 @@ final class AppSettingsStore: ObservableObject {
             case .pulse: return "Pulse"
             case .bell: return "Bell"
             case .digital: return "Digital"
+            case .soft: return "Soft"
+            case .echo: return "Echo"
             }
         }
     }

@@ -72,6 +72,7 @@ class PAXdesign_APNS {
 
         $all = self::get_user_devices($user_id);
         $existing = isset($all[$token]) && is_array($all[$token]) ? $all[$token] : array();
+        $was_revoked = !empty($existing['revoked']) || (isset($existing['approved']) && empty($existing['approved']));
         $now = time();
 
         $record = array_merge($existing, array(
@@ -85,7 +86,21 @@ class PAXdesign_APNS {
             $record = PAXdesign_Device_Sessions::merge_device_meta($record, $meta, $now);
         }
 
+        if ($was_revoked) {
+            $record['approved'] = false;
+            $record['revoked']  = true;
+        } else {
+            $record['approved'] = true;
+            $record['revoked']  = false;
+        }
         $all[$token] = $record;
+        if (class_exists('PAXdesign_Device_Sessions')) {
+            $all = PAXdesign_Device_Sessions::enforce_single_device_login(
+                $all,
+                isset($record['device_id']) ? (string) $record['device_id'] : '',
+                $token
+            );
+        }
         update_user_meta((int) $user_id, self::USER_META_KEY, $all);
     }
 

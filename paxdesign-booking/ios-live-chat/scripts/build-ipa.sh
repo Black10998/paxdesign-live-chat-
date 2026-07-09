@@ -76,6 +76,10 @@ done
   || /usr/libexec/PlistBuddy -c "Set :NSPhotoLibraryUsageDescription 'Select photos from your library to send in live chat.'" "$APP_PATH/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :NSUserNotificationsUsageDescription string 'Notifications for live agent requests and new customer messages.'" "$APP_PATH/Info.plist" 2>/dev/null \
   || /usr/libexec/PlistBuddy -c "Set :NSUserNotificationsUsageDescription 'Notifications for live agent requests and new customer messages.'" "$APP_PATH/Info.plist"
+/usr/libexec/PlistBuddy -c "Add :NSLocationWhenInUseUsageDescription string 'Location helps secure account sign-ins and device audits.'" "$APP_PATH/Info.plist" 2>/dev/null \
+  || /usr/libexec/PlistBuddy -c "Set :NSLocationWhenInUseUsageDescription 'Location helps secure account sign-ins and device audits.'" "$APP_PATH/Info.plist"
+/usr/libexec/PlistBuddy -c "Add :NSLocationAlwaysAndWhenInUseUsageDescription string 'Location helps secure account sign-ins and device audits.'" "$APP_PATH/Info.plist" 2>/dev/null \
+  || /usr/libexec/PlistBuddy -c "Set :NSLocationAlwaysAndWhenInUseUsageDescription 'Location helps secure account sign-ins and device audits.'" "$APP_PATH/Info.plist"
 
 echo "==> Packaging IPA: $IPA_NAME"
 STAGE="$OUTPUT_DIR/ipa-stage"

@@ -1,4 +1,7 @@
 import Foundation
+#if !SIDELOAD
+import UIKit
+#endif
 
 /// Ensures login side-effects (polling, push, sync) start exactly once per session.
 @MainActor
@@ -25,6 +28,12 @@ enum AppServicesController {
             await PermissionCoordinator.shared.refreshStatuses()
             PermissionCoordinator.shared.presentNotificationPromptIfNeeded(isLoggedIn: true)
             #if !SIDELOAD
+            let status = PermissionCoordinator.shared.notificationStatus
+            if status == .authorized || status == .provisional || status == .ephemeral {
+                await MainActor.run {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
             await DeviceSessionService.shared.registerWithPush(auth: auth)
             #endif
             await PlatformSyncService.shared.sync(auth: auth)

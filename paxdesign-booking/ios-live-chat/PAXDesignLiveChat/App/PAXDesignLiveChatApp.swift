@@ -135,6 +135,7 @@ struct RootView: View {
     @EnvironmentObject private var settings: AppSettingsStore
     @EnvironmentObject private var launchSplash: LaunchSplashController
     @State private var showFirstRunOnboarding = false
+    @State private var showPostLoginOnboarding = false
 
     private enum AppPhase {
         case splash
@@ -193,6 +194,11 @@ struct RootView: View {
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
         }
+        .fullScreenCover(isPresented: $showPostLoginOnboarding) {
+            OnboardingFlowView(mode: .postLogin) {
+                showPostLoginOnboarding = false
+            }
+        }
         .onChange(of: launchSplash.isVisible) { visible in
             guard !visible, !settings.firstLaunchOnboardingCompleted else { return }
             showFirstRunOnboarding = true
@@ -201,6 +207,13 @@ struct RootView: View {
             if loggedIn, auth.profile?.onboardingCompleted == true {
                 settings.onboardingCompleted = true
             }
+            syncPostLoginOnboardingPresentation()
+        }
+        .onChange(of: auth.profile?.onboardingCompleted) { _ in
+            syncPostLoginOnboardingPresentation()
+        }
+        .onAppear {
+            syncPostLoginOnboardingPresentation()
         }
     }
 
@@ -211,5 +224,21 @@ struct RootView: View {
         case .main: return "main"
         case .login: return "login"
         }
+    }
+
+    private func syncPostLoginOnboardingPresentation() {
+        guard auth.isLoggedIn else {
+            showPostLoginOnboarding = false
+            return
+        }
+        if auth.profile?.isSuperAdmin == true {
+            showPostLoginOnboarding = false
+            return
+        }
+        if auth.profile?.onboardingCompleted == true || settings.onboardingCompleted {
+            showPostLoginOnboarding = false
+            return
+        }
+        showPostLoginOnboarding = true
     }
 }

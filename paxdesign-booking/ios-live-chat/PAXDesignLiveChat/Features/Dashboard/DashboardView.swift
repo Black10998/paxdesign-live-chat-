@@ -6,6 +6,7 @@ import Charts
 struct DashboardView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
+    @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
     @EnvironmentObject private var settings: AppSettingsStore
     @ObservedObject private var tasks = TaskStore.shared
     @ObservedObject private var calendar = CalendarStore.shared
@@ -70,6 +71,7 @@ struct DashboardView: View {
             NavigationStack { GlobalSearchView() }
                 .environmentObject(auth)
                 .environmentObject(coordinator)
+                .environmentObject(teamCoordinator)
         }
         .refreshable {
             await coordinator.refreshSessions(auth: auth)

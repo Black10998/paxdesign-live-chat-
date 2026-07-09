@@ -8,6 +8,7 @@ if (!defined('ABSPATH')) {
 }
 
 class PAXdesign_Device_Sessions {
+    const ONLINE_WINDOW_SECONDS = 180;
 
     /**
      * @param array<string, mixed> $record
@@ -54,7 +55,15 @@ class PAXdesign_Device_Sessions {
 
         if (!empty($meta['force_logout'])) {
             $merged['revoked'] = true;
+            $merged['approved'] = false;
             $merged['revoked_at'] = $now;
+        }
+
+        if (!isset($merged['approved'])) {
+            $merged['approved'] = empty($merged['revoked']);
+        }
+        if (!empty($merged['revoked'])) {
+            $merged['approved'] = false;
         }
 
         return $merged;
@@ -74,7 +83,7 @@ class PAXdesign_Device_Sessions {
     /**
      * @return array<int, array<string, mixed>>
      */
-    public static function list_employee_devices($filter_user_id = 0) {
+    public static function list_employee_devices($filter_user_id = 0, $current_device_id = '') {
         $users = get_users(array('fields' => array('ID', 'display_name', 'user_email')));
         $rows  = array();
 
@@ -95,7 +104,7 @@ class PAXdesign_Device_Sessions {
                 if (!is_array($device)) {
                     continue;
                 }
-                $rows[] = self::format_device_row($uid, $user, $token, $device);
+                $rows[] = self::format_device_row($uid, $user, $token, $device, $current_device_id);
             }
         }
 
@@ -111,7 +120,7 @@ class PAXdesign_Device_Sessions {
      * @param array<string, mixed> $device
      * @return array<string, mixed>
      */
-    private static function format_device_row($user_id, $user, $token, $device) {
+    private static function format_device_row($user_id, $user, $token, $device, $current_device_id = '') {
         $display_name = '';
         $email        = '';
         if (is_object($user)) {
@@ -119,21 +128,31 @@ class PAXdesign_Device_Sessions {
             $email        = isset($user->user_email) ? (string) $user->user_email : '';
         }
 
+        $device_id   = !empty($device['device_id']) ? (string) $device['device_id'] : substr($token, 0, 12);
+        $revoked     = !empty($device['revoked']);
+        $approved    = isset($device['approved']) ? !empty($device['approved']) : !$revoked;
+        $last_active = (int) ($device['last_active_at'] ?? $device['updated_at'] ?? 0);
+        $is_online   = !$revoked && $approved && $last_active > 0 && (time() - $last_active) <= self::ONLINE_WINDOW_SECONDS;
+        $is_current  = $current_device_id !== '' && $current_device_id === $device_id;
+
         return array(
             'user_id'        => (int) $user_id,
             'employee_name'  => $display_name,
             'employee_email' => $email,
-            'device_id'      => !empty($device['device_id']) ? (string) $device['device_id'] : substr($token, 0, 12),
+            'device_id'      => $device_id,
             'device_token'   => substr($token, 0, 8) . '…',
             'device_name'    => (string) ($device['device_name'] ?? 'Unbekanntes Gerät'),
             'device_model'   => (string) ($device['device_model'] ?? ''),
             'os_version'     => (string) ($device['os_version'] ?? ''),
             'app_version'    => (string) ($device['app_version'] ?? ''),
             'first_login_at' => (int) ($device['first_login_at'] ?? 0),
-            'last_active_at' => (int) ($device['last_active_at'] ?? $device['updated_at'] ?? 0),
+            'last_active_at' => $last_active,
             'ip_address'     => (string) ($device['ip_address'] ?? ''),
             'location'       => (string) ($device['location'] ?? ''),
-            'revoked'        => !empty($device['revoked']),
+            'revoked'        => $revoked,
+            'approved'       => $approved,
+            'online'         => $is_online,
+            'is_current'     => $is_current,
             'sandbox'        => !empty($device['sandbox']),
         );
     }
@@ -151,6 +170,9 @@ class PAXdesign_Device_Sessions {
             if (!empty($device['revoked'])) {
                 return new WP_Error('device_revoked', 'This device session has been revoked.', array('status' => 403));
             }
+            if (isset($device['approved']) && empty($device['approved'])) {
+                return new WP_Error('device_not_approved', 'This device is awaiting administrator approval.', array('status' => 403));
+            }
             $devices[$token] = self::merge_device_meta($device, $meta);
             update_user_meta((int) $user_id, PAXdesign_APNS::USER_META_KEY, $devices);
             return rest_ensure_response(array('ok' => true, 'revoked' => false));
@@ -159,7 +181,9 @@ class PAXdesign_Device_Sessions {
     }
 
     public static function revoke_device($admin_id, $target_user_id, $device_id, $force_logout = true) {
-        if (!PAXdesign_Live_Chat_Permissions::can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)) {
+        $can_manage = PAXdesign_Live_Chat_Permissions::can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)
+            || PAXdesign_Live_Chat_Permissions::can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_TEAM_PERMISSIONS);
+        if (!$can_manage) {
             return new WP_Error('forbidden', 'Insufficient permissions.', array('status' => 403));
         }
 
@@ -176,6 +200,7 @@ class PAXdesign_Device_Sessions {
             }
             $found = true;
             $devices[$token]['revoked'] = true;
+            $devices[$token]['approved'] = false;
             $devices[$token]['revoked_at'] = time();
             $devices[$token]['revoked_by'] = (int) $admin_id;
             if (!$force_logout) {
@@ -192,11 +217,103 @@ class PAXdesign_Device_Sessions {
         return rest_ensure_response(array('ok' => true));
     }
 
+    public static function approve_device($admin_id, $target_user_id, $device_id) {
+        $can_manage = PAXdesign_Live_Chat_Permissions::can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)
+            || PAXdesign_Live_Chat_Permissions::can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_TEAM_PERMISSIONS);
+        if (!$can_manage) {
+            return new WP_Error('forbidden', 'Insufficient permissions.', array('status' => 403));
+        }
+
+        $devices = self::get_user_devices($target_user_id);
+        $found   = false;
+        foreach ($devices as $token => $device) {
+            if (!is_array($device)) {
+                continue;
+            }
+            $id = !empty($device['device_id']) ? (string) $device['device_id'] : '';
+            if ($id !== $device_id) {
+                continue;
+            }
+            $found = true;
+            $devices[$token]['revoked'] = false;
+            $devices[$token]['approved'] = true;
+            $devices[$token]['approved_at'] = time();
+            $devices[$token]['approved_by'] = (int) $admin_id;
+            unset($devices[$token]['revoked_at'], $devices[$token]['revoked_by']);
+            break;
+        }
+
+        if (!$found) {
+            return new WP_Error('device_not_found', 'Device not found.', array('status' => 404));
+        }
+
+        update_user_meta((int) $target_user_id, PAXdesign_APNS::USER_META_KEY, $devices);
+        return rest_ensure_response(array('ok' => true));
+    }
+
+    public static function force_logout_user($admin_id, $target_user_id) {
+        $can_manage = PAXdesign_Live_Chat_Permissions::can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)
+            || PAXdesign_Live_Chat_Permissions::can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_TEAM_PERMISSIONS);
+        if (!$can_manage) {
+            return new WP_Error('forbidden', 'Insufficient permissions.', array('status' => 403));
+        }
+
+        $devices = self::get_user_devices($target_user_id);
+        $now = time();
+        foreach ($devices as $token => $device) {
+            if (!is_array($device)) {
+                continue;
+            }
+            $devices[$token]['revoked'] = true;
+            $devices[$token]['approved'] = false;
+            $devices[$token]['revoked_at'] = $now;
+            $devices[$token]['revoked_by'] = (int) $admin_id;
+        }
+        update_user_meta((int) $target_user_id, PAXdesign_APNS::USER_META_KEY, $devices);
+        return rest_ensure_response(array('ok' => true));
+    }
+
+    /**
+     * Revoke all older devices once a new device signs in.
+     *
+     * @param array<string, array<string, mixed>> $devices
+     * @return array<string, array<string, mixed>>
+     */
+    public static function enforce_single_device_login(array $devices, $current_device_id, $except_token = '') {
+        $current_device_id = sanitize_text_field((string) $current_device_id);
+        if ($current_device_id === '') {
+            return $devices;
+        }
+        $now = time();
+        foreach ($devices as $token => $device) {
+            if (!is_array($device)) {
+                continue;
+            }
+            if ($except_token !== '' && $token === $except_token) {
+                continue;
+            }
+            $id = !empty($device['device_id']) ? (string) $device['device_id'] : '';
+            if ($id === '' || $id === $current_device_id) {
+                continue;
+            }
+            $devices[$token]['revoked'] = true;
+            $devices[$token]['approved'] = false;
+            $devices[$token]['revoked_at'] = $now;
+            $devices[$token]['revoked_reason'] = 'new_login';
+        }
+        return $devices;
+    }
+
     public static function reset_onboarding($admin_id, $target_user_id) {
-        if (!PAXdesign_Live_Chat_Permissions::can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)) {
+        $can_manage = PAXdesign_Live_Chat_Permissions::can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)
+            || PAXdesign_Live_Chat_Permissions::can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_TEAM_PERMISSIONS);
+        if (!$can_manage) {
             return new WP_Error('forbidden', 'Insufficient permissions.', array('status' => 403));
         }
         delete_user_meta((int) $target_user_id, 'pax_live_onboarding_completed');
+        delete_user_meta((int) $target_user_id, 'pax_live_terms_accepted_at');
+        delete_user_meta((int) $target_user_id, 'pax_live_permission_notifications');
+        delete_user_meta((int) $target_user_id, 'pax_live_permission_location');
         return rest_ensure_response(array('ok' => true));
     }
 

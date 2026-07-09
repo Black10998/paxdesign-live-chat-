@@ -7,8 +7,10 @@ struct DeviceManagementView: View {
     @State private var errorMessage: String?
     @State private var selectedEmployeeId: Int?
     @State private var confirmRevoke: DeviceRecord?
+    @State private var confirmApprove: DeviceRecord?
+    @State private var liveRefreshTask: Task<Void, Never>?
 
-    private var canManage: Bool { auth.canManageUsers }
+    private var canManage: Bool { auth.canManageUsers || auth.canManageTeamPermissions }
 
     var body: some View {
         List {
@@ -65,7 +67,11 @@ struct DeviceManagementView: View {
         .navigationTitle("Geräteverwaltung")
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await loadDevices() }
-        .task { await loadDevices() }
+        .task {
+            await loadDevices()
+            startRealtimeRefresh()
+        }
+        .onDisappear { stopRealtimeRefresh() }
         .confirmationDialog(
             "Gerät abmelden?",
             isPresented: Binding(
@@ -82,9 +88,44 @@ struct DeviceManagementView: View {
             Button("Abbrechen", role: .cancel) { confirmRevoke = nil }
         } message: {
             if let device = confirmRevoke {
-                Text("\(device.deviceName) wird sofort abgemeldet und kann sich nicht mehr anmelden, bis ein Administrator es freigibt.")
+                Text("\(device.deviceName) wird sofort abgemeldet.")
             }
         }
+        .confirmationDialog(
+            "Gerät freigeben?",
+            isPresented: Binding(
+                get: { confirmApprove != nil },
+                set: { if !$0 { confirmApprove = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            if let device = confirmApprove {
+                Button("Freigeben") {
+                    Task { await approve(device) }
+                }
+            }
+            Button("Abbrechen", role: .cancel) { confirmApprove = nil }
+        } message: {
+            if let device = confirmApprove {
+                Text("\(device.deviceName) darf wieder Anfragen senden.")
+            }
+        }
+    }
+
+    private func startRealtimeRefresh() {
+        liveRefreshTask?.cancel()
+        liveRefreshTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 20_000_000_000)
+                guard !Task.isCancelled else { return }
+                await loadDevices()
+            }
+        }
+    }
+
+    private func stopRealtimeRefresh() {
+        liveRefreshTask?.cancel()
+        liveRefreshTask = nil
     }
 
     private func deviceRow(_ device: DeviceRecord) -> some View {
@@ -95,11 +136,15 @@ struct DeviceManagementView: View {
                 Text(device.deviceName)
                     .font(.subheadline.weight(.semibold))
                 Spacer()
-                if device.revoked {
-                    Text("Widerrufen")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(PAXTheme.danger)
+                statusBadge(device)
+            }
+
+            HStack(spacing: 6) {
+                if device.isCurrent {
+                    chip("Dieses Gerät", color: .blue)
                 }
+                chip(device.online ? "Online" : "Offline", color: device.online ? .green : .gray)
+                chip(device.approved && !device.revoked ? "Freigegeben" : "Nicht freigegeben", color: device.approved && !device.revoked ? .mint : .orange)
             }
 
             if !device.deviceModel.isEmpty {
@@ -116,17 +161,56 @@ struct DeviceManagementView: View {
                 metaRow("Standort", device.location)
             }
 
-            if canManage && !device.revoked {
-                Button(role: .destructive) {
-                    confirmRevoke = device
-                } label: {
-                    Label("Gerät abmelden", systemImage: "xmark.circle")
-                        .font(.caption.weight(.semibold))
+            if canManage {
+                HStack(spacing: 10) {
+                    if device.revoked || !device.approved {
+                        Button {
+                            confirmApprove = device
+                        } label: {
+                            Label("Freigeben", systemImage: "checkmark.shield")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .buttonStyle(.bordered)
+                    } else {
+                        Button(role: .destructive) {
+                            confirmRevoke = device
+                        } label: {
+                            Label("Widerrufen", systemImage: "xmark.shield")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
                 .padding(.top, 4)
             }
         }
         .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func statusBadge(_ device: DeviceRecord) -> some View {
+        if device.revoked {
+            Text("Widerrufen")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(PAXTheme.danger)
+        } else if device.online {
+            Text("Live")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(PAXTheme.success)
+        } else {
+            Text("Inaktiv")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(PAXTheme.textTertiary)
+        }
+    }
+
+    private func chip(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(.caption2.weight(.semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(color.opacity(0.12)))
     }
 
     private func metaRow(_ title: String, _ value: String) -> some View {
@@ -152,7 +236,10 @@ struct DeviceManagementView: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            let response = try await api.fetchEmployeeDevices(userId: selectedEmployeeId)
+            let response = try await api.fetchEmployeeDevices(
+                userId: selectedEmployeeId,
+                currentDeviceId: PAXDeviceInfo.deviceId
+            )
             devices = response.devices
             errorMessage = nil
         } catch {
@@ -166,6 +253,18 @@ struct DeviceManagementView: View {
             try await api.revokeDevice(deviceId: device.deviceId, userId: device.userId)
             PAXHaptics.warning()
             confirmRevoke = nil
+            await loadDevices()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func approve(_ device: DeviceRecord) async {
+        guard let api = auth.api else { return }
+        do {
+            try await api.approveDevice(deviceId: device.deviceId, userId: device.userId)
+            PAXHaptics.success()
+            confirmApprove = nil
             await loadDevices()
         } catch {
             errorMessage = error.localizedDescription

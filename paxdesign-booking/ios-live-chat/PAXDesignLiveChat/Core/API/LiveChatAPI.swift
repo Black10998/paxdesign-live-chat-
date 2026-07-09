@@ -341,7 +341,13 @@ final class LiveChatAPI {
         userId: Int = 0,
         email: String = "",
         enabled: Bool,
-        permissions: AdminPermissions
+        permissions: AdminPermissions,
+        displayName: String? = nil,
+        avatarURL: String? = nil,
+        profileTitle: String? = nil,
+        profilePhone: String? = nil,
+        profileNotes: String? = nil,
+        password: String? = nil
     ) async throws {
         guard let url = liveAdminURL(path: "staff") else {
             throw LiveChatAPIError.invalidURL
@@ -357,6 +363,24 @@ final class LiveChatAPI {
         if !trimmedEmail.isEmpty {
             payload["email"] = trimmedEmail
         }
+        if let displayName {
+            payload["display_name"] = displayName
+        }
+        if let avatarURL {
+            payload["avatar_url"] = avatarURL
+        }
+        if let profileTitle {
+            payload["profile_title"] = profileTitle
+        }
+        if let profilePhone {
+            payload["profile_phone"] = profilePhone
+        }
+        if let profileNotes {
+            payload["profile_notes"] = profileNotes
+        }
+        if let password, !password.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            payload["password"] = password
+        }
         let body = try JSONSerialization.data(withJSONObject: payload)
         _ = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "staff-save", as: EmptyResponse.self)
     }
@@ -366,6 +390,13 @@ final class LiveChatAPI {
             throw LiveChatAPIError.invalidURL
         }
         _ = try await perform(authRequest(url: url, method: "DELETE"), endpoint: "staff-remove", as: EmptyResponse.self)
+    }
+
+    func forceLogoutStaff(userId: Int) async throws {
+        guard let url = liveAdminURL(path: "staff/\(userId)/force-logout") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "staff-force-logout", as: EmptyResponse.self)
     }
 
     func fetchTeamSessions() async throws -> SessionListResponse {
@@ -439,12 +470,15 @@ final class LiveChatAPI {
         _ = try await perform(authRequest(url: url, method: "POST", body: json), endpoint: "device-heartbeat", as: EmptyResponse.self)
     }
 
-    func fetchEmployeeDevices(userId: Int? = nil) async throws -> DeviceListResponse {
-        var path = "devices"
+    func fetchEmployeeDevices(userId: Int? = nil, currentDeviceId: String? = nil) async throws -> DeviceListResponse {
+        var query: [URLQueryItem] = []
         if let userId, userId > 0 {
-            path += "?user_id=\(userId)"
+            query.append(URLQueryItem(name: "user_id", value: String(userId)))
         }
-        guard let url = liveAdminURL(path: path) else {
+        if let currentDeviceId, !currentDeviceId.isEmpty {
+            query.append(URLQueryItem(name: "current_device_id", value: currentDeviceId))
+        }
+        guard let url = liveAdminURL(path: "devices", query: query) else {
             throw LiveChatAPIError.invalidURL
         }
         return try await perform(authRequest(url: url), endpoint: "devices-list", as: DeviceListResponse.self)
@@ -459,11 +493,29 @@ final class LiveChatAPI {
         _ = try await perform(request, endpoint: "device-revoke", as: EmptyResponse.self)
     }
 
-    func completeOnboarding() async throws {
+    func approveDevice(deviceId: String, userId: Int) async throws {
+        guard let url = liveAdminURL(path: "devices/\(deviceId)/approve") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONSerialization.data(withJSONObject: ["user_id": userId])
+        _ = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "device-approve", as: EmptyResponse.self)
+    }
+
+    func completeOnboarding(
+        termsAccepted: Bool = true,
+        permissionStatus: OnboardingPermissionStatus = .init()
+    ) async throws -> AdminProfile {
         guard let url = liveAdminURL(path: "onboarding/complete") else {
             throw LiveChatAPIError.invalidURL
         }
-        _ = try await perform(authRequest(url: url, method: "POST"), endpoint: "onboarding-complete", as: EmptyResponse.self)
+        let body = try JSONSerialization.data(withJSONObject: [
+            "terms_accepted": termsAccepted,
+            "permissions": [
+                "notifications": permissionStatus.notifications,
+                "location": permissionStatus.location,
+            ],
+        ])
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "onboarding-complete", as: AdminProfile.self)
     }
 
     func resetOnboarding(for userId: Int) async throws {
@@ -711,6 +763,9 @@ struct DeviceRecord: Codable, Identifiable {
     let ipAddress: String
     let location: String
     let revoked: Bool
+    let approved: Bool
+    let online: Bool
+    let isCurrent: Bool
     let sandbox: Bool
 
     enum CodingKeys: String, CodingKey {
@@ -726,7 +781,30 @@ struct DeviceRecord: Codable, Identifiable {
         case firstLoginAt = "first_login_at"
         case lastActiveAt = "last_active_at"
         case ipAddress = "ip_address"
-        case location, revoked, sandbox
+        case location, revoked, approved, online, sandbox
+        case isCurrent = "is_current"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        userId = (try? c.decode(Int.self, forKey: .userId)) ?? 0
+        employeeName = (try? c.decode(String.self, forKey: .employeeName)) ?? ""
+        employeeEmail = (try? c.decode(String.self, forKey: .employeeEmail)) ?? ""
+        deviceId = (try? c.decode(String.self, forKey: .deviceId)) ?? ""
+        deviceToken = (try? c.decode(String.self, forKey: .deviceToken)) ?? ""
+        deviceName = (try? c.decode(String.self, forKey: .deviceName)) ?? ""
+        deviceModel = (try? c.decode(String.self, forKey: .deviceModel)) ?? ""
+        osVersion = (try? c.decode(String.self, forKey: .osVersion)) ?? ""
+        appVersion = (try? c.decode(String.self, forKey: .appVersion)) ?? ""
+        firstLoginAt = (try? c.decode(Int.self, forKey: .firstLoginAt)) ?? 0
+        lastActiveAt = (try? c.decode(Int.self, forKey: .lastActiveAt)) ?? 0
+        ipAddress = (try? c.decode(String.self, forKey: .ipAddress)) ?? ""
+        location = (try? c.decode(String.self, forKey: .location)) ?? ""
+        revoked = (try? c.decode(Bool.self, forKey: .revoked)) ?? false
+        approved = (try? c.decode(Bool.self, forKey: .approved)) ?? !revoked
+        online = (try? c.decode(Bool.self, forKey: .online)) ?? false
+        isCurrent = (try? c.decode(Bool.self, forKey: .isCurrent)) ?? false
+        sandbox = (try? c.decode(Bool.self, forKey: .sandbox)) ?? false
     }
 }
 

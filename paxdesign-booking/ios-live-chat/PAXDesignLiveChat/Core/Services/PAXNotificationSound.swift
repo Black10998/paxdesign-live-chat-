@@ -169,30 +169,40 @@ final class PAXNotificationSound {
         case (.message, .pulse): id = 1110
         case (.message, .bell): id = 1013
         case (.message, .digital): id = 1104
+        case (.message, .soft): id = 1007
+        case (.message, .echo): id = 1021
 
         case (.liveRequest, .classic): id = 1005
         case (.liveRequest, .chime): id = 1009
         case (.liveRequest, .pulse): id = 1014
         case (.liveRequest, .bell): id = 1013
         case (.liveRequest, .digital): id = 1107
+        case (.liveRequest, .soft): id = 1007
+        case (.liveRequest, .echo): id = 1021
 
         case (.aiAlert, .classic): id = 1013
         case (.aiAlert, .chime): id = 1022
         case (.aiAlert, .pulse): id = 1111
         case (.aiAlert, .bell): id = 1025
         case (.aiAlert, .digital): id = 1103
+        case (.aiAlert, .soft): id = 1007
+        case (.aiAlert, .echo): id = 1021
 
         case (.send, .classic): id = 1004
         case (.send, .chime): id = 1106
         case (.send, .pulse): id = 1110
         case (.send, .bell): id = 1012
         case (.send, .digital): id = 1104
+        case (.send, .soft): id = 1007
+        case (.send, .echo): id = 1021
 
         case (.typing, .classic): id = 1104
         case (.typing, .chime): id = 1106
         case (.typing, .pulse): id = 1110
         case (.typing, .bell): id = 1011
         case (.typing, .digital): id = 1103
+        case (.typing, .soft): id = 1007
+        case (.typing, .echo): id = 1021
         }
         AudioServicesPlaySystemSound(id)
     }
