@@ -9,17 +9,20 @@ struct PAXDesignLiveChatApp: App {
     @StateObject private var settings = AppSettingsStore.shared
     @StateObject private var permissions = PermissionCoordinator.shared
     @StateObject private var appLock = AppLockService.shared
+    @StateObject private var teamCoordinator = TeamMessagingCoordinator.shared
+    @State private var showLaunchSplash = true
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
-            RootView()
+            RootView(showLaunchSplash: $showLaunchSplash)
                 .environmentObject(auth)
                 .environmentObject(coordinator)
                 .environmentObject(push)
                 .environmentObject(settings)
                 .environmentObject(permissions)
                 .environmentObject(appLock)
+                .environmentObject(teamCoordinator)
                 .environment(\.locale, settings.resolvedLocale)
                 .environment(\.paxPalette, settings.palette)
                 .modifier(PAXLayoutDirectionModifier())
@@ -30,6 +33,7 @@ struct PAXDesignLiveChatApp: App {
                 .onChange(of: auth.isLoggedIn) { loggedIn in
                     if loggedIn {
                         coordinator.start(auth: auth)
+                        teamCoordinator.start(auth: auth)
                         appLock.prepareForLogin()
                         Task {
                             await permissions.refreshStatuses()
@@ -38,6 +42,7 @@ struct PAXDesignLiveChatApp: App {
                         }
                     } else {
                         coordinator.stop()
+                        teamCoordinator.stop()
                         appLock.resetOnLogout()
                     }
                 }
@@ -61,13 +66,11 @@ struct PAXDesignLiveChatApp: App {
 
     private func runStartupSequence() async {
         await permissions.refreshStatuses()
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await auth.bootstrapSession() }
-            group.addTask { try? await Task.sleep(nanoseconds: 1_250_000_000) }
-        }
+        await auth.bootstrapSession()
 
         if auth.isLoggedIn {
             coordinator.start(auth: auth)
+            teamCoordinator.start(auth: auth)
             permissions.presentNotificationPromptIfNeeded(isLoggedIn: true)
             await push.registerTokenWithBackend(auth: auth)
         }
@@ -97,6 +100,7 @@ struct PAXDesignLiveChatApp: App {
 }
 
 struct RootView: View {
+    @Binding var showLaunchSplash: Bool
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
     @EnvironmentObject private var permissions: PermissionCoordinator
@@ -105,9 +109,13 @@ struct RootView: View {
     var body: some View {
         ZStack {
             Group {
-                if auth.isBootstrapping {
-                    PAXLaunchView()
-                        .transition(.opacity)
+                if showLaunchSplash {
+                    PAXLaunchView {
+                        withAnimation(PAXTheme.fade) {
+                            showLaunchSplash = false
+                        }
+                    }
+                    .transition(.opacity)
                 } else if auth.isLoggedIn {
                     MainShellView()
                         .transition(.opacity.combined(with: .move(edge: .trailing)))
@@ -116,7 +124,7 @@ struct RootView: View {
                         .transition(.opacity.combined(with: .move(edge: .leading)))
                 }
             }
-            .animation(PAXTheme.spring, value: auth.isBootstrapping)
+            .animation(PAXTheme.spring, value: showLaunchSplash)
             .animation(PAXTheme.spring, value: auth.isLoggedIn)
 
             if coordinator.showIncomingFullscreen, let incoming = coordinator.incomingRequest, auth.canReplyChats {
@@ -166,7 +174,11 @@ struct MainShellView: View {
                 NavigationStack(path: $chatsPath) {
                     SessionListView(onOpenSession: { openSession($0, path: $chatsPath) })
                         .navigationDestination(for: String.self) { sessionId in
-                            ChatView(sessionId: sessionId)
+                            if sessionId.hasPrefix("team_") {
+                                TeamChatView(sessionId: sessionId)
+                            } else {
+                                ChatView(sessionId: sessionId)
+                            }
                         }
                 }
                 .tabItem { Label(L10n.TabChats, systemImage: "bubble.left.and.bubble.right") }

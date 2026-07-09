@@ -231,6 +231,34 @@ class PAXdesign_Live_Chat_Mobile_API {
             'callback'            => array(__CLASS__, 'route_staff_remove'),
             'permission_callback' => $auth,
         ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/sessions', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'route_team_sessions'),
+            'permission_callback' => $auth,
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/sessions/open', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_team_open'),
+            'permission_callback' => $auth,
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/sessions/(?P<id>team_[0-9]+_[0-9]+)/poll', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'route_team_poll'),
+            'permission_callback' => $auth,
+            'args'                => array(
+                'since' => array('default' => 0, 'sanitize_callback' => 'absint'),
+                'full'  => array('default' => false),
+            ),
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/sessions/(?P<id>team_[0-9]+_[0-9]+)/messages', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_team_send_message'),
+            'permission_callback' => $auth,
+        ));
     }
 
     public static function permission_admin() {
@@ -506,5 +534,46 @@ class PAXdesign_Live_Chat_Mobile_API {
             return $result;
         }
         return rest_ensure_response(array('ok' => true));
+    }
+
+    public static function route_team_sessions(WP_REST_Request $request) {
+        return self::respond(PAXdesign_Team_Messaging::list_sessions_for_user((int) wp_get_current_user()->ID));
+    }
+
+    public static function route_team_open(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
+        $params  = $request->get_json_params();
+        $user_id = isset($params['user_id']) ? (int) $params['user_id'] : 0;
+        if ($user_id <= 0) {
+            return new WP_Error('pax_invalid', 'user_id required', array('status' => 400));
+        }
+        $result = PAXdesign_Team_Messaging::open_conversation((int) wp_get_current_user()->ID, $user_id);
+        if (isset($result['error'])) {
+            return new WP_Error('pax_team_error', (string) $result['error'], array('status' => 400));
+        }
+        return rest_ensure_response($result);
+    }
+
+    public static function route_team_poll(WP_REST_Request $request) {
+        $full = rest_sanitize_boolean($request->get_param('full'));
+        return self::respond(PAXdesign_Team_Messaging::poll_conversation(
+            $request['id'],
+            (int) wp_get_current_user()->ID,
+            (int) $request->get_param('since'),
+            $full
+        ));
+    }
+
+    public static function route_team_send_message(WP_REST_Request $request) {
+        $params  = $request->get_json_params();
+        $content = isset($params['content']) ? (string) $params['content'] : '';
+        return self::respond(PAXdesign_Team_Messaging::send_message(
+            $request['id'],
+            (int) wp_get_current_user()->ID,
+            $content
+        ));
     }
 }

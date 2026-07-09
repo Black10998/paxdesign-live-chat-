@@ -363,6 +363,43 @@ final class LiveChatAPI {
         _ = try await perform(authRequest(url: url, method: "DELETE"), endpoint: "staff-remove", as: EmptyResponse.self)
     }
 
+    func fetchTeamSessions() async throws -> SessionListResponse {
+        guard let url = liveAdminURL(path: "team/sessions") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "team-sessions", as: SessionListResponse.self)
+    }
+
+    func openTeamConversation(userId: Int) async throws -> TeamOpenResponse {
+        guard let url = liveAdminURL(path: "team/sessions/open") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONSerialization.data(withJSONObject: ["user_id": userId])
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-open", as: TeamOpenResponse.self)
+    }
+
+    func pollTeamSession(_ sessionId: String, since: Int, full: Bool = false) async throws -> PollResponse {
+        var query = [URLQueryItem(name: "since", value: String(since))]
+        if full {
+            query.append(URLQueryItem(name: "full", value: "1"))
+        }
+        guard let url = liveAdminURL(
+            path: "team/sessions/\(sessionId)/poll",
+            query: query
+        ) else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "team-poll:\(sessionId)", as: PollResponse.self)
+    }
+
+    func sendTeamMessage(_ sessionId: String, content: String) async throws {
+        guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/messages") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONEncoder().encode(["content": content])
+        _ = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-send", as: TeamSendResponse.self)
+    }
+
     func registerAPNs(token: String, sandbox: Bool) async throws {
         guard let url = liveAdminURL(path: "push/apns") else {
             throw LiveChatAPIError.invalidURL

@@ -222,6 +222,30 @@ enum L10n {
     static var TabAccount: String { t("tab.account") }
     static var TabChats: String { t("tab.chats") }
     static var TabLive: String { t("tab.live") }
+    static var TeamChatTitle: String { t("team.chat.title") }
+    static var TeamChatPlaceholder: String { t("team.chat.placeholder") }
+    static var TeamComposeTitle: String { t("team.compose.title") }
+    static var TeamComposeSection: String { t("team.compose.section") }
+    static var TeamComposeEmpty: String { t("team.compose.empty") }
+    static var TeamSectionTitle: String { t("team.section.title") }
+    static var TeamNewMessage: String { t("team.new_message") }
+    static var SettingsDataStorage: String { t("settings.data_storage") }
+    static var SettingsDataStorageSubtitle: String { t("settings.data_storage_subtitle") }
+    static var SettingsSupport: String { t("settings.support") }
+    static var SettingsSupportSubtitle: String { t("settings.support_subtitle") }
+    static var SettingsChatDisplay: String { t("settings.chat_display") }
+    static var SettingsChatDisplaySubtitle: String { t("settings.chat_display_subtitle") }
+    static var SettingsCompactList: String { t("settings.compact_list") }
+    static var SettingsShowTimestamps: String { t("settings.show_timestamps") }
+    static var SettingsResetRead: String { t("settings.reset_read") }
+    static var SettingsResetReadFooter: String { t("settings.reset_read_footer") }
+    static var SettingsContactSupport: String { t("settings.contact_support") }
+    static var SettingsRateApp: String { t("settings.rate_app") }
+    static var SettingsTeamMessaging: String { t("settings.team_messaging") }
+    static var SettingsTeamMessagingSubtitle: String { t("settings.team_messaging_subtitle") }
+    static var AboutTagline: String { t("about.tagline") }
+    static var AboutBuiltWith: String { t("about.built_with") }
+    static var SessionTeamBadge: String { t("session.team_badge") }
     static var TimeToday: String { t("time.today") }
     static var TimeYesterday: String { t("time.yesterday") }
 }

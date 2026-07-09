@@ -86,6 +86,30 @@ struct SettingsRootView: View {
                         systemImage: "bubble.left.and.bubble.right"
                     )
                 }
+
+                NavigationLink {
+                    ChatDisplaySettingsView()
+                } label: {
+                    SettingsRowLabel(
+                        title: L10n.SettingsChatDisplay,
+                        subtitle: L10n.SettingsChatDisplaySubtitle,
+                        systemImage: "list.bullet.rectangle"
+                    )
+                }
+            }
+
+            if auth.canManageUsers {
+                Section(L10n.SettingsTeamMessaging) {
+                    NavigationLink {
+                        TeamComposeView { _ in }
+                    } label: {
+                        SettingsRowLabel(
+                            title: L10n.SettingsTeamMessaging,
+                            subtitle: L10n.SettingsTeamMessagingSubtitle,
+                            systemImage: "person.2.wave.2"
+                        )
+                    }
+                }
             }
 
             if auth.canUseAI {
@@ -110,6 +134,28 @@ struct SettingsRootView: View {
                         title: L10n.SettingsSectionPrivacy,
                         subtitle: L10n.SettingsPrivacySubtitle,
                         systemImage: "hand.raised"
+                    )
+                }
+
+                NavigationLink {
+                    DataStorageSettingsView()
+                } label: {
+                    SettingsRowLabel(
+                        title: L10n.SettingsDataStorage,
+                        subtitle: L10n.SettingsDataStorageSubtitle,
+                        systemImage: "externaldrive"
+                    )
+                }
+            }
+
+            Section(L10n.SettingsSupport) {
+                NavigationLink {
+                    SupportSettingsView()
+                } label: {
+                    SettingsRowLabel(
+                        title: L10n.SettingsSupport,
+                        subtitle: L10n.SettingsSupportSubtitle,
+                        systemImage: "lifepreserver"
                     )
                 }
             }
