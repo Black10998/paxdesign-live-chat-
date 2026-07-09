@@ -31,8 +31,13 @@ jobs:
       - name: Build sideload IPA
         run: |
           cd paxdesign-booking/ios-live-chat
-          chmod +x scripts/build-ipa.sh scripts/validate-ipa.sh
+          chmod +x scripts/build-ipa.sh scripts/validate-ipa.sh scripts/smoke-test-launch.sh
           ./scripts/build-ipa.sh
+
+      - name: Simulator launch smoke test
+        run: |
+          cd paxdesign-booking/ios-live-chat
+          ./scripts/smoke-test-launch.sh
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4

@@ -77,7 +77,8 @@ echo "==> Waiting ${LAUNCH_SETTLE_SECONDS}s for launch splash + startup sequence
 sleep "$LAUNCH_SETTLE_SECONDS"
 
 app_is_running() {
-  xcrun simctl spawn "$UDID" pgrep -x PAXDesignLiveChat >/dev/null 2>&1
+  xcrun simctl spawn "$UDID" pgrep -x PAXDesignLiveChat >/dev/null 2>&1 \
+    || xcrun simctl spawn "$UDID" pgrep -f "$BUNDLE_ID" >/dev/null 2>&1
 }
 
 if app_is_running; then

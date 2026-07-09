@@ -151,6 +151,7 @@ final class AppSettingsStore: ObservableObject {
         didSet { UserDefaults.standard.set(accentColorPreset.rawValue, forKey: Keys.accentPreset) }
     }
 
+    /// Resolved theme palette including optional accent override.
     var palette: PAXThemePalette {
         effectivePalette
     }

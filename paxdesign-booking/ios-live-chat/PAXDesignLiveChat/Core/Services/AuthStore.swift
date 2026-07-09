@@ -29,7 +29,7 @@ final class AuthStore: ObservableObject {
 
     func bootstrapSession() async {
         loadStoredCredentials()
-        defer { isBootstrapping = false }
+        defer { finishBootstrap() }
 
         guard !isLoggedIn else { return }
         guard !username.isEmpty, !appPassword.isEmpty, !siteURLString.isEmpty else { return }
@@ -39,6 +39,10 @@ final class AuthStore: ObservableObject {
         } catch {
             invalidateStoredSession(keepFormFields: true)
         }
+    }
+
+    func finishBootstrap() {
+        isBootstrapping = false
     }
 
     func login() async throws {

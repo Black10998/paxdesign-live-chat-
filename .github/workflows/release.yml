@@ -43,8 +43,13 @@ jobs:
       - name: Build iOS IPA
         run: |
           cd paxdesign-booking/ios-live-chat
-          chmod +x scripts/build-ipa.sh scripts/validate-ipa.sh
+          chmod +x scripts/build-ipa.sh scripts/validate-ipa.sh scripts/smoke-test-launch.sh
           ./scripts/build-ipa.sh
+
+      - name: Simulator launch smoke test
+        run: |
+          cd paxdesign-booking/ios-live-chat
+          ./scripts/smoke-test-launch.sh
 
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
@@ -63,7 +68,7 @@ jobs:
 
             `PAXDesignLiveChat.ipa` — install via LiveContainer, AltStore, or Xcode.
 
-            **Sideload build:** no widget extension, no App Intents metadata, no push entitlements. Verified by IPA structure validation in CI.
+            **Sideload build:** no widget extension, no App Intents metadata, no push entitlements. Verified by IPA structure validation and simulator launch smoke test in CI.
 
             **Public IPA mirror (GitHub Pages):** https://black10998.github.io/paxdesign-live-chat-/releases/${{ steps.version.outputs.version }}/PAXDesignLiveChat.ipa
 

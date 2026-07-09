@@ -40,8 +40,13 @@ enum AccentColorPreset: String, CaseIterable, Identifiable {
 }
 
 extension AppSettingsStore {
+    /// Base theme palette without accent override (must not call `palette` — that property applies overrides).
+    var basePalette: PAXThemePalette {
+        PAXThemePalette.palette(for: visualTheme)
+    }
+
     var effectivePalette: PAXThemePalette {
-        let base = palette
+        let base = basePalette
         guard let override = accentColorPreset.color else { return base }
         return base.withAccent(override)
     }

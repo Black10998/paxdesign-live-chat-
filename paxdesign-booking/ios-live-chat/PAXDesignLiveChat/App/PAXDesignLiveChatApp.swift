@@ -9,6 +9,10 @@ struct PAXDesignLiveChatApp: App {
     @State private var showLaunchSplash = true
     @Environment(\.scenePhase) private var scenePhase
 
+    init() {
+        LaunchDiagnostics.mark("App.init")
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView(showLaunchSplash: $showLaunchSplash)
@@ -23,6 +27,9 @@ struct PAXDesignLiveChatApp: App {
                 .environment(\.paxPalette, AppSettingsStore.shared.palette)
                 .modifier(PAXLayoutDirectionModifier())
                 .preferredColorScheme(AppSettingsStore.shared.appearanceMode.colorScheme)
+                .onAppear {
+                    LaunchDiagnostics.mark("RootView.onAppear")
+                }
                 .task {
                     await runStartupSequence()
                 }
@@ -73,9 +80,12 @@ struct PAXDesignLiveChatApp: App {
     }
 
     private func runStartupSequence() async {
+        LaunchDiagnostics.mark("startup.begin")
         #if SIDELOAD
         // Avoid launch-time side effects in sideload builds; wait for explicit user login.
         await PermissionCoordinator.shared.refreshStatuses()
+        AuthStore.shared.finishBootstrap()
+        LaunchDiagnostics.mark("startup.sideload.complete")
         return
         #else
         let auth = AuthStore.shared
@@ -91,6 +101,7 @@ struct PAXDesignLiveChatApp: App {
             await DeviceSessionService.shared.registerWithPush(auth: auth)
             await PlatformSyncService.shared.sync(auth: auth)
         }
+        LaunchDiagnostics.mark("startup.complete")
         #endif
     }
 
