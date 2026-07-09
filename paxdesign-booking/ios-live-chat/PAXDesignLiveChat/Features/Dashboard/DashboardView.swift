@@ -39,35 +39,6 @@ struct DashboardView: View {
         }
     }
 
-    private var statusChips: [DashboardStatusChip] {
-        [
-            DashboardStatusChip(
-                title: "Live",
-                value: "\(platform.dashboard?.liveCount ?? coordinator.liveCount)",
-                icon: "waveform.path.ecg",
-                tint: .red
-            ),
-            DashboardStatusChip(
-                title: "Ungelesen",
-                value: "\(unreadCount)",
-                icon: "bell.badge.fill",
-                tint: .orange
-            ),
-            DashboardStatusChip(
-                title: "Aufgaben",
-                value: "\(platform.dashboard?.openTasks ?? tasks.openCount)",
-                icon: "checklist.checked",
-                tint: .green
-            ),
-            DashboardStatusChip(
-                title: "Kalender",
-                value: "\(calendar.upcoming().count)",
-                icon: "calendar.badge.clock",
-                tint: .blue
-            )
-        ]
-    }
-
     private var recentActivityItems: [LiveSession] {
         customerSessions
             .sorted {
@@ -144,7 +115,6 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 20) {
                 heroHeader
                 metricsGrid
-                activityPulse
                 if PlatformModuleSettingsStore.shared.dashboardShowChart {
                     activityChart
                 }
@@ -256,29 +226,6 @@ struct DashboardView: View {
                 icon: "checklist"
             )
         }
-    }
-
-    private var activityPulse: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Activity Pulse")
-                    .font(.headline)
-                Spacer()
-                Text("\(recentActivityItems.count) aktiv")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(PAXTheme.textSecondary)
-            }
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 10) {
-                    ForEach(statusChips) { chip in
-                        DashboardStatusChipView(chip: chip)
-                    }
-                }
-                .padding(.vertical, 2)
-            }
-        }
-        .paxNativeCard()
     }
 
     private var activityFeed: some View {

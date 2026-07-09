@@ -77,22 +77,6 @@ $tour_done     = (bool) get_user_meta(get_current_user_id(), 'pax_live_dashboard
     </article>
   </section>
 
-  <section class="pax-live-dashboard__workflow" id="paxLiveWorkflow">
-    <div class="pax-live-dashboard__workflow-head">
-      <strong>Aktivitäts-Queue</strong>
-      <span class="pax-live-dashboard__hint">Wird automatisch aus aktuellen Chats gefüllt</span>
-    </div>
-    <div class="pax-live-workflow__scene" aria-hidden="true">
-      <span class="pax-live-workflow__acc-card pax-live-workflow__acc-card--one"></span>
-      <span class="pax-live-workflow__acc-card pax-live-workflow__acc-card--two"></span>
-      <span class="pax-live-workflow__acc-card pax-live-workflow__acc-card--three"></span>
-      <span class="pax-live-workflow__light pax-live-workflow__light--left"></span>
-      <span class="pax-live-workflow__light pax-live-workflow__light--right"></span>
-      <span class="pax-live-workflow__top-light"></span>
-    </div>
-    <ul class="pax-live-workflow__list" id="paxLiveWorkflowList" aria-live="polite"></ul>
-  </section>
-
   <div class="pax-live-dashboard__grid">
     <aside class="pax-live-dashboard__sidebar">
       <div class="pax-live-dashboard__sidebar-top">

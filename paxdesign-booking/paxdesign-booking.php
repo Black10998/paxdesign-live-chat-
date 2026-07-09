@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.76.3
+Version: 3.76.4
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.76.3');
+define('PAXDESIGN_BOOKING_VERSION', '3.76.4');
 define('PAXDESIGN_BOOKING_DB_VERSION', '1.7');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
