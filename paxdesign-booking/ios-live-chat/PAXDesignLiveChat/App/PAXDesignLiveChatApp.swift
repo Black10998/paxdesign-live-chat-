@@ -3,59 +3,55 @@ import SwiftUI
 @main
 struct PAXDesignLiveChatApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @ObservedObject private var auth = AuthStore.shared
     @StateObject private var coordinator = ChatCoordinator()
-    @ObservedObject private var push = PushService.shared
-    @ObservedObject private var settings = AppSettingsStore.shared
-    @ObservedObject private var permissions = PermissionCoordinator.shared
-    @ObservedObject private var appLock = AppLockService.shared
-    @ObservedObject private var teamCoordinator = TeamMessagingCoordinator.shared
     @State private var showLaunchSplash = true
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
             RootView(showLaunchSplash: $showLaunchSplash)
-                .environmentObject(auth)
+                .environmentObject(AuthStore.shared)
                 .environmentObject(coordinator)
-                .environmentObject(push)
-                .environmentObject(settings)
-                .environmentObject(permissions)
-                .environmentObject(appLock)
-                .environmentObject(teamCoordinator)
-                .environment(\.locale, settings.resolvedLocale)
-                .environment(\.paxPalette, settings.palette)
+                .environmentObject(PushService.shared)
+                .environmentObject(AppSettingsStore.shared)
+                .environmentObject(PermissionCoordinator.shared)
+                .environmentObject(AppLockService.shared)
+                .environmentObject(TeamMessagingCoordinator.shared)
+                .environment(\.locale, AppSettingsStore.shared.resolvedLocale)
+                .environment(\.paxPalette, AppSettingsStore.shared.palette)
                 .modifier(PAXLayoutDirectionModifier())
-                .preferredColorScheme(settings.appearanceMode.colorScheme)
+                .preferredColorScheme(AppSettingsStore.shared.appearanceMode.colorScheme)
                 .task {
                     await runStartupSequence()
                 }
-                .onChange(of: auth.isLoggedIn) { loggedIn in
+                .onChange(of: AuthStore.shared.isLoggedIn) { loggedIn in
+                    let auth = AuthStore.shared
                     if loggedIn {
                         coordinator.start(auth: auth)
-                        teamCoordinator.start(auth: auth)
-                        appLock.prepareForLogin()
+                        TeamMessagingCoordinator.shared.start(auth: auth)
+                        AppLockService.shared.prepareForLogin()
                         DeviceSessionService.shared.start(auth: auth)
                         Task {
-                            await permissions.refreshStatuses()
-                            permissions.presentNotificationPromptIfNeeded(isLoggedIn: true)
+                            await PermissionCoordinator.shared.refreshStatuses()
+                            PermissionCoordinator.shared.presentNotificationPromptIfNeeded(isLoggedIn: true)
                             await DeviceSessionService.shared.registerWithPush(auth: auth)
                             await PlatformSyncService.shared.sync(auth: auth)
                         }
                     } else {
                         coordinator.stop()
-                        teamCoordinator.stop()
+                        TeamMessagingCoordinator.shared.stop()
                         DeviceSessionService.shared.stop()
-                        appLock.resetOnLogout()
+                        AppLockService.shared.resetOnLogout()
                     }
                 }
                 .onChange(of: scenePhase) { phase in
-                    appLock.handleScenePhase(phase, isLoggedIn: auth.isLoggedIn)
+                    let auth = AuthStore.shared
+                    AppLockService.shared.handleScenePhase(phase, isLoggedIn: auth.isLoggedIn)
                     guard phase == .active, auth.isLoggedIn else { return }
                     Task {
                         await auth.refreshProfile()
                         await coordinator.refreshSessions(auth: auth)
-                        await permissions.refreshStatuses()
+                        await PermissionCoordinator.shared.refreshStatuses()
                         await PlatformSyncService.shared.sync(auth: auth)
                     }
                 }
@@ -69,12 +65,14 @@ struct PAXDesignLiveChatApp: App {
     }
 
     private func runStartupSequence() async {
+        let auth = AuthStore.shared
+        let permissions = PermissionCoordinator.shared
         await permissions.refreshStatuses()
         await auth.bootstrapSession()
 
         if auth.isLoggedIn {
             coordinator.start(auth: auth)
-            teamCoordinator.start(auth: auth)
+            TeamMessagingCoordinator.shared.start(auth: auth)
             DeviceSessionService.shared.start(auth: auth)
             permissions.presentNotificationPromptIfNeeded(isLoggedIn: true)
             await DeviceSessionService.shared.registerWithPush(auth: auth)
@@ -83,6 +81,7 @@ struct PAXDesignLiveChatApp: App {
     }
 
     private func handlePushNotification(_ note: Notification, opened: Bool) {
+        let auth = AuthStore.shared
         guard auth.isLoggedIn,
               let sessionId = note.userInfo?["session_id"] as? String,
               let type = note.userInfo?["type"] as? String else { return }
