@@ -31,7 +31,8 @@ final class LiveChatAPI {
 
     init(siteURL: URL, username: String, appPassword: String, session: URLSession? = nil) {
         let normalized = Self.normalizeSiteURL(siteURL)
-        precondition(normalized.scheme?.lowercased() == "https", "LiveChatAPI requires HTTPS")
+        // Keep runtime resilient in production/sideload builds; login validation enforces HTTPS.
+        assert(normalized.scheme?.lowercased() == "https", "LiveChatAPI requires HTTPS")
         self.siteURL = normalized
         self.username = Self.normalizeUsername(username)
         self.appPassword = Self.normalizeAppPassword(appPassword)

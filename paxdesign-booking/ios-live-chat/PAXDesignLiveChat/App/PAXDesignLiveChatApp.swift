@@ -2,7 +2,9 @@ import SwiftUI
 
 @main
 struct PAXDesignLiveChatApp: App {
+    #if !SIDELOAD
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    #endif
     @StateObject private var coordinator = ChatCoordinator()
     @State private var showLaunchSplash = true
     @Environment(\.scenePhase) private var scenePhase
@@ -30,17 +32,23 @@ struct PAXDesignLiveChatApp: App {
                         coordinator.start(auth: auth)
                         TeamMessagingCoordinator.shared.start(auth: auth)
                         AppLockService.shared.prepareForLogin()
+                        #if !SIDELOAD
                         DeviceSessionService.shared.start(auth: auth)
+                        #endif
                         Task {
                             await PermissionCoordinator.shared.refreshStatuses()
                             PermissionCoordinator.shared.presentNotificationPromptIfNeeded(isLoggedIn: true)
+                            #if !SIDELOAD
                             await DeviceSessionService.shared.registerWithPush(auth: auth)
+                            #endif
                             await PlatformSyncService.shared.sync(auth: auth)
                         }
                     } else {
                         coordinator.stop()
                         TeamMessagingCoordinator.shared.stop()
+                        #if !SIDELOAD
                         DeviceSessionService.shared.stop()
+                        #endif
                         AppLockService.shared.resetOnLogout()
                     }
                 }
@@ -65,6 +73,11 @@ struct PAXDesignLiveChatApp: App {
     }
 
     private func runStartupSequence() async {
+        #if SIDELOAD
+        // Avoid launch-time side effects in sideload builds; wait for explicit user login.
+        await PermissionCoordinator.shared.refreshStatuses()
+        return
+        #else
         let auth = AuthStore.shared
         let permissions = PermissionCoordinator.shared
         await permissions.refreshStatuses()
@@ -78,6 +91,7 @@ struct PAXDesignLiveChatApp: App {
             await DeviceSessionService.shared.registerWithPush(auth: auth)
             await PlatformSyncService.shared.sync(auth: auth)
         }
+        #endif
     }
 
     private func handlePushNotification(_ note: Notification, opened: Bool) {
