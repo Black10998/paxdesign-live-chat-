@@ -72,13 +72,18 @@ xcrun simctl install "$UDID" "$APP_PATH"
 echo "==> Launching $BUNDLE_ID"
 LAUNCH_OUTPUT="$(xcrun simctl launch "$UDID" "$BUNDLE_ID" 2>&1)"
 echo "$LAUNCH_OUTPUT"
+APP_PID="$(echo "$LAUNCH_OUTPUT" | awk '{print $NF}')"
+if [[ -z "$APP_PID" || ! "$APP_PID" =~ ^[0-9]+$ ]]; then
+  echo "ERROR: Could not parse launch PID from: $LAUNCH_OUTPUT" >&2
+  exit 1
+fi
+echo "Launch PID: $APP_PID"
 
 echo "==> Waiting ${LAUNCH_SETTLE_SECONDS}s for launch splash + startup sequence"
 sleep "$LAUNCH_SETTLE_SECONDS"
 
 app_is_running() {
-  xcrun simctl spawn "$UDID" pgrep -x PAXDesignLiveChat >/dev/null 2>&1 \
-    || xcrun simctl spawn "$UDID" pgrep -f "$BUNDLE_ID" >/dev/null 2>&1
+  xcrun simctl spawn "$UDID" kill -0 "$APP_PID" >/dev/null 2>&1
 }
 
 if app_is_running; then
