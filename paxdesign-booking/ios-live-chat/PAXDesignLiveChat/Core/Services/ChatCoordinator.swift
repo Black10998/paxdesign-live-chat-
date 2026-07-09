@@ -102,7 +102,7 @@ final class ChatCoordinator: ObservableObject {
         }
     }
 
-    func updateUnreadCounts(readIds: Set<String> = AppSettingsStore.shared.readSessionIds) {
+    func updateUnreadCounts(readIds: Set<String>) {
         unreadChatCount = sessions.filter {
             !$0.isTeamDM && $0.needsReply && !readIds.contains($0.sessionId)
         }.count
