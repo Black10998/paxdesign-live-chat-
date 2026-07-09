@@ -41,7 +41,7 @@ final class AdminTypingSound {
         try? session.setActive(true)
 
         guard let audio = try? AVAudioPlayer(contentsOf: Self.soundURL) else { return }
-        audio.volume = Self.volume
+        audio.volume = AppSettingsStore.shared.ringtoneVolume * 0.36
         audio.numberOfLoops = 0
         audio.prepareToPlay()
         audio.play()

@@ -287,6 +287,7 @@ struct AdminProfile: Codable {
     let pluginVer: String
     let isSuperAdmin: Bool
     let permissions: AdminPermissions
+    let onboardingCompleted: Bool
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -297,6 +298,7 @@ struct AdminProfile: Codable {
         case pluginVer = "plugin_ver"
         case isSuperAdmin = "is_super_admin"
         case permissions
+        case onboardingCompleted = "onboarding_completed"
     }
 
     init(from decoder: Decoder) throws {
@@ -311,6 +313,7 @@ struct AdminProfile: Codable {
         pluginVer = LiveChatDecode.string(container, CodingKeys.pluginVer)
         isSuperAdmin = (try? container.decode(Bool.self, forKey: .isSuperAdmin)) ?? false
         permissions = (try? container.decode(AdminPermissions.self, forKey: .permissions)) ?? .full
+        onboardingCompleted = (try? container.decode(Bool.self, forKey: .onboardingCompleted)) ?? false
     }
 
     var displayEmail: String {

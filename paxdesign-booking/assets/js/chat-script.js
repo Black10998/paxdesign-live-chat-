@@ -76,6 +76,7 @@
   var SOUND_URLS = (config && config.sounds) ? config.sounds : {
     typing: 'https://paxdesign.at/wp-content/uploads/2026/06/freesound_community-writing-a-text-message-41141.mp3',
     openClose: 'https://paxdesign.at/wp-content/uploads/2026/06/u_8e8ungop1x-intro_cinematic-270840.mp3',
+    incoming: ''
   };
 
   var namePromptEl       = root.querySelector('#paxdesignChatNamePrompt');
@@ -982,6 +983,58 @@
     });
   }
 
+  function playIncomingAdminSound() {
+    if (!soundEnabled) return;
+    if (SOUND_URLS.incoming) {
+      playMp3Sound('incoming', { volume: document.hidden ? 0.5 : 0.28, force: false });
+      return;
+    }
+    runWithAudioContext(function (ctx) {
+      try {
+        var t = ctx.currentTime;
+        var master = ctx.createGain();
+        master.gain.setValueAtTime(document.hidden ? 0.34 : 0.18, t);
+        master.connect(ctx.destination);
+        [[660, 0, 0.07], [880, 0.05, 0.09]].forEach(function (tone) {
+          var osc = ctx.createOscillator();
+          var gain = ctx.createGain();
+          var start = t + tone[1];
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(tone[0], start);
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.exponentialRampToValueAtTime(0.9, start + 0.008);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + tone[2]);
+          osc.connect(gain);
+          gain.connect(master);
+          osc.start(start);
+          osc.stop(start + tone[2] + 0.02);
+        });
+      } catch (e) {}
+    });
+  }
+
+  function tryCustomerBrowserNotification(title, body) {
+    if (!document.hidden) return;
+    if (!('Notification' in window)) return;
+    if (Notification.permission !== 'granted') {
+      if (Notification.permission !== 'denied') {
+        Notification.requestPermission();
+      }
+      return;
+    }
+    try {
+      var n = new Notification(title || 'PAXDesign Live Chat', {
+        body: body || 'Neue Nachricht vom Support-Team.',
+        tag: 'pax-customer-admin-msg',
+        silent: false
+      });
+      n.onclick = function () {
+        window.focus();
+        n.close();
+      };
+    } catch (e) {}
+  }
+
   function playNotificationSound(preview) {
     playMessengerPop(preview);
   }
@@ -1325,7 +1378,13 @@
           });
         }
         if (!played) {
-          playMessengerPop(false);
+          playIncomingAdminSound();
+          if (document.hidden) {
+            tryCustomerBrowserNotification(
+              (config && config.liveAgent && config.liveAgent.name) ? config.liveAgent.name : 'Live Chat',
+              (msg.content || '').substring(0, 120)
+            );
+          }
           played = true;
         }
       } else {

@@ -1,0 +1,254 @@
+<?php
+/**
+ * Employee device session registry for PAXDesign Live Chat mobile app.
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class PAXdesign_Device_Sessions {
+
+    const USER_META_KEY = 'pax_live_device_sessions';
+
+    public static function init() {
+        // Loaded via plugin bootstrap.
+    }
+
+    /**
+     * @param array<string, mixed> $record
+     * @param array<string, mixed> $meta
+     * @return array<string, mixed>
+     */
+    public static function merge_device_meta($record, $meta, $now = 0) {
+        if (!is_array($meta)) {
+            $meta = array();
+        }
+        $now = $now > 0 ? $now : time();
+
+        $device_id = isset($meta['device_id']) ? sanitize_text_field($meta['device_id']) : '';
+        if ($device_id === '' && !empty($record['device_id'])) {
+            $device_id = (string) $record['device_id'];
+        }
+
+        $merged = $record;
+        if ($device_id !== '') {
+            $merged['device_id'] = $device_id;
+        }
+        if (!empty($meta['device_name'])) {
+            $merged['device_name'] = sanitize_text_field($meta['device_name']);
+        }
+        if (!empty($meta['device_model'])) {
+            $merged['device_model'] = sanitize_text_field($meta['device_model']);
+        }
+        if (!empty($meta['os_version'])) {
+            $merged['os_version'] = sanitize_text_field($meta['os_version']);
+        }
+        if (!empty($meta['app_version'])) {
+            $merged['app_version'] = sanitize_text_field($meta['app_version']);
+        }
+        if (empty($merged['first_login_at'])) {
+            $merged['first_login_at'] = $now;
+        }
+        $merged['last_active_at'] = $now;
+
+        $ip = self::client_ip();
+        if ($ip !== '') {
+            $merged['ip_address'] = $ip;
+            $merged['location'] = self::lookup_location($ip);
+        }
+
+        if (!empty($meta['force_logout'])) {
+            $merged['revoked'] = true;
+            $merged['revoked_at'] = $now;
+        }
+
+        return $merged;
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    public static function get_user_devices($user_id) {
+        if (class_exists('PAXdesign_APNS')) {
+            return PAXdesign_APNS::get_user_devices($user_id);
+        }
+        $all = get_user_meta((int) $user_id, PAXdesign_APNS::USER_META_KEY, true);
+        return is_array($all) ? $all : array();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    public static function list_employee_devices($filter_user_id = 0) {
+        $users = get_users(array('fields' => array('ID', 'display_name', 'user_email')));
+        $rows  = array();
+
+        foreach ($users as $user) {
+            $uid = (int) $user->ID;
+            if ($uid <= 0) {
+                continue;
+            }
+            if ($filter_user_id > 0 && $uid !== $filter_user_id) {
+                continue;
+            }
+            if (!PAXdesign_Live_Chat_Permissions::has_live_chat_access($uid)) {
+                continue;
+            }
+
+            $devices = self::get_user_devices($uid);
+            foreach ($devices as $token => $device) {
+                if (!is_array($device)) {
+                    continue;
+                }
+                $rows[] = self::format_device_row($uid, $user, $token, $device);
+            }
+        }
+
+        usort($rows, function ($a, $b) {
+            return (int) ($b['last_active_at'] ?? 0) <=> (int) ($a['last_active_at'] ?? 0);
+        });
+
+        return $rows;
+    }
+
+    /**
+     * @param WP_User $user
+     * @param array<string, mixed> $device
+     * @return array<string, mixed>
+     */
+    private static function format_device_row($user_id, $user, $token, $device) {
+        return array(
+            'user_id'        => (int) $user_id,
+            'employee_name'  => (string) $user->display_name,
+            'employee_email' => (string) $user->user_email,
+            'device_id'      => !empty($device['device_id']) ? (string) $device['device_id'] : substr($token, 0, 12),
+            'device_token'   => substr($token, 0, 8) . '…',
+            'device_name'    => (string) ($device['device_name'] ?? 'Unbekanntes Gerät'),
+            'device_model'   => (string) ($device['device_model'] ?? ''),
+            'os_version'     => (string) ($device['os_version'] ?? ''),
+            'app_version'    => (string) ($device['app_version'] ?? ''),
+            'first_login_at' => (int) ($device['first_login_at'] ?? 0),
+            'last_active_at' => (int) ($device['last_active_at'] ?? $device['updated_at'] ?? 0),
+            'ip_address'     => (string) ($device['ip_address'] ?? ''),
+            'location'       => (string) ($device['location'] ?? ''),
+            'revoked'        => !empty($device['revoked']),
+            'sandbox'        => !empty($device['sandbox']),
+        );
+    }
+
+    public static function heartbeat($user_id, $device_id, $meta = array()) {
+        $devices = self::get_user_devices($user_id);
+        foreach ($devices as $token => $device) {
+            if (!is_array($device)) {
+                continue;
+            }
+            $id = !empty($device['device_id']) ? (string) $device['device_id'] : '';
+            if ($id !== $device_id) {
+                continue;
+            }
+            if (!empty($device['revoked'])) {
+                return new WP_Error('device_revoked', 'This device session has been revoked.', array('status' => 403));
+            }
+            $devices[$token] = self::merge_device_meta($device, $meta);
+            update_user_meta((int) $user_id, PAXdesign_APNS::USER_META_KEY, $devices);
+            return rest_ensure_response(array('ok' => true, 'revoked' => false));
+        }
+        return new WP_Error('device_not_found', 'Device not registered.', array('status' => 404));
+    }
+
+    public static function revoke_device($admin_id, $target_user_id, $device_id, $force_logout = true) {
+        if (!PAXdesign_Live_Chat_Permissions::user_can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)) {
+            return new WP_Error('forbidden', 'Insufficient permissions.', array('status' => 403));
+        }
+
+        $devices = self::get_user_devices($target_user_id);
+        $found   = false;
+
+        foreach ($devices as $token => $device) {
+            if (!is_array($device)) {
+                continue;
+            }
+            $id = !empty($device['device_id']) ? (string) $device['device_id'] : '';
+            if ($id !== $device_id) {
+                continue;
+            }
+            $found = true;
+            $devices[$token]['revoked'] = true;
+            $devices[$token]['revoked_at'] = time();
+            $devices[$token]['revoked_by'] = (int) $admin_id;
+            if (!$force_logout) {
+                unset($devices[$token]);
+            }
+            break;
+        }
+
+        if (!$found) {
+            return new WP_Error('device_not_found', 'Device not found.', array('status' => 404));
+        }
+
+        update_user_meta((int) $target_user_id, PAXdesign_APNS::USER_META_KEY, $devices);
+        return rest_ensure_response(array('ok' => true));
+    }
+
+    public static function reset_onboarding($admin_id, $target_user_id) {
+        if (!PAXdesign_Live_Chat_Permissions::user_can($admin_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)) {
+            return new WP_Error('forbidden', 'Insufficient permissions.', array('status' => 403));
+        }
+        delete_user_meta((int) $target_user_id, 'pax_live_onboarding_completed');
+        return rest_ensure_response(array('ok' => true));
+    }
+
+    public static function client_ip() {
+        $candidates = array('HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR', 'REMOTE_ADDR');
+        foreach ($candidates as $key) {
+            if (empty($_SERVER[$key])) {
+                continue;
+            }
+            $raw = (string) $_SERVER[$key];
+            if ($key === 'HTTP_X_FORWARDED_FOR') {
+                $parts = explode(',', $raw);
+                $raw   = trim($parts[0]);
+            }
+            if (filter_var($raw, FILTER_VALIDATE_IP)) {
+                return $raw;
+            }
+        }
+        return '';
+    }
+
+    public static function lookup_location($ip) {
+        $ip = (string) $ip;
+        if ($ip === '' || $ip === '127.0.0.1' || strpos($ip, '10.') === 0 || strpos($ip, '192.168.') === 0) {
+            return '';
+        }
+
+        $cache_key = 'pax_geo_' . md5($ip);
+        $cached = get_transient($cache_key);
+        if (is_string($cached)) {
+            return $cached;
+        }
+
+        $url = 'http://ip-api.com/json/' . rawurlencode($ip) . '?fields=status,country,city,regionName';
+        $response = wp_remote_get($url, array('timeout' => 4));
+        if (is_wp_error($response)) {
+            return '';
+        }
+
+        $body = json_decode(wp_remote_retrieve_body($response), true);
+        if (!is_array($body) || ($body['status'] ?? '') !== 'success') {
+            return '';
+        }
+
+        $parts = array_filter(array(
+            isset($body['city']) ? (string) $body['city'] : '',
+            isset($body['regionName']) ? (string) $body['regionName'] : '',
+            isset($body['country']) ? (string) $body['country'] : '',
+        ));
+        $label = implode(', ', $parts);
+        if ($label !== '') {
+            set_transient($cache_key, $label, DAY_IN_SECONDS);
+        }
+        return $label;
+    }
+}

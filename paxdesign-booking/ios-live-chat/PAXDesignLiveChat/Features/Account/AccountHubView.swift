@@ -56,6 +56,11 @@ struct AccountHubView: View {
                     } label: {
                         Label(L10n.AccountTeam, systemImage: "person.3")
                     }
+                    NavigationLink {
+                        DeviceManagementView()
+                    } label: {
+                        Label("Geräteverwaltung", systemImage: "iphone.and.arrow.forward")
+                    }
                 }
                 NavigationLink {
                     SettingsRootView()

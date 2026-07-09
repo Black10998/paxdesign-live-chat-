@@ -1,6 +1,16 @@
 import UIKit
 
 enum ImageUploadPreprocessor {
+    static func prepareForUpload(
+        _ image: UIImage,
+        maxDimension: CGFloat = 1600,
+        jpegQuality: CGFloat = 0.82
+    ) -> (data: Data, filename: String)? {
+        let resized = resize(image, maxDimension: maxDimension)
+        guard let jpeg = resized.jpegData(compressionQuality: jpegQuality) else { return nil }
+        return (jpeg, "photo.jpg")
+    }
+
     /// Resize and compress photos before upload for faster transfer and consistent thumbnails.
     static func prepareForUpload(
         _ data: Data,
@@ -8,9 +18,7 @@ enum ImageUploadPreprocessor {
         jpegQuality: CGFloat = 0.82
     ) -> (data: Data, filename: String)? {
         guard let image = UIImage(data: data) else { return nil }
-        let resized = resize(image, maxDimension: maxDimension)
-        guard let jpeg = resized.jpegData(compressionQuality: jpegQuality) else { return nil }
-        return (jpeg, "photo.jpg")
+        return prepareForUpload(image, maxDimension: maxDimension, jpegQuality: jpegQuality)
     }
 
     private static func resize(_ image: UIImage, maxDimension: CGFloat) -> UIImage {

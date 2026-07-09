@@ -1,7 +1,6 @@
 import AVFoundation
-import AudioToolbox
 
-/// Subtle send confirmation — professional, non-repetitive.
+/// Subtle send confirmation using bundled tone.
 @MainActor
 final class MessageSendSound {
     static let shared = MessageSendSound()
@@ -14,11 +13,6 @@ final class MessageSendSound {
         let now = Date()
         if let last = lastPlayed, now.timeIntervalSince(last) < minInterval { return }
         lastPlayed = now
-
-        let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
-        try? session.setActive(true)
-
-        AudioServicesPlaySystemSound(1004)
+        PAXNotificationSound.shared.play(.send)
     }
 }

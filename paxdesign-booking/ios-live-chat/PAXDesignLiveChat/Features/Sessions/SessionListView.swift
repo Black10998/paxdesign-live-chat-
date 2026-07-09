@@ -150,6 +150,7 @@ struct SessionListView: View {
                         }
                         .buttonStyle(.plain)
                         .opacity(session.isClosed ? 0.55 : 1)
+                        .transition(PAXMotion.listInsert)
                         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.visible)

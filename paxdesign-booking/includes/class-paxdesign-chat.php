@@ -74,6 +74,7 @@ class PAXdesign_Chat {
             'sounds'             => array(
                 'typing'    => 'https://paxdesign.at/wp-content/uploads/2026/06/freesound_community-writing-a-text-message-41141.mp3',
                 'openClose' => 'https://paxdesign.at/wp-content/uploads/2026/06/u_8e8ungop1x-intro_cinematic-270840.mp3',
+                'incoming'  => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-incoming.wav',
             ),
         ));
     }

@@ -61,6 +61,9 @@ final class AuthStore: ObservableObject {
             api = client
             profile = me
             isLoggedIn = true
+            if me.onboardingCompleted {
+                AppSettingsStore.shared.onboardingCompleted = true
+            }
 
             let stored = StoredCredentials(siteURL: siteURLString, username: username, appPassword: appPassword)
             if let data = try? JSONEncoder().encode(stored) {
@@ -95,6 +98,9 @@ final class AuthStore: ObservableObject {
         guard let api else { return }
         if let me = try? await api.validateLogin() {
             profile = me
+            if me.onboardingCompleted {
+                AppSettingsStore.shared.onboardingCompleted = true
+            }
         }
     }
 

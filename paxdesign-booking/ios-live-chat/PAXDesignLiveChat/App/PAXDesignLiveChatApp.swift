@@ -35,14 +35,16 @@ struct PAXDesignLiveChatApp: App {
                         coordinator.start(auth: auth)
                         teamCoordinator.start(auth: auth)
                         appLock.prepareForLogin()
+                        DeviceSessionService.shared.start(auth: auth)
                         Task {
                             await permissions.refreshStatuses()
                             permissions.presentNotificationPromptIfNeeded(isLoggedIn: true)
-                            await push.registerTokenWithBackend(auth: auth)
+                            await DeviceSessionService.shared.registerWithPush(auth: auth)
                         }
                     } else {
                         coordinator.stop()
                         teamCoordinator.stop()
+                        DeviceSessionService.shared.stop()
                         appLock.resetOnLogout()
                     }
                 }
@@ -71,8 +73,9 @@ struct PAXDesignLiveChatApp: App {
         if auth.isLoggedIn {
             coordinator.start(auth: auth)
             teamCoordinator.start(auth: auth)
+            DeviceSessionService.shared.start(auth: auth)
             permissions.presentNotificationPromptIfNeeded(isLoggedIn: true)
-            await push.registerTokenWithBackend(auth: auth)
+            await DeviceSessionService.shared.registerWithPush(auth: auth)
         }
     }
 
@@ -94,6 +97,15 @@ struct PAXDesignLiveChatApp: App {
                 await coordinator.handlePushAction(action, sessionId: sessionId, auth: auth)
                 return
             }
+            if !opened {
+                InAppNotificationCoordinator.shared.handlePushForeground(
+                    type: type,
+                    sessionId: sessionId,
+                    preview: payload.preview,
+                    customerName: payload.customerName,
+                    activeSessionId: coordinator.activeSessionId
+                )
+            }
             await coordinator.handlePush(sessionId: sessionId, type: type, auth: auth, payload: payload)
         }
     }
@@ -105,6 +117,14 @@ struct RootView: View {
     @EnvironmentObject private var coordinator: ChatCoordinator
     @EnvironmentObject private var permissions: PermissionCoordinator
     @EnvironmentObject private var appLock: AppLockService
+    @StateObject private var settings = AppSettingsStore.shared
+    @State private var showOnboarding = false
+
+    private var needsOnboarding: Bool {
+        auth.isLoggedIn
+            && !settings.onboardingCompleted
+            && !(auth.profile?.onboardingCompleted ?? false)
+    }
 
     var body: some View {
         ZStack {
@@ -146,6 +166,23 @@ struct RootView: View {
             NotificationPermissionPromptView()
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingFlowView {
+                showOnboarding = false
+            }
+        }
+        .onChange(of: showLaunchSplash) { splash in
+            guard !splash, needsOnboarding else { return }
+            showOnboarding = true
+        }
+        .onChange(of: auth.isLoggedIn) { loggedIn in
+            if loggedIn, !showLaunchSplash, needsOnboarding {
+                showOnboarding = true
+            }
+            if loggedIn, auth.profile?.onboardingCompleted == true {
+                settings.onboardingCompleted = true
+            }
         }
     }
 }

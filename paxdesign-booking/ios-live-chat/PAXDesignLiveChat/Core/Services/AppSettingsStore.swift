@@ -144,6 +144,9 @@ final class AppSettingsStore: ObservableObject {
     @Published var profileImageData: Data? {
         didSet { UserDefaults.standard.set(profileImageData, forKey: Keys.profileImage) }
     }
+    @Published var onboardingCompleted: Bool {
+        didSet { UserDefaults.standard.set(onboardingCompleted, forKey: Keys.onboarding) }
+    }
 
     var palette: PAXThemePalette {
         PAXThemePalette.palette(for: visualTheme)
@@ -172,6 +175,7 @@ final class AppSettingsStore: ObservableObject {
         static let privacyBanner = "pax.settings.privacyBanner"
         static let volume = "pax.settings.ringVolume"
         static let profileImage = "pax.settings.profileImage"
+        static let onboarding = "pax.settings.onboardingCompleted"
     }
 
     init() {
@@ -210,5 +214,6 @@ final class AppSettingsStore: ObservableObject {
         showListTimestamps = defaults.object(forKey: Keys.showTimestamps) as? Bool ?? true
         ringtoneVolume = defaults.object(forKey: Keys.volume) as? Float ?? 0.9
         profileImageData = defaults.data(forKey: Keys.profileImage)
+        onboardingCompleted = defaults.object(forKey: Keys.onboarding) as? Bool ?? false
     }
 }

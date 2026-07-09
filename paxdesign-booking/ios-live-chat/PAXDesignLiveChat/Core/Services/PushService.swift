@@ -47,13 +47,7 @@ final class PushService: NSObject, ObservableObject {
     }
 
     func registerTokenWithBackend(auth: AuthStore) async {
-        guard let token = deviceToken, let api = auth.api else { return }
-        #if DEBUG
-        let sandbox = true
-        #else
-        let sandbox = false
-        #endif
-        try? await api.registerAPNs(token: token, sandbox: sandbox)
+        await DeviceSessionService.shared.registerWithPush(auth: auth)
     }
 
     func unregisterTokenFromBackend(auth: AuthStore) async {

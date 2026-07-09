@@ -7,6 +7,7 @@ struct SoundSettingsView: View {
         List {
             Section {
                 Toggle(L10n.SettingsIncomingRingtone, isOn: $settings.incomingCallSoundEnabled)
+                Toggle("Nachrichtentöne", isOn: $settings.messageSoundEnabled)
                 Toggle(L10n.SettingsSendSound, isOn: $settings.sendSoundEnabled)
                 Toggle(L10n.SettingsTypingSound, isOn: $settings.typingSoundEnabled)
 
@@ -17,12 +18,10 @@ struct SoundSettingsView: View {
                         .accessibilityLabel(L10n.SettingsVolume)
                 }
 
-                Button(L10n.SettingsTestRingtone) {
-                    IncomingCallRingtone.shared.startRinging()
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-                        IncomingCallRingtone.shared.stopRinging()
-                    }
-                }
+                soundTestButton("Live-Anfrage", tone: .liveRequest)
+                soundTestButton("Kundennachricht", tone: .message)
+                soundTestButton("KI-Hinweis", tone: .aiAlert)
+                soundTestButton("Senden", tone: .send)
             } header: {
                 Text(L10n.SettingsSound)
             } footer: {
@@ -34,5 +33,18 @@ struct SoundSettingsView: View {
         .background(PAXBackground())
         .navigationTitle(L10n.SettingsSound)
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func soundTestButton(_ title: String, tone: PAXNotificationSound.Tone) -> some View {
+        Button(title) {
+            if tone == .liveRequest {
+                IncomingCallRingtone.shared.startRinging()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                    IncomingCallRingtone.shared.stopRinging()
+                }
+            } else {
+                PAXNotificationSound.shared.play(tone, respectSettings: false)
+            }
+        }
     }
 }

@@ -400,15 +400,18 @@ final class LiveChatAPI {
         _ = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-send", as: TeamSendResponse.self)
     }
 
-    func registerAPNs(token: String, sandbox: Bool) async throws {
+    func registerAPNs(token: String, sandbox: Bool, metadata: [String: Any] = [:]) async throws {
         guard let url = liveAdminURL(path: "push/apns") else {
             throw LiveChatAPIError.invalidURL
         }
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "device_token": token,
             "sandbox": sandbox,
             "bundle_id": Bundle.main.bundleIdentifier ?? "at.paxdesign.livechat"
         ]
+        for (key, value) in metadata {
+            payload[key] = value
+        }
         let json = try JSONSerialization.data(withJSONObject: payload)
         _ = try await perform(authRequest(url: url, method: "POST", body: json), endpoint: "apns-register", as: EmptyResponse.self)
     }
@@ -422,6 +425,49 @@ final class LiveChatAPI {
         var request = authRequest(url: url, method: "DELETE", body: json)
         _ = try await perform(request, endpoint: "apns-unregister", as: EmptyResponse.self)
     }
+
+    func sendDeviceHeartbeat(metadata: [String: Any]) async throws {
+        guard let url = liveAdminURL(path: "devices/heartbeat") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let json = try JSONSerialization.data(withJSONObject: metadata)
+        _ = try await perform(authRequest(url: url, method: "POST", body: json), endpoint: "device-heartbeat", as: EmptyResponse.self)
+    }
+
+    func fetchEmployeeDevices(userId: Int? = nil) async throws -> DeviceListResponse {
+        var path = "devices"
+        if let userId, userId > 0 {
+            path += "?user_id=\(userId)"
+        }
+        guard let url = liveAdminURL(path: path) else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "devices-list", as: DeviceListResponse.self)
+    }
+
+    func revokeDevice(deviceId: String, userId: Int) async throws {
+        guard let url = liveAdminURL(path: "devices/\(deviceId)") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONSerialization.data(withJSONObject: ["user_id": userId])
+        var request = authRequest(url: url, method: "DELETE", body: body)
+        _ = try await perform(request, endpoint: "device-revoke", as: EmptyResponse.self)
+    }
+
+    func completeOnboarding() async throws {
+        guard let url = liveAdminURL(path: "onboarding/complete") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        _ = try await perform(authRequest(url: url, method: "POST"), endpoint: "onboarding-complete", as: EmptyResponse.self)
+    }
+
+    func resetOnboarding(for userId: Int) async throws {
+        guard let url = liveAdminURL(path: "onboarding/reset") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONSerialization.data(withJSONObject: ["user_id": userId])
+        _ = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "onboarding-reset", as: EmptyResponse.self)
+    }
 }
 
 private struct WPErrorResponse: Codable {
@@ -430,3 +476,48 @@ private struct WPErrorResponse: Codable {
 }
 
 private struct EmptyResponse: Codable {}
+
+struct DeviceRecord: Codable, Identifiable {
+    var id: String { deviceId }
+    let userId: Int
+    let employeeName: String
+    let employeeEmail: String
+    let deviceId: String
+    let deviceToken: String
+    let deviceName: String
+    let deviceModel: String
+    let osVersion: String
+    let appVersion: String
+    let firstLoginAt: Int
+    let lastActiveAt: Int
+    let ipAddress: String
+    let location: String
+    let revoked: Bool
+    let sandbox: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case employeeName = "employee_name"
+        case employeeEmail = "employee_email"
+        case deviceId = "device_id"
+        case deviceToken = "device_token"
+        case deviceName = "device_name"
+        case deviceModel = "device_model"
+        case osVersion = "os_version"
+        case appVersion = "app_version"
+        case firstLoginAt = "first_login_at"
+        case lastActiveAt = "last_active_at"
+        case ipAddress = "ip_address"
+        case location, revoked, sandbox
+    }
+}
+
+struct DeviceListResponse: Codable {
+    let devices: [DeviceRecord]
+    let canManage: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case devices
+        case canManage = "can_manage"
+    }
+}

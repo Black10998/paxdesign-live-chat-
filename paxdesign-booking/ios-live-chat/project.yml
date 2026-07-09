@@ -13,8 +13,8 @@ settings:
   base:
     SWIFT_VERSION: "5.9"
     TARGETED_DEVICE_FAMILY: "1"
-    MARKETING_VERSION: "1.16.0"
-    CURRENT_PROJECT_VERSION: "29"
+    MARKETING_VERSION: "1.17.0"
+    CURRENT_PROJECT_VERSION: "30"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
 targets:
@@ -34,6 +34,7 @@ targets:
         INFOPLIST_KEY_NSUserNotificationsUsageDescription: "Notifications for live agent requests and new customer messages."
         INFOPLIST_KEY_NSFaceIDUsageDescription: "Face ID is used to unlock the app after inactivity."
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Select photos from your library to send in live chat."
+        INFOPLIST_KEY_NSCameraUsageDescription: "Take photos to send in live chat conversations."
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         ENABLE_PREVIEWS: YES

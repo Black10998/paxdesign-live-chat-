@@ -21,8 +21,11 @@ struct ChatDisplaySettingsView: View {
 }
 
 struct DataStorageSettingsView: View {
+    @EnvironmentObject private var auth: AuthStore
     @StateObject private var settings = AppSettingsStore.shared
     @State private var showResetConfirm = false
+    @State private var showOnboardingResetConfirm = false
+    @State private var onboardingResetMessage: String?
 
     var body: some View {
         List {
@@ -46,6 +49,21 @@ struct DataStorageSettingsView: View {
                         .foregroundStyle(PAXTheme.textTertiary)
                 }
             }
+
+            if auth.canManageUsers {
+                Section("Onboarding") {
+                    Button("Einführung für alle zurücksetzen", role: .destructive) {
+                        showOnboardingResetConfirm = true
+                    }
+                    if let onboardingResetMessage {
+                        Text(onboardingResetMessage)
+                            .font(.caption)
+                            .foregroundStyle(PAXTheme.textSecondary)
+                    }
+                } footer: {
+                    Text("Setzt die Willkommens-Tour für den ausgewählten Mitarbeiter zurück.")
+                }
+            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -57,6 +75,25 @@ struct DataStorageSettingsView: View {
                 settings.readSessionIds.removeAll()
                 PAXHaptics.success()
             }
+        }
+        .confirmationDialog("Onboarding zurücksetzen?", isPresented: $showOnboardingResetConfirm) {
+            Button("Zurücksetzen", role: .destructive) {
+                Task { await resetOnboardingForCurrentUser() }
+            }
+        } message: {
+            Text("Die Einführungstour wird beim nächsten Start erneut angezeigt.")
+        }
+    }
+
+    private func resetOnboardingForCurrentUser() async {
+        guard let userId = auth.profile?.userId, let api = auth.api else { return }
+        do {
+            try await api.resetOnboarding(for: userId)
+            settings.onboardingCompleted = false
+            onboardingResetMessage = "Onboarding wurde zurückgesetzt."
+            PAXHaptics.success()
+        } catch {
+            onboardingResetMessage = error.localizedDescription
         }
     }
 }

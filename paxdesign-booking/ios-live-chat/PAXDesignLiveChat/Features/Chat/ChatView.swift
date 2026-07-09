@@ -11,6 +11,9 @@ struct ChatView: View {
     @State private var imageViewer: ImageViewerItem?
     @State private var photoItem: PhotosPickerItem?
     @State private var showCustomerOverview = true
+    @State private var pendingImage: UIImage?
+    @State private var showCamera = false
+    @State private var showImagePreview = false
 
     init(sessionId: String) {
         _thread = StateObject(wrappedValue: ChatThreadModel(sessionId: sessionId))
@@ -100,6 +103,28 @@ struct ChatView: View {
         }
         .sheet(item: $imageViewer) { item in
             FullScreenImageView(url: item.url)
+        }
+        .sheet(isPresented: $showImagePreview) {
+            if let pendingImage {
+                ImagePreviewSheet(
+                    image: pendingImage,
+                    caption: $thread.draft,
+                    onSend: {
+                        showImagePreview = false
+                        Task { await sendPendingImage(pendingImage) }
+                    },
+                    onCancel: {
+                        showImagePreview = false
+                        self.pendingImage = nil
+                    }
+                )
+            }
+        }
+        .sheet(isPresented: $showCamera) {
+            CameraImagePicker { image in
+                pendingImage = image
+                showImagePreview = true
+            }
         }
         .onChange(of: photoItem) { item in
             Task { await handlePhotoSelection(item) }
@@ -302,8 +327,17 @@ struct ChatView: View {
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 8) {
             if thread.handler == "admin", canSendImages {
-                PhotosPicker(selection: $photoItem, matching: .images) {
-                    Image(systemName: "photo")
+                Menu {
+                    PhotosPicker(selection: $photoItem, matching: .images) {
+                        Label("Fotomediathek", systemImage: "photo.on.rectangle")
+                    }
+                    Button {
+                        showCamera = true
+                    } label: {
+                        Label("Kamera", systemImage: "camera")
+                    }
+                } label: {
+                    Image(systemName: "plus.circle")
                         .font(.title3)
                         .foregroundStyle(PAXTheme.accent)
                         .frame(width: 32, height: 32)
@@ -351,9 +385,21 @@ struct ChatView: View {
     private func handlePhotoSelection(_ item: PhotosPickerItem?) async {
         guard let item,
               let raw = try? await item.loadTransferable(type: Data.self),
-              let prepared = ImageUploadPreprocessor.prepareForUpload(raw) else { return }
+              let image = UIImage(data: raw) else { return }
+        await MainActor.run {
+            pendingImage = image
+            showImagePreview = true
+            photoItem = nil
+        }
+    }
+
+    private func sendPendingImage(_ image: UIImage) async {
+        guard let prepared = ImageUploadPreprocessor.prepareForUpload(image) else {
+            pendingImage = nil
+            return
+        }
         await thread.sendImage(auth: auth, imageData: prepared.data, filename: prepared.filename)
-        photoItem = nil
+        pendingImage = nil
     }
 }
 

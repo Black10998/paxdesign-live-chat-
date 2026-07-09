@@ -64,20 +64,45 @@ class PAXdesign_APNS {
         return is_array($all) ? $all : array();
     }
 
-    public static function register_device($user_id, $token, $sandbox = false, $bundle_id = '') {
+    public static function register_device($user_id, $token, $sandbox = false, $bundle_id = '', $meta = array()) {
         $token = preg_replace('/[^a-fA-F0-9]/', '', (string) $token);
         if ($token === '') {
             return;
         }
 
         $all = self::get_user_devices($user_id);
-        $all[$token] = array(
+        $existing = isset($all[$token]) && is_array($all[$token]) ? $all[$token] : array();
+        $now = time();
+
+        $record = array_merge($existing, array(
             'token'      => $token,
             'sandbox'    => (bool) $sandbox,
             'bundle_id'  => sanitize_text_field($bundle_id),
-            'updated_at' => time(),
-        );
+            'updated_at' => $now,
+        ));
+
+        if (class_exists('PAXdesign_Device_Sessions')) {
+            $record = PAXdesign_Device_Sessions::merge_device_meta($record, $meta, $now);
+        }
+
+        $all[$token] = $record;
         update_user_meta((int) $user_id, self::USER_META_KEY, $all);
+    }
+
+    /**
+     * @return string
+     */
+    private static function sound_for_type($type, $handler = '') {
+        if ($type === 'live_request') {
+            return 'pax-live-request.wav';
+        }
+        if ($type === 'ai_attention' || ($type === 'session_sync' && $handler === 'ai')) {
+            return 'pax-ai-alert.wav';
+        }
+        if ($type === 'message' || $type === 'new_chat') {
+            return 'pax-message.wav';
+        }
+        return 'pax-message.wav';
     }
 
     public static function unregister_device($user_id, $token) {
@@ -149,18 +174,23 @@ class PAXdesign_APNS {
 
         $body = ($service !== '' ? $service . ' — ' : '') . ($preview !== '' ? $preview : 'Chat aktualisiert');
 
+        $last_role = isset($meta['last_role']) ? (string) $meta['last_role'] : '';
+        $needs_ai_attention = ($handler === 'ai' && $last_role === 'user' && $preview !== '');
+        $type = $is_new ? 'new_chat' : ($needs_ai_attention ? 'ai_attention' : 'session_sync');
+        $silent = !$is_new && !$needs_ai_attention;
+
         self::send_to_admins(
-            $is_new ? 'Neuer Live-Chat' : 'Chat aktualisiert',
+            $is_new ? 'Neuer Live-Chat' : ($needs_ai_attention ? 'KI-Assistent' : 'Chat aktualisiert'),
             $body,
             array(
-                'type'       => $is_new ? 'new_chat' : 'session_sync',
+                'type'       => $type,
                 'session_id' => (string) $session_id,
                 'service'    => $service,
                 'preview'    => $preview,
                 'seq'        => $seq,
                 'handler'    => $handler,
             ),
-            !$is_new
+            $silent
         );
     }
 
@@ -205,6 +235,9 @@ class PAXdesign_APNS {
         foreach (self::get_admin_user_ids() as $user_id) {
             $devices = self::get_user_devices($user_id);
             foreach ($devices as $device) {
+                if (!empty($device['revoked'])) {
+                    continue;
+                }
                 $result = self::send($device, $title, $body, $data, $user_id, $silent);
                 if (is_wp_error($result) && $result->get_error_code() === 'apns_invalid_token') {
                     self::unregister_device($user_id, (string) $device['token']);
@@ -233,8 +266,10 @@ class PAXdesign_APNS {
         }
 
         $type     = isset($data['type']) ? (string) $data['type'] : 'message';
-        $sound    = ($type === 'live_request') ? 'pax-live-request.wav' : 'default';
+        $handler  = isset($data['handler']) ? (string) $data['handler'] : '';
+        $sound    = self::sound_for_type($type, $handler);
         $category = ($type === 'live_request') ? 'PAX_LIVE_REQUEST' : 'PAX_MESSAGE';
+        $interruption = ($type === 'live_request') ? 'critical' : 'time-sensitive';
 
         $aps = array(
             'badge'              => self::count_pending_badge(),
@@ -248,7 +283,7 @@ class PAXdesign_APNS {
                 'body'  => (string) $body,
             );
             $aps['sound'] = $sound;
-            $aps['interruption-level'] = 'time-sensitive';
+            $aps['interruption-level'] = $interruption;
             $aps['category'] = $category;
         }
 

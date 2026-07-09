@@ -29,6 +29,7 @@ final class ChatCoordinator: ObservableObject {
 
     private var listTask: Task<Void, Never>?
     private var knownLiveRequests = Set<String>()
+    private var lastKnownPreviews: [String: String] = [:]
     private var expiryTasks: [String: Task<Void, Never>] = [:]
     private var fullscreenTask: Task<Void, Never>?
 
@@ -94,6 +95,25 @@ final class ChatCoordinator: ObservableObject {
             guard !knownLiveRequests.contains(session.sessionId) else { continue }
             presentIncoming(session: session)
         }
+
+        for session in items where !session.isLiveRequest && session.needsReply {
+            let preview = session.lastPreview
+            let previous = lastKnownPreviews[session.sessionId]
+            lastKnownPreviews[session.sessionId] = preview
+
+            guard previous != preview, !preview.isEmpty else { continue }
+            guard activeSessionId != session.sessionId else { continue }
+
+            InAppNotificationCoordinator.shared.handleNewCustomerMessage(
+                sessionId: session.sessionId,
+                preview: preview,
+                customerName: session.displayName,
+                isActiveSession: false
+            )
+        }
+
+        let currentIds = Set(items.map(\.sessionId))
+        lastKnownPreviews = lastKnownPreviews.filter { currentIds.contains($0.key) }
     }
 
     func presentIncoming(session: LiveSession) {
