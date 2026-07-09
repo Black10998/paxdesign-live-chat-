@@ -124,7 +124,7 @@ struct AdministrationHubView: View {
         HStack(spacing: 14) {
             ProfileAvatarView(size: 52)
             VStack(alignment: .leading, spacing: 4) {
-                Text(auth.profile?.name ?? L10n.CommonAdministrator)
+                Text(auth.profile?.displayName ?? L10n.CommonAdministrator)
                     .font(.headline)
                 Text(L10n.AccountSuperAdmin)
                     .font(.caption.weight(.semibold))

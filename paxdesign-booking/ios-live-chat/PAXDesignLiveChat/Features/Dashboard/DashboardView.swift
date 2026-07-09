@@ -90,7 +90,7 @@ struct DashboardView: View {
 
     private var heroHeader: some View {
         PlatformHeroHeader(
-            title: L10n.DashboardWelcome(auth.profile?.name ?? L10n.CommonAdministrator),
+            title: L10n.DashboardWelcome(auth.profile?.displayName ?? L10n.CommonAdministrator),
             subtitle: L10n.DashboardSubtitle,
             systemImage: "chart.bar.doc.horizontal.fill",
             gradient: [.blue, .cyan]

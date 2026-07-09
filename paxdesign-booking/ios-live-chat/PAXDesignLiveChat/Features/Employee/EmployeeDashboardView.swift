@@ -19,7 +19,7 @@ struct EmployeeDashboardView: View {
         List {
             Section {
                 PlatformHeroHeader(
-                    title: L10n.EmployeeWelcome(platform.employee?.name ?? auth.profile?.name ?? L10n.ProfileRoleStaff),
+                    title: L10n.EmployeeWelcome(platform.employee?.name ?? auth.profile?.displayName ?? L10n.ProfileRoleStaff),
                     subtitle: L10n.ModuleEmployeeSubtitle,
                     systemImage: "person.crop.circle.badge.checkmark",
                     gradient: [.mint, .teal]

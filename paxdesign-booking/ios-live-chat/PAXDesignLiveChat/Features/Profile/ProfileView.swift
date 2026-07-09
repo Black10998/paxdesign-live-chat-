@@ -12,11 +12,8 @@ struct ProfileView: View {
                 HStack(spacing: 18) {
                     ProfileAvatarView(size: 80)
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(profile?.name ?? L10n.CommonAdministrator)
+                        Text(profile?.displayName ?? L10n.CommonAdministrator)
                             .font(.title2.weight(.bold))
-                        Text(profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
-                            .font(.subheadline)
-                            .foregroundStyle(PAXTheme.textSecondary)
                         roleBadge
                     }
                     .padding(.vertical, 8)
@@ -24,10 +21,14 @@ struct ProfileView: View {
             }
 
             Section(L10n.ProfileAccountInfo) {
+                LabeledContent(L10n.SettingsProfile, value: profile?.displayName ?? L10n.CommonAdministrator)
+                    .font(.subheadline)
+                LabeledContent(L10n.StaffWordpressEmail, value: profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
+                    .font(.subheadline)
                 LabeledContent(L10n.LoginWebsite, value: profile?.siteUrl ?? auth.siteURLString)
                     .font(.subheadline)
-                if let username = profile?.username, !username.isEmpty {
-                    LabeledContent(L10n.LoginUsername, value: PrivacyMask.email(username, revealFull: profile?.isSuperAdmin == true))
+                if let username = profile?.displayUsernameIfDistinct {
+                    LabeledContent(L10n.LoginUsername, value: username)
                         .font(.subheadline)
                 }
                 LabeledContent(L10n.CommonPlugin, value: profile?.pluginVer ?? "—")

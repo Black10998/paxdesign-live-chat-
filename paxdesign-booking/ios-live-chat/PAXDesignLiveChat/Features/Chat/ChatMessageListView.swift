@@ -6,7 +6,6 @@ struct ChatMessageListView: View {
     let userTyping: Bool
     let canReply: Bool
     let handler: String
-    let quotedMessage: (LiveMessage) -> LiveMessage?
     let onReply: (LiveMessage) -> Void
     let onCopy: (LiveMessage) -> Void
     let onImageTap: (URL) -> Void
@@ -21,7 +20,6 @@ struct ChatMessageListView: View {
                             row: row,
                             canReply: canReply,
                             handler: handler,
-                            quotedMessage: quotedMessage(row.message),
                             onReply: { onReply(row.message) },
                             onCopy: { onCopy(row.message) },
                             onImageTap: onImageTap
@@ -42,12 +40,14 @@ struct ChatMessageListView: View {
     }
 
     private static func displayRows(for messages: [LiveMessage]) -> [MessageDisplayRow] {
+        let messageLookup = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
         messages.enumerated().map { index, message in
             MessageDisplayRow(
                 id: message.id,
                 message: message,
                 previous: index > 0 ? messages[index - 1] : nil,
-                next: index + 1 < messages.count ? messages[index + 1] : nil
+                next: index + 1 < messages.count ? messages[index + 1] : nil,
+                quotedMessage: message.replyTo.flatMap { messageLookup[$0] }
             )
         }
     }
@@ -66,13 +66,13 @@ private struct MessageDisplayRow: Identifiable {
     let message: LiveMessage
     let previous: LiveMessage?
     let next: LiveMessage?
+    let quotedMessage: LiveMessage?
 }
 
 private struct ChatMessageRow: View {
     let row: MessageDisplayRow
     let canReply: Bool
     let handler: String
-    let quotedMessage: LiveMessage?
     let onReply: () -> Void
     let onCopy: () -> Void
     let onImageTap: (URL) -> Void
@@ -90,7 +90,7 @@ private struct ChatMessageRow: View {
 
             MessageBubbleView(
                 message: row.message,
-                quotedMessage: quotedMessage,
+                quotedMessage: row.quotedMessage,
                 canReply: handler == "admin" && canReply && row.message.role != "system",
                 showTimestamp: MessageTimeFormatter.shouldShowTimestamp(current: row.message, next: row.next),
                 onReply: onReply,

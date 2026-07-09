@@ -8,6 +8,7 @@ struct SessionListView: View {
     @State private var searchText = ""
     @State private var filter: SessionFilter = .all
     @State private var displayedSessions: [LiveSession] = []
+    @State private var recomputeTask: Task<Void, Never>?
     @FocusState private var isSearchFocused: Bool
     var onOpenSession: (String) -> Void = { _ in }
 
@@ -25,27 +26,68 @@ struct SessionListView: View {
         }
     }
 
-    private func recomputeDisplayedSessions() {
-        var items = coordinator.sessions
+    private func scheduleDisplayedSessionsRecompute(immediate: Bool) {
+        recomputeTask?.cancel()
+
+        let sessions = coordinator.sessions
+        let readIds = settings.readSessionIds
+        let activeFilter = filter
+        let trimmedSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        recomputeTask = Task(priority: .userInitiated) {
+            if !immediate {
+                try? await Task.sleep(nanoseconds: 120_000_000)
+            }
+            guard !Task.isCancelled else { return }
+
+            let result = Self.computeDisplayedSessions(
+                sessions: sessions,
+                filter: activeFilter,
+                searchText: trimmedSearch,
+                readSessionIds: readIds
+            )
+
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                if displayedSessions != result {
+                    displayedSessions = result
+                }
+            }
+        }
+    }
+
+    private static func computeDisplayedSessions(
+        sessions: [LiveSession],
+        filter: SessionFilter,
+        searchText: String,
+        readSessionIds: Set<String>
+    ) -> [LiveSession] {
+        var items = sessions
             .filter { !$0.isTeamDM }
             .sorted { $0.updatedAt > $1.updatedAt }
 
         if !searchText.isEmpty {
-            let q = searchText.lowercased()
             items = items.filter {
-                $0.displayName.lowercased().contains(q)
-                    || $0.detectedService.lowercased().contains(q)
-                    || $0.lastPreview.lowercased().contains(q)
+                $0.displayName.lowercased().contains(searchText)
+                    || $0.detectedService.lowercased().contains(searchText)
+                    || $0.lastPreview.lowercased().contains(searchText)
             }
         }
+
         switch filter {
-        case .all: break
-        case .live: items = items.filter { $0.isLiveRequest }
-        case .unread: items = items.filter { $0.needsReply && !settings.readSessionIds.contains($0.sessionId) }
-        case .active: items = items.filter { $0.isAdmin || $0.isLiveRequest }
-        case .closed: items = items.filter { $0.isClosed }
+        case .all:
+            break
+        case .live:
+            items = items.filter(\.isLiveRequest)
+        case .unread:
+            items = items.filter { $0.needsReply && !readSessionIds.contains($0.sessionId) }
+        case .active:
+            items = items.filter { $0.isAdmin || $0.isLiveRequest }
+        case .closed:
+            items = items.filter(\.isClosed)
         }
-        displayedSessions = items
+
+        return items
     }
 
     private var canViewChats: Bool { auth.canViewChats }
@@ -63,11 +105,15 @@ struct SessionListView: View {
         .background(PAXBackground())
         .navigationTitle(L10n.SessionTitle)
         .navigationBarTitleDisplayMode(.large)
-        .onAppear { recomputeDisplayedSessions() }
-        .onChange(of: coordinator.sessions) { _ in recomputeDisplayedSessions() }
-        .onChange(of: searchText) { _ in recomputeDisplayedSessions() }
-        .onChange(of: filter) { _ in recomputeDisplayedSessions() }
-        .onChange(of: settings.readSessionIds) { _ in recomputeDisplayedSessions() }
+        .onAppear { scheduleDisplayedSessionsRecompute(immediate: true) }
+        .onDisappear {
+            recomputeTask?.cancel()
+            recomputeTask = nil
+        }
+        .onChange(of: coordinator.sessions) { _ in scheduleDisplayedSessionsRecompute(immediate: true) }
+        .onChange(of: searchText) { _ in scheduleDisplayedSessionsRecompute(immediate: false) }
+        .onChange(of: filter) { _ in scheduleDisplayedSessionsRecompute(immediate: true) }
+        .onChange(of: settings.readSessionIds) { _ in scheduleDisplayedSessionsRecompute(immediate: true) }
     }
 
     private var sessionListContent: some View {
@@ -113,9 +159,7 @@ struct SessionListView: View {
                             isSearchFocused = false
                             PAXKeyboard.dismiss()
                             onOpenSession(session.sessionId)
-                            Task { @MainActor in
-                                PAXHaptics.light()
-                            }
+                            PAXHaptics.light()
                         } label: {
                             SessionRow(
                                 session: session,
@@ -127,7 +171,6 @@ struct SessionListView: View {
                         }
                         .buttonStyle(.plain)
                         .opacity(session.isClosed ? 0.55 : 1)
-                        .transition(PAXMotion.listInsert)
                         .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.visible)

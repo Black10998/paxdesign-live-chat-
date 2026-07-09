@@ -307,9 +307,11 @@ final class ChatThreadModel: ObservableObject {
     private var pollSeq = 0
     private var pollTask: Task<Void, Never>?
     private var typingStopTask: Task<Void, Never>?
+    private var typingNotifyTask: Task<Void, Never>?
     private var suggestionsTask: Task<Void, Never>?
     private var suggestionsForMessageId = 0
     private var knownMessageIds = Set<Int>()
+    private var lastTypingNotifyAt = Date.distantPast
 
     init(sessionId: String) {
         self.sessionId = sessionId
@@ -338,6 +340,8 @@ final class ChatThreadModel: ObservableObject {
         pollTask = nil
         typingStopTask?.cancel()
         typingStopTask = nil
+        typingNotifyTask?.cancel()
+        typingNotifyTask = nil
         suggestionsTask?.cancel()
         suggestionsTask = nil
         AdminTypingSound.shared.stop()
@@ -505,13 +509,14 @@ final class ChatThreadModel: ObservableObject {
             return
         }
         AdminTypingSound.shared.typingActivity()
-        Task { await notifyTyping(auth: auth) }
+        scheduleTypingNotify(auth: auth)
     }
 
     func send(auth: AuthStore) async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, let api = auth.api else { return }
         AdminTypingSound.shared.stop()
+        typingNotifyTask?.cancel()
         await notifyTypingStop(auth: auth)
         isSending = true
         defer { isSending = false }
@@ -532,6 +537,7 @@ final class ChatThreadModel: ObservableObject {
 
     func sendImage(auth: AuthStore, imageData: Data, filename: String) async {
         guard let api = auth.api else { return }
+        typingNotifyTask?.cancel()
         isSending = true
         defer { isSending = false }
         let replyId = replyToMessage?.id
@@ -567,7 +573,32 @@ final class ChatThreadModel: ObservableObject {
     func notifyTypingStop(auth: AuthStore) async {
         typingStopTask?.cancel()
         typingStopTask = nil
+        typingNotifyTask?.cancel()
+        typingNotifyTask = nil
+        lastTypingNotifyAt = .distantPast
         try? await auth.api?.setTyping(sessionId, stop: true)
+    }
+
+    private func scheduleTypingNotify(auth: AuthStore) {
+        let minInterval: TimeInterval = 1.1
+        let now = Date()
+        let elapsed = now.timeIntervalSince(lastTypingNotifyAt)
+
+        if elapsed >= minInterval {
+            lastTypingNotifyAt = now
+            Task { await notifyTyping(auth: auth) }
+            return
+        }
+
+        typingNotifyTask?.cancel()
+        let remaining = max(minInterval - elapsed, 0)
+        let delay = UInt64(remaining * 1_000_000_000)
+        typingNotifyTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: delay)
+            guard !Task.isCancelled, let self else { return }
+            self.lastTypingNotifyAt = Date()
+            await self.notifyTyping(auth: auth)
+        }
     }
 
     func reloadAfterTakeover(auth: AuthStore) async {

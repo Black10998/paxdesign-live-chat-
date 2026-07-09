@@ -15,7 +15,6 @@ struct TeamChatView: View {
                 userTyping: false,
                 canReply: false,
                 handler: "team",
-                quotedMessage: { _ in nil },
                 onReply: { _ in },
                 onCopy: { UIPasteboard.general.string = $0.content },
                 onImageTap: { _ in }

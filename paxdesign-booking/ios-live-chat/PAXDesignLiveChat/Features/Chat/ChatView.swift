@@ -47,7 +47,6 @@ struct ChatView: View {
                 userTyping: thread.userTyping,
                 canReply: canReply,
                 handler: thread.handler,
-                quotedMessage: quotedMessage(for:),
                 onReply: { thread.setReply(to: $0) },
                 onCopy: copyMessage,
                 onImageTap: { imageViewer = ImageViewerItem(url: $0) }
@@ -124,11 +123,6 @@ struct ChatView: View {
             Task { await handlePhotoSelection(item) }
         }
         #endif
-    }
-
-    private func quotedMessage(for message: LiveMessage) -> LiveMessage? {
-        guard let replyId = message.replyTo else { return nil }
-        return thread.messages.first { $0.id == replyId }
     }
 
     private func copyMessage(_ message: LiveMessage) {

@@ -3,16 +3,13 @@ import SwiftUI
 struct PlatformHubView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
-    @EnvironmentObject private var settings: AppSettingsStore
     @State private var showSearch = false
 
     private var canManageUsers: Bool { auth.canManageUsers }
     private var canAccessSecurity: Bool { auth.canAccessSecurity }
 
     private var unreadCount: Int {
-        coordinator.sessions.filter {
-            !$0.isTeamDM && $0.needsReply && !settings.readSessionIds.contains($0.sessionId)
-        }.count
+        coordinator.unreadChatCount
     }
 
     private var websiteURL: URL {
@@ -107,7 +104,7 @@ struct PlatformHubView: View {
                 ProfileAvatarView(size: 64)
 
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(auth.profile?.name ?? L10n.CommonAdministrator)
+                    Text(auth.profile?.displayName ?? L10n.CommonAdministrator)
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(PAXTheme.textPrimary)
                     Text(auth.profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))

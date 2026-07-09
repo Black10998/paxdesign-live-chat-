@@ -7,29 +7,12 @@ struct TeamMessagesHubView: View {
     @EnvironmentObject private var settings: AppSettingsStore
     @State private var searchText = ""
     @State private var showCompose = false
+    @State private var displayedSessions: [LiveSession] = []
+    @State private var teamSessionCount = 0
+    @State private var unreadCount = 0
+    @State private var recomputeTask: Task<Void, Never>?
     @FocusState private var isSearchFocused: Bool
     var onOpenSession: (String) -> Void = { _ in }
-
-    private var teamSessions: [LiveSession] {
-        var items = coordinator.sessions.filter { $0.isTeamDM }
-        let teamOnly = teamCoordinator.teamSessions.filter { team in
-            !items.contains { $0.sessionId == team.sessionId }
-        }
-        items.append(contentsOf: teamOnly)
-        return items.sorted { $0.updatedAt > $1.updatedAt }
-    }
-
-    private var filteredSessions: [LiveSession] {
-        guard !searchText.isEmpty else { return teamSessions }
-        let q = searchText.lowercased()
-        return teamSessions.filter {
-            $0.displayName.lowercased().contains(q) || $0.lastPreview.lowercased().contains(q)
-        }
-    }
-
-    private var unreadCount: Int {
-        teamSessions.filter { $0.needsReply && !settings.readSessionIds.contains($0.sessionId) }.count
-    }
 
     private var canManageTeam: Bool { auth.canManageUsers }
 
@@ -47,10 +30,10 @@ struct TeamMessagesHubView: View {
                 .listRowSeparator(.hidden)
             }
 
-            if unreadCount > 0 || !teamSessions.isEmpty {
+            if unreadCount > 0 || teamSessionCount > 0 {
                 Section {
                     HStack(spacing: 12) {
-                        TeamStatPill(value: "\(teamSessions.count)", label: L10n.TeamHubConversations, tint: PAXBrand.accent)
+                        TeamStatPill(value: "\(teamSessionCount)", label: L10n.TeamHubConversations, tint: PAXBrand.accent)
                         if unreadCount > 0 {
                             TeamStatPill(value: "\(unreadCount)", label: L10n.FilterUnread, tint: .orange)
                         }
@@ -72,7 +55,7 @@ struct TeamMessagesHubView: View {
                 .listRowSeparator(.hidden)
             }
 
-            if filteredSessions.isEmpty {
+            if displayedSessions.isEmpty {
                 Section {
                     teamEmptyState
                         .listRowInsets(EdgeInsets(top: 24, leading: 0, bottom: 24, trailing: 0))
@@ -81,9 +64,8 @@ struct TeamMessagesHubView: View {
                 }
             } else {
                 Section(L10n.TeamHubConversations) {
-                    ForEach(filteredSessions) { session in
+                    ForEach(displayedSessions) { session in
                         teamConversationRow(session)
-                            .transition(PAXMotion.listInsert)
                     }
                 }
             }
@@ -120,6 +102,15 @@ struct TeamMessagesHubView: View {
             await coordinator.refreshSessions(auth: auth)
             await teamCoordinator.refresh(auth: auth)
         }
+        .onAppear { scheduleRecompute(immediate: true) }
+        .onDisappear {
+            recomputeTask?.cancel()
+            recomputeTask = nil
+        }
+        .onChange(of: coordinator.sessions) { _ in scheduleRecompute(immediate: true) }
+        .onChange(of: teamCoordinator.teamSessions) { _ in scheduleRecompute(immediate: true) }
+        .onChange(of: searchText) { _ in scheduleRecompute(immediate: false) }
+        .onChange(of: settings.readSessionIds) { _ in scheduleRecompute(immediate: true) }
     }
 
     private func teamConversationRow(_ session: LiveSession) -> some View {
@@ -129,7 +120,7 @@ struct TeamMessagesHubView: View {
             isSearchFocused = false
             PAXKeyboard.dismiss()
             onOpenSession(session.sessionId)
-            Task { @MainActor in PAXHaptics.light() }
+            PAXHaptics.light()
         } label: {
             HStack(spacing: 14) {
                 ZStack(alignment: .bottomTrailing) {
@@ -223,6 +214,68 @@ struct TeamMessagesHubView: View {
         }
     }
 
+    private func scheduleRecompute(immediate: Bool) {
+        recomputeTask?.cancel()
+        let coordinatorSessions = coordinator.sessions
+        let teamOnlySessions = teamCoordinator.teamSessions
+        let readIds = settings.readSessionIds
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        recomputeTask = Task(priority: .userInitiated) {
+            if !immediate {
+                try? await Task.sleep(nanoseconds: 120_000_000)
+            }
+            guard !Task.isCancelled else { return }
+
+            let state = Self.computeListState(
+                coordinatorSessions: coordinatorSessions,
+                teamSessions: teamOnlySessions,
+                readSessionIds: readIds,
+                searchText: query
+            )
+
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                displayedSessions = state.displayedSessions
+                teamSessionCount = state.teamSessionCount
+                unreadCount = state.unreadCount
+            }
+        }
+    }
+
+    private static func computeListState(
+        coordinatorSessions: [LiveSession],
+        teamSessions: [LiveSession],
+        readSessionIds: Set<String>,
+        searchText: String
+    ) -> TeamHubListState {
+        var merged: [String: LiveSession] = [:]
+        for session in coordinatorSessions where session.isTeamDM {
+            merged[session.sessionId] = session
+        }
+        for session in teamSessions {
+            if let existing = merged[session.sessionId] {
+                merged[session.sessionId] = existing.updatedAt >= session.updatedAt ? existing : session
+            } else {
+                merged[session.sessionId] = session
+            }
+        }
+
+        let allSessions = merged.values.sorted { $0.updatedAt > $1.updatedAt }
+        let filtered: [LiveSession]
+        if searchText.isEmpty {
+            filtered = allSessions
+        } else {
+            filtered = allSessions.filter {
+                $0.displayName.lowercased().contains(searchText)
+                    || $0.lastPreview.lowercased().contains(searchText)
+            }
+        }
+
+        let unread = allSessions.filter { $0.needsReply && !readSessionIds.contains($0.sessionId) }.count
+        return TeamHubListState(displayedSessions: filtered, teamSessionCount: allSessions.count, unreadCount: unread)
+    }
+
     private var teamEmptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "person.3.sequence.fill")
@@ -250,6 +303,12 @@ struct TeamMessagesHubView: View {
         }
         .frame(maxWidth: .infinity)
     }
+}
+
+private struct TeamHubListState {
+    let displayedSessions: [LiveSession]
+    let teamSessionCount: Int
+    let unreadCount: Int
 }
 
 private struct TeamStatPill: View {

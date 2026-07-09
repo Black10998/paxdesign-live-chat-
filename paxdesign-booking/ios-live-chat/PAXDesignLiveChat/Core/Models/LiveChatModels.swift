@@ -367,6 +367,31 @@ struct AdminProfile: Codable {
     var displayEmail: String {
         PrivacyMask.email(email, revealFull: isSuperAdmin)
     }
+
+    var displayName: String {
+        let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cleaned.isEmpty { return cleaned }
+        if let username = normalizedUsername, !username.isEmpty { return username }
+        let cleanedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cleanedEmail.isEmpty { return cleanedEmail }
+        return L10n.CommonAdministrator
+    }
+
+    var displayUsernameIfDistinct: String? {
+        guard let username = normalizedUsername, !username.isEmpty else { return nil }
+        let cleanedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanedEmail.isEmpty else {
+            return PrivacyMask.email(username, revealFull: isSuperAdmin)
+        }
+        guard username.caseInsensitiveCompare(cleanedEmail) != .orderedSame else { return nil }
+        return PrivacyMask.email(username, revealFull: isSuperAdmin)
+    }
+
+    private var normalizedUsername: String? {
+        guard let username else { return nil }
+        let cleaned = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? nil : cleaned
+    }
 }
 
 extension AdminProfile {

@@ -213,7 +213,7 @@ struct SettingsRootView: View {
             HStack(spacing: 16) {
                 ProfileAvatarView(size: 64)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(auth.profile?.name ?? L10n.CommonAdministrator)
+                    Text(auth.profile?.displayName ?? L10n.CommonAdministrator)
                         .font(.title3.weight(.semibold))
                     Text(auth.profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
                         .font(.subheadline)

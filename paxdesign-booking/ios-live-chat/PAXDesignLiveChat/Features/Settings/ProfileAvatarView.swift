@@ -28,10 +28,10 @@ struct ProfileAvatarView: View {
         .frame(width: size, height: size)
         .clipShape(Circle())
         .overlay(Circle().stroke(PAXTheme.border, lineWidth: 1))
-        .accessibilityLabel(auth.profile?.name ?? L10n.CommonAdministrator)
+        .accessibilityLabel(auth.profile?.displayName ?? L10n.CommonAdministrator)
     }
 
     private var fallback: some View {
-        PAXAvatar(name: auth.profile?.name ?? "PAX", size: size)
+        PAXAvatar(name: auth.profile?.displayName ?? "PAX", size: size)
     }
 }

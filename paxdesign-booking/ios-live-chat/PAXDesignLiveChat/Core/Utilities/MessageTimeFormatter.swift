@@ -25,6 +25,36 @@ enum MessageTimeFormatter {
         return f
     }()
 
+    private static let relativeFormatter: RelativeDateTimeFormatter = {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .short
+        return formatter
+    }()
+
+    private static let isoWithFractionalSeconds: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return formatter
+    }()
+
+    private static let isoInternetDateTime: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
+
+    private static let fallbackUpdatedAtFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter
+    }()
+
+    private static let updatedAtCache: NSCache<NSString, NSDate> = {
+        let cache = NSCache<NSString, NSDate>()
+        cache.countLimit = 512
+        return cache
+    }()
+
     static func timeString(from ts: Int?) -> String? {
         guard let ts else { return nil }
         timeFormatter.locale = locale
@@ -60,29 +90,37 @@ enum MessageTimeFormatter {
     }
 
     static func relativeUpdatedLabel(from date: Date) -> String {
-        let relative = RelativeDateTimeFormatter()
-        relative.locale = locale
-        relative.unitsStyle = .short
-        return relative.localizedString(for: date, relativeTo: Date())
+        relativeFormatter.locale = locale
+        return relativeFormatter.localizedString(for: date, relativeTo: Date())
     }
 
     static func date(fromUpdatedAt raw: String) -> Date? {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
-        let iso = ISO8601DateFormatter()
-        iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let date = iso.date(from: trimmed) { return date }
-        iso.formatOptions = [.withInternetDateTime]
-        if let date = iso.date(from: trimmed) { return date }
+        if let cached = updatedAtCache.object(forKey: trimmed as NSString) {
+            return cached as Date
+        }
 
-        let fallback = DateFormatter()
-        fallback.locale = locale
-        fallback.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        if let date = fallback.date(from: trimmed) { return date }
+        if let date = isoWithFractionalSeconds.date(from: trimmed) {
+            updatedAtCache.setObject(date as NSDate, forKey: trimmed as NSString)
+            return date
+        }
+        if let date = isoInternetDateTime.date(from: trimmed) {
+            updatedAtCache.setObject(date as NSDate, forKey: trimmed as NSString)
+            return date
+        }
+
+        fallbackUpdatedAtFormatter.locale = locale
+        if let date = fallbackUpdatedAtFormatter.date(from: trimmed) {
+            updatedAtCache.setObject(date as NSDate, forKey: trimmed as NSString)
+            return date
+        }
 
         if let interval = TimeInterval(trimmed) {
-            return Date(timeIntervalSince1970: interval)
+            let date = Date(timeIntervalSince1970: interval)
+            updatedAtCache.setObject(date as NSDate, forKey: trimmed as NSString)
+            return date
         }
         return nil
     }

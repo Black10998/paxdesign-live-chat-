@@ -98,37 +98,37 @@ final class AppSettingsStore: ObservableObject {
     }
 
     @Published var appearanceMode: AppearanceMode {
-        didSet { UserDefaults.standard.set(appearanceMode.rawValue, forKey: Keys.appearance) }
+        didSet { DeferredUserDefaults.set(appearanceMode.rawValue, forKey: Keys.appearance) }
     }
     @Published var languageMode: LanguageMode {
-        didSet { UserDefaults.standard.set(languageMode.rawValue, forKey: Keys.language) }
+        didSet { DeferredUserDefaults.set(languageMode.rawValue, forKey: Keys.language) }
     }
     @Published var visualTheme: VisualTheme {
-        didSet { UserDefaults.standard.set(visualTheme.rawValue, forKey: Keys.visualTheme) }
+        didSet { DeferredUserDefaults.set(visualTheme.rawValue, forKey: Keys.visualTheme) }
     }
     @Published var aiSuggestionsEnabled: Bool {
-        didSet { UserDefaults.standard.set(aiSuggestionsEnabled, forKey: Keys.aiSuggestions) }
+        didSet { DeferredUserDefaults.set(aiSuggestionsEnabled, forKey: Keys.aiSuggestions) }
     }
     @Published var notificationsEnabled: Bool {
-        didSet { UserDefaults.standard.set(notificationsEnabled, forKey: Keys.notifications) }
+        didSet { DeferredUserDefaults.set(notificationsEnabled, forKey: Keys.notifications) }
     }
     @Published var incomingCallSoundEnabled: Bool {
-        didSet { UserDefaults.standard.set(incomingCallSoundEnabled, forKey: Keys.incomingSound) }
+        didSet { DeferredUserDefaults.set(incomingCallSoundEnabled, forKey: Keys.incomingSound) }
     }
     @Published var messageSoundEnabled: Bool {
-        didSet { UserDefaults.standard.set(messageSoundEnabled, forKey: Keys.messageSound) }
+        didSet { DeferredUserDefaults.set(messageSoundEnabled, forKey: Keys.messageSound) }
     }
     @Published var typingSoundEnabled: Bool {
-        didSet { UserDefaults.standard.set(typingSoundEnabled, forKey: Keys.typingSound) }
+        didSet { DeferredUserDefaults.set(typingSoundEnabled, forKey: Keys.typingSound) }
     }
     @Published var privacyBannerDismissed: Bool {
-        didSet { UserDefaults.standard.set(privacyBannerDismissed, forKey: Keys.privacyBanner) }
+        didSet { DeferredUserDefaults.set(privacyBannerDismissed, forKey: Keys.privacyBanner) }
     }
     @Published var ringtoneVolume: Float {
-        didSet { UserDefaults.standard.set(ringtoneVolume, forKey: Keys.volume) }
+        didSet { DeferredUserDefaults.set(ringtoneVolume, forKey: Keys.volume) }
     }
     @Published var sendSoundEnabled: Bool {
-        didSet { UserDefaults.standard.set(sendSoundEnabled, forKey: Keys.sendSound) }
+        didSet { DeferredUserDefaults.set(sendSoundEnabled, forKey: Keys.sendSound) }
     }
     @Published var readSessionIds: Set<String> {
         didSet {
@@ -136,23 +136,23 @@ final class AppSettingsStore: ObservableObject {
         }
     }
     @Published var compactListMode: Bool {
-        didSet { UserDefaults.standard.set(compactListMode, forKey: Keys.compactList) }
+        didSet { DeferredUserDefaults.set(compactListMode, forKey: Keys.compactList) }
     }
     @Published var showListTimestamps: Bool {
-        didSet { UserDefaults.standard.set(showListTimestamps, forKey: Keys.showTimestamps) }
+        didSet { DeferredUserDefaults.set(showListTimestamps, forKey: Keys.showTimestamps) }
     }
     @Published var profileImageData: Data? {
-        didSet { UserDefaults.standard.set(profileImageData, forKey: Keys.profileImage) }
+        didSet { DeferredUserDefaults.setData(profileImageData, forKey: Keys.profileImage) }
     }
     @Published var onboardingCompleted: Bool {
-        didSet { UserDefaults.standard.set(onboardingCompleted, forKey: Keys.onboarding) }
+        didSet { DeferredUserDefaults.set(onboardingCompleted, forKey: Keys.onboarding) }
     }
     /// Shown once after a fresh install — cleared when the app is deleted and reinstalled.
     @Published var firstLaunchOnboardingCompleted: Bool {
-        didSet { UserDefaults.standard.set(firstLaunchOnboardingCompleted, forKey: Keys.firstLaunchOnboarding) }
+        didSet { DeferredUserDefaults.set(firstLaunchOnboardingCompleted, forKey: Keys.firstLaunchOnboarding) }
     }
     @Published var accentColorPreset: AccentColorPreset {
-        didSet { UserDefaults.standard.set(accentColorPreset.rawValue, forKey: Keys.accentPreset) }
+        didSet { DeferredUserDefaults.set(accentColorPreset.rawValue, forKey: Keys.accentPreset) }
     }
 
     /// Resolved theme palette including optional accent override.
@@ -182,7 +182,7 @@ final class AppSettingsStore: ObservableObject {
         readPersistTask = Task { [readSessionIds] in
             try? await Task.sleep(nanoseconds: 400_000_000)
             guard !Task.isCancelled else { return }
-            UserDefaults.standard.set(Array(readSessionIds), forKey: Keys.readSessions)
+            DeferredUserDefaults.set(Array(readSessionIds), forKey: Keys.readSessions, delayNanoseconds: 0)
         }
     }
 
