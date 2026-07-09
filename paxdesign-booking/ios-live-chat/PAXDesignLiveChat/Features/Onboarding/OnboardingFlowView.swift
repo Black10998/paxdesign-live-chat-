@@ -196,7 +196,7 @@ struct OnboardingFlowView: View {
                     .font(.subheadline.weight(.semibold))
                 Text(granted ? "Aktiv" : "Nicht aktiv")
                     .font(.caption)
-                    .foregroundStyle(granted ? PAXTheme.success : PAXTheme.warning)
+                    .foregroundStyle(granted ? PAXTheme.success : PAXTheme.danger)
             }
             Spacer()
             if !granted {

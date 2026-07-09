@@ -141,7 +141,7 @@ struct StaffManagementView: View {
                     .foregroundStyle(PAXTheme.textSecondary)
                 Text(member.onboardingCompleted ? "Onboarding abgeschlossen" : "Onboarding ausstehend")
                     .font(.caption2)
-                    .foregroundStyle(member.onboardingCompleted ? PAXTheme.textTertiary : PAXTheme.warning)
+                    .foregroundStyle(member.onboardingCompleted ? PAXTheme.textTertiary : PAXTheme.danger)
             }
         }
         .padding(.vertical, 4)
