@@ -371,7 +371,7 @@ struct OnboardingFlowView: View {
                             "biometric_enabled": biometricAvailable ? enableBiometricProtection : false,
                             "pin_enabled": true,
                             "password_confirmed": securityPasswordValid
-                        )
+                        ]
                     )
                     if let updatedProfile {
                         auth.applyProfileUpdate(updatedProfile)
