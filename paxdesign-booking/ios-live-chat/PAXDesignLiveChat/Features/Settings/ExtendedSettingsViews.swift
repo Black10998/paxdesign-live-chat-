@@ -107,7 +107,7 @@ struct SupportSettingsView: View {
 
     var body: some View {
         List {
-            Section("Geführte Tour") {
+            Section {
                 Button("Tour neu starten") {
                     settings.dashboardTourCompleted = false
                     tourResetMessage = "Die Tour wird auf dem Dashboard erneut angezeigt."
@@ -118,6 +118,8 @@ struct SupportSettingsView: View {
                         .font(.caption)
                         .foregroundStyle(PAXTheme.textSecondary)
                 }
+            } header: {
+                Text("Geführte Tour")
             } footer: {
                 Text("Zeigt die Schritt-für-Schritt-Einführung erneut auf der Startseite.")
             }

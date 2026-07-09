@@ -112,7 +112,7 @@ struct DashboardView: View {
                 title: "Sprachwechsel",
                 description: "Über Einstellungen > Sprache wechseln Sie die komplette App-Sprache.",
                 pointerSymbol: "arrow.down.right",
-                alignment: .centerTrailing,
+                alignment: .trailing,
                 edgeInsets: EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16)
             ),
             DashboardTourStep(
