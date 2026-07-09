@@ -101,7 +101,7 @@ private struct SetPINView: View {
                     .multilineTextAlignment(.center)
                     .font(.title2.monospacedDigit())
                     .padding()
-                    .background(RoundedRectangle(cornerRadius: 14).fill(PAXTheme.surface))
+                    .paxGlassCardStyle(cornerRadius: 14, fillOpacity: 0.82, borderOpacity: 0.44, shadowOpacity: 0.1)
                     .padding(.horizontal, 32)
 
                 if let errorMessage {

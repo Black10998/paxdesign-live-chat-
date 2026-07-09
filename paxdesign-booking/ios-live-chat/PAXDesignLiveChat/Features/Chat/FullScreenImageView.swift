@@ -25,7 +25,8 @@ struct FullScreenImageView: View {
                     Text(L10n.ChatImageUnavailable)
                         .foregroundStyle(.white.opacity(0.7))
                 default:
-                    ProgressView().tint(.white)
+                    PAXTimelineLoaderCard(status: "Bild wird geladen")
+                        .frame(maxWidth: 260)
                 }
             }
             .padding(.top, 48)

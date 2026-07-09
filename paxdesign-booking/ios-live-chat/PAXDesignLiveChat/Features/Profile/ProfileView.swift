@@ -123,17 +123,23 @@ struct ProfileView: View {
         } else if auth.canManageUsers {
             Text(L10n.ProfileRoleManager)
                 .font(.caption2.weight(.bold))
-                .foregroundStyle(.purple)
+                .foregroundStyle(PAXTheme.accent)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
-                .background(Capsule().fill(Color.purple.opacity(0.12)))
+                .background(Capsule().fill(PAXTheme.accent.opacity(0.14)))
+                .overlay(Capsule().stroke(PAXTheme.accent.opacity(0.34), lineWidth: 1))
         } else {
             Text(L10n.ProfileRoleStaff)
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(PAXTheme.textSecondary)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
-                .background(Capsule().fill(PAXTheme.surface))
+                .background(
+                    Capsule()
+                        .fill(.ultraThinMaterial)
+                        .overlay(Capsule().fill(PAXTheme.surface.opacity(0.75)))
+                        .overlay(Capsule().stroke(PAXTheme.border.opacity(0.42), lineWidth: 1))
+                )
         }
     }
 

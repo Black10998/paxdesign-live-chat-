@@ -526,14 +526,7 @@ private struct DashboardTourOverlay: View {
             }
             .padding(14)
             .frame(maxWidth: 340, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(PAXTheme.surface)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 16, style: .continuous)
-                            .stroke(PAXTheme.border, lineWidth: 0.7)
-                    )
-            )
+            .paxGlassCardStyle(cornerRadius: 16, fillOpacity: 0.84, borderOpacity: 0.5, shadowOpacity: 0.22)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: step.alignment)
             .padding(step.edgeInsets)
         }

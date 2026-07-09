@@ -22,10 +22,7 @@ struct ImagePreviewSheet: View {
                 TextField("Beschriftung (optional)", text: $caption, axis: .vertical)
                     .lineLimit(1...3)
                     .padding(12)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .fill(PAXTheme.surfaceElevated)
-                    )
+                    .paxGlassCardStyle(cornerRadius: 12, fillOpacity: 0.78, borderOpacity: 0.4, shadowOpacity: 0.08)
                     .padding(.horizontal, 20)
 
                 Spacer()

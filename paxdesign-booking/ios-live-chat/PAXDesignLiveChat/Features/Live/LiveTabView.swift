@@ -80,11 +80,7 @@ struct LiveTabView: View {
             }
         }
         .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(PAXTheme.surface.opacity(0.94))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(PAXTheme.border, lineWidth: 1))
-        )
+        .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.82, borderOpacity: 0.44, shadowOpacity: 0.18)
     }
 
     private var emptyLiveState: some View {
@@ -101,6 +97,7 @@ struct LiveTabView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 48)
+        .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.12)
     }
 }
 
@@ -158,8 +155,16 @@ private struct LiveRequestCard: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(PAXTheme.accentSoft.opacity(0.55))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(PAXTheme.accent.opacity(0.3), lineWidth: 1))
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(PAXTheme.accentSoft.opacity(0.42))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .stroke(PAXTheme.accent.opacity(0.34), lineWidth: 1)
+                )
+                .shadow(color: .black.opacity(0.16), radius: 12, x: 0, y: 8)
         )
     }
 }

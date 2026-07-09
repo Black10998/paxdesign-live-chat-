@@ -385,3 +385,52 @@
     transition: opacity 0.2s ease;
   }
 }
+
+/* Unified interaction + glass consistency */
+.pax-live-app,
+.pax-live-app .pax-live-console {
+  background:
+    radial-gradient(circle at 8% -10%, rgba(59, 130, 246, 0.16), transparent 36%),
+    radial-gradient(circle at 94% 0%, rgba(16, 185, 129, 0.11), transparent 32%),
+    var(--plc-bg);
+}
+
+.pax-live-app .pax-live-console__bar,
+.pax-live-app .pax-live-console__list-pane,
+.pax-live-app .pax-live-console__chat-pane,
+.pax-live-app .pax-live-console__list-head,
+.pax-live-app .pax-live-console__thread-head,
+.pax-live-app .pax-live-console__composer-wrap {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.pax-live-app .pax-live-dashboard__item,
+.pax-live-app .pax-live-dashboard__msg-bubble,
+.pax-live-app .pax-live-app__action,
+.pax-live-app .pax-live-app__icon-btn,
+.pax-live-app .pax-live-app-banner__btn,
+.pax-live-app .pax-live-app-banner__close {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease;
+}
+
+@media (hover: hover) {
+  .pax-live-app .pax-live-dashboard__item:hover {
+    transform: translateY(-1px) scale(1.004);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pax-live-app *,
+  .pax-live-app *::before,
+  .pax-live-app *::after {
+    transition: none !important;
+    animation-duration: 1.2s !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -3262,3 +3262,61 @@ html.paxdesign-scroll-lock body {
   font-size: 0.68rem;
   color: var(--pax-icon-muted);
 }
+
+/* Unified glass consistency pass for booking/chat widget shell */
+#paxdesign-booking-root.paxdesign-booking,
+#paxdesign-booking-root.paxdesign-booking-wrapper {
+  background:
+    radial-gradient(circle at 6% -10%, rgba(255, 255, 255, 0.08), transparent 36%),
+    radial-gradient(circle at 94% 0%, rgba(126, 126, 126, 0.12), transparent 34%),
+    transparent;
+}
+
+#paxdesign-booking-root .paxdesign-booking-frame-inner,
+#paxdesign-booking-root .paxdesign-booking-card,
+#paxdesign-booking-root .paxdesign-booking-summary,
+#paxdesign-booking-root .paxdesign-booking-chat-message,
+#paxdesign-booking-root .paxdesign-booking-chat-input-wrap,
+#paxdesign-booking-root .paxdesign-booking-team-card,
+#paxdesign-booking-root .paxdesign-booking-service-card,
+#paxdesign-booking-root .paxdesign-booking-day,
+#paxdesign-booking-root .paxdesign-booking-timeslot {
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+#paxdesign-booking-root .paxdesign-booking-team-card,
+#paxdesign-booking-root .paxdesign-booking-service-card,
+#paxdesign-booking-root .paxdesign-booking-day,
+#paxdesign-booking-root .paxdesign-booking-timeslot,
+#paxdesign-booking-root .paxdesign-booking-chat-send,
+#paxdesign-booking-root .paxdesign-booking-chat-plus,
+#paxdesign-booking-root .paxdesign-booking-chat-notify,
+#paxdesign-booking-root .paxdesign-booking-chat-action,
+#paxdesign-booking-root .paxdesign-booking-button {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+}
+
+@media (hover: hover) {
+  #paxdesign-booking-root .paxdesign-booking-team-card:hover,
+  #paxdesign-booking-root .paxdesign-booking-service-card:hover,
+  #paxdesign-booking-root .paxdesign-booking-day:hover,
+  #paxdesign-booking-root .paxdesign-booking-timeslot:hover {
+    transform: translateY(-1px) scale(1.004);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #paxdesign-booking-root *,
+  #paxdesign-booking-root *::before,
+  #paxdesign-booking-root *::after {
+    transition: none !important;
+    animation-duration: 1.2s !important;
+    scroll-behavior: auto !important;
+  }
+}

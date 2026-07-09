@@ -55,7 +55,15 @@ struct NotificationPermissionPromptView: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(PAXTheme.surfaceElevated)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(PAXTheme.surface.opacity(0.8))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(PAXTheme.border.opacity(0.44), lineWidth: 1)
+                )
         )
         .padding(.horizontal, 12)
     }
@@ -68,9 +76,8 @@ struct PAXLoadingOverlay: View {
         ZStack {
             Color.black.opacity(0.35).ignoresSafeArea()
             VStack(spacing: 14) {
-                ProgressView()
-                    .controlSize(.large)
-                    .tint(PAXTheme.accent)
+                PAXTimelineLoaderCard(status: message)
+                    .frame(maxWidth: 280)
                 Text(message)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(PAXTheme.textSecondary)
@@ -78,7 +85,15 @@ struct PAXLoadingOverlay: View {
             .padding(28)
             .background(
                 RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(PAXTheme.surfaceElevated)
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(PAXTheme.surface.opacity(0.82))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .stroke(PAXTheme.border.opacity(0.42), lineWidth: 1)
+                    )
             )
         }
     }

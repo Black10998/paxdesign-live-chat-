@@ -10,8 +10,7 @@ struct PAXLaunchView: View {
 
     var body: some View {
         ZStack {
-            Color(.systemBackground)
-                .ignoresSafeArea()
+            PAXBackground()
 
             VStack(spacing: 22) {
                 Image(systemName: "bubble.left.and.bubble.right.fill")
@@ -30,6 +29,9 @@ struct PAXLaunchView: View {
                     .foregroundStyle(.secondary)
                     .opacity(labelOpacity)
             }
+            .padding(.horizontal, 26)
+            .padding(.vertical, 24)
+            .paxGlassCardStyle(cornerRadius: 22, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.2)
         }
         .onAppear { runLaunchSequence() }
     }

@@ -1091,6 +1091,16 @@
 .pax-admin .pa-test-result.ok    { color: #16a34a; }
 .pax-admin .pa-test-result.error { color: #dc2626; }
 
+.pax-admin .pa-inline-muted {
+  margin: 0;
+  color: #6b7280;
+}
+
+.pax-admin .pa-inline-error {
+  margin: 0;
+  color: #b91c1c;
+}
+
 /* ============================================================
    SORTABLE
    ============================================================ */
@@ -1286,6 +1296,14 @@
 
   .pax-admin .pa-table tbody tr:hover {
     background: rgba(15, 23, 42, 0.76);
+  }
+
+  .pax-admin .pa-inline-muted {
+    color: #94a3b8;
+  }
+
+  .pax-admin .pa-inline-error {
+    color: #fca5a5;
   }
 }
 

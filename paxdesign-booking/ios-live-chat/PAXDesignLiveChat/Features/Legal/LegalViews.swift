@@ -29,8 +29,7 @@ struct LegalDocumentView: View {
                                         .foregroundStyle(PAXTheme.textTertiary)
                                 }
                                 .padding(12)
-                                .background(PAXTheme.surface)
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .paxGlassCardStyle(cornerRadius: 12, fillOpacity: 0.8, borderOpacity: 0.44, shadowOpacity: 0.1)
                             }
                         }
                     }
@@ -45,6 +44,8 @@ struct LegalDocumentView: View {
                             .foregroundStyle(PAXTheme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
+                    .padding(14)
+                    .paxGlassCardStyle(cornerRadius: 14, fillOpacity: 0.8, borderOpacity: 0.42, shadowOpacity: 0.12)
                 }
             }
             .padding(20)
@@ -208,10 +209,14 @@ struct AboutView: View {
         }
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(PAXTheme.surface)
+                .fill(.ultraThinMaterial)
                 .overlay(
                     RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(PAXTheme.border, lineWidth: 1)
+                        .fill(PAXTheme.surface.opacity(0.82))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(PAXTheme.border.opacity(0.44), lineWidth: 1)
                 )
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
@@ -225,10 +230,7 @@ struct AboutView: View {
             featureRow(icon: "lock.shield", title: "Enterprise-Sicherheit", subtitle: "Verschlüsselte Verbindung")
         }
         .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(PAXTheme.surface.opacity(0.7))
-        )
+        .paxGlassCardStyle(cornerRadius: 16, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.12)
     }
 
     private func featureRow(icon: String, title: String, subtitle: String) -> some View {

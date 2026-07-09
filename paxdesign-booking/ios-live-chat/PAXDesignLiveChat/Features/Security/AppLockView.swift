@@ -112,10 +112,7 @@ struct AppLockView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 56)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(PAXTheme.surface.opacity(0.9))
-                        )
+                        .paxGlassCardStyle(cornerRadius: 16, fillOpacity: 0.82, borderOpacity: 0.44, shadowOpacity: 0.1)
                     }
                     .buttonStyle(PAXPressButtonStyle())
                 }

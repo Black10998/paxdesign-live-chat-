@@ -148,7 +148,18 @@ struct ChatView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
-        .background(PAXTheme.surface.opacity(0.65))
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(PAXTheme.surface.opacity(0.68))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(PAXTheme.border.opacity(0.4), lineWidth: 1)
+                )
+        )
     }
 
     private var customerOverviewPanel: some View {
@@ -182,7 +193,18 @@ struct ChatView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(PAXTheme.surface.opacity(0.55))
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(PAXTheme.surface.opacity(0.64))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(PAXTheme.border.opacity(0.4), lineWidth: 1)
+                )
+        )
         .overlay(alignment: .bottom) {
             Divider().background(PAXTheme.border.opacity(0.5))
         }

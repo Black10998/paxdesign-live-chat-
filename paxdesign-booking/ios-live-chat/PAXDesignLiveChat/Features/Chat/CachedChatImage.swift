@@ -55,8 +55,12 @@ struct CachedChatImage: View {
                 } else {
                     ZStack {
                         placeholder
-                        ProgressView()
-                            .scaleEffect(0.8)
+                        PAXSkeletonBlock(width: 54, height: 6, cornerRadius: 5)
+                            .frame(width: 74, height: 26)
+                            .background(
+                                Capsule(style: .continuous)
+                                    .fill(PAXTheme.surface.opacity(0.68))
+                            )
                     }
                 }
             }
@@ -76,7 +80,7 @@ struct CachedChatImage: View {
 
     private var placeholder: some View {
         RoundedRectangle(cornerRadius: PAXMessageStyle.imageCornerRadius, style: .continuous)
-            .fill(Color.white.opacity(0.06))
+            .fill(PAXTheme.surface.opacity(0.4))
             .frame(width: 140, height: 100)
             .overlay {
                 Image(systemName: "photo")

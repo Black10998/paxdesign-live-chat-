@@ -39,10 +39,7 @@ struct TeamChatView: View {
                 .lineLimit(1...5)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(PAXTheme.surfaceElevated)
-                )
+                .paxGlassCardStyle(cornerRadius: 22, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.08)
 
             Button {
                 Task { await thread.send(auth: auth) }
@@ -55,7 +52,7 @@ struct TeamChatView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .background(PAXTheme.surface.opacity(0.95))
+        .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.82, borderOpacity: 0.44, shadowOpacity: 0.16)
     }
 }
 
@@ -183,6 +180,7 @@ private struct StaffComposeRow: View {
 
                 if isOpening {
                     ProgressView()
+                        .controlSize(.small)
                 } else {
                     Image(systemName: "message.fill")
                         .foregroundStyle(PAXBrand.accent)

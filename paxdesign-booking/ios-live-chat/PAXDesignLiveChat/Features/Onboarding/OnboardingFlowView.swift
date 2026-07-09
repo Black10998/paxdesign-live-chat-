@@ -220,10 +220,7 @@ struct OnboardingFlowView: View {
             }
         }
         .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(PAXTheme.surface)
-        )
+        .paxGlassCardStyle(cornerRadius: 14, fillOpacity: 0.82, borderOpacity: 0.44, shadowOpacity: 0.14)
     }
 
     private func permissionRow(
@@ -264,11 +261,17 @@ struct OnboardingFlowView: View {
                 .keyboardType(.numberPad)
                 .textContentType(.oneTimeCode)
                 .textInputAutocapitalization(.never)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .paxGlassCardStyle(cornerRadius: 12, fillOpacity: 0.76, borderOpacity: 0.4, shadowOpacity: 0.08)
 
             SecureField("Sicherheitscode bestätigen", text: $securityPasswordConfirm)
                 .keyboardType(.numberPad)
                 .textContentType(.oneTimeCode)
                 .textInputAutocapitalization(.never)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .paxGlassCardStyle(cornerRadius: 12, fillOpacity: 0.76, borderOpacity: 0.4, shadowOpacity: 0.08)
 
             if biometricAvailable {
                 Toggle("Biometrische Anmeldung aktivieren (\(appLock.biometricTypeLabel))", isOn: $enableBiometricProtection)
@@ -283,10 +286,7 @@ struct OnboardingFlowView: View {
             }
         }
         .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(PAXTheme.background.opacity(0.65))
-        )
+        .paxGlassCardStyle(cornerRadius: 12, fillOpacity: 0.72, borderOpacity: 0.36, shadowOpacity: 0.08)
     }
 
     private var controlBar: some View {

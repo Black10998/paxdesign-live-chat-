@@ -30,7 +30,7 @@
 
   function renderDetailMessages($body, messages) {
     if (!messages || !messages.length) {
-      $body.html('<p style="margin:0;color:#6b7280;">Kein Verlauf vorhanden.</p>');
+      $body.html('<p class="pa-inline-muted">Kein Verlauf vorhanden.</p>');
       return;
     }
     var html = '';
@@ -68,7 +68,7 @@
     })
       .done(function (res) {
         if (!res || !res.success || !res.data) {
-          $body.html('<p style="margin:0;color:#b91c1c;">Verlauf konnte nicht geladen werden.</p>');
+          $body.html('<p class="pa-inline-error">Verlauf konnte nicht geladen werden.</p>');
           loadedDetails[id] = 'error';
           return;
         }
@@ -76,7 +76,7 @@
         loadedDetails[id] = 'done';
       })
       .fail(function () {
-        $body.html('<p style="margin:0;color:#b91c1c;">Netzwerkfehler beim Laden.</p>');
+        $body.html('<p class="pa-inline-error">Netzwerkfehler beim Laden.</p>');
         loadedDetails[id] = 'error';
       });
   }

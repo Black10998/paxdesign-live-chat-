@@ -157,8 +157,18 @@ private struct QuotePreviewView: View {
         }
         .padding(7)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.black.opacity(0.16))
-        .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .background(
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .fill(PAXTheme.surface.opacity(0.62))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .stroke(PAXTheme.border.opacity(0.36), lineWidth: 1)
+                )
+        )
     }
 
     private var previewText: String {
@@ -198,6 +208,17 @@ struct ReplyBarView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 7)
-        .background(PAXTheme.surface.opacity(0.95))
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(PAXTheme.surface.opacity(0.82))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(PAXTheme.border.opacity(0.42), lineWidth: 1)
+                )
+        )
     }
 }
