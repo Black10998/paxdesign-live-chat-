@@ -1,6 +1,8 @@
 import Foundation
 
 enum MessageTimeFormatter {
+    private static let formatterLock = NSLock()
+
     private static var locale: Locale {
         if let raw = UserDefaults.standard.string(forKey: "pax.settings.language"),
            raw != AppSettingsStore.LanguageMode.system.rawValue {
@@ -57,6 +59,8 @@ enum MessageTimeFormatter {
 
     static func timeString(from ts: Int?) -> String? {
         guard let ts else { return nil }
+        formatterLock.lock()
+        defer { formatterLock.unlock() }
         timeFormatter.locale = locale
         return timeFormatter.string(from: Date(timeIntervalSince1970: TimeInterval(ts)))
     }
@@ -66,6 +70,8 @@ enum MessageTimeFormatter {
         let date = Date(timeIntervalSince1970: TimeInterval(ts))
         if Calendar.current.isDateInToday(date) { return L10n.TimeToday }
         if Calendar.current.isDateInYesterday(date) { return L10n.TimeYesterday }
+        formatterLock.lock()
+        defer { formatterLock.unlock() }
         dayFormatter.locale = locale
         return dayFormatter.string(from: date)
     }
@@ -90,6 +96,8 @@ enum MessageTimeFormatter {
     }
 
     static func relativeUpdatedLabel(from date: Date) -> String {
+        formatterLock.lock()
+        defer { formatterLock.unlock() }
         relativeFormatter.locale = locale
         return relativeFormatter.localizedString(for: date, relativeTo: Date())
     }
@@ -101,6 +109,9 @@ enum MessageTimeFormatter {
         if let cached = updatedAtCache.object(forKey: trimmed as NSString) {
             return cached as Date
         }
+
+        formatterLock.lock()
+        defer { formatterLock.unlock() }
 
         if let date = isoWithFractionalSeconds.date(from: trimmed) {
             updatedAtCache.setObject(date as NSDate, forKey: trimmed as NSString)
