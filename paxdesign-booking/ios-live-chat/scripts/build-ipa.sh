@@ -9,6 +9,7 @@ CONFIGURATION="${CONFIGURATION:-Release}"
 DERIVED_DATA="${DERIVED_DATA:-$ROOT/build/DerivedData}"
 OUTPUT_DIR="${OUTPUT_DIR:-$ROOT/build/output}"
 IPA_NAME="${IPA_NAME:-PAXDesignLiveChat.ipa}"
+SIDELOAD_ENTITLEMENTS="$ROOT/PAXDesignLiveChat/PAXDesignLiveChat.sideload.entitlements"
 
 echo "==> Generating Xcode project"
 if ! command -v xcodegen >/dev/null 2>&1; then
@@ -17,7 +18,7 @@ if ! command -v xcodegen >/dev/null 2>&1; then
 fi
 xcodegen generate
 
-echo "==> Building unsigned iOS app ($CONFIGURATION)"
+echo "==> Building unsigned sideload iOS app ($CONFIGURATION)"
 rm -rf "$DERIVED_DATA" "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
@@ -32,11 +33,23 @@ xcodebuild \
   CODE_SIGN_IDENTITY="" \
   DEVELOPMENT_TEAM="" \
   PROVISIONING_PROFILE_SPECIFIER="" \
+  CODE_SIGN_ENTITLEMENTS="$SIDELOAD_ENTITLEMENTS" \
   build
 
 APP_PATH="$(find "$DERIVED_DATA/Build/Products/$CONFIGURATION-iphoneos" -maxdepth 1 -name '*.app' -type d | head -1)"
 if [[ -z "$APP_PATH" || ! -d "$APP_PATH" ]]; then
   echo "Built .app not found under $DERIVED_DATA" >&2
+  exit 1
+fi
+
+# Unsigned embedded app extensions cause immediate launch crashes on sideloaded devices.
+if [[ -d "$APP_PATH/PlugIns" ]]; then
+  echo "==> Removing unsigned PlugIns (required for sideload IPA stability)"
+  rm -rf "$APP_PATH/PlugIns"
+fi
+
+if [[ -d "$APP_PATH/PlugIns" ]]; then
+  echo "ERROR: PlugIns still present in app bundle" >&2
   exit 1
 fi
 
