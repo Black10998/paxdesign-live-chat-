@@ -47,12 +47,24 @@ final class CalendarStore: ObservableObject {
     static let shared = CalendarStore()
 
     @Published private(set) var events: [PAXCalendarEvent] = []
+    @Published private(set) var upcomingCache: [PAXCalendarEvent] = []
 
     private let storageKey = "pax.calendar.events"
 
     private init() {
         load()
-        if events.isEmpty { seedDefaults() }
+    }
+
+    func applyServerEvents(_ items: [PAXCalendarEvent], upcoming: [PAXCalendarEvent]) {
+        events = items.sorted { $0.startDate < $1.startDate }
+        upcomingCache = upcoming
+        persist()
+    }
+
+    func resetForLogout() {
+        events = []
+        upcomingCache = []
+        UserDefaults.standard.removeObject(forKey: storageKey)
     }
 
     func events(on day: Date) -> [PAXCalendarEvent] {
@@ -62,47 +74,42 @@ final class CalendarStore: ObservableObject {
     }
 
     func upcoming(limit: Int = 5) -> [PAXCalendarEvent] {
+        if !upcomingCache.isEmpty {
+            return Array(upcomingCache.prefix(limit))
+        }
         let now = Date()
         return events.filter { $0.endDate >= now }.sorted { $0.startDate < $1.startDate }.prefix(limit).map { $0 }
     }
 
-    func add(title: String, notes: String = "", startDate: Date, endDate: Date, category: PAXCalendarEvent.EventCategory = .appointment) {
-        let event = PAXCalendarEvent(title: title, notes: notes, startDate: startDate, endDate: endDate, category: category)
+    func add(title: String, notes: String = "", startDate: Date, endDate: Date, category: PAXCalendarEvent.EventCategory = .appointment, auth: AuthStore) async {
+        var event = PAXCalendarEvent(title: title, notes: notes, startDate: startDate, endDate: endDate, category: category)
+        if let api = auth.api {
+            if let saved = try? await api.savePlatformEvent(event.apiPayload()) {
+                event = PAXCalendarEvent(api: saved)
+            } else {
+                return
+            }
+        }
         events.append(event)
         events.sort { $0.startDate < $1.startDate }
+        upcomingCache = upcoming(limit: 8)
         persist()
-        ActivityLogService.shared.log(
+        await ActivityLogService.shared.log(
             category: L10n.ModuleCalendar,
             title: L10n.ActivityEventCreated,
             detail: title,
             module: PlatformModule.calendar.rawValue,
-            severity: .action
+            severity: .action,
+            auth: auth
         )
     }
 
-    func delete(_ event: PAXCalendarEvent) {
+    func delete(_ event: PAXCalendarEvent, auth: AuthStore) async {
+        if let api = auth.api {
+            _ = try? await api.deletePlatformEvent(id: event.id)
+        }
         events.removeAll { $0.id == event.id }
-        persist()
-    }
-
-    private func seedDefaults() {
-        let calendar = Calendar.current
-        let today = calendar.startOfDay(for: Date())
-        events = [
-            PAXCalendarEvent(
-                title: L10n.CalendarSampleTeamSync,
-                notes: L10n.CalendarSampleTeamSyncNote,
-                startDate: calendar.date(byAdding: .hour, value: 10, to: today) ?? today,
-                endDate: calendar.date(byAdding: .hour, value: 11, to: today) ?? today,
-                category: .meeting
-            ),
-            PAXCalendarEvent(
-                title: L10n.CalendarSampleFollowUp,
-                startDate: calendar.date(byAdding: .day, value: 1, to: today) ?? today,
-                endDate: calendar.date(byAdding: .day, value: 1, to: today) ?? today,
-                category: .appointment
-            )
-        ]
+        upcomingCache = upcoming(limit: 8)
         persist()
     }
 

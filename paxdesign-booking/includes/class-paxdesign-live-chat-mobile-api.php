@@ -295,6 +295,88 @@ class PAXdesign_Live_Chat_Mobile_API {
             'callback'            => array(__CLASS__, 'route_team_send_message'),
             'permission_callback' => $auth,
         ));
+
+        self::register_platform_routes($auth);
+    }
+
+    /**
+     * @param callable $auth
+     */
+    private static function register_platform_routes($auth) {
+        $base = '/live-admin/platform';
+
+        register_rest_route(self::REST_NAMESPACE, $base . '/dashboard', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array(__CLASS__, 'route_platform_dashboard'),
+            'permission_callback' => $auth,
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/reports', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array(__CLASS__, 'route_platform_reports'),
+            'permission_callback' => $auth,
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/employee', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array(__CLASS__, 'route_platform_employee'),
+            'permission_callback' => $auth,
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/notifications', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array(__CLASS__, 'route_platform_notifications'),
+            'permission_callback' => $auth,
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/permissions', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array(__CLASS__, 'route_platform_permissions'),
+            'permission_callback' => $auth,
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/search', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array(__CLASS__, 'route_platform_search'),
+            'permission_callback' => $auth,
+            'args' => array('q' => array('required' => false, 'sanitize_callback' => 'sanitize_text_field')),
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/tasks', array(
+            array('methods' => WP_REST_Server::READABLE, 'callback' => array(__CLASS__, 'route_platform_tasks_list'), 'permission_callback' => $auth),
+            array('methods' => WP_REST_Server::CREATABLE, 'callback' => array(__CLASS__, 'route_platform_task_save'), 'permission_callback' => $auth),
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/tasks/(?P<id>[a-zA-Z0-9_\-]+)', array(
+            'methods' => WP_REST_Server::DELETABLE,
+            'callback' => array(__CLASS__, 'route_platform_task_delete'),
+            'permission_callback' => $auth,
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/calendar', array(
+            array('methods' => WP_REST_Server::READABLE, 'callback' => array(__CLASS__, 'route_platform_calendar_list'), 'permission_callback' => $auth),
+            array('methods' => WP_REST_Server::CREATABLE, 'callback' => array(__CLASS__, 'route_platform_calendar_save'), 'permission_callback' => $auth),
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/calendar/(?P<id>[a-zA-Z0-9_\-]+)', array(
+            'methods' => WP_REST_Server::DELETABLE,
+            'callback' => array(__CLASS__, 'route_platform_calendar_delete'),
+            'permission_callback' => $auth,
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/files', array(
+            array('methods' => WP_REST_Server::READABLE, 'callback' => array(__CLASS__, 'route_platform_files_list'), 'permission_callback' => $auth),
+            array('methods' => WP_REST_Server::CREATABLE, 'callback' => array(__CLASS__, 'route_platform_file_save'), 'permission_callback' => $auth),
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/files/(?P<id>[a-zA-Z0-9_\-]+)', array(
+            'methods' => WP_REST_Server::DELETABLE,
+            'callback' => array(__CLASS__, 'route_platform_file_delete'),
+            'permission_callback' => $auth,
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/activity', array(
+            array('methods' => WP_REST_Server::READABLE, 'callback' => array(__CLASS__, 'route_platform_activity_list'), 'permission_callback' => $auth),
+            array('methods' => WP_REST_Server::CREATABLE, 'callback' => array(__CLASS__, 'route_platform_activity_append'), 'permission_callback' => $auth),
+            array('methods' => WP_REST_Server::DELETABLE, 'callback' => array(__CLASS__, 'route_platform_activity_clear'), 'permission_callback' => $auth),
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/settings', array(
+            array('methods' => WP_REST_Server::READABLE, 'callback' => array(__CLASS__, 'route_platform_settings_get'), 'permission_callback' => $auth),
+            array('methods' => WP_REST_Server::CREATABLE, 'callback' => array(__CLASS__, 'route_platform_settings_save'), 'permission_callback' => $auth),
+        ));
+        register_rest_route(self::REST_NAMESPACE, $base . '/sync', array(
+            'methods' => WP_REST_Server::READABLE,
+            'callback' => array(__CLASS__, 'route_platform_sync'),
+            'permission_callback' => $auth,
+        ));
     }
 
     public static function permission_admin() {
@@ -345,6 +427,7 @@ class PAXdesign_Live_Chat_Mobile_API {
             'plugin_ver'      => PAXDESIGN_BOOKING_VERSION,
             'is_super_admin'  => PAXdesign_Live_Chat_Permissions::is_super_admin($user),
             'permissions'     => $perms,
+            'module_permissions' => PAXdesign_Platform_Store::module_permissions_for_user($user),
             'onboarding_completed' => (bool) get_user_meta((int) $user->ID, 'pax_live_onboarding_completed', true),
         ));
     }
@@ -729,6 +812,148 @@ class PAXdesign_Live_Chat_Mobile_API {
             $request['id'],
             (int) wp_get_current_user()->ID,
             $content
+        ));
+    }
+
+    public static function route_platform_dashboard(WP_REST_Request $request) {
+        return self::respond(PAXdesign_Platform_Store::dashboard_payload());
+    }
+
+    public static function route_platform_reports(WP_REST_Request $request) {
+        return self::respond(PAXdesign_Platform_Store::reports_payload());
+    }
+
+    public static function route_platform_employee(WP_REST_Request $request) {
+        return self::respond(PAXdesign_Platform_Store::employee_payload((int) wp_get_current_user()->ID));
+    }
+
+    public static function route_platform_notifications(WP_REST_Request $request) {
+        return self::respond(PAXdesign_Platform_Store::notifications_summary());
+    }
+
+    public static function route_platform_permissions(WP_REST_Request $request) {
+        return self::respond(array(
+            'permissions' => PAXdesign_Live_Chat_Permissions::get_effective_permissions(wp_get_current_user()),
+            'module_permissions' => PAXdesign_Platform_Store::module_permissions_for_user(wp_get_current_user()),
+        ));
+    }
+
+    public static function route_platform_search(WP_REST_Request $request) {
+        return self::respond(array(
+            'results' => PAXdesign_Platform_Store::search((string) $request->get_param('q')),
+        ));
+    }
+
+    public static function route_platform_tasks_list(WP_REST_Request $request) {
+        return self::respond(array('tasks' => PAXdesign_Platform_Store::list_tasks()));
+    }
+
+    public static function route_platform_task_save(WP_REST_Request $request) {
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        return self::respond(PAXdesign_Platform_Store::save_task($params));
+    }
+
+    public static function route_platform_task_delete(WP_REST_Request $request) {
+        return self::respond(PAXdesign_Platform_Store::delete_task($request['id']));
+    }
+
+    public static function route_platform_calendar_list(WP_REST_Request $request) {
+        return self::respond(array(
+            'events' => PAXdesign_Platform_Store::list_events(),
+            'upcoming' => PAXdesign_Platform_Store::upcoming_events(8),
+        ));
+    }
+
+    public static function route_platform_calendar_save(WP_REST_Request $request) {
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        return self::respond(PAXdesign_Platform_Store::save_event($params));
+    }
+
+    public static function route_platform_calendar_delete(WP_REST_Request $request) {
+        return self::respond(PAXdesign_Platform_Store::delete_event($request['id']));
+    }
+
+    public static function route_platform_files_list(WP_REST_Request $request) {
+        return self::respond(array('files' => PAXdesign_Platform_Store::list_files()));
+    }
+
+    public static function route_platform_file_save(WP_REST_Request $request) {
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        return self::respond(PAXdesign_Platform_Store::save_file($params));
+    }
+
+    public static function route_platform_file_delete(WP_REST_Request $request) {
+        return self::respond(PAXdesign_Platform_Store::delete_file($request['id']));
+    }
+
+    public static function route_platform_activity_list(WP_REST_Request $request) {
+        $module = (string) $request->get_param('module');
+        return self::respond(array('entries' => PAXdesign_Platform_Store::list_activity($module)));
+    }
+
+    public static function route_platform_activity_append(WP_REST_Request $request) {
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        return self::respond(PAXdesign_Platform_Store::append_activity(
+            isset($params['module']) ? (string) $params['module'] : 'system',
+            isset($params['title']) ? (string) $params['title'] : '',
+            isset($params['detail']) ? (string) $params['detail'] : '',
+            isset($params['severity']) ? (string) $params['severity'] : 'info',
+            isset($params['category']) ? (string) $params['category'] : ''
+        ));
+    }
+
+    public static function route_platform_activity_clear(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
+        return self::respond(array('cleared' => PAXdesign_Platform_Store::clear_activity()));
+    }
+
+    public static function route_platform_settings_get(WP_REST_Request $request) {
+        $user_id = (int) wp_get_current_user()->ID;
+        return self::respond(array('settings' => PAXdesign_Platform_Store::get_user_settings($user_id)));
+    }
+
+    public static function route_platform_settings_save(WP_REST_Request $request) {
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        $settings = isset($params['settings']) && is_array($params['settings']) ? $params['settings'] : $params;
+        $user_id = (int) wp_get_current_user()->ID;
+        return self::respond(array('settings' => PAXdesign_Platform_Store::save_user_settings($user_id, $settings)));
+    }
+
+    public static function route_platform_sync(WP_REST_Request $request) {
+        $user_id = (int) wp_get_current_user()->ID;
+        return self::respond(array(
+            'dashboard'    => PAXdesign_Platform_Store::dashboard_payload(),
+            'reports'      => PAXdesign_Platform_Store::reports_payload(),
+            'employee'     => PAXdesign_Platform_Store::employee_payload($user_id),
+            'notifications'=> PAXdesign_Platform_Store::notifications_summary(),
+            'tasks'        => PAXdesign_Platform_Store::list_tasks(),
+            'calendar'     => PAXdesign_Platform_Store::list_events(),
+            'upcoming'     => PAXdesign_Platform_Store::upcoming_events(8),
+            'files'        => PAXdesign_Platform_Store::list_files(),
+            'activity'     => PAXdesign_Platform_Store::list_activity(),
+            'settings'     => PAXdesign_Platform_Store::get_user_settings($user_id),
+            'permissions'  => array(
+                'permissions' => PAXdesign_Live_Chat_Permissions::get_effective_permissions(wp_get_current_user()),
+                'module_permissions' => PAXdesign_Platform_Store::module_permissions_for_user(wp_get_current_user()),
+            ),
         ));
     }
 }

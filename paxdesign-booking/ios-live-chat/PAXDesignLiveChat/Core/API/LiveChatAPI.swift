@@ -472,6 +472,185 @@ final class LiveChatAPI {
         let body = try JSONSerialization.data(withJSONObject: ["user_id": userId])
         _ = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "onboarding-reset", as: EmptyResponse.self)
     }
+
+    // MARK: - Platform modules
+
+    func fetchPlatformSync() async throws -> PlatformSyncResponse {
+        guard let url = liveAdminURL(path: "platform/sync") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "platform-sync", as: PlatformSyncResponse.self)
+    }
+
+    func fetchPlatformDashboard() async throws -> PlatformDashboardPayload {
+        guard let url = liveAdminURL(path: "platform/dashboard") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "platform-dashboard", as: PlatformDashboardPayload.self)
+    }
+
+    func fetchPlatformReports() async throws -> PlatformReportsPayload {
+        guard let url = liveAdminURL(path: "platform/reports") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "platform-reports", as: PlatformReportsPayload.self)
+    }
+
+    func fetchPlatformEmployee() async throws -> PlatformEmployeePayload {
+        guard let url = liveAdminURL(path: "platform/employee") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "platform-employee", as: PlatformEmployeePayload.self)
+    }
+
+    func fetchPlatformNotifications() async throws -> PlatformNotificationsSummary {
+        guard let url = liveAdminURL(path: "platform/notifications") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "platform-notifications", as: PlatformNotificationsSummary.self)
+    }
+
+    func platformSearch(query: String) async throws -> PlatformSearchResponse {
+        guard let url = liveAdminURL(path: "platform/search", query: [URLQueryItem(name: "q", value: query)]) else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "platform-search", as: PlatformSearchResponse.self)
+    }
+
+    func fetchPlatformTasks() async throws -> [APITaskRecord] {
+        guard let url = liveAdminURL(path: "platform/tasks") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        struct Response: Codable { let tasks: [APITaskRecord] }
+        let response = try await perform(authRequest(url: url), endpoint: "platform-tasks", as: Response.self)
+        return response.tasks
+    }
+
+    func savePlatformTask(_ payload: [String: Any]) async throws -> APITaskRecord {
+        guard let url = liveAdminURL(path: "platform/tasks") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "platform-task-save", as: APITaskRecord.self)
+    }
+
+    func deletePlatformTask(id: String) async throws {
+        guard let url = liveAdminURL(path: "platform/tasks/\(id)") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        _ = try await perform(authRequest(url: url, method: "DELETE"), endpoint: "platform-task-delete", as: EmptyResponse.self)
+    }
+
+    func fetchPlatformCalendar() async throws -> (events: [APICalendarRecord], upcoming: [APICalendarRecord]) {
+        guard let url = liveAdminURL(path: "platform/calendar") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        struct Response: Codable {
+            let events: [APICalendarRecord]
+            let upcoming: [APICalendarRecord]
+        }
+        let response = try await perform(authRequest(url: url), endpoint: "platform-calendar", as: Response.self)
+        return (response.events, response.upcoming)
+    }
+
+    func savePlatformEvent(_ payload: [String: Any]) async throws -> APICalendarRecord {
+        guard let url = liveAdminURL(path: "platform/calendar") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "platform-calendar-save", as: APICalendarRecord.self)
+    }
+
+    func deletePlatformEvent(id: String) async throws {
+        guard let url = liveAdminURL(path: "platform/calendar/\(id)") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        _ = try await perform(authRequest(url: url, method: "DELETE"), endpoint: "platform-calendar-delete", as: EmptyResponse.self)
+    }
+
+    func fetchPlatformFiles() async throws -> [APIFileRecord] {
+        guard let url = liveAdminURL(path: "platform/files") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        struct Response: Codable { let files: [APIFileRecord] }
+        let response = try await perform(authRequest(url: url), endpoint: "platform-files", as: Response.self)
+        return response.files
+    }
+
+    func savePlatformFile(_ payload: [String: Any]) async throws -> APIFileRecord {
+        guard let url = liveAdminURL(path: "platform/files") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "platform-file-save", as: APIFileRecord.self)
+    }
+
+    func deletePlatformFile(id: String) async throws {
+        guard let url = liveAdminURL(path: "platform/files/\(id)") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        _ = try await perform(authRequest(url: url, method: "DELETE"), endpoint: "platform-file-delete", as: EmptyResponse.self)
+    }
+
+    func fetchPlatformActivity(module: String? = nil) async throws -> [APIActivityRecord] {
+        var query: [URLQueryItem] = []
+        if let module, !module.isEmpty {
+            query.append(URLQueryItem(name: "module", value: module))
+        }
+        guard let url = liveAdminURL(path: "platform/activity", query: query) else {
+            throw LiveChatAPIError.invalidURL
+        }
+        struct Response: Codable { let entries: [APIActivityRecord] }
+        let response = try await perform(authRequest(url: url), endpoint: "platform-activity", as: Response.self)
+        return response.entries
+    }
+
+    func appendPlatformActivity(
+        module: String,
+        title: String,
+        detail: String = "",
+        severity: String = "info",
+        category: String = ""
+    ) async throws -> APIActivityRecord {
+        guard let url = liveAdminURL(path: "platform/activity") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let payload: [String: Any] = [
+            "module": module,
+            "title": title,
+            "detail": detail,
+            "severity": severity,
+            "category": category.isEmpty ? module : category,
+        ]
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "platform-activity-append", as: APIActivityRecord.self)
+    }
+
+    func clearPlatformActivity() async throws {
+        guard let url = liveAdminURL(path: "platform/activity") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        _ = try await perform(authRequest(url: url, method: "DELETE"), endpoint: "platform-activity-clear", as: EmptyResponse.self)
+    }
+
+    func fetchPlatformSettings() async throws -> [String: Bool] {
+        guard let url = liveAdminURL(path: "platform/settings") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        struct Response: Codable { let settings: [String: Bool] }
+        let response = try await perform(authRequest(url: url), endpoint: "platform-settings-get", as: Response.self)
+        return response.settings
+    }
+
+    func savePlatformSettings(_ settings: [String: Bool]) async throws -> [String: Bool] {
+        guard let url = liveAdminURL(path: "platform/settings") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONSerialization.data(withJSONObject: ["settings": settings])
+        struct Response: Codable { let settings: [String: Bool] }
+        let response = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "platform-settings-save", as: Response.self)
+        return response.settings
+    }
 }
 
 private struct WPErrorResponse: Codable {

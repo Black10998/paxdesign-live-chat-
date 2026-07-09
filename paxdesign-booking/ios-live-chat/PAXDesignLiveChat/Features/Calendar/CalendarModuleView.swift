@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct CalendarModuleView: View {
+    @EnvironmentObject private var auth: AuthStore
     @StateObject private var store = CalendarStore.shared
     @State private var selectedDate = Date()
     @State private var showAdd = false
@@ -24,7 +25,11 @@ struct CalendarModuleView: View {
                         calendarRow(event)
                     }
                     .onDelete { indexSet in
-                        indexSet.map { dayEvents[$0] }.forEach(store.delete)
+                        Task {
+                            for event in indexSet.map({ dayEvents[$0] }) {
+                                await store.delete(event, auth: auth)
+                            }
+                        }
                     }
                 }
             }
@@ -46,9 +51,11 @@ struct CalendarModuleView: View {
                     Image(systemName: "slider.horizontal.3")
                 }
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button { showAdd = true } label: {
-                    Image(systemName: "plus")
+            if auth.canManageCalendar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showAdd = true } label: {
+                        Image(systemName: "plus")
+                    }
                 }
             }
         }
@@ -58,6 +65,9 @@ struct CalendarModuleView: View {
             Button(L10n.CommonSave) { saveEvent() }
         } message: {
             Text(L10n.CalendarAddEventHint)
+        }
+        .refreshable {
+            await PlatformSyncService.shared.sync(auth: auth)
         }
     }
 
@@ -82,9 +92,11 @@ struct CalendarModuleView: View {
         guard !title.isEmpty else { return }
         let start = Calendar.current.date(bySettingHour: 10, minute: 0, second: 0, of: selectedDate) ?? selectedDate
         let end = Calendar.current.date(byAdding: .hour, value: 1, to: start) ?? start
-        store.add(title: title, notes: newNotes, startDate: start, endDate: end)
-        resetForm()
-        PAXHaptics.success()
+        Task {
+            await store.add(title: title, notes: newNotes, startDate: start, endDate: end, auth: auth)
+            resetForm()
+            PAXHaptics.success()
+        }
     }
 
     private func resetForm() {

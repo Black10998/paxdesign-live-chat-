@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct FilesModuleView: View {
+    @EnvironmentObject private var auth: AuthStore
     @StateObject private var store = FileLibraryStore.shared
     @State private var selectedCategory: PAXDocumentItem.DocumentCategory?
 
@@ -39,7 +40,11 @@ struct FilesModuleView: View {
                         }
                     }
                     .onDelete { indexSet in
-                        indexSet.map { visibleDocuments[$0] }.forEach(store.delete)
+                        Task {
+                            for document in indexSet.map({ visibleDocuments[$0] }) {
+                                await store.delete(document, auth: auth)
+                            }
+                        }
                     }
                 }
             }
@@ -55,6 +60,9 @@ struct FilesModuleView: View {
                     Image(systemName: "slider.horizontal.3")
                 }
             }
+        }
+        .refreshable {
+            await PlatformSyncService.shared.sync(auth: auth)
         }
     }
 

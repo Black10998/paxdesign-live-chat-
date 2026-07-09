@@ -40,6 +40,7 @@ struct PAXDesignLiveChatApp: App {
                             await permissions.refreshStatuses()
                             permissions.presentNotificationPromptIfNeeded(isLoggedIn: true)
                             await DeviceSessionService.shared.registerWithPush(auth: auth)
+                            await PlatformSyncService.shared.sync(auth: auth)
                         }
                     } else {
                         coordinator.stop()
@@ -55,6 +56,7 @@ struct PAXDesignLiveChatApp: App {
                         await auth.refreshProfile()
                         await coordinator.refreshSessions(auth: auth)
                         await permissions.refreshStatuses()
+                        await PlatformSyncService.shared.sync(auth: auth)
                     }
                 }
                 .onReceive(NotificationCenter.default.publisher(for: .paxPushReceived)) { note in
@@ -76,6 +78,7 @@ struct PAXDesignLiveChatApp: App {
             DeviceSessionService.shared.start(auth: auth)
             permissions.presentNotificationPromptIfNeeded(isLoggedIn: true)
             await DeviceSessionService.shared.registerWithPush(auth: auth)
+            await PlatformSyncService.shared.sync(auth: auth)
         }
     }
 

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct ActivityLogView: View {
+    @EnvironmentObject private var auth: AuthStore
     @StateObject private var log = ActivityLogService.shared
     @State private var filterModule: String?
 
@@ -44,14 +45,19 @@ struct ActivityLogView: View {
                     Image(systemName: "slider.horizontal.3")
                 }
             }
-            if !log.entries.isEmpty {
+            if !log.entries.isEmpty, auth.canManageUsers {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(L10n.ActivityLogClear, role: .destructive) {
-                        log.clear()
-                        PAXHaptics.warning()
+                        Task {
+                            await log.clear(auth: auth)
+                            PAXHaptics.warning()
+                        }
                     }
                 }
             }
+        }
+        .refreshable {
+            await PlatformSyncService.shared.sync(auth: auth)
         }
     }
 

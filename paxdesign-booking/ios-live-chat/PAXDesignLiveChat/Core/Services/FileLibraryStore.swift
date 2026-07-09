@@ -54,38 +54,48 @@ final class FileLibraryStore: ObservableObject {
 
     private init() {
         load()
-        if documents.isEmpty { seedDefaults() }
+    }
+
+    func applyServerFiles(_ items: [PAXDocumentItem]) {
+        documents = items
+        persist()
+    }
+
+    func resetForLogout() {
+        documents = []
+        UserDefaults.standard.removeObject(forKey: storageKey)
     }
 
     func documents(in category: PAXDocumentItem.DocumentCategory) -> [PAXDocumentItem] {
         documents.filter { $0.category == category }.sorted { $0.modifiedAt > $1.modifiedAt }
     }
 
-    func add(name: String, category: PAXDocumentItem.DocumentCategory, sizeLabel: String, detail: String = "") {
-        let doc = PAXDocumentItem(name: name, category: category, sizeLabel: sizeLabel, detail: detail)
+    func add(name: String, category: PAXDocumentItem.DocumentCategory, sizeLabel: String, detail: String = "", auth: AuthStore) async {
+        var doc = PAXDocumentItem(name: name, category: category, sizeLabel: sizeLabel, detail: detail)
+        if let api = auth.api {
+            if let saved = try? await api.savePlatformFile(doc.apiPayload()) {
+                doc = PAXDocumentItem(api: saved)
+            } else {
+                return
+            }
+        }
         documents.insert(doc, at: 0)
         persist()
-        ActivityLogService.shared.log(
+        await ActivityLogService.shared.log(
             category: L10n.ModuleFiles,
             title: L10n.ActivityFileAdded,
             detail: name,
             module: PlatformModule.files.rawValue,
-            severity: .action
+            severity: .action,
+            auth: auth
         )
     }
 
-    func delete(_ document: PAXDocumentItem) {
+    func delete(_ document: PAXDocumentItem, auth: AuthStore) async {
+        if let api = auth.api {
+            _ = try? await api.deletePlatformFile(id: document.id)
+        }
         documents.removeAll { $0.id == document.id }
-        persist()
-    }
-
-    private func seedDefaults() {
-        documents = [
-            PAXDocumentItem(name: "Service Agreement Template.pdf", category: .contracts, sizeLabel: "248 KB", detail: L10n.FilesSampleContract),
-            PAXDocumentItem(name: "Live Chat Onboarding.pdf", category: .guides, sizeLabel: "1.2 MB", detail: L10n.FilesSampleGuide),
-            PAXDocumentItem(name: "Q3 Invoice Summary.xlsx", category: .invoices, sizeLabel: "84 KB", detail: L10n.FilesSampleInvoice),
-            PAXDocumentItem(name: "Brand Assets.zip", category: .media, sizeLabel: "4.8 MB", detail: L10n.FilesSampleMedia)
-        ]
         persist()
     }
 

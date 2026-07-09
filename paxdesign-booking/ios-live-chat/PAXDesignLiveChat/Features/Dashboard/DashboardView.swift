@@ -7,6 +7,7 @@ struct DashboardView: View {
     @StateObject private var settings = AppSettingsStore.shared
     @StateObject private var tasks = TaskStore.shared
     @StateObject private var calendar = CalendarStore.shared
+    @StateObject private var platform = PlatformSyncService.shared
     @State private var showSearch = false
 
     private var customerSessions: [LiveSession] {
@@ -18,6 +19,9 @@ struct DashboardView: View {
     }
 
     private var chartData: [DashboardMetric] {
+        if let serverChart = platform.dashboard?.activityChart, !serverChart.isEmpty {
+            return serverChart.map { DashboardMetric(label: formatChartLabel($0.label), value: $0.value) }
+        }
         let calendar = Calendar.current
         return (0..<7).reversed().compactMap { offset -> DashboardMetric? in
             guard let day = calendar.date(byAdding: .day, value: -offset, to: Date()) else { return nil }
@@ -32,9 +36,13 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 20) {
                 heroHeader
                 metricsGrid
-                activityChart
+                if PlatformModuleSettingsStore.shared.dashboardShowChart {
+                    activityChart
+                }
                 quickModules
-                upcomingSection
+                if PlatformModuleSettingsStore.shared.dashboardShowUpcoming {
+                    upcomingSection
+                }
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
@@ -60,15 +68,19 @@ struct DashboardView: View {
         }
         .refreshable {
             await coordinator.refreshSessions(auth: auth)
+            await platform.sync(auth: auth)
             WidgetDataStore.shared.syncFromApp()
         }
         .onAppear {
             WidgetDataStore.shared.syncFromApp()
-            ActivityLogService.shared.log(
-                category: L10n.ModuleDashboard,
-                title: L10n.ActivityDashboardOpened,
-                module: PlatformModule.dashboard.rawValue
-            )
+            Task {
+                await ActivityLogService.shared.log(
+                    category: L10n.ModuleDashboard,
+                    title: L10n.ActivityDashboardOpened,
+                    module: PlatformModule.dashboard.rawValue,
+                    auth: auth
+                )
+            }
         }
     }
 
@@ -84,10 +96,30 @@ struct DashboardView: View {
 
     private var metricsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            DashboardMetricCard(title: L10n.DashboardMetricSessions, value: "\(customerSessions.count)", tint: .blue, icon: "bubble.left.and.bubble.right.fill")
-            DashboardMetricCard(title: L10n.DashboardMetricUnread, value: "\(unreadCount)", tint: .orange, icon: "envelope.badge.fill")
-            DashboardMetricCard(title: L10n.DashboardMetricLive, value: "\(coordinator.liveCount)", tint: .red, icon: "bell.and.waves.left.and.right.fill")
-            DashboardMetricCard(title: L10n.DashboardMetricTasks, value: "\(tasks.openCount)", tint: .green, icon: "checklist")
+            DashboardMetricCard(
+                title: L10n.DashboardMetricSessions,
+                value: "\(platform.dashboard?.sessionsTotal ?? customerSessions.count)",
+                tint: .blue,
+                icon: "bubble.left.and.bubble.right.fill"
+            )
+            DashboardMetricCard(
+                title: L10n.DashboardMetricUnread,
+                value: "\(unreadCount)",
+                tint: .orange,
+                icon: "envelope.badge.fill"
+            )
+            DashboardMetricCard(
+                title: L10n.DashboardMetricLive,
+                value: "\(platform.dashboard?.liveCount ?? coordinator.liveCount)",
+                tint: .red,
+                icon: "bell.and.waves.left.and.right.fill"
+            )
+            DashboardMetricCard(
+                title: L10n.DashboardMetricTasks,
+                value: "\(platform.dashboard?.openTasks ?? tasks.openCount)",
+                tint: .green,
+                icon: "checklist"
+            )
         }
     }
 
@@ -165,6 +197,15 @@ struct DashboardView: View {
                 }
             }
         }
+    }
+
+    private func formatChartLabel(_ raw: String) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        if let date = formatter.date(from: raw) {
+            return MessageTimeFormatter.relativeUpdatedLabel(from: date.timeIntervalSince1970) ?? raw
+        }
+        return raw
     }
 }
 

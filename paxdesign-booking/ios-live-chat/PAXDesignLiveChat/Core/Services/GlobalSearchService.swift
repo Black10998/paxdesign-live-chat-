@@ -24,10 +24,71 @@ enum GlobalSearchService {
         auth: AuthStore,
         coordinator: ChatCoordinator,
         teamCoordinator: TeamMessagingCoordinator
-    ) -> [GlobalSearchResult] {
-        let q = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+    ) async -> [GlobalSearchResult] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !q.isEmpty else { return [] }
 
+        if let api = auth.api, let response = try? await api.platformSearch(query: q) {
+            return mapServerResults(response.results, auth: auth)
+        }
+
+        return localSearch(
+            query: q,
+            auth: auth,
+            coordinator: coordinator,
+            teamCoordinator: teamCoordinator
+        )
+    }
+
+    private static func mapServerResults(_ hits: [PlatformSearchHit], auth: AuthStore) -> [GlobalSearchResult] {
+        hits.compactMap { hit in
+            let module = PlatformModule(rawValue: hit.module) ?? moduleForType(hit.type)
+            guard PlatformModuleAccess.isAvailable(module, auth: auth) else { return nil }
+
+            let destination: GlobalSearchResult.SearchDestination
+            switch hit.type {
+            case "session":
+                destination = .session(hit.id)
+            case "task":
+                destination = .task(hit.id)
+            case "event":
+                destination = .event(hit.id)
+            case "document":
+                destination = .document(hit.id)
+            case "activity":
+                destination = .activity(hit.id)
+            default:
+                destination = .module(module)
+            }
+
+            return GlobalSearchResult(
+                id: "\(hit.type)-\(hit.id)",
+                title: hit.title,
+                subtitle: hit.subtitle,
+                module: module,
+                destination: destination
+            )
+        }
+    }
+
+    private static func moduleForType(_ type: String) -> PlatformModule {
+        switch type {
+        case "task": return .tasks
+        case "event": return .calendar
+        case "document": return .files
+        case "activity": return .activityLog
+        case "session": return .chats
+        default: return .dashboard
+        }
+    }
+
+    private static func localSearch(
+        query: String,
+        auth: AuthStore,
+        coordinator: ChatCoordinator,
+        teamCoordinator: TeamMessagingCoordinator
+    ) -> [GlobalSearchResult] {
+        let q = query.lowercased()
         var results: [GlobalSearchResult] = []
 
         if auth.canViewChats {
@@ -115,7 +176,7 @@ enum GlobalSearchService {
             }
         }
 
-        return results.prefix(40).map { $0 }
+        return Array(results.prefix(40))
     }
 
     private static func matches(_ value: String, _ query: String) -> Bool {

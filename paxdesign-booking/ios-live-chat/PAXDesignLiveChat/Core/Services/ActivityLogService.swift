@@ -43,13 +43,43 @@ final class ActivityLogService: ObservableObject {
         load()
     }
 
+    func applyServerEntries(_ items: [ActivityLogEntry]) {
+        entries = Array(items.prefix(maxEntries))
+        persist()
+    }
+
+    func resetForLogout() {
+        entries = []
+        UserDefaults.standard.removeObject(forKey: storageKey)
+    }
+
     func log(
         category: String,
         title: String,
         detail: String = "",
         module: String = "system",
-        severity: ActivityLogEntry.Severity = .info
-    ) {
+        severity: ActivityLogEntry.Severity = .info,
+        auth: AuthStore? = nil
+    ) async {
+        if let api = auth?.api {
+            if let record = try? await api.appendPlatformActivity(
+                module: module,
+                title: title,
+                detail: detail,
+                severity: severity.rawValue,
+                category: category
+            ) {
+                let entry = ActivityLogEntry(api: record)
+                entries.insert(entry, at: 0)
+                if entries.count > maxEntries {
+                    entries = Array(entries.prefix(maxEntries))
+                }
+                persist()
+                WidgetDataStore.shared.syncFromApp()
+                return
+            }
+        }
+
         let entry = ActivityLogEntry(
             category: category,
             title: title,
@@ -65,7 +95,10 @@ final class ActivityLogService: ObservableObject {
         WidgetDataStore.shared.syncFromApp()
     }
 
-    func clear() {
+    func clear(auth: AuthStore) async {
+        if let api = auth.api {
+            _ = try? await api.clearPlatformActivity()
+        }
         entries = []
         persist()
     }

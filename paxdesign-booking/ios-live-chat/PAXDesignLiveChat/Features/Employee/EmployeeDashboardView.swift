@@ -5,6 +5,7 @@ struct EmployeeDashboardView: View {
     @EnvironmentObject private var coordinator: ChatCoordinator
     @StateObject private var settings = AppSettingsStore.shared
     @StateObject private var tasks = TaskStore.shared
+    @StateObject private var platform = PlatformSyncService.shared
 
     private var mySessions: [LiveSession] {
         coordinator.sessions.filter { !$0.isTeamDM && ($0.isAdmin || $0.needsReply) }
@@ -18,7 +19,7 @@ struct EmployeeDashboardView: View {
         List {
             Section {
                 PlatformHeroHeader(
-                    title: L10n.EmployeeWelcome(auth.profile?.name ?? L10n.ProfileRoleStaff),
+                    title: L10n.EmployeeWelcome(platform.employee?.name ?? auth.profile?.name ?? L10n.ProfileRoleStaff),
                     subtitle: L10n.ModuleEmployeeSubtitle,
                     systemImage: "person.crop.circle.badge.checkmark",
                     gradient: [.mint, .teal]
@@ -28,9 +29,9 @@ struct EmployeeDashboardView: View {
             }
 
             Section(L10n.EmployeeToday) {
-                metricRow(L10n.EmployeeAssignedChats, value: "\(mySessions.count)", icon: "bubble.left.and.bubble.right.fill", tint: .blue)
-                metricRow(L10n.EmployeeUnread, value: "\(unreadCount)", icon: "envelope.badge.fill", tint: .orange)
-                metricRow(L10n.EmployeeOpenTasks, value: "\(tasks.openCount)", icon: "checklist", tint: .green)
+                metricRow(L10n.EmployeeAssignedChats, value: "\(platform.employee?.assignedChats ?? mySessions.count)", icon: "bubble.left.and.bubble.right.fill", tint: .blue)
+                metricRow(L10n.EmployeeUnread, value: "\(platform.employee?.unreadChats ?? unreadCount)", icon: "envelope.badge.fill", tint: .orange)
+                metricRow(L10n.EmployeeOpenTasks, value: "\(platform.employee?.openTasks ?? tasks.openCount)", icon: "checklist", tint: .green)
                 metricRow(L10n.EmployeeRole, value: auth.roleLabel, icon: "person.badge.key.fill", tint: .purple)
             }
 
@@ -62,6 +63,10 @@ struct EmployeeDashboardView: View {
         .paxScreenBackground()
         .navigationTitle(L10n.ModuleEmployee)
         .navigationBarTitleDisplayMode(.large)
+        .refreshable {
+            await platform.refreshEmployee(auth: auth)
+            await coordinator.refreshSessions(auth: auth)
+        }
     }
 
     private func metricRow(_ title: String, value: String, icon: String, tint: Color) -> some View {

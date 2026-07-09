@@ -41,6 +41,7 @@ final class TaskStore: ObservableObject {
     @Published private(set) var tasks: [PAXTaskItem] = []
 
     private let storageKey = "pax.tasks"
+    private var isServerSynced = false
 
     var openCount: Int { tasks.filter { !$0.isCompleted }.count }
     var overdueCount: Int {
@@ -49,55 +50,77 @@ final class TaskStore: ObservableObject {
 
     private init() {
         load()
-        if tasks.isEmpty { seedDefaults() }
     }
 
-    func add(title: String, notes: String = "", dueDate: Date? = nil, priority: PAXTaskItem.Priority = .medium) {
-        let task = PAXTaskItem(title: title, notes: notes, dueDate: dueDate, priority: priority)
+    func applyServerTasks(_ items: [PAXTaskItem]) {
+        tasks = items
+        isServerSynced = true
+        persist()
+    }
+
+    func resetForLogout() {
+        tasks = []
+        isServerSynced = false
+        UserDefaults.standard.removeObject(forKey: storageKey)
+    }
+
+    func add(title: String, notes: String = "", dueDate: Date? = nil, priority: PAXTaskItem.Priority = .medium, auth: AuthStore) async {
+        var task = PAXTaskItem(title: title, notes: notes, dueDate: dueDate, priority: priority)
+        if let api = auth.api {
+            do {
+                let saved = try await api.savePlatformTask(task.apiPayload())
+                task = PAXTaskItem(api: saved)
+            } catch {
+                return
+            }
+        }
         tasks.insert(task, at: 0)
         persist()
-        ActivityLogService.shared.log(
+        await ActivityLogService.shared.log(
             category: L10n.ModuleTasks,
             title: L10n.ActivityTaskCreated,
             detail: title,
             module: PlatformModule.tasks.rawValue,
-            severity: .action
+            severity: .action,
+            auth: auth
         )
         WidgetDataStore.shared.syncFromApp()
     }
 
-    func toggleComplete(_ task: PAXTaskItem) {
+    func toggleComplete(_ task: PAXTaskItem, auth: AuthStore) async {
         guard let index = tasks.firstIndex(where: { $0.id == task.id }) else { return }
         tasks[index].isCompleted.toggle()
+        if let api = auth.api {
+            if let saved = try? await api.savePlatformTask(tasks[index].apiPayload()) {
+                tasks[index] = PAXTaskItem(api: saved)
+            }
+        }
         persist()
-        ActivityLogService.shared.log(
+        await ActivityLogService.shared.log(
             category: L10n.ModuleTasks,
             title: tasks[index].isCompleted ? L10n.ActivityTaskCompleted : L10n.ActivityTaskReopened,
             detail: task.title,
             module: PlatformModule.tasks.rawValue,
-            severity: .success
+            severity: .success,
+            auth: auth
         )
         WidgetDataStore.shared.syncFromApp()
     }
 
-    func delete(_ task: PAXTaskItem) {
+    func delete(_ task: PAXTaskItem, auth: AuthStore) async {
+        if let api = auth.api {
+            _ = try? await api.deletePlatformTask(id: task.id)
+        }
         tasks.removeAll { $0.id == task.id }
         persist()
         WidgetDataStore.shared.syncFromApp()
-    }
-
-    private func seedDefaults() {
-        tasks = [
-            PAXTaskItem(title: L10n.TaskSampleFollowUp, notes: L10n.TaskSampleFollowUpNote, dueDate: Calendar.current.date(byAdding: .day, value: 1, to: Date()), priority: .high),
-            PAXTaskItem(title: L10n.TaskSampleReview, priority: .medium)
-        ]
-        persist()
     }
 
     private func load() {
         guard let data = UserDefaults.standard.data(forKey: storageKey),
               let decoded = try? JSONDecoder().decode([PAXTaskItem].self, from: data) else { return }
         tasks = decoded
+        isServerSynced = !decoded.isEmpty
     }
 
     private func persist() {

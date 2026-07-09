@@ -69,6 +69,7 @@ final class AuthStore: ObservableObject {
             if let data = try? JSONEncoder().encode(stored) {
                 KeychainHelper.save(data, service: service)
             }
+            await PlatformSyncService.shared.sync(auth: self)
         } catch {
             invalidateStoredSession(keepFormFields: true)
             throw error
@@ -88,9 +89,13 @@ final class AuthStore: ObservableObject {
         if !keepFormFields {
             clearFormFields()
         }
+        if !isLoggedIn {
+            PlatformSyncService.shared.reset()
+        }
     }
 
     func logout() {
+        PlatformSyncService.shared.reset()
         invalidateStoredSession(keepFormFields: false)
     }
 
@@ -102,6 +107,10 @@ final class AuthStore: ObservableObject {
                 AppSettingsStore.shared.onboardingCompleted = true
             }
         }
+    }
+
+    func applyProfileUpdate(_ updated: AdminProfile) {
+        profile = updated
     }
 
     private func clearFormFields() {

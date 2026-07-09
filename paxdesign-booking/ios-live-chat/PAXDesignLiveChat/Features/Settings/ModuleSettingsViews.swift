@@ -96,77 +96,91 @@ struct AccentColorSettingsView: View {
 }
 
 struct ModuleCalendarSettingsView: View {
-    @AppStorage("pax.module.calendar.weekStartMonday") private var weekStartMonday = true
-    @AppStorage("pax.module.calendar.showWeekNumbers") private var showWeekNumbers = false
+    @EnvironmentObject private var auth: AuthStore
+    @ObservedObject private var settings = PlatformModuleSettingsStore.shared
 
     var body: some View {
         moduleSettingsList(title: L10n.ModuleCalendar) {
-            Toggle(L10n.ModuleSettingWeekStartMonday, isOn: $weekStartMonday)
-            Toggle(L10n.ModuleSettingShowWeekNumbers, isOn: $showWeekNumbers)
+            Toggle(L10n.ModuleSettingWeekStartMonday, isOn: $settings.calendarWeekStartMonday)
+                .onChange(of: settings.calendarWeekStartMonday) { _ in settings.scheduleSave(auth: auth) }
+            Toggle(L10n.ModuleSettingShowWeekNumbers, isOn: $settings.calendarShowWeekNumbers)
+                .onChange(of: settings.calendarShowWeekNumbers) { _ in settings.scheduleSave(auth: auth) }
         }
     }
 }
 
 struct ModuleTasksSettingsView: View {
-    @AppStorage("pax.module.tasks.sortByDueDate") private var sortByDueDate = true
-    @AppStorage("pax.module.tasks.showCompleted") private var showCompleted = true
+    @EnvironmentObject private var auth: AuthStore
+    @ObservedObject private var settings = PlatformModuleSettingsStore.shared
 
     var body: some View {
         moduleSettingsList(title: L10n.ModuleTasks) {
-            Toggle(L10n.ModuleSettingSortDueDate, isOn: $sortByDueDate)
-            Toggle(L10n.ModuleSettingShowCompleted, isOn: $showCompleted)
+            Toggle(L10n.ModuleSettingSortDueDate, isOn: $settings.tasksSortByDueDate)
+                .onChange(of: settings.tasksSortByDueDate) { _ in settings.scheduleSave(auth: auth) }
+            Toggle(L10n.ModuleSettingShowCompleted, isOn: $settings.tasksShowCompleted)
+                .onChange(of: settings.tasksShowCompleted) { _ in settings.scheduleSave(auth: auth) }
         }
     }
 }
 
 struct ModuleFilesSettingsView: View {
-    @AppStorage("pax.module.files.groupByCategory") private var groupByCategory = true
+    @EnvironmentObject private var auth: AuthStore
+    @ObservedObject private var settings = PlatformModuleSettingsStore.shared
 
     var body: some View {
         moduleSettingsList(title: L10n.ModuleFiles) {
-            Toggle(L10n.ModuleSettingGroupByCategory, isOn: $groupByCategory)
+            Toggle(L10n.ModuleSettingGroupByCategory, isOn: $settings.filesGroupByCategory)
+                .onChange(of: settings.filesGroupByCategory) { _ in settings.scheduleSave(auth: auth) }
         }
     }
 }
 
 struct ModuleReportsSettingsView: View {
-    @AppStorage("pax.module.reports.includeClosed") private var includeClosed = true
+    @EnvironmentObject private var auth: AuthStore
+    @ObservedObject private var settings = PlatformModuleSettingsStore.shared
 
     var body: some View {
         moduleSettingsList(title: L10n.ModuleReports) {
-            Toggle(L10n.ModuleSettingIncludeClosed, isOn: $includeClosed)
+            Toggle(L10n.ModuleSettingIncludeClosed, isOn: $settings.reportsIncludeClosed)
+                .onChange(of: settings.reportsIncludeClosed) { _ in settings.scheduleSave(auth: auth) }
         }
     }
 }
 
 struct ModuleActivitySettingsView: View {
-    @AppStorage("pax.module.activity.verbose") private var verboseLogging = false
+    @EnvironmentObject private var auth: AuthStore
+    @ObservedObject private var settings = PlatformModuleSettingsStore.shared
 
     var body: some View {
         moduleSettingsList(title: L10n.ModuleActivityLog) {
-            Toggle(L10n.ModuleSettingVerboseActivity, isOn: $verboseLogging)
+            Toggle(L10n.ModuleSettingVerboseActivity, isOn: $settings.activityVerboseLogging)
+                .onChange(of: settings.activityVerboseLogging) { _ in settings.scheduleSave(auth: auth) }
         }
     }
 }
 
 struct ModuleDashboardSettingsView: View {
-    @AppStorage("pax.module.dashboard.showChart") private var showChart = true
-    @AppStorage("pax.module.dashboard.showUpcoming") private var showUpcoming = true
+    @EnvironmentObject private var auth: AuthStore
+    @ObservedObject private var settings = PlatformModuleSettingsStore.shared
 
     var body: some View {
         moduleSettingsList(title: L10n.ModuleDashboard) {
-            Toggle(L10n.ModuleSettingShowChart, isOn: $showChart)
-            Toggle(L10n.ModuleSettingShowUpcoming, isOn: $showUpcoming)
+            Toggle(L10n.ModuleSettingShowChart, isOn: $settings.dashboardShowChart)
+                .onChange(of: settings.dashboardShowChart) { _ in settings.scheduleSave(auth: auth) }
+            Toggle(L10n.ModuleSettingShowUpcoming, isOn: $settings.dashboardShowUpcoming)
+                .onChange(of: settings.dashboardShowUpcoming) { _ in settings.scheduleSave(auth: auth) }
         }
     }
 }
 
 struct ModuleNotificationsSettingsView: View {
-    @AppStorage("pax.module.notifications.interactive") private var interactiveCards = true
+    @EnvironmentObject private var auth: AuthStore
+    @ObservedObject private var settings = PlatformModuleSettingsStore.shared
 
     var body: some View {
         moduleSettingsList(title: L10n.PlatformNotifications) {
-            Toggle(L10n.ModuleSettingInteractiveNotifications, isOn: $interactiveCards)
+            Toggle(L10n.ModuleSettingInteractiveNotifications, isOn: $settings.notificationsInteractiveCards)
+                .onChange(of: settings.notificationsInteractiveCards) { _ in settings.scheduleSave(auth: auth) }
             NavigationLink { NotificationSettingsView() } label: {
                 Text(L10n.SettingsSectionNotifications)
             }

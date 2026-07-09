@@ -50,7 +50,11 @@ struct TasksModuleView: View {
                         taskRow(task)
                     }
                     .onDelete { indexSet in
-                        indexSet.map { filteredTasks[$0] }.forEach(store.delete)
+                        Task {
+                            for task in indexSet.map({ filteredTasks[$0] }) {
+                                await store.delete(task, auth: auth)
+                            }
+                        }
                     }
                 }
             }
@@ -80,18 +84,25 @@ struct TasksModuleView: View {
             Button(L10n.CommonSave) {
                 let title = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !title.isEmpty else { return }
-                store.add(title: title)
-                newTitle = ""
-                PAXHaptics.success()
+                Task {
+                    await store.add(title: title, auth: auth)
+                    newTitle = ""
+                    PAXHaptics.success()
+                }
             }
+        }
+        .refreshable {
+            await PlatformSyncService.shared.sync(auth: auth)
         }
     }
 
     private func taskRow(_ task: PAXTaskItem) -> some View {
         HStack(spacing: 12) {
             Button {
-                store.toggleComplete(task)
-                PAXHaptics.light()
+                Task {
+                    await store.toggleComplete(task, auth: auth)
+                    PAXHaptics.light()
+                }
             } label: {
                 Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
@@ -119,18 +130,22 @@ struct TasksModuleView: View {
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
-                store.toggleComplete(task)
+                Task { await store.toggleComplete(task, auth: auth) }
             } label: {
                 Label(task.isCompleted ? L10n.CommonReopen : L10n.CommonAccept, systemImage: "checkmark")
             }
             .tint(.green)
         }
         .contextMenu {
-            Button { store.toggleComplete(task) } label: {
+            Button {
+                Task { await store.toggleComplete(task, auth: auth) }
+            } label: {
                 Label(task.isCompleted ? L10n.CommonReopen : L10n.CommonAccept, systemImage: "checkmark")
             }
             if auth.canManageTasks {
-                Button(role: .destructive) { store.delete(task) } label: {
+                Button(role: .destructive) {
+                    Task { await store.delete(task, auth: auth) }
+                } label: {
                     Label(L10n.CommonDelete, systemImage: "trash")
                 }
             }

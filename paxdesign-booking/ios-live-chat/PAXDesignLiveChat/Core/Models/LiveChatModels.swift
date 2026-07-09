@@ -287,6 +287,7 @@ struct AdminProfile: Codable {
     let pluginVer: String
     let isSuperAdmin: Bool
     let permissions: AdminPermissions
+    let modulePermissions: ModulePermissions?
     let onboardingCompleted: Bool
 
     enum CodingKeys: String, CodingKey {
@@ -298,6 +299,7 @@ struct AdminProfile: Codable {
         case pluginVer = "plugin_ver"
         case isSuperAdmin = "is_super_admin"
         case permissions
+        case modulePermissions = "module_permissions"
         case onboardingCompleted = "onboarding_completed"
     }
 
@@ -313,7 +315,53 @@ struct AdminProfile: Codable {
         pluginVer = LiveChatDecode.string(container, CodingKeys.pluginVer)
         isSuperAdmin = (try? container.decode(Bool.self, forKey: .isSuperAdmin)) ?? false
         permissions = (try? container.decode(AdminPermissions.self, forKey: .permissions)) ?? .full
+        modulePermissions = try container.decodeIfPresent(ModulePermissions.self, forKey: .modulePermissions)
         onboardingCompleted = (try? container.decode(Bool.self, forKey: .onboardingCompleted)) ?? false
+    }
+
+    func updating(modulePermissions: ModulePermissions) -> AdminProfile {
+        AdminProfile(
+            userId: userId,
+            name: name,
+            email: email,
+            username: username,
+            avatarUrl: avatarUrl,
+            siteUrl: siteUrl,
+            restBase: restBase,
+            pluginVer: pluginVer,
+            isSuperAdmin: isSuperAdmin,
+            permissions: permissions,
+            modulePermissions: modulePermissions,
+            onboardingCompleted: onboardingCompleted
+        )
+    }
+
+    private init(
+        userId: Int,
+        name: String,
+        email: String,
+        username: String?,
+        avatarUrl: String?,
+        siteUrl: String,
+        restBase: String,
+        pluginVer: String,
+        isSuperAdmin: Bool,
+        permissions: AdminPermissions,
+        modulePermissions: ModulePermissions?,
+        onboardingCompleted: Bool
+    ) {
+        self.userId = userId
+        self.name = name
+        self.email = email
+        self.username = username
+        self.avatarUrl = avatarUrl
+        self.siteUrl = siteUrl
+        self.restBase = restBase
+        self.pluginVer = pluginVer
+        self.isSuperAdmin = isSuperAdmin
+        self.permissions = permissions
+        self.modulePermissions = modulePermissions
+        self.onboardingCompleted = onboardingCompleted
     }
 
     var displayEmail: String {

@@ -6,15 +6,8 @@ struct GlobalSearchView: View {
     @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
-
-    private var results: [GlobalSearchResult] {
-        GlobalSearchService.search(
-            query: query,
-            auth: auth,
-            coordinator: coordinator,
-            teamCoordinator: teamCoordinator
-        )
-    }
+    @State private var results: [GlobalSearchResult] = []
+    @State private var searchTask: Task<Void, Never>?
 
     var body: some View {
         List {
@@ -42,10 +35,27 @@ struct GlobalSearchView: View {
         .navigationTitle(L10n.GlobalSearchTitle)
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $query, prompt: L10n.SearchPrompt)
+        .onChange(of: query) { newValue in
+            runSearch(for: newValue)
+        }
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
                 Button(L10n.CommonClose) { dismiss() }
             }
+        }
+    }
+
+    private func runSearch(for value: String) {
+        searchTask?.cancel()
+        searchTask = Task {
+            let hits = await GlobalSearchService.search(
+                query: value,
+                auth: auth,
+                coordinator: coordinator,
+                teamCoordinator: teamCoordinator
+            )
+            guard !Task.isCancelled else { return }
+            results = hits
         }
     }
 

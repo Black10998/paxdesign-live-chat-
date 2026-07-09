@@ -5,6 +5,7 @@ struct NotificationsCenterView: View {
     @EnvironmentObject private var coordinator: ChatCoordinator
     @EnvironmentObject private var permissions: PermissionCoordinator
     @StateObject private var settings = AppSettingsStore.shared
+    @StateObject private var platform = PlatformSyncService.shared
 
     private var unreadSessions: [LiveSession] {
         coordinator.sessions.filter {
@@ -33,16 +34,24 @@ struct NotificationsCenterView: View {
             Section(L10n.NotificationsSummary) {
                 notificationMetric(
                     title: L10n.NotificationsUnreadChats,
-                    count: unreadSessions.count,
+                    count: platform.notifications?.unreadChats ?? unreadSessions.count,
                     systemImage: "bubble.left.and.bubble.right.fill",
                     tint: PAXTheme.accent
                 )
                 notificationMetric(
                     title: L10n.NotificationsLiveRequests,
-                    count: coordinator.liveCount,
+                    count: platform.notifications?.liveRequests ?? coordinator.liveCount,
                     systemImage: "bell.and.waves.left.and.right.fill",
                     tint: .orange
                 )
+                if let openTasks = platform.notifications?.openTasks {
+                    notificationMetric(
+                        title: L10n.DashboardMetricTasks,
+                        count: openTasks,
+                        systemImage: "checklist",
+                        tint: .green
+                    )
+                }
                 LabeledContent(L10n.SettingsPush) {
                     Text(settings.notificationsEnabled ? L10n.CommonActive : L10n.SettingsDisabled)
                         .foregroundStyle(settings.notificationsEnabled ? PAXTheme.success : PAXTheme.textTertiary)
@@ -99,6 +108,7 @@ struct NotificationsCenterView: View {
         .navigationBarTitleDisplayMode(.large)
         .refreshable {
             await coordinator.refreshSessions(auth: auth)
+            await platform.refreshNotifications(auth: auth)
         }
     }
 
