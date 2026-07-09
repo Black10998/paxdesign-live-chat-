@@ -51,7 +51,7 @@ struct DataStorageSettingsView: View {
             }
 
             if auth.canManageUsers {
-                Section("Onboarding") {
+                Section {
                     Button("Einführung zurücksetzen", role: .destructive) {
                         showOnboardingResetConfirm = true
                     }
@@ -60,6 +60,8 @@ struct DataStorageSettingsView: View {
                             .font(.caption)
                             .foregroundStyle(PAXTheme.textSecondary)
                     }
+                } header: {
+                    Text("Onboarding")
                 } footer: {
                     Text("Setzt die Willkommens-Tour für den ausgewählten Mitarbeiter zurück.")
                 }

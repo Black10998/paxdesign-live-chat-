@@ -30,11 +30,19 @@ struct DeviceManagementView: View {
                 }
             } else if devices.isEmpty {
                 Section {
-                    ContentUnavailableView(
-                        "Keine Geräte",
-                        systemImage: "iphone.slash",
-                        description: Text("Noch keine registrierten Geräte gefunden.")
-                    )
+                    VStack(spacing: 10) {
+                        Image(systemName: "iphone.slash")
+                            .font(.system(size: 36, weight: .light))
+                            .foregroundStyle(PAXTheme.textTertiary)
+                        Text("Keine Geräte")
+                            .font(.headline)
+                        Text("Noch keine registrierten Geräte gefunden.")
+                            .font(.subheadline)
+                            .foregroundStyle(PAXTheme.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 24)
                 }
             } else {
                 let grouped = Dictionary(grouping: devices, by: \.userId)
