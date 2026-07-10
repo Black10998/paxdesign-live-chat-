@@ -21,105 +21,13 @@ struct TeamMessagesHubView: View {
 
     var body: some View {
         List {
-            Section {
-                PlatformHeroHeader(
-                    title: L10n.TeamHubTitle,
-                    subtitle: L10n.TeamHubSubtitle,
-                    systemImage: "person.3.fill",
-                    gradient: [PAXBrand.accent, PAXBrand.accent.opacity(0.65)]
-                )
-                .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
-
-            if unreadCount > 0 || teamSessionCount > 0 {
-                Section {
-                    HStack(spacing: 12) {
-                        TeamStatPill(value: "\(teamSessionCount)", label: L10n.TeamHubConversations, tint: PAXBrand.accent)
-                        if unreadCount > 0 {
-                            TeamStatPill(value: "\(unreadCount)", label: L10n.FilterUnread, tint: .orange)
-                        }
-                    }
-                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                }
-            }
-
-            if canComposeTeam {
-                Section {
-                    HStack {
-                        Text("Start a conversation")
-                            .font(.headline)
-                        Spacer()
-                        Button {
-                            showCompose = true
-                        } label: {
-                            Label(L10n.TeamNewMessage, systemImage: "square.and.pencil")
-                                .font(.subheadline.weight(.semibold))
-                        }
-                    }
-                    .listRowBackground(Color.clear)
-                }
-
-                if contactsLoading && teamContacts.isEmpty {
-                    Section {
-                        PAXScreenLoadingStack(status: "Contacts werden geladen", rowCount: 2)
-                    }
-                } else if !teamContacts.isEmpty {
-                    Section("Leadership & Team") {
-                        ForEach(teamContacts) { member in
-                            TeamContactRow(
-                                member: member,
-                                revealFullEmail: auth.profile?.isSuperAdmin == true,
-                                isOpening: openingContactId == member.userId
-                            ) {
-                                Task { await openContact(member) }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if let error = teamCoordinator.errorMessage, !error.isEmpty {
-                Section {
-                    Text(error)
-                        .font(.caption)
-                        .foregroundStyle(PAXTheme.danger)
-                }
-            }
-
-            Section {
-                PAXNativeSearchField(
-                    text: $searchText,
-                    prompt: L10n.SearchPrompt,
-                    isFocused: $isSearchFocused
-                )
-                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
-
-            if displayedSessions.isEmpty {
-                Section {
-                    if teamCoordinator.isLoading && searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        teamLoadingState
-                            .listRowInsets(EdgeInsets(top: 14, leading: 0, bottom: 14, trailing: 0))
-                    } else {
-                        teamEmptyState
-                            .listRowInsets(EdgeInsets(top: 24, leading: 0, bottom: 24, trailing: 0))
-                    }
-                }
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            } else {
-                Section(L10n.TeamHubConversations) {
-                    ForEach(displayedSessions) { session in
-                        teamConversationRow(session)
-                    }
-                }
-            }
+            heroSection
+            statsSection
+            composeSection
+            contactsSection
+            errorSection
+            searchSection
+            conversationsSection
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -167,6 +75,127 @@ struct TeamMessagesHubView: View {
         .onChange(of: searchText) { _ in scheduleRecompute(immediate: false) }
         .onChange(of: settings.readSessionIds) { _ in scheduleRecompute(immediate: true) }
         .onChange(of: settings.readUpToSeq) { _ in scheduleRecompute(immediate: true) }
+    }
+
+    private var heroSection: some View {
+        Section {
+            PlatformHeroHeader(
+                title: L10n.TeamHubTitle,
+                subtitle: L10n.TeamHubSubtitle,
+                systemImage: "person.3.fill",
+                gradient: [PAXBrand.accent, PAXBrand.accent.opacity(0.65)]
+            )
+            .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+    }
+
+    @ViewBuilder
+    private var statsSection: some View {
+        if unreadCount > 0 || teamSessionCount > 0 {
+            Section {
+                HStack(spacing: 12) {
+                    TeamStatPill(value: "\(teamSessionCount)", label: L10n.TeamHubConversations, tint: PAXBrand.accent)
+                    if unreadCount > 0 {
+                        TeamStatPill(value: "\(unreadCount)", label: L10n.FilterUnread, tint: .orange)
+                    }
+                }
+                .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var composeSection: some View {
+        if canComposeTeam {
+            Section {
+                HStack {
+                    Text("Start a conversation")
+                        .font(.headline)
+                    Spacer()
+                    Button {
+                        showCompose = true
+                    } label: {
+                        Label(L10n.TeamNewMessage, systemImage: "square.and.pencil")
+                            .font(.subheadline.weight(.semibold))
+                    }
+                }
+                .listRowBackground(Color.clear)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var contactsSection: some View {
+        if canComposeTeam {
+            if contactsLoading && teamContacts.isEmpty {
+                Section {
+                    PAXScreenLoadingStack(status: "Contacts werden geladen", rowCount: 2)
+                }
+            } else if !teamContacts.isEmpty {
+                Section("Leadership & Team") {
+                    ForEach(teamContacts) { member in
+                        TeamContactRow(
+                            member: member,
+                            revealFullEmail: auth.profile?.isSuperAdmin == true,
+                            isOpening: openingContactId == member.userId
+                        ) {
+                            Task { await openContact(member) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var errorSection: some View {
+        if let error = teamCoordinator.errorMessage, !error.isEmpty {
+            Section {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(PAXTheme.danger)
+            }
+        }
+    }
+
+    private var searchSection: some View {
+        Section {
+            PAXNativeSearchField(
+                text: $searchText,
+                prompt: L10n.SearchPrompt,
+                isFocused: $isSearchFocused
+            )
+            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+    }
+
+    @ViewBuilder
+    private var conversationsSection: some View {
+        if displayedSessions.isEmpty {
+            Section {
+                if teamCoordinator.isLoading && searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    teamLoadingState
+                        .listRowInsets(EdgeInsets(top: 14, leading: 0, bottom: 14, trailing: 0))
+                } else {
+                    teamEmptyState
+                        .listRowInsets(EdgeInsets(top: 24, leading: 0, bottom: 24, trailing: 0))
+                }
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        } else {
+            Section(L10n.TeamHubConversations) {
+                ForEach(displayedSessions) { session in
+                    teamConversationRow(session)
+                }
+            }
+        }
     }
 
     private var teamLoadingState: some View {
