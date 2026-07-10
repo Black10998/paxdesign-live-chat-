@@ -1,6 +1,6 @@
 import Foundation
 
-struct ChatStreamEvent: Sendable {
+struct ChatStreamEvent {
     let id: Int
     let type: String
     let payload: [String: Any]
@@ -37,14 +37,19 @@ final class ChatEventStream {
     private var threadSince = 0
     private var threadSessionId = ""
 
-    func startInbox(api: LiveChatAPI, onEvent: @escaping (ChatStreamEvent) -> Void) {
+    func startInbox(api: LiveChatAPI, onEvent: @escaping @MainActor (ChatStreamEvent) -> Void) {
         inboxTask?.cancel()
-        inboxTask = Task {
+        inboxTask = Task { @MainActor in
             while !Task.isCancelled {
                 do {
-                    try await api.consumeEventStream(path: "events/stream", since: inboxSince) { event in
-                        if event.id > 0 { self.inboxSince = max(self.inboxSince, event.id) }
-                        onEvent(event)
+                    let since = inboxSince
+                    try await api.consumeEventStream(path: "events/stream", since: since) { event in
+                        Task { @MainActor in
+                            if event.id > 0 {
+                                self.inboxSince = max(self.inboxSince, event.id)
+                            }
+                            onEvent(event)
+                        }
                     }
                 } catch {
                     if Task.isCancelled { break }
@@ -54,17 +59,22 @@ final class ChatEventStream {
         }
     }
 
-    func startThread(api: LiveChatAPI, sessionId: String, isTeam: Bool, onEvent: @escaping (ChatStreamEvent) -> Void) {
+    func startThread(api: LiveChatAPI, sessionId: String, isTeam: Bool, onEvent: @escaping @MainActor (ChatStreamEvent) -> Void) {
         threadTask?.cancel()
         threadSessionId = sessionId
         threadSince = 0
         let path = isTeam ? "team/sessions/\(sessionId)/stream" : "sessions/\(sessionId)/stream"
-        threadTask = Task {
+        threadTask = Task { @MainActor in
             while !Task.isCancelled {
                 do {
-                    try await api.consumeEventStream(path: path, since: threadSince) { event in
-                        if event.id > 0 { self.threadSince = max(self.threadSince, event.id) }
-                        onEvent(event)
+                    let since = threadSince
+                    try await api.consumeEventStream(path: path, since: since) { event in
+                        Task { @MainActor in
+                            if event.id > 0 {
+                                self.threadSince = max(self.threadSince, event.id)
+                            }
+                            onEvent(event)
+                        }
                     }
                 } catch {
                     if Task.isCancelled { break }
