@@ -485,10 +485,6 @@ struct AdminProfile: Codable {
         self.permissionStatus = permissionStatus
         self.spokenLanguages = spokenLanguages
     }
-        self.termsAccepted = termsAccepted
-        self.termsAcceptedAt = termsAcceptedAt
-        self.permissionStatus = permissionStatus
-    }
 
     var displayEmail: String {
         PrivacyMask.email(email, revealFull: isSuperAdmin)
