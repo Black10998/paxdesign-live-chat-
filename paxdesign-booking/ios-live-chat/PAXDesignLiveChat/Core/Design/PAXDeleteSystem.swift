@@ -245,7 +245,7 @@ private struct PAXShatterShardsView: View {
                         .scaleEffect(1 - progress * shard.scaleSpeed)
                         .rotationEffect(.degrees(progress * shard.rotation))
                         .offset(
-                            x: progress * shard driftX * scaleX,
+                            x: progress * shard.driftX * scaleX,
                             y: progress * shard.driftY * scaleY
                         )
                         .opacity(Double(1 - progress * 0.85))
