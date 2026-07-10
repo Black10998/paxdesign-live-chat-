@@ -450,7 +450,7 @@ final class TeamChatThreadModel: ObservableObject {
         }
         threadSubscriptionId = ChatEventStream.shared.subscribeThread(api: api, sessionId: sessionId, isTeam: true) { [weak self] event in
             guard let self, self.lifecycleGeneration == generation else { return }
-            Task { await self.handleThreadStreamEvent(event, auth: auth) }
+            await self.handleThreadStreamEvent(event, auth: auth)
         }
     }
 
@@ -584,7 +584,7 @@ final class TeamChatThreadModel: ObservableObject {
             senderName: auth.profile?.displayName
         )
         messages.append(optimistic)
-        PendingMessageStore.shared.enqueue(PendingOutboundMessage(
+        let queued = PendingMessageStore.shared.enqueue(PendingOutboundMessage(
             id: clientMsgId,
             sessionId: sessionId,
             channel: .team,
@@ -593,6 +593,12 @@ final class TeamChatThreadModel: ObservableObject {
             createdAt: Date().timeIntervalSince1970,
             attempts: 0
         ))
+        guard queued else {
+            messages.removeAll { $0.id == tempId }
+            draft = text
+            errorMessage = "Nachricht konnte nicht sicher lokal gespeichert werden."
+            return
+        }
         draft = ""
         isSending = true
         defer { isSending = false }
@@ -603,11 +609,8 @@ final class TeamChatThreadModel: ObservableObject {
                 content: text,
                 clientMsgId: clientMsgId
             )
-            if let index = messages.firstIndex(where: { $0.id == tempId }) {
-                messages[index] = normalizeTeamMessage(sent.message)
-            } else {
-                insertIncomingMessages([sent.message])
-            }
+            messages.removeAll { $0.id == tempId }
+            insertIncomingMessages([sent.message])
             pollSeq = max(pollSeq, sent.seq)
             currentSeq = max(currentSeq, sent.seq)
             PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
@@ -618,7 +621,7 @@ final class TeamChatThreadModel: ObservableObject {
             PAXHaptics.light()
         } catch {
             switch error {
-            case LiveChatAPIError.unauthorized, LiveChatAPIError.server(_):
+            case LiveChatAPIError.unauthorized, LiveChatAPIError.rejected(_):
                 PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
                 messages.removeAll { $0.id == tempId }
                 draft = text

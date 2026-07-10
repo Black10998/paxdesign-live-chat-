@@ -38,18 +38,28 @@ final class PendingMessageStore {
         }
     }
 
-    func enqueue(_ message: PendingOutboundMessage) {
+    @discardableResult
+    func enqueue(_ message: PendingOutboundMessage) -> Bool {
         entries[message.id] = message
-        persist()
+        return persist()
     }
 
-    func enqueueImage(_ message: PendingOutboundMessage, data: Data, filename: String) {
+    @discardableResult
+    func enqueueImage(_ message: PendingOutboundMessage, data: Data, filename: String) -> Bool {
         let fileURL = attachmentURL(clientMsgId: message.id, filename: filename)
-        try? data.write(to: fileURL, options: .atomic)
+        do {
+            try data.write(to: fileURL, options: .atomic)
+        } catch {
+            return false
+        }
         var stored = message
         stored.attachmentPath = fileURL.path
         stored.filename = filename
-        enqueue(stored)
+        if enqueue(stored) {
+            return true
+        }
+        try? FileManager.default.removeItem(at: fileURL)
+        return false
     }
 
     func acknowledge(clientMsgId: String) {
@@ -83,9 +93,15 @@ final class PendingMessageStore {
         try? FileManager.default.removeItem(at: url)
     }
 
-    private func persist() {
-        guard let data = try? encoder.encode(entries) else { return }
-        try? data.write(to: url, options: .atomic)
+    @discardableResult
+    private func persist() -> Bool {
+        guard let data = try? encoder.encode(entries) else { return false }
+        do {
+            try data.write(to: url, options: .atomic)
+            return true
+        } catch {
+            return false
+        }
     }
 
     private func attachmentURL(clientMsgId: String, filename: String) -> URL {

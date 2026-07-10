@@ -36,7 +36,7 @@ function wp_generate_uuid4() {
     return vsprintf('%s%s-%s-%s-%s-%s%s%s', str_split(bin2hex($bytes), 4));
 }
 function get_option($key, $default = false) {
-    return $key === 'paxdesign_message_store_schema' ? '2.0' : $default;
+    return $key === 'paxdesign_message_store_schema' ? '2.1' : $default;
 }
 function update_option($key, $value, $autoload = null) { return true; }
 
@@ -126,3 +126,4 @@ class Test_WPDB {
 
 $GLOBALS['wpdb'] = new Test_WPDB();
 require_once dirname(__DIR__, 2) . '/paxdesign-booking/includes/class-paxdesign-message-store.php';
+require_once dirname(__DIR__, 2) . '/paxdesign-booking/includes/class-paxdesign-chat-event-bus.php';

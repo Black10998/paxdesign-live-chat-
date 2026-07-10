@@ -136,6 +136,21 @@ class PAXdesign_Chat_Event_Bus {
         return PAXdesign_Message_Store::events_since($channel, absint($since), self::MAX_EVENTS);
     }
 
+    public static function merged_events_since($channels, $since = 0) {
+        $pending = array();
+        foreach ((array) $channels as $key => $value) {
+            $channel = is_string($key) ? $key : $value;
+            $channel_since = is_string($key) ? absint($value) : absint($since);
+            $channel = sanitize_text_field($channel);
+            foreach (self::events_since($channel, $channel_since) as $event) {
+                $event['channel'] = $channel;
+                $pending[(int) $event['id']] = $event;
+            }
+        }
+        ksort($pending, SORT_NUMERIC);
+        return array_values($pending);
+    }
+
     /**
      * Stream SSE events until new data arrives or timeout.
      *
@@ -194,20 +209,15 @@ class PAXdesign_Chat_Event_Bus {
         }
 
         while (microtime(true) < $deadline) {
-            $found = false;
-            foreach ($channels as $c) {
-                $ch = $c['channel'];
-                $events = self::events_since($ch, isset($last_ids[$ch]) ? $last_ids[$ch] : 0);
-                foreach ($events as $event) {
-                    $found = true;
-                    $event['channel'] = $ch;
+            $pending = self::merged_events_since($last_ids);
+            if (!empty($pending)) {
+                foreach ($pending as $event) {
                     self::write_sse('chat', $event);
-                    if (isset($event['id'])) {
+                    $ch = isset($event['channel']) ? $event['channel'] : '';
+                    if ($ch !== '' && isset($event['id'])) {
                         $last_ids[$ch] = max(isset($last_ids[$ch]) ? $last_ids[$ch] : 0, (int) $event['id']);
                     }
                 }
-            }
-            if ($found) {
                 echo "event: ping\ndata: " . wp_json_encode(array('since_inbox' => max($last_ids))) . "\n\n";
                 self::flush_output();
                 break;

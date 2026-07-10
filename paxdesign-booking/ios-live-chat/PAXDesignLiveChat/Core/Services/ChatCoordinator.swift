@@ -630,7 +630,7 @@ final class ChatThreadModel: ObservableObject {
         }
         threadSubscriptionId = ChatEventStream.shared.subscribeThread(api: api, sessionId: sessionId, isTeam: false) { [weak self] event in
             guard let self, let auth = self.auth, self.lifecycleGeneration == generation else { return }
-            Task { await self.handleThreadStreamEvent(event, auth: auth) }
+            await self.handleThreadStreamEvent(event, auth: auth)
         }
     }
 
@@ -1033,7 +1033,7 @@ final class ChatThreadModel: ObservableObject {
             senderName: auth.profile?.displayName
         )
         messages.append(optimistic)
-        PendingMessageStore.shared.enqueue(PendingOutboundMessage(
+        let queued = PendingMessageStore.shared.enqueue(PendingOutboundMessage(
             id: clientMsgId,
             sessionId: sessionId,
             channel: .booking,
@@ -1042,6 +1042,13 @@ final class ChatThreadModel: ObservableObject {
             createdAt: Date().timeIntervalSince1970,
             attempts: 0
         ))
+        guard queued else {
+            messages.removeAll { $0.id == tempId }
+            knownMessageIds.remove(tempId)
+            draft = text
+            errorMessage = "Nachricht konnte nicht sicher lokal gespeichert werden."
+            return
+        }
         knownMessageIds.insert(tempId)
         draft = ""
         clearReply()
@@ -1056,20 +1063,16 @@ final class ChatThreadModel: ObservableObject {
                 replyTo: replyId,
                 clientMsgId: clientMsgId
             )
-            if let index = messages.firstIndex(where: { $0.id == tempId }) {
-                messages[index] = msg
-            } else {
-                messages.append(msg)
-            }
+            messages.removeAll { $0.id == tempId }
             knownMessageIds.remove(tempId)
-            knownMessageIds.insert(msg.id)
+            insertIncomingMessages([msg])
             pollSeq = max(pollSeq, msg.id)
             PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
             MessageSendSound.shared.playIfEnabled()
             await poll(auth: auth)
         } catch {
             switch error {
-            case LiveChatAPIError.unauthorized, LiveChatAPIError.server(_):
+            case LiveChatAPIError.unauthorized, LiveChatAPIError.rejected(_):
                 PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
                 messages.removeAll { $0.id == tempId }
                 knownMessageIds.remove(tempId)
@@ -1094,7 +1097,8 @@ final class ChatThreadModel: ObservableObject {
                 let message: LiveMessage
                 if let path = item.attachmentPath {
                     guard let imageData = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
-                        return
+                        PendingMessageStore.shared.acknowledge(clientMsgId: item.id)
+                        continue
                     }
                     message = try await api.sendImage(
                         sessionId,
@@ -1141,7 +1145,7 @@ final class ChatThreadModel: ObservableObject {
             senderName: auth.profile?.displayName
         )
         messages.append(optimistic)
-        PendingMessageStore.shared.enqueueImage(
+        let queued = PendingMessageStore.shared.enqueueImage(
             PendingOutboundMessage(
                 id: clientMsgId,
                 sessionId: sessionId,
@@ -1154,6 +1158,13 @@ final class ChatThreadModel: ObservableObject {
             data: imageData,
             filename: filename
         )
+        guard queued else {
+            messages.removeAll { $0.id == tempId }
+            knownMessageIds.remove(tempId)
+            draft = caption
+            errorMessage = "Bild konnte nicht sicher lokal gespeichert werden."
+            return
+        }
         knownMessageIds.insert(tempId)
         draft = ""
         clearReply()
@@ -1169,20 +1180,16 @@ final class ChatThreadModel: ObservableObject {
                 replyTo: replyId,
                 clientMsgId: clientMsgId
             )
-            if let index = messages.firstIndex(where: { $0.id == tempId }) {
-                messages[index] = msg
-            } else {
-                messages.append(msg)
-            }
+            messages.removeAll { $0.id == tempId }
             knownMessageIds.remove(tempId)
-            knownMessageIds.insert(msg.id)
+            insertIncomingMessages([msg])
             pollSeq = max(pollSeq, msg.id)
             PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
             MessageSendSound.shared.playIfEnabled()
             await poll(auth: auth)
         } catch {
             switch error {
-            case LiveChatAPIError.unauthorized, LiveChatAPIError.server(_):
+            case LiveChatAPIError.unauthorized, LiveChatAPIError.rejected(_):
                 PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
                 messages.removeAll { $0.id == tempId }
                 knownMessageIds.remove(tempId)

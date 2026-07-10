@@ -40,7 +40,7 @@ enum ChatEventStreamParser {
 final class ChatEventStream {
     static let shared = ChatEventStream()
 
-    typealias InboxHandler = @MainActor (ChatStreamEvent) -> Void
+    typealias InboxHandler = @MainActor (ChatStreamEvent) async -> Void
 
     @MainActor
     private final class ThreadSubscription {
@@ -104,7 +104,7 @@ final class ChatEventStream {
                     try await current.api.consumeEventStream(path: current.path, since: since) { event in
                         Task { @MainActor in
                             guard let current = self.threadSubscriptions[id] else { return }
-                            current.handler(event)
+                            await current.handler(event)
                             if event.id > 0 {
                                 current.since = max(current.since, event.id)
                                 ChatCursorStore.shared.advance(
@@ -166,7 +166,7 @@ final class ChatEventStream {
                     try await api.consumeEventStream(path: "events/stream", since: since) { event in
                         Task { @MainActor in
                             for handler in self.inboxHandlers.values {
-                                handler(event)
+                                await handler(event)
                             }
                             if event.id > 0 {
                                 self.inboxSince = max(self.inboxSince, event.id)

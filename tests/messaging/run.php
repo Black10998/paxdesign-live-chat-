@@ -116,6 +116,16 @@ $replay = collect_events('session:' . $session, $cursor);
 assert_true(count($replay) === $expected - 200, 'Reconnect replay lost or duplicated events');
 assert_true($replay[0]['id'] > $cursor, 'Reconnect replay did not honor exclusive cursor');
 
+// Multiplexed channels must be emitted in global outbox order.
+$userEvent = PAXdesign_Message_Store::emit('inbox:user:7', 'message', array('seq' => 1));
+$adminEvent = PAXdesign_Message_Store::emit('inbox:admins', 'message', array('seq' => 2));
+$merged = PAXdesign_Chat_Event_Bus::merged_events_since(array(
+    'inbox:admins' => 0,
+    'inbox:user:7' => 0,
+));
+assert_true(count($merged) === 2, 'Multiplexed inbox omitted an event');
+assert_true($merged[0]['id'] === $userEvent && $merged[1]['id'] === $adminEvent, 'Multiplexed inbox reordered events');
+
 // A committed message without its outbox event is forbidden.
 $beforeFailure = PAXdesign_Message_Store::count($session);
 $wpdb->failOutboxInsert = true;

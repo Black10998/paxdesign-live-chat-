@@ -289,7 +289,6 @@ class PAXdesign_Team_Messaging {
             }
 
             $identity = PAXdesign_Chat_Live::resolve_employee_identity($current_user_id);
-            PAXdesign_Message_Store::migrate_legacy($conv_id, $conv['messages'], 'team');
             $stored = PAXdesign_Message_Store::append(
                 $conv_id,
                 'admin',
@@ -301,6 +300,8 @@ class PAXdesign_Team_Messaging {
                     'sender_avatar' => $identity ? $identity['avatar'] : '',
                     'sender_role'   => $identity ? $identity['role'] : '',
                     'participants'  => isset($conv['participants']) ? $conv['participants'] : array(),
+                    'legacy_messages' => $conv['messages'],
+                    'lock_already_held' => true,
                 ),
                 'team'
             );
@@ -330,7 +331,7 @@ class PAXdesign_Team_Messaging {
             $formatted = self::format_message($stored);
 
             $recipient = self::other_participant($conv, $current_user_id);
-            if ($recipient && class_exists('PAXdesign_APNS')) {
+            if (empty($stored['_deduplicated']) && $recipient && class_exists('PAXdesign_APNS')) {
                 $sender_name = $identity ? $identity['name'] : wp_get_current_user()->display_name;
                 PAXdesign_APNS::notify_team_message(
                     (int) $recipient->ID,
@@ -564,15 +565,15 @@ class PAXdesign_Team_Messaging {
             }
             self::save_conversations($all);
 
+            if ($all_hidden && class_exists('PAXdesign_Message_Store')) {
+                PAXdesign_Message_Store::delete_session($conv_id);
+            }
             if (class_exists('PAXdesign_Chat_Event_Bus')) {
                 PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'conversation_deleted', array(
                     'mode'         => $all_hidden ? 'purged' : 'hidden',
                     'user_id'      => $current_user_id,
                     'participants' => $participants,
                 ));
-            }
-            if ($all_hidden && class_exists('PAXdesign_Message_Store')) {
-                PAXdesign_Message_Store::delete_session($conv_id);
             }
 
             return array(
@@ -607,15 +608,15 @@ class PAXdesign_Team_Messaging {
             unset($all[$conv_id]);
             self::save_conversations($all);
 
+            if (class_exists('PAXdesign_Message_Store')) {
+                PAXdesign_Message_Store::delete_session($conv_id);
+            }
             if (class_exists('PAXdesign_Chat_Event_Bus')) {
                 PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'conversation_deleted', array(
                     'mode'         => 'purged',
                     'user_id'      => absint($current_user_id),
                     'participants' => $participants,
                 ));
-            }
-            if (class_exists('PAXdesign_Message_Store')) {
-                PAXdesign_Message_Store::delete_session($conv_id);
             }
 
             return array(

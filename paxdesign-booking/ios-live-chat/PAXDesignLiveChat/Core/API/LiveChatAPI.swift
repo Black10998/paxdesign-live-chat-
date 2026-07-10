@@ -3,6 +3,7 @@ import Foundation
 enum LiveChatAPIError: LocalizedError {
     case invalidURL
     case unauthorized
+    case rejected(String)
     case server(String)
     case decoding(Error)
 
@@ -10,6 +11,7 @@ enum LiveChatAPIError: LocalizedError {
         switch self {
         case .invalidURL: return L10n.ApiErrorInvalidUrl
         case .unauthorized: return L10n.ApiErrorLoginFailed
+        case .rejected(let msg): return msg
         case .server(let msg): return msg
         case .decoding(let err): return "Antwort konnte nicht gelesen werden: \(err.localizedDescription)"
         }
@@ -143,10 +145,11 @@ final class LiveChatAPI {
         }
 
         if http.statusCode >= 400 {
-            if let message = wpErrorMessage(from: data) {
-                throw LiveChatAPIError.server(message)
+            let message = wpErrorMessage(from: data) ?? "HTTP \(http.statusCode)"
+            if http.statusCode < 500 {
+                throw LiveChatAPIError.rejected(message)
             }
-            throw LiveChatAPIError.server("HTTP \(http.statusCode)")
+            throw LiveChatAPIError.server(message)
         }
 
         do {

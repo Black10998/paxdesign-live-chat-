@@ -12,7 +12,14 @@ if (!defined('ABSPATH')) {
 
 class PAXdesign_Message_Store {
 
-    const SCHEMA_VERSION = '2.0';
+    const SCHEMA_VERSION = '2.1';
+
+    public static function init() {
+        add_action('paxdesign_message_store_prune', array(__CLASS__, 'prune'));
+        if (!wp_next_scheduled('paxdesign_message_store_prune')) {
+            wp_schedule_event(time() + HOUR_IN_SECONDS, 'hourly', 'paxdesign_message_store_prune');
+        }
+    }
 
     public static function messages_table() {
         global $wpdb;
@@ -205,18 +212,25 @@ class PAXdesign_Message_Store {
 
         $client_id = self::normalize_client_id(isset($extra['client_msg_id']) ? $extra['client_msg_id'] : '');
         $lock_name = 'pax_msg_' . md5($session_id);
-        $locked = (int) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 10)', $lock_name));
+        $owns_lock = empty($extra['lock_already_held']);
+        $locked = $owns_lock
+            ? (int) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 10)', $lock_name))
+            : 1;
         if ($locked !== 1) {
             return new WP_Error('pax_message_busy', 'Conversation is busy. Retry with the same client_msg_id.', array('status' => 503));
         }
 
         try {
+            self::migrate_customer_session_if_needed($session_id, $channel, true);
+            if ($channel === 'team' && !empty($extra['legacy_messages']) && is_array($extra['legacy_messages'])) {
+                self::import_legacy_rows($session_id, $extra['legacy_messages'], 'team');
+            }
             $existing = self::get_by_client_id($session_id, $client_id);
             if ($existing) {
+                $existing['_deduplicated'] = true;
                 return $existing;
             }
 
-            self::migrate_customer_session_if_needed($session_id, $channel, true);
             $table = self::messages_table();
             $wpdb->query('START TRANSACTION');
             $seq = 1 + (int) $wpdb->get_var($wpdb->prepare(
@@ -286,7 +300,9 @@ class PAXdesign_Message_Store {
             $wpdb->query('COMMIT');
             return $message;
         } finally {
-            $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock_name));
+            if ($owns_lock) {
+                $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock_name));
+            }
         }
     }
 
@@ -399,7 +415,7 @@ class PAXdesign_Message_Store {
         if ($consumer_key === '' || $channel_key === '') {
             return new WP_Error('pax_ack_invalid', 'Invalid acknowledgement.', array('status' => 400));
         }
-        $wpdb->query($wpdb->prepare(
+        $result = $wpdb->query($wpdb->prepare(
             "INSERT INTO $table
                 (consumer_key, channel_key, last_event_id, last_msg_seq, updated_at)
              VALUES (%s, %s, %d, %d, %s)
@@ -413,6 +429,9 @@ class PAXdesign_Message_Store {
             absint($msg_seq),
             current_time('mysql', true)
         ));
+        if ($result === false) {
+            return new WP_Error('pax_ack_failed', 'Acknowledgement could not be persisted.', array('status' => 500));
+        }
         return array('ok' => true, 'event_id' => absint($event_id), 'seq' => absint($msg_seq));
     }
 
@@ -438,11 +457,23 @@ class PAXdesign_Message_Store {
         if ($session_id === '') {
             return false;
         }
-        $wpdb->delete(self::messages_table(), array('session_id' => $session_id), array('%s'));
-        $wpdb->delete(self::outbox_table(), array('channel_key' => 'session:' . $session_id), array('%s'));
-        $wpdb->delete(self::outbox_table(), array('channel_key' => 'team:' . $session_id), array('%s'));
-        $wpdb->delete(self::cursors_table(), array('channel_key' => 'session:' . $session_id), array('%s'));
-        $wpdb->delete(self::cursors_table(), array('channel_key' => 'team:' . $session_id), array('%s'));
+        $results = array(
+            $wpdb->delete(self::messages_table(), array('session_id' => $session_id), array('%s')),
+            $wpdb->delete(self::outbox_table(), array('channel_key' => 'session:' . $session_id), array('%s')),
+            $wpdb->delete(self::outbox_table(), array('channel_key' => 'team:' . $session_id), array('%s')),
+            $wpdb->delete(self::cursors_table(), array('channel_key' => 'session:' . $session_id), array('%s')),
+            $wpdb->delete(self::cursors_table(), array('channel_key' => 'team:' . $session_id), array('%s')),
+        );
+        $payload_pattern = '%"session_id":"' . str_replace(array('%', '_'), array('\\%', '\\_'), $session_id) . '"%';
+        $results[] = $wpdb->query($wpdb->prepare(
+            'DELETE FROM ' . self::outbox_table() . ' WHERE payload_json LIKE %s',
+            $payload_pattern
+        ));
+        foreach ($results as $result) {
+            if ($result === false) {
+                return false;
+            }
+        }
         return true;
     }
 

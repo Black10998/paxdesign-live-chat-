@@ -32,6 +32,19 @@ final class MessagingReliabilityTests: XCTestCase {
         XCTAssertEqual(result.messages.map(\.id), [8])
     }
 
+    func testReactionsCannotCrashOnLegacyDuplicateIDs() {
+        let first = LiveMessage(id: 8, role: "admin", content: "once")
+        let duplicate = LiveMessage(id: 8, role: "admin", content: "once")
+
+        let result = MessageMerge.applyReactions(
+            to: [first, duplicate],
+            reactions: ["8": "like"]
+        )
+
+        XCTAssertEqual(result.messages.count, 1)
+        XCTAssertEqual(result.messages.first?.reaction, "like")
+    }
+
     func testOutOfOrderMessagesAreSortedByServerSequence() {
         let existing = [LiveMessage(id: 3, role: "user", content: "three")]
         let incoming = [

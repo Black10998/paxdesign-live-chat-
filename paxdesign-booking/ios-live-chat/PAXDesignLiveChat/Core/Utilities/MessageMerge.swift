@@ -66,8 +66,11 @@ enum MessageMerge {
     ) -> (messages: [LiveMessage], changed: Bool) {
         guard !reactions.isEmpty else { return (messages, false) }
 
-        var map = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
-        var changed = false
+        var map: [Int: LiveMessage] = [:]
+        for message in messages {
+            map[message.id] = message
+        }
+        var changed = map.count != messages.count
 
         for (key, raw) in reactions {
             guard let messageId = Int(key),

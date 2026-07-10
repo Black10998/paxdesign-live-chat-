@@ -761,14 +761,16 @@ class PAXdesign_Chat_Live {
 
         $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
         $preview = $content !== '' ? wp_html_excerpt($content, 120, '…') : '';
-        do_action('paxdesign_session_sync', $session_id, array(
-            'is_new'    => false,
-            'seq'       => $id,
-            'preview'   => $preview,
-            'last_role' => $role,
-            'handler'   => $handler,
-            'service'   => isset($row->detected_service) ? (string) $row->detected_service : '',
-        ));
+        if (empty($entry['_deduplicated'])) {
+            do_action('paxdesign_session_sync', $session_id, array(
+                'is_new'    => false,
+                'seq'       => $id,
+                'preview'   => $preview,
+                'last_role' => $role,
+                'handler'   => $handler,
+                'service'   => isset($row->detected_service) ? (string) $row->detected_service : '',
+            ));
+        }
 
         return $entry;
     }
@@ -1123,7 +1125,7 @@ class PAXdesign_Chat_Live {
 
         $this->clear_typing($session_id, 'user');
 
-        if (class_exists('PAXdesign_Live_Chat_PWA')) {
+        if (empty($entry['_deduplicated']) && class_exists('PAXdesign_Live_Chat_PWA')) {
             PAXdesign_Live_Chat_PWA::notify_new_customer_message($session_id, $content);
         }
 
@@ -1757,14 +1759,21 @@ class PAXdesign_Chat_Live {
         if (!$this->is_admin_handler($session_id)) {
             return new WP_Error('not_admin', 'Chat nicht übernommen.', array('status' => 409));
         }
-        $existing = PAXdesign_Message_Store::find_by_client_id($session_id, $client_msg_id);
-        if ($existing) {
-            return array('message' => $existing);
+        global $wpdb;
+        $lock_name = 'pax_msg_' . md5($session_id);
+        $locked = (int) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 10)', $lock_name));
+        if ($locked !== 1) {
+            return new WP_Error('pax_message_busy', 'Chat ist beschäftigt. Bitte erneut versuchen.', array('status' => 503));
         }
+        try {
+            $existing = PAXdesign_Message_Store::find_by_client_id($session_id, $client_msg_id);
+            if ($existing) {
+                return array('message' => $existing);
+            }
 
-        if (!empty($file['error'])) {
-            return new WP_Error('upload_failed', 'Upload fehlgeschlagen.', array('status' => 400));
-        }
+            if (!empty($file['error'])) {
+                return new WP_Error('upload_failed', 'Upload fehlgeschlagen.', array('status' => 400));
+            }
 
         $allowed = array(
             'jpg|jpeg|jpe' => 'image/jpeg',
@@ -1795,13 +1804,20 @@ class PAXdesign_Chat_Live {
         $image_url = $this->optimize_chat_image($upload['file'], $upload['url']);
         $caption   = sanitize_textarea_field((string) $caption);
         $reply_to  = (int) $reply_to;
-        $extra     = array('image_url' => $image_url, 'client_msg_id' => $client_msg_id);
+        $extra     = array(
+            'image_url' => $image_url,
+            'client_msg_id' => $client_msg_id,
+            'lock_already_held' => true,
+        );
         if ($reply_to > 0) {
             $extra['reply_to'] = $reply_to;
         }
 
         $entry = $this->append_message($session_id, 'admin', $caption, $extra);
         if (is_wp_error($entry)) {
+            if (!empty($upload['file']) && file_exists($upload['file'])) {
+                wp_delete_file($upload['file']);
+            }
             return $entry;
         }
         if (!$entry) {
@@ -1811,6 +1827,9 @@ class PAXdesign_Chat_Live {
         $this->clear_typing($session_id, 'admin');
 
         return array('message' => $entry);
+        } finally {
+            $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock_name));
+        }
     }
 
     /**
@@ -2626,7 +2645,14 @@ class PAXdesign_Chat_Live {
             return new WP_Error('delete_failed', 'Löschen fehlgeschlagen.', array('status' => 500));
         }
         if (class_exists('PAXdesign_Message_Store')) {
-            PAXdesign_Message_Store::delete_session($session_id);
+            if (!PAXdesign_Message_Store::delete_session($session_id)) {
+                return new WP_Error('delete_failed', 'Nachrichtendaten konnten nicht vollständig gelöscht werden.', array('status' => 500));
+            }
+        }
+        if (class_exists('PAXdesign_Chat_Event_Bus')) {
+            PAXdesign_Chat_Event_Bus::emit_session($session_id, 'conversation_deleted', array(
+                'mode' => 'purged',
+            ));
         }
 
         return array(

@@ -22,7 +22,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 
 // Define plugin constants
 define('PAXDESIGN_BOOKING_VERSION', '3.98.0');
-define('PAXDESIGN_BOOKING_DB_VERSION', '2.0');
+define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -48,6 +48,7 @@ require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-icons.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-settings-admin.php';
 PAXdesign_Booking_Update_Checker::init();
+PAXdesign_Message_Store::init();
 PAXdesign_Settings_Admin::init();
 PAXdesign_Chat_Log::get_instance();
 PAXdesign_Chat_Live::get_instance();
