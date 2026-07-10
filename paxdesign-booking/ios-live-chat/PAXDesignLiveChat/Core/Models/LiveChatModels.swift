@@ -343,6 +343,31 @@ struct SessionListResponse: Codable {
     }
 }
 
+struct ConversationSyncResponse: Codable {
+    let sessions: [LiveSession]
+    let liveCount: Int
+    let teamSessions: [LiveSession]
+    let threads: [String: PollResponse]
+    let teamThreads: [String: PollResponse]
+
+    enum CodingKeys: String, CodingKey {
+        case sessions
+        case liveCount = "live_count"
+        case teamSessions = "team_sessions"
+        case threads
+        case teamThreads = "team_threads"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sessions = (try? container.decode([LiveSession].self, forKey: .sessions)) ?? []
+        liveCount = LiveChatDecode.int(container, CodingKeys.liveCount)
+        teamSessions = (try? container.decode([LiveSession].self, forKey: .teamSessions)) ?? []
+        threads = (try? container.decode([String: PollResponse].self, forKey: .threads)) ?? [:]
+        teamThreads = (try? container.decode([String: PollResponse].self, forKey: .teamThreads)) ?? [:]
+    }
+}
+
 struct PollResponse: Codable {
     let handler: String
     let handlerLabel: String

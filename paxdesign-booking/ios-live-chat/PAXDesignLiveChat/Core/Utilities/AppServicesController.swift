@@ -18,6 +18,7 @@ enum AppServicesController {
 
         if let api = auth.api {
             ConversationHistoryStore.shared.setSiteScope(api.publicApiBaseURL)
+            ConversationHistoryStore.shared.warmAllFromDisk()
         }
 
         coordinator.start(auth: auth)

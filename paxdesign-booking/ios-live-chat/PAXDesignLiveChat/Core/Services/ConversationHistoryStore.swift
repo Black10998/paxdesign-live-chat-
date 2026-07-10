@@ -54,7 +54,7 @@ struct ConversationSnapshot: Codable {
 final class ConversationHistoryStore {
     static let shared = ConversationHistoryStore()
 
-    private let memoryLimit = 40
+    private let memoryLimit = 300
     private var memory: [String: ConversationSnapshot] = [:]
     private var memoryOrder: [String] = []
     private let directoryURL: URL
@@ -75,6 +75,23 @@ final class ConversationHistoryStore {
         siteScope = normalized
         memory.removeAll()
         memoryOrder.removeAll()
+        warmAllFromDisk()
+    }
+
+    func warmAllFromDisk() {
+        guard let items = try? FileManager.default.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: nil) else {
+            return
+        }
+        let scopePrefix = (siteScope.isEmpty ? "default" : String(siteScope.hashValue)) + "-"
+        for url in items where url.pathExtension == "json" {
+            let name = url.lastPathComponent
+            guard name.hasPrefix(scopePrefix) else { continue }
+            guard let data = try? Data(contentsOf: url),
+                  let snapshot = try? decoder.decode(ConversationSnapshot.self, from: data) else {
+                continue
+            }
+            storeInMemory(snapshot)
+        }
     }
 
     func snapshot(for sessionId: String) -> ConversationSnapshot? {

@@ -143,6 +143,12 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => $auth,
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/conversations/sync', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'route_conversations_sync'),
+            'permission_callback' => $auth,
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions/(?P<id>[a-zA-Z0-9_\-]+)', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'route_session'),
@@ -598,6 +604,22 @@ class PAXdesign_Live_Chat_Mobile_API {
 
     public static function route_sessions(WP_REST_Request $request) {
         return self::respond(self::live()->get_live_list_data());
+    }
+
+    public static function route_conversations_sync(WP_REST_Request $request) {
+        $user_id = (int) wp_get_current_user()->ID;
+        $live    = self::live()->get_live_list_data(true);
+        if (is_wp_error($live)) {
+            return $live;
+        }
+        $team = PAXdesign_Team_Messaging::list_sessions_for_user($user_id, true);
+        return self::respond(array(
+            'sessions'      => isset($live['sessions']) ? $live['sessions'] : array(),
+            'live_count'    => isset($live['live_count']) ? (int) $live['live_count'] : 0,
+            'team_sessions' => isset($team['sessions']) ? $team['sessions'] : array(),
+            'threads'       => isset($live['threads']) ? $live['threads'] : array(),
+            'team_threads'  => isset($team['threads']) ? $team['threads'] : array(),
+        ));
     }
 
     public static function route_session(WP_REST_Request $request) {

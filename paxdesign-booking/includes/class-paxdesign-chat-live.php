@@ -2040,7 +2040,7 @@ class PAXdesign_Chat_Live {
     /**
      * @return array<string, mixed>|WP_Error
      */
-    public function get_live_list_data() {
+    public function get_live_list_data($include_threads = false) {
         PAXdesign_Chat_Log::create_table();
         self::upgrade_schema();
 
@@ -2066,18 +2066,29 @@ class PAXdesign_Chat_Live {
 
         $sessions   = array();
         $live_count = 0;
+        $threads    = array();
         foreach ((array) $rows as $row) {
             $item = $this->format_live_list_session($row);
             if ($item['handler'] === self::HANDLER_LIVE) {
                 $live_count++;
             }
             $sessions[] = $item;
+            if ($include_threads) {
+                $session_id = isset($row->session_id) ? (string) $row->session_id : '';
+                if ($session_id !== '') {
+                    $thread = $this->get_poll_data($session_id, 0, true);
+                    if (!is_wp_error($thread)) {
+                        $threads[$session_id] = $thread;
+                    }
+                }
+            }
         }
 
         return array(
             'sessions'    => $sessions,
             'live_count'  => $live_count,
             'server_time' => current_time('mysql'),
+            'threads'     => $threads,
         );
     }
 

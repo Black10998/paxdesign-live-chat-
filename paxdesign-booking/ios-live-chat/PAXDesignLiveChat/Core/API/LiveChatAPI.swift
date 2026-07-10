@@ -170,6 +170,13 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url), endpoint: "sessions", as: SessionListResponse.self)
     }
 
+    func fetchConversationSync() async throws -> ConversationSyncResponse {
+        guard let url = liveAdminURL(path: "conversations/sync") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "conversations-sync", as: ConversationSyncResponse.self)
+    }
+
     func fetchSession(_ sessionId: String) async throws -> PollResponse {
         guard let detailURL = liveAdminURL(path: "sessions/\(sessionId)") else {
             throw LiveChatAPIError.invalidURL

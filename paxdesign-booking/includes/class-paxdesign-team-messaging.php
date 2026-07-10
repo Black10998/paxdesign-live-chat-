@@ -135,7 +135,7 @@ class PAXdesign_Team_Messaging {
      * @param int $current_user_id
      * @return array{sessions: array<int, array<string, mixed>>, live_count: int}
      */
-    public static function list_sessions_for_user($current_user_id) {
+    public static function list_sessions_for_user($current_user_id, $include_threads = false) {
         $current_user_id = absint($current_user_id);
         $all             = self::all_conversations();
         $sessions        = array();
@@ -160,9 +160,24 @@ class PAXdesign_Team_Messaging {
             return strcmp((string) $b['updated_at'], (string) $a['updated_at']);
         });
 
+        $threads = array();
+        if ($include_threads) {
+            foreach ($sessions as $session) {
+                $conv_id = isset($session['session_id']) ? (string) $session['session_id'] : '';
+                if ($conv_id === '') {
+                    continue;
+                }
+                $thread = self::poll_conversation($conv_id, $current_user_id, 0, true);
+                if (!is_wp_error($thread)) {
+                    $threads[$conv_id] = $thread;
+                }
+            }
+        }
+
         return array(
             'sessions'   => $sessions,
             'live_count' => 0,
+            'threads'    => $threads,
         );
     }
 

@@ -53,7 +53,15 @@ final class TeamMessagingCoordinator: ObservableObject {
                 }
                 if event.type == "message",
                    let inline = LiveMessage.fromStreamPayload(event.payload["message"]) {
-                    ConversationHistoryStore.shared.mergeMessage(sessionId: sessionId, message: inline, seq: StreamPayload.int(event.payload["seq"]))
+                    ConversationHistoryStore.shared.mergeMessage(
+                        sessionId: sessionId,
+                        message: inline,
+                        seq: StreamPayload.int(event.payload["seq"])
+                    )
+                    ChatThreadRegistry.shared.teamThread(sessionId: sessionId).applyLiveMessage(
+                        inline,
+                        seq: StreamPayload.int(event.payload["seq"])
+                    )
                     var userInfo: [String: Any] = ["session_id": sessionId]
                     userInfo["inline_message"] = event.payload["message"]
                     NotificationCenter.default.post(
@@ -87,6 +95,13 @@ final class TeamMessagingCoordinator: ObservableObject {
         }
     }
 
+    func applyTeamSessions(_ sessions: [LiveSession]) {
+        if sessions != teamSessions {
+            teamSessions = sessions
+        }
+        errorMessage = nil
+    }
+
     func refresh(auth: AuthStore) async {
         guard auth.isLoggedIn, let api = auth.api else {
             if !teamSessions.isEmpty { teamSessions = [] }
@@ -96,12 +111,9 @@ final class TeamMessagingCoordinator: ObservableObject {
         if shouldShowLoading { isLoading = true }
         defer { if shouldShowLoading { isLoading = false } }
         do {
-            let response = try await api.fetchTeamSessions()
-            if response.sessions != teamSessions {
-                teamSessions = response.sessions
-            }
-            errorMessage = nil
-            ConversationPrefetcher.shared.prefetchFromSessions(response.sessions, api: api)
+            let response = try await api.fetchConversationSync()
+            ConversationLocalSync.shared.apply(response)
+            applyTeamSessions(response.teamSessions)
         } catch {
             if case LiveChatAPIError.unauthorized = error {
                 auth.handleUnauthorized()
@@ -127,7 +139,7 @@ final class TeamMessagingCoordinator: ObservableObject {
 @MainActor
 final class TeamChatThreadModel: ObservableObject {
     @Published var messages: [LiveMessage] = []
-    @Published var isLoadingMessages = true
+    @Published var isLoadingMessages = false
     @Published var participantName = ""
     @Published var draft = ""
     @Published var isSending = false
@@ -157,23 +169,17 @@ final class TeamChatThreadModel: ObservableObject {
 
     func start(auth: AuthStore) {
         self.auth = auth
-        let restoredFromCache = restoreFromCache()
+        hydrateFromLocalStore()
         lifecycleGeneration += 1
         let generation = lifecycleGeneration
         stopBackgroundWork()
-
-        if !restoredFromCache {
-            resetThreadState()
-        } else {
-            isLoadingMessages = false
-            historyBaselined = true
-        }
         streamSnapshotReady = true
+        isLoadingMessages = false
 
         pollTask = Task { [weak self] in
             guard let self else { return }
             self.beginEventStream(auth: auth, generation: generation)
-            await self.loadFullHistory(auth: auth, showLoading: !restoredFromCache)
+            await self.loadFullHistory(auth: auth, showLoading: false)
             guard !Task.isCancelled, self.lifecycleGeneration == generation else { return }
             self.lastStreamEventAt = Date()
 
@@ -189,6 +195,27 @@ final class TeamChatThreadModel: ObservableObject {
                     : self.recoveryPollIntervalNs
                 try? await Task.sleep(nanoseconds: interval)
             }
+        }
+    }
+
+    func hydrateFromLocalStore(force: Bool = false) {
+        if !force && !messages.isEmpty { return }
+        guard let snapshot = ConversationHistoryStore.shared.snapshot(for: sessionId) else { return }
+        applyBaselineSnapshot(snapshot.toPollResponse(), persistCache: false)
+        isLoadingMessages = false
+    }
+
+    func applySilentSync(_ data: PollResponse) {
+        applyBaselineSnapshot(data, persistCache: false)
+        isLoadingMessages = false
+    }
+
+    func applyLiveMessage(_ message: LiveMessage, seq: Int) {
+        insertIncomingMessages([message])
+        lastStreamEventAt = Date()
+        if seq > 0 {
+            pollSeq = max(pollSeq, seq)
+            currentSeq = max(currentSeq, seq)
         }
     }
 
@@ -247,14 +274,8 @@ final class TeamChatThreadModel: ObservableObject {
         isLoadingMessages = true
     }
 
-    private func loadFullHistory(auth: AuthStore, showLoading: Bool = true) async {
-        guard let api = auth.api else {
-            isLoadingMessages = false
-            return
-        }
-        if showLoading && messages.isEmpty {
-            isLoadingMessages = true
-        }
+    private func loadFullHistory(auth: AuthStore, showLoading: Bool = false) async {
+        guard let api = auth.api else { return }
         defer { isLoadingMessages = false }
         do {
             let response = try await api.pollTeamSession(sessionId, since: 0, full: true)
@@ -304,12 +325,8 @@ final class TeamChatThreadModel: ObservableObject {
 
     private func noteHistoryIntegrityIssue() {
         guard serverMessageCount > 0, persistedMessageCount() < serverMessageCount else {
-            if persistedMessageCount() > 0 {
-                errorMessage = nil
-            }
             return
         }
-        errorMessage = "Es fehlen \(serverMessageCount - persistedMessageCount()) von \(serverMessageCount) gespeicherten Nachrichten. Verlauf wird erneut geladen…"
     }
 
     private func persistedMessageCount() -> Int {

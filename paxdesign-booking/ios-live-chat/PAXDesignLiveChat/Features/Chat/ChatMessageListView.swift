@@ -16,43 +16,33 @@ struct ChatMessageListView: View {
     @State private var displayRows: [MessageDisplayRow] = []
 
     var body: some View {
-        Group {
-            if isLoading && messages.isEmpty {
-                ScrollView {
-                    PAXScreenLoadingStack(status: "Nachrichten werden geladen", rowCount: 5)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                }
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: PAXMessageStyle.threadSpacing) {
-                            ForEach(displayRows) { row in
-                                ChatMessageRow(
-                                    row: row,
-                                    canReply: canReply,
-                                    handler: handler,
-                                    agentDisplayName: agentDisplayName,
-                                    customerDisplayName: customerDisplayName,
-                                    onReply: { onReply(row.message) },
-                                    onCopy: { onCopy(row.message) },
-                                    onImageTap: onImageTap
-                                )
-                                .id(row.id)
-                            }
-                            if userTyping {
-                                TypingIndicator(customerName: customerDisplayName)
-                                    .id("typing-indicator")
-                            }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .padding(.bottom, PAXShellLayout.scrollBottomPadding(tabBarVisible: false))
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: PAXMessageStyle.threadSpacing) {
+                    ForEach(displayRows) { row in
+                        ChatMessageRow(
+                            row: row,
+                            canReply: canReply,
+                            handler: handler,
+                            agentDisplayName: agentDisplayName,
+                            customerDisplayName: customerDisplayName,
+                            onReply: { onReply(row.message) },
+                            onCopy: { onCopy(row.message) },
+                            onImageTap: onImageTap
+                        )
+                        .id(row.id)
                     }
-                    .onChange(of: messages.count) { _ in scrollToBottom(proxy: proxy) }
-                    .onChange(of: userTyping) { _ in scrollToBottom(proxy: proxy) }
+                    if userTyping {
+                        TypingIndicator(customerName: customerDisplayName)
+                            .id("typing-indicator")
+                    }
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .padding(.bottom, PAXShellLayout.scrollBottomPadding(tabBarVisible: false))
             }
+            .onChange(of: messages.count) { _ in scrollToBottom(proxy: proxy) }
+            .onChange(of: userTyping) { _ in scrollToBottom(proxy: proxy) }
         }
         .onAppear { rebuildRows() }
         .onChange(of: messages) { _ in rebuildRows() }

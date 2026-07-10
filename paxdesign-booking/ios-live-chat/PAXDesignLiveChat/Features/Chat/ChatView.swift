@@ -38,10 +38,6 @@ struct ChatView: View {
 
             compactStatusBar
 
-            if let historyError = thread.errorMessage, !historyError.isEmpty {
-                historyErrorBanner(historyError)
-            }
-
             if showCustomerOverview {
                 customerOverviewPanel
             }
@@ -499,26 +495,6 @@ private struct AssistChip: View {
 }
 
 private extension ChatView {
-    func historyErrorBanner(_ message: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
-            Text(message)
-                .font(.caption)
-                .foregroundStyle(PAXTheme.textSecondary)
-                .multilineTextAlignment(.leading)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.orange.opacity(0.12))
-        )
-        .padding(.horizontal, 12)
-        .padding(.top, 6)
-    }
-
     var statusLabel: String {
         if thread.handler == "admin" {
             return agentDisplayName

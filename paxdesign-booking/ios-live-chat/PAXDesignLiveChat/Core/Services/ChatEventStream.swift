@@ -99,7 +99,7 @@ final class ChatEventStream {
                     }
                 } catch {
                     if Task.isCancelled { break }
-                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    try? await Task.sleep(nanoseconds: 80_000_000)
                 }
             }
         }
@@ -149,7 +149,7 @@ final class ChatEventStream {
                     }
                 } catch {
                     if Task.isCancelled { break }
-                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    try? await Task.sleep(nanoseconds: 80_000_000)
                 }
             }
         }

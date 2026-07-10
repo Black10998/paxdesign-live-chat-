@@ -6,7 +6,7 @@ final class ChatThreadRegistry {
 
     private var bookingThreads: [String: ChatThreadModel] = [:]
     private var teamThreads: [String: TeamChatThreadModel] = [:]
-    private let maxThreads = 48
+    private let maxThreads = 300
 
     private init() {}
 
@@ -16,6 +16,7 @@ final class ChatThreadRegistry {
             return existing
         }
         let thread = ChatThreadModel(sessionId: sessionId)
+        thread.hydrateFromLocalStore()
         bookingThreads[sessionId] = thread
         touch(sessionId: sessionId, isTeam: false)
         evictIfNeeded()
@@ -28,6 +29,7 @@ final class ChatThreadRegistry {
             return existing
         }
         let thread = TeamChatThreadModel(sessionId: sessionId)
+        thread.hydrateFromLocalStore()
         teamThreads[sessionId] = thread
         touch(sessionId: sessionId, isTeam: true)
         evictIfNeeded()

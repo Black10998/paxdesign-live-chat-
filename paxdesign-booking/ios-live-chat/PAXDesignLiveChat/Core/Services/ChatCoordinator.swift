@@ -94,6 +94,11 @@ final class ChatCoordinator: ObservableObject {
                     if event.type == "message",
                        let inline = LiveMessage.fromStreamPayload(event.payload["message"]) {
                         ConversationHistoryStore.shared.mergeMessage(sessionId: sid, message: inline, seq: seq)
+                        if sid.hasPrefix("team_") {
+                            ChatThreadRegistry.shared.teamThread(sessionId: sid).applyLiveMessage(inline, seq: seq)
+                        } else {
+                            ChatThreadRegistry.shared.bookingThread(sessionId: sid).applyLiveMessage(inline, seq: seq)
+                        }
                     }
                     if event.type == "message" || event.type == "handler" || event.type == "typing" {
                         self.postSessionSync(sessionId: sid, inlineMessage: event.payload["message"])
@@ -119,26 +124,19 @@ final class ChatCoordinator: ObservableObject {
         if shouldShowSync { isSyncing = true }
         defer { if shouldShowSync { isSyncing = false } }
         do {
-            let response = try await api.fetchSessions()
-            let newSessions = response.sessions
-            let newLiveCount = response.liveCount
-            let changed = newSessions != sessions || newLiveCount != liveCount
-            guard changed else {
-                errorMessage = nil
-                return
-            }
-            sessions = newSessions
-            liveCount = newLiveCount
-            noteSessionSeqs(from: newSessions)
+            let response = try await api.fetchConversationSync()
+            ConversationLocalSync.shared.apply(response)
+            TeamMessagingCoordinator.shared.applyTeamSessions(response.teamSessions)
+
+            sessions = response.sessions
+            liveCount = response.liveCount
+            noteSessionSeqs(from: response.sessions)
             lastSyncAt = Date()
             lastSessionRefreshAt = lastSyncAt
             updateUnreadCounts()
-            AppRefreshPolicy.update(liveCount: newLiveCount, openChat: activeSessionId != nil)
+            AppRefreshPolicy.update(liveCount: response.liveCount, openChat: activeSessionId != nil)
             errorMessage = nil
-            detectIncomingLiveRequests(newSessions)
-            if let api = auth.api {
-                ConversationPrefetcher.shared.prefetchFromSessions(newSessions, api: api)
-            }
+            detectIncomingLiveRequests(response.sessions)
         } catch {
             if case LiveChatAPIError.unauthorized = error {
                 auth.handleUnauthorized()
@@ -349,7 +347,7 @@ final class ChatCoordinator: ObservableObject {
 @MainActor
 final class ChatThreadModel: ObservableObject {
     @Published var messages: [LiveMessage] = []
-    @Published var isLoadingMessages = true
+    @Published var isLoadingMessages = false
     @Published var handler = "ai"
     @Published var customerName = "Kunde"
     @Published var adminName = ""
@@ -395,18 +393,12 @@ final class ChatThreadModel: ObservableObject {
 
     func start(auth: AuthStore, expectedServerSeq: Int = 0) {
         self.auth = auth
-        let restoredFromCache = restoreFromCache()
+        hydrateFromLocalStore()
         lifecycleGeneration += 1
         let generation = lifecycleGeneration
         stopBackgroundWork()
-
-        if !restoredFromCache {
-            resetThreadState()
-        } else {
-            isLoadingMessages = false
-            historyBaselined = true
-        }
         streamSnapshotReady = true
+        isLoadingMessages = false
 
         pollTask = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -415,7 +407,7 @@ final class ChatThreadModel: ObservableObject {
             async let history: Void = self.loadFullHistory(
                 auth: auth,
                 expectedServerSeq: expectedServerSeq,
-                showLoading: !restoredFromCache
+                showLoading: false
             )
             _ = await (quickReplies, history)
             guard !Task.isCancelled, self.lifecycleGeneration == generation else { return }
@@ -434,6 +426,26 @@ final class ChatThreadModel: ObservableObject {
                     : self.recoveryPollIntervalNs
                 try? await Task.sleep(nanoseconds: interval)
             }
+        }
+    }
+
+    func applySilentSync(_ data: PollResponse) {
+        applyBaselineSnapshot(data, persistCache: false)
+        isLoadingMessages = false
+    }
+
+    func hydrateFromLocalStore(force: Bool = false) {
+        if !force && !messages.isEmpty { return }
+        guard let snapshot = ConversationHistoryStore.shared.snapshot(for: sessionId) else { return }
+        applyBaselineSnapshot(snapshot.toPollResponse(), persistCache: false)
+        isLoadingMessages = false
+    }
+
+    func applyLiveMessage(_ message: LiveMessage, seq: Int) {
+        insertIncomingMessages([message])
+        lastStreamEventAt = Date()
+        if seq > 0 {
+            pollSeq = max(pollSeq, seq)
         }
     }
 
@@ -485,12 +497,8 @@ final class ChatThreadModel: ObservableObject {
     }
 
     private func restoreFromCache() -> Bool {
-        guard let snapshot = ConversationHistoryStore.shared.snapshot(for: sessionId) else {
-            return false
-        }
-        applyBaselineSnapshot(snapshot.toPollResponse(), persistCache: false)
-        isLoadingMessages = false
-        return !messages.isEmpty || snapshot.messageCount > 0
+        hydrateFromLocalStore()
+        return historyBaselined
     }
 
     private func resetThreadState() {
@@ -615,14 +623,8 @@ final class ChatThreadModel: ObservableObject {
         messages.map(\.id).filter { $0 > 0 }.max() ?? 0
     }
 
-    private func loadFullHistory(auth: AuthStore, expectedServerSeq: Int = 0, showLoading: Bool = true) async {
-        guard let api = auth.api else {
-            isLoadingMessages = false
-            return
-        }
-        if showLoading && messages.isEmpty {
-            isLoadingMessages = true
-        }
+    private func loadFullHistory(auth: AuthStore, expectedServerSeq: Int = 0, showLoading: Bool = false) async {
+        guard let api = auth.api else { return }
         defer { isLoadingMessages = false }
         do {
             let data = try await api.fetchSession(sessionId)
@@ -771,12 +773,9 @@ final class ChatThreadModel: ObservableObject {
 
     private func noteHistoryIntegrityIssue() {
         guard serverMessageCount > 0, persistedMessageCount() < serverMessageCount else {
-            if persistedMessageCount() > 0 {
-                errorMessage = nil
-            }
             return
         }
-        errorMessage = "Es fehlen \(serverMessageCount - persistedMessageCount()) von \(serverMessageCount) gespeicherten Nachrichten. Verlauf wird erneut geladen…"
+        // Silent background recovery — never disturb the chat UI.
     }
 
     private func loadQuickReplies(auth: AuthStore) async {

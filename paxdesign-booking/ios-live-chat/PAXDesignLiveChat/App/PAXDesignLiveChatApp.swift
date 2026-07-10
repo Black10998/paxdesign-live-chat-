@@ -90,6 +90,8 @@ struct PAXDesignLiveChatApp: App {
                 coordinator: coordinator,
                 teamCoordinator: TeamMessagingCoordinator.shared
             )
+            await coordinator.refreshSessions(auth: auth)
+            await TeamMessagingCoordinator.shared.refresh(auth: auth)
         }
 
         LaunchDiagnostics.mark("startup.complete")
