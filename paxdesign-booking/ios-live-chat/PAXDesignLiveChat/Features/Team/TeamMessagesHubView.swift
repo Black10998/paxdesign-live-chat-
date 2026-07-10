@@ -58,8 +58,8 @@ struct TeamMessagesHubView: View {
             .environmentObject(teamCoordinator)
         }
         .paxPremiumRefreshable(status: "Team-Unterhaltungen werden geladen", rowCount: 4) {
-            await coordinator.refreshSessions(auth: auth)
-            await teamCoordinator.refresh(auth: auth)
+            await coordinator.fullConversationSync(auth: auth)
+            await teamCoordinator.fullConversationSync(auth: auth)
             await loadContacts()
         }
         .onAppear {
