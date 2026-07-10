@@ -11,8 +11,9 @@ struct PAXSevenDayAnalyticsRings: View {
     let title: String
     let items: [PAXRingMetric]
 
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var animateRings = false
+    @State private var animateChart = false
 
     private var maxValue: Int {
         max(items.map(\.value).max() ?? 0, 1)
@@ -22,128 +23,280 @@ struct PAXSevenDayAnalyticsRings: View {
         items.map(\.value).reduce(0, +)
     }
 
+    private var averageValue: Double {
+        guard !items.isEmpty else { return 0 }
+        return Double(totalValue) / Double(items.count)
+    }
+
+    private var peakItem: PAXRingMetric? {
+        items.max(by: { $0.value < $1.value })
+    }
+
+    private var trendDelta: Double? {
+        guard items.count >= 4 else { return nil }
+        let midpoint = items.count / 2
+        let earlier = items.prefix(midpoint).map(\.value).reduce(0, +)
+        let recent = items.suffix(items.count - midpoint).map(\.value).reduce(0, +)
+        let earlierAvg = Double(earlier) / Double(midpoint)
+        let recentAvg = Double(recent) / Double(items.count - midpoint)
+        guard earlierAvg > 0 else { return recentAvg > 0 ? 100 : nil }
+        return ((recentAvg - earlierAvg) / earlierAvg) * 100
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(title)
-                    .font(.headline)
-                    .foregroundStyle(PAXTheme.textPrimary)
-                Spacer(minLength: 8)
-                Text("\(totalValue) total")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(PAXTheme.textSecondary)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(
-                        Capsule()
-                            .fill(PAXTheme.surface.opacity(0.55))
-                            .overlay(Capsule().stroke(PAXTheme.border.opacity(0.28), lineWidth: 0.5))
-                    )
-            }
+            header
 
-            HStack(spacing: 6) {
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    PAXActivityRingCell(
-                        item: item,
-                        maxValue: maxValue,
-                        animate: animateRings,
-                        delay: Double(index) * 0.05
-                    )
-                    .frame(maxWidth: .infinity)
-                }
-            }
+            chartPanel
+
+            footerStats
         }
         .padding(16)
         .paxCard(.standard)
-        .onAppear {
-            guard !reduceMotion else {
-                animateRings = true
-                return
+        .onAppear { startChartAnimation() }
+        .onChange(of: items) { _ in
+            animateChart = false
+            startChartAnimation()
+        }
+    }
+
+    private var header: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline.weight(.semibold))
+                    .foregroundStyle(PAXTheme.textPrimary)
+
+                Text("7-Tage-Verlauf")
+                    .font(.caption)
+                    .foregroundStyle(PAXTheme.textSecondary)
             }
-            withAnimation(.spring(response: 0.72, dampingFraction: 0.82)) {
-                animateRings = true
+
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: 4) {
+                Text("\(totalValue)")
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(PAXTheme.textPrimary)
+
+                Text("Gesamt")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(PAXTheme.textSecondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(PAXTheme.accentSoft)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .stroke(PAXTheme.accent.opacity(0.18), lineWidth: 0.5)
+                    )
+            )
+        }
+    }
+
+    private var chartPanel: some View {
+        VStack(spacing: 8) {
+            ZStack(alignment: .bottom) {
+                chartGrid
+
+                HStack(alignment: .bottom, spacing: 8) {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                        PAXAnalyticsBarColumn(
+                            item: item,
+                            maxValue: maxValue,
+                            isPeak: item.id == peakItem?.id && item.value > 0,
+                            isLatest: index == items.count - 1,
+                            animate: animateChart,
+                            delay: Double(index) * 0.04
+                        )
+                        .frame(maxWidth: .infinity)
+                    }
+                }
+                .frame(height: 88)
+                .padding(.horizontal, 2)
+            }
+            .frame(height: 88)
+
+            HStack(spacing: 8) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    Text(shortDayLabel(item.label, index: index))
+                        .font(.system(size: 10, weight: index == items.count - 1 ? .bold : .medium))
+                        .foregroundStyle(index == items.count - 1 ? PAXTheme.accent : PAXTheme.textTertiary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(maxWidth: .infinity)
+                }
             }
         }
-        .onChange(of: items) { _ in
-            animateRings = false
-            guard !reduceMotion else {
-                animateRings = true
-                return
+        .padding(.horizontal, 4)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(PAXTheme.surface.opacity(colorScheme == .dark ? 0.34 : 0.42))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(PAXTheme.border.opacity(0.22), lineWidth: 0.5)
+                )
+        )
+    }
+
+    private var chartGrid: some View {
+        VStack(spacing: 0) {
+            ForEach(0..<4, id: \.self) { line in
+                if line > 0 { Spacer(minLength: 0) }
+                Rectangle()
+                    .fill(PAXTheme.border.opacity(line == 0 ? 0.28 : 0.14))
+                    .frame(height: 0.5)
             }
-            withAnimation(.spring(response: 0.72, dampingFraction: 0.82)) {
-                animateRings = true
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        .padding(.bottom, 1)
+    }
+
+    private var footerStats: some View {
+        HStack(spacing: 10) {
+            statPill(
+                title: "Spitze",
+                value: "\(peakItem?.value ?? 0)",
+                tint: PAXTheme.accent
+            )
+
+            statPill(
+                title: "Ø / Tag",
+                value: String(format: "%.1f", averageValue),
+                tint: PAXTheme.textSecondary
+            )
+
+            if let trendDelta {
+                trendPill(delta: trendDelta)
             }
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func statPill(title: String, value: String, tint: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(PAXTheme.textTertiary)
+            Text(value)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(tint == PAXTheme.textSecondary ? PAXTheme.textPrimary : tint)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(PAXTheme.surface.opacity(0.45))
+        )
+    }
+
+    private func trendPill(delta: Double) -> some View {
+        let positive = delta >= 0
+        return HStack(spacing: 4) {
+            Image(systemName: positive ? "arrow.up.right" : "arrow.down.right")
+                .font(.caption2.weight(.bold))
+            Text(String(format: "%+.0f%%", delta))
+                .font(.caption.weight(.semibold))
+        }
+        .foregroundStyle(positive ? PAXTheme.success : PAXTheme.danger)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill((positive ? PAXTheme.success : PAXTheme.danger).opacity(0.12))
+        )
+    }
+
+    private func shortDayLabel(_ label: String, index: Int) -> String {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.count <= 3 { return trimmed }
+        return String(trimmed.prefix(3))
+    }
+
+    private func startChartAnimation() {
+        guard !reduceMotion else {
+            animateChart = true
+            return
+        }
+        withAnimation(.spring(response: 0.68, dampingFraction: 0.84)) {
+            animateChart = true
         }
     }
 }
 
-private struct PAXActivityRingCell: View {
+private struct PAXAnalyticsBarColumn: View {
     let item: PAXRingMetric
     let maxValue: Int
+    let isPeak: Bool
+    let isLatest: Bool
     let animate: Bool
     let delay: Double
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var targetProgress: Double {
-        guard maxValue > 0 else { return 0 }
-        return min(Double(item.value) / Double(maxValue), 1)
+    private var targetHeight: CGFloat {
+        guard maxValue > 0 else { return 4 }
+        let ratio = CGFloat(item.value) / CGFloat(maxValue)
+        return max(4, ratio * 72)
     }
 
-    private var displayedProgress: Double {
-        animate ? targetProgress : 0
+    private var displayedHeight: CGFloat {
+        animate ? targetHeight : 4
+    }
+
+    private var barTint: Color {
+        isPeak ? item.tint : item.tint.opacity(isLatest ? 0.92 : 0.72)
     }
 
     var body: some View {
-        VStack(spacing: 7) {
-            ZStack {
-                Circle()
-                    .stroke(PAXTheme.border.opacity(0.22), lineWidth: 3.5)
+        VStack(spacing: 4) {
+            Text(item.value > 0 ? "\(item.value)" : "·")
+                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                .foregroundStyle(item.value > 0 ? PAXTheme.textSecondary : PAXTheme.textTertiary)
+                .frame(height: 12)
 
-                Circle()
-                    .trim(from: 0, to: displayedProgress)
-                    .stroke(
-                        AngularGradient(
-                            colors: [
-                                item.tint.opacity(0.35),
-                                item.tint,
-                                item.tint.opacity(0.75),
-                                item.tint.opacity(0.35)
-                            ],
-                            center: .center
-                        ),
-                        style: StrokeStyle(lineWidth: 3.5, lineCap: .round)
-                    )
-                    .rotationEffect(.degrees(-90))
-                    .shadow(color: item.tint.opacity(0.18), radius: 3, x: 0, y: 1)
+            ZStack(alignment: .bottom) {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(item.tint.opacity(0.08))
+                    .frame(height: 72)
 
-                Circle()
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
                     .fill(
-                        RadialGradient(
-                            colors: [item.tint.opacity(0.12), .clear],
-                            center: .center,
-                            startRadius: 0,
-                            endRadius: 18
+                        LinearGradient(
+                            colors: [
+                                barTint.opacity(0.55),
+                                barTint,
+                                barTint.opacity(0.88)
+                            ],
+                            startPoint: .bottom,
+                            endPoint: .top
                         )
                     )
-                    .frame(width: 30, height: 30)
-
-                Text("\(item.value)")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundStyle(PAXTheme.textPrimary)
-                    .minimumScaleFactor(0.7)
+                    .frame(height: displayedHeight)
+                    .overlay(alignment: .top) {
+                        if isPeak, item.value > 0 {
+                            Circle()
+                                .fill(barTint)
+                                .frame(width: 5, height: 5)
+                                .offset(y: -2)
+                        }
+                    }
+                    .shadow(
+                        color: isPeak ? barTint.opacity(0.28) : .clear,
+                        radius: 4,
+                        x: 0,
+                        y: 1
+                    )
             }
-            .frame(width: 40, height: 40)
+            .frame(height: 72, alignment: .bottom)
             .animation(
-                reduceMotion ? nil : .spring(response: 0.72, dampingFraction: 0.82).delay(delay),
-                value: displayedProgress
+                reduceMotion ? nil : .spring(response: 0.68, dampingFraction: 0.84).delay(delay),
+                value: displayedHeight
             )
-
-            Text(item.label)
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(PAXTheme.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(item.label): \(item.value)")

@@ -288,8 +288,13 @@ struct DashboardView: View {
     private var activityChart: some View {
         PAXSevenDayAnalyticsRings(
             title: L10n.DashboardChartTitle,
-            items: chartData.map {
-                PAXRingMetric(label: $0.label, value: $0.value, tint: PAXTheme.accent)
+            items: chartData.enumerated().map { index, point in
+                let emphasis = 0.55 + (Double(index + 1) / Double(max(chartData.count, 1))) * 0.45
+                return PAXRingMetric(
+                    label: point.label,
+                    value: point.value,
+                    tint: PAXTheme.accent.opacity(emphasis)
+                )
             }
         )
     }
