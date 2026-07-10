@@ -119,6 +119,14 @@ final class ChatCoordinator: ObservableObject {
                     }
                     if event.type == "message" {
                         let incoming = StreamPayload.messages(from: event.payload)
+                        ChatLiveDiagnostics.sseReceived(
+                            channel: event.channel.isEmpty ? "inbox:admins" : event.channel,
+                            type: event.type,
+                            sessionId: sid,
+                            eventId: event.id,
+                            seq: seq,
+                            inlineCount: incoming.count
+                        )
                         for inline in incoming {
                             let messageSeq = max(seq, inline.id)
                             ConversationHistoryStore.shared.mergeMessage(sessionId: sid, message: inline, seq: messageSeq)
@@ -445,6 +453,7 @@ final class ChatCoordinator: ObservableObject {
 @MainActor
 final class ChatThreadModel: ObservableObject {
     @Published var messages: [LiveMessage] = []
+    @Published var messagesRevision = 0
     @Published var isLoadingMessages = false
     @Published var handler = "ai"
     @Published var customerName = "Kunde"
@@ -551,16 +560,13 @@ final class ChatThreadModel: ObservableObject {
     }
 
     func applyLiveMessage(_ message: LiveMessage, seq: Int) {
-        insertIncomingMessages([message])
+        insertIncomingMessages([message], source: "inbox-live")
         lastStreamEventAt = Date()
-        if seq > 0 {
-            pollSeq = max(pollSeq, seq)
-        }
     }
 
     func refreshNow(auth: AuthStore, expectedServerSeq: Int = 0, inlineMessage: Any? = nil) async {
         if let inline = LiveMessage.fromStreamPayload(inlineMessage) {
-            insertIncomingMessages([inline])
+            insertIncomingMessages([inline], source: "refresh-inline")
             lastStreamEventAt = Date()
             if historyBaselined {
                 let targetSeq = max(expectedServerSeq, inline.id)
@@ -641,8 +647,16 @@ final class ChatThreadModel: ObservableObject {
         case "message":
             let eventSeq = StreamPayload.int(event.payload["seq"])
             let incoming = StreamPayload.messages(from: event.payload)
+            ChatLiveDiagnostics.sseReceived(
+                channel: event.channel.isEmpty ? "session:\(sessionId)" : event.channel,
+                type: event.type,
+                sessionId: sessionId,
+                eventId: event.id,
+                seq: eventSeq,
+                inlineCount: incoming.count
+            )
             if !incoming.isEmpty {
-                insertIncomingMessages(incoming)
+                insertIncomingMessages(incoming, source: "thread-sse")
                 let maxId = incoming.map(\.id).filter { $0 > 0 }.max() ?? 0
                 let targetSeq = max(eventSeq, maxId)
                 if needsHistoryRecovery(expectedServerSeq: targetSeq) {
@@ -671,9 +685,11 @@ final class ChatThreadModel: ObservableObject {
         }
     }
 
-    private func insertIncomingMessages(_ incoming: [LiveMessage]) {
+    private func insertIncomingMessages(_ incoming: [LiveMessage], source: String = "merge") {
         guard !incoming.isEmpty else { return }
 
+        let beforeCount = messages.count
+        let existingIds = Set(messages.map(\.id))
         var newUserMessageId = 0
         for msg in incoming where msg.id > 0 {
             if msg.role == "user" && !knownMessageIds.contains(msg.id) {
@@ -683,9 +699,24 @@ final class ChatThreadModel: ObservableObject {
         }
 
         let mergeResult = MessageMerge.mergeSorted(existing: messages, incoming: incoming)
+        var published = false
         if mergeResult.changed {
             messages = mergeResult.messages
+            messagesRevision &+= 1
+            published = true
+        } else if incoming.contains(where: { $0.id > 0 && !existingIds.contains($0.id) }) {
+            messagesRevision &+= 1
+            published = true
         }
+
+        ChatLiveDiagnostics.mergeResult(
+            sessionId: sessionId,
+            incomingIds: incoming.map(\.id),
+            changed: mergeResult.changed,
+            before: beforeCount,
+            after: messages.count,
+            published: published
+        )
 
         if !incoming.isEmpty {
             let payload = CachedPollPayload(
@@ -704,7 +735,7 @@ final class ChatThreadModel: ObservableObject {
             ConversationHistoryStore.shared.save(payload.asPollResponse(), sessionId: sessionId)
         }
 
-        let maxId = incoming.map(\.id).filter { $0 > 0 }.max() ?? 0
+        let maxId = messages.map(\.id).filter { $0 > 0 }.max() ?? 0
         if maxId > 0 {
             pollSeq = max(pollSeq, maxId)
             scheduleReadAcknowledgement()
@@ -715,6 +746,11 @@ final class ChatThreadModel: ObservableObject {
             if handler == "admin" {
                 fetchSuggestions(messageId: newUserMessageId)
             }
+        }
+
+        let presentIds = Set(messages.map(\.id))
+        if !published, incoming.contains(where: { $0.id > 0 && !presentIds.contains($0.id) }) {
+            ChatLiveDiagnostics.cursorAdjusted(sessionId: sessionId, reason: "\(source)-unpublished", pollSeq: pollSeq)
         }
     }
 
@@ -812,8 +848,9 @@ final class ChatThreadModel: ObservableObject {
         while needsHistoryRecovery(expectedServerSeq: throughSeq) && attempts < 6 {
             attempts += 1
             do {
-                let data = try await api.pollSession(sessionId, since: pollSeq)
-                applyIncrementalSnapshot(data)
+                let since = pollSeq
+                let data = try await api.pollSession(sessionId, since: since)
+                applyIncrementalSnapshot(data, polledSince: since)
                 if !needsHistoryRecovery(expectedServerSeq: throughSeq) {
                     break
                 }
@@ -842,7 +879,14 @@ final class ChatThreadModel: ObservableObject {
         }
         messages = merged
         knownMessageIds = Set(messages.map(\.id))
-        pollSeq = data.seq
+        let localMax = localMessageMaxId()
+        if localMax < data.seq {
+            pollSeq = localMax
+            ChatLiveDiagnostics.cursorAdjusted(sessionId: sessionId, reason: "baseline-gap", pollSeq: pollSeq)
+        } else {
+            pollSeq = max(localMax, data.seq)
+        }
+        messagesRevision &+= 1
         serverMessageCount = max(data.messageCount, data.messages.count, data.seq)
         historyBaselined = true
         scheduleReadAcknowledgement()
@@ -859,12 +903,20 @@ final class ChatThreadModel: ObservableObject {
         }
     }
 
-    private func applyIncrementalSnapshot(_ data: PollResponse) {
+    private func applyIncrementalSnapshot(_ data: PollResponse, polledSince: Int) {
         applySessionMeta(data)
         if !data.messages.isEmpty {
-            insertIncomingMessages(data.messages)
+            insertIncomingMessages(data.messages, source: "poll")
         }
         reconcilePollCursor(serverSeq: data.seq)
+        ChatLiveDiagnostics.pollApplied(
+            sessionId: sessionId,
+            since: polledSince,
+            serverSeq: data.seq,
+            newCount: data.messages.count,
+            localMax: localMessageMaxId(),
+            pollSeq: pollSeq
+        )
         if data.messageCount > serverMessageCount {
             serverMessageCount = data.messageCount
         }
@@ -920,8 +972,9 @@ final class ChatThreadModel: ObservableObject {
     private func poll(auth: AuthStore) async {
         guard let api = auth.api else { return }
         do {
-            let data = try await api.pollSession(sessionId, since: pollSeq)
-            applyIncrementalSnapshot(data)
+            let since = pollSeq
+            let data = try await api.pollSession(sessionId, since: since)
+            applyIncrementalSnapshot(data, polledSince: since)
             if serverMessageCount > 0 && persistedMessageCount() < serverMessageCount {
                 await reloadFullHistory(auth: auth)
             }
@@ -934,7 +987,7 @@ final class ChatThreadModel: ObservableObject {
     }
 
     private func applyPoll(_ data: PollResponse) {
-        applyIncrementalSnapshot(data)
+        applyIncrementalSnapshot(data, polledSince: pollSeq)
     }
 
     private func applyReactions(_ reactions: [String: String]) {

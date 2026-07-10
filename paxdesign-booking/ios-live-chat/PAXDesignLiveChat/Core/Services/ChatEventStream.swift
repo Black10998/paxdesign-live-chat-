@@ -102,23 +102,21 @@ final class ChatEventStream {
                 do {
                     let since = current.since
                     try await current.api.consumeEventStream(path: current.path, since: since) { event in
-                        Task { @MainActor in
-                            guard let current = self.threadSubscriptions[id] else { return }
-                            await current.handler(event)
-                            if event.id > 0 {
-                                current.since = max(current.since, event.id)
-                                ChatCursorStore.shared.advance(
-                                    site: current.api.cursorScope,
+                        guard let current = self.threadSubscriptions[id] else { return }
+                        await current.handler(event)
+                        if event.id > 0 {
+                            current.since = max(current.since, event.id)
+                            ChatCursorStore.shared.advance(
+                                site: current.api.cursorScope,
+                                channel: current.channel,
+                                eventId: event.id
+                            )
+                            Task {
+                                try? await current.api.acknowledgeEvent(
                                     channel: current.channel,
-                                    eventId: event.id
+                                    eventId: event.id,
+                                    seq: StreamPayload.int(event.payload["seq"])
                                 )
-                                Task {
-                                    try? await current.api.acknowledgeEvent(
-                                        channel: current.channel,
-                                        eventId: event.id,
-                                        seq: StreamPayload.int(event.payload["seq"])
-                                    )
-                                }
                             }
                         }
                     }
@@ -164,24 +162,22 @@ final class ChatEventStream {
                 do {
                     let since = inboxSince
                     try await api.consumeEventStream(path: "events/stream", since: since) { event in
-                        Task { @MainActor in
-                            for handler in self.inboxHandlers.values {
-                                await handler(event)
-                            }
-                            if event.id > 0 {
-                                self.inboxSince = max(self.inboxSince, event.id)
-                                ChatCursorStore.shared.advance(
-                                    site: api.cursorScope,
-                                    channel: "inbox",
-                                    eventId: event.id
+                        for handler in self.inboxHandlers.values {
+                            await handler(event)
+                        }
+                        if event.id > 0 {
+                            self.inboxSince = max(self.inboxSince, event.id)
+                            ChatCursorStore.shared.advance(
+                                site: api.cursorScope,
+                                channel: "inbox",
+                                eventId: event.id
+                            )
+                            Task {
+                                try? await api.acknowledgeEvent(
+                                    channel: event.channel.isEmpty ? "inbox:admins" : event.channel,
+                                    eventId: event.id,
+                                    seq: StreamPayload.int(event.payload["seq"])
                                 )
-                                Task {
-                                    try? await api.acknowledgeEvent(
-                                        channel: event.channel.isEmpty ? "inbox:admins" : event.channel,
-                                        eventId: event.id,
-                                        seq: StreamPayload.int(event.payload["seq"])
-                                    )
-                                }
                             }
                         }
                     }

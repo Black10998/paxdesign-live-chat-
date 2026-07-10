@@ -42,6 +42,8 @@ struct ChatView: View {
 
             ChatMessageListView(
                 messages: thread.messages,
+                messagesRevision: thread.messagesRevision,
+                sessionId: thread.sessionId,
                 userTyping: thread.userTyping,
                 canReply: canReply,
                 handler: thread.handler,

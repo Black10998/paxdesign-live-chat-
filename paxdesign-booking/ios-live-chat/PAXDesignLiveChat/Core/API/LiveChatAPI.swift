@@ -513,7 +513,7 @@ final class LiveChatAPI {
     func consumeEventStream(
         path: String,
         since: Int,
-        onEvent: @escaping (ChatStreamEvent) -> Void
+        onEvent: @escaping @MainActor (ChatStreamEvent) async -> Void
     ) async throws {
         guard let url = liveAdminURL(path: path, query: [URLQueryItem(name: "since", value: String(since))]) else {
             throw LiveChatAPIError.invalidURL
@@ -531,7 +531,7 @@ final class LiveChatAPI {
         for try await line in bytes.lines {
             if Task.isCancelled { break }
             if let event = ChatEventStreamParser.parseLine(line, dataBuffer: &dataBuffer) {
-                onEvent(event)
+                await onEvent(event)
             }
         }
     }
