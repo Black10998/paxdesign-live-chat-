@@ -106,7 +106,7 @@ struct ProfileView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.ProfileTitle)
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

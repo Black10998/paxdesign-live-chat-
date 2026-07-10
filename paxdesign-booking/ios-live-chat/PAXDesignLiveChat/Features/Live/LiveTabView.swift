@@ -55,14 +55,13 @@ struct LiveTabView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.LiveTitle)
         .navigationBarTitleDisplayMode(.large)
         .paxPremiumRefreshable(status: L10n.LiveTitle, rowCount: 3) {
             await coordinator.refreshSessions(auth: auth)
         }
         .scrollDismissesKeyboard(.interactively)
-        .paxShellScrollClearance()
     }
 
     private var liveHero: some View {

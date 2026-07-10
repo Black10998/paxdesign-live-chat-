@@ -27,7 +27,7 @@ struct ImagePreviewSheet: View {
 
                 Spacer()
             }
-            .background(PAXBackground())
+            .paxScreenBackground()
             .navigationTitle("Bild senden")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

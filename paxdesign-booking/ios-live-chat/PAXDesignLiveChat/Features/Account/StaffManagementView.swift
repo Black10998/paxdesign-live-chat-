@@ -87,6 +87,9 @@ struct StaffManagementView: View {
                 }
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .paxScreenBackground()
         .navigationTitle("Team")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }

@@ -21,7 +21,7 @@ struct AIAssistantSettingsView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.SettingsSectionAI)
         .navigationBarTitleDisplayMode(.inline)
     }

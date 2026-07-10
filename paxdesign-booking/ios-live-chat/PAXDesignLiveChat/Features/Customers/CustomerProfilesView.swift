@@ -53,6 +53,9 @@ struct CustomerProfilesView: View {
                 }
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .paxScreenBackground()
         .searchable(text: $searchText, prompt: "Name, E-Mail oder Session-ID")
         .navigationTitle("Kundenprofile")
         .navigationBarTitleDisplayMode(.inline)

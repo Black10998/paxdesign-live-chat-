@@ -18,7 +18,7 @@ struct LanguageSettingsView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.SettingsSectionLanguage)
         .navigationBarTitleDisplayMode(.inline)
     }

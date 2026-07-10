@@ -77,8 +77,7 @@ struct TeamMessagesHubView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
-        .paxShellScrollClearance()
+        .paxScreenBackground()
         .navigationTitle(L10n.TeamHubTitle)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {

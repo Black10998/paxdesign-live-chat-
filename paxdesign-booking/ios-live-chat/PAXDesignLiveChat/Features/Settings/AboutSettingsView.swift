@@ -25,7 +25,7 @@ struct AboutSettingsView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.SettingsSectionAbout)
         .navigationBarTitleDisplayMode(.inline)
     }

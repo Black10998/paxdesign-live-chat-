@@ -50,7 +50,7 @@ struct LegalDocumentView: View {
             }
             .padding(20)
         }
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -84,7 +84,7 @@ struct SecurityView: View {
         .navigationTitle(L10n.LegalSecurity)
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
     }
 }
 
@@ -159,7 +159,7 @@ struct AboutView: View {
                     .padding(.bottom, 32)
             }
         }
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.AccountAbout)
         .navigationBarTitleDisplayMode(.inline)
     }

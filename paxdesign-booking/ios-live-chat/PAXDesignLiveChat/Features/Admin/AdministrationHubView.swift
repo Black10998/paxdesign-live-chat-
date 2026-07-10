@@ -122,7 +122,7 @@ struct AdministrationHubView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.AdminTitle)
         .navigationBarTitleDisplayMode(.large)
         .task { await loadStaffCount() }

@@ -57,7 +57,7 @@ struct LoginView: View {
                 .padding(.bottom, 24)
             }
             .scrollDismissesKeyboard(.interactively)
-            .background(PAXBackground())
+            .paxScreenBackground()
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 siteURL = auth.siteURLString

@@ -68,7 +68,7 @@ struct AppLockSettingsView: View {
         .navigationTitle(L10n.ApplockSettingsTitle)
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .sheet(isPresented: $showSetPIN) {
             SetPINView(mode: .create) { showSetPIN = false }
         }
@@ -111,7 +111,7 @@ private struct SetPINView: View {
                 Spacer()
             }
             .padding(.top, 32)
-            .background(PAXBackground())
+            .paxScreenBackground()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(L10n.CommonCancel) { dismiss(); onDone() }

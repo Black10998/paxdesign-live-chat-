@@ -59,6 +59,9 @@ struct DeviceManagementView: View {
                 }
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .paxScreenBackground()
         .navigationTitle("Geräteverwaltung")
         .navigationBarTitleDisplayMode(.inline)
         .paxPremiumRefreshable(status: "Geräte werden synchronisiert", rowCount: 3) { await loadDevices() }

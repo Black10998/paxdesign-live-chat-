@@ -38,6 +38,7 @@ extension View {
 
     func paxScreenBackground() -> some View {
         background(PAXBackground())
+            .paxShellScrollClearance()
     }
 
     func paxModuleTransition() -> some View {

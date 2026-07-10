@@ -33,6 +33,7 @@ struct ChatMessageListView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
+                .padding(.bottom, PAXShellLayout.scrollBottomPadding(tabBarVisible: false))
             }
             .onChange(of: messages.count) { _ in scrollToBottom(proxy: proxy) }
             .onChange(of: userTyping) { _ in scrollToBottom(proxy: proxy) }

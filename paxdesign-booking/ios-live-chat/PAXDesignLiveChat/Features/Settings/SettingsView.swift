@@ -201,7 +201,7 @@ struct SettingsRootView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.SettingsTitle)
         .navigationBarTitleDisplayMode(.large)
     }

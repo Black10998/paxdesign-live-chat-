@@ -102,7 +102,7 @@ struct SessionListView: View {
                 noAccessView
             }
         }
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.SessionTitle)
         .navigationBarTitleDisplayMode(.large)
         .onAppear { scheduleDisplayedSessionsRecompute(immediate: true) }
@@ -262,7 +262,6 @@ struct SessionListView: View {
             await coordinator.refreshSessions(auth: auth)
             await teamCoordinator.refresh(auth: auth)
         }
-        .paxShellScrollClearance()
     }
 
     private func requestDeleteSession(_ session: LiveSession) {

@@ -43,7 +43,7 @@ struct PrivacySettingsView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.SettingsSectionPrivacy)
         .navigationBarTitleDisplayMode(.inline)
     }

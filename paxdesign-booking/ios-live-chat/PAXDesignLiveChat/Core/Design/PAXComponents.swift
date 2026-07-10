@@ -398,6 +398,14 @@ enum PAXShellLayout {
     static var tabBarReservedHeight: CGFloat {
         tabBarBodyHeight + max(bottomSafeArea, 6) + 10
     }
+
+    /// Extra scroll padding so the last row clears floating chrome (tab bar / home indicator).
+    static func scrollBottomPadding(tabBarVisible: Bool) -> CGFloat {
+        if tabBarVisible {
+            return 24
+        }
+        return max(bottomSafeArea, 12) + 8
+    }
 }
 
 private struct ShellTabBarVisibleKey: EnvironmentKey {
@@ -415,7 +423,11 @@ private struct ShellScrollClearanceModifier: ViewModifier {
     @Environment(\.shellTabBarVisible) private var tabBarVisible
 
     func body(content: Content) -> some View {
-        content.padding(.bottom, tabBarVisible ? 6 : 0)
+        content.safeAreaInset(edge: .bottom, spacing: 0) {
+            Color.clear
+                .frame(height: PAXShellLayout.scrollBottomPadding(tabBarVisible: tabBarVisible))
+                .accessibilityHidden(true)
+        }
     }
 }
 
@@ -441,50 +453,61 @@ private struct PAXPremiumRefreshModifier: ViewModifier {
     let rowCount: Int
     let action: () async -> Void
 
+    func body(content: Content) -> some View {
+        PAXPremiumRefreshContainer(status: status, rowCount: rowCount, action: action) {
+            content
+        }
+    }
+}
+
+private struct PAXPremiumRefreshContainer<Content: View>: View {
+    let status: String
+    let rowCount: Int
+    let action: () async -> Void
+    @ViewBuilder let content: () -> Content
+
     @State private var isRefreshing = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    func body(content: Content) -> some View {
-        content
-            .refreshable {
-                guard !isRefreshing else { return }
-                if reduceMotion {
-                    isRefreshing = true
-                } else {
-                    withAnimation(.easeOut(duration: 0.22)) {
-                        isRefreshing = true
-                    }
-                }
-                defer {
-                    if reduceMotion {
-                        isRefreshing = false
-                    } else {
-                        withAnimation(.easeOut(duration: 0.25)) {
-                            isRefreshing = false
-                        }
-                    }
-                }
-                await action()
+    var body: some View {
+        Group {
+            if isRefreshing {
+                refreshLoadingBody
+            } else {
+                content()
             }
-            .overlay {
-                if isRefreshing {
-                    ZStack {
-                        PAXTheme.background.opacity(0.92)
-                            .ignoresSafeArea()
-                        ScrollView {
-                            PAXScreenLoadingStack(status: status, rowCount: rowCount)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 12)
-                        }
-                        .scrollDisabled(true)
-                    }
-                    .transition(.opacity)
-                    .zIndex(1000)
-                }
+        }
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: isRefreshing)
+        .refreshable {
+            guard !isRefreshing else { return }
+            setRefreshing(true)
+            await action()
+            setRefreshing(false)
+        }
+        .background {
+            PAXRefreshControlSpinnerHider()
+        }
+    }
+
+    private var refreshLoadingBody: some View {
+        ScrollView {
+            PAXScreenLoadingStack(status: status, rowCount: rowCount)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+        }
+        .scrollIndicators(.hidden)
+        .paxScreenBackground()
+        .transition(.opacity.combined(with: .scale(scale: 0.985)))
+    }
+
+    private func setRefreshing(_ value: Bool) {
+        if reduceMotion {
+            isRefreshing = value
+        } else {
+            withAnimation(.easeInOut(duration: 0.28)) {
+                isRefreshing = value
             }
-            .background {
-                PAXRefreshControlSpinnerHider()
-            }
+        }
     }
 }
 

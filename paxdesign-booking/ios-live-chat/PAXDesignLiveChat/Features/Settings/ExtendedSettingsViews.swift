@@ -14,7 +14,7 @@ struct ChatDisplaySettingsView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.SettingsChatDisplay)
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -83,7 +83,7 @@ struct DataStorageSettingsView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.SettingsDataStorage)
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -153,7 +153,7 @@ struct SupportSettingsView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.SettingsSupport)
         .navigationBarTitleDisplayMode(.inline)
     }

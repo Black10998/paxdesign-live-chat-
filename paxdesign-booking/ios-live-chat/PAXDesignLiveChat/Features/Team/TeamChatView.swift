@@ -22,7 +22,7 @@ struct TeamChatView: View {
 
             teamComposer
         }
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(thread.participantName.isEmpty ? L10n.TeamChatTitle : thread.participantName)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear { thread.start(auth: auth) }
@@ -122,7 +122,7 @@ struct TeamComposeView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.TeamComposeTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadStaff() }

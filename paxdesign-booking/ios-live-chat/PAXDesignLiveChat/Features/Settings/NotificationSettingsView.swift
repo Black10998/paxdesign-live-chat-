@@ -34,7 +34,7 @@ struct NotificationSettingsView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.SettingsSectionNotifications)
         .navigationBarTitleDisplayMode(.inline)
     }

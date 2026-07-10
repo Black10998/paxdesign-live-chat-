@@ -64,7 +64,7 @@ struct ChatView: View {
 
             composer
         }
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(thread.customerName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }

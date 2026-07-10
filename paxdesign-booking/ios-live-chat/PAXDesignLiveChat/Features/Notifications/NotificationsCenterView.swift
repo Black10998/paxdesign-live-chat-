@@ -110,7 +110,7 @@ struct NotificationsCenterView: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(PAXBackground())
+        .paxScreenBackground()
         .navigationTitle(L10n.NotificationsCenterTitle)
         .navigationBarTitleDisplayMode(.large)
         .paxPremiumRefreshable(status: L10n.NotificationsCenterTitle, rowCount: 4) {
