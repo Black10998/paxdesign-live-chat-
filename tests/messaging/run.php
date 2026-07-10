@@ -7,6 +7,19 @@ function assert_true($condition, $message) {
     }
 }
 
+function collect_events($channel, $since = 0) {
+    $events = array();
+    $cursor = $since;
+    do {
+        $page = PAXdesign_Message_Store::events_since($channel, $cursor, 1000);
+        foreach ($page as $event) {
+            $events[] = $event;
+            $cursor = max($cursor, (int) $event['id']);
+        }
+    } while (count($page) === 1000);
+    return $events;
+}
+
 function recreate_schema() {
     global $wpdb;
     $wpdb->query('DROP TABLE IF EXISTS test_paxdesign_chat_cursors');
@@ -96,10 +109,10 @@ foreach ($all as $index => $message) {
 }
 
 // Durable outbox replay: reconnect from cursor must return every later event once.
-$events = PAXdesign_Message_Store::events_since('session:' . $session, 0, 1000);
+$events = collect_events('session:' . $session);
 assert_true(count($events) === $expected, 'Outbox event count does not match committed messages');
 $cursor = $events[199]['id'];
-$replay = PAXdesign_Message_Store::events_since('session:' . $session, $cursor, 1000);
+$replay = collect_events('session:' . $session, $cursor);
 assert_true(count($replay) === $expected - 200, 'Reconnect replay lost or duplicated events');
 assert_true($replay[0]['id'] > $cursor, 'Reconnect replay did not honor exclusive cursor');
 
