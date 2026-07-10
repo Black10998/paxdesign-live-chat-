@@ -90,7 +90,7 @@ final class ChatCoordinator: ObservableObject {
             liveCount = newLiveCount
             lastSyncAt = Date()
             lastSessionRefreshAt = lastSyncAt
-            updateUnreadCounts(readIds: AppSettingsStore.shared.readSessionIds)
+            updateUnreadCounts()
             AppRefreshPolicy.update(liveCount: newLiveCount, openChat: activeSessionId != nil)
             errorMessage = nil
             detectIncomingLiveRequests(newSessions)
@@ -102,7 +102,7 @@ final class ChatCoordinator: ObservableObject {
         }
     }
 
-    func updateUnreadCounts(readIds: Set<String> = AppSettingsStore.shared.readSessionIds) {
+    func updateUnreadCounts() {
         let settings = AppSettingsStore.shared
         unreadChatCount = sessions.filter { !$0.isTeamDM && settings.isSessionUnread($0) }.count
         unreadTeamCount = sessions.filter { $0.isTeamDM && settings.isSessionUnread($0) }.count

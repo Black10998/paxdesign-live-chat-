@@ -158,7 +158,7 @@ struct AdaptiveShellView: View {
         }
         .onAppear {
             loadedTabs.insert(selectedTab)
-            coordinator.updateUnreadCounts(readIds: settings.readSessionIds)
+            coordinator.updateUnreadCounts()
             schedulePlatformSync()
             PAXHaptics.prepare()
         }

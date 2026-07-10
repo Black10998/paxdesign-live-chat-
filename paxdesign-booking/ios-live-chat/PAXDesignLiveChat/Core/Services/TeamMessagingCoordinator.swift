@@ -192,17 +192,6 @@ struct TeamSendResponse: Codable {
     let ok: Bool
     let message: LiveMessage
     let seq: Int
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        ok = LiveChatDecode.bool(container, CodingKeys.ok)
-        message = try container.decode(LiveMessage.self, forKey: .message)
-        seq = LiveChatDecode.int(container, CodingKeys.seq)
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case ok, message, seq
-    }
 }
 
 struct TeamReadResponse: Codable {
@@ -212,11 +201,5 @@ struct TeamReadResponse: Codable {
     enum CodingKeys: String, CodingKey {
         case ok
         case lastReadSeq = "last_read_seq"
-    }
-
-    init(from decoder: Decoder) throws {
-        let container = try decoder.container(keyedBy: CodingKeys.self)
-        ok = LiveChatDecode.bool(container, CodingKeys.ok)
-        lastReadSeq = LiveChatDecode.int(container, CodingKeys.lastReadSeq)
     }
 }

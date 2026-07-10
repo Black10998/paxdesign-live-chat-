@@ -175,13 +175,17 @@ struct LiveMessage: Identifiable, Codable, Hashable {
     let senderRole: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, role, content, ts, reaction, sender
+        case id, role, content, ts, reaction
         case imageUrl = "image_url"
         case replyTo = "reply_to"
         case senderId = "sender_id"
         case senderName = "sender_name"
         case senderAvatar = "sender_avatar"
         case senderRole = "sender_role"
+    }
+
+    private enum LegacyCodingKeys: String, CodingKey {
+        case sender
     }
 
     init(
@@ -225,8 +229,13 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         }
         senderId = try container.decodeIfPresent(Int.self, forKey: .senderId)
         let decodedSenderName = LiveChatDecode.string(container, CodingKeys.senderName)
-        let legacySender = LiveChatDecode.string(container, CodingKeys.sender)
-        senderName = decodedSenderName.isEmpty ? (legacySender.isEmpty ? nil : legacySender) : decodedSenderName
+        if decodedSenderName.isEmpty {
+            let legacy = try decoder.container(keyedBy: LegacyCodingKeys.self)
+            let legacySender = LiveChatDecode.string(legacy, LegacyCodingKeys.sender)
+            senderName = legacySender.isEmpty ? nil : legacySender
+        } else {
+            senderName = decodedSenderName
+        }
         let avatar = LiveChatDecode.string(container, CodingKeys.senderAvatar)
         senderAvatar = avatar.isEmpty ? nil : avatar
         let roleLabel = LiveChatDecode.string(container, CodingKeys.senderRole)
