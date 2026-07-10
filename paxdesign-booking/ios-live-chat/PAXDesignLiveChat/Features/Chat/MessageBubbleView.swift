@@ -87,7 +87,8 @@ struct MessageBubbleView: View {
                     Text(message.content)
                         .font(.subheadline)
                         .foregroundStyle(PAXTheme.textPrimary)
-                        .multilineTextAlignment(.leading)
+                        .multilineTextAlignment(PAXTextAlignment.natural(for: message.content))
+                        .environment(\.layoutDirection, PAXTextAlignment.layoutDirection(for: message.content))
                 } else if message.imageUrl != nil {
                     Text(L10n.ChatImage)
                         .font(.caption)

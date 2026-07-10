@@ -1675,9 +1675,13 @@ class PAXdesign_Chat_Live {
         }
 
         $chat = PAXdesign_Chat::get_instance();
+        $customer_language = class_exists('PAXdesign_Language_Routing')
+            ? PAXdesign_Language_Routing::session_language_from_row($row)
+            : '';
         $result = $chat->generate_admin_reply_suggestions($messages, $target, array(
-            'service'       => isset($row->detected_service) ? (string) $row->detected_service : '',
-            'customer_name' => isset($row->customer_name) ? (string) $row->customer_name : '',
+            'service'            => isset($row->detected_service) ? (string) $row->detected_service : '',
+            'customer_name'      => isset($row->customer_name) ? (string) $row->customer_name : '',
+            'customer_language'  => $customer_language,
         ));
 
         if (is_wp_error($result)) {

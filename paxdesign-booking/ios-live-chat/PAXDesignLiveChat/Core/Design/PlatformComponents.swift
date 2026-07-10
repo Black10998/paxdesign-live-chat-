@@ -6,6 +6,7 @@ struct PlatformModuleCard: View {
     let systemImage: String
     let tint: Color
     var badge: Int = 0
+    var helpText: String?
 
     var body: some View {
         PAXFeatureCard(
@@ -13,7 +14,8 @@ struct PlatformModuleCard: View {
             subtitle: subtitle,
             systemImage: systemImage,
             tint: tint,
-            badge: badge
+            badge: badge,
+            helpText: helpText
         )
         .contentShape(Rectangle())
     }

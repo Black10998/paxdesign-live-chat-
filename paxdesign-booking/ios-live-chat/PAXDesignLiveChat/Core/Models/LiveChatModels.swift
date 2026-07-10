@@ -391,6 +391,7 @@ struct PollResponse: Codable {
     let adminTyping: Bool
     let userTyping: Bool
     let reactions: [String: String]
+    let customerLanguage: String
 
     enum CodingKeys: String, CodingKey {
         case handler
@@ -399,6 +400,7 @@ struct PollResponse: Codable {
         case adminUserId = "admin_user_id"
         case assignedAgent = "assigned_agent"
         case customerName = "customer_name"
+        case customerLanguage = "customer_language"
         case sessionRating = "session_rating"
         case detectedService = "detected_service"
         case updatedAt = "updated_at"
@@ -420,6 +422,7 @@ struct PollResponse: Codable {
             ? (try? container.decode(EmployeeIdentity.self, forKey: .assignedAgent))
             : nil
         customerName = LiveChatDecode.string(container, CodingKeys.customerName)
+        customerLanguage = LiveChatDecode.string(container, CodingKeys.customerLanguage)
         sessionRating = LiveChatDecode.int(container, CodingKeys.sessionRating)
         detectedService = LiveChatDecode.string(container, CodingKeys.detectedService)
         updatedAt = LiveChatDecode.string(container, CodingKeys.updatedAt)

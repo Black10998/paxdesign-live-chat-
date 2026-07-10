@@ -126,6 +126,28 @@ enum PlatformModule: String, CaseIterable, Identifiable, Hashable {
     static var adminModules: [PlatformModule] {
         [.administration, .devices]
     }
+
+    var helpDescription: String {
+        switch self {
+        case .dashboard: return L10n.DashboardMetricSessionsHelp
+        case .calendar: return L10n.ModuleCalendarSubtitle
+        case .tasks: return L10n.ModuleTasksSubtitle
+        case .files: return L10n.ModuleFilesSubtitle
+        case .chats: return L10n.SessionNoChatsHint
+        case .team: return L10n.TeamHubSubtitle
+        case .live: return L10n.LiveEmptyHint
+        case .notifications: return L10n.PlatformNotificationsSubtitle
+        case .reports: return L10n.ModuleReportsSubtitle
+        case .activityLog: return L10n.ModuleActivityLogSubtitle
+        case .employee: return L10n.ModuleEmployeeSubtitle
+        case .administration: return L10n.PlatformAdministrationSubtitle
+        case .devices: return L10n.PlatformDevicesSubtitle
+        case .settings: return L10n.PlatformSettingsSubtitle
+        case .profile: return L10n.ProfileAccountInfo
+        case .help: return L10n.PlatformHelpSubtitle
+        case .about: return L10n.AccountAbout
+        }
+    }
 }
 
 enum PlatformModuleCategory: String, CaseIterable, Identifiable {

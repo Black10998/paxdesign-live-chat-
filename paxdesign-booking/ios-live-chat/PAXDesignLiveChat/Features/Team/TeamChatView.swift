@@ -40,7 +40,8 @@ struct TeamChatView: View {
 
             teamComposer
         }
-        .paxScreenBackground()
+        .background(PAXBackground())
+        .paxKeyboardBottomInset()
         .navigationTitle(thread.participantName.isEmpty ? L10n.TeamChatTitle : thread.participantName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

@@ -28,6 +28,7 @@ final class ChatCoordinator: ObservableObject {
     @Published var showIncomingFullscreen = false
     @Published var incomingBannerDismissed = false
 
+    private var knownSessionIds = Set<String>()
     private var listTask: Task<Void, Never>?
     private var knownLiveRequests = Set<String>()
     private var lastKnownPreviews: [String: String] = [:]
@@ -95,6 +96,7 @@ final class ChatCoordinator: ObservableObject {
             ConversationHistoryStore.shared.setSiteScope(api.publicApiBaseURL)
             SessionListCache.shared.setSiteScope(api.publicApiBaseURL)
             hydrateFromCache()
+            knownSessionIds = Set(sessions.map(\.sessionId))
         }
         listTask = Task { [weak self] in
             while !Task.isCancelled {
@@ -133,9 +135,26 @@ final class ChatCoordinator: ObservableObject {
                             if sid.hasPrefix("team_") {
                                 ChatThreadRegistry.shared.teamThread(sessionId: sid).applyLiveMessage(inline, seq: messageSeq)
                                 TeamMessagingCoordinator.shared.bumpTeamSession(sessionId: sid, message: inline, seq: messageSeq)
+                                if self.activeSessionId != sid, inline.role != "admin" {
+                                    InAppNotificationCoordinator.shared.handleTeamMessage(
+                                        sessionId: sid,
+                                        preview: inline.content,
+                                        senderName: inline.senderName ?? "",
+                                        isActiveSession: false
+                                    )
+                                }
                             } else {
                                 ChatThreadRegistry.shared.bookingThread(sessionId: sid).applyLiveMessage(inline, seq: messageSeq)
                                 self.bumpBookingSession(sessionId: sid, message: inline, seq: messageSeq)
+                                if self.activeSessionId != sid, inline.role == "user" {
+                                    let sessionName = self.sessions.first(where: { $0.sessionId == sid })?.displayName ?? ""
+                                    InAppNotificationCoordinator.shared.handleNewCustomerMessage(
+                                        sessionId: sid,
+                                        preview: inline.content,
+                                        customerName: sessionName,
+                                        isActiveSession: false
+                                    )
+                                }
                             }
                         }
                     }
@@ -212,6 +231,7 @@ final class ChatCoordinator: ObservableObject {
             sessions = response.sessions
             liveCount = response.liveCount
             noteSessionSeqs(from: response.sessions)
+            detectNewSessions(response.sessions)
             lastSyncAt = Date()
             lastSessionRefreshAt = lastSyncAt
             updateUnreadCounts()
@@ -236,6 +256,7 @@ final class ChatCoordinator: ObservableObject {
             sessions = response.sessions
             liveCount = response.liveCount
             noteSessionSeqs(from: response.sessions)
+            detectNewSessions(response.sessions)
             lastSessionRefreshAt = Date()
             updateUnreadCounts()
             AppRefreshPolicy.update(liveCount: response.liveCount, openChat: activeSessionId != nil)
@@ -255,6 +276,26 @@ final class ChatCoordinator: ObservableObject {
         let settings = AppSettingsStore.shared
         unreadChatCount = sessions.filter { !$0.isTeamDM && settings.isSessionUnread($0) }.count
         unreadTeamCount = sessions.filter { $0.isTeamDM && settings.isSessionUnread($0) }.count
+        PAXApplicationBadge.sync(
+            unreadChats: unreadChatCount,
+            unreadTeam: unreadTeamCount,
+            liveRequests: liveCount
+        )
+    }
+
+    private func detectNewSessions(_ items: [LiveSession]) {
+        for session in items where !session.isTeamDM {
+            guard !knownSessionIds.contains(session.sessionId) else { continue }
+            knownSessionIds.insert(session.sessionId)
+            guard activeSessionId != session.sessionId else { continue }
+            InAppNotificationCoordinator.shared.handleNewChatStarted(
+                sessionId: session.sessionId,
+                customerName: session.displayName,
+                preview: session.lastPreview
+            )
+        }
+        let currentIds = Set(items.map(\.sessionId))
+        knownSessionIds = knownSessionIds.intersection(currentIds)
     }
 
     private func detectIncomingLiveRequests(_ items: [LiveSession]) {
@@ -457,6 +498,7 @@ final class ChatThreadModel: ObservableObject {
     @Published var isLoadingMessages = false
     @Published var handler = "ai"
     @Published var customerName = "Kunde"
+    @Published var customerLanguage = ""
     @Published var adminName = ""
     @Published var assignedAgent: EmployeeIdentity?
     @Published var detectedService = ""
@@ -934,6 +976,7 @@ final class ChatThreadModel: ObservableObject {
         if handler != data.handler { handler = data.handler }
         let resolvedName = data.customerName.isEmpty ? "Kunde" : data.customerName
         if customerName != resolvedName { customerName = resolvedName }
+        if customerLanguage != data.customerLanguage { customerLanguage = data.customerLanguage }
         if adminName != data.adminName { adminName = data.adminName }
         if assignedAgent?.id != data.assignedAgent?.id || assignedAgent?.name != data.assignedAgent?.name {
             assignedAgent = data.assignedAgent
@@ -965,8 +1008,19 @@ final class ChatThreadModel: ObservableObject {
     private func loadQuickReplies(auth: AuthStore) async {
         guard let api = auth.api, quickReplies.isEmpty else { return }
         if let response = try? await api.fetchQuickReplies() {
-            quickReplies = response.quickReplies
+            quickReplies = filteredQuickReplies(from: response.quickReplies)
         }
+    }
+
+    func filteredQuickReplies() -> [QuickReply] {
+        filteredQuickReplies(from: quickReplies)
+    }
+
+    private func filteredQuickReplies(from items: [QuickReply]) -> [QuickReply] {
+        let lang = customerLanguage.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !lang.isEmpty else { return items }
+        let localized = items.filter { $0.lang.lowercased() == lang }
+        return localized.isEmpty ? items : localized
     }
 
     private func poll(auth: AuthStore) async {
@@ -1032,7 +1086,7 @@ final class ChatThreadModel: ObservableObject {
                 let response = try await api.fetchSuggestions(sessionId: self.sessionId, messageId: messageId)
                 guard !Task.isCancelled, response.messageId == messageId else { return }
                 self.aiSuggestions = response.suggestions
-                self.suggestionsError = response.suggestions.isEmpty ? "Keine Vorschläge verfügbar." : nil
+                self.suggestionsError = response.suggestions.isEmpty ? L10n.ChatSuggestionsEmpty : nil
             } catch {
                 guard !Task.isCancelled else { return }
                 self.suggestionsError = error.localizedDescription

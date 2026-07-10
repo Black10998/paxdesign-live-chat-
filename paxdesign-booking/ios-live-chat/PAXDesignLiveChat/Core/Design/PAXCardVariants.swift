@@ -13,6 +13,7 @@ enum PAXCardVariant {
 private struct PAXCardVariantModifier: ViewModifier {
     let variant: PAXCardVariant
     let tint: Color
+    let animateReflection: Bool
 
     func body(content: Content) -> some View {
         switch variant {
@@ -21,21 +22,27 @@ private struct PAXCardVariantModifier: ViewModifier {
                 .paxPremiumGlass(tier: .standard, cornerRadius: 16)
                 .paxCardGlassReflection(cornerRadius: 16, alignment: .topTrailing, intensity: 0.07)
                 .paxCardGlassRefraction(cornerRadius: 16)
+                .paxAnimatedGlassReflection(cornerRadius: 16, enabled: animateReflection)
         case .hero:
             content
                 .padding(18)
-                .paxPremiumGlass(tier: .hero, cornerRadius: 22, accent: tint)
-                .paxCardGlassReflection(cornerRadius: 22, alignment: .topTrailing, intensity: 0.12)
-                .paxCardGlassReflection(cornerRadius: 22, alignment: .bottomLeading, intensity: 0.04)
-                .paxCardGlassRefraction(cornerRadius: 22)
+                .paxPremiumGlass(tier: .hero, cornerRadius: 24, accent: tint)
+                .paxCardGlassReflection(cornerRadius: 24, alignment: .topTrailing, intensity: 0.12)
+                .paxCardGlassReflection(cornerRadius: 24, alignment: .bottomLeading, intensity: 0.04)
+                .paxCardGlassRefraction(cornerRadius: 24)
+                .paxAnimatedGlassReflection(cornerRadius: 24, enabled: animateReflection)
+                .overlay(alignment: .topTrailing) {
+                    PAXCardDecorLayer(cornerRadius: 24, tint: tint)
+                }
         case .metric:
             content
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .paxPremiumGlass(tier: .premium, cornerRadius: 18, accent: tint)
-                .paxCardGlassReflection(cornerRadius: 18, alignment: .topTrailing, intensity: 0.11)
-                .paxCardGlassReflection(cornerRadius: 18, alignment: .bottomLeading, intensity: 0.035)
-                .paxCardGlassRefraction(cornerRadius: 18)
+                .paxPremiumGlass(tier: .premium, cornerRadius: 20, accent: tint)
+                .paxCardGlassReflection(cornerRadius: 20, alignment: .topTrailing, intensity: 0.11)
+                .paxCardGlassReflection(cornerRadius: 20, alignment: .bottomLeading, intensity: 0.035)
+                .paxCardGlassRefraction(cornerRadius: 20)
+                .paxAnimatedGlassReflection(cornerRadius: 20, enabled: animateReflection)
                 .overlay(alignment: .topLeading) {
                     RoundedRectangle(cornerRadius: 3, style: .continuous)
                         .fill(
@@ -49,25 +56,36 @@ private struct PAXCardVariantModifier: ViewModifier {
                         .padding(.leading, 0)
                         .offset(x: -1, y: 14)
                 }
+                .overlay(alignment: .bottomTrailing) {
+                    Circle()
+                        .fill(tint.opacity(0.06))
+                        .frame(width: 56, height: 56)
+                        .offset(x: 12, y: 14)
+                        .allowsHitTesting(false)
+                }
         case .feature:
             content
                 .padding(16)
-                .paxPremiumGlass(tier: .premium, cornerRadius: 20, accent: tint)
-                .paxCardGlassReflection(cornerRadius: 20, alignment: .topTrailing, intensity: 0.1)
-                .paxCardGlassReflection(cornerRadius: 20, alignment: .bottomLeading, intensity: 0.04)
-                .paxCardGlassRefraction(cornerRadius: 20)
+                .paxPremiumGlass(tier: .premium, cornerRadius: 22, accent: tint)
+                .paxCardGlassReflection(cornerRadius: 22, alignment: .topTrailing, intensity: 0.1)
+                .paxCardGlassReflection(cornerRadius: 22, alignment: .bottomLeading, intensity: 0.04)
+                .paxCardGlassRefraction(cornerRadius: 22)
+                .paxAnimatedGlassReflection(cornerRadius: 22, enabled: animateReflection)
+                .overlay(alignment: .topTrailing) {
+                    PAXCardDecorLayer(cornerRadius: 22, tint: tint)
+                }
         case .list:
             content
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .paxPremiumGlass(tier: .subtle, cornerRadius: 16)
-                .paxCardGlassReflection(cornerRadius: 16, alignment: .topTrailing, intensity: 0.05)
-                .paxCardGlassRefraction(cornerRadius: 16)
+                .paxPremiumGlass(tier: .subtle, cornerRadius: 18)
+                .paxCardGlassReflection(cornerRadius: 18, alignment: .topTrailing, intensity: 0.05)
+                .paxCardGlassRefraction(cornerRadius: 18)
         case .accent:
             content
                 .padding(16)
                 .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [tint.opacity(0.1), tint.opacity(0.04)],
@@ -76,9 +94,9 @@ private struct PAXCardVariantModifier: ViewModifier {
                             )
                         )
                 )
-                .paxPremiumGlass(tier: .standard, cornerRadius: 18, accent: tint)
-                .paxCardGlassReflection(cornerRadius: 18, alignment: .topLeading, intensity: 0.08)
-                .paxCardGlassRefraction(cornerRadius: 18)
+                .paxPremiumGlass(tier: .standard, cornerRadius: 20, accent: tint)
+                .paxCardGlassReflection(cornerRadius: 20, alignment: .topLeading, intensity: 0.08)
+                .paxCardGlassRefraction(cornerRadius: 20)
         case .compact:
             content
                 .padding(.horizontal, 12)
@@ -89,8 +107,8 @@ private struct PAXCardVariantModifier: ViewModifier {
 }
 
 extension View {
-    func paxCard(_ variant: PAXCardVariant, tint: Color = PAXTheme.accent) -> some View {
-        modifier(PAXCardVariantModifier(variant: variant, tint: tint))
+    func paxCard(_ variant: PAXCardVariant, tint: Color = PAXTheme.accent, animateReflection: Bool = true) -> some View {
+        modifier(PAXCardVariantModifier(variant: variant, tint: tint, animateReflection: animateReflection))
     }
 
     /// Subtle crystal specular on card surfaces (not on icons).
@@ -163,6 +181,16 @@ extension View {
                 .allowsHitTesting(false)
         }
     }
+
+    fileprivate func paxAnimatedGlassReflection(cornerRadius: CGFloat, enabled: Bool) -> some View {
+        Group {
+            if enabled {
+                self.paxAnimatedGlassReflection(cornerRadius: cornerRadius)
+            } else {
+                self
+            }
+        }
+    }
 }
 
 struct PAXHeroCard: View {
@@ -170,6 +198,7 @@ struct PAXHeroCard: View {
     let subtitle: String
     let systemImage: String
     var tint: Color = PAXTheme.accent
+    var helpText: String?
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
@@ -191,6 +220,7 @@ struct PAXHeroCard: View {
             Spacer(minLength: 0)
         }
         .paxCard(.hero, tint: tint)
+        .modifier(OptionalCardHelp(helpText: helpText))
     }
 }
 
@@ -199,6 +229,7 @@ struct PAXMetricCard: View {
     let value: String
     let icon: String
     var tint: Color = PAXTheme.accent
+    var helpText: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -216,6 +247,7 @@ struct PAXMetricCard: View {
                 .foregroundStyle(PAXTheme.textSecondary)
         }
         .paxCard(.metric, tint: tint)
+        .modifier(OptionalCardHelp(helpText: helpText))
     }
 }
 
@@ -225,6 +257,7 @@ struct PAXFeatureCard: View {
     let systemImage: String
     var tint: Color = PAXTheme.accent
     var badge: Int = 0
+    var helpText: String?
 
     var body: some View {
         HStack(spacing: 14) {
@@ -258,8 +291,22 @@ struct PAXFeatureCard: View {
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(PAXTheme.textTertiary)
+                .flipsForRightToLeftLayoutDirection(true)
         }
         .paxCard(.feature, tint: tint)
+        .modifier(OptionalCardHelp(helpText: helpText))
+    }
+}
+
+private struct OptionalCardHelp: ViewModifier {
+    let helpText: String?
+
+    func body(content: Content) -> some View {
+        if let helpText, !helpText.isEmpty {
+            content.paxCardHelp(helpText)
+        } else {
+            content
+        }
     }
 }
 
@@ -270,10 +317,10 @@ struct PAXListCard<Content: View>: View {
 
     var body: some View {
         content()
-            .paxCard(highlighted ? .accent : .list, tint: accent)
+            .paxCard(highlighted ? .accent : .list, tint: accent, animateReflection: false)
             .overlay {
                 if highlighted {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .stroke(accent.opacity(0.42), lineWidth: 1.2)
                 }
             }
