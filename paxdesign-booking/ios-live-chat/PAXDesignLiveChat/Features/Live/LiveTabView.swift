@@ -39,8 +39,13 @@ struct LiveTabView: View {
                                 await coordinator.acceptLiveRequest(auth: auth, session: session)
                             }
                         } onDecline: {
-                            PAXHaptics.warning()
-                            Task { await coordinator.declineLiveRequest(auth: auth, session: session) }
+                            PAXDelete.confirm(
+                                message: "Diese Live-Anfrage wird abgelehnt.",
+                                itemTitle: session.displayName,
+                                confirmTitle: L10n.CommonDecline
+                            ) {
+                                Task { await coordinator.declineLiveRequest(auth: auth, session: session) }
+                            }
                         } onOpen: {
                             if canViewChats { onOpenSession(session.sessionId) }
                         }
