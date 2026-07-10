@@ -81,7 +81,8 @@ struct PlatformHubView: View {
                             subtitle: module.subtitle,
                             systemImage: module.systemImage,
                             tint: module.tint,
-                            badge: badge(for: module)
+                            badge: badge(for: module),
+                            helpText: module.helpDescription
                         )
                     }
                     .buttonStyle(.plain)

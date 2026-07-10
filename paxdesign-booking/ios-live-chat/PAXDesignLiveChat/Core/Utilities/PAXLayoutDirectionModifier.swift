@@ -6,6 +6,8 @@ struct PAXLayoutDirectionModifier: ViewModifier {
     func body(content: Content) -> some View {
         if let direction = settings.languageMode.layoutDirectionOverride {
             content.environment(\.layoutDirection, direction)
+        } else if Locale.current.language.languageCode?.identifier == "ar" {
+            content.environment(\.layoutDirection, .rightToLeft)
         } else {
             content
         }

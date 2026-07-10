@@ -792,29 +792,83 @@ class PAXdesign_Chat {
 
         $service = isset($context['service']) ? trim((string) $context['service']) : '';
         $customer_name = isset($context['customer_name']) ? trim((string) $context['customer_name']) : '';
+        $customer_language = isset($context['customer_language']) ? sanitize_key((string) $context['customer_language']) : '';
+        $staff_language = isset($context['staff_language']) ? sanitize_key((string) $context['staff_language']) : '';
 
-        $system = 'Du bist ein stiller Assistent für den Live-Support-Mitarbeiter von PAXdesign (Webdesign, SEO, Buchungssysteme). '
-            . 'Der Mitarbeiter schreibt selbst — du sendest NIEMALS Nachrichten an den Kunden. '
-            . 'Erstelle genau 2–3 kurze, professionelle Antwortvorschläge auf die letzte Kundennachricht. '
-            . 'Antworte in der Sprache des Kunden (Deutsch oder Arabisch). '
-            . 'Jeder Vorschlag max. 2 Sätze, direkt sendbar, freundlich und konkret. '
-            . 'Antworte NUR als JSON: {"suggestions":["…","…"]} ohne Markdown.';
+        if ($staff_language === '' && class_exists('PAXdesign_Language_Routing')) {
+            foreach (array_reverse($messages) as $msg) {
+                if (!is_array($msg) || ($msg['role'] ?? '') !== 'admin') {
+                    continue;
+                }
+                $staff_language = PAXdesign_Language_Routing::detect_text_language((string) ($msg['content'] ?? ''));
+                if ($staff_language !== '') {
+                    break;
+                }
+            }
+        }
+        if ($customer_language === '' && class_exists('PAXdesign_Language_Routing')) {
+            $customer_language = PAXdesign_Language_Routing::detect_text_language($customer_text);
+        }
+
+        $reply_language = 'de';
+        if ($staff_language === 'ar' || $customer_language === 'ar') {
+            $reply_language = 'ar';
+        } elseif ($staff_language === 'en' || $customer_language === 'en') {
+            $reply_language = 'en';
+        }
+
+        if ($reply_language === 'ar') {
+            $system = 'أنت مساعد صامت لموظف دعم PAXdesign (تصميم مواقع، SEO، أنظمة حجز). '
+                . 'الموظف يكتب بنفسه — لا ترسل أبداً رسائل للعميل. '
+                . 'أنشئ 2–3 اقتراحات رد قصيرة واحترافية على آخر رسالة من العميل. '
+                . 'اكتب كل الاقتراحات بالعربية الطبيعية فقط. لا تستخدم الألمانية أو الإنجليزية. '
+                . 'كل اقتراح بحد أقصى جملتين، جاهز للإرسال، ودود ومحدد. '
+                . 'أجب فقط بصيغة JSON: {"suggestions":["…","…"]} بدون Markdown.';
+        } elseif ($reply_language === 'en') {
+            $system = 'You are a silent assistant for the PAXdesign live support agent (web design, SEO, booking systems). '
+                . 'The agent writes themselves — you NEVER send messages to the customer. '
+                . 'Create exactly 2–3 short, professional reply suggestions for the latest customer message. '
+                . 'Write every suggestion in natural English only. '
+                . 'Each suggestion max 2 sentences, ready to send, friendly and concrete. '
+                . 'Reply ONLY as JSON: {"suggestions":["…","…"]} without Markdown.';
+        } else {
+            $system = 'Du bist ein stiller Assistent für den Live-Support-Mitarbeiter von PAXdesign (Webdesign, SEO, Buchungssysteme). '
+                . 'Der Mitarbeiter schreibt selbst — du sendest NIEMALS Nachrichten an den Kunden. '
+                . 'Erstelle genau 2–3 kurze, professionelle Antwortvorschläge auf die letzte Kundennachricht. '
+                . 'Antworte ausschließlich auf Deutsch. '
+                . 'Jeder Vorschlag max. 2 Sätze, direkt sendbar, freundlich und konkret. '
+                . 'Antworte NUR als JSON: {"suggestions":["…","…"]} ohne Markdown.';
+        }
 
         $user_parts = array();
         if ($customer_name !== '') {
-            $user_parts[] = 'Kundenname: ' . $customer_name;
+            $user_parts[] = $reply_language === 'ar'
+                ? 'اسم العميل: ' . $customer_name
+                : ($reply_language === 'en' ? 'Customer name: ' . $customer_name : 'Kundenname: ' . $customer_name);
         }
         if ($service !== '') {
-            $user_parts[] = 'Erkanntes Thema: ' . $service;
+            $user_parts[] = $reply_language === 'ar'
+                ? 'الموضوع المكتشف: ' . $service
+                : ($reply_language === 'en' ? 'Detected topic: ' . $service : 'Erkanntes Thema: ' . $service);
+        }
+        if ($reply_language !== 'de') {
+            $user_parts[] = $reply_language === 'ar' ? 'لغة المحادثة: العربية' : 'Conversation language: English';
         }
         if (!empty($history)) {
-            $user_parts[] = 'Bisheriger Verlauf (Auszug):';
+            $user_parts[] = $reply_language === 'ar' ? 'سجل المحادثة (مختصر):' : ($reply_language === 'en' ? 'Conversation excerpt:' : 'Bisheriger Verlauf (Auszug):');
             foreach ($history as $turn) {
-                $label = $turn['role'] === 'user' ? 'Kunde' : 'Support';
+                $label = $turn['role'] === 'user'
+                    ? ($reply_language === 'ar' ? 'العميل' : ($reply_language === 'en' ? 'Customer' : 'Kunde'))
+                    : ($reply_language === 'ar' ? 'الدعم' : ($reply_language === 'en' ? 'Support' : 'Support'));
                 $user_parts[] = $label . ': ' . $turn['content'];
             }
         }
-        $user_parts[] = 'Letzte Kundennachricht (Antwortvorschläge dafür): ' . ($customer_text !== '' ? $customer_text : '[Bild/Foto ohne Text]');
+        $user_parts[] = ($reply_language === 'ar'
+            ? 'آخر رسالة من العميل (اقترح ردوداً لها): '
+            : ($reply_language === 'en'
+                ? 'Latest customer message (suggest replies for): '
+                : 'Letzte Kundennachricht (Antwortvorschläge dafür): '))
+            . ($customer_text !== '' ? $customer_text : ($reply_language === 'ar' ? '[صورة بدون نص]' : ($reply_language === 'en' ? '[Image without text]' : '[Bild/Foto ohne Text]')));
 
         $openai_messages = array(
             array('role' => 'system', 'content' => $system),

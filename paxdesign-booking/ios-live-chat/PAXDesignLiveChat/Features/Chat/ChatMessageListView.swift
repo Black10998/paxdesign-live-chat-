@@ -54,9 +54,10 @@ struct ChatMessageListView: View {
                     }
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .padding(.bottom, PAXShellLayout.scrollBottomPadding(tabBarVisible: false))
+                .padding(.top, 6)
+                .padding(.bottom, 4)
             }
+            .scrollDismissesKeyboard(.interactively)
             .onChange(of: messagesRevision) { _ in
                 ChatLiveDiagnostics.uiRows(
                     sessionId: sessionId,

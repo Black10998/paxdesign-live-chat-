@@ -65,6 +65,7 @@ enum L10n {
     static var ChatImage: String { t("chat.image") }
     static var ChatImageUnavailable: String { t("chat.image_unavailable") }
     static var ChatMessagePlaceholder: String { t("chat.message_placeholder") }
+    static var ChatSuggestionsEmpty: String { t("chat.suggestions_empty") }
     static var ChatMessages: String { t("chat.messages") }
     static var ChatPrivacyBanner: String { t("chat.privacy_banner") }
     static var ChatReadOnly: String { t("chat.read_only") }
@@ -418,4 +419,29 @@ enum L10n {
     static var QuickActionTeamSubtitle: String { t("quick_action.team_subtitle") }
     static var TimeToday: String { t("time.today") }
     static var TimeYesterday: String { t("time.yesterday") }
+
+    static var NotifyNewChatTitle: String { t("notify.new_chat.title") }
+    static var NotifyNewChatBody: String { t("notify.new_chat.body") }
+    static var NotifyNewMessageTitle: String { t("notify.new_message.title") }
+    static var NotifyNewMessageBody: String { t("notify.new_message.body") }
+    static var NotifyTeamMessageTitle: String { t("notify.team_message.title") }
+    static var NotifyTeamMessageBody: String { t("notify.team_message.body") }
+    static var NotifyAIAttentionTitle: String { t("notify.ai_attention.title") }
+    static var NotifyAIAttentionBody: String { t("notify.ai_attention.body") }
+    static var NotifyCustomerWaitingTitle: String { t("notify.customer_waiting.title") }
+    static var NotifyCustomerWaitingBody: String { t("notify.customer_waiting.body") }
+    static var NotifyMissedChatTitle: String { t("notify.missed_chat.title") }
+    static var NotifyMissedChatBody: String { t("notify.missed_chat.body") }
+    static var NotifyAssignedChatTitle: String { t("notify.assigned_chat.title") }
+    static var NotifyAssignedChatBody: String { t("notify.assigned_chat.body") }
+    static var NotifyNewLeadTitle: String { t("notify.new_lead.title") }
+    static var NotifyNewLeadBody: String { t("notify.new_lead.body") }
+
+    static var DashboardMetricSessionsHelp: String { t("dashboard.metric.sessions_help") }
+    static var DashboardMetricUnreadHelp: String { t("dashboard.metric.unread_help") }
+    static var DashboardMetricLiveHelp: String { t("dashboard.metric.live_help") }
+    static var DashboardMetricTasksHelp: String { t("dashboard.metric.tasks_help") }
+    static var DashboardActivityFeed: String { t("dashboard.activity_feed") }
+    static var DashboardActivityEmpty: String { t("dashboard.activity_empty") }
+    static var DashboardActivityRealtime: String { t("dashboard.activity_realtime") }
 }

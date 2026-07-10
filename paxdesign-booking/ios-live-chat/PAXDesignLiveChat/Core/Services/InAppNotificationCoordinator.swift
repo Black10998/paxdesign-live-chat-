@@ -8,9 +8,24 @@ final class InAppNotificationCoordinator {
 
     private var lastMessageSoundAt: Date?
     private var lastAISoundAt: Date?
-    private let minInterval: TimeInterval = 1.2
+    private var lastNewChatSoundAt: Date?
+    private let minInterval: TimeInterval = 0.8
 
     private init() {}
+
+    func handleNewChatStarted(sessionId: String, customerName: String, preview: String) {
+        guard AppSettingsStore.shared.notificationsEnabled else { return }
+        guard shouldPlay(since: &lastNewChatSoundAt) else { return }
+
+        PAXNotificationSound.shared.play(.message)
+        PAXHaptics.medium()
+        postLocalNotification(
+            title: customerName.isEmpty ? L10n.NotifyNewChatTitle : customerName,
+            body: preview.isEmpty ? L10n.NotifyNewChatBody : preview,
+            sessionId: sessionId,
+            type: "new_chat"
+        )
+    }
 
     func handleNewCustomerMessage(sessionId: String, preview: String, customerName: String, isActiveSession: Bool) {
         guard AppSettingsStore.shared.messageSoundEnabled else { return }
@@ -20,8 +35,8 @@ final class InAppNotificationCoordinator {
         PAXNotificationSound.shared.play(.message)
         PAXHaptics.light()
         postLocalNotification(
-            title: customerName.isEmpty ? "Neue Kundennachricht" : customerName,
-            body: preview.isEmpty ? "Neue Nachricht im Live Chat" : preview,
+            title: customerName.isEmpty ? L10n.NotifyNewMessageTitle : customerName,
+            body: preview.isEmpty ? L10n.NotifyNewMessageBody : preview,
             sessionId: sessionId,
             type: "message"
         )
@@ -35,8 +50,8 @@ final class InAppNotificationCoordinator {
         PAXNotificationSound.shared.play(.message)
         PAXHaptics.light()
         postLocalNotification(
-            title: senderName.isEmpty ? "Team-Nachricht" : senderName,
-            body: preview.isEmpty ? "Neue Team-Nachricht" : preview,
+            title: senderName.isEmpty ? L10n.NotifyTeamMessageTitle : senderName,
+            body: preview.isEmpty ? L10n.NotifyTeamMessageBody : preview,
             sessionId: sessionId,
             type: "team_message"
         )
@@ -49,8 +64,8 @@ final class InAppNotificationCoordinator {
         PAXNotificationSound.shared.play(.aiAlert)
         PAXHaptics.medium()
         postLocalNotification(
-            title: "KI-Assistent",
-            body: preview.isEmpty ? "Neue KI-Aktivität — bitte prüfen" : preview,
+            title: L10n.NotifyAIAttentionTitle,
+            body: preview.isEmpty ? L10n.NotifyAIAttentionBody : preview,
             sessionId: sessionId,
             type: "ai_attention"
         )
@@ -67,33 +82,33 @@ final class InAppNotificationCoordinator {
 
         switch event {
         case "customer_waiting":
-            title = "Customer waiting"
-            body = preview.isEmpty ? "Ein Kunde wartet auf schnelle Rückmeldung." : preview
+            title = L10n.NotifyCustomerWaitingTitle
+            body = preview.isEmpty ? L10n.NotifyCustomerWaitingBody : preview
             tone = .liveRequest
             type = "live_request"
         case "new_chat_started":
-            title = "New chat started"
-            body = preview.isEmpty ? "Neuer Live-Chat wurde gestartet." : preview
+            title = L10n.NotifyNewChatTitle
+            body = preview.isEmpty ? L10n.NotifyNewChatBody : preview
             tone = .message
             type = "new_chat"
         case "missed_chat":
-            title = "Missed chat"
-            body = preview.isEmpty ? "Eine Live-Anfrage wurde verpasst." : preview
+            title = L10n.NotifyMissedChatTitle
+            body = preview.isEmpty ? L10n.NotifyMissedChatBody : preview
             tone = .aiAlert
             type = "missed_chat"
         case "assigned_chat_updated":
-            title = "Assigned chat updated"
-            body = preview.isEmpty ? "Zugewiesener Chat hat neue Aktivität." : preview
+            title = L10n.NotifyAssignedChatTitle
+            body = preview.isEmpty ? L10n.NotifyAssignedChatBody : preview
             tone = .aiAlert
             type = "session_sync"
         case "new_lead_contact":
-            title = "New lead/contact from chat"
-            body = preview.isEmpty ? "Neuer Lead oder Kontakt aus Live-Chat." : preview
+            title = L10n.NotifyNewLeadTitle
+            body = preview.isEmpty ? L10n.NotifyNewLeadBody : preview
             tone = .aiAlert
             type = "new_lead_contact"
         default:
-            title = customerName.isEmpty ? "Live Chat" : customerName
-            body = preview.isEmpty ? "Neue Aktivität im Live Chat." : preview
+            title = customerName.isEmpty ? L10n.NotifyNewMessageTitle : customerName
+            body = preview.isEmpty ? L10n.NotifyNewMessageBody : preview
             tone = .message
             type = "message"
         }

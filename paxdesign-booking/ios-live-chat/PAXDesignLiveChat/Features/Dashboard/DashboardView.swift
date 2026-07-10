@@ -224,6 +224,7 @@ struct DashboardView: View {
             systemImage: "chart.bar.doc.horizontal.fill",
             gradient: [.blue, .cyan]
         )
+        .paxStaggeredAppear(index: 0)
         .transition(PAXMotion.heroReveal)
     }
 
@@ -233,36 +234,44 @@ struct DashboardView: View {
                 title: L10n.DashboardMetricSessions,
                 value: "\(platform.dashboard?.sessionsTotal ?? customerSessions.count)",
                 icon: "bubble.left.and.bubble.right.fill",
-                tint: .blue
+                tint: .blue,
+                helpText: L10n.DashboardMetricSessionsHelp
             )
+            .paxStaggeredAppear(index: 0)
             PAXMetricCard(
                 title: L10n.DashboardMetricUnread,
                 value: "\(unreadCount)",
                 icon: "envelope.badge.fill",
-                tint: .orange
+                tint: .orange,
+                helpText: L10n.DashboardMetricUnreadHelp
             )
+            .paxStaggeredAppear(index: 1)
             PAXMetricCard(
                 title: L10n.DashboardMetricLive,
                 value: "\(platform.dashboard?.liveCount ?? coordinator.liveCount)",
                 icon: "bell.and.waves.left.and.right.fill",
-                tint: .red
+                tint: .red,
+                helpText: L10n.DashboardMetricLiveHelp
             )
+            .paxStaggeredAppear(index: 2)
             PAXMetricCard(
                 title: L10n.DashboardMetricTasks,
                 value: "\(platform.dashboard?.openTasks ?? tasks.openCount)",
                 icon: "checklist",
-                tint: .green
+                tint: .green,
+                helpText: L10n.DashboardMetricTasksHelp
             )
+            .paxStaggeredAppear(index: 3)
         }
     }
 
     private var activityFeed: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                Text("Live Activity Feed")
+                Text(L10n.DashboardActivityFeed)
                     .font(.headline)
                 Spacer()
-                Text("Realtime")
+                Text(L10n.DashboardActivityRealtime)
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(.mint)
                     .padding(.horizontal, 8)
@@ -271,7 +280,7 @@ struct DashboardView: View {
             }
 
             if recentActivityItems.isEmpty {
-                Text("Noch keine aktuelle Aktivität.")
+                Text(L10n.DashboardActivityEmpty)
                     .font(.subheadline)
                     .foregroundStyle(PAXTheme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -325,16 +334,18 @@ struct DashboardView: View {
                 .font(.headline)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                ForEach(Array(PlatformModuleAccess.availableHubModules(auth: auth).filter { $0 != .dashboard }.prefix(6))) { module in
+                ForEach(Array(PlatformModuleAccess.availableHubModules(auth: auth).filter { $0 != .dashboard }.prefix(6).enumerated()), id: \.element.id) { index, module in
                     NavigationLink(value: module) {
                         PlatformModuleCard(
                             title: module.title,
                             subtitle: module.subtitle,
                             systemImage: module.systemImage,
-                            tint: module.tint
+                            tint: module.tint,
+                            helpText: module.helpDescription
                         )
                     }
                     .buttonStyle(.plain)
+                    .paxStaggeredAppear(index: index + 4)
                 }
             }
         }

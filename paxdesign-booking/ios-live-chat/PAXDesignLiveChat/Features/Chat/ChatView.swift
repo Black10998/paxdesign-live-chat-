@@ -71,7 +71,8 @@ struct ChatView: View {
 
             composer
         }
-        .paxScreenBackground()
+        .background(PAXBackground())
+        .paxKeyboardBottomInset()
         .navigationTitle(thread.customerName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
@@ -308,7 +309,7 @@ struct ChatView: View {
         VStack(alignment: .leading, spacing: 8) {
             if !thread.quickReplies.isEmpty {
                 AssistChipRow {
-                    ForEach(thread.quickReplies) { item in
+                    ForEach(thread.filteredQuickReplies()) { item in
                         AssistChip(title: item.label, subtitle: item.text) {
                             thread.applyQuickReply(item.text)
                         }
@@ -331,8 +332,8 @@ struct ChatView: View {
                 }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.82, borderOpacity: 0.46, shadowOpacity: 0.16)
     }
 
@@ -370,11 +371,11 @@ struct ChatView: View {
                 .disabled(thread.isSending)
             }
 
-            TextField("Nachricht", text: $thread.draft, axis: .vertical)
+            TextField(L10n.ChatMessagePlaceholder, text: $thread.draft, axis: .vertical)
                 .font(.subheadline)
                 .lineLimit(1...4)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
                 .paxGlassCardStyle(cornerRadius: 20, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.08)
                 .disabled(thread.handler != "admin" || !canReply)
                 .onChange(of: thread.draft) { _ in
@@ -391,9 +392,9 @@ struct ChatView: View {
             }
             .disabled(!canSend)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.8, borderOpacity: 0.4, shadowOpacity: 0.14)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .paxGlassCardStyle(cornerRadius: 16, fillOpacity: 0.8, borderOpacity: 0.4, shadowOpacity: 0.14)
     }
 
     private var canSend: Bool {

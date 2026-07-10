@@ -1,10 +1,10 @@
 import SwiftUI
 
 enum PAXMotion {
-    static let listInsert = AnyTransition.opacity
-    static let cardAppear = AnyTransition.opacity
-    static let modulePush = AnyTransition.opacity
-    static let heroReveal = AnyTransition.opacity
+    static let listInsert = AnyTransition.opacity.combined(with: .move(edge: .bottom))
+    static let cardAppear = AnyTransition.opacity.combined(with: .scale(scale: 0.97))
+    static let modulePush = AnyTransition.opacity.combined(with: .move(edge: .trailing))
+    static let heroReveal = AnyTransition.opacity.combined(with: .move(edge: .top))
 
     static func pressable<S: Shape>(_ shape: S, scale: CGFloat = 0.98) -> some ViewModifier {
         PressableModifier(shape: shape, scale: scale)
