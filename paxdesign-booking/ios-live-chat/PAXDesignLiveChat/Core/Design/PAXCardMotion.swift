@@ -114,7 +114,6 @@ struct PAXCardHelpModifier: ViewModifier {
                     .multilineTextAlignment(.leading)
                     .padding(14)
                     .frame(maxWidth: 280)
-                    .presentationCompactAdaptation(.popover)
             }
     }
 }
