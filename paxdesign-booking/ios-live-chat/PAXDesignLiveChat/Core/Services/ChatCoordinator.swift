@@ -34,6 +34,25 @@ final class ChatCoordinator: ObservableObject {
     private var expiryTasks: [String: Task<Void, Never>] = [:]
     private var fullscreenTask: Task<Void, Never>?
     private(set) var lastSessionRefreshAt: Date?
+    private var sessionServerSeq: [String: Int] = [:]
+
+    func serverSeq(for sessionId: String) -> Int {
+        if let hinted = sessionServerSeq[sessionId], hinted > 0 {
+            return hinted
+        }
+        return sessions.first(where: { $0.sessionId == sessionId })?.seq ?? 0
+    }
+
+    func noteSessionSeq(_ sessionId: String, seq: Int) {
+        guard !sessionId.isEmpty, seq > 0 else { return }
+        sessionServerSeq[sessionId] = max(sessionServerSeq[sessionId] ?? 0, seq)
+    }
+
+    private func noteSessionSeqs(from sessions: [LiveSession]) {
+        for session in sessions where session.seq > 0 {
+            noteSessionSeq(session.sessionId, seq: session.seq)
+        }
+    }
 
     private func scheduleFullscreenPresentation() {
         fullscreenTask?.cancel()
@@ -65,10 +84,16 @@ final class ChatCoordinator: ObservableObject {
         if let api = auth.api {
             ChatEventStream.shared.startInbox(api: api) { [weak self] event in
                 Task { @MainActor in
-                    await self?.refreshSessions(auth: auth)
-                    if event.type == "message", let sid = event.payload["session_id"] as? String {
-                        self?.postSessionSync(sessionId: sid)
+                    guard let self else { return }
+                    if let sid = event.payload["session_id"] as? String, !sid.isEmpty {
+                        if let seq = event.payload["seq"] as? Int {
+                            self.noteSessionSeq(sid, seq: seq)
+                        }
+                        if event.type == "message" || event.type == "handler" || event.type == "typing" {
+                            self.postSessionSync(sessionId: sid)
+                        }
                     }
+                    await self.refreshSessions(auth: auth)
                 }
             }
         }
@@ -99,6 +124,7 @@ final class ChatCoordinator: ObservableObject {
             }
             sessions = newSessions
             liveCount = newLiveCount
+            noteSessionSeqs(from: newSessions)
             lastSyncAt = Date()
             lastSessionRefreshAt = lastSyncAt
             updateUnreadCounts()
@@ -339,40 +365,51 @@ final class ChatThreadModel: ObservableObject {
     private var suggestionsForMessageId = 0
     private var knownMessageIds = Set<Int>()
     private var lastTypingNotifyAt = Date.distantPast
+    private var lifecycleGeneration = 0
 
     init(sessionId: String) {
         self.sessionId = sessionId
     }
 
-    func start(auth: AuthStore) {
+    func start(auth: AuthStore, expectedServerSeq: Int = 0) {
         self.auth = auth
-        pollTask?.cancel()
-        pollTask = Task { [weak self] in
+        lifecycleGeneration += 1
+        let generation = lifecycleGeneration
+        stopBackgroundWork()
+
+        pollTask = Task { @MainActor [weak self] in
             guard let self else { return }
             await self.loadQuickReplies(auth: auth)
-            await self.loadFull(auth: auth)
-            while !Task.isCancelled {
+            await self.syncFromServer(auth: auth, full: true, expectedServerSeq: expectedServerSeq)
+            guard !Task.isCancelled, self.lifecycleGeneration == generation else { return }
+
+            self.beginEventStream(auth: auth, generation: generation)
+
+            while !Task.isCancelled, self.lifecycleGeneration == generation {
                 await self.poll(auth: auth)
                 try? await Task.sleep(nanoseconds: AppRefreshPolicy.chatThreadInterval)
             }
         }
-        if let api = auth.api {
-            ChatEventStream.shared.startThread(api: api, sessionId: sessionId, isTeam: false) { [weak self] event in
-                Task { @MainActor in
-                    guard let self, let auth = self.auth else { return }
-                    if event.type == "message" || event.type == "typing" || event.type == "handler" {
-                        await self.poll(auth: auth)
-                    }
-                }
+    }
+
+    func refreshNow(auth: AuthStore, expectedServerSeq: Int = 0) async {
+        if hasMessageGap(expectedServerSeq: expectedServerSeq) {
+            await syncFromServer(auth: auth, full: true, expectedServerSeq: expectedServerSeq)
+        } else {
+            await poll(auth: auth)
+            if hasMessageGap(expectedServerSeq: expectedServerSeq) {
+                await syncFromServer(auth: auth, full: true, expectedServerSeq: expectedServerSeq)
             }
         }
     }
 
-    func refreshNow(auth: AuthStore) async {
-        await poll(auth: auth)
+    func stop() {
+        lifecycleGeneration += 1
+        stopBackgroundWork()
+        AdminTypingSound.shared.stop()
     }
 
-    func stop() {
+    private func stopBackgroundWork() {
         pollTask?.cancel()
         pollTask = nil
         ChatEventStream.shared.stopThread()
@@ -382,27 +419,56 @@ final class ChatThreadModel: ObservableObject {
         typingNotifyTask = nil
         suggestionsTask?.cancel()
         suggestionsTask = nil
-        AdminTypingSound.shared.stop()
     }
 
-    private func loadQuickReplies(auth: AuthStore) async {
-        guard let api = auth.api, quickReplies.isEmpty else { return }
-        if let response = try? await api.fetchQuickReplies() {
-            quickReplies = response.quickReplies
+    private func beginEventStream(auth: AuthStore, generation: Int) {
+        guard let api = auth.api else { return }
+        ChatEventStream.shared.startThread(api: api, sessionId: sessionId, isTeam: false) { [weak self] event in
+            Task { @MainActor in
+                guard let self, let auth = self.auth, self.lifecycleGeneration == generation else { return }
+                if event.type == "message" || event.type == "typing" || event.type == "handler" {
+                    let eventSeq = (event.payload["seq"] as? Int) ?? 0
+                    await self.poll(auth: auth)
+                    if self.hasMessageGap(expectedServerSeq: eventSeq) {
+                        await self.syncFromServer(auth: auth, full: true, expectedServerSeq: eventSeq)
+                    }
+                }
+            }
         }
     }
 
-    private func loadFull(auth: AuthStore) async {
+    private func hasMessageGap(expectedServerSeq: Int = 0) -> Bool {
+        let localMax = localMessageMaxId()
+        if expectedServerSeq > localMax {
+            return true
+        }
+        return pollSeq > localMax
+    }
+
+    private func localMessageMaxId() -> Int {
+        messages.map(\.id).filter { $0 > 0 }.max() ?? 0
+    }
+
+    private func syncFromServer(auth: AuthStore, full: Bool, expectedServerSeq: Int = 0) async {
         guard let api = auth.api else {
             isLoadingMessages = false
             return
         }
-        isLoadingMessages = messages.isEmpty
+        isLoadingMessages = true
         defer { isLoadingMessages = false }
         do {
-            let data = try await api.fetchSession(sessionId)
-            applyPoll(data)
-            knownMessageIds = Set(messages.map(\.id))
+            let data: PollResponse
+            if full {
+                data = try await api.fetchSession(sessionId)
+            } else {
+                data = try await api.pollSession(sessionId, since: pollSeq)
+            }
+            applyServerSnapshot(data, replaceMessages: full)
+            if hasMessageGap(expectedServerSeq: max(expectedServerSeq, data.seq)) {
+                let recovery = try await api.fetchSession(sessionId)
+                applyServerSnapshot(recovery, replaceMessages: true)
+            }
+            errorMessage = nil
             if handler == "admin" {
                 maybeFetchSuggestionsForLatestUserMessage()
             }
@@ -411,6 +477,54 @@ final class ChatThreadModel: ObservableObject {
                 auth.handleUnauthorized()
             }
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func applyServerSnapshot(_ data: PollResponse, replaceMessages: Bool) {
+        if handler != data.handler { handler = data.handler }
+        let resolvedName = data.customerName.isEmpty ? "Kunde" : data.customerName
+        if customerName != resolvedName { customerName = resolvedName }
+        if adminName != data.adminName { adminName = data.adminName }
+        if assignedAgent?.id != data.assignedAgent?.id || assignedAgent?.name != data.assignedAgent?.name {
+            assignedAgent = data.assignedAgent
+        }
+        if detectedService != data.detectedService { detectedService = data.detectedService }
+        if updatedAt != data.updatedAt { updatedAt = data.updatedAt }
+        if data.sessionRating > 0, sessionRating != data.sessionRating {
+            sessionRating = data.sessionRating
+        }
+        if userTyping != data.userTyping { userTyping = data.userTyping }
+
+        if replaceMessages {
+            messages = data.messages.sorted { $0.id < $1.id }
+            knownMessageIds = Set(messages.map(\.id))
+            pollSeq = data.seq
+        } else {
+            applyPoll(data)
+            reconcilePollCursor(serverSeq: data.seq)
+        }
+
+        if !data.reactions.isEmpty {
+            let reactionResult = MessageMerge.applyReactions(to: messages, reactions: data.reactions)
+            if reactionResult.changed {
+                messages = reactionResult.messages
+            }
+        }
+    }
+
+    private func reconcilePollCursor(serverSeq: Int) {
+        let localMax = localMessageMaxId()
+        if serverSeq > localMax {
+            pollSeq = localMax
+            return
+        }
+        pollSeq = max(pollSeq, serverSeq)
+    }
+
+    private func loadQuickReplies(auth: AuthStore) async {
+        guard let api = auth.api, quickReplies.isEmpty else { return }
+        if let response = try? await api.fetchQuickReplies() {
+            quickReplies = response.quickReplies
         }
     }
 
@@ -441,7 +555,6 @@ final class ChatThreadModel: ObservableObject {
             sessionRating = data.sessionRating
         }
         if userTyping != data.userTyping { userTyping = data.userTyping }
-        pollSeq = max(pollSeq, data.seq)
 
         if !data.reactions.isEmpty {
             let reactionResult = MessageMerge.applyReactions(to: messages, reactions: data.reactions)
@@ -474,6 +587,8 @@ final class ChatThreadModel: ObservableObject {
         if handler == "admin", newUserMessageId > 0 {
             fetchSuggestions(messageId: newUserMessageId)
         }
+
+        reconcilePollCursor(serverSeq: data.seq)
     }
 
     private func applyReactions(_ reactions: [String: String]) {
@@ -693,26 +808,11 @@ final class ChatThreadModel: ObservableObject {
     }
 
     func reloadAfterTakeover(auth: AuthStore) async {
-        guard let api = auth.api else { return }
-        if let data = try? await api.fetchSession(sessionId) {
-            handler = data.handler
-            customerName = data.customerName.isEmpty ? "Kunde" : data.customerName
-            adminName = data.adminName
-            detectedService = data.detectedService
-            updatedAt = data.updatedAt
-            sessionRating = data.sessionRating
-            messages = data.messages
-            knownMessageIds = Set(messages.map(\.id))
-            pollSeq = data.seq
-            if !data.reactions.isEmpty {
-                applyReactions(data.reactions)
-            }
-            if handler == "admin" {
-                await loadQuickReplies(auth: auth)
-                maybeFetchSuggestionsForLatestUserMessage()
-            } else {
-                clearSuggestions()
-            }
+        await syncFromServer(auth: auth, full: true)
+        if handler == "admin" {
+            await loadQuickReplies(auth: auth)
+        } else {
+            clearSuggestions()
         }
     }
 }

@@ -2232,6 +2232,15 @@ class PAXdesign_Chat_Live {
                     $new[] = $msg;
                 }
             }
+            $message_seq = isset($row->message_seq) ? (int) $row->message_seq : 0;
+            if (empty($new) && $since > 0 && $message_seq > $since) {
+                foreach ($all as $msg) {
+                    $mid = isset($msg['id']) ? (int) $msg['id'] : 0;
+                    if ($mid >= $since) {
+                        $new[] = $msg;
+                    }
+                }
+            }
         }
 
         $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;

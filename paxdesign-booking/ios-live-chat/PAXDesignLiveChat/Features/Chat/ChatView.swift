@@ -76,9 +76,11 @@ struct ChatView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
         .onAppear {
-            thread.start(auth: auth)
+            let serverSeq = coordinator.serverSeq(for: thread.sessionId)
+            thread.start(auth: auth, expectedServerSeq: serverSeq)
             coordinator.activeSessionId = thread.sessionId
             AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: true)
+            settings.markSessionRead(thread.sessionId, seq: serverSeq)
         }
         .onDisappear {
             AdminTypingSound.shared.stop()
@@ -91,7 +93,8 @@ struct ChatView: View {
         .onReceive(NotificationCenter.default.publisher(for: .paxSessionSync)) { note in
             guard let syncedId = note.userInfo?["session_id"] as? String,
                   syncedId == thread.sessionId else { return }
-            Task { await thread.refreshNow(auth: auth) }
+            let serverSeq = coordinator.serverSeq(for: syncedId)
+            Task { await thread.refreshNow(auth: auth, expectedServerSeq: serverSeq) }
         }
         .sheet(item: $imageViewer) { item in
             FullScreenImageView(url: item.url)
