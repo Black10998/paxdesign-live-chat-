@@ -9,6 +9,7 @@ final class TeamMessagingCoordinator: ObservableObject {
     @Published var errorMessage: String?
 
     private var pollTask: Task<Void, Never>?
+    private let inboxSubscriptionId = UUID()
 
     static func mergeTeamSessions(teamSessions: [LiveSession], coordinatorSessions: [LiveSession]) -> [LiveSession] {
         var merged: [String: LiveSession] = [:]
@@ -41,16 +42,14 @@ final class TeamMessagingCoordinator: ObservableObject {
             }
         }
         if let api = auth.api {
-            ChatEventStream.shared.startInbox(api: api) { [weak self] event in
-                Task { @MainActor in
-                    guard let self else { return }
-                    if event.type == "conversation_deleted" {
-                        await self.refresh(auth: auth)
-                        return
-                    }
-                    if event.type == "message" || event.type == "read" || event.type == "session_update" {
-                        await self.refresh(auth: auth)
-                    }
+            ChatEventStream.shared.subscribeInbox(id: inboxSubscriptionId, api: api) { [weak self] event in
+                guard let self else { return }
+                if event.type == "conversation_deleted" {
+                    Task { await self.refresh(auth: auth) }
+                    return
+                }
+                if event.type == "message" || event.type == "read" || event.type == "session_update" {
+                    Task { await self.refresh(auth: auth) }
                 }
             }
         }
@@ -59,7 +58,7 @@ final class TeamMessagingCoordinator: ObservableObject {
     func stop() {
         pollTask?.cancel()
         pollTask = nil
-        ChatEventStream.shared.stopInbox()
+        ChatEventStream.shared.unsubscribeInbox(id: inboxSubscriptionId)
     }
 
     func deleteConversation(sessionId: String, mode: String, auth: AuthStore) async -> (success: Bool, message: String?) {
@@ -141,15 +140,16 @@ final class TeamChatThreadModel: ObservableObject {
         }
         if let api = auth.api {
             ChatEventStream.shared.startThread(api: api, sessionId: sessionId, isTeam: true) { [weak self] event in
-                Task { @MainActor in
-                    guard let self else { return }
-                    if event.type == "conversation_deleted" {
-                        self.onConversationRemoved?()
-                        return
+                guard let self else { return }
+                if event.type == "conversation_deleted" {
+                    self.onConversationRemoved?()
+                    return
+                }
+                if event.type == "message" {
+                    if let inline = LiveMessage.fromStreamPayload(event.payload["message"]) {
+                        self.insertIncomingMessages([inline])
                     }
-                    if event.type == "message" {
-                        await self.poll(auth: auth)
-                    }
+                    Task { await self.poll(auth: auth) }
                 }
             }
         }
@@ -232,11 +232,20 @@ final class TeamChatThreadModel: ObservableObject {
         }
     }
 
-    private func mergeMessages(_ incoming: [LiveMessage]) {
+    private func insertIncomingMessages(_ incoming: [LiveMessage]) {
         let result = MessageMerge.mergeSorted(existing: messages, incoming: incoming)
         if result.changed {
             messages = result.messages
         }
+        let maxId = incoming.map(\.id).filter { $0 > 0 }.max() ?? 0
+        if maxId > 0 {
+            pollSeq = max(pollSeq, maxId)
+            currentSeq = max(currentSeq, maxId)
+        }
+    }
+
+    private func mergeMessages(_ incoming: [LiveMessage]) {
+        insertIncomingMessages(incoming)
     }
 }
 

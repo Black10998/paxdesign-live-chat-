@@ -307,6 +307,7 @@ class PAXdesign_Chat_Live {
             array('session_rating', 'tinyint(3) unsigned NOT NULL DEFAULT 0', 'customer_name'),
             array('device_token_hash', "varchar(64) NOT NULL DEFAULT ''", 'session_rating'),
             array('last_preview', "varchar(160) NOT NULL DEFAULT ''", 'device_token_hash'),
+            array('customer_language', "varchar(8) NOT NULL DEFAULT ''", 'last_preview'),
         );
 
         foreach ($columns as $col) {
@@ -752,16 +753,27 @@ class PAXdesign_Chat_Live {
         $messages[] = $entry;
         $messages   = $this->sort_messages($messages);
 
+        $update_row = array(
+            'messages'      => $this->encode_messages($messages),
+            'message_seq'   => $id,
+            'message_count' => count($messages),
+            'updated_at'    => current_time('mysql'),
+        );
+        $update_fmt = array('%s', '%d', '%d', '%s');
+
+        if ($role === 'user' && class_exists('PAXdesign_Language_Routing')) {
+            $detected = PAXdesign_Language_Routing::detect_text_language($content);
+            if ($detected !== '') {
+                $update_row['customer_language'] = $detected;
+                $update_fmt[] = '%s';
+            }
+        }
+
         $wpdb->update(
             PAXdesign_Chat_Log::table_name(),
-            array(
-                'messages'      => $this->encode_messages($messages),
-                'message_seq'   => $id,
-                'message_count' => count($messages),
-                'updated_at'    => current_time('mysql'),
-            ),
+            $update_row,
             array('id' => (int) $row->id),
-            array('%s', '%d', '%d', '%s'),
+            $update_fmt,
             array('%d')
         );
 
@@ -1059,6 +1071,14 @@ class PAXdesign_Chat_Live {
         );
         if ($topic !== '') {
             $update['detected_service'] = $topic;
+        }
+
+        if (class_exists('PAXdesign_Language_Routing')) {
+            $messages = $this->decode_messages($row->messages);
+            $detected = PAXdesign_Language_Routing::detect_from_messages($messages);
+            if ($detected !== '') {
+                $update['customer_language'] = $detected;
+            }
         }
 
         $updated = $wpdb->update(
@@ -1855,6 +1875,11 @@ class PAXdesign_Chat_Live {
         $this->send_live_agent_whatsapp($session_id, $service, $preview, $admin_url, $customer);
 
         do_action('paxdesign_live_agent_requested', $session_id, $service, $preview, $admin_url, $customer);
+
+        $language = class_exists('PAXdesign_Language_Routing')
+            ? PAXdesign_Language_Routing::session_language_from_row($row)
+            : '';
+        do_action('paxdesign_live_agent_requested_language', $session_id, $language, $service, $preview, $admin_url, $customer);
     }
 
     private function get_admin_panel_url() {
@@ -2091,6 +2116,9 @@ class PAXdesign_Chat_Live {
             'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
             'last_preview'     => $preview,
             'last_role'        => is_array($last) && !empty($last['role']) ? (string) $last['role'] : '',
+            'customer_language'=> class_exists('PAXdesign_Language_Routing')
+                ? PAXdesign_Language_Routing::session_language_from_row($row)
+                : '',
         );
     }
 
@@ -2260,6 +2288,9 @@ class PAXdesign_Chat_Live {
             'admin_typing'     => $this->is_typing($session_id, 'admin'),
             'user_typing'      => $this->is_typing($session_id, 'user'),
             'reactions'        => $this->extract_message_reactions($messages),
+            'customer_language'=> class_exists('PAXdesign_Language_Routing')
+                ? PAXdesign_Language_Routing::session_language_from_row($row)
+                : '',
         );
     }
 

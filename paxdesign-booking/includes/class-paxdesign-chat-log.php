@@ -311,6 +311,7 @@ class PAXdesign_Chat_Log {
         $seq = 0;
         $preview = '';
         $last_role = '';
+        $last = null;
 
         if (!empty($messages)) {
             $last = end($messages);
@@ -342,6 +343,16 @@ class PAXdesign_Chat_Log {
             'handler'   => $handler,
             'service'   => ($previous && isset($previous->detected_service)) ? (string) $previous->detected_service : '',
         ));
+
+        if ($seq > $prev_seq && class_exists('PAXdesign_Chat_Event_Bus') && is_array($last)) {
+            PAXdesign_Chat_Event_Bus::emit_session($session_id, 'message', array(
+                'seq'     => $seq,
+                'role'    => $last_role,
+                'handler' => $handler,
+                'preview' => $preview,
+                'message' => $last,
+            ));
+        }
     }
 
     public function handle_sync() {

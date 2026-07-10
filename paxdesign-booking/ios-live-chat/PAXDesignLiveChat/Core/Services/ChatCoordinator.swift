@@ -35,6 +35,7 @@ final class ChatCoordinator: ObservableObject {
     private var fullscreenTask: Task<Void, Never>?
     private(set) var lastSessionRefreshAt: Date?
     private var sessionServerSeq: [String: Int] = [:]
+    private let inboxSubscriptionId = UUID()
 
     func serverSeq(for sessionId: String) -> Int {
         if let hinted = sessionServerSeq[sessionId], hinted > 0 {
@@ -82,19 +83,17 @@ final class ChatCoordinator: ObservableObject {
             }
         }
         if let api = auth.api {
-            ChatEventStream.shared.startInbox(api: api) { [weak self] event in
-                Task { @MainActor in
-                    guard let self else { return }
-                    if let sid = event.payload["session_id"] as? String, !sid.isEmpty {
-                        if let seq = event.payload["seq"] as? Int {
-                            self.noteSessionSeq(sid, seq: seq)
-                        }
-                        if event.type == "message" || event.type == "handler" || event.type == "typing" {
-                            self.postSessionSync(sessionId: sid)
-                        }
+            ChatEventStream.shared.subscribeInbox(id: inboxSubscriptionId, api: api) { [weak self] event in
+                guard let self else { return }
+                if let sid = event.payload["session_id"] as? String, !sid.isEmpty {
+                    if let seq = event.payload["seq"] as? Int {
+                        self.noteSessionSeq(sid, seq: seq)
                     }
-                    await self.refreshSessions(auth: auth)
+                    if event.type == "message" || event.type == "handler" || event.type == "typing" {
+                        self.postSessionSync(sessionId: sid, inlineMessage: event.payload["message"])
+                    }
                 }
+                Task { await self.refreshSessions(auth: auth) }
             }
         }
     }
@@ -102,7 +101,7 @@ final class ChatCoordinator: ObservableObject {
     func stop() {
         listTask?.cancel()
         listTask = nil
-        ChatEventStream.shared.stopInbox()
+        ChatEventStream.shared.unsubscribeInbox(id: inboxSubscriptionId)
         expiryTasks.values.forEach { $0.cancel() }
         expiryTasks.removeAll()
         IncomingCallRingtone.shared.stopRinging()
@@ -295,11 +294,15 @@ final class ChatCoordinator: ObservableObject {
         }
     }
 
-    private func postSessionSync(sessionId: String) {
+    private func postSessionSync(sessionId: String, inlineMessage: Any? = nil) {
+        var userInfo: [String: Any] = ["session_id": sessionId]
+        if let inlineMessage {
+            userInfo["inline_message"] = inlineMessage
+        }
         NotificationCenter.default.post(
             name: .paxSessionSync,
             object: nil,
-            userInfo: ["session_id": sessionId]
+            userInfo: userInfo
         )
     }
 
@@ -392,7 +395,10 @@ final class ChatThreadModel: ObservableObject {
         }
     }
 
-    func refreshNow(auth: AuthStore, expectedServerSeq: Int = 0) async {
+    func refreshNow(auth: AuthStore, expectedServerSeq: Int = 0, inlineMessage: Any? = nil) async {
+        if let inline = LiveMessage.fromStreamPayload(inlineMessage) {
+            insertIncomingMessages([inline])
+        }
         if hasMessageGap(expectedServerSeq: expectedServerSeq) {
             await syncFromServer(auth: auth, full: true, expectedServerSeq: expectedServerSeq)
         } else {
@@ -424,15 +430,55 @@ final class ChatThreadModel: ObservableObject {
     private func beginEventStream(auth: AuthStore, generation: Int) {
         guard let api = auth.api else { return }
         ChatEventStream.shared.startThread(api: api, sessionId: sessionId, isTeam: false) { [weak self] event in
-            Task { @MainActor in
-                guard let self, let auth = self.auth, self.lifecycleGeneration == generation else { return }
-                if event.type == "message" || event.type == "typing" || event.type == "handler" {
-                    let eventSeq = (event.payload["seq"] as? Int) ?? 0
-                    await self.poll(auth: auth)
-                    if self.hasMessageGap(expectedServerSeq: eventSeq) {
-                        await self.syncFromServer(auth: auth, full: true, expectedServerSeq: eventSeq)
-                    }
-                }
+            guard let self, let auth = self.auth, self.lifecycleGeneration == generation else { return }
+            Task { await self.handleThreadStreamEvent(event, auth: auth) }
+        }
+    }
+
+    private func handleThreadStreamEvent(_ event: ChatStreamEvent, auth: AuthStore) async {
+        switch event.type {
+        case "message":
+            let eventSeq = (event.payload["seq"] as? Int) ?? 0
+            if let inline = LiveMessage.fromStreamPayload(event.payload["message"]) {
+                insertIncomingMessages([inline])
+            }
+            if hasMessageGap(expectedServerSeq: eventSeq) {
+                await syncFromServer(auth: auth, full: true, expectedServerSeq: eventSeq)
+            } else {
+                await poll(auth: auth)
+            }
+        case "typing", "handler":
+            await poll(auth: auth)
+        default:
+            break
+        }
+    }
+
+    private func insertIncomingMessages(_ incoming: [LiveMessage]) {
+        guard !incoming.isEmpty else { return }
+
+        var newUserMessageId = 0
+        for msg in incoming where msg.id > 0 {
+            if msg.role == "user" && !knownMessageIds.contains(msg.id) {
+                newUserMessageId = msg.id
+            }
+            knownMessageIds.insert(msg.id)
+        }
+
+        let mergeResult = MessageMerge.mergeSorted(existing: messages, incoming: incoming)
+        if mergeResult.changed {
+            messages = mergeResult.messages
+        }
+
+        let maxId = incoming.map(\.id).filter { $0 > 0 }.max() ?? 0
+        if maxId > 0 {
+            pollSeq = max(pollSeq, maxId)
+        }
+
+        if newUserMessageId > 0 {
+            userTyping = false
+            if handler == "admin" {
+                fetchSuggestions(messageId: newUserMessageId)
             }
         }
     }
@@ -564,30 +610,11 @@ final class ChatThreadModel: ObservableObject {
         }
 
         guard !data.messages.isEmpty else {
+            reconcilePollCursor(serverSeq: data.seq)
             return
         }
 
-        var newUserMessageId = 0
-        for msg in data.messages {
-            if msg.role == "user" && !knownMessageIds.contains(msg.id) {
-                newUserMessageId = msg.id
-            }
-            knownMessageIds.insert(msg.id)
-        }
-
-        let mergeResult = MessageMerge.mergeSorted(existing: messages, incoming: data.messages)
-        if mergeResult.changed {
-            messages = mergeResult.messages
-        }
-
-        if newUserMessageId > 0 {
-            userTyping = false
-        }
-
-        if handler == "admin", newUserMessageId > 0 {
-            fetchSuggestions(messageId: newUserMessageId)
-        }
-
+        insertIncomingMessages(data.messages)
         reconcilePollCursor(serverSeq: data.seq)
     }
 

@@ -525,6 +525,9 @@ class PAXdesign_Live_Chat_Mobile_API {
             'terms_accepted_at' => $terms_accepted_at,
             'permission_status' => $permission_status,
             'security_status' => $security_status,
+            'spoken_languages' => class_exists('PAXdesign_Language_Routing')
+                ? PAXdesign_Language_Routing::get_user_spoken_languages($user_id)
+                : array('de', 'en'),
         );
     }
 
@@ -555,6 +558,11 @@ class PAXdesign_Live_Chat_Mobile_API {
             delete_user_meta($user_id, 'pax_live_hub_display_name');
         } else {
             update_user_meta($user_id, 'pax_live_hub_display_name', $display_name);
+        }
+
+        if (array_key_exists('spoken_languages', $params) && class_exists('PAXdesign_Language_Routing')) {
+            $langs = is_array($params['spoken_languages']) ? $params['spoken_languages'] : array($params['spoken_languages']);
+            PAXdesign_Language_Routing::save_user_spoken_languages($user_id, $langs);
         }
 
         return self::respond(self::profile_payload(wp_get_current_user()));

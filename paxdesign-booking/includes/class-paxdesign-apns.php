@@ -12,7 +12,7 @@ class PAXdesign_APNS {
     const USER_META_KEY = 'pax_live_apns_devices';
 
     public static function init() {
-        add_action('paxdesign_live_agent_requested', array(__CLASS__, 'on_live_agent_requested'), 20, 5);
+        add_action('paxdesign_live_agent_requested_language', array(__CLASS__, 'on_live_agent_requested_language'), 20, 6);
         add_action('paxdesign_new_chat_session', array(__CLASS__, 'on_new_chat_session'), 20, 3);
         add_action('paxdesign_session_sync', array(__CLASS__, 'on_session_sync'), 20, 2);
         add_action('paxdesign_chat_live_missed', array(__CLASS__, 'on_missed_chat'), 20, 4);
@@ -133,7 +133,14 @@ class PAXdesign_APNS {
         }
     }
 
-    public static function on_live_agent_requested($session_id, $service, $preview, $admin_url, $customer = '') {
+    public static function on_live_agent_requested_language($session_id, $language, $service, $preview, $admin_url, $customer = '') {
+        self::dispatch_live_agent_push($session_id, (string) $language, $service, $preview, $customer);
+    }
+
+    /**
+     * @param string $language Customer language code (de|en|ar) or empty.
+     */
+    private static function dispatch_live_agent_push($session_id, $language, $service, $preview, $customer = '') {
         $customer = (string) $customer;
         $service  = (string) $service;
         $preview  = (string) $preview;
@@ -144,20 +151,43 @@ class PAXdesign_APNS {
         if ($preview !== '') {
             $body .= ' — ' . $preview;
         }
+        if ($language !== '' && class_exists('PAXdesign_Language_Routing')) {
+            $body .= ' · ' . PAXdesign_Language_Routing::label($language);
+        }
 
-        self::send_to_admins(
+        $payload = array(
+            'type'               => 'live_request',
+            'event'              => 'customer_waiting',
+            'session_id'         => (string) $session_id,
+            'customer_name'      => $customer,
+            'service'            => $service,
+            'preview'            => $preview,
+            'customer_language'  => (string) $language,
+        );
+
+        $primary_ids = class_exists('PAXdesign_Language_Routing')
+            ? PAXdesign_Language_Routing::admin_user_ids_for_language($language)
+            : self::get_admin_user_ids();
+
+        self::send_to_user_ids(
+            $primary_ids,
             'Kunde wartet',
             $body,
-            array(
-                'type'          => 'live_request',
-                'event'         => 'customer_waiting',
-                'session_id'    => (string) $session_id,
-                'customer_name' => $customer,
-                'service'       => $service,
-                'preview'       => $preview,
-            ),
+            $payload,
             false
         );
+
+        $all_ids = self::get_admin_user_ids();
+        $secondary = array_values(array_diff($all_ids, $primary_ids));
+        if (!empty($secondary)) {
+            self::send_to_user_ids(
+                $secondary,
+                'Kunde wartet',
+                $body,
+                $payload,
+                true
+            );
+        }
     }
 
     public static function on_new_chat_session($session_id, $service, $preview) {
@@ -318,28 +348,24 @@ class PAXdesign_APNS {
     }
 
     /**
+     * @param int[] $user_ids
      * @param array<string, mixed> $data
      */
-    public static function send_to_admins($title, $body, $data = array(), $silent = false) {
+    public static function send_to_user_ids($user_ids, $title, $body, $data = array(), $silent = false) {
         if (!self::is_configured()) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[PAXdesign APNs] skipped — not configured');
-            }
             return;
         }
 
-        foreach (self::get_admin_user_ids() as $user_id) {
-            $devices = self::get_user_devices($user_id);
-            foreach ($devices as $device) {
-                if (!empty($device['revoked'])) {
-                    continue;
-                }
-                $result = self::send($device, $title, $body, $data, $user_id, $silent);
-                if (is_wp_error($result) && $result->get_error_code() === 'apns_invalid_token') {
-                    self::unregister_device($user_id, (string) $device['token']);
-                }
-            }
+        foreach ($user_ids as $user_id) {
+            self::send_to_user((int) $user_id, $title, $body, $data, $silent);
         }
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public static function send_to_admins($title, $body, $data = array(), $silent = false) {
+        self::send_to_user_ids(self::get_admin_user_ids(), $title, $body, $data, $silent);
     }
 
     /**

@@ -194,6 +194,8 @@ enum L10n {
     static var LanguageGerman: String { t("language.german") }
     static var LanguageArabic: String { t("language.arabic") }
     static var LanguageFooter: String { t("language.footer") }
+    static var LanguageSpokenHeader: String { t("language.spoken.header") }
+    static var LanguageSpokenFooter: String { t("language.spoken.footer") }
     static var AppearanceColorScheme: String { t("appearance.color_scheme") }
     static var ThemeTitle: String { t("theme.title") }
     static var ThemeFooter: String { t("theme.footer") }

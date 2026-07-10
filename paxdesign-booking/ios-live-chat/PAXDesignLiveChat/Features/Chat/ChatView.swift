@@ -94,7 +94,8 @@ struct ChatView: View {
             guard let syncedId = note.userInfo?["session_id"] as? String,
                   syncedId == thread.sessionId else { return }
             let serverSeq = coordinator.serverSeq(for: syncedId)
-            Task { await thread.refreshNow(auth: auth, expectedServerSeq: serverSeq) }
+            let inlineMessage = note.userInfo?["inline_message"]
+            Task { await thread.refreshNow(auth: auth, expectedServerSeq: serverSeq, inlineMessage: inlineMessage) }
         }
         .sheet(item: $imageViewer) { item in
             FullScreenImageView(url: item.url)

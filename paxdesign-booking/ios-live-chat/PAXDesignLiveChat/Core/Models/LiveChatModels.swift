@@ -52,6 +52,7 @@ struct LiveSession: Identifiable, Codable, Hashable {
     let seq: Int
     let lastPreview: String
     let lastRole: String
+    let customerLanguage: String
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -67,6 +68,7 @@ struct LiveSession: Identifiable, Codable, Hashable {
         case seq
         case lastPreview = "last_preview"
         case lastRole = "last_role"
+        case customerLanguage = "customer_language"
     }
 
     init(
@@ -82,7 +84,8 @@ struct LiveSession: Identifiable, Codable, Hashable {
         messageCount: Int,
         seq: Int,
         lastPreview: String,
-        lastRole: String
+        lastRole: String,
+        customerLanguage: String = ""
     ) {
         self.id = id
         self.sessionId = sessionId
@@ -97,6 +100,7 @@ struct LiveSession: Identifiable, Codable, Hashable {
         self.seq = seq
         self.lastPreview = lastPreview
         self.lastRole = lastRole
+        self.customerLanguage = customerLanguage
     }
 
     init(from decoder: Decoder) throws {
@@ -114,6 +118,7 @@ struct LiveSession: Identifiable, Codable, Hashable {
         seq = LiveChatDecode.int(container, CodingKeys.seq)
         lastPreview = LiveChatDecode.string(container, CodingKeys.lastPreview)
         lastRole = LiveChatDecode.string(container, CodingKeys.lastRole)
+        customerLanguage = LiveChatDecode.string(container, CodingKeys.customerLanguage)
     }
 
     var displayName: String {
@@ -240,6 +245,16 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         senderAvatar = avatar.isEmpty ? nil : avatar
         let roleLabel = LiveChatDecode.string(container, CodingKeys.senderRole)
         senderRole = roleLabel.isEmpty ? nil : roleLabel
+    }
+
+    /// Decode a message embedded in an SSE event payload for instant UI insertion.
+    static func fromStreamPayload(_ value: Any?) -> LiveMessage? {
+        guard let dict = value as? [String: Any],
+              JSONSerialization.isValidJSONObject(dict),
+              let data = try? JSONSerialization.data(withJSONObject: dict) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(LiveMessage.self, from: data)
     }
 }
 
@@ -375,6 +390,7 @@ struct AdminProfile: Codable {
     let termsAccepted: Bool
     let termsAcceptedAt: Int
     let permissionStatus: OnboardingPermissionStatus?
+    let spokenLanguages: [String]
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -390,6 +406,7 @@ struct AdminProfile: Codable {
         case termsAccepted = "terms_accepted"
         case termsAcceptedAt = "terms_accepted_at"
         case permissionStatus = "permission_status"
+        case spokenLanguages = "spoken_languages"
     }
 
     init(from decoder: Decoder) throws {
@@ -409,6 +426,7 @@ struct AdminProfile: Codable {
         termsAccepted = (try? container.decode(Bool.self, forKey: .termsAccepted)) ?? onboardingCompleted
         termsAcceptedAt = LiveChatDecode.int(container, CodingKeys.termsAcceptedAt)
         permissionStatus = try container.decodeIfPresent(OnboardingPermissionStatus.self, forKey: .permissionStatus)
+        spokenLanguages = (try? container.decode([String].self, forKey: .spokenLanguages)) ?? ["de", "en"]
     }
 
     func updating(modulePermissions: ModulePermissions) -> AdminProfile {
@@ -427,7 +445,8 @@ struct AdminProfile: Codable {
             onboardingCompleted: onboardingCompleted,
             termsAccepted: termsAccepted,
             termsAcceptedAt: termsAcceptedAt,
-            permissionStatus: permissionStatus
+            permissionStatus: permissionStatus,
+            spokenLanguages: spokenLanguages
         )
     }
 
@@ -446,7 +465,8 @@ struct AdminProfile: Codable {
         onboardingCompleted: Bool,
         termsAccepted: Bool,
         termsAcceptedAt: Int,
-        permissionStatus: OnboardingPermissionStatus?
+        permissionStatus: OnboardingPermissionStatus?,
+        spokenLanguages: [String]
     ) {
         self.userId = userId
         self.name = name
@@ -460,6 +480,11 @@ struct AdminProfile: Codable {
         self.permissions = permissions
         self.modulePermissions = modulePermissions
         self.onboardingCompleted = onboardingCompleted
+        self.termsAccepted = termsAccepted
+        self.termsAcceptedAt = termsAcceptedAt
+        self.permissionStatus = permissionStatus
+        self.spokenLanguages = spokenLanguages
+    }
         self.termsAccepted = termsAccepted
         self.termsAcceptedAt = termsAcceptedAt
         self.permissionStatus = permissionStatus
