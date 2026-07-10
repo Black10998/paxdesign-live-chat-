@@ -170,6 +170,42 @@ class PAXdesign_Chat_Log {
     }
 
     /**
+     * Persist any client-identified messages to the durable store immediately.
+     * Legacy JSON projection may lag; SSE and mobile polls read the store first.
+     *
+     * @param string $session_id
+     * @param array<int, array<string, mixed>> $messages
+     * @return int Number of newly committed durable rows
+     */
+    private function persist_durable_messages($session_id, $messages) {
+        if (!class_exists('PAXdesign_Message_Store')) {
+            return 0;
+        }
+        $written = 0;
+        foreach ((array) $messages as $message) {
+            if (!is_array($message) || empty($message['client_msg_id'])) {
+                continue;
+            }
+            $extra = $message;
+            $extra['client_msg_id'] = $message['client_msg_id'];
+            $stored = PAXdesign_Message_Store::append(
+                $session_id,
+                $message['role'],
+                $message['content'],
+                $extra,
+                'customer'
+            );
+            if (is_wp_error($stored)) {
+                continue;
+            }
+            if (empty($stored['_deduplicated'])) {
+                $written++;
+            }
+        }
+        return $written;
+    }
+
+    /**
      * @param array<int, array<string, mixed>> $messages
      */
     private function max_message_id($messages) {
@@ -309,6 +345,8 @@ class PAXdesign_Chat_Log {
                 return (int) $existing->id;
             }
 
+            $this->persist_durable_messages($session_id, $sanitized);
+
             $sanitized = $this->merge_messages($existing_messages, $sanitized);
 
             $json = wp_json_encode($sanitized);
@@ -337,6 +375,8 @@ class PAXdesign_Chat_Log {
             }
             return (int) $existing->id;
         }
+
+        $this->persist_durable_messages($session_id, $sanitized);
 
         $sanitized = $this->merge_messages(array(), $sanitized);
         $json = wp_json_encode($sanitized);
@@ -414,6 +454,12 @@ class PAXdesign_Chat_Log {
             $prev_count = isset($previous->message_count) ? (int) $previous->message_count : 0;
             $prev_seq = isset($previous->message_seq) ? (int) $previous->message_seq : 0;
         }
+        if (class_exists('PAXdesign_Message_Store')) {
+            $store_seq = PAXdesign_Message_Store::latest_seq($session_id, 'customer');
+            if ($store_seq > 0) {
+                $seq = max($seq, $store_seq);
+            }
+        }
 
         if (!$is_new && $seq <= $prev_seq && count($messages) <= $prev_count) {
             return;
@@ -440,6 +486,10 @@ class PAXdesign_Chat_Log {
             $new_messages = array();
             foreach ($messages as $msg) {
                 if (!is_array($msg)) {
+                    continue;
+                }
+                if (!empty($msg['client_msg_id'])) {
+                    // Durable append already emitted inbox + session events.
                     continue;
                 }
                 $mid = isset($msg['id']) ? (int) $msg['id'] : 0;

@@ -244,9 +244,7 @@ final class TeamChatThreadModel: ObservableObject {
     private var historyBaselined = false
     private var serverMessageCount = 0
     private var lifecycleGeneration = 0
-    private let activePollIntervalNs: UInt64 = 1_000_000_000
-    private let recoveryPollIntervalNs: UInt64 = 5_000_000_000
-    private let streamStaleThreshold: TimeInterval = 20
+    private let streamStaleThreshold: TimeInterval = 12
 
     init(sessionId: String) {
         self.sessionId = sessionId
@@ -257,6 +255,9 @@ final class TeamChatThreadModel: ObservableObject {
         hydrateFromLocalStore()
 
         if let pollTask, !pollTask.isCancelled {
+            if let auth = self.auth {
+                Task { await self.poll(auth: auth) }
+            }
             return
         }
 
@@ -276,15 +277,15 @@ final class TeamChatThreadModel: ObservableObject {
             self.lastStreamEventAt = Date()
 
             while !Task.isCancelled, self.lifecycleGeneration == generation {
-                if self.historyBaselined {
-                    await self.poll(auth: auth)
-                    if self.serverMessageCount > 0 && self.persistedMessageCount() < self.serverMessageCount {
-                        await self.reloadFullHistory(auth: auth)
-                    }
+                await self.poll(auth: auth)
+                if self.historyBaselined,
+                   self.serverMessageCount > 0,
+                   self.persistedMessageCount() < self.serverMessageCount {
+                    await self.reloadFullHistory(auth: auth)
                 }
                 let interval = Date().timeIntervalSince(self.lastStreamEventAt) < self.streamStaleThreshold
-                    ? self.activePollIntervalNs
-                    : self.recoveryPollIntervalNs
+                    ? AppRefreshPolicy.teamThreadInterval
+                    : UInt64(2_000_000_000)
                 try? await Task.sleep(nanoseconds: interval)
             }
         }
@@ -321,9 +322,7 @@ final class TeamChatThreadModel: ObservableObject {
                     await recoverMissingHistory(auth: auth, throughSeq: targetSeq)
                 }
             }
-            return
         }
-        guard historyBaselined else { return }
         await poll(auth: auth)
     }
 
@@ -402,9 +401,13 @@ final class TeamChatThreadModel: ObservableObject {
     private func applyBaselineSnapshot(_ response: PollResponse, persistCache: Bool = true) {
         participantName = response.customerName
         let optimistic = messages.filter { $0.id < 0 }
-        messages = normalizeTeamMessages(
-            MessageMerge.baseline(server: response.messages, preservingOptimistic: optimistic)
-        )
+        let serverMax = response.messages.map(\.id).filter { $0 > 0 }.max() ?? 0
+        let liveAhead = messages.filter { $0.id > serverMax }
+        var merged = MessageMerge.baseline(server: response.messages, preservingOptimistic: optimistic)
+        if !liveAhead.isEmpty {
+            merged = MessageMerge.mergeSorted(existing: merged, incoming: liveAhead).messages
+        }
+        messages = normalizeTeamMessages(merged)
         pollSeq = response.seq
         currentSeq = response.seq
         serverMessageCount = max(response.messageCount, response.messages.count, response.seq)
