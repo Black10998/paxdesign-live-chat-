@@ -30,6 +30,7 @@ enum PAXGlassTier {
     case standard
     case premium
     case hero
+    case tabBar
 
     var material: Material {
         switch self {
@@ -37,33 +38,46 @@ enum PAXGlassTier {
         case .standard: .thinMaterial
         case .premium: .regularMaterial
         case .hero: .thickMaterial
+        case .tabBar: .bar
         }
     }
 
     func fillOpacity(for scheme: ColorScheme) -> Double {
         let base: Double
         switch self {
-        case .subtle: base = 0.52
-        case .standard: base = 0.62
-        case .premium: base = 0.72
-        case .hero: base = 0.78
+        case .subtle: base = 0.28
+        case .standard: base = 0.36
+        case .premium: base = 0.42
+        case .hero: base = 0.48
+        case .tabBar: base = 0.18
         }
-        return scheme == .dark ? min(base + 0.1, 0.92) : base
+        return scheme == .dark ? min(base + 0.06, 0.58) : base
     }
 
     func borderOpacity(for scheme: ColorScheme) -> Double {
-        scheme == .dark ? 0.58 : 0.48
+        switch self {
+        case .tabBar: scheme == .dark ? 0.22 : 0.18
+        default: scheme == .dark ? 0.34 : 0.28
+        }
     }
 
     func shadowOpacity(for scheme: ColorScheme) -> Double {
         let base: Double
         switch self {
-        case .subtle: base = 0.12
-        case .standard: base = 0.18
-        case .premium: base = 0.24
-        case .hero: base = 0.3
+        case .subtle: base = 0.06
+        case .standard: base = 0.08
+        case .premium: base = 0.1
+        case .hero: base = 0.12
+        case .tabBar: base = 0
         }
-        return scheme == .dark ? base * 1.6 : base
+        return scheme == .dark ? base * 1.4 : base
+    }
+
+    var usesAccentBorder: Bool {
+        switch self {
+        case .tabBar, .subtle: false
+        default: true
+        }
     }
 }
 
@@ -127,7 +141,6 @@ private struct PAXPremiumGlassModifier: ViewModifier {
     @Environment(\.colorScheme) private var colorScheme
 
     func body(content: Content) -> some View {
-        let fill = tier.fillOpacity(for: colorScheme)
         let border = tier.borderOpacity(for: colorScheme)
         let shadow = tier.shadowOpacity(for: colorScheme)
         let accentColor = accent ?? PAXTheme.accent
@@ -138,25 +151,17 @@ private struct PAXPremiumGlassModifier: ViewModifier {
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .fill(tier.material)
 
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    PAXTheme.surface.opacity(fill + 0.08),
-                                    PAXTheme.surface.opacity(fill),
-                                    PAXTheme.surface.opacity(fill - 0.06)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                    if tier.fillOpacity(for: colorScheme) > 0 {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(PAXTheme.surface.opacity(tier.fillOpacity(for: colorScheme) * 0.35))
+                    }
 
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Color.white.opacity(colorScheme == .dark ? 0.16 : 0.34),
-                                    Color.white.opacity(colorScheme == .dark ? 0.04 : 0.08),
+                                    Color.white.opacity(colorScheme == .dark ? 0.07 : 0.16),
+                                    Color.white.opacity(colorScheme == .dark ? 0.02 : 0.04),
                                     .clear
                                 ],
                                 startPoint: .top,
@@ -167,21 +172,29 @@ private struct PAXPremiumGlassModifier: ViewModifier {
 
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .stroke(
-                            LinearGradient(
-                                colors: [
-                                    accentColor.opacity(colorScheme == .dark ? 0.28 : 0.18),
-                                    PAXTheme.border.opacity(border),
-                                    accentColor.opacity(0.08)
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            ),
-                            lineWidth: 1
+                            tier.usesAccentBorder
+                                ? LinearGradient(
+                                    colors: [
+                                        accentColor.opacity(colorScheme == .dark ? 0.12 : 0.08),
+                                        PAXTheme.border.opacity(border),
+                                        PAXTheme.border.opacity(border * 0.8)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                                : LinearGradient(
+                                    colors: [
+                                        PAXTheme.border.opacity(border),
+                                        PAXTheme.border.opacity(border * 0.65)
+                                    ],
+                                    startPoint: .top,
+                                    endPoint: .bottom
+                                ),
+                            lineWidth: tier == .tabBar ? 0.33 : 0.5
                         )
                 }
             )
-            .shadow(color: .black.opacity(shadow), radius: tier == .hero ? 22 : 16, x: 0, y: tier == .hero ? 14 : 10)
-            .shadow(color: accentColor.opacity(colorScheme == .dark ? 0.12 : 0.06), radius: 24, x: 0, y: 8)
+            .shadow(color: .black.opacity(shadow), radius: tier == .hero ? 14 : 10, x: 0, y: tier == .hero ? 8 : 5)
     }
 }
 

@@ -385,7 +385,13 @@ struct PAXScreenLoadingStack: View {
 }
 
 enum PAXShellLayout {
-    static let tabBarBodyHeight: CGFloat = 56
+    /// Standard UIKit tab bar icon row height.
+    static let tabBarContentHeight: CGFloat = 49
+    static let tabBarHairlineHeight: CGFloat = 0.33
+
+    static var tabBarLayoutHeight: CGFloat {
+        tabBarContentHeight + tabBarHairlineHeight
+    }
 
     static var bottomSafeArea: CGFloat {
         UIApplication.shared.connectedScenes
@@ -396,14 +402,12 @@ enum PAXShellLayout {
     }
 
     static var tabBarReservedHeight: CGFloat {
-        tabBarBodyHeight + max(bottomSafeArea, 6) + 10
+        tabBarLayoutHeight + bottomSafeArea
     }
 
-    /// Extra scroll padding so the last row clears floating chrome (tab bar / home indicator).
+    /// Extra scroll padding for detail screens without the tab bar.
     static func scrollBottomPadding(tabBarVisible: Bool) -> CGFloat {
-        if tabBarVisible {
-            return 24
-        }
+        if tabBarVisible { return 0 }
         return max(bottomSafeArea, 12) + 8
     }
 }
@@ -423,10 +427,15 @@ private struct ShellScrollClearanceModifier: ViewModifier {
     @Environment(\.shellTabBarVisible) private var tabBarVisible
 
     func body(content: Content) -> some View {
-        content.safeAreaInset(edge: .bottom, spacing: 0) {
-            Color.clear
-                .frame(height: PAXShellLayout.scrollBottomPadding(tabBarVisible: tabBarVisible))
-                .accessibilityHidden(true)
+        let padding = PAXShellLayout.scrollBottomPadding(tabBarVisible: tabBarVisible)
+        if padding > 0 {
+            content.safeAreaInset(edge: .bottom, spacing: 0) {
+                Color.clear
+                    .frame(height: padding)
+                    .accessibilityHidden(true)
+            }
+        } else {
+            content
         }
     }
 }

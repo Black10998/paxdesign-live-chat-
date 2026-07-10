@@ -22,13 +22,13 @@ private struct PAXCardVariantModifier: ViewModifier {
             content
                 .padding(18)
                 .paxPremiumGlass(tier: .hero, cornerRadius: 22, accent: tint)
-                .paxCardGlassReflection(tint: tint, cornerRadius: 22, alignment: .topTrailing)
+                .paxCardGlassReflection(cornerRadius: 22, alignment: .topTrailing, intensity: 0.08)
         case .metric:
             content
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .paxPremiumGlass(tier: .premium, cornerRadius: 18, accent: tint)
-                .paxCardGlassReflection(tint: tint, cornerRadius: 18, alignment: .topTrailing, intensity: 0.22)
+                .paxCardGlassReflection(cornerRadius: 18, alignment: .topTrailing, intensity: 0.06)
                 .overlay(alignment: .topLeading) {
                     RoundedRectangle(cornerRadius: 3, style: .continuous)
                         .fill(
@@ -46,7 +46,7 @@ private struct PAXCardVariantModifier: ViewModifier {
             content
                 .padding(16)
                 .paxPremiumGlass(tier: .premium, cornerRadius: 20, accent: tint)
-                .paxCardGlassReflection(tint: tint, cornerRadius: 20, alignment: .bottomTrailing, intensity: 0.18)
+                .paxCardGlassReflection(cornerRadius: 20, alignment: .topTrailing, intensity: 0.05)
         case .list:
             content
                 .padding(.horizontal, 16)
@@ -59,14 +59,14 @@ private struct PAXCardVariantModifier: ViewModifier {
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
                         .fill(
                             LinearGradient(
-                                colors: [tint.opacity(0.22), tint.opacity(0.08)],
+                                colors: [tint.opacity(0.1), tint.opacity(0.04)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                 )
                 .paxPremiumGlass(tier: .standard, cornerRadius: 18, accent: tint)
-                .paxCardGlassReflection(tint: tint, cornerRadius: 18, alignment: .topLeading, intensity: 0.16)
+                .paxCardGlassReflection(cornerRadius: 18, alignment: .topLeading, intensity: 0.05)
         case .compact:
             content
                 .padding(.horizontal, 12)
@@ -81,29 +81,32 @@ extension View {
         modifier(PAXCardVariantModifier(variant: variant, tint: tint))
     }
 
-    /// Subtle ambient glass reflection on card surfaces (not on icons).
+    /// Subtle crystal specular on card surfaces (not on icons).
     fileprivate func paxCardGlassReflection(
-        tint: Color,
         cornerRadius: CGFloat,
         alignment: Alignment,
-        intensity: Double = 0.28
+        intensity: Double = 0.08
     ) -> some View {
         overlay(alignment: alignment) {
             RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                 .fill(
                     RadialGradient(
-                        colors: [Color.white.opacity(intensity + 0.08), tint.opacity(intensity), .clear],
+                        colors: [
+                            Color.white.opacity(intensity + 0.04),
+                            Color.white.opacity(intensity * 0.35),
+                            .clear
+                        ],
                         center: .center,
                         startRadius: 0,
-                        endRadius: 72
+                        endRadius: 56
                     )
                 )
-                .frame(width: 132, height: 132)
+                .frame(width: 96, height: 96)
                 .offset(
-                    x: alignment == .topTrailing || alignment == .bottomTrailing ? 34 : -34,
-                    y: alignment == .bottomTrailing || alignment == .bottomLeading ? 36 : -36
+                    x: alignment == .topTrailing || alignment == .bottomTrailing ? 24 : -24,
+                    y: alignment == .bottomTrailing || alignment == .bottomLeading ? 28 : -28
                 )
-                .blendMode(.plusLighter)
+                .blendMode(.overlay)
                 .allowsHitTesting(false)
         }
     }

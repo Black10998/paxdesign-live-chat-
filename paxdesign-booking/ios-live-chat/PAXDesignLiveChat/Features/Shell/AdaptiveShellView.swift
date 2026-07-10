@@ -139,6 +139,13 @@ struct AdaptiveShellView: View {
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if shouldShowBottomTabBar {
+                Color.clear
+                    .frame(height: PAXShellLayout.tabBarLayoutHeight)
+                    .accessibilityHidden(true)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if shouldShowBottomTabBar {
                 PAXBottomTabBar(
                     items: iPhoneTabItems,
                     selection: $selectedTab,
@@ -422,44 +429,26 @@ private struct PAXBottomTabBar: View {
     @Binding var selection: Int
     let reduceMotion: Bool
 
-    private var bottomSafeInset: CGFloat {
-        max(PAXShellLayout.bottomSafeArea, 6)
-    }
-
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 4) {
+            Rectangle()
+                .fill(PAXTheme.border.opacity(0.35))
+                .frame(height: 0.33)
+
+            HStack(spacing: 0) {
                 ForEach(items) { item in
                     button(for: item)
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
-            .background {
-                Color.clear
-                    .paxPremiumGlass(tier: .premium, cornerRadius: 26)
-            }
-            .padding(.horizontal, 10)
-
-            Color.clear
-                .frame(height: bottomSafeInset)
+            .frame(maxWidth: .infinity)
+            .frame(height: PAXShellLayout.tabBarContentHeight)
+            .padding(.horizontal, 4)
         }
-        .padding(.top, 4)
-        .background(tabBarDockBackground)
+        .background {
+            PAXTabBarGlassBackground()
+                .ignoresSafeArea(edges: .bottom)
+        }
         .accessibilityElement(children: .contain)
-    }
-
-    private var tabBarDockBackground: some View {
-        LinearGradient(
-            colors: [
-                PAXTheme.background.opacity(0),
-                PAXTheme.background.opacity(0.72),
-                PAXTheme.background.opacity(0.94)
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea(edges: .bottom)
     }
 
     private func button(for item: ShellTabItem) -> some View {
@@ -497,7 +486,7 @@ private struct PAXBottomTabBar: View {
                 }
 
                 Text(item.title)
-                    .font(.system(size: 11, weight: selected ? .semibold : .regular))
+                    .font(.system(size: 10, weight: selected ? .semibold : .regular))
                     .foregroundStyle(selected ? PAXTheme.textPrimary : PAXTheme.textSecondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
@@ -505,13 +494,35 @@ private struct PAXBottomTabBar: View {
                     .animation(.spring(response: 0.36, dampingFraction: 0.82), value: selected)
             }
             .frame(maxWidth: .infinity)
-            .padding(.horizontal, 4)
-            .padding(.vertical, 7)
+            .padding(.top, 6)
+            .padding(.bottom, 2)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(item.title)
         .accessibilityValue(selected ? "Ausgewählt" : "")
+    }
+}
+
+private struct PAXTabBarGlassBackground: View {
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(.bar)
+
+            LinearGradient(
+                colors: [
+                    Color.white.opacity(colorScheme == .dark ? 0.1 : 0.24),
+                    Color.white.opacity(colorScheme == .dark ? 0.03 : 0.06),
+                    .clear
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .blendMode(.overlay)
+        }
     }
 }
 
