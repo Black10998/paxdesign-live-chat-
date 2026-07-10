@@ -28,6 +28,7 @@ enum MessageMerge {
             map[message.id] = message
         }
         var changed = reconciledExisting.count != existing.count
+            || map.count != reconciledExisting.count
 
         for msg in incoming {
             if let prior = map[msg.id] {
