@@ -59,10 +59,13 @@ struct ChatMessageListView: View {
     }
 
     private func rebuildRows() {
-        let messageLookup = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
+        var messageLookup: [Int: LiveMessage] = [:]
+        for message in messages {
+            messageLookup[message.id] = message
+        }
         displayRows = messages.enumerated().map { index, message in
             MessageDisplayRow(
-                id: message.id,
+                id: "\(index)-\(message.id)",
                 message: message,
                 previous: index > 0 ? messages[index - 1] : nil,
                 next: index + 1 < messages.count ? messages[index + 1] : nil,
@@ -74,14 +77,14 @@ struct ChatMessageListView: View {
     private func scrollToBottom(proxy: ScrollViewProxy) {
         if userTyping {
             proxy.scrollTo("typing-indicator", anchor: .bottom)
-        } else if let last = messages.last {
+        } else if let last = displayRows.last {
             proxy.scrollTo(last.id, anchor: .bottom)
         }
     }
 }
 
 private struct MessageDisplayRow: Identifiable {
-    let id: Int
+    let id: String
     let message: LiveMessage
     let previous: LiveMessage?
     let next: LiveMessage?

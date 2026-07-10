@@ -171,13 +171,31 @@ final class LiveChatAPI {
     }
 
     func fetchSession(_ sessionId: String) async throws -> PollResponse {
-        guard let url = liveAdminURL(
-            path: "sessions/\(sessionId)/poll",
-            query: [URLQueryItem(name: "full", value: "1")]
-        ) else {
+        guard let detailURL = liveAdminURL(path: "sessions/\(sessionId)") else {
             throw LiveChatAPIError.invalidURL
         }
-        return try await perform(authRequest(url: url), endpoint: "poll:\(sessionId):full", as: PollResponse.self)
+        do {
+            return try await perform(
+                authRequest(url: detailURL),
+                endpoint: "session:\(sessionId)",
+                as: PollResponse.self
+            )
+        } catch {
+            guard let pollURL = liveAdminURL(
+                path: "sessions/\(sessionId)/poll",
+                query: [
+                    URLQueryItem(name: "full", value: "1"),
+                    URLQueryItem(name: "history", value: "1"),
+                ]
+            ) else {
+                throw error
+            }
+            return try await perform(
+                authRequest(url: pollURL),
+                endpoint: "poll:\(sessionId):full",
+                as: PollResponse.self
+            )
+        }
     }
 
     func pollSession(_ sessionId: String, since: Int) async throws -> PollResponse {

@@ -146,6 +146,7 @@ final class TeamChatThreadModel: ObservableObject {
     private var historyBaselined = false
     private var serverMessageCount = 0
     private var lifecycleGeneration = 0
+    private let activePollIntervalNs: UInt64 = 1_000_000_000
     private let recoveryPollIntervalNs: UInt64 = 5_000_000_000
     private let streamStaleThreshold: TimeInterval = 20
 
@@ -179,12 +180,16 @@ final class TeamChatThreadModel: ObservableObject {
             self.lastStreamEventAt = Date()
 
             while !Task.isCancelled, self.lifecycleGeneration == generation {
-                try? await Task.sleep(nanoseconds: self.recoveryPollIntervalNs)
-                guard !Task.isCancelled, self.lifecycleGeneration == generation else { break }
-                if Date().timeIntervalSince(self.lastStreamEventAt) >= self.streamStaleThreshold {
+                if self.historyBaselined {
                     await self.poll(auth: auth)
-                    await self.verifyHistoryIntegrity(auth: auth)
+                    if self.serverMessageCount > 0 && self.persistedMessageCount() < self.serverMessageCount {
+                        await self.reloadFullHistory(auth: auth)
+                    }
                 }
+                let interval = Date().timeIntervalSince(self.lastStreamEventAt) < self.streamStaleThreshold
+                    ? self.activePollIntervalNs
+                    : self.recoveryPollIntervalNs
+                try? await Task.sleep(nanoseconds: interval)
             }
         }
     }
@@ -280,6 +285,17 @@ final class TeamChatThreadModel: ObservableObject {
         currentSeq = response.seq
         serverMessageCount = max(response.messageCount, response.messages.count, response.seq)
         historyBaselined = true
+        noteHistoryIntegrityIssue()
+    }
+
+    private func noteHistoryIntegrityIssue() {
+        guard serverMessageCount > 0, persistedMessageCount() < serverMessageCount else {
+            if persistedMessageCount() > 0 {
+                errorMessage = nil
+            }
+            return
+        }
+        errorMessage = "Es fehlen \(serverMessageCount - persistedMessageCount()) von \(serverMessageCount) gespeicherten Nachrichten. Verlauf wird erneut geladen…"
     }
 
     private func persistedMessageCount() -> Int {
@@ -416,6 +432,7 @@ final class TeamChatThreadModel: ObservableObject {
             if serverMessageCount > 0 && persistedMessageCount() < serverMessageCount {
                 await reloadFullHistory(auth: auth)
             }
+            noteHistoryIntegrityIssue()
         } catch {
             isLoadingMessages = false
             if case LiveChatAPIError.unauthorized = error {

@@ -385,7 +385,9 @@ struct PollResponse: Codable {
         handlerLabel = LiveChatDecode.string(container, CodingKeys.handlerLabel)
         adminName = LiveChatDecode.string(container, CodingKeys.adminName)
         adminUserId = LiveChatDecode.int(container, CodingKeys.adminUserId)
-        assignedAgent = try container.decodeIfPresent(EmployeeIdentity.self, forKey: .assignedAgent)
+        assignedAgent = container.contains(.assignedAgent)
+            ? (try? container.decode(EmployeeIdentity.self, forKey: .assignedAgent))
+            : nil
         customerName = LiveChatDecode.string(container, CodingKeys.customerName)
         sessionRating = LiveChatDecode.int(container, CodingKeys.sessionRating)
         detectedService = LiveChatDecode.string(container, CodingKeys.detectedService)

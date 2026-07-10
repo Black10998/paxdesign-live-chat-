@@ -96,6 +96,32 @@ class PAXdesign_Live_Chat_Mobile_API {
         error_log($line);
     }
 
+    /**
+     * Accept 1, true, yes, on and other common truthy REST query values.
+     *
+     * @param mixed $value
+     * @return bool
+     */
+    public static function sanitize_bool_param($value) {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_numeric($value)) {
+            return (int) $value !== 0;
+        }
+        $normalized = strtolower(trim((string) $value));
+        return in_array($normalized, array('1', 'true', 'yes', 'on'), true);
+    }
+
+    /**
+     * @param WP_REST_Request $request
+     * @return bool
+     */
+    public static function request_wants_full_history(WP_REST_Request $request) {
+        return self::sanitize_bool_param($request->get_param('full'))
+            || self::sanitize_bool_param($request->get_param('history'));
+    }
+
     public static function register_routes() {
         $auth = array(__CLASS__, 'permission_admin');
 
@@ -128,8 +154,9 @@ class PAXdesign_Live_Chat_Mobile_API {
             'callback'            => array(__CLASS__, 'route_poll'),
             'permission_callback' => $auth,
             'args'                => array(
-                'since' => array('default' => 0, 'sanitize_callback' => 'absint'),
-                'full'  => array('default' => false),
+                'since'   => array('default' => 0, 'sanitize_callback' => 'absint'),
+                'full'    => array('default' => false, 'sanitize_callback' => array(__CLASS__, 'sanitize_bool_param')),
+                'history' => array('default' => false, 'sanitize_callback' => array(__CLASS__, 'sanitize_bool_param')),
             ),
         ));
 
@@ -307,8 +334,9 @@ class PAXdesign_Live_Chat_Mobile_API {
             'callback'            => array(__CLASS__, 'route_team_poll'),
             'permission_callback' => $auth,
             'args'                => array(
-                'since' => array('default' => 0, 'sanitize_callback' => 'absint'),
-                'full'  => array('default' => false),
+                'since'   => array('default' => 0, 'sanitize_callback' => 'absint'),
+                'full'    => array('default' => false, 'sanitize_callback' => array(__CLASS__, 'sanitize_bool_param')),
+                'history' => array('default' => false, 'sanitize_callback' => array(__CLASS__, 'sanitize_bool_param')),
             ),
         ));
 
@@ -577,7 +605,7 @@ class PAXdesign_Live_Chat_Mobile_API {
     }
 
     public static function route_poll(WP_REST_Request $request) {
-        $full = rest_sanitize_boolean($request->get_param('full'));
+        $full = self::request_wants_full_history($request);
         return self::respond(self::live()->get_poll_data(
             $request['id'],
             (int) $request->get_param('since'),
@@ -1118,7 +1146,7 @@ class PAXdesign_Live_Chat_Mobile_API {
     }
 
     public static function route_team_poll(WP_REST_Request $request) {
-        $full = rest_sanitize_boolean($request->get_param('full'));
+        $full = self::request_wants_full_history($request);
         return self::respond(PAXdesign_Team_Messaging::poll_conversation(
             $request['id'],
             (int) wp_get_current_user()->ID,

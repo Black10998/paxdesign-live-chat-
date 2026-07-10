@@ -377,6 +377,7 @@ final class ChatThreadModel: ObservableObject {
     private var pendingInlineMessages: [LiveMessage] = []
     private var historyBaselined = false
     private var serverMessageCount = 0
+    private let activePollIntervalNs: UInt64 = 1_000_000_000
     private let recoveryPollIntervalNs: UInt64 = 5_000_000_000
     private let streamStaleThreshold: TimeInterval = 20
 
@@ -411,12 +412,16 @@ final class ChatThreadModel: ObservableObject {
             self.lastStreamEventAt = Date()
 
             while !Task.isCancelled, self.lifecycleGeneration == generation {
-                try? await Task.sleep(nanoseconds: self.recoveryPollIntervalNs)
-                guard !Task.isCancelled, self.lifecycleGeneration == generation else { break }
-                if Date().timeIntervalSince(self.lastStreamEventAt) >= self.streamStaleThreshold {
+                if self.historyBaselined {
                     await self.poll(auth: auth)
-                    await self.verifyHistoryIntegrity(auth: auth)
+                    if self.serverMessageCount > 0 && self.persistedMessageCount() < self.serverMessageCount {
+                        await self.reloadFullHistory(auth: auth)
+                    }
                 }
+                let interval = Date().timeIntervalSince(self.lastStreamEventAt) < self.streamStaleThreshold
+                    ? self.activePollIntervalNs
+                    : self.recoveryPollIntervalNs
+                try? await Task.sleep(nanoseconds: interval)
             }
         }
     }
@@ -599,7 +604,11 @@ final class ChatThreadModel: ObservableObject {
             if case LiveChatAPIError.unauthorized = error, let auth = self.auth {
                 auth.handleUnauthorized()
             }
-            errorMessage = error.localizedDescription
+            if messages.isEmpty {
+                errorMessage = error.localizedDescription
+            } else {
+                noteHistoryIntegrityIssue()
+            }
         }
     }
 
@@ -674,6 +683,7 @@ final class ChatThreadModel: ObservableObject {
                 messages = reactionResult.messages
             }
         }
+        noteHistoryIntegrityIssue()
     }
 
     private func applyIncrementalSnapshot(_ data: PollResponse) {
@@ -692,6 +702,7 @@ final class ChatThreadModel: ObservableObject {
                 messages = reactionResult.messages
             }
         }
+        noteHistoryIntegrityIssue()
     }
 
     private func applySessionMeta(_ data: PollResponse) {
@@ -717,6 +728,16 @@ final class ChatThreadModel: ObservableObject {
             return
         }
         pollSeq = max(pollSeq, serverSeq)
+    }
+
+    private func noteHistoryIntegrityIssue() {
+        guard serverMessageCount > 0, persistedMessageCount() < serverMessageCount else {
+            if persistedMessageCount() > 0 {
+                errorMessage = nil
+            }
+            return
+        }
+        errorMessage = "Es fehlen \(serverMessageCount - persistedMessageCount()) von \(serverMessageCount) gespeicherten Nachrichten. Verlauf wird erneut geladen…"
     }
 
     private func loadQuickReplies(auth: AuthStore) async {

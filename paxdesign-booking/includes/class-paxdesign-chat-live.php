@@ -2046,25 +2046,18 @@ class PAXdesign_Chat_Live {
 
         global $wpdb;
         $table = PAXdesign_Chat_Log::table_name();
-        $since = $this->active_since_sql();
 
         $rows = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT * FROM $table
-                 WHERE handler IN ('live_request', 'admin', 'closed')
-                 OR (COALESCE(handler, 'ai') = %s AND updated_at >= %s)
-                 ORDER BY
-                   CASE COALESCE(handler, 'ai')
-                     WHEN 'live_request' THEN 0
-                     WHEN 'admin' THEN 1
-                     WHEN 'closed' THEN 3
-                     ELSE 2
-                   END,
-                   updated_at DESC
-                 LIMIT 100",
-                self::HANDLER_AI,
-                $since
-            )
+            "SELECT * FROM $table
+             ORDER BY
+               CASE COALESCE(handler, 'ai')
+                 WHEN 'live_request' THEN 0
+                 WHEN 'admin' THEN 1
+                 WHEN 'closed' THEN 3
+                 ELSE 2
+               END,
+               updated_at DESC
+             LIMIT 250"
         );
 
         if ($rows === null && $wpdb->last_error) {
@@ -2230,8 +2223,9 @@ class PAXdesign_Chat_Live {
 
         $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
         $agent   = self::session_agent_payload($row);
+        $raw_messages = $this->decode_messages($row->messages);
         $all_messages = $this->format_messages_for_api(
-            $this->decode_messages($row->messages),
+            $raw_messages,
             $agent['admin_user_id']
         );
 
@@ -2248,7 +2242,14 @@ class PAXdesign_Chat_Live {
             'updated_at'       => isset($row->updated_at) ? (string) $row->updated_at : '',
             'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
             'message_count'    => count($all_messages),
+            'last_read_seq'    => 0,
             'messages'         => $all_messages,
+            'admin_typing'     => $this->is_typing($session_id, 'admin'),
+            'user_typing'      => $this->is_typing($session_id, 'user'),
+            'reactions'        => $this->extract_message_reactions($raw_messages),
+            'customer_language'=> class_exists('PAXdesign_Language_Routing')
+                ? PAXdesign_Language_Routing::session_language_from_row($row)
+                : '',
         );
     }
 
@@ -2265,7 +2266,7 @@ class PAXdesign_Chat_Live {
         $row   = $this->get_session_row($session_id);
 
         if (!$row) {
-            return $this->empty_poll_payload();
+            return new WP_Error('not_found', 'Session not found', array('status' => 404));
         }
 
         $messages = $this->decode_messages($row->messages);
