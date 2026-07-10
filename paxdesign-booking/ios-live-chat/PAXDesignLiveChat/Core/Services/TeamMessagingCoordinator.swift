@@ -51,6 +51,17 @@ final class TeamMessagingCoordinator: ObservableObject {
                     Task { await self.refresh(auth: auth) }
                     return
                 }
+                if event.type == "message" {
+                    var userInfo: [String: Any] = ["session_id": sessionId]
+                    if let message = event.payload["message"] {
+                        userInfo["inline_message"] = message
+                    }
+                    NotificationCenter.default.post(
+                        name: .paxSessionSync,
+                        object: nil,
+                        userInfo: userInfo
+                    )
+                }
                 if event.type == "message" || event.type == "read" || event.type == "session_update" {
                     Task { await self.refresh(auth: auth) }
                 }
@@ -129,6 +140,9 @@ final class TeamChatThreadModel: ObservableObject {
     private weak var auth: AuthStore?
     private var threadSubscriptionId: UUID?
     private var lastStreamEventAt = Date.distantPast
+    private var streamSnapshotReady = false
+    private var pendingStreamEvents: [ChatStreamEvent] = []
+    private var lifecycleGeneration = 0
     private let recoveryPollIntervalNs: UInt64 = 5_000_000_000
     private let streamStaleThreshold: TimeInterval = 20
 
@@ -138,17 +152,29 @@ final class TeamChatThreadModel: ObservableObject {
 
     func start(auth: AuthStore) {
         self.auth = auth
-        stop()
+        lifecycleGeneration += 1
+        let generation = lifecycleGeneration
+        stopBackgroundWork()
+        streamSnapshotReady = false
+        pendingStreamEvents = []
+
         pollTask = Task { [weak self] in
             guard let self else { return }
-            await self.poll(auth: auth)
-            guard !Task.isCancelled else { return }
-            self.beginEventStream(auth: auth)
+            self.beginEventStream(auth: auth, generation: generation)
+            await self.loadInitialSnapshot(auth: auth)
+            guard !Task.isCancelled, self.lifecycleGeneration == generation else { return }
+
+            self.streamSnapshotReady = true
+            let pending = self.pendingStreamEvents
+            self.pendingStreamEvents = []
+            for event in pending {
+                await self.handleThreadStreamEvent(event, auth: auth)
+            }
             self.lastStreamEventAt = Date()
 
-            while !Task.isCancelled {
+            while !Task.isCancelled, self.lifecycleGeneration == generation {
                 try? await Task.sleep(nanoseconds: self.recoveryPollIntervalNs)
-                guard !Task.isCancelled else { break }
+                guard !Task.isCancelled, self.lifecycleGeneration == generation else { break }
                 if Date().timeIntervalSince(self.lastStreamEventAt) >= self.streamStaleThreshold {
                     await self.poll(auth: auth)
                 }
@@ -156,7 +182,25 @@ final class TeamChatThreadModel: ObservableObject {
         }
     }
 
+    func refreshNow(auth: AuthStore, inlineMessage: Any? = nil) async {
+        if let inline = LiveMessage.fromStreamPayload(inlineMessage) {
+            insertIncomingMessages([inline])
+            lastStreamEventAt = Date()
+            let targetSeq = max(currentSeq, inline.id)
+            if hasMessageGap(throughSeq: targetSeq) {
+                await fillMessageGap(auth: auth, throughSeq: targetSeq)
+            }
+            return
+        }
+        await poll(auth: auth)
+    }
+
     func stop() {
+        lifecycleGeneration += 1
+        stopBackgroundWork()
+    }
+
+    private func stopBackgroundWork() {
         pollTask?.cancel()
         pollTask = nil
         if let threadSubscriptionId {
@@ -165,34 +209,118 @@ final class TeamChatThreadModel: ObservableObject {
         }
     }
 
-    private func beginEventStream(auth: AuthStore) {
+    private func loadInitialSnapshot(auth: AuthStore) async {
+        guard let api = auth.api else {
+            isLoadingMessages = false
+            return
+        }
+        isLoadingMessages = true
+        defer { isLoadingMessages = false }
+        do {
+            let response = try await api.pollTeamSession(sessionId, since: 0, full: true)
+            participantName = response.customerName
+            if messages.isEmpty {
+                messages = normalizeTeamMessages(response.messages)
+            } else if !response.messages.isEmpty {
+                insertIncomingMessages(response.messages)
+            }
+            pollSeq = max(pollSeq, response.seq)
+            currentSeq = max(currentSeq, response.seq)
+            errorMessage = nil
+        } catch {
+            if case LiveChatAPIError.unauthorized = error {
+                auth.handleUnauthorized()
+            } else {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func beginEventStream(auth: AuthStore, generation: Int) {
         guard let api = auth.api else { return }
         if let threadSubscriptionId {
             ChatEventStream.shared.unsubscribeThread(id: threadSubscriptionId)
         }
         threadSubscriptionId = ChatEventStream.shared.subscribeThread(api: api, sessionId: sessionId, isTeam: true) { [weak self] event in
-            guard let self else { return }
-            self.lastStreamEventAt = Date()
-            if event.type == "conversation_deleted" {
-                self.onConversationRemoved?()
-                return
+            guard let self, self.lifecycleGeneration == generation else { return }
+            Task { await self.handleThreadStreamEvent(event, auth: auth) }
+        }
+    }
+
+    private func handleThreadStreamEvent(_ event: ChatStreamEvent, auth: AuthStore) async {
+        if !streamSnapshotReady {
+            pendingStreamEvents.append(event)
+            return
+        }
+
+        lastStreamEventAt = Date()
+        if event.type == "conversation_deleted" {
+            onConversationRemoved?()
+            return
+        }
+        if event.type == "read" {
+            let seq = StreamPayload.int(event.payload["seq"])
+            if seq > currentSeq {
+                currentSeq = seq
             }
-            if event.type == "read" {
-                if let seq = event.payload["seq"] as? Int, seq > self.currentSeq {
-                    self.currentSeq = seq
+            return
+        }
+        if event.type == "message" {
+            let eventSeq = StreamPayload.int(event.payload["seq"])
+            if let inline = LiveMessage.fromStreamPayload(event.payload["message"]) {
+                insertIncomingMessages([inline])
+                let targetSeq = max(eventSeq, inline.id)
+                if hasMessageGap(throughSeq: targetSeq) {
+                    await fillMessageGap(auth: auth, throughSeq: targetSeq)
                 }
-                return
+            } else if eventSeq > 0 {
+                await fillMessageGap(auth: auth, throughSeq: eventSeq)
+            } else {
+                await poll(auth: auth)
             }
-            if event.type == "message" {
-                let eventSeq = (event.payload["seq"] as? Int) ?? 0
-                var insertedInline = false
-                if let inline = LiveMessage.fromStreamPayload(event.payload["message"]) {
-                    self.insertIncomingMessages([inline])
-                    insertedInline = true
+        }
+    }
+
+    private func hasMessageGap(throughSeq: Int) -> Bool {
+        guard throughSeq > 0 else { return false }
+        let localMax = messages.map(\.id).filter { $0 > 0 }.max() ?? 0
+        return throughSeq > localMax || pollSeq > localMax
+    }
+
+    private func fillMessageGap(auth: AuthStore, throughSeq: Int) async {
+        guard hasMessageGap(throughSeq: throughSeq) else { return }
+        guard let api = auth.api else { return }
+
+        var attempts = 0
+        while hasMessageGap(throughSeq: throughSeq) && attempts < 6 {
+            attempts += 1
+            do {
+                let response = try await api.pollTeamSession(sessionId, since: pollSeq, full: false)
+                participantName = response.customerName
+                if !response.messages.isEmpty {
+                    insertIncomingMessages(response.messages)
                 }
-                if eventSeq > self.currentSeq + 1 || !insertedInline {
-                    Task { await self.poll(auth: auth) }
+                pollSeq = max(pollSeq, response.seq)
+                currentSeq = max(currentSeq, response.seq)
+                if !hasMessageGap(throughSeq: throughSeq) {
+                    break
                 }
+                if response.messages.isEmpty {
+                    let recovery = try await api.pollTeamSession(sessionId, since: 0, full: true)
+                    if !recovery.messages.isEmpty {
+                        insertIncomingMessages(recovery.messages)
+                    }
+                    pollSeq = max(pollSeq, recovery.seq)
+                    currentSeq = max(currentSeq, recovery.seq)
+                    break
+                }
+            } catch {
+                if case LiveChatAPIError.unauthorized = error {
+                    auth.handleUnauthorized()
+                } else {
+                    errorMessage = error.localizedDescription
+                }
+                break
             }
         }
     }
@@ -203,9 +331,10 @@ final class TeamChatThreadModel: ObservableObject {
             return
         }
         do {
-            let response = try await api.pollTeamSession(sessionId, since: pollSeq, full: pollSeq == 0)
+            let isInitial = pollSeq == 0 && messages.isEmpty
+            let response = try await api.pollTeamSession(sessionId, since: pollSeq, full: isInitial)
             participantName = response.customerName
-            if pollSeq == 0 {
+            if isInitial && !response.messages.isEmpty {
                 messages = normalizeTeamMessages(response.messages)
                 isLoadingMessages = false
             } else if !response.messages.isEmpty {
@@ -213,6 +342,7 @@ final class TeamChatThreadModel: ObservableObject {
             }
             pollSeq = max(pollSeq, response.seq)
             currentSeq = max(currentSeq, response.seq)
+            isLoadingMessages = false
             errorMessage = nil
         } catch {
             isLoadingMessages = false

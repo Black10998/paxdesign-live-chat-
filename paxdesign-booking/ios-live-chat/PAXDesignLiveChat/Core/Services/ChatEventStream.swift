@@ -25,8 +25,8 @@ enum ChatEventStreamParser {
                   let object = try? JSONSerialization.jsonObject(with: jsonData) as? [String: Any] else {
                 return nil
             }
-            let id = object["id"] as? Int ?? 0
-            let type = object["type"] as? String ?? ""
+            let id = StreamPayload.int(object["id"])
+            let type = StreamPayload.string(object["type"])
             let payload = object["payload"] as? [String: Any] ?? [:]
             return ChatStreamEvent(id: id, type: type, payload: payload)
         }

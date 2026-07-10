@@ -86,7 +86,8 @@ final class ChatCoordinator: ObservableObject {
             ChatEventStream.shared.subscribeInbox(id: inboxSubscriptionId, api: api) { [weak self] event in
                 guard let self else { return }
                 if let sid = event.payload["session_id"] as? String, !sid.isEmpty {
-                    if let seq = event.payload["seq"] as? Int {
+                    let seq = StreamPayload.int(event.payload["seq"])
+                    if seq > 0 {
                         self.noteSessionSeq(sid, seq: seq)
                     }
                     if event.type == "message" || event.type == "handler" || event.type == "typing" {
@@ -371,6 +372,8 @@ final class ChatThreadModel: ObservableObject {
     private var lifecycleGeneration = 0
     private var threadSubscriptionId: UUID?
     private var lastStreamEventAt = Date.distantPast
+    private var streamSnapshotReady = false
+    private var pendingStreamEvents: [ChatStreamEvent] = []
     private let recoveryPollIntervalNs: UInt64 = 5_000_000_000
     private let streamStaleThreshold: TimeInterval = 20
 
@@ -383,14 +386,22 @@ final class ChatThreadModel: ObservableObject {
         lifecycleGeneration += 1
         let generation = lifecycleGeneration
         stopBackgroundWork()
+        streamSnapshotReady = false
+        pendingStreamEvents = []
 
         pollTask = Task { @MainActor [weak self] in
             guard let self else { return }
             await self.loadQuickReplies(auth: auth)
-            await self.syncFromServer(auth: auth, full: true, expectedServerSeq: expectedServerSeq)
+            self.beginEventStream(auth: auth, generation: generation)
+            await self.syncFromServer(auth: auth, expectedServerSeq: expectedServerSeq)
             guard !Task.isCancelled, self.lifecycleGeneration == generation else { return }
 
-            self.beginEventStream(auth: auth, generation: generation)
+            self.streamSnapshotReady = true
+            let pending = self.pendingStreamEvents
+            self.pendingStreamEvents = []
+            for event in pending {
+                await self.handleThreadStreamEvent(event, auth: auth)
+            }
             self.lastStreamEventAt = Date()
 
             while !Task.isCancelled, self.lifecycleGeneration == generation {
@@ -404,19 +415,20 @@ final class ChatThreadModel: ObservableObject {
     }
 
     func refreshNow(auth: AuthStore, expectedServerSeq: Int = 0, inlineMessage: Any? = nil) async {
-        var insertedInline = false
         if let inline = LiveMessage.fromStreamPayload(inlineMessage) {
             insertIncomingMessages([inline])
-            insertedInline = true
             lastStreamEventAt = Date()
-        }
-        if hasMessageGap(expectedServerSeq: expectedServerSeq) {
-            await syncFromServer(auth: auth, full: true, expectedServerSeq: expectedServerSeq)
-        } else if !insertedInline {
-            await poll(auth: auth)
-            if hasMessageGap(expectedServerSeq: expectedServerSeq) {
-                await syncFromServer(auth: auth, full: true, expectedServerSeq: expectedServerSeq)
+            let targetSeq = max(expectedServerSeq, inline.id)
+            if hasMessageGap(expectedServerSeq: targetSeq) {
+                await fillMessageGap(auth: auth, throughSeq: targetSeq)
             }
+            return
+        }
+
+        if hasMessageGap(expectedServerSeq: expectedServerSeq) {
+            await fillMessageGap(auth: auth, throughSeq: expectedServerSeq)
+        } else {
+            await poll(auth: auth)
         }
     }
 
@@ -453,29 +465,36 @@ final class ChatThreadModel: ObservableObject {
     }
 
     private func handleThreadStreamEvent(_ event: ChatStreamEvent, auth: AuthStore) async {
+        if !streamSnapshotReady {
+            pendingStreamEvents.append(event)
+            return
+        }
+
         lastStreamEventAt = Date()
         switch event.type {
         case "message":
-            let eventSeq = (event.payload["seq"] as? Int) ?? 0
-            var insertedInline = false
+            let eventSeq = StreamPayload.int(event.payload["seq"])
             if let inline = LiveMessage.fromStreamPayload(event.payload["message"]) {
                 insertIncomingMessages([inline])
-                insertedInline = true
-            }
-            if hasMessageGap(expectedServerSeq: eventSeq) {
-                await syncFromServer(auth: auth, full: true, expectedServerSeq: eventSeq)
-            } else if !insertedInline {
+                let targetSeq = max(eventSeq, inline.id)
+                if hasMessageGap(expectedServerSeq: targetSeq) {
+                    await fillMessageGap(auth: auth, throughSeq: targetSeq)
+                }
+            } else if eventSeq > 0 {
+                await fillMessageGap(auth: auth, throughSeq: eventSeq)
+            } else {
                 await poll(auth: auth)
             }
         case "typing":
-            let who = (event.payload["who"] as? String) ?? ""
-            if who == "user", let active = event.payload["active"] as? Bool {
-                userTyping = active
+            let who = StreamPayload.string(event.payload["who"])
+            if who == "user" {
+                userTyping = StreamPayload.bool(event.payload["active"])
             } else {
                 await poll(auth: auth)
             }
         case "handler":
-            if let incomingHandler = event.payload["handler"] as? String, !incomingHandler.isEmpty {
+            let incomingHandler = StreamPayload.string(event.payload["handler"])
+            if !incomingHandler.isEmpty {
                 handler = incomingHandler
             }
             await poll(auth: auth)
@@ -525,7 +544,7 @@ final class ChatThreadModel: ObservableObject {
         messages.map(\.id).filter { $0 > 0 }.max() ?? 0
     }
 
-    private func syncFromServer(auth: AuthStore, full: Bool, expectedServerSeq: Int = 0) async {
+    private func syncFromServer(auth: AuthStore, expectedServerSeq: Int = 0) async {
         guard let api = auth.api else {
             isLoadingMessages = false
             return
@@ -533,16 +552,11 @@ final class ChatThreadModel: ObservableObject {
         isLoadingMessages = true
         defer { isLoadingMessages = false }
         do {
-            let data: PollResponse
-            if full {
-                data = try await api.fetchSession(sessionId)
-            } else {
-                data = try await api.pollSession(sessionId, since: pollSeq)
-            }
-            applyServerSnapshot(data, replaceMessages: full)
-            if hasMessageGap(expectedServerSeq: max(expectedServerSeq, data.seq)) {
-                let recovery = try await api.fetchSession(sessionId)
-                applyServerSnapshot(recovery, replaceMessages: true)
+            let data = try await api.fetchSession(sessionId)
+            applyServerSnapshot(data)
+            let targetSeq = max(expectedServerSeq, data.seq)
+            if hasMessageGap(expectedServerSeq: targetSeq) {
+                await fillMessageGap(auth: auth, throughSeq: targetSeq)
             }
             errorMessage = nil
             if handler == "admin" {
@@ -556,7 +570,35 @@ final class ChatThreadModel: ObservableObject {
         }
     }
 
-    private func applyServerSnapshot(_ data: PollResponse, replaceMessages: Bool) {
+    private func fillMessageGap(auth: AuthStore, throughSeq: Int) async {
+        guard throughSeq > 0, hasMessageGap(expectedServerSeq: throughSeq) else { return }
+        guard let api = auth.api else { return }
+
+        var attempts = 0
+        while hasMessageGap(expectedServerSeq: throughSeq) && attempts < 6 {
+            attempts += 1
+            do {
+                let data = try await api.pollSession(sessionId, since: pollSeq)
+                applyPoll(data)
+                if !hasMessageGap(expectedServerSeq: throughSeq) {
+                    break
+                }
+                if data.messages.isEmpty {
+                    let recovery = try await api.fetchSession(sessionId)
+                    applyServerSnapshot(recovery)
+                    break
+                }
+            } catch {
+                if case LiveChatAPIError.unauthorized = error, let auth = self.auth {
+                    auth.handleUnauthorized()
+                }
+                errorMessage = error.localizedDescription
+                break
+            }
+        }
+    }
+
+    private func applyServerSnapshot(_ data: PollResponse) {
         if handler != data.handler { handler = data.handler }
         let resolvedName = data.customerName.isEmpty ? "Kunde" : data.customerName
         if customerName != resolvedName { customerName = resolvedName }
@@ -571,12 +613,14 @@ final class ChatThreadModel: ObservableObject {
         }
         if userTyping != data.userTyping { userTyping = data.userTyping }
 
-        if replaceMessages {
+        if messages.isEmpty {
             messages = data.messages.sorted { $0.id < $1.id }
             knownMessageIds = Set(messages.map(\.id))
-            pollSeq = data.seq
+            pollSeq = max(pollSeq, data.seq)
+        } else if !data.messages.isEmpty {
+            insertIncomingMessages(data.messages)
+            reconcilePollCursor(serverSeq: data.seq)
         } else {
-            applyPoll(data)
             reconcilePollCursor(serverSeq: data.seq)
         }
 
@@ -865,7 +909,7 @@ final class ChatThreadModel: ObservableObject {
     }
 
     func reloadAfterTakeover(auth: AuthStore) async {
-        await syncFromServer(auth: auth, full: true)
+        await syncFromServer(auth: auth)
         if handler == "admin" {
             await loadQuickReplies(auth: auth)
         } else {

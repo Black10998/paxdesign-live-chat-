@@ -197,6 +197,11 @@ class PAXdesign_Team_Messaging {
             $out_messages = array_values(array_filter($messages, function ($msg) use ($since) {
                 return isset($msg['id']) && absint($msg['id']) > $since;
             }));
+            if (empty($out_messages) && $since > 0 && $seq > $since) {
+                $out_messages = array_values(array_filter($messages, function ($msg) use ($since) {
+                    return isset($msg['id']) && absint($msg['id']) >= $since;
+                }));
+            }
         }
 
         $other         = self::other_participant($conv, $current_user_id);

@@ -104,7 +104,8 @@ struct TeamChatView: View {
         .onReceive(NotificationCenter.default.publisher(for: .paxSessionSync)) { note in
             guard let syncedId = note.userInfo?["session_id"] as? String,
                   syncedId == thread.sessionId else { return }
-            Task { await thread.poll(auth: auth) }
+            let inlineMessage = note.userInfo?["inline_message"]
+            Task { await thread.refreshNow(auth: auth, inlineMessage: inlineMessage) }
         }
         .disabled(isDeleting)
     }

@@ -345,12 +345,20 @@ class PAXdesign_Chat_Log {
         ));
 
         if ($seq > $prev_seq && class_exists('PAXdesign_Chat_Event_Bus') && is_array($last)) {
+            $sse_message = $last;
+            if (class_exists('PAXdesign_Chat_Live')) {
+                $fallback = 0;
+                if ($previous && isset($previous->admin_user_id)) {
+                    $fallback = (int) $previous->admin_user_id;
+                }
+                $sse_message = PAXdesign_Chat_Live::get_instance()->format_sse_message_payload($last, $fallback);
+            }
             PAXdesign_Chat_Event_Bus::emit_session($session_id, 'message', array(
                 'seq'     => $seq,
                 'role'    => $last_role,
                 'handler' => $handler,
                 'preview' => $preview,
-                'message' => $last,
+                'message' => $sse_message,
             ));
         }
     }

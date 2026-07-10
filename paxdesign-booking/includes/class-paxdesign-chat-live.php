@@ -789,12 +789,13 @@ class PAXdesign_Chat_Live {
         ));
 
         if (class_exists('PAXdesign_Chat_Event_Bus')) {
+            $agent = self::session_agent_payload($row);
             PAXdesign_Chat_Event_Bus::emit_session($session_id, 'message', array(
                 'seq'     => $id,
                 'role'    => $role,
                 'handler' => $handler,
                 'preview' => $preview,
-                'message' => $entry,
+                'message' => $this->format_sse_message_payload($entry, $agent['admin_user_id']),
             ));
         }
 
@@ -2120,6 +2121,21 @@ class PAXdesign_Chat_Live {
                 ? PAXdesign_Language_Routing::session_language_from_row($row)
                 : '',
         );
+    }
+
+    /**
+     * Normalize a single message for SSE instant-render payloads (iOS/web).
+     *
+     * @param array<string, mixed> $msg
+     * @param int                  $fallback_agent_id
+     * @return array<string, mixed>
+     */
+    public function format_sse_message_payload($msg, $fallback_agent_id = 0) {
+        if (!is_array($msg)) {
+            return array();
+        }
+        $formatted = $this->format_messages_for_api(array($msg), absint($fallback_agent_id));
+        return !empty($formatted) ? $formatted[0] : $msg;
     }
 
     /**
