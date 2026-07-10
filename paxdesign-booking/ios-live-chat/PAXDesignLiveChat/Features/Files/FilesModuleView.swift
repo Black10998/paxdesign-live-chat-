@@ -38,12 +38,18 @@ struct FilesModuleView: View {
                         } label: {
                             fileRow(document)
                         }
-                    }
-                    .onDelete { indexSet in
-                        Task {
-                            for document in indexSet.map({ visibleDocuments[$0] }) {
-                                await store.delete(document, auth: auth)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button {
+                                PAXDelete.confirm(
+                                    message: "Diese Datei wird dauerhaft gelöscht.",
+                                    itemTitle: document.name
+                                ) {
+                                    Task { await store.delete(document, auth: auth) }
+                                }
+                            } label: {
+                                Label(L10n.CommonDelete, systemImage: "trash")
                             }
+                            .tint(.red)
                         }
                     }
                 }

@@ -436,6 +436,14 @@ private struct ShellTabItem: Identifiable {
     var id: Int { tag }
 }
 
+private struct TabFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [Int: Anchor<CGRect>] = [:]
+
+    static func reduce(value: inout [Int: Anchor<CGRect>], nextValue: () -> [Int: Anchor<CGRect>]) {
+        value.merge(nextValue(), uniquingKeysWith: { $1 })
+    }
+}
+
 private struct PAXBottomTabBar: View {
     let items: [ShellTabItem]
     @Binding var selection: Int
@@ -447,15 +455,45 @@ private struct PAXBottomTabBar: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 ForEach(items) { item in
                     button(for: item)
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.top, 8)
-            .padding(.bottom, 6)
-            .background(tabBarPillBackground)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 8)
+            .background {
+                Color.clear
+                    .paxPremiumGlass(tier: .premium, cornerRadius: 26)
+            }
+            .backgroundPreferenceValue(TabFramePreferenceKey.self) { anchors in
+                GeometryReader { proxy in
+                    if let anchor = anchors[selection] {
+                        let frame = proxy[anchor]
+                        Capsule(style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        PAXTheme.accent.opacity(0.24),
+                                        PAXTheme.accent.opacity(0.14)
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .overlay(
+                                Capsule(style: .continuous)
+                                    .stroke(PAXTheme.accent.opacity(0.38), lineWidth: 1)
+                            )
+                            .frame(width: max(frame.width, 44), height: max(frame.height, 44))
+                            .position(x: frame.midX, y: frame.midY)
+                            .animation(
+                                reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.82),
+                                value: selection
+                            )
+                    }
+                }
+            }
             .padding(.horizontal, 10)
 
             Color.clear
@@ -464,20 +502,6 @@ private struct PAXBottomTabBar: View {
         .padding(.top, 4)
         .background(tabBarDockBackground)
         .accessibilityElement(children: .contain)
-    }
-
-    private var tabBarPillBackground: some View {
-        RoundedRectangle(cornerRadius: 24, style: .continuous)
-            .fill(.ultraThinMaterial)
-            .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .fill(PAXTheme.surface.opacity(0.34))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(PAXTheme.border.opacity(0.46), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.22), radius: 18, x: 0, y: 10)
     }
 
     private var tabBarDockBackground: some View {
@@ -500,13 +524,13 @@ private struct PAXBottomTabBar: View {
             if reduceMotion {
                 selection = item.tag
             } else {
-                withAnimation(.spring(response: 0.28, dampingFraction: 0.88)) {
+                withAnimation(.spring(response: 0.42, dampingFraction: 0.84)) {
                     selection = item.tag
                 }
             }
             PAXHaptics.light()
         } label: {
-            VStack(spacing: 3) {
+            VStack(spacing: 4) {
                 ZStack(alignment: .topTrailing) {
                     PAXAnimatedTabIcon(
                         symbol: item.symbol,
@@ -532,19 +556,14 @@ private struct PAXBottomTabBar: View {
                     .foregroundStyle(selected ? PAXTheme.textPrimary : PAXTheme.textSecondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
+                    .offset(y: selected ? -1 : 0)
+                    .animation(.spring(response: 0.36, dampingFraction: 0.82), value: selected)
             }
             .frame(maxWidth: .infinity)
             .padding(.horizontal, 4)
-            .padding(.vertical, 8)
-            .background(
-                Capsule(style: .continuous)
-                    .fill(selected ? PAXTheme.accent.opacity(0.18) : .clear)
-            )
-            .overlay(
-                Capsule(style: .continuous)
-                    .stroke(selected ? PAXTheme.accent.opacity(0.42) : .clear, lineWidth: 1)
-            )
+            .padding(.vertical, 7)
             .contentShape(Rectangle())
+            .anchorPreference(key: TabFramePreferenceKey.self, value: .bounds) { [item.tag: $0] }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(item.title)
@@ -559,30 +578,44 @@ private struct PAXAnimatedTabIcon: View {
     let reduceMotion: Bool
 
     @State private var pulseScale: CGFloat = 1
+    @State private var slideOffset: CGFloat = 0
 
     var body: some View {
-        Image(systemName: isSelected ? selectedSymbol : symbol)
-            .font(.system(size: 18, weight: .semibold))
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(isSelected ? PAXTheme.accent : PAXTheme.textSecondary)
-            .scaleEffect(pulseScale * (isSelected ? 1.04 : 1))
-            .rotationEffect(.degrees(isSelected && !reduceMotion ? -2 : 0))
-            .animation(.easeOut(duration: 0.16), value: isSelected)
-            .onAppear {
+        ZStack {
+            Image(systemName: symbol)
+                .font(.system(size: 18, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(PAXTheme.textSecondary)
+                .opacity(isSelected ? 0 : 1)
+                .offset(x: isSelected ? -10 : 0)
+                .scaleEffect(isSelected ? 0.82 : 1)
+
+            Image(systemName: selectedSymbol)
+                .font(.system(size: 18, weight: .semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(PAXTheme.accent)
+                .opacity(isSelected ? 1 : 0)
+                .offset(x: isSelected ? 0 : 10)
+                .scaleEffect(isSelected ? 1.06 : 0.82)
+        }
+        .scaleEffect(pulseScale)
+        .offset(x: slideOffset)
+        .animation(.spring(response: 0.38, dampingFraction: 0.78), value: isSelected)
+        .onChange(of: isSelected) { selected in
+            guard selected, !reduceMotion else {
+                pulseScale = 1
+                slideOffset = 0
+                return
+            }
+            slideOffset = -6
+            pulseScale = 0.88
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.62)) {
+                slideOffset = 0
+                pulseScale = 1.12
+            }
+            withAnimation(.easeOut(duration: 0.18).delay(0.12)) {
                 pulseScale = 1
             }
-            .onChange(of: isSelected) { selected in
-                guard selected, !reduceMotion else {
-                    pulseScale = 1
-                    return
-                }
-                pulseScale = 0.9
-                withAnimation(.spring(response: 0.24, dampingFraction: 0.5)) {
-                    pulseScale = 1.16
-                }
-                withAnimation(.easeOut(duration: 0.16).delay(0.14)) {
-                    pulseScale = 1
-                }
-            }
+        }
     }
 }

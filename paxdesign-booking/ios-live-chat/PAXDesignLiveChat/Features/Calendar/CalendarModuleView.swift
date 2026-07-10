@@ -23,13 +23,19 @@ struct CalendarModuleView: View {
                 } else {
                     ForEach(dayEvents) { event in
                         calendarRow(event)
-                    }
-                    .onDelete { indexSet in
-                        Task {
-                            for event in indexSet.map({ dayEvents[$0] }) {
-                                await store.delete(event, auth: auth)
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button {
+                                    PAXDelete.confirm(
+                                        message: "Dieser Termin wird dauerhaft gelöscht.",
+                                        itemTitle: event.title
+                                    ) {
+                                        Task { await store.delete(event, auth: auth) }
+                                    }
+                                } label: {
+                                    Label(L10n.CommonDelete, systemImage: "trash")
+                                }
+                                .tint(.red)
                             }
-                        }
                     }
                 }
             }

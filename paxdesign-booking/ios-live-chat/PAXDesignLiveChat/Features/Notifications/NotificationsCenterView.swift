@@ -6,6 +6,7 @@ struct NotificationsCenterView: View {
     @EnvironmentObject private var permissions: PermissionCoordinator
     @EnvironmentObject private var settings: AppSettingsStore
     @ObservedObject private var platform = PlatformSyncService.shared
+    @State private var isInitialLoading = true
 
     private var unreadSessions: [LiveSession] {
         coordinator.sessions.filter {
@@ -19,6 +20,11 @@ struct NotificationsCenterView: View {
 
     var body: some View {
         List {
+            if isInitialLoading && coordinator.isLoading && coordinator.sessions.isEmpty {
+                Section {
+                    PAXScreenLoadingStack(status: L10n.NotificationsCenterTitle, rowCount: 4)
+                }
+            } else {
             Section {
                 PlatformHeroHeader(
                     title: L10n.NotificationsCenterTitle,
@@ -100,6 +106,7 @@ struct NotificationsCenterView: View {
                     }
                 }
             }
+            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -109,6 +116,14 @@ struct NotificationsCenterView: View {
         .refreshable {
             await coordinator.refreshSessions(auth: auth)
             await platform.refreshNotifications(auth: auth)
+        }
+        .onAppear {
+            Task {
+                try? await Task.sleep(nanoseconds: 450_000_000)
+                withAnimation(.easeOut(duration: 0.25)) {
+                    isInitialLoading = false
+                }
+            }
         }
     }
 

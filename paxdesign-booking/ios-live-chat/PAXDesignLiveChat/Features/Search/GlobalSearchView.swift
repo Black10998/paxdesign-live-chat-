@@ -7,6 +7,7 @@ struct GlobalSearchView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
     @State private var results: [GlobalSearchResult] = []
+    @State private var isSearching = false
     @State private var searchTask: Task<Void, Never>?
 
     var body: some View {
@@ -15,6 +16,10 @@ struct GlobalSearchView: View {
                 Section(L10n.GlobalSearchHint) {
                     Text(L10n.GlobalSearchPrompt)
                         .foregroundStyle(PAXTheme.textSecondary)
+                }
+            } else if isSearching {
+                Section {
+                    PAXScreenLoadingStack(status: L10n.GlobalSearchTitle, rowCount: 4)
                 }
             } else if results.isEmpty {
                 Section {
@@ -47,6 +52,13 @@ struct GlobalSearchView: View {
 
     private func runSearch(for value: String) {
         searchTask?.cancel()
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            isSearching = false
+            results = []
+            return
+        }
+        isSearching = true
         searchTask = Task {
             let hits = await GlobalSearchService.search(
                 query: value,
@@ -56,6 +68,7 @@ struct GlobalSearchView: View {
             )
             guard !Task.isCancelled else { return }
             results = hits
+            isSearching = false
         }
     }
 

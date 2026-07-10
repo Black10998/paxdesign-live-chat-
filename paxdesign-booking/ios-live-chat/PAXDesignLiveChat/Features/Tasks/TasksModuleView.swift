@@ -66,14 +66,6 @@ struct TasksModuleView: View {
                     ForEach(filteredTasks) { task in
                         taskRow(task)
                     }
-                    .onDelete { indexSet in
-                        guard auth.canAssignTeamTasks else { return }
-                        Task {
-                            for task in indexSet.map({ filteredTasks[$0] }) {
-                                await store.delete(task, auth: auth)
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -174,6 +166,16 @@ struct TasksModuleView: View {
             }
             .tint(.green)
         }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            if auth.canAssignTeamTasks {
+                Button {
+                    requestDeleteTask(task)
+                } label: {
+                    Label(L10n.CommonDelete, systemImage: "trash")
+                }
+                .tint(.red)
+            }
+        }
         .contextMenu {
             Button {
                 Task { await store.toggleComplete(task, auth: auth) }
@@ -181,12 +183,21 @@ struct TasksModuleView: View {
                 Label(task.isCompleted ? L10n.CommonReopen : L10n.CommonAccept, systemImage: "checkmark")
             }
             if auth.canAssignTeamTasks {
-                Button(role: .destructive) {
-                    Task { await store.delete(task, auth: auth) }
+                Button {
+                    requestDeleteTask(task)
                 } label: {
                     Label(L10n.CommonDelete, systemImage: "trash")
                 }
             }
+        }
+    }
+
+    private func requestDeleteTask(_ task: PAXTaskItem) {
+        PAXDelete.confirm(
+            message: "Diese Aufgabe wird dauerhaft gelöscht.",
+            itemTitle: task.title
+        ) {
+            Task { await store.delete(task, auth: auth) }
         }
     }
 

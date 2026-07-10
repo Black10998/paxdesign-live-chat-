@@ -20,8 +20,7 @@ struct PAXLaunchView: View {
                     .scaleEffect(symbolScale)
                     .opacity(symbolOpacity)
 
-                ProgressView()
-                    .controlSize(.regular)
+                PAXInlineLoader(size: 22)
                     .opacity(labelOpacity)
 
                 Text("PAXDesign Live Chat")

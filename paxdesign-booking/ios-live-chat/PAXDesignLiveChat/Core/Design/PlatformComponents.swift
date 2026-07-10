@@ -8,47 +8,13 @@ struct PlatformModuleCard: View {
     var badge: Int = 0
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: systemImage)
-                .font(.body.weight(.medium))
-                .foregroundStyle(tint)
-                .frame(width: 28, height: 28)
-                .background(
-                    Circle()
-                        .fill(tint.opacity(0.16))
-                )
-
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(title)
-                        .font(.body)
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                    if badge > 0 {
-                        Text("\(badge)")
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(tint))
-                    }
-                }
-                Text(subtitle)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-
-            Spacer(minLength: 0)
-
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.tertiary)
-        }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .paxGlassCardStyle(cornerRadius: 16, fillOpacity: 0.8, borderOpacity: 0.44, shadowOpacity: 0.16)
+        PAXFeatureCard(
+            title: title,
+            subtitle: subtitle,
+            systemImage: systemImage,
+            tint: tint,
+            badge: badge
+        )
         .contentShape(Rectangle())
     }
 }
@@ -60,26 +26,12 @@ struct PlatformHeroHeader: View {
     let gradient: [Color]
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            Image(systemName: systemImage)
-                .font(.title2)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(gradient.first ?? .accentColor)
-                .frame(width: 36, height: 36)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.title3.weight(.semibold))
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-        .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.82, borderOpacity: 0.46, shadowOpacity: 0.18)
+        PAXHeroCard(
+            title: title,
+            subtitle: subtitle,
+            systemImage: systemImage,
+            tint: gradient.first ?? PAXTheme.accent
+        )
     }
 }
 

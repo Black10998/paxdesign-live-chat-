@@ -33,8 +33,7 @@ extension View {
     }
 
     func paxNativeCard() -> some View {
-        padding(12)
-            .paxGlassCardStyle(cornerRadius: 14, fillOpacity: 0.82, borderOpacity: 0.46, shadowOpacity: 0.18)
+        paxCard(.list)
     }
 
     func paxScreenBackground() -> some View {

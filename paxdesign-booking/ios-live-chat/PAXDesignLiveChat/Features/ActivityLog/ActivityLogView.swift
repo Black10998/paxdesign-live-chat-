@@ -47,10 +47,15 @@ struct ActivityLogView: View {
             }
             if !log.entries.isEmpty, auth.canManageUsers {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(L10n.ActivityLogClear, role: .destructive) {
-                        Task {
-                            await log.clear(auth: auth)
-                            PAXHaptics.warning()
+                    Button(L10n.ActivityLogClear) {
+                        PAXDelete.confirm(
+                            message: "Das gesamte Aktivitätsprotokoll wird geleert.",
+                            confirmTitle: L10n.ActivityLogClear
+                        ) {
+                            Task {
+                                await log.clear(auth: auth)
+                                PAXHaptics.warning()
+                            }
                         }
                     }
                 }

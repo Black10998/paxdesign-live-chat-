@@ -55,8 +55,13 @@ struct GeneralSettingsView: View {
                 #endif
 
                 if settings.profileImageData != nil {
-                    Button(L10n.SettingsResetPhoto, role: .destructive) {
-                        settings.profileImageData = nil
+                    Button(L10n.SettingsResetPhoto) {
+                        PAXDelete.confirm(
+                            message: "Das Profilbild wird entfernt.",
+                            confirmTitle: L10n.SettingsResetPhoto
+                        ) {
+                            settings.profileImageData = nil
+                        }
                     }
                 }
             }
@@ -88,11 +93,16 @@ struct GeneralSettingsView: View {
                 }
 
                 Section {
-                    Button(L10n.SettingsSignOut, role: .destructive) {
-                        Task {
-                            await push.unregisterTokenFromBackend(auth: auth)
-                            auth.logout()
-                            dismiss()
+                    Button(L10n.SettingsSignOut) {
+                        PAXDelete.confirm(
+                            message: "Sie werden von diesem Gerät abgemeldet.",
+                            confirmTitle: L10n.SettingsSignOut
+                        ) {
+                            Task {
+                                await push.unregisterTokenFromBackend(auth: auth)
+                                auth.logout()
+                                dismiss()
+                            }
                         }
                     }
                 }

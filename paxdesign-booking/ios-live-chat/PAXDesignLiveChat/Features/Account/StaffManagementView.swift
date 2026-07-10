@@ -41,13 +41,7 @@ struct StaffManagementView: View {
 
             if isLoading {
                 Section {
-                    VStack(spacing: 12) {
-                        PAXTimelineLoaderCard(status: "Team wird geladen")
-                        ForEach(0..<4, id: \.self) { _ in
-                            PAXSkeletonListRow()
-                        }
-                    }
-                    .padding(.vertical, 4)
+                    PAXScreenLoadingStack(status: "Team wird geladen", rowCount: 4)
                 }
             } else if let errorMessage {
                 Section {
@@ -77,11 +71,17 @@ struct StaffManagementView: View {
                         }
                         .buttonStyle(.plain)
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                Task { await removeStaff(member) }
+                            Button {
+                                PAXDelete.confirm(
+                                    message: "Dieser Mitarbeiter wird aus dem Team entfernt.",
+                                    itemTitle: member.name
+                                ) {
+                                    Task { await removeStaff(member) }
+                                }
                             } label: {
                                 Label("Entfernen", systemImage: "trash")
                             }
+                            .tint(.red)
                         }
                     }
                 }
@@ -290,8 +290,16 @@ private struct StaffEditSheet: View {
                 }
                 Section("Sicherheit") {
                     SecureField("Neues Passwort (optional)", text: $password)
-                    Button("Mitarbeiter sofort abmelden", role: .destructive, action: onForceLogout)
-                        .disabled(isForcingLogout)
+                    Button("Mitarbeiter sofort abmelden") {
+                        PAXDelete.confirm(
+                            message: "Der Mitarbeiter wird auf allen Geräten abgemeldet.",
+                            itemTitle: member.name,
+                            confirmTitle: "Abmelden"
+                        ) {
+                            onForceLogout()
+                        }
+                    }
+                    .disabled(isForcingLogout)
                 }
                 Section("Berechtigungen") {
                     PermissionToggle("Chats ansehen", keyPath: \.viewChats, permissions: $permissions)

@@ -55,7 +55,7 @@ struct PAXPrimaryButton: View {
         Button(action: action) {
             HStack(spacing: 8) {
                 if isLoading {
-                    ProgressView()
+                    PAXInlineLoader(size: 18)
                 }
                 Text(title)
                     .fontWeight(.semibold)
@@ -348,11 +348,39 @@ struct PAXTimelineLoaderCard: View {
             }
             .padding(12)
         }
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(PAXTheme.surface.opacity(0.86))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(PAXTheme.border.opacity(0.4), lineWidth: 1))
-        )
+        .paxPremiumGlass(tier: .premium, cornerRadius: 18)
+    }
+}
+
+struct PAXInlineLoader: View {
+    var size: CGFloat = 20
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(0..<3, id: \.self) { index in
+                Circle()
+                    .fill(PAXTheme.accent.opacity(0.85))
+                    .frame(width: size * 0.22, height: size * 0.22)
+                    .opacity(0.35 + Double(index) * 0.2)
+            }
+        }
+        .frame(width: size, height: size)
+        .paxSkeletonShimmer()
+    }
+}
+
+struct PAXScreenLoadingStack: View {
+    var status: String
+    var rowCount: Int = 4
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            PAXTimelineLoaderCard(status: status)
+            ForEach(0..<rowCount, id: \.self) { _ in
+                PAXSkeletonListRow()
+                    .paxCard(.list)
+            }
+        }
     }
 }
 

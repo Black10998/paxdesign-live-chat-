@@ -127,8 +127,7 @@ struct PlatformHubView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(PAXTheme.textTertiary)
             }
-            .padding(18)
-            .paxGlassCardStyle(cornerRadius: 20, fillOpacity: 0.82, borderOpacity: 0.46, shadowOpacity: 0.22)
+            .paxCard(.hero)
         }
         .buttonStyle(.plain)
         .simultaneousGesture(TapGesture().onEnded { PAXHaptics.light() })
@@ -158,15 +157,20 @@ struct PlatformHubView: View {
                     }
                 }
             }
-            .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.8, borderOpacity: 0.44, shadowOpacity: 0.18)
+            .paxCard(.list)
         }
     }
 
     private var signOutSection: some View {
-        Button(L10n.SettingsSignOut, role: .destructive) {
-            Task {
-                await PushService.shared.unregisterTokenFromBackend(auth: auth)
-                auth.logout()
+        Button(L10n.SettingsSignOut) {
+            PAXDelete.confirm(
+                message: "Sie werden von diesem Gerät abgemeldet.",
+                confirmTitle: L10n.SettingsSignOut
+            ) {
+                Task {
+                    await PushService.shared.unregisterTokenFromBackend(auth: auth)
+                    auth.logout()
+                }
             }
         }
         .font(.body.weight(.semibold))

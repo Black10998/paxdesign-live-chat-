@@ -190,6 +190,9 @@ struct RootView: View {
                 AppLockView()
                     .zIndex(100)
             }
+
+            PAXDeleteOverlay()
+                .zIndex(300)
         }
         .animation(.easeInOut(duration: 0.28), value: phaseIdentifier)
         .sheet(isPresented: $permissions.showNotificationPrompt) {

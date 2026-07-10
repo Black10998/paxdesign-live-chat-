@@ -6,7 +6,6 @@ struct DeviceManagementView: View {
     @State private var isLoading = true
     @State private var errorMessage: String?
     @State private var selectedEmployeeId: Int?
-    @State private var confirmRevoke: DeviceRecord?
     @State private var confirmApprove: DeviceRecord?
     @State private var liveRefreshTask: Task<Void, Never>?
 
@@ -24,12 +23,7 @@ struct DeviceManagementView: View {
 
             if isLoading {
                 Section {
-                    VStack(spacing: 12) {
-                        PAXTimelineLoaderCard(status: "Geräte werden synchronisiert")
-                        ForEach(0..<3, id: \.self) { _ in
-                            deviceSkeletonRow
-                        }
-                    }
+                    PAXScreenLoadingStack(status: "Geräte werden synchronisiert", rowCount: 3)
                 }
             } else if devices.isEmpty {
                 Section {
@@ -73,25 +67,6 @@ struct DeviceManagementView: View {
             startRealtimeRefresh()
         }
         .onDisappear { stopRealtimeRefresh() }
-        .confirmationDialog(
-            "Gerät abmelden?",
-            isPresented: Binding(
-                get: { confirmRevoke != nil },
-                set: { if !$0 { confirmRevoke = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            if let device = confirmRevoke {
-                Button("Abmelden erzwingen", role: .destructive) {
-                    Task { await revoke(device) }
-                }
-            }
-            Button("Abbrechen", role: .cancel) { confirmRevoke = nil }
-        } message: {
-            if let device = confirmRevoke {
-                Text("\(device.deviceName) wird sofort abgemeldet.")
-            }
-        }
         .confirmationDialog(
             "Gerät freigeben?",
             isPresented: Binding(
@@ -173,8 +148,14 @@ struct DeviceManagementView: View {
                         }
                         .buttonStyle(.bordered)
                     } else {
-                        Button(role: .destructive) {
-                            confirmRevoke = device
+                        Button {
+                            PAXDelete.confirm(
+                                message: "Das Gerät wird sofort abgemeldet.",
+                                itemTitle: device.deviceName,
+                                confirmTitle: "Abmelden"
+                            ) {
+                                Task { await revoke(device) }
+                            }
                         } label: {
                             Label("Widerrufen", systemImage: "xmark.shield")
                                 .font(.caption.weight(.semibold))
@@ -186,34 +167,6 @@ struct DeviceManagementView: View {
             }
         }
         .padding(.vertical, 4)
-    }
-
-    private var deviceSkeletonRow: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                PAXSkeletonCircle(size: 24)
-                PAXSkeletonBlock(width: 156, height: 11, cornerRadius: 8)
-                Spacer(minLength: 0)
-                PAXSkeletonBlock(width: 64, height: 9, cornerRadius: 999)
-            }
-            HStack(spacing: 8) {
-                PAXSkeletonBlock(width: 70, height: 18, cornerRadius: 999)
-                PAXSkeletonBlock(width: 66, height: 18, cornerRadius: 999)
-                PAXSkeletonBlock(width: 90, height: 18, cornerRadius: 999)
-            }
-            VStack(alignment: .leading, spacing: 6) {
-                PAXSkeletonBlock(width: 220, height: 8, cornerRadius: 7)
-                PAXSkeletonBlock(width: 185, height: 8, cornerRadius: 7)
-                PAXSkeletonBlock(width: 204, height: 8, cornerRadius: 7)
-                PAXSkeletonBlock(width: 170, height: 8, cornerRadius: 7)
-            }
-            HStack(spacing: 8) {
-                PAXSkeletonBlock(width: 92, height: 24, cornerRadius: 8)
-                PAXSkeletonBlock(width: 86, height: 24, cornerRadius: 8)
-            }
-            .padding(.top, 2)
-        }
-        .padding(.vertical, 6)
     }
 
     @ViewBuilder
@@ -281,7 +234,6 @@ struct DeviceManagementView: View {
         do {
             try await api.revokeDevice(deviceId: device.deviceId, userId: device.userId)
             PAXHaptics.warning()
-            confirmRevoke = nil
             await loadDevices()
         } catch {
             errorMessage = error.localizedDescription

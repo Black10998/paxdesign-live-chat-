@@ -6,6 +6,7 @@ struct EmployeeDashboardView: View {
     @EnvironmentObject private var settings: AppSettingsStore
     @ObservedObject private var tasks = TaskStore.shared
     @ObservedObject private var platform = PlatformSyncService.shared
+    @State private var isInitialLoading = true
 
     private var mySessions: [LiveSession] {
         coordinator.sessions.filter { !$0.isTeamDM && ($0.isAdmin || $0.needsReply) }
@@ -17,6 +18,11 @@ struct EmployeeDashboardView: View {
 
     var body: some View {
         List {
+            if isInitialLoading {
+                Section {
+                    PAXScreenLoadingStack(status: L10n.ModuleEmployee, rowCount: 4)
+                }
+            } else {
             Section {
                 PlatformHeroHeader(
                     title: L10n.EmployeeWelcome(platform.employee?.name ?? auth.profile?.displayName ?? L10n.ProfileRoleStaff),
@@ -57,6 +63,7 @@ struct EmployeeDashboardView: View {
                     Label(L10n.PlatformNotifications, systemImage: "bell.badge")
                 }
             }
+            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -66,6 +73,15 @@ struct EmployeeDashboardView: View {
         .refreshable {
             await platform.refreshEmployee(auth: auth)
             await coordinator.refreshSessions(auth: auth)
+        }
+        .onAppear {
+            Task {
+                await platform.refreshEmployee(auth: auth)
+                try? await Task.sleep(nanoseconds: 450_000_000)
+                withAnimation(.easeOut(duration: 0.25)) {
+                    isInitialLoading = false
+                }
+            }
         }
     }
 

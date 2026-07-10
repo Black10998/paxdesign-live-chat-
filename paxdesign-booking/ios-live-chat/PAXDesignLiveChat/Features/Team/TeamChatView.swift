@@ -92,12 +92,7 @@ struct TeamComposeView: View {
 
             if isLoading {
                 Section {
-                    VStack(spacing: 12) {
-                        PAXTimelineLoaderCard(status: "Teamliste wird geladen")
-                        ForEach(0..<4, id: \.self) { _ in
-                            PAXSkeletonListRow()
-                        }
-                    }
+                    PAXScreenLoadingStack(status: "Teamliste wird geladen", rowCount: 4)
                 }
             } else if let errorMessage {
                 Section {
@@ -179,8 +174,7 @@ private struct StaffComposeRow: View {
                 Spacer()
 
                 if isOpening {
-                    ProgressView()
-                        .controlSize(.small)
+                    PAXInlineLoader(size: 18)
                 } else {
                     Image(systemName: "message.fill")
                         .foregroundStyle(PAXBrand.accent)

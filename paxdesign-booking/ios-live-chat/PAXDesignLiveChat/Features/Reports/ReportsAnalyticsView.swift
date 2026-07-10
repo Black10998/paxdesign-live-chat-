@@ -5,6 +5,7 @@ struct ReportsAnalyticsView: View {
     @EnvironmentObject private var coordinator: ChatCoordinator
     @ObservedObject private var tasks = TaskStore.shared
     @ObservedObject private var platform = PlatformSyncService.shared
+    @State private var isInitialLoading = true
 
     private var customerSessions: [LiveSession] {
         coordinator.sessions.filter { !$0.isTeamDM }
@@ -29,6 +30,11 @@ struct ReportsAnalyticsView: View {
 
     var body: some View {
         List {
+            if isInitialLoading {
+                Section {
+                    PAXScreenLoadingStack(status: L10n.ModuleReports, rowCount: 4)
+                }
+            } else {
             Section {
                 PlatformHeroHeader(
                     title: L10n.ModuleReports,
@@ -66,6 +72,7 @@ struct ReportsAnalyticsView: View {
                     .font(.subheadline)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
+            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -82,6 +89,15 @@ struct ReportsAnalyticsView: View {
         .refreshable {
             await platform.refreshReports(auth: auth)
             await coordinator.refreshSessions(auth: auth)
+        }
+        .onAppear {
+            Task {
+                await platform.refreshReports(auth: auth)
+                try? await Task.sleep(nanoseconds: 450_000_000)
+                withAnimation(.easeOut(duration: 0.25)) {
+                    isInitialLoading = false
+                }
+            }
         }
     }
 

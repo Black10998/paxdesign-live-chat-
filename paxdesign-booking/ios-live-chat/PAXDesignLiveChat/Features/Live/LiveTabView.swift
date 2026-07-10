@@ -18,7 +18,11 @@ struct LiveTabView: View {
                 liveHero
             }
 
-            if liveSessions.isEmpty {
+            if coordinator.isLoading && coordinator.sessions.isEmpty {
+                Section {
+                    PAXScreenLoadingStack(status: L10n.LiveTitle, rowCount: 3)
+                }
+            } else if liveSessions.isEmpty {
                 Section {
                     emptyLiveState
                 }
@@ -55,33 +59,13 @@ struct LiveTabView: View {
     }
 
     private var liveHero: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(PAXTheme.accentSoft)
-                    .frame(width: 52, height: 52)
-                Image(systemName: "bell.and.waves.left.and.right.fill")
-                    .font(.title2)
-                    .foregroundStyle(PAXTheme.accent)
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                Text(L10n.LiveSupport)
-                    .font(.headline)
-                Text(coordinator.liveCount > 0
-                     ? L10n.LiveWaitingCount(coordinator.liveCount)
-                     : L10n.LiveNoRequests)
-                    .font(.subheadline)
-                    .foregroundStyle(PAXTheme.textSecondary)
-            }
-            Spacer()
-            if coordinator.liveCount > 0 {
-                Text("\(coordinator.liveCount)")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(PAXTheme.accent)
-            }
-        }
-        .padding(16)
-        .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.82, borderOpacity: 0.44, shadowOpacity: 0.18)
+        PAXAccentBannerCard(
+            title: L10n.LiveSupport,
+            subtitle: coordinator.liveCount > 0
+                ? L10n.LiveWaitingCount(coordinator.liveCount)
+                : L10n.LiveNoRequests,
+            systemImage: "bell.and.waves.left.and.right.fill"
+        )
     }
 
     private var emptyLiveState: some View {
@@ -98,7 +82,7 @@ struct LiveTabView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 48)
-        .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.12)
+        .paxCard(.feature, tint: PAXTheme.success)
     }
 }
 
@@ -140,8 +124,9 @@ private struct LiveRequestCard: View {
 
             HStack(spacing: 10) {
                 if canReply {
-                    Button(L10n.CommonDecline, role: .destructive, action: onDecline)
+                    Button(L10n.CommonDecline, action: onDecline)
                         .buttonStyle(.bordered)
+                        .tint(PAXTheme.danger)
                     Button(L10n.CommonTakeover, action: onAccept)
                         .buttonStyle(.borderedProminent)
                         .tint(PAXTheme.accent)
@@ -153,20 +138,7 @@ private struct LiveRequestCard: View {
                 }
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(PAXTheme.accentSoft.opacity(0.42))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(PAXTheme.accent.opacity(0.34), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.16), radius: 12, x: 0, y: 8)
-        )
+        .paxCard(.accent, tint: PAXTheme.accent)
     }
 }
 

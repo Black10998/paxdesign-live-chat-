@@ -12,9 +12,14 @@ struct LiveChatSettingsView: View {
                     PAXHaptics.success()
                 }
 
-                Button(L10n.SettingsClearReadState, role: .destructive) {
-                    settings.readSessionIds = []
-                    PAXHaptics.light()
+                Button(L10n.SettingsClearReadState) {
+                    PAXDelete.confirm(
+                        message: L10n.SettingsLiveChatFooter,
+                        confirmTitle: L10n.SettingsClearReadState
+                    ) {
+                        settings.readSessionIds = []
+                        PAXHaptics.light()
+                    }
                 }
             } header: {
                 Text(L10n.SettingsLiveChatBehavior)

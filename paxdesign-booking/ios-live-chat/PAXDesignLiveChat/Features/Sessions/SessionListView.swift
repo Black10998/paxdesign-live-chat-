@@ -207,9 +207,8 @@ struct SessionListView: View {
                                 } label: {
                                     Label(L10n.CommonArchive, systemImage: "archivebox")
                                 }
-                                Button(role: .destructive) {
-                                    PAXHaptics.warning()
-                                    Task { await coordinator.deleteSession(auth: auth, session: session) }
+                                Button {
+                                    requestDeleteSession(session)
                                 } label: {
                                     Label(L10n.CommonDelete, systemImage: "trash")
                                 }
@@ -234,14 +233,14 @@ struct SessionListView: View {
                                 .tint(.gray)
                             }
                         }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             if canReplyChats {
-                                Button(role: .destructive) {
-                                    PAXHaptics.warning()
-                                    Task { await coordinator.deleteSession(auth: auth, session: session) }
+                                Button {
+                                    requestDeleteSession(session)
                                 } label: {
                                     Label(L10n.CommonDelete, systemImage: "trash")
                                 }
+                                .tint(.red)
 
                                 Button {
                                     PAXHaptics.light()
@@ -264,6 +263,15 @@ struct SessionListView: View {
             await teamCoordinator.refresh(auth: auth)
         }
         .paxShellScrollClearance()
+    }
+
+    private func requestDeleteSession(_ session: LiveSession) {
+        PAXDelete.confirm(
+            message: "Diese Unterhaltung wird dauerhaft gelöscht.",
+            itemTitle: session.displayName
+        ) {
+            Task { await coordinator.deleteSession(auth: auth, session: session) }
+        }
     }
 
     private var noAccessView: some View {
@@ -389,15 +397,7 @@ struct SessionListView: View {
     }
 
     private var loadingState: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            PAXTimelineLoaderCard(status: "Unterhaltungen werden geladen")
-            ForEach(0..<5, id: \.self) { _ in
-                PAXSkeletonListRow()
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .paxGlassCardStyle(cornerRadius: 16, fillOpacity: 0.8, borderOpacity: 0.42, shadowOpacity: 0.12)
-            }
-        }
+        PAXScreenLoadingStack(status: "Unterhaltungen werden geladen", rowCount: 5)
     }
 }
 
@@ -412,73 +412,60 @@ private struct SessionRow: View {
     private var rowPadding: CGFloat { compact ? 10 : 12 }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            SessionAvatarView(
-                name: session.displayName,
-                size: avatarSize,
-                isLive: session.isLiveRequest,
-                isTeam: session.isTeamDM
-            )
+        PAXListCard(highlighted: isUnread, accent: PAXBrand.accent) {
+            HStack(alignment: .center, spacing: 14) {
+                SessionAvatarView(
+                    name: session.displayName,
+                    size: avatarSize,
+                    isLive: session.isLiveRequest,
+                    isTeam: session.isTeamDM
+                )
 
-            VStack(alignment: .leading, spacing: compact ? 3 : 5) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text(session.displayName)
-                        .font(.body.weight(isUnread ? .semibold : .regular))
-                        .foregroundStyle(PAXTheme.textPrimary)
-                        .lineLimit(1)
-
-                    Spacer(minLength: 4)
-
-                    if showTimestamp, let time = MessageTimeFormatter.relativeUpdatedLabel(from: session.updatedAt) {
-                        Text(time)
-                            .font(.caption)
-                            .foregroundStyle(isUnread ? PAXBrand.accent : PAXTheme.textTertiary)
+                VStack(alignment: .leading, spacing: compact ? 3 : 5) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text(session.displayName)
+                            .font(.body.weight(isUnread ? .semibold : .regular))
+                            .foregroundStyle(PAXTheme.textPrimary)
                             .lineLimit(1)
+
+                        Spacer(minLength: 4)
+
+                        if showTimestamp, let time = MessageTimeFormatter.relativeUpdatedLabel(from: session.updatedAt) {
+                            Text(time)
+                                .font(.caption)
+                                .foregroundStyle(isUnread ? PAXBrand.accent : PAXTheme.textTertiary)
+                                .lineLimit(1)
+                        }
                     }
-                }
 
-                HStack(alignment: .center, spacing: 8) {
-                    if session.isLiveRequest {
-                        liveIndicator
-                    } else if session.isTeamDM {
-                        teamBadge
-                    } else if showRating, let rating = SessionRatingBadge(rating: session.sessionRating) {
-                        rating
-                    }
+                    HStack(alignment: .center, spacing: 8) {
+                        if session.isLiveRequest {
+                            liveIndicator
+                        } else if session.isTeamDM {
+                            teamBadge
+                        } else if showRating, let rating = SessionRatingBadge(rating: session.sessionRating) {
+                            rating
+                        }
 
-                    Text(previewText)
-                        .font(.subheadline)
-                        .fontWeight(isUnread ? .medium : .regular)
-                        .foregroundStyle(isUnread ? PAXTheme.textPrimary : PAXTheme.textSecondary)
-                        .lineLimit(1)
+                        Text(previewText)
+                            .font(.subheadline)
+                            .fontWeight(isUnread ? .medium : .regular)
+                            .foregroundStyle(isUnread ? PAXTheme.textPrimary : PAXTheme.textSecondary)
+                            .lineLimit(1)
 
-                    Spacer(minLength: 0)
+                        Spacer(minLength: 0)
 
-                    if isUnread {
-                        Circle()
-                            .fill(PAXBrand.accent)
-                            .frame(width: 10, height: 10)
+                        if isUnread {
+                            Circle()
+                                .fill(PAXBrand.accent)
+                                .frame(width: 10, height: 10)
+                        }
                     }
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, rowPadding)
         .padding(.horizontal, 12)
         .padding(.vertical, 3)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(PAXTheme.surface.opacity(isUnread ? 0.82 : 0.74))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(isUnread ? PAXTheme.accent.opacity(0.42) : PAXTheme.border.opacity(0.42), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(isUnread ? 0.22 : 0.14), radius: 14, x: 0, y: 8)
-        )
         .contentShape(Rectangle())
     }
 

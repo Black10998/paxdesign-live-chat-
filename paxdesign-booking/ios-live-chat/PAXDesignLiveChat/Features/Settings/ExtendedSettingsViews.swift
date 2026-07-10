@@ -23,16 +23,20 @@ struct ChatDisplaySettingsView: View {
 struct DataStorageSettingsView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var settings: AppSettingsStore
-    @State private var showResetConfirm = false
-    @State private var showOnboardingResetConfirm = false
     @State private var onboardingResetMessage: String?
 
     var body: some View {
         List {
             Section {
                 LabeledContent(L10n.SettingsResetRead, value: "\(settings.readSessionIds.count)")
-                Button(L10n.SettingsResetRead, role: .destructive) {
-                    showResetConfirm = true
+                Button(L10n.SettingsResetRead) {
+                    PAXDelete.confirm(
+                        message: L10n.SettingsResetReadFooter,
+                        confirmTitle: L10n.SettingsResetRead
+                    ) {
+                        settings.readSessionIds.removeAll()
+                        PAXHaptics.success()
+                    }
                 }
             } footer: {
                 Text(L10n.SettingsResetReadFooter)
@@ -40,9 +44,14 @@ struct DataStorageSettingsView: View {
 
             Section(L10n.SettingsProfile) {
                 if settings.profileImageData != nil {
-                    Button(L10n.SettingsResetPhoto, role: .destructive) {
-                        settings.profileImageData = nil
-                        PAXHaptics.light()
+                    Button(L10n.SettingsResetPhoto) {
+                        PAXDelete.confirm(
+                            message: "Das Profilbild wird entfernt.",
+                            confirmTitle: L10n.SettingsResetPhoto
+                        ) {
+                            settings.profileImageData = nil
+                            PAXHaptics.light()
+                        }
                     }
                 } else {
                     Text(L10n.SettingsResetPhoto)
@@ -52,8 +61,13 @@ struct DataStorageSettingsView: View {
 
             if auth.canManageUsers {
                 Section {
-                    Button("Einführung zurücksetzen", role: .destructive) {
-                        showOnboardingResetConfirm = true
+                    Button("Einführung zurücksetzen") {
+                        PAXDelete.confirm(
+                            message: "Die Einführungstour wird beim nächsten Start erneut angezeigt.",
+                            confirmTitle: "Zurücksetzen"
+                        ) {
+                            Task { await resetOnboardingForCurrentUser() }
+                        }
                     }
                     if let onboardingResetMessage {
                         Text(onboardingResetMessage)
@@ -72,19 +86,6 @@ struct DataStorageSettingsView: View {
         .background(PAXBackground())
         .navigationTitle(L10n.SettingsDataStorage)
         .navigationBarTitleDisplayMode(.inline)
-        .confirmationDialog(L10n.SettingsResetRead, isPresented: $showResetConfirm) {
-            Button(L10n.SettingsResetRead, role: .destructive) {
-                settings.readSessionIds.removeAll()
-                PAXHaptics.success()
-            }
-        }
-        .confirmationDialog("Onboarding zurücksetzen?", isPresented: $showOnboardingResetConfirm) {
-            Button("Zurücksetzen", role: .destructive) {
-                Task { await resetOnboardingForCurrentUser() }
-            }
-        } message: {
-            Text("Die Einführungstour wird beim nächsten Start erneut angezeigt.")
-        }
     }
 
     private func resetOnboardingForCurrentUser() async {

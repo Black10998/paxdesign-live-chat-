@@ -91,10 +91,15 @@ struct ProfileView: View {
             }
 
             Section {
-                Button(L10n.SettingsSignOut, role: .destructive) {
-                    Task {
-                        await PushService.shared.unregisterTokenFromBackend(auth: auth)
-                        auth.logout()
+                Button(L10n.SettingsSignOut) {
+                    PAXDelete.confirm(
+                        message: "Sie werden von diesem Gerät abgemeldet.",
+                        confirmTitle: L10n.SettingsSignOut
+                    ) {
+                        Task {
+                            await PushService.shared.unregisterTokenFromBackend(auth: auth)
+                            auth.logout()
+                        }
                     }
                 }
             }

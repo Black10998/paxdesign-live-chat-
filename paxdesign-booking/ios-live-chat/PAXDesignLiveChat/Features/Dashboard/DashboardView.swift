@@ -14,6 +14,7 @@ struct DashboardView: View {
     @State private var showSearch = false
     @State private var showDashboardTour = false
     @State private var dashboardTourStepIndex = 0
+    @State private var isInitialLoading = true
 
     private var customerSessions: [LiveSession] {
         coordinator.sessions.filter { !$0.isTeamDM }
@@ -112,20 +113,26 @@ struct DashboardView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                heroHeader
-                metricsGrid
-                if PlatformModuleSettingsStore.shared.dashboardShowChart {
-                    activityChart
+            if isInitialLoading {
+                PAXScreenLoadingStack(status: "Dashboard wird geladen", rowCount: 3)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+            } else {
+                VStack(alignment: .leading, spacing: 20) {
+                    heroHeader
+                    metricsGrid
+                    if PlatformModuleSettingsStore.shared.dashboardShowChart {
+                        activityChart
+                    }
+                    activityFeed
+                    quickModules
+                    if PlatformModuleSettingsStore.shared.dashboardShowUpcoming {
+                        upcomingSection
+                    }
                 }
-                activityFeed
-                quickModules
-                if PlatformModuleSettingsStore.shared.dashboardShowUpcoming {
-                    upcomingSection
-                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
         }
         .paxShellScrollClearance()
         .paxScreenBackground()
@@ -181,6 +188,10 @@ struct DashboardView: View {
                     auth: auth
                 )
                 startDashboardTourIfNeeded()
+                try? await Task.sleep(nanoseconds: 450_000_000)
+                withAnimation(.easeOut(duration: 0.25)) {
+                    isInitialLoading = false
+                }
             }
         }
         .onChange(of: settings.dashboardTourCompleted) { completed in
@@ -202,29 +213,29 @@ struct DashboardView: View {
 
     private var metricsGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            DashboardMetricCard(
+            PAXMetricCard(
                 title: L10n.DashboardMetricSessions,
                 value: "\(platform.dashboard?.sessionsTotal ?? customerSessions.count)",
-                tint: .blue,
-                icon: "bubble.left.and.bubble.right.fill"
+                icon: "bubble.left.and.bubble.right.fill",
+                tint: .blue
             )
-            DashboardMetricCard(
+            PAXMetricCard(
                 title: L10n.DashboardMetricUnread,
                 value: "\(unreadCount)",
-                tint: .orange,
-                icon: "envelope.badge.fill"
+                icon: "envelope.badge.fill",
+                tint: .orange
             )
-            DashboardMetricCard(
+            PAXMetricCard(
                 title: L10n.DashboardMetricLive,
                 value: "\(platform.dashboard?.liveCount ?? coordinator.liveCount)",
-                tint: .red,
-                icon: "bell.and.waves.left.and.right.fill"
+                icon: "bell.and.waves.left.and.right.fill",
+                tint: .red
             )
-            DashboardMetricCard(
+            PAXMetricCard(
                 title: L10n.DashboardMetricTasks,
                 value: "\(platform.dashboard?.openTasks ?? tasks.openCount)",
-                tint: .green,
-                icon: "checklist"
+                icon: "checklist",
+                tint: .green
             )
         }
     }
@@ -251,29 +262,31 @@ struct DashboardView: View {
             } else {
                 VStack(spacing: 10) {
                     ForEach(recentActivityItems, id: \.sessionId) { session in
-                        HStack(spacing: 10) {
-                            Circle()
-                                .fill(session.isLiveRequest ? Color.red : PAXTheme.accent)
-                                .frame(width: 9, height: 9)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(session.displayName)
-                                    .font(.subheadline.weight(.semibold))
-                                Text(session.lastPreview.isEmpty ? session.detectedService : session.lastPreview)
-                                    .font(.caption)
-                                    .foregroundStyle(PAXTheme.textSecondary)
-                                    .lineLimit(1)
+                        PAXListCard(highlighted: session.isLiveRequest, accent: session.isLiveRequest ? .red : PAXTheme.accent) {
+                            HStack(spacing: 10) {
+                                Circle()
+                                    .fill(session.isLiveRequest ? Color.red : PAXTheme.accent)
+                                    .frame(width: 9, height: 9)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(session.displayName)
+                                        .font(.subheadline.weight(.semibold))
+                                    Text(session.lastPreview.isEmpty ? session.detectedService : session.lastPreview)
+                                        .font(.caption)
+                                        .foregroundStyle(PAXTheme.textSecondary)
+                                        .lineLimit(1)
+                                }
+                                Spacer()
+                                Text(MessageTimeFormatter.relativeUpdatedLabel(from: MessageTimeFormatter.date(fromUpdatedAt: session.updatedAt) ?? Date()))
+                                    .font(.caption2)
+                                    .foregroundStyle(PAXTheme.textTertiary)
                             }
-                            Spacer()
-                            Text(MessageTimeFormatter.relativeUpdatedLabel(from: MessageTimeFormatter.date(fromUpdatedAt: session.updatedAt) ?? Date()))
-                                .font(.caption2)
-                                .foregroundStyle(PAXTheme.textTertiary)
                         }
-                        .padding(.vertical, 2)
                     }
                 }
             }
         }
-        .paxNativeCard()
+        .padding(16)
+        .paxPremiumGlass(tier: .premium, cornerRadius: 18, accent: .mint)
     }
 
     private var activityChart: some View {
@@ -411,27 +424,6 @@ private struct DashboardMetric: Identifiable {
     let id = UUID()
     let label: String
     let value: Int
-}
-
-private struct DashboardMetricCard: View {
-    let title: String
-    let value: String
-    let tint: Color
-    let icon: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Image(systemName: icon)
-                .foregroundStyle(tint)
-            Text(value)
-                .font(.title.weight(.bold))
-            Text(title)
-                .font(.caption)
-                .foregroundStyle(PAXTheme.textSecondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .paxNativeCard()
-    }
 }
 
 private struct DashboardStatusChip: Identifiable {

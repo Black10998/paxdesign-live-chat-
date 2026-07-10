@@ -120,15 +120,7 @@ struct TeamMessagesHubView: View {
     }
 
     private var teamLoadingState: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            PAXTimelineLoaderCard(status: "Team-Unterhaltungen werden geladen")
-            ForEach(0..<4, id: \.self) { _ in
-                PAXSkeletonListRow()
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .paxGlassCardStyle(cornerRadius: 16, fillOpacity: 0.8, borderOpacity: 0.42, shadowOpacity: 0.1)
-            }
-        }
+        PAXScreenLoadingStack(status: "Team-Unterhaltungen werden geladen", rowCount: 4)
     }
 
     private func teamConversationRow(_ session: LiveSession) -> some View {
