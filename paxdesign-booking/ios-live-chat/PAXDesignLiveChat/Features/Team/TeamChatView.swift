@@ -161,7 +161,7 @@ struct TeamComposeView: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            let response = try await api.fetchStaff()
+            let response = try await api.fetchTeamContacts()
             staff = response.staff
         } catch {
             errorMessage = error.localizedDescription

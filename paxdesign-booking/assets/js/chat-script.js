@@ -138,6 +138,8 @@
   ];
   var LIVE_QUALIFY_TEXT   = 'Gerne. Damit ich Sie richtig weiterleiten kann: Worum geht es kurz — Website, AI Chatbot, Booking, Support oder ein anderes Thema?';
   var POLL_INTERVAL_MS    = 1000;
+  var POLL_INTERVAL_OPEN_MS = 350;
+  var widgetOpen          = false;
   var pageVisible         = !document.hidden;
 
   function init() {
@@ -240,11 +242,16 @@
   }
 
   function onWidgetOpen() {
+    widgetOpen = true;
     if (chatHandler === 'closed' && isSessionArchived(getSessionId())) {
       beginFreshSessionSilently();
     }
     updateEntryUi();
     notifyLayout();
+    if (getSessionId()) {
+      pollUpdates();
+      scheduleLivePolling();
+    }
     if (entryEl && !entryEl.hidden) {
       try {
         entryEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
@@ -253,6 +260,8 @@
   }
 
   function onWidgetClose() {
+    widgetOpen = false;
+    scheduleLivePolling();
     notifyLayout();
   }
 
@@ -1140,7 +1149,8 @@
       pollTimer = null;
       return;
     }
-    pollTimer = window.setInterval(pollUpdates, POLL_INTERVAL_MS);
+    var interval = widgetOpen ? POLL_INTERVAL_OPEN_MS : POLL_INTERVAL_MS;
+    pollTimer = window.setInterval(pollUpdates, interval);
   }
 
   document.addEventListener('visibilitychange', function () {
@@ -2304,7 +2314,9 @@
           domMsgIds[json.data.message.id] = true;
           seenMsgId(json.data.message.id);
           indexChatMessage(json.data.message);
+          pollSeq = Math.max(pollSeq, json.data.message.id);
         }
+        pollUpdates();
       });
   }
 

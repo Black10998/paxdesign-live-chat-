@@ -373,6 +373,60 @@ class PAXdesign_Live_Chat_Permissions {
     }
 
     /**
+     * Team compose picker: enabled staff plus administrators with live chat access.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function list_team_contacts_for_api() {
+        $out  = array();
+        $seen = array();
+
+        foreach (self::list_staff_for_api() as $member) {
+            if (empty($member['enabled'])) {
+                continue;
+            }
+            $uid = (int) $member['user_id'];
+            $seen[$uid] = true;
+            $out[] = $member;
+        }
+
+        $admin_users = get_users(array(
+            'role__in' => array('administrator'),
+            'fields'   => array('ID', 'display_name', 'user_email', 'user_login'),
+        ));
+
+        foreach ($admin_users as $user) {
+            $uid = (int) $user->ID;
+            if (isset($seen[$uid]) || !self::has_live_chat_access($uid)) {
+                continue;
+            }
+            $avatar_meta = trim((string) get_user_meta($uid, 'pax_live_avatar_url', true));
+            $avatar_url  = $avatar_meta !== '' ? esc_url_raw($avatar_meta) : get_avatar_url($uid, array('size' => 256));
+            $out[] = array(
+                'user_id'     => $uid,
+                'name'        => $user->display_name,
+                'email'       => $user->user_email,
+                'username'    => $user->user_login,
+                'avatar_url'  => $avatar_url,
+                'profile_title' => (string) get_user_meta($uid, 'pax_live_profile_title', true),
+                'profile_phone' => (string) get_user_meta($uid, 'pax_live_profile_phone', true),
+                'profile_notes' => (string) get_user_meta($uid, 'pax_live_profile_notes', true),
+                'onboarding_completed' => (bool) get_user_meta($uid, 'pax_live_onboarding_completed', true),
+                'enabled'     => true,
+                'permissions' => self::get_effective_permissions($uid),
+                'is_administrator' => true,
+            );
+            $seen[$uid] = true;
+        }
+
+        usort($out, function ($a, $b) {
+            return strcasecmp((string) $a['name'], (string) $b['name']);
+        });
+
+        return $out;
+    }
+
+    /**
      * @param WP_User|int|null $user
      * @return WP_User|null
      */

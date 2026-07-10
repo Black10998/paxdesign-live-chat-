@@ -79,20 +79,33 @@
     var pollSeq = 0;
     var listTimer = null;
     var msgTimer = null;
-    var LIST_POLL_MS = 3500;
-    var MSG_POLL_MS = 1100;
+    var LIST_POLL_MS = 2000;
+    var MSG_POLL_MS = 400;
+    var LIST_POLL_ACTIVE_MS = 1200;
     var pageVisible = !document.hidden;
 
     function scheduleListPoll() {
       if (listTimer) clearInterval(listTimer);
       if (!pageVisible) return;
-      listTimer = setInterval(loadList, LIST_POLL_MS);
+      var interval = selectedSession ? LIST_POLL_ACTIVE_MS : LIST_POLL_MS;
+      listTimer = setInterval(loadList, interval);
     }
 
     function scheduleMsgPoll() {
       if (msgTimer) clearInterval(msgTimer);
       if (!pageVisible || !selectedSession) return;
       msgTimer = setInterval(pollMessages, MSG_POLL_MS);
+    }
+
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', function (event) {
+        var data = event.data || {};
+        if (data.type !== 'pax-session-sync') return;
+        if (data.session_id && data.session_id === selectedSession) {
+          pollMessages();
+        }
+        loadList();
+      });
     }
 
     document.addEventListener('visibilitychange', function () {
@@ -1751,6 +1764,7 @@
       updateSessionHeader({});
       renderMessagesLoadingSkeleton();
       loadSession(sessionId, true);
+      pollMessages();
       scheduleMsgPoll();
       syncSelectedListItem();
       updateMobilePanels();
@@ -1893,6 +1907,7 @@
             return;
           }
           replaceOptimisticMessage(tempId, res.data.message);
+          pollMessages();
           loadList();
         })
         .fail(function () {
@@ -1920,6 +1935,7 @@
             $input.val('');
             clearReply();
             if (res.data && res.data.message) renderMessages([res.data.message], false);
+            pollMessages();
             $messages.scrollTop($messages[0].scrollHeight);
           })
           .fail(function () {

@@ -54,18 +54,33 @@ self.addEventListener('push', function (event) {
     renotify: true,
     requireInteraction: true,
     vibrate: [200, 100, 200, 100, 400],
-    data: { url: data.url || ADMIN_URL, session: data.session || '' },
+    data: { url: data.url || ADMIN_URL, session: data.session || data.session_id || '' },
   };
+
+  function notifyOpenClients(sessionId) {
+    return clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function (list) {
+      list.forEach(function (client) {
+        client.postMessage({
+          type: 'pax-session-sync',
+          session_id: sessionId || '',
+        });
+      });
+    });
+  }
+
+  var showNote = self.registration.showNotification(data.title || 'PAX Live Chat', options);
+  var syncClients = notifyOpenClients(options.data.session);
 
   if (typeof data.badge === 'number' && self.registration.setAppBadge) {
     event.waitUntil(
       Promise.all([
-        self.registration.showNotification(data.title || 'PAX Live Chat', options),
+        showNote,
+        syncClients,
         self.registration.setAppBadge(data.badge),
       ])
     );
   } else {
-    event.waitUntil(self.registration.showNotification(data.title || 'PAX Live Chat', options));
+    event.waitUntil(Promise.all([showNote, syncClients]));
   }
 });
 

@@ -406,6 +406,13 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url), endpoint: "team-sessions", as: SessionListResponse.self)
     }
 
+    func fetchTeamContacts() async throws -> StaffListResponse {
+        guard let url = liveAdminURL(path: "team/contacts") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "team-contacts", as: StaffListResponse.self)
+    }
+
     func openTeamConversation(userId: Int) async throws -> TeamOpenResponse {
         guard let url = liveAdminURL(path: "team/sessions/open") else {
             throw LiveChatAPIError.invalidURL

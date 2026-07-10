@@ -153,19 +153,38 @@ final class TeamChatThreadModel: ObservableObject {
     func send(auth: AuthStore, teamCoordinator: TeamMessagingCoordinator) async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, let api = auth.api else { return }
+
+        let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000)
+        let optimistic = LiveMessage(
+            id: tempId,
+            role: "admin",
+            content: text,
+            ts: Int(Date().timeIntervalSince1970),
+            senderName: auth.profile?.displayName,
+            senderId: auth.profile?.userId
+        )
+        messages.append(optimistic)
+        draft = ""
         isSending = true
         defer { isSending = false }
+
         do {
             let sent = try await api.sendTeamMessage(sessionId, content: text)
-            draft = ""
-            mergeMessages([sent.message])
+            if let index = messages.firstIndex(where: { $0.id == tempId }) {
+                messages[index] = sent.message
+            } else {
+                mergeMessages([sent.message])
+            }
             pollSeq = max(pollSeq, sent.seq)
             currentSeq = max(currentSeq, sent.seq)
             MessageSendSound.shared.playIfEnabled()
             await teamCoordinator.refresh(auth: auth)
             await markRead(auth: auth)
+            await poll(auth: auth)
             PAXHaptics.light()
         } catch {
+            messages.removeAll { $0.id == tempId }
+            draft = text
             errorMessage = error.localizedDescription
         }
     }

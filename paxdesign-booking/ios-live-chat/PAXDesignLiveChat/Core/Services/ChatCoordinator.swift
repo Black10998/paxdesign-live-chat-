@@ -542,19 +542,42 @@ final class ChatThreadModel: ObservableObject {
         AdminTypingSound.shared.stop()
         typingNotifyTask?.cancel()
         await notifyTypingStop(auth: auth)
+
+        let replyId = replyToMessage?.id
+        let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000)
+        let optimistic = LiveMessage(
+            id: tempId,
+            role: "admin",
+            content: text,
+            ts: Int(Date().timeIntervalSince1970),
+            replyTo: replyId,
+            senderName: auth.profile?.displayName,
+            senderId: auth.profile?.userId
+        )
+        messages.append(optimistic)
+        knownMessageIds.insert(tempId)
+        draft = ""
+        clearReply()
+        clearSuggestions()
         isSending = true
         defer { isSending = false }
-        let replyId = replyToMessage?.id
+
         do {
             let msg = try await api.sendMessage(sessionId, text: text, replyTo: replyId)
-            draft = ""
-            clearReply()
-            messages.append(msg)
+            if let index = messages.firstIndex(where: { $0.id == tempId }) {
+                messages[index] = msg
+            } else {
+                messages.append(msg)
+            }
+            knownMessageIds.remove(tempId)
             knownMessageIds.insert(msg.id)
             pollSeq = max(pollSeq, msg.id)
-            clearSuggestions()
             MessageSendSound.shared.playIfEnabled()
+            await poll(auth: auth)
         } catch {
+            messages.removeAll { $0.id == tempId }
+            knownMessageIds.remove(tempId)
+            draft = text
             errorMessage = error.localizedDescription
         }
     }
@@ -562,24 +585,46 @@ final class ChatThreadModel: ObservableObject {
     func sendImage(auth: AuthStore, imageData: Data, filename: String) async {
         guard let api = auth.api else { return }
         typingNotifyTask?.cancel()
+        let caption = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        let replyId = replyToMessage?.id
+        let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000) - 1
+        let optimistic = LiveMessage(
+            id: tempId,
+            role: "admin",
+            content: caption.isEmpty ? "📷 Foto" : caption,
+            ts: Int(Date().timeIntervalSince1970),
+            replyTo: replyId,
+            senderName: auth.profile?.displayName,
+            senderId: auth.profile?.userId
+        )
+        messages.append(optimistic)
+        knownMessageIds.insert(tempId)
+        draft = ""
+        clearReply()
         isSending = true
         defer { isSending = false }
-        let replyId = replyToMessage?.id
+
         do {
             let msg = try await api.sendImage(
                 sessionId,
                 imageData: imageData,
                 filename: filename,
-                caption: draft.trimmingCharacters(in: .whitespacesAndNewlines),
+                caption: caption,
                 replyTo: replyId
             )
-            draft = ""
-            clearReply()
-            messages.append(msg)
+            if let index = messages.firstIndex(where: { $0.id == tempId }) {
+                messages[index] = msg
+            } else {
+                messages.append(msg)
+            }
+            knownMessageIds.remove(tempId)
             knownMessageIds.insert(msg.id)
             pollSeq = max(pollSeq, msg.id)
             MessageSendSound.shared.playIfEnabled()
+            await poll(auth: auth)
         } catch {
+            messages.removeAll { $0.id == tempId }
+            knownMessageIds.remove(tempId)
             errorMessage = error.localizedDescription
         }
     }
