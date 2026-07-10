@@ -111,7 +111,7 @@ struct MessageBubbleView: View {
         }
     }
 
-    private var isOutgoing: Bool { message.role == "admin" }
+    private var isOutgoing: Bool { message.role == "admin" || message.role == "assistant" }
 }
 
 private struct BubbleTail: View {

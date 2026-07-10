@@ -30,6 +30,7 @@
   var welcomeEl        = root.querySelector('.paxdesign-booking-chat-welcome');
 
   var messages           = [];
+  var lastUserSyncPromise = Promise.resolve();
   var isStreaming        = false;
   var abortCtrl          = null;
   var initialized        = false;
@@ -876,6 +877,13 @@
     return localMsgId;
   }
 
+  function newClientMessageId() {
+    if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+      return window.crypto.randomUUID();
+    }
+    return 'web-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+  }
+
   function getSessionId() {
     try {
       var id = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
@@ -1649,10 +1657,19 @@
     if (!text) return;
     clearMessageFailed(msgEl);
     if (isHumanMode()) {
+      var pending = messages.find(function (message) {
+        return String(message.id) === String(msgId);
+      });
+      var clientMsgId = pending && pending.client_msg_id
+        ? pending.client_msg_id
+        : newClientMessageId();
+      if (pending) pending.client_msg_id = clientMsgId;
       isStreaming = true;
       updateSendButton();
-      sendHumanModeMessage(text)
-        .then(function () { syncChatLog(); })
+      sendHumanModeMessage(text, clientMsgId)
+        .then(function (serverMessage) {
+          if (pending && serverMessage && serverMessage.id) pending.id = serverMessage.id;
+        })
         .catch(function (err) {
           markMessageFailed(msgId, text);
           showError(err.message || 'Verbindungsfehler.');
@@ -2298,11 +2315,14 @@
   function appendUserMessage(text, opts) {
     opts = opts || {};
     var userId = nextLocalId();
+    var clientMsgId = opts.clientMsgId || newClientMessageId();
     domMsgIds[userId] = true;
     seenMsgId(userId);
     renderMessageDom('user', text, userId);
-    messages.push({ role: 'user', content: text, id: userId });
-    if (!opts.skipSync) syncChatLog();
+    messages.push({ role: 'user', content: text, id: userId, client_msg_id: clientMsgId });
+    if (!opts.skipSync) {
+      lastUserSyncPromise = syncChatLog();
+    }
     return userId;
   }
 
@@ -2312,14 +2332,25 @@
     var serviceName = parseBookingMarker(fullText);
 
     if (cleanText) {
-      var id = streamingMsgId || nextLocalId();
+      var id = meta.serverMessage && meta.serverMessage.id
+        ? meta.serverMessage.id
+        : (streamingMsgId || nextLocalId());
+      if (streamingMsgId && id !== streamingMsgId) {
+        delete domMsgIds[streamingMsgId];
+        if (pendingMessageEl) pendingMessageEl.setAttribute('data-msg-id', String(id));
+      }
       domMsgIds[id] = true;
       seenMsgId(id);
       if (pendingMessageEl) {
         pendingMessageEl.setAttribute('data-msg-id', String(id));
         attachMessageChrome(pendingMessageEl, pendingBubble, 'assistant', cleanText, id, '');
       }
-      messages.push({ role: 'assistant', content: cleanText, id: id });
+      messages.push({
+        role: 'assistant',
+        content: cleanText,
+        id: id,
+        client_msg_id: meta.clientMsgId || newClientMessageId()
+      });
     }
 
     streamingMsgId = 0;
@@ -2379,13 +2410,14 @@
     setTimeout(function () { el.remove(); }, 5000);
   }
 
-  function sendHumanModeMessage(text) {
+  function sendHumanModeMessage(text, clientMsgId) {
     var formData = new FormData();
     formData.append('action', 'paxdesign_chat_live_user_send');
     formData.append('nonce', config.nonce);
     stampChatRequest(formData);
     formData.append('session_id', getSessionId());
     formData.append('message', text);
+    formData.append('client_msg_id', clientMsgId);
     if (replyToId) formData.append('reply_to', String(replyToId));
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) { return res.json(); })
@@ -2401,6 +2433,7 @@
           pollSeq = Math.max(pollSeq, json.data.message.id);
         }
         pollUpdates();
+        return json.data.message;
       });
   }
 
@@ -2500,13 +2533,17 @@
     if (handleLiveAgentFlow(text)) return;
 
     if (isHumanMode()) {
-      var userMsgId = appendUserMessage(text, { skipSync: true });
+      var clientMsgId = newClientMessageId();
+      var userMsgId = appendUserMessage(text, { skipSync: true, clientMsgId: clientMsgId });
       isStreaming = true;
       updateSendButton();
-      sendHumanModeMessage(text)
-        .then(function () {
+      sendHumanModeMessage(text, clientMsgId)
+        .then(function (serverMessage) {
           clearMessageFailed(threadEl.querySelector('[data-msg-id="' + userMsgId + '"]'));
-          syncChatLog();
+          if (serverMessage && serverMessage.id) {
+            var local = messages.find(function (m) { return m.client_msg_id === clientMsgId; });
+            if (local) local.id = serverMessage.id;
+          }
         })
         .catch(function (err) {
           markMessageFailed(userMsgId, text);
@@ -2520,18 +2557,20 @@
     }
 
     appendUserMessage(text);
+    lastUserSyncPromise.then(function () {
+      isStreaming = true;
+      updateSendButton();
+      showTyping();
+      var assistantClientMsgId = newClientMessageId();
 
-    isStreaming = true;
-    updateSendButton();
-    showTyping();
-
-    var formData = new FormData();
-    formData.append('action', 'paxdesign_chat');
-    formData.append('nonce', config.nonce);
-    stampChatRequest(formData);
-    formData.append('session_id', getSessionId());
-    formData.append('messages', JSON.stringify(messages.filter(function (m) {
-      return m.role === 'user' || m.role === 'assistant';
+      var formData = new FormData();
+      formData.append('action', 'paxdesign_chat');
+      formData.append('nonce', config.nonce);
+      stampChatRequest(formData);
+      formData.append('session_id', getSessionId());
+      formData.append('assistant_client_msg_id', assistantClientMsgId);
+      formData.append('messages', JSON.stringify(messages.filter(function (m) {
+        return m.role === 'user' || m.role === 'assistant';
     })));
     formData.append('website', honeypot ? honeypot.value : '');
     abortCtrl = new AbortController();
@@ -2578,6 +2617,7 @@
         var reader = response.body.getReader();
         var decoder = new TextDecoder();
         var buffer = '';
+        var persistedAssistantMessage = null;
 
         function ensureAssistantBubble() {
           if (bubble) return;
@@ -2625,6 +2665,8 @@
                 fullText += data.delta;
                 scheduleStreamUpdate(bubble, fullText);
               }
+            } else if (data.type === 'done' && data.message) {
+              persistedAssistantMessage = data.message;
             }
           } catch (e) {}
         }
@@ -2637,6 +2679,8 @@
                 finalizeAssistantMessage(fullText, {
                   messageEl: messageEl,
                   userBookingIntent: userBookingIntent,
+                  clientMsgId: assistantClientMsgId,
+                  serverMessage: persistedAssistantMessage,
                 });
               } else if (!streamError) {
                 removeTyping();
@@ -2672,6 +2716,7 @@
         pendingMessageEl = null;
         updateSendButton();
       });
+    });
   }
 
   function handleSend(e) {

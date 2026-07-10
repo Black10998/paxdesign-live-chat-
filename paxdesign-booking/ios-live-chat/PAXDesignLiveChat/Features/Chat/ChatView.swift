@@ -6,7 +6,7 @@ import PhotosUI
 struct ChatView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
-    @StateObject private var thread: ChatThreadModel
+    @ObservedObject private var thread: ChatThreadModel
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var settings: AppSettingsStore
 
@@ -16,13 +16,13 @@ struct ChatView: View {
     #else
     @State private var photoItem: PhotosPickerItem?
     #endif
-    @State private var showCustomerOverview = true
+    @State private var showCustomerOverview = false
     @State private var pendingImage: UIImage?
     @State private var showCamera = false
     @State private var showImagePreview = false
 
     init(sessionId: String) {
-        _thread = StateObject(wrappedValue: ChatThreadModel(sessionId: sessionId))
+        _thread = ObservedObject(wrappedValue: ChatThreadRegistry.shared.bookingThread(sessionId: sessionId))
     }
 
     var body: some View {
@@ -32,11 +32,9 @@ struct ChatView: View {
                     settings.privacyBannerDismissed = true
                 }
                 .padding(.horizontal, 12)
-                .padding(.top, 8)
+                .padding(.top, 4)
                 .transition(.opacity)
             }
-
-            compactStatusBar
 
             if showCustomerOverview {
                 customerOverviewPanel
@@ -75,6 +73,9 @@ struct ChatView: View {
         .navigationTitle(thread.customerName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            compactStatusBar
+        }
         .onAppear {
             let serverSeq = coordinator.serverSeq(for: thread.sessionId)
             thread.start(auth: auth, expectedServerSeq: serverSeq)
@@ -84,7 +85,7 @@ struct ChatView: View {
         }
         .onDisappear {
             AdminTypingSound.shared.stop()
-            thread.stop()
+            thread.suspend()
             if coordinator.activeSessionId == thread.sessionId {
                 coordinator.activeSessionId = nil
             }
@@ -94,7 +95,8 @@ struct ChatView: View {
             guard let syncedId = note.userInfo?["session_id"] as? String,
                   syncedId == thread.sessionId else { return }
             let serverSeq = coordinator.serverSeq(for: syncedId)
-            Task { await thread.refreshNow(auth: auth, expectedServerSeq: serverSeq) }
+            let inlineMessage = note.userInfo?["inline_message"]
+            Task { await thread.refreshNow(auth: auth, expectedServerSeq: serverSeq, inlineMessage: inlineMessage) }
         }
         .sheet(item: $imageViewer) { item in
             FullScreenImageView(url: item.url)
@@ -151,34 +153,24 @@ struct ChatView: View {
 
     private var compactStatusBar: some View {
         HStack(spacing: 6) {
-            Circle().fill(statusColor).frame(width: 7, height: 7)
+            Circle().fill(statusColor).frame(width: 6, height: 6)
             Text(statusLabel)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(PAXTheme.textSecondary)
+                .lineLimit(1)
             if let ratingView = SessionRatingBadge(rating: thread.sessionRating), canViewRatings {
                 ratingView
             }
-            Spacer()
+            Spacer(minLength: 0)
             if thread.handler != "admin" {
                 Text(L10n.ChatReadOnly)
                     .font(.caption2)
                     .foregroundStyle(PAXTheme.textTertiary)
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(PAXTheme.surface.opacity(0.68))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(PAXTheme.border.opacity(0.4), lineWidth: 1)
-                )
-        )
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .background(PAXTheme.surface.opacity(0.55))
     }
 
     private var customerOverviewPanel: some View {

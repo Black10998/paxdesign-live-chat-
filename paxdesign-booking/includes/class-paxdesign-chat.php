@@ -238,7 +238,10 @@ class PAXdesign_Chat {
             }
         }
 
-        $this->stream_chat_response($messages);
+        $assistant_client_id = isset($_POST['assistant_client_msg_id'])
+            ? sanitize_text_field(wp_unslash($_POST['assistant_client_msg_id']))
+            : '';
+        $this->stream_chat_response($messages, $session_id, $assistant_client_id);
     }
 
     /**
@@ -292,7 +295,7 @@ class PAXdesign_Chat {
         return array('ok' => true);
     }
 
-    private function stream_chat_response($messages) {
+    private function stream_chat_response($messages, $session_id = '', $assistant_client_id = '') {
         $validated = $this->validate_messages($messages);
         if (is_wp_error($validated)) {
             status_header(400);
@@ -318,7 +321,7 @@ class PAXdesign_Chat {
             wp_send_json_error(array('message' => 'Chat ist derzeit nicht konfiguriert.'));
         }
 
-        $this->stream_openai_response($api_key, $validated);
+        $this->stream_openai_response($api_key, $validated, $session_id, $assistant_client_id);
     }
 
     private function validate_messages($messages) {
@@ -440,7 +443,7 @@ class PAXdesign_Chat {
         exit;
     }
 
-    private function stream_openai_response($api_key, $messages) {
+    private function stream_openai_response($api_key, $messages, $session_id = '', $assistant_client_id = '') {
         if (!function_exists('curl_init')) {
             status_header(503);
             wp_send_json_error(array('message' => 'Chat-Server unterstützt keine Streaming-Verbindung (cURL fehlt).'));
@@ -466,6 +469,7 @@ class PAXdesign_Chat {
             $state = array(
                 'line_buffer' => '',
                 'has_content' => false,
+                'full_content'=> '',
                 'api_error'   => '',
             );
 
@@ -503,10 +507,22 @@ class PAXdesign_Chat {
             curl_close($ch);
 
             if ($state['has_content']) {
+                $stored = null;
+                if ($session_id !== '' && class_exists('PAXdesign_Chat_Live')) {
+                    $stored = PAXdesign_Chat_Live::get_instance()->append_message(
+                        $session_id,
+                        'assistant',
+                        $state['full_content'],
+                        array('client_msg_id' => $assistant_client_id)
+                    );
+                }
                 update_option('paxdesign_chat_last_model', $model, false);
                 delete_option('paxdesign_chat_last_error');
                 update_option('paxdesign_chat_last_test', time(), false);
                 $this->log_event('openai_success', array('model' => $model));
+                if (is_array($stored)) {
+                    echo 'data: ' . wp_json_encode(array('type' => 'done', 'message' => $stored)) . "\n\n";
+                }
                 echo "data: [DONE]\n\n";
                 exit;
             }
@@ -568,6 +584,7 @@ class PAXdesign_Chat {
 
             if ($text !== '') {
                 $state['has_content'] = true;
+                $state['full_content'] .= $text;
                 echo 'data: ' . wp_json_encode(array('type' => 'text', 'text' => $text)) . "\n\n";
                 $this->flush_sse_output();
             }

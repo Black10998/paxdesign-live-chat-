@@ -16,53 +16,46 @@ struct ChatMessageListView: View {
     @State private var displayRows: [MessageDisplayRow] = []
 
     var body: some View {
-        Group {
-            if isLoading && messages.isEmpty {
-                ScrollView {
-                    PAXScreenLoadingStack(status: "Nachrichten werden geladen", rowCount: 5)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                }
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: PAXMessageStyle.threadSpacing) {
-                            ForEach(displayRows) { row in
-                                ChatMessageRow(
-                                    row: row,
-                                    canReply: canReply,
-                                    handler: handler,
-                                    agentDisplayName: agentDisplayName,
-                                    customerDisplayName: customerDisplayName,
-                                    onReply: { onReply(row.message) },
-                                    onCopy: { onCopy(row.message) },
-                                    onImageTap: onImageTap
-                                )
-                                .id(row.id)
-                            }
-                            if userTyping {
-                                TypingIndicator(customerName: customerDisplayName)
-                                    .id("typing-indicator")
-                            }
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
-                        .padding(.bottom, PAXShellLayout.scrollBottomPadding(tabBarVisible: false))
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: PAXMessageStyle.threadSpacing) {
+                    ForEach(displayRows) { row in
+                        ChatMessageRow(
+                            row: row,
+                            canReply: canReply,
+                            handler: handler,
+                            agentDisplayName: agentDisplayName,
+                            customerDisplayName: customerDisplayName,
+                            onReply: { onReply(row.message) },
+                            onCopy: { onCopy(row.message) },
+                            onImageTap: onImageTap
+                        )
+                        .id(row.id)
                     }
-                    .onChange(of: messages.count) { _ in scrollToBottom(proxy: proxy) }
-                    .onChange(of: userTyping) { _ in scrollToBottom(proxy: proxy) }
+                    if userTyping {
+                        TypingIndicator(customerName: customerDisplayName)
+                            .id("typing-indicator")
+                    }
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .padding(.bottom, PAXShellLayout.scrollBottomPadding(tabBarVisible: false))
             }
+            .onChange(of: messages.count) { _ in scrollToBottom(proxy: proxy) }
+            .onChange(of: userTyping) { _ in scrollToBottom(proxy: proxy) }
         }
         .onAppear { rebuildRows() }
         .onChange(of: messages) { _ in rebuildRows() }
     }
 
     private func rebuildRows() {
-        let messageLookup = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
+        var messageLookup: [Int: LiveMessage] = [:]
+        for message in messages {
+            messageLookup[message.id] = message
+        }
         displayRows = messages.enumerated().map { index, message in
             MessageDisplayRow(
-                id: message.id,
+                id: "\(index)-\(message.id)",
                 message: message,
                 previous: index > 0 ? messages[index - 1] : nil,
                 next: index + 1 < messages.count ? messages[index + 1] : nil,
@@ -74,14 +67,14 @@ struct ChatMessageListView: View {
     private func scrollToBottom(proxy: ScrollViewProxy) {
         if userTyping {
             proxy.scrollTo("typing-indicator", anchor: .bottom)
-        } else if let last = messages.last {
+        } else if let last = displayRows.last {
             proxy.scrollTo(last.id, anchor: .bottom)
         }
     }
 }
 
 private struct MessageDisplayRow: Identifiable {
-    let id: Int
+    let id: String
     let message: LiveMessage
     let previous: LiveMessage?
     let next: LiveMessage?
@@ -113,6 +106,8 @@ private struct ChatMessageRow: View {
         switch message.role {
         case "admin":
             if let sender = message.senderName, !sender.isEmpty { return sender }
+            return agentDisplayName
+        case "assistant":
             return agentDisplayName
         case "user":
             if let sender = message.senderName, !sender.isEmpty { return sender }

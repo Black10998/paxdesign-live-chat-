@@ -36,6 +36,65 @@ private enum LiveChatDecode {
         }
         return false
     }
+
+    static func optionalInt<C: CodingKey>(_ container: KeyedDecodingContainer<C>, _ key: C) -> Int? {
+        if let value = try? container.decodeIfPresent(Int.self, forKey: key) {
+            return value
+        }
+        if let value = try? container.decodeIfPresent(String.self, forKey: key), let parsed = Int(value) {
+            return parsed
+        }
+        return nil
+    }
+
+    static func decodeLiveMessages<C: CodingKey>(from container: KeyedDecodingContainer<C>, key: C) -> [LiveMessage] {
+        guard var array = try? container.nestedUnkeyedContainer(forKey: key) else {
+            return []
+        }
+        var messages: [LiveMessage] = []
+        while !array.isAtEnd {
+            if let message = try? array.decode(LiveMessage.self) {
+                messages.append(message)
+            } else {
+                _ = try? array.decode(LossyJSONSkip.self)
+            }
+        }
+        return messages
+    }
+}
+
+/// Skips one JSON value when decoding a partially invalid message array.
+private struct LossyJSONSkip: Decodable {
+    init(from decoder: Decoder) throws {
+        if let container = try? decoder.singleValueContainer() {
+            if container.decodeNil() { return }
+            if (try? container.decode(Bool.self)) != nil { return }
+            if (try? container.decode(Int.self)) != nil { return }
+            if (try? container.decode(Double.self)) != nil { return }
+            if (try? container.decode(String.self)) != nil { return }
+        }
+        if var unkeyed = try? decoder.unkeyedContainer() {
+            while !unkeyed.isAtEnd {
+                _ = try? unkeyed.decode(LossyJSONSkip.self)
+            }
+            return
+        }
+        if let keyed = try? decoder.container(keyedBy: LossyJSONKey.self) {
+            for key in keyed.allKeys {
+                _ = try? keyed.decode(LossyJSONSkip.self, forKey: key)
+            }
+        }
+    }
+}
+
+private struct LossyJSONKey: CodingKey {
+    var stringValue: String
+    var intValue: Int?
+    init?(stringValue: String) { self.stringValue = stringValue }
+    init?(intValue: Int) {
+        self.intValue = intValue
+        self.stringValue = "\(intValue)"
+    }
 }
 
 struct LiveSession: Identifiable, Codable, Hashable {
@@ -52,6 +111,7 @@ struct LiveSession: Identifiable, Codable, Hashable {
     let seq: Int
     let lastPreview: String
     let lastRole: String
+    let customerLanguage: String
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -67,6 +127,7 @@ struct LiveSession: Identifiable, Codable, Hashable {
         case seq
         case lastPreview = "last_preview"
         case lastRole = "last_role"
+        case customerLanguage = "customer_language"
     }
 
     init(
@@ -82,7 +143,8 @@ struct LiveSession: Identifiable, Codable, Hashable {
         messageCount: Int,
         seq: Int,
         lastPreview: String,
-        lastRole: String
+        lastRole: String,
+        customerLanguage: String = ""
     ) {
         self.id = id
         self.sessionId = sessionId
@@ -97,6 +159,7 @@ struct LiveSession: Identifiable, Codable, Hashable {
         self.seq = seq
         self.lastPreview = lastPreview
         self.lastRole = lastRole
+        self.customerLanguage = customerLanguage
     }
 
     init(from decoder: Decoder) throws {
@@ -114,6 +177,7 @@ struct LiveSession: Identifiable, Codable, Hashable {
         seq = LiveChatDecode.int(container, CodingKeys.seq)
         lastPreview = LiveChatDecode.string(container, CodingKeys.lastPreview)
         lastRole = LiveChatDecode.string(container, CodingKeys.lastRole)
+        customerLanguage = LiveChatDecode.string(container, CodingKeys.customerLanguage)
     }
 
     var displayName: String {
@@ -163,6 +227,7 @@ struct EmployeeIdentity: Codable, Hashable {
 
 struct LiveMessage: Identifiable, Codable, Hashable {
     let id: Int
+    let clientMsgId: String?
     let role: String
     let content: String
     let ts: Int?
@@ -176,6 +241,7 @@ struct LiveMessage: Identifiable, Codable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case id, role, content, ts, reaction
+        case clientMsgId = "client_msg_id"
         case imageUrl = "image_url"
         case replyTo = "reply_to"
         case senderId = "sender_id"
@@ -190,6 +256,7 @@ struct LiveMessage: Identifiable, Codable, Hashable {
 
     init(
         id: Int,
+        clientMsgId: String? = nil,
         role: String,
         content: String,
         ts: Int? = nil,
@@ -202,6 +269,7 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         senderRole: String? = nil
     ) {
         self.id = id
+        self.clientMsgId = clientMsgId
         self.role = role
         self.content = content
         self.ts = ts
@@ -217,17 +285,19 @@ struct LiveMessage: Identifiable, Codable, Hashable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = LiveChatDecode.int(container, CodingKeys.id)
+        let decodedClientId = LiveChatDecode.string(container, CodingKeys.clientMsgId)
+        clientMsgId = decodedClientId.isEmpty ? nil : decodedClientId
         role = LiveChatDecode.string(container, CodingKeys.role)
         content = LiveChatDecode.string(container, CodingKeys.content)
-        ts = try container.decodeIfPresent(Int.self, forKey: .ts)
+        ts = LiveChatDecode.optionalInt(container, CodingKeys.ts)
         imageUrl = try container.decodeIfPresent(String.self, forKey: .imageUrl)
-        replyTo = try container.decodeIfPresent(Int.self, forKey: .replyTo)
+        replyTo = LiveChatDecode.optionalInt(container, CodingKeys.replyTo)
         if let raw = try container.decodeIfPresent(String.self, forKey: .reaction) {
             reaction = MessageReaction.normalize(raw)
         } else {
             reaction = nil
         }
-        senderId = try container.decodeIfPresent(Int.self, forKey: .senderId)
+        senderId = LiveChatDecode.optionalInt(container, CodingKeys.senderId)
         let decodedSenderName = LiveChatDecode.string(container, CodingKeys.senderName)
         if decodedSenderName.isEmpty {
             let legacy = try decoder.container(keyedBy: LegacyCodingKeys.self)
@@ -240,6 +310,16 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         senderAvatar = avatar.isEmpty ? nil : avatar
         let roleLabel = LiveChatDecode.string(container, CodingKeys.senderRole)
         senderRole = roleLabel.isEmpty ? nil : roleLabel
+    }
+
+    /// Decode a message embedded in an SSE event payload for instant UI insertion.
+    static func fromStreamPayload(_ value: Any?) -> LiveMessage? {
+        guard let dict = value as? [String: Any],
+              JSONSerialization.isValidJSONObject(dict),
+              let data = try? JSONSerialization.data(withJSONObject: dict) else {
+            return nil
+        }
+        return try? JSONDecoder().decode(LiveMessage.self, from: data)
     }
 }
 
@@ -269,6 +349,31 @@ struct SessionListResponse: Codable {
     }
 }
 
+struct ConversationSyncResponse: Codable {
+    let sessions: [LiveSession]
+    let liveCount: Int
+    let teamSessions: [LiveSession]
+    let threads: [String: PollResponse]
+    let teamThreads: [String: PollResponse]
+
+    enum CodingKeys: String, CodingKey {
+        case sessions
+        case liveCount = "live_count"
+        case teamSessions = "team_sessions"
+        case threads
+        case teamThreads = "team_threads"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sessions = (try? container.decode([LiveSession].self, forKey: .sessions)) ?? []
+        liveCount = LiveChatDecode.int(container, CodingKeys.liveCount)
+        teamSessions = (try? container.decode([LiveSession].self, forKey: .teamSessions)) ?? []
+        threads = (try? container.decode([String: PollResponse].self, forKey: .threads)) ?? [:]
+        teamThreads = (try? container.decode([String: PollResponse].self, forKey: .teamThreads)) ?? [:]
+    }
+}
+
 struct PollResponse: Codable {
     let handler: String
     let handlerLabel: String
@@ -280,6 +385,7 @@ struct PollResponse: Codable {
     let detectedService: String
     let updatedAt: String
     let seq: Int
+    let messageCount: Int
     let lastReadSeq: Int
     let messages: [LiveMessage]
     let adminTyping: Bool
@@ -296,7 +402,9 @@ struct PollResponse: Codable {
         case sessionRating = "session_rating"
         case detectedService = "detected_service"
         case updatedAt = "updated_at"
-        case seq, messages, reactions
+        case seq
+        case messageCount = "message_count"
+        case messages, reactions
         case adminTyping = "admin_typing"
         case userTyping = "user_typing"
         case lastReadSeq = "last_read_seq"
@@ -308,14 +416,17 @@ struct PollResponse: Codable {
         handlerLabel = LiveChatDecode.string(container, CodingKeys.handlerLabel)
         adminName = LiveChatDecode.string(container, CodingKeys.adminName)
         adminUserId = LiveChatDecode.int(container, CodingKeys.adminUserId)
-        assignedAgent = try container.decodeIfPresent(EmployeeIdentity.self, forKey: .assignedAgent)
+        assignedAgent = container.contains(.assignedAgent)
+            ? (try? container.decode(EmployeeIdentity.self, forKey: .assignedAgent))
+            : nil
         customerName = LiveChatDecode.string(container, CodingKeys.customerName)
         sessionRating = LiveChatDecode.int(container, CodingKeys.sessionRating)
         detectedService = LiveChatDecode.string(container, CodingKeys.detectedService)
         updatedAt = LiveChatDecode.string(container, CodingKeys.updatedAt)
         seq = LiveChatDecode.int(container, CodingKeys.seq)
+        messageCount = LiveChatDecode.int(container, CodingKeys.messageCount)
         lastReadSeq = LiveChatDecode.int(container, CodingKeys.lastReadSeq)
-        messages = (try? container.decode([LiveMessage].self, forKey: .messages)) ?? []
+        messages = LiveChatDecode.decodeLiveMessages(from: container, key: CodingKeys.messages)
         adminTyping = LiveChatDecode.bool(container, CodingKeys.adminTyping)
         userTyping = LiveChatDecode.bool(container, CodingKeys.userTyping)
         reactions = (try? container.decode([String: String].self, forKey: .reactions)) ?? [:]
@@ -375,6 +486,7 @@ struct AdminProfile: Codable {
     let termsAccepted: Bool
     let termsAcceptedAt: Int
     let permissionStatus: OnboardingPermissionStatus?
+    let spokenLanguages: [String]
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -390,6 +502,7 @@ struct AdminProfile: Codable {
         case termsAccepted = "terms_accepted"
         case termsAcceptedAt = "terms_accepted_at"
         case permissionStatus = "permission_status"
+        case spokenLanguages = "spoken_languages"
     }
 
     init(from decoder: Decoder) throws {
@@ -409,6 +522,7 @@ struct AdminProfile: Codable {
         termsAccepted = (try? container.decode(Bool.self, forKey: .termsAccepted)) ?? onboardingCompleted
         termsAcceptedAt = LiveChatDecode.int(container, CodingKeys.termsAcceptedAt)
         permissionStatus = try container.decodeIfPresent(OnboardingPermissionStatus.self, forKey: .permissionStatus)
+        spokenLanguages = (try? container.decode([String].self, forKey: .spokenLanguages)) ?? ["de", "en"]
     }
 
     func updating(modulePermissions: ModulePermissions) -> AdminProfile {
@@ -427,7 +541,8 @@ struct AdminProfile: Codable {
             onboardingCompleted: onboardingCompleted,
             termsAccepted: termsAccepted,
             termsAcceptedAt: termsAcceptedAt,
-            permissionStatus: permissionStatus
+            permissionStatus: permissionStatus,
+            spokenLanguages: spokenLanguages
         )
     }
 
@@ -446,7 +561,8 @@ struct AdminProfile: Codable {
         onboardingCompleted: Bool,
         termsAccepted: Bool,
         termsAcceptedAt: Int,
-        permissionStatus: OnboardingPermissionStatus?
+        permissionStatus: OnboardingPermissionStatus?,
+        spokenLanguages: [String]
     ) {
         self.userId = userId
         self.name = name
@@ -463,6 +579,7 @@ struct AdminProfile: Codable {
         self.termsAccepted = termsAccepted
         self.termsAcceptedAt = termsAcceptedAt
         self.permissionStatus = permissionStatus
+        self.spokenLanguages = spokenLanguages
     }
 
     var displayEmail: String {

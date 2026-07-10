@@ -1,6 +1,11 @@
 name: Verify Sideload Build
 
 on:
+  pull_request:
+    paths:
+      - 'paxdesign-booking/ios-live-chat/**'
+      - 'paxdesign-booking/paxdesign-booking.php'
+      - '.github/workflows/verify-sideload.yml'
   push:
     branches:
       - main
@@ -38,6 +43,12 @@ jobs:
         run: |
           cd paxdesign-booking/ios-live-chat
           ./scripts/smoke-test-launch.sh
+
+      - name: Messaging unit tests
+        run: |
+          cd paxdesign-booking/ios-live-chat
+          chmod +x scripts/test-messaging.sh
+          ./scripts/test-messaging.sh
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4

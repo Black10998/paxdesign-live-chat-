@@ -3,6 +3,7 @@ import Foundation
 enum LiveChatAPIError: LocalizedError {
     case invalidURL
     case unauthorized
+    case rejected(String)
     case server(String)
     case decoding(Error)
 
@@ -10,6 +11,7 @@ enum LiveChatAPIError: LocalizedError {
         switch self {
         case .invalidURL: return L10n.ApiErrorInvalidUrl
         case .unauthorized: return L10n.ApiErrorLoginFailed
+        case .rejected(let msg): return msg
         case .server(let msg): return msg
         case .decoding(let err): return "Antwort konnte nicht gelesen werden: \(err.localizedDescription)"
         }
@@ -117,6 +119,10 @@ final class LiveChatAPI {
         restBase.absoluteString
     }
 
+    var cursorScope: String {
+        "\(publicApiBaseURL)|\(username.lowercased())"
+    }
+
     private func perform<T: Decodable>(_ request: URLRequest, endpoint: String, as type: T.Type) async throws -> T {
         let data: Data
         let http: HTTPURLResponse
@@ -139,10 +145,11 @@ final class LiveChatAPI {
         }
 
         if http.statusCode >= 400 {
-            if let message = wpErrorMessage(from: data) {
-                throw LiveChatAPIError.server(message)
+            let message = wpErrorMessage(from: data) ?? "HTTP \(http.statusCode)"
+            if http.statusCode < 500 {
+                throw LiveChatAPIError.rejected(message)
             }
-            throw LiveChatAPIError.server("HTTP \(http.statusCode)")
+            throw LiveChatAPIError.server(message)
         }
 
         do {
@@ -170,14 +177,39 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url), endpoint: "sessions", as: SessionListResponse.self)
     }
 
-    func fetchSession(_ sessionId: String) async throws -> PollResponse {
-        guard let url = liveAdminURL(
-            path: "sessions/\(sessionId)/poll",
-            query: [URLQueryItem(name: "full", value: "1")]
-        ) else {
+    func fetchConversationSync() async throws -> ConversationSyncResponse {
+        guard let url = liveAdminURL(path: "conversations/sync") else {
             throw LiveChatAPIError.invalidURL
         }
-        return try await perform(authRequest(url: url), endpoint: "poll:\(sessionId):full", as: PollResponse.self)
+        return try await perform(authRequest(url: url), endpoint: "conversations-sync", as: ConversationSyncResponse.self)
+    }
+
+    func fetchSession(_ sessionId: String) async throws -> PollResponse {
+        guard let detailURL = liveAdminURL(path: "sessions/\(sessionId)") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        do {
+            return try await perform(
+                authRequest(url: detailURL),
+                endpoint: "session:\(sessionId)",
+                as: PollResponse.self
+            )
+        } catch {
+            guard let pollURL = liveAdminURL(
+                path: "sessions/\(sessionId)/poll",
+                query: [
+                    URLQueryItem(name: "full", value: "1"),
+                    URLQueryItem(name: "history", value: "1"),
+                ]
+            ) else {
+                throw error
+            }
+            return try await perform(
+                authRequest(url: pollURL),
+                endpoint: "poll:\(sessionId):full",
+                as: PollResponse.self
+            )
+        }
     }
 
     func pollSession(_ sessionId: String, since: Int) async throws -> PollResponse {
@@ -240,11 +272,19 @@ final class LiveChatAPI {
         _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "release", as: EmptyResponse.self)
     }
 
-    func sendMessage(_ sessionId: String, text: String, replyTo: Int? = nil) async throws -> LiveMessage {
+    func sendMessage(
+        _ sessionId: String,
+        text: String,
+        replyTo: Int? = nil,
+        clientMsgId: String = UUID().uuidString.lowercased()
+    ) async throws -> LiveMessage {
         guard let url = liveAdminURL(path: "sessions/\(sessionId)/messages") else {
             throw LiveChatAPIError.invalidURL
         }
-        var payload: [String: Any] = ["message": text]
+        var payload: [String: Any] = [
+            "message": text,
+            "client_msg_id": clientMsgId,
+        ]
         if let replyTo, replyTo > 0 {
             payload["reply_to"] = replyTo
         }
@@ -259,7 +299,8 @@ final class LiveChatAPI {
         imageData: Data,
         filename: String,
         caption: String = "",
-        replyTo: Int? = nil
+        replyTo: Int? = nil,
+        clientMsgId: String = UUID().uuidString.lowercased()
     ) async throws -> LiveMessage {
         guard let url = liveAdminURL(path: "sessions/\(sessionId)/images") else {
             throw LiveChatAPIError.invalidURL
@@ -286,6 +327,9 @@ final class LiveChatAPI {
             body.append("Content-Disposition: form-data; name=\"reply_to\"\r\n\r\n".data(using: .utf8)!)
             body.append("\(replyTo)\r\n".data(using: .utf8)!)
         }
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"client_msg_id\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(clientMsgId)\r\n".data(using: .utf8)!)
 
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
 
@@ -435,11 +479,18 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url), endpoint: "team-poll:\(sessionId)", as: PollResponse.self)
     }
 
-    func sendTeamMessage(_ sessionId: String, content: String) async throws -> TeamSendResponse {
+    func sendTeamMessage(
+        _ sessionId: String,
+        content: String,
+        clientMsgId: String = UUID().uuidString.lowercased()
+    ) async throws -> TeamSendResponse {
         guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/messages") else {
             throw LiveChatAPIError.invalidURL
         }
-        let body = try JSONEncoder().encode(["content": content])
+        let body = try JSONEncoder().encode([
+            "content": content,
+            "client_msg_id": clientMsgId,
+        ])
         return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-send", as: TeamSendResponse.self)
     }
 
@@ -483,6 +534,38 @@ final class LiveChatAPI {
                 onEvent(event)
             }
         }
+    }
+
+    func acknowledgeEvent(channel: String, eventId: Int, seq: Int = 0) async throws {
+        guard eventId > 0,
+              let url = liveAdminURL(path: "events/ack") else {
+            return
+        }
+        let payload: [String: Any] = [
+            "consumer_id": ChatCursorStore.shared.consumerId,
+            "channel": channel,
+            "event_id": eventId,
+            "seq": seq,
+        ]
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        _ = try await perform(
+            authRequest(url: url, method: "POST", body: body),
+            endpoint: "events-ack",
+            as: EmptyResponse.self
+        )
+    }
+
+    func markSessionRead(_ sessionId: String, seq: Int) async throws {
+        guard seq > 0,
+              let url = liveAdminURL(path: "sessions/\(sessionId)/read") else {
+            return
+        }
+        let body = try JSONEncoder().encode(["seq": seq])
+        _ = try await perform(
+            authRequest(url: url, method: "POST", body: body),
+            endpoint: "session-read",
+            as: EmptyResponse.self
+        )
     }
 
     func registerAPNs(token: String, sandbox: Bool, metadata: [String: Any] = [:]) async throws {
@@ -791,6 +874,14 @@ final class LiveChatAPI {
         }
         let body = try JSONSerialization.data(withJSONObject: ["hub_display_name": displayName])
         return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "profile-save", as: AdminProfile.self)
+    }
+
+    func updateSpokenLanguages(_ languages: [String]) async throws -> AdminProfile {
+        guard let url = liveAdminURL(path: "profile") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONSerialization.data(withJSONObject: ["spoken_languages": languages])
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "profile-spoken-languages", as: AdminProfile.self)
     }
 }
 

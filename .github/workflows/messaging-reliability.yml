@@ -1,0 +1,51 @@
+name: Messaging Reliability
+
+on:
+  pull_request:
+    paths:
+      - "paxdesign-booking/includes/**"
+      - "paxdesign-booking/assets/js/**"
+      - "paxdesign-booking/ios-live-chat/**"
+      - "tests/messaging/**"
+      - ".github/workflows/messaging-reliability.yml"
+  push:
+    branches: [main]
+
+jobs:
+  protocol:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ALLOW_EMPTY_ROOT_PASSWORD: "1"
+          MARIADB_DATABASE: pax_chat_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      PAX_TEST_DSN: mysql:host=127.0.0.1;port=3306;dbname=pax_chat_test;charset=utf8mb4
+      PAX_TEST_DB_USER: root
+      PAX_TEST_DB_PASS: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PHP MySQL extension
+        run: sudo apt-get update && sudo apt-get install -y php-mysql
+
+      - name: Validate PHP syntax
+        run: rg --files -g '*.php' paxdesign-booking tests/messaging | xargs -n1 php -l
+
+      - name: Validate browser clients
+        run: |
+          node --check paxdesign-booking/assets/js/chat-script.js
+          node --check paxdesign-booking/assets/js/chat-live-admin.js
+
+      - name: Run durability, concurrency and reconnect tests
+        run: php tests/messaging/run.php

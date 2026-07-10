@@ -28,10 +28,10 @@ enum ForegroundRefreshCoordinator {
             } ?? false
 
             if !recentPoll {
-                await coordinator.refreshSessions(auth: auth)
+                await coordinator.refreshSessions(auth: auth, mode: .lightweight)
             }
 
-            await teamCoordinator.refresh(auth: auth)
+            await teamCoordinator.refresh(auth: auth, mode: .lightweight)
             await permissions.refreshStatuses()
 
             Task(priority: .utility) {

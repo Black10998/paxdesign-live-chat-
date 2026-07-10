@@ -18,15 +18,19 @@ enum MessageMerge {
             return (sorted, true)
         }
 
-        var map = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
-        var changed = false
-        var maxIncomingId = existing.last?.id ?? 0
-        var appendOnly = true
+        let incomingClientIds = Set(incoming.compactMap(\.clientMsgId))
+        let reconciledExisting = existing.filter { message in
+            guard message.id < 0, let clientId = message.clientMsgId else { return true }
+            return !incomingClientIds.contains(clientId)
+        }
+        var map: [Int: LiveMessage] = [:]
+        for message in reconciledExisting {
+            map[message.id] = message
+        }
+        var changed = reconciledExisting.count != existing.count
+            || map.count != reconciledExisting.count
 
         for msg in incoming {
-            if msg.id <= maxIncomingId { appendOnly = false }
-            maxIncomingId = max(maxIncomingId, msg.id)
-
             if let prior = map[msg.id] {
                 var merged = msg
                 merged = preserveReaction(merged, prior)
@@ -42,14 +46,18 @@ enum MessageMerge {
 
         guard changed else { return (existing, false) }
 
-        if appendOnly, let lastExisting = existing.last {
-            let newOnes = incoming.filter { $0.id > lastExisting.id }.sorted { $0.id < $1.id }
-            if !newOnes.isEmpty {
-                return (existing + newOnes, true)
-            }
-        }
-
         return (map.values.sorted { $0.id < $1.id }, true)
+    }
+
+    /// Establish authoritative server history while preserving in-flight optimistic sends.
+    static func baseline(server: [LiveMessage], preservingOptimistic optimistic: [LiveMessage]) -> [LiveMessage] {
+        let sorted = server.sorted { $0.id < $1.id }
+        let acknowledgedClientIds = Set(sorted.compactMap(\.clientMsgId))
+        let pending = optimistic.filter {
+            $0.id < 0 && ($0.clientMsgId.map { !acknowledgedClientIds.contains($0) } ?? true)
+        }
+        guard !pending.isEmpty else { return sorted }
+        return mergeSorted(existing: sorted, incoming: pending).messages
     }
 
     static func applyReactions(
@@ -58,8 +66,11 @@ enum MessageMerge {
     ) -> (messages: [LiveMessage], changed: Bool) {
         guard !reactions.isEmpty else { return (messages, false) }
 
-        var map = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
-        var changed = false
+        var map: [Int: LiveMessage] = [:]
+        for message in messages {
+            map[message.id] = message
+        }
+        var changed = map.count != messages.count
 
         for (key, raw) in reactions {
             guard let messageId = Int(key),

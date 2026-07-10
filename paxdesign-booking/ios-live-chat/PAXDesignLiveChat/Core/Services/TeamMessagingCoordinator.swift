@@ -9,6 +9,11 @@ final class TeamMessagingCoordinator: ObservableObject {
     @Published var errorMessage: String?
 
     private var pollTask: Task<Void, Never>?
+    private let inboxSubscriptionId = UUID()
+    private var inboxRefreshTask: Task<Void, Never>?
+    private var listLoopCounter = 0
+    private static let inboxDebounceNs: UInt64 = 1_500_000_000
+    private static let fullSyncEveryListCycles = 24
 
     static func mergeTeamSessions(teamSessions: [LiveSession], coordinatorSessions: [LiveSession]) -> [LiveSession] {
         var merged: [String: LiveSession] = [:]
@@ -31,35 +36,104 @@ final class TeamMessagingCoordinator: ObservableObject {
             .count
     }
 
+    func bumpTeamSession(sessionId: String, message: LiveMessage, seq: Int) {
+        guard let index = teamSessions.firstIndex(where: { $0.sessionId == sessionId }) else { return }
+        let updated = LiveSessionPatch.bumped(teamSessions[index], message: message, seq: seq)
+        teamSessions.remove(at: index)
+        teamSessions.insert(updated, at: 0)
+        persistTeamListCache()
+    }
+
+    private func persistTeamListCache() {
+        let existing = SessionListCache.shared.load()
+        SessionListCache.shared.save(
+            sessions: existing?.sessions ?? [],
+            teamSessions: teamSessions,
+            liveCount: existing?.liveCount ?? 0
+        )
+    }
+
     func start(auth: AuthStore) {
         guard auth.isLoggedIn else { return }
         stop()
+        if let api = auth.api {
+            SessionListCache.shared.setSiteScope(api.publicApiBaseURL)
+            if teamSessions.isEmpty, let cached = SessionListCache.shared.load() {
+                applyTeamSessions(cached.teamSessions)
+            }
+        }
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
-                await self?.refresh(auth: auth)
+                guard let self else { return }
+                self.listLoopCounter += 1
+                if self.listLoopCounter.isMultiple(of: Self.fullSyncEveryListCycles) {
+                    await self.refresh(auth: auth, mode: .full)
+                } else {
+                    await self.refresh(auth: auth, mode: .lightweight)
+                }
                 try? await Task.sleep(nanoseconds: AppRefreshPolicy.teamListInterval)
             }
         }
         if let api = auth.api {
-            ChatEventStream.shared.startInbox(api: api) { [weak self] event in
-                Task { @MainActor in
-                    guard let self else { return }
-                    if event.type == "conversation_deleted" {
-                        await self.refresh(auth: auth)
-                        return
+            ChatEventStream.shared.subscribeInbox(id: inboxSubscriptionId, api: api) { [weak self] event in
+                guard let self else { return }
+                guard let sessionId = event.payload["session_id"] as? String, sessionId.hasPrefix("team_") else {
+                    return
+                }
+                if event.type == "conversation_deleted" {
+                    self.scheduleInboxListRefresh(auth: auth)
+                    return
+                }
+                if event.type == "message" {
+                    let incoming = StreamPayload.messages(from: event.payload)
+                    for inline in incoming {
+                        let seq = max(StreamPayload.int(event.payload["seq"]), inline.id)
+                        ConversationHistoryStore.shared.mergeMessage(
+                            sessionId: sessionId,
+                            message: inline,
+                            seq: seq
+                        )
+                        ChatThreadRegistry.shared.teamThread(sessionId: sessionId).applyLiveMessage(
+                            inline,
+                            seq: seq
+                        )
+                        self.bumpTeamSession(sessionId: sessionId, message: inline, seq: seq)
                     }
-                    if event.type == "message" || event.type == "read" || event.type == "session_update" {
-                        await self.refresh(auth: auth)
+                    if !incoming.isEmpty {
+                        var userInfo: [String: Any] = ["session_id": sessionId]
+                        if incoming.count == 1 {
+                            userInfo["inline_message"] = event.payload["message"]
+                        }
+                        NotificationCenter.default.post(
+                            name: .paxSessionSync,
+                            object: nil,
+                            userInfo: userInfo
+                        )
                     }
                 }
+                if event.type == "message" || event.type == "read" || event.type == "session_update" {
+                    self.scheduleInboxListRefresh(auth: auth)
+                }
             }
+        }
+    }
+
+    private func scheduleInboxListRefresh(auth: AuthStore) {
+        inboxRefreshTask?.cancel()
+        inboxRefreshTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: Self.inboxDebounceNs)
+            guard !Task.isCancelled, let self else { return }
+            await self.refresh(auth: auth, mode: .lightweight)
         }
     }
 
     func stop() {
         pollTask?.cancel()
         pollTask = nil
-        ChatEventStream.shared.stopInbox()
+        inboxRefreshTask?.cancel()
+        inboxRefreshTask = nil
+        listLoopCounter = 0
+        ChatEventStream.shared.unsubscribeInbox(id: inboxSubscriptionId)
     }
 
     func deleteConversation(sessionId: String, mode: String, auth: AuthStore) async -> (success: Bool, message: String?) {
@@ -74,7 +148,23 @@ final class TeamMessagingCoordinator: ObservableObject {
         }
     }
 
-    func refresh(auth: AuthStore) async {
+    func applyTeamSessions(_ sessions: [LiveSession]) {
+        if sessions != teamSessions {
+            teamSessions = sessions
+        }
+        errorMessage = nil
+    }
+
+    func refresh(auth: AuthStore, mode: SessionRefreshMode = .lightweight) async {
+        switch mode {
+        case .full:
+            await fullConversationSync(auth: auth)
+        case .lightweight:
+            await refreshLightweight(auth: auth)
+        }
+    }
+
+    func fullConversationSync(auth: AuthStore) async {
         guard auth.isLoggedIn, let api = auth.api else {
             if !teamSessions.isEmpty { teamSessions = [] }
             return
@@ -83,15 +173,36 @@ final class TeamMessagingCoordinator: ObservableObject {
         if shouldShowLoading { isLoading = true }
         defer { if shouldShowLoading { isLoading = false } }
         do {
-            let response = try await api.fetchTeamSessions()
-            if response.sessions != teamSessions {
-                teamSessions = response.sessions
-            }
-            errorMessage = nil
+            let response = try await api.fetchConversationSync()
+            ConversationLocalSync.shared.apply(response)
+            applyTeamSessions(response.teamSessions)
+            SessionListCache.shared.save(
+                sessions: response.sessions,
+                teamSessions: response.teamSessions,
+                liveCount: response.liveCount
+            )
         } catch {
             if case LiveChatAPIError.unauthorized = error {
                 auth.handleUnauthorized()
-            } else {
+            } else if teamSessions.isEmpty {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func refreshLightweight(auth: AuthStore) async {
+        guard auth.isLoggedIn, let api = auth.api else {
+            if !teamSessions.isEmpty { teamSessions = [] }
+            return
+        }
+        do {
+            let response = try await api.fetchTeamSessions()
+            applyTeamSessions(response.sessions)
+            persistTeamListCache()
+        } catch {
+            if case LiveChatAPIError.unauthorized = error {
+                auth.handleUnauthorized()
+            } else if teamSessions.isEmpty {
                 errorMessage = error.localizedDescription
             }
         }
@@ -113,7 +224,7 @@ final class TeamMessagingCoordinator: ObservableObject {
 @MainActor
 final class TeamChatThreadModel: ObservableObject {
     @Published var messages: [LiveMessage] = []
-    @Published var isLoadingMessages = true
+    @Published var isLoadingMessages = false
     @Published var participantName = ""
     @Published var draft = ""
     @Published var isSending = false
@@ -125,6 +236,17 @@ final class TeamChatThreadModel: ObservableObject {
     private var pollSeq = 0
     private var pollTask: Task<Void, Never>?
     private weak var auth: AuthStore?
+    private var threadSubscriptionId: UUID?
+    private var lastStreamEventAt = Date.distantPast
+    private var streamSnapshotReady = false
+    private var pendingStreamEvents: [ChatStreamEvent] = []
+    private var pendingInlineMessages: [LiveMessage] = []
+    private var historyBaselined = false
+    private var serverMessageCount = 0
+    private var lifecycleGeneration = 0
+    private let activePollIntervalNs: UInt64 = 1_000_000_000
+    private let recoveryPollIntervalNs: UInt64 = 5_000_000_000
+    private let streamStaleThreshold: TimeInterval = 20
 
     init(sessionId: String) {
         self.sessionId = sessionId
@@ -132,33 +254,281 @@ final class TeamChatThreadModel: ObservableObject {
 
     func start(auth: AuthStore) {
         self.auth = auth
-        stop()
-        pollTask = Task { [weak self] in
-            while !Task.isCancelled {
-                await self?.poll(auth: auth)
-                try? await Task.sleep(nanoseconds: AppRefreshPolicy.teamThreadInterval)
-            }
+        hydrateFromLocalStore()
+
+        if let pollTask, !pollTask.isCancelled {
+            return
         }
-        if let api = auth.api {
-            ChatEventStream.shared.startThread(api: api, sessionId: sessionId, isTeam: true) { [weak self] event in
-                Task { @MainActor in
-                    guard let self else { return }
-                    if event.type == "conversation_deleted" {
-                        self.onConversationRemoved?()
-                        return
-                    }
-                    if event.type == "message" {
-                        await self.poll(auth: auth)
+
+        lifecycleGeneration += 1
+        let generation = lifecycleGeneration
+        stopBackgroundWork()
+        streamSnapshotReady = true
+        isLoadingMessages = false
+
+        pollTask = Task { [weak self] in
+            guard let self else { return }
+            self.beginEventStream(auth: auth, generation: generation)
+            async let history: Void = self.loadFullHistory(auth: auth, showLoading: false)
+            async let pending: Void = self.retryPendingMessages(auth: auth)
+            _ = await (history, pending)
+            guard !Task.isCancelled, self.lifecycleGeneration == generation else { return }
+            self.lastStreamEventAt = Date()
+
+            while !Task.isCancelled, self.lifecycleGeneration == generation {
+                if self.historyBaselined {
+                    await self.poll(auth: auth)
+                    if self.serverMessageCount > 0 && self.persistedMessageCount() < self.serverMessageCount {
+                        await self.reloadFullHistory(auth: auth)
                     }
                 }
+                let interval = Date().timeIntervalSince(self.lastStreamEventAt) < self.streamStaleThreshold
+                    ? self.activePollIntervalNs
+                    : self.recoveryPollIntervalNs
+                try? await Task.sleep(nanoseconds: interval)
             }
         }
     }
 
+    func hydrateFromLocalStore(force: Bool = false) {
+        if !force && !messages.isEmpty { return }
+        guard let snapshot = ConversationHistoryStore.shared.snapshot(for: sessionId) else { return }
+        applyBaselineSnapshot(snapshot.toPollResponse(), persistCache: false)
+        isLoadingMessages = false
+    }
+
+    func applySilentSync(_ data: PollResponse) {
+        applyBaselineSnapshot(data, persistCache: false)
+        isLoadingMessages = false
+    }
+
+    func applyLiveMessage(_ message: LiveMessage, seq: Int) {
+        insertIncomingMessages([message])
+        lastStreamEventAt = Date()
+        if seq > 0 {
+            pollSeq = max(pollSeq, seq)
+            currentSeq = max(currentSeq, seq)
+        }
+    }
+
+    func refreshNow(auth: AuthStore, inlineMessage: Any? = nil) async {
+        if let inline = LiveMessage.fromStreamPayload(inlineMessage) {
+            insertIncomingMessages([inline])
+            lastStreamEventAt = Date()
+            if historyBaselined {
+                let targetSeq = max(currentSeq, inline.id)
+                if needsHistoryRecovery(throughSeq: targetSeq) {
+                    await recoverMissingHistory(auth: auth, throughSeq: targetSeq)
+                }
+            }
+            return
+        }
+        guard historyBaselined else { return }
+        await poll(auth: auth)
+    }
+
+    func suspend() {
+        lifecycleGeneration += 1
+        stopBackgroundWork()
+    }
+
     func stop() {
+        suspend()
+    }
+
+    private func restoreFromCache() -> Bool {
+        guard let snapshot = ConversationHistoryStore.shared.snapshot(for: sessionId) else {
+            return false
+        }
+        applyBaselineSnapshot(snapshot.toPollResponse(), persistCache: false)
+        isLoadingMessages = false
+        return !messages.isEmpty || snapshot.messageCount > 0
+    }
+
+    private func stopBackgroundWork() {
         pollTask?.cancel()
         pollTask = nil
-        ChatEventStream.shared.stopThread()
+        if let threadSubscriptionId {
+            ChatEventStream.shared.unsubscribeThread(id: threadSubscriptionId)
+            self.threadSubscriptionId = nil
+        }
+    }
+
+    private func resetThreadState() {
+        messages = []
+        pollSeq = 0
+        currentSeq = 0
+        historyBaselined = false
+        serverMessageCount = 0
+        streamSnapshotReady = false
+        pendingStreamEvents = []
+        pendingInlineMessages = []
+        isLoadingMessages = true
+    }
+
+    private func loadFullHistory(auth: AuthStore, showLoading: Bool = false) async {
+        guard let api = auth.api else { return }
+        defer { isLoadingMessages = false }
+        do {
+            let response = try await api.pollTeamSession(sessionId, since: 0, full: true)
+            applyBaselineSnapshot(response)
+            await verifyHistoryIntegrity(auth: auth)
+            errorMessage = nil
+        } catch {
+            if case LiveChatAPIError.unauthorized = error {
+                auth.handleUnauthorized()
+            } else {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func reloadFullHistory(auth: AuthStore) async {
+        guard let api = auth.api else { return }
+        do {
+            let response = try await api.pollTeamSession(sessionId, since: 0, full: true)
+            applyBaselineSnapshot(response)
+            await verifyHistoryIntegrity(auth: auth)
+            errorMessage = nil
+        } catch {
+            if case LiveChatAPIError.unauthorized = error {
+                auth.handleUnauthorized()
+            } else {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func applyBaselineSnapshot(_ response: PollResponse, persistCache: Bool = true) {
+        participantName = response.customerName
+        let optimistic = messages.filter { $0.id < 0 }
+        messages = normalizeTeamMessages(
+            MessageMerge.baseline(server: response.messages, preservingOptimistic: optimistic)
+        )
+        pollSeq = response.seq
+        currentSeq = response.seq
+        serverMessageCount = max(response.messageCount, response.messages.count, response.seq)
+        historyBaselined = true
+        noteHistoryIntegrityIssue()
+        if persistCache {
+            ConversationHistoryStore.shared.save(response, sessionId: sessionId)
+        }
+    }
+
+    private func noteHistoryIntegrityIssue() {
+        guard serverMessageCount > 0, persistedMessageCount() < serverMessageCount else {
+            return
+        }
+    }
+
+    private func persistedMessageCount() -> Int {
+        messages.filter { $0.id > 0 }.count
+    }
+
+    private func verifyHistoryIntegrity(auth: AuthStore) async {
+        guard serverMessageCount > 0 else { return }
+        guard persistedMessageCount() < serverMessageCount else { return }
+        await reloadFullHistory(auth: auth)
+    }
+
+    private func recoverMissingHistory(auth: AuthStore, throughSeq: Int) async {
+        if serverMessageCount > 0 && persistedMessageCount() < serverMessageCount {
+            await reloadFullHistory(auth: auth)
+            return
+        }
+        await fillMessageGap(auth: auth, throughSeq: throughSeq)
+    }
+
+    private func loadInitialSnapshot(auth: AuthStore) async {
+        await loadFullHistory(auth: auth)
+    }
+
+    private func beginEventStream(auth: AuthStore, generation: Int) {
+        guard let api = auth.api else { return }
+        if let threadSubscriptionId {
+            ChatEventStream.shared.unsubscribeThread(id: threadSubscriptionId)
+        }
+        threadSubscriptionId = ChatEventStream.shared.subscribeThread(api: api, sessionId: sessionId, isTeam: true) { [weak self] event in
+            guard let self, self.lifecycleGeneration == generation else { return }
+            await self.handleThreadStreamEvent(event, auth: auth)
+        }
+    }
+
+    private func handleThreadStreamEvent(_ event: ChatStreamEvent, auth: AuthStore) async {
+        lastStreamEventAt = Date()
+        if event.type == "conversation_deleted" {
+            onConversationRemoved?()
+            return
+        }
+        if event.type == "read" {
+            let seq = StreamPayload.int(event.payload["seq"])
+            if seq > currentSeq {
+                currentSeq = seq
+            }
+            return
+        }
+        if event.type == "message" {
+            let eventSeq = StreamPayload.int(event.payload["seq"])
+            let incoming = StreamPayload.messages(from: event.payload)
+            if !incoming.isEmpty {
+                insertIncomingMessages(incoming)
+                let maxId = incoming.map(\.id).filter { $0 > 0 }.max() ?? 0
+                let targetSeq = max(eventSeq, maxId)
+                if needsHistoryRecovery(throughSeq: targetSeq) {
+                    await recoverMissingHistory(auth: auth, throughSeq: targetSeq)
+                }
+            } else if eventSeq > 0 {
+                await recoverMissingHistory(auth: auth, throughSeq: eventSeq)
+            } else {
+                await poll(auth: auth)
+            }
+        }
+    }
+
+    private func needsHistoryRecovery(throughSeq: Int) -> Bool {
+        if serverMessageCount > 0 && persistedMessageCount() < serverMessageCount {
+            return true
+        }
+        guard throughSeq > 0 else { return false }
+        let localMax = messages.map(\.id).filter { $0 > 0 }.max() ?? 0
+        return throughSeq > localMax || pollSeq > localMax
+    }
+
+    private func hasMessageGap(throughSeq: Int) -> Bool {
+        needsHistoryRecovery(throughSeq: throughSeq)
+    }
+
+    private func fillMessageGap(auth: AuthStore, throughSeq: Int) async {
+        guard needsHistoryRecovery(throughSeq: throughSeq) else { return }
+        guard let api = auth.api else { return }
+
+        var attempts = 0
+        while needsHistoryRecovery(throughSeq: throughSeq) && attempts < 6 {
+            attempts += 1
+            do {
+                let response = try await api.pollTeamSession(sessionId, since: pollSeq, full: false)
+                participantName = response.customerName
+                if !response.messages.isEmpty {
+                    insertIncomingMessages(response.messages)
+                }
+                pollSeq = max(pollSeq, response.seq)
+                currentSeq = max(currentSeq, response.seq)
+                if !needsHistoryRecovery(throughSeq: throughSeq) {
+                    break
+                }
+                if response.messages.isEmpty {
+                    await reloadFullHistory(auth: auth)
+                    break
+                }
+            } catch {
+                if case LiveChatAPIError.unauthorized = error {
+                    auth.handleUnauthorized()
+                } else {
+                    errorMessage = error.localizedDescription
+                }
+                break
+            }
+        }
     }
 
     func poll(auth: AuthStore) async {
@@ -167,17 +537,22 @@ final class TeamChatThreadModel: ObservableObject {
             return
         }
         do {
-            let response = try await api.pollTeamSession(sessionId, since: pollSeq, full: pollSeq == 0)
+            let response = try await api.pollTeamSession(sessionId, since: pollSeq, full: false)
             participantName = response.customerName
-            if pollSeq == 0 {
-                messages = response.messages
-                isLoadingMessages = false
-            } else if !response.messages.isEmpty {
-                mergeMessages(response.messages)
+            if !response.messages.isEmpty {
+                insertIncomingMessages(response.messages)
             }
             pollSeq = max(pollSeq, response.seq)
             currentSeq = max(currentSeq, response.seq)
+            if response.messageCount > serverMessageCount {
+                serverMessageCount = response.messageCount
+            }
+            isLoadingMessages = false
             errorMessage = nil
+            if serverMessageCount > 0 && persistedMessageCount() < serverMessageCount {
+                await reloadFullHistory(auth: auth)
+            }
+            noteHistoryIntegrityIssue()
         } catch {
             isLoadingMessages = false
             if case LiveChatAPIError.unauthorized = error {
@@ -197,9 +572,11 @@ final class TeamChatThreadModel: ObservableObject {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, let api = auth.api else { return }
 
+        let clientMsgId = UUID().uuidString.lowercased()
         let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000)
         let optimistic = LiveMessage(
             id: tempId,
+            clientMsgId: clientMsgId,
             role: "admin",
             content: text,
             ts: Int(Date().timeIntervalSince1970),
@@ -207,36 +584,129 @@ final class TeamChatThreadModel: ObservableObject {
             senderName: auth.profile?.displayName
         )
         messages.append(optimistic)
+        let queued = PendingMessageStore.shared.enqueue(PendingOutboundMessage(
+            id: clientMsgId,
+            sessionId: sessionId,
+            channel: .team,
+            content: text,
+            replyTo: nil,
+            createdAt: Date().timeIntervalSince1970,
+            attempts: 0
+        ))
+        guard queued else {
+            messages.removeAll { $0.id == tempId }
+            draft = text
+            errorMessage = "Nachricht konnte nicht sicher lokal gespeichert werden."
+            return
+        }
         draft = ""
         isSending = true
         defer { isSending = false }
 
         do {
-            let sent = try await api.sendTeamMessage(sessionId, content: text)
-            if let index = messages.firstIndex(where: { $0.id == tempId }) {
-                messages[index] = sent.message
-            } else {
-                mergeMessages([sent.message])
-            }
+            let sent = try await api.sendTeamMessage(
+                sessionId,
+                content: text,
+                clientMsgId: clientMsgId
+            )
+            messages.removeAll { $0.id == tempId }
+            insertIncomingMessages([sent.message])
             pollSeq = max(pollSeq, sent.seq)
             currentSeq = max(currentSeq, sent.seq)
+            PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
             MessageSendSound.shared.playIfEnabled()
             await teamCoordinator.refresh(auth: auth)
             await markRead(auth: auth)
             await poll(auth: auth)
             PAXHaptics.light()
         } catch {
-            messages.removeAll { $0.id == tempId }
-            draft = text
-            errorMessage = error.localizedDescription
+            switch error {
+            case LiveChatAPIError.unauthorized, LiveChatAPIError.rejected(_):
+                PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
+                messages.removeAll { $0.id == tempId }
+                draft = text
+                errorMessage = error.localizedDescription
+            default:
+                errorMessage = "Nachricht wird automatisch erneut gesendet."
+            }
         }
     }
 
-    private func mergeMessages(_ incoming: [LiveMessage]) {
-        let result = MessageMerge.mergeSorted(existing: messages, incoming: incoming)
+    private func retryPendingMessages(auth: AuthStore) async {
+        guard let api = auth.api else { return }
+        let pending = PendingMessageStore.shared.pending(sessionId: sessionId, channel: .team)
+        for item in pending {
+            guard !Task.isCancelled else { return }
+            PendingMessageStore.shared.noteAttempt(clientMsgId: item.id)
+            do {
+                let sent = try await api.sendTeamMessage(
+                    sessionId,
+                    content: item.content,
+                    clientMsgId: item.id
+                )
+                insertIncomingMessages([sent.message])
+                pollSeq = max(pollSeq, sent.seq)
+                currentSeq = max(currentSeq, sent.seq)
+                PendingMessageStore.shared.acknowledge(clientMsgId: item.id)
+            } catch {
+                if case LiveChatAPIError.unauthorized = error {
+                    auth.handleUnauthorized()
+                }
+                return
+            }
+        }
+    }
+
+    private func insertIncomingMessages(_ incoming: [LiveMessage]) {
+        let normalized = normalizeTeamMessages(incoming)
+        let result = MessageMerge.mergeSorted(existing: messages, incoming: normalized)
         if result.changed {
             messages = result.messages
+            let payload = CachedPollPayload(
+                handler: "team_dm",
+                handlerLabel: "Team",
+                adminName: auth?.profile?.displayName ?? "",
+                customerName: participantName,
+                assignedAgent: nil,
+                sessionRating: 0,
+                detectedService: "Team-Nachricht",
+                updatedAt: "",
+                seq: pollSeq,
+                messageCount: max(serverMessageCount, messages.count, pollSeq),
+                messages: messages
+            )
+            ConversationHistoryStore.shared.save(payload.asPollResponse(), sessionId: sessionId)
         }
+        let maxId = normalized.map(\.id).filter { $0 > 0 }.max() ?? 0
+        if maxId > 0 {
+            pollSeq = max(pollSeq, maxId)
+            currentSeq = max(currentSeq, maxId)
+        }
+    }
+
+    private func normalizeTeamMessages(_ incoming: [LiveMessage]) -> [LiveMessage] {
+        incoming.map { normalizeTeamMessage($0) }
+    }
+
+    private func normalizeTeamMessage(_ message: LiveMessage) -> LiveMessage {
+        guard let myId = auth?.profile?.userId, let senderId = message.senderId else {
+            return message
+        }
+        let expectedRole = senderId == myId ? "admin" : "user"
+        guard message.role != expectedRole else { return message }
+        return LiveMessage(
+            id: message.id,
+            role: expectedRole,
+            content: message.content,
+            ts: message.ts,
+            imageUrl: message.imageUrl,
+            replyTo: message.replyTo,
+            reaction: message.reaction,
+            senderId: message.senderId,
+            senderName: message.senderName,
+            senderAvatar: message.senderAvatar,
+            senderRole: message.senderRole
+        )
     }
 }
 

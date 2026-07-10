@@ -4489,6 +4489,50 @@
         }
       }
     },
+    "language.spoken.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Languages you speak"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gesprochene Sprachen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اللغات التي تتحدثها"
+          }
+        }
+      }
+    },
+    "language.spoken.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Customers are routed to employees who speak their language. Live chat messages still sync to all authorized staff in real time."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kunden werden Mitarbeitern zugeordnet, die ihre Sprache sprechen. Chat-Nachrichten synchronisieren weiterhin in Echtzeit für alle berechtigten Mitarbeiter."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يُوجَّه العملاء إلى الموظفين الذين يتحدثون لغتهم. تظل رسائل الدردشة متزامنة فورياً لجميع الموظفين المصرّح لهم."
+          }
+        }
+      }
+    },
     "appearance.color_scheme": {
       "localizations": {
         "en": {

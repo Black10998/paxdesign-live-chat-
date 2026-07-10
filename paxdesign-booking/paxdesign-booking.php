@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.90.0
+Version: 3.99.0
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,8 +21,8 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.90.0');
-define('PAXDESIGN_BOOKING_DB_VERSION', '1.7');
+define('PAXDESIGN_BOOKING_VERSION', '3.99.0');
+define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
 
@@ -31,6 +31,7 @@ require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-email-temp
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-service-icons.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-knowledge.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-log.php';
+require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-message-store.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-live.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-live-chat-shortcode.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-web-push.php';
@@ -40,12 +41,14 @@ require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-device-ses
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-live-chat-permissions.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-team-messaging.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-event-bus.php';
+require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-language-routing.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-platform-store.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-live-chat-mobile-api.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-icons.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-settings-admin.php';
 PAXdesign_Booking_Update_Checker::init();
+PAXdesign_Message_Store::init();
 PAXdesign_Settings_Admin::init();
 PAXdesign_Chat_Log::get_instance();
 PAXdesign_Chat_Live::get_instance();
@@ -450,6 +453,7 @@ class PAXdesign_Booking {
      */
     public function maybe_upgrade_database() {
         paxdesign_booking_upgrade_database();
+        PAXdesign_Message_Store::maybe_upgrade();
         paxdesign_booking_upgrade_live_notify_defaults();
     }
 
@@ -1261,6 +1265,7 @@ function paxdesign_booking_upgrade_database() {
 
     PAXdesign_Chat_Log::create_table();
     PAXdesign_Chat_Live::upgrade_schema();
+    PAXdesign_Message_Store::create_tables();
     PAXdesign_Chat_Log::maybe_purge_old_logs();
 
     update_option('paxdesign_booking_db_version', PAXDESIGN_BOOKING_DB_VERSION);

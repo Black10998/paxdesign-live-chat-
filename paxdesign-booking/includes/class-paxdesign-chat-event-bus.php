@@ -9,8 +9,7 @@ if (!defined('ABSPATH')) {
 
 class PAXdesign_Chat_Event_Bus {
 
-    const QUEUE_TTL    = 180;
-    const MAX_EVENTS   = 80;
+    const MAX_EVENTS   = 500;
     const STREAM_WAIT  = 25;
     const GLOBAL_KEY   = 'pax_evt_global_seq';
 
@@ -26,33 +25,11 @@ class PAXdesign_Chat_Event_Bus {
         if ($channel === '' || $type === '') {
             return 0;
         }
-
-        $key   = self::queue_key($channel);
-        $queue = get_transient($key);
-        if (!is_array($queue)) {
-            $queue = array('seq' => 0, 'events' => array());
+        if (!class_exists('PAXdesign_Message_Store')) {
+            return 0;
         }
-        if (!isset($queue['seq'])) {
-            $queue['seq'] = 0;
-        }
-        if (!isset($queue['events']) || !is_array($queue['events'])) {
-            $queue['events'] = array();
-        }
-
-        $global_id = self::next_global_id();
-        $event = array(
-            'id'      => $global_id,
-            'type'    => $type,
-            'ts'      => time(),
-            'payload' => $payload,
-        );
-        $queue['events'][] = $event;
-        if (count($queue['events']) > self::MAX_EVENTS) {
-            $queue['events'] = array_slice($queue['events'], -self::MAX_EVENTS);
-        }
-        set_transient($key, $queue, self::QUEUE_TTL);
-
-        return $global_id;
+        $message_seq = isset($payload['seq']) ? absint($payload['seq']) : 0;
+        return PAXdesign_Message_Store::emit($channel, $type, $payload, $message_seq);
     }
 
     /**
@@ -62,9 +39,42 @@ class PAXdesign_Chat_Event_Bus {
      * @return int
      */
     private static function next_global_id() {
-        $seq = (int) get_transient(self::GLOBAL_KEY);
+        global $wpdb;
+
+        $key = self::GLOBAL_KEY;
+        $table = $wpdb->options;
+
+        $wpdb->query(
+            $wpdb->prepare(
+                "INSERT INTO $table (option_name, option_value, autoload)
+                 VALUES (%s, '0', 'no')
+                 ON DUPLICATE KEY UPDATE option_name = option_name",
+                $key
+            )
+        );
+        $wpdb->query(
+            $wpdb->prepare(
+                "UPDATE $table
+                 SET option_value = CAST(option_value AS UNSIGNED) + 1
+                 WHERE option_name = %s",
+                $key
+            )
+        );
+
+        $seq = (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT option_value FROM $table WHERE option_name = %s LIMIT 1",
+                $key
+            )
+        );
+        if ($seq > 0) {
+            return $seq;
+        }
+
+        // Last-resort fallback.
+        $seq = (int) get_option($key, 0);
         $seq++;
-        set_transient(self::GLOBAL_KEY, $seq, self::QUEUE_TTL);
+        update_option($key, $seq, false);
         return $seq;
     }
 
@@ -120,22 +130,25 @@ class PAXdesign_Chat_Event_Bus {
      * @return array<int, array<string, mixed>>
      */
     public static function events_since($channel, $since = 0) {
-        $key   = self::queue_key($channel);
-        $queue = get_transient($key);
-        if (!is_array($queue) || empty($queue['events']) || !is_array($queue['events'])) {
+        if (!class_exists('PAXdesign_Message_Store')) {
             return array();
         }
-        $since = absint($since);
-        $out   = array();
-        foreach ($queue['events'] as $event) {
-            if (!is_array($event) || !isset($event['id'])) {
-                continue;
-            }
-            if ((int) $event['id'] > $since) {
-                $out[] = $event;
+        return PAXdesign_Message_Store::events_since($channel, absint($since), self::MAX_EVENTS);
+    }
+
+    public static function merged_events_since($channels, $since = 0) {
+        $pending = array();
+        foreach ((array) $channels as $key => $value) {
+            $channel = is_string($key) ? $key : $value;
+            $channel_since = is_string($key) ? absint($value) : absint($since);
+            $channel = sanitize_text_field($channel);
+            foreach (self::events_since($channel, $channel_since) as $event) {
+                $event['channel'] = $channel;
+                $pending[(int) $event['id']] = $event;
             }
         }
-        return $out;
+        ksort($pending, SORT_NUMERIC);
+        return array_values($pending);
     }
 
     /**
@@ -196,20 +209,15 @@ class PAXdesign_Chat_Event_Bus {
         }
 
         while (microtime(true) < $deadline) {
-            $found = false;
-            foreach ($channels as $c) {
-                $ch = $c['channel'];
-                $events = self::events_since($ch, isset($last_ids[$ch]) ? $last_ids[$ch] : 0);
-                foreach ($events as $event) {
-                    $found = true;
-                    $event['channel'] = $ch;
+            $pending = self::merged_events_since($last_ids);
+            if (!empty($pending)) {
+                foreach ($pending as $event) {
                     self::write_sse('chat', $event);
-                    if (isset($event['id'])) {
+                    $ch = isset($event['channel']) ? $event['channel'] : '';
+                    if ($ch !== '' && isset($event['id'])) {
                         $last_ids[$ch] = max(isset($last_ids[$ch]) ? $last_ids[$ch] : 0, (int) $event['id']);
                     }
                 }
-            }
-            if ($found) {
                 echo "event: ping\ndata: " . wp_json_encode(array('since_inbox' => max($last_ids))) . "\n\n";
                 self::flush_output();
                 break;

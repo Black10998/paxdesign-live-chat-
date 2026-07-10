@@ -320,14 +320,17 @@ struct AdaptiveShellView: View {
     private func sessionDestination(_ sessionId: String) -> some View {
         if sessionId.hasPrefix("team_") {
             TeamChatView(sessionId: sessionId)
+                .id(sessionId)
         } else if canViewChats {
             ChatView(sessionId: sessionId)
+                .id(sessionId)
         }
     }
 
     @ViewBuilder
     private func teamDestination(_ sessionId: String) -> some View {
         TeamChatView(sessionId: sessionId)
+            .id(sessionId)
     }
 
     private func openSession(_ sessionId: String, path: Binding<NavigationPath>) {
@@ -337,6 +340,15 @@ struct AdaptiveShellView: View {
         coordinator.acknowledgeIncomingRequest(sessionId)
         coordinator.activeSessionId = sessionId
         AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: true)
+
+        if let api = AuthStore.shared.api {
+            ConversationPrefetcher.shared.schedulePrefetch(
+                sessionId: sessionId,
+                api: api,
+                isTeam: sessionId.hasPrefix("team_"),
+                priority: true
+            )
+        }
 
         if path.wrappedValue.isEmpty {
             path.wrappedValue.append(sessionId)

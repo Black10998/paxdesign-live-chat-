@@ -89,6 +89,9 @@ class PAXdesign_Chat_Log {
             if (isset($msg['id'])) {
                 $entry['id'] = (int) $msg['id'];
             }
+            if (!empty($msg['client_msg_id'])) {
+                $entry['client_msg_id'] = PAXdesign_Message_Store::normalize_client_id($msg['client_msg_id']);
+            }
             if (isset($msg['ts'])) {
                 $entry['ts'] = (int) $msg['ts'];
             }
@@ -223,10 +226,87 @@ class PAXdesign_Chat_Log {
             $wpdb->prepare("SELECT * FROM $table WHERE session_id = %s LIMIT 1", $session_id)
         );
 
+        $all_idempotent = !empty($sanitized);
+        foreach ($sanitized as $message) {
+            if (empty($message['client_msg_id'])) {
+                $all_idempotent = false;
+                break;
+            }
+        }
+
+        if (!$existing && $all_idempotent && class_exists('PAXdesign_Message_Store')) {
+            $wpdb->insert(
+                $table,
+                array(
+                    'session_id'            => $session_id,
+                    'started_at'            => $now,
+                    'updated_at'            => $now,
+                    'messages'              => '[]',
+                    'detected_service'      => $service,
+                    'booking_triggered'     => $booking,
+                    'consultation_started'  => $consult,
+                    'message_count'         => 0,
+                ),
+                array('%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d')
+            );
+            $insert_id = (int) $wpdb->insert_id;
+            if ($insert_id <= 0) {
+                return false;
+            }
+            $preview = '';
+            foreach ($sanitized as $message) {
+                $stored = PAXdesign_Message_Store::append(
+                    $session_id,
+                    $message['role'],
+                    $message['content'],
+                    $message,
+                    'customer'
+                );
+                if (is_wp_error($stored)) {
+                    return false;
+                }
+                if ($preview === '' && $message['role'] === 'user') {
+                    $preview = wp_html_excerpt($message['content'], 120, '…');
+                }
+            }
+            do_action('paxdesign_new_chat_session', $session_id, $service, $preview);
+            return $insert_id;
+        }
+
         if ($existing) {
             $existing_messages = json_decode($existing->messages, true);
             if (!is_array($existing_messages)) {
                 $existing_messages = array();
+            }
+
+            if ($all_idempotent && class_exists('PAXdesign_Message_Store')) {
+                foreach ($sanitized as $message) {
+                    $extra = $message;
+                    $extra['client_msg_id'] = $message['client_msg_id'];
+                    $stored = PAXdesign_Message_Store::append(
+                        $session_id,
+                        $message['role'],
+                        $message['content'],
+                        $extra,
+                        'customer'
+                    );
+                    if (is_wp_error($stored)) {
+                        return false;
+                    }
+                }
+                $wpdb->update(
+                    $table,
+                    array(
+                        'detected_service'     => $service !== '' ? $service : $existing->detected_service,
+                        'booking_triggered'    => $booking ? 1 : (int) $existing->booking_triggered,
+                        'consultation_started' => $consult ? 1 : (int) $existing->consultation_started,
+                        'updated_at'           => $now,
+                    ),
+                    array('id' => (int) $existing->id),
+                    array('%s', '%d', '%d', '%s'),
+                    array('%d')
+                );
+                return (int) $existing->id;
             }
 
             $sanitized = $this->merge_messages($existing_messages, $sanitized);
@@ -252,6 +332,9 @@ class PAXdesign_Chat_Log {
                 array('%d')
             );
             self::broadcast_session_sync($session_id, $sanitized, $existing, false);
+            if (class_exists('PAXdesign_Message_Store')) {
+                PAXdesign_Message_Store::migrate_legacy($session_id, $sanitized, 'customer');
+            }
             return (int) $existing->id;
         }
 
@@ -296,6 +379,9 @@ class PAXdesign_Chat_Log {
             }
             do_action('paxdesign_new_chat_session', $session_id, $service, $preview);
             self::broadcast_session_sync($session_id, $sanitized, null, true);
+            if (class_exists('PAXdesign_Message_Store')) {
+                PAXdesign_Message_Store::migrate_legacy($session_id, $sanitized, 'customer');
+            }
         }
 
         return $insert_id;
@@ -311,6 +397,7 @@ class PAXdesign_Chat_Log {
         $seq = 0;
         $preview = '';
         $last_role = '';
+        $last = null;
 
         if (!empty($messages)) {
             $last = end($messages);
@@ -342,6 +429,48 @@ class PAXdesign_Chat_Log {
             'handler'   => $handler,
             'service'   => ($previous && isset($previous->detected_service)) ? (string) $previous->detected_service : '',
         ));
+
+        if ($seq > $prev_seq && class_exists('PAXdesign_Chat_Event_Bus')) {
+            $fallback = 0;
+            if ($previous && isset($previous->admin_user_id)) {
+                $fallback = (int) $previous->admin_user_id;
+            }
+            $live = class_exists('PAXdesign_Chat_Live') ? PAXdesign_Chat_Live::get_instance() : null;
+
+            $new_messages = array();
+            foreach ($messages as $msg) {
+                if (!is_array($msg)) {
+                    continue;
+                }
+                $mid = isset($msg['id']) ? (int) $msg['id'] : 0;
+                if ($mid > $prev_seq) {
+                    $new_messages[] = $msg;
+                }
+            }
+            usort($new_messages, function ($a, $b) {
+                return ((int) ($a['id'] ?? 0)) <=> ((int) ($b['id'] ?? 0));
+            });
+
+            foreach ($new_messages as $msg) {
+                $mid = isset($msg['id']) ? (int) $msg['id'] : 0;
+                if ($mid <= 0) {
+                    continue;
+                }
+                $role = isset($msg['role']) ? (string) $msg['role'] : '';
+                $preview = !empty($msg['content']) ? wp_html_excerpt((string) $msg['content'], 120, '…') : '';
+                $sse_message = $msg;
+                if ($live) {
+                    $sse_message = $live->format_sse_message_payload($msg, $fallback);
+                }
+                PAXdesign_Chat_Event_Bus::emit_session($session_id, 'message', array(
+                    'seq'     => $mid,
+                    'role'    => $role,
+                    'handler' => $handler,
+                    'preview' => $preview,
+                    'message' => $sse_message,
+                ));
+            }
+        }
     }
 
     public function handle_sync() {
