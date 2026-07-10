@@ -551,8 +551,8 @@ final class ChatThreadModel: ObservableObject {
             content: text,
             ts: Int(Date().timeIntervalSince1970),
             replyTo: replyId,
-            senderName: auth.profile?.displayName,
-            senderId: auth.profile?.userId
+            senderId: auth.profile?.userId,
+            senderName: auth.profile?.displayName
         )
         messages.append(optimistic)
         knownMessageIds.insert(tempId)
@@ -594,8 +594,8 @@ final class ChatThreadModel: ObservableObject {
             content: caption.isEmpty ? "📷 Foto" : caption,
             ts: Int(Date().timeIntervalSince1970),
             replyTo: replyId,
-            senderName: auth.profile?.displayName,
-            senderId: auth.profile?.userId
+            senderId: auth.profile?.userId,
+            senderName: auth.profile?.displayName
         )
         messages.append(optimistic)
         knownMessageIds.insert(tempId)
