@@ -188,6 +188,9 @@ class PAXdesign_Chat_Live {
     private function __construct() {
         add_action('wp_ajax_paxdesign_chat_poll', array($this, 'handle_poll'));
         add_action('wp_ajax_nopriv_paxdesign_chat_poll', array($this, 'handle_poll'));
+        add_action('wp_ajax_paxdesign_chat_stream', array($this, 'handle_stream'));
+        add_action('wp_ajax_nopriv_paxdesign_chat_stream', array($this, 'handle_stream'));
+        add_action('wp_ajax_paxdesign_chat_live_stream', array($this, 'handle_admin_stream'));
         add_action('wp_ajax_paxdesign_chat_live_user_send', array($this, 'handle_user_send'));
         add_action('wp_ajax_nopriv_paxdesign_chat_live_user_send', array($this, 'handle_user_send'));
         add_action('wp_ajax_paxdesign_chat_live_request', array($this, 'handle_live_request'));
@@ -269,6 +272,12 @@ class PAXdesign_Chat_Live {
 
     private function mark_typing($session_id, $who) {
         set_transient($this->typing_transient_key($session_id, $who), 1, 2);
+        if (class_exists('PAXdesign_Chat_Event_Bus')) {
+            PAXdesign_Chat_Event_Bus::emit_session($session_id, 'typing', array(
+                'who'    => sanitize_key($who),
+                'active' => true,
+            ));
+        }
     }
 
     private function is_typing($session_id, $who) {
@@ -277,6 +286,12 @@ class PAXdesign_Chat_Live {
 
     private function clear_typing($session_id, $who) {
         delete_transient($this->typing_transient_key($session_id, $who));
+        if (class_exists('PAXdesign_Chat_Event_Bus')) {
+            PAXdesign_Chat_Event_Bus::emit_session($session_id, 'typing', array(
+                'who'    => sanitize_key($who),
+                'active' => false,
+            ));
+        }
     }
 
     public static function upgrade_schema() {
@@ -453,6 +468,9 @@ class PAXdesign_Chat_Live {
 
     private function verify_chat_nonce() {
         $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+        if ($nonce === '' && isset($_GET['nonce'])) {
+            $nonce = sanitize_text_field(wp_unslash($_GET['nonce']));
+        }
         if ($nonce && wp_verify_nonce($nonce, 'paxdesign_chat_nonce')) {
             return true;
         }
@@ -460,6 +478,18 @@ class PAXdesign_Chat_Live {
             return true;
         }
         return false;
+    }
+
+    private function verify_admin_stream_access() {
+        $nonce = isset($_GET['nonce']) ? sanitize_text_field(wp_unslash($_GET['nonce'])) : '';
+        if (!$nonce || !wp_verify_nonce($nonce, 'paxdesign_admin_nonce')) {
+            status_header(403);
+            exit;
+        }
+        if (!current_user_can('manage_options')) {
+            status_header(403);
+            exit;
+        }
     }
 
     private function verify_admin_nonce() {
@@ -746,6 +776,16 @@ class PAXdesign_Chat_Live {
             'service'   => isset($row->detected_service) ? (string) $row->detected_service : '',
         ));
 
+        if (class_exists('PAXdesign_Chat_Event_Bus')) {
+            PAXdesign_Chat_Event_Bus::emit_session($session_id, 'message', array(
+                'seq'     => $id,
+                'role'    => $role,
+                'handler' => $handler,
+                'preview' => $preview,
+                'message' => $entry,
+            ));
+        }
+
         return $entry;
     }
 
@@ -779,6 +819,59 @@ class PAXdesign_Chat_Live {
         }
 
         wp_send_json_success($data);
+    }
+
+    public function handle_stream() {
+        if (!$this->verify_chat_nonce()) {
+            status_header(403);
+            exit;
+        }
+
+        $session_id = $this->sanitize_session_id(
+            isset($_GET['session_id']) ? wp_unslash($_GET['session_id']) : ''
+        );
+        if ($session_id === '') {
+            status_header(400);
+            exit;
+        }
+
+        $since = isset($_GET['since']) ? absint($_GET['since']) : 0;
+        if (class_exists('PAXdesign_Chat_Event_Bus')) {
+            PAXdesign_Chat_Event_Bus::stream_sse('session:' . $session_id, $since);
+        }
+        exit;
+    }
+
+    public function handle_admin_stream() {
+        $this->verify_admin_stream_access();
+
+        $session_id = $this->sanitize_session_id(
+            isset($_GET['session_id']) ? wp_unslash($_GET['session_id']) : ''
+        );
+        $since_session = isset($_GET['since']) ? absint($_GET['since']) : 0;
+        $since_inbox   = isset($_GET['since_inbox']) ? absint($_GET['since_inbox']) : 0;
+
+        if (class_exists('PAXdesign_Chat_Event_Bus')) {
+            PAXdesign_Chat_Event_Bus::stream_admin_sse(
+                (int) get_current_user_id(),
+                $session_id,
+                $since_session,
+                $since_inbox
+            );
+        }
+        exit;
+    }
+
+    /**
+     * @param array<string, mixed> $extra
+     */
+    private function emit_handler_event($session_id, $handler, $extra = array()) {
+        if (!class_exists('PAXdesign_Chat_Event_Bus')) {
+            return;
+        }
+        PAXdesign_Chat_Event_Bus::emit_session($session_id, 'handler', array_merge(array(
+            'handler' => (string) $handler,
+        ), $extra));
     }
 
     /**

@@ -62,11 +62,22 @@ final class ChatCoordinator: ObservableObject {
                 try? await Task.sleep(nanoseconds: interval)
             }
         }
+        if let api = auth.api {
+            ChatEventStream.shared.startInbox(api: api) { [weak self] event in
+                Task { @MainActor in
+                    await self?.refreshSessions(auth: auth)
+                    if event.type == "message", let sid = event.payload["session_id"] as? String {
+                        self?.postSessionSync(sessionId: sid)
+                    }
+                }
+            }
+        }
     }
 
     func stop() {
         listTask?.cancel()
         listTask = nil
+        ChatEventStream.shared.stopInbox()
         expiryTasks.values.forEach { $0.cancel() }
         expiryTasks.removeAll()
         IncomingCallRingtone.shared.stopRinging()
@@ -345,6 +356,16 @@ final class ChatThreadModel: ObservableObject {
                 try? await Task.sleep(nanoseconds: AppRefreshPolicy.chatThreadInterval)
             }
         }
+        if let api = auth.api {
+            ChatEventStream.shared.startThread(api: api, sessionId: sessionId, isTeam: false) { [weak self] event in
+                Task { @MainActor in
+                    guard let self, let auth = self.auth else { return }
+                    if event.type == "message" || event.type == "typing" || event.type == "handler" {
+                        await self.poll(auth: auth)
+                    }
+                }
+            }
+        }
     }
 
     func refreshNow(auth: AuthStore) async {
@@ -354,6 +375,7 @@ final class ChatThreadModel: ObservableObject {
     func stop() {
         pollTask?.cancel()
         pollTask = nil
+        ChatEventStream.shared.stopThread()
         typingStopTask?.cancel()
         typingStopTask = nil
         typingNotifyTask?.cancel()

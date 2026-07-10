@@ -5,10 +5,20 @@ struct TeamChatView: View {
     @EnvironmentObject private var coordinator: ChatCoordinator
     @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
     @EnvironmentObject private var settings: AppSettingsStore
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var thread: TeamChatThreadModel
+
+    @State private var showDeleteConfirm = false
+    @State private var deleteMode = "hide"
+    @State private var isDeleting = false
+    @State private var deleteFeedback: String?
 
     init(sessionId: String) {
         _thread = StateObject(wrappedValue: TeamChatThreadModel(sessionId: sessionId))
+    }
+
+    private var canPurgeForAll: Bool {
+        auth.canManageUsers || auth.profile?.isSuperAdmin == true
     }
 
     var body: some View {
@@ -31,7 +41,48 @@ struct TeamChatView: View {
         .paxScreenBackground()
         .navigationTitle(thread.participantName.isEmpty ? L10n.TeamChatTitle : thread.participantName)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button(role: .destructive) {
+                        deleteMode = "hide"
+                        showDeleteConfirm = true
+                    } label: {
+                        Label("Remove from my Team list", systemImage: "eye.slash")
+                    }
+
+                    if canPurgeForAll {
+                        Button(role: .destructive) {
+                            deleteMode = "purge_all"
+                            showDeleteConfirm = true
+                        } label: {
+                            Label("Delete for all participants", systemImage: "trash")
+                        }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
+                .accessibilityLabel("Conversation options")
+            }
+        }
+        .alert(deleteAlertTitle, isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button(deleteConfirmLabel, role: .destructive) {
+                Task { await performDelete() }
+            }
+        } message: {
+            Text(deleteAlertMessage)
+        }
+        .alert("Delete conversation", isPresented: Binding(
+            get: { deleteFeedback != nil },
+            set: { if !$0 { deleteFeedback = nil } }
+        )) {
+            Button("OK", role: .cancel) { deleteFeedback = nil }
+        } message: {
+            Text(deleteFeedback ?? "")
+        }
         .onAppear {
+            thread.onConversationRemoved = { dismiss() }
             thread.start(auth: auth)
             coordinator.activeSessionId = thread.sessionId
             AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: true)
@@ -54,6 +105,42 @@ struct TeamChatView: View {
             guard let syncedId = note.userInfo?["session_id"] as? String,
                   syncedId == thread.sessionId else { return }
             Task { await thread.poll(auth: auth) }
+        }
+        .disabled(isDeleting)
+    }
+
+    private var deleteAlertTitle: String {
+        deleteMode == "purge_all" ? "Delete for everyone?" : "Remove conversation?"
+    }
+
+    private var deleteConfirmLabel: String {
+        deleteMode == "purge_all" ? "Delete for all" : "Remove for me"
+    }
+
+    private var deleteAlertMessage: String {
+        if deleteMode == "purge_all" {
+            return "This permanently deletes the conversation and all messages for every participant. This cannot be undone."
+        }
+        return "This removes the conversation from your Team list only. The other participant can still see it unless they also remove it."
+    }
+
+    private func performDelete() async {
+        guard !isDeleting else { return }
+        isDeleting = true
+        defer { isDeleting = false }
+
+        let result = await teamCoordinator.deleteConversation(
+            sessionId: thread.sessionId,
+            mode: deleteMode,
+            auth: auth
+        )
+        if result.success {
+            settings.markSessionRead(thread.sessionId, seq: thread.currentSeq)
+            coordinator.updateUnreadCounts()
+            PAXHaptics.success()
+            dismiss()
+        } else {
+            deleteFeedback = result.message ?? "Could not delete conversation."
         }
     }
 
@@ -107,7 +194,18 @@ struct TeamComposeView: View {
                 $0.name.lowercased().contains(q) || $0.email.lowercased().contains(q)
             }
         }
-        return items
+        return items.sorted { lhs, rhs in
+            let rank: (StaffMember) -> Int = { member in
+                if member.isExecutive { return 0 }
+                if member.isAdministrator { return 1 }
+                if member.permissions.manageUsers { return 2 }
+                return 3
+            }
+            let lr = rank(lhs)
+            let rr = rank(rhs)
+            if lr != rr { return lr < rr }
+            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+        }
     }
 
     var body: some View {
@@ -185,15 +283,25 @@ private struct StaffComposeRow: View {
     let isDisabled: Bool
     let action: () -> Void
 
+    private var roleTint: Color {
+        if member.isExecutive { return .purple }
+        if member.isAdministrator { return PAXBrand.accent }
+        if member.permissions.manageUsers { return .blue }
+        return PAXTheme.textSecondary
+    }
+
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 SessionAvatarView(name: member.name, size: 48, isTeam: true)
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(member.name)
                         .font(.body.weight(.semibold))
                         .foregroundStyle(PAXTheme.textPrimary)
+                    Text(member.displayRoleLabel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(roleTint)
                     Text(PrivacyMask.email(member.email, revealFull: revealFullEmail))
                         .font(.caption)
                         .foregroundStyle(PAXTheme.textSecondary)
@@ -205,7 +313,7 @@ private struct StaffComposeRow: View {
                     PAXInlineLoader(size: 18)
                 } else {
                     Image(systemName: "message.fill")
-                        .foregroundStyle(PAXBrand.accent)
+                        .foregroundStyle(roleTint)
                 }
             }
         }

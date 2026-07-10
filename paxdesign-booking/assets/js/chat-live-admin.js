@@ -83,6 +83,96 @@
     var MSG_POLL_MS = 400;
     var LIST_POLL_ACTIVE_MS = 1200;
     var pageVisible = !document.hidden;
+    var streamSource = null;
+    var streamEventSince = 0;
+    var streamInboxSince = 0;
+    var streamRestartTimer = null;
+
+    function adminStreamUrl() {
+      var parts = [
+        'action=paxdesign_chat_live_stream',
+        'nonce=' + encodeURIComponent(cfg.nonce),
+        'since=' + encodeURIComponent(String(streamEventSince)),
+        'since_inbox=' + encodeURIComponent(String(streamInboxSince)),
+      ];
+      if (selectedSession) {
+        parts.push('session_id=' + encodeURIComponent(selectedSession));
+      }
+      return cfg.ajaxUrl + '?' + parts.join('&');
+    }
+
+    function handleStreamPayload(data) {
+      if (!data || !data.type) return;
+      if (typeof data.id === 'number') {
+        if (data.channel && String(data.channel).indexOf('inbox:') === 0) {
+          streamInboxSince = Math.max(streamInboxSince, data.id);
+        } else {
+          streamEventSince = Math.max(streamEventSince, data.id);
+        }
+      }
+      var payload = data.payload || {};
+      var sid = payload.session_id || '';
+      if (data.type === 'message' && payload.message && sid === selectedSession) {
+        renderMessages([payload.message], false);
+      }
+      if (data.type === 'typing' && sid === selectedSession) {
+        if (payload.active && payload.who === 'user') {
+          showCustomerTyping();
+        } else if (payload.who === 'user') {
+          hideCustomerTyping();
+        }
+      }
+      if (data.type === 'message' || data.type === 'handler' || data.type === 'typing') {
+        if (!sid || sid === selectedSession) {
+          pollMessages();
+        }
+        loadList();
+      } else if (data.type === 'session_update' || data.type === 'conversation_deleted') {
+        loadList();
+      }
+    }
+
+    function stopAdminStream() {
+      if (streamRestartTimer) {
+        clearTimeout(streamRestartTimer);
+        streamRestartTimer = null;
+      }
+      if (streamSource) {
+        streamSource.close();
+        streamSource = null;
+      }
+    }
+
+    function scheduleAdminStreamRestart(delayMs) {
+      if (streamRestartTimer) clearTimeout(streamRestartTimer);
+      streamRestartTimer = setTimeout(function () {
+        streamRestartTimer = null;
+        startAdminStream();
+      }, delayMs || 600);
+    }
+
+    function startAdminStream() {
+      if (!pageVisible || typeof EventSource === 'undefined') return;
+      stopAdminStream();
+      try {
+        streamSource = new EventSource(adminStreamUrl());
+        streamSource.addEventListener('chat', function (event) {
+          try {
+            handleStreamPayload(JSON.parse(event.data));
+          } catch (e) {}
+          scheduleAdminStreamRestart(120);
+        });
+        streamSource.addEventListener('ping', function () {
+          scheduleAdminStreamRestart(120);
+        });
+        streamSource.onerror = function () {
+          stopAdminStream();
+          scheduleAdminStreamRestart(900);
+        };
+      } catch (e) {
+        scheduleAdminStreamRestart(1200);
+      }
+    }
 
     function scheduleListPoll() {
       if (listTimer) clearInterval(listTimer);
@@ -115,9 +205,11 @@
         if (selectedSession) pollMessages();
         scheduleListPoll();
         scheduleMsgPoll();
+        startAdminStream();
       } else {
         if (listTimer) { clearInterval(listTimer); listTimer = null; }
         if (msgTimer) { clearInterval(msgTimer); msgTimer = null; }
+        stopAdminStream();
       }
     });
     var domMsgIds = {};
@@ -1766,6 +1858,7 @@
       loadSession(sessionId, true);
       pollMessages();
       scheduleMsgPoll();
+      startAdminStream();
       syncSelectedListItem();
       updateMobilePanels();
     }
@@ -1972,6 +2065,7 @@
     }
     loadList();
     scheduleListPoll();
+    startAdminStream();
 
     window.setTimeout(function () {
       startTour(false);

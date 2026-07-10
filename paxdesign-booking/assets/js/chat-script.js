@@ -141,6 +141,86 @@
   var POLL_INTERVAL_OPEN_MS = 350;
   var widgetOpen          = false;
   var pageVisible         = !document.hidden;
+  var streamSource        = null;
+  var streamEventSince    = 0;
+  var streamRestartTimer  = null;
+
+  function customerStreamUrl() {
+    var parts = [
+      'action=paxdesign_chat_stream',
+      'nonce=' + encodeURIComponent(config.nonce),
+      'session_id=' + encodeURIComponent(getSessionId()),
+      'since=' + encodeURIComponent(String(streamEventSince)),
+    ];
+    return config.ajaxUrl + '?' + parts.join('&');
+  }
+
+  function stopCustomerStream() {
+    if (streamRestartTimer) {
+      clearTimeout(streamRestartTimer);
+      streamRestartTimer = null;
+    }
+    if (streamSource) {
+      streamSource.close();
+      streamSource = null;
+    }
+  }
+
+  function scheduleCustomerStreamRestart(delayMs) {
+    if (streamRestartTimer) clearTimeout(streamRestartTimer);
+    streamRestartTimer = window.setTimeout(function () {
+      streamRestartTimer = null;
+      startCustomerStream();
+    }, delayMs || 600);
+  }
+
+  function handleCustomerStreamPayload(data) {
+    if (!data || !data.type) return;
+    if (typeof data.id === 'number') {
+      streamEventSince = Math.max(streamEventSince, data.id);
+    }
+    var payload = data.payload || {};
+    if (data.type === 'message' && Array.isArray(payload.message ? [payload.message] : payload.messages)) {
+      var msgs = payload.message ? [payload.message] : payload.messages;
+      applyIncomingMessages(msgs);
+    }
+    if (data.type === 'typing') {
+      if (payload.active && payload.who === 'admin' && chatHandler === 'admin') {
+        if (!adminTypingEl) showAdminTypingIndicator();
+        syncTypingSound(true);
+      } else if (payload.who === 'admin') {
+        stopAdminTypingFeedback();
+      }
+    }
+    if (data.type === 'handler' && payload.handler) {
+      applyHandlerState(payload.handler, payload.admin_name || '');
+    }
+    pollUpdates();
+  }
+
+  function startCustomerStream() {
+    if (!pageVisible || !widgetOpen || typeof EventSource === 'undefined') return;
+    if (!getSessionId()) return;
+    stopCustomerStream();
+    try {
+      streamSource = new EventSource(customerStreamUrl());
+      streamSource.addEventListener('chat', function (event) {
+        try {
+          handleCustomerStreamPayload(JSON.parse(event.data));
+        } catch (e) {}
+        scheduleCustomerStreamRestart(120);
+      });
+      streamSource.addEventListener('ping', function () {
+        scheduleCustomerStreamRestart(120);
+      });
+      streamSource.onerror = function () {
+        stopCustomerStream();
+        scheduleCustomerStreamRestart(900);
+      };
+    } catch (e) {
+      scheduleCustomerStreamRestart(1200);
+    }
+  }
 
   function init() {
     if (initialized) return;
@@ -251,6 +331,7 @@
     if (getSessionId()) {
       pollUpdates();
       scheduleLivePolling();
+      startCustomerStream();
     }
     if (entryEl && !entryEl.hidden) {
       try {
@@ -261,6 +342,7 @@
 
   function onWidgetClose() {
     widgetOpen = false;
+    stopCustomerStream();
     scheduleLivePolling();
     notifyLayout();
   }
@@ -1158,9 +1240,11 @@
     if (pageVisible && getSessionId()) {
       pollUpdates();
       scheduleLivePolling();
+      if (widgetOpen) startCustomerStream();
     } else if (pollTimer) {
       clearInterval(pollTimer);
       pollTimer = null;
+      stopCustomerStream();
     }
   });
 

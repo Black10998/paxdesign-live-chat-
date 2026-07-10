@@ -373,6 +373,47 @@ class PAXdesign_Live_Chat_Permissions {
     }
 
     /**
+     * Human-readable role label for Team contact picker.
+     *
+     * @param WP_User|int|null $user
+     */
+    public static function team_role_label_for_user($user = null) {
+        $user = self::resolve_user($user);
+        if (!$user) {
+            return 'Team Member';
+        }
+        $uid = (int) $user->ID;
+        if (self::is_super_admin($uid)) {
+            return 'Executive Manager';
+        }
+        if (user_can($uid, 'manage_options')) {
+            return 'Administrator';
+        }
+        $perms = self::get_effective_permissions($uid);
+        if (!empty($perms[self::PERM_MANAGE_USERS])) {
+            return 'Manager';
+        }
+        return 'Team Member';
+    }
+
+    /**
+     * @param array<string, mixed> $member
+     * @return array<string, mixed>
+     */
+    private static function enrich_team_contact($member) {
+        $uid = isset($member['user_id']) ? (int) $member['user_id'] : 0;
+        $member['role_label'] = self::team_role_label_for_user($uid);
+        $member['is_executive'] = self::is_super_admin($uid);
+        $member['is_administrator'] = !empty($member['is_administrator'])
+            || user_can($uid, 'manage_options')
+            || self::is_super_admin($uid);
+        if ($member['profile_title'] === '' && $member['is_executive']) {
+            $member['profile_title'] = 'Executive Manager';
+        }
+        return $member;
+    }
+
+    /**
      * Team compose picker: enabled staff plus administrators with live chat access.
      *
      * @return array<int, array<string, mixed>>
@@ -387,7 +428,7 @@ class PAXdesign_Live_Chat_Permissions {
             }
             $uid = (int) $member['user_id'];
             $seen[$uid] = true;
-            $out[] = $member;
+            $out[] = self::enrich_team_contact($member);
         }
 
         $admin_users = get_users(array(
@@ -397,12 +438,15 @@ class PAXdesign_Live_Chat_Permissions {
 
         foreach ($admin_users as $user) {
             $uid = (int) $user->ID;
-            if (isset($seen[$uid]) || !self::has_live_chat_access($uid)) {
+            if (isset($seen[$uid])) {
+                continue;
+            }
+            if (!self::has_live_chat_access($uid)) {
                 continue;
             }
             $avatar_meta = trim((string) get_user_meta($uid, 'pax_live_avatar_url', true));
             $avatar_url  = $avatar_meta !== '' ? esc_url_raw($avatar_meta) : get_avatar_url($uid, array('size' => 256));
-            $out[] = array(
+            $out[] = self::enrich_team_contact(array(
                 'user_id'     => $uid,
                 'name'        => $user->display_name,
                 'email'       => $user->user_email,
@@ -415,11 +459,52 @@ class PAXdesign_Live_Chat_Permissions {
                 'enabled'     => true,
                 'permissions' => self::get_effective_permissions($uid),
                 'is_administrator' => true,
-            );
+            ));
             $seen[$uid] = true;
         }
 
+        $executive = get_user_by('email', self::SUPER_ADMIN_EMAIL);
+        if ($executive instanceof WP_User) {
+            $euid = (int) $executive->ID;
+            if (!isset($seen[$euid])) {
+                $avatar_meta = trim((string) get_user_meta($euid, 'pax_live_avatar_url', true));
+                $avatar_url  = $avatar_meta !== '' ? esc_url_raw($avatar_meta) : get_avatar_url($euid, array('size' => 256));
+                $out[] = self::enrich_team_contact(array(
+                    'user_id'     => $euid,
+                    'name'        => $executive->display_name,
+                    'email'       => $executive->user_email,
+                    'username'    => $executive->user_login,
+                    'avatar_url'  => $avatar_url,
+                    'profile_title' => (string) get_user_meta($euid, 'pax_live_profile_title', true),
+                    'profile_phone' => (string) get_user_meta($euid, 'pax_live_profile_phone', true),
+                    'profile_notes' => (string) get_user_meta($euid, 'pax_live_profile_notes', true),
+                    'onboarding_completed' => (bool) get_user_meta($euid, 'pax_live_onboarding_completed', true),
+                    'enabled'     => true,
+                    'permissions' => self::get_effective_permissions($euid),
+                    'is_administrator' => true,
+                ));
+                $seen[$euid] = true;
+            }
+        }
+
         usort($out, function ($a, $b) {
+            $rank = function ($item) {
+                if (!empty($item['is_executive'])) {
+                    return 0;
+                }
+                if (!empty($item['is_administrator'])) {
+                    return 1;
+                }
+                if (!empty($item['permissions'][self::PERM_MANAGE_USERS])) {
+                    return 2;
+                }
+                return 3;
+            };
+            $ra = $rank($a);
+            $rb = $rank($b);
+            if ($ra !== $rb) {
+                return $ra - $rb;
+            }
             return strcasecmp((string) $a['name'], (string) $b['name']);
         });
 

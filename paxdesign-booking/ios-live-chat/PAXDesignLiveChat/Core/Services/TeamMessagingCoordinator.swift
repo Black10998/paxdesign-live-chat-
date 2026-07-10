@@ -40,11 +40,38 @@ final class TeamMessagingCoordinator: ObservableObject {
                 try? await Task.sleep(nanoseconds: AppRefreshPolicy.teamListInterval)
             }
         }
+        if let api = auth.api {
+            ChatEventStream.shared.startInbox(api: api) { [weak self] event in
+                Task { @MainActor in
+                    guard let self else { return }
+                    if event.type == "conversation_deleted" {
+                        await self.refresh(auth: auth)
+                        return
+                    }
+                    if event.type == "message" || event.type == "read" || event.type == "session_update" {
+                        await self.refresh(auth: auth)
+                    }
+                }
+            }
+        }
     }
 
     func stop() {
         pollTask?.cancel()
         pollTask = nil
+        ChatEventStream.shared.stopInbox()
+    }
+
+    func deleteConversation(sessionId: String, mode: String, auth: AuthStore) async -> (success: Bool, message: String?) {
+        guard let api = auth.api else { return (false, "Not signed in.") }
+        do {
+            let response = try await api.deleteTeamConversation(sessionId, mode: mode)
+            teamSessions.removeAll { $0.sessionId == sessionId }
+            await refresh(auth: auth)
+            return (response.ok, response.message)
+        } catch {
+            return (false, error.localizedDescription)
+        }
     }
 
     func refresh(auth: AuthStore) async {
@@ -94,6 +121,7 @@ final class TeamChatThreadModel: ObservableObject {
     @Published var currentSeq = 0
 
     let sessionId: String
+    var onConversationRemoved: (() -> Void)?
     private var pollSeq = 0
     private var pollTask: Task<Void, Never>?
     private weak var auth: AuthStore?
@@ -111,11 +139,26 @@ final class TeamChatThreadModel: ObservableObject {
                 try? await Task.sleep(nanoseconds: AppRefreshPolicy.teamThreadInterval)
             }
         }
+        if let api = auth.api {
+            ChatEventStream.shared.startThread(api: api, sessionId: sessionId, isTeam: true) { [weak self] event in
+                Task { @MainActor in
+                    guard let self else { return }
+                    if event.type == "conversation_deleted" {
+                        self.onConversationRemoved?()
+                        return
+                    }
+                    if event.type == "message" {
+                        await self.poll(auth: auth)
+                    }
+                }
+            }
+        }
     }
 
     func stop() {
         pollTask?.cancel()
         pollTask = nil
+        ChatEventStream.shared.stopThread()
     }
 
     func poll(auth: AuthStore) async {
@@ -221,4 +264,10 @@ struct TeamReadResponse: Codable {
         case ok
         case lastReadSeq = "last_read_seq"
     }
+}
+
+struct TeamDeleteResponse: Codable {
+    let ok: Bool
+    let mode: String
+    let message: String
 }

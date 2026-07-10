@@ -11,6 +11,9 @@ struct TeamMessagesHubView: View {
     @State private var teamSessionCount = 0
     @State private var unreadCount = 0
     @State private var recomputeTask: Task<Void, Never>?
+    @State private var teamContacts: [StaffMember] = []
+    @State private var contactsLoading = false
+    @State private var openingContactId: Int?
     @FocusState private var isSearchFocused: Bool
     var onOpenSession: (String) -> Void = { _ in }
 
@@ -41,6 +44,41 @@ struct TeamMessagesHubView: View {
                     .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                }
+            }
+
+            if canComposeTeam {
+                Section {
+                    HStack {
+                        Text("Start a conversation")
+                            .font(.headline)
+                        Spacer()
+                        Button {
+                            showCompose = true
+                        } label: {
+                            Label(L10n.TeamNewMessage, systemImage: "square.and.pencil")
+                                .font(.subheadline.weight(.semibold))
+                        }
+                    }
+                    .listRowBackground(Color.clear)
+                }
+
+                if contactsLoading && teamContacts.isEmpty {
+                    Section {
+                        PAXScreenLoadingStack(status: "Contacts werden geladen", rowCount: 2)
+                    }
+                } else if !teamContacts.isEmpty {
+                    Section("Leadership & Team") {
+                        ForEach(teamContacts) { member in
+                            TeamContactRow(
+                                member: member,
+                                revealFullEmail: auth.profile?.isSuperAdmin == true,
+                                isOpening: openingContactId == member.userId
+                            ) {
+                                Task { await openContact(member) }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -114,8 +152,12 @@ struct TeamMessagesHubView: View {
         .paxPremiumRefreshable(status: "Team-Unterhaltungen werden geladen", rowCount: 4) {
             await coordinator.refreshSessions(auth: auth)
             await teamCoordinator.refresh(auth: auth)
+            await loadContacts()
         }
-        .onAppear { scheduleRecompute(immediate: true) }
+        .onAppear {
+            scheduleRecompute(immediate: true)
+            Task { await loadContacts() }
+        }
         .onDisappear {
             recomputeTask?.cancel()
             recomputeTask = nil
@@ -129,6 +171,34 @@ struct TeamMessagesHubView: View {
 
     private var teamLoadingState: some View {
         PAXScreenLoadingStack(status: "Team-Unterhaltungen werden geladen", rowCount: 4)
+    }
+
+    private func loadContacts() async {
+        guard canComposeTeam, let api = auth.api else { return }
+        contactsLoading = true
+        defer { contactsLoading = false }
+        if let response = try? await api.fetchTeamContacts() {
+            let currentId = auth.profile?.userId ?? 0
+            teamContacts = response.staff.filter { $0.userId != currentId && $0.enabled }
+        }
+    }
+
+    private func openContact(_ member: StaffMember) async {
+        openingContactId = member.userId
+        defer { openingContactId = nil }
+        if let sessionId = await teamCoordinator.openConversation(with: member.userId, auth: auth) {
+            onOpenSession(sessionId)
+        }
+    }
+
+    private func deleteConversation(_ sessionId: String, mode: String) async {
+        let result = await teamCoordinator.deleteConversation(sessionId: sessionId, mode: mode, auth: auth)
+        if result.success {
+            settings.markSessionRead(sessionId, seq: 0)
+            coordinator.updateUnreadCounts()
+            scheduleRecompute(immediate: true)
+            PAXHaptics.success()
+        }
     }
 
     private func teamConversationRow(_ session: LiveSession) -> some View {
@@ -223,6 +293,11 @@ struct TeamMessagesHubView: View {
                 PAXHaptics.light()
             } label: {
                 Label(L10n.CommonMarkUnread, systemImage: "envelope.badge")
+            }
+            Button(role: .destructive) {
+                Task { await deleteConversation(session.sessionId, mode: "hide") }
+            } label: {
+                Label("Remove from my list", systemImage: "eye.slash")
             }
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -338,11 +413,16 @@ private struct TeamStatPill: View {
     let label: String
     let tint: Color
 
+    @State private var pulse = false
+
     var body: some View {
         VStack(spacing: 4) {
             Text(value)
                 .font(.title2.weight(.bold))
                 .foregroundStyle(tint)
+                .contentTransition(.numericText())
+                .scaleEffect(pulse ? 1.08 : 1)
+                .animation(.spring(response: 0.35, dampingFraction: 0.8), value: value)
             Text(label)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(PAXTheme.textSecondary)
@@ -353,7 +433,66 @@ private struct TeamStatPill: View {
         .padding(.vertical, 12)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(tint.opacity(0.1))
+                .fill(tint.opacity(pulse ? 0.22 : 0.12))
         )
+        .onChange(of: value) { _ in
+            pulse = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                pulse = false
+            }
+        }
     }
+}
+
+private struct TeamContactRow: View {
+    let member: StaffMember
+    let revealFullEmail: Bool
+    let isOpening: Bool
+    let action: () -> Void
+
+    private var roleTint: Color {
+        if member.isExecutive { return .purple }
+        if member.isAdministrator { return PAXBrand.accent }
+        if member.permissions.manageUsers { return .blue }
+        return PAXTheme.textSecondary
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                SessionAvatarView(name: member.name, size: 48, isTeam: true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(member.name)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(PAXTheme.textPrimary)
+                    Text(member.displayRoleLabel)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(roleTint)
+                    if !member.profileTitle.orEmpty.isEmpty {
+                        Text(member.profileTitle ?? "")
+                            .font(.caption)
+                            .foregroundStyle(PAXTheme.textSecondary)
+                    } else {
+                        Text(PrivacyMask.email(member.email, revealFull: revealFullEmail))
+                            .font(.caption)
+                            .foregroundStyle(PAXTheme.textSecondary)
+                    }
+                }
+                Spacer()
+                if isOpening {
+                    ProgressView()
+                } else {
+                    Image(systemName: "message.fill")
+                        .foregroundStyle(roleTint)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+        .disabled(isOpening)
+    }
+}
+
+private extension Optional where Wrapped == String {
+    var orEmpty: String { self ?? "" }
 }

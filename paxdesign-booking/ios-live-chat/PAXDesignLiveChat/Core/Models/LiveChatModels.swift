@@ -512,6 +512,9 @@ struct StaffMember: Codable, Identifiable {
     let onboardingCompleted: Bool
     let enabled: Bool
     let permissions: AdminPermissions
+    let roleLabel: String?
+    let isExecutive: Bool
+    let isAdministrator: Bool
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -522,6 +525,9 @@ struct StaffMember: Codable, Identifiable {
         case profileNotes = "profile_notes"
         case onboardingCompleted = "onboarding_completed"
         case enabled, permissions
+        case roleLabel = "role_label"
+        case isExecutive = "is_executive"
+        case isAdministrator = "is_administrator"
     }
 
     init(from decoder: Decoder) throws {
@@ -537,6 +543,17 @@ struct StaffMember: Codable, Identifiable {
         onboardingCompleted = (try? c.decode(Bool.self, forKey: .onboardingCompleted)) ?? false
         enabled = (try? c.decode(Bool.self, forKey: .enabled)) ?? false
         permissions = (try? c.decode(AdminPermissions.self, forKey: .permissions)) ?? AdminPermissions()
+        roleLabel = try c.decodeIfPresent(String.self, forKey: .roleLabel)
+        isExecutive = (try? c.decode(Bool.self, forKey: .isExecutive)) ?? false
+        isAdministrator = (try? c.decode(Bool.self, forKey: .isAdministrator)) ?? false
+    }
+
+    var displayRoleLabel: String {
+        if let roleLabel, !roleLabel.isEmpty { return roleLabel }
+        if isExecutive { return "Executive Manager" }
+        if isAdministrator { return "Administrator" }
+        if permissions.manageUsers { return "Manager" }
+        return "Team Member"
     }
 }
 

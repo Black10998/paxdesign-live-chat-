@@ -451,6 +451,40 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-read", as: TeamReadResponse.self)
     }
 
+    func deleteTeamConversation(_ sessionId: String, mode: String = "hide") async throws -> TeamDeleteResponse {
+        guard let url = liveAdminURL(path: "team/sessions/\(sessionId)") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONEncoder().encode(["mode": mode])
+        return try await perform(authRequest(url: url, method: "DELETE", body: body), endpoint: "team-delete", as: TeamDeleteResponse.self)
+    }
+
+    func consumeEventStream(
+        path: String,
+        since: Int,
+        onEvent: @escaping @Sendable (ChatStreamEvent) -> Void
+    ) async throws {
+        guard let url = liveAdminURL(path: path, query: [URLQueryItem(name: "since", value: String(since))]) else {
+            throw LiveChatAPIError.invalidURL
+        }
+        var request = authRequest(url: url)
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 30
+
+        let (bytes, response) = try await session.bytes(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw LiveChatAPIError.server("Stream failed")
+        }
+
+        var dataBuffer = ""
+        for try await line in bytes.lines {
+            if Task.isCancelled { break }
+            if let event = ChatEventStreamParser.parseLine(line, dataBuffer: &dataBuffer) {
+                onEvent(event)
+            }
+        }
+    }
+
     func registerAPNs(token: String, sandbox: Bool, metadata: [String: Any] = [:]) async throws {
         guard let url = liveAdminURL(path: "push/apns") else {
             throw LiveChatAPIError.invalidURL
