@@ -2302,8 +2302,10 @@
     seenMsgId(userId);
     renderMessageDom('user', text, userId);
     messages.push({ role: 'user', content: text, id: userId });
-    if (!opts.skipSync) syncChatLog();
-    return userId;
+    if (!opts.skipSync) {
+      return syncChatLog().then(function () { return userId; });
+    }
+    return Promise.resolve(userId);
   }
 
   function finalizeAssistantMessage(fullText, meta) {
@@ -2519,19 +2521,18 @@
       return;
     }
 
-    appendUserMessage(text);
+    appendUserMessage(text).then(function () {
+      isStreaming = true;
+      updateSendButton();
+      showTyping();
 
-    isStreaming = true;
-    updateSendButton();
-    showTyping();
-
-    var formData = new FormData();
-    formData.append('action', 'paxdesign_chat');
-    formData.append('nonce', config.nonce);
-    stampChatRequest(formData);
-    formData.append('session_id', getSessionId());
-    formData.append('messages', JSON.stringify(messages.filter(function (m) {
-      return m.role === 'user' || m.role === 'assistant';
+      var formData = new FormData();
+      formData.append('action', 'paxdesign_chat');
+      formData.append('nonce', config.nonce);
+      stampChatRequest(formData);
+      formData.append('session_id', getSessionId());
+      formData.append('messages', JSON.stringify(messages.filter(function (m) {
+        return m.role === 'user' || m.role === 'assistant';
     })));
     formData.append('website', honeypot ? honeypot.value : '');
     abortCtrl = new AbortController();
@@ -2672,6 +2673,7 @@
         pendingMessageEl = null;
         updateSendButton();
       });
+    });
   }
 
   function handleSend(e) {

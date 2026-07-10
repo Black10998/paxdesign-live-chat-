@@ -18,6 +18,7 @@ enum AppServicesController {
 
         if let api = auth.api {
             ConversationHistoryStore.shared.setSiteScope(api.publicApiBaseURL)
+            SessionListCache.shared.setSiteScope(api.publicApiBaseURL)
             ConversationHistoryStore.shared.warmAllFromDisk()
         }
 
@@ -56,6 +57,7 @@ enum AppServicesController {
         teamCoordinator.stop()
         ChatThreadRegistry.shared.clearAll()
         ConversationHistoryStore.shared.clearAll()
+        SessionListCache.shared.clear()
         #if !SIDELOAD
         DeviceSessionService.shared.stop()
         #endif

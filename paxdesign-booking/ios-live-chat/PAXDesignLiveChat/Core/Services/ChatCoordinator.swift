@@ -36,6 +36,11 @@ final class ChatCoordinator: ObservableObject {
     private(set) var lastSessionRefreshAt: Date?
     private var sessionServerSeq: [String: Int] = [:]
     private let inboxSubscriptionId = UUID()
+    private var inboxRefreshTask: Task<Void, Never>?
+    private var fullSyncTask: Task<Void, Never>?
+    private var listLoopCounter = 0
+    private static let inboxDebounceNs: UInt64 = 1_500_000_000
+    private static let fullSyncEveryListCycles = 24
 
     func serverSeq(for sessionId: String) -> Int {
         if let hinted = sessionServerSeq[sessionId], hinted > 0 {
@@ -73,17 +78,38 @@ final class ChatCoordinator: ObservableObject {
         incomingBannerDismissed = true
     }
 
+    func hydrateFromCache() {
+        guard sessions.isEmpty, let cached = SessionListCache.shared.load() else { return }
+        sessions = cached.sessions
+        liveCount = cached.liveCount
+        noteSessionSeqs(from: cached.sessions)
+        lastSyncAt = cached.cachedDate
+        lastSessionRefreshAt = cached.cachedDate
+        updateUnreadCounts()
+        TeamMessagingCoordinator.shared.applyTeamSessions(cached.teamSessions)
+    }
+
     func start(auth: AuthStore) {
         stop()
+        if let api = auth.api {
+            ConversationHistoryStore.shared.setSiteScope(api.publicApiBaseURL)
+            SessionListCache.shared.setSiteScope(api.publicApiBaseURL)
+            hydrateFromCache()
+        }
         listTask = Task { [weak self] in
             while !Task.isCancelled {
-                await self?.refreshSessions(auth: auth)
+                guard let self else { return }
+                self.listLoopCounter += 1
+                if self.listLoopCounter.isMultiple(of: Self.fullSyncEveryListCycles) {
+                    await self.refreshSessions(auth: auth, mode: .full)
+                } else {
+                    await self.refreshSessions(auth: auth, mode: .lightweight)
+                }
                 let interval = AppRefreshPolicy.sessionListInterval
                 try? await Task.sleep(nanoseconds: interval)
             }
         }
-            if let api = auth.api {
-            ConversationHistoryStore.shared.setSiteScope(api.publicApiBaseURL)
+        if let api = auth.api {
             ChatEventStream.shared.subscribeInbox(id: inboxSubscriptionId, api: api) { [weak self] event in
                 guard let self else { return }
                 if let sid = event.payload["session_id"] as? String, !sid.isEmpty {
@@ -91,34 +117,81 @@ final class ChatCoordinator: ObservableObject {
                     if seq > 0 {
                         self.noteSessionSeq(sid, seq: seq)
                     }
-                    if event.type == "message",
-                       let inline = LiveMessage.fromStreamPayload(event.payload["message"]) {
-                        ConversationHistoryStore.shared.mergeMessage(sessionId: sid, message: inline, seq: seq)
-                        if sid.hasPrefix("team_") {
-                            ChatThreadRegistry.shared.teamThread(sessionId: sid).applyLiveMessage(inline, seq: seq)
-                        } else {
-                            ChatThreadRegistry.shared.bookingThread(sessionId: sid).applyLiveMessage(inline, seq: seq)
+                    if event.type == "message" {
+                        let incoming = StreamPayload.messages(from: event.payload)
+                        for inline in incoming {
+                            let messageSeq = max(seq, inline.id)
+                            ConversationHistoryStore.shared.mergeMessage(sessionId: sid, message: inline, seq: messageSeq)
+                            if sid.hasPrefix("team_") {
+                                ChatThreadRegistry.shared.teamThread(sessionId: sid).applyLiveMessage(inline, seq: messageSeq)
+                                TeamMessagingCoordinator.shared.bumpTeamSession(sessionId: sid, message: inline, seq: messageSeq)
+                            } else {
+                                ChatThreadRegistry.shared.bookingThread(sessionId: sid).applyLiveMessage(inline, seq: messageSeq)
+                                self.bumpBookingSession(sessionId: sid, message: inline, seq: messageSeq)
+                            }
                         }
                     }
                     if event.type == "message" || event.type == "handler" || event.type == "typing" {
                         self.postSessionSync(sessionId: sid, inlineMessage: event.payload["message"])
                     }
                 }
-                Task { await self.refreshSessions(auth: auth) }
+                self.scheduleInboxListRefresh(auth: auth)
             }
         }
+    }
+
+    private func scheduleInboxListRefresh(auth: AuthStore) {
+        inboxRefreshTask?.cancel()
+        inboxRefreshTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: Self.inboxDebounceNs)
+            guard !Task.isCancelled, let self else { return }
+            await self.refreshSessions(auth: auth, mode: .lightweight)
+        }
+    }
+
+    private func bumpBookingSession(sessionId: String, message: LiveMessage, seq: Int) {
+        guard let index = sessions.firstIndex(where: { $0.sessionId == sessionId }) else { return }
+        let updated = LiveSessionPatch.bumped(sessions[index], message: message, seq: seq)
+        sessions.remove(at: index)
+        sessions.insert(updated, at: 0)
+        updateUnreadCounts()
+        persistSessionListCache()
+        detectIncomingLiveRequests([updated])
+    }
+
+    private func persistSessionListCache() {
+        let existing = SessionListCache.shared.load()
+        SessionListCache.shared.save(
+            sessions: sessions,
+            teamSessions: existing?.teamSessions ?? TeamMessagingCoordinator.shared.teamSessions,
+            liveCount: liveCount
+        )
     }
 
     func stop() {
         listTask?.cancel()
         listTask = nil
+        inboxRefreshTask?.cancel()
+        inboxRefreshTask = nil
+        fullSyncTask?.cancel()
+        fullSyncTask = nil
+        listLoopCounter = 0
         ChatEventStream.shared.unsubscribeInbox(id: inboxSubscriptionId)
         expiryTasks.values.forEach { $0.cancel() }
         expiryTasks.removeAll()
         IncomingCallRingtone.shared.stopRinging()
     }
 
-    func refreshSessions(auth: AuthStore) async {
+    func refreshSessions(auth: AuthStore, mode: SessionRefreshMode = .lightweight) async {
+        switch mode {
+        case .full:
+            await fullConversationSync(auth: auth)
+        case .lightweight:
+            await refreshSessionsLightweight(auth: auth)
+        }
+    }
+
+    func fullConversationSync(auth: AuthStore) async {
         guard let api = auth.api else { return }
         let shouldShowSync = sessions.isEmpty
         if shouldShowSync { isSyncing = true }
@@ -137,11 +210,36 @@ final class ChatCoordinator: ObservableObject {
             AppRefreshPolicy.update(liveCount: response.liveCount, openChat: activeSessionId != nil)
             errorMessage = nil
             detectIncomingLiveRequests(response.sessions)
+            persistSessionListCache()
         } catch {
             if case LiveChatAPIError.unauthorized = error {
                 auth.handleUnauthorized()
             }
-            errorMessage = error.localizedDescription
+            if sessions.isEmpty {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func refreshSessionsLightweight(auth: AuthStore) async {
+        guard let api = auth.api else { return }
+        do {
+            let response = try await api.fetchSessions()
+            sessions = response.sessions
+            liveCount = response.liveCount
+            noteSessionSeqs(from: response.sessions)
+            lastSessionRefreshAt = Date()
+            updateUnreadCounts()
+            AppRefreshPolicy.update(liveCount: response.liveCount, openChat: activeSessionId != nil)
+            errorMessage = nil
+            detectIncomingLiveRequests(response.sessions)
+            persistSessionListCache()
+        } catch {
+            if case LiveChatAPIError.unauthorized = error {
+                auth.handleUnauthorized()
+            } else if sessions.isEmpty {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -394,6 +492,14 @@ final class ChatThreadModel: ObservableObject {
     func start(auth: AuthStore, expectedServerSeq: Int = 0) {
         self.auth = auth
         hydrateFromLocalStore()
+
+        if let pollTask, !pollTask.isCancelled {
+            if expectedServerSeq > pollSeq {
+                pollSeq = max(pollSeq, expectedServerSeq)
+            }
+            return
+        }
+
         lifecycleGeneration += 1
         let generation = lifecycleGeneration
         stopBackgroundWork()
@@ -529,9 +635,11 @@ final class ChatThreadModel: ObservableObject {
         switch event.type {
         case "message":
             let eventSeq = StreamPayload.int(event.payload["seq"])
-            if let inline = LiveMessage.fromStreamPayload(event.payload["message"]) {
-                insertIncomingMessages([inline])
-                let targetSeq = max(eventSeq, inline.id)
+            let incoming = StreamPayload.messages(from: event.payload)
+            if !incoming.isEmpty {
+                insertIncomingMessages(incoming)
+                let maxId = incoming.map(\.id).filter { $0 > 0 }.max() ?? 0
+                let targetSeq = max(eventSeq, maxId)
                 if needsHistoryRecovery(expectedServerSeq: targetSeq) {
                     await recoverMissingHistory(auth: auth, throughSeq: targetSeq)
                 }

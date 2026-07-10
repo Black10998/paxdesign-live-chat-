@@ -344,22 +344,46 @@ class PAXdesign_Chat_Log {
             'service'   => ($previous && isset($previous->detected_service)) ? (string) $previous->detected_service : '',
         ));
 
-        if ($seq > $prev_seq && class_exists('PAXdesign_Chat_Event_Bus') && is_array($last)) {
-            $sse_message = $last;
-            if (class_exists('PAXdesign_Chat_Live')) {
-                $fallback = 0;
-                if ($previous && isset($previous->admin_user_id)) {
-                    $fallback = (int) $previous->admin_user_id;
-                }
-                $sse_message = PAXdesign_Chat_Live::get_instance()->format_sse_message_payload($last, $fallback);
+        if ($seq > $prev_seq && class_exists('PAXdesign_Chat_Event_Bus')) {
+            $fallback = 0;
+            if ($previous && isset($previous->admin_user_id)) {
+                $fallback = (int) $previous->admin_user_id;
             }
-            PAXdesign_Chat_Event_Bus::emit_session($session_id, 'message', array(
-                'seq'     => $seq,
-                'role'    => $last_role,
-                'handler' => $handler,
-                'preview' => $preview,
-                'message' => $sse_message,
-            ));
+            $live = class_exists('PAXdesign_Chat_Live') ? PAXdesign_Chat_Live::get_instance() : null;
+
+            $new_messages = array();
+            foreach ($messages as $msg) {
+                if (!is_array($msg)) {
+                    continue;
+                }
+                $mid = isset($msg['id']) ? (int) $msg['id'] : 0;
+                if ($mid > $prev_seq) {
+                    $new_messages[] = $msg;
+                }
+            }
+            usort($new_messages, function ($a, $b) {
+                return ((int) ($a['id'] ?? 0)) <=> ((int) ($b['id'] ?? 0));
+            });
+
+            foreach ($new_messages as $msg) {
+                $mid = isset($msg['id']) ? (int) $msg['id'] : 0;
+                if ($mid <= 0) {
+                    continue;
+                }
+                $role = isset($msg['role']) ? (string) $msg['role'] : '';
+                $preview = !empty($msg['content']) ? wp_html_excerpt((string) $msg['content'], 120, '…') : '';
+                $sse_message = $msg;
+                if ($live) {
+                    $sse_message = $live->format_sse_message_payload($msg, $fallback);
+                }
+                PAXdesign_Chat_Event_Bus::emit_session($session_id, 'message', array(
+                    'seq'     => $mid,
+                    'role'    => $role,
+                    'handler' => $handler,
+                    'preview' => $preview,
+                    'message' => $sse_message,
+                ));
+            }
         }
     }
 

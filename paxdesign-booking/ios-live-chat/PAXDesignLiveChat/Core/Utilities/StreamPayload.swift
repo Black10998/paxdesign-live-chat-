@@ -40,4 +40,25 @@ enum StreamPayload {
             return false
         }
     }
+
+    /// Decode one or many inline messages from an SSE payload.
+    static func messages(from payload: [String: Any]) -> [LiveMessage] {
+        if let single = LiveMessage.fromStreamPayload(payload["message"]) {
+            return [single]
+        }
+        guard let raw = payload["messages"] else { return [] }
+        guard let array = raw as? [Any] else { return [] }
+
+        var decoded: [LiveMessage] = []
+        for item in array {
+            guard let dict = item as? [String: Any],
+                  JSONSerialization.isValidJSONObject(dict),
+                  let data = try? JSONSerialization.data(withJSONObject: dict),
+                  let message = try? JSONDecoder().decode(LiveMessage.self, from: data) else {
+                continue
+            }
+            decoded.append(message)
+        }
+        return decoded.sorted { $0.id < $1.id }
+    }
 }

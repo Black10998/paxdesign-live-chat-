@@ -107,6 +107,8 @@ private struct ChatMessageRow: View {
         case "admin":
             if let sender = message.senderName, !sender.isEmpty { return sender }
             return agentDisplayName
+        case "assistant":
+            return agentDisplayName
         case "user":
             if let sender = message.senderName, !sender.isEmpty { return sender }
             return customerDisplayName

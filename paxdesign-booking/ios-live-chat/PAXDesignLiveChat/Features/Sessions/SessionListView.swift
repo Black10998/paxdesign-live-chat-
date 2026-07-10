@@ -145,7 +145,7 @@ struct SessionListView: View {
 
             if displayedSessions.isEmpty {
                 Section {
-                    if coordinator.isLoading && searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    if coordinator.isSyncing && searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                         loadingState
                             .listRowInsets(EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16))
                     } else {
@@ -268,8 +268,8 @@ struct SessionListView: View {
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .paxPremiumRefreshable(status: "Unterhaltungen werden geladen", rowCount: 5) {
-            await coordinator.refreshSessions(auth: auth)
-            await teamCoordinator.refresh(auth: auth)
+            await coordinator.fullConversationSync(auth: auth)
+            await teamCoordinator.fullConversationSync(auth: auth)
         }
     }
 
