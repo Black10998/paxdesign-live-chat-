@@ -58,6 +58,7 @@ enum AppServicesController {
         ChatThreadRegistry.shared.clearAll()
         ConversationHistoryStore.shared.clearAll()
         SessionListCache.shared.clear()
+        PendingMessageStore.shared.clearAll()
         #if !SIDELOAD
         DeviceSessionService.shared.stop()
         #endif

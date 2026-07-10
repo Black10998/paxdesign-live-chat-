@@ -67,7 +67,7 @@ final class SessionListCache {
     }
 
     private func fileURL() -> URL {
-        let scope = siteScope.isEmpty ? "default" : String(siteScope.hashValue)
+        let scope = siteScope.isEmpty ? "default" : SiteScopeKey.make(siteScope)
         return directoryURL.appendingPathComponent("\(scope)-\(fileName)")
     }
 }

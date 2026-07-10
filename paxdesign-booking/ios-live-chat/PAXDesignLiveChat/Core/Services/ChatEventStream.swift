@@ -4,6 +4,7 @@ struct ChatStreamEvent {
     let id: Int
     let type: String
     let payload: [String: Any]
+    let channel: String
 }
 
 enum ChatEventStreamParser {
@@ -28,7 +29,8 @@ enum ChatEventStreamParser {
             let id = StreamPayload.int(object["id"])
             let type = StreamPayload.string(object["type"])
             let payload = object["payload"] as? [String: Any] ?? [:]
-            return ChatStreamEvent(id: id, type: type, payload: payload)
+            let channel = StreamPayload.string(object["channel"])
+            return ChatStreamEvent(id: id, type: type, payload: payload, channel: channel)
         }
         return nil
     }
@@ -44,14 +46,20 @@ final class ChatEventStream {
     private final class ThreadSubscription {
         let api: LiveChatAPI
         let path: String
+        let channel: String
         let handler: InboxHandler
         var since = 0
         var task: Task<Void, Never>?
 
-        init(api: LiveChatAPI, path: String, handler: @escaping InboxHandler) {
+        init(api: LiveChatAPI, path: String, channel: String, handler: @escaping InboxHandler) {
             self.api = api
             self.path = path
+            self.channel = channel
             self.handler = handler
+            since = ChatCursorStore.shared.eventCursor(
+                site: api.publicApiBaseURL,
+                channel: channel
+            )
         }
     }
 
@@ -65,6 +73,13 @@ final class ChatEventStream {
     func subscribeInbox(id: UUID, api: LiveChatAPI, handler: @escaping InboxHandler) {
         inboxHandlers[id] = handler
         inboxApi = api
+        inboxSince = max(
+            inboxSince,
+            ChatCursorStore.shared.eventCursor(
+                site: api.publicApiBaseURL,
+                channel: "inbox:admins"
+            )
+        )
         ensureInboxStream()
     }
 
@@ -81,7 +96,8 @@ final class ChatEventStream {
     func subscribeThread(api: LiveChatAPI, sessionId: String, isTeam: Bool, onEvent: @escaping InboxHandler) -> UUID {
         let id = UUID()
         let path = isTeam ? "team/sessions/\(sessionId)/stream" : "sessions/\(sessionId)/stream"
-        let subscription = ThreadSubscription(api: api, path: path, handler: onEvent)
+        let channel = isTeam ? "team:\(sessionId)" : "session:\(sessionId)"
+        let subscription = ThreadSubscription(api: api, path: path, channel: channel, handler: onEvent)
         threadSubscriptions[id] = subscription
         subscription.task = Task { @MainActor in
             while !Task.isCancelled {
@@ -93,6 +109,18 @@ final class ChatEventStream {
                             guard let current = self.threadSubscriptions[id] else { return }
                             if event.id > 0 {
                                 current.since = max(current.since, event.id)
+                                ChatCursorStore.shared.advance(
+                                    site: current.api.publicApiBaseURL,
+                                    channel: current.channel,
+                                    eventId: event.id
+                                )
+                                Task {
+                                    try? await current.api.acknowledgeEvent(
+                                        channel: current.channel,
+                                        eventId: event.id,
+                                        seq: StreamPayload.int(event.payload["seq"])
+                                    )
+                                }
                             }
                             current.handler(event)
                         }
@@ -141,6 +169,18 @@ final class ChatEventStream {
                         Task { @MainActor in
                             if event.id > 0 {
                                 self.inboxSince = max(self.inboxSince, event.id)
+                                ChatCursorStore.shared.advance(
+                                    site: api.publicApiBaseURL,
+                                    channel: "inbox:admins",
+                                    eventId: event.id
+                                )
+                                Task {
+                                    try? await api.acknowledgeEvent(
+                                        channel: event.channel.isEmpty ? "inbox:admins" : event.channel,
+                                        eventId: event.id,
+                                        seq: StreamPayload.int(event.payload["seq"])
+                                    )
+                                }
                             }
                             for handler in self.inboxHandlers.values {
                                 handler(event)

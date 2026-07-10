@@ -265,11 +265,19 @@ final class LiveChatAPI {
         _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "release", as: EmptyResponse.self)
     }
 
-    func sendMessage(_ sessionId: String, text: String, replyTo: Int? = nil) async throws -> LiveMessage {
+    func sendMessage(
+        _ sessionId: String,
+        text: String,
+        replyTo: Int? = nil,
+        clientMsgId: String = UUID().uuidString.lowercased()
+    ) async throws -> LiveMessage {
         guard let url = liveAdminURL(path: "sessions/\(sessionId)/messages") else {
             throw LiveChatAPIError.invalidURL
         }
-        var payload: [String: Any] = ["message": text]
+        var payload: [String: Any] = [
+            "message": text,
+            "client_msg_id": clientMsgId,
+        ]
         if let replyTo, replyTo > 0 {
             payload["reply_to"] = replyTo
         }
@@ -460,11 +468,18 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url), endpoint: "team-poll:\(sessionId)", as: PollResponse.self)
     }
 
-    func sendTeamMessage(_ sessionId: String, content: String) async throws -> TeamSendResponse {
+    func sendTeamMessage(
+        _ sessionId: String,
+        content: String,
+        clientMsgId: String = UUID().uuidString.lowercased()
+    ) async throws -> TeamSendResponse {
         guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/messages") else {
             throw LiveChatAPIError.invalidURL
         }
-        let body = try JSONEncoder().encode(["content": content])
+        let body = try JSONEncoder().encode([
+            "content": content,
+            "client_msg_id": clientMsgId,
+        ])
         return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-send", as: TeamSendResponse.self)
     }
 
@@ -508,6 +523,38 @@ final class LiveChatAPI {
                 onEvent(event)
             }
         }
+    }
+
+    func acknowledgeEvent(channel: String, eventId: Int, seq: Int = 0) async throws {
+        guard eventId > 0,
+              let url = liveAdminURL(path: "events/ack") else {
+            return
+        }
+        let payload: [String: Any] = [
+            "consumer_id": ChatCursorStore.shared.consumerId,
+            "channel": channel,
+            "event_id": eventId,
+            "seq": seq,
+        ]
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        _ = try await perform(
+            authRequest(url: url, method: "POST", body: body),
+            endpoint: "events-ack",
+            as: EmptyResponse.self
+        )
+    }
+
+    func markSessionRead(_ sessionId: String, seq: Int) async throws {
+        guard seq > 0,
+              let url = liveAdminURL(path: "sessions/\(sessionId)/read") else {
+            return
+        }
+        let body = try JSONEncoder().encode(["seq": seq])
+        _ = try await perform(
+            authRequest(url: url, method: "POST", body: body),
+            endpoint: "session-read",
+            as: EmptyResponse.self
+        )
     }
 
     func registerAPNs(token: String, sandbox: Bool, metadata: [String: Any] = [:]) async throws {

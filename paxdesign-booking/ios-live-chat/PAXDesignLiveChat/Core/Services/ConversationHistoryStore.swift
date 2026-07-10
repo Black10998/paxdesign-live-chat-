@@ -82,7 +82,7 @@ final class ConversationHistoryStore {
         guard let items = try? FileManager.default.contentsOfDirectory(at: directoryURL, includingPropertiesForKeys: nil) else {
             return
         }
-        let scopePrefix = (siteScope.isEmpty ? "default" : String(siteScope.hashValue)) + "-"
+        let scopePrefix = (siteScope.isEmpty ? "default" : SiteScopeKey.make(siteScope)) + "-"
         for url in items where url.pathExtension == "json" {
             let name = url.lastPathComponent
             guard name.hasPrefix(scopePrefix) else { continue }
@@ -160,7 +160,7 @@ final class ConversationHistoryStore {
         let safe = sessionId
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: ":", with: "_")
-        let scope = siteScope.isEmpty ? "default" : String(siteScope.hashValue)
+        let scope = siteScope.isEmpty ? "default" : SiteScopeKey.make(siteScope)
         return directoryURL.appendingPathComponent("\(scope)-\(safe).json")
     }
 
@@ -234,6 +234,7 @@ struct CachedPollPayload {
             "role": message.role,
             "content": message.content,
         ]
+        if let clientMsgId = message.clientMsgId { dict["client_msg_id"] = clientMsgId }
         if let ts = message.ts { dict["ts"] = ts }
         if let imageUrl = message.imageUrl { dict["image_url"] = imageUrl }
         if let replyTo = message.replyTo { dict["reply_to"] = replyTo }

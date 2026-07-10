@@ -470,6 +470,7 @@ final class ChatThreadModel: ObservableObject {
     private var typingStopTask: Task<Void, Never>?
     private var typingNotifyTask: Task<Void, Never>?
     private var suggestionsTask: Task<Void, Never>?
+    private var readAckTask: Task<Void, Never>?
     private var suggestionsForMessageId = 0
     private var knownMessageIds = Set<Int>()
     private var lastTypingNotifyAt = Date.distantPast
@@ -515,7 +516,8 @@ final class ChatThreadModel: ObservableObject {
                 expectedServerSeq: expectedServerSeq,
                 showLoading: false
             )
-            _ = await (quickReplies, history)
+            async let pending: Void = self.retryPendingMessages(auth: auth)
+            _ = await (quickReplies, history, pending)
             guard !Task.isCancelled, self.lifecycleGeneration == generation else { return }
 
             self.lastStreamEventAt = Date()
@@ -600,6 +602,8 @@ final class ChatThreadModel: ObservableObject {
         typingNotifyTask = nil
         suggestionsTask?.cancel()
         suggestionsTask = nil
+        readAckTask?.cancel()
+        readAckTask = nil
     }
 
     private func restoreFromCache() -> Bool {
@@ -702,6 +706,7 @@ final class ChatThreadModel: ObservableObject {
         let maxId = incoming.map(\.id).filter { $0 > 0 }.max() ?? 0
         if maxId > 0 {
             pollSeq = max(pollSeq, maxId)
+            scheduleReadAcknowledgement()
         }
 
         if newUserMessageId > 0 {
@@ -714,6 +719,17 @@ final class ChatThreadModel: ObservableObject {
 
     private func persistedMessageCount() -> Int {
         messages.filter { $0.id > 0 }.count
+    }
+
+    private func scheduleReadAcknowledgement() {
+        guard historyBaselined, pollSeq > 0, let api = auth?.api else { return }
+        let seq = pollSeq
+        readAckTask?.cancel()
+        readAckTask = Task {
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+            try? await api.markSessionRead(sessionId, seq: seq)
+        }
     }
 
     private func needsHistoryRecovery(expectedServerSeq: Int = 0) -> Bool {
@@ -822,6 +838,7 @@ final class ChatThreadModel: ObservableObject {
         pollSeq = data.seq
         serverMessageCount = max(data.messageCount, data.messages.count, data.seq)
         historyBaselined = true
+        scheduleReadAcknowledgement()
 
         if !data.reactions.isEmpty {
             let reactionResult = MessageMerge.applyReactions(to: messages, reactions: data.reactions)
@@ -1003,9 +1020,11 @@ final class ChatThreadModel: ObservableObject {
         await notifyTypingStop(auth: auth)
 
         let replyId = replyToMessage?.id
+        let clientMsgId = UUID().uuidString.lowercased()
         let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000)
         let optimistic = LiveMessage(
             id: tempId,
+            clientMsgId: clientMsgId,
             role: "admin",
             content: text,
             ts: Int(Date().timeIntervalSince1970),
@@ -1014,6 +1033,15 @@ final class ChatThreadModel: ObservableObject {
             senderName: auth.profile?.displayName
         )
         messages.append(optimistic)
+        PendingMessageStore.shared.enqueue(PendingOutboundMessage(
+            id: clientMsgId,
+            sessionId: sessionId,
+            channel: .booking,
+            content: text,
+            replyTo: replyId,
+            createdAt: Date().timeIntervalSince1970,
+            attempts: 0
+        ))
         knownMessageIds.insert(tempId)
         draft = ""
         clearReply()
@@ -1022,7 +1050,12 @@ final class ChatThreadModel: ObservableObject {
         defer { isSending = false }
 
         do {
-            let msg = try await api.sendMessage(sessionId, text: text, replyTo: replyId)
+            let msg = try await api.sendMessage(
+                sessionId,
+                text: text,
+                replyTo: replyId,
+                clientMsgId: clientMsgId
+            )
             if let index = messages.firstIndex(where: { $0.id == tempId }) {
                 messages[index] = msg
             } else {
@@ -1031,6 +1064,7 @@ final class ChatThreadModel: ObservableObject {
             knownMessageIds.remove(tempId)
             knownMessageIds.insert(msg.id)
             pollSeq = max(pollSeq, msg.id)
+            PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
             MessageSendSound.shared.playIfEnabled()
             await poll(auth: auth)
         } catch {
@@ -1038,6 +1072,30 @@ final class ChatThreadModel: ObservableObject {
             knownMessageIds.remove(tempId)
             draft = text
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func retryPendingMessages(auth: AuthStore) async {
+        guard let api = auth.api else { return }
+        let pending = PendingMessageStore.shared.pending(sessionId: sessionId, channel: .booking)
+        for item in pending {
+            guard !Task.isCancelled else { return }
+            PendingMessageStore.shared.noteAttempt(clientMsgId: item.id)
+            do {
+                let message = try await api.sendMessage(
+                    sessionId,
+                    text: item.content,
+                    replyTo: item.replyTo,
+                    clientMsgId: item.id
+                )
+                insertIncomingMessages([message])
+                PendingMessageStore.shared.acknowledge(clientMsgId: item.id)
+            } catch {
+                if case LiveChatAPIError.unauthorized = error {
+                    auth.handleUnauthorized()
+                }
+                return
+            }
         }
     }
 

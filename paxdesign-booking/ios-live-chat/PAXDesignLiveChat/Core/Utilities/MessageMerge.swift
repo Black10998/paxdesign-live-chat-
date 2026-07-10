@@ -18,7 +18,12 @@ enum MessageMerge {
             return (sorted, true)
         }
 
-        var map = Dictionary(uniqueKeysWithValues: existing.map { ($0.id, $0) })
+        let incomingClientIds = Set(incoming.compactMap(\.clientMsgId))
+        let reconciledExisting = existing.filter { message in
+            guard message.id < 0, let clientId = message.clientMsgId else { return true }
+            return !incomingClientIds.contains(clientId)
+        }
+        var map = Dictionary(uniqueKeysWithValues: reconciledExisting.map { ($0.id, $0) })
         var changed = false
         var maxIncomingId = existing.last?.id ?? 0
         var appendOnly = true
@@ -55,7 +60,10 @@ enum MessageMerge {
     /// Establish authoritative server history while preserving in-flight optimistic sends.
     static func baseline(server: [LiveMessage], preservingOptimistic optimistic: [LiveMessage]) -> [LiveMessage] {
         let sorted = server.sorted { $0.id < $1.id }
-        let pending = optimistic.filter { $0.id < 0 }
+        let acknowledgedClientIds = Set(sorted.compactMap(\.clientMsgId))
+        let pending = optimistic.filter {
+            $0.id < 0 && ($0.clientMsgId.map { !acknowledgedClientIds.contains($0) } ?? true)
+        }
         guard !pending.isEmpty else { return sorted }
         return mergeSorted(existing: sorted, incoming: pending).messages
     }

@@ -1690,10 +1690,18 @@
       $messages.append(html);
     }
 
-    function appendOptimisticAdminMessage(text, replyTo) {
-      var tempId = 'pending-' + Date.now();
+    function newClientMessageId() {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+      }
+      return 'admin-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+    }
+
+    function appendOptimisticAdminMessage(text, replyTo, clientMsgId) {
+      var tempId = 'pending-' + clientMsgId;
       var msg = {
         id: tempId,
+        client_msg_id: clientMsgId,
         role: 'admin',
         content: text,
         _pending: true,
@@ -1985,12 +1993,13 @@
       if ($send.prop('disabled')) return;
       clearAdminTypingState();
       var replyTo = replyToId || 0;
-      var tempId = appendOptimisticAdminMessage(text, replyTo);
+      var clientMsgId = newClientMessageId();
+      var tempId = appendOptimisticAdminMessage(text, replyTo, clientMsgId);
       $input.val('');
       resetComposerHeight();
       clearReply();
       $send.prop('disabled', true);
-      var payload = { session_id: selectedSession, message: text };
+      var payload = { session_id: selectedSession, message: text, client_msg_id: clientMsgId };
       if (replyTo) payload.reply_to = replyTo;
       ajax('paxdesign_chat_live_admin_send', payload)
         .done(function (res) {

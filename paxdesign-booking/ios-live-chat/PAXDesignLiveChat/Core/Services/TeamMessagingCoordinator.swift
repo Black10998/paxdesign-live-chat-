@@ -269,7 +269,9 @@ final class TeamChatThreadModel: ObservableObject {
         pollTask = Task { [weak self] in
             guard let self else { return }
             self.beginEventStream(auth: auth, generation: generation)
-            await self.loadFullHistory(auth: auth, showLoading: false)
+            async let history: Void = self.loadFullHistory(auth: auth, showLoading: false)
+            async let pending: Void = self.retryPendingMessages(auth: auth)
+            _ = await (history, pending)
             guard !Task.isCancelled, self.lifecycleGeneration == generation else { return }
             self.lastStreamEventAt = Date()
 
@@ -570,9 +572,11 @@ final class TeamChatThreadModel: ObservableObject {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, let api = auth.api else { return }
 
+        let clientMsgId = UUID().uuidString.lowercased()
         let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000)
         let optimistic = LiveMessage(
             id: tempId,
+            clientMsgId: clientMsgId,
             role: "admin",
             content: text,
             ts: Int(Date().timeIntervalSince1970),
@@ -580,12 +584,25 @@ final class TeamChatThreadModel: ObservableObject {
             senderName: auth.profile?.displayName
         )
         messages.append(optimistic)
+        PendingMessageStore.shared.enqueue(PendingOutboundMessage(
+            id: clientMsgId,
+            sessionId: sessionId,
+            channel: .team,
+            content: text,
+            replyTo: nil,
+            createdAt: Date().timeIntervalSince1970,
+            attempts: 0
+        ))
         draft = ""
         isSending = true
         defer { isSending = false }
 
         do {
-            let sent = try await api.sendTeamMessage(sessionId, content: text)
+            let sent = try await api.sendTeamMessage(
+                sessionId,
+                content: text,
+                clientMsgId: clientMsgId
+            )
             if let index = messages.firstIndex(where: { $0.id == tempId }) {
                 messages[index] = normalizeTeamMessage(sent.message)
             } else {
@@ -593,6 +610,7 @@ final class TeamChatThreadModel: ObservableObject {
             }
             pollSeq = max(pollSeq, sent.seq)
             currentSeq = max(currentSeq, sent.seq)
+            PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
             MessageSendSound.shared.playIfEnabled()
             await teamCoordinator.refresh(auth: auth)
             await markRead(auth: auth)
@@ -602,6 +620,31 @@ final class TeamChatThreadModel: ObservableObject {
             messages.removeAll { $0.id == tempId }
             draft = text
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func retryPendingMessages(auth: AuthStore) async {
+        guard let api = auth.api else { return }
+        let pending = PendingMessageStore.shared.pending(sessionId: sessionId, channel: .team)
+        for item in pending {
+            guard !Task.isCancelled else { return }
+            PendingMessageStore.shared.noteAttempt(clientMsgId: item.id)
+            do {
+                let sent = try await api.sendTeamMessage(
+                    sessionId,
+                    content: item.content,
+                    clientMsgId: item.id
+                )
+                insertIncomingMessages([sent.message])
+                pollSeq = max(pollSeq, sent.seq)
+                currentSeq = max(currentSeq, sent.seq)
+                PendingMessageStore.shared.acknowledge(clientMsgId: item.id)
+            } catch {
+                if case LiveChatAPIError.unauthorized = error {
+                    auth.handleUnauthorized()
+                }
+                return
+            }
         }
     }
 

@@ -227,6 +227,7 @@ struct EmployeeIdentity: Codable, Hashable {
 
 struct LiveMessage: Identifiable, Codable, Hashable {
     let id: Int
+    let clientMsgId: String?
     let role: String
     let content: String
     let ts: Int?
@@ -240,6 +241,7 @@ struct LiveMessage: Identifiable, Codable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case id, role, content, ts, reaction
+        case clientMsgId = "client_msg_id"
         case imageUrl = "image_url"
         case replyTo = "reply_to"
         case senderId = "sender_id"
@@ -254,6 +256,7 @@ struct LiveMessage: Identifiable, Codable, Hashable {
 
     init(
         id: Int,
+        clientMsgId: String? = nil,
         role: String,
         content: String,
         ts: Int? = nil,
@@ -266,6 +269,7 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         senderRole: String? = nil
     ) {
         self.id = id
+        self.clientMsgId = clientMsgId
         self.role = role
         self.content = content
         self.ts = ts
@@ -281,6 +285,8 @@ struct LiveMessage: Identifiable, Codable, Hashable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = LiveChatDecode.int(container, CodingKeys.id)
+        let decodedClientId = LiveChatDecode.string(container, CodingKeys.clientMsgId)
+        clientMsgId = decodedClientId.isEmpty ? nil : decodedClientId
         role = LiveChatDecode.string(container, CodingKeys.role)
         content = LiveChatDecode.string(container, CodingKeys.content)
         ts = LiveChatDecode.optionalInt(container, CodingKeys.ts)

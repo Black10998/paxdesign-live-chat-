@@ -706,76 +706,58 @@ class PAXdesign_Chat_Live {
         if (!$row) {
             $row = $this->ensure_session($session_id);
         }
-        if (!$row) {
+        if (!$row || !class_exists('PAXdesign_Message_Store')) {
             return null;
         }
 
-        $messages = $this->decode_messages($row->messages);
-        $id       = $this->next_message_id($messages);
-        $entry    = array(
-            'id'      => $id,
-            'role'    => $role,
-            'content' => $content,
-            'ts'      => time(),
-        );
         if (!empty($extra['reply_to'])) {
-            $reply_to = (int) $extra['reply_to'];
-            if ($reply_to > 0) {
-                $entry['reply_to'] = $reply_to;
-            }
+            $extra['reply_to'] = absint($extra['reply_to']);
         }
         if ($has_image) {
-            $entry['image_url']        = esc_url_raw($extra['image_url']);
-            $entry['attachment_type']  = 'image';
+            $extra['image_url']       = esc_url_raw($extra['image_url']);
+            $extra['attachment_type'] = 'image';
         }
         if ($role === 'admin') {
             $sender_id = get_current_user_id();
             if ($sender_id > 0) {
                 $identity = self::resolve_employee_identity($sender_id);
                 if ($identity) {
-                    $entry['sender_id']     = $identity['id'];
-                    $entry['sender_name']   = $identity['name'];
-                    $entry['sender_avatar'] = $identity['avatar'];
-                    $entry['sender_role']   = $identity['role'];
-                    $entry['sender_email']  = $identity['email'];
+                    $extra['sender_id']     = $identity['id'];
+                    $extra['sender_name']   = $identity['name'];
+                    $extra['sender_avatar'] = $identity['avatar'];
+                    $extra['sender_role']   = $identity['role'];
+                    $extra['sender_email']  = $identity['email'];
                 }
             } elseif (!empty($extra['sender_id'])) {
                 $identity = self::resolve_employee_identity((int) $extra['sender_id']);
                 if ($identity) {
-                    $entry['sender_id']     = $identity['id'];
-                    $entry['sender_name']   = $identity['name'];
-                    $entry['sender_avatar'] = $identity['avatar'];
-                    $entry['sender_role']   = $identity['role'];
-                    $entry['sender_email']  = $identity['email'];
+                    $extra['sender_id']     = $identity['id'];
+                    $extra['sender_name']   = $identity['name'];
+                    $extra['sender_avatar'] = $identity['avatar'];
+                    $extra['sender_role']   = $identity['role'];
+                    $extra['sender_email']  = $identity['email'];
                 }
             }
         }
-        $messages[] = $entry;
-        $messages   = $this->sort_messages($messages);
 
-        $update_row = array(
-            'messages'      => $this->encode_messages($messages),
-            'message_seq'   => $id,
-            'message_count' => count($messages),
-            'updated_at'    => current_time('mysql'),
-        );
-        $update_fmt = array('%s', '%d', '%d', '%s');
+        $entry = PAXdesign_Message_Store::append($session_id, $role, $content, $extra, 'customer');
+        if (is_wp_error($entry)) {
+            return $entry;
+        }
+        $id = isset($entry['id']) ? absint($entry['id']) : 0;
 
         if ($role === 'user' && class_exists('PAXdesign_Language_Routing')) {
             $detected = PAXdesign_Language_Routing::detect_text_language($content);
             if ($detected !== '') {
-                $update_row['customer_language'] = $detected;
-                $update_fmt[] = '%s';
+                $wpdb->update(
+                    PAXdesign_Chat_Log::table_name(),
+                    array('customer_language' => $detected),
+                    array('session_id' => $session_id),
+                    array('%s'),
+                    array('%s')
+                );
             }
         }
-
-        $wpdb->update(
-            PAXdesign_Chat_Log::table_name(),
-            $update_row,
-            array('id' => (int) $row->id),
-            $update_fmt,
-            array('%d')
-        );
 
         $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
         $preview = $content !== '' ? wp_html_excerpt($content, 120, '…') : '';
@@ -787,17 +769,6 @@ class PAXdesign_Chat_Live {
             'handler'   => $handler,
             'service'   => isset($row->detected_service) ? (string) $row->detected_service : '',
         ));
-
-        if (class_exists('PAXdesign_Chat_Event_Bus')) {
-            $agent = self::session_agent_payload($row);
-            PAXdesign_Chat_Event_Bus::emit_session($session_id, 'message', array(
-                'seq'     => $id,
-                'role'    => $role,
-                'handler' => $handler,
-                'preview' => $preview,
-                'message' => $this->format_sse_message_payload($entry, $agent['admin_user_id']),
-            ));
-        }
 
         return $entry;
     }
@@ -1138,7 +1109,14 @@ class PAXdesign_Chat_Live {
 
         $reply_to = isset($_POST['reply_to']) ? (int) $_POST['reply_to'] : 0;
         $extra    = $reply_to > 0 ? array('reply_to' => $reply_to) : array();
+        $extra['client_msg_id'] = isset($_POST['client_msg_id'])
+            ? sanitize_text_field(wp_unslash($_POST['client_msg_id']))
+            : '';
         $entry    = $this->append_message($session_id, 'user', $content, $extra);
+        if (is_wp_error($entry)) {
+            $data = $entry->get_error_data();
+            wp_send_json_error(array('message' => $entry->get_error_message()), is_array($data) && !empty($data['status']) ? (int) $data['status'] : 500);
+        }
         if (!$entry) {
             wp_send_json_error(array('message' => 'Could not save'), 500);
         }
@@ -1642,7 +1620,14 @@ class PAXdesign_Chat_Live {
 
         $reply_to = isset($_POST['reply_to']) ? (int) $_POST['reply_to'] : 0;
         $extra    = $reply_to > 0 ? array('reply_to' => $reply_to) : array();
+        $extra['client_msg_id'] = isset($_POST['client_msg_id'])
+            ? sanitize_text_field(wp_unslash($_POST['client_msg_id']))
+            : '';
         $entry    = $this->append_message($session_id, 'admin', $content, $extra);
+        if (is_wp_error($entry)) {
+            $data = $entry->get_error_data();
+            wp_send_json_error(array('message' => $entry->get_error_message()), is_array($data) && !empty($data['status']) ? (int) $data['status'] : 500);
+        }
         if (!$entry) {
             wp_send_json_error(array('message' => 'Speichern fehlgeschlagen.'), 500);
         }
@@ -2158,6 +2143,9 @@ class PAXdesign_Chat_Live {
                 'role'    => $role,
                 'content' => isset($msg['content']) ? (string) $msg['content'] : '',
             );
+            if (!empty($msg['client_msg_id'])) {
+                $entry['client_msg_id'] = sanitize_text_field((string) $msg['client_msg_id']);
+            }
             if (isset($msg['ts'])) {
                 $entry['ts'] = (int) $msg['ts'];
             }
@@ -2234,11 +2222,13 @@ class PAXdesign_Chat_Live {
 
         $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
         $agent   = self::session_agent_payload($row);
-        $raw_messages = $this->decode_messages($row->messages);
-        $all_messages = $this->format_messages_for_api(
-            $raw_messages,
-            $agent['admin_user_id']
-        );
+        $raw_messages = class_exists('PAXdesign_Message_Store')
+            ? PAXdesign_Message_Store::all_messages($session_id, 'customer')
+            : $this->decode_messages($row->messages);
+        $all_messages = $this->format_messages_for_api($raw_messages, $agent['admin_user_id']);
+        $authoritative_seq = class_exists('PAXdesign_Message_Store')
+            ? PAXdesign_Message_Store::latest_seq($session_id, 'customer')
+            : (isset($row->message_seq) ? (int) $row->message_seq : 0);
 
         return array(
             'session_id'       => isset($row->session_id) ? (string) $row->session_id : '',
@@ -2251,7 +2241,7 @@ class PAXdesign_Chat_Live {
             'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
             'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
             'updated_at'       => isset($row->updated_at) ? (string) $row->updated_at : '',
-            'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
+            'seq'              => $authoritative_seq,
             'message_count'    => count($all_messages),
             'last_read_seq'    => 0,
             'messages'         => $all_messages,
@@ -2280,27 +2270,21 @@ class PAXdesign_Chat_Live {
             return new WP_Error('not_found', 'Session not found', array('status' => 404));
         }
 
-        $messages = $this->decode_messages($row->messages);
         $agent    = self::session_agent_payload($row);
-        $all      = $this->format_messages_for_api($messages, $agent['admin_user_id']);
-        $new      = $full ? $all : array();
-        if (!$full) {
-            foreach ($all as $msg) {
-                $mid = isset($msg['id']) ? (int) $msg['id'] : 0;
-                if ($mid > $since) {
-                    $new[] = $msg;
-                }
-            }
+        if (class_exists('PAXdesign_Message_Store')) {
+            $all = PAXdesign_Message_Store::all_messages($session_id, 'customer');
+            $new = $full ? $all : PAXdesign_Message_Store::messages_since($session_id, $since, 500, 'customer');
+            $message_seq = PAXdesign_Message_Store::latest_seq($session_id, 'customer');
+        } else {
+            $messages = $this->decode_messages($row->messages);
+            $all = $this->format_messages_for_api($messages, $agent['admin_user_id']);
+            $new = $full ? $all : array_values(array_filter($all, function ($msg) use ($since) {
+                return isset($msg['id']) && (int) $msg['id'] > $since;
+            }));
             $message_seq = isset($row->message_seq) ? (int) $row->message_seq : 0;
-            if (empty($new) && $since > 0 && $message_seq > $since) {
-                foreach ($all as $msg) {
-                    $mid = isset($msg['id']) ? (int) $msg['id'] : 0;
-                    if ($mid >= $since) {
-                        $new[] = $msg;
-                    }
-                }
-            }
         }
+        $all = $this->format_messages_for_api($all, $agent['admin_user_id']);
+        $new = $this->format_messages_for_api($new, $agent['admin_user_id']);
 
         $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
 
@@ -2314,7 +2298,7 @@ class PAXdesign_Chat_Live {
             'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
             'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
             'updated_at'       => isset($row->updated_at) ? (string) $row->updated_at : '',
-            'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
+            'seq'              => $message_seq,
             'message_count'    => count($all),
             'messages'         => $new,
             'admin_typing'     => $this->is_typing($session_id, 'admin'),
@@ -2554,7 +2538,7 @@ class PAXdesign_Chat_Live {
     /**
      * @return array<string, mixed>|WP_Error
      */
-    public function admin_send_message($session_id, $content, $reply_to = 0) {
+    public function admin_send_message($session_id, $content, $reply_to = 0, $client_msg_id = '') {
         $session_id = $this->sanitize_session_id($session_id);
         $content    = sanitize_textarea_field((string) $content);
 
@@ -2568,7 +2552,11 @@ class PAXdesign_Chat_Live {
 
         $reply_to = (int) $reply_to;
         $extra    = $reply_to > 0 ? array('reply_to' => $reply_to) : array();
+        $extra['client_msg_id'] = sanitize_text_field((string) $client_msg_id);
         $entry    = $this->append_message($session_id, 'admin', $content, $extra);
+        if (is_wp_error($entry)) {
+            return $entry;
+        }
         if (!$entry) {
             return new WP_Error('save_failed', 'Speichern fehlgeschlagen.', array('status' => 500));
         }

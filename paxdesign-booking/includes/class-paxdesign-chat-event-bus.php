@@ -9,7 +9,6 @@ if (!defined('ABSPATH')) {
 
 class PAXdesign_Chat_Event_Bus {
 
-    const QUEUE_TTL    = 900;
     const MAX_EVENTS   = 500;
     const STREAM_WAIT  = 25;
     const GLOBAL_KEY   = 'pax_evt_global_seq';
@@ -26,33 +25,11 @@ class PAXdesign_Chat_Event_Bus {
         if ($channel === '' || $type === '') {
             return 0;
         }
-
-        $key   = self::queue_key($channel);
-        $queue = get_transient($key);
-        if (!is_array($queue)) {
-            $queue = array('seq' => 0, 'events' => array());
+        if (!class_exists('PAXdesign_Message_Store')) {
+            return 0;
         }
-        if (!isset($queue['seq'])) {
-            $queue['seq'] = 0;
-        }
-        if (!isset($queue['events']) || !is_array($queue['events'])) {
-            $queue['events'] = array();
-        }
-
-        $global_id = self::next_global_id();
-        $event = array(
-            'id'      => $global_id,
-            'type'    => $type,
-            'ts'      => time(),
-            'payload' => $payload,
-        );
-        $queue['events'][] = $event;
-        if (count($queue['events']) > self::MAX_EVENTS) {
-            $queue['events'] = array_slice($queue['events'], -self::MAX_EVENTS);
-        }
-        set_transient($key, $queue, self::QUEUE_TTL);
-
-        return $global_id;
+        $message_seq = isset($payload['seq']) ? absint($payload['seq']) : 0;
+        return PAXdesign_Message_Store::emit($channel, $type, $payload, $message_seq);
     }
 
     /**
@@ -153,28 +130,10 @@ class PAXdesign_Chat_Event_Bus {
      * @return array<int, array<string, mixed>>
      */
     public static function events_since($channel, $since = 0) {
-        $key   = self::queue_key($channel);
-        $queue = get_transient($key);
-        if (!is_array($queue) || empty($queue['events']) || !is_array($queue['events'])) {
+        if (!class_exists('PAXdesign_Message_Store')) {
             return array();
         }
-        $since = absint($since);
-        $latest = end($queue['events']);
-        $latest_id = is_array($latest) && isset($latest['id']) ? (int) $latest['id'] : 0;
-        // Recover automatically if the client cursor is ahead after a cache reset.
-        if ($since > 0 && $latest_id > 0 && $since > $latest_id) {
-            $since = 0;
-        }
-        $out   = array();
-        foreach ($queue['events'] as $event) {
-            if (!is_array($event) || !isset($event['id'])) {
-                continue;
-            }
-            if ((int) $event['id'] > $since) {
-                $out[] = $event;
-            }
-        }
-        return $out;
+        return PAXdesign_Message_Store::events_since($channel, absint($since), self::MAX_EVENTS);
     }
 
     /**

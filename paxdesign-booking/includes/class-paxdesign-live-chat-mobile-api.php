@@ -373,6 +373,18 @@ class PAXdesign_Live_Chat_Mobile_API {
             ),
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/events/ack', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_event_ack'),
+            'permission_callback' => $auth,
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions/(?P<id>[a-zA-Z0-9_\-]+)/read', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_session_read'),
+            'permission_callback' => $auth,
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions/(?P<id>[a-zA-Z0-9_]+)/stream', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'route_session_stream'),
@@ -702,7 +714,8 @@ class PAXdesign_Live_Chat_Mobile_API {
         }
         $message  = isset($params['message']) ? $params['message'] : $request->get_param('message');
         $reply_to = isset($params['reply_to']) ? $params['reply_to'] : $request->get_param('reply_to');
-        return self::respond(self::live()->admin_send_message($request['id'], $message, $reply_to));
+        $client_id = isset($params['client_msg_id']) ? $params['client_msg_id'] : $request->get_param('client_msg_id');
+        return self::respond(self::live()->admin_send_message($request['id'], $message, $reply_to, $client_id));
     }
 
     public static function route_send_image(WP_REST_Request $request) {
@@ -1180,10 +1193,12 @@ class PAXdesign_Live_Chat_Mobile_API {
     public static function route_team_send_message(WP_REST_Request $request) {
         $params  = $request->get_json_params();
         $content = isset($params['content']) ? (string) $params['content'] : '';
+        $client_id = isset($params['client_msg_id']) ? (string) $params['client_msg_id'] : '';
         return self::respond(PAXdesign_Team_Messaging::send_message(
             $request['id'],
             (int) wp_get_current_user()->ID,
-            $content
+            $content,
+            $client_id
         ));
     }
 
@@ -1223,6 +1238,35 @@ class PAXdesign_Live_Chat_Mobile_API {
             PAXdesign_Chat_Event_Bus::stream_admin_sse((int) get_current_user_id(), '', 0, $since);
         }
         exit;
+    }
+
+    public static function route_event_ack(WP_REST_Request $request) {
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        $consumer = !empty($params['consumer_id'])
+            ? sanitize_text_field($params['consumer_id'])
+            : 'user:' . (int) get_current_user_id();
+        return self::respond(PAXdesign_Message_Store::acknowledge(
+            $consumer,
+            isset($params['channel']) ? $params['channel'] : 'inbox:admins',
+            isset($params['event_id']) ? (int) $params['event_id'] : 0,
+            isset($params['seq']) ? (int) $params['seq'] : 0
+        ));
+    }
+
+    public static function route_session_read(WP_REST_Request $request) {
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        return self::respond(PAXdesign_Message_Store::acknowledge(
+            'user:' . (int) get_current_user_id(),
+            'session:' . sanitize_text_field($request['id']),
+            0,
+            isset($params['seq']) ? (int) $params['seq'] : 0
+        ));
     }
 
     public static function route_session_stream(WP_REST_Request $request) {
