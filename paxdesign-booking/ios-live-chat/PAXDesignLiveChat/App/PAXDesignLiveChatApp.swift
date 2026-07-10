@@ -195,14 +195,11 @@ struct RootView: View {
                 .zIndex(300)
         }
         .animation(.easeInOut(duration: 0.28), value: phaseIdentifier)
-        .sheet(isPresented: $permissions.showNotificationPrompt) {
-            NotificationPermissionPromptView()
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
-        }
         .fullScreenCover(isPresented: $showPostLoginOnboarding) {
             OnboardingFlowView(mode: .postLogin) {
-                showPostLoginOnboarding = false
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    showPostLoginOnboarding = false
+                }
             }
         }
         .onChange(of: launchSplash.isVisible) { visible in

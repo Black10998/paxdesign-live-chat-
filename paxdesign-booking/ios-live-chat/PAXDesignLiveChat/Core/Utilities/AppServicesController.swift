@@ -26,7 +26,6 @@ enum AppServicesController {
 
         Task(priority: .utility) {
             await PermissionCoordinator.shared.refreshStatuses()
-            PermissionCoordinator.shared.presentNotificationPromptIfNeeded(isLoggedIn: true)
             #if !SIDELOAD
             let status = PermissionCoordinator.shared.notificationStatus
             if status == .authorized || status == .provisional || status == .ephemeral {
