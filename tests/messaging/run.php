@@ -117,11 +117,11 @@ assert_true(count($replay) === $expected - 200, 'Reconnect replay lost or duplic
 assert_true($replay[0]['id'] > $cursor, 'Reconnect replay did not honor exclusive cursor');
 
 // Multiplexed channels must be emitted in global outbox order.
-$userEvent = PAXdesign_Message_Store::emit('inbox:user:7', 'message', array('seq' => 1));
-$adminEvent = PAXdesign_Message_Store::emit('inbox:admins', 'message', array('seq' => 2));
+$userEvent = PAXdesign_Message_Store::emit('test:inbox:user', 'message', array('seq' => 1));
+$adminEvent = PAXdesign_Message_Store::emit('test:inbox:admin', 'message', array('seq' => 2));
 $merged = PAXdesign_Chat_Event_Bus::merged_events_since(array(
-    'inbox:admins' => 0,
-    'inbox:user:7' => 0,
+    'test:inbox:admin' => 0,
+    'test:inbox:user' => 0,
 ));
 assert_true(count($merged) === 2, 'Multiplexed inbox omitted an event');
 assert_true($merged[0]['id'] === $userEvent && $merged[1]['id'] === $adminEvent, 'Multiplexed inbox reordered events');
