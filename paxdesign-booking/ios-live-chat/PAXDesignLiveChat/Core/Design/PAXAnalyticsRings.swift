@@ -54,7 +54,7 @@ struct PAXSevenDayAnalyticsRings: View {
             }
         }
         .padding(16)
-        .paxCard(.premium)
+        .paxCard(.standard)
         .onAppear {
             guard !reduceMotion else {
                 animateRings = true
@@ -212,7 +212,7 @@ struct PAXSessionMixRings: View {
             }
         }
         .padding(16)
-        .paxCard(.premium)
+        .paxCard(.standard)
         .onAppear {
             guard !reduceMotion else {
                 animate = true
