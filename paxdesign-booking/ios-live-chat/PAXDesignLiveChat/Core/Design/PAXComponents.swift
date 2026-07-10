@@ -489,8 +489,6 @@ private struct PAXPremiumRefreshModifier: ViewModifier {
 }
 
 private struct PAXRefreshControlSpinnerHider: UIViewRepresentable {
-    let isActive: Bool
-
     func makeUIView(context: Context) -> PAXRefreshAnchorView {
         let view = PAXRefreshAnchorView()
         view.isUserInteractionEnabled = false
