@@ -52,6 +52,14 @@ enum MessageMerge {
         return (map.values.sorted { $0.id < $1.id }, true)
     }
 
+    /// Establish authoritative server history while preserving in-flight optimistic sends.
+    static func baseline(server: [LiveMessage], preservingOptimistic optimistic: [LiveMessage]) -> [LiveMessage] {
+        let sorted = server.sorted { $0.id < $1.id }
+        let pending = optimistic.filter { $0.id < 0 }
+        guard !pending.isEmpty else { return sorted }
+        return mergeSorted(existing: sorted, incoming: pending).messages
+    }
+
     static func applyReactions(
         to messages: [LiveMessage],
         reactions: [String: String]

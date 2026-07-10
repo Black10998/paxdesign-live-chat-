@@ -36,6 +36,65 @@ private enum LiveChatDecode {
         }
         return false
     }
+
+    static func optionalInt<C: CodingKey>(_ container: KeyedDecodingContainer<C>, _ key: C) -> Int? {
+        if let value = try? container.decodeIfPresent(Int.self, forKey: key) {
+            return value
+        }
+        if let value = try? container.decodeIfPresent(String.self, forKey: key), let parsed = Int(value) {
+            return parsed
+        }
+        return nil
+    }
+
+    static func decodeLiveMessages<C: CodingKey>(from container: KeyedDecodingContainer<C>, key: C) -> [LiveMessage] {
+        guard var array = try? container.nestedUnkeyedContainer(forKey: key) else {
+            return []
+        }
+        var messages: [LiveMessage] = []
+        while !array.isAtEnd {
+            if let message = try? array.decode(LiveMessage.self) {
+                messages.append(message)
+            } else {
+                _ = try? array.decode(LossyJSONSkip.self)
+            }
+        }
+        return messages
+    }
+}
+
+/// Skips one JSON value when decoding a partially invalid message array.
+private struct LossyJSONSkip: Decodable {
+    init(from decoder: Decoder) throws {
+        if let container = try? decoder.singleValueContainer() {
+            if container.decodeNil() { return }
+            if (try? container.decode(Bool.self)) != nil { return }
+            if (try? container.decode(Int.self)) != nil { return }
+            if (try? container.decode(Double.self)) != nil { return }
+            if (try? container.decode(String.self)) != nil { return }
+        }
+        if var unkeyed = try? decoder.unkeyedContainer() {
+            while !unkeyed.isAtEnd {
+                _ = try? unkeyed.decode(LossyJSONSkip.self)
+            }
+            return
+        }
+        if let keyed = try? decoder.container(keyedBy: LossyJSONKey.self) {
+            for key in keyed.allKeys {
+                _ = try? keyed.decode(LossyJSONSkip.self, forKey: key)
+            }
+        }
+    }
+}
+
+private struct LossyJSONKey: CodingKey {
+    var stringValue: String
+    var intValue: Int?
+    init?(stringValue: String) { self.stringValue = stringValue }
+    init?(intValue: Int) {
+        self.intValue = intValue
+        self.stringValue = "\(intValue)"
+    }
 }
 
 struct LiveSession: Identifiable, Codable, Hashable {
@@ -224,15 +283,15 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         id = LiveChatDecode.int(container, CodingKeys.id)
         role = LiveChatDecode.string(container, CodingKeys.role)
         content = LiveChatDecode.string(container, CodingKeys.content)
-        ts = try container.decodeIfPresent(Int.self, forKey: .ts)
+        ts = LiveChatDecode.optionalInt(container, CodingKeys.ts)
         imageUrl = try container.decodeIfPresent(String.self, forKey: .imageUrl)
-        replyTo = try container.decodeIfPresent(Int.self, forKey: .replyTo)
+        replyTo = LiveChatDecode.optionalInt(container, CodingKeys.replyTo)
         if let raw = try container.decodeIfPresent(String.self, forKey: .reaction) {
             reaction = MessageReaction.normalize(raw)
         } else {
             reaction = nil
         }
-        senderId = try container.decodeIfPresent(Int.self, forKey: .senderId)
+        senderId = LiveChatDecode.optionalInt(container, CodingKeys.senderId)
         let decodedSenderName = LiveChatDecode.string(container, CodingKeys.senderName)
         if decodedSenderName.isEmpty {
             let legacy = try decoder.container(keyedBy: LegacyCodingKeys.self)
@@ -295,6 +354,7 @@ struct PollResponse: Codable {
     let detectedService: String
     let updatedAt: String
     let seq: Int
+    let messageCount: Int
     let lastReadSeq: Int
     let messages: [LiveMessage]
     let adminTyping: Bool
@@ -311,7 +371,9 @@ struct PollResponse: Codable {
         case sessionRating = "session_rating"
         case detectedService = "detected_service"
         case updatedAt = "updated_at"
-        case seq, messages, reactions
+        case seq
+        case messageCount = "message_count"
+        case messages, reactions
         case adminTyping = "admin_typing"
         case userTyping = "user_typing"
         case lastReadSeq = "last_read_seq"
@@ -329,8 +391,9 @@ struct PollResponse: Codable {
         detectedService = LiveChatDecode.string(container, CodingKeys.detectedService)
         updatedAt = LiveChatDecode.string(container, CodingKeys.updatedAt)
         seq = LiveChatDecode.int(container, CodingKeys.seq)
+        messageCount = LiveChatDecode.int(container, CodingKeys.messageCount)
         lastReadSeq = LiveChatDecode.int(container, CodingKeys.lastReadSeq)
-        messages = (try? container.decode([LiveMessage].self, forKey: .messages)) ?? []
+        messages = LiveChatDecode.decodeLiveMessages(from: container, key: CodingKeys.messages)
         adminTyping = LiveChatDecode.bool(container, CodingKeys.adminTyping)
         userTyping = LiveChatDecode.bool(container, CodingKeys.userTyping)
         reactions = (try? container.decode([String: String].self, forKey: .reactions)) ?? [:]

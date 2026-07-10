@@ -2206,6 +2206,7 @@ class PAXdesign_Chat_Live {
             'detected_service' => '',
             'updated_at'       => '',
             'seq'              => 0,
+            'message_count'    => 0,
             'messages'         => array(),
             'admin_typing'     => false,
             'user_typing'      => false,
@@ -2229,6 +2230,10 @@ class PAXdesign_Chat_Live {
 
         $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
         $agent   = self::session_agent_payload($row);
+        $all_messages = $this->format_messages_for_api(
+            $this->decode_messages($row->messages),
+            $agent['admin_user_id']
+        );
 
         return array(
             'session_id'       => isset($row->session_id) ? (string) $row->session_id : '',
@@ -2242,10 +2247,8 @@ class PAXdesign_Chat_Live {
             'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
             'updated_at'       => isset($row->updated_at) ? (string) $row->updated_at : '',
             'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
-            'messages'         => $this->format_messages_for_api(
-                $this->decode_messages($row->messages),
-                $agent['admin_user_id']
-            ),
+            'message_count'    => count($all_messages),
+            'messages'         => $all_messages,
         );
     }
 
@@ -2300,6 +2303,7 @@ class PAXdesign_Chat_Live {
             'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
             'updated_at'       => isset($row->updated_at) ? (string) $row->updated_at : '',
             'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
+            'message_count'    => count($all),
             'messages'         => $new,
             'admin_typing'     => $this->is_typing($session_id, 'admin'),
             'user_typing'      => $this->is_typing($session_id, 'user'),

@@ -222,6 +222,7 @@ class PAXdesign_Team_Messaging {
             'updated_at'       => isset($conv['updated_at']) ? (string) $conv['updated_at'] : '',
             'session_rating'   => 0,
             'seq'              => $seq,
+            'message_count'    => count($messages),
             'last_read_seq'    => $read_seq,
             'other_read_seq'   => $other_read,
             'messages'         => array_map(array(__CLASS__, 'format_message'), $out_messages),
