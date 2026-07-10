@@ -44,6 +44,9 @@ final class TeamMessagingCoordinator: ObservableObject {
         if let api = auth.api {
             ChatEventStream.shared.subscribeInbox(id: inboxSubscriptionId, api: api) { [weak self] event in
                 guard let self else { return }
+                guard let sessionId = event.payload["session_id"] as? String, sessionId.hasPrefix("team_") else {
+                    return
+                }
                 if event.type == "conversation_deleted" {
                     Task { await self.refresh(auth: auth) }
                     return
@@ -124,6 +127,10 @@ final class TeamChatThreadModel: ObservableObject {
     private var pollSeq = 0
     private var pollTask: Task<Void, Never>?
     private weak var auth: AuthStore?
+    private var threadSubscriptionId: UUID?
+    private var lastStreamEventAt = Date.distantPast
+    private let recoveryPollIntervalNs: UInt64 = 5_000_000_000
+    private let streamStaleThreshold: TimeInterval = 20
 
     init(sessionId: String) {
         self.sessionId = sessionId
@@ -133,23 +140,17 @@ final class TeamChatThreadModel: ObservableObject {
         self.auth = auth
         stop()
         pollTask = Task { [weak self] in
+            guard let self else { return }
+            await self.poll(auth: auth)
+            guard !Task.isCancelled else { return }
+            self.beginEventStream(auth: auth)
+            self.lastStreamEventAt = Date()
+
             while !Task.isCancelled {
-                await self?.poll(auth: auth)
-                try? await Task.sleep(nanoseconds: AppRefreshPolicy.teamThreadInterval)
-            }
-        }
-        if let api = auth.api {
-            ChatEventStream.shared.startThread(api: api, sessionId: sessionId, isTeam: true) { [weak self] event in
-                guard let self else { return }
-                if event.type == "conversation_deleted" {
-                    self.onConversationRemoved?()
-                    return
-                }
-                if event.type == "message" {
-                    if let inline = LiveMessage.fromStreamPayload(event.payload["message"]) {
-                        self.insertIncomingMessages([inline])
-                    }
-                    Task { await self.poll(auth: auth) }
+                try? await Task.sleep(nanoseconds: self.recoveryPollIntervalNs)
+                guard !Task.isCancelled else { break }
+                if Date().timeIntervalSince(self.lastStreamEventAt) >= self.streamStaleThreshold {
+                    await self.poll(auth: auth)
                 }
             }
         }
@@ -158,7 +159,42 @@ final class TeamChatThreadModel: ObservableObject {
     func stop() {
         pollTask?.cancel()
         pollTask = nil
-        ChatEventStream.shared.stopThread()
+        if let threadSubscriptionId {
+            ChatEventStream.shared.unsubscribeThread(id: threadSubscriptionId)
+            self.threadSubscriptionId = nil
+        }
+    }
+
+    private func beginEventStream(auth: AuthStore) {
+        guard let api = auth.api else { return }
+        if let threadSubscriptionId {
+            ChatEventStream.shared.unsubscribeThread(id: threadSubscriptionId)
+        }
+        threadSubscriptionId = ChatEventStream.shared.subscribeThread(api: api, sessionId: sessionId, isTeam: true) { [weak self] event in
+            guard let self else { return }
+            self.lastStreamEventAt = Date()
+            if event.type == "conversation_deleted" {
+                self.onConversationRemoved?()
+                return
+            }
+            if event.type == "read" {
+                if let seq = event.payload["seq"] as? Int, seq > self.currentSeq {
+                    self.currentSeq = seq
+                }
+                return
+            }
+            if event.type == "message" {
+                let eventSeq = (event.payload["seq"] as? Int) ?? 0
+                var insertedInline = false
+                if let inline = LiveMessage.fromStreamPayload(event.payload["message"]) {
+                    self.insertIncomingMessages([inline])
+                    insertedInline = true
+                }
+                if eventSeq > self.currentSeq + 1 || !insertedInline {
+                    Task { await self.poll(auth: auth) }
+                }
+            }
+        }
     }
 
     func poll(auth: AuthStore) async {
@@ -170,10 +206,10 @@ final class TeamChatThreadModel: ObservableObject {
             let response = try await api.pollTeamSession(sessionId, since: pollSeq, full: pollSeq == 0)
             participantName = response.customerName
             if pollSeq == 0 {
-                messages = response.messages
+                messages = normalizeTeamMessages(response.messages)
                 isLoadingMessages = false
             } else if !response.messages.isEmpty {
-                mergeMessages(response.messages)
+                insertIncomingMessages(response.messages)
             }
             pollSeq = max(pollSeq, response.seq)
             currentSeq = max(currentSeq, response.seq)
@@ -214,9 +250,9 @@ final class TeamChatThreadModel: ObservableObject {
         do {
             let sent = try await api.sendTeamMessage(sessionId, content: text)
             if let index = messages.firstIndex(where: { $0.id == tempId }) {
-                messages[index] = sent.message
+                messages[index] = normalizeTeamMessage(sent.message)
             } else {
-                mergeMessages([sent.message])
+                insertIncomingMessages([sent.message])
             }
             pollSeq = max(pollSeq, sent.seq)
             currentSeq = max(currentSeq, sent.seq)
@@ -233,19 +269,41 @@ final class TeamChatThreadModel: ObservableObject {
     }
 
     private func insertIncomingMessages(_ incoming: [LiveMessage]) {
-        let result = MessageMerge.mergeSorted(existing: messages, incoming: incoming)
+        let normalized = normalizeTeamMessages(incoming)
+        let result = MessageMerge.mergeSorted(existing: messages, incoming: normalized)
         if result.changed {
             messages = result.messages
         }
-        let maxId = incoming.map(\.id).filter { $0 > 0 }.max() ?? 0
+        let maxId = normalized.map(\.id).filter { $0 > 0 }.max() ?? 0
         if maxId > 0 {
             pollSeq = max(pollSeq, maxId)
             currentSeq = max(currentSeq, maxId)
         }
     }
 
-    private func mergeMessages(_ incoming: [LiveMessage]) {
-        insertIncomingMessages(incoming)
+    private func normalizeTeamMessages(_ incoming: [LiveMessage]) -> [LiveMessage] {
+        incoming.map { normalizeTeamMessage($0) }
+    }
+
+    private func normalizeTeamMessage(_ message: LiveMessage) -> LiveMessage {
+        guard let myId = auth?.profile?.userId, let senderId = message.senderId else {
+            return message
+        }
+        let expectedRole = senderId == myId ? "admin" : "user"
+        guard message.role != expectedRole else { return message }
+        return LiveMessage(
+            id: message.id,
+            role: expectedRole,
+            content: message.content,
+            ts: message.ts,
+            imageUrl: message.imageUrl,
+            replyTo: message.replyTo,
+            reaction: message.reaction,
+            senderId: message.senderId,
+            senderName: message.senderName,
+            senderAvatar: message.senderAvatar,
+            senderRole: message.senderRole
+        )
     }
 }
 

@@ -9,7 +9,14 @@ struct ChatStreamEvent {
 enum ChatEventStreamParser {
     static func parseLine(_ line: String, dataBuffer: inout String) -> ChatStreamEvent? {
         if line.hasPrefix("data:") {
-            dataBuffer = String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces)
+            let chunk = String(line.dropFirst(5)).trimmingCharacters(in: .whitespaces)
+            if !dataBuffer.isEmpty {
+                dataBuffer.append("\n")
+            }
+            dataBuffer.append(chunk)
+            return nil
+        }
+        if line.hasPrefix("event:") || line.hasPrefix("id:") || line.hasPrefix("retry:") || line.hasPrefix(":") {
             return nil
         }
         if line.isEmpty, !dataBuffer.isEmpty {
@@ -33,15 +40,27 @@ final class ChatEventStream {
 
     typealias InboxHandler = @MainActor (ChatStreamEvent) -> Void
 
+    @MainActor
+    private final class ThreadSubscription {
+        let api: LiveChatAPI
+        let path: String
+        let handler: InboxHandler
+        var since = 0
+        var task: Task<Void, Never>?
+
+        init(api: LiveChatAPI, path: String, handler: @escaping InboxHandler) {
+            self.api = api
+            self.path = path
+            self.handler = handler
+        }
+    }
+
     private var inboxHandlers: [UUID: InboxHandler] = [:]
     private var inboxTask: Task<Void, Never>?
     private weak var inboxApi: LiveChatAPI?
     private var inboxSince = 0
 
-    private var threadTask: Task<Void, Never>?
-    private var threadSince = 0
-    private var threadSessionId = ""
-    private var threadHandler: InboxHandler?
+    private var threadSubscriptions: [UUID: ThreadSubscription] = [:]
 
     func subscribeInbox(id: UUID, api: LiveChatAPI, handler: @escaping InboxHandler) {
         inboxHandlers[id] = handler
@@ -58,22 +77,24 @@ final class ChatEventStream {
         }
     }
 
-    func startThread(api: LiveChatAPI, sessionId: String, isTeam: Bool, onEvent: @escaping InboxHandler) {
-        threadTask?.cancel()
-        threadSessionId = sessionId
-        threadSince = 0
-        threadHandler = onEvent
+    @discardableResult
+    func subscribeThread(api: LiveChatAPI, sessionId: String, isTeam: Bool, onEvent: @escaping InboxHandler) -> UUID {
+        let id = UUID()
         let path = isTeam ? "team/sessions/\(sessionId)/stream" : "sessions/\(sessionId)/stream"
-        threadTask = Task { @MainActor in
+        let subscription = ThreadSubscription(api: api, path: path, handler: onEvent)
+        threadSubscriptions[id] = subscription
+        subscription.task = Task { @MainActor in
             while !Task.isCancelled {
+                guard let current = self.threadSubscriptions[id] else { break }
                 do {
-                    let since = threadSince
-                    try await api.consumeEventStream(path: path, since: since) { event in
+                    let since = current.since
+                    try await current.api.consumeEventStream(path: current.path, since: since) { event in
                         Task { @MainActor in
+                            guard let current = self.threadSubscriptions[id] else { return }
                             if event.id > 0 {
-                                self.threadSince = max(self.threadSince, event.id)
+                                current.since = max(current.since, event.id)
                             }
-                            self.threadHandler?(event)
+                            current.handler(event)
                         }
                     }
                 } catch {
@@ -82,6 +103,12 @@ final class ChatEventStream {
                 }
             }
         }
+        return id
+    }
+
+    func unsubscribeThread(id: UUID) {
+        guard let subscription = threadSubscriptions.removeValue(forKey: id) else { return }
+        subscription.task?.cancel()
     }
 
     func stopInbox() {
@@ -91,16 +118,16 @@ final class ChatEventStream {
         inboxApi = nil
     }
 
-    func stopThread() {
-        threadTask?.cancel()
-        threadTask = nil
-        threadSessionId = ""
-        threadHandler = nil
+    func stopThreads() {
+        for (_, subscription) in threadSubscriptions {
+            subscription.task?.cancel()
+        }
+        threadSubscriptions.removeAll()
     }
 
     func stopAll() {
         stopInbox()
-        stopThread()
+        stopThreads()
     }
 
     private func ensureInboxStream() {

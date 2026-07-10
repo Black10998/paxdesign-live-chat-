@@ -31,6 +31,35 @@ class PAXdesign_Team_Messaging {
     }
 
     /**
+     * Serialize writes to option-backed team conversations to avoid lost updates.
+     *
+     * @param string   $scope
+     * @param callable $callback
+     * @return mixed
+     */
+    private static function with_write_lock($scope, $callback) {
+        global $wpdb;
+
+        $lock_name = 'pax_team_msg_' . md5((string) $scope);
+        $acquired = (int) $wpdb->get_var(
+            $wpdb->prepare("SELECT GET_LOCK(%s, 5)", $lock_name)
+        );
+        if ($acquired !== 1) {
+            return new WP_Error(
+                'pax_team_lock_timeout',
+                'Team conversation is busy. Please retry.',
+                array('status' => 503)
+            );
+        }
+
+        try {
+            return $callback();
+        } finally {
+            $wpdb->get_var($wpdb->prepare("SELECT RELEASE_LOCK(%s)", $lock_name));
+        }
+    }
+
+    /**
      * @param int $user_a
      * @param int $user_b
      * @return string
@@ -65,33 +94,41 @@ class PAXdesign_Team_Messaging {
         }
 
         $conv_id = self::conversation_id($current_user_id, $other_user_id);
-        $all     = self::all_conversations();
+        $result = self::with_write_lock('open:' . $conv_id, function () use ($conv_id, $current_user_id, $other_user_id) {
+            $all = self::all_conversations();
 
-        if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
-            $all[$conv_id] = array(
-                'participants' => array($current_user_id, $other_user_id),
-                'messages'     => array(),
-                'read_seq'     => array(),
-                'hidden_for'   => array(),
-                'seq'          => 0,
-                'updated_at'   => gmdate('Y-m-d H:i:s'),
-            );
-            self::save_conversations($all);
-        } else {
-            if (!isset($all[$conv_id]['hidden_for']) || !is_array($all[$conv_id]['hidden_for'])) {
-                $all[$conv_id]['hidden_for'] = array();
+            if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
+                $all[$conv_id] = array(
+                    'participants' => array($current_user_id, $other_user_id),
+                    'messages'     => array(),
+                    'read_seq'     => array(),
+                    'hidden_for'   => array(),
+                    'seq'          => 0,
+                    'updated_at'   => gmdate('Y-m-d H:i:s'),
+                );
+                self::save_conversations($all);
+            } else {
+                if (!isset($all[$conv_id]['hidden_for']) || !is_array($all[$conv_id]['hidden_for'])) {
+                    $all[$conv_id]['hidden_for'] = array();
+                }
+                $all[$conv_id]['hidden_for'] = array_values(array_diff(
+                    array_map('absint', $all[$conv_id]['hidden_for']),
+                    array($current_user_id)
+                ));
+                self::save_conversations($all);
             }
-            $all[$conv_id]['hidden_for'] = array_values(array_diff(
-                array_map('absint', $all[$conv_id]['hidden_for']),
-                array($current_user_id)
-            ));
-            self::save_conversations($all);
+
+            return array(
+                'conversation_id' => $conv_id,
+                'session'         => self::format_session_row($conv_id, $all[$conv_id], $current_user_id),
+            );
+        });
+
+        if (is_wp_error($result)) {
+            return array('error' => $result->get_error_code());
         }
 
-        return array(
-            'conversation_id' => $conv_id,
-            'session'         => self::format_session_row($conv_id, $all[$conv_id], $current_user_id),
-        );
+        return $result;
     }
 
     /**
@@ -202,69 +239,71 @@ class PAXdesign_Team_Messaging {
             return new WP_Error('pax_team_empty', 'Message cannot be empty', array('status' => 400));
         }
 
-        $all = self::all_conversations();
-        if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
-            return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
-        }
+        return self::with_write_lock('send:' . $conv_id, function () use ($conv_id, $current_user_id, $content) {
+            $all = self::all_conversations();
+            if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
+                return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
+            }
 
-        $conv = $all[$conv_id];
-        if (!self::user_in_conversation($conv, $current_user_id)) {
-            return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
-        }
+            $conv = $all[$conv_id];
+            if (!self::user_in_conversation($conv, $current_user_id)) {
+                return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
+            }
 
-        if (!isset($conv['messages']) || !is_array($conv['messages'])) {
-            $conv['messages'] = array();
-        }
-        if (!isset($conv['read_seq']) || !is_array($conv['read_seq'])) {
-            $conv['read_seq'] = array();
-        }
+            if (!isset($conv['messages']) || !is_array($conv['messages'])) {
+                $conv['messages'] = array();
+            }
+            if (!isset($conv['read_seq']) || !is_array($conv['read_seq'])) {
+                $conv['read_seq'] = array();
+            }
 
-        $seq = isset($conv['seq']) ? absint($conv['seq']) : 0;
-        $seq++;
-        $msg_id = $seq;
+            $seq = isset($conv['seq']) ? absint($conv['seq']) : 0;
+            $seq++;
+            $msg_id = $seq;
 
-        $identity = PAXdesign_Chat_Live::resolve_employee_identity($current_user_id);
+            $identity = PAXdesign_Chat_Live::resolve_employee_identity($current_user_id);
 
-        $conv['messages'][] = array(
-            'id'        => $msg_id,
-            'sender_id' => $current_user_id,
-            'content'   => $content,
-            'ts'        => time(),
-            'role'      => 'admin',
-        );
-        $conv['seq']        = $seq;
-        $conv['updated_at'] = gmdate('Y-m-d H:i:s');
-        $conv['read_seq'][(string) $current_user_id] = $seq;
-
-        $all[$conv_id] = $conv;
-        self::save_conversations($all);
-
-        $formatted = self::format_message(end($conv['messages']));
-
-        $recipient = self::other_participant($conv, $current_user_id);
-        if ($recipient && class_exists('PAXdesign_APNS')) {
-            $sender_name = $identity ? $identity['name'] : wp_get_current_user()->display_name;
-            PAXdesign_APNS::notify_team_message(
-                (int) $recipient->ID,
-                $sender_name,
-                $content,
-                $conv_id
+            $conv['messages'][] = array(
+                'id'        => $msg_id,
+                'sender_id' => $current_user_id,
+                'content'   => $content,
+                'ts'        => time(),
+                'role'      => 'admin',
             );
-        }
+            $conv['seq']        = $seq;
+            $conv['updated_at'] = gmdate('Y-m-d H:i:s');
+            $conv['read_seq'][(string) $current_user_id] = $seq;
 
-        if (class_exists('PAXdesign_Chat_Event_Bus')) {
-            PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'message', array(
-                'seq'          => $seq,
-                'message'      => $formatted,
-                'participants' => isset($conv['participants']) ? $conv['participants'] : array(),
-            ));
-        }
+            $all[$conv_id] = $conv;
+            self::save_conversations($all);
 
-        return array(
-            'ok'      => true,
-            'message' => $formatted,
-            'seq'     => $seq,
-        );
+            $formatted = self::format_message(end($conv['messages']));
+
+            $recipient = self::other_participant($conv, $current_user_id);
+            if ($recipient && class_exists('PAXdesign_APNS')) {
+                $sender_name = $identity ? $identity['name'] : wp_get_current_user()->display_name;
+                PAXdesign_APNS::notify_team_message(
+                    (int) $recipient->ID,
+                    $sender_name,
+                    $content,
+                    $conv_id
+                );
+            }
+
+            if (class_exists('PAXdesign_Chat_Event_Bus')) {
+                PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'message', array(
+                    'seq'          => $seq,
+                    'message'      => $formatted,
+                    'participants' => isset($conv['participants']) ? $conv['participants'] : array(),
+                ));
+            }
+
+            return array(
+                'ok'      => true,
+                'message' => $formatted,
+                'seq'     => $seq,
+            );
+        });
     }
 
     /**
@@ -278,40 +317,42 @@ class PAXdesign_Team_Messaging {
         $current_user_id = absint($current_user_id);
         $seq             = absint($seq);
 
-        $all = self::all_conversations();
-        if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
-            return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
-        }
-
-        $conv = $all[$conv_id];
-        if (!self::user_in_conversation($conv, $current_user_id)) {
-            return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
-        }
-
-        if (!isset($conv['read_seq']) || !is_array($conv['read_seq'])) {
-            $conv['read_seq'] = array();
-        }
-
-        $key = (string) $current_user_id;
-        $current = isset($conv['read_seq'][$key]) ? absint($conv['read_seq'][$key]) : 0;
-        if ($seq > $current) {
-            $conv['read_seq'][$key] = $seq;
-            $all[$conv_id] = $conv;
-            self::save_conversations($all);
-            if (class_exists('PAXdesign_Chat_Event_Bus')) {
-                PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'read', array(
-                    'seq'          => $seq,
-                    'user_id'      => $current_user_id,
-                    'participants' => isset($conv['participants']) ? $conv['participants'] : array(),
-                ));
+        return self::with_write_lock('read:' . $conv_id, function () use ($conv_id, $current_user_id, $seq) {
+            $all = self::all_conversations();
+            if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
+                return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
             }
-        }
 
-        return array(
-            'ok'            => true,
-            'last_read_seq' => isset($conv['read_seq'][$key]) ? absint($conv['read_seq'][$key]) : 0,
-            'seq'           => isset($conv['seq']) ? absint($conv['seq']) : 0,
-        );
+            $conv = $all[$conv_id];
+            if (!self::user_in_conversation($conv, $current_user_id)) {
+                return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
+            }
+
+            if (!isset($conv['read_seq']) || !is_array($conv['read_seq'])) {
+                $conv['read_seq'] = array();
+            }
+
+            $key = (string) $current_user_id;
+            $current = isset($conv['read_seq'][$key]) ? absint($conv['read_seq'][$key]) : 0;
+            if ($seq > $current) {
+                $conv['read_seq'][$key] = $seq;
+                $all[$conv_id] = $conv;
+                self::save_conversations($all);
+                if (class_exists('PAXdesign_Chat_Event_Bus')) {
+                    PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'read', array(
+                        'seq'          => $seq,
+                        'user_id'      => $current_user_id,
+                        'participants' => isset($conv['participants']) ? $conv['participants'] : array(),
+                    ));
+                }
+            }
+
+            return array(
+                'ok'            => true,
+                'last_read_seq' => isset($conv['read_seq'][$key]) ? absint($conv['read_seq'][$key]) : 0,
+                'seq'           => isset($conv['seq']) ? absint($conv['seq']) : 0,
+            );
+        });
     }
 
     /**
@@ -446,54 +487,56 @@ class PAXdesign_Team_Messaging {
     public static function hide_conversation($conv_id, $current_user_id) {
         $conv_id         = sanitize_text_field($conv_id);
         $current_user_id = absint($current_user_id);
-        $all             = self::all_conversations();
+        return self::with_write_lock('hide:' . $conv_id, function () use ($conv_id, $current_user_id) {
+            $all = self::all_conversations();
 
-        if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
-            return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
-        }
-
-        $conv = $all[$conv_id];
-        if (!self::user_in_conversation($conv, $current_user_id)) {
-            return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
-        }
-
-        if (!isset($conv['hidden_for']) || !is_array($conv['hidden_for'])) {
-            $conv['hidden_for'] = array();
-        }
-        if (!in_array($current_user_id, array_map('absint', $conv['hidden_for']), true)) {
-            $conv['hidden_for'][] = $current_user_id;
-        }
-
-        $participants = isset($conv['participants']) ? array_map('absint', $conv['participants']) : array();
-        $all_hidden   = true;
-        foreach ($participants as $uid) {
-            if (!in_array($uid, array_map('absint', $conv['hidden_for']), true)) {
-                $all_hidden = false;
-                break;
+            if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
+                return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
             }
-        }
-        if ($all_hidden) {
-            unset($all[$conv_id]);
-        } else {
-            $all[$conv_id] = $conv;
-        }
-        self::save_conversations($all);
 
-        if (class_exists('PAXdesign_Chat_Event_Bus')) {
-            PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'conversation_deleted', array(
-                'mode'         => $all_hidden ? 'purged' : 'hidden',
-                'user_id'      => $current_user_id,
-                'participants' => $participants,
-            ));
-        }
+            $conv = $all[$conv_id];
+            if (!self::user_in_conversation($conv, $current_user_id)) {
+                return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
+            }
 
-        return array(
-            'ok'      => true,
-            'mode'    => $all_hidden ? 'purged' : 'hidden',
-            'message' => $all_hidden
-                ? 'Conversation permanently deleted for all participants.'
-                : 'Conversation removed from your Team list. The other participant can still see it.',
-        );
+            if (!isset($conv['hidden_for']) || !is_array($conv['hidden_for'])) {
+                $conv['hidden_for'] = array();
+            }
+            if (!in_array($current_user_id, array_map('absint', $conv['hidden_for']), true)) {
+                $conv['hidden_for'][] = $current_user_id;
+            }
+
+            $participants = isset($conv['participants']) ? array_map('absint', $conv['participants']) : array();
+            $all_hidden   = true;
+            foreach ($participants as $uid) {
+                if (!in_array($uid, array_map('absint', $conv['hidden_for']), true)) {
+                    $all_hidden = false;
+                    break;
+                }
+            }
+            if ($all_hidden) {
+                unset($all[$conv_id]);
+            } else {
+                $all[$conv_id] = $conv;
+            }
+            self::save_conversations($all);
+
+            if (class_exists('PAXdesign_Chat_Event_Bus')) {
+                PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'conversation_deleted', array(
+                    'mode'         => $all_hidden ? 'purged' : 'hidden',
+                    'user_id'      => $current_user_id,
+                    'participants' => $participants,
+                ));
+            }
+
+            return array(
+                'ok'      => true,
+                'mode'    => $all_hidden ? 'purged' : 'hidden',
+                'message' => $all_hidden
+                    ? 'Conversation permanently deleted for all participants.'
+                    : 'Conversation removed from your Team list. The other participant can still see it.',
+            );
+        });
     }
 
     /**
@@ -508,27 +551,29 @@ class PAXdesign_Team_Messaging {
         }
 
         $conv_id = sanitize_text_field($conv_id);
-        $all     = self::all_conversations();
-        if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
-            return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
-        }
+        return self::with_write_lock('purge:' . $conv_id, function () use ($conv_id, $current_user_id) {
+            $all = self::all_conversations();
+            if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
+                return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
+            }
 
-        $participants = isset($all[$conv_id]['participants']) ? array_map('absint', $all[$conv_id]['participants']) : array();
-        unset($all[$conv_id]);
-        self::save_conversations($all);
+            $participants = isset($all[$conv_id]['participants']) ? array_map('absint', $all[$conv_id]['participants']) : array();
+            unset($all[$conv_id]);
+            self::save_conversations($all);
 
-        if (class_exists('PAXdesign_Chat_Event_Bus')) {
-            PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'conversation_deleted', array(
-                'mode'         => 'purged',
-                'user_id'      => absint($current_user_id),
-                'participants' => $participants,
-            ));
-        }
+            if (class_exists('PAXdesign_Chat_Event_Bus')) {
+                PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'conversation_deleted', array(
+                    'mode'         => 'purged',
+                    'user_id'      => absint($current_user_id),
+                    'participants' => $participants,
+                ));
+            }
 
-        return array(
-            'ok'      => true,
-            'mode'    => 'purged',
-            'message' => 'Conversation permanently deleted for all participants.',
-        );
+            return array(
+                'ok'      => true,
+                'mode'    => 'purged',
+                'message' => 'Conversation permanently deleted for all participants.',
+            );
+        });
     }
 }

@@ -9,8 +9,8 @@ if (!defined('ABSPATH')) {
 
 class PAXdesign_Chat_Event_Bus {
 
-    const QUEUE_TTL    = 180;
-    const MAX_EVENTS   = 80;
+    const QUEUE_TTL    = 900;
+    const MAX_EVENTS   = 500;
     const STREAM_WAIT  = 25;
     const GLOBAL_KEY   = 'pax_evt_global_seq';
 
@@ -62,9 +62,42 @@ class PAXdesign_Chat_Event_Bus {
      * @return int
      */
     private static function next_global_id() {
-        $seq = (int) get_transient(self::GLOBAL_KEY);
+        global $wpdb;
+
+        $key = self::GLOBAL_KEY;
+        $table = $wpdb->options;
+
+        $wpdb->query(
+            $wpdb->prepare(
+                "INSERT INTO $table (option_name, option_value, autoload)
+                 VALUES (%s, '0', 'no')
+                 ON DUPLICATE KEY UPDATE option_name = option_name",
+                $key
+            )
+        );
+        $wpdb->query(
+            $wpdb->prepare(
+                "UPDATE $table
+                 SET option_value = CAST(option_value AS UNSIGNED) + 1
+                 WHERE option_name = %s",
+                $key
+            )
+        );
+
+        $seq = (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT option_value FROM $table WHERE option_name = %s LIMIT 1",
+                $key
+            )
+        );
+        if ($seq > 0) {
+            return $seq;
+        }
+
+        // Last-resort fallback.
+        $seq = (int) get_option($key, 0);
         $seq++;
-        set_transient(self::GLOBAL_KEY, $seq, self::QUEUE_TTL);
+        update_option($key, $seq, false);
         return $seq;
     }
 
@@ -126,6 +159,12 @@ class PAXdesign_Chat_Event_Bus {
             return array();
         }
         $since = absint($since);
+        $latest = end($queue['events']);
+        $latest_id = is_array($latest) && isset($latest['id']) ? (int) $latest['id'] : 0;
+        // Recover automatically if the client cursor is ahead after a cache reset.
+        if ($since > 0 && $latest_id > 0 && $since > $latest_id) {
+            $since = 0;
+        }
         $out   = array();
         foreach ($queue['events'] as $event) {
             if (!is_array($event) || !isset($event['id'])) {

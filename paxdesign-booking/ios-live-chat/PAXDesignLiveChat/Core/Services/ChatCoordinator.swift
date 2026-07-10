@@ -369,6 +369,10 @@ final class ChatThreadModel: ObservableObject {
     private var knownMessageIds = Set<Int>()
     private var lastTypingNotifyAt = Date.distantPast
     private var lifecycleGeneration = 0
+    private var threadSubscriptionId: UUID?
+    private var lastStreamEventAt = Date.distantPast
+    private let recoveryPollIntervalNs: UInt64 = 5_000_000_000
+    private let streamStaleThreshold: TimeInterval = 20
 
     init(sessionId: String) {
         self.sessionId = sessionId
@@ -387,21 +391,28 @@ final class ChatThreadModel: ObservableObject {
             guard !Task.isCancelled, self.lifecycleGeneration == generation else { return }
 
             self.beginEventStream(auth: auth, generation: generation)
+            self.lastStreamEventAt = Date()
 
             while !Task.isCancelled, self.lifecycleGeneration == generation {
-                await self.poll(auth: auth)
-                try? await Task.sleep(nanoseconds: AppRefreshPolicy.chatThreadInterval)
+                try? await Task.sleep(nanoseconds: self.recoveryPollIntervalNs)
+                guard !Task.isCancelled, self.lifecycleGeneration == generation else { break }
+                if Date().timeIntervalSince(self.lastStreamEventAt) >= self.streamStaleThreshold {
+                    await self.poll(auth: auth)
+                }
             }
         }
     }
 
     func refreshNow(auth: AuthStore, expectedServerSeq: Int = 0, inlineMessage: Any? = nil) async {
+        var insertedInline = false
         if let inline = LiveMessage.fromStreamPayload(inlineMessage) {
             insertIncomingMessages([inline])
+            insertedInline = true
+            lastStreamEventAt = Date()
         }
         if hasMessageGap(expectedServerSeq: expectedServerSeq) {
             await syncFromServer(auth: auth, full: true, expectedServerSeq: expectedServerSeq)
-        } else {
+        } else if !insertedInline {
             await poll(auth: auth)
             if hasMessageGap(expectedServerSeq: expectedServerSeq) {
                 await syncFromServer(auth: auth, full: true, expectedServerSeq: expectedServerSeq)
@@ -418,7 +429,10 @@ final class ChatThreadModel: ObservableObject {
     private func stopBackgroundWork() {
         pollTask?.cancel()
         pollTask = nil
-        ChatEventStream.shared.stopThread()
+        if let threadSubscriptionId {
+            ChatEventStream.shared.unsubscribeThread(id: threadSubscriptionId)
+            self.threadSubscriptionId = nil
+        }
         typingStopTask?.cancel()
         typingStopTask = nil
         typingNotifyTask?.cancel()
@@ -429,25 +443,41 @@ final class ChatThreadModel: ObservableObject {
 
     private func beginEventStream(auth: AuthStore, generation: Int) {
         guard let api = auth.api else { return }
-        ChatEventStream.shared.startThread(api: api, sessionId: sessionId, isTeam: false) { [weak self] event in
+        if let threadSubscriptionId {
+            ChatEventStream.shared.unsubscribeThread(id: threadSubscriptionId)
+        }
+        threadSubscriptionId = ChatEventStream.shared.subscribeThread(api: api, sessionId: sessionId, isTeam: false) { [weak self] event in
             guard let self, let auth = self.auth, self.lifecycleGeneration == generation else { return }
             Task { await self.handleThreadStreamEvent(event, auth: auth) }
         }
     }
 
     private func handleThreadStreamEvent(_ event: ChatStreamEvent, auth: AuthStore) async {
+        lastStreamEventAt = Date()
         switch event.type {
         case "message":
             let eventSeq = (event.payload["seq"] as? Int) ?? 0
+            var insertedInline = false
             if let inline = LiveMessage.fromStreamPayload(event.payload["message"]) {
                 insertIncomingMessages([inline])
+                insertedInline = true
             }
             if hasMessageGap(expectedServerSeq: eventSeq) {
                 await syncFromServer(auth: auth, full: true, expectedServerSeq: eventSeq)
+            } else if !insertedInline {
+                await poll(auth: auth)
+            }
+        case "typing":
+            let who = (event.payload["who"] as? String) ?? ""
+            if who == "user", let active = event.payload["active"] as? Bool {
+                userTyping = active
             } else {
                 await poll(auth: auth)
             }
-        case "typing", "handler":
+        case "handler":
+            if let incomingHandler = event.payload["handler"] as? String, !incomingHandler.isEmpty {
+                handler = incomingHandler
+            }
             await poll(auth: auth)
         default:
             break
