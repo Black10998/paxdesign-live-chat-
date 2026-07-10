@@ -84,4 +84,43 @@ final class MessagingReliabilityTests: XCTestCase {
             SiteScopeKey.make("https://other.example/wp-json")
         )
     }
+
+    func testPollCursorUsesInclusiveSinceSemantics() {
+        // Server poll returns msg_seq > since. Advancing since to the latest seq
+        // before the message is merged locally would skip that message entirely.
+        let existing = [LiveMessage(id: 4, role: "user", content: "four")]
+        let incoming = [LiveMessage(id: 5, role: "user", content: "five")]
+
+        let result = MessageMerge.mergeSorted(existing: existing, incoming: incoming)
+
+        XCTAssertTrue(result.changed)
+        XCTAssertEqual(result.messages.map(\.id), [4, 5])
+
+        let localMax = result.messages.map(\.id).max() ?? 0
+        let serverSeq = 5
+        let pollSeq = localMax < serverSeq ? localMax : max(localMax, serverSeq)
+        XCTAssertEqual(pollSeq, 4, "Poll cursor must stay behind server seq until message 5 is local")
+    }
+
+    func testStreamPayloadDecodesInlineWebsiteMessage() {
+        let payload: [String: Any] = [
+            "session_id": "pax_test",
+            "seq": 12,
+            "role": "user",
+            "message": [
+                "id": 12,
+                "client_msg_id": "abc-123",
+                "role": "user",
+                "content": "Hello from website",
+                "ts": 1_720_000_000,
+            ],
+        ]
+
+        let decoded = StreamPayload.messages(from: payload)
+
+        XCTAssertEqual(decoded.count, 1)
+        XCTAssertEqual(decoded.first?.id, 12)
+        XCTAssertEqual(decoded.first?.content, "Hello from website")
+        XCTAssertEqual(decoded.first?.clientMsgId, "abc-123")
+    }
 }

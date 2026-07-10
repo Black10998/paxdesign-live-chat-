@@ -224,6 +224,7 @@ final class TeamMessagingCoordinator: ObservableObject {
 @MainActor
 final class TeamChatThreadModel: ObservableObject {
     @Published var messages: [LiveMessage] = []
+    @Published var messagesRevision = 0
     @Published var isLoadingMessages = false
     @Published var participantName = ""
     @Published var draft = ""
@@ -660,11 +661,31 @@ final class TeamChatThreadModel: ObservableObject {
         }
     }
 
-    private func insertIncomingMessages(_ incoming: [LiveMessage]) {
+    private func insertIncomingMessages(_ incoming: [LiveMessage], source: String = "merge") {
         let normalized = normalizeTeamMessages(incoming)
+        let beforeCount = messages.count
+        let existingIds = Set(messages.map(\.id))
         let result = MessageMerge.mergeSorted(existing: messages, incoming: normalized)
+        var published = false
         if result.changed {
             messages = result.messages
+            messagesRevision &+= 1
+            published = true
+        } else if normalized.contains(where: { $0.id > 0 && !existingIds.contains($0.id) }) {
+            messagesRevision &+= 1
+            published = true
+        }
+
+        ChatLiveDiagnostics.mergeResult(
+            sessionId: sessionId,
+            incomingIds: normalized.map(\.id),
+            changed: result.changed,
+            before: beforeCount,
+            after: messages.count,
+            published: published
+        )
+
+        if result.changed {
             let payload = CachedPollPayload(
                 handler: "team_dm",
                 handlerLabel: "Team",
@@ -680,10 +701,15 @@ final class TeamChatThreadModel: ObservableObject {
             )
             ConversationHistoryStore.shared.save(payload.asPollResponse(), sessionId: sessionId)
         }
-        let maxId = normalized.map(\.id).filter { $0 > 0 }.max() ?? 0
+        let maxId = messages.map(\.id).filter { $0 > 0 }.max() ?? 0
         if maxId > 0 {
             pollSeq = max(pollSeq, maxId)
             currentSeq = max(currentSeq, maxId)
+        }
+
+        let presentIds = Set(messages.map(\.id))
+        if !published, normalized.contains(where: { $0.id > 0 && !presentIds.contains($0.id) }) {
+            ChatLiveDiagnostics.cursorAdjusted(sessionId: sessionId, reason: "\(source)-unpublished", pollSeq: pollSeq)
         }
     }
 

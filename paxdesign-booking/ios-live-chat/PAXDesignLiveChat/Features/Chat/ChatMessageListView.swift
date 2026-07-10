@@ -1,8 +1,10 @@
 import SwiftUI
 
-/// Shared lazy message list — avoids per-body `enumerated()` allocations.
+/// Shared lazy message list — renders directly from `messages` so live inserts always appear.
 struct ChatMessageListView: View {
     let messages: [LiveMessage]
+    let messagesRevision: Int
+    let sessionId: String
     let userTyping: Bool
     let canReply: Bool
     let handler: String
@@ -13,7 +15,21 @@ struct ChatMessageListView: View {
     let onCopy: (LiveMessage) -> Void
     let onImageTap: (URL) -> Void
 
-    @State private var displayRows: [MessageDisplayRow] = []
+    private var displayRows: [MessageDisplayRow] {
+        var messageLookup: [Int: LiveMessage] = [:]
+        for message in messages {
+            messageLookup[message.id] = message
+        }
+        return messages.enumerated().map { index, message in
+            MessageDisplayRow(
+                id: "\(index)-\(message.id)",
+                message: message,
+                previous: index > 0 ? messages[index - 1] : nil,
+                next: index + 1 < messages.count ? messages[index + 1] : nil,
+                quotedMessage: message.replyTo.flatMap { messageLookup[$0] }
+            )
+        }
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -41,25 +57,23 @@ struct ChatMessageListView: View {
                 .padding(.vertical, 10)
                 .padding(.bottom, PAXShellLayout.scrollBottomPadding(tabBarVisible: false))
             }
-            .onChange(of: messages.count) { _ in scrollToBottom(proxy: proxy) }
+            .onChange(of: messagesRevision) { _ in
+                ChatLiveDiagnostics.uiRows(
+                    sessionId: sessionId,
+                    messageCount: messages.count,
+                    rowCount: displayRows.count,
+                    revision: messagesRevision
+                )
+                scrollToBottom(proxy: proxy)
+            }
             .onChange(of: userTyping) { _ in scrollToBottom(proxy: proxy) }
         }
-        .onAppear { rebuildRows() }
-        .onChange(of: messages) { _ in rebuildRows() }
-    }
-
-    private func rebuildRows() {
-        var messageLookup: [Int: LiveMessage] = [:]
-        for message in messages {
-            messageLookup[message.id] = message
-        }
-        displayRows = messages.enumerated().map { index, message in
-            MessageDisplayRow(
-                id: "\(index)-\(message.id)",
-                message: message,
-                previous: index > 0 ? messages[index - 1] : nil,
-                next: index + 1 < messages.count ? messages[index + 1] : nil,
-                quotedMessage: message.replyTo.flatMap { messageLookup[$0] }
+        .onAppear {
+            ChatLiveDiagnostics.uiRows(
+                sessionId: sessionId,
+                messageCount: messages.count,
+                rowCount: displayRows.count,
+                revision: messagesRevision
             )
         }
     }

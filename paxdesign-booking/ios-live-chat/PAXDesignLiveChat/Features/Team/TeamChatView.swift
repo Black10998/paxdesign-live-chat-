@@ -25,6 +25,8 @@ struct TeamChatView: View {
         VStack(spacing: 0) {
             ChatMessageListView(
                 messages: thread.messages,
+                messagesRevision: thread.messagesRevision,
+                sessionId: thread.sessionId,
                 userTyping: false,
                 canReply: false,
                 handler: "team",

@@ -172,6 +172,23 @@ for ($i = 0; $i < 1000; $i++) {
 $elapsed = microtime(true) - $elapsedStart;
 assert_true($elapsed < 5.0, 'Indexed reconnect replay is unexpectedly slow');
 
+// Poll uses msg_seq > since. A client that advances since to the latest seq before
+// merging the message locally will never receive that message from incremental poll.
+$poll_session = 'pax_poll_cursor_trap';
+$stored = PAXdesign_Message_Store::append(
+    $poll_session,
+    'user',
+    'first website message',
+    array('client_msg_id' => 'poll-cursor-test'),
+    'customer'
+);
+assert_true(!is_wp_error($stored), 'Poll cursor trap append failed');
+$seq = (int) $stored['id'];
+$skipped = PAXdesign_Message_Store::messages_since($poll_session, $seq, 10, 'customer');
+$visible = PAXdesign_Message_Store::messages_since($poll_session, max(0, $seq - 1), 10, 'customer');
+assert_true(empty($skipped), 'since=seq must not return the message at seq');
+assert_true(count($visible) === 1 && (int) $visible[0]['id'] === $seq, 'since=seq-1 must return the live message');
+
 echo json_encode(array(
     'status' => 'ok',
     'messages' => $expected,
