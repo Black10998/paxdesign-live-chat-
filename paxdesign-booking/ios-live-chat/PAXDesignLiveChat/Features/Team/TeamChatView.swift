@@ -15,6 +15,9 @@ struct TeamChatView: View {
                 userTyping: false,
                 canReply: false,
                 handler: "team",
+                isLoading: thread.isLoadingMessages,
+                agentDisplayName: auth.profile?.displayName ?? L10n.ChatAgent,
+                customerDisplayName: thread.participantName.isEmpty ? L10n.TeamChatTitle : thread.participantName,
                 onReply: { _ in },
                 onCopy: { UIPasteboard.general.string = $0.content },
                 onImageTap: { _ in }

@@ -4,6 +4,7 @@ struct ActivityLogView: View {
     @EnvironmentObject private var auth: AuthStore
     @ObservedObject private var log = ActivityLogService.shared
     @State private var filterModule: String?
+    @State private var isInitialLoading = true
 
     private var filteredEntries: [ActivityLogEntry] {
         guard let filterModule else { return log.entries }
@@ -12,6 +13,11 @@ struct ActivityLogView: View {
 
     var body: some View {
         List {
+            if isInitialLoading {
+                Section {
+                    PAXScreenLoadingStack(status: L10n.ModuleActivityLog, rowCount: 4)
+                }
+            } else {
             Section {
                 Picker(L10n.FilterAll, selection: $filterModule) {
                     Text(L10n.FilterAll).tag(String?.none)
@@ -32,6 +38,7 @@ struct ActivityLogView: View {
                         activityRow(entry)
                     }
                 }
+            }
             }
         }
         .listStyle(.insetGrouped)
@@ -63,6 +70,12 @@ struct ActivityLogView: View {
         }
         .paxPremiumRefreshable(status: L10n.ModuleActivityLog, rowCount: 4) {
             await PlatformSyncService.shared.sync(auth: auth)
+        }
+        .task {
+            await PlatformSyncService.shared.sync(auth: auth)
+            withAnimation(.easeOut(duration: 0.25)) {
+                isInitialLoading = false
+            }
         }
     }
 

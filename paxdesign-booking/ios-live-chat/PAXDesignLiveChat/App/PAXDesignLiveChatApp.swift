@@ -62,6 +62,7 @@ struct PAXDesignLiveChatApp: App {
                     ForegroundRefreshCoordinator.schedule(
                         auth: auth,
                         coordinator: coordinator,
+                        teamCoordinator: TeamMessagingCoordinator.shared,
                         permissions: PermissionCoordinator.shared
                     )
                 }

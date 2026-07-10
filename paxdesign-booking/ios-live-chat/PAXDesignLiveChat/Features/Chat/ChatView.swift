@@ -47,6 +47,9 @@ struct ChatView: View {
                 userTyping: thread.userTyping,
                 canReply: canReply,
                 handler: thread.handler,
+                isLoading: thread.isLoadingMessages,
+                agentDisplayName: agentDisplayName,
+                customerDisplayName: thread.customerName,
                 onReply: { thread.setReply(to: $0) },
                 onCopy: copyMessage,
                 onImageTap: { imageViewer = ImageViewerItem(url: $0) }
@@ -57,7 +60,11 @@ struct ChatView: View {
             }
 
             if let reply = thread.replyToMessage {
-                ReplyBarView(message: reply) {
+                ReplyBarView(
+                    message: reply,
+                    agentDisplayName: agentDisplayName,
+                    customerDisplayName: thread.customerName
+                ) {
                     thread.clearReply()
                 }
             }
@@ -130,10 +137,18 @@ struct ChatView: View {
         PAXHaptics.success()
     }
 
+    private var agentDisplayName: String {
+        let profileName = auth.profile?.displayName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !profileName.isEmpty { return profileName }
+        let admin = thread.adminName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !admin.isEmpty { return admin }
+        return L10n.ChatAgent
+    }
+
     private var compactStatusBar: some View {
         HStack(spacing: 6) {
             Circle().fill(statusColor).frame(width: 7, height: 7)
-            Text(thread.handlerLabel)
+            Text(statusLabel)
                 .font(.caption2.weight(.medium))
                 .foregroundStyle(PAXTheme.textSecondary)
             if let ratingView = SessionRatingBadge(rating: thread.sessionRating), canViewRatings {
@@ -185,7 +200,7 @@ struct ChatView: View {
             overviewRow(icon: "number", title: "Session", value: thread.sessionId)
             overviewRow(icon: "bubble.left.and.bubble.right", title: "Nachrichten", value: "\(thread.messages.count)")
             if !thread.adminName.isEmpty, thread.handler == "admin" {
-                overviewRow(icon: "person.badge.shield.checkmark", title: "Agent", value: thread.adminName)
+                overviewRow(icon: "person.badge.shield.checkmark", title: L10n.ChatAgent, value: agentDisplayName)
             }
             if let updated = MessageTimeFormatter.relativeUpdatedLabel(from: thread.updatedAt) {
                 overviewRow(icon: "clock", title: "Aktualisiert", value: updated)
@@ -471,6 +486,15 @@ private struct AssistChip: View {
         }
         .buttonStyle(.plain)
         .accessibilityHint(subtitle)
+    }
+}
+
+private extension ChatView {
+    var statusLabel: String {
+        if thread.handler == "admin" {
+            return agentDisplayName
+        }
+        return SessionHandlerLocalization.label(handler: thread.handler)
     }
 }
 

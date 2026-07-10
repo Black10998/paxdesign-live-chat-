@@ -7,9 +7,15 @@ struct CalendarModuleView: View {
     @State private var showAdd = false
     @State private var newTitle = ""
     @State private var newNotes = ""
+    @State private var isInitialLoading = true
 
     var body: some View {
         List {
+            if isInitialLoading {
+                Section {
+                    PAXScreenLoadingStack(status: L10n.ModuleCalendar, rowCount: 4)
+                }
+            } else {
             Section {
                 DatePicker(L10n.CalendarSelectedDay, selection: $selectedDate, displayedComponents: .date)
                     .datePickerStyle(.graphical)
@@ -45,6 +51,7 @@ struct CalendarModuleView: View {
                     calendarRow(event)
                 }
             }
+            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -74,6 +81,12 @@ struct CalendarModuleView: View {
         }
         .paxPremiumRefreshable(status: L10n.ModuleCalendar, rowCount: 4) {
             await PlatformSyncService.shared.sync(auth: auth)
+        }
+        .task {
+            await PlatformSyncService.shared.sync(auth: auth)
+            withAnimation(.easeOut(duration: 0.25)) {
+                isInitialLoading = false
+            }
         }
     }
 

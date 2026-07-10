@@ -303,6 +303,7 @@ final class ChatCoordinator: ObservableObject {
 @MainActor
 final class ChatThreadModel: ObservableObject {
     @Published var messages: [LiveMessage] = []
+    @Published var isLoadingMessages = true
     @Published var handler = "ai"
     @Published var customerName = "Kunde"
     @Published var adminName = ""
@@ -372,7 +373,12 @@ final class ChatThreadModel: ObservableObject {
     }
 
     private func loadFull(auth: AuthStore) async {
-        guard let api = auth.api else { return }
+        guard let api = auth.api else {
+            isLoadingMessages = false
+            return
+        }
+        isLoadingMessages = messages.isEmpty
+        defer { isLoadingMessages = false }
         do {
             let data = try await api.fetchSession(sessionId)
             applyPoll(data)

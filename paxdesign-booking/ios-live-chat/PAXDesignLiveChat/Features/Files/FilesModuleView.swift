@@ -4,6 +4,7 @@ struct FilesModuleView: View {
     @EnvironmentObject private var auth: AuthStore
     @ObservedObject private var store = FileLibraryStore.shared
     @State private var selectedCategory: PAXDocumentItem.DocumentCategory?
+    @State private var isInitialLoading = true
 
     private var visibleDocuments: [PAXDocumentItem] {
         if let selectedCategory {
@@ -14,6 +15,11 @@ struct FilesModuleView: View {
 
     var body: some View {
         List {
+            if isInitialLoading {
+                Section {
+                    PAXScreenLoadingStack(status: L10n.ModuleFiles, rowCount: 4)
+                }
+            } else {
             Section {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
@@ -54,6 +60,7 @@ struct FilesModuleView: View {
                     }
                 }
             }
+            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
@@ -69,6 +76,12 @@ struct FilesModuleView: View {
         }
         .paxPremiumRefreshable(status: L10n.ModuleFiles, rowCount: 4) {
             await PlatformSyncService.shared.sync(auth: auth)
+        }
+        .task {
+            await PlatformSyncService.shared.sync(auth: auth)
+            withAnimation(.easeOut(duration: 0.25)) {
+                isInitialLoading = false
+            }
         }
     }
 

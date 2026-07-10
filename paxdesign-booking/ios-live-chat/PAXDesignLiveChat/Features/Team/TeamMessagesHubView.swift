@@ -44,6 +44,14 @@ struct TeamMessagesHubView: View {
                 }
             }
 
+            if let error = teamCoordinator.errorMessage, !error.isEmpty {
+                Section {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(PAXTheme.danger)
+                }
+            }
+
             Section {
                 PAXNativeSearchField(
                     text: $searchText,

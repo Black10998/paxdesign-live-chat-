@@ -22,7 +22,7 @@ struct AdaptiveShellView: View {
     private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
     private var unreadChatCount: Int { coordinator.unreadChatCount }
-    private var unreadTeamCount: Int { coordinator.unreadTeamCount }
+    private var unreadTeamCount: Int { teamCoordinator.unreadCount(readIds: settings.readSessionIds) }
 
     private var canViewChats: Bool { auth.canViewChats }
     private var canReplyChats: Bool { auth.canReplyChats }

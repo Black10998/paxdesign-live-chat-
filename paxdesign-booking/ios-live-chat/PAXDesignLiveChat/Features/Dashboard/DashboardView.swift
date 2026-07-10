@@ -4,6 +4,7 @@ struct DashboardView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
     @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
+    @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
     @EnvironmentObject private var settings: AppSettingsStore
     @ObservedObject private var tasks = TaskStore.shared
     @ObservedObject private var calendar = CalendarStore.shared
@@ -12,6 +13,8 @@ struct DashboardView: View {
     @State private var showDashboardTour = false
     @State private var dashboardTourStepIndex = 0
     @State private var isInitialLoading = true
+    @State private var cachedChartData: [DashboardMetric] = []
+    @State private var cachedRecentActivity: [LiveSession] = []
 
     private var customerSessions: [LiveSession] {
         coordinator.sessions.filter { !$0.isTeamDM }
@@ -22,29 +25,39 @@ struct DashboardView: View {
     }
 
     private var chartData: [DashboardMetric] {
-        if let serverChart = platform.dashboard?.activityChart, !serverChart.isEmpty {
-            return serverChart.map { DashboardMetric(label: formatChartLabel($0.label), value: $0.value) }
-        }
-        let calendar = Calendar.current
-        return (0..<7).reversed().compactMap { offset -> DashboardMetric? in
-            guard let day = calendar.date(byAdding: .day, value: -offset, to: Date()) else { return nil }
-            let count = customerSessions.filter {
-                guard let updated = MessageTimeFormatter.date(fromUpdatedAt: $0.updatedAt) else { return false }
-                return calendar.isDate(updated, inSameDayAs: day)
-            }.count
-            let label = MessageTimeFormatter.relativeUpdatedLabel(from: day)
-            return DashboardMetric(label: label, value: count)
-        }
+        cachedChartData
     }
 
     private var recentActivityItems: [LiveSession] {
-        customerSessions
+        cachedRecentActivity
+    }
+
+    private func recomputeDashboardMetrics() {
+        let sessions = customerSessions
+        let chart: [DashboardMetric]
+        if let serverChart = platform.dashboard?.activityChart, !serverChart.isEmpty {
+            chart = serverChart.map { DashboardMetric(label: formatChartLabel($0.label), value: $0.value) }
+        } else {
+            let calendar = Calendar.current
+            chart = (0..<7).reversed().compactMap { offset -> DashboardMetric? in
+                guard let day = calendar.date(byAdding: .day, value: -offset, to: Date()) else { return nil }
+                let count = sessions.filter {
+                    guard let updated = MessageTimeFormatter.date(fromUpdatedAt: $0.updatedAt) else { return false }
+                    return calendar.isDate(updated, inSameDayAs: day)
+                }.count
+                let label = MessageTimeFormatter.relativeUpdatedLabel(from: day)
+                return DashboardMetric(label: label, value: count)
+            }
+        }
+        let recent = sessions
             .sorted {
                 MessageTimeFormatter.date(fromUpdatedAt: $0.updatedAt) ?? .distantPast >
                 MessageTimeFormatter.date(fromUpdatedAt: $1.updatedAt) ?? .distantPast
             }
             .prefix(5)
             .map { $0 }
+        cachedChartData = chart
+        cachedRecentActivity = recent
     }
 
     private var dashboardTourSteps: [DashboardTourStep] {
@@ -171,9 +184,12 @@ struct DashboardView: View {
             }
         }
         .paxPremiumRefreshable(status: "Dashboard wird geladen", rowCount: 3) {
-            await coordinator.refreshSessions(auth: auth)
-            await platform.sync(auth: auth)
+            async let sessions: Void = coordinator.refreshSessions(auth: auth)
+            async let platformSync: Void = platform.sync(auth: auth)
+            async let teamSync: Void = teamCoordinator.refresh(auth: auth)
+            _ = await (sessions, platformSync, teamSync)
             WidgetDataStore.shared.syncFromApp()
+            recomputeDashboardMetrics()
         }
         .onAppear {
             Task {
@@ -184,12 +200,17 @@ struct DashboardView: View {
                     auth: auth
                 )
                 startDashboardTourIfNeeded()
-                try? await Task.sleep(nanoseconds: 450_000_000)
+                async let sessions: Void = coordinator.refreshSessions(auth: auth)
+                async let platformSync: Void = platform.sync(auth: auth)
+                async let teamSync: Void = teamCoordinator.refresh(auth: auth)
+                _ = await (sessions, platformSync, teamSync)
+                recomputeDashboardMetrics()
                 withAnimation(.easeOut(duration: 0.25)) {
                     isInitialLoading = false
                 }
             }
         }
+        .onChange(of: coordinator.sessions) { _ in recomputeDashboardMetrics() }
         .onChange(of: settings.dashboardTourCompleted) { completed in
             if !completed {
                 startDashboardTourIfNeeded()

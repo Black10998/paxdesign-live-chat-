@@ -5,6 +5,9 @@ struct MessageBubbleView: View {
     let quotedMessage: LiveMessage?
     let canReply: Bool
     let showTimestamp: Bool
+    var senderLabel: String?
+    var agentDisplayName = L10n.ChatAgent
+    var customerDisplayName = L10n.ChatCustomer
     let onReply: () -> Void
     let onCopy: () -> Void
     let onImageTap: (URL) -> Void
@@ -14,6 +17,12 @@ struct MessageBubbleView: View {
             if isOutgoing { Spacer(minLength: 52) }
 
             VStack(alignment: isOutgoing ? .trailing : .leading, spacing: 3) {
+                if let senderLabel {
+                    Text(senderLabel)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(isOutgoing ? PAXTheme.accent : PAXTheme.textSecondary)
+                }
+
                 bubbleContent
                     .contextMenu {
                         if !message.content.isEmpty {
@@ -61,7 +70,11 @@ struct MessageBubbleView: View {
 
             VStack(alignment: .leading, spacing: 5) {
                 if let quotedMessage {
-                    QuotePreviewView(message: quotedMessage)
+                    QuotePreviewView(
+                        message: quotedMessage,
+                        agentDisplayName: agentDisplayName,
+                        customerDisplayName: customerDisplayName
+                    )
                 }
 
                 if let imageUrl = message.imageUrl, let url = URL(string: imageUrl) {
@@ -138,6 +151,8 @@ private struct BubbleTailShape: Shape {
 
 private struct QuotePreviewView: View {
     let message: LiveMessage
+    let agentDisplayName: String
+    let customerDisplayName: String
 
     var body: some View {
         HStack(spacing: 8) {
@@ -146,7 +161,7 @@ private struct QuotePreviewView: View {
                 .frame(width: 3)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text(message.role == "admin" ? "Sie" : "Kunde")
+                Text(message.role == "admin" ? agentDisplayName : customerDisplayName)
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(PAXTheme.accent)
                 Text(previewText)
@@ -180,6 +195,8 @@ private struct QuotePreviewView: View {
 
 struct ReplyBarView: View {
     let message: LiveMessage
+    var agentDisplayName = L10n.ChatAgent
+    var customerDisplayName = L10n.ChatCustomer
     let onClear: () -> Void
 
     var body: some View {
@@ -189,7 +206,7 @@ struct ReplyBarView: View {
                 .frame(width: 3, height: 34)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Antwort auf \(message.role == "admin" ? "Sie" : "Kunde")")
+                Text("\(L10n.ChatReplyTo) \(message.role == "admin" ? agentDisplayName : customerDisplayName)")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(PAXTheme.accent)
                 Text(message.content.isEmpty ? "Bild" : String(message.content.prefix(90)))

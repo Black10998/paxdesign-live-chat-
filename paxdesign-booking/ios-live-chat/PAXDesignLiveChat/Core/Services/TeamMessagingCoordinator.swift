@@ -26,6 +26,10 @@ final class TeamMessagingCoordinator: ObservableObject {
         pollTask = nil
     }
 
+    func unreadCount(readIds: Set<String>) -> Int {
+        teamSessions.filter { $0.needsReply && !readIds.contains($0.sessionId) }.count
+    }
+
     func refresh(auth: AuthStore) async {
         guard auth.isLoggedIn, let api = auth.api else {
             if !teamSessions.isEmpty { teamSessions = [] }
@@ -65,6 +69,7 @@ final class TeamMessagingCoordinator: ObservableObject {
 @MainActor
 final class TeamChatThreadModel: ObservableObject {
     @Published var messages: [LiveMessage] = []
+    @Published var isLoadingMessages = true
     @Published var participantName = ""
     @Published var draft = ""
     @Published var isSending = false
@@ -96,18 +101,23 @@ final class TeamChatThreadModel: ObservableObject {
     }
 
     func poll(auth: AuthStore) async {
-        guard let api = auth.api else { return }
+        guard let api = auth.api else {
+            isLoadingMessages = false
+            return
+        }
         do {
             let response = try await api.pollTeamSession(sessionId, since: pollSeq, full: pollSeq == 0)
             participantName = response.customerName
             if pollSeq == 0 {
                 messages = response.messages
+                isLoadingMessages = false
             } else if !response.messages.isEmpty {
                 mergeMessages(response.messages)
             }
             pollSeq = max(pollSeq, response.seq)
             errorMessage = nil
         } catch {
+            isLoadingMessages = false
             errorMessage = error.localizedDescription
         }
     }

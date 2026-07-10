@@ -6,43 +6,61 @@ struct ChatMessageListView: View {
     let userTyping: Bool
     let canReply: Bool
     let handler: String
+    var isLoading = false
+    var agentDisplayName = L10n.ChatAgent
+    var customerDisplayName = L10n.ChatCustomer
     let onReply: (LiveMessage) -> Void
     let onCopy: (LiveMessage) -> Void
     let onImageTap: (URL) -> Void
 
+    @State private var displayRows: [MessageDisplayRow] = []
+
     var body: some View {
-        let rows = Self.displayRows(for: messages)
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: PAXMessageStyle.threadSpacing) {
-                    ForEach(rows) { row in
-                        ChatMessageRow(
-                            row: row,
-                            canReply: canReply,
-                            handler: handler,
-                            onReply: { onReply(row.message) },
-                            onCopy: { onCopy(row.message) },
-                            onImageTap: onImageTap
-                        )
-                        .id(row.id)
-                    }
-                    if userTyping {
-                        TypingIndicator()
-                            .id("typing-indicator")
-                    }
+        Group {
+            if isLoading && messages.isEmpty {
+                ScrollView {
+                    PAXScreenLoadingStack(status: "Nachrichten werden geladen", rowCount: 5)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .padding(.bottom, PAXShellLayout.scrollBottomPadding(tabBarVisible: false))
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: PAXMessageStyle.threadSpacing) {
+                            ForEach(displayRows) { row in
+                                ChatMessageRow(
+                                    row: row,
+                                    canReply: canReply,
+                                    handler: handler,
+                                    agentDisplayName: agentDisplayName,
+                                    customerDisplayName: customerDisplayName,
+                                    onReply: { onReply(row.message) },
+                                    onCopy: { onCopy(row.message) },
+                                    onImageTap: onImageTap
+                                )
+                                .id(row.id)
+                            }
+                            if userTyping {
+                                TypingIndicator(customerName: customerDisplayName)
+                                    .id("typing-indicator")
+                            }
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .padding(.bottom, PAXShellLayout.scrollBottomPadding(tabBarVisible: false))
+                    }
+                    .onChange(of: messages.count) { _ in scrollToBottom(proxy: proxy) }
+                    .onChange(of: userTyping) { _ in scrollToBottom(proxy: proxy) }
+                }
             }
-            .onChange(of: messages.count) { _ in scrollToBottom(proxy: proxy) }
-            .onChange(of: userTyping) { _ in scrollToBottom(proxy: proxy) }
         }
+        .onAppear { rebuildRows() }
+        .onChange(of: messages) { _ in rebuildRows() }
     }
 
-    private static func displayRows(for messages: [LiveMessage]) -> [MessageDisplayRow] {
+    private func rebuildRows() {
         let messageLookup = Dictionary(uniqueKeysWithValues: messages.map { ($0.id, $0) })
-        return messages.enumerated().map { index, message in
+        displayRows = messages.enumerated().map { index, message in
             MessageDisplayRow(
                 id: message.id,
                 message: message,
@@ -74,9 +92,27 @@ private struct ChatMessageRow: View {
     let row: MessageDisplayRow
     let canReply: Bool
     let handler: String
+    let agentDisplayName: String
+    let customerDisplayName: String
     let onReply: () -> Void
     let onCopy: () -> Void
     let onImageTap: (URL) -> Void
+
+    private var showSenderLabel: Bool {
+        row.message.role != "system" && (
+            row.previous == nil
+                || row.previous?.role != row.message.role
+                || MessageTimeFormatter.shouldShowDayHeader(current: row.message, previous: row.previous)
+        )
+    }
+
+    private func senderLabel(for role: String) -> String {
+        switch role {
+        case "admin": return agentDisplayName
+        case "user": return customerDisplayName
+        default: return L10n.ChatAgent
+        }
+    }
 
     var body: some View {
         Group {
@@ -89,20 +125,47 @@ private struct ChatMessageRow: View {
                     .padding(.vertical, 8)
             }
 
-            MessageBubbleView(
-                message: row.message,
-                quotedMessage: row.quotedMessage,
-                canReply: handler == "admin" && canReply && row.message.role != "system",
-                showTimestamp: MessageTimeFormatter.shouldShowTimestamp(current: row.message, next: row.next),
-                onReply: onReply,
-                onCopy: onCopy,
-                onImageTap: { onImageTap($0) }
-            )
+            if row.message.role == "system" {
+                SystemMessageView(text: row.message.content)
+            } else {
+                MessageBubbleView(
+                    message: row.message,
+                    quotedMessage: row.quotedMessage,
+                    canReply: handler == "admin" && canReply && row.message.role != "system",
+                    showTimestamp: MessageTimeFormatter.shouldShowTimestamp(current: row.message, next: row.next),
+                    senderLabel: showSenderLabel ? senderLabel(for: row.message.role) : nil,
+                    agentDisplayName: agentDisplayName,
+                    customerDisplayName: customerDisplayName,
+                    onReply: onReply,
+                    onCopy: onCopy,
+                    onImageTap: { onImageTap($0) }
+                )
+            }
         }
     }
 }
 
+private struct SystemMessageView: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(PAXTheme.textSecondary)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity)
+            .background(
+                Capsule()
+                    .fill(PAXTheme.systemBubble)
+            )
+            .padding(.vertical, 4)
+    }
+}
+
 private struct TypingIndicator: View {
+    let customerName: String
     @State private var animate = false
 
     var body: some View {
@@ -121,6 +184,7 @@ private struct TypingIndicator: View {
                 .font(.caption2)
                 .foregroundStyle(PAXTheme.textSecondary)
         }
+        .accessibilityLabel("\(customerName) \(L10n.ChatCustomerTyping)")
         .onAppear { animate = true }
     }
 }

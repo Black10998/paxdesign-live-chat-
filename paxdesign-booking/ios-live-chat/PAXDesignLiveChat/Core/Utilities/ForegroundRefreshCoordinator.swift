@@ -10,6 +10,7 @@ enum ForegroundRefreshCoordinator {
     static func schedule(
         auth: AuthStore,
         coordinator: ChatCoordinator,
+        teamCoordinator: TeamMessagingCoordinator,
         permissions: PermissionCoordinator
     ) {
         guard auth.isLoggedIn, AppRefreshPolicy.isForeground else { return }
@@ -30,6 +31,7 @@ enum ForegroundRefreshCoordinator {
                 await coordinator.refreshSessions(auth: auth)
             }
 
+            await teamCoordinator.refresh(auth: auth)
             await permissions.refreshStatuses()
 
             Task(priority: .utility) {

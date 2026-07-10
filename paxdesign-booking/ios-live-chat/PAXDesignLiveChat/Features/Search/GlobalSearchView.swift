@@ -60,6 +60,8 @@ struct GlobalSearchView: View {
         }
         isSearching = true
         searchTask = Task {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            guard !Task.isCancelled else { return }
             let hits = await GlobalSearchService.search(
                 query: value,
                 auth: auth,

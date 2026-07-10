@@ -7,6 +7,7 @@ struct TasksModuleView: View {
     @State private var showAdd = false
     @State private var filter: TaskFilter = .open
     @State private var teamMembers: [TeamMemberRecord] = []
+    @State private var isInitialLoading = true
 
     private enum TaskFilter: String, CaseIterable, Identifiable {
         case open, completed, all
@@ -46,6 +47,11 @@ struct TasksModuleView: View {
 
     var body: some View {
         List {
+            if isInitialLoading {
+                Section {
+                    PAXScreenLoadingStack(status: L10n.ModuleTasks, rowCount: 4)
+                }
+            } else {
             Section {
                 Picker(L10n.FilterAll, selection: $filter) {
                     ForEach(TaskFilter.allCases) { item in
@@ -67,6 +73,7 @@ struct TasksModuleView: View {
                         taskRow(task)
                     }
                 }
+            }
             }
         }
         .listStyle(.insetGrouped)
@@ -114,6 +121,10 @@ struct TasksModuleView: View {
         }
         .task {
             await loadTeamMembers()
+            await PlatformSyncService.shared.sync(auth: auth)
+            withAnimation(.easeOut(duration: 0.25)) {
+                isInitialLoading = false
+            }
         }
         .paxPremiumRefreshable(status: L10n.ModuleTasks, rowCount: 4) {
             await PlatformSyncService.shared.sync(auth: auth)
