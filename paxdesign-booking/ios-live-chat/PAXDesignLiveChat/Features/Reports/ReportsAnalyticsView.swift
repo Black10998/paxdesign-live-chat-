@@ -86,7 +86,7 @@ struct ReportsAnalyticsView: View {
                 }
             }
         }
-        .refreshable {
+        .paxPremiumRefreshable(status: L10n.ModuleReports, rowCount: 4) {
             await platform.refreshReports(auth: auth)
             await coordinator.refreshSessions(auth: auth)
         }

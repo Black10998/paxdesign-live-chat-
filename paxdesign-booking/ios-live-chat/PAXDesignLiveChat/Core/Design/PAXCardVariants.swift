@@ -22,20 +22,6 @@ private struct PAXCardVariantModifier: ViewModifier {
             content
                 .padding(18)
                 .paxPremiumGlass(tier: .hero, cornerRadius: 22, accent: tint)
-                .overlay(alignment: .topTrailing) {
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [tint.opacity(0.28), .clear],
-                                center: .center,
-                                startRadius: 0,
-                                endRadius: 64
-                            )
-                        )
-                        .frame(width: 120, height: 120)
-                        .offset(x: 28, y: -36)
-                        .allowsHitTesting(false)
-                }
         case .metric:
             content
                 .padding(14)
@@ -58,12 +44,6 @@ private struct PAXCardVariantModifier: ViewModifier {
             content
                 .padding(16)
                 .paxPremiumGlass(tier: .premium, cornerRadius: 20, accent: tint)
-                .overlay(alignment: .bottomTrailing) {
-                    Image(systemName: "sparkles")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(tint.opacity(0.35))
-                        .padding(12)
-                }
         case .list:
             content
                 .padding(.horizontal, 16)
@@ -106,15 +86,10 @@ struct PAXHeroCard: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(tint.opacity(0.16))
-                    .frame(width: 52, height: 52)
-                Image(systemName: systemImage)
-                    .font(.title2.weight(.semibold))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(tint)
-            }
+            Image(systemName: systemImage)
+                .font(.title2.weight(.semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(tint)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
@@ -144,8 +119,6 @@ struct PAXMetricCard: View {
                 Image(systemName: icon)
                     .font(.body.weight(.semibold))
                     .foregroundStyle(tint)
-                    .frame(width: 32, height: 32)
-                    .background(Circle().fill(tint.opacity(0.14)))
                 Spacer(minLength: 0)
             }
             Text(value)
@@ -171,11 +144,6 @@ struct PAXFeatureCard: View {
             Image(systemName: systemImage)
                 .font(.title3.weight(.medium))
                 .foregroundStyle(tint)
-                .frame(width: 36, height: 36)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(tint.opacity(0.14))
-                )
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {

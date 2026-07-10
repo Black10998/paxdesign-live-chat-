@@ -423,4 +423,132 @@ extension View {
     func paxShellScrollClearance() -> some View {
         modifier(ShellScrollClearanceModifier())
     }
+
+    /// Replaces the system pull-to-refresh spinner with the premium skeleton loading UI.
+    func paxPremiumRefreshable(
+        status: String,
+        rowCount: Int = 4,
+        action: @escaping () async -> Void
+    ) -> some View {
+        modifier(PAXPremiumRefreshModifier(status: status, rowCount: rowCount, action: action))
+    }
+}
+
+// MARK: - Premium Pull-to-Refresh
+
+private struct PAXPremiumRefreshModifier: ViewModifier {
+    let status: String
+    let rowCount: Int
+    let action: () async -> Void
+
+    @State private var isRefreshing = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .refreshable {
+                guard !isRefreshing else { return }
+                if reduceMotion {
+                    isRefreshing = true
+                } else {
+                    withAnimation(.easeOut(duration: 0.22)) {
+                        isRefreshing = true
+                    }
+                }
+                defer {
+                    if reduceMotion {
+                        isRefreshing = false
+                    } else {
+                        withAnimation(.easeOut(duration: 0.25)) {
+                            isRefreshing = false
+                        }
+                    }
+                }
+                await action()
+            }
+            .overlay {
+                if isRefreshing {
+                    ZStack {
+                        PAXTheme.background.opacity(0.92)
+                            .ignoresSafeArea()
+                        ScrollView {
+                            PAXScreenLoadingStack(status: status, rowCount: rowCount)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 12)
+                        }
+                        .scrollDisabled(true)
+                    }
+                    .transition(.opacity)
+                    .zIndex(1000)
+                }
+            }
+            .background {
+                PAXRefreshControlSpinnerHider()
+            }
+    }
+}
+
+private struct PAXRefreshControlSpinnerHider: UIViewRepresentable {
+    let isActive: Bool
+
+    func makeUIView(context: Context) -> PAXRefreshAnchorView {
+        let view = PAXRefreshAnchorView()
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = .clear
+        view.onHierarchyChange = { [weak view] in
+            guard let view else { return }
+            PAXRefreshControlCustomizer.hideSystemSpinner(from: view)
+        }
+        return view
+    }
+
+    func updateUIView(_ uiView: PAXRefreshAnchorView, context: Context) {
+        PAXRefreshControlCustomizer.hideSystemSpinner(from: uiView)
+    }
+}
+
+private final class PAXRefreshAnchorView: UIView {
+    var onHierarchyChange: (() -> Void)?
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        onHierarchyChange?()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        onHierarchyChange?()
+    }
+}
+
+private enum PAXRefreshControlCustomizer {
+    static func hideSystemSpinner(from anchor: UIView) {
+        guard let scrollView = nearestScrollView(from: anchor) else { return }
+        scrollView.refreshControl?.tintColor = .clear
+        scrollView.refreshControl?.backgroundColor = .clear
+        scrollView.refreshControl?.subviews.forEach { subview in
+            subview.alpha = 0
+            subview.isHidden = true
+        }
+    }
+
+    private static func nearestScrollView(from view: UIView) -> UIScrollView? {
+        var current: UIView? = view
+        while let node = current {
+            if let scroll = node as? UIScrollView { return scroll }
+            for subview in node.subviews {
+                if let scroll = findScrollView(in: subview) { return scroll }
+            }
+            current = node.superview
+        }
+        return findScrollView(in: view)
+    }
+
+    private static func findScrollView(in view: UIView) -> UIScrollView? {
+        if let scroll = view as? UIScrollView { return scroll }
+        for subview in view.subviews {
+            if let scroll = findScrollView(in: subview) { return scroll }
+        }
+        return nil
+    }
 }

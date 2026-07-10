@@ -258,7 +258,7 @@ struct SessionListView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
-        .refreshable {
+        .paxPremiumRefreshable(status: "Unterhaltungen werden geladen", rowCount: 5) {
             await coordinator.refreshSessions(auth: auth)
             await teamCoordinator.refresh(auth: auth)
         }

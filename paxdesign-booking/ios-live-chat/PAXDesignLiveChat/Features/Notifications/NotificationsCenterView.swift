@@ -113,7 +113,7 @@ struct NotificationsCenterView: View {
         .background(PAXBackground())
         .navigationTitle(L10n.NotificationsCenterTitle)
         .navigationBarTitleDisplayMode(.large)
-        .refreshable {
+        .paxPremiumRefreshable(status: L10n.NotificationsCenterTitle, rowCount: 4) {
             await coordinator.refreshSessions(auth: auth)
             await platform.refreshNotifications(auth: auth)
         }

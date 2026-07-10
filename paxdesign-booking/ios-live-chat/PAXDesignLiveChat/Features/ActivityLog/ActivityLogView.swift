@@ -61,7 +61,7 @@ struct ActivityLogView: View {
                 }
             }
         }
-        .refreshable {
+        .paxPremiumRefreshable(status: L10n.ModuleActivityLog, rowCount: 4) {
             await PlatformSyncService.shared.sync(auth: auth)
         }
     }

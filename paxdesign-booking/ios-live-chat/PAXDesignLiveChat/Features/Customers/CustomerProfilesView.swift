@@ -57,7 +57,7 @@ struct CustomerProfilesView: View {
         .navigationTitle("Kundenprofile")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
-        .refreshable { await load() }
+        .paxPremiumRefreshable(status: "Kundenprofile werden geladen", rowCount: 4) { await load() }
         .sheet(item: $draft) { item in
             NavigationStack {
                 CustomerProfileEditSheet(

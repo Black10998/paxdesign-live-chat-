@@ -193,8 +193,8 @@ struct AdaptiveShellView: View {
 
     private var iPhoneShell: some View {
         let tags = tabTags
-        return TabView(selection: $selectedTab) {
-            lazyTab(tags.dashboard) {
+        return ZStack {
+            iPhoneTabPane(tags.dashboard) {
                 NavigationStack(path: $dashboardPath) {
                     DashboardView()
                         .navigationDestination(for: String.self, destination: sessionDestination)
@@ -203,34 +203,26 @@ struct AdaptiveShellView: View {
                         }
                 }
             }
-            .tabItem { Label(L10n.TabDashboard, systemImage: "house.fill") }
-            .tag(tags.dashboard)
 
             if canViewChats, let chatsTag = tags.chats {
-                lazyTab(chatsTag) {
+                iPhoneTabPane(chatsTag) {
                     NavigationStack(path: $chatsPath) {
                         SessionListView(onOpenSession: { openSession($0, path: $chatsPath) })
                             .navigationDestination(for: String.self, destination: sessionDestination)
                     }
                 }
-                .tabItem { Label(L10n.TabChats, systemImage: "bubble.left.and.bubble.right") }
-                .tag(chatsTag)
-                .modifier(ShellTabBadge(count: unreadChatCount))
             }
 
             if canViewChats, let teamTag = tags.team {
-                lazyTab(teamTag) {
+                iPhoneTabPane(teamTag) {
                     NavigationStack(path: $teamPath) {
                         TeamMessagesHubView(onOpenSession: { openSession($0, path: $teamPath) })
                             .navigationDestination(for: String.self, destination: teamDestination)
                     }
                 }
-                .tabItem { Label(L10n.TabTeam, systemImage: "person.3.fill") }
-                .tag(teamTag)
-                .modifier(ShellTabBadge(count: unreadTeamCount))
             }
 
-            lazyTab(tags.live) {
+            iPhoneTabPane(tags.live) {
                 NavigationStack(path: $livePath) {
                     LiveTabView(onOpenSession: { openSession($0, path: $livePath) })
                         .navigationDestination(for: String.self) { sessionId in
@@ -238,11 +230,8 @@ struct AdaptiveShellView: View {
                         }
                 }
             }
-            .tabItem { Label(L10n.TabLive, systemImage: "bell.and.waves.left.and.right.fill") }
-            .tag(tags.live)
-            .modifier(ShellTabBadge(count: coordinator.liveCount))
 
-            lazyTab(tags.platform) {
+            iPhoneTabPane(tags.platform) {
                 NavigationStack(path: $platformPath) {
                     PlatformHubView()
                         .navigationDestination(for: String.self, destination: sessionDestination)
@@ -251,18 +240,17 @@ struct AdaptiveShellView: View {
                         }
                 }
             }
-            .tabItem { Label(L10n.TabPlatform, systemImage: "square.grid.2x2.fill") }
-            .tag(tags.platform)
         }
-        .toolbar(.hidden, for: .tabBar)
     }
 
     @ViewBuilder
-    private func lazyTab<Content: View>(_ tag: Int, @ViewBuilder content: () -> Content) -> some View {
+    private func iPhoneTabPane<Content: View>(_ tag: Int, @ViewBuilder content: () -> Content) -> some View {
         if loadedTabs.contains(tag) {
             content()
-        } else {
-            Color.clear
+                .opacity(selectedTab == tag ? 1 : 0)
+                .allowsHitTesting(selectedTab == tag)
+                .accessibilityHidden(selectedTab != tag)
+                .zIndex(selectedTab == tag ? 1 : 0)
         }
     }
 
@@ -419,13 +407,6 @@ struct AdaptiveShellView: View {
     }
 }
 
-private struct ShellTabBadge: ViewModifier {
-    let count: Int
-    func body(content: Content) -> some View {
-        if count > 0 { content.badge(count) } else { content }
-    }
-}
-
 private struct ShellTabItem: Identifiable {
     let tag: Int
     let title: String
@@ -434,14 +415,6 @@ private struct ShellTabItem: Identifiable {
     var badgeCount: Int = 0
 
     var id: Int { tag }
-}
-
-private struct TabFramePreferenceKey: PreferenceKey {
-    static var defaultValue: [Int: Anchor<CGRect>] = [:]
-
-    static func reduce(value: inout [Int: Anchor<CGRect>], nextValue: () -> [Int: Anchor<CGRect>]) {
-        value.merge(nextValue(), uniquingKeysWith: { $1 })
-    }
 }
 
 private struct PAXBottomTabBar: View {
@@ -465,34 +438,6 @@ private struct PAXBottomTabBar: View {
             .background {
                 Color.clear
                     .paxPremiumGlass(tier: .premium, cornerRadius: 26)
-            }
-            .backgroundPreferenceValue(TabFramePreferenceKey.self) { anchors in
-                GeometryReader { proxy in
-                    if let anchor = anchors[selection] {
-                        let frame = proxy[anchor]
-                        Capsule(style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        PAXTheme.accent.opacity(0.24),
-                                        PAXTheme.accent.opacity(0.14)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .overlay(
-                                Capsule(style: .continuous)
-                                    .stroke(PAXTheme.accent.opacity(0.38), lineWidth: 1)
-                            )
-                            .frame(width: max(frame.width, 44), height: max(frame.height, 44))
-                            .position(x: frame.midX, y: frame.midY)
-                            .animation(
-                                reduceMotion ? nil : .spring(response: 0.42, dampingFraction: 0.82),
-                                value: selection
-                            )
-                    }
-                }
             }
             .padding(.horizontal, 10)
 
@@ -563,7 +508,6 @@ private struct PAXBottomTabBar: View {
             .padding(.horizontal, 4)
             .padding(.vertical, 7)
             .contentShape(Rectangle())
-            .anchorPreference(key: TabFramePreferenceKey.self, value: .bounds) { [item.tag: $0] }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(item.title)

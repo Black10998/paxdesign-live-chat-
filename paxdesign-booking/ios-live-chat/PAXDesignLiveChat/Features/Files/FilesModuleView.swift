@@ -67,7 +67,7 @@ struct FilesModuleView: View {
                 }
             }
         }
-        .refreshable {
+        .paxPremiumRefreshable(status: L10n.ModuleFiles, rowCount: 4) {
             await PlatformSyncService.shared.sync(auth: auth)
         }
     }

@@ -126,7 +126,7 @@ struct AdministrationHubView: View {
         .navigationTitle(L10n.AdminTitle)
         .navigationBarTitleDisplayMode(.large)
         .task { await loadStaffCount() }
-        .refreshable {
+        .paxPremiumRefreshable(status: "Administration wird geladen", rowCount: 3) {
             await coordinator.refreshSessions(auth: auth)
             await teamCoordinator.refresh(auth: auth)
             await loadStaffCount()

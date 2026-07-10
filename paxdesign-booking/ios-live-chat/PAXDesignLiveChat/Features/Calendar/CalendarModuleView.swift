@@ -72,7 +72,7 @@ struct CalendarModuleView: View {
         } message: {
             Text(L10n.CalendarAddEventHint)
         }
-        .refreshable {
+        .paxPremiumRefreshable(status: L10n.ModuleCalendar, rowCount: 4) {
             await PlatformSyncService.shared.sync(auth: auth)
         }
     }

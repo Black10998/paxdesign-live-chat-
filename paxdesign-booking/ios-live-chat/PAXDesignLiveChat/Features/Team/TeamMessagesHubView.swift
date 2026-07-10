@@ -104,7 +104,7 @@ struct TeamMessagesHubView: View {
             .environmentObject(auth)
             .environmentObject(teamCoordinator)
         }
-        .refreshable {
+        .paxPremiumRefreshable(status: "Team-Unterhaltungen werden geladen", rowCount: 4) {
             await coordinator.refreshSessions(auth: auth)
             await teamCoordinator.refresh(auth: auth)
         }

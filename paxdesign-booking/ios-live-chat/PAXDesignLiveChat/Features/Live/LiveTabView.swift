@@ -58,7 +58,9 @@ struct LiveTabView: View {
         .background(PAXBackground())
         .navigationTitle(L10n.LiveTitle)
         .navigationBarTitleDisplayMode(.large)
-        .refreshable { await coordinator.refreshSessions(auth: auth) }
+        .paxPremiumRefreshable(status: L10n.LiveTitle, rowCount: 3) {
+            await coordinator.refreshSessions(auth: auth)
+        }
         .scrollDismissesKeyboard(.interactively)
         .paxShellScrollClearance()
     }

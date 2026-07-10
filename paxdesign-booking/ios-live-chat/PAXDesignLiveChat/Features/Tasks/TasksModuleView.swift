@@ -115,7 +115,7 @@ struct TasksModuleView: View {
         .task {
             await loadTeamMembers()
         }
-        .refreshable {
+        .paxPremiumRefreshable(status: L10n.ModuleTasks, rowCount: 4) {
             await PlatformSyncService.shared.sync(auth: auth)
             await loadTeamMembers()
         }

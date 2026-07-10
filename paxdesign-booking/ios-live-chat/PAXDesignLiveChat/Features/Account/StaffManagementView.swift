@@ -90,7 +90,7 @@ struct StaffManagementView: View {
         .navigationTitle("Team")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
-        .refreshable { await load() }
+        .paxPremiumRefreshable(status: "Team wird geladen", rowCount: 4) { await load() }
         .sheet(item: $editingMember) { member in
             StaffEditSheet(
                 member: member,

@@ -61,7 +61,7 @@ struct DeviceManagementView: View {
         }
         .navigationTitle("Geräteverwaltung")
         .navigationBarTitleDisplayMode(.inline)
-        .refreshable { await loadDevices() }
+        .paxPremiumRefreshable(status: "Geräte werden synchronisiert", rowCount: 3) { await loadDevices() }
         .task {
             await loadDevices()
             startRealtimeRefresh()

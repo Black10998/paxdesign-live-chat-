@@ -174,7 +174,7 @@ struct DashboardView: View {
                 )
             }
         }
-        .refreshable {
+        .paxPremiumRefreshable(status: "Dashboard wird geladen", rowCount: 3) {
             await coordinator.refreshSessions(auth: auth)
             await platform.sync(auth: auth)
             WidgetDataStore.shared.syncFromApp()

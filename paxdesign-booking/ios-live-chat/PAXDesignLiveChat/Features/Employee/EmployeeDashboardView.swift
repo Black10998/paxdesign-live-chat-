@@ -70,7 +70,7 @@ struct EmployeeDashboardView: View {
         .paxScreenBackground()
         .navigationTitle(L10n.ModuleEmployee)
         .navigationBarTitleDisplayMode(.large)
-        .refreshable {
+        .paxPremiumRefreshable(status: L10n.ModuleEmployee, rowCount: 4) {
             await platform.refreshEmployee(auth: auth)
             await coordinator.refreshSessions(auth: auth)
         }
