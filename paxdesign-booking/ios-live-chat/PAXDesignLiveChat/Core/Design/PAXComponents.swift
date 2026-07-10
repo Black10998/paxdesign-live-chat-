@@ -401,14 +401,32 @@ enum PAXShellLayout {
             .safeAreaInsets.bottom ?? 0
     }
 
+    /// Full obstruction from the bottom edge: tab bar chrome + home indicator + breathing room.
+    static var tabBarScrollInset: CGFloat {
+        tabBarLayoutHeight + bottomSafeArea + 12
+    }
+
     static var tabBarReservedHeight: CGFloat {
-        tabBarLayoutHeight + bottomSafeArea
+        tabBarScrollInset
     }
 
     /// Extra scroll padding for detail screens without the tab bar.
     static func scrollBottomPadding(tabBarVisible: Bool) -> CGFloat {
-        if tabBarVisible { return 0 }
+        if tabBarVisible {
+            return tabBarScrollInset
+        }
         return max(bottomSafeArea, 12) + 8
+    }
+}
+
+private struct ShellTabBarScrollInsetKey: EnvironmentKey {
+    static let defaultValue: CGFloat = 0
+}
+
+extension EnvironmentValues {
+    var shellTabBarScrollInset: CGFloat {
+        get { self[ShellTabBarScrollInsetKey.self] }
+        set { self[ShellTabBarScrollInsetKey.self] = newValue }
     }
 }
 
@@ -425,9 +443,13 @@ extension EnvironmentValues {
 
 private struct ShellScrollClearanceModifier: ViewModifier {
     @Environment(\.shellTabBarVisible) private var tabBarVisible
+    @Environment(\.shellTabBarScrollInset) private var tabBarScrollInset
 
     func body(content: Content) -> some View {
-        let padding = PAXShellLayout.scrollBottomPadding(tabBarVisible: tabBarVisible)
+        let padding: CGFloat = {
+            if tabBarScrollInset > 0 { return tabBarScrollInset }
+            return PAXShellLayout.scrollBottomPadding(tabBarVisible: tabBarVisible)
+        }()
         if padding > 0 {
             content.safeAreaInset(edge: .bottom, spacing: 0) {
                 Color.clear

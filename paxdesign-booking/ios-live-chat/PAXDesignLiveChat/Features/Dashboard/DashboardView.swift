@@ -1,7 +1,4 @@
 import SwiftUI
-#if !SIDELOAD
-import Charts
-#endif
 
 struct DashboardView: View {
     @EnvironmentObject private var auth: AuthStore
@@ -289,49 +286,12 @@ struct DashboardView: View {
     }
 
     private var activityChart: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(L10n.DashboardChartTitle)
-                .font(.headline)
-            #if SIDELOAD
-            // Keep sideload startup conservative by avoiding extra framework links.
-            VStack(spacing: 8) {
-                ForEach(chartData) { item in
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text(item.label)
-                                .font(.caption)
-                                .foregroundStyle(PAXTheme.textSecondary)
-                            Spacer()
-                            Text("\(item.value)")
-                                .font(.caption.weight(.semibold))
-                        }
-                        GeometryReader { geo in
-                            let maxValue = max(chartData.map(\.value).max() ?? 1, 1)
-                            let ratio = CGFloat(item.value) / CGFloat(maxValue)
-                            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                                .fill(PAXTheme.accent.gradient)
-                                .frame(width: max(6, geo.size.width * ratio), height: 10)
-                        }
-                        .frame(height: 10)
-                    }
-                }
+        PAXSevenDayAnalyticsRings(
+            title: L10n.DashboardChartTitle,
+            items: chartData.map {
+                PAXRingMetric(label: $0.label, value: $0.value, tint: PAXTheme.accent)
             }
-            #else
-            Chart(chartData) { item in
-                BarMark(
-                    x: .value("Day", item.label),
-                    y: .value("Sessions", item.value)
-                )
-                .foregroundStyle(PAXTheme.accent.gradient)
-                .cornerRadius(6)
-            }
-            .frame(height: 180)
-            .chartYAxis {
-                AxisMarks(position: .leading)
-            }
-            #endif
-        }
-        .paxNativeCard()
+        )
     }
 
     private var quickModules: some View {

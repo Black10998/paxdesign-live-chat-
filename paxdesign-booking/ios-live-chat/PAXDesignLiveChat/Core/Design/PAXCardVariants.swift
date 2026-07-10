@@ -17,18 +17,22 @@ private struct PAXCardVariantModifier: ViewModifier {
     func body(content: Content) -> some View {
         switch variant {
         case .standard:
-            content.paxPremiumGlass(tier: .standard, cornerRadius: 16)
+            content
+                .paxPremiumGlass(tier: .standard, cornerRadius: 16)
+                .paxCardGlassRefraction(cornerRadius: 16)
         case .hero:
             content
                 .padding(18)
                 .paxPremiumGlass(tier: .hero, cornerRadius: 22, accent: tint)
-                .paxCardGlassReflection(cornerRadius: 22, alignment: .topTrailing, intensity: 0.08)
+                .paxCardGlassReflection(cornerRadius: 22, alignment: .topTrailing, intensity: 0.1)
+                .paxCardGlassRefraction(cornerRadius: 22)
         case .metric:
             content
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .paxPremiumGlass(tier: .premium, cornerRadius: 18, accent: tint)
-                .paxCardGlassReflection(cornerRadius: 18, alignment: .topTrailing, intensity: 0.06)
+                .paxCardGlassReflection(cornerRadius: 18, alignment: .topTrailing, intensity: 0.09)
+                .paxCardGlassRefraction(cornerRadius: 18)
                 .overlay(alignment: .topLeading) {
                     RoundedRectangle(cornerRadius: 3, style: .continuous)
                         .fill(
@@ -46,12 +50,14 @@ private struct PAXCardVariantModifier: ViewModifier {
             content
                 .padding(16)
                 .paxPremiumGlass(tier: .premium, cornerRadius: 20, accent: tint)
-                .paxCardGlassReflection(cornerRadius: 20, alignment: .topTrailing, intensity: 0.05)
+                .paxCardGlassReflection(cornerRadius: 20, alignment: .topTrailing, intensity: 0.08)
+                .paxCardGlassRefraction(cornerRadius: 20)
         case .list:
             content
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .paxPremiumGlass(tier: .subtle, cornerRadius: 16)
+                .paxCardGlassRefraction(cornerRadius: 16)
         case .accent:
             content
                 .padding(16)
@@ -66,7 +72,8 @@ private struct PAXCardVariantModifier: ViewModifier {
                         )
                 )
                 .paxPremiumGlass(tier: .standard, cornerRadius: 18, accent: tint)
-                .paxCardGlassReflection(cornerRadius: 18, alignment: .topLeading, intensity: 0.05)
+                .paxCardGlassReflection(cornerRadius: 18, alignment: .topLeading, intensity: 0.08)
+                .paxCardGlassRefraction(cornerRadius: 18)
         case .compact:
             content
                 .padding(.horizontal, 12)
@@ -105,6 +112,27 @@ extension View {
                 .offset(
                     x: alignment == .topTrailing || alignment == .bottomTrailing ? 24 : -24,
                     y: alignment == .bottomTrailing || alignment == .bottomLeading ? 28 : -28
+                )
+                .blendMode(.overlay)
+                .allowsHitTesting(false)
+        }
+    }
+
+    /// Soft diagonal refraction line for crystal glass depth.
+    fileprivate func paxCardGlassRefraction(cornerRadius: CGFloat) -> some View {
+        overlay {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.16),
+                            .clear,
+                            Color.white.opacity(0.05),
+                            .clear
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                 )
                 .blendMode(.overlay)
                 .allowsHitTesting(false)

@@ -45,13 +45,13 @@ enum PAXGlassTier {
     func fillOpacity(for scheme: ColorScheme) -> Double {
         let base: Double
         switch self {
-        case .subtle: base = 0.28
-        case .standard: base = 0.36
-        case .premium: base = 0.42
-        case .hero: base = 0.48
-        case .tabBar: base = 0.18
+        case .subtle: base = 0.14
+        case .standard: base = 0.2
+        case .premium: base = 0.24
+        case .hero: base = 0.28
+        case .tabBar: base = 0.12
         }
-        return scheme == .dark ? min(base + 0.06, 0.58) : base
+        return scheme == .dark ? min(base + 0.04, 0.34) : base
     }
 
     func borderOpacity(for scheme: ColorScheme) -> Double {
@@ -153,22 +153,38 @@ private struct PAXPremiumGlassModifier: ViewModifier {
 
                     if tier.fillOpacity(for: colorScheme) > 0 {
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .fill(PAXTheme.surface.opacity(tier.fillOpacity(for: colorScheme) * 0.35))
+                            .fill(PAXTheme.surface.opacity(tier.fillOpacity(for: colorScheme) * 0.22))
                     }
 
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Color.white.opacity(colorScheme == .dark ? 0.07 : 0.16),
-                                    Color.white.opacity(colorScheme == .dark ? 0.02 : 0.04),
+                                    Color.white.opacity(colorScheme == .dark ? 0.1 : 0.22),
+                                    Color.white.opacity(colorScheme == .dark ? 0.03 : 0.06),
                                     .clear
                                 ],
-                                startPoint: .top,
-                                endPoint: .center
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
                             )
                         )
                         .blendMode(.overlay)
+
+                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    .clear,
+                                    Color.white.opacity(colorScheme == .dark ? 0.04 : 0.08),
+                                    .clear
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .rotationEffect(.degrees(12))
+                        .blendMode(.softLight)
+                        .opacity(tier == .subtle || tier == .tabBar ? 0 : 0.85)
 
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .stroke(

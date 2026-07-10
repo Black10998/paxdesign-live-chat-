@@ -54,16 +54,16 @@ struct ReportsAnalyticsView: View {
             }
 
             if !statusSlices.isEmpty {
-                Section(L10n.ReportsSessionMix) {
-                    ForEach(statusSlices) { slice in
-                        HStack {
-                            Circle().fill(slice.color).frame(width: 10, height: 10)
-                            Text(slice.label)
-                            Spacer()
-                            Text("\(slice.value)")
-                                .font(.headline)
+                Section {
+                    PAXSessionMixRings(
+                        title: L10n.ReportsSessionMix,
+                        slices: statusSlices.map {
+                            PAXRingMetric(label: $0.label, value: $0.value, tint: $0.color)
                         }
-                    }
+                    )
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
 
