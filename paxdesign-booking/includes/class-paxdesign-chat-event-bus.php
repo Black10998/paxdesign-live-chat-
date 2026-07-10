@@ -176,7 +176,7 @@ class PAXdesign_Chat_Event_Bus {
                 }
                 echo "event: ping\ndata: {\"since\":" . (int) $last_id . "}\n\n";
                 self::flush_output();
-                break;
+                continue;
             }
             echo ": keepalive " . time() . "\n\n";
             self::flush_output();
@@ -220,7 +220,7 @@ class PAXdesign_Chat_Event_Bus {
                 }
                 echo "event: ping\ndata: " . wp_json_encode(array('since_inbox' => max($last_ids))) . "\n\n";
                 self::flush_output();
-                break;
+                continue;
             }
             echo ": keepalive " . time() . "\n\n";
             self::flush_output();

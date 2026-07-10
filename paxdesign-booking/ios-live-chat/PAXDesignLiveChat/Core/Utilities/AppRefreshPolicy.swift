@@ -26,7 +26,7 @@ enum AppRefreshPolicy {
     /// Open customer chat thread polling.
     static var chatThreadInterval: UInt64 {
         guard isForeground else { return 12_000_000_000 }
-        return hasOpenChat ? 350_000_000 : 900_000_000
+        return hasOpenChat ? 250_000_000 : 900_000_000
     }
 
     /// Team inbox list polling.
@@ -38,7 +38,7 @@ enum AppRefreshPolicy {
     /// Open team thread polling.
     static var teamThreadInterval: UInt64 {
         guard isForeground else { return 12_000_000_000 }
-        return hasOpenChat ? 400_000_000 : 1_000_000_000
+        return hasOpenChat ? 300_000_000 : 1_000_000_000
     }
 
     static func update(scenePhase: SceneActivity) {

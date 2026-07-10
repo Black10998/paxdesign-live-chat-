@@ -482,9 +482,7 @@ final class ChatThreadModel: ObservableObject {
     private var pendingInlineMessages: [LiveMessage] = []
     private var historyBaselined = false
     private var serverMessageCount = 0
-    private let activePollIntervalNs: UInt64 = 1_000_000_000
-    private let recoveryPollIntervalNs: UInt64 = 5_000_000_000
-    private let streamStaleThreshold: TimeInterval = 20
+    private let streamStaleThreshold: TimeInterval = 12
 
     init(sessionId: String) {
         self.sessionId = sessionId
@@ -497,6 +495,9 @@ final class ChatThreadModel: ObservableObject {
         if let pollTask, !pollTask.isCancelled {
             if expectedServerSeq > pollSeq {
                 pollSeq = max(pollSeq, expectedServerSeq)
+            }
+            if let auth = self.auth {
+                Task { await self.poll(auth: auth) }
             }
             return
         }
@@ -523,15 +524,15 @@ final class ChatThreadModel: ObservableObject {
             self.lastStreamEventAt = Date()
 
             while !Task.isCancelled, self.lifecycleGeneration == generation {
-                if self.historyBaselined {
-                    await self.poll(auth: auth)
-                    if self.serverMessageCount > 0 && self.persistedMessageCount() < self.serverMessageCount {
-                        await self.reloadFullHistory(auth: auth)
-                    }
+                await self.poll(auth: auth)
+                if self.historyBaselined,
+                   self.serverMessageCount > 0,
+                   self.persistedMessageCount() < self.serverMessageCount {
+                    await self.reloadFullHistory(auth: auth)
                 }
                 let interval = Date().timeIntervalSince(self.lastStreamEventAt) < self.streamStaleThreshold
-                    ? self.activePollIntervalNs
-                    : self.recoveryPollIntervalNs
+                    ? AppRefreshPolicy.chatThreadInterval
+                    : UInt64(2_000_000_000)
                 try? await Task.sleep(nanoseconds: interval)
             }
         }
@@ -567,15 +568,15 @@ final class ChatThreadModel: ObservableObject {
                     await recoverMissingHistory(auth: auth, throughSeq: targetSeq)
                 }
             }
-            return
+        } else if expectedServerSeq > localMessageMaxId() {
+            await recoverMissingHistory(auth: auth, throughSeq: expectedServerSeq)
         }
 
-        guard historyBaselined else { return }
+        await poll(auth: auth)
 
-        if needsHistoryRecovery(expectedServerSeq: expectedServerSeq) {
-            await recoverMissingHistory(auth: auth, throughSeq: expectedServerSeq)
-        } else {
-            await poll(auth: auth)
+        if historyBaselined,
+           needsHistoryRecovery(expectedServerSeq: max(expectedServerSeq, pollSeq)) {
+            await recoverMissingHistory(auth: auth, throughSeq: max(expectedServerSeq, pollSeq))
         }
     }
 
@@ -833,7 +834,13 @@ final class ChatThreadModel: ObservableObject {
     private func applyBaselineSnapshot(_ data: PollResponse, persistCache: Bool = true) {
         applySessionMeta(data)
         let optimistic = messages.filter { $0.id < 0 }
-        messages = MessageMerge.baseline(server: data.messages, preservingOptimistic: optimistic)
+        let serverMax = data.messages.map(\.id).filter { $0 > 0 }.max() ?? 0
+        let liveAhead = messages.filter { $0.id > serverMax }
+        var merged = MessageMerge.baseline(server: data.messages, preservingOptimistic: optimistic)
+        if !liveAhead.isEmpty {
+            merged = MessageMerge.mergeSorted(existing: merged, incoming: liveAhead).messages
+        }
+        messages = merged
         knownMessageIds = Set(messages.map(\.id))
         pollSeq = data.seq
         serverMessageCount = max(data.messageCount, data.messages.count, data.seq)
