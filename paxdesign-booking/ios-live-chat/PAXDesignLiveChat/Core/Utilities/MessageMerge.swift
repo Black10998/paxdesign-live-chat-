@@ -23,15 +23,13 @@ enum MessageMerge {
             guard message.id < 0, let clientId = message.clientMsgId else { return true }
             return !incomingClientIds.contains(clientId)
         }
-        var map = Dictionary(uniqueKeysWithValues: reconciledExisting.map { ($0.id, $0) })
-        var changed = false
-        var maxIncomingId = existing.last?.id ?? 0
-        var appendOnly = true
+        var map: [Int: LiveMessage] = [:]
+        for message in reconciledExisting {
+            map[message.id] = message
+        }
+        var changed = reconciledExisting.count != existing.count
 
         for msg in incoming {
-            if msg.id <= maxIncomingId { appendOnly = false }
-            maxIncomingId = max(maxIncomingId, msg.id)
-
             if let prior = map[msg.id] {
                 var merged = msg
                 merged = preserveReaction(merged, prior)
@@ -46,13 +44,6 @@ enum MessageMerge {
         }
 
         guard changed else { return (existing, false) }
-
-        if appendOnly, let lastExisting = existing.last {
-            let newOnes = incoming.filter { $0.id > lastExisting.id }.sorted { $0.id < $1.id }
-            if !newOnes.isEmpty {
-                return (existing + newOnes, true)
-            }
-        }
 
         return (map.values.sorted { $0.id < $1.id }, true)
     }

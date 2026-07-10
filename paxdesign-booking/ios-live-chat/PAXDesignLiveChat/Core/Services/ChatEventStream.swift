@@ -57,7 +57,7 @@ final class ChatEventStream {
             self.channel = channel
             self.handler = handler
             since = ChatCursorStore.shared.eventCursor(
-                site: api.publicApiBaseURL,
+                site: api.cursorScope,
                 channel: channel
             )
         }
@@ -73,12 +73,9 @@ final class ChatEventStream {
     func subscribeInbox(id: UUID, api: LiveChatAPI, handler: @escaping InboxHandler) {
         inboxHandlers[id] = handler
         inboxApi = api
-        inboxSince = max(
-            inboxSince,
-            ChatCursorStore.shared.eventCursor(
-                site: api.publicApiBaseURL,
-                channel: "inbox:admins"
-            )
+        inboxSince = ChatCursorStore.shared.eventCursor(
+            site: api.cursorScope,
+            channel: "inbox"
         )
         ensureInboxStream()
     }
@@ -107,10 +104,11 @@ final class ChatEventStream {
                     try await current.api.consumeEventStream(path: current.path, since: since) { event in
                         Task { @MainActor in
                             guard let current = self.threadSubscriptions[id] else { return }
+                            current.handler(event)
                             if event.id > 0 {
                                 current.since = max(current.since, event.id)
                                 ChatCursorStore.shared.advance(
-                                    site: current.api.publicApiBaseURL,
+                                    site: current.api.cursorScope,
                                     channel: current.channel,
                                     eventId: event.id
                                 )
@@ -122,7 +120,6 @@ final class ChatEventStream {
                                     )
                                 }
                             }
-                            current.handler(event)
                         }
                     }
                 } catch {
@@ -144,6 +141,7 @@ final class ChatEventStream {
         inboxTask?.cancel()
         inboxTask = nil
         inboxApi = nil
+        inboxSince = 0
     }
 
     func stopThreads() {
@@ -167,11 +165,14 @@ final class ChatEventStream {
                     let since = inboxSince
                     try await api.consumeEventStream(path: "events/stream", since: since) { event in
                         Task { @MainActor in
+                            for handler in self.inboxHandlers.values {
+                                handler(event)
+                            }
                             if event.id > 0 {
                                 self.inboxSince = max(self.inboxSince, event.id)
                                 ChatCursorStore.shared.advance(
-                                    site: api.publicApiBaseURL,
-                                    channel: "inbox:admins",
+                                    site: api.cursorScope,
+                                    channel: "inbox",
                                     eventId: event.id
                                 )
                                 Task {
@@ -181,9 +182,6 @@ final class ChatEventStream {
                                         seq: StreamPayload.int(event.payload["seq"])
                                     )
                                 }
-                            }
-                            for handler in self.inboxHandlers.values {
-                                handler(event)
                             }
                         }
                     }

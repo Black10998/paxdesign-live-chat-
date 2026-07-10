@@ -43,6 +43,7 @@ function update_option($key, $value, $autoload = null) { return true; }
 class Test_WPDB {
     public $prefix = 'test_';
     public $insert_id = 0;
+    public $failOutboxInsert = false;
     private $pdo;
 
     public function __construct() {
@@ -88,6 +89,9 @@ class Test_WPDB {
     }
 
     public function insert($table, $data, $formats = array()) {
+        if ($this->failOutboxInsert && str_ends_with($table, 'paxdesign_chat_outbox')) {
+            return false;
+        }
         $columns = array_keys($data);
         $quoted = array_map(function ($value) {
             return is_int($value) ? (string) $value : $this->pdo->quote((string) $value);
@@ -109,6 +113,14 @@ class Test_WPDB {
             $conditions[] = "`$key`=" . $this->pdo->quote((string) $value);
         }
         return $this->pdo->exec("UPDATE $table SET " . implode(',', $sets) . ' WHERE ' . implode(' AND ', $conditions));
+    }
+
+    public function delete($table, $where, $whereFormats = array()) {
+        $conditions = array();
+        foreach ($where as $key => $value) {
+            $conditions[] = "`$key`=" . $this->pdo->quote((string) $value);
+        }
+        return $this->pdo->exec("DELETE FROM $table WHERE " . implode(' AND ', $conditions));
     }
 }
 

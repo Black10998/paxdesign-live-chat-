@@ -68,8 +68,8 @@ assert_true($first['id'] === $retry['id'], 'Retry returned a different sequence'
 assert_true(PAXdesign_Message_Store::count($session) === 1, 'Retry created a duplicate row');
 
 // Concurrent writers: all messages must survive with contiguous server ordering.
-$workers = 8;
-$perWorker = 50;
+$workers = (int) (getenv('PAX_TEST_WORKERS') ?: 8);
+$perWorker = (int) (getenv('PAX_TEST_MESSAGES_PER_WORKER') ?: 50);
 $processes = array();
 $php = PHP_BINARY;
 for ($worker = 0; $worker < $workers; $worker++) {
@@ -103,6 +103,20 @@ $replay = PAXdesign_Message_Store::events_since('session:' . $session, $cursor, 
 assert_true(count($replay) === $expected - 200, 'Reconnect replay lost or duplicated events');
 assert_true($replay[0]['id'] > $cursor, 'Reconnect replay did not honor exclusive cursor');
 
+// A committed message without its outbox event is forbidden.
+$beforeFailure = PAXdesign_Message_Store::count($session);
+$wpdb->failOutboxInsert = true;
+$failed = PAXdesign_Message_Store::append(
+    $session,
+    'user',
+    'must rollback',
+    array('client_msg_id' => 'outbox-failure'),
+    'customer'
+);
+$wpdb->failOutboxInsert = false;
+assert_true(is_wp_error($failed), 'Outbox failure was incorrectly acknowledged');
+assert_true(PAXdesign_Message_Store::count($session) === $beforeFailure, 'Message committed without outbox event');
+
 // Delivery/read acknowledgement is monotonic even if stale acknowledgements arrive later.
 PAXdesign_Message_Store::acknowledge('device:test', 'session:' . $session, 400, 250);
 PAXdesign_Message_Store::acknowledge('device:test', 'session:' . $session, 100, 50);
@@ -113,6 +127,20 @@ $ack = $wpdb->get_row(
 );
 assert_true((int) $ack->last_event_id === 400, 'Event acknowledgement moved backwards');
 assert_true((int) $ack->last_msg_seq === 250, 'Read acknowledgement moved backwards');
+
+// Full history must not truncate long conversations.
+$longSession = 'pax_long_history';
+for ($i = 0; $i < 2105; $i++) {
+    $message = PAXdesign_Message_Store::append(
+        $longSession,
+        'user',
+        "long-$i",
+        array('client_msg_id' => "long:$i"),
+        'customer'
+    );
+    assert_true(!is_wp_error($message), 'Long-history append failed');
+}
+assert_true(count(PAXdesign_Message_Store::all_messages($longSession)) === 2105, 'Full history was truncated');
 
 $elapsedStart = microtime(true);
 for ($i = 0; $i < 1000; $i++) {
@@ -126,6 +154,7 @@ echo json_encode(array(
     'messages' => $expected,
     'workers' => $workers,
     'outbox_events' => count($events),
+    'long_history_messages' => 2105,
     'replay_queries' => 1000,
     'replay_seconds' => round($elapsed, 3),
 ), JSON_PRETTY_PRINT) . PHP_EOL;

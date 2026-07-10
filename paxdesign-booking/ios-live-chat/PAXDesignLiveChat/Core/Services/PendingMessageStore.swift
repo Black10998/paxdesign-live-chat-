@@ -13,6 +13,8 @@ struct PendingOutboundMessage: Codable, Identifiable, Hashable {
     let replyTo: Int?
     let createdAt: TimeInterval
     var attempts: Int
+    var attachmentPath: String? = nil
+    var filename: String? = nil
 }
 
 @MainActor
@@ -41,7 +43,19 @@ final class PendingMessageStore {
         persist()
     }
 
+    func enqueueImage(_ message: PendingOutboundMessage, data: Data, filename: String) {
+        let fileURL = attachmentURL(clientMsgId: message.id, filename: filename)
+        try? data.write(to: fileURL, options: .atomic)
+        var stored = message
+        stored.attachmentPath = fileURL.path
+        stored.filename = filename
+        enqueue(stored)
+    }
+
     func acknowledge(clientMsgId: String) {
+        if let path = entries[clientMsgId]?.attachmentPath {
+            try? FileManager.default.removeItem(atPath: path)
+        }
         entries.removeValue(forKey: clientMsgId)
         persist()
     }
@@ -60,6 +74,11 @@ final class PendingMessageStore {
     }
 
     func clearAll() {
+        for entry in entries.values {
+            if let path = entry.attachmentPath {
+                try? FileManager.default.removeItem(atPath: path)
+            }
+        }
         entries.removeAll()
         try? FileManager.default.removeItem(at: url)
     }
@@ -67,5 +86,10 @@ final class PendingMessageStore {
     private func persist() {
         guard let data = try? encoder.encode(entries) else { return }
         try? data.write(to: url, options: .atomic)
+    }
+
+    private func attachmentURL(clientMsgId: String, filename: String) -> URL {
+        url.deletingLastPathComponent()
+            .appendingPathComponent("pending-\(clientMsgId)-\(filename)")
     }
 }

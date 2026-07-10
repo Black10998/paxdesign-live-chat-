@@ -1725,7 +1725,8 @@ class PAXdesign_Chat_Live {
 
         $caption  = isset($_POST['caption']) ? sanitize_textarea_field(wp_unslash($_POST['caption'])) : '';
         $reply_to = isset($_POST['reply_to']) ? (int) $_POST['reply_to'] : 0;
-        $result   = $this->admin_send_image($session_id, $_FILES['image'], $caption, $reply_to);
+        $client_id = isset($_POST['client_msg_id']) ? sanitize_text_field(wp_unslash($_POST['client_msg_id'])) : '';
+        $result   = $this->admin_send_image($session_id, $_FILES['image'], $caption, $reply_to, $client_id);
 
         if (is_wp_error($result)) {
             $status = 500;
@@ -1745,8 +1746,9 @@ class PAXdesign_Chat_Live {
      * @param array<string, mixed> $file $_FILES-style upload array
      * @return array{message: array<string, mixed>}|WP_Error
      */
-    public function admin_send_image($session_id, array $file, $caption = '', $reply_to = 0) {
+    public function admin_send_image($session_id, array $file, $caption = '', $reply_to = 0, $client_msg_id = '') {
         $session_id = $this->sanitize_session_id($session_id);
+        $client_msg_id = PAXdesign_Message_Store::normalize_client_id($client_msg_id);
 
         if ($session_id === '' || empty($file)) {
             return new WP_Error('invalid_payload', 'Kein Bild übermittelt.', array('status' => 400));
@@ -1754,6 +1756,10 @@ class PAXdesign_Chat_Live {
 
         if (!$this->is_admin_handler($session_id)) {
             return new WP_Error('not_admin', 'Chat nicht übernommen.', array('status' => 409));
+        }
+        $existing = PAXdesign_Message_Store::find_by_client_id($session_id, $client_msg_id);
+        if ($existing) {
+            return array('message' => $existing);
         }
 
         if (!empty($file['error'])) {
@@ -1789,12 +1795,15 @@ class PAXdesign_Chat_Live {
         $image_url = $this->optimize_chat_image($upload['file'], $upload['url']);
         $caption   = sanitize_textarea_field((string) $caption);
         $reply_to  = (int) $reply_to;
-        $extra     = array('image_url' => $image_url);
+        $extra     = array('image_url' => $image_url, 'client_msg_id' => $client_msg_id);
         if ($reply_to > 0) {
             $extra['reply_to'] = $reply_to;
         }
 
         $entry = $this->append_message($session_id, 'admin', $caption, $extra);
+        if (is_wp_error($entry)) {
+            return $entry;
+        }
         if (!$entry) {
             return new WP_Error('save_failed', 'Speichern fehlgeschlagen.', array('status' => 500));
         }
@@ -2303,7 +2312,7 @@ class PAXdesign_Chat_Live {
             'messages'         => $new,
             'admin_typing'     => $this->is_typing($session_id, 'admin'),
             'user_typing'      => $this->is_typing($session_id, 'user'),
-            'reactions'        => $this->extract_message_reactions($messages),
+            'reactions'        => $this->extract_message_reactions($all),
             'customer_language'=> class_exists('PAXdesign_Language_Routing')
                 ? PAXdesign_Language_Routing::session_language_from_row($row)
                 : '',
@@ -2615,6 +2624,9 @@ class PAXdesign_Chat_Live {
         $deleted = PAXdesign_Chat_Log::get_instance()->delete_logs_by_ids(array((int) $row->id));
         if ($deleted < 1) {
             return new WP_Error('delete_failed', 'Löschen fehlgeschlagen.', array('status' => 500));
+        }
+        if (class_exists('PAXdesign_Message_Store')) {
+            PAXdesign_Message_Store::delete_session($session_id);
         }
 
         return array(

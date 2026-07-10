@@ -86,3 +86,14 @@ targets:
         CFBundleDisplayName: PAXDesign Widgets
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
+  PAXDesignLiveChatTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PAXDesignLiveChatTests
+    dependencies:
+      - target: PAXDesignLiveChat
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: at.paxdesign.livechat.tests
+        GENERATE_INFOPLIST_FILE: YES

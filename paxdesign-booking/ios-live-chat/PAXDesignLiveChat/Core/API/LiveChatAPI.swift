@@ -117,6 +117,10 @@ final class LiveChatAPI {
         restBase.absoluteString
     }
 
+    var cursorScope: String {
+        "\(publicApiBaseURL)|\(username.lowercased())"
+    }
+
     private func perform<T: Decodable>(_ request: URLRequest, endpoint: String, as type: T.Type) async throws -> T {
         let data: Data
         let http: HTTPURLResponse
@@ -292,7 +296,8 @@ final class LiveChatAPI {
         imageData: Data,
         filename: String,
         caption: String = "",
-        replyTo: Int? = nil
+        replyTo: Int? = nil,
+        clientMsgId: String = UUID().uuidString.lowercased()
     ) async throws -> LiveMessage {
         guard let url = liveAdminURL(path: "sessions/\(sessionId)/images") else {
             throw LiveChatAPIError.invalidURL
@@ -319,6 +324,9 @@ final class LiveChatAPI {
             body.append("Content-Disposition: form-data; name=\"reply_to\"\r\n\r\n".data(using: .utf8)!)
             body.append("\(replyTo)\r\n".data(using: .utf8)!)
         }
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"client_msg_id\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(clientMsgId)\r\n".data(using: .utf8)!)
 
         body.append("--\(boundary)--\r\n".data(using: .utf8)!)
 

@@ -1583,6 +1583,7 @@
         formData.append('action', 'paxdesign_chat_live_admin_image');
         formData.append('nonce', cfg.nonce);
         formData.append('session_id', selectedSession);
+        formData.append('client_msg_id', newClientMessageId());
         formData.append('image', optimized, optimized.name || 'chat.jpg');
         var caption = ($input.val() || '').trim();
         if (caption) formData.append('caption', caption);

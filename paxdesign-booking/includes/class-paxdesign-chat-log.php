@@ -226,19 +226,59 @@ class PAXdesign_Chat_Log {
             $wpdb->prepare("SELECT * FROM $table WHERE session_id = %s LIMIT 1", $session_id)
         );
 
+        $all_idempotent = !empty($sanitized);
+        foreach ($sanitized as $message) {
+            if (empty($message['client_msg_id'])) {
+                $all_idempotent = false;
+                break;
+            }
+        }
+
+        if (!$existing && $all_idempotent && class_exists('PAXdesign_Message_Store')) {
+            $wpdb->insert(
+                $table,
+                array(
+                    'session_id'            => $session_id,
+                    'started_at'            => $now,
+                    'updated_at'            => $now,
+                    'messages'              => '[]',
+                    'detected_service'      => $service,
+                    'booking_triggered'     => $booking,
+                    'consultation_started'  => $consult,
+                    'message_count'         => 0,
+                ),
+                array('%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d')
+            );
+            $insert_id = (int) $wpdb->insert_id;
+            if ($insert_id <= 0) {
+                return false;
+            }
+            $preview = '';
+            foreach ($sanitized as $message) {
+                $stored = PAXdesign_Message_Store::append(
+                    $session_id,
+                    $message['role'],
+                    $message['content'],
+                    $message,
+                    'customer'
+                );
+                if (is_wp_error($stored)) {
+                    return false;
+                }
+                if ($preview === '' && $message['role'] === 'user') {
+                    $preview = wp_html_excerpt($message['content'], 120, '…');
+                }
+            }
+            do_action('paxdesign_new_chat_session', $session_id, $service, $preview);
+            return $insert_id;
+        }
+
         if ($existing) {
             $existing_messages = json_decode($existing->messages, true);
             if (!is_array($existing_messages)) {
                 $existing_messages = array();
             }
 
-            $all_idempotent = !empty($sanitized);
-            foreach ($sanitized as $message) {
-                if (empty($message['client_msg_id'])) {
-                    $all_idempotent = false;
-                    break;
-                }
-            }
             if ($all_idempotent && class_exists('PAXdesign_Message_Store')) {
                 foreach ($sanitized as $message) {
                     $extra = $message;

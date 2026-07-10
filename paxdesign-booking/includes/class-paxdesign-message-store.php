@@ -54,7 +54,7 @@ class PAXdesign_Message_Store {
             UNIQUE KEY session_client (session_id, client_msg_id),
             KEY session_since (session_id, msg_seq),
             KEY created_at (created_at)
-        ) $charset;");
+        ) ENGINE=InnoDB $charset;");
 
         dbDelta("CREATE TABLE $outbox (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
@@ -66,19 +66,28 @@ class PAXdesign_Message_Store {
             PRIMARY KEY (id),
             KEY channel_event (channel_key, id),
             KEY created_at (created_at)
-        ) $charset;");
+        ) ENGINE=InnoDB $charset;");
 
         dbDelta("CREATE TABLE $cursors (
-            consumer_key varchar(128) NOT NULL,
-            channel_key varchar(128) NOT NULL,
+            consumer_key varchar(80) NOT NULL,
+            channel_key varchar(80) NOT NULL,
             last_event_id bigint(20) unsigned NOT NULL DEFAULT 0,
             last_msg_seq bigint(20) unsigned NOT NULL DEFAULT 0,
             updated_at datetime NOT NULL,
             PRIMARY KEY (consumer_key, channel_key),
             KEY updated_at (updated_at)
-        ) $charset;");
+        ) ENGINE=InnoDB $charset;");
 
-        update_option('paxdesign_message_store_schema', self::SCHEMA_VERSION, false);
+        $created = true;
+        foreach (array($messages, $outbox, $cursors) as $table) {
+            if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) !== $table) {
+                $created = false;
+                break;
+            }
+        }
+        if ($created) {
+            update_option('paxdesign_message_store_schema', self::SCHEMA_VERSION, false);
+        }
     }
 
     public static function maybe_upgrade() {
@@ -106,7 +115,8 @@ class PAXdesign_Message_Store {
             return self::uuid();
         }
         $value = preg_replace('/[^a-z0-9._:-]/', '', $value);
-        return substr((string) $value, 0, 64);
+        $value = substr((string) $value, 0, 64);
+        return $value !== '' ? $value : self::uuid();
     }
 
     /**
@@ -120,6 +130,20 @@ class PAXdesign_Message_Store {
             return;
         }
         self::maybe_upgrade();
+        $lock_name = 'pax_msg_' . md5($session_id);
+        $locked = (int) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 10)', $lock_name));
+        if ($locked !== 1) {
+            return;
+        }
+        try {
+            self::import_legacy_rows($session_id, $messages, $channel);
+        } finally {
+            $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock_name));
+        }
+    }
+
+    private static function import_legacy_rows($session_id, $messages, $channel = 'customer') {
+        global $wpdb;
 
         $table = self::messages_table();
         foreach ($messages as $index => $message) {
@@ -192,7 +216,7 @@ class PAXdesign_Message_Store {
                 return $existing;
             }
 
-            self::migrate_customer_session_if_needed($session_id, $channel);
+            self::migrate_customer_session_if_needed($session_id, $channel, true);
             $table = self::messages_table();
             $wpdb->query('START TRANSACTION');
             $seq = 1 + (int) $wpdb->get_var($wpdb->prepare(
@@ -242,16 +266,22 @@ class PAXdesign_Message_Store {
                 'role'       => $role,
                 'message'    => $message,
             );
+            $outbox_ok = true;
             if ($channel === 'customer') {
-                self::emit('session:' . $session_id, 'message', $payload, $seq);
-                self::emit('inbox:admins', 'message', $payload, $seq);
+                $outbox_ok = self::emit('session:' . $session_id, 'message', $payload, $seq) > 0
+                    && self::emit('inbox:admins', 'message', $payload, $seq) > 0;
             } elseif (!empty($extra['participants']) && is_array($extra['participants'])) {
-                self::emit('team:' . $session_id, 'message', $payload, $seq);
+                $outbox_ok = self::emit('team:' . $session_id, 'message', $payload, $seq) > 0;
                 foreach (array_map('absint', $extra['participants']) as $participant) {
                     if ($participant > 0) {
-                        self::emit('inbox:user:' . $participant, 'message', $payload, $seq);
+                        $outbox_ok = self::emit('inbox:user:' . $participant, 'message', $payload, $seq) > 0
+                            && $outbox_ok;
                     }
                 }
+            }
+            if (!$outbox_ok) {
+                $wpdb->query('ROLLBACK');
+                return new WP_Error('pax_outbox_write_failed', 'Message delivery event could not be persisted.', array('status' => 500));
             }
             $wpdb->query('COMMIT');
             return $message;
@@ -280,7 +310,20 @@ class PAXdesign_Message_Store {
     }
 
     public static function all_messages($session_id, $channel = 'customer') {
-        return self::messages_since($session_id, 0, 2000, $channel);
+        self::maybe_upgrade();
+        self::migrate_customer_session_if_needed($session_id, $channel);
+        return self::fetch_all_rows($session_id);
+    }
+
+    private static function fetch_all_rows($session_id) {
+        global $wpdb;
+        $table = self::messages_table();
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT msg_seq, client_msg_id, role, content, meta_json, created_at
+             FROM $table WHERE session_id = %s ORDER BY msg_seq ASC",
+            sanitize_text_field($session_id)
+        ));
+        return array_map(array(__CLASS__, 'format_row'), is_array($rows) ? $rows : array());
     }
 
     public static function latest_seq($session_id, $channel = 'customer') {
@@ -306,7 +349,7 @@ class PAXdesign_Message_Store {
     public static function emit($channel_key, $event_type, $payload, $message_seq = 0) {
         global $wpdb;
         self::maybe_upgrade();
-        $wpdb->insert(
+        $inserted = $wpdb->insert(
             self::outbox_table(),
             array(
                 'channel_key' => sanitize_text_field($channel_key),
@@ -317,7 +360,7 @@ class PAXdesign_Message_Store {
             ),
             array('%s', '%s', '%s', '%d', '%s')
         );
-        return (int) $wpdb->insert_id;
+        return $inserted ? (int) $wpdb->insert_id : 0;
     }
 
     public static function events_since($channel_key, $since = 0, $limit = 500) {
@@ -351,8 +394,8 @@ class PAXdesign_Message_Store {
         global $wpdb;
         self::maybe_upgrade();
         $table = self::cursors_table();
-        $consumer_key = substr(sanitize_text_field($consumer_key), 0, 128);
-        $channel_key  = substr(sanitize_text_field($channel_key), 0, 128);
+        $consumer_key = substr(sanitize_text_field($consumer_key), 0, 80);
+        $channel_key  = substr(sanitize_text_field($channel_key), 0, 80);
         if ($consumer_key === '' || $channel_key === '') {
             return new WP_Error('pax_ack_invalid', 'Invalid acknowledgement.', array('status' => 400));
         }
@@ -376,7 +419,31 @@ class PAXdesign_Message_Store {
     public static function prune() {
         global $wpdb;
         $table = self::outbox_table();
-        $wpdb->query("DELETE FROM $table WHERE created_at < (UTC_TIMESTAMP() - INTERVAL 7 DAY)");
+        $cursors = self::cursors_table();
+        $wpdb->query(
+            "DELETE o FROM $table o
+             INNER JOIN (
+                SELECT channel_key, MIN(last_event_id) acknowledged
+                FROM $cursors GROUP BY channel_key
+             ) c ON c.channel_key = o.channel_key
+             WHERE o.id <= c.acknowledged
+               AND o.created_at < (UTC_TIMESTAMP() - INTERVAL 1 DAY)"
+        );
+        $wpdb->query("DELETE FROM $table WHERE created_at < (UTC_TIMESTAMP() - INTERVAL 30 DAY)");
+    }
+
+    public static function delete_session($session_id) {
+        global $wpdb;
+        $session_id = sanitize_text_field($session_id);
+        if ($session_id === '') {
+            return false;
+        }
+        $wpdb->delete(self::messages_table(), array('session_id' => $session_id), array('%s'));
+        $wpdb->delete(self::outbox_table(), array('channel_key' => 'session:' . $session_id), array('%s'));
+        $wpdb->delete(self::outbox_table(), array('channel_key' => 'team:' . $session_id), array('%s'));
+        $wpdb->delete(self::cursors_table(), array('channel_key' => 'session:' . $session_id), array('%s'));
+        $wpdb->delete(self::cursors_table(), array('channel_key' => 'team:' . $session_id), array('%s'));
+        return true;
     }
 
     private static function get_by_client_id($session_id, $client_id) {
@@ -391,25 +458,28 @@ class PAXdesign_Message_Store {
         return $row ? self::format_row($row) : null;
     }
 
-    private static function migrate_customer_session_if_needed($session_id, $channel) {
+    public static function find_by_client_id($session_id, $client_id) {
+        self::maybe_upgrade();
+        $client_id = self::normalize_client_id($client_id);
+        return self::get_by_client_id(sanitize_text_field($session_id), $client_id);
+    }
+
+    private static function migrate_customer_session_if_needed($session_id, $channel, $already_locked = false) {
         if ($channel !== 'customer' || !class_exists('PAXdesign_Chat_Live') || !class_exists('PAXdesign_Chat_Log')) {
             return;
         }
         global $wpdb;
-        $table = self::messages_table();
-        $exists = (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM $table WHERE session_id = %s",
-            $session_id
-        ));
-        if ($exists > 0) {
-            return;
-        }
         $row = $wpdb->get_row($wpdb->prepare(
             'SELECT messages FROM ' . PAXdesign_Chat_Log::table_name() . ' WHERE session_id = %s LIMIT 1',
             $session_id
         ));
         if ($row && isset($row->messages)) {
-            self::migrate_legacy($session_id, json_decode($row->messages, true), 'customer');
+            $messages = json_decode($row->messages, true);
+            if ($already_locked) {
+                self::import_legacy_rows($session_id, is_array($messages) ? $messages : array(), 'customer');
+            } else {
+                self::migrate_legacy($session_id, $messages, 'customer');
+            }
         }
     }
 
@@ -418,7 +488,7 @@ class PAXdesign_Message_Store {
             return;
         }
         global $wpdb;
-        $messages = self::all_messages($session_id, 'customer');
+        $messages = self::fetch_all_rows($session_id);
         $preview = !empty($message['content']) ? wp_html_excerpt($message['content'], 120, '…') : '';
         $wpdb->update(
             PAXdesign_Chat_Log::table_name(),

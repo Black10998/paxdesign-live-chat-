@@ -731,12 +731,14 @@ class PAXdesign_Live_Chat_Mobile_API {
         $params   = $request->get_body_params();
         $caption  = isset($params['caption']) ? $params['caption'] : $request->get_param('caption');
         $reply_to = isset($params['reply_to']) ? $params['reply_to'] : $request->get_param('reply_to');
+        $client_id = isset($params['client_msg_id']) ? $params['client_msg_id'] : $request->get_param('client_msg_id');
 
         return self::respond(self::live()->admin_send_image(
             $request['id'],
             $files['image'],
             $caption,
-            $reply_to
+            $reply_to,
+            $client_id
         ));
     }
 

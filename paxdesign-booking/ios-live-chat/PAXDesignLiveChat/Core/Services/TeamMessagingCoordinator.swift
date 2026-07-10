@@ -617,9 +617,15 @@ final class TeamChatThreadModel: ObservableObject {
             await poll(auth: auth)
             PAXHaptics.light()
         } catch {
-            messages.removeAll { $0.id == tempId }
-            draft = text
-            errorMessage = error.localizedDescription
+            switch error {
+            case LiveChatAPIError.unauthorized, LiveChatAPIError.server(_):
+                PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
+                messages.removeAll { $0.id == tempId }
+                draft = text
+                errorMessage = error.localizedDescription
+            default:
+                errorMessage = "Nachricht wird automatisch erneut gesendet."
+            }
         }
     }
 

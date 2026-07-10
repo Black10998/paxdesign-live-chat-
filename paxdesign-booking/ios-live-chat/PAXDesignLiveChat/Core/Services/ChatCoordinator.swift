@@ -1068,9 +1068,18 @@ final class ChatThreadModel: ObservableObject {
             MessageSendSound.shared.playIfEnabled()
             await poll(auth: auth)
         } catch {
-            messages.removeAll { $0.id == tempId }
-            knownMessageIds.remove(tempId)
-            draft = text
+            switch error {
+            case LiveChatAPIError.unauthorized, LiveChatAPIError.server(_):
+                PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
+                messages.removeAll { $0.id == tempId }
+                knownMessageIds.remove(tempId)
+                draft = text
+            default:
+                // The request may have reached the server before the connection
+                // failed. Keep one durable outbox item and retry with the same ID.
+                errorMessage = "Nachricht wird automatisch erneut gesendet."
+                return
+            }
             errorMessage = error.localizedDescription
         }
     }
@@ -1082,12 +1091,27 @@ final class ChatThreadModel: ObservableObject {
             guard !Task.isCancelled else { return }
             PendingMessageStore.shared.noteAttempt(clientMsgId: item.id)
             do {
-                let message = try await api.sendMessage(
-                    sessionId,
-                    text: item.content,
-                    replyTo: item.replyTo,
-                    clientMsgId: item.id
-                )
+                let message: LiveMessage
+                if let path = item.attachmentPath {
+                    guard let imageData = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+                        return
+                    }
+                    message = try await api.sendImage(
+                        sessionId,
+                        imageData: imageData,
+                        filename: item.filename ?? "image.jpg",
+                        caption: item.content,
+                        replyTo: item.replyTo,
+                        clientMsgId: item.id
+                    )
+                } else {
+                    message = try await api.sendMessage(
+                        sessionId,
+                        text: item.content,
+                        replyTo: item.replyTo,
+                        clientMsgId: item.id
+                    )
+                }
                 insertIncomingMessages([message])
                 PendingMessageStore.shared.acknowledge(clientMsgId: item.id)
             } catch {
@@ -1104,9 +1128,11 @@ final class ChatThreadModel: ObservableObject {
         typingNotifyTask?.cancel()
         let caption = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         let replyId = replyToMessage?.id
+        let clientMsgId = UUID().uuidString.lowercased()
         let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000) - 1
         let optimistic = LiveMessage(
             id: tempId,
+            clientMsgId: clientMsgId,
             role: "admin",
             content: caption.isEmpty ? "📷 Foto" : caption,
             ts: Int(Date().timeIntervalSince1970),
@@ -1115,6 +1141,19 @@ final class ChatThreadModel: ObservableObject {
             senderName: auth.profile?.displayName
         )
         messages.append(optimistic)
+        PendingMessageStore.shared.enqueueImage(
+            PendingOutboundMessage(
+                id: clientMsgId,
+                sessionId: sessionId,
+                channel: .booking,
+                content: caption,
+                replyTo: replyId,
+                createdAt: Date().timeIntervalSince1970,
+                attempts: 0
+            ),
+            data: imageData,
+            filename: filename
+        )
         knownMessageIds.insert(tempId)
         draft = ""
         clearReply()
@@ -1127,7 +1166,8 @@ final class ChatThreadModel: ObservableObject {
                 imageData: imageData,
                 filename: filename,
                 caption: caption,
-                replyTo: replyId
+                replyTo: replyId,
+                clientMsgId: clientMsgId
             )
             if let index = messages.firstIndex(where: { $0.id == tempId }) {
                 messages[index] = msg
@@ -1137,12 +1177,19 @@ final class ChatThreadModel: ObservableObject {
             knownMessageIds.remove(tempId)
             knownMessageIds.insert(msg.id)
             pollSeq = max(pollSeq, msg.id)
+            PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
             MessageSendSound.shared.playIfEnabled()
             await poll(auth: auth)
         } catch {
-            messages.removeAll { $0.id == tempId }
-            knownMessageIds.remove(tempId)
-            errorMessage = error.localizedDescription
+            switch error {
+            case LiveChatAPIError.unauthorized, LiveChatAPIError.server(_):
+                PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
+                messages.removeAll { $0.id == tempId }
+                knownMessageIds.remove(tempId)
+                errorMessage = error.localizedDescription
+            default:
+                errorMessage = "Bild wird automatisch erneut gesendet."
+            }
         }
     }
 

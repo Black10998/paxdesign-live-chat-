@@ -1657,10 +1657,19 @@
     if (!text) return;
     clearMessageFailed(msgEl);
     if (isHumanMode()) {
+      var pending = messages.find(function (message) {
+        return String(message.id) === String(msgId);
+      });
+      var clientMsgId = pending && pending.client_msg_id
+        ? pending.client_msg_id
+        : newClientMessageId();
+      if (pending) pending.client_msg_id = clientMsgId;
       isStreaming = true;
       updateSendButton();
-      sendHumanModeMessage(text)
-        .then(function () { syncChatLog(); })
+      sendHumanModeMessage(text, clientMsgId)
+        .then(function (serverMessage) {
+          if (pending && serverMessage && serverMessage.id) pending.id = serverMessage.id;
+        })
         .catch(function (err) {
           markMessageFailed(msgId, text);
           showError(err.message || 'Verbindungsfehler.');
