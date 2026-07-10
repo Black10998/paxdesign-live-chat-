@@ -1408,9 +1408,39 @@
     display: none;
   }
 
+  .pax-live-dashboard--shortcode.is-chat-open .pax-live-dashboard__activity-panel {
+    display: none;
+  }
+
   .pax-live-dashboard--shortcode.is-chat-open .pax-live-dashboard__main {
     display: flex;
-    min-height: calc(100dvh - 160px);
+    flex: 1;
+    min-height: 0;
+  }
+
+  .pax-live-dashboard--shortcode.is-chat-open .pax-live-dashboard__conversation {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+  }
+
+  .pax-live-dashboard--shortcode.is-chat-open .pax-live-dashboard__messages {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pax-live-dashboard--shortcode.is-chat-open .pax-live-dashboard__chat-footer {
+    flex-shrink: 0;
+    margin-top: auto;
+  }
+
+  .pax-live-dashboard--shortcode.is-chat-open .pax-live-dashboard__compose {
+    padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
   }
 
   .pax-live-dashboard--shortcode .pax-live-dashboard__back {
@@ -1666,6 +1696,8 @@
     flex-shrink: 0;
     border-top: 1px solid var(--pax-live-border);
     background: var(--pax-live-surface-2);
+    position: relative;
+    z-index: 3;
   }
 
   .pax-live-dashboard--shortcode .pax-live-dashboard__actions {
@@ -2146,6 +2178,8 @@ body.paxdesign-booking_page_paxdesign-chat-live #wpbody-content {
   flex-shrink: 0;
   border-top: 1px solid #e5e7eb;
   background: #fafafa;
+  position: relative;
+  z-index: 3;
 }
 
 .pax-live-dashboard--admin .pax-live-dashboard__actions {
@@ -2268,6 +2302,14 @@ body.paxdesign-booking_page_paxdesign-chat-live #wpbody-content {
     min-height: 0;
   }
 
+  .pax-live-dashboard--admin.is-chat-open {
+    padding: 0;
+  }
+
+  .pax-live-dashboard--admin.is-chat-open .pax-live-dashboard__activity-panel {
+    display: none;
+  }
+
   .pax-live-dashboard--admin.is-chat-open .pax-live-dashboard__header {
     display: none;
   }
@@ -2276,12 +2318,44 @@ body.paxdesign-booking_page_paxdesign-chat-live #wpbody-content {
     display: none;
   }
 
+  .pax-live-dashboard--admin.is-chat-open .pax-live-dashboard__grid {
+    flex: 1;
+    min-height: 0;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .pax-live-dashboard--admin.is-chat-open .pax-live-dashboard__main {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+  }
+
   .pax-live-dashboard--admin:not(.is-chat-open) .pax-live-dashboard__main {
     display: none;
   }
 
   .pax-live-dashboard--admin.is-chat-open .pax-live-dashboard__back {
     display: inline-flex !important;
+  }
+
+  .pax-live-dashboard--admin.is-chat-open .pax-live-dashboard__conversation {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .pax-live-dashboard--admin.is-chat-open .pax-live-dashboard__messages {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pax-live-dashboard--admin.is-chat-open .pax-live-dashboard__chat-footer {
+    flex-shrink: 0;
+    margin-top: auto;
   }
 
   .pax-live-dashboard--admin .pax-live-dashboard__conversation-head {

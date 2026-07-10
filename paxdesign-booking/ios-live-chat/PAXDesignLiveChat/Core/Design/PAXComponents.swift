@@ -355,3 +355,44 @@ struct PAXTimelineLoaderCard: View {
         )
     }
 }
+
+enum PAXShellLayout {
+    static let tabBarBodyHeight: CGFloat = 56
+
+    static var bottomSafeArea: CGFloat {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)?
+            .safeAreaInsets.bottom ?? 0
+    }
+
+    static var tabBarReservedHeight: CGFloat {
+        tabBarBodyHeight + max(bottomSafeArea, 6) + 10
+    }
+}
+
+private struct ShellTabBarVisibleKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var shellTabBarVisible: Bool {
+        get { self[ShellTabBarVisibleKey.self] }
+        set { self[ShellTabBarVisibleKey.self] = newValue }
+    }
+}
+
+private struct ShellScrollClearanceModifier: ViewModifier {
+    @Environment(\.shellTabBarVisible) private var tabBarVisible
+
+    func body(content: Content) -> some View {
+        content.padding(.bottom, tabBarVisible ? 6 : 0)
+    }
+}
+
+extension View {
+    func paxShellScrollClearance() -> some View {
+        modifier(ShellScrollClearanceModifier())
+    }
+}

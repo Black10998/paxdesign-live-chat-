@@ -51,6 +51,7 @@ struct LiveTabView: View {
         .navigationBarTitleDisplayMode(.large)
         .refreshable { await coordinator.refreshSessions(auth: auth) }
         .scrollDismissesKeyboard(.interactively)
+        .paxShellScrollClearance()
     }
 
     private var liveHero: some View {

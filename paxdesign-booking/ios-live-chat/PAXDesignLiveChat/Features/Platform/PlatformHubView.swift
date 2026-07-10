@@ -35,6 +35,7 @@ struct PlatformHubView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
+        .paxShellScrollClearance()
         .paxScreenBackground()
         .navigationTitle(L10n.PlatformTitle)
         .navigationBarTitleDisplayMode(.large)

@@ -127,6 +127,7 @@ struct DashboardView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
+        .paxShellScrollClearance()
         .paxScreenBackground()
         .navigationTitle(L10n.ModuleDashboard)
         .navigationBarTitleDisplayMode(.large)

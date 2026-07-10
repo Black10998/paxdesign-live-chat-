@@ -52,6 +52,18 @@ struct AdaptiveShellView: View {
         return (dashboard, chats, team, live, platform)
     }
 
+    private var isShellDetailActive: Bool {
+        !dashboardPath.isEmpty
+            || !chatsPath.isEmpty
+            || !teamPath.isEmpty
+            || !livePath.isEmpty
+            || !platformPath.isEmpty
+    }
+
+    private var shouldShowBottomTabBar: Bool {
+        !isPad && !isShellDetailActive
+    }
+
     private var iPhoneTabItems: [ShellTabItem] {
         let tags = tabTags
         var items: [ShellTabItem] = [
@@ -126,14 +138,17 @@ struct AdaptiveShellView: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            if !isPad {
+            if shouldShowBottomTabBar {
                 PAXBottomTabBar(
                     items: iPhoneTabItems,
                     selection: $selectedTab,
                     reduceMotion: reduceMotion
                 )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.9), value: shouldShowBottomTabBar)
+        .environment(\.shellTabBarVisible, shouldShowBottomTabBar)
         .tint(PAXTheme.accent)
         .sheet(isPresented: $showGlobalSearch) {
             NavigationStack { GlobalSearchView() }
@@ -426,28 +441,56 @@ private struct PAXBottomTabBar: View {
     @Binding var selection: Int
     let reduceMotion: Bool
 
+    private var bottomSafeInset: CGFloat {
+        max(PAXShellLayout.bottomSafeArea, 6)
+    }
+
     var body: some View {
-        HStack(spacing: 6) {
-            ForEach(items) { item in
-                button(for: item)
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                ForEach(items) { item in
+                    button(for: item)
+                }
             }
+            .padding(.horizontal, 10)
+            .padding(.top, 8)
+            .padding(.bottom, 6)
+            .background(tabBarPillBackground)
+            .padding(.horizontal, 10)
+
+            Color.clear
+                .frame(height: bottomSafeInset)
         }
-        .padding(.horizontal, 10)
-        .padding(.top, 8)
-        .padding(.bottom, 6)
-        .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(PAXTheme.border.opacity(0.46), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.22), radius: 18, x: 0, y: 10)
-        )
-        .padding(.horizontal, 10)
-        .padding(.top, 2)
-        .padding(.bottom, 2)
+        .padding(.top, 4)
+        .background(tabBarDockBackground)
         .accessibilityElement(children: .contain)
+    }
+
+    private var tabBarPillBackground: some View {
+        RoundedRectangle(cornerRadius: 24, style: .continuous)
+            .fill(.ultraThinMaterial)
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(PAXTheme.surface.opacity(0.34))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(PAXTheme.border.opacity(0.46), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.22), radius: 18, x: 0, y: 10)
+    }
+
+    private var tabBarDockBackground: some View {
+        LinearGradient(
+            colors: [
+                PAXTheme.background.opacity(0),
+                PAXTheme.background.opacity(0.72),
+                PAXTheme.background.opacity(0.94)
+            ],
+            startPoint: .top,
+            endPoint: .bottom
+        )
+        .ignoresSafeArea(edges: .bottom)
     }
 
     private func button(for item: ShellTabItem) -> some View {

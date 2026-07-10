@@ -263,6 +263,7 @@ struct SessionListView: View {
             await coordinator.refreshSessions(auth: auth)
             await teamCoordinator.refresh(auth: auth)
         }
+        .paxShellScrollClearance()
     }
 
     private var noAccessView: some View {
