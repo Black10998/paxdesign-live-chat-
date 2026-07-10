@@ -16,6 +16,10 @@ enum AppServicesController {
         guard auth.isLoggedIn, !didStart else { return }
         didStart = true
 
+        if let api = auth.api {
+            ConversationHistoryStore.shared.setSiteScope(api.publicApiBaseURL)
+        }
+
         coordinator.start(auth: auth)
         teamCoordinator.start(auth: auth)
         AppLockService.shared.prepareForLogin()
@@ -49,6 +53,8 @@ enum AppServicesController {
         didStart = false
         coordinator.stop()
         teamCoordinator.stop()
+        ChatThreadRegistry.shared.clearAll()
+        ConversationHistoryStore.shared.clearAll()
         #if !SIDELOAD
         DeviceSessionService.shared.stop()
         #endif

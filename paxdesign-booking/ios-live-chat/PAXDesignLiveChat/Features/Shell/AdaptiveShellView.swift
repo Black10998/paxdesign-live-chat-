@@ -341,6 +341,15 @@ struct AdaptiveShellView: View {
         coordinator.activeSessionId = sessionId
         AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: true)
 
+        if let api = AuthStore.shared.api {
+            ConversationPrefetcher.shared.schedulePrefetch(
+                sessionId: sessionId,
+                api: api,
+                isTeam: sessionId.hasPrefix("team_"),
+                priority: true
+            )
+        }
+
         if path.wrappedValue.isEmpty {
             path.wrappedValue.append(sessionId)
         } else {

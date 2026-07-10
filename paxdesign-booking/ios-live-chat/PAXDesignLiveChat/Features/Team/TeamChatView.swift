@@ -6,7 +6,7 @@ struct TeamChatView: View {
     @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
     @EnvironmentObject private var settings: AppSettingsStore
     @Environment(\.dismiss) private var dismiss
-    @StateObject private var thread: TeamChatThreadModel
+    @ObservedObject private var thread: TeamChatThreadModel
 
     @State private var showDeleteConfirm = false
     @State private var deleteMode = "hide"
@@ -14,7 +14,7 @@ struct TeamChatView: View {
     @State private var deleteFeedback: String?
 
     init(sessionId: String) {
-        _thread = StateObject(wrappedValue: TeamChatThreadModel(sessionId: sessionId))
+        _thread = ObservedObject(wrappedValue: ChatThreadRegistry.shared.teamThread(sessionId: sessionId))
     }
 
     private var canPurgeForAll: Bool {
@@ -90,7 +90,7 @@ struct TeamChatView: View {
             Task { await thread.markRead(auth: auth) }
         }
         .onDisappear {
-            thread.stop()
+            thread.suspend()
             if coordinator.activeSessionId == thread.sessionId {
                 coordinator.activeSessionId = nil
             }

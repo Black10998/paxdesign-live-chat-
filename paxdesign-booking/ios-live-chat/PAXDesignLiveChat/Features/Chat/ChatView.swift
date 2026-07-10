@@ -6,7 +6,7 @@ import PhotosUI
 struct ChatView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var coordinator: ChatCoordinator
-    @StateObject private var thread: ChatThreadModel
+    @ObservedObject private var thread: ChatThreadModel
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var settings: AppSettingsStore
 
@@ -22,7 +22,7 @@ struct ChatView: View {
     @State private var showImagePreview = false
 
     init(sessionId: String) {
-        _thread = StateObject(wrappedValue: ChatThreadModel(sessionId: sessionId))
+        _thread = ObservedObject(wrappedValue: ChatThreadRegistry.shared.bookingThread(sessionId: sessionId))
     }
 
     var body: some View {
@@ -88,7 +88,7 @@ struct ChatView: View {
         }
         .onDisappear {
             AdminTypingSound.shared.stop()
-            thread.stop()
+            thread.suspend()
             if coordinator.activeSessionId == thread.sessionId {
                 coordinator.activeSessionId = nil
             }

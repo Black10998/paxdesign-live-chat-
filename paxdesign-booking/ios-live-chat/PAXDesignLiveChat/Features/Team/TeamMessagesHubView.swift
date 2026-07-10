@@ -307,6 +307,15 @@ struct TeamMessagesHubView: View {
             )
         }
         .buttonStyle(.plain)
+        .onAppear {
+            if let api = auth.api {
+                ConversationPrefetcher.shared.schedulePrefetch(
+                    sessionId: session.sessionId,
+                    api: api,
+                    isTeam: true
+                )
+            }
+        }
         .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)

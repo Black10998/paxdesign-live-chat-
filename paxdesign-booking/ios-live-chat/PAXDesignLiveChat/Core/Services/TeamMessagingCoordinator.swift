@@ -51,11 +51,11 @@ final class TeamMessagingCoordinator: ObservableObject {
                     Task { await self.refresh(auth: auth) }
                     return
                 }
-                if event.type == "message" {
+                if event.type == "message",
+                   let inline = LiveMessage.fromStreamPayload(event.payload["message"]) {
+                    ConversationHistoryStore.shared.mergeMessage(sessionId: sessionId, message: inline, seq: StreamPayload.int(event.payload["seq"]))
                     var userInfo: [String: Any] = ["session_id": sessionId]
-                    if let message = event.payload["message"] {
-                        userInfo["inline_message"] = message
-                    }
+                    userInfo["inline_message"] = event.payload["message"]
                     NotificationCenter.default.post(
                         name: .paxSessionSync,
                         object: nil,
@@ -101,6 +101,7 @@ final class TeamMessagingCoordinator: ObservableObject {
                 teamSessions = response.sessions
             }
             errorMessage = nil
+            ConversationPrefetcher.shared.prefetchFromSessions(response.sessions, api: api)
         } catch {
             if case LiveChatAPIError.unauthorized = error {
                 auth.handleUnauthorized()
@@ -156,27 +157,24 @@ final class TeamChatThreadModel: ObservableObject {
 
     func start(auth: AuthStore) {
         self.auth = auth
+        let restoredFromCache = restoreFromCache()
         lifecycleGeneration += 1
         let generation = lifecycleGeneration
         stopBackgroundWork()
-        resetThreadState()
+
+        if !restoredFromCache {
+            resetThreadState()
+        } else {
+            isLoadingMessages = false
+            historyBaselined = true
+        }
+        streamSnapshotReady = true
 
         pollTask = Task { [weak self] in
             guard let self else { return }
             self.beginEventStream(auth: auth, generation: generation)
-            await self.loadFullHistory(auth: auth)
+            await self.loadFullHistory(auth: auth, showLoading: !restoredFromCache)
             guard !Task.isCancelled, self.lifecycleGeneration == generation else { return }
-
-            self.streamSnapshotReady = true
-            let pending = self.pendingStreamEvents
-            self.pendingStreamEvents = []
-            for event in pending {
-                await self.handleThreadStreamEvent(event, auth: auth)
-            }
-            for inline in self.pendingInlineMessages {
-                self.insertIncomingMessages([inline])
-            }
-            self.pendingInlineMessages = []
             self.lastStreamEventAt = Date()
 
             while !Task.isCancelled, self.lifecycleGeneration == generation {
@@ -196,15 +194,13 @@ final class TeamChatThreadModel: ObservableObject {
 
     func refreshNow(auth: AuthStore, inlineMessage: Any? = nil) async {
         if let inline = LiveMessage.fromStreamPayload(inlineMessage) {
+            insertIncomingMessages([inline])
+            lastStreamEventAt = Date()
             if historyBaselined {
-                insertIncomingMessages([inline])
-                lastStreamEventAt = Date()
                 let targetSeq = max(currentSeq, inline.id)
                 if needsHistoryRecovery(throughSeq: targetSeq) {
                     await recoverMissingHistory(auth: auth, throughSeq: targetSeq)
                 }
-            } else {
-                pendingInlineMessages.append(inline)
             }
             return
         }
@@ -212,9 +208,22 @@ final class TeamChatThreadModel: ObservableObject {
         await poll(auth: auth)
     }
 
-    func stop() {
+    func suspend() {
         lifecycleGeneration += 1
         stopBackgroundWork()
+    }
+
+    func stop() {
+        suspend()
+    }
+
+    private func restoreFromCache() -> Bool {
+        guard let snapshot = ConversationHistoryStore.shared.snapshot(for: sessionId) else {
+            return false
+        }
+        applyBaselineSnapshot(snapshot.toPollResponse(), persistCache: false)
+        isLoadingMessages = false
+        return !messages.isEmpty || snapshot.messageCount > 0
     }
 
     private func stopBackgroundWork() {
@@ -238,12 +247,14 @@ final class TeamChatThreadModel: ObservableObject {
         isLoadingMessages = true
     }
 
-    private func loadFullHistory(auth: AuthStore) async {
+    private func loadFullHistory(auth: AuthStore, showLoading: Bool = true) async {
         guard let api = auth.api else {
             isLoadingMessages = false
             return
         }
-        isLoadingMessages = true
+        if showLoading && messages.isEmpty {
+            isLoadingMessages = true
+        }
         defer { isLoadingMessages = false }
         do {
             let response = try await api.pollTeamSession(sessionId, since: 0, full: true)
@@ -275,7 +286,7 @@ final class TeamChatThreadModel: ObservableObject {
         }
     }
 
-    private func applyBaselineSnapshot(_ response: PollResponse) {
+    private func applyBaselineSnapshot(_ response: PollResponse, persistCache: Bool = true) {
         participantName = response.customerName
         let optimistic = messages.filter { $0.id < 0 }
         messages = normalizeTeamMessages(
@@ -286,6 +297,9 @@ final class TeamChatThreadModel: ObservableObject {
         serverMessageCount = max(response.messageCount, response.messages.count, response.seq)
         historyBaselined = true
         noteHistoryIntegrityIssue()
+        if persistCache {
+            ConversationHistoryStore.shared.save(response, sessionId: sessionId)
+        }
     }
 
     private func noteHistoryIntegrityIssue() {
@@ -332,11 +346,6 @@ final class TeamChatThreadModel: ObservableObject {
     }
 
     private func handleThreadStreamEvent(_ event: ChatStreamEvent, auth: AuthStore) async {
-        if !streamSnapshotReady {
-            pendingStreamEvents.append(event)
-            return
-        }
-
         lastStreamEventAt = Date()
         if event.type == "conversation_deleted" {
             onConversationRemoved?()
@@ -492,6 +501,20 @@ final class TeamChatThreadModel: ObservableObject {
         let result = MessageMerge.mergeSorted(existing: messages, incoming: normalized)
         if result.changed {
             messages = result.messages
+            let payload = CachedPollPayload(
+                handler: "team_dm",
+                handlerLabel: "Team",
+                adminName: auth?.profile?.displayName ?? "",
+                customerName: participantName,
+                assignedAgent: nil,
+                sessionRating: 0,
+                detectedService: "Team-Nachricht",
+                updatedAt: "",
+                seq: pollSeq,
+                messageCount: max(serverMessageCount, messages.count, pollSeq),
+                messages: messages
+            )
+            ConversationHistoryStore.shared.save(payload.asPollResponse(), sessionId: sessionId)
         }
         let maxId = normalized.map(\.id).filter { $0 > 0 }.max() ?? 0
         if maxId > 0 {

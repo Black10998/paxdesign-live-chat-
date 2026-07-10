@@ -176,6 +176,15 @@ struct SessionListView: View {
                         }
                         .buttonStyle(.plain)
                         .opacity(session.isClosed ? 0.55 : 1)
+                        .onAppear {
+                            if let api = auth.api {
+                                ConversationPrefetcher.shared.schedulePrefetch(
+                                    sessionId: session.sessionId,
+                                    api: api,
+                                    isTeam: session.isTeamDM
+                                )
+                            }
+                        }
                         .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
