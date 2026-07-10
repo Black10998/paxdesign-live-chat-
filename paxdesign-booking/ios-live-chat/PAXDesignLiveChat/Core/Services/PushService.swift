@@ -37,12 +37,29 @@ final class PushService: NSObject, ObservableObject {
         UNUserNotificationCenter.current().setNotificationCategories([liveCategory, messageCategoryObj])
     }
 
-    func requestAuthorization() async {
+    @discardableResult
+    func requestAuthorization() async -> Bool {
         configureNotificationCategories()
         let center = UNUserNotificationCenter.current()
-        _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
-        await MainActor.run {
-            UIApplication.shared.registerForRemoteNotifications()
+        let currentSettings = await center.notificationSettings()
+        switch currentSettings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            await MainActor.run {
+                UIApplication.shared.registerForRemoteNotifications()
+            }
+            return true
+        case .denied:
+            return false
+        case .notDetermined:
+            let granted = (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+            if granted {
+                await MainActor.run {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
+            return granted
+        @unknown default:
+            return false
         }
     }
 

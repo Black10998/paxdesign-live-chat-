@@ -10,6 +10,11 @@ struct OnboardingPage: Identifiable {
     let systemImage: String
 }
 
+private enum OnboardingPasswordField: Hashable {
+    case password
+    case confirm
+}
+
 struct OnboardingFlowView: View {
     enum Mode {
         case firstLaunch
@@ -19,19 +24,23 @@ struct OnboardingFlowView: View {
     @EnvironmentObject private var auth: AuthStore
     @EnvironmentObject private var settings: AppSettingsStore
     @EnvironmentObject private var push: PushService
+    @Environment(\.scenePhase) private var scenePhase
     @ObservedObject private var permissions = PermissionCoordinator.shared
     @ObservedObject private var locationPermission = LocationPermissionService.shared
     @ObservedObject private var appLock = AppLockService.shared
 
     @State private var pageIndex = 0
     @State private var acceptedTerms = false
-    @State private var requestInFlight = false
+    @State private var notificationsRequestInFlight = false
+    @State private var locationRequestInFlight = false
+    @State private var biometricRequestInFlight = false
     @State private var completionError: String?
     @State private var isCompleting = false
     @State private var securityPassword = ""
     @State private var securityPasswordConfirm = ""
     @State private var enableBiometricProtection = true
     @State private var biometricVerified = false
+    @FocusState private var focusedPasswordField: OnboardingPasswordField?
 
     let mode: Mode
     let onComplete: () -> Void
@@ -80,8 +89,16 @@ struct OnboardingFlowView: View {
         }
     }
 
+    private var notificationsDenied: Bool {
+        permissions.notificationStatus == .denied
+    }
+
     private var locationGranted: Bool {
         LocationPermissionService.isAuthorized(locationPermission.status)
+    }
+
+    private var locationDenied: Bool {
+        locationPermission.status == .denied || locationPermission.status == .restricted
     }
 
     private var biometricAvailable: Bool {
@@ -121,6 +138,10 @@ struct OnboardingFlowView: View {
         acceptedTerms && notificationsGranted && locationGranted && securityReady && !isCompleting
     }
 
+    private var isLastPage: Bool {
+        pageIndex == pages.count - 1
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -136,8 +157,9 @@ struct OnboardingFlowView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 24)
                     .padding(.top, 8)
+                    .background(.bar)
             }
-            .background(Color(.systemGroupedBackground))
+            .paxScreenBackground()
             .navigationTitle(mode == .firstLaunch ? "Willkommen" : "Einführung")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -148,109 +170,174 @@ struct OnboardingFlowView: View {
                         }
                     }
                 }
+                if isLastPage && mode == .postLogin {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Fertig") {
+                            focusedPasswordField = nil
+                        }
+                    }
+                }
             }
         }
         .task {
-            await permissions.refreshStatuses()
-            locationPermission.refreshStatus()
+            await refreshPermissionStatuses()
             acceptedTerms = auth.profile?.termsAccepted ?? false
             enableBiometricProtection = biometricAvailable
+        }
+        .onChange(of: scenePhase) { phase in
+            guard phase == .active else { return }
+            Task { await refreshPermissionStatuses() }
         }
     }
 
     private func onboardingPage(_ page: OnboardingPage, index: Int) -> some View {
-        VStack(spacing: 24) {
-            Spacer()
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 24) {
+                    Spacer(minLength: isLastPage && mode == .postLogin ? 8 : 32)
 
-            Image(systemName: page.systemImage)
-                .font(.system(size: 52))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.tint)
-                .padding(.bottom, 8)
+                    Image(systemName: page.systemImage)
+                        .font(.system(size: 52))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(.tint)
+                        .padding(.bottom, 4)
 
-            VStack(spacing: 10) {
-                Text(page.title)
-                    .font(.title2.weight(.semibold))
-                    .multilineTextAlignment(.center)
+                    VStack(spacing: 10) {
+                        Text(page.title)
+                            .font(.title2.weight(.semibold))
+                            .multilineTextAlignment(.center)
 
-                Text(page.subtitle)
-                    .font(.body)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
-                    .lineSpacing(3)
-                    .padding(.horizontal, 12)
+                        Text(page.subtitle)
+                            .font(.body)
+                            .multilineTextAlignment(.center)
+                            .foregroundStyle(.secondary)
+                            .lineSpacing(3)
+                            .padding(.horizontal, 4)
+                    }
+
+                    if mode == .postLogin && index == pages.count - 1 {
+                        complianceSection
+                            .padding(.top, 4)
+                    }
+
+                    Spacer(minLength: 32)
+                }
+                .padding(.horizontal, 20)
+                .frame(maxWidth: .infinity)
             }
-
-            if mode == .postLogin && index == pages.count - 1 {
-                complianceSection
-                    .padding(.top, 8)
+            .scrollDismissesKeyboard(.interactively)
+            .onChange(of: focusedPasswordField) { field in
+                guard let field else { return }
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    proxy.scrollTo(field, anchor: .center)
+                }
             }
-
-            Spacer()
-            Spacer(minLength: 24)
         }
-        .padding(.horizontal, 24)
     }
 
     private var complianceSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Toggle("Ich akzeptiere die Nutzungsbedingungen und Datenschutzbedingungen.", isOn: $acceptedTerms)
-                .toggleStyle(.switch)
-
-            permissionRow(
-                title: "Push-Benachrichtigungen",
-                granted: notificationsGranted,
-                actionTitle: "Erlauben",
-                action: requestNotifications
-            )
-
-            permissionRow(
-                title: "Standortzugriff",
-                granted: locationGranted,
-                actionTitle: "Erlauben",
-                action: requestLocation
-            )
-
+        VStack(alignment: .leading, spacing: 16) {
+            termsSection
+            permissionsSection
             securitySection
 
             if let completionError, !completionError.isEmpty {
                 Text(completionError)
                     .font(.caption)
                     .foregroundStyle(PAXTheme.danger)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(14)
-        .paxGlassCardStyle(cornerRadius: 14, fillOpacity: 0.82, borderOpacity: 0.44, shadowOpacity: 0.14)
+    }
+
+    private var termsSection: some View {
+        Toggle("Ich akzeptiere die Nutzungsbedingungen und Datenschutzbedingungen.", isOn: $acceptedTerms)
+            .toggleStyle(.switch)
+            .font(.subheadline)
+            .padding(16)
+            .paxCard(.list)
+    }
+
+    private var permissionsSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Berechtigungen")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PAXTheme.textPrimary)
+
+            permissionRow(
+                title: "Push-Benachrichtigungen",
+                detail: notificationsGranted
+                    ? "Aktiv"
+                    : (notificationsDenied ? "In den Einstellungen aktivieren" : "Für Live-Anfragen und Nachrichten"),
+                granted: notificationsGranted,
+                denied: notificationsDenied,
+                isLoading: notificationsRequestInFlight,
+                actionTitle: notificationsDenied ? "Einstellungen" : "Erlauben",
+                action: requestNotifications
+            )
+
+            permissionRow(
+                title: "Standortzugriff",
+                detail: locationGranted
+                    ? "Aktiv"
+                    : (locationDenied ? "In den Einstellungen aktivieren" : "Für standortbezogene Funktionen"),
+                granted: locationGranted,
+                denied: locationDenied,
+                isLoading: locationRequestInFlight,
+                actionTitle: locationDenied ? "Einstellungen" : "Erlauben",
+                action: requestLocation
+            )
+        }
+        .padding(16)
+        .paxCard(.standard)
     }
 
     private func permissionRow(
         title: String,
+        detail: String,
         granted: Bool,
+        denied: Bool,
+        isLoading: Bool,
         actionTitle: String,
         action: @escaping () -> Void
     ) -> some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 3) {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))
-                Text(granted ? "Aktiv" : "Nicht aktiv")
+                Text(detail)
                     .font(.caption)
-                    .foregroundStyle(granted ? PAXTheme.success : PAXTheme.danger)
+                    .foregroundStyle(granted ? PAXTheme.success : (denied ? PAXTheme.danger : PAXTheme.textSecondary))
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer()
-            if !granted {
-                Button(actionTitle, action: action)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(requestInFlight)
-            } else {
+            Spacer(minLength: 8)
+            if granted {
                 Image(systemName: "checkmark.circle.fill")
+                    .font(.title3)
                     .foregroundStyle(PAXTheme.success)
+            } else {
+                Button {
+                    PAXHaptics.light()
+                    action()
+                } label: {
+                    if isLoading {
+                        ProgressView()
+                            .controlSize(.small)
+                            .frame(minWidth: 72)
+                    } else {
+                        Text(actionTitle)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.small)
+                .disabled(isLoading)
             }
         }
     }
 
     private var securitySection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 14) {
             Text("Sicherheits-Setup")
                 .font(.subheadline.weight(.semibold))
             Text(deviceSecurityLabel)
@@ -261,38 +348,66 @@ struct OnboardingFlowView: View {
                 .keyboardType(.numberPad)
                 .textContentType(.oneTimeCode)
                 .textInputAutocapitalization(.never)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .paxGlassCardStyle(cornerRadius: 12, fillOpacity: 0.76, borderOpacity: 0.4, shadowOpacity: 0.08)
+                .focused($focusedPasswordField, equals: .password)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(PAXTheme.surface.opacity(0.55))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(PAXTheme.border.opacity(0.35), lineWidth: 0.5)
+                )
+                .id(OnboardingPasswordField.password)
 
             SecureField("Sicherheitscode bestätigen", text: $securityPasswordConfirm)
                 .keyboardType(.numberPad)
                 .textContentType(.oneTimeCode)
                 .textInputAutocapitalization(.never)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .paxGlassCardStyle(cornerRadius: 12, fillOpacity: 0.76, borderOpacity: 0.4, shadowOpacity: 0.08)
+                .focused($focusedPasswordField, equals: .confirm)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(PAXTheme.surface.opacity(0.55))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(PAXTheme.border.opacity(0.35), lineWidth: 0.5)
+                )
+                .id(OnboardingPasswordField.confirm)
+
+            if !securityPassword.isEmpty || !securityPasswordConfirm.isEmpty {
+                Text(securityPasswordValid ? "Sicherheitscode gültig" : "Bitte 4-8 identische Ziffern eingeben")
+                    .font(.caption)
+                    .foregroundStyle(securityPasswordValid ? PAXTheme.success : PAXTheme.textSecondary)
+            }
 
             if biometricAvailable {
                 Toggle("Biometrische Anmeldung aktivieren (\(appLock.biometricTypeLabel))", isOn: $enableBiometricProtection)
                     .toggleStyle(.switch)
+                    .font(.subheadline)
+
                 if enableBiometricProtection {
                     Button(biometricVerified ? "Biometrie bestätigt" : "Biometrie jetzt aktivieren") {
                         Task { await verifyBiometricSetup() }
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(requestInFlight)
+                    .controlSize(.small)
+                    .disabled(biometricRequestInFlight)
                 }
             }
         }
-        .padding(12)
-        .paxGlassCardStyle(cornerRadius: 12, fillOpacity: 0.72, borderOpacity: 0.36, shadowOpacity: 0.08)
+        .padding(16)
+        .paxCard(.standard)
     }
 
     private var controlBar: some View {
         HStack(spacing: 12) {
             if pageIndex > 0 {
                 Button("Zurück") {
+                    focusedPasswordField = nil
                     PAXHaptics.light()
                     withAnimation { pageIndex -= 1 }
                 }
@@ -303,12 +418,14 @@ struct OnboardingFlowView: View {
 
             if pageIndex < pages.count - 1 {
                 Button("Weiter") {
+                    focusedPasswordField = nil
                     PAXHaptics.light()
                     withAnimation { pageIndex += 1 }
                 }
                 .buttonStyle(.borderedProminent)
             } else {
                 Button(mode == .firstLaunch ? "Loslegen" : "Zugriff aktivieren") {
+                    focusedPasswordField = nil
                     PAXHaptics.success()
                     completeOnboarding()
                 }
@@ -319,23 +436,57 @@ struct OnboardingFlowView: View {
         }
     }
 
+    private func refreshPermissionStatuses() async {
+        await permissions.refreshStatuses()
+        locationPermission.refreshStatus()
+    }
+
     private func requestNotifications() {
+        guard !notificationsRequestInFlight else { return }
         Task {
-            requestInFlight = true
-            defer { requestInFlight = false }
-            await push.requestAuthorization()
+            notificationsRequestInFlight = true
+            defer { notificationsRequestInFlight = false }
+
+            if notificationsDenied {
+                permissions.openSystemSettings()
+                return
+            }
+
             await permissions.refreshStatuses()
             if notificationsGranted {
                 await push.registerTokenWithBackend(auth: auth)
+                return
+            }
+
+            _ = await push.requestAuthorization()
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            await permissions.refreshStatuses()
+
+            if notificationsGranted {
+                completionError = nil
+                await push.registerTokenWithBackend(auth: auth)
+            } else if permissions.notificationStatus == .denied {
+                completionError = "Push-Benachrichtigungen wurden abgelehnt. Bitte in den Einstellungen aktivieren."
             }
         }
     }
 
     private func requestLocation() {
+        guard !locationRequestInFlight else { return }
         Task {
-            requestInFlight = true
-            defer { requestInFlight = false }
+            locationRequestInFlight = true
+            defer { locationRequestInFlight = false }
+
+            if locationDenied {
+                permissions.openSystemSettings()
+                return
+            }
+
+            locationPermission.refreshStatus()
+            if locationGranted { return }
+
             _ = await locationPermission.requestWhenInUse()
+            try? await Task.sleep(nanoseconds: 250_000_000)
             locationPermission.refreshStatus()
         }
     }
@@ -387,10 +538,12 @@ struct OnboardingFlowView: View {
     }
 
     private func verifyBiometricSetup() async {
-        requestInFlight = true
-        defer { requestInFlight = false }
+        biometricRequestInFlight = true
+        defer { biometricRequestInFlight = false }
         biometricVerified = await appLock.verifyDeviceOwnerForSetup()
-        if !biometricVerified {
+        if biometricVerified {
+            completionError = nil
+        } else {
             completionError = "Biometrische Aktivierung konnte nicht bestätigt werden."
         }
     }

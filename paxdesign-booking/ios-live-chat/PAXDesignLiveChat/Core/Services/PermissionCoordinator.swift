@@ -33,12 +33,12 @@ final class PermissionCoordinator: ObservableObject {
     }
 
     func requestNotifications(push: PushService) async -> Bool {
-        await push.requestAuthorization()
+        let granted = await push.requestAuthorization()
         await refreshStatuses()
         hasCompletedOnboarding = true
         UserDefaults.standard.set(true, forKey: Keys.onboardingDone)
         showNotificationPrompt = false
-        return notificationStatus == .authorized || notificationStatus == .provisional
+        return granted || notificationStatus == .authorized || notificationStatus == .provisional
     }
 
     func skipNotificationOnboarding() {

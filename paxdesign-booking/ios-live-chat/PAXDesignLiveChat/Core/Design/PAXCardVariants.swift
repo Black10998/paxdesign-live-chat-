@@ -19,19 +19,22 @@ private struct PAXCardVariantModifier: ViewModifier {
         case .standard:
             content
                 .paxPremiumGlass(tier: .standard, cornerRadius: 16)
+                .paxCardGlassReflection(cornerRadius: 16, alignment: .topTrailing, intensity: 0.07)
                 .paxCardGlassRefraction(cornerRadius: 16)
         case .hero:
             content
                 .padding(18)
                 .paxPremiumGlass(tier: .hero, cornerRadius: 22, accent: tint)
-                .paxCardGlassReflection(cornerRadius: 22, alignment: .topTrailing, intensity: 0.1)
+                .paxCardGlassReflection(cornerRadius: 22, alignment: .topTrailing, intensity: 0.12)
+                .paxCardGlassReflection(cornerRadius: 22, alignment: .bottomLeading, intensity: 0.04)
                 .paxCardGlassRefraction(cornerRadius: 22)
         case .metric:
             content
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .paxPremiumGlass(tier: .premium, cornerRadius: 18, accent: tint)
-                .paxCardGlassReflection(cornerRadius: 18, alignment: .topTrailing, intensity: 0.09)
+                .paxCardGlassReflection(cornerRadius: 18, alignment: .topTrailing, intensity: 0.11)
+                .paxCardGlassReflection(cornerRadius: 18, alignment: .bottomLeading, intensity: 0.035)
                 .paxCardGlassRefraction(cornerRadius: 18)
                 .overlay(alignment: .topLeading) {
                     RoundedRectangle(cornerRadius: 3, style: .continuous)
@@ -50,13 +53,15 @@ private struct PAXCardVariantModifier: ViewModifier {
             content
                 .padding(16)
                 .paxPremiumGlass(tier: .premium, cornerRadius: 20, accent: tint)
-                .paxCardGlassReflection(cornerRadius: 20, alignment: .topTrailing, intensity: 0.08)
+                .paxCardGlassReflection(cornerRadius: 20, alignment: .topTrailing, intensity: 0.1)
+                .paxCardGlassReflection(cornerRadius: 20, alignment: .bottomLeading, intensity: 0.04)
                 .paxCardGlassRefraction(cornerRadius: 20)
         case .list:
             content
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
                 .paxPremiumGlass(tier: .subtle, cornerRadius: 16)
+                .paxCardGlassReflection(cornerRadius: 16, alignment: .topTrailing, intensity: 0.05)
                 .paxCardGlassRefraction(cornerRadius: 16)
         case .accent:
             content
@@ -99,19 +104,20 @@ extension View {
                 .fill(
                     RadialGradient(
                         colors: [
-                            Color.white.opacity(intensity + 0.04),
-                            Color.white.opacity(intensity * 0.35),
+                            Color.white.opacity(intensity + 0.06),
+                            Color.white.opacity(intensity * 0.45),
+                            Color.white.opacity(intensity * 0.12),
                             .clear
                         ],
                         center: .center,
                         startRadius: 0,
-                        endRadius: 56
+                        endRadius: 68
                     )
                 )
-                .frame(width: 96, height: 96)
+                .frame(width: 112, height: 112)
                 .offset(
-                    x: alignment == .topTrailing || alignment == .bottomTrailing ? 24 : -24,
-                    y: alignment == .bottomTrailing || alignment == .bottomLeading ? 28 : -28
+                    x: alignment == .topTrailing || alignment == .bottomTrailing ? 28 : -28,
+                    y: alignment == .bottomTrailing || alignment == .bottomLeading ? 32 : -32
                 )
                 .blendMode(.overlay)
                 .allowsHitTesting(false)
@@ -125,14 +131,33 @@ extension View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.16),
+                            Color.white.opacity(0.22),
+                            Color.white.opacity(0.06),
                             .clear,
-                            Color.white.opacity(0.05),
+                            Color.white.opacity(0.04),
+                            Color.white.opacity(0.1),
                             .clear
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
+                )
+                .blendMode(.overlay)
+                .allowsHitTesting(false)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.28),
+                            .clear,
+                            Color.white.opacity(0.08)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 0.5
                 )
                 .blendMode(.overlay)
                 .allowsHitTesting(false)

@@ -45,32 +45,32 @@ enum PAXGlassTier {
     func fillOpacity(for scheme: ColorScheme) -> Double {
         let base: Double
         switch self {
-        case .subtle: base = 0.14
-        case .standard: base = 0.2
-        case .premium: base = 0.24
-        case .hero: base = 0.28
+        case .subtle: base = 0.16
+        case .standard: base = 0.22
+        case .premium: base = 0.28
+        case .hero: base = 0.32
         case .tabBar: base = 0.12
         }
-        return scheme == .dark ? min(base + 0.04, 0.34) : base
+        return scheme == .dark ? min(base + 0.05, 0.38) : base
     }
 
     func borderOpacity(for scheme: ColorScheme) -> Double {
         switch self {
-        case .tabBar: scheme == .dark ? 0.22 : 0.18
-        default: scheme == .dark ? 0.34 : 0.28
+        case .tabBar: scheme == .dark ? 0.24 : 0.2
+        default: scheme == .dark ? 0.38 : 0.32
         }
     }
 
     func shadowOpacity(for scheme: ColorScheme) -> Double {
         let base: Double
         switch self {
-        case .subtle: base = 0.06
-        case .standard: base = 0.08
-        case .premium: base = 0.1
-        case .hero: base = 0.12
+        case .subtle: base = 0.07
+        case .standard: base = 0.1
+        case .premium: base = 0.13
+        case .hero: base = 0.16
         case .tabBar: base = 0
         }
-        return scheme == .dark ? base * 1.4 : base
+        return scheme == .dark ? base * 1.45 : base
     }
 
     var usesAccentBorder: Bool {
@@ -160,8 +160,9 @@ private struct PAXPremiumGlassModifier: ViewModifier {
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    Color.white.opacity(colorScheme == .dark ? 0.1 : 0.22),
-                                    Color.white.opacity(colorScheme == .dark ? 0.03 : 0.06),
+                                    Color.white.opacity(colorScheme == .dark ? 0.14 : 0.28),
+                                    Color.white.opacity(colorScheme == .dark ? 0.05 : 0.1),
+                                    Color.white.opacity(colorScheme == .dark ? 0.02 : 0.04),
                                     .clear
                                 ],
                                 startPoint: .topLeading,
@@ -175,16 +176,51 @@ private struct PAXPremiumGlassModifier: ViewModifier {
                             LinearGradient(
                                 colors: [
                                     .clear,
-                                    Color.white.opacity(colorScheme == .dark ? 0.04 : 0.08),
+                                    Color.white.opacity(colorScheme == .dark ? 0.06 : 0.12),
+                                    Color.white.opacity(colorScheme == .dark ? 0.03 : 0.06),
                                     .clear
                                 ],
                                 startPoint: .top,
                                 endPoint: .bottom
                             )
                         )
-                        .rotationEffect(.degrees(12))
+                        .rotationEffect(.degrees(14))
                         .blendMode(.softLight)
-                        .opacity(tier == .subtle || tier == .tabBar ? 0 : 0.85)
+                        .opacity(tier == .subtle || tier == .tabBar ? 0 : 0.92)
+
+                    if tier == .premium || tier == .hero || tier == .standard {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(colorScheme == .dark ? 0.22 : 0.42),
+                                        Color.white.opacity(colorScheme == .dark ? 0.06 : 0.12),
+                                        .clear
+                                    ],
+                                    startPoint: .topLeading,
+                                    endPoint: .center
+                                ),
+                                lineWidth: 0.75
+                            )
+                            .blendMode(.overlay)
+                            .padding(0.5)
+                    }
+
+                    if tier == .premium || tier == .hero {
+                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+                            .fill(
+                                RadialGradient(
+                                    colors: [
+                                        (accentColor.opacity(colorScheme == .dark ? 0.08 : 0.05)),
+                                        .clear
+                                    ],
+                                    center: .bottomTrailing,
+                                    startRadius: 0,
+                                    endRadius: cornerRadius * 2.4
+                                )
+                            )
+                            .blendMode(.plusLighter)
+                    }
 
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                         .stroke(
@@ -210,7 +246,8 @@ private struct PAXPremiumGlassModifier: ViewModifier {
                         )
                 }
             )
-            .shadow(color: .black.opacity(shadow), radius: tier == .hero ? 14 : 10, x: 0, y: tier == .hero ? 8 : 5)
+            .shadow(color: .black.opacity(shadow * 0.55), radius: tier == .hero ? 6 : 4, x: 0, y: tier == .hero ? 3 : 2)
+            .shadow(color: .black.opacity(shadow), radius: tier == .hero ? 18 : 14, x: 0, y: tier == .hero ? 10 : 7)
     }
 }
 
