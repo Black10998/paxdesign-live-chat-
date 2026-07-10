@@ -10,6 +10,27 @@ final class TeamMessagingCoordinator: ObservableObject {
 
     private var pollTask: Task<Void, Never>?
 
+    static func mergeTeamSessions(teamSessions: [LiveSession], coordinatorSessions: [LiveSession]) -> [LiveSession] {
+        var merged: [String: LiveSession] = [:]
+        for session in coordinatorSessions where session.isTeamDM {
+            merged[session.sessionId] = session
+        }
+        for session in teamSessions {
+            if let existing = merged[session.sessionId] {
+                merged[session.sessionId] = existing.updatedAt >= session.updatedAt ? existing : session
+            } else {
+                merged[session.sessionId] = session
+            }
+        }
+        return merged.values.sorted { $0.updatedAt > $1.updatedAt }
+    }
+
+    func unreadCount(settings: AppSettingsStore, coordinatorSessions: [LiveSession] = []) -> Int {
+        Self.mergeTeamSessions(teamSessions: teamSessions, coordinatorSessions: coordinatorSessions)
+            .filter { settings.isSessionUnread($0) }
+            .count
+    }
+
     func start(auth: AuthStore) {
         guard auth.isLoggedIn else { return }
         stop()
@@ -24,10 +45,6 @@ final class TeamMessagingCoordinator: ObservableObject {
     func stop() {
         pollTask?.cancel()
         pollTask = nil
-    }
-
-    func unreadCount(readIds: Set<String>) -> Int {
-        teamSessions.filter { $0.needsReply && !readIds.contains($0.sessionId) }.count
     }
 
     func refresh(auth: AuthStore) async {
@@ -74,6 +91,7 @@ final class TeamChatThreadModel: ObservableObject {
     @Published var draft = ""
     @Published var isSending = false
     @Published var errorMessage: String?
+    @Published var currentSeq = 0
 
     let sessionId: String
     private var pollSeq = 0
@@ -115,23 +133,37 @@ final class TeamChatThreadModel: ObservableObject {
                 mergeMessages(response.messages)
             }
             pollSeq = max(pollSeq, response.seq)
+            currentSeq = max(currentSeq, response.seq)
             errorMessage = nil
         } catch {
             isLoadingMessages = false
-            errorMessage = error.localizedDescription
+            if case LiveChatAPIError.unauthorized = error {
+                auth.handleUnauthorized()
+            } else {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
-    func send(auth: AuthStore) async {
+    func markRead(auth: AuthStore) async {
+        guard let api = auth.api, currentSeq > 0 else { return }
+        _ = try? await api.markTeamSessionRead(sessionId, seq: currentSeq)
+    }
+
+    func send(auth: AuthStore, teamCoordinator: TeamMessagingCoordinator) async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, let api = auth.api else { return }
         isSending = true
         defer { isSending = false }
         do {
-            _ = try await api.sendTeamMessage(sessionId, content: text)
+            let sent = try await api.sendTeamMessage(sessionId, content: text)
             draft = ""
+            mergeMessages([sent.message])
+            pollSeq = max(pollSeq, sent.seq)
+            currentSeq = max(currentSeq, sent.seq)
             MessageSendSound.shared.playIfEnabled()
-            await poll(auth: auth)
+            await teamCoordinator.refresh(auth: auth)
+            await markRead(auth: auth)
             PAXHaptics.light()
         } catch {
             errorMessage = error.localizedDescription
@@ -158,4 +190,33 @@ struct TeamOpenResponse: Codable {
 
 struct TeamSendResponse: Codable {
     let ok: Bool
+    let message: LiveMessage
+    let seq: Int
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        ok = LiveChatDecode.bool(container, CodingKeys.ok)
+        message = try container.decode(LiveMessage.self, forKey: .message)
+        seq = LiveChatDecode.int(container, CodingKeys.seq)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case ok, message, seq
+    }
+}
+
+struct TeamReadResponse: Codable {
+    let ok: Bool
+    let lastReadSeq: Int
+
+    enum CodingKeys: String, CodingKey {
+        case ok
+        case lastReadSeq = "last_read_seq"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        ok = LiveChatDecode.bool(container, CodingKeys.ok)
+        lastReadSeq = LiveChatDecode.int(container, CodingKeys.lastReadSeq)
+    }
 }

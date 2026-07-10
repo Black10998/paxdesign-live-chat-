@@ -236,6 +236,53 @@ class PAXdesign_APNS {
         );
     }
 
+    /**
+     * Push a team DM to a specific employee.
+     */
+    public static function notify_team_message($recipient_user_id, $sender_name, $content, $conv_id) {
+        $recipient_user_id = absint($recipient_user_id);
+        if ($recipient_user_id <= 0) {
+            return;
+        }
+
+        self::send_to_user(
+            $recipient_user_id,
+            sanitize_text_field((string) $sender_name),
+            wp_html_excerpt((string) $content, 120, '…'),
+            array(
+                'type'       => 'team_message',
+                'event'      => 'team_message',
+                'session_id' => (string) $conv_id,
+                'preview'    => wp_html_excerpt((string) $content, 160, '…'),
+            ),
+            false
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     */
+    public static function send_to_user($user_id, $title, $body, $data = array(), $silent = false) {
+        if (!self::is_configured()) {
+            return;
+        }
+
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return;
+        }
+
+        foreach (self::get_user_devices($user_id) as $device) {
+            if (!empty($device['revoked'])) {
+                continue;
+            }
+            $result = self::send($device, $title, $body, $data, $user_id, $silent);
+            if (is_wp_error($result) && $result->get_error_code() === 'apns_invalid_token') {
+                self::unregister_device($user_id, (string) $device['token']);
+            }
+        }
+    }
+
     public static function on_missed_chat($session_id, $service, $preview, $customer = '') {
         $body = ($customer !== '' ? $customer . ' — ' : '') . ($preview !== '' ? $preview : 'Live-Anfrage wurde nicht beantwortet');
         if ($service !== '') {

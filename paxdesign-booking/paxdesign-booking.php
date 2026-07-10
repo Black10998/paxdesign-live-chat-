@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.86.0
+Version: 3.87.0
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.86.0');
+define('PAXDESIGN_BOOKING_VERSION', '3.87.0');
 define('PAXDESIGN_BOOKING_DB_VERSION', '1.7');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -1052,6 +1052,7 @@ class PAXdesign_Booking {
             'smtpEnabled'  => (bool) get_option('paxdesign_smtp_enabled', false),
             'notifEmail'   => get_option('paxdesign_booking_notification_email', 'info@paxdesign.at'),
             'liveAgent'    => PAXdesign_Chat_Live::get_agent_public_config(),
+            'currentEmployee' => PAXdesign_Chat_Live::resolve_employee_identity(get_current_user_id()),
             'adminUrl'     => class_exists('PAXdesign_Live_Chat_PWA') ? PAXdesign_Live_Chat_PWA::get_admin_panel_url() : 'https://paxdesign.at/live-chat-admin/',
             'quickReplies' => PAXdesign_Chat_Live::get_admin_quick_replies(),
             'tourCompleted' => (bool) get_user_meta(get_current_user_id(), 'pax_live_dashboard_tour_completed', true),

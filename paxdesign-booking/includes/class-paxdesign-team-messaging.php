@@ -71,6 +71,7 @@ class PAXdesign_Team_Messaging {
             $all[$conv_id] = array(
                 'participants' => array($current_user_id, $other_user_id),
                 'messages'     => array(),
+                'read_seq'     => array(),
                 'seq'          => 0,
                 'updated_at'   => gmdate('Y-m-d H:i:s'),
             );
@@ -148,18 +149,26 @@ class PAXdesign_Team_Messaging {
             }));
         }
 
-        $other = self::other_participant($conv, $current_user_id);
+        $other         = self::other_participant($conv, $current_user_id);
+        $self_identity = PAXdesign_Chat_Live::resolve_employee_identity($current_user_id);
+        $other_identity = $other ? PAXdesign_Chat_Live::resolve_employee_identity((int) $other->ID) : null;
+        $read_seq      = self::read_seq_for_user($conv, $current_user_id);
+        $other_read    = $other ? self::read_seq_for_user($conv, (int) $other->ID) : 0;
 
         return array(
             'session_id'       => $conv_id,
             'handler'          => self::HANDLER,
             'handler_label'    => 'Team',
-            'customer_name'    => $other ? $other->display_name : 'Team',
-            'admin_name'       => wp_get_current_user()->display_name,
+            'customer_name'    => $other_identity ? $other_identity['name'] : ($other ? $other->display_name : 'Team'),
+            'admin_name'       => $self_identity ? $self_identity['name'] : wp_get_current_user()->display_name,
+            'other_user_id'    => $other ? (int) $other->ID : 0,
+            'assigned_agent'   => $other_identity,
             'detected_service' => 'Team-Nachricht',
             'updated_at'       => isset($conv['updated_at']) ? (string) $conv['updated_at'] : '',
             'session_rating'   => 0,
             'seq'              => $seq,
+            'last_read_seq'    => $read_seq,
+            'other_read_seq'   => $other_read,
             'messages'         => array_map(array(__CLASS__, 'format_message'), $out_messages),
             'user_typing'      => false,
         );
@@ -193,10 +202,15 @@ class PAXdesign_Team_Messaging {
         if (!isset($conv['messages']) || !is_array($conv['messages'])) {
             $conv['messages'] = array();
         }
+        if (!isset($conv['read_seq']) || !is_array($conv['read_seq'])) {
+            $conv['read_seq'] = array();
+        }
 
         $seq = isset($conv['seq']) ? absint($conv['seq']) : 0;
         $seq++;
         $msg_id = $seq;
+
+        $identity = PAXdesign_Chat_Live::resolve_employee_identity($current_user_id);
 
         $conv['messages'][] = array(
             'id'        => $msg_id,
@@ -207,17 +221,82 @@ class PAXdesign_Team_Messaging {
         );
         $conv['seq']        = $seq;
         $conv['updated_at'] = gmdate('Y-m-d H:i:s');
+        $conv['read_seq'][(string) $current_user_id] = $seq;
 
         $all[$conv_id] = $conv;
         self::save_conversations($all);
 
         $formatted = self::format_message(end($conv['messages']));
 
+        $recipient = self::other_participant($conv, $current_user_id);
+        if ($recipient && class_exists('PAXdesign_APNS')) {
+            $sender_name = $identity ? $identity['name'] : wp_get_current_user()->display_name;
+            PAXdesign_APNS::notify_team_message(
+                (int) $recipient->ID,
+                $sender_name,
+                $content,
+                $conv_id
+            );
+        }
+
         return array(
             'ok'      => true,
             'message' => $formatted,
             'seq'     => $seq,
         );
+    }
+
+    /**
+     * @param string $conv_id
+     * @param int    $current_user_id
+     * @param int    $seq
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function mark_read($conv_id, $current_user_id, $seq) {
+        $conv_id         = sanitize_text_field($conv_id);
+        $current_user_id = absint($current_user_id);
+        $seq             = absint($seq);
+
+        $all = self::all_conversations();
+        if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
+            return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
+        }
+
+        $conv = $all[$conv_id];
+        if (!self::user_in_conversation($conv, $current_user_id)) {
+            return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
+        }
+
+        if (!isset($conv['read_seq']) || !is_array($conv['read_seq'])) {
+            $conv['read_seq'] = array();
+        }
+
+        $key = (string) $current_user_id;
+        $current = isset($conv['read_seq'][$key]) ? absint($conv['read_seq'][$key]) : 0;
+        if ($seq > $current) {
+            $conv['read_seq'][$key] = $seq;
+            $all[$conv_id] = $conv;
+            self::save_conversations($all);
+        }
+
+        return array(
+            'ok'            => true,
+            'last_read_seq' => isset($conv['read_seq'][$key]) ? absint($conv['read_seq'][$key]) : 0,
+            'seq'           => isset($conv['seq']) ? absint($conv['seq']) : 0,
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $conv
+     * @param int                  $current_user_id
+     * @return int
+     */
+    private static function read_seq_for_user($conv, $current_user_id) {
+        if (!isset($conv['read_seq']) || !is_array($conv['read_seq'])) {
+            return 0;
+        }
+        $key = (string) absint($current_user_id);
+        return isset($conv['read_seq'][$key]) ? absint($conv['read_seq'][$key]) : 0;
     }
 
     /**
@@ -260,6 +339,9 @@ class PAXdesign_Team_Messaging {
         $last     = !empty($messages) ? end($messages) : null;
         $other    = self::other_participant($conv, $current_user_id);
 
+        $self_identity  = PAXdesign_Chat_Live::resolve_employee_identity($current_user_id);
+        $other_identity = $other ? PAXdesign_Chat_Live::resolve_employee_identity((int) $other->ID) : null;
+
         $last_preview = '';
         $last_role    = 'admin';
         if (is_array($last)) {
@@ -269,18 +351,24 @@ class PAXdesign_Team_Messaging {
             }
         }
 
+        $seq      = isset($conv['seq']) ? absint($conv['seq']) : 0;
+        $read_seq = self::read_seq_for_user($conv, $current_user_id);
+
         return array(
             'id'               => 0,
             'session_id'       => $conv_id,
             'handler'          => self::HANDLER,
             'handler_label'    => 'Team',
-            'admin_name'       => wp_get_current_user()->display_name,
-            'customer_name'    => $other ? $other->display_name : 'Team',
+            'admin_name'       => $self_identity ? $self_identity['name'] : wp_get_current_user()->display_name,
+            'customer_name'    => $other_identity ? $other_identity['name'] : ($other ? $other->display_name : 'Team'),
+            'other_user_id'    => $other ? (int) $other->ID : 0,
+            'assigned_agent'   => $other_identity,
             'session_rating'   => 0,
             'detected_service' => 'Team-Nachricht',
             'updated_at'       => isset($conv['updated_at']) ? (string) $conv['updated_at'] : '',
             'message_count'    => count($messages),
-            'seq'              => isset($conv['seq']) ? absint($conv['seq']) : 0,
+            'seq'              => $seq,
+            'last_read_seq'    => $read_seq,
             'last_preview'     => $last_preview,
             'last_role'        => $last_role,
         );
@@ -292,18 +380,22 @@ class PAXdesign_Team_Messaging {
      */
     public static function format_message($msg) {
         $sender_id = isset($msg['sender_id']) ? absint($msg['sender_id']) : 0;
-        $user      = $sender_id > 0 ? get_user_by('id', $sender_id) : null;
+        $identity  = $sender_id > 0 ? PAXdesign_Chat_Live::resolve_employee_identity($sender_id) : null;
         $is_self   = $sender_id === get_current_user_id();
 
         return array(
-            'id'        => isset($msg['id']) ? absint($msg['id']) : 0,
-            'role'      => $is_self ? 'admin' : 'user',
-            'content'   => isset($msg['content']) ? (string) $msg['content'] : '',
-            'ts'        => isset($msg['ts']) ? absint($msg['ts']) : time(),
-            'image_url' => '',
-            'reply_to'  => null,
-            'reaction'  => null,
-            'sender'    => $user ? $user->display_name : '',
+            'id'            => isset($msg['id']) ? absint($msg['id']) : 0,
+            'role'          => $is_self ? 'admin' : 'user',
+            'content'       => isset($msg['content']) ? (string) $msg['content'] : '',
+            'ts'            => isset($msg['ts']) ? absint($msg['ts']) : time(),
+            'image_url'     => '',
+            'reply_to'      => null,
+            'reaction'      => null,
+            'sender_id'     => $sender_id,
+            'sender_name'   => $identity ? $identity['name'] : '',
+            'sender_avatar' => $identity ? $identity['avatar'] : '',
+            'sender_role'   => $identity ? $identity['role'] : '',
+            'sender'        => $identity ? $identity['name'] : '',
         );
     }
 }

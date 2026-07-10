@@ -312,6 +312,12 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => $auth,
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/sessions/(?P<id>team_[0-9]+_[0-9]+)/read', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_team_mark_read'),
+            'permission_callback' => $auth,
+        ));
+
         self::register_platform_routes($auth);
     }
 
@@ -469,6 +475,7 @@ class PAXdesign_Live_Chat_Mobile_API {
             'avatar_url'      => $avatar_url,
             'site_url'        => home_url('/'),
             'rest_base'       => rest_url(self::REST_NAMESPACE . '/live-admin/'),
+            'employee'        => PAXdesign_Chat_Live::resolve_employee_identity($user_id),
             'live_agent'      => PAXdesign_Chat_Live::get_agent_public_config(),
             'plugin_ver'      => PAXDESIGN_BOOKING_VERSION,
             'is_super_admin'  => PAXdesign_Live_Chat_Permissions::is_super_admin($user),
@@ -1037,7 +1044,7 @@ class PAXdesign_Live_Chat_Mobile_API {
     }
 
     public static function route_team_open(WP_REST_Request $request) {
-        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS);
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_VIEW_CHATS);
         if (is_wp_error($check)) {
             return $check;
         }
@@ -1070,6 +1077,19 @@ class PAXdesign_Live_Chat_Mobile_API {
             $request['id'],
             (int) wp_get_current_user()->ID,
             $content
+        ));
+    }
+
+    public static function route_team_mark_read(WP_REST_Request $request) {
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        $seq = isset($params['seq']) ? (int) $params['seq'] : 0;
+        return self::respond(PAXdesign_Team_Messaging::mark_read(
+            $request['id'],
+            (int) wp_get_current_user()->ID,
+            $seq
         ));
     }
 

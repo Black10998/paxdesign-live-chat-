@@ -60,6 +60,124 @@ class PAXdesign_Chat_Live {
         );
     }
 
+    /**
+     * Resolve the authenticated employee's public identity (hub name, avatar, role).
+     *
+     * @param int $user_id
+     * @return array{id: int, name: string, email: string, avatar: string, role: string}|null
+     */
+    public static function resolve_employee_identity($user_id) {
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return null;
+        }
+
+        $user = get_user_by('id', $user_id);
+        if (!$user) {
+            return null;
+        }
+
+        $hub_name = trim((string) get_user_meta($user_id, 'pax_live_hub_display_name', true));
+        $name     = $hub_name !== '' ? $hub_name : $user->display_name;
+        if ($name === '') {
+            $name = $user->user_login;
+        }
+
+        $avatar_meta = trim((string) get_user_meta($user_id, 'pax_live_avatar_url', true));
+        $avatar      = $avatar_meta !== '' ? esc_url_raw($avatar_meta) : get_avatar_url($user_id, array('size' => 256));
+
+        $title = trim((string) get_user_meta($user_id, 'pax_live_profile_title', true));
+        if ($title === '' && class_exists('PAXdesign_Live_Chat_Permissions')) {
+            $title = PAXdesign_Live_Chat_Permissions::is_super_admin($user)
+                ? __('Administrator', 'paxdesign-booking')
+                : __('Mitarbeiter', 'paxdesign-booking');
+        }
+
+        return array(
+            'id'     => $user_id,
+            'name'   => sanitize_text_field($name),
+            'email'  => sanitize_email($user->user_email),
+            'avatar' => $avatar,
+            'role'   => sanitize_text_field($title),
+        );
+    }
+
+    /**
+     * @param object|array<string, mixed>|null $row
+     * @return array{id: int, name: string, email: string, avatar: string, role: string}|null
+     */
+    public static function assigned_agent_from_row($row) {
+        if (!$row) {
+            return null;
+        }
+
+        $user_id = 0;
+        $name    = '';
+        if (is_object($row)) {
+            $user_id = isset($row->admin_user_id) ? absint($row->admin_user_id) : 0;
+            $name    = isset($row->admin_name) ? trim((string) $row->admin_name) : '';
+        } elseif (is_array($row)) {
+            $user_id = isset($row['admin_user_id']) ? absint($row['admin_user_id']) : 0;
+            $name    = isset($row['admin_name']) ? trim((string) $row['admin_name']) : '';
+        }
+
+        if ($user_id > 0) {
+            $identity = self::resolve_employee_identity($user_id);
+            if ($identity) {
+                return $identity;
+            }
+        }
+
+        if ($name !== '') {
+            return array(
+                'id'     => $user_id,
+                'name'   => $name,
+                'email'  => '',
+                'avatar' => '',
+                'role'   => '',
+            );
+        }
+
+        return null;
+    }
+
+    /**
+     * @param object|array<string, mixed>|null $row
+     * @return array<string, mixed>
+     */
+    public static function session_agent_payload($row) {
+        $payload = array(
+            'admin_user_id'  => 0,
+            'admin_name'     => '',
+            'assigned_agent' => null,
+        );
+
+        if (!$row) {
+            return $payload;
+        }
+
+        if (is_object($row)) {
+            $payload['admin_user_id'] = isset($row->admin_user_id) ? absint($row->admin_user_id) : 0;
+            $payload['admin_name']    = isset($row->admin_name) ? sanitize_text_field((string) $row->admin_name) : '';
+        } elseif (is_array($row)) {
+            $payload['admin_user_id'] = isset($row['admin_user_id']) ? absint($row['admin_user_id']) : 0;
+            $payload['admin_name']    = isset($row['admin_name']) ? sanitize_text_field((string) $row['admin_name']) : '';
+        }
+
+        $assigned = self::assigned_agent_from_row($row);
+        if ($assigned) {
+            $payload['assigned_agent'] = $assigned;
+            if ($payload['admin_name'] === '' && !empty($assigned['name'])) {
+                $payload['admin_name'] = (string) $assigned['name'];
+            }
+            if ($payload['admin_user_id'] <= 0 && !empty($assigned['id'])) {
+                $payload['admin_user_id'] = absint($assigned['id']);
+            }
+        }
+
+        return $payload;
+    }
+
     public static function get_instance() {
         if (null === self::$instance) {
             self::$instance = new self();
@@ -394,12 +512,13 @@ class PAXdesign_Chat_Live {
         ), true);
     }
 
-    public static function handler_label($handler) {
+    public static function handler_label($handler, $session_admin_name = '') {
         switch ($handler) {
             case self::HANDLER_LIVE:
                 return 'Live-Anfrage';
             case self::HANDLER_ADMIN:
-                return self::get_agent_display_name();
+                $name = trim((string) $session_admin_name);
+                return $name !== '' ? $name : __('Live Agent', 'paxdesign-booking');
             case self::HANDLER_CLOSED:
                 return 'Geschlossen';
             default:
@@ -577,6 +696,28 @@ class PAXdesign_Chat_Live {
         if ($has_image) {
             $entry['image_url']        = esc_url_raw($extra['image_url']);
             $entry['attachment_type']  = 'image';
+        }
+        if ($role === 'admin') {
+            $sender_id = get_current_user_id();
+            if ($sender_id > 0) {
+                $identity = self::resolve_employee_identity($sender_id);
+                if ($identity) {
+                    $entry['sender_id']     = $identity['id'];
+                    $entry['sender_name']   = $identity['name'];
+                    $entry['sender_avatar'] = $identity['avatar'];
+                    $entry['sender_role']   = $identity['role'];
+                    $entry['sender_email']  = $identity['email'];
+                }
+            } elseif (!empty($extra['sender_id'])) {
+                $identity = self::resolve_employee_identity((int) $extra['sender_id']);
+                if ($identity) {
+                    $entry['sender_id']     = $identity['id'];
+                    $entry['sender_name']   = $identity['name'];
+                    $entry['sender_avatar'] = $identity['avatar'];
+                    $entry['sender_role']   = $identity['role'];
+                    $entry['sender_email']  = $identity['email'];
+                }
+            }
         }
         $messages[] = $entry;
         $messages   = $this->sort_messages($messages);
@@ -1198,7 +1339,8 @@ class PAXdesign_Chat_Live {
         }
 
         $user       = wp_get_current_user();
-        $admin_name = self::get_agent_display_name();
+        $identity   = self::resolve_employee_identity((int) $user->ID);
+        $admin_name = $identity ? $identity['name'] : $user->display_name;
 
         global $wpdb;
         $wpdb->update(
@@ -1218,9 +1360,11 @@ class PAXdesign_Chat_Live {
         $entry  = $this->append_message($session_id, 'system', $notice);
 
         wp_send_json_success(array(
-            'handler'    => self::HANDLER_ADMIN,
-            'admin_name' => $admin_name,
-            'message'    => $entry,
+            'handler'        => self::HANDLER_ADMIN,
+            'admin_user_id'  => (int) $user->ID,
+            'admin_name'     => $admin_name,
+            'assigned_agent' => $identity,
+            'message'        => $entry,
         ));
     }
 
@@ -1836,13 +1980,16 @@ class PAXdesign_Chat_Live {
             ? wp_html_excerpt($last['content'], 100, '…')
             : '';
         $handler  = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
+        $agent    = self::session_agent_payload($row);
 
         return array(
             'id'               => isset($row->id) ? (int) $row->id : 0,
             'session_id'       => isset($row->session_id) ? (string) $row->session_id : '',
             'handler'          => $handler,
-            'handler_label'    => self::handler_label($handler),
-            'admin_name'       => isset($row->admin_name) ? (string) $row->admin_name : '',
+            'handler_label'    => self::handler_label($handler, $agent['admin_name']),
+            'admin_user_id'    => $agent['admin_user_id'],
+            'admin_name'       => $agent['admin_name'],
+            'assigned_agent'   => $agent['assigned_agent'],
             'customer_name'    => isset($row->customer_name) ? (string) $row->customer_name : '',
             'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
             'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
@@ -1858,15 +2005,16 @@ class PAXdesign_Chat_Live {
      * @param array<int, array<string, mixed>> $messages
      * @return array<int, array<string, mixed>>
      */
-    private function format_messages_for_api($messages) {
+    private function format_messages_for_api($messages, $fallback_agent_id = 0) {
         $out = array();
         foreach ($this->sort_messages($messages) as $msg) {
             if (!is_array($msg)) {
                 continue;
             }
+            $role  = isset($msg['role']) ? sanitize_text_field($msg['role']) : 'assistant';
             $entry = array(
                 'id'      => isset($msg['id']) ? (int) $msg['id'] : 0,
-                'role'    => isset($msg['role']) ? sanitize_text_field($msg['role']) : 'assistant',
+                'role'    => $role,
                 'content' => isset($msg['content']) ? (string) $msg['content'] : '',
             );
             if (isset($msg['ts'])) {
@@ -1877,6 +2025,29 @@ class PAXdesign_Chat_Live {
             }
             if (!empty($msg['reply_to'])) {
                 $entry['reply_to'] = (int) $msg['reply_to'];
+            }
+            if (!empty($msg['reaction'])) {
+                $entry['reaction'] = sanitize_text_field((string) $msg['reaction']);
+            }
+            if ($role === 'admin') {
+                $sender_id = !empty($msg['sender_id']) ? absint($msg['sender_id']) : 0;
+                if ($sender_id <= 0 && $fallback_agent_id > 0) {
+                    $sender_id = absint($fallback_agent_id);
+                }
+                if (!empty($msg['sender_name'])) {
+                    $entry['sender_id']     = $sender_id;
+                    $entry['sender_name']   = sanitize_text_field((string) $msg['sender_name']);
+                    $entry['sender_avatar'] = !empty($msg['sender_avatar']) ? esc_url_raw((string) $msg['sender_avatar']) : '';
+                    $entry['sender_role']   = !empty($msg['sender_role']) ? sanitize_text_field((string) $msg['sender_role']) : '';
+                } elseif ($sender_id > 0) {
+                    $identity = self::resolve_employee_identity($sender_id);
+                    if ($identity) {
+                        $entry['sender_id']     = $identity['id'];
+                        $entry['sender_name']   = $identity['name'];
+                        $entry['sender_avatar'] = $identity['avatar'];
+                        $entry['sender_role']   = $identity['role'];
+                    }
+                }
             }
             $out[] = $entry;
         }
@@ -1890,7 +2061,9 @@ class PAXdesign_Chat_Live {
         return array(
             'handler'          => self::HANDLER_AI,
             'handler_label'    => self::handler_label(self::HANDLER_AI),
+            'admin_user_id'    => 0,
             'admin_name'       => '',
+            'assigned_agent'   => null,
             'customer_name'    => '',
             'session_rating'   => 0,
             'detected_service' => '',
@@ -1918,18 +2091,24 @@ class PAXdesign_Chat_Live {
         }
 
         $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
+        $agent   = self::session_agent_payload($row);
 
         return array(
             'session_id'       => isset($row->session_id) ? (string) $row->session_id : '',
             'handler'          => $handler,
-            'handler_label'    => self::handler_label($handler),
-            'admin_name'       => isset($row->admin_name) ? (string) $row->admin_name : '',
+            'handler_label'    => self::handler_label($handler, $agent['admin_name']),
+            'admin_user_id'    => $agent['admin_user_id'],
+            'admin_name'       => $agent['admin_name'],
+            'assigned_agent'   => $agent['assigned_agent'],
             'customer_name'    => isset($row->customer_name) ? (string) $row->customer_name : '',
             'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
             'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
             'updated_at'       => isset($row->updated_at) ? (string) $row->updated_at : '',
             'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
-            'messages'         => $this->format_messages_for_api($this->decode_messages($row->messages)),
+            'messages'         => $this->format_messages_for_api(
+                $this->decode_messages($row->messages),
+                $agent['admin_user_id']
+            ),
         );
     }
 
@@ -1950,7 +2129,8 @@ class PAXdesign_Chat_Live {
         }
 
         $messages = $this->decode_messages($row->messages);
-        $all      = $this->format_messages_for_api($messages);
+        $agent    = self::session_agent_payload($row);
+        $all      = $this->format_messages_for_api($messages, $agent['admin_user_id']);
         $new      = $full ? $all : array();
         if (!$full) {
             foreach ($all as $msg) {
@@ -1965,8 +2145,10 @@ class PAXdesign_Chat_Live {
 
         return array(
             'handler'          => $handler,
-            'handler_label'    => self::handler_label($handler),
-            'admin_name'       => isset($row->admin_name) ? (string) $row->admin_name : '',
+            'handler_label'    => self::handler_label($handler, $agent['admin_name']),
+            'admin_user_id'    => $agent['admin_user_id'],
+            'admin_name'       => $agent['admin_name'],
+            'assigned_agent'   => $agent['assigned_agent'],
             'customer_name'    => isset($row->customer_name) ? (string) $row->customer_name : '',
             'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
             'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
@@ -1997,8 +2179,9 @@ class PAXdesign_Chat_Live {
             return new WP_Error('closed', 'Chat ist geschlossen.', array('status' => 409));
         }
 
-        $user       = wp_get_current_user();
-        $admin_name = self::get_agent_display_name();
+        $user     = wp_get_current_user();
+        $identity = self::resolve_employee_identity((int) $user->ID);
+        $admin_name = $identity ? $identity['name'] : $user->display_name;
 
         global $wpdb;
         $wpdb->update(
@@ -2018,9 +2201,11 @@ class PAXdesign_Chat_Live {
         $entry  = $this->append_message($session_id, 'system', $notice);
 
         return array(
-            'handler'    => self::HANDLER_ADMIN,
-            'admin_name' => $admin_name,
-            'message'    => $entry,
+            'handler'        => self::HANDLER_ADMIN,
+            'admin_user_id'  => (int) $user->ID,
+            'admin_name'     => $admin_name,
+            'assigned_agent' => $identity,
+            'message'        => $entry,
         );
     }
 
@@ -2169,7 +2354,8 @@ class PAXdesign_Chat_Live {
         }
 
         $user       = wp_get_current_user();
-        $admin_name = self::get_agent_display_name();
+        $identity   = self::resolve_employee_identity((int) $user->ID);
+        $admin_name = $identity ? $identity['name'] : $user->display_name;
 
         global $wpdb;
         $wpdb->update(
@@ -2192,9 +2378,11 @@ class PAXdesign_Chat_Live {
         );
 
         return array(
-            'handler'    => self::HANDLER_ADMIN,
-            'admin_name' => $admin_name,
-            'message'    => $entry,
+            'handler'        => self::HANDLER_ADMIN,
+            'admin_user_id'  => (int) $user->ID,
+            'admin_name'     => $admin_name,
+            'assigned_agent' => $identity,
+            'message'        => $entry,
         );
     }
 

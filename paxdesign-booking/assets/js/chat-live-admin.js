@@ -18,8 +18,10 @@
     var cfg = window.paxdesignAdmin;
     var meta = window.paxLiveChatAdmin || {};
     var agent = (cfg && cfg.liveAgent) ? cfg.liveAgent : meta;
-    var agentName = agent.name || meta.adminName || 'Ahmad Alkhalaf';
-    var agentAvatar = agent.avatar || '';
+    var currentEmployee = (cfg && cfg.currentEmployee) ? cfg.currentEmployee : null;
+    var sessionAssignedAgent = null;
+    var agentName = currentEmployee && currentEmployee.name ? currentEmployee.name : (agent.name || meta.adminName || 'Live Agent');
+    var agentAvatar = currentEmployee && currentEmployee.avatar ? currentEmployee.avatar : (agent.avatar || '');
     var adminPanelUrl = (cfg && cfg.adminUrl) ? cfg.adminUrl : ((window.paxLivePwa && window.paxLivePwa.adminUrl) || 'https://paxdesign.at/live-chat-admin/');
     var $root = $('#paxLiveChatDashboard');
 
@@ -725,12 +727,16 @@
       return $.post(cfg.ajaxUrl, data);
     }
 
-    function roleLabel(role) {
+    function roleLabel(role, msg) {
       if (role === 'user') {
         var cname = sessionCustomerName(knownSessions[selectedSession] || {});
         return cname || 'Kunde';
       }
-      if (role === 'admin') return agentName;
+      if (role === 'admin') {
+        if (msg && msg.sender_name) return msg.sender_name;
+        if (sessionAssignedAgent && sessionAssignedAgent.name) return sessionAssignedAgent.name;
+        return agentName;
+      }
       if (role === 'system') return 'System';
       return 'KI-Assistent';
     }
@@ -1072,7 +1078,12 @@
 
     function handlerLabel(handler, adminName) {
       if (handler === 'live_request') return 'Live-Anfrage';
-      if (handler === 'admin') return agentName;
+      if (handler === 'admin') {
+        var name = (adminName || '').trim();
+        if (name) return name;
+        if (sessionAssignedAgent && sessionAssignedAgent.name) return sessionAssignedAgent.name;
+        return agentName;
+      }
       if (handler === 'closed') return 'Geschlossen';
       return 'KI aktiv';
     }
@@ -1081,12 +1092,23 @@
       return (label || '?').charAt(0).toUpperCase();
     }
 
-    function renderAvatar(role, label) {
+    function renderAvatar(role, label, msg) {
       if (role === 'admin') {
-        if (agentAvatar) {
-          return '<img class="pax-live-dashboard__avatar" src="' + escapeHtml(agentAvatar) + '" alt="" width="32" height="32" loading="lazy">';
+        var avatarUrl = '';
+        if (msg && msg.sender_avatar) {
+          avatarUrl = msg.sender_avatar;
+        } else if (msg && msg.role === 'admin' && msg.sender_name && currentEmployee && msg.sender_name === currentEmployee.name) {
+          avatarUrl = currentEmployee.avatar || agentAvatar;
+        } else if (sessionAssignedAgent && sessionAssignedAgent.avatar) {
+          avatarUrl = sessionAssignedAgent.avatar;
+        } else {
+          avatarUrl = agentAvatar;
         }
-        return '<div class="pax-live-dashboard__msg-avatar pax-live-dashboard__msg-avatar--agent">' + escapeHtml(avatarInitial(agentName)) + '</div>';
+        if (avatarUrl) {
+          return '<img class="pax-live-dashboard__avatar" src="' + escapeHtml(avatarUrl) + '" alt="" width="32" height="32" loading="lazy">';
+        }
+        var adminLabel = (msg && msg.sender_name) ? msg.sender_name : agentName;
+        return '<div class="pax-live-dashboard__msg-avatar pax-live-dashboard__msg-avatar--agent">' + escapeHtml(avatarInitial(adminLabel)) + '</div>';
       }
       if (role === 'user') {
         var cname = sessionCustomerName(knownSessions[selectedSession] || {});
@@ -1339,6 +1361,15 @@
       });
     }
 
+    function applySessionAgent(data) {
+      if (!data) return;
+      if (data.assigned_agent && data.assigned_agent.name) {
+        sessionAssignedAgent = data.assigned_agent;
+      } else if (data.admin_name) {
+        sessionAssignedAgent = { name: data.admin_name, avatar: '', role: '' };
+      }
+    }
+
     function updateHandlerUi(handler, adminName) {
       currentHandler = handler || 'ai';
       var isAdmin = currentHandler === 'admin';
@@ -1490,7 +1521,7 @@
       var src = sessionMessageMap[replyTo];
       if (!src) return '';
       return '<div class="pax-live-dashboard__quote"><span class="pax-live-dashboard__quote-author">' +
-        escapeHtml(roleLabel(src.role)) + '</span>' +
+        escapeHtml(roleLabel(src.role, src)) + '</span>' +
         escapeHtml(String(src.content || '').slice(0, 140)) + '</div>';
     }
 
@@ -1522,13 +1553,13 @@
 
       var isOutgoing = role === 'admin';
       var mod = isOutgoing ? 'outgoing' : 'incoming';
-      var label = roleLabel(role);
+      var label = roleLabel(role, msg);
 
       html = '<div class="pax-live-dashboard__msg pax-live-dashboard__msg--' + role + ' pax-live-dashboard__msg--' + mod + (isPending ? ' is-pending' : '') + '" data-msg-id="' + msg.id + '">';
       html += '<div class="pax-live-dashboard__msg-row">';
 
       if (!isOutgoing) {
-        html += renderAvatar(role, label);
+        html += renderAvatar(role, label, msg);
       }
 
       html += '<div class="pax-live-dashboard__msg-stack">';
@@ -1543,7 +1574,7 @@
       html += '</div>';
 
       if (isOutgoing) {
-        html += renderAvatar(role, label);
+        html += renderAvatar(role, label, msg);
       }
 
       html += '</div>';
@@ -1625,6 +1656,7 @@
           renderMessages(data.messages || [], true);
           $messages.attr('aria-busy', 'false');
         }
+        applySessionAgent(data);
         updateHandlerUi(data.handler, data.admin_name);
         updateSessionHeader(data);
       }).fail(function () {
@@ -1638,6 +1670,7 @@
       ajax('paxdesign_chat_poll', { session_id: selectedSession, since: pollSeq })
         .done(function (res) {
           if (!res.success || !res.data) return;
+          applySessionAgent(res.data);
           updateHandlerUi(res.data.handler, res.data.admin_name);
           if (selectedSession) {
             if (!knownSessions[selectedSession]) knownSessions[selectedSession] = {};

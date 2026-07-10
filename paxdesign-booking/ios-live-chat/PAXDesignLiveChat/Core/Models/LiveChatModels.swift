@@ -117,6 +117,10 @@ struct LiveSession: Identifiable, Codable, Hashable {
     }
 
     var displayName: String {
+        if isTeamDM {
+            if !customerName.isEmpty { return customerName }
+            return "Team · \(sessionId.replacingOccurrences(of: "team_", with: ""))"
+        }
         if !customerName.isEmpty { return customerName }
         return "Kunde · \(sessionId.prefix(10))"
     }
@@ -128,6 +132,35 @@ struct LiveSession: Identifiable, Codable, Hashable {
     var needsReply: Bool { lastRole == "user" && !isClosed }
 }
 
+struct EmployeeIdentity: Codable, Hashable {
+    let id: Int
+    let name: String
+    let email: String
+    let avatar: String
+    let role: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, email, avatar, role
+    }
+
+    init(id: Int, name: String, email: String = "", avatar: String = "", role: String = "") {
+        self.id = id
+        self.name = name
+        self.email = email
+        self.avatar = avatar
+        self.role = role
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = LiveChatDecode.int(container, CodingKeys.id)
+        name = LiveChatDecode.string(container, CodingKeys.name)
+        email = LiveChatDecode.string(container, CodingKeys.email)
+        avatar = LiveChatDecode.string(container, CodingKeys.avatar)
+        role = LiveChatDecode.string(container, CodingKeys.role)
+    }
+}
+
 struct LiveMessage: Identifiable, Codable, Hashable {
     let id: Int
     let role: String
@@ -136,14 +169,34 @@ struct LiveMessage: Identifiable, Codable, Hashable {
     let imageUrl: String?
     let replyTo: Int?
     var reaction: String?
+    let senderId: Int?
+    let senderName: String?
+    let senderAvatar: String?
+    let senderRole: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, role, content, ts, reaction
+        case id, role, content, ts, reaction, sender
         case imageUrl = "image_url"
         case replyTo = "reply_to"
+        case senderId = "sender_id"
+        case senderName = "sender_name"
+        case senderAvatar = "sender_avatar"
+        case senderRole = "sender_role"
     }
 
-    init(id: Int, role: String, content: String, ts: Int? = nil, imageUrl: String? = nil, replyTo: Int? = nil, reaction: String? = nil) {
+    init(
+        id: Int,
+        role: String,
+        content: String,
+        ts: Int? = nil,
+        imageUrl: String? = nil,
+        replyTo: Int? = nil,
+        reaction: String? = nil,
+        senderId: Int? = nil,
+        senderName: String? = nil,
+        senderAvatar: String? = nil,
+        senderRole: String? = nil
+    ) {
         self.id = id
         self.role = role
         self.content = content
@@ -151,6 +204,10 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         self.imageUrl = imageUrl
         self.replyTo = replyTo
         self.reaction = reaction.flatMap { MessageReaction.normalize($0) }
+        self.senderId = senderId
+        self.senderName = senderName
+        self.senderAvatar = senderAvatar
+        self.senderRole = senderRole
     }
 
     init(from decoder: Decoder) throws {
@@ -166,6 +223,14 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         } else {
             reaction = nil
         }
+        senderId = try container.decodeIfPresent(Int.self, forKey: .senderId)
+        let decodedSenderName = LiveChatDecode.string(container, CodingKeys.senderName)
+        let legacySender = LiveChatDecode.string(container, CodingKeys.sender)
+        senderName = decodedSenderName.isEmpty ? (legacySender.isEmpty ? nil : legacySender) : decodedSenderName
+        let avatar = LiveChatDecode.string(container, CodingKeys.senderAvatar)
+        senderAvatar = avatar.isEmpty ? nil : avatar
+        let roleLabel = LiveChatDecode.string(container, CodingKeys.senderRole)
+        senderRole = roleLabel.isEmpty ? nil : roleLabel
     }
 }
 
@@ -199,11 +264,14 @@ struct PollResponse: Codable {
     let handler: String
     let handlerLabel: String
     let adminName: String
+    let adminUserId: Int
+    let assignedAgent: EmployeeIdentity?
     let customerName: String
     let sessionRating: Int
     let detectedService: String
     let updatedAt: String
     let seq: Int
+    let lastReadSeq: Int
     let messages: [LiveMessage]
     let adminTyping: Bool
     let userTyping: Bool
@@ -213,6 +281,8 @@ struct PollResponse: Codable {
         case handler
         case handlerLabel = "handler_label"
         case adminName = "admin_name"
+        case adminUserId = "admin_user_id"
+        case assignedAgent = "assigned_agent"
         case customerName = "customer_name"
         case sessionRating = "session_rating"
         case detectedService = "detected_service"
@@ -220,6 +290,7 @@ struct PollResponse: Codable {
         case seq, messages, reactions
         case adminTyping = "admin_typing"
         case userTyping = "user_typing"
+        case lastReadSeq = "last_read_seq"
     }
 
     init(from decoder: Decoder) throws {
@@ -227,11 +298,14 @@ struct PollResponse: Codable {
         handler = LiveChatDecode.string(container, CodingKeys.handler)
         handlerLabel = LiveChatDecode.string(container, CodingKeys.handlerLabel)
         adminName = LiveChatDecode.string(container, CodingKeys.adminName)
+        adminUserId = LiveChatDecode.int(container, CodingKeys.adminUserId)
+        assignedAgent = try container.decodeIfPresent(EmployeeIdentity.self, forKey: .assignedAgent)
         customerName = LiveChatDecode.string(container, CodingKeys.customerName)
         sessionRating = LiveChatDecode.int(container, CodingKeys.sessionRating)
         detectedService = LiveChatDecode.string(container, CodingKeys.detectedService)
         updatedAt = LiveChatDecode.string(container, CodingKeys.updatedAt)
         seq = LiveChatDecode.int(container, CodingKeys.seq)
+        lastReadSeq = LiveChatDecode.int(container, CodingKeys.lastReadSeq)
         messages = (try? container.decode([LiveMessage].self, forKey: .messages)) ?? []
         adminTyping = LiveChatDecode.bool(container, CodingKeys.adminTyping)
         userTyping = LiveChatDecode.bool(container, CodingKeys.userTyping)

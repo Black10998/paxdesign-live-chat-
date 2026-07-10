@@ -22,7 +22,9 @@ struct AdaptiveShellView: View {
     private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
     private var unreadChatCount: Int { coordinator.unreadChatCount }
-    private var unreadTeamCount: Int { teamCoordinator.unreadCount(readIds: settings.readSessionIds) }
+    private var unreadTeamCount: Int {
+        teamCoordinator.unreadCount(settings: settings, coordinatorSessions: coordinator.sessions)
+    }
 
     private var canViewChats: Bool { auth.canViewChats }
     private var canReplyChats: Bool { auth.canReplyChats }
@@ -160,8 +162,11 @@ struct AdaptiveShellView: View {
             schedulePlatformSync()
             PAXHaptics.prepare()
         }
-        .onChange(of: settings.readSessionIds) { readIds in
-            coordinator.updateUnreadCounts(readIds: readIds)
+        .onChange(of: settings.readSessionIds) { _ in
+            coordinator.updateUnreadCounts()
+        }
+        .onChange(of: settings.readUpToSeq) { _ in
+            coordinator.updateUnreadCounts()
         }
         .onChange(of: coordinator.sessions.count) { _ in schedulePlatformSync() }
         .onChange(of: coordinator.liveCount) { count in
@@ -341,7 +346,12 @@ struct AdaptiveShellView: View {
         }
 
         Task { @MainActor in
-            settings.markSessionRead(sessionId)
+            if let session = coordinator.sessions.first(where: { $0.sessionId == sessionId })
+                ?? teamCoordinator.teamSessions.first(where: { $0.sessionId == sessionId }) {
+                settings.markSessionRead(sessionId, seq: session.seq)
+            } else {
+                settings.markSessionRead(sessionId)
+            }
         }
     }
 

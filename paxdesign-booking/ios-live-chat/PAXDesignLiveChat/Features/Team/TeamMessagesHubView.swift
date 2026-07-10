@@ -14,7 +14,7 @@ struct TeamMessagesHubView: View {
     @FocusState private var isSearchFocused: Bool
     var onOpenSession: (String) -> Void = { _ in }
 
-    private var canManageTeam: Bool { auth.canManageUsers }
+    private var canComposeTeam: Bool { auth.canViewChats }
 
     var body: some View {
         List {
@@ -89,7 +89,7 @@ struct TeamMessagesHubView: View {
         .navigationTitle(L10n.TeamHubTitle)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            if canManageTeam {
+            if canComposeTeam {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         PAXHaptics.light()
@@ -124,6 +124,7 @@ struct TeamMessagesHubView: View {
         .onChange(of: teamCoordinator.teamSessions) { _ in scheduleRecompute(immediate: true) }
         .onChange(of: searchText) { _ in scheduleRecompute(immediate: false) }
         .onChange(of: settings.readSessionIds) { _ in scheduleRecompute(immediate: true) }
+        .onChange(of: settings.readUpToSeq) { _ in scheduleRecompute(immediate: true) }
     }
 
     private var teamLoadingState: some View {
@@ -131,7 +132,7 @@ struct TeamMessagesHubView: View {
     }
 
     private func teamConversationRow(_ session: LiveSession) -> some View {
-        let isUnread = session.needsReply && !settings.readSessionIds.contains(session.sessionId)
+        let isUnread = settings.isSessionUnread(session)
 
         return Button {
             isSearchFocused = false
@@ -212,13 +213,13 @@ struct TeamMessagesHubView: View {
         .listRowBackground(Color.clear)
         .contextMenu {
             Button {
-                settings.readSessionIds.insert(session.sessionId)
+                settings.markSessionRead(session.sessionId, seq: session.seq)
                 PAXHaptics.light()
             } label: {
                 Label(L10n.CommonMarkRead, systemImage: "envelope.open")
             }
             Button {
-                settings.readSessionIds.remove(session.sessionId)
+                settings.markSessionUnread(session.sessionId)
                 PAXHaptics.light()
             } label: {
                 Label(L10n.CommonMarkUnread, systemImage: "envelope.badge")
@@ -227,7 +228,7 @@ struct TeamMessagesHubView: View {
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             if isUnread {
                 Button {
-                    settings.readSessionIds.insert(session.sessionId)
+                    settings.markSessionRead(session.sessionId, seq: session.seq)
                     PAXHaptics.success()
                 } label: {
                     Label(L10n.CommonMarkRead, systemImage: "envelope.open")
@@ -235,7 +236,7 @@ struct TeamMessagesHubView: View {
                 .tint(.blue)
             } else {
                 Button {
-                    settings.readSessionIds.remove(session.sessionId)
+                    settings.markSessionUnread(session.sessionId)
                     PAXHaptics.light()
                 } label: {
                     Label(L10n.CommonMarkUnread, systemImage: "envelope.badge")
@@ -249,7 +250,6 @@ struct TeamMessagesHubView: View {
         recomputeTask?.cancel()
         let coordinatorSessions = coordinator.sessions
         let teamOnlySessions = teamCoordinator.teamSessions
-        let readIds = settings.readSessionIds
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
         recomputeTask = Task(priority: .userInitiated) {
@@ -261,7 +261,7 @@ struct TeamMessagesHubView: View {
             let state = Self.computeListState(
                 coordinatorSessions: coordinatorSessions,
                 teamSessions: teamOnlySessions,
-                readSessionIds: readIds,
+                settings: settings,
                 searchText: query
             )
 
@@ -277,22 +277,13 @@ struct TeamMessagesHubView: View {
     private static func computeListState(
         coordinatorSessions: [LiveSession],
         teamSessions: [LiveSession],
-        readSessionIds: Set<String>,
+        settings: AppSettingsStore,
         searchText: String
     ) -> TeamHubListState {
-        var merged: [String: LiveSession] = [:]
-        for session in coordinatorSessions where session.isTeamDM {
-            merged[session.sessionId] = session
-        }
-        for session in teamSessions {
-            if let existing = merged[session.sessionId] {
-                merged[session.sessionId] = existing.updatedAt >= session.updatedAt ? existing : session
-            } else {
-                merged[session.sessionId] = session
-            }
-        }
-
-        let allSessions = merged.values.sorted { $0.updatedAt > $1.updatedAt }
+        let allSessions = TeamMessagingCoordinator.mergeTeamSessions(
+            teamSessions: teamSessions,
+            coordinatorSessions: coordinatorSessions
+        )
         let filtered: [LiveSession]
         if searchText.isEmpty {
             filtered = allSessions
@@ -303,7 +294,7 @@ struct TeamMessagesHubView: View {
             }
         }
 
-        let unread = allSessions.filter { $0.needsReply && !readSessionIds.contains($0.sessionId) }.count
+        let unread = allSessions.filter { settings.isSessionUnread($0) }.count
         return TeamHubListState(displayedSessions: filtered, teamSessionCount: allSessions.count, unreadCount: unread)
     }
 
@@ -318,7 +309,7 @@ struct TeamMessagesHubView: View {
                 .font(.subheadline)
                 .foregroundStyle(PAXTheme.textSecondary)
                 .multilineTextAlignment(.center)
-            if canManageTeam {
+            if canComposeTeam {
                 Button {
                     showCompose = true
                 } label: {

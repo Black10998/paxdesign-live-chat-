@@ -116,6 +116,23 @@ struct PAXDesignLiveChatApp: App {
                 await coordinator.handlePushAction(action, sessionId: sessionId, auth: auth)
                 return
             }
+            if type == "team_message" || sessionId.hasPrefix("team_") {
+                await TeamMessagingCoordinator.shared.refresh(auth: auth)
+                NotificationCenter.default.post(
+                    name: .paxSessionSync,
+                    object: nil,
+                    userInfo: ["session_id": sessionId]
+                )
+                if !opened {
+                    InAppNotificationCoordinator.shared.handleTeamMessage(
+                        sessionId: sessionId,
+                        preview: payload.preview,
+                        senderName: payload.customerName.isEmpty ? payload.preview : payload.customerName,
+                        isActiveSession: coordinator.activeSessionId == sessionId
+                    )
+                }
+                return
+            }
             if !opened {
                 InAppNotificationCoordinator.shared.handlePushForeground(
                     type: type,

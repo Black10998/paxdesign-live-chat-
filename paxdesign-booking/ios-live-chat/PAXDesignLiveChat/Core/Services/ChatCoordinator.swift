@@ -102,13 +102,10 @@ final class ChatCoordinator: ObservableObject {
         }
     }
 
-    func updateUnreadCounts(readIds: Set<String>) {
-        unreadChatCount = sessions.filter {
-            !$0.isTeamDM && $0.needsReply && !readIds.contains($0.sessionId)
-        }.count
-        unreadTeamCount = sessions.filter {
-            $0.isTeamDM && $0.needsReply && !readIds.contains($0.sessionId)
-        }.count
+    func updateUnreadCounts(readIds: Set<String> = AppSettingsStore.shared.readSessionIds) {
+        let settings = AppSettingsStore.shared
+        unreadChatCount = sessions.filter { !$0.isTeamDM && settings.isSessionUnread($0) }.count
+        unreadTeamCount = sessions.filter { $0.isTeamDM && settings.isSessionUnread($0) }.count
     }
 
     private func detectIncomingLiveRequests(_ items: [LiveSession]) {
@@ -307,6 +304,7 @@ final class ChatThreadModel: ObservableObject {
     @Published var handler = "ai"
     @Published var customerName = "Kunde"
     @Published var adminName = ""
+    @Published var assignedAgent: EmployeeIdentity?
     @Published var detectedService = ""
     @Published var updatedAt = ""
     @Published var sessionRating = 0
@@ -412,6 +410,9 @@ final class ChatThreadModel: ObservableObject {
         let resolvedName = data.customerName.isEmpty ? "Kunde" : data.customerName
         if customerName != resolvedName { customerName = resolvedName }
         if adminName != data.adminName { adminName = data.adminName }
+        if assignedAgent?.id != data.assignedAgent?.id || assignedAgent?.name != data.assignedAgent?.name {
+            assignedAgent = data.assignedAgent
+        }
         if detectedService != data.detectedService { detectedService = data.detectedService }
         if updatedAt != data.updatedAt { updatedAt = data.updatedAt }
         if data.sessionRating > 0, sessionRating != data.sessionRating {

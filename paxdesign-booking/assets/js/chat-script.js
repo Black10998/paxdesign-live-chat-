@@ -45,6 +45,7 @@
   var soundEnabled       = true;
   var chatHandler        = 'ai';
   var adminName          = '';
+  var assignedAgent      = null;
   var pollSeq            = 0;
   var pollTimer          = null;
   var localMsgId         = 0;
@@ -625,6 +626,15 @@
 
   function syncSessionMetaFromPoll(data) {
     if (!data) return;
+    if (data.assigned_agent && data.assigned_agent.name) {
+      assignedAgent = data.assigned_agent;
+    } else if (data.admin_name) {
+      assignedAgent = {
+        name: data.admin_name,
+        avatar: (data.assigned_agent && data.assigned_agent.avatar) ? data.assigned_agent.avatar : '',
+        role: (data.assigned_agent && data.assigned_agent.role) ? data.assigned_agent.role : ''
+      };
+    }
     if (data.customer_name) {
       customerName = data.customer_name;
       saveCustomerName();
@@ -691,8 +701,20 @@
     updateEntryUi();
   }
 
+  function getLiveAgent() {
+    return (config && config.liveAgent) ? config.liveAgent : { name: 'Ahmad Alkhalaf', avatar: '' };
+  }
+
+  function getAssignedAgent() {
+    if (assignedAgent && assignedAgent.name) return assignedAgent;
+    if (adminName) {
+      return { name: adminName, avatar: '', role: '' };
+    }
+    return getLiveAgent();
+  }
+
   function getCustomerAgentLabel() {
-    var agent = getLiveAgent();
+    var agent = getAssignedAgent();
     return (agent && agent.name) ? agent.name : 'Live Chat';
   }
 
@@ -700,7 +722,7 @@
     var profileBtn = root.querySelector('#paxdesignChatAgentProfile');
     var modal = document.getElementById('paxdesignAgentProfileModal');
     var subtitle = document.getElementById('paxdesignWidgetSubtitle');
-    var agent = getLiveAgent();
+    var agent = getAssignedAgent();
     if (subtitle && agent && agent.role) {
       subtitle.textContent = agent.role;
     }
@@ -1395,14 +1417,17 @@
           renderMessageDom(msg.role, msg.content, msg.id, {
             reaction: msg.reaction || '',
             reply_to: msg.reply_to || 0,
-            image_url: msg.image_url || ''
+            image_url: msg.image_url || '',
+            sender_name: msg.sender_name || '',
+            sender_avatar: msg.sender_avatar || '',
+            sender_role: msg.sender_role || ''
           });
         }
         if (!played) {
           playIncomingAdminSound();
           if (document.hidden) {
             tryCustomerBrowserNotification(
-              (config && config.liveAgent && config.liveAgent.name) ? config.liveAgent.name : 'Live Chat',
+              msg.sender_name || getCustomerAgentLabel(),
               (msg.content || '').substring(0, 120)
             );
           }
@@ -1423,10 +1448,6 @@
 
   function seenMsgId(id) {
     pollSeq = Math.max(pollSeq, id);
-  }
-
-  function getLiveAgent() {
-    return (config && config.liveAgent) ? config.liveAgent : { name: 'Ahmad Alkhalaf', avatar: '' };
   }
 
   function copyPlainText(text) {
@@ -1824,15 +1845,18 @@
     }, 1800);
   }
 
-  function renderAdminMessageHeader(msgEl) {
-    var agent = getLiveAgent();
+  function renderAdminMessageHeader(msgEl, opts) {
+    opts = opts || {};
+    var agent = opts.sender_name
+      ? { name: opts.sender_name, avatar: opts.sender_avatar || '', role: opts.sender_role || '' }
+      : getAssignedAgent();
     var head = document.createElement('div');
     head.className = 'paxdesign-booking-chat-agent-head paxdesign-booking-chat-agent-head--live';
     if (agent.avatar) {
       var img = document.createElement('img');
       img.className = 'paxdesign-booking-chat-agent-avatar paxdesign-booking-chat-agent-avatar--clickable';
       img.src = agent.avatar;
-      img.alt = getCustomerAgentLabel();
+      img.alt = agent.name || getCustomerAgentLabel();
       img.width = 24;
       img.height = 24;
       img.loading = 'lazy';
@@ -1852,7 +1876,7 @@
     nameWrap.className = 'paxdesign-booking-chat-agent-ident';
     var name = document.createElement('span');
     name.className = 'paxdesign-booking-chat-agent-name';
-    name.textContent = getCustomerAgentLabel();
+    name.textContent = agent.name || getCustomerAgentLabel();
     nameWrap.appendChild(name);
     if (agent.role) {
       var role = document.createElement('span');
@@ -1890,7 +1914,7 @@
     if (msgId) msg.setAttribute('data-msg-id', String(msgId));
 
     if (role === 'admin') {
-      renderAdminMessageHeader(msg);
+      renderAdminMessageHeader(msg, opts);
     }
 
     if (opts.reply_to) {

@@ -27,6 +27,21 @@ final class InAppNotificationCoordinator {
         )
     }
 
+    func handleTeamMessage(sessionId: String, preview: String, senderName: String, isActiveSession: Bool) {
+        guard AppSettingsStore.shared.messageSoundEnabled else { return }
+        guard !isActiveSession else { return }
+        guard shouldPlay(since: &lastMessageSoundAt) else { return }
+
+        PAXNotificationSound.shared.play(.message)
+        PAXHaptics.light()
+        postLocalNotification(
+            title: senderName.isEmpty ? "Team-Nachricht" : senderName,
+            body: preview.isEmpty ? "Neue Team-Nachricht" : preview,
+            sessionId: sessionId,
+            type: "team_message"
+        )
+    }
+
     func handleAIAttention(sessionId: String, preview: String) {
         guard AppSettingsStore.shared.messageSoundEnabled else { return }
         guard shouldPlay(since: &lastAISoundAt) else { return }
@@ -122,6 +137,13 @@ final class InAppNotificationCoordinator {
                 sessionId: sessionId,
                 preview: preview,
                 customerName: customerName,
+                isActiveSession: activeSessionId == sessionId
+            )
+        case "team_message":
+            handleTeamMessage(
+                sessionId: sessionId,
+                preview: preview,
+                senderName: customerName,
                 isActiveSession: activeSessionId == sessionId
             )
         case "session_sync", "ai_attention":

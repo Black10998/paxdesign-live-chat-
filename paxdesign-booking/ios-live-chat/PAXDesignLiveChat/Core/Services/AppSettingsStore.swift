@@ -174,6 +174,11 @@ final class AppSettingsStore: ObservableObject {
             scheduleReadSessionPersist()
         }
     }
+    @Published var readUpToSeq: [String: Int] {
+        didSet {
+            scheduleReadSeqPersist()
+        }
+    }
     @Published var compactListMode: Bool {
         didSet { DeferredUserDefaults.set(compactListMode, forKey: Keys.compactList) }
     }
@@ -210,12 +215,28 @@ final class AppSettingsStore: ObservableObject {
     }
 
     private var readPersistTask: Task<Void, Never>?
+    private var readSeqPersistTask: Task<Void, Never>?
 
-    func markSessionRead(_ sessionId: String) {
+    func isSessionUnread(_ session: LiveSession) -> Bool {
+        guard session.needsReply else { return false }
+        if let readSeq = readUpToSeq[session.sessionId] {
+            return session.seq > readSeq
+        }
+        return !readSessionIds.contains(session.sessionId)
+    }
+
+    func markSessionRead(_ sessionId: String, seq: Int? = nil) {
+        if let seq {
+            let current = readUpToSeq[sessionId] ?? 0
+            if seq > current {
+                readUpToSeq[sessionId] = seq
+            }
+        }
         guard readSessionIds.insert(sessionId).inserted else { return }
     }
 
     func markSessionUnread(_ sessionId: String) {
+        readUpToSeq.removeValue(forKey: sessionId)
         guard readSessionIds.remove(sessionId) != nil else { return }
     }
 
@@ -225,6 +246,15 @@ final class AppSettingsStore: ObservableObject {
             try? await Task.sleep(nanoseconds: 400_000_000)
             guard !Task.isCancelled else { return }
             DeferredUserDefaults.set(Array(readSessionIds), forKey: Keys.readSessions, delayNanoseconds: 0)
+        }
+    }
+
+    private func scheduleReadSeqPersist() {
+        readSeqPersistTask?.cancel()
+        readSeqPersistTask = Task { [readUpToSeq] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+            DeferredUserDefaults.set(readUpToSeq, forKey: Keys.readUpToSeq, delayNanoseconds: 0)
         }
     }
 
@@ -239,6 +269,7 @@ final class AppSettingsStore: ObservableObject {
         static let typingSound = "pax.settings.typingSound"
         static let sendSound = "pax.settings.sendSound"
         static let readSessions = "pax.settings.readSessions"
+        static let readUpToSeq = "pax.settings.readUpToSeq"
         static let compactList = "pax.settings.compactList"
         static let showTimestamps = "pax.settings.showTimestamps"
         static let privacyBanner = "pax.settings.privacyBanner"
@@ -311,6 +342,13 @@ final class AppSettingsStore: ObservableObject {
             readSessionIds = Set(read)
         } else {
             readSessionIds = []
+        }
+        if let seqMap = defaults.dictionary(forKey: Keys.readUpToSeq) as? [String: Int] {
+            readUpToSeq = seqMap
+        } else if let seqMap = defaults.dictionary(forKey: Keys.readUpToSeq) as? [String: NSNumber] {
+            readUpToSeq = seqMap.mapValues { $0.intValue }
+        } else {
+            readUpToSeq = [:]
         }
         compactListMode = defaults.object(forKey: Keys.compactList) as? Bool ?? false
         showListTimestamps = defaults.object(forKey: Keys.showTimestamps) as? Bool ?? true

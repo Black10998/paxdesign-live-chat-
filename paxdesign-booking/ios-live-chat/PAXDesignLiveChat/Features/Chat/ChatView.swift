@@ -138,6 +138,7 @@ struct ChatView: View {
     }
 
     private var agentDisplayName: String {
+        if let agent = thread.assignedAgent, !agent.name.isEmpty { return agent.name }
         let profileName = auth.profile?.displayName.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if !profileName.isEmpty { return profileName }
         let admin = thread.adminName.trimmingCharacters(in: .whitespacesAndNewlines)

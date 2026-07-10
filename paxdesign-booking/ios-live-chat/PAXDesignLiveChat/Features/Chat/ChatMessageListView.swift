@@ -106,11 +106,19 @@ private struct ChatMessageRow: View {
         )
     }
 
-    private func senderLabel(for role: String) -> String {
-        switch role {
-        case "admin": return agentDisplayName
-        case "user": return customerDisplayName
-        default: return L10n.ChatAgent
+    private func senderLabel(for message: LiveMessage) -> String {
+        if handler == "team", let sender = message.senderName, !sender.isEmpty {
+            return message.role == "admin" ? sender : (sender.isEmpty ? customerDisplayName : sender)
+        }
+        switch message.role {
+        case "admin":
+            if let sender = message.senderName, !sender.isEmpty { return sender }
+            return agentDisplayName
+        case "user":
+            if let sender = message.senderName, !sender.isEmpty { return sender }
+            return customerDisplayName
+        default:
+            return L10n.ChatAgent
         }
     }
 
@@ -133,7 +141,7 @@ private struct ChatMessageRow: View {
                     quotedMessage: row.quotedMessage,
                     canReply: handler == "admin" && canReply && row.message.role != "system",
                     showTimestamp: MessageTimeFormatter.shouldShowTimestamp(current: row.message, next: row.next),
-                    senderLabel: showSenderLabel ? senderLabel(for: row.message.role) : nil,
+                    senderLabel: showSenderLabel ? senderLabel(for: row.message) : nil,
                     agentDisplayName: agentDisplayName,
                     customerDisplayName: customerDisplayName,
                     onReply: onReply,

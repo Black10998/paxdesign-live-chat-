@@ -20,7 +20,7 @@ struct DashboardView: View {
     }
 
     private var unreadCount: Int {
-        customerSessions.filter { $0.needsReply && !settings.readSessionIds.contains($0.sessionId) }.count
+        customerSessions.filter { settings.isSessionUnread($0) }.count
     }
 
     private var chartData: [DashboardMetric] {

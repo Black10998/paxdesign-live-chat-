@@ -428,12 +428,20 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url), endpoint: "team-poll:\(sessionId)", as: PollResponse.self)
     }
 
-    func sendTeamMessage(_ sessionId: String, content: String) async throws {
+    func sendTeamMessage(_ sessionId: String, content: String) async throws -> TeamSendResponse {
         guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/messages") else {
             throw LiveChatAPIError.invalidURL
         }
         let body = try JSONEncoder().encode(["content": content])
-        _ = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-send", as: TeamSendResponse.self)
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-send", as: TeamSendResponse.self)
+    }
+
+    func markTeamSessionRead(_ sessionId: String, seq: Int) async throws -> TeamReadResponse {
+        guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/read") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONEncoder().encode(["seq": seq])
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-read", as: TeamReadResponse.self)
     }
 
     func registerAPNs(token: String, sandbox: Bool, metadata: [String: Any] = [:]) async throws {

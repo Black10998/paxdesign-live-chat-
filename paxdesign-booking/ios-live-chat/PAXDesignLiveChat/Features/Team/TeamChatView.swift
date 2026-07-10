@@ -2,6 +2,9 @@ import SwiftUI
 
 struct TeamChatView: View {
     @EnvironmentObject private var auth: AuthStore
+    @EnvironmentObject private var coordinator: ChatCoordinator
+    @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
+    @EnvironmentObject private var settings: AppSettingsStore
     @StateObject private var thread: TeamChatThreadModel
 
     init(sessionId: String) {
@@ -28,8 +31,30 @@ struct TeamChatView: View {
         .paxScreenBackground()
         .navigationTitle(thread.participantName.isEmpty ? L10n.TeamChatTitle : thread.participantName)
         .navigationBarTitleDisplayMode(.inline)
-        .onAppear { thread.start(auth: auth) }
-        .onDisappear { thread.stop() }
+        .onAppear {
+            thread.start(auth: auth)
+            coordinator.activeSessionId = thread.sessionId
+            AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: true)
+            settings.markSessionRead(thread.sessionId, seq: thread.currentSeq)
+            Task { await thread.markRead(auth: auth) }
+        }
+        .onDisappear {
+            thread.stop()
+            if coordinator.activeSessionId == thread.sessionId {
+                coordinator.activeSessionId = nil
+            }
+            AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: false)
+            settings.markSessionRead(thread.sessionId, seq: thread.currentSeq)
+        }
+        .onChange(of: thread.currentSeq) { seq in
+            settings.markSessionRead(thread.sessionId, seq: seq)
+            Task { await thread.markRead(auth: auth) }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .paxSessionSync)) { note in
+            guard let syncedId = note.userInfo?["session_id"] as? String,
+                  syncedId == thread.sessionId else { return }
+            Task { await thread.poll(auth: auth) }
+        }
     }
 
     private var canSend: Bool {
@@ -45,7 +70,7 @@ struct TeamChatView: View {
                 .paxGlassCardStyle(cornerRadius: 22, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.08)
 
             Button {
-                Task { await thread.send(auth: auth) }
+                Task { await thread.send(auth: auth, teamCoordinator: teamCoordinator) }
             } label: {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.system(size: 34))
