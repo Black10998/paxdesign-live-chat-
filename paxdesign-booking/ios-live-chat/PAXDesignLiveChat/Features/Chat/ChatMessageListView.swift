@@ -54,8 +54,8 @@ struct ChatMessageListView: View {
                     }
                 }
                 .padding(.horizontal, 12)
-                .padding(.top, 6)
-                .padding(.bottom, 4)
+                .padding(.vertical, 10)
+                .padding(.bottom, 8)
             }
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: messagesRevision) { _ in

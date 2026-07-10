@@ -37,11 +37,13 @@ struct TeamChatView: View {
                 onCopy: { UIPasteboard.general.string = $0.content },
                 onImageTap: { _ in }
             )
-
-            teamComposer
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .background(PAXBackground())
-        .paxKeyboardBottomInset()
+        .paxChatScreenBackground()
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            teamComposer
+                .background(PAXBackground())
+        }
         .navigationTitle(thread.participantName.isEmpty ? L10n.TeamChatTitle : thread.participantName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

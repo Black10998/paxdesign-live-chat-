@@ -54,25 +54,12 @@ struct ChatView: View {
                 onCopy: copyMessage,
                 onImageTap: { imageViewer = ImageViewerItem(url: $0) }
             )
-
-            if thread.handler == "admin", canUseAI, settings.aiSuggestionsEnabled {
-                assistStrip
-            }
-
-            if let reply = thread.replyToMessage {
-                ReplyBarView(
-                    message: reply,
-                    agentDisplayName: agentDisplayName,
-                    customerDisplayName: thread.customerName
-                ) {
-                    thread.clearReply()
-                }
-            }
-
-            composer
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .background(PAXBackground())
-        .paxKeyboardBottomInset()
+        .paxChatScreenBackground()
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            chatInputBar
+        }
         .navigationTitle(thread.customerName)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
@@ -332,9 +319,30 @@ struct ChatView: View {
                 }
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
         .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.82, borderOpacity: 0.46, shadowOpacity: 0.16)
+    }
+
+    private var chatInputBar: some View {
+        VStack(spacing: 0) {
+            if thread.handler == "admin", canUseAI, settings.aiSuggestionsEnabled {
+                assistStrip
+            }
+
+            if let reply = thread.replyToMessage {
+                ReplyBarView(
+                    message: reply,
+                    agentDisplayName: agentDisplayName,
+                    customerDisplayName: thread.customerName
+                ) {
+                    thread.clearReply()
+                }
+            }
+
+            composer
+        }
+        .background(PAXBackground())
     }
 
     private var canReply: Bool { auth.canReplyChats }
@@ -374,8 +382,8 @@ struct ChatView: View {
             TextField(L10n.ChatMessagePlaceholder, text: $thread.draft, axis: .vertical)
                 .font(.subheadline)
                 .lineLimit(1...4)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
                 .paxGlassCardStyle(cornerRadius: 20, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.08)
                 .disabled(thread.handler != "admin" || !canReply)
                 .onChange(of: thread.draft) { _ in
@@ -392,9 +400,9 @@ struct ChatView: View {
             }
             .disabled(!canSend)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .paxGlassCardStyle(cornerRadius: 16, fillOpacity: 0.8, borderOpacity: 0.4, shadowOpacity: 0.14)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.8, borderOpacity: 0.4, shadowOpacity: 0.14)
     }
 
     private var canSend: Bool {
