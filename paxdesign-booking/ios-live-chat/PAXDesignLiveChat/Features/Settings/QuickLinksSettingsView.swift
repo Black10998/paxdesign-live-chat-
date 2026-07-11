@@ -189,6 +189,13 @@ private struct EditableQuickLink: Identifiable {
         icon = link.icon
     }
 
+    init(id: String, label: String, url: String, icon: String) {
+        self.id = id
+        self.label = label
+        self.url = url
+        self.icon = icon
+    }
+
     static func new() -> EditableQuickLink {
         EditableQuickLink(
             id: UUID().uuidString.lowercased(),
