@@ -1324,24 +1324,6 @@
         return year + '-' + month + '-' + day;
     }
     
-    // Initialize clock animation — scoped to plugin root only (never documentElement)
-    (function initClock() {
-        var rootEl = document.getElementById('paxdesign-booking-root');
-        if (!rootEl) {
-            return;
-        }
-
-        const d = new Date();
-        const convertedSeconds = ((d.getSeconds() + d.getMilliseconds() / 1000) / 60) * 360;
-        const convertedMinutes = (d.getMinutes() / 60) * 360;
-        const convertedHours = ((d.getHours() + d.getMinutes() / 60) / 12) * 360;
-        
-        rootEl.style.setProperty('--pax-s-rotate-from', convertedSeconds + 'deg');
-        rootEl.style.setProperty('--pax-m-rotate-from', convertedMinutes + 'deg');
-        rootEl.style.setProperty('--pax-h-rotate-from', convertedHours + 'deg');
-        rootEl.style.setProperty('--pax-s-rotate-to', (convertedSeconds + 360) + 'deg');
-        rootEl.style.setProperty('--pax-m-rotate-to', (convertedMinutes + 360) + 'deg');
-        rootEl.style.setProperty('--pax-h-rotate-to', (convertedHours + 360) + 'deg');
-    })();
+    // Clock animation removed — Eva chat launcher is pure CSS (booking-widget.php)
     
 })(jQuery);

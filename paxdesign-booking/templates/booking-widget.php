@@ -13,37 +13,27 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
 
 <div id="paxdesign-booking-root" class="paxdesign-booking paxdesign-booking-wrapper paxdesign-booking-root" aria-live="polite">
 
-  <!-- Floating Clock Button -->
-  <div class="paxdesign-booking-button" role="button" tabindex="0" aria-label="Live Chat öffnen">
-    <div class="paxdesign-booking-clock-working">
-      <div class="paxdesign-booking-clock-face">
-        <div class="paxdesign-booking-clock-top">
-          <div class="paxdesign-booking-sec-min-container">
-            <div class="paxdesign-booking-min-container">
-              <div class="paxdesign-booking-min-pointer"></div>
+  <!-- Floating Chat Launcher (Eva) -->
+  <div class="paxdesign-booking-button" role="button" tabindex="0" aria-label="<?php echo esc_attr__('Chat öffnen', 'paxdesign-booking'); ?>">
+    <span class="paxdesign-booking-launcher-label" aria-hidden="true">Chat</span>
+    <div class="paxdesign-booking-launcher">
+      <!-- From Uiverse.io by Subaashbala -->
+      <div class="loader">
+        <div class="modelViewPort">
+          <div class="eva">
+            <div class="head">
+              <div class="eyeChamber">
+                <div class="eye"></div>
+                <div class="eye"></div>
+              </div>
             </div>
-            <div class="paxdesign-booking-sec-container">
-              <div class="paxdesign-booking-sec-pointer"></div>
+            <div class="body">
+              <div class="hand"></div>
+              <div class="hand"></div>
+              <div class="scannerThing"></div>
+              <div class="scannerOrigin"></div>
             </div>
           </div>
-          <div class="paxdesign-booking-hours-container">
-            <div class="paxdesign-booking-hours-pointer"></div>
-          </div>
-        </div>
-        <div class="paxdesign-booking-clock-center">
-          <span class="paxdesign-booking-clock-label" aria-hidden="true">Chat</span>
-          <span class="paxdesign-booking-clock-number paxdesign-booking-clock-number-1">01</span>
-          <span class="paxdesign-booking-clock-number paxdesign-booking-clock-number-2">02</span>
-          <span class="paxdesign-booking-clock-number paxdesign-booking-clock-number-3">03</span>
-          <span class="paxdesign-booking-clock-number paxdesign-booking-clock-number-4">04</span>
-          <span class="paxdesign-booking-clock-number paxdesign-booking-clock-number-5">05</span>
-          <span class="paxdesign-booking-clock-number paxdesign-booking-clock-number-6">06</span>
-          <span class="paxdesign-booking-clock-number paxdesign-booking-clock-number-7">07</span>
-          <span class="paxdesign-booking-clock-number paxdesign-booking-clock-number-8">08</span>
-          <span class="paxdesign-booking-clock-number paxdesign-booking-clock-number-9">09</span>
-          <span class="paxdesign-booking-clock-number paxdesign-booking-clock-number-10">10</span>
-          <span class="paxdesign-booking-clock-number paxdesign-booking-clock-number-11">11</span>
-          <span class="paxdesign-booking-clock-number paxdesign-booking-clock-number-12">12</span>
         </div>
       </div>
     </div>
