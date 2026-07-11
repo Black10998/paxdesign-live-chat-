@@ -97,6 +97,11 @@ struct MessageBubbleView: View {
 
                 if message.isLinkCard {
                     LinkCardBubbleView(message: message, siteBaseURL: siteBaseURL)
+                } else if message.isInPlaceWarning {
+                    Text(message.content)
+                        .font(.subheadline)
+                        .foregroundStyle(message.isInPlaceWarnStyle ? Color(red: 0.6, green: 0.2, blue: 0.07) : PAXTheme.textSecondary)
+                        .multilineTextAlignment(.leading)
                 } else if !message.content.isEmpty {
                     Text(message.content)
                         .font(.subheadline)
@@ -109,11 +114,11 @@ struct MessageBubbleView: View {
                         .foregroundStyle(PAXTheme.textSecondary)
                 }
 
-                if message.showsLinkScanBadge {
+                if message.showsLinkScanBadge && !message.isInPlaceWarning {
                     LinkScanBadgeView(message: message, useStaffDisplay: canDelete)
                 }
 
-                if canDelete && message.needsLinkScanReview, let onLinkReview {
+                if canDelete && message.needsLinkScanReview && !message.isInPlaceWarning, let onLinkReview {
                     LinkScanReviewActionsView(
                         message: message,
                         isSubmitting: isLinkReviewSubmitting,
@@ -125,7 +130,7 @@ struct MessageBubbleView: View {
             .padding(.vertical, PAXMessageStyle.bubblePaddingV)
             .background(
                 RoundedRectangle(cornerRadius: PAXMessageStyle.bubbleRadius, style: .continuous)
-                    .fill(PAXMessageStyle.bubbleColor(role: message.role, isOutgoing: isOutgoing))
+                    .fill(bubbleFill)
             )
             .frame(
                 maxWidth: min(300, UIScreen.main.bounds.width * PAXMessageStyle.maxBubbleWidthRatio),
@@ -139,6 +144,16 @@ struct MessageBubbleView: View {
     }
 
     private var isOutgoing: Bool { message.role == "admin" || message.role == "assistant" }
+
+    private var bubbleFill: Color {
+        if message.isInPlaceWarnStyle {
+            return Color(red: 1.0, green: 0.97, blue: 0.94)
+        }
+        if message.isInPlaceWarning {
+            return Color(red: 0.97, green: 0.98, blue: 0.99)
+        }
+        return PAXMessageStyle.bubbleColor(role: message.role, isOutgoing: isOutgoing)
+    }
 }
 
 private struct BubbleTail: View {

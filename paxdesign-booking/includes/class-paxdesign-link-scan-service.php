@@ -318,13 +318,17 @@ class PAXdesign_Link_Scan_Service {
 
         if ($action === 'delete_warn') {
             $tombstone = __('This message contained an unsafe link and was removed to protect you.', 'paxdesign-booking');
-            return PAXdesign_Message_Store::delete_message(
+            $result = PAXdesign_Message_Store::delete_message(
                 $session_id,
                 $message_seq,
                 $reviewer_id,
                 'customer',
                 $tombstone
             );
+            if (!is_wp_error($result) && is_array($result)) {
+                $result['warn'] = true;
+            }
+            return $result;
         }
 
         if ($action === 'mark_safe') {

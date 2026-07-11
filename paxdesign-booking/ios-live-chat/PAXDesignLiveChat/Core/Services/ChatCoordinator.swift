@@ -749,8 +749,13 @@ final class ChatThreadModel: ObservableObject {
         case "message_deleted":
             let messageId = StreamPayload.int(event.payload["message_id"])
             let tombstone = StreamPayload.string(event.payload["tombstone"])
+            let warn = StreamPayload.bool(event.payload["warn"])
             if messageId > 0 {
-                applyMessageDeleted(messageId: messageId, tombstone: tombstone.isEmpty ? L10n.ChatMessageDeletedByEmployee : tombstone)
+                applyMessageDeleted(
+                    messageId: messageId,
+                    tombstone: tombstone.isEmpty ? L10n.ChatMessageDeletedByEmployee : tombstone,
+                    warn: warn
+                )
             }
         default:
             break
@@ -765,60 +770,128 @@ final class ChatThreadModel: ObservableObject {
         }
     }
 
-    private func applyMessageDeleted(messageId: Int, tombstone: String) {
+    private func applyMessageDeleted(messageId: Int, tombstone: String, warn: Bool = false) {
         guard messageId > 0 else { return }
         guard !permanentlyDeletedMessageIds.contains(messageId) else { return }
-        guard !deletingMessageIds.contains(messageId) else { return }
         permanentlyDeletedMessageIds.insert(messageId)
+        guard let index = messages.firstIndex(where: { $0.id == messageId }) else { return }
+
         deletingMessageIds.insert(messageId)
         messagesRevision &+= 1
 
         deletionTasks[messageId]?.cancel()
         deletionTasks[messageId] = Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 460_000_000)
+            try? await Task.sleep(nanoseconds: 200_000_000)
             guard !Task.isCancelled else { return }
-            finishMessageDeletion(messageId: messageId, tombstone: tombstone)
+            finishMessageDeletion(at: index, messageId: messageId, tombstone: tombstone, warn: warn)
         }
     }
 
-    private func finishMessageDeletion(messageId: Int, tombstone: String) {
+    private func finishMessageDeletion(at index: Int, messageId: Int, tombstone: String, warn: Bool) {
         deletionTasks.removeValue(forKey: messageId)
         deletingMessageIds.remove(messageId)
-        messages.removeAll { $0.id == messageId }
-        let placeholder = LiveMessage(
+        guard messages.indices.contains(index), messages[index].id == messageId else { return }
+
+        let existing = messages[index]
+        messages[index] = LiveMessage(
             id: messageId,
-            role: "system",
+            clientMsgId: existing.clientMsgId,
+            role: existing.role,
             content: tombstone,
-            ts: Int(Date().timeIntervalSince1970)
+            ts: existing.ts ?? Int(Date().timeIntervalSince1970),
+            imageUrl: nil,
+            replyTo: nil,
+            attachmentType: warn ? "in_place_warning" : "in_place_deleted",
+            linkScanStatus: nil,
+            linkScanSystemStatus: nil,
+            linkScanReviewPending: nil,
+            linkScanUrls: nil
         )
-        if let insertIndex = messages.firstIndex(where: { $0.id > messageId }) {
-            messages.insert(placeholder, at: insertIndex)
-        } else {
-            messages.append(placeholder)
-        }
         knownMessageIds.remove(messageId)
         messagesRevision &+= 1
     }
 
     func deleteMessage(_ messageId: Int, auth: AuthStore) async {
         guard messageId > 0, let api = auth.api else { return }
+        applyMessageDeleted(messageId: messageId, tombstone: L10n.ChatMessageDeletedByEmployee, warn: false)
         do {
             try await api.deleteMessage(sessionId, messageId: messageId)
-            applyMessageDeleted(messageId: messageId, tombstone: L10n.ChatMessageDeletedByEmployee)
         } catch {
             errorMessage = error.localizedDescription
+            await refreshNow(auth: auth)
         }
     }
 
     func submitLinkScanReview(messageId: Int, action: String, auth: AuthStore) async {
         guard messageId > 0, let api = auth.api else { return }
+
+        if action == "mark_safe", let index = messages.firstIndex(where: { $0.id == messageId }) {
+            let existing = messages[index]
+            messages[index] = LiveMessage(
+                id: existing.id,
+                clientMsgId: existing.clientMsgId,
+                role: existing.role,
+                content: existing.content,
+                ts: existing.ts,
+                imageUrl: existing.imageUrl,
+                replyTo: existing.replyTo,
+                reaction: existing.reaction,
+                senderId: existing.senderId,
+                senderName: existing.senderName,
+                senderAvatar: existing.senderAvatar,
+                senderRole: existing.senderRole,
+                attachmentType: existing.attachmentType,
+                linkUrl: existing.linkUrl,
+                linkLabel: existing.linkLabel,
+                linkIcon: existing.linkIcon,
+                linkScanStatus: "safe",
+                linkScanSystemStatus: existing.linkScanSystemStatus,
+                linkScanReviewPending: nil,
+                linkScanUrls: existing.linkScanUrls
+            )
+            messagesRevision &+= 1
+        } else if action == "mark_unsafe", let index = messages.firstIndex(where: { $0.id == messageId }) {
+            let existing = messages[index]
+            messages[index] = LiveMessage(
+                id: existing.id,
+                clientMsgId: existing.clientMsgId,
+                role: existing.role,
+                content: existing.content,
+                ts: existing.ts,
+                imageUrl: existing.imageUrl,
+                replyTo: existing.replyTo,
+                reaction: existing.reaction,
+                senderId: existing.senderId,
+                senderName: existing.senderName,
+                senderAvatar: existing.senderAvatar,
+                senderRole: existing.senderRole,
+                attachmentType: existing.attachmentType,
+                linkUrl: existing.linkUrl,
+                linkLabel: existing.linkLabel,
+                linkIcon: existing.linkIcon,
+                linkScanStatus: "dangerous",
+                linkScanSystemStatus: existing.linkScanSystemStatus,
+                linkScanReviewPending: nil,
+                linkScanUrls: existing.linkScanUrls
+            )
+            messagesRevision &+= 1
+        } else if action == "delete_warn" {
+            applyMessageDeleted(
+                messageId: messageId,
+                tombstone: L10n.ChatLinkScanDeleteWarnTombstone,
+                warn: true
+            )
+        }
+
         linkReviewSubmittingIds.insert(messageId)
         defer { linkReviewSubmittingIds.remove(messageId) }
         do {
             let response = try await api.submitLinkScanReview(sessionId, messageId: messageId, action: action)
             if action == "delete_warn" {
                 let tombstone = response.tombstone ?? L10n.ChatLinkScanDeleteWarnTombstone
-                applyMessageDeleted(messageId: messageId, tombstone: tombstone)
+                if let index = messages.firstIndex(where: { $0.id == messageId }) {
+                    finishMessageDeletion(at: index, messageId: messageId, tombstone: tombstone, warn: true)
+                }
             } else if let updated = response.message {
                 applyLinkScanUpdate(updated)
             }
@@ -826,6 +899,7 @@ final class ChatThreadModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
             PAXHaptics.warning()
+            await refreshNow(auth: auth)
         }
     }
 

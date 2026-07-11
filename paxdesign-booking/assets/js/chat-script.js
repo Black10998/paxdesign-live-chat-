@@ -53,6 +53,7 @@
   var domMsgIds          = {};
   var deletedMessageIds  = {};
   var deletingInProgress = {};
+  var MESSAGE_TRANSFORM_MS = 200;
   var liveAgentPhase     = 0;
   var streamingMsgId     = 0;
   var adminTypingEl      = null;
@@ -196,7 +197,11 @@
       }
     }
     if (data.type === 'message_deleted' && payload.message_id) {
-      animateCustomerMessageDeletion(payload.message_id, payload.tombstone || 'This message was deleted by an employee.');
+      transformCustomerMessageInPlace(
+        payload.message_id,
+        payload.tombstone || 'This message was deleted by an employee.',
+        { warn: !!payload.warn || (payload.tombstone || '').indexOf('unsafe link') !== -1 }
+      );
     }
     if (data.type === 'typing') {
       if (payload.active && payload.who === 'admin' && chatHandler === 'admin') {
@@ -2197,34 +2202,67 @@
     deletedMessageIds[String(messageId)] = true;
   }
 
-  function animateCustomerMessageDeletion(messageId, tombstone) {
+  function transformCustomerMessageInPlace(messageId, warningText, opts) {
+    opts = opts || {};
     var id = String(messageId);
     if (deletingInProgress[id] || isMessagePermanentlyDeleted(messageId)) return;
     deletingInProgress[id] = true;
     markMessagePermanentlyDeleted(messageId);
 
     var msgEl = threadEl.querySelector('[data-msg-id="' + messageId + '"]');
+    messages = messages.map(function (m) {
+      if (String(m.id) !== id) return m;
+      return Object.assign({}, m, {
+        role: 'system',
+        content: warningText,
+        image_url: '',
+        link_scan_status: '',
+        _inPlaceWarning: true
+      });
+    });
+
     if (!msgEl) {
-      delete domMsgIds[messageId];
-      messages = messages.filter(function (m) { return String(m.id) !== id; });
-      if (!threadEl.querySelector('[data-msg-id="deleted-' + messageId + '"]')) {
-        renderMessageDom('system', tombstone, 'deleted-' + messageId, { skipPush: true });
-      }
       saveSessionSnapshot();
+      deletingInProgress[id] = false;
       return;
     }
-    requestAnimationFrame(function () {
-      msgEl.classList.add('paxdesign-booking-chat-message--deleting');
+
+    msgEl.classList.add('paxdesign-booking-chat-message--transforming');
+    window.requestAnimationFrame(function () {
       window.setTimeout(function () {
-        if (msgEl.parentNode) msgEl.parentNode.removeChild(msgEl);
-        delete domMsgIds[messageId];
-        if (!threadEl.querySelector('[data-msg-id="deleted-' + messageId + '"]')) {
-          renderMessageDom('system', tombstone, 'deleted-' + messageId, { skipPush: true });
+        msgEl.classList.remove(
+          'paxdesign-booking-chat-message--transforming',
+          'paxdesign-booking-chat-message--deleting',
+          'paxdesign-booking-chat-message--dangerous-link'
+        );
+        msgEl.classList.add('paxdesign-booking-chat-message--in-place-warning');
+        if (opts.warn) {
+          msgEl.classList.add('paxdesign-booking-chat-message--warned');
         }
-        messages = messages.filter(function (m) { return String(m.id) !== id; });
+
+        var quote = msgEl.querySelector('.paxdesign-booking-chat-quote');
+        if (quote) quote.remove();
+        var meta = msgEl.querySelector('.paxdesign-booking-chat-message-meta');
+        if (meta) meta.remove();
+        var footer = msgEl.querySelector('.paxdesign-booking-chat-message-footer');
+        if (footer) footer.remove();
+        var adminHead = msgEl.querySelector('.paxdesign-booking-chat-admin-head');
+        if (adminHead) adminHead.remove();
+
+        var bubble = msgEl.querySelector('.paxdesign-booking-chat-message-bubble');
+        if (bubble) {
+          bubble.innerHTML = '';
+          bubble.textContent = warningText;
+        }
+
         saveSessionSnapshot();
-      }, 460);
+        deletingInProgress[id] = false;
+      }, MESSAGE_TRANSFORM_MS);
     });
+  }
+
+  function animateCustomerMessageDeletion(messageId, tombstone) {
+    transformCustomerMessageInPlace(messageId, tombstone, {});
   }
 
   function linkScanIconSvg(status) {

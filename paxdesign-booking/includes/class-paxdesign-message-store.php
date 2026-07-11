@@ -14,6 +14,14 @@ class PAXdesign_Message_Store {
 
     const SCHEMA_VERSION = '2.1';
 
+    /** @var array<string, string> */
+    private static $deferred_projection_sessions = array();
+
+    /** @var array<int, array<string, mixed>> */
+    private static $deferred_asset_purges = array();
+
+    private static $shutdown_deferred_registered = false;
+
     public static function init() {
         add_action('paxdesign_message_store_prune', array(__CLASS__, 'prune'));
         if (!wp_next_scheduled('paxdesign_message_store_prune')) {
@@ -571,8 +579,48 @@ class PAXdesign_Message_Store {
             'meta_json'     => wp_json_encode($meta),
             'created_at'    => $row->created_at,
         ));
-        self::rebuild_customer_projection($session_id, $channel);
+        self::defer_customer_projection_rebuild($session_id, $channel);
         return $message;
+    }
+
+    private static function register_shutdown_deferred() {
+        if (self::$shutdown_deferred_registered) {
+            return;
+        }
+        self::$shutdown_deferred_registered = true;
+        add_action('shutdown', array(__CLASS__, 'flush_deferred_work'), 9998);
+    }
+
+    public static function flush_deferred_work() {
+        foreach (self::$deferred_asset_purges as $message) {
+            self::purge_message_assets($message);
+        }
+        self::$deferred_asset_purges = array();
+
+        foreach (self::$deferred_projection_sessions as $session_id => $channel) {
+            self::rebuild_customer_projection($session_id, $channel);
+        }
+        self::$deferred_projection_sessions = array();
+    }
+
+    private static function defer_customer_projection_rebuild($session_id, $channel = 'customer') {
+        if ($channel !== 'customer') {
+            return;
+        }
+        $session_id = sanitize_text_field((string) $session_id);
+        if ($session_id === '') {
+            return;
+        }
+        self::$deferred_projection_sessions[$session_id] = $channel;
+        self::register_shutdown_deferred();
+    }
+
+    private static function defer_purge_message_assets($message) {
+        if (!is_array($message)) {
+            return;
+        }
+        self::$deferred_asset_purges[] = $message;
+        self::register_shutdown_deferred();
     }
 
     /**
@@ -661,6 +709,10 @@ class PAXdesign_Message_Store {
             'message_id'  => $msg_seq,
             'deleted_by'  => $deleted_by,
             'tombstone'   => $tombstone,
+            'in_place'    => true,
+            'warn'        => strpos($tombstone, 'unsafe link') !== false
+                || strpos($tombstone, 'unsicheren Link') !== false
+                || strpos($tombstone, 'رابط غير آمن') !== false,
         );
         self::emit('session:' . $session_id, 'message_deleted', $payload, $msg_seq);
         self::emit('inbox:admins', 'message_deleted', $payload, $msg_seq);
@@ -669,15 +721,18 @@ class PAXdesign_Message_Store {
             PAXdesign_Link_Scan_Service::cancel_message_scans($session_id, $msg_seq);
         }
 
-        self::purge_message_assets($message);
-
-        self::rebuild_customer_projection($session_id, $channel);
+        self::defer_purge_message_assets($message);
+        self::defer_customer_projection_rebuild($session_id, $channel);
 
         return array(
             'ok'          => true,
             'message_id'  => $msg_seq,
             'tombstone'   => $tombstone,
             'deleted_by'  => $deleted_by,
+            'in_place'    => true,
+            'warn'        => strpos($tombstone, 'unsafe link') !== false
+                || strpos($tombstone, 'unsicheren Link') !== false
+                || strpos($tombstone, 'رابط غير آمن') !== false,
         );
     }
 

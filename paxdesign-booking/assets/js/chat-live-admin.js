@@ -143,7 +143,11 @@
           updateAdminLinkScanBadge(payload.message);
         }
       } else if (data.type === 'message_deleted' && sid === selectedSession && payload.message_id) {
-        animateAdminMessageDeletion(payload.message_id, payload.tombstone || 'This message was deleted by an employee.');
+        transformAdminMessageInPlace(
+          payload.message_id,
+          payload.tombstone || 'This message was deleted by an employee.',
+          { warn: !!payload.warn }
+        );
       } else if (data.type === 'session_update' || data.type === 'conversation_deleted') {
         loadList();
       }
@@ -232,6 +236,8 @@
     var domMsgIds = {};
     var deletedMessageIds = {};
     var deletingInProgress = {};
+    var MESSAGE_TRANSFORM_MS = 200;
+    var MESSAGE_TRANSFORM_MS = 200;
     var sessionMessageMap = {};
     var replyToId = 0;
     var allSessions = [];
@@ -1684,49 +1690,75 @@
       deletedMessageIds[String(messageId)] = true;
     }
 
-    function animateAdminMessageDeletion(messageId, tombstone) {
+    function transformAdminMessageInPlace(messageId, warningText, opts) {
+      opts = opts || {};
       var id = String(messageId);
       if (deletingInProgress[id] || isMessagePermanentlyDeleted(messageId)) return;
       deletingInProgress[id] = true;
       markMessagePermanentlyDeleted(messageId);
 
       var $msg = $messages.find('[data-msg-id="' + messageId + '"]');
+      if (sessionMessageMap[messageId]) {
+        sessionMessageMap[messageId] = Object.assign({}, sessionMessageMap[messageId], {
+          role: 'system',
+          content: warningText,
+          image_url: '',
+          link_scan_status: '',
+          link_scan_review_pending: '',
+          _inPlaceWarning: true
+        });
+      }
+
       if (!$msg.length) {
-        delete domMsgIds[messageId];
-        delete sessionMessageMap[messageId];
-        if (!$messages.find('[data-msg-id="deleted-' + messageId + '"]').length) {
-          appendMessageDom({ id: 'deleted-' + messageId, role: 'system', content: tombstone });
-        }
+        deletingInProgress[id] = false;
         return;
       }
+
+      $msg.addClass('pax-live-dashboard__msg--transforming');
       window.requestAnimationFrame(function () {
-        $msg.addClass('pax-live-dashboard__msg--deleting');
         window.setTimeout(function () {
-          $msg.remove();
-          delete domMsgIds[messageId];
-          delete sessionMessageMap[messageId];
-          if (!$messages.find('[data-msg-id="deleted-' + messageId + '"]').length) {
-            appendMessageDom({ id: 'deleted-' + messageId, role: 'system', content: tombstone });
+          $msg.removeClass('pax-live-dashboard__msg--transforming pax-live-dashboard__msg--deleting');
+          $msg.addClass('pax-live-dashboard__msg--in-place-warning');
+          if (opts.warn) {
+            $msg.addClass('pax-live-dashboard__msg--warned');
           }
-        }, 460);
+          $msg.find('.pax-live-dashboard__msg-head .pax-live-dashboard__reply-btn, .pax-live-dashboard__delete-btn').remove();
+          $msg.find('.pax-live-dashboard__msg-quote').remove();
+          var $bubble = $msg.find('.pax-live-dashboard__msg-bubble');
+          if ($bubble.length) {
+            $bubble.text(warningText);
+          }
+          deletingInProgress[id] = false;
+        }, MESSAGE_TRANSFORM_MS);
       });
+    }
+
+    function animateAdminMessageDeletion(messageId, tombstone, opts) {
+      transformAdminMessageInPlace(messageId, tombstone, opts || {});
     }
 
     function deleteAdminMessage(messageId) {
       if (!selectedSession || !messageId || currentHandler !== 'admin') return;
       if (!window.confirm('Diese Nachricht endgültig löschen? Sie wird für alle Teilnehmer entfernt.')) return;
+      var tombstone = 'This message was deleted by an employee.';
+      transformAdminMessageInPlace(messageId, tombstone, {});
       ajax('paxdesign_chat_live_admin_delete_message', {
         session_id: selectedSession,
         message_id: messageId
       }).done(function (res) {
         if (!res.success) {
           alert(res.data && res.data.message ? res.data.message : 'Nachricht konnte nicht gelöscht werden.');
+          if (selectedSession) pollMessages();
           return;
         }
-        animateAdminMessageDeletion(messageId, (res.data && res.data.tombstone) || 'This message was deleted by an employee.');
-        loadList();
+        transformAdminMessageInPlace(
+          messageId,
+          (res.data && res.data.tombstone) || tombstone,
+          {}
+        );
       }).fail(function () {
         alert('Nachricht konnte nicht gelöscht werden.');
+        if (selectedSession) pollMessages();
       });
     }
 
@@ -1746,8 +1778,33 @@
       return html || '<span class="pax-live-dashboard__msg-image-only">📷 Foto</span>';
     }
 
+    function applyOptimisticLinkReview(messageId, action) {
+      var msg = sessionMessageMap[messageId];
+      if (!msg) return;
+      if (action === 'mark_safe') {
+        updateAdminLinkScanBadge(Object.assign({}, msg, {
+          link_scan_status: 'safe',
+          link_scan_system_status: 'safe',
+          link_scan_review_pending: ''
+        }));
+      } else if (action === 'mark_unsafe') {
+        updateAdminLinkScanBadge(Object.assign({}, msg, {
+          link_scan_status: 'dangerous',
+          link_scan_system_status: 'dangerous',
+          link_scan_review_pending: ''
+        }));
+      } else if (action === 'delete_warn') {
+        transformAdminMessageInPlace(
+          messageId,
+          'This message contained an unsafe link and was removed to protect you.',
+          { warn: true }
+        );
+      }
+    }
+
     function submitLinkScanReview(messageId, action) {
       if (!selectedSession || !messageId || !action || currentHandler !== 'admin') return;
+      applyOptimisticLinkReview(messageId, action);
       ajax('paxdesign_chat_live_admin_link_review', {
         session_id: selectedSession,
         message_id: messageId,
@@ -1755,17 +1812,22 @@
       }).done(function (res) {
         if (!res.success) {
           alert(res.data && res.data.message ? res.data.message : 'Review could not be applied.');
+          if (selectedSession) pollMessages();
           return;
         }
         var data = res.data || {};
         if (action === 'delete_warn') {
-          animateAdminMessageDeletion(messageId, data.tombstone || 'This message contained an unsafe link and was removed to protect you.');
+          transformAdminMessageInPlace(
+            messageId,
+            data.tombstone || 'This message contained an unsafe link and was removed to protect you.',
+            { warn: true }
+          );
         } else if (data.message) {
           updateAdminLinkScanBadge(data.message);
         }
-        loadList();
       }).fail(function () {
         alert('Review could not be applied.');
+        if (selectedSession) pollMessages();
       });
     }
 

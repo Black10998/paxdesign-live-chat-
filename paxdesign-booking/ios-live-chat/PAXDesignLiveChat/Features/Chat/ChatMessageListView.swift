@@ -192,7 +192,7 @@ private struct ChatMessageRow: View {
                 .opacity(deletingMessageIds.contains(row.message.id) ? 0 : 1)
                 .scaleEffect(deletingMessageIds.contains(row.message.id) ? 0.9 : 1, anchor: .center)
                 .blur(radius: deletingMessageIds.contains(row.message.id) ? 4 : 0)
-                .animation(.easeOut(duration: 0.46), value: deletingMessageIds.contains(row.message.id))
+                .animation(.easeOut(duration: 0.22), value: deletingMessageIds.contains(row.message.id))
                 if handler == "team", row.message.role == "admin" {
                     TeamMessageDeliveryStatus(
                         message: row.message,

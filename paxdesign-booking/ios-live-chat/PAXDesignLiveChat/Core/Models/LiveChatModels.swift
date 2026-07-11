@@ -399,6 +399,14 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         attachmentType == "link_card" && !(linkUrl ?? "").isEmpty
     }
 
+    var isInPlaceWarning: Bool {
+        attachmentType == "in_place_warning" || attachmentType == "in_place_deleted"
+    }
+
+    var isInPlaceWarnStyle: Bool {
+        attachmentType == "in_place_warning"
+    }
+
     var showsLinkScanBadge: Bool {
         guard role == "user" else { return false }
         if let status = linkScanStatus, !status.isEmpty, status != "none" { return true }
@@ -685,9 +693,10 @@ struct LinkScanReviewResponse: Codable {
     let message: LiveMessage?
     let tombstone: String?
     let messageId: Int?
+    let warn: Bool?
 
     enum CodingKeys: String, CodingKey {
-        case ok, action, message, tombstone
+        case ok, action, message, tombstone, warn
         case messageId = "message_id"
     }
 }

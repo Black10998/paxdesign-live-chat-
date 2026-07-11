@@ -3496,15 +3496,37 @@ html.paxdesign-scroll-lock body {
   color: #475569;
 }
 
-#paxdesign-booking-root .paxdesign-booking-chat-message--deleting {
+#paxdesign-booking-root .paxdesign-booking-chat-message--deleting,
+#paxdesign-booking-root .paxdesign-booking-chat-message--transforming {
   opacity: 0 !important;
-  transform: scale(0.9) translateY(6px);
-  filter: blur(4px);
-  transition: opacity 0.46s cubic-bezier(0.22, 1, 0.36, 1),
-              transform 0.46s cubic-bezier(0.22, 1, 0.36, 1),
-              filter 0.46s cubic-bezier(0.22, 1, 0.36, 1);
+  transform: scale(0.96) translateY(4px);
+  filter: blur(3px);
+  transition: opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+              filter 0.2s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
   will-change: opacity, transform, filter;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-message--in-place-warning .paxdesign-booking-chat-message-bubble {
+  background: rgba(255, 247, 237, 0.96) !important;
+  border: 1px solid rgba(234, 88, 12, 0.35);
+  color: #9a3412;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  box-shadow: none;
+  animation: pax-in-place-warning-in 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-message--in-place-warning:not(.paxdesign-booking-chat-message--warned) .paxdesign-booking-chat-message-bubble {
+  background: rgba(248, 250, 252, 0.96) !important;
+  border-color: rgba(100, 116, 139, 0.35);
+  color: #475569;
+}
+
+@keyframes pax-in-place-warning-in {
+  from { opacity: 0.35; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 #paxdesign-booking-root .paxdesign-booking-chat-message--dangerous-link .paxdesign-booking-chat-message-bubble a {
