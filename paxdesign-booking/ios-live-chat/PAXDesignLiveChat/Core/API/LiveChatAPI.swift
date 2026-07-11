@@ -511,6 +511,86 @@ final class LiveChatAPI {
         _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "team-presence", as: EmptyResponse.self)
     }
 
+    func fetchTeamManagementOverview() async throws -> TeamManagementOverview {
+        guard let url = liveAdminURL(path: "team/management/overview") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "team-management-overview", as: TeamManagementOverview.self)
+    }
+
+    func fetchTeamManagementMembers() async throws -> TeamManagementMembersResponse {
+        guard let url = liveAdminURL(path: "team/management/members") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "team-management-members", as: TeamManagementMembersResponse.self)
+    }
+
+    func addTeamManagementMember(email: String, teamRole: String, enabled: Bool = true, permissions: AdminPermissions? = nil) async throws -> TeamManagementMemberResponse {
+        guard let url = liveAdminURL(path: "team/management/members") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        var payload: [String: Any] = [
+            "email": email,
+            "team_role": teamRole,
+            "enabled": enabled,
+        ]
+        if let permissions {
+            payload["permissions"] = permissions.apiDictionary
+        }
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-management-add", as: TeamManagementMemberResponse.self)
+    }
+
+    func updateTeamManagementMember(
+        userId: Int,
+        teamRole: String? = nil,
+        enabled: Bool? = nil,
+        permissions: AdminPermissions? = nil
+    ) async throws -> TeamManagementMemberResponse {
+        guard let url = liveAdminURL(path: "team/management/members/\(userId)") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        var payload: [String: Any] = [:]
+        if let teamRole { payload["team_role"] = teamRole }
+        if let enabled { payload["enabled"] = enabled }
+        if let permissions { payload["permissions"] = permissions.apiDictionary }
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        return try await perform(authRequest(url: url, method: "PUT", body: body), endpoint: "team-management-update", as: TeamManagementMemberResponse.self)
+    }
+
+    func removeTeamManagementMember(userId: Int) async throws {
+        guard let url = liveAdminURL(path: "team/management/members/\(userId)") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        _ = try await perform(authRequest(url: url, method: "DELETE"), endpoint: "team-management-remove", as: EmptyResponse.self)
+    }
+
+    func fetchTeamManagementPolicy() async throws -> TeamContactPolicy {
+        guard let url = liveAdminURL(path: "team/management/policy") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "team-management-policy", as: TeamContactPolicy.self)
+    }
+
+    func saveTeamManagementPolicy(requireAdminApproval: Bool, requireManagerApproval: Bool) async throws -> TeamManagementPolicyResponse {
+        guard let url = liveAdminURL(path: "team/management/policy") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let payload: [String: Any] = [
+            "require_admin_approval": requireAdminApproval,
+            "require_manager_approval": requireManagerApproval,
+        ]
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        return try await perform(authRequest(url: url, method: "PUT", body: body), endpoint: "team-management-policy-save", as: TeamManagementPolicyResponse.self)
+    }
+
+    func fetchTeamManagementPendingRequests() async throws -> SessionListResponse {
+        guard let url = liveAdminURL(path: "team/management/pending-requests") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "team-management-pending", as: SessionListResponse.self)
+    }
+
     func openTeamConversation(userId: Int, requestNote: String = "") async throws -> TeamOpenResponse {
         guard let url = liveAdminURL(path: "team/sessions/open") else {
             throw LiveChatAPIError.invalidURL

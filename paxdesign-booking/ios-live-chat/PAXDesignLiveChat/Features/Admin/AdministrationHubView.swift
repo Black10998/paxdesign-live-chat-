@@ -63,17 +63,25 @@ struct AdministrationHubView: View {
             }
 
             Section(L10n.AdminManagement) {
-                if canManageTeamPermissions {
+                if auth.profile?.isSuperAdmin == true {
                     NavigationLink {
-                        StaffManagementView()
+                        TeamManagementHubView()
                     } label: {
-                        Label(L10n.AdminEmployeeManagement, systemImage: "person.2.badge.gearshape")
+                        Label(L10n.AdminTeamManagement, systemImage: "person.3.sequence.fill")
                     }
-                }
-                NavigationLink {
-                    TeamMessagesHubView()
-                } label: {
-                    Label(L10n.AdminTeamManagement, systemImage: "person.3.sequence")
+                } else {
+                    if canManageTeamPermissions {
+                        NavigationLink {
+                            StaffManagementView()
+                        } label: {
+                            Label(L10n.AdminEmployeeManagement, systemImage: "person.2.badge.gearshape")
+                        }
+                    }
+                    NavigationLink {
+                        TeamMessagesHubView()
+                    } label: {
+                        Label(L10n.AdminTeamManagement, systemImage: "person.3.sequence")
+                    }
                 }
                 if canManageCustomers {
                     NavigationLink {
@@ -169,13 +177,17 @@ struct AdministrationHubView: View {
     }
 
     private func loadStaffCount() async {
-        guard canManageTeamPermissions, let api = auth.api else {
+        guard let api = auth.api else {
             isLoadingStaff = false
             return
         }
         isLoadingStaff = true
         defer { isLoadingStaff = false }
-        if let response = try? await api.fetchStaff() {
+        if auth.profile?.isSuperAdmin == true,
+           let overview = try? await api.fetchTeamManagementOverview() {
+            staffCount = overview.enabledMembers
+        } else if canManageTeamPermissions,
+                  let response = try? await api.fetchStaff() {
             staffCount = response.staff.filter(\.enabled).count
         }
     }

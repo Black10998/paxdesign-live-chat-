@@ -640,7 +640,7 @@ private struct TeamContactRow: View {
                 if isOpening {
                     ProgressView()
                 } else {
-                    Image(systemName: "message.fill")
+                    Image(systemName: member.requiresEdRequest ? "paperplane" : "message.fill")
                         .foregroundStyle(roleTint)
                 }
             }

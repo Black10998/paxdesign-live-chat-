@@ -374,12 +374,20 @@ struct TeamComposeView: View {
             }
 
             if let selectedMember {
-                Section("Request note") {
-                    TextField("Optional message for the request", text: $requestNote, axis: .vertical)
-                        .lineLimit(2...4)
-                    Text(selectedMember.isExecutive
-                         ? "The Executive Director must approve before messaging begins."
-                         : "This contact may require approval before messaging begins.")
+                Section(selectedMember.requiresEdRequest ? "Conversation request" : "Request note") {
+                    TextField(
+                        selectedMember.requiresEdRequest
+                            ? "Message for the Executive Director"
+                            : "Optional message for the request",
+                        text: $requestNote,
+                        axis: .vertical
+                    )
+                    .lineLimit(2...4)
+                    Text(selectedMember.requiresEdRequest
+                         ? "You cannot message the Executive Director directly. Submit a request and wait for approval."
+                         : (selectedMember.requiresContactRequest
+                            ? "This contact may require approval before messaging begins."
+                            : "You can start messaging once the conversation opens."))
                         .font(.caption)
                         .foregroundStyle(PAXTheme.textSecondary)
                 }
@@ -502,7 +510,7 @@ private struct StaffComposeRow: View {
                 if isOpening {
                     PAXInlineLoader(size: 18)
                 } else {
-                    Image(systemName: member.isExecutive ? "paperplane" : "message.fill")
+                    Image(systemName: member.requiresEdRequest ? "paperplane" : "message.fill")
                         .foregroundStyle(roleTint)
                 }
             }
