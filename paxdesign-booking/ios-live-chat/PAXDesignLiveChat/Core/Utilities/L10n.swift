@@ -84,6 +84,22 @@ enum L10n {
     static var CommonClose: String { t("common.close") }
     static var CommonDecline: String { t("common.decline") }
     static var CommonDelete: String { t("common.delete") }
+    static var CommonOK: String { t("common.ok") }
+    static var CommonInactive: String { t("common.inactive") }
+    static var CommonRemove: String { t("common.remove") }
+    static var CommonAdd: String { t("common.add") }
+    static var CommonSend: String { t("common.send") }
+    static var CommonBack: String { t("common.back") }
+    static var CommonSkip: String { t("common.skip") }
+    static var CommonFinish: String { t("common.finish") }
+    static var CommonDone: String { t("common.done") }
+    static var CommonCopy: String { t("common.copy") }
+    static var CommonShare: String { t("common.share") }
+    static var CommonReply: String { t("common.reply") }
+    static var CommonFieldDisplayName: String { t("common.field_display_name") }
+    static var CommonFieldEmail: String { t("common.field_email") }
+    static var CommonFieldPhone: String { t("common.field_phone") }
+    static var CommonFieldNotes: String { t("common.field_notes") }
     static var CommonLater: String { t("common.later") }
     static var CommonNext: String { t("common.next") }
     static var CommonOnline: String { t("common.online") }
@@ -162,6 +178,7 @@ enum L10n {
     static var SettingsSecurity: String { t("settings.security") }
     static var SettingsSendSound: String { t("settings.send_sound") }
     static var SettingsSignOut: String { t("settings.sign_out") }
+    static var SettingsSignOutMessage: String { t("settings.sign_out_message") }
     static var SettingsSound: String { t("settings.sound") }
     static var SettingsTestRingtone: String { t("settings.test_ringtone") }
     static var SettingsTitle: String { t("settings.title") }
@@ -268,6 +285,41 @@ enum L10n {
     static var TeamHubConversations: String { t("team.hub.conversations") }
     static var TeamHubEmpty: String { t("team.hub.empty") }
     static var TeamHubEmptyHint: String { t("team.hub.empty_hint") }
+    static var TeamPendingRequests: String { t("team.pending_requests") }
+    static var TeamStartConversation: String { t("team.start_conversation") }
+    static var TeamSectionLeadership: String { t("team.section_leadership") }
+    static var TeamActionAccept: String { t("team.action_accept") }
+    static var TeamActionDecline: String { t("team.action_decline") }
+    static var TeamActionApprove: String { t("team.action_approve") }
+    static var TeamComposeSectionEdRequest: String { t("team.compose_section_ed_request") }
+    static var TeamComposeSectionRequestNote: String { t("team.compose_section_request_note") }
+    static var TeamComposePlaceholderEd: String { t("team.compose_placeholder_ed") }
+    static var TeamComposePlaceholderRequest: String { t("team.compose_placeholder_request") }
+    static var TeamComposeHintEd: String { t("team.compose_hint_ed") }
+    static var TeamComposeHintApprovalRequired: String { t("team.compose_hint_approval_required") }
+    static var TeamComposeHintOpen: String { t("team.compose_hint_open") }
+    static var TeamBannerReviewRequest: String { t("team.banner_review_request") }
+    static var TeamBannerLockedMessaging: String { t("team.banner_locked_messaging") }
+    static var TeamPresenceTyping: String { t("team.presence_typing") }
+    static var TeamPresenceRequestPending: String { t("team.presence_request_pending") }
+    static var TeamPresenceOnline: String { t("team.presence_online") }
+    static var TeamPresenceOffline: String { t("team.presence_offline") }
+    static func TeamPresenceLastSeen(_ label: String) -> String {
+        String(format: String(localized: "team.presence_last_seen"), label)
+    }
+    static var TeamContextRemoveFromList: String { t("team.context_remove_from_list") }
+    static var RoleExecutiveDirector: String { t("role.executive_director") }
+    static var RoleAdministrator: String { t("role.administrator") }
+    static var RoleSeniorStaff: String { t("role.senior_staff") }
+    static var RoleStaffMember: String { t("role.staff_member") }
+    static var RoleTeamMember: String { t("role.team_member") }
+    static var LoadingTeamConversations: String { t("loading.team_conversations") }
+    static var LoadingContacts: String { t("loading.contacts") }
+    static var LoadingTeamManagement: String { t("loading.team_management") }
+    static var LoadingOverview: String { t("loading.overview") }
+    static var LoadingTeam: String { t("loading.team") }
+    static var LoadingTeamList: String { t("loading.team_list") }
+    static var LoadingAdministration: String { t("loading.administration") }
     static var ProfileTitle: String { t("profile.title") }
     static var ProfileAccountInfo: String { t("profile.account_info") }
     static var ProfilePermissions: String { t("profile.permissions") }
@@ -288,6 +340,44 @@ enum L10n {
     static var AdminActivityTeam: String { t("admin.activity_team") }
     static var AdminManagement: String { t("admin.management") }
     static var AdminTeamManagement: String { t("admin.team_management") }
+    static var AdminTeamManagementSubtitle: String { t("admin.team_management_subtitle") }
+    static var AdminAccessDeniedTitle: String { t("admin.access_denied_title") }
+    static var AdminAccessDeniedSubtitle: String { t("admin.access_denied_subtitle") }
+    static var AdminSectionOverview: String { t("admin.section_overview") }
+    static var AdminOverviewEd: String { t("admin.overview_ed") }
+    static var AdminOverviewMembers: String { t("admin.overview_members") }
+    static var AdminOverviewActive: String { t("admin.overview_active") }
+    static var AdminOverviewPending: String { t("admin.overview_pending") }
+    static var AdminSectionHierarchy: String { t("admin.section_hierarchy") }
+    static var AdminSectionTeamRoster: String { t("admin.section_team_roster") }
+    static var AdminConfirmRemoveMember: String { t("admin.confirm_remove_member") }
+    static var AdminSectionAddMember: String { t("admin.section_add_member") }
+    static var AdminFieldWordpressEmail: String { t("admin.field_wordpress_email") }
+    static var AdminAddMemberHint: String { t("admin.add_member_hint") }
+    static var AdminSectionContactPolicy: String { t("admin.section_contact_policy") }
+    static var AdminPolicyRequireAdminApproval: String { t("admin.policy_require_admin_approval") }
+    static var AdminPolicyRequireManagerApproval: String { t("admin.policy_require_manager_approval") }
+    static var AdminPolicyEdMessaging: String { t("admin.policy_ed_messaging") }
+    static var AdminPolicyRequestRequired: String { t("admin.policy_request_required") }
+    static var AdminPolicyEdHint: String { t("admin.policy_ed_hint") }
+    static var AdminSectionConversations: String { t("admin.section_conversations") }
+    static var AdminTeamMessagesInbox: String { t("admin.team_messages_inbox") }
+    static var AdminMemberRole: String { t("admin.member_role") }
+    static var AdminSectionPermissions: String { t("admin.section_permissions") }
+    static var AdminEditMemberTitle: String { t("admin.edit_member_title") }
+    static var AdminCustomerProfiles: String { t("admin.customer_profiles") }
+    static var PermissionViewChats: String { t("permission.view_chats") }
+    static var PermissionReplyChats: String { t("permission.reply_chats") }
+    static var PermissionAIAssistant: String { t("permission.ai_assistant") }
+    static var PermissionSendImages: String { t("permission.send_images") }
+    static var PermissionSettings: String { t("permission.settings") }
+    static var PermissionRatings: String { t("permission.ratings") }
+    static var PermissionManageTeam: String { t("permission.manage_team") }
+    static var PermissionSecurity: String { t("permission.security") }
+    static var PermissionTeamPermissions: String { t("permission.team_permissions") }
+    static var PermissionCustomerProfiles: String { t("permission.customer_profiles") }
+    static var PermissionAssignTasks: String { t("permission.assign_tasks") }
+    static var PermissionHubProfile: String { t("permission.hub_profile") }
     static var AdminEmployeeManagement: String { t("admin.employee_management") }
     static var AdminPermissionsOverview: String { t("admin.permissions_overview") }
     static var AdminSettings: String { t("admin.settings") }
@@ -426,6 +516,8 @@ enum L10n {
     static var NotifyNewMessageBody: String { t("notify.new_message.body") }
     static var NotifyTeamMessageTitle: String { t("notify.team_message.title") }
     static var NotifyTeamMessageBody: String { t("notify.team_message.body") }
+    static var NotifyTeamRequestTitle: String { t("notify.team_request_title") }
+    static var NotifyTeamRequestBody: String { t("notify.team_request_body") }
     static var NotifyAIAttentionTitle: String { t("notify.ai_attention.title") }
     static var NotifyAIAttentionBody: String { t("notify.ai_attention.body") }
     static var NotifyCustomerWaitingTitle: String { t("notify.customer_waiting.title") }
@@ -444,4 +536,228 @@ enum L10n {
     static var DashboardActivityFeed: String { t("dashboard.activity_feed") }
     static var DashboardActivityEmpty: String { t("dashboard.activity_empty") }
     static var DashboardActivityRealtime: String { t("dashboard.activity_realtime") }
+
+    // MARK: - Team Chat (additional)
+    static var TeamContextAcceptRequest: String { t("team.context_accept_request") }
+    static var TeamContextDeclineRequest: String { t("team.context_decline_request") }
+    static var TeamContextPinConversation: String { t("team.context_pin_conversation") }
+    static var TeamContextDeleteForAll: String { t("team.context_delete_for_all") }
+    static var TeamContextConversationOptions: String { t("team.context_conversation_options") }
+    static var TeamDeleteEveryoneTitle: String { t("team.delete_everyone_title") }
+    static var TeamDeleteRemoveTitle: String { t("team.delete_remove_title") }
+    static var TeamDeleteConfirmAll: String { t("team.delete_confirm_all") }
+    static var TeamDeleteConfirmRemove: String { t("team.delete_confirm_remove") }
+    static var TeamDeleteMessageAll: String { t("team.delete_message_all") }
+    static var TeamDeleteMessageRemove: String { t("team.delete_message_remove") }
+    static var TeamDeleteFeedbackTitle: String { t("team.delete_feedback_title") }
+    static var TeamDeleteFailed: String { t("team.delete_failed") }
+    static var TeamLockedConversation: String { t("team.locked_conversation") }
+    static var TeamWaitingApproval: String { t("team.waiting_approval") }
+
+    // MARK: - Chat (additional)
+    static var ChatOverviewTopic: String { t("chat.overview_topic") }
+    static var ChatOverviewSession: String { t("chat.overview_session") }
+    static var ChatOverviewMessages: String { t("chat.overview_messages") }
+    static var ChatOverviewUpdated: String { t("chat.overview_updated") }
+    static var ChatOverviewAccessibility: String { t("chat.overview_accessibility") }
+    static var ChatPhotoLibrary: String { t("chat.photo_library") }
+    static var ChatCamera: String { t("chat.camera") }
+    static var ChatLoadingImage: String { t("chat.loading_image") }
+    static var ChatImageCaptionPlaceholder: String { t("chat.image_caption_placeholder") }
+    static var ChatSendImageTitle: String { t("chat.send_image_title") }
+
+    // MARK: - Staff (additional)
+    static var StaffManagementHint: String { t("staff.management_hint") }
+    static var StaffNoneConfigured: String { t("staff.none_configured") }
+    static var StaffRemoveConfirmMessage: String { t("staff.remove_confirm_message") }
+    static var StaffOnboardingComplete: String { t("staff.onboarding_complete") }
+    static var StaffOnboardingPending: String { t("staff.onboarding_pending") }
+    static var StaffFieldAvatarUrl: String { t("staff.field_avatar_url") }
+    static var StaffFieldPosition: String { t("staff.field_position") }
+    static var StaffNewPasswordPlaceholder: String { t("staff.new_password_placeholder") }
+    static var StaffForceLogout: String { t("staff.force_logout") }
+    static var StaffForceLogoutMessage: String { t("staff.force_logout_message") }
+    static var StaffForceLogoutConfirm: String { t("staff.force_logout_confirm") }
+
+    // MARK: - Device Management
+    static var DeviceLoading: String { t("device.loading") }
+    static var DeviceNoneTitle: String { t("device.none_title") }
+    static var DeviceNoneBody: String { t("device.none_body") }
+    static var DeviceConfirmTitle: String { t("device.confirm_title") }
+    static func DeviceConfirmApproveMessage(_ name: String) -> String {
+        String(format: String(localized: "device.confirm_approve_message"), name)
+    }
+    static var DeviceChipCurrent: String { t("device.chip_current") }
+    static var DeviceChipOffline: String { t("device.chip_offline") }
+    static var DeviceChipApproved: String { t("device.chip_approved") }
+    static var DeviceChipNotApproved: String { t("device.chip_not_approved") }
+    static var DeviceMetaModel: String { t("device.meta_model") }
+    static var DeviceMetaSystem: String { t("device.meta_system") }
+    static var DeviceMetaApp: String { t("device.meta_app") }
+    static var DeviceMetaFirstLogin: String { t("device.meta_first_login") }
+    static var DeviceMetaLastActive: String { t("device.meta_last_active") }
+    static var DeviceMetaIp: String { t("device.meta_ip") }
+    static var DeviceMetaLocation: String { t("device.meta_location") }
+    static var DeviceStatusRevoked: String { t("device.status_revoked") }
+    static var DeviceStatusLive: String { t("device.status_live") }
+    static var DeviceActionApprove: String { t("device.action_approve") }
+    static var DeviceActionRevoke: String { t("device.action_revoke") }
+    static var DeviceRevokeMessage: String { t("device.revoke_message") }
+    static var DeviceRevokeConfirm: String { t("device.revoke_confirm") }
+
+    // MARK: - Customer Profiles
+    static var CustomerManagementHint: String { t("customer.management_hint") }
+    static var CustomerLoading: String { t("customer.loading") }
+    static var CustomerNoneFound: String { t("customer.none_found") }
+    static var CustomerSection: String { t("customer.section") }
+    static var CustomerSearchPrompt: String { t("customer.search_prompt") }
+    static var CustomerTitle: String { t("customer.title") }
+    static var CustomerDefaultName: String { t("customer.default_name") }
+    static var CustomerEditSectionSession: String { t("customer.edit_section_session") }
+    static var CustomerEditFieldSessionId: String { t("customer.edit_field_session_id") }
+    static var CustomerEditSectionContact: String { t("customer.edit_section_contact") }
+    static var CustomerEditFieldCompany: String { t("customer.edit_field_company") }
+    static var CustomerEditSectionVisible: String { t("customer.edit_section_visible") }
+    static var CustomerEditShowEmail: String { t("customer.edit_show_email") }
+    static var CustomerEditShowPhone: String { t("customer.edit_show_phone") }
+    static var CustomerEditShowCompany: String { t("customer.edit_show_company") }
+    static var CustomerEditShowNotes: String { t("customer.edit_show_notes") }
+    static var CustomerEditTitle: String { t("customer.edit_title") }
+
+    // MARK: - Dashboard (additional)
+    static var DashboardLoading: String { t("dashboard.loading") }
+    static func DashboardTourStepOf(_ step: Int, _ total: Int) -> String {
+        String(format: String(localized: "dashboard.tour_step_of"), step, total)
+    }
+    static var DashboardTourSearchTitle: String { t("dashboard.tour.search_title") }
+    static var DashboardTourSearchDesc: String { t("dashboard.tour.search_desc") }
+    static var DashboardTourLiveTitle: String { t("dashboard.tour.live_title") }
+    static var DashboardTourLiveDesc: String { t("dashboard.tour.live_desc") }
+    static var DashboardTourRequestsTitle: String { t("dashboard.tour.requests_title") }
+    static var DashboardTourRequestsDesc: String { t("dashboard.tour.requests_desc") }
+    static var DashboardTourNotificationsTitle: String { t("dashboard.tour.notifications_title") }
+    static var DashboardTourNotificationsDesc: String { t("dashboard.tour.notifications_desc") }
+    static var DashboardTourLanguageTitle: String { t("dashboard.tour.language_title") }
+    static var DashboardTourLanguageDesc: String { t("dashboard.tour.language_desc") }
+    static var DashboardTourProfileTitle: String { t("dashboard.tour.profile_title") }
+    static var DashboardTourProfileDesc: String { t("dashboard.tour.profile_desc") }
+    static var DashboardTourDevicesTitle: String { t("dashboard.tour.devices_title") }
+    static var DashboardTourDevicesDesc: String { t("dashboard.tour.devices_desc") }
+    static var DashboardTourAdminTitle: String { t("dashboard.tour.admin_title") }
+    static var DashboardTourAdminDesc: String { t("dashboard.tour.admin_desc") }
+
+    // MARK: - Onboarding
+    static var OnboardingWelcomeTitle: String { t("onboarding.welcome_title") }
+    static var OnboardingWelcomeSubtitle: String { t("onboarding.welcome_subtitle") }
+    static var OnboardingChatsTitle: String { t("onboarding.chats_title") }
+    static var OnboardingChatsSubtitle: String { t("onboarding.chats_subtitle") }
+    static var OnboardingTeamTitle: String { t("onboarding.team_title") }
+    static var OnboardingTeamSubtitle: String { t("onboarding.team_subtitle") }
+    static var OnboardingLiveChatTitle: String { t("onboarding.live_chat_title") }
+    static var OnboardingLiveChatSubtitle: String { t("onboarding.live_chat_subtitle") }
+    static var OnboardingSettingsTitle: String { t("onboarding.settings_title") }
+    static var OnboardingSettingsSubtitle: String { t("onboarding.settings_subtitle") }
+    static var OnboardingNavWelcome: String { t("onboarding.nav_welcome") }
+    static var OnboardingNavSetup: String { t("onboarding.nav_setup") }
+    static var OnboardingGetStarted: String { t("onboarding.get_started") }
+    static var OnboardingStepTermsTitle: String { t("onboarding.step.terms_title") }
+    static var OnboardingStepNotificationsTitle: String { t("onboarding.step.notifications_title") }
+    static var OnboardingStepLocationTitle: String { t("onboarding.step.location_title") }
+    static var OnboardingStepPinTitle: String { t("onboarding.step.pin_title") }
+    static var OnboardingStepTermsSubtitle: String { t("onboarding.step.terms_subtitle") }
+    static var OnboardingStepNotificationsSubtitle: String { t("onboarding.step.notifications_subtitle") }
+    static var OnboardingStepLocationSubtitle: String { t("onboarding.step.location_subtitle") }
+    static var OnboardingStepPinSubtitle: String { t("onboarding.step.pin_subtitle") }
+    static func OnboardingStepBiometricSubtitle(_ label: String) -> String {
+        String(format: String(localized: "onboarding.step.biometric_subtitle"), label)
+    }
+    static var OnboardingTermsToggle: String { t("onboarding.terms_toggle") }
+    static var OnboardingPermissionHint: String { t("onboarding.permission_hint") }
+    static var OnboardingPinPlaceholder: String { t("onboarding.pin_placeholder") }
+    static var OnboardingPinConfirmPlaceholder: String { t("onboarding.pin_confirm_placeholder") }
+    static var OnboardingPinValid: String { t("onboarding.pin_valid") }
+    static var OnboardingPinInvalid: String { t("onboarding.pin_invalid") }
+    static func OnboardingBiometricHint(_ label: String) -> String {
+        String(format: String(localized: "onboarding.biometric_hint"), label)
+    }
+    static var OnboardingCompleting: String { t("onboarding.completing") }
+    static var OnboardingStartApp: String { t("onboarding.start_app") }
+    static func OnboardingActivateBiometric(_ label: String) -> String {
+        String(format: String(localized: "onboarding.activate_biometric"), label)
+    }
+    static var OnboardingSkipBiometric: String { t("onboarding.skip_biometric") }
+    static var OnboardingErrorTerms: String { t("onboarding.error_terms") }
+    static var OnboardingErrorPin: String { t("onboarding.error_pin") }
+    static var OnboardingErrorPinRequired: String { t("onboarding.error_pin_required") }
+
+    // MARK: - Sound Settings (additional)
+    static var SoundMessageTones: String { t("sound.message_tones") }
+    static var SoundToneMessages: String { t("sound.tone_messages") }
+    static var SoundToneLiveRequest: String { t("sound.tone_live_request") }
+    static var SoundToneAiAlert: String { t("sound.tone_ai_alert") }
+    static var SoundToneSend: String { t("sound.tone_send") }
+    static var SoundToneTyping: String { t("sound.tone_typing") }
+    static var SoundTestLiveRequest: String { t("sound.test_live_request") }
+    static var SoundTestMessage: String { t("sound.test_message") }
+    static var SoundTestAiAlert: String { t("sound.test_ai_alert") }
+    static var SoundTestSend: String { t("sound.test_send") }
+    static var SoundTestTyping: String { t("sound.test_typing") }
+
+    // MARK: - Extended Settings (additional)
+    static var SettingsResetPhotoMessage: String { t("settings.reset_photo_message") }
+    static var SettingsResetOnboarding: String { t("settings.reset_onboarding") }
+    static var SettingsResetOnboardingMessage: String { t("settings.reset_onboarding_message") }
+    static var SettingsResetOnboardingConfirm: String { t("settings.reset_onboarding_confirm") }
+    static var SettingsOnboardingSection: String { t("settings.onboarding_section") }
+    static var SettingsOnboardingFooter: String { t("settings.onboarding_footer") }
+    static var SettingsOnboardingResetDone: String { t("settings.onboarding_reset_done") }
+    static var SettingsRestartTour: String { t("settings.restart_tour") }
+    static var SettingsTourResetMessage: String { t("settings.tour_reset_message") }
+    static var SettingsTourSection: String { t("settings.tour_section") }
+    static var SettingsTourFooter: String { t("settings.tour_footer") }
+
+    // MARK: - Legal / About (short labels)
+    static var LegalAppLockLabel: String { t("legal.app_lock_label") }
+    static var LegalAppLockFooter: String { t("legal.app_lock_footer") }
+    static var LegalSecuritySection: String { t("legal.security_section") }
+    static var LegalPrivacyLinkTitle: String { t("legal.privacy_link_title") }
+    static var LegalTermsLinkTitle: String { t("legal.terms_link_title") }
+    static var LegalDataHandlingTitle: String { t("legal.data_handling_title") }
+    static var LegalHelpTitle: String { t("legal.help_title") }
+    static var AboutVersionLabel: String { t("about.version_label") }
+    static var AboutWebsiteLabel: String { t("about.website_label") }
+    static var AboutManufacturerLabel: String { t("about.manufacturer_label") }
+    static var AboutSecurityLabel: String { t("about.security_label") }
+    static var AboutPushTitle: String { t("about.push_title") }
+    static var AboutPushSubtitle: String { t("about.push_subtitle") }
+    static var AboutLiveAgentTitle: String { t("about.live_agent_title") }
+    static var AboutLiveAgentSubtitle: String { t("about.live_agent_subtitle") }
+    static var AboutAiTitle: String { t("about.ai_title") }
+    static var AboutAiSubtitle: String { t("about.ai_subtitle") }
+    static var AboutEnterpriseTitle: String { t("about.enterprise_title") }
+    static var AboutEnterpriseSubtitle: String { t("about.enterprise_subtitle") }
+
+    // MARK: - Incoming (additional)
+    static var LiveDecline: String { t("live.decline") }
+    static var LiveAccept: String { t("live.accept") }
+
+    // MARK: - Push actions
+    static var PushActionAccept: String { t("push.action_accept") }
+    static var PushActionDecline: String { t("push.action_decline") }
+
+    // MARK: - Analytics
+    static var AnalyticsSevenDay: String { t("analytics.seven_day") }
+    static var AnalyticsTotal: String { t("analytics.total") }
+    static var AnalyticsPeak: String { t("analytics.peak") }
+    static var AnalyticsAvgPerDay: String { t("analytics.avg_per_day") }
+    static var AnalyticsRingTotal: String { t("analytics.ring_total") }
+
+    // MARK: - Shell
+    static var ShellSelected: String { t("shell.selected") }
+
+    // MARK: - Profile (additional)
+    static var ProfileHubDisplayNamePlaceholder: String { t("profile.hub_display_name_placeholder") }
+    static var ProfileHubSave: String { t("profile.hub_save") }
+    static var ProfileHubSection: String { t("profile.hub_section") }
+    static var ProfileHubFooter: String { t("profile.hub_footer") }
 }

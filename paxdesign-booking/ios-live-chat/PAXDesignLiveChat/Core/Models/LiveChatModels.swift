@@ -704,26 +704,20 @@ struct AdminProfile: Codable {
     }
 
     var displayEmail: String {
-        PrivacyMask.email(email, revealFull: isSuperAdmin)
+        ""
     }
 
     var displayName: String {
         let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
         if !cleaned.isEmpty { return cleaned }
-        if let username = normalizedUsername, !username.isEmpty { return username }
-        let cleanedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !cleanedEmail.isEmpty { return cleanedEmail }
+        if let username = normalizedUsername, !username.isEmpty, !username.contains("@") {
+            return username
+        }
         return L10n.CommonAdministrator
     }
 
     var displayUsernameIfDistinct: String? {
-        guard let username = normalizedUsername, !username.isEmpty else { return nil }
-        let cleanedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanedEmail.isEmpty else {
-            return PrivacyMask.email(username, revealFull: isSuperAdmin)
-        }
-        guard username.caseInsensitiveCompare(cleanedEmail) != .orderedSame else { return nil }
-        return PrivacyMask.email(username, revealFull: isSuperAdmin)
+        nil
     }
 
     private var normalizedUsername: String? {
@@ -813,13 +807,19 @@ struct StaffMember: Codable, Identifiable {
 
     var displayRoleLabel: String {
         if let roleLabel, !roleLabel.isEmpty { return roleLabel }
-        if isExecutive { return "Executive Director" }
-        if isAdministrator { return "Administrator" }
-        if permissions.manageUsers { return "Senior Staff" }
-        return "Staff Member"
+        if isExecutive { return L10n.RoleExecutiveDirector }
+        if isAdministrator { return L10n.RoleAdministrator }
+        if permissions.manageUsers { return L10n.RoleSeniorStaff }
+        return L10n.RoleStaffMember
     }
 
     var isOnline: Bool { presenceStatus == "online" }
+
+    var publicDisplaySubtitle: String {
+        if isExecutive { return L10n.RoleExecutiveDirector }
+        if let profileTitle, !profileTitle.isEmpty { return profileTitle }
+        return displayRoleLabel
+    }
 }
 
 struct OnboardingPermissionStatus: Codable, Equatable {
@@ -883,11 +883,11 @@ enum TeamRoleKey: String, CaseIterable, Identifiable {
 
     var label: String {
         switch self {
-        case .executiveDirector: return "Executive Director"
-        case .administrator: return "Administrator"
-        case .seniorStaff: return "Senior Staff"
-        case .staffMember: return "Staff Member"
-        case .teamMember: return "Team Member"
+        case .executiveDirector: return L10n.RoleExecutiveDirector
+        case .administrator: return L10n.RoleAdministrator
+        case .seniorStaff: return L10n.RoleSeniorStaff
+        case .staffMember: return L10n.RoleStaffMember
+        case .teamMember: return L10n.RoleTeamMember
         }
     }
 
@@ -971,4 +971,11 @@ struct TeamManagementMemberResponse: Codable {
 struct TeamManagementPolicyResponse: Codable {
     let ok: Bool?
     let policy: TeamContactPolicy
+}
+
+extension Array where Element == StaffMember {
+    func deduplicatedByUserId() -> [StaffMember] {
+        var seen = Set<Int>()
+        return filter { seen.insert($0.userId).inserted }
+    }
 }

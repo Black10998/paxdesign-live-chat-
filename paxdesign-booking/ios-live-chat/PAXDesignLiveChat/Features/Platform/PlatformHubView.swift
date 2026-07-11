@@ -108,9 +108,6 @@ struct PlatformHubView: View {
                     Text(auth.profile?.displayName ?? L10n.CommonAdministrator)
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(PAXTheme.textPrimary)
-                    Text(auth.profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
-                        .font(.subheadline)
-                        .foregroundStyle(PAXTheme.textSecondary)
                     if auth.profile?.isSuperAdmin == true {
                         Text(L10n.AccountSuperAdmin)
                             .font(.caption2.weight(.bold))
@@ -164,7 +161,8 @@ struct PlatformHubView: View {
     private var signOutSection: some View {
         Button(L10n.SettingsSignOut) {
             PAXDelete.confirm(
-                message: "Sie werden von diesem Gerät abgemeldet.",
+                title: L10n.SettingsSignOut,
+                message: L10n.SettingsSignOutMessage,
                 confirmTitle: L10n.SettingsSignOut
             ) {
                 Task {

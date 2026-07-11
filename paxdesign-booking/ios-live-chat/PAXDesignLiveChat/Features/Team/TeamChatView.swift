@@ -161,16 +161,16 @@ struct TeamChatView: View {
     }
 
     private var presenceLabel: String {
-        if thread.remoteTyping { return "Typing…" }
+        if thread.remoteTyping { return L10n.TeamPresenceTyping }
         if thread.requestStatus == "pending" {
-            return thread.canRespond ? "Request pending" : thread.requestStatusLabel
+            return thread.canRespond ? L10n.TeamPresenceRequestPending : thread.requestStatusLabel
         }
-        if thread.otherPresence == "online" { return "Online" }
+        if thread.otherPresence == "online" { return L10n.TeamPresenceOnline }
         if thread.otherLastSeen > 0,
            let label = MessageTimeFormatter.relativeUpdatedLabel(from: teamLastSeenTimestamp(thread.otherLastSeen)) {
-            return "Last seen \(label)"
+            return L10n.TeamPresenceLastSeen(label)
         }
-        return "Offline"
+        return L10n.TeamPresenceOffline
     }
 
     private func teamLastSeenTimestamp(_ unix: Int) -> String {
@@ -189,11 +189,11 @@ struct TeamChatView: View {
                 Text(thread.requestStatusLabel)
                     .font(.caption.weight(.semibold))
                 if thread.requestStatus == "pending", thread.canRespond {
-                    Text("Review and accept or decline this request.")
+                    Text(L10n.TeamBannerReviewRequest)
                         .font(.caption2)
                         .foregroundStyle(PAXTheme.textSecondary)
                 } else if !thread.canSend {
-                    Text("Messaging unlocks after approval.")
+                    Text(L10n.TeamBannerLockedMessaging)
                         .font(.caption2)
                         .foregroundStyle(PAXTheme.textSecondary)
                 }
@@ -201,12 +201,12 @@ struct TeamChatView: View {
             Spacer(minLength: 0)
             if thread.canRespond {
                 HStack(spacing: 8) {
-                    Button("Decline") {
+                    Button(L10n.TeamActionDecline) {
                         Task { await thread.respondToRequest(accept: false, auth: auth, teamCoordinator: teamCoordinator) }
                     }
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(PAXTheme.danger)
-                    Button("Accept") {
+                    Button(L10n.TeamActionAccept) {
                         Task { await thread.respondToRequest(accept: true, auth: auth, teamCoordinator: teamCoordinator) }
                     }
                     .font(.caption.weight(.semibold))
@@ -374,20 +374,20 @@ struct TeamComposeView: View {
             }
 
             if let selectedMember {
-                Section(selectedMember.requiresEdRequest ? "Conversation request" : "Request note") {
+                Section(selectedMember.requiresEdRequest ? L10n.TeamComposeSectionEdRequest : L10n.TeamComposeSectionRequestNote) {
                     TextField(
                         selectedMember.requiresEdRequest
-                            ? "Message for the Executive Director"
-                            : "Optional message for the request",
+                            ? L10n.TeamComposePlaceholderEd
+                            : L10n.TeamComposePlaceholderRequest,
                         text: $requestNote,
                         axis: .vertical
                     )
                     .lineLimit(2...4)
                     Text(selectedMember.requiresEdRequest
-                         ? "You cannot message the Executive Director directly. Submit a request and wait for approval."
+                         ? L10n.TeamComposeHintEd
                          : (selectedMember.requiresContactRequest
-                            ? "This contact may require approval before messaging begins."
-                            : "You can start messaging once the conversation opens."))
+                            ? L10n.TeamComposeHintApprovalRequired
+                            : L10n.TeamComposeHintOpen))
                         .font(.caption)
                         .foregroundStyle(PAXTheme.textSecondary)
                 }
@@ -395,7 +395,7 @@ struct TeamComposeView: View {
 
             if isLoading {
                 Section {
-                    PAXScreenLoadingStack(status: "Teamliste wird geladen", rowCount: 4)
+                    PAXScreenLoadingStack(status: L10n.LoadingTeamList, rowCount: 4)
                 }
             } else if let errorMessage {
                 Section {
@@ -413,7 +413,6 @@ struct TeamComposeView: View {
                     ForEach(filteredStaff) { member in
                         StaffComposeRow(
                             member: member,
-                            revealFullEmail: auth.profile?.isSuperAdmin == true,
                             isOpening: openingUserId == member.userId,
                             isDisabled: openingUserId != nil
                         ) {
@@ -438,7 +437,7 @@ struct TeamComposeView: View {
         defer { isLoading = false }
         do {
             let response = try await api.fetchTeamContacts()
-            staff = response.staff
+            staff = response.staff.deduplicatedByUserId()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -460,7 +459,6 @@ struct TeamComposeView: View {
 
 private struct StaffComposeRow: View {
     let member: StaffMember
-    let revealFullEmail: Bool
     let isOpening: Bool
     let isDisabled: Bool
     let action: () -> Void
@@ -497,12 +495,9 @@ private struct StaffComposeRow: View {
                                 .foregroundStyle(.purple)
                         }
                     }
-                    Text(member.displayRoleLabel)
+                    Text(member.publicDisplaySubtitle)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(roleTint)
-                    Text(PrivacyMask.email(member.email, revealFull: revealFullEmail))
-                        .font(.caption)
-                        .foregroundStyle(PAXTheme.textSecondary)
                 }
 
                 Spacer()

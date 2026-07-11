@@ -26,8 +26,6 @@ struct ProfileView: View {
             Section(L10n.ProfileAccountInfo) {
                 LabeledContent(L10n.SettingsProfile, value: profile?.displayName ?? L10n.CommonAdministrator)
                     .font(.subheadline)
-                LabeledContent(L10n.StaffWordpressEmail, value: profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
-                    .font(.subheadline)
                 LabeledContent(L10n.LoginWebsite, value: profile?.siteUrl ?? auth.siteURLString)
                     .font(.subheadline)
                 if let username = profile?.displayUsernameIfDistinct {
@@ -93,7 +91,8 @@ struct ProfileView: View {
             Section {
                 Button(L10n.SettingsSignOut) {
                     PAXDelete.confirm(
-                        message: "Sie werden von diesem Gerät abgemeldet.",
+                        title: L10n.SettingsSignOut,
+                        message: L10n.SettingsSignOutMessage,
                         confirmTitle: L10n.SettingsSignOut
                     ) {
                         Task {
