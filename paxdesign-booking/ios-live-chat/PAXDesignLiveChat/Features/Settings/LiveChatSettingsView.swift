@@ -3,9 +3,26 @@ import UIKit
 
 struct LiveChatSettingsView: View {
     @EnvironmentObject private var settings: AppSettingsStore
+    @EnvironmentObject private var auth: AuthStore
+
+    private var canManageSettings: Bool { auth.canManageSettings }
 
     var body: some View {
         List {
+            if canManageSettings {
+                Section(L10n.SettingsQuickLinksTitle) {
+                    NavigationLink {
+                        QuickLinksSettingsView()
+                    } label: {
+                        SettingsRowLabel(
+                            title: L10n.SettingsQuickLinksTitle,
+                            subtitle: L10n.SettingsQuickLinksSubtitle,
+                            systemImage: "link.badge.plus"
+                        )
+                    }
+                }
+            }
+
             Section {
                 Button(L10n.SettingsResetPrivacyBanner) {
                     settings.privacyBannerDismissed = false

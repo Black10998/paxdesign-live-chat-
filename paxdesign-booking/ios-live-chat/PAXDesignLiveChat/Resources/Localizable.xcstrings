@@ -2313,9 +2313,16 @@
     },
     "chat.link_scan.checking": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Checking link…" } },
+        "en": { "stringUnit": { "state": "translated", "value": "Scanning link…" } },
         "de": { "stringUnit": { "state": "translated", "value": "Link wird geprüft …" } },
         "ar": { "stringUnit": { "state": "translated", "value": "جارٍ فحص الرابط…" } }
+      }
+    },
+    "chat.link_scan.analyzing": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Analyzing security…" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Sicherheit wird analysiert …" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "جارٍ تحليل الأمان…" } }
       }
     },
     "chat.link_scan.safe": {
@@ -2355,9 +2362,9 @@
     },
     "chat.quick_links.empty_body": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Add quick website links in the WordPress plugin settings." } },
-        "de": { "stringUnit": { "state": "translated", "value": "Bitte im WordPress-Backend unter Einstellungen verwalten." } },
-        "ar": { "stringUnit": { "state": "translated", "value": "أضِف روابط الموقع السريعة من إعدادات إضافة ووردبريس." } }
+        "en": { "stringUnit": { "state": "translated", "value": "Add quick website links in Settings → Live Chat." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Bitte unter Einstellungen → Live-Chat verwalten." } },
+        "ar": { "stringUnit": { "state": "translated", "value": "أضِف روابط الموقع السريعة من الإعدادات → الدردشة المباشرة." } }
       }
     },
     "chat.quick_links.default_label": {
@@ -4235,6 +4242,83 @@
             "value": "سلوك الدردشة"
           }
         }
+      }
+    },
+    "settings.quick_links.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Website Links" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Website-Links" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "روابط الموقع" } }
+      }
+    },
+    "settings.quick_links.subtitle": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Add, edit, reorder" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Hinzufügen, bearbeiten, sortieren" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "إضافة وتعديل وإعادة ترتيب" } }
+      }
+    },
+    "settings.quick_links.hint": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "These links sync with your WordPress backend and appear in the chat + menu for staff." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Diese Links werden mit dem WordPress-Backend synchronisiert und erscheinen im Chat-Menü für Mitarbeiter." } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تتزامن هذه الروابط مع ووردبريس وتظهر في قائمة الدردشة للموظفين." } }
+      }
+    },
+    "settings.quick_links.section": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Configured links" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Konfigurierte Links" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الروابط المُعدّة" } }
+      }
+    },
+    "settings.quick_links.add": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Add link" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Link hinzufügen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "إضافة رابط" } }
+      }
+    },
+    "settings.quick_links.edit": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Edit link" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Link bearbeiten" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تعديل الرابط" } }
+      }
+    },
+    "settings.quick_links.empty_body": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Tap Add link to create your first quick website link." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Tippen Sie auf „Link hinzufügen“, um den ersten Schnelllink anzulegen." } },
+        "ar": { "stringUnit": { "state": "translated", "value": "اضغط على إضافة رابط لإنشاء أول رابط سريع." } }
+      }
+    },
+    "settings.quick_links.editor_details": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Link details" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Link-Details" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تفاصيل الرابط" } }
+      }
+    },
+    "settings.quick_links.field_label": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Button title" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Button-Titel" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "عنوان الزر" } }
+      }
+    },
+    "settings.quick_links.field_url": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "URL" } },
+        "de": { "stringUnit": { "state": "translated", "value": "URL" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الرابط" } }
+      }
+    },
+    "settings.quick_links.field_icon": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Icon" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Symbol" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الأيقونة" } }
       }
     },
     "settings.privacy_subtitle": {
@@ -11539,6 +11623,13 @@
             "value": "جارٍ تحميل جهات الاتصال"
           }
         }
+      }
+    },
+    "loading.quick_links": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Loading website links" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Website-Links werden geladen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "جارٍ تحميل روابط الموقع" } }
       }
     },
     "loading.team_management": {

@@ -82,6 +82,7 @@ class PAXdesign_Chat_Live {
         if ($name === '') {
             $name = $user->user_login;
         }
+        $name = self::normalize_staff_display_name($user_id, $name);
 
         $avatar_meta = trim((string) get_user_meta($user_id, 'pax_live_avatar_url', true));
         $avatar      = $avatar_meta !== '' ? esc_url_raw($avatar_meta) : get_avatar_url($user_id, array('size' => 256));
@@ -100,6 +101,55 @@ class PAXdesign_Chat_Live {
             'avatar' => $avatar,
             'role'   => sanitize_text_field($title),
         );
+    }
+
+    /**
+     * Replace generic WordPress/system placeholder names with a human identity.
+     *
+     * @param int    $user_id
+     * @param string $candidate
+     */
+    public static function normalize_staff_display_name($user_id, $candidate) {
+        $user_id   = absint($user_id);
+        $candidate = trim((string) $candidate);
+        if ($candidate === '' || $user_id <= 0) {
+            return $candidate;
+        }
+
+        $is_placeholder = (bool) preg_match('/^management\s+system/i', $candidate)
+            || (bool) preg_match('/^system\s+account/i', $candidate)
+            || strtolower($candidate) === 'administrator'
+            || strtolower($candidate) === 'admin';
+
+        if (!$is_placeholder) {
+            return $candidate;
+        }
+
+        $first = trim((string) get_user_meta($user_id, 'first_name', true));
+        $last  = trim((string) get_user_meta($user_id, 'last_name', true));
+        $full  = trim($first . ' ' . $last);
+        if ($full !== '' && !preg_match('/^management\s+system/i', $full)) {
+            return $full;
+        }
+
+        $user = get_user_by('id', $user_id);
+        if ($user && is_string($user->user_email) && strpos($user->user_email, '@') !== false) {
+            $local = strstr($user->user_email, '@', true);
+            if (is_string($local) && $local !== '') {
+                $parts = preg_split('/[._\-+]+/', $local);
+                if (is_array($parts)) {
+                    $parts = array_values(array_filter(array_map(function ($part) {
+                        $part = trim((string) $part);
+                        return $part !== '' ? ucfirst(strtolower($part)) : '';
+                    }, $parts)));
+                    if (!empty($parts)) {
+                        return implode(' ', $parts);
+                    }
+                }
+            }
+        }
+
+        return $candidate;
     }
 
     /**

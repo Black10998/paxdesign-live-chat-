@@ -233,9 +233,16 @@ class PAXdesign_Live_Chat_Mobile_API {
         ));
 
         register_rest_route(self::REST_NAMESPACE, '/live-admin/quick-links', array(
-            'methods'             => WP_REST_Server::READABLE,
-            'callback'            => array(__CLASS__, 'route_quick_links'),
-            'permission_callback' => $auth,
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array(__CLASS__, 'route_quick_links'),
+                'permission_callback' => $auth,
+            ),
+            array(
+                'methods'             => WP_REST_Server::EDITABLE,
+                'callback'            => array(__CLASS__, 'route_save_quick_links'),
+                'permission_callback' => $auth,
+            ),
         ));
 
         register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions/(?P<id>[a-zA-Z0-9_\-]+)/links', array(
@@ -857,6 +864,40 @@ class PAXdesign_Live_Chat_Mobile_API {
             : array();
         return self::respond(array(
             'quick_links' => $links,
+        ));
+    }
+
+    public static function route_save_quick_links(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_SETTINGS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
+
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+
+        $links = null;
+        if (isset($params['quick_links']) && is_array($params['quick_links'])) {
+            $links = $params['quick_links'];
+        } elseif (isset($params['links']) && is_array($params['links'])) {
+            $links = $params['links'];
+        }
+
+        if ($links === null) {
+            return new WP_Error('invalid_payload', 'quick_links array required.', array('status' => 400));
+        }
+
+        if (!class_exists('PAXdesign_Chat_Quick_Links')) {
+            return new WP_Error('unavailable', 'Quick links unavailable.', array('status' => 500));
+        }
+
+        PAXdesign_Chat_Quick_Links::save_links($links);
+
+        return self::respond(array(
+            'ok'          => true,
+            'quick_links' => PAXdesign_Chat_Quick_Links::get_links(),
         ));
     }
 
