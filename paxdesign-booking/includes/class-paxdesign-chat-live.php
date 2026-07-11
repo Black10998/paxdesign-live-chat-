@@ -698,7 +698,8 @@ class PAXdesign_Chat_Live {
 
         $content = sanitize_textarea_field($content);
         $has_image = !empty($extra['image_url']);
-        if ($content === '' && !$has_image) {
+        $has_link_card = !empty($extra['attachment_type']) && $extra['attachment_type'] === 'link_card';
+        if ($content === '' && !$has_image && !$has_link_card) {
             return null;
         }
 
@@ -716,6 +717,14 @@ class PAXdesign_Chat_Live {
         if ($has_image) {
             $extra['image_url']       = esc_url_raw($extra['image_url']);
             $extra['attachment_type'] = 'image';
+        }
+        if ($has_link_card) {
+            $extra['link_url']   = esc_url_raw((string) ($extra['link_url'] ?? ''));
+            $extra['link_label'] = sanitize_text_field((string) ($extra['link_label'] ?? ''));
+            $extra['link_icon']  = sanitize_text_field((string) ($extra['link_icon'] ?? '🔗'));
+            if ($extra['link_url'] === '' || $extra['link_label'] === '') {
+                return null;
+            }
         }
         if ($role === 'admin') {
             $sender_id = get_current_user_id();
@@ -1114,6 +1123,9 @@ class PAXdesign_Chat_Live {
         $extra['client_msg_id'] = isset($_POST['client_msg_id'])
             ? sanitize_text_field(wp_unslash($_POST['client_msg_id']))
             : '';
+        if (class_exists('PAXdesign_Link_Scanner')) {
+            $extra = PAXdesign_Link_Scanner::attach_scan_meta($content, 'user', $extra);
+        }
         $entry    = $this->append_message($session_id, 'user', $content, $extra);
         if (is_wp_error($entry)) {
             $data = $entry->get_error_data();
@@ -1281,7 +1293,12 @@ class PAXdesign_Chat_Live {
 
         $device_token = $this->device_token_from_request();
         if ($device_token !== '' && !$this->verify_session_ownership($session_id, $device_token)) {
-            wp_send_json_error(array('message' => 'Access denied'), 403);
+            $probe = $this->get_session_row($session_id);
+            $existing_hash = ($probe && isset($probe->device_token_hash)) ? (string) $probe->device_token_hash : '';
+            if ($existing_hash === '') {
+                $this->bind_session_to_device($session_id, $device_token);
+            }
+            // Customer-initiated close: allow even when token drifted (e.g. cleared storage).
         }
 
         $row = $this->get_session_row($session_id);
@@ -1383,7 +1400,11 @@ class PAXdesign_Chat_Live {
 
         $device_token = $this->device_token_from_request();
         if ($device_token !== '' && !$this->verify_session_ownership($session_id, $device_token)) {
-            wp_send_json_error(array('message' => 'Access denied'), 403);
+            $probe = $this->get_session_row($session_id);
+            $existing_hash = ($probe && isset($probe->device_token_hash)) ? (string) $probe->device_token_hash : '';
+            if ($existing_hash === '') {
+                $this->bind_session_to_device($session_id, $device_token);
+            }
         }
 
         $row = $this->get_session_row($session_id);
@@ -2586,6 +2607,50 @@ class PAXdesign_Chat_Live {
         $extra    = $reply_to > 0 ? array('reply_to' => $reply_to) : array();
         $extra['client_msg_id'] = sanitize_text_field((string) $client_msg_id);
         $entry    = $this->append_message($session_id, 'admin', $content, $extra);
+        if (is_wp_error($entry)) {
+            return $entry;
+        }
+        if (!$entry) {
+            return new WP_Error('save_failed', 'Speichern fehlgeschlagen.', array('status' => 500));
+        }
+
+        $this->clear_typing($session_id, 'admin');
+
+        return array('message' => $entry);
+    }
+
+    /**
+     * @param array<string, mixed> $link
+     * @return array<string, mixed>|WP_Error
+     */
+    public function admin_send_link_card($session_id, array $link) {
+        $session_id = $this->sanitize_session_id($session_id);
+        if ($session_id === '') {
+            return new WP_Error('invalid_session', 'Ungültige Session.', array('status' => 400));
+        }
+
+        if (!$this->is_admin_handler($session_id)) {
+            return new WP_Error('not_admin', 'Chat nicht übernommen.', array('status' => 409));
+        }
+
+        $label = sanitize_text_field((string) ($link['label'] ?? ''));
+        $url   = esc_url_raw((string) ($link['url'] ?? ''));
+        $icon  = sanitize_text_field((string) ($link['icon'] ?? '🔗'));
+        if ($label === '' || $url === '') {
+            return new WP_Error('invalid_link', 'Ungültiger Link.', array('status' => 400));
+        }
+
+        $extra = array(
+            'attachment_type' => 'link_card',
+            'link_url'        => $url,
+            'link_label'      => $label,
+            'link_icon'       => $icon,
+            'client_msg_id'   => isset($_POST['client_msg_id'])
+                ? sanitize_text_field(wp_unslash($_POST['client_msg_id']))
+                : '',
+        );
+
+        $entry = $this->append_message($session_id, 'admin', $label, $extra);
         if (is_wp_error($entry)) {
             return $entry;
         }

@@ -200,6 +200,8 @@
             $('#paxdesignChatPriceHintsWrap').toggle($(this).is(':checked'));
         });
 
+        initQuickLinksManager();
+
         // Password visibility toggle
         $(document).on('click', '.paxdesign-toggle-pass', function() {
             var $inp = $(this).siblings('input');
@@ -270,6 +272,78 @@
                 $btn.prop('disabled', false).text('Test senden');
             });
         });
+    }
+
+    function initQuickLinksManager() {
+        var $body = $('#paxdesignQuickLinksBody');
+        var $hidden = $('#paxdesign_chat_quick_links');
+        if (!$body.length || !$hidden.length) return;
+
+        function slugify(text) {
+            return String(text || '')
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '') || 'link';
+        }
+
+        function serializeQuickLinks() {
+            var links = [];
+            $body.find('tr').each(function(index) {
+                var $row = $(this);
+                var label = $.trim($row.find('.ps-quick-link-label').val());
+                var url = $.trim($row.find('.ps-quick-link-url').val());
+                if (!label || !url) return;
+                var id = $row.attr('data-link-id') || slugify(label + '-' + index);
+                links.push({
+                    id: id,
+                    label: label,
+                    url: url,
+                    icon: $.trim($row.find('.ps-quick-link-icon').val()) || '🔗',
+                    sort: index
+                });
+            });
+            $hidden.val(JSON.stringify(links));
+        }
+
+        function bindRow($row) {
+            $row.find('input').on('input change', serializeQuickLinks);
+            $row.find('.ps-quick-link-remove').on('click', function() {
+                $row.remove();
+                serializeQuickLinks();
+            });
+        }
+
+        $body.find('tr').each(function() {
+            bindRow($(this));
+        });
+
+        if ($.fn.sortable) {
+            $body.sortable({
+                handle: '.ps-quick-links-drag',
+                axis: 'y',
+                update: serializeQuickLinks
+            });
+        }
+
+        $('#paxdesignQuickLinksAdd').on('click', function() {
+            var id = 'link-' + Date.now().toString(36);
+            var $row = $(
+                '<tr data-link-id="' + id + '">' +
+                    '<td class="ps-quick-links-col-drag"><span class="ps-quick-links-drag" aria-hidden="true">⋮⋮</span></td>' +
+                    '<td><input type="text" class="ps-input ps-input--compact ps-quick-link-icon" value="🔗" maxlength="8" aria-label="Icon"></td>' +
+                    '<td><input type="text" class="ps-input ps-quick-link-label" value="" required aria-label="Bezeichnung" placeholder="z. B. Pricing"></td>' +
+                    '<td><input type="url" class="ps-input ps-quick-link-url" value="" required aria-label="URL" placeholder="https://paxdesign.at/pricing"></td>' +
+                    '<td class="ps-quick-links-col-actions"><button type="button" class="ps-btn ps-btn-ghost ps-quick-link-remove" aria-label="Link entfernen">Entfernen</button></td>' +
+                '</tr>'
+            );
+            $body.append($row);
+            bindRow($row);
+            $row.find('.ps-quick-link-label').trigger('focus');
+            serializeQuickLinks();
+        });
+
+        $('#paxdesignSettingsForm').on('submit', serializeQuickLinks);
+        serializeQuickLinks();
     }
 
 })(jQuery);

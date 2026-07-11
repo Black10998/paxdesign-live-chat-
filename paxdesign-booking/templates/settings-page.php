@@ -60,6 +60,7 @@ $chat_email         = get_option('paxdesign_chat_email', '');
 $chat_primary       = get_option('paxdesign_chat_primary_services', '');
 $chat_cta_text      = get_option('paxdesign_chat_cta_text', '');
 $chat_price_hints   = get_option('paxdesign_chat_price_hints', '');
+$chat_quick_links   = class_exists('PAXdesign_Chat_Quick_Links') ? PAXdesign_Chat_Quick_Links::get_links() : array();
 ?>
 <div class="wrap pax-settings">
 
@@ -258,6 +259,39 @@ $chat_price_hints   = get_option('paxdesign_chat_price_hints', '');
               <label class="ps-label" for="paxdesign_live_chat_agent_bio">Profil-Text (Popup)</label>
               <textarea id="paxdesign_live_chat_agent_bio" name="paxdesign_live_chat_agent_bio" class="ps-input" rows="3"
                         placeholder="Kurzbeschreibung für das Profil-Popup …"><?php echo esc_textarea($live_agent_bio); ?></textarea>
+            </div>
+
+            <div class="ps-divider"><span>Website Quick Links</span></div>
+            <h3 class="ps-subheading">Schnell-Links für Live-Chat</h3>
+            <p class="ps-hint ps-hint--block">Vordefinierte Website-Seiten, die Mitarbeiter per „+“-Button an Kunden senden können. Reihenfolge per Drag &amp; Drop ändern.</p>
+            <input type="hidden" name="paxdesign_chat_quick_links" id="paxdesign_chat_quick_links"
+                   value="<?php echo esc_attr(wp_json_encode($chat_quick_links)); ?>">
+            <div class="ps-quick-links-toolbar">
+              <button type="button" class="ps-btn ps-btn-secondary" id="paxdesignQuickLinksAdd">Link hinzufügen</button>
+            </div>
+            <div class="ps-quick-links-table-wrap">
+              <table class="ps-quick-links-table" id="paxdesignQuickLinksTable" aria-label="Website Quick Links">
+                <thead>
+                  <tr>
+                    <th scope="col" class="ps-quick-links-col-drag" aria-label="Reihenfolge"></th>
+                    <th scope="col">Icon</th>
+                    <th scope="col">Bezeichnung</th>
+                    <th scope="col">URL</th>
+                    <th scope="col" class="ps-quick-links-col-actions" aria-label="Aktionen"></th>
+                  </tr>
+                </thead>
+                <tbody id="paxdesignQuickLinksBody">
+                  <?php foreach ($chat_quick_links as $link) : ?>
+                    <tr data-link-id="<?php echo esc_attr($link['id']); ?>">
+                      <td class="ps-quick-links-col-drag"><span class="ps-quick-links-drag" aria-hidden="true">⋮⋮</span></td>
+                      <td><input type="text" class="ps-input ps-input--compact ps-quick-link-icon" value="<?php echo esc_attr($link['icon']); ?>" maxlength="8" aria-label="Icon"></td>
+                      <td><input type="text" class="ps-input ps-quick-link-label" value="<?php echo esc_attr($link['label']); ?>" required aria-label="Bezeichnung"></td>
+                      <td><input type="url" class="ps-input ps-quick-link-url" value="<?php echo esc_attr($link['url']); ?>" required aria-label="URL"></td>
+                      <td class="ps-quick-links-col-actions"><button type="button" class="ps-btn ps-btn-ghost ps-quick-link-remove" aria-label="Link entfernen">Entfernen</button></td>
+                    </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
             </div>
 
             <?php if (!$smtp_ok) : ?>

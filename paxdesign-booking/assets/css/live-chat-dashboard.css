@@ -3059,3 +3059,216 @@ body.pax-live-agent-profile-open {
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Quick website links + URL scan badges (staff console) ── */
+.pax-live-dashboard__quick-links {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(90, 122, 0, 0.28);
+  border-radius: 12px;
+  background: rgba(90, 122, 0, 0.08);
+  color: #5a7a00;
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.pax-live-dashboard__quick-links:hover,
+.pax-live-dashboard__quick-links:focus-visible {
+  background: rgba(90, 122, 0, 0.14);
+  border-color: rgba(90, 122, 0, 0.42);
+  outline: none;
+}
+
+.pax-live-dashboard__quick-links[hidden] {
+  display: none !important;
+}
+
+.pax-live-quick-links-modal[hidden] {
+  display: none !important;
+}
+
+.pax-live-quick-links-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.pax-live-quick-links-modal__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+}
+
+.pax-live-quick-links-modal__card {
+  position: relative;
+  z-index: 1;
+  width: min(420px, 100%);
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  padding: 18px 18px 14px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+}
+
+.pax-live-quick-links-modal__title {
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.pax-live-quick-links-modal__hint {
+  margin: 0 0 14px;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.pax-live-quick-links-modal__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pax-live-quick-links-modal__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s ease;
+}
+
+.pax-live-quick-links-modal__item:hover,
+.pax-live-quick-links-modal__item:focus-visible {
+  border-color: rgba(90, 122, 0, 0.35);
+  background: rgba(90, 122, 0, 0.06);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.pax-live-quick-links-modal__icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.pax-live-quick-links-modal__text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pax-live-quick-links-modal__label {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.pax-live-quick-links-modal__url {
+  font-size: 0.74rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pax-live-quick-links-modal__empty {
+  margin: 0;
+  padding: 12px 0;
+  font-size: 0.84rem;
+  color: #64748b;
+}
+
+.pax-live-quick-links-modal__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pax-live-dashboard__link-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(90, 122, 0, 0.14), rgba(90, 122, 0, 0.05));
+  border: 1px solid rgba(90, 122, 0, 0.28);
+  color: #1e293b;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.pax-live-dashboard__link-card:hover,
+.pax-live-dashboard__link-card:focus-visible {
+  border-color: rgba(90, 122, 0, 0.45);
+  outline: none;
+}
+
+.pax-live-dashboard__link-card-icon {
+  font-size: 1.1rem;
+}
+
+.pax-live-dashboard__link-scan {
+  display: block;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.pax-live-dashboard__link-scan--checking {
+  background: rgba(148, 163, 184, 0.16);
+  color: #475569;
+}
+
+.pax-live-dashboard__link-scan--safe {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
+
+.pax-live-dashboard__link-scan--suspicious {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.pax-live-dashboard__link-scan--dangerous {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+}

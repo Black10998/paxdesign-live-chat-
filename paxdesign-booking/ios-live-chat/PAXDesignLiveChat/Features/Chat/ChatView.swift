@@ -267,7 +267,16 @@ struct ChatView: View {
             if thread.handler == "admin", canReply {
                 Button(L10n.CommonRelease) {
                     PAXHaptics.light()
-                    Task { try? await auth.api?.release(thread.sessionId) }
+                    Task {
+                        do {
+                            _ = try await auth.api?.release(thread.sessionId)
+                            await thread.reloadAfterTakeover(auth: auth)
+                            await coordinator.refreshSessions(auth: auth)
+                            PAXHaptics.success()
+                        } catch {
+                            thread.errorMessage = error.localizedDescription
+                        }
+                    }
                 }
             }
             if thread.handler == "closed", canReply {

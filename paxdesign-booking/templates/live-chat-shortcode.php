@@ -114,6 +114,7 @@ if (!defined('ABSPATH')) {
               </div>
             </div>
             <div class="pax-live-console__compose-row pax-live-app__compose-row">
+              <button type="button" class="pax-live-console__quick-links pax-live-app__quick-links" id="paxLiveChatQuickLinks" title="Website-Links senden" aria-label="Website-Links senden" hidden>+</button>
               <label class="pax-live-console__attach pax-live-app__attach" id="paxLiveChatAttachLabel" title="Foto senden">
                 <input type="file" id="paxLiveChatAttach" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
@@ -136,9 +137,20 @@ window.paxLiveChatAdmin = <?php echo wp_json_encode(array_merge(
     array(
         'adminName'    => PAXdesign_Chat_Live::get_agent_display_name(),
         'quickReplies' => PAXdesign_Chat_Live::get_admin_quick_replies(),
+        'quickLinks'   => PAXdesign_Chat_Quick_Links::get_links(),
     )
 )); ?>;
 </script>
+
+<div class="pax-live-quick-links-modal" id="paxLiveChatQuickLinksModal" hidden role="dialog" aria-modal="true" aria-labelledby="paxLiveQuickLinksTitle">
+  <div class="pax-live-quick-links-modal__backdrop" data-quick-links-close></div>
+  <div class="pax-live-quick-links-modal__card">
+    <button type="button" class="pax-live-quick-links-modal__close" data-quick-links-close aria-label="Schließen">×</button>
+    <h4 id="paxLiveQuickLinksTitle" class="pax-live-quick-links-modal__title">Website-Links</h4>
+    <p class="pax-live-quick-links-modal__hint">Wählen Sie eine Seite — der Kunde erhält einen klickbaren Button.</p>
+    <div class="pax-live-quick-links-modal__list" id="paxLiveChatQuickLinksList"></div>
+  </div>
+</div>
 
 <div class="pax-live-agent-profile" id="paxLiveAgentProfileModal" hidden role="dialog" aria-modal="true">
   <div class="pax-live-agent-profile__backdrop" data-live-profile-close></div>

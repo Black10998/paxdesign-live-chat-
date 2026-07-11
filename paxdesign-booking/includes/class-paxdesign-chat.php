@@ -1158,5 +1158,19 @@ class PAXdesign_Chat {
         register_setting('paxdesign_booking_settings', 'paxdesign_chat_price_hints', array(
             'sanitize_callback' => 'sanitize_textarea_field',
         ));
+        register_setting('paxdesign_booking_settings', 'paxdesign_chat_quick_links', array(
+            'sanitize_callback' => function ($value) {
+                if (is_array($value)) {
+                    PAXdesign_Chat_Quick_Links::save_links($value);
+                    return get_option(PAXdesign_Chat_Quick_Links::OPTION_KEY, '');
+                }
+                $decoded = json_decode((string) $value, true);
+                if (is_array($decoded)) {
+                    PAXdesign_Chat_Quick_Links::save_links($decoded);
+                    return get_option(PAXdesign_Chat_Quick_Links::OPTION_KEY, '');
+                }
+                return (string) $value;
+            },
+        ));
     }
 }

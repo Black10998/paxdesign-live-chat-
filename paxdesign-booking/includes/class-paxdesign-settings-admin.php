@@ -111,10 +111,12 @@ class PAXdesign_Settings_Admin {
             wp_add_inline_style(self::STYLE_HANDLE, $css);
         }
 
+        wp_enqueue_script('jquery-ui-sortable');
+
         wp_enqueue_script(
             self::SCRIPT_HANDLE,
             PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/js/admin-script.js',
-            array('jquery'),
+            array('jquery', 'jquery-ui-sortable'),
             PAXDESIGN_BOOKING_VERSION,
             true
         );

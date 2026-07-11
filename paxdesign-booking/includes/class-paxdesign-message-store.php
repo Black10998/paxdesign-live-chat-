@@ -540,6 +540,8 @@ class PAXdesign_Message_Store {
         $allowed = array(
             'image_url', 'attachment_type', 'reply_to', 'reaction',
             'sender_id', 'sender_name', 'sender_avatar', 'sender_role', 'sender_email',
+            'link_url', 'link_label', 'link_icon',
+            'link_scan_status', 'link_scan_urls',
         );
         $meta = array();
         foreach ($allowed as $key) {

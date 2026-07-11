@@ -128,6 +128,7 @@
   var LIVE_AGENT_KEY    = 'paxdesign-chat-live-agent-phase';
   var CUSTOMER_NAME_KEY = 'paxdesign-chat-customer-name';
   var DEVICE_TOKEN_KEY  = 'paxdesign-chat-device-token';
+  var cachedDeviceToken = null;
   var ARCHIVED_IDS_KEY  = 'paxdesign-chat-archived-ids';
   var BOOKING_MARKER_RE = /\[\[BOOKING:([^\]]+)\]\]/gi;
   var USER_BOOKING_RE   = /(?:termin\s*(?:buch|vereinbar|machen|wunsch)?|beratung\s*buchen|kontakt\s*aufnehmen|ruf(?:en)?\s*(?:mich\s*)?an|(?:ein\s*)?angebot|möchte\s*(?:einen?\s*)?termin|ja[\s,]*(?:bitte|gerne|ok)?\s*(?:termin|buchen)?)/i;
@@ -200,7 +201,7 @@
   }
 
   function startCustomerStream() {
-    if (!pageVisible || !widgetOpen || typeof EventSource === 'undefined') return;
+    if (!pageVisible || !widgetOpen || chatHandler === 'closed' || typeof EventSource === 'undefined') return;
     if (!getSessionId()) return;
     stopCustomerStream();
     try {
@@ -553,12 +554,18 @@
     stampChatRequest(formData);
     formData.append('session_id', getSessionId());
     fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return res.json(); })
-      .then(function (json) {
+      .then(function (res) { return res.json().then(function (json) { return { ok: res.ok, json: json }; }); })
+      .then(function (result) {
+        var json = result.json;
         if (!json || !json.success) {
-          showError(json && json.data && json.data.message ? json.data.message : 'Beenden fehlgeschlagen.');
+          if (json && json.data && json.data.message === 'Invalid nonce') {
+            showError('Sitzung abgelaufen. Bitte laden Sie die Seite neu.');
+          } else {
+            showError(json && json.data && json.data.message ? json.data.message : 'Beenden fehlgeschlagen.');
+          }
           return;
         }
+        stopCustomerStream();
         if (json.data && json.data.message) {
           domMsgIds[json.data.message.id] = true;
           seenMsgId(json.data.message.id);
@@ -703,13 +710,7 @@
       if (!msg || !msg.id || domMsgIds[msg.id]) return;
       domMsgIds[msg.id] = true;
       seenMsgId(msg.id);
-      renderMessageDom(msg.role, msg.content, msg.id, {
-        reaction: msg.reaction || '',
-        reply_to: msg.reply_to || 0,
-        image_url: msg.image_url || '',
-        ts: msg.ts || 0,
-        skipPush: true,
-      });
+      renderMessageDom(msg.role, msg.content, msg.id, messageRenderOpts(msg, { skipPush: true }));
       if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'admin' || msg.role === 'system') {
         messages.push({
           role: msg.role,
@@ -784,13 +785,7 @@
       seenMsgId(msg.id);
       if (msg.reaction) messageReactions[msg.id] = msg.reaction;
       indexChatMessage(msg);
-      renderMessageDom(msg.role, msg.content, msg.id, {
-        reaction: msg.reaction || '',
-        reply_to: msg.reply_to || 0,
-        image_url: msg.image_url || '',
-        ts: msg.ts || 0,
-        skipPush: true,
-      });
+      renderMessageDom(msg.role, msg.content, msg.id, messageRenderOpts(msg, { skipPush: true }));
       if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'admin') {
         if (!messages.some(function (m) { return m.id === msg.id; })) {
           messages.push({
@@ -958,15 +953,21 @@
   }
 
   function getDeviceToken() {
+    if (cachedDeviceToken) return cachedDeviceToken;
     try {
-      var token = localStorage.getItem(DEVICE_TOKEN_KEY);
+      var token = localStorage.getItem(DEVICE_TOKEN_KEY) || sessionStorage.getItem(DEVICE_TOKEN_KEY);
       if (!token) {
         token = 'paxdev_' + randomHex(24);
         localStorage.setItem(DEVICE_TOKEN_KEY, token);
+        sessionStorage.setItem(DEVICE_TOKEN_KEY, token);
       }
+      cachedDeviceToken = token;
       return token;
     } catch (e) {
-      return 'paxdev_' + randomHex(16);
+      if (!cachedDeviceToken) {
+        cachedDeviceToken = 'paxdev_' + randomHex(24);
+      }
+      return cachedDeviceToken;
     }
   }
 
@@ -1523,6 +1524,23 @@
     return true;
   }
 
+  function messageRenderOpts(msg, extra) {
+    extra = extra || {};
+    return Object.assign({
+      reaction: msg.reaction || '',
+      reply_to: msg.reply_to || 0,
+      image_url: msg.image_url || '',
+      attachment_type: msg.attachment_type || '',
+      link_url: msg.link_url || '',
+      link_label: msg.link_label || '',
+      link_icon: msg.link_icon || '',
+      sender_name: msg.sender_name || '',
+      sender_avatar: msg.sender_avatar || '',
+      sender_role: msg.sender_role || '',
+      ts: msg.ts || 0,
+    }, extra);
+  }
+
   function applyIncomingMessages(incoming) {
     var played = false;
     incoming.forEach(function (msg) {
@@ -1554,14 +1572,11 @@
         stopTypingSound();
         if (!morphAdminTypingToMessage(msg)) {
           removeAdminTypingIndicator();
-          renderMessageDom(msg.role, msg.content, msg.id, {
-            reaction: msg.reaction || '',
-            reply_to: msg.reply_to || 0,
-            image_url: msg.image_url || '',
+          renderMessageDom(msg.role, msg.content, msg.id, messageRenderOpts(msg, {
             sender_name: msg.sender_name || '',
             sender_avatar: msg.sender_avatar || '',
             sender_role: msg.sender_role || ''
-          });
+          }));
         }
         if (!played) {
           playIncomingAdminSound();
@@ -1574,7 +1589,7 @@
           played = true;
         }
       } else {
-        renderMessageDom(msg.role, msg.content, msg.id, { reaction: msg.reaction || '', reply_to: msg.reply_to || 0, image_url: msg.image_url || '' });
+        renderMessageDom(msg.role, msg.content, msg.id, messageRenderOpts(msg));
       }
 
       if (msg.role === 'assistant' || msg.role === 'admin') {
@@ -2041,13 +2056,29 @@
     msgEl.insertBefore(head, msgEl.firstChild);
   }
 
+  function buildLinkCardHtml(opts) {
+    if (!opts || !opts.link_url) return '';
+    var icon = opts.link_icon || '🔗';
+    var rawLabel = opts.link_label || opts.content || 'Link';
+    var label = String(rawLabel).trim();
+    if (label.toLowerCase().indexOf('view ') !== 0) {
+      label = 'View ' + label;
+    }
+    return '<a class="paxdesign-booking-chat-link-card" href="' + escapeHtml(opts.link_url) + '" target="_blank" rel="noopener noreferrer">' +
+      '<span class="paxdesign-booking-chat-link-card__icon" aria-hidden="true">' + escapeHtml(icon) + '</span>' +
+      '<span class="paxdesign-booking-chat-link-card__label">' + escapeHtml(label) + '</span>' +
+      '</a>';
+  }
+
   function buildBubbleInnerHtml(role, content, opts) {
     opts = opts || {};
     var html = '';
     if (opts.image_url) {
       html += '<div class="paxdesign-booking-chat-message-image"><img src="' + escapeHtml(opts.image_url) + '" alt="Foto" loading="lazy" decoding="async"></div>';
     }
-    if (role === 'assistant' || role === 'admin') {
+    if (opts.attachment_type === 'link_card' || opts.link_url) {
+      html += buildLinkCardHtml(opts);
+    } else if (role === 'assistant' || role === 'admin') {
       if (content) html += formatMarkdown(content);
     } else if (role !== 'system' && content) {
       html += escapeHtml(content);

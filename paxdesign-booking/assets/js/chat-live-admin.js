@@ -59,6 +59,9 @@
     var $replyPreview = $('#paxLiveChatReplyPreview');
     var $replyClear = $('#paxLiveChatReplyClear');
     var $quickReplies = $('#paxLiveChatQuickReplies');
+    var $quickLinksBtn = $('#paxLiveChatQuickLinks');
+    var $quickLinksModal = $('#paxLiveChatQuickLinksModal');
+    var $quickLinksList = $('#paxLiveChatQuickLinksList');
     var $aiSuggest = $('#paxLiveChatAiSuggest');
     var $refresh = $('#paxLiveChatRefresh');
     var $sessionRating = $('#paxLiveChatSessionRating');
@@ -74,6 +77,10 @@
     var quickReplies = (cfg && cfg.quickReplies && cfg.quickReplies.length)
       ? cfg.quickReplies
       : ((meta && meta.quickReplies && meta.quickReplies.length) ? meta.quickReplies : DEFAULT_QUICK_REPLIES);
+
+    var quickLinks = (cfg && cfg.quickLinks && cfg.quickLinks.length)
+      ? cfg.quickLinks
+      : ((meta && meta.quickLinks && meta.quickLinks.length) ? meta.quickLinks : []);
 
     var selectedSession = '';
     var pollSeq = 0;
@@ -1487,6 +1494,7 @@
       $release.prop('hidden', !isAdmin);
       $reopen.prop('hidden', !isClosed);
       $close.prop('hidden', isClosed);
+      if ($quickLinksBtn.length) $quickLinksBtn.prop('hidden', !isAdmin);
 
       if (!selectedSession || isClosed) {
         $compose.prop('hidden', true);
@@ -1496,6 +1504,7 @@
         $send.prop('disabled', true);
         if ($attach.length) $attach.prop('disabled', true);
         if ($attachLabel.length) $attachLabel.addClass('is-disabled');
+        if ($quickLinksBtn.length) $quickLinksBtn.prop('hidden', true);
         return;
       }
 
@@ -1509,6 +1518,7 @@
         $send.prop('disabled', false);
         if ($attach.length) $attach.prop('disabled', false);
         if ($attachLabel.length) $attachLabel.removeClass('is-disabled');
+        if ($quickLinksBtn.length) $quickLinksBtn.prop('hidden', false);
         maybeSuggestForLatestUserMessage();
       } else {
         $composeHint
@@ -1523,7 +1533,104 @@
       }
     }
 
+    function extractUrlsFromText(text) {
+      if (!text) return [];
+      var pattern = /\bhttps?:\/\/[^\s<>"')\]]+/gi;
+      var matches = String(text).match(pattern) || [];
+      var urls = [];
+      matches.forEach(function (raw) {
+        var url = raw.replace(/[.,;:!?)]+$/, '');
+        if (url && urls.indexOf(url) === -1) urls.push(url);
+      });
+      return urls;
+    }
+
+    function clientScanUrl(url) {
+      var lower = String(url || '').toLowerCase();
+      if (!lower) return 'none';
+      if (/^(javascript|data|file|vbscript|blob):/i.test(lower)) return 'dangerous';
+      var hostMatch = lower.match(/^https?:\/\/([^/?#]+)/i);
+      if (!hostMatch || !hostMatch[1]) return 'dangerous';
+      var host = hostMatch[1];
+      if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return 'suspicious';
+      if (host.indexOf('xn--') !== -1) return 'suspicious';
+      var tldMatch = host.match(/\.([a-z0-9-]{2,24})$/i);
+      var suspiciousTlds = ['tk', 'ml', 'ga', 'cf', 'gq', 'zip', 'mov', 'top', 'xyz', 'click', 'loan'];
+      if (tldMatch && suspiciousTlds.indexOf(tldMatch[1]) !== -1) return 'suspicious';
+      if ((host.match(/\./g) || []).length >= 4) return 'suspicious';
+      if (lower.length > 300) return 'suspicious';
+      return 'safe';
+    }
+
+    function worstClientScanStatus(urls) {
+      var worst = 'safe';
+      urls.forEach(function (url) {
+        var status = clientScanUrl(url);
+        if (status === 'dangerous') worst = 'dangerous';
+        else if (status === 'suspicious' && worst !== 'dangerous') worst = 'suspicious';
+      });
+      return worst;
+    }
+
+    function linkCardDisplayLabel(label) {
+      var text = String(label || 'Link').trim();
+      if (text.toLowerCase().indexOf('view ') === 0) return text;
+      return 'View ' + text;
+    }
+
+    function buildAdminLinkCardHtml(msg) {
+      if (!msg || (!msg.link_url && msg.attachment_type !== 'link_card')) return '';
+      var icon = msg.link_icon || '🔗';
+      var label = linkCardDisplayLabel(msg.link_label || msg.content || 'Link');
+      var url = msg.link_url || '';
+      if (!url) return '';
+      return '<a class="pax-live-dashboard__link-card" href="' + escapeHtml(url) + '" target="_blank" rel="noopener noreferrer">' +
+        '<span class="pax-live-dashboard__link-card-icon" aria-hidden="true">' + escapeHtml(icon) + '</span>' +
+        '<span class="pax-live-dashboard__link-card-label">' + escapeHtml(label) + '</span>' +
+        '</a>';
+    }
+
+    function linkScanBadgeLabel(status) {
+      if (status === 'checking') return 'Checking link…';
+      if (status === 'safe') return '✅ Safe Link';
+      if (status === 'suspicious') return '⚠ Suspicious Link';
+      if (status === 'dangerous') return '❌ Dangerous Link';
+      return '';
+    }
+
+    function buildLinkScanBadgeHtml(msg) {
+      if (!msg || msg.role !== 'user') return '';
+      var status = msg.link_scan_status || '';
+      var urls = extractUrlsFromText(msg.content);
+      if (!status && !urls.length) return '';
+      if (!status) status = 'checking';
+      return '<div class="pax-live-dashboard__link-scan pax-live-dashboard__link-scan--' + escapeHtml(status) + '" data-scan-status="' + escapeHtml(status) + '">' +
+        escapeHtml(linkScanBadgeLabel(status)) +
+        '</div>';
+    }
+
+    function resolvePendingLinkScan(msg) {
+      if (!msg || msg.role !== 'user' || msg.link_scan_status) return;
+      var urls = extractUrlsFromText(msg.content);
+      if (!urls.length) return;
+      window.setTimeout(function () {
+        var $msg = $messages.find('[data-msg-id="' + msg.id + '"]');
+        if (!$msg.length) return;
+        var $badge = $msg.find('.pax-live-dashboard__link-scan--checking');
+        if (!$badge.length) return;
+        var status = worstClientScanStatus(urls);
+        $badge
+          .removeClass('pax-live-dashboard__link-scan--checking')
+          .addClass('pax-live-dashboard__link-scan--' + status)
+          .attr('data-scan-status', status)
+          .text(linkScanBadgeLabel(status));
+      }, 420);
+    }
+
     function messageBubbleHtml(msg) {
+      var linkCard = buildAdminLinkCardHtml(msg);
+      if (linkCard) return linkCard;
+
       var html = '';
       if (msg.image_url) {
         html += '<div class="pax-live-dashboard__msg-image"><img src="' + escapeHtml(msg.image_url) + '" alt="Foto" loading="lazy" decoding="async"></div>';
@@ -1531,6 +1638,7 @@
       if (msg.content) {
         html += escapeHtml(String(msg.content));
       }
+      html += buildLinkScanBadgeHtml(msg);
       return html || '<span class="pax-live-dashboard__msg-image-only">📷 Foto</span>';
     }
 
@@ -1689,6 +1797,81 @@
       }
       html += '</div>';
       $messages.append(html);
+      resolvePendingLinkScan(msg);
+    }
+
+    function renderQuickLinksList() {
+      if (!$quickLinksList.length) return;
+      if (!quickLinks.length) {
+        $quickLinksList.html('<p class="pax-live-quick-links-modal__empty">Keine Links konfiguriert. Bitte im WordPress-Backend unter Einstellungen verwalten.</p>');
+        return;
+      }
+      var html = '';
+      quickLinks.forEach(function (link) {
+        html += '<button type="button" class="pax-live-quick-links-modal__item" data-link-id="' + escapeHtml(link.id) + '">' +
+          '<span class="pax-live-quick-links-modal__icon" aria-hidden="true">' + escapeHtml(link.icon || '🔗') + '</span>' +
+          '<span class="pax-live-quick-links-modal__text">' +
+            '<span class="pax-live-quick-links-modal__label">' + escapeHtml(link.label) + '</span>' +
+            '<span class="pax-live-quick-links-modal__url">' + escapeHtml(link.url) + '</span>' +
+          '</span>' +
+          '</button>';
+      });
+      $quickLinksList.html(html);
+    }
+
+    function openQuickLinksModal() {
+      if (!$quickLinksModal.length || currentHandler !== 'admin' || !selectedSession) return;
+      renderQuickLinksList();
+      $quickLinksModal.prop('hidden', false);
+    }
+
+    function closeQuickLinksModal() {
+      if ($quickLinksModal.length) $quickLinksModal.prop('hidden', true);
+    }
+
+    function sendQuickLink(linkId) {
+      if (!selectedSession || !linkId || currentHandler !== 'admin') return;
+      ajax('paxdesign_chat_live_admin_send_link', { session_id: selectedSession, link_id: linkId })
+        .done(function (res) {
+          if (!res.success) {
+            alert(res.data && res.data.message ? res.data.message : 'Link konnte nicht gesendet werden.');
+            return;
+          }
+          if (res.data && res.data.message) renderMessages([res.data.message], false);
+          pollMessages();
+          loadList();
+        })
+        .fail(function () {
+          alert('Link konnte nicht gesendet werden.');
+        });
+    }
+
+    function initQuickLinks() {
+      if (!$quickLinksBtn.length) return;
+      $quickLinksBtn.on('click', function (e) {
+        e.preventDefault();
+        openQuickLinksModal();
+      });
+      if ($quickLinksModal.length) {
+        $quickLinksModal.on('click', '[data-quick-links-close]', function (e) {
+          e.preventDefault();
+          closeQuickLinksModal();
+        });
+        $quickLinksModal.on('click', function (e) {
+          if ($(e.target).is('.pax-live-quick-links-modal__backdrop')) closeQuickLinksModal();
+        });
+      }
+      if ($quickLinksList.length) {
+        $quickLinksList.on('click', '.pax-live-quick-links-modal__item', function () {
+          sendQuickLink($(this).attr('data-link-id'));
+          closeQuickLinksModal();
+        });
+      }
+      $(document).on('keydown.paxQuickLinks', function (e) {
+        if (e.key === 'Escape' && $quickLinksModal.length && !$quickLinksModal.prop('hidden')) {
+          closeQuickLinksModal();
+        }
+      });
     }
 
     function newClientMessageId() {
@@ -2064,6 +2247,7 @@
 
     bindComposerResize();
     initQuickReplies();
+    initQuickLinks();
     initAiSuggestions();
     initAgentProfileModal();
     initLanguageToggle();

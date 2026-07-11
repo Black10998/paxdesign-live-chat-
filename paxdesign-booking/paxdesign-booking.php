@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.106.0
+Version: 3.107.0
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.106.0');
+define('PAXDESIGN_BOOKING_VERSION', '3.107.0');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -47,12 +47,15 @@ require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-platform-s
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-live-chat-mobile-api.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-icons.php';
+require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-quick-links.php';
+require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-link-scanner.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-settings-admin.php';
 PAXdesign_Booking_Update_Checker::init();
 PAXdesign_Message_Store::init();
 PAXdesign_Settings_Admin::init();
 PAXdesign_Chat_Log::get_instance();
 PAXdesign_Chat_Live::get_instance();
+PAXdesign_Chat_Quick_Links::init();
 PAXdesign_Live_Chat_Shortcode::init();
 PAXdesign_Live_Chat_PWA::init();
 PAXdesign_APNS::init();
@@ -1061,7 +1064,8 @@ class PAXdesign_Booking {
             'currentEmployee' => PAXdesign_Chat_Live::resolve_employee_identity(get_current_user_id()),
             'adminUrl'     => class_exists('PAXdesign_Live_Chat_PWA') ? PAXdesign_Live_Chat_PWA::get_admin_panel_url() : 'https://paxdesign.at/live-chat-admin/',
             'quickReplies' => PAXdesign_Chat_Live::get_admin_quick_replies(),
-            'tourCompleted' => (bool) get_user_meta(get_current_user_id(), 'pax_live_dashboard_tour_completed', true),
+        'quickLinks'   => class_exists('PAXdesign_Chat_Quick_Links') ? PAXdesign_Chat_Quick_Links::get_links() : array(),
+        'tourCompleted' => (bool) get_user_meta(get_current_user_id(), 'pax_live_dashboard_tour_completed', true),
         );
 
         if ($hook === 'paxdesign-booking_page_paxdesign-chat-live') {
