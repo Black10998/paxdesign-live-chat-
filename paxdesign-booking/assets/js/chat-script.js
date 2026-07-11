@@ -1534,6 +1534,7 @@
       link_url: msg.link_url || '',
       link_label: msg.link_label || '',
       link_icon: msg.link_icon || '',
+      link_scan_status: msg.link_scan_status || '',
       sender_name: msg.sender_name || '',
       sender_avatar: msg.sender_avatar || '',
       sender_role: msg.sender_role || '',
@@ -2058,16 +2059,165 @@
 
   function buildLinkCardHtml(opts) {
     if (!opts || !opts.link_url) return '';
-    var icon = opts.link_icon || '🔗';
     var rawLabel = opts.link_label || opts.content || 'Link';
     var label = String(rawLabel).trim();
     if (label.toLowerCase().indexOf('view ') !== 0) {
       label = 'View ' + label;
     }
-    return '<a class="paxdesign-booking-chat-link-card" href="' + escapeHtml(opts.link_url) + '" target="_blank" rel="noopener noreferrer">' +
-      '<span class="paxdesign-booking-chat-link-card__icon" aria-hidden="true">' + escapeHtml(icon) + '</span>' +
+    var iconSvg = linkCardIconSvg(opts.link_icon || '', label);
+    return '<a class="paxdesign-booking-chat-link-card paxdesign-booking-chat-link-card--compact" href="' + escapeHtml(opts.link_url) + '" target="_blank" rel="noopener noreferrer">' +
+      '<span class="paxdesign-booking-chat-link-card__icon-svg" aria-hidden="true">' + iconSvg + '</span>' +
       '<span class="paxdesign-booking-chat-link-card__label">' + escapeHtml(label) + '</span>' +
+      '<span class="paxdesign-booking-chat-link-card__arrow" aria-hidden="true">' +
+        '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12L12 4"/><path d="M6 4h6v6"/></svg>' +
+      '</span>' +
       '</a>';
+  }
+
+  function linkCardIconSvg(icon, label) {
+    var key = String(icon || '').trim();
+    if (key.indexOf('svg:') === 0) key = key.slice(4);
+    else if (key.indexOf('sf:') === 0) key = 'link';
+    else if (/^[a-z0-9_-]+$/i.test(key) && key.length <= 24) { /* keep */ }
+    else {
+      var lower = String(label || '').toLowerCase();
+      if (lower.indexOf('service') !== -1) key = 'services';
+      else if (lower.indexOf('project') !== -1) key = 'projects';
+      else if (lower.indexOf('pric') !== -1) key = 'pricing';
+      else if (lower.indexOf('contact') !== -1) key = 'contact';
+      else if (lower.indexOf('about') !== -1) key = 'about';
+      else if (lower.indexOf('faq') !== -1) key = 'faq';
+      else if (lower.indexOf('portfolio') !== -1) key = 'portfolio';
+      else key = 'link';
+    }
+    var paths = {
+      link: '<path d="M8.5 3.5a4 4 0 0 1 5.7 5.7l-2.1 2.1a4 4 0 0 1-5.7-5.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M7.5 12.5a4 4 0 0 1-5.7-5.7l2.1-2.1a4 4 0 0 1 5.7 5.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+      services: '<path d="M3 7h10M3 11h7M3 3h12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+      projects: '<path d="M4 14l4-9 4 9H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M6.5 10h5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+      pricing: '<circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 5.5v5M6.2 8h3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+      contact: '<path d="M3.5 4.5h9v7h-9z" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M4 6.5l4 2.5 4-2.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>',
+      about: '<circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8 7.2v3.3M8 5.4h.01" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+      faq: '<circle cx="8" cy="8" r="5.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M6.2 6.4a2 2 0 0 1 3.4 1.4c0 1.2-1.6 1.2-1.6 2.4M8 12.2h.01" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>',
+      portfolio: '<rect x="3.5" y="4.5" width="9" height="7" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="6.2" cy="7.2" r="1" fill="currentColor"/><path d="M5 11l2.2-2 1.8 1.5L11 8.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>'
+    };
+    return '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">' + (paths[key] || paths.link) + '</svg>';
+  }
+
+  function extractUrlsFromText(text) {
+    if (!text) return [];
+    var pattern = /\bhttps?:\/\/[^\s<>"')\]]+/gi;
+    var matches = String(text).match(pattern) || [];
+    var urls = [];
+    matches.forEach(function (raw) {
+      var url = raw.replace(/[.,;:!?)]+$/, '');
+      if (url && urls.indexOf(url) === -1) urls.push(url);
+    });
+    return urls;
+  }
+
+  function clientScanUrl(url) {
+    var lower = String(url || '').toLowerCase();
+    if (!lower) return 'none';
+    if (/^(javascript|data|file|vbscript|blob):/i.test(lower)) return 'dangerous';
+    var hostMatch = lower.match(/^https?:\/\/([^/?#]+)/i);
+    if (!hostMatch || !hostMatch[1]) return 'dangerous';
+    var host = hostMatch[1];
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return 'suspicious';
+    if (host.indexOf('xn--') !== -1) return 'suspicious';
+    var tldMatch = host.match(/\.([a-z0-9-]{2,24})$/i);
+    var suspiciousTlds = ['tk', 'ml', 'ga', 'cf', 'gq', 'zip', 'mov', 'top', 'xyz', 'click', 'loan'];
+    if (tldMatch && suspiciousTlds.indexOf(tldMatch[1]) !== -1) return 'suspicious';
+    if ((host.match(/\./g) || []).length >= 4) return 'suspicious';
+    if (lower.length > 300) return 'suspicious';
+    return 'safe';
+  }
+
+  function worstClientScanStatus(urls) {
+    var worst = 'safe';
+    urls.forEach(function (url) {
+      var status = clientScanUrl(url);
+      if (status === 'dangerous') worst = 'dangerous';
+      else if (status === 'suspicious' && worst !== 'dangerous') worst = 'suspicious';
+    });
+    return worst;
+  }
+
+  function customerLinkScanLabel(status, phase) {
+    var isEn = document.documentElement.lang && document.documentElement.lang.indexOf('en') === 0;
+    if (status === 'checking') {
+      if (phase === 1) return isEn ? 'Analyzing security…' : 'Sicherheit wird analysiert …';
+      return isEn ? 'Scanning your link…' : 'Ihr Link wird geprüft …';
+    }
+    if (status === 'safe') return isEn ? 'Your link appears to be safe.' : 'Ihr Link scheint sicher zu sein.';
+    if (status === 'suspicious') return isEn ? 'Your link may be suspicious.' : 'Ihr Link könnte verdächtig sein.';
+    if (status === 'dangerous') return isEn ? 'Your link has been flagged as potentially dangerous.' : 'Ihr Link wurde als potenziell gefährlich eingestuft.';
+    return '';
+  }
+
+  function linkScanShieldSvg(status) {
+    if (status === 'safe') {
+      return '<svg class="paxdesign-booking-chat-link-scan__shield" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" fill="currentColor" opacity="0.18"/><path d="M9.5 12.2l2 2 4.2-4.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    }
+    if (status === 'suspicious') {
+      return '<svg class="paxdesign-booking-chat-link-scan__shield" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" fill="currentColor" opacity="0.18"/><path d="M12 8.5v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.2" r="1" fill="currentColor"/></svg>';
+    }
+    if (status === 'dangerous') {
+      return '<svg class="paxdesign-booking-chat-link-scan__shield" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" fill="currentColor" opacity="0.18"/><path d="M9 9l6 6M15 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+    }
+    return '<svg class="paxdesign-booking-chat-link-scan__shield paxdesign-booking-chat-link-scan__shield--spin" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" fill="currentColor" opacity="0.22"/><path d="M12 6.5v4.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="14.2" r="0.9" fill="currentColor"/></svg>';
+  }
+
+  function buildCustomerLinkScanHtml(opts) {
+    if (!opts) return '';
+    var status = opts.link_scan_status || '';
+    var urls = extractUrlsFromText(opts.content || '');
+    if (!status && !urls.length) return '';
+    if (!status) status = 'checking';
+    var phase = opts.link_scan_phase || 0;
+    return '<div class="paxdesign-booking-chat-link-scan paxdesign-booking-chat-link-scan--' + escapeHtml(status) + '" data-scan-status="' + escapeHtml(status) + '">' +
+      '<span class="paxdesign-booking-chat-link-scan__icon">' + linkScanShieldSvg(status) + '</span>' +
+      '<span class="paxdesign-booking-chat-link-scan__copy">' +
+        '<span class="paxdesign-booking-chat-link-scan__label">' + escapeHtml(customerLinkScanLabel(status, phase)) + '</span>' +
+        (status === 'checking' ? '<span class="paxdesign-booking-chat-link-scan__progress" aria-hidden="true"><span></span></span>' : '') +
+      '</span>' +
+      '</div>';
+  }
+
+  function updateCustomerLinkScanBadge(msgId, serverMsg) {
+    if (!msgId) return;
+    var msgEl = threadEl.querySelector('[data-msg-id="' + msgId + '"]');
+    if (!msgEl) return;
+    var bubble = msgEl.querySelector('.paxdesign-booking-chat-message-bubble');
+    if (!bubble) return;
+    var status = serverMsg && serverMsg.link_scan_status ? serverMsg.link_scan_status : '';
+    var content = serverMsg && serverMsg.content ? serverMsg.content : '';
+    var urls = extractUrlsFromText(content);
+    if (!status && urls.length) status = worstClientScanStatus(urls);
+    if (!status) return;
+    var existing = bubble.querySelector('.paxdesign-booking-chat-link-scan');
+    var html = buildCustomerLinkScanHtml({ link_scan_status: status, content: content });
+    if (existing) {
+      existing.outerHTML = html;
+    } else if (html) {
+      bubble.insertAdjacentHTML('beforeend', html);
+    }
+  }
+
+  function resolvePendingCustomerLinkScan(msgId, content, serverStatus) {
+    var urls = extractUrlsFromText(content);
+    if (!urls.length) return;
+    if (serverStatus) {
+      updateCustomerLinkScanBadge(msgId, { link_scan_status: serverStatus, content: content });
+      return;
+    }
+    var msgEl = threadEl.querySelector('[data-msg-id="' + msgId + '"]');
+    if (!msgEl) return;
+    var badge = msgEl.querySelector('.paxdesign-booking-chat-link-scan--checking');
+    if (!badge) return;
+    window.setTimeout(function () {
+      var status = worstClientScanStatus(urls);
+      updateCustomerLinkScanBadge(msgId, { link_scan_status: status, content: content });
+    }, 520);
   }
 
   function buildBubbleInnerHtml(role, content, opts) {
@@ -2082,6 +2232,9 @@
       if (content) html += formatMarkdown(content);
     } else if (role !== 'system' && content) {
       html += escapeHtml(content);
+    }
+    if (role === 'user') {
+      html += buildCustomerLinkScanHtml(Object.assign({}, opts, { content: content }));
     }
     return html;
   }
@@ -2131,6 +2284,9 @@
     }
     threadEl.appendChild(msg);
     scrollToBottom();
+    if (role === 'user' && (opts.link_scan_status === 'checking' || extractUrlsFromText(content).length)) {
+      resolvePendingCustomerLinkScan(msgId, content, opts.link_scan_status && opts.link_scan_status !== 'checking' ? opts.link_scan_status : null);
+    }
     if (!opts.skipPush && msgId) saveSessionSnapshot();
     return { bubble: bubble, messageEl: msg };
   }
@@ -2387,7 +2543,12 @@
     var clientMsgId = opts.clientMsgId || newClientMessageId();
     domMsgIds[userId] = true;
     seenMsgId(userId);
-    renderMessageDom('user', text, userId);
+    var urls = extractUrlsFromText(text);
+    var renderOpts = {};
+    if (urls.length) {
+      renderOpts.link_scan_status = 'checking';
+    }
+    renderMessageDom('user', text, userId, renderOpts);
     messages.push({ role: 'user', content: text, id: userId, client_msg_id: clientMsgId });
     if (!opts.skipSync) {
       lastUserSyncPromise = syncChatLog();
@@ -2612,6 +2773,7 @@
           if (serverMessage && serverMessage.id) {
             var local = messages.find(function (m) { return m.client_msg_id === clientMsgId; });
             if (local) local.id = serverMessage.id;
+            updateCustomerLinkScanBadge(userMsgId, serverMessage);
           }
         })
         .catch(function (err) {

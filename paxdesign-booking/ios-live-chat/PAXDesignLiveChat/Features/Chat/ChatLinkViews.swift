@@ -1,8 +1,13 @@
 import SwiftUI
 
+// MARK: - Link scan badge (premium animated)
+
 struct LinkScanBadgeView: View {
     let message: LiveMessage
     @State private var displayedStatus: LinkScanStatus
+    @State private var scanPhase = 0
+    @State private var progress: CGFloat = 0
+    @State private var glow = false
 
     init(message: LiveMessage) {
         self.message = message
@@ -11,43 +16,61 @@ struct LinkScanBadgeView: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
-            Group {
+        HStack(spacing: 12) {
+            LinkScanShieldAnimationView(status: displayedStatus, glow: glow)
+                .frame(width: 40, height: 40)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(scanLabel)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(tint)
+                    .contentTransition(.numericText())
+                    .animation(.easeInOut(duration: 0.35), value: scanLabel)
+
                 if displayedStatus == .checking {
-                    Image(systemName: displayedStatus.symbolName)
-                        .rotationEffect(.degrees(spin ? 360 : 0))
-                        .animation(.linear(duration: 0.9).repeatForever(autoreverses: false), value: spin)
-                } else {
-                    Image(systemName: displayedStatus.symbolName)
+                    GeometryReader { proxy in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(tint.opacity(0.14))
+                            Capsule()
+                                .fill(tint.opacity(0.72))
+                                .frame(width: max(18, proxy.size.width * progress))
+                        }
+                    }
+                    .frame(height: 4)
                 }
             }
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(tint)
-            .frame(width: 16)
-
-            Text(displayedStatus.label)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(tint)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(background)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .stroke(border, lineWidth: 1)
                 )
+                .shadow(color: tint.opacity(displayedStatus == .checking ? 0.18 : 0.08), radius: glow ? 10 : 4)
         )
         .onAppear {
             if displayedStatus == .checking {
-                spin = true
+                startCheckingAnimation()
                 resolveCheckingStatus()
             }
         }
+        .animation(.spring(response: 0.45, dampingFraction: 0.82), value: displayedStatus)
     }
 
-    @State private var spin = false
+    private var scanLabel: String {
+        switch displayedStatus {
+        case .checking:
+            return scanPhase == 0 ? L10n.ChatLinkScanChecking : L10n.ChatLinkScanAnalyzing
+        case .safe: return L10n.ChatLinkScanSafe
+        case .suspicious: return L10n.ChatLinkScanSuspicious
+        case .dangerous: return L10n.ChatLinkScanDangerous
+        case .none: return ""
+        }
+    }
 
     private var tint: Color {
         switch displayedStatus {
@@ -61,7 +84,7 @@ struct LinkScanBadgeView: View {
 
     private var background: Color {
         switch displayedStatus {
-        case .checking: return PAXTheme.surface.opacity(0.72)
+        case .checking: return PAXTheme.surface.opacity(0.78)
         case .safe: return Color(red: 0.13, green: 0.77, blue: 0.37, opacity: 0.12)
         case .suspicious: return Color(red: 0.96, green: 0.62, blue: 0.04, opacity: 0.14)
         case .dangerous: return PAXTheme.danger.opacity(0.12)
@@ -69,20 +92,117 @@ struct LinkScanBadgeView: View {
         }
     }
 
-    private var border: Color {
-        tint.opacity(0.28)
+    private var border: Color { tint.opacity(0.28) }
+
+    private func startCheckingAnimation() {
+        glow = true
+        withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
+            progress = 0.92
+        }
+        Task { @MainActor in
+            while displayedStatus == .checking {
+                try? await Task.sleep(nanoseconds: 1_400_000_000)
+                guard displayedStatus == .checking else { break }
+                scanPhase = scanPhase == 0 ? 1 : 0
+            }
+        }
     }
 
     private func resolveCheckingStatus() {
         guard displayedStatus == .checking else { return }
         Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 420_000_000)
+            try? await Task.sleep(nanoseconds: 520_000_000)
             let resolved = LinkScanSupport.resolvedStatus(for: message)
             displayedStatus = resolved == .none ? .safe : resolved
-            spin = false
+            glow = false
+            progress = 1
         }
     }
 }
+
+private struct LinkScanShieldAnimationView: View {
+    let status: LinkScanStatus
+    let glow: Bool
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1 / 30)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            ZStack {
+                Circle()
+                    .fill(accent.opacity(glow ? 0.16 : 0.08))
+                    .scaleEffect(glow ? 1.08 + CGFloat(sin(t * 2.4)) * 0.04 : 1)
+                    .blur(radius: glow ? 6 : 2)
+
+                ShieldShape()
+                    .fill(
+                        LinearGradient(
+                            colors: [accent.opacity(0.95), accent.opacity(0.55)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(ShieldShape().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
+                    .frame(width: 26, height: 30)
+                    .rotationEffect(status == .checking ? .degrees(t.truncatingRemainder(dividingBy: 1) * 12 - 6) : .zero)
+
+                resultGlyph
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var resultGlyph: some View {
+        switch status {
+        case .safe:
+            Image(systemName: "checkmark")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
+                .transition(.scale.combined(with: .opacity))
+        case .suspicious:
+            Image(systemName: "exclamationmark")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
+        case .dangerous:
+            Image(systemName: "xmark")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
+        case .checking:
+            Circle()
+                .trim(from: 0.08, to: 0.72)
+                .stroke(Color.white.opacity(0.9), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                .frame(width: 12, height: 12)
+                .rotationEffect(.degrees(-90))
+        case .none:
+            EmptyView()
+        }
+    }
+
+    private var accent: Color {
+        switch status {
+        case .checking: return Color(red: 0.45, green: 0.52, blue: 0.64)
+        case .safe: return Color(red: 0.13, green: 0.72, blue: 0.38)
+        case .suspicious: return Color(red: 0.92, green: 0.58, blue: 0.08)
+        case .dangerous: return PAXTheme.danger
+        case .none: return PAXTheme.textSecondary
+        }
+    }
+}
+
+private struct ShieldShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        let w = rect.width
+        let h = rect.height
+        path.move(to: CGPoint(x: w * 0.5, y: 0))
+        path.addLine(to: CGPoint(x: w, y: h * 0.18))
+        path.addQuadCurve(to: CGPoint(x: w * 0.5, y: h), control: CGPoint(x: w * 0.92, y: h * 0.72))
+        path.addQuadCurve(to: CGPoint(x: 0, y: h * 0.18), control: CGPoint(x: w * 0.08, y: h * 0.72))
+        path.closeSubpath()
+        return path
+    }
+}
+
+// MARK: - Compact link card with SVG icon
 
 struct LinkCardBubbleView: View {
     let message: LiveMessage
@@ -91,39 +211,125 @@ struct LinkCardBubbleView: View {
     var body: some View {
         if let url = LinkScanSupport.resolveURL(message.linkUrl ?? "", siteBase: siteBaseURL) {
             Link(destination: url) {
-                HStack(spacing: 10) {
-                    Text(message.linkIcon ?? "🔗")
-                        .font(.title3)
+                HStack(spacing: 8) {
+                    QuickLinkIconView(
+                        icon: message.linkIcon ?? "svg:link",
+                        label: message.linkLabel ?? message.content,
+                        size: 26
+                    )
                     Text(LinkScanSupport.linkCardLabel(for: message))
-                        .font(.subheadline.weight(.semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(PAXTheme.textPrimary)
-                        .multilineTextAlignment(.leading)
+                        .lineLimit(1)
                     Spacer(minLength: 0)
                     Image(systemName: "arrow.up.right")
-                        .font(.caption.weight(.bold))
+                        .font(.caption2.weight(.bold))
                         .foregroundStyle(PAXTheme.accent)
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 11)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
                 .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [
-                                    PAXTheme.accent.opacity(0.16),
-                                    PAXTheme.accent.opacity(0.06),
+                                    PAXTheme.accent.opacity(0.14),
+                                    PAXTheme.accent.opacity(0.05),
                                 ],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             )
                         )
                         .overlay(
-                            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                .stroke(PAXTheme.accent.opacity(0.28), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                .stroke(PAXTheme.accent.opacity(0.24), lineWidth: 1)
                         )
                 )
             }
             .buttonStyle(.plain)
+        }
+    }
+}
+
+struct QuickLinkIconView: View {
+    let icon: String
+    let label: String
+    let size: CGFloat
+
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                .fill(PAXTheme.accent.opacity(0.14))
+                .frame(width: size, height: size)
+            if icon.hasPrefix("sf:") {
+                Image(systemName: String(icon.dropFirst(3)))
+                    .font(.system(size: size * 0.42, weight: .semibold))
+                    .foregroundStyle(PAXTheme.accent)
+            } else {
+                QuickLinkVectorIcon(name: resolvedIconKey)
+                    .frame(width: size * 0.52, height: size * 0.52)
+                    .foregroundStyle(PAXTheme.accent)
+            }
+        }
+    }
+
+    private var resolvedIconKey: String {
+        let raw = icon.hasPrefix("svg:") ? String(icon.dropFirst(4)) : icon
+        if raw.range(of: #"^[a-z0-9_-]+$"#, options: .regularExpression) != nil, raw.count <= 24 {
+            return raw
+        }
+        let lower = label.lowercased()
+        if lower.contains("service") { return "services" }
+        if lower.contains("project") { return "projects" }
+        if lower.contains("pric") { return "pricing" }
+        if lower.contains("contact") { return "contact" }
+        if lower.contains("about") { return "about" }
+        if lower.contains("faq") { return "faq" }
+        if lower.contains("portfolio") { return "portfolio" }
+        return "link"
+    }
+}
+
+private struct QuickLinkVectorIcon: View {
+    let name: String
+
+    var body: some View {
+        Canvas { context, size in
+            let rect = CGRect(origin: .zero, size: size)
+            var path = Path()
+            switch name {
+            case "services":
+                path.move(to: CGPoint(x: rect.minX + rect.width * 0.15, y: rect.midY - rect.height * 0.18))
+                path.addLine(to: CGPoint(x: rect.maxX - rect.width * 0.15, y: rect.midY - rect.height * 0.18))
+                path.move(to: CGPoint(x: rect.minX + rect.width * 0.15, y: rect.midY))
+                path.addLine(to: CGPoint(x: rect.maxX - rect.width * 0.35, y: rect.midY))
+                path.move(to: CGPoint(x: rect.minX + rect.width * 0.15, y: rect.midY + rect.height * 0.18))
+                path.addLine(to: CGPoint(x: rect.maxX - rect.width * 0.15, y: rect.midY + rect.height * 0.18))
+            case "projects":
+                path.move(to: CGPoint(x: rect.midX - rect.width * 0.28, y: rect.maxY - rect.height * 0.12))
+                path.addLine(to: CGPoint(x: rect.midX, y: rect.minY + rect.height * 0.12))
+                path.addLine(to: CGPoint(x: rect.midX + rect.width * 0.28, y: rect.maxY - rect.height * 0.12))
+                path.closeSubpath()
+            case "pricing":
+                path.addEllipse(in: rect.insetBy(dx: rect.width * 0.12, dy: rect.height * 0.12))
+                path.move(to: CGPoint(x: rect.midX, y: rect.midY - rect.height * 0.12))
+                path.addLine(to: CGPoint(x: rect.midX, y: rect.midY + rect.height * 0.12))
+                path.move(to: CGPoint(x: rect.midX - rect.width * 0.14, y: rect.midY))
+                path.addLine(to: CGPoint(x: rect.midX + rect.width * 0.14, y: rect.midY))
+            case "contact":
+                path.addRoundedRect(in: rect.insetBy(dx: rect.width * 0.1, dy: rect.height * 0.18), cornerSize: CGSize(width: 2, height: 2))
+            case "about":
+                path.addEllipse(in: rect.insetBy(dx: rect.width * 0.12, dy: rect.height * 0.12))
+                path.addEllipse(in: CGRect(x: rect.midX - 1.2, y: rect.midY + rect.height * 0.08, width: 2.4, height: 2.4))
+            case "faq":
+                path.addEllipse(in: rect.insetBy(dx: rect.width * 0.12, dy: rect.height * 0.12))
+            case "portfolio":
+                path.addRoundedRect(in: rect.insetBy(dx: rect.width * 0.1, dy: rect.height * 0.16), cornerSize: CGSize(width: 2, height: 2))
+            default:
+                path.addEllipse(in: CGRect(x: rect.midX - rect.width * 0.22, y: rect.midY - rect.height * 0.08, width: rect.width * 0.44, height: rect.height * 0.16))
+                path.addEllipse(in: CGRect(x: rect.midX - rect.width * 0.22, y: rect.midY + rect.height * 0.08, width: rect.width * 0.44, height: rect.height * 0.16))
+            }
+            context.stroke(path, with: .foreground, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
         }
     }
 }
@@ -144,7 +350,7 @@ struct QuickLinksSheet: View {
                             .foregroundStyle(PAXTheme.textTertiary)
                         Text(L10n.ChatQuickLinksEmptyTitle)
                             .font(.headline)
-                        Text(L10n.ChatQuickLinksEmptyBody)
+                        Text(L10n.SettingsQuickLinksEmptyBody)
                             .font(.subheadline)
                             .foregroundStyle(PAXTheme.textSecondary)
                             .multilineTextAlignment(.center)
@@ -157,9 +363,7 @@ struct QuickLinksSheet: View {
                             onSelect(link)
                         } label: {
                             HStack(spacing: 12) {
-                                Text(link.icon)
-                                    .font(.title3)
-                                    .frame(width: 28)
+                                QuickLinkIconView(icon: link.icon, label: link.label, size: 30)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(link.label)
                                         .font(.subheadline.weight(.semibold))

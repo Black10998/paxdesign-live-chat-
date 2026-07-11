@@ -356,9 +356,10 @@ class PAXdesign_Live_Chat_Permissions {
             }
             $avatar_meta = trim((string) get_user_meta($uid, 'pax_live_avatar_url', true));
             $avatar_url  = $avatar_meta !== '' ? esc_url_raw($avatar_meta) : get_avatar_url($uid, array('size' => 256));
+            $identity    = PAXdesign_Chat_Live::resolve_employee_identity($uid);
             $out[] = array(
                 'user_id'     => $uid,
-                'name'        => $user->display_name,
+                'name'        => $identity ? $identity['name'] : $user->display_name,
                 'email'       => $user->user_email,
                 'username'    => $user->user_login,
                 'avatar_url'  => $avatar_url,
@@ -593,9 +594,10 @@ class PAXdesign_Live_Chat_Permissions {
             }
             $avatar_meta = trim((string) get_user_meta($uid, 'pax_live_avatar_url', true));
             $avatar_url  = $avatar_meta !== '' ? esc_url_raw($avatar_meta) : get_avatar_url($uid, array('size' => 256));
+            $identity    = PAXdesign_Chat_Live::resolve_employee_identity($uid);
             $out[] = self::enrich_team_contact(array(
                 'user_id'     => $uid,
-                'name'        => $user->display_name,
+                'name'        => $identity ? $identity['name'] : $user->display_name,
                 'email'       => $user->user_email,
                 'username'    => $user->user_login,
                 'avatar_url'  => $avatar_url,
@@ -618,9 +620,10 @@ class PAXdesign_Live_Chat_Permissions {
             }));
             $avatar_meta = trim((string) get_user_meta($euid, 'pax_live_avatar_url', true));
             $avatar_url  = $avatar_meta !== '' ? esc_url_raw($avatar_meta) : get_avatar_url($euid, array('size' => 256));
+            $identity    = PAXdesign_Chat_Live::resolve_employee_identity($euid);
             array_unshift($out, self::enrich_team_contact(array(
                 'user_id'     => $euid,
-                'name'        => $executive->display_name,
+                'name'        => $identity ? $identity['name'] : $executive->display_name,
                 'email'       => $executive->user_email,
                 'username'    => $executive->user_login,
                 'avatar_url'  => $avatar_url,

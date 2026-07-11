@@ -1017,7 +1017,7 @@ final class ChatThreadModel: ObservableObject {
     }
 
     private func loadQuickLinks(auth: AuthStore) async {
-        guard let api = auth.api, quickLinks.isEmpty else { return }
+        guard let api = auth.api else { return }
         if let response = try? await api.fetchQuickLinks() {
             quickLinks = response.quickLinks
         }

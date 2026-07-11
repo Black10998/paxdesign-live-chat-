@@ -65,6 +65,7 @@ enum L10n {
     static var ChatImage: String { t("chat.image") }
     static var ChatImageUnavailable: String { t("chat.image_unavailable") }
     static var ChatLinkScanChecking: String { t("chat.link_scan.checking") }
+    static var ChatLinkScanAnalyzing: String { t("chat.link_scan.analyzing") }
     static var ChatLinkScanSafe: String { t("chat.link_scan.safe") }
     static var ChatLinkScanSuspicious: String { t("chat.link_scan.suspicious") }
     static var ChatLinkScanDangerous: String { t("chat.link_scan.dangerous") }
@@ -206,6 +207,18 @@ enum L10n {
     static var SettingsSecuritySubtitle: String { t("settings.security_subtitle") }
     static var SettingsSoundSubtitle: String { t("settings.sound_subtitle") }
     static var SettingsLiveChatSubtitle: String { t("settings.live_chat_subtitle") }
+    static var SettingsQuickLinksTitle: String { t("settings.quick_links.title") }
+    static var SettingsQuickLinksSubtitle: String { t("settings.quick_links.subtitle") }
+    static var SettingsQuickLinksHint: String { t("settings.quick_links.hint") }
+    static var SettingsQuickLinksSection: String { t("settings.quick_links.section") }
+    static var SettingsQuickLinksAdd: String { t("settings.quick_links.add") }
+    static var SettingsQuickLinksEdit: String { t("settings.quick_links.edit") }
+    static var SettingsQuickLinksEmptyBody: String { t("settings.quick_links.empty_body") }
+    static var SettingsQuickLinksEditorDetails: String { t("settings.quick_links.editor_details") }
+    static var SettingsQuickLinksFieldLabel: String { t("settings.quick_links.field_label") }
+    static var SettingsQuickLinksFieldURL: String { t("settings.quick_links.field_url") }
+    static var SettingsQuickLinksFieldIcon: String { t("settings.quick_links.field_icon") }
+    static var LoadingQuickLinks: String { t("loading.quick_links") }
     static var SettingsPrivacySubtitle: String { t("settings.privacy_subtitle") }
     static var SettingsSoundDetailFooter: String { t("settings.sound_detail_footer") }
     static var SettingsResetPrivacyBanner: String { t("settings.reset_privacy_banner") }

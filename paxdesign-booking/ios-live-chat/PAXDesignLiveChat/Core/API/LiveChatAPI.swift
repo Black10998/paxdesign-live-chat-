@@ -371,6 +371,28 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url), endpoint: "quick-links", as: QuickLinksResponse.self)
     }
 
+    func saveQuickLinks(_ links: [QuickLink]) async throws -> QuickLinksResponse {
+        guard let url = liveAdminURL(path: "quick-links") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let payload: [String: Any] = [
+            "quick_links": links.map { link in
+                [
+                    "id": link.id,
+                    "label": link.label,
+                    "url": link.url,
+                    "icon": link.icon,
+                ]
+            },
+        ]
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        return try await perform(
+            authRequest(url: url, method: "PUT", body: body),
+            endpoint: "quick-links-save",
+            as: QuickLinksResponse.self
+        )
+    }
+
     func sendLinkCard(
         _ sessionId: String,
         linkId: String,

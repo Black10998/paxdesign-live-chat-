@@ -179,9 +179,12 @@ class PAXdesign_Team_Registry {
             : PAXdesign_Live_Chat_Permissions::get_effective_permissions($uid);
         $presence = PAXdesign_Live_Chat_Permissions::get_team_presence($uid);
 
+        $identity = PAXdesign_Chat_Live::resolve_employee_identity($uid);
+        $name     = $identity ? $identity['name'] : $user->display_name;
+
         return array(
             'user_id'          => $uid,
-            'name'             => $user->display_name,
+            'name'             => $name,
             'email'            => $user->user_email,
             'username'         => $user->user_login,
             'enabled'          => !empty($record['enabled']) || self::is_executive_director($uid),
