@@ -757,22 +757,20 @@ final class ChatThreadModel: ObservableObject {
 
     private func applyMessageDeleted(messageId: Int, tombstone: String) {
         guard messageId > 0 else { return }
-        withAnimation(.easeOut(duration: 0.35)) {
-            messages.removeAll { $0.id == messageId }
-            let placeholder = LiveMessage(
-                id: messageId,
-                role: "system",
-                content: tombstone,
-                ts: Int(Date().timeIntervalSince1970)
-            )
-            if let insertIndex = messages.firstIndex(where: { $0.id > messageId }) {
-                messages.insert(placeholder, at: insertIndex)
-            } else {
-                messages.append(placeholder)
-            }
-            knownMessageIds.remove(messageId)
-            messagesRevision &+= 1
+        messages.removeAll { $0.id == messageId }
+        let placeholder = LiveMessage(
+            id: messageId,
+            role: "system",
+            content: tombstone,
+            ts: Int(Date().timeIntervalSince1970)
+        )
+        if let insertIndex = messages.firstIndex(where: { $0.id > messageId }) {
+            messages.insert(placeholder, at: insertIndex)
+        } else {
+            messages.append(placeholder)
         }
+        knownMessageIds.remove(messageId)
+        messagesRevision &+= 1
     }
 
     func deleteMessage(_ messageId: Int, auth: AuthStore) async {

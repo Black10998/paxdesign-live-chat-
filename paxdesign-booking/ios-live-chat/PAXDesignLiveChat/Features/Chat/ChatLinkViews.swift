@@ -42,7 +42,7 @@ struct LinkScanBadgeView: View {
                         .stroke(border, lineWidth: 1)
                 )
         )
-        .onChange(of: message.linkScanStatus) { _, newValue in
+        .onChange(of: message.linkScanStatus) { newValue in
             let resolved = LinkScanStatus(raw: newValue)
             if resolved != .none {
                 withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
