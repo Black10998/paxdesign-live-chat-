@@ -77,17 +77,6 @@
   --pax-transition-fast: 0.15s ease;
   --pax-font:           -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --pax-shadow-color:   #292929;
-  --pax-clock-color:    #363636;
-  --pax-clock-accent:   #f3f6fd;
-  --pax-s-rotate-time:  60s;
-  --pax-m-rotate-time:  3600s;
-  --pax-h-rotate-time:  43200s;
-  --pax-s-rotate-from:  0deg;
-  --pax-m-rotate-from:  0deg;
-  --pax-h-rotate-from:  0deg;
-  --pax-s-rotate-to:    0deg;
-  --pax-m-rotate-to:    0deg;
-  --pax-h-rotate-to:    0deg;
   /* Mobile viewport layout */
   --pax-mobile-header-clearance: 96px;
   --pax-mobile-launcher-clearance: 92px;
@@ -259,13 +248,15 @@
   overflow: hidden;
 }
 
-/* ─── Floating Clock Button ─────────────────────────────────────────────── */
+/* ─── Floating Eva Chat Launcher ────────────────────────────────────────── */
 #paxdesign-booking-root .paxdesign-booking-button {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  width: 80px;
+  width: auto;
   height: 80px;
+  --pax-launcher-size: 80px;
+  --pax-launcher-scale: 0.25;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -273,8 +264,10 @@
   display: flex;
   visibility: visible;
   opacity: 1;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
+  gap: 10px;
   padding: 0;
   overflow: visible;
   pointer-events: auto;
@@ -282,10 +275,10 @@
 }
 
 #paxdesign-booking-root .paxdesign-booking-button:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: none;
 }
 
-/* Hide floating clock while the widget (chat or booking) is open */
+/* Hide floating launcher while the widget (chat or booking) is open */
 #paxdesign-booking-root.paxdesign-widget-open .paxdesign-booking-button {
   visibility: hidden;
   opacity: 0;
@@ -293,206 +286,211 @@
   transform: scale(0.85);
 }
 
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-working {
-  background-color: transparent;
-  min-height: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  padding: 0;
-}
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-working:before { display: none; }
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-face,
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-top,
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-center,
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-hours-pointer { border-radius: 50%; }
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-face {
-  height: 80px;
-  width: 80px;
-  min-height: 80px;
-  min-width: 80px;
-  padding: 4px;
-  background: var(--pax-border-gradient);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
-  position: relative;
-  transition: box-shadow var(--pax-transition);
-}
-
-#paxdesign-booking-root .paxdesign-booking-button:hover .paxdesign-booking-clock-face {
-  box-shadow: 0 6px 28px rgba(0, 0, 0, 0.55), 0 0 12px rgba(255, 255, 255, 0.15);
-}
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-center {
-  height: 100%;
-  width: 100%;
-  background-color: var(--pax-gray-darker);
-  box-shadow: 0.2rem 0 0.4rem 0 var(--pax-shadow-color);
-  display: grid;
-  position: relative;
-  grid-template-rows: repeat(7, 1fr);
-  grid-template-columns: repeat(7, 1fr);
-  grid-template-areas:
-    ". . . n12 . . ."
-    ". . n11  . n1 . ."
-    ". n10 . . . n2 ."
-    "n9 . . . . . n3"
-    ". n8 . . . n4 ."
-    ". . n7 . n5 . ."
-    ". . . n6 . . .";
-}
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number {
-  font-size: 6px;
-  color: var(--pax-icon-muted);
-  line-height: 1;
-  align-self: center;
-  justify-self: center;
-  font-weight: 500;
-}
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number-1  { grid-area: n1;  justify-self: end;   align-self: start; }
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number-2  { grid-area: n2;  justify-self: end;   align-self: start; }
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number-3  { grid-area: n3;  justify-self: start; }
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number-4  { grid-area: n4;  justify-self: end;   align-self: end; }
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number-5  { grid-area: n5;  justify-self: end;   align-self: end; }
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number-6  { grid-area: n6;  align-self: start; }
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number-7  { grid-area: n7;  justify-self: start; align-self: end; }
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number-8  { grid-area: n8;  justify-self: start; align-self: end; }
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number-9  { grid-area: n9;  justify-self: end; }
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number-10 { grid-area: n10; justify-self: start; align-self: start; }
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number-11 { grid-area: n11; justify-self: start; align-self: start; }
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number-12 { grid-area: n12; align-self: end; }
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-label {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 4;
-  font-size: 9px;
+#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher-label {
+  flex-shrink: 0;
+  padding: 5px 11px;
+  border-radius: 6px;
+  background: #000;
+  color: #9bdaeb;
+  font-family: var(--pax-font);
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.07em;
+  letter-spacing: 0.1em;
   line-height: 1;
-  color: var(--pax-clock-color);
-  opacity: 0.62;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.14), 0 -1px 1px rgba(0, 0, 0, 0.42);
+  text-transform: uppercase;
+  box-shadow: 0 0 10px rgba(11, 218, 235, 0.28), inset 0 0 0 1px rgba(155, 218, 235, 0.18);
   pointer-events: none;
   user-select: none;
+  white-space: nowrap;
 }
 
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-top,
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-hours-container,
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-hours-pointer { height: 100%; width: 100%; }
+#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher {
+  width: var(--pax-launcher-size);
+  height: var(--pax-launcher-size);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+}
 
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-top {
-  position: absolute;
-  top: 0; left: 0;
+#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher .loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: scale(var(--pax-launcher-scale));
+  transform-origin: center center;
+}
+
+/* From Uiverse.io by Subaashbala */
+#paxdesign-booking-root .paxdesign-booking-button .modelViewPort {
+  /* The black circle background around the model*/
+  perspective: 1000px;
+  width: 20rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #000;
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-hours-container {
+#paxdesign-booking-root .paxdesign-booking-button .eva {
+  --EVA-ROTATION-DURATION: 4s;
+  transform-style: preserve-3d;
+  animation: paxdesign-eva-rotateRight var(--EVA-ROTATION-DURATION) linear infinite alternate;
+}
+#paxdesign-booking-root .paxdesign-booking-button .head {
   position: relative;
-  z-index: 1;
-  filter: drop-shadow(0.05rem 0 0.3rem var(--pax-shadow-color));
+  width: 6rem;
+  height: 4rem;
+  border-radius: 48% 53% 45% 55% / 79% 79% 20% 22%;
+  background: linear-gradient(to right, white 45%, gray);
 }
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-hours-pointer {
-  background-color: var(--pax-clock-color);
-  clip-path: polygon(-10% -10%, 32% -10%, 50% 50%, 68% -10%, 110% -10%, 110% 110%, -10% 110%);
+#paxdesign-booking-root .paxdesign-booking-button .eyeChamber {
+  width: 4.5rem;
+  height: 2.75rem;
+  position: relative;
+  left: 50%;
+  top: 55%;
+  border-radius: 45% 53% 45% 48% / 62% 59% 35% 34%;
+  background-color: #0c203c;
+  box-shadow: 0px 0px 2px 2px white, inset 0px 0px 0px 2px black;
+  transform: translate(-50%, -50%);
+  animation: paxdesign-eva-moveRight var(--EVA-ROTATION-DURATION) linear infinite alternate;
 }
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-sec-min-container {
-  height: 6px;
-  width: 6px;
-  background-color: var(--pax-clock-color);
-  box-shadow: 0 0.05rem 0.5rem 0.05rem var(--pax-shadow-color);
+#paxdesign-booking-root .paxdesign-booking-button .eye {
+  width: 1.2rem;
+  height: 1.5rem;
+  position: absolute;
   border-radius: 50%;
-  position: absolute;
-  z-index: 2;
 }
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-sec-container,
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-min-container {
-  height: 100%;
-  width: 100%;
-  position: absolute;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+#paxdesign-booking-root .paxdesign-booking-button .eye:first-child {
+  left: 12px;
+  top: 50%;
+  background: repeating-linear-gradient(
+    65deg,
+    #9bdaeb 0px,
+    #9bdaeb 1px,
+    white 2px
+  );
+  box-shadow: inset 0px 0px 5px #04b8d5, 0px 0px 15px 1px #0bdaeb;
+  transform: translate(0, -50%) rotate(-65deg);
 }
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-sec-pointer {
-  position: absolute;
-  bottom: -8px;
-  height: 44px;
-  width: 1px;
-  border-radius: 0.5px;
-  background-color: var(--pax-white);
-  box-shadow: 0 0.05rem 0.5rem 0.05rem var(--pax-shadow-color);
-  z-index: 0;
+#paxdesign-booking-root .paxdesign-booking-button .eye:nth-child(2) {
+  right: 12px;
+  top: 50%;
+  background: repeating-linear-gradient(
+    -65deg,
+    #9bdaeb 0px,
+    #9bdaeb 1px,
+    white 2px
+  );
+  box-shadow: inset 0px 0px 5px #04b8d5, 0px 0px 15px 1px #0bdaeb;
+  transform: translate(0, -50%) rotate(65deg);
 }
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-sec-container:before {
-  content: "";
+#paxdesign-booking-root .paxdesign-booking-button .body {
+  width: 6rem;
+  height: 8rem;
+  position: relative;
+  margin-block-start: 0.25rem;
+  border-radius: 47% 53% 45% 55% / 12% 9% 90% 88%;
+  background: linear-gradient(to right, white 35%, gray);
+}
+#paxdesign-booking-root .paxdesign-booking-button .hand {
   position: absolute;
-  height: 2px; width: 2px;
+  left: -1.5rem;
+  top: 0.75rem;
+  width: 2rem;
+  height: 5.5rem;
+  border-radius: 40%;
+  background: linear-gradient(to left, white 15%, gray);
+  box-shadow: 5px 0px 5px rgba(0, 0, 0, 0.25);
+  transform: rotateY(55deg) rotateZ(10deg);
+}
+#paxdesign-booking-root .paxdesign-booking-button .hand:first-child {
+  animation: paxdesign-eva-compensateRotation var(--EVA-ROTATION-DURATION) linear infinite
+    alternate;
+}
+#paxdesign-booking-root .paxdesign-booking-button .hand:nth-child(2) {
+  left: 92%;
+  background: linear-gradient(to right, white 15%, gray);
+  transform: rotateY(55deg) rotateZ(-10deg);
+  animation: paxdesign-eva-compensateRotationRight var(--EVA-ROTATION-DURATION) linear
+    infinite alternate;
+}
+#paxdesign-booking-root .paxdesign-booking-button .scannerThing {
+  width: 0;
+  height: 0;
+  position: absolute;
+  left: 60%;
+  top: 10%;
+  border-top: 180px solid #9bdaeb;
+  border-left: 250px solid transparent;
+  border-right: 250px solid transparent;
+  transform-origin: top left;
+  mask: linear-gradient(to right, white, transparent 35%);
+  animation: paxdesign-eva-glow 2s cubic-bezier(0.86, 0, 0.07, 1) infinite;
+}
+#paxdesign-booking-root .paxdesign-booking-button .scannerOrigin {
+  position: absolute;
+  width: 8px;
+  aspect-ratio: 1;
   border-radius: 50%;
-  background-color: var(--pax-clock-color);
-  z-index: 2;
+  left: 60%;
+  top: 10%;
+  background: #9bdaeb;
+  box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0.5);
+  animation: paxdesign-eva-moveRight var(--EVA-ROTATION-DURATION) linear infinite;
 }
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-sec-container:after {
-  content: "";
-  position: absolute;
-  height: 4px; width: 4px;
-  border: 1px solid var(--pax-white);
-  border-radius: 50%;
-  background-color: var(--pax-gray-darker);
-  z-index: 1;
+@keyframes paxdesign-eva-rotateRight {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(25deg);
+  }
 }
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-min-pointer {
-  position: absolute;
-  bottom: -3px;
-  height: 28px;
-  width: 1px;
-  border-radius: 0.5px;
-  background-color: var(--pax-placeholder);
-  box-shadow: 0.2rem 0.05rem 0.4rem 0.05rem var(--pax-shadow-color);
-  z-index: 0;
+@keyframes paxdesign-eva-moveRight {
+  from {
+    transform: translate(-50%, -50%);
+  }
+  to {
+    transform: translate(-40%, -50%);
+  }
 }
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-working .paxdesign-booking-sec-container {
-  transform: rotateZ(var(--pax-s-rotate-from));
-  animation: paxdesign-rotate-seconds var(--pax-s-rotate-time) infinite linear;
+@keyframes paxdesign-eva-compensateRotation {
+  from {
+    transform: rotateY(55deg) rotateZ(10deg);
+  }
+  to {
+    transform: rotatey(30deg) rotateZ(10deg);
+  }
 }
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-working .paxdesign-booking-min-container {
-  transform: rotateZ(var(--pax-m-rotate-from));
-  animation: paxdesign-rotate-minutes var(--pax-m-rotate-time) infinite linear;
+@keyframes paxdesign-eva-compensateRotationRight {
+  from {
+    transform: rotateY(55deg) rotateZ(-10deg);
+  }
+  to {
+    transform: rotateY(70deg) rotateZ(-10deg);
+  }
 }
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-working .paxdesign-booking-hours-pointer {
-  transform: rotateZ(var(--pax-h-rotate-from));
-  animation: paxdesign-rotate-hours var(--pax-h-rotate-time) infinite linear;
-}
-
-@keyframes paxdesign-rotate-seconds {
-  from { transform: rotateZ(var(--pax-s-rotate-from)); }
-  to   { transform: rotateZ(var(--pax-s-rotate-to)); }
-}
-@keyframes paxdesign-rotate-minutes {
-  from { transform: rotateZ(var(--pax-m-rotate-from)); }
-  to   { transform: rotateZ(var(--pax-m-rotate-to)); }
-}
-@keyframes paxdesign-rotate-hours {
-  from { transform: rotateZ(var(--pax-h-rotate-from)); }
-  to   { transform: rotateZ(var(--pax-h-rotate-to)); }
+@keyframes paxdesign-eva-glow {
+  from {
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  45% {
+    transform: rotate(-25deg);
+  }
+  75% {
+    transform: rotate(5deg);
+  }
+  100% {
+    opacity: 0;
+  }
 }
 
 /* ─── Widget Shell ──────────────────────────────────────────────────────── */
@@ -2014,26 +2012,16 @@ body.paxdesign-agent-profile-open {
   #paxdesign-booking-root .paxdesign-booking-button {
     bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     right: calc(16px + env(safe-area-inset-right, 0px));
-    width: 70px;
     height: 70px;
+    --pax-launcher-size: 70px;
+    --pax-launcher-scale: 0.21875;
     z-index: 99993;
   }
 
-  #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-face {
-    height: 70px;
-    width: 70px;
-    min-height: 70px;
-    min-width: 70px;
+  #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher-label {
+    font-size: 10px;
+    padding: 4px 9px;
   }
-
-  #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number { font-size: 5px; }
-
-  #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-sec-pointer {
-    bottom: -7px;
-    height: 38px;
-  }
-
-  #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-min-pointer { height: 24px; }
 
   #paxdesign-booking-root .paxdesign-booking-body { padding: 14px 12px; }
 
@@ -2076,25 +2064,17 @@ body.paxdesign-agent-profile-open {
   #paxdesign-booking-root .paxdesign-booking-button {
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     right: calc(12px + env(safe-area-inset-right, 0px));
-    width: 60px;
     height: 60px;
+    --pax-launcher-size: 60px;
+    --pax-launcher-scale: 0.1875;
+    gap: 8px;
   }
 
-  #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-face {
-    height: 60px;
-    width: 60px;
-    min-height: 60px;
-    min-width: 60px;
+  #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher-label {
+    font-size: 9px;
+    padding: 4px 8px;
+    letter-spacing: 0.08em;
   }
-
-  #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-clock-number { font-size: 4.5px; }
-
-  #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-sec-pointer {
-    bottom: -6px;
-    height: 33px;
-  }
-
-  #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-min-pointer { height: 21px; }
 }
 
 @media (max-width: 480px) {
