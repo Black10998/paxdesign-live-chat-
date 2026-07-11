@@ -1,6 +1,6 @@
 import SwiftUI
 
-// MARK: - Link scan badge (premium animated)
+// MARK: - Compact inline link scan badge
 
 struct LinkScanBadgeView: View {
     let message: LiveMessage
@@ -13,156 +13,68 @@ struct LinkScanBadgeView: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            LinkScanShieldAnimationView(status: displayedStatus, glow: displayedStatus == .checking)
-                .frame(width: 40, height: 40)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(displayedStatus.label)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(tint)
-                    .contentTransition(.numericText())
-                    .animation(.easeInOut(duration: 0.35), value: displayedStatus.label)
-
-                if displayedStatus == .checking {
-                    ProgressView()
-                        .progressViewStyle(.linear)
-                        .tint(tint)
-                        .frame(height: 4)
-                }
-            }
+        HStack(spacing: 5) {
+            Image(systemName: iconName)
+                .font(.system(size: 10, weight: .bold))
+            Text(displayedStatus.label)
+                .font(.caption2.weight(.bold))
+                .lineLimit(1)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .foregroundStyle(foreground)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            Capsule(style: .continuous)
                 .fill(background)
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(border, lineWidth: 1)
+                    Capsule(style: .continuous)
+                        .strokeBorder(border, lineWidth: 1.5)
                 )
         )
         .onChange(of: message.linkScanStatus) { newValue in
             let resolved = LinkScanStatus(raw: newValue)
             if resolved != .none {
-                withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+                withAnimation(.easeInOut(duration: 0.28)) {
                     displayedStatus = resolved
                 }
             }
         }
-        .animation(.spring(response: 0.45, dampingFraction: 0.82), value: displayedStatus)
     }
 
-    private var tint: Color {
+    private var iconName: String {
         switch displayedStatus {
-        case .checking: return PAXTheme.textSecondary
-        case .safe: return Color(red: 0.09, green: 0.50, blue: 0.24)
-        case .suspicious: return Color(red: 0.71, green: 0.33, blue: 0.04)
-        case .dangerous: return PAXTheme.danger
-        case .failed, .timeout, .incomplete: return Color(red: 0.45, green: 0.48, blue: 0.56)
+        case .checking: return "shield.lefthalf.filled.badge.checkmark"
+        case .safe: return "checkmark.shield.fill"
+        case .suspicious: return "exclamationmark.shield.fill"
+        case .dangerous: return "xmark.shield.fill"
+        case .failed, .timeout, .incomplete: return "questionmark.circle.fill"
+        case .none: return "shield"
+        }
+    }
+
+    private var foreground: Color {
+        switch displayedStatus {
+        case .checking: return Color(red: 0.15, green: 0.39, blue: 0.92)
+        case .safe: return Color(red: 0.09, green: 0.64, blue: 0.29)
+        case .suspicious: return Color(red: 0.85, green: 0.47, blue: 0.02)
+        case .dangerous: return Color(red: 0.86, green: 0.15, blue: 0.15)
+        case .failed, .timeout, .incomplete: return Color(red: 0.28, green: 0.33, blue: 0.41)
         case .none: return PAXTheme.textSecondary
         }
     }
 
     private var background: Color {
         switch displayedStatus {
-        case .checking: return PAXTheme.surface.opacity(0.78)
-        case .safe: return Color(red: 0.13, green: 0.77, blue: 0.37, opacity: 0.12)
-        case .suspicious: return Color(red: 0.96, green: 0.62, blue: 0.04, opacity: 0.14)
-        case .dangerous: return PAXTheme.danger.opacity(0.12)
-        case .failed, .timeout, .incomplete: return Color(red: 0.45, green: 0.48, blue: 0.56, opacity: 0.12)
+        case .checking: return Color(red: 0.93, green: 0.96, blue: 1.0)
+        case .safe: return Color(red: 0.94, green: 0.99, blue: 0.96)
+        case .suspicious: return Color(red: 1.0, green: 0.98, blue: 0.94)
+        case .dangerous: return Color(red: 1.0, green: 0.95, blue: 0.95)
+        case .failed, .timeout, .incomplete: return Color(red: 0.97, green: 0.98, blue: 0.99)
         case .none: return PAXTheme.surface.opacity(0.72)
         }
     }
 
-    private var border: Color { tint.opacity(0.28) }
-}
-
-private struct LinkScanShieldAnimationView: View {
-    let status: LinkScanStatus
-    let glow: Bool
-
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1 / 30)) { timeline in
-            let t = timeline.date.timeIntervalSinceReferenceDate
-            ZStack {
-                Circle()
-                    .fill(accent.opacity(glow ? 0.16 : 0.08))
-                    .scaleEffect(glow ? 1.08 + CGFloat(sin(t * 2.4)) * 0.04 : 1)
-                    .blur(radius: glow ? 6 : 2)
-
-                ShieldShape()
-                    .fill(
-                        LinearGradient(
-                            colors: [accent.opacity(0.95), accent.opacity(0.55)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .overlay(ShieldShape().stroke(Color.white.opacity(0.35), lineWidth: 0.8))
-                    .frame(width: 26, height: 30)
-                    .rotationEffect(status == .checking ? .degrees(t.truncatingRemainder(dividingBy: 1) * 12 - 6) : .zero)
-
-                resultGlyph
-            }
-        }
-    }
-
-    @ViewBuilder
-    private var resultGlyph: some View {
-        switch status {
-        case .safe:
-            Image(systemName: "checkmark")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.white)
-                .transition(.scale.combined(with: .opacity))
-        case .suspicious:
-            Image(systemName: "exclamationmark")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.white)
-        case .dangerous:
-            Image(systemName: "xmark")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.white)
-        case .failed, .timeout, .incomplete:
-            Image(systemName: "questionmark")
-                .font(.caption2.weight(.bold))
-                .foregroundStyle(.white)
-        case .checking:
-            Circle()
-                .trim(from: 0.08, to: 0.72)
-                .stroke(Color.white.opacity(0.9), style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                .frame(width: 12, height: 12)
-                .rotationEffect(.degrees(-90))
-        case .none:
-            EmptyView()
-        }
-    }
-
-    private var accent: Color {
-        switch status {
-        case .checking: return Color(red: 0.45, green: 0.52, blue: 0.64)
-        case .safe: return Color(red: 0.13, green: 0.72, blue: 0.38)
-        case .suspicious: return Color(red: 0.92, green: 0.58, blue: 0.08)
-        case .dangerous: return PAXTheme.danger
-        case .failed, .timeout, .incomplete: return Color(red: 0.45, green: 0.48, blue: 0.56)
-        case .none: return PAXTheme.textSecondary
-        }
-    }
-}
-
-private struct ShieldShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let w = rect.width
-        let h = rect.height
-        path.move(to: CGPoint(x: w * 0.5, y: 0))
-        path.addLine(to: CGPoint(x: w, y: h * 0.18))
-        path.addQuadCurve(to: CGPoint(x: w * 0.5, y: h), control: CGPoint(x: w * 0.92, y: h * 0.72))
-        path.addQuadCurve(to: CGPoint(x: 0, y: h * 0.18), control: CGPoint(x: w * 0.08, y: h * 0.72))
-        path.closeSubpath()
-        return path
-    }
+    private var border: Color { foreground.opacity(0.55) }
 }
 
 // MARK: - Compact link card with SVG icon

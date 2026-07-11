@@ -60,7 +60,8 @@ struct ChatView: View {
                     showDeleteConfirm = true
                 },
                 onImageTap: { imageViewer = ImageViewerItem(url: $0) },
-                siteBaseURL: auth.profile?.siteUrl ?? auth.siteURLString
+                siteBaseURL: auth.profile?.siteUrl ?? auth.siteURLString,
+                deletingMessageIds: thread.deletingMessageIds
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }

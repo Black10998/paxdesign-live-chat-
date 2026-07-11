@@ -516,6 +516,7 @@ final class ChatThreadModel: ObservableObject {
     @Published var aiSuggestions: [String] = []
     @Published var suggestionsLoading = false
     @Published var suggestionsError: String?
+    @Published var deletingMessageIds: Set<Int> = []
 
     let sessionId: String
     private weak var auth: AuthStore?
@@ -525,6 +526,7 @@ final class ChatThreadModel: ObservableObject {
     private var typingNotifyTask: Task<Void, Never>?
     private var suggestionsTask: Task<Void, Never>?
     private var readAckTask: Task<Void, Never>?
+    private var deletionTasks: [Int: Task<Void, Never>] = [:]
     private var suggestionsForMessageId = 0
     private var knownMessageIds = Set<Int>()
     private var lastTypingNotifyAt = Date.distantPast
@@ -757,6 +759,21 @@ final class ChatThreadModel: ObservableObject {
 
     private func applyMessageDeleted(messageId: Int, tombstone: String) {
         guard messageId > 0 else { return }
+        guard !deletingMessageIds.contains(messageId) else { return }
+        deletingMessageIds.insert(messageId)
+        messagesRevision &+= 1
+
+        deletionTasks[messageId]?.cancel()
+        deletionTasks[messageId] = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 460_000_000)
+            guard !Task.isCancelled else { return }
+            finishMessageDeletion(messageId: messageId, tombstone: tombstone)
+        }
+    }
+
+    private func finishMessageDeletion(messageId: Int, tombstone: String) {
+        deletionTasks.removeValue(forKey: messageId)
+        deletingMessageIds.remove(messageId)
         messages.removeAll { $0.id == messageId }
         let placeholder = LiveMessage(
             id: messageId,

@@ -595,12 +595,6 @@ class PAXdesign_Message_Store {
             return new WP_Error('pax_message_not_found', 'Message not found.', array('status' => 404));
         }
 
-        self::purge_message_assets($message);
-
-        if (class_exists('PAXdesign_Link_Scan_Service')) {
-            PAXdesign_Link_Scan_Service::delete_scan_rows($session_id, $msg_seq);
-        }
-
         $table = self::messages_table();
         $deleted = $wpdb->delete(
             $table,
@@ -614,8 +608,6 @@ class PAXdesign_Message_Store {
             return new WP_Error('pax_message_delete_failed', 'Message could not be deleted.', array('status' => 500));
         }
 
-        self::rebuild_customer_projection($session_id, $channel);
-
         $tombstone = __('This message was deleted by an employee.', 'paxdesign-booking');
         $payload = array(
             'session_id'  => $session_id,
@@ -625,6 +617,14 @@ class PAXdesign_Message_Store {
         );
         self::emit('session:' . $session_id, 'message_deleted', $payload, $msg_seq);
         self::emit('inbox:admins', 'message_deleted', $payload, $msg_seq);
+
+        self::purge_message_assets($message);
+
+        if (class_exists('PAXdesign_Link_Scan_Service')) {
+            PAXdesign_Link_Scan_Service::delete_scan_rows($session_id, $msg_seq);
+        }
+
+        self::rebuild_customer_projection($session_id, $channel);
 
         return array(
             'ok'          => true,

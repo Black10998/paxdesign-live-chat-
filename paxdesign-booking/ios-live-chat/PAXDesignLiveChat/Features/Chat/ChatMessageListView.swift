@@ -19,6 +19,7 @@ struct ChatMessageListView: View {
     var teamFailedClientMsgIds: Set<String> = []
     var onRetryTeamMessage: ((String) -> Void)? = nil
     var siteBaseURL: String?
+    var deletingMessageIds: Set<Int> = []
 
     private var displayRows: [MessageDisplayRow] {
         var messageLookup: [Int: LiveMessage] = [:]
@@ -54,7 +55,8 @@ struct ChatMessageListView: View {
                             teamOtherReadSeq: teamOtherReadSeq,
                             teamFailedClientMsgIds: teamFailedClientMsgIds,
                             onRetryTeamMessage: onRetryTeamMessage,
-                            siteBaseURL: siteBaseURL
+                            siteBaseURL: siteBaseURL,
+                            deletingMessageIds: deletingMessageIds
                         )
                         .id(row.id)
                     }
@@ -120,6 +122,7 @@ private struct ChatMessageRow: View {
     var teamFailedClientMsgIds: Set<String> = []
     var onRetryTeamMessage: ((String) -> Void)? = nil
     var siteBaseURL: String?
+    var deletingMessageIds: Set<Int> = []
 
     private var showSenderLabel: Bool {
         row.message.role != "system" && (
@@ -176,6 +179,10 @@ private struct ChatMessageRow: View {
                     onDelete: onDelete,
                     onImageTap: { onImageTap($0) }
                 )
+                .opacity(deletingMessageIds.contains(row.message.id) ? 0 : 1)
+                .scaleEffect(deletingMessageIds.contains(row.message.id) ? 0.9 : 1, anchor: .center)
+                .blur(radius: deletingMessageIds.contains(row.message.id) ? 4 : 0)
+                .animation(.easeOut(duration: 0.46), value: deletingMessageIds.contains(row.message.id))
                 if handler == "team", row.message.role == "admin" {
                     TeamMessageDeliveryStatus(
                         message: row.message,

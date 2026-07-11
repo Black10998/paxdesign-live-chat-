@@ -3254,14 +3254,15 @@ body.pax-live-agent-profile-open {
 .pax-live-dashboard__link-scan {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  font-size: 0.78rem;
-  font-weight: 600;
-  line-height: 1.35;
+  gap: 5px;
+  margin-top: 6px;
+  padding: 3px 9px 3px 7px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
 }
 
 .pax-live-dashboard__link-scan-icon {
@@ -3269,53 +3270,48 @@ body.pax-live-agent-profile-open {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 1.15rem;
-  font-size: 0.95rem;
-  line-height: 1;
+  line-height: 0;
+}
+
+.pax-live-dashboard__link-scan-icon-spin {
+  animation: pax-link-scan-spin 0.9s linear infinite;
+  transform-origin: 50% 50%;
 }
 
 .pax-live-dashboard__link-scan-label {
   min-width: 0;
+  white-space: nowrap;
 }
 
 .pax-live-dashboard__link-scan--checking {
-  background: rgba(148, 163, 184, 0.16);
-  border-color: rgba(148, 163, 184, 0.28);
-  color: #475569;
-}
-
-.pax-live-dashboard__link-scan--checking .pax-live-dashboard__link-scan-icon {
-  animation: pax-link-scan-spin 0.9s linear infinite;
-}
-
-@keyframes pax-link-scan-spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  background: #eff6ff;
+  border-color: #2563eb;
+  color: #1d4ed8;
 }
 
 .pax-live-dashboard__link-scan--safe {
-  background: rgba(34, 197, 94, 0.12);
-  border-color: rgba(34, 197, 94, 0.28);
+  background: #f0fdf4;
+  border-color: #16a34a;
   color: #15803d;
 }
 
 .pax-live-dashboard__link-scan--suspicious {
-  background: rgba(245, 158, 11, 0.14);
-  border-color: rgba(245, 158, 11, 0.3);
+  background: #fffbeb;
+  border-color: #d97706;
   color: #b45309;
 }
 
 .pax-live-dashboard__link-scan--dangerous {
-  background: rgba(239, 68, 68, 0.12);
-  border-color: rgba(239, 68, 68, 0.28);
+  background: #fef2f2;
+  border-color: #dc2626;
   color: #b91c1c;
 }
 
 .pax-live-dashboard__link-scan--failed,
 .pax-live-dashboard__link-scan--timeout,
 .pax-live-dashboard__link-scan--incomplete {
-  background: rgba(100, 116, 139, 0.12);
-  border-color: rgba(100, 116, 139, 0.28);
+  background: #f8fafc;
+  border-color: #64748b;
   color: #475569;
 }
 
@@ -3343,9 +3339,17 @@ body.pax-live-agent-profile-open {
 }
 
 .pax-live-dashboard__msg--deleting {
-  opacity: 0;
-  transform: scale(0.96) translateY(6px);
-  filter: blur(2px);
-  transition: opacity 0.36s ease, transform 0.36s ease, filter 0.36s ease;
+  opacity: 0 !important;
+  transform: scale(0.9) translateY(6px);
+  filter: blur(4px);
+  transition: opacity 0.46s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.46s cubic-bezier(0.22, 1, 0.36, 1),
+              filter 0.46s cubic-bezier(0.22, 1, 0.36, 1);
   pointer-events: none;
+  will-change: opacity, transform, filter;
+}
+
+@keyframes pax-link-scan-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

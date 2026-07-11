@@ -204,7 +204,9 @@
     if (data.type === 'handler' && payload.handler) {
       applyHandlerState(payload.handler, payload.admin_name || '');
     }
-    pollUpdates();
+    if (data.type !== 'link_scan_updated' && data.type !== 'message_deleted') {
+      pollUpdates();
+    }
   }
 
   function startCustomerStream() {
@@ -2170,27 +2172,32 @@
   function animateCustomerMessageDeletion(messageId, tombstone) {
     var msgEl = threadEl.querySelector('[data-msg-id="' + messageId + '"]');
     if (!msgEl) return;
-    msgEl.classList.add('paxdesign-booking-chat-message--deleting');
-    window.setTimeout(function () {
-      if (msgEl.parentNode) msgEl.parentNode.removeChild(msgEl);
-      delete domMsgIds[messageId];
-      renderMessageDom('system', tombstone, 'deleted-' + messageId, { skipPush: true });
-      messages = messages.filter(function (m) { return String(m.id) !== String(messageId); });
-      saveSessionSnapshot();
-    }, 360);
+    requestAnimationFrame(function () {
+      msgEl.classList.add('paxdesign-booking-chat-message--deleting');
+      window.setTimeout(function () {
+        if (msgEl.parentNode) msgEl.parentNode.removeChild(msgEl);
+        delete domMsgIds[messageId];
+        renderMessageDom('system', tombstone, 'deleted-' + messageId, { skipPush: true });
+        messages = messages.filter(function (m) { return String(m.id) !== String(messageId); });
+        saveSessionSnapshot();
+      }, 460);
+    });
   }
 
-  function linkScanShieldSvg(status) {
+  function linkScanIconSvg(status) {
     if (status === 'safe') {
-      return '<svg class="paxdesign-booking-chat-link-scan__shield" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" fill="currentColor" opacity="0.18"/><path d="M9.5 12.2l2 2 4.2-4.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      return '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 1.5l5.5 2.2v3.8c0 3.4-2.3 6.5-5.5 7.2-3.2-.7-5.5-3.8-5.5-7.2V3.7L8 1.5z" fill="currentColor" opacity="0.2"/><path d="M5.5 8.2l1.6 1.6 3.4-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
     }
     if (status === 'suspicious') {
-      return '<svg class="paxdesign-booking-chat-link-scan__shield" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" fill="currentColor" opacity="0.18"/><path d="M12 8.5v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="16.2" r="1" fill="currentColor"/></svg>';
+      return '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 1.5l5.5 2.2v3.8c0 3.4-2.3 6.5-5.5 7.2-3.2-.7-5.5-3.8-5.5-7.2V3.7L8 1.5z" fill="currentColor" opacity="0.2"/><path d="M8 5.2v3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="11" r="0.8" fill="currentColor"/></svg>';
     }
     if (status === 'dangerous') {
-      return '<svg class="paxdesign-booking-chat-link-scan__shield" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" fill="currentColor" opacity="0.18"/><path d="M9 9l6 6M15 9l-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+      return '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 1.5l5.5 2.2v3.8c0 3.4-2.3 6.5-5.5 7.2-3.2-.7-5.5-3.8-5.5-7.2V3.7L8 1.5z" fill="currentColor" opacity="0.2"/><path d="M6 6.2l4 4M10 6.2l-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
     }
-    return '<svg class="paxdesign-booking-chat-link-scan__shield paxdesign-booking-chat-link-scan__shield--spin" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V6l8-4z" fill="currentColor" opacity="0.22"/><path d="M12 6.5v4.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="14.2" r="0.9" fill="currentColor"/></svg>';
+    if (status === 'failed' || status === 'timeout' || status === 'incomplete') {
+      return '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><circle cx="8" cy="8" r="5.5" fill="currentColor" opacity="0.15"/><path d="M8 5.4v3.2M8 10.8h.01" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+    }
+    return '<svg class="paxdesign-booking-chat-link-scan__icon-spin" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 1.5l5.5 2.2v3.8c0 3.4-2.3 6.5-5.5 7.2-3.2-.7-5.5-3.8-5.5-7.2V3.7L8 1.5z" fill="currentColor" opacity="0.2"/><path d="M8 4.5v2.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
   }
 
   function buildCustomerLinkScanHtml(opts) {
@@ -2199,14 +2206,10 @@
     var urls = extractUrlsFromText(opts.content || '');
     if (!status && !urls.length) return '';
     if (!status) status = 'checking';
-    var phase = opts.link_scan_phase || 0;
-    return '<div class="paxdesign-booking-chat-link-scan paxdesign-booking-chat-link-scan--' + escapeHtml(status) + '" data-scan-status="' + escapeHtml(status) + '">' +
-      '<span class="paxdesign-booking-chat-link-scan__icon">' + linkScanShieldSvg(status) + '</span>' +
-      '<span class="paxdesign-booking-chat-link-scan__copy">' +
-        '<span class="paxdesign-booking-chat-link-scan__label">' + escapeHtml(customerLinkScanLabel(status, phase)) + '</span>' +
-        (status === 'checking' ? '<span class="paxdesign-booking-chat-link-scan__progress" aria-hidden="true"><span></span></span>' : '') +
-      '</span>' +
-      '</div>';
+    return '<span class="paxdesign-booking-chat-link-scan paxdesign-booking-chat-link-scan--' + escapeHtml(status) + '" data-scan-status="' + escapeHtml(status) + '" role="status">' +
+      '<span class="paxdesign-booking-chat-link-scan__icon">' + linkScanIconSvg(status) + '</span>' +
+      '<span class="paxdesign-booking-chat-link-scan__label">' + escapeHtml(customerLinkScanLabel(status)) + '</span>' +
+      '</span>';
   }
 
   function updateCustomerLinkScanBadge(msgId, serverMsg) {

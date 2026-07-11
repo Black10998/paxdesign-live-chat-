@@ -1549,15 +1549,31 @@
       return urls;
     }
 
-    function linkScanBadgeParts(status) {
-      if (status === 'checking') return { icon: '⟳', label: 'Scanning...' };
-      if (status === 'safe') return { icon: '✅', label: 'Safe Link' };
-      if (status === 'suspicious') return { icon: '⚠', label: 'Suspicious Link' };
-      if (status === 'dangerous') return { icon: '❌', label: 'Dangerous Link' };
-      if (status === 'failed' || status === 'timeout' || status === 'incomplete') {
-        return { icon: '…', label: 'Scan not completed.' };
+    function linkScanIconSvg(status) {
+      if (status === 'safe') {
+        return '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 1.5l5.5 2.2v3.8c0 3.4-2.3 6.5-5.5 7.2-3.2-.7-5.5-3.8-5.5-7.2V3.7L8 1.5z" fill="currentColor" opacity="0.2"/><path d="M5.5 8.2l1.6 1.6 3.4-3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
       }
-      return { icon: '', label: '' };
+      if (status === 'suspicious') {
+        return '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 1.5l5.5 2.2v3.8c0 3.4-2.3 6.5-5.5 7.2-3.2-.7-5.5-3.8-5.5-7.2V3.7L8 1.5z" fill="currentColor" opacity="0.2"/><path d="M8 5.2v3.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="11" r="0.8" fill="currentColor"/></svg>';
+      }
+      if (status === 'dangerous') {
+        return '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 1.5l5.5 2.2v3.8c0 3.4-2.3 6.5-5.5 7.2-3.2-.7-5.5-3.8-5.5-7.2V3.7L8 1.5z" fill="currentColor" opacity="0.2"/><path d="M6 6.2l4 4M10 6.2l-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+      }
+      if (status === 'failed' || status === 'timeout' || status === 'incomplete') {
+        return '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><circle cx="8" cy="8" r="5.5" fill="currentColor" opacity="0.15"/><path d="M8 5.4v3.2M8 10.8h.01" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+      }
+      return '<svg class="pax-live-dashboard__link-scan-icon-spin" viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path d="M8 1.5l5.5 2.2v3.8c0 3.4-2.3 6.5-5.5 7.2-3.2-.7-5.5-3.8-5.5-7.2V3.7L8 1.5z" fill="currentColor" opacity="0.2"/></svg>';
+    }
+
+    function linkScanBadgeParts(status) {
+      if (status === 'checking') return { label: 'Scanning...' };
+      if (status === 'safe') return { label: 'Safe Link' };
+      if (status === 'suspicious') return { label: 'Suspicious Link' };
+      if (status === 'dangerous') return { label: 'Dangerous Link' };
+      if (status === 'failed' || status === 'timeout' || status === 'incomplete') {
+        return { label: 'Scan not completed.' };
+      }
+      return { label: '' };
     }
 
     function linkCardDisplayLabel(label) {
@@ -1585,10 +1601,10 @@
       if (!status && !urls.length) return '';
       if (!status) status = 'checking';
       var parts = linkScanBadgeParts(status);
-      return '<div class="pax-live-dashboard__link-scan pax-live-dashboard__link-scan--' + escapeHtml(status) + '" data-scan-status="' + escapeHtml(status) + '">' +
-        '<span class="pax-live-dashboard__link-scan-icon" aria-hidden="true">' + escapeHtml(parts.icon) + '</span>' +
+      return '<span class="pax-live-dashboard__link-scan pax-live-dashboard__link-scan--' + escapeHtml(status) + '" data-scan-status="' + escapeHtml(status) + '" role="status">' +
+        '<span class="pax-live-dashboard__link-scan-icon" aria-hidden="true">' + linkScanIconSvg(status) + '</span>' +
         '<span class="pax-live-dashboard__link-scan-label">' + escapeHtml(parts.label) + '</span>' +
-        '</div>';
+        '</span>';
     }
 
     function updateAdminLinkScanBadge(msg) {
@@ -1610,17 +1626,19 @@
     function animateAdminMessageDeletion(messageId, tombstone) {
       var $msg = $messages.find('[data-msg-id="' + messageId + '"]');
       if (!$msg.length) return;
-      $msg.addClass('pax-live-dashboard__msg--deleting');
-      window.setTimeout(function () {
-        $msg.remove();
-        delete domMsgIds[messageId];
-        delete sessionMessageMap[messageId];
-        appendMessageDom({
-          id: 'deleted-' + messageId,
-          role: 'system',
-          content: tombstone
-        });
-      }, 360);
+      window.requestAnimationFrame(function () {
+        $msg.addClass('pax-live-dashboard__msg--deleting');
+        window.setTimeout(function () {
+          $msg.remove();
+          delete domMsgIds[messageId];
+          delete sessionMessageMap[messageId];
+          appendMessageDom({
+            id: 'deleted-' + messageId,
+            role: 'system',
+            content: tombstone
+          });
+        }, 460);
+      });
     }
 
     function deleteAdminMessage(messageId) {
