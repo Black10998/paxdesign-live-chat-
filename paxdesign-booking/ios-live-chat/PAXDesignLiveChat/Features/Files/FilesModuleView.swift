@@ -47,7 +47,7 @@ struct FilesModuleView: View {
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button {
                                 PAXDelete.confirm(
-                                    message: "Diese Datei wird dauerhaft gelöscht.",
+                                    message: L10n.FilesDeleteConfirm,
                                     itemTitle: document.name
                                 ) {
                                     Task { await store.delete(document, auth: auth) }

@@ -62,57 +62,57 @@ struct DashboardView: View {
     private var dashboardTourSteps: [DashboardTourStep] {
         [
             DashboardTourStep(
-                title: "Suche",
-                description: "Über die Suche oben rechts finden Sie Chats, Aufgaben und Kunden sofort.",
+                title: L10n.DashboardTourSearchTitle,
+                description: L10n.DashboardTourSearchDesc,
                 pointerSymbol: "arrow.up.right",
                 alignment: .topTrailing,
                 edgeInsets: EdgeInsets(top: 88, leading: 16, bottom: 0, trailing: 16)
             ),
             DashboardTourStep(
-                title: "Live-Chat",
-                description: "Hier sehen Sie alle aktiven Gespräche und offene Live-Anfragen in Echtzeit.",
+                title: L10n.DashboardTourLiveTitle,
+                description: L10n.DashboardTourLiveDesc,
                 pointerSymbol: "arrow.up.left",
                 alignment: .topLeading,
                 edgeInsets: EdgeInsets(top: 160, leading: 16, bottom: 0, trailing: 16)
             ),
             DashboardTourStep(
-                title: "Aufträge & Requests",
-                description: "Die Kennzahlenkarten zeigen aktuelle Requests, offene Tasks und Prioritäten.",
+                title: L10n.DashboardTourRequestsTitle,
+                description: L10n.DashboardTourRequestsDesc,
                 pointerSymbol: "arrow.up",
                 alignment: .top,
                 edgeInsets: EdgeInsets(top: 228, leading: 16, bottom: 0, trailing: 16)
             ),
             DashboardTourStep(
-                title: "Benachrichtigungen",
-                description: "Neue Nachrichten und Live-Events landen sofort in Ihren Benachrichtigungen.",
+                title: L10n.DashboardTourNotificationsTitle,
+                description: L10n.DashboardTourNotificationsDesc,
                 pointerSymbol: "arrow.up.right",
                 alignment: .topTrailing,
                 edgeInsets: EdgeInsets(top: 310, leading: 16, bottom: 0, trailing: 16)
             ),
             DashboardTourStep(
-                title: "Sprachwechsel",
-                description: "Über Einstellungen > Sprache wechseln Sie die komplette App-Sprache.",
+                title: L10n.DashboardTourLanguageTitle,
+                description: L10n.DashboardTourLanguageDesc,
                 pointerSymbol: "arrow.down.right",
                 alignment: .trailing,
                 edgeInsets: EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16)
             ),
             DashboardTourStep(
-                title: "Profil & Einstellungen",
-                description: "Im Profil bearbeiten Sie Konto, Sounds, Sicherheit und Personalisierung.",
+                title: L10n.DashboardTourProfileTitle,
+                description: L10n.DashboardTourProfileDesc,
                 pointerSymbol: "arrow.down.left",
                 alignment: .bottomLeading,
                 edgeInsets: EdgeInsets(top: 0, leading: 16, bottom: 120, trailing: 16)
             ),
             DashboardTourStep(
-                title: "Geräteverwaltung",
-                description: "Geräte-Freigaben und Status finden Sie im Admin-Bereich unter Sicherheit.",
+                title: L10n.DashboardTourDevicesTitle,
+                description: L10n.DashboardTourDevicesDesc,
                 pointerSymbol: "arrow.down",
                 alignment: .bottom,
                 edgeInsets: EdgeInsets(top: 0, leading: 16, bottom: 164, trailing: 16)
             ),
             DashboardTourStep(
-                title: "Admin- & Team-Tools",
-                description: "Teamverwaltung, Rollen, Aufgaben und Kundentools sind zentral im Hub verfügbar.",
+                title: L10n.DashboardTourAdminTitle,
+                description: L10n.DashboardTourAdminDesc,
                 pointerSymbol: "arrow.down.left",
                 alignment: .bottomTrailing,
                 edgeInsets: EdgeInsets(top: 0, leading: 16, bottom: 94, trailing: 16)
@@ -123,7 +123,7 @@ struct DashboardView: View {
     var body: some View {
         ScrollView {
             if isInitialLoading {
-                PAXScreenLoadingStack(status: "Dashboard wird geladen", rowCount: 3)
+                PAXScreenLoadingStack(status: L10n.DashboardLoading, rowCount: 3)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
             } else {
@@ -182,7 +182,7 @@ struct DashboardView: View {
                 )
             }
         }
-        .paxPremiumRefreshable(status: "Dashboard wird geladen", rowCount: 3) {
+        .paxPremiumRefreshable(status: L10n.DashboardLoading, rowCount: 3) {
             async let sessions: Void = coordinator.refreshSessions(auth: auth)
             async let platformSync: Void = platform.sync(auth: auth)
             async let teamSync: Void = teamCoordinator.refresh(auth: auth)
@@ -484,7 +484,7 @@ private struct DashboardTourOverlay: View {
                     Image(systemName: step.pointerSymbol)
                         .font(.headline.weight(.bold))
                         .foregroundStyle(PAXTheme.accent)
-                    Text("Schritt \(stepIndex + 1) von \(totalSteps)")
+                    Text(L10n.DashboardTourStepOf(stepIndex + 1, totalSteps))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(PAXTheme.textSecondary)
                 }
@@ -500,13 +500,13 @@ private struct DashboardTourOverlay: View {
 
                 HStack(spacing: 8) {
                     if stepIndex > 0 {
-                        Button("Back", action: onBack)
+                        Button(L10n.CommonBack, action: onBack)
                             .buttonStyle(.bordered)
                     }
-                    Button("Skip", action: onSkip)
+                    Button(L10n.CommonSkip, action: onSkip)
                         .buttonStyle(.bordered)
                     Spacer()
-                    Button(isLast ? "Finish" : "Next") {
+                    Button(isLast ? L10n.CommonFinish : L10n.CommonNext) {
                         if isLast { onFinish() } else { onNext() }
                     }
                     .buttonStyle(.borderedProminent)

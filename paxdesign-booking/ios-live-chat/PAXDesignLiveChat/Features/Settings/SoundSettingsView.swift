@@ -7,15 +7,15 @@ struct SoundSettingsView: View {
         List {
             Section {
                 Toggle(L10n.SettingsIncomingRingtone, isOn: $settings.incomingCallSoundEnabled)
-                Toggle("Nachrichtentöne", isOn: $settings.messageSoundEnabled)
+                Toggle(L10n.SoundMessageTones, isOn: $settings.messageSoundEnabled)
                 Toggle(L10n.SettingsSendSound, isOn: $settings.sendSoundEnabled)
                 Toggle(L10n.SettingsTypingSound, isOn: $settings.typingSoundEnabled)
 
-                tonePicker("Ton für Kundennachrichten", tone: .message)
-                tonePicker("Ton für Live-Anfragen", tone: .liveRequest)
-                tonePicker("Ton für KI-Hinweise", tone: .aiAlert)
-                tonePicker("Ton für Senden", tone: .send)
-                tonePicker("Ton für Tippen", tone: .typing)
+                tonePicker(L10n.SoundToneMessages, tone: .message)
+                tonePicker(L10n.SoundToneLiveRequest, tone: .liveRequest)
+                tonePicker(L10n.SoundToneAiAlert, tone: .aiAlert)
+                tonePicker(L10n.SoundToneSend, tone: .send)
+                tonePicker(L10n.SoundToneTyping, tone: .typing)
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text(L10n.SettingsVolume)
@@ -24,11 +24,11 @@ struct SoundSettingsView: View {
                         .accessibilityLabel(L10n.SettingsVolume)
                 }
 
-                soundTestButton("Live-Anfrage", tone: .liveRequest)
-                soundTestButton("Kundennachricht", tone: .message)
-                soundTestButton("KI-Hinweis", tone: .aiAlert)
-                soundTestButton("Senden", tone: .send)
-                soundTestButton("Tippen", tone: .typing)
+                soundTestButton(L10n.SoundTestLiveRequest, tone: .liveRequest)
+                soundTestButton(L10n.SoundTestMessage, tone: .message)
+                soundTestButton(L10n.SoundTestAiAlert, tone: .aiAlert)
+                soundTestButton(L10n.SoundTestSend, tone: .send)
+                soundTestButton(L10n.SoundTestTyping, tone: .typing)
             } header: {
                 Text(L10n.SettingsSound)
             } footer: {

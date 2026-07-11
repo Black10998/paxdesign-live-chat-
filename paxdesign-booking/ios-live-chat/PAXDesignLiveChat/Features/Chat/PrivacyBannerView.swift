@@ -35,6 +35,6 @@ struct PrivacyBannerView: View {
                 )
         )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Sicherheitshinweis: Nachrichten werden per TLS übertragen.")
+        .accessibilityLabel(L10n.ChatPrivacyBanner)
     }
 }

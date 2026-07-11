@@ -110,13 +110,13 @@ final class AppSettingsStore: ObservableObject {
 
         var title: String {
             switch self {
-            case .classic: return "Classic"
-            case .chime: return "Chime"
-            case .pulse: return "Pulse"
-            case .bell: return "Bell"
-            case .digital: return "Digital"
-            case .soft: return "Soft"
-            case .echo: return "Echo"
+            case .classic: return L10n.SoundToneClassic
+            case .chime: return L10n.SoundToneChime
+            case .pulse: return L10n.SoundTonePulse
+            case .bell: return L10n.SoundToneBell
+            case .digital: return L10n.SoundToneDigital
+            case .soft: return L10n.SoundToneSoft
+            case .echo: return L10n.SoundToneEcho
             }
         }
     }

@@ -181,15 +181,15 @@ struct ChatView: View {
             }
 
             if !thread.detectedService.isEmpty {
-                overviewRow(icon: "sparkles", title: "Thema", value: thread.detectedService)
+                overviewRow(icon: "sparkles", title: L10n.ChatOverviewTopic, value: thread.detectedService)
             }
-            overviewRow(icon: "number", title: "Session", value: thread.sessionId)
-            overviewRow(icon: "bubble.left.and.bubble.right", title: "Nachrichten", value: "\(thread.messages.count)")
+            overviewRow(icon: "number", title: L10n.ChatOverviewSession, value: thread.sessionId)
+            overviewRow(icon: "bubble.left.and.bubble.right", title: L10n.ChatOverviewMessages, value: "\(thread.messages.count)")
             if !thread.adminName.isEmpty, thread.handler == "admin" {
                 overviewRow(icon: "person.badge.shield.checkmark", title: L10n.ChatAgent, value: agentDisplayName)
             }
             if let updated = MessageTimeFormatter.relativeUpdatedLabel(from: thread.updatedAt) {
-                overviewRow(icon: "clock", title: "Aktualisiert", value: updated)
+                overviewRow(icon: "clock", title: L10n.ChatOverviewUpdated, value: updated)
             }
         }
         .padding(.horizontal, 14)
@@ -248,11 +248,11 @@ struct ChatView: View {
             } label: {
                 Image(systemName: showCustomerOverview ? "person.crop.circle.fill" : "person.crop.circle")
             }
-            .accessibilityLabel("Kundenübersicht")
+            .accessibilityLabel(L10n.ChatOverviewAccessibility)
         }
         ToolbarItemGroup(placement: .topBarTrailing) {
             if thread.handler == "live_request", canReply {
-                Button("Übernehmen") {
+                Button(L10n.CommonTakeover) {
                     PAXHaptics.medium()
                     Task {
                         if let session = coordinator.sessions.first(where: { $0.sessionId == thread.sessionId }) {
@@ -265,13 +265,13 @@ struct ChatView: View {
                 .font(.subheadline.weight(.semibold))
             }
             if thread.handler == "admin", canReply {
-                Button("Freigeben") {
+                Button(L10n.CommonRelease) {
                     PAXHaptics.light()
                     Task { try? await auth.api?.release(thread.sessionId) }
                 }
             }
             if thread.handler == "closed", canReply {
-                Button("Wiederöffnen") {
+                Button(L10n.CommonReopen) {
                     PAXHaptics.light()
                     Task {
                         try? await auth.api?.reopen(thread.sessionId)
@@ -280,7 +280,7 @@ struct ChatView: View {
                     }
                 }
             } else if canReply {
-                Button("Schließen") {
+                Button(L10n.CommonClose) {
                     PAXHaptics.warning()
                     Task {
                         try? await auth.api?.close(thread.sessionId)
@@ -358,17 +358,17 @@ struct ChatView: View {
                     Button {
                         showPhotoLibrary = true
                     } label: {
-                        Label("Fotomediathek", systemImage: "photo.on.rectangle")
+                        Label(L10n.ChatPhotoLibrary, systemImage: "photo.on.rectangle")
                     }
                     #else
                     PhotosPicker(selection: $photoItem, matching: .images) {
-                        Label("Fotomediathek", systemImage: "photo.on.rectangle")
+                        Label(L10n.ChatPhotoLibrary, systemImage: "photo.on.rectangle")
                     }
                     #endif
                     Button {
                         showCamera = true
                     } label: {
-                        Label("Kamera", systemImage: "camera")
+                        Label(L10n.ChatCamera, systemImage: "camera")
                     }
                 } label: {
                     Image(systemName: "plus.circle")

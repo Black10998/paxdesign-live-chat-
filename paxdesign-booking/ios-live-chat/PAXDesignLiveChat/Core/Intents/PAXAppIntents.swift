@@ -3,7 +3,7 @@ import AppIntents
 
 @available(iOS 16.0, *)
 struct OpenDashboardIntent: AppIntent {
-    static var title: LocalizedStringResource = "Open Dashboard"
+    static var title: LocalizedStringResource = "intent.open_dashboard"
     static var openAppWhenRun = true
 
     func perform() async throws -> some IntentResult {
@@ -14,7 +14,7 @@ struct OpenDashboardIntent: AppIntent {
 
 @available(iOS 16.0, *)
 struct OpenLiveRequestsIntent: AppIntent {
-    static var title: LocalizedStringResource = "Open Live Requests"
+    static var title: LocalizedStringResource = "intent.open_live_requests"
     static var openAppWhenRun = true
 
     func perform() async throws -> some IntentResult {
@@ -25,10 +25,10 @@ struct OpenLiveRequestsIntent: AppIntent {
 
 @available(iOS 16.0, *)
 struct SearchLiveChatIntent: AppIntent {
-    static var title: LocalizedStringResource = "Search Live Chat"
+    static var title: LocalizedStringResource = "intent.search_live_chat"
     static var openAppWhenRun = true
 
-    @Parameter(title: "Query")
+    @Parameter(title: "intent.query_parameter")
     var query: String?
 
     func perform() async throws -> some IntentResult {
@@ -47,19 +47,19 @@ struct PAXLiveChatShortcuts: AppShortcutsProvider {
         AppShortcut(
             intent: OpenDashboardIntent(),
             phrases: ["Open \(.applicationName) dashboard", "Show business overview in \(.applicationName)"],
-            shortTitle: "Dashboard",
+            shortTitle: "intent.short_dashboard",
             systemImageName: "house.fill"
         )
         AppShortcut(
             intent: OpenLiveRequestsIntent(),
             phrases: ["Open live requests in \(.applicationName)", "Show waiting customers in \(.applicationName)"],
-            shortTitle: "Live Requests",
+            shortTitle: "intent.short_live_requests",
             systemImageName: "bell.and.waves.left.and.right.fill"
         )
         AppShortcut(
             intent: SearchLiveChatIntent(),
             phrases: ["Search \(.applicationName)", "Find chats in \(.applicationName)"],
-            shortTitle: "Search",
+            shortTitle: "intent.short_search",
             systemImageName: "magnifyingglass"
         )
     }

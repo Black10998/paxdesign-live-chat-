@@ -20,8 +20,8 @@ struct LegalWebLinkRow: View {
 struct LegalFooterLinks: View {
     var body: some View {
         VStack(spacing: 10) {
-            LegalWebLinkRow(title: "Datenschutzerklärung (Web)", url: PAXLegalLinks.privacyPolicy)
-            LegalWebLinkRow(title: "Impressum (Web)", url: PAXLegalLinks.impressum)
+            LegalWebLinkRow(title: L10n.AccountPrivacyWeb, url: PAXLegalLinks.privacyPolicy)
+            LegalWebLinkRow(title: L10n.AccountImprintWeb, url: PAXLegalLinks.impressum)
         }
         .font(.footnote)
     }

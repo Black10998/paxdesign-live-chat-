@@ -32,7 +32,7 @@ struct CalendarModuleView: View {
                             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                 Button {
                                     PAXDelete.confirm(
-                                        message: "Dieser Termin wird dauerhaft gelöscht.",
+                                        message: L10n.CalendarDeleteConfirm,
                                         itemTitle: event.title
                                     ) {
                                         Task { await store.delete(event, auth: auth) }

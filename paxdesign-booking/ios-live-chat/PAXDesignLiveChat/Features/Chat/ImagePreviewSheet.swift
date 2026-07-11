@@ -19,7 +19,7 @@ struct ImagePreviewSheet: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 12)
 
-                TextField("Beschriftung (optional)", text: $caption, axis: .vertical)
+                TextField(L10n.ChatImageCaptionPlaceholder, text: $caption, axis: .vertical)
                     .lineLimit(1...3)
                     .padding(12)
                     .paxGlassCardStyle(cornerRadius: 12, fillOpacity: 0.78, borderOpacity: 0.4, shadowOpacity: 0.08)
@@ -28,14 +28,14 @@ struct ImagePreviewSheet: View {
                 Spacer()
             }
             .paxScreenBackground()
-            .navigationTitle("Bild senden")
+            .navigationTitle(L10n.ChatSendImageTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen", action: onCancel)
+                    Button(L10n.CommonCancel, action: onCancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Senden") {
+                    Button(L10n.CommonSend) {
                         PAXHaptics.light()
                         onSend()
                     }

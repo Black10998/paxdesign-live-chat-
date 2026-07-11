@@ -14,12 +14,12 @@ final class PushService: NSObject, ObservableObject {
     func configureNotificationCategories() {
         let accept = UNNotificationAction(
             identifier: "PAX_ACCEPT",
-            title: "Annehmen",
+            title: L10n.PushActionAccept,
             options: [.foreground]
         )
         let decline = UNNotificationAction(
             identifier: "PAX_DECLINE",
-            title: "Ablehnen",
+            title: L10n.PushActionDecline,
             options: [.destructive, .foreground]
         )
         let liveCategory = UNNotificationCategory(

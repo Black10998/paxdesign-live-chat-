@@ -272,7 +272,7 @@ struct AdaptiveShellView: View {
                     .foregroundStyle(iPadSection == section ? PAXTheme.accent : PAXTheme.textPrimary)
                 }
             }
-            .navigationTitle("PAXDesign")
+            .navigationTitle(L10n.AppShortName)
         } detail: {
             iPadDetail(for: iPadSection)
         }
@@ -516,7 +516,7 @@ private struct PAXBottomTabBar: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(item.title)
-        .accessibilityValue(selected ? "Ausgewählt" : "")
+        .accessibilityValue(selected ? L10n.ShellSelected : "")
     }
 }
 

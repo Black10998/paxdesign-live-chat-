@@ -46,7 +46,7 @@ struct DataStorageSettingsView: View {
                 if settings.profileImageData != nil {
                     Button(L10n.SettingsResetPhoto) {
                         PAXDelete.confirm(
-                            message: "Das Profilbild wird entfernt.",
+                            message: L10n.SettingsResetPhotoMessage,
                             confirmTitle: L10n.SettingsResetPhoto
                         ) {
                             settings.profileImageData = nil
@@ -61,10 +61,10 @@ struct DataStorageSettingsView: View {
 
             if auth.canManageUsers {
                 Section {
-                    Button("Einführung zurücksetzen") {
+                    Button(L10n.SettingsResetOnboarding) {
                         PAXDelete.confirm(
-                            message: "Die Einführungstour wird beim nächsten Start erneut angezeigt.",
-                            confirmTitle: "Zurücksetzen"
+                            message: L10n.SettingsResetOnboardingMessage,
+                            confirmTitle: L10n.SettingsResetOnboardingConfirm
                         ) {
                             Task { await resetOnboardingForCurrentUser() }
                         }
@@ -75,9 +75,9 @@ struct DataStorageSettingsView: View {
                             .foregroundStyle(PAXTheme.textSecondary)
                     }
                 } header: {
-                    Text("Onboarding")
+                    Text(L10n.SettingsOnboardingSection)
                 } footer: {
-                    Text("Setzt die Willkommens-Tour für den ausgewählten Mitarbeiter zurück.")
+                    Text(L10n.SettingsOnboardingFooter)
                 }
             }
         }
@@ -94,7 +94,7 @@ struct DataStorageSettingsView: View {
             try await api.resetOnboarding(for: userId)
             settings.onboardingCompleted = false
             settings.firstLaunchOnboardingCompleted = false
-            onboardingResetMessage = "Onboarding wurde zurückgesetzt."
+            onboardingResetMessage = L10n.SettingsOnboardingResetDone
             PAXHaptics.success()
         } catch {
             onboardingResetMessage = error.localizedDescription
@@ -109,9 +109,9 @@ struct SupportSettingsView: View {
     var body: some View {
         List {
             Section {
-                Button("Tour neu starten") {
+                Button(L10n.SettingsRestartTour) {
                     settings.dashboardTourCompleted = false
-                    tourResetMessage = "Die Tour wird auf dem Dashboard erneut angezeigt."
+                    tourResetMessage = L10n.SettingsTourResetDone
                     PAXHaptics.success()
                 }
                 if let tourResetMessage {
@@ -120,9 +120,9 @@ struct SupportSettingsView: View {
                         .foregroundStyle(PAXTheme.textSecondary)
                 }
             } header: {
-                Text("Geführte Tour")
+                Text(L10n.SettingsTourSection)
             } footer: {
-                Text("Zeigt die Schritt-für-Schritt-Einführung erneut auf der Startseite.")
+                Text(L10n.SettingsTourFooter)
             }
 
             Section {

@@ -40,21 +40,21 @@ struct ProfileView: View {
 
             if auth.canCustomizeHubProfile {
                 Section {
-                    TextField("Anzeigename im Hub", text: $hubDisplayName)
+                    TextField(L10n.ProfileHubDisplayNamePlaceholder, text: $hubDisplayName)
                         .textInputAutocapitalization(.words)
                     if let hubNameError, !hubNameError.isEmpty {
                         Text(hubNameError)
                             .font(.caption)
                             .foregroundStyle(PAXTheme.danger)
                     }
-                    Button("Hub-Namen speichern") {
+                    Button(L10n.ProfileHubSave) {
                         Task { await saveHubDisplayName() }
                     }
                     .disabled(isSavingHubName || hubDisplayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 } header: {
-                    Text("Hub Administrator")
+                    Text(L10n.ProfileHubSection)
                 } footer: {
-                    Text("Dieser Name wird in der Hub-Profilansicht angezeigt.")
+                    Text(L10n.ProfileHubFooter)
                 }
             }
 
