@@ -25,13 +25,13 @@ struct FullScreenImageView: View {
                     Text(L10n.ChatImageUnavailable)
                         .foregroundStyle(.white.opacity(0.7))
                 default:
-                    PAXTimelineLoaderCard(status: "Bild wird geladen")
+                    PAXTimelineLoaderCard(status: L10n.ChatLoadingImage)
                         .frame(maxWidth: 260)
                 }
             }
             .padding(.top, 48)
 
-            Button("Schließen") { dismiss() }
+            Button(L10n.CommonClose) { dismiss() }
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 16)

@@ -21,14 +21,14 @@ struct CustomerProfilesView: View {
     var body: some View {
         List {
             Section {
-                Text("Bearbeiten Sie Kundenname, Avatar und sichtbare Profildetails pro Chat-Session.")
+                Text(L10n.CustomerManagementHint)
                     .font(.footnote)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
 
             if isLoading {
                 Section {
-                    PAXScreenLoadingStack(status: "Kundenprofile werden geladen", rowCount: 4)
+                    PAXScreenLoadingStack(status: L10n.CustomerLoading, rowCount: 4)
                 }
             } else if let errorMessage {
                 Section {
@@ -37,11 +37,11 @@ struct CustomerProfilesView: View {
                 }
             } else if filteredProfiles.isEmpty {
                 Section {
-                    Text("Keine Kundenprofile gefunden.")
+                    Text(L10n.CustomerNoneFound)
                         .foregroundStyle(PAXTheme.textSecondary)
                 }
             } else {
-                Section("Kunden") {
+                Section(L10n.CustomerSection) {
                     ForEach(filteredProfiles) { profile in
                         Button {
                             draft = CustomerProfileDraft(record: profile)
@@ -56,11 +56,11 @@ struct CustomerProfilesView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .paxScreenBackground()
-        .searchable(text: $searchText, prompt: "Name, E-Mail oder Session-ID")
-        .navigationTitle("Kundenprofile")
+        .searchable(text: $searchText, prompt: L10n.CustomerSearchPrompt)
+        .navigationTitle(L10n.CustomerTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
-        .paxPremiumRefreshable(status: "Kundenprofile werden geladen", rowCount: 4) { await load() }
+        .paxPremiumRefreshable(status: L10n.CustomerLoading, rowCount: 4) { await load() }
         .sheet(item: $draft) { item in
             NavigationStack {
                 CustomerProfileEditSheet(
@@ -79,7 +79,7 @@ struct CustomerProfilesView: View {
         HStack(spacing: 12) {
             avatar(urlString: profile.avatarUrl)
             VStack(alignment: .leading, spacing: 3) {
-                Text(profile.displayName.isEmpty ? "Kunde" : profile.displayName)
+                Text(profile.displayName.isEmpty ? L10n.CustomerDefaultName : profile.displayName)
                     .font(.body.weight(.semibold))
                     .foregroundStyle(PAXTheme.textPrimary)
                 Text(profile.sessionId)
@@ -199,40 +199,40 @@ private struct CustomerProfileEditSheet: View {
 
     var body: some View {
         Form {
-            Section("Session") {
-                LabeledContent("Session-ID", value: draft.sessionId)
-                TextField("Anzeigename", text: $draft.displayName)
-                TextField("Avatar URL", text: $draft.avatarUrl)
+            Section(L10n.CustomerEditSectionSession) {
+                LabeledContent(L10n.CustomerEditFieldSessionId, value: draft.sessionId)
+                TextField(L10n.CommonFieldDisplayName, text: $draft.displayName)
+                TextField(L10n.StaffFieldAvatarUrl, text: $draft.avatarUrl)
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
             }
 
-            Section("Kontaktdaten") {
-                TextField("E-Mail", text: $draft.email)
+            Section(L10n.CustomerEditSectionContact) {
+                TextField(L10n.CommonFieldEmail, text: $draft.email)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
-                TextField("Telefon", text: $draft.phone)
+                TextField(L10n.CommonFieldPhone, text: $draft.phone)
                     .keyboardType(.phonePad)
-                TextField("Firma", text: $draft.company)
-                TextField("Notizen", text: $draft.notes, axis: .vertical)
+                TextField(L10n.CustomerEditFieldCompany, text: $draft.company)
+                TextField(L10n.CommonFieldNotes, text: $draft.notes, axis: .vertical)
                     .lineLimit(2...5)
             }
 
-            Section("Sichtbare Details") {
-                Toggle("E-Mail anzeigen", isOn: $draft.showEmail)
-                Toggle("Telefon anzeigen", isOn: $draft.showPhone)
-                Toggle("Firma anzeigen", isOn: $draft.showCompany)
-                Toggle("Notizen anzeigen", isOn: $draft.showNotes)
+            Section(L10n.CustomerEditSectionVisible) {
+                Toggle(L10n.CustomerEditShowEmail, isOn: $draft.showEmail)
+                Toggle(L10n.CustomerEditShowPhone, isOn: $draft.showPhone)
+                Toggle(L10n.CustomerEditShowCompany, isOn: $draft.showCompany)
+                Toggle(L10n.CustomerEditShowNotes, isOn: $draft.showNotes)
             }
         }
-        .navigationTitle("Kundenprofil")
+        .navigationTitle(L10n.CustomerEditTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Abbrechen", action: onCancel)
+                Button(L10n.CommonCancel, action: onCancel)
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Speichern") { onSave(draft) }
+                Button(L10n.CommonSave) { onSave(draft) }
             }
         }
     }

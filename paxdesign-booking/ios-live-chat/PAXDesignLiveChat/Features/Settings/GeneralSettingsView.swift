@@ -54,7 +54,7 @@ struct GeneralSettingsView: View {
                 if settings.profileImageData != nil {
                     Button(L10n.SettingsResetPhoto) {
                         PAXDelete.confirm(
-                            message: "Das Profilbild wird entfernt.",
+                            message: L10n.SettingsResetPhotoMessage,
                             confirmTitle: L10n.SettingsResetPhoto
                         ) {
                             settings.profileImageData = nil

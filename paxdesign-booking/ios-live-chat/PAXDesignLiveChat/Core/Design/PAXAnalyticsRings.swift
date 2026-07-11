@@ -67,7 +67,7 @@ struct PAXSevenDayAnalyticsRings: View {
                     .font(.headline.weight(.semibold))
                     .foregroundStyle(PAXTheme.textPrimary)
 
-                Text("7-Tage-Verlauf")
+                Text(L10n.AnalyticsSevenDay)
                     .font(.caption)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
@@ -79,7 +79,7 @@ struct PAXSevenDayAnalyticsRings: View {
                     .font(.title3.weight(.bold))
                     .foregroundStyle(PAXTheme.textPrimary)
 
-                Text("Gesamt")
+                Text(L10n.AnalyticsRingTotal)
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(PAXTheme.textSecondary)
             }
@@ -158,13 +158,13 @@ struct PAXSevenDayAnalyticsRings: View {
     private var footerStats: some View {
         HStack(spacing: 10) {
             statPill(
-                title: "Spitze",
+                title: L10n.AnalyticsPeak,
                 value: "\(peakItem?.value ?? 0)",
                 tint: PAXTheme.accent
             )
 
             statPill(
-                title: "Ø / Tag",
+                title: L10n.AnalyticsAvgPerDay,
                 value: String(format: "%.1f", averageValue),
                 tint: PAXTheme.textSecondary
             )
@@ -341,7 +341,7 @@ struct PAXSessionMixRings: View {
                     VStack(spacing: 2) {
                         Text("\(total)")
                             .font(.title3.weight(.bold))
-                        Text("Total")
+                        Text(L10n.AnalyticsTotal)
                             .font(.caption2)
                             .foregroundStyle(PAXTheme.textSecondary)
                     }

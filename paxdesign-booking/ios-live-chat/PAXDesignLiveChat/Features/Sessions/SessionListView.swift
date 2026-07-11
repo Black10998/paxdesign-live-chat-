@@ -267,7 +267,7 @@ struct SessionListView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
-        .paxPremiumRefreshable(status: "Unterhaltungen werden geladen", rowCount: 5) {
+        .paxPremiumRefreshable(status: L10n.LoadingSessions, rowCount: 5) {
             await coordinator.fullConversationSync(auth: auth)
             await teamCoordinator.fullConversationSync(auth: auth)
         }
@@ -275,7 +275,7 @@ struct SessionListView: View {
 
     private func requestDeleteSession(_ session: LiveSession) {
         PAXDelete.confirm(
-            message: "Diese Unterhaltung wird dauerhaft gelöscht.",
+            message: L10n.SessionDeleteConfirm,
             itemTitle: session.displayName
         ) {
             Task { await coordinator.deleteSession(auth: auth, session: session) }
@@ -405,7 +405,7 @@ struct SessionListView: View {
     }
 
     private var loadingState: some View {
-        PAXScreenLoadingStack(status: "Unterhaltungen werden geladen", rowCount: 5)
+        PAXScreenLoadingStack(status: L10n.LoadingSessions, rowCount: 5)
     }
 }
 

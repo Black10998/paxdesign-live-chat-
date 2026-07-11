@@ -76,52 +76,52 @@ struct TeamChatView: View {
                         Button {
                             Task { await thread.respondToRequest(accept: true, auth: auth, teamCoordinator: teamCoordinator) }
                         } label: {
-                            Label("Accept request", systemImage: "checkmark.circle")
+                            Label(L10n.TeamContextAcceptRequest, systemImage: "checkmark.circle")
                         }
                         Button(role: .destructive) {
                             Task { await thread.respondToRequest(accept: false, auth: auth, teamCoordinator: teamCoordinator) }
                         } label: {
-                            Label("Decline request", systemImage: "xmark.circle")
+                            Label(L10n.TeamContextDeclineRequest, systemImage: "xmark.circle")
                         }
                     }
                     Button {
                         Task { await teamCoordinator.pinConversation(sessionId: thread.sessionId, pinned: true, auth: auth) }
                     } label: {
-                        Label("Pin conversation", systemImage: "pin")
+                        Label(L10n.TeamContextPinConversation, systemImage: "pin")
                     }
                     Button(role: .destructive) {
                         deleteMode = "hide"
                         showDeleteConfirm = true
                     } label: {
-                        Label("Remove from my Team list", systemImage: "eye.slash")
+                        Label(L10n.TeamContextRemoveFromList, systemImage: "eye.slash")
                     }
                     if canPurgeForAll {
                         Button(role: .destructive) {
                             deleteMode = "purge_all"
                             showDeleteConfirm = true
                         } label: {
-                            Label("Delete for all participants", systemImage: "trash")
+                            Label(L10n.TeamContextDeleteForAll, systemImage: "trash")
                         }
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
-                .accessibilityLabel("Conversation options")
+                .accessibilityLabel(L10n.TeamContextConversationOptions)
             }
         }
         .alert(deleteAlertTitle, isPresented: $showDeleteConfirm) {
-            Button("Cancel", role: .cancel) {}
+            Button(L10n.CommonCancel, role: .cancel) {}
             Button(deleteConfirmLabel, role: .destructive) {
                 Task { await performDelete() }
             }
         } message: {
             Text(deleteAlertMessage)
         }
-        .alert("Delete conversation", isPresented: Binding(
+        .alert(L10n.TeamDeleteFeedbackTitle, isPresented: Binding(
             get: { deleteFeedback != nil },
             set: { if !$0 { deleteFeedback = nil } }
         )) {
-            Button("OK", role: .cancel) { deleteFeedback = nil }
+            Button(L10n.CommonOK, role: .cancel) { deleteFeedback = nil }
         } message: {
             Text(deleteFeedback ?? "")
         }
@@ -249,8 +249,8 @@ struct TeamChatView: View {
             Image(systemName: "lock.fill")
                 .foregroundStyle(PAXTheme.textTertiary)
             Text(thread.requestStatus == "declined" || thread.requestStatus == "locked"
-                 ? "This conversation is locked."
-                 : "Waiting for approval before you can send messages.")
+                 ? L10n.TeamLockedConversation
+                 : L10n.TeamWaitingApproval)
                 .font(.subheadline)
                 .foregroundStyle(PAXTheme.textSecondary)
         }
@@ -263,18 +263,15 @@ struct TeamChatView: View {
     }
 
     private var deleteAlertTitle: String {
-        deleteMode == "purge_all" ? "Delete for everyone?" : "Remove conversation?"
+        deleteMode == "purge_all" ? L10n.TeamDeleteEveryoneTitle : L10n.TeamDeleteRemoveTitle
     }
 
     private var deleteConfirmLabel: String {
-        deleteMode == "purge_all" ? "Delete for all" : "Remove for me"
+        deleteMode == "purge_all" ? L10n.TeamDeleteConfirmAll : L10n.TeamDeleteConfirmRemove
     }
 
     private var deleteAlertMessage: String {
-        if deleteMode == "purge_all" {
-            return "This permanently deletes the conversation and all messages for every participant. This cannot be undone."
-        }
-        return "This removes the conversation from your Team list only. The other participant can still see it unless they also remove it."
+        deleteMode == "purge_all" ? L10n.TeamDeleteMessageAll : L10n.TeamDeleteMessageRemove
     }
 
     private func performDelete() async {
@@ -293,7 +290,7 @@ struct TeamChatView: View {
             PAXHaptics.success()
             dismiss()
         } else {
-            deleteFeedback = result.message ?? "Could not delete conversation."
+            deleteFeedback = result.message ?? L10n.TeamDeleteFailed
         }
     }
 

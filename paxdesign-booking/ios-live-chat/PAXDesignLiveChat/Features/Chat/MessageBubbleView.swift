@@ -29,18 +29,18 @@ struct MessageBubbleView: View {
                             Button {
                                 onCopy()
                             } label: {
-                                Label("Kopieren", systemImage: "doc.on.doc")
+                                Label(L10n.CommonCopy, systemImage: "doc.on.doc")
                             }
 
                             ShareLink(item: message.content) {
-                                Label("Teilen", systemImage: "square.and.arrow.up")
+                                Label(L10n.CommonShare, systemImage: "square.and.arrow.up")
                             }
                         }
                         if canReply {
                             Button {
                                 onReply()
                             } label: {
-                                Label("Antworten", systemImage: "arrowshape.turn.up.left")
+                                Label(L10n.CommonReply, systemImage: "arrowshape.turn.up.left")
                             }
                         }
                     }
@@ -189,7 +189,7 @@ private struct QuotePreviewView: View {
 
     private var previewText: String {
         if !message.content.isEmpty { return message.content }
-        if message.imageUrl != nil { return "Bild" }
+        if message.imageUrl != nil { return L10n.ChatImage }
         return "—"
     }
 }
@@ -210,7 +210,7 @@ struct ReplyBarView: View {
                 Text("\(L10n.ChatReplyTo) \(message.role == "admin" ? agentDisplayName : customerDisplayName)")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(PAXTheme.accent)
-                Text(message.content.isEmpty ? "Bild" : String(message.content.prefix(90)))
+                Text(message.content.isEmpty ? L10n.ChatImage : String(message.content.prefix(90)))
                     .font(.caption)
                     .foregroundStyle(PAXTheme.textSecondary)
                     .lineLimit(1)

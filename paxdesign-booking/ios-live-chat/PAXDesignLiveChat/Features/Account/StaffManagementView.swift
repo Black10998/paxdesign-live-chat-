@@ -22,17 +22,17 @@ struct StaffManagementView: View {
     var body: some View {
         List {
             Section {
-                Text("Verwalten Sie Mitarbeiter-Zugang, Profilangaben und Sicherheitseinstellungen.")
+                Text(L10n.StaffManagementHint)
                     .font(.footnote)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
 
-            Section("Mitarbeiter hinzufügen") {
+            Section(L10n.AdminSectionAddMember) {
                 HStack {
-                    TextField("WordPress E-Mail", text: $addEmail)
+                    TextField(L10n.StaffWordpressEmail, text: $addEmail)
                         .textInputAutocapitalization(.never)
                         .keyboardType(.emailAddress)
-                    Button("Hinzufügen") {
+                    Button(L10n.CommonAdd) {
                         Task { await addStaff() }
                     }
                     .disabled(addEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
@@ -41,7 +41,7 @@ struct StaffManagementView: View {
 
             if isLoading {
                 Section {
-                    PAXScreenLoadingStack(status: "Team wird geladen", rowCount: 4)
+                    PAXScreenLoadingStack(status: L10n.LoadingTeam, rowCount: 4)
                 }
             } else if let errorMessage {
                 Section {
@@ -49,11 +49,11 @@ struct StaffManagementView: View {
                 }
             } else if staff.isEmpty {
                 Section {
-                    Text("Noch keine Mitarbeiter konfiguriert.")
+                    Text(L10n.StaffNoneConfigured)
                         .foregroundStyle(PAXTheme.textSecondary)
                 }
             } else {
-                Section("Team") {
+                Section(L10n.AccountTeam) {
                     ForEach(staff) { member in
                         Button {
                             editingMember = member
@@ -73,13 +73,13 @@ struct StaffManagementView: View {
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                             Button {
                                 PAXDelete.confirm(
-                                    message: "Dieser Mitarbeiter wird aus dem Team entfernt.",
+                                    message: L10n.StaffRemoveConfirmMessage,
                                     itemTitle: member.name
                                 ) {
                                     Task { await removeStaff(member) }
                                 }
                             } label: {
-                                Label("Entfernen", systemImage: "trash")
+                                Label(L10n.CommonRemove, systemImage: "trash")
                             }
                             .tint(.red)
                         }
@@ -90,10 +90,10 @@ struct StaffManagementView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .paxScreenBackground()
-        .navigationTitle("Team")
+        .navigationTitle(L10n.AccountTeam)
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
-        .paxPremiumRefreshable(status: "Team wird geladen", rowCount: 4) { await load() }
+        .paxPremiumRefreshable(status: L10n.LoadingTeam, rowCount: 4) { await load() }
         .sheet(item: $editingMember) { member in
             StaffEditSheet(
                 member: member,
@@ -140,7 +140,7 @@ struct StaffManagementView: View {
                         .font(.headline)
                         .foregroundStyle(PAXTheme.textPrimary)
                     Spacer()
-                    Text(member.enabled ? "Aktiv" : "Inaktiv")
+                    Text(member.enabled ? L10n.CommonActive : L10n.CommonInactive)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(member.enabled ? PAXTheme.success : PAXTheme.textTertiary)
                     Image(systemName: "chevron.right")
@@ -150,7 +150,7 @@ struct StaffManagementView: View {
                 Text(member.publicDisplaySubtitle)
                     .font(.caption)
                     .foregroundStyle(PAXTheme.textSecondary)
-                Text(member.onboardingCompleted ? "Onboarding abgeschlossen" : "Onboarding ausstehend")
+                Text(member.onboardingCompleted ? L10n.StaffOnboardingComplete : L10n.StaffOnboardingPending)
                     .font(.caption2)
                     .foregroundStyle(member.onboardingCompleted ? PAXTheme.textTertiary : PAXTheme.danger)
             }
@@ -276,57 +276,57 @@ private struct StaffEditSheet: View {
         NavigationStack {
             List {
                 Section(member.name) {
-                    Toggle("Aktiv", isOn: $enabled)
+                    Toggle(L10n.CommonActive, isOn: $enabled)
                 }
-                Section("Profil") {
-                    TextField("Anzeigename", text: $displayName)
-                    TextField("E-Mail", text: $email)
+                Section(L10n.SettingsProfile) {
+                    TextField(L10n.CommonFieldDisplayName, text: $displayName)
+                    TextField(L10n.CommonFieldEmail, text: $email)
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)
-                    TextField("Avatar URL", text: $avatarURL)
+                    TextField(L10n.StaffFieldAvatarUrl, text: $avatarURL)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                    TextField("Position", text: $profileTitle)
-                    TextField("Telefon", text: $profilePhone)
-                    TextField("Notizen", text: $profileNotes, axis: .vertical)
+                    TextField(L10n.StaffFieldPosition, text: $profileTitle)
+                    TextField(L10n.CommonFieldPhone, text: $profilePhone)
+                    TextField(L10n.CommonFieldNotes, text: $profileNotes, axis: .vertical)
                         .lineLimit(2...5)
                 }
-                Section("Sicherheit") {
-                    SecureField("Neues Passwort (optional)", text: $password)
-                    Button("Mitarbeiter sofort abmelden") {
+                Section(L10n.SettingsSecurity) {
+                    SecureField(L10n.StaffNewPasswordPlaceholder, text: $password)
+                    Button(L10n.StaffForceLogout) {
                         PAXDelete.confirm(
-                            message: "Der Mitarbeiter wird auf allen Geräten abgemeldet.",
+                            message: L10n.StaffForceLogoutMessage,
                             itemTitle: member.name,
-                            confirmTitle: "Abmelden"
+                            confirmTitle: L10n.StaffForceLogoutConfirm
                         ) {
                             onForceLogout()
                         }
                     }
                     .disabled(isForcingLogout)
                 }
-                Section("Berechtigungen") {
-                    PermissionToggle("Chats ansehen", keyPath: \.viewChats, permissions: $permissions)
-                    PermissionToggle("Antworten & Chat führen", keyPath: \.replyChats, permissions: $permissions)
-                    PermissionToggle("KI-Assistent", keyPath: \.useAI, permissions: $permissions)
-                    PermissionToggle("Bilder senden", keyPath: \.sendImages, permissions: $permissions)
-                    PermissionToggle("Einstellungen", keyPath: \.manageSettings, permissions: $permissions)
-                    PermissionToggle("Bewertungen", keyPath: \.viewRatings, permissions: $permissions)
-                    PermissionToggle("Team verwalten", keyPath: \.manageUsers, permissions: $permissions)
-                    PermissionToggle("Sicherheit", keyPath: \.accessSecurity, permissions: $permissions)
-                    PermissionToggle("Team-Berechtigungen", keyPath: \.manageTeamPermissions, permissions: $permissions)
-                    PermissionToggle("Kundenprofile", keyPath: \.manageCustomerProfiles, permissions: $permissions)
-                    PermissionToggle("Aufgaben zuweisen", keyPath: \.assignTeamTasks, permissions: $permissions)
-                    PermissionToggle("Hub-Profilname ändern", keyPath: \.customizeHubProfile, permissions: $permissions)
+                Section(L10n.AdminSectionPermissions) {
+                    PermissionToggle(L10n.PermissionViewChats, keyPath: \.viewChats, permissions: $permissions)
+                    PermissionToggle(L10n.PermissionReplyChats, keyPath: \.replyChats, permissions: $permissions)
+                    PermissionToggle(L10n.PermissionAIAssistant, keyPath: \.useAI, permissions: $permissions)
+                    PermissionToggle(L10n.PermissionSendImages, keyPath: \.sendImages, permissions: $permissions)
+                    PermissionToggle(L10n.PermissionSettings, keyPath: \.manageSettings, permissions: $permissions)
+                    PermissionToggle(L10n.PermissionRatings, keyPath: \.viewRatings, permissions: $permissions)
+                    PermissionToggle(L10n.PermissionManageTeam, keyPath: \.manageUsers, permissions: $permissions)
+                    PermissionToggle(L10n.PermissionSecurity, keyPath: \.accessSecurity, permissions: $permissions)
+                    PermissionToggle(L10n.PermissionTeamPermissions, keyPath: \.manageTeamPermissions, permissions: $permissions)
+                    PermissionToggle(L10n.PermissionCustomerProfiles, keyPath: \.manageCustomerProfiles, permissions: $permissions)
+                    PermissionToggle(L10n.PermissionAssignTasks, keyPath: \.assignTeamTasks, permissions: $permissions)
+                    PermissionToggle(L10n.PermissionHubProfile, keyPath: \.customizeHubProfile, permissions: $permissions)
                 }
             }
-            .navigationTitle("Mitarbeiter")
+            .navigationTitle(L10n.StaffTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Abbrechen", action: onCancel)
+                    Button(L10n.CommonCancel, action: onCancel)
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Speichern", action: onSave)
+                    Button(L10n.CommonSave, action: onSave)
                         .disabled(isSaving)
                 }
             }

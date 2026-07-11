@@ -205,7 +205,7 @@ struct TasksModuleView: View {
 
     private func requestDeleteTask(_ task: PAXTaskItem) {
         PAXDelete.confirm(
-            message: "Diese Aufgabe wird dauerhaft gelöscht.",
+            message: L10n.TaskDeleteConfirm,
             itemTitle: task.title
         ) {
             Task { await store.delete(task, auth: auth) }
@@ -240,7 +240,7 @@ private struct AddTaskSheet: View {
         Form {
             Section(L10n.TasksAdd) {
                 TextField(L10n.TasksTitleField, text: $title)
-                TextField("Notizen", text: $notes, axis: .vertical)
+                TextField(L10n.CommonFieldNotes, text: $notes, axis: .vertical)
                     .lineLimit(2...5)
                 Picker(L10n.TaskPriorityMedium, selection: $priority) {
                     ForEach(PAXTaskItem.Priority.allCases) { item in
@@ -249,17 +249,17 @@ private struct AddTaskSheet: View {
                 }
             }
 
-            Section("Fälligkeit") {
-                Toggle("Fälligkeitsdatum setzen", isOn: $hasDueDate)
+            Section(L10n.TasksSectionDue) {
+                Toggle(L10n.TasksDueDateToggle, isOn: $hasDueDate)
                 if hasDueDate {
-                    DatePicker("Datum", selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker(L10n.TasksDateLabel, selection: $dueDate, displayedComponents: [.date, .hourAndMinute])
                 }
             }
 
             if canAssign {
-                Section("Zuweisen") {
-                    Picker("Teammitglied", selection: $assignedUserId) {
-                        Text("Nicht zugewiesen").tag(0)
+                Section(L10n.TasksSectionAssign) {
+                    Picker(L10n.TasksTeamMember, selection: $assignedUserId) {
+                        Text(L10n.TasksUnassigned).tag(0)
                         ForEach(members) { member in
                             Text(member.name).tag(member.userId)
                         }

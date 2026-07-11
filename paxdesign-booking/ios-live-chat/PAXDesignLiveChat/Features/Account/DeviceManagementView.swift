@@ -23,7 +23,7 @@ struct DeviceManagementView: View {
 
             if isLoading {
                 Section {
-                    PAXScreenLoadingStack(status: "Geräte werden synchronisiert", rowCount: 3)
+                    PAXScreenLoadingStack(status: L10n.DeviceLoading, rowCount: 3)
                 }
             } else if devices.isEmpty {
                 Section {
@@ -31,9 +31,9 @@ struct DeviceManagementView: View {
                         Image(systemName: "iphone.slash")
                             .font(.system(size: 36, weight: .light))
                             .foregroundStyle(PAXTheme.textTertiary)
-                        Text("Keine Geräte")
+                        Text(L10n.DeviceNoneTitle)
                             .font(.headline)
-                        Text("Noch keine registrierten Geräte gefunden.")
+                        Text(L10n.DeviceNoneBody)
                             .font(.subheadline)
                             .foregroundStyle(PAXTheme.textSecondary)
                             .multilineTextAlignment(.center)
@@ -45,7 +45,7 @@ struct DeviceManagementView: View {
                 let grouped = Dictionary(grouping: devices, by: \.userId)
                 ForEach(grouped.keys.sorted(), id: \.self) { userId in
                     if let employeeDevices = grouped[userId] {
-                        Section(employeeDevices.first?.employeeName ?? "Mitarbeiter") {
+                        Section(employeeDevices.first?.employeeName ?? L10n.DeviceDefaultEmployee) {
                             if canManage {
                                 Text(employeeDevices.first?.employeeEmail ?? "")
                                     .font(.caption)
@@ -62,16 +62,16 @@ struct DeviceManagementView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .paxScreenBackground()
-        .navigationTitle("Geräteverwaltung")
+        .navigationTitle(L10n.PlatformDevices)
         .navigationBarTitleDisplayMode(.inline)
-        .paxPremiumRefreshable(status: "Geräte werden synchronisiert", rowCount: 3) { await loadDevices() }
+        .paxPremiumRefreshable(status: L10n.DeviceLoading, rowCount: 3) { await loadDevices() }
         .task {
             await loadDevices()
             startRealtimeRefresh()
         }
         .onDisappear { stopRealtimeRefresh() }
         .confirmationDialog(
-            "Gerät freigeben?",
+            L10n.DeviceConfirmTitle,
             isPresented: Binding(
                 get: { confirmApprove != nil },
                 set: { if !$0 { confirmApprove = nil } }
@@ -79,14 +79,14 @@ struct DeviceManagementView: View {
             titleVisibility: .visible
         ) {
             if let device = confirmApprove {
-                Button("Freigeben") {
+                Button(L10n.DeviceActionApprove) {
                     Task { await approve(device) }
                 }
             }
-            Button("Abbrechen", role: .cancel) { confirmApprove = nil }
+            Button(L10n.CommonCancel, role: .cancel) { confirmApprove = nil }
         } message: {
             if let device = confirmApprove {
-                Text("\(device.deviceName) darf wieder Anfragen senden.")
+                Text(L10n.DeviceConfirmApproveMessage(device.deviceName))
             }
         }
     }
@@ -120,24 +120,24 @@ struct DeviceManagementView: View {
 
             HStack(spacing: 6) {
                 if device.isCurrent {
-                    chip("Dieses Gerät", color: .blue)
+                    chip(L10n.DeviceChipCurrent, color: .blue)
                 }
-                chip(device.online ? "Online" : "Offline", color: device.online ? .green : .gray)
-                chip(device.approved && !device.revoked ? "Freigegeben" : "Nicht freigegeben", color: device.approved && !device.revoked ? .mint : .orange)
+                chip(device.online ? L10n.CommonOnline : L10n.DeviceChipOffline, color: device.online ? .green : .gray)
+                chip(device.approved && !device.revoked ? L10n.DeviceChipApproved : L10n.DeviceChipNotApproved, color: device.approved && !device.revoked ? .mint : .orange)
             }
 
             if !device.deviceModel.isEmpty {
-                metaRow("Modell", device.deviceModel)
+                metaRow(L10n.DeviceMetaModel, device.deviceModel)
             }
-            metaRow("System", device.osVersion)
-            metaRow("App", device.appVersion)
-            metaRow("Erstanmeldung", formatTimestamp(device.firstLoginAt))
-            metaRow("Zuletzt aktiv", formatTimestamp(device.lastActiveAt))
+            metaRow(L10n.DeviceMetaSystem, device.osVersion)
+            metaRow(L10n.DeviceMetaApp, device.appVersion)
+            metaRow(L10n.DeviceMetaFirstLogin, formatTimestamp(device.firstLoginAt))
+            metaRow(L10n.DeviceMetaLastActive, formatTimestamp(device.lastActiveAt))
             if !device.ipAddress.isEmpty {
-                metaRow("IP-Adresse", device.ipAddress)
+                metaRow(L10n.DeviceMetaIp, device.ipAddress)
             }
             if !device.location.isEmpty {
-                metaRow("Standort", device.location)
+                metaRow(L10n.DeviceMetaLocation, device.location)
             }
 
             if canManage {
@@ -146,21 +146,21 @@ struct DeviceManagementView: View {
                         Button {
                             confirmApprove = device
                         } label: {
-                            Label("Freigeben", systemImage: "checkmark.shield")
+                            Label(L10n.DeviceActionApprove, systemImage: "checkmark.shield")
                                 .font(.caption.weight(.semibold))
                         }
                         .buttonStyle(.bordered)
                     } else {
                         Button {
                             PAXDelete.confirm(
-                                message: "Das Gerät wird sofort abgemeldet.",
+                                message: L10n.DeviceRevokeMessage,
                                 itemTitle: device.deviceName,
-                                confirmTitle: "Abmelden"
+                                confirmTitle: L10n.DeviceRevokeConfirm
                             ) {
                                 Task { await revoke(device) }
                             }
                         } label: {
-                            Label("Widerrufen", systemImage: "xmark.shield")
+                            Label(L10n.DeviceActionRevoke, systemImage: "xmark.shield")
                                 .font(.caption.weight(.semibold))
                         }
                         .buttonStyle(.bordered)
@@ -175,15 +175,15 @@ struct DeviceManagementView: View {
     @ViewBuilder
     private func statusBadge(_ device: DeviceRecord) -> some View {
         if device.revoked {
-            Text("Widerrufen")
+            Text(L10n.DeviceStatusRevoked)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(PAXTheme.danger)
         } else if device.online {
-            Text("Live")
+            Text(L10n.DeviceStatusLive)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(PAXTheme.success)
         } else {
-            Text("Inaktiv")
+            Text(L10n.DeviceStatusInactive)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(PAXTheme.textTertiary)
         }

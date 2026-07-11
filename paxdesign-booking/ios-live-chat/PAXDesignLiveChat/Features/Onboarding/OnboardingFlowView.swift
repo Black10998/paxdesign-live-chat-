@@ -59,28 +59,28 @@ struct OnboardingFlowView: View {
     private var pages: [OnboardingPage] {
         [
             OnboardingPage(
-                title: "Willkommen bei PAXDesign Live Chat",
-                subtitle: "Ihre professionelle Plattform für Kundenkommunikation, Teamarbeit und Live-Support.",
+                title: L10n.OnboardingWelcomeTitle,
+                subtitle: L10n.OnboardingWelcomeSubtitle,
                 systemImage: "bubble.left.and.bubble.right.fill"
             ),
             OnboardingPage(
-                title: "Chat-Übersicht",
-                subtitle: "Alle Kundengespräche auf einen Blick. Filtern, suchen und ungelesene Nachrichten sofort erkennen.",
+                title: L10n.OnboardingChatsTitle,
+                subtitle: L10n.OnboardingChatsSubtitle,
                 systemImage: "list.bullet.rectangle.portrait.fill"
             ),
             OnboardingPage(
-                title: "Team-Messaging",
-                subtitle: "Kommunizieren Sie intern mit Ihrem Team — direkt integriert in die Chat-Liste.",
+                title: L10n.OnboardingTeamTitle,
+                subtitle: L10n.OnboardingTeamSubtitle,
                 systemImage: "person.3.fill"
             ),
             OnboardingPage(
-                title: "Live Chat",
-                subtitle: "Live-Anfragen erscheinen sofort mit Klingelton. Übernehmen oder ablehnen — in Sekunden.",
+                title: L10n.OnboardingLiveChatTitle,
+                subtitle: L10n.OnboardingLiveChatSubtitle,
                 systemImage: "bell.and.waves.left.and.right.fill"
             ),
             OnboardingPage(
-                title: "Einstellungen & Sicherheit",
-                subtitle: "Erscheinungsbild, Sprache, Sounds, App-Sperre und Datenschutz individuell anpassen.",
+                title: L10n.OnboardingSettingsTitle,
+                subtitle: L10n.OnboardingSettingsSubtitle,
                 systemImage: "lock.shield.fill"
             )
         ]
@@ -151,11 +151,11 @@ struct OnboardingFlowView: View {
                     .background(.bar)
             }
             .paxScreenBackground()
-            .navigationTitle("Willkommen")
+            .navigationTitle(L10n.OnboardingNavWelcome)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Überspringen") {
+                    Button(L10n.CommonSkip) {
                         completeFirstLaunch()
                     }
                 }
@@ -195,7 +195,7 @@ struct OnboardingFlowView: View {
     private var firstLaunchControlBar: some View {
         HStack(spacing: 12) {
             if pageIndex > 0 {
-                Button("Zurück") {
+                Button(L10n.CommonBack) {
                     PAXHaptics.light()
                     withAnimation { pageIndex -= 1 }
                 }
@@ -205,13 +205,13 @@ struct OnboardingFlowView: View {
             Spacer()
 
             if pageIndex < pages.count - 1 {
-                Button("Weiter") {
+                Button(L10n.CommonNext) {
                     PAXHaptics.light()
                     withAnimation { pageIndex += 1 }
                 }
                 .buttonStyle(.borderedProminent)
             } else {
-                Button("Loslegen") {
+                Button(L10n.OnboardingGetStarted) {
                     PAXHaptics.success()
                     completeFirstLaunch()
                 }
@@ -255,12 +255,12 @@ struct OnboardingFlowView: View {
                     .background(.bar)
             }
             .paxScreenBackground()
-            .navigationTitle("Einrichtung")
+            .navigationTitle(L10n.OnboardingNavSetup)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
-                    Button("Fertig") {
+                    Button(L10n.CommonDone) {
                         focusedPasswordField = nil
                     }
                 }
@@ -306,7 +306,7 @@ struct OnboardingFlowView: View {
     }
 
     private var termsStepContent: some View {
-        Toggle("Ich akzeptiere die Nutzungsbedingungen und Datenschutzbedingungen.", isOn: $acceptedTerms)
+        Toggle(L10n.OnboardingTermsToggle, isOn: $acceptedTerms)
             .toggleStyle(.switch)
             .font(.subheadline)
             .padding(16)
@@ -314,7 +314,7 @@ struct OnboardingFlowView: View {
     }
 
     private var nativePermissionHint: some View {
-        Text("Tippen Sie auf „Weiter“, um die Systemabfrage von iOS anzuzeigen.")
+        Text(L10n.OnboardingPermissionHint)
             .font(.footnote)
             .foregroundStyle(PAXTheme.textSecondary)
             .multilineTextAlignment(.center)
@@ -323,7 +323,7 @@ struct OnboardingFlowView: View {
 
     private var securityPINStepContent: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SecureField("Sicherheitscode (4-8 Ziffern)", text: $securityPassword)
+            SecureField(L10n.OnboardingPinPlaceholder, text: $securityPassword)
                 .keyboardType(.numberPad)
                 .textContentType(.oneTimeCode)
                 .textInputAutocapitalization(.never)
@@ -339,7 +339,7 @@ struct OnboardingFlowView: View {
                         .stroke(PAXTheme.border.opacity(0.35), lineWidth: 0.5)
                 )
 
-            SecureField("Sicherheitscode bestätigen", text: $securityPasswordConfirm)
+            SecureField(L10n.OnboardingPinConfirmPlaceholder, text: $securityPasswordConfirm)
                 .keyboardType(.numberPad)
                 .textContentType(.oneTimeCode)
                 .textInputAutocapitalization(.never)
@@ -356,7 +356,7 @@ struct OnboardingFlowView: View {
                 )
 
             if !securityPassword.isEmpty || !securityPasswordConfirm.isEmpty {
-                Text(securityPasswordValid ? "Sicherheitscode gültig" : "Bitte 4-8 identische Ziffern eingeben")
+                Text(securityPasswordValid ? L10n.OnboardingPinValid : L10n.OnboardingPinInvalid)
                     .font(.caption)
                     .foregroundStyle(securityPasswordValid ? PAXTheme.success : PAXTheme.textSecondary)
             }
@@ -367,7 +367,7 @@ struct OnboardingFlowView: View {
 
     private var biometricsStepContent: some View {
         VStack(spacing: 12) {
-            Text("iOS zeigt die \(appLock.biometricTypeLabel)-Abfrage an, wenn Sie fortfahren.")
+            Text(L10n.OnboardingBiometricHint(appLock.biometricTypeLabel))
                 .font(.footnote)
                 .foregroundStyle(PAXTheme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -378,7 +378,7 @@ struct OnboardingFlowView: View {
     private var postLoginControlBar: some View {
         VStack(spacing: 10) {
             if isCompleting {
-                ProgressView("Wird abgeschlossen…")
+                ProgressView(L10n.OnboardingCompleting)
                     .font(.subheadline)
                     .frame(maxWidth: .infinity)
             } else {
@@ -433,42 +433,36 @@ struct OnboardingFlowView: View {
 
     private var postLoginStepTitle: String {
         switch postLoginStep {
-        case .terms: return "Nutzungsbedingungen"
-        case .notifications: return "Benachrichtigungen"
-        case .location: return "Standort"
-        case .securityPIN: return "Sicherheitscode"
+        case .terms: return L10n.OnboardingStepTermsTitle
+        case .notifications: return L10n.OnboardingStepNotificationsTitle
+        case .location: return L10n.OnboardingStepLocationTitle
+        case .securityPIN: return L10n.OnboardingStepPinTitle
         case .biometrics: return appLock.biometricTypeLabel
         }
     }
 
     private var postLoginStepSubtitle: String {
         switch postLoginStep {
-        case .terms:
-            return "Bitte akzeptieren Sie die Nutzungsbedingungen und Datenschutzbedingungen, um fortzufahren."
-        case .notifications:
-            return "Erhalten Sie Live-Anfragen und neue Nachrichten sofort. iOS fragt Sie im nächsten Schritt um Erlaubnis."
-        case .location:
-            return "Standortdaten werden nur für standortbezogene Funktionen verwendet. iOS zeigt die offizielle Systemabfrage."
-        case .securityPIN:
-            return "Legen Sie einen persönlichen Sicherheitscode fest, um die App zu schützen."
-        case .biometrics:
-            return "Nutzen Sie \(appLock.biometricTypeLabel) für schnellen und sicheren Zugriff auf die App."
+        case .terms: return L10n.OnboardingStepTermsSubtitle
+        case .notifications: return L10n.OnboardingStepNotificationsSubtitle
+        case .location: return L10n.OnboardingStepLocationSubtitle
+        case .securityPIN: return L10n.OnboardingStepPinSubtitle
+        case .biometrics: return L10n.OnboardingStepBiometricSubtitle(appLock.biometricTypeLabel)
         }
     }
 
     private var postLoginPrimaryButtonTitle: String {
         switch postLoginStep {
-        case .terms: return "Weiter"
-        case .notifications, .location: return "Weiter"
-        case .securityPIN: return isLastPostLoginStep ? "App starten" : "Weiter"
-        case .biometrics: return "\(appLock.biometricTypeLabel) aktivieren"
+        case .terms, .notifications, .location: return L10n.CommonNext
+        case .securityPIN: return isLastPostLoginStep ? L10n.OnboardingStartApp : L10n.CommonNext
+        case .biometrics: return L10n.OnboardingActivateBiometric(appLock.biometricTypeLabel)
         }
     }
 
     private var postLoginSkipTitle: String {
         switch postLoginStep {
-        case .biometrics: return "Ohne Biometrie fortfahren"
-        default: return "Überspringen"
+        case .biometrics: return L10n.OnboardingSkipBiometric
+        default: return L10n.CommonSkip
         }
     }
 
@@ -594,7 +588,7 @@ struct OnboardingFlowView: View {
 
     private func configureSecurityPIN() -> Bool {
         guard securityPasswordValid else {
-            completionError = "Bitte einen gültigen Sicherheitscode (4-8 Ziffern) vergeben und bestätigen."
+            completionError = L10n.OnboardingErrorPin
             return false
         }
         do {
@@ -613,12 +607,12 @@ struct OnboardingFlowView: View {
     private func finishPostLoginOnboarding() async {
         guard !isCompleting else { return }
         guard acceptedTerms else {
-            completionError = "Bitte akzeptieren Sie die Nutzungsbedingungen."
+            completionError = L10n.OnboardingErrorTerms
             postLoginStep = .terms
             return
         }
         guard securityPasswordValid, appLock.hasPINConfigured() else {
-            completionError = "Bitte richten Sie zuerst den Sicherheitscode ein."
+            completionError = L10n.OnboardingErrorPinRequired
             postLoginStep = .securityPIN
             return
         }

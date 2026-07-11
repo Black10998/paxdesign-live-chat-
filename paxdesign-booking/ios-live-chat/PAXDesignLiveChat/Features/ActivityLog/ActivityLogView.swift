@@ -56,7 +56,7 @@ struct ActivityLogView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button(L10n.ActivityLogClear) {
                         PAXDelete.confirm(
-                            message: "Das gesamte Aktivitätsprotokoll wird geleert.",
+                            message: L10n.ActivityLogClearConfirm,
                             confirmTitle: L10n.ActivityLogClear
                         ) {
                             Task {

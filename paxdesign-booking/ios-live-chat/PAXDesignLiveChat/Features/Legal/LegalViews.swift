@@ -63,20 +63,20 @@ struct SecurityView: View {
                 NavigationLink {
                     AppLockSettingsView()
                 } label: {
-                    Label("App-Sperre", systemImage: "lock.shield.fill")
+                    Label(L10n.LegalAppLockLabel, systemImage: "lock.shield.fill")
                 }
             } footer: {
-                Text("Face ID, Touch ID oder App-PIN mit automatischer Sperre nach Inaktivität.")
+                Text(L10n.LegalAppLockFooter)
             }
 
-            Section("Hinweise") {
-                Text("Transportverschlüsselung: Alle API-Anfragen erfolgen ausschließlich über HTTPS (TLS).")
+            Section(L10n.LegalSecuritySection) {
+                Text(L10n.LegalSecurityTransport)
                     .font(.footnote)
                     .foregroundStyle(PAXTheme.textSecondary)
-                Text("Anmeldedaten werden im iOS-Schlüsselbund gespeichert. App-PINs werden gehasht im Schlüsselbund abgelegt.")
+                Text(L10n.LegalSecurityCredentials)
                     .font(.footnote)
                     .foregroundStyle(PAXTheme.textSecondary)
-                Text("Kein Tracking. Keine Third-Party-Analytics.")
+                Text(L10n.LegalSecurityNoTracking)
                     .font(.footnote)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
@@ -93,17 +93,17 @@ struct PrivacyPolicyView: View {
         LegalDocumentView(
             title: L10n.LegalPrivacy,
             sections: [
-                ("Verantwortlicher", "PAXdesign / PrimoJob GmbH\nFranzensbrückenstraße 14, 1020 Wien\nhttps://paxdesign.at"),
-                ("Zweck", "Die App dient autorisierten Mitarbeitern zur Bearbeitung von Live-Chat-Anfragen. Es werden nur Daten verarbeitet, die für den Support erforderlich sind."),
-                ("Verarbeitete Daten", "Anmeldedaten (WordPress Application Password, lokal im Schlüsselbund), Chat-Inhalte, Metadaten (Zeitstempel, Session-ID), optional Profilbild lokal auf dem Gerät, Push-Token für Benachrichtigungen."),
-                ("Speicherung", "Chat-Inhalte werden auf dem WordPress-Server des Auftraggebers gespeichert. Anmeldedaten verbleiben verschlüsselt im iOS-Schlüsselbund."),
-                ("Übermittlung", "Alle API-Kommunikation erfolgt über HTTPS (TLS). Es wird keine Ende-zu-Ende-Verschlüsselung zusätzlich zur Transportverschlüsselung eingesetzt."),
-                ("Rechtsgrundlage (DSGVO)", "Art. 6 Abs. 1 lit. b (Vertrag/Support) und lit. f (berechtigtes Interesse am Kundenservice)."),
-                ("Betroffenenrechte", "Auskunft, Berichtigung, Löschung, Einschränkung, Widerspruch und Datenübertragbarkeit gemäß DSGVO. Anfragen an den Verantwortlichen."),
-                ("Aufbewahrung", "Entspricht den Einstellungen des WordPress-Systems des Auftraggebers."),
+                (L10n.LegalPrivacyControllerTitle, L10n.LegalPrivacyControllerBody),
+                (L10n.LegalPrivacyPurposeTitle, L10n.LegalPrivacyPurposeBody),
+                (L10n.LegalPrivacyDataTitle, L10n.LegalPrivacyDataBody),
+                (L10n.LegalPrivacyStorageTitle, L10n.LegalPrivacyStorageBody),
+                (L10n.LegalPrivacyTransmissionTitle, L10n.LegalPrivacyTransmissionBody),
+                (L10n.LegalPrivacyLegalBasisTitle, L10n.LegalPrivacyLegalBasisBody),
+                (L10n.LegalPrivacyRightsTitle, L10n.LegalPrivacyRightsBody),
+                (L10n.LegalPrivacyRetentionTitle, L10n.LegalPrivacyRetentionBody),
             ],
             webLinks: [
-                .init(title: "Vollständige Datenschutzerklärung", url: PAXLegalLinks.privacyPolicy)
+                .init(title: L10n.LegalPrivacyLinkTitle, url: PAXLegalLinks.privacyPolicy)
             ]
         )
     }
@@ -114,14 +114,14 @@ struct TermsOfServiceView: View {
         LegalDocumentView(
             title: L10n.LegalTerms,
             sections: [
-                ("Geltungsbereich", "Diese App ist ausschließlich für autorisierte PAXdesign-Mitarbeiter bestimmt."),
-                ("Zugang", "Der Zugang erfordert gültige WordPress-Administrator-Anmeldedaten und ein Application Password."),
-                ("Pflichten", "Chat-Inhalte vertraulich behandeln. Keine Weitergabe von Zugangsdaten. Gerät mit Code schützen."),
-                ("Verfügbarkeit", "Der Dienst hängt von der Erreichbarkeit des WordPress-Backends ab."),
-                ("Haftung", "Die App wird im Rahmen des internen Support-Betriebs bereitgestellt. Schäden durch unsachgemäße Nutzung sind ausgeschlossen, soweit gesetzlich zulässig."),
+                (L10n.LegalTermsScopeTitle, L10n.LegalTermsScopeBody),
+                (L10n.LegalTermsAccessTitle, L10n.LegalTermsAccessBody),
+                (L10n.LegalTermsDutiesTitle, L10n.LegalTermsDutiesBody),
+                (L10n.LegalTermsAvailabilityTitle, L10n.LegalTermsAvailabilityBody),
+                (L10n.LegalTermsLiabilityTitle, L10n.LegalTermsLiabilityBody),
             ],
             webLinks: [
-                .init(title: "Impressum & Anbieterkennzeichnung", url: PAXLegalLinks.impressum)
+                .init(title: L10n.LegalTermsLinkTitle, url: PAXLegalLinks.impressum)
             ]
         )
     }
@@ -129,12 +129,12 @@ struct TermsOfServiceView: View {
 
 struct DataHandlingView: View {
     var body: some View {
-        LegalDocumentView(title: "Datenverarbeitung", sections: [
-            ("Lokale Speicherung", "Application Password im iOS-Schlüsselbund (kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly). Optionales Profilbild in UserDefaults."),
-            ("Netzwerk", "REST-API über HTTPS. Keine Third-Party-Analytics in der App."),
-            ("Push (APNs)", "Device-Token wird an den WordPress-Server übermittelt, um Live-Anfragen zu signalisieren."),
-            ("Löschung", "Abmeldung entfernt lokale Zugangsdaten. Serverseitige Löschung über WordPress-Administration."),
-            ("App Store Privacy", "Kein Tracking. Kontaktinformationen und Benutzerinhalte werden für App-Funktionalität verarbeitet."),
+        LegalDocumentView(title: L10n.LegalDataHandlingTitle, sections: [
+            (L10n.LegalDataLocalTitle, L10n.LegalDataLocalBody),
+            (L10n.LegalDataNetworkTitle, L10n.LegalDataNetworkBody),
+            (L10n.LegalDataPushTitle, L10n.LegalDataPushBody),
+            (L10n.LegalDataDeletionTitle, L10n.LegalDataDeletionBody),
+            (L10n.LegalDataAppStoreTitle, L10n.LegalDataAppStoreBody),
         ])
     }
 }
@@ -170,7 +170,7 @@ struct AboutView: View {
                 .shadow(color: PAXBrand.accent.opacity(0.2), radius: 16, y: 6)
 
             VStack(spacing: 8) {
-                Text("PAXDesign Live Chat")
+                Text(L10n.AppName)
                     .font(.title2.weight(.bold))
 
                 Text(L10n.AboutTagline)
@@ -202,10 +202,10 @@ struct AboutView: View {
 
     private var aboutInfoCard: some View {
         VStack(spacing: 0) {
-            aboutRow("Version", PAXAppInfo.fullVersion, showDivider: true)
-            aboutRow("Website", "https://paxdesign.at", showDivider: true)
-            aboutRow("Hersteller", "PAXdesign / PrimoJob GmbH", showDivider: true)
-            aboutRow("Sicherheit", "HTTPS/TLS, iOS-Schlüsselbund", showDivider: false)
+            aboutRow(L10n.AboutVersionLabel, PAXAppInfo.fullVersion, showDivider: true)
+            aboutRow(L10n.AboutWebsiteLabel, "https://paxdesign.at", showDivider: true)
+            aboutRow(L10n.AboutManufacturerLabel, "PAXdesign / PrimoJob GmbH", showDivider: true)
+            aboutRow(L10n.AboutSecurityLabel, "HTTPS/TLS, iOS-Schlüsselbund", showDivider: false)
         }
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -224,10 +224,10 @@ struct AboutView: View {
 
     private var featureHighlights: some View {
         VStack(alignment: .leading, spacing: 14) {
-            featureRow(icon: "bell.badge", title: "Push-Benachrichtigungen", subtitle: "Live-Anfragen in Echtzeit")
-            featureRow(icon: "person.wave.2", title: "Live-Agent-Übernahme", subtitle: "Nahtloser Kundensupport")
-            featureRow(icon: "sparkles", title: "KI-Assistent", subtitle: "Intelligente Antwortvorschläge")
-            featureRow(icon: "lock.shield", title: "Enterprise-Sicherheit", subtitle: "Verschlüsselte Verbindung")
+            featureRow(icon: "bell.badge", title: L10n.AboutPushTitle, subtitle: L10n.AboutPushSubtitle)
+            featureRow(icon: "person.wave.2", title: L10n.AboutLiveAgentTitle, subtitle: L10n.AboutLiveAgentSubtitle)
+            featureRow(icon: "sparkles", title: L10n.AboutAiTitle, subtitle: L10n.AboutAiSubtitle)
+            featureRow(icon: "lock.shield", title: L10n.AboutEnterpriseTitle, subtitle: L10n.AboutEnterpriseSubtitle)
         }
         .padding(18)
         .paxGlassCardStyle(cornerRadius: 16, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.12)
@@ -275,18 +275,18 @@ struct AboutView: View {
 
 struct HelpView: View {
     var body: some View {
-        LegalDocumentView(title: "Hilfe", sections: [
-            ("Über diese App", "PAXDesign Live Chat ist die offizielle iOS-App für autorisierte Mitarbeiter. Sie verbindet sich sicher per HTTPS mit Ihrem WordPress-Backend und spiegelt die Funktionen des Browser-Live-Admin-Panels — optimiert für unterwegs und mit Push-Benachrichtigungen."),
-            ("Anmeldung & Konto", "Geben Sie die HTTPS-URL Ihrer Website, Ihren WordPress-Benutzernamen (oder E-Mail) und ein Application Password ein. Das Passwort erstellen Sie in WordPress unter Benutzer → Profil. Nach erfolgreicher Anmeldung bleiben die Zugangsdaten verschlüsselt im iOS-Schlüsselbund."),
-            ("Live-Anfragen", "Wenn ein Kunde einen Live-Agenten anfordert, erscheint ein Premium-Banner oben in der App sowie ein Vollbild-Alarm mit Klingelton. Wechseln Sie zum Live-Tab, um alle offenen Anfragen zu sehen. Übernehmen oder lehnen Sie Anfragen ab — übernommene Chats öffnen sich automatisch."),
-            ("Chats & Nachrichten", "Im Chats-Tab sehen Sie alle aktiven Gespräche. Nutzen Sie Suche und Filter (Alle, Live, Offen, Aktiv, Geschlossen). Ungelesene Kundennachrichten werden mit einem Badge markiert. Lang drücken auf eine Nachricht: Kopieren, Teilen oder Antworten."),
-            ("Bilder senden", "Tippen Sie auf das Foto-Symbol im Composer, um ein Bild aus der Mediathek zu senden. Bilder werden vor dem Upload optimiert und im Chat als Vorschaubild angezeigt. Tippen Sie auf ein Bild für die Vollbild-Ansicht."),
-            ("KI-Assistent & Schnellantworten", "Nach Kundennachrichten erscheinen KI-Vorschläge und Schnellantworten oberhalb des Eingabefelds. Antippen übernimmt den Text — es wird nichts automatisch gesendet. Berechtigungen können vom Hauptadministrator eingeschränkt werden."),
-            ("Benachrichtigungen & Töne", "Push-Benachrichtigungen informieren über Live-Anfragen und neue Nachrichten. In den Einstellungen können Klingelton, Sendeton, Tippgeräusch und Lautstärke angepasst werden."),
-            ("Team & Berechtigungen", "Der Hauptadministrator verwaltet Mitarbeiter-Zugang und Berechtigungen (Chats ansehen, antworten, KI, Bilder, Einstellungen, Bewertungen, Team-Verwaltung, Sicherheit). Unter Konto → Team & Berechtigungen oder im WordPress-Admin."),
-            ("Datenschutz & Sicherheit", "Alle Kommunikation erfolgt über TLS (HTTPS). Es gibt keine Ende-zu-Ende-Verschlüsselung — Nachrichten werden serverseitig für den Support gespeichert. E-Mail-Adressen werden in der App teilweise maskiert angezeigt. Details unter Konto → Sicherheit und Datenschutz."),
-            ("Best Practices für Admins", "Melden Sie sich auf gemeinsam genutzten Geräten ab. Widerrufen Sie Application Passwords bei Verlust. Antworten Sie zeitnah auf Live-Anfragen. Nutzen Sie die KI-Vorschläge als Hilfe, prüfen Sie Inhalte vor dem Senden. Halten Sie Plugin und App aktuell."),
-            ("Support", "Technische Fragen: https://paxdesign.at — Plugin-Updates werden automatisch über GitHub Releases bereitgestellt."),
+        LegalDocumentView(title: L10n.LegalHelpTitle, sections: [
+            (L10n.HelpAboutTitle, L10n.HelpAboutBody),
+            (L10n.HelpLoginTitle, L10n.HelpLoginBody),
+            (L10n.HelpLiveTitle, L10n.HelpLiveBody),
+            (L10n.HelpChatsTitle, L10n.HelpChatsBody),
+            (L10n.HelpImagesTitle, L10n.HelpImagesBody),
+            (L10n.HelpAiTitle, L10n.HelpAiBody),
+            (L10n.HelpNotificationsTitle, L10n.HelpNotificationsBody),
+            (L10n.HelpTeamTitle, L10n.HelpTeamBody),
+            (L10n.HelpPrivacyTitle, L10n.HelpPrivacyBody),
+            (L10n.HelpAdminTitle, L10n.HelpAdminBody),
+            (L10n.HelpSupportTitle, L10n.HelpSupportBody),
         ])
     }
 }

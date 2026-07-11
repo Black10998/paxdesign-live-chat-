@@ -423,6 +423,7 @@ enum L10n {
     static var CalendarAddEvent: String { t("calendar.add_event") }
     static var CalendarEventTitle: String { t("calendar.event_title") }
     static var CalendarAddEventHint: String { t("calendar.add_event_hint") }
+    static var CalendarDeleteConfirm: String { t("calendar.delete_confirm") }
     static var CalendarCategoryMeeting: String { t("calendar.category.meeting") }
     static var CalendarCategoryAppointment: String { t("calendar.category.appointment") }
     static var CalendarCategoryReminder: String { t("calendar.category.reminder") }
@@ -462,6 +463,7 @@ enum L10n {
     static var ReportsInsightBody: String { t("reports.insight_body") }
     static var ActivityLogEmpty: String { t("activity_log.empty") }
     static var ActivityLogClear: String { t("activity_log.clear") }
+    static var ActivityLogClearConfirm: String { t("activity_log.clear_confirm") }
     static var ActivityDashboardOpened: String { t("activity.dashboard_opened") }
     static var ActivityTaskCreated: String { t("activity.task_created") }
     static var ActivityTaskCompleted: String { t("activity.task_completed") }
@@ -760,4 +762,119 @@ enum L10n {
     static var ProfileHubSave: String { t("profile.hub_save") }
     static var ProfileHubSection: String { t("profile.hub_section") }
     static var ProfileHubFooter: String { t("profile.hub_footer") }
+
+    // MARK: - App
+    static var AppName: String { t("app.name") }
+    static var AppShortName: String { t("app.short_name") }
+
+    // MARK: - Loading (additional)
+    static var LoadingSessions: String { t("loading.sessions") }
+
+    // MARK: - Session (additional)
+    static var SessionDeleteConfirm: String { t("session.delete_confirm") }
+
+    // MARK: - Tasks (additional)
+    static var TaskDeleteConfirm: String { t("tasks.delete_confirm") }
+    static var TasksSectionDue: String { t("tasks.section_due") }
+    static var TasksDueDateToggle: String { t("tasks.due_date_toggle") }
+    static var TasksDateLabel: String { t("tasks.date_label") }
+    static var TasksSectionAssign: String { t("tasks.section_assign") }
+    static var TasksTeamMember: String { t("tasks.team_member") }
+    static var TasksUnassigned: String { t("tasks.unassigned") }
+
+    // MARK: - Files (additional)
+    static var FilesDeleteConfirm: String { t("files.delete_confirm") }
+
+    // MARK: - Live (additional)
+    static var LiveDeclineConfirm: String { t("live.decline_confirm") }
+
+    // MARK: - Device (additional)
+    static var DeviceStatusInactive: String { t("device.status_inactive") }
+    static var DeviceDefaultEmployee: String { t("device.default_employee") }
+
+    // MARK: - Settings (additional)
+    static var SettingsTourResetDone: String { t("settings.tour_reset_done") }
+
+    // MARK: - Sound tones
+    static var SoundToneClassic: String { t("sound.tone.classic") }
+    static var SoundToneChime: String { t("sound.tone.chime") }
+    static var SoundTonePulse: String { t("sound.tone.pulse") }
+    static var SoundToneBell: String { t("sound.tone.bell") }
+    static var SoundToneDigital: String { t("sound.tone.digital") }
+    static var SoundToneSoft: String { t("sound.tone.soft") }
+    static var SoundToneEcho: String { t("sound.tone.echo") }
+
+    // MARK: - Legal (body)
+    static var LegalSecurityTransport: String { t("legal.security_transport") }
+    static var LegalSecurityCredentials: String { t("legal.security_credentials") }
+    static var LegalSecurityNoTracking: String { t("legal.security_no_tracking") }
+    static var LegalPrivacyControllerTitle: String { t("legal.privacy.controller_title") }
+    static var LegalPrivacyControllerBody: String { t("legal.privacy.controller_body") }
+    static var LegalPrivacyPurposeTitle: String { t("legal.privacy.purpose_title") }
+    static var LegalPrivacyPurposeBody: String { t("legal.privacy.purpose_body") }
+    static var LegalPrivacyDataTitle: String { t("legal.privacy.data_title") }
+    static var LegalPrivacyDataBody: String { t("legal.privacy.data_body") }
+    static var LegalPrivacyStorageTitle: String { t("legal.privacy.storage_title") }
+    static var LegalPrivacyStorageBody: String { t("legal.privacy.storage_body") }
+    static var LegalPrivacyTransmissionTitle: String { t("legal.privacy.transmission_title") }
+    static var LegalPrivacyTransmissionBody: String { t("legal.privacy.transmission_body") }
+    static var LegalPrivacyLegalBasisTitle: String { t("legal.privacy.legal_basis_title") }
+    static var LegalPrivacyLegalBasisBody: String { t("legal.privacy.legal_basis_body") }
+    static var LegalPrivacyRightsTitle: String { t("legal.privacy.rights_title") }
+    static var LegalPrivacyRightsBody: String { t("legal.privacy.rights_body") }
+    static var LegalPrivacyRetentionTitle: String { t("legal.privacy.retention_title") }
+    static var LegalPrivacyRetentionBody: String { t("legal.privacy.retention_body") }
+    static var LegalTermsScopeTitle: String { t("legal.terms.scope_title") }
+    static var LegalTermsScopeBody: String { t("legal.terms.scope_body") }
+    static var LegalTermsAccessTitle: String { t("legal.terms.access_title") }
+    static var LegalTermsAccessBody: String { t("legal.terms.access_body") }
+    static var LegalTermsDutiesTitle: String { t("legal.terms.duties_title") }
+    static var LegalTermsDutiesBody: String { t("legal.terms.duties_body") }
+    static var LegalTermsAvailabilityTitle: String { t("legal.terms.availability_title") }
+    static var LegalTermsAvailabilityBody: String { t("legal.terms.availability_body") }
+    static var LegalTermsLiabilityTitle: String { t("legal.terms.liability_title") }
+    static var LegalTermsLiabilityBody: String { t("legal.terms.liability_body") }
+    static var LegalDataLocalTitle: String { t("legal.data.local_title") }
+    static var LegalDataLocalBody: String { t("legal.data.local_body") }
+    static var LegalDataNetworkTitle: String { t("legal.data.network_title") }
+    static var LegalDataNetworkBody: String { t("legal.data.network_body") }
+    static var LegalDataPushTitle: String { t("legal.data.push_title") }
+    static var LegalDataPushBody: String { t("legal.data.push_body") }
+    static var LegalDataDeletionTitle: String { t("legal.data.deletion_title") }
+    static var LegalDataDeletionBody: String { t("legal.data.deletion_body") }
+    static var LegalDataAppStoreTitle: String { t("legal.data.app_store_title") }
+    static var LegalDataAppStoreBody: String { t("legal.data.app_store_body") }
+
+    // MARK: - Help
+    static var HelpAboutTitle: String { t("help.about_title") }
+    static var HelpAboutBody: String { t("help.about_body") }
+    static var HelpLoginTitle: String { t("help.login_title") }
+    static var HelpLoginBody: String { t("help.login_body") }
+    static var HelpLiveTitle: String { t("help.live_title") }
+    static var HelpLiveBody: String { t("help.live_body") }
+    static var HelpChatsTitle: String { t("help.chats_title") }
+    static var HelpChatsBody: String { t("help.chats_body") }
+    static var HelpImagesTitle: String { t("help.images_title") }
+    static var HelpImagesBody: String { t("help.images_body") }
+    static var HelpAiTitle: String { t("help.ai_title") }
+    static var HelpAiBody: String { t("help.ai_body") }
+    static var HelpNotificationsTitle: String { t("help.notifications_title") }
+    static var HelpNotificationsBody: String { t("help.notifications_body") }
+    static var HelpTeamTitle: String { t("help.team_title") }
+    static var HelpTeamBody: String { t("help.team_body") }
+    static var HelpPrivacyTitle: String { t("help.privacy_title") }
+    static var HelpPrivacyBody: String { t("help.privacy_body") }
+    static var HelpAdminTitle: String { t("help.admin_title") }
+    static var HelpAdminBody: String { t("help.admin_body") }
+    static var HelpSupportTitle: String { t("help.support_title") }
+    static var HelpSupportBody: String { t("help.support_body") }
+
+    // MARK: - Intents
+    static var IntentOpenDashboard: String { t("intent.open_dashboard") }
+    static var IntentOpenLiveRequests: String { t("intent.open_live_requests") }
+    static var IntentSearchLiveChat: String { t("intent.search_live_chat") }
+    static var IntentQueryParameter: String { t("intent.query_parameter") }
+    static var IntentShortDashboard: String { t("intent.short_dashboard") }
+    static var IntentShortLiveRequests: String { t("intent.short_live_requests") }
+    static var IntentShortSearch: String { t("intent.short_search") }
 }

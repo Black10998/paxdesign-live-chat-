@@ -40,7 +40,7 @@ struct LiveTabView: View {
                             }
                         } onDecline: {
                             PAXDelete.confirm(
-                                message: "Diese Live-Anfrage wird abgelehnt.",
+                                message: L10n.LiveDeclineConfirm,
                                 itemTitle: session.displayName,
                                 confirmTitle: L10n.CommonDecline
                             ) {

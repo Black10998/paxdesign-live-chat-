@@ -23,7 +23,7 @@ struct PAXLaunchView: View {
                 PAXInlineLoader(size: 22)
                     .opacity(labelOpacity)
 
-                Text("PAXDesign Live Chat")
+                Text(L10n.AppName)
                     .font(.footnote.weight(.medium))
                     .foregroundStyle(.secondary)
                     .opacity(labelOpacity)
