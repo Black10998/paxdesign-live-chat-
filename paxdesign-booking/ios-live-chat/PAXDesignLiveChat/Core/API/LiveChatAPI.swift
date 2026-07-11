@@ -265,11 +265,11 @@ final class LiveChatAPI {
         _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "reopen", as: EmptyResponse.self)
     }
 
-    func release(_ sessionId: String) async throws -> HandlerTransitionResponse {
+    func release(_ sessionId: String) async throws {
         guard let url = liveAdminURL(path: "sessions/\(sessionId)/release") else {
             throw LiveChatAPIError.invalidURL
         }
-        return try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "release", as: HandlerTransitionResponse.self)
+        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "release", as: EmptyResponse.self)
     }
 
     func sendMessage(
