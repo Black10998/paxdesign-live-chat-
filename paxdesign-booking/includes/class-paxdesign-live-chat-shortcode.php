@@ -163,6 +163,12 @@ class PAXdesign_Live_Chat_Shortcode {
 
     public static function enqueue_assets() {
         self::enqueue_shell_assets();
+        wp_enqueue_style(
+            'paxdesign-live-chat-dashboard',
+            PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/css/live-chat-dashboard.css',
+            array('paxdesign-live-chat-app'),
+            PAXDESIGN_BOOKING_VERSION
+        );
         PAXdesign_Live_Chat_PWA::enqueue_assets();
 
         wp_enqueue_script(
@@ -180,6 +186,7 @@ class PAXdesign_Live_Chat_Shortcode {
             'currentEmployee' => PAXdesign_Chat_Live::resolve_employee_identity(get_current_user_id()),
             'adminUrl'     => PAXdesign_Live_Chat_PWA::get_admin_panel_url(),
             'quickReplies' => PAXdesign_Chat_Live::get_admin_quick_replies(),
+            'quickLinks'   => class_exists('PAXdesign_Chat_Quick_Links') ? PAXdesign_Chat_Quick_Links::get_links() : array(),
             'tourCompleted' => (bool) get_user_meta(get_current_user_id(), 'pax_live_dashboard_tour_completed', true),
         ));
     }

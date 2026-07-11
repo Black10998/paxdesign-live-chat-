@@ -3061,7 +3061,9 @@ body.pax-live-agent-profile-open {
 }
 
 /* ── Quick website links + URL scan badges (staff console) ── */
-.pax-live-dashboard__quick-links {
+.pax-live-dashboard__quick-links,
+.pax-live-console__quick-links,
+.pax-live-app__quick-links {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -3082,13 +3084,19 @@ body.pax-live-agent-profile-open {
 }
 
 .pax-live-dashboard__quick-links:hover,
-.pax-live-dashboard__quick-links:focus-visible {
+.pax-live-dashboard__quick-links:focus-visible,
+.pax-live-console__quick-links:hover,
+.pax-live-console__quick-links:focus-visible,
+.pax-live-app__quick-links:hover,
+.pax-live-app__quick-links:focus-visible {
   background: rgba(90, 122, 0, 0.14);
   border-color: rgba(90, 122, 0, 0.42);
   outline: none;
 }
 
-.pax-live-dashboard__quick-links[hidden] {
+.pax-live-dashboard__quick-links[hidden],
+.pax-live-console__quick-links[hidden],
+.pax-live-app__quick-links[hidden] {
   display: none !important;
 }
 
@@ -3244,31 +3252,61 @@ body.pax-live-agent-profile-open {
 }
 
 .pax-live-dashboard__link-scan {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 8px;
-  padding: 6px 10px;
-  border-radius: 8px;
-  font-size: 0.74rem;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  font-size: 0.78rem;
   font-weight: 600;
   line-height: 1.35;
 }
 
+.pax-live-dashboard__link-scan-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 1.15rem;
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
+.pax-live-dashboard__link-scan-label {
+  min-width: 0;
+}
+
 .pax-live-dashboard__link-scan--checking {
   background: rgba(148, 163, 184, 0.16);
+  border-color: rgba(148, 163, 184, 0.28);
   color: #475569;
+}
+
+.pax-live-dashboard__link-scan--checking .pax-live-dashboard__link-scan-icon {
+  animation: pax-link-scan-spin 0.9s linear infinite;
+}
+
+@keyframes pax-link-scan-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .pax-live-dashboard__link-scan--safe {
   background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.28);
   color: #15803d;
 }
 
 .pax-live-dashboard__link-scan--suspicious {
   background: rgba(245, 158, 11, 0.14);
+  border-color: rgba(245, 158, 11, 0.3);
   color: #b45309;
 }
 
 .pax-live-dashboard__link-scan--dangerous {
   background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.28);
   color: #b91c1c;
 }
