@@ -135,7 +135,9 @@
         }
         loadList();
       } else if (data.type === 'link_scan_updated' && sid === selectedSession && payload.message) {
-        updateAdminLinkScanBadge(payload.message);
+        if (!isMessagePermanentlyDeleted(payload.message.id)) {
+          updateAdminLinkScanBadge(payload.message);
+        }
       } else if (data.type === 'message_deleted' && sid === selectedSession && payload.message_id) {
         animateAdminMessageDeletion(payload.message_id, payload.tombstone || 'This message was deleted by an employee.');
       } else if (data.type === 'session_update' || data.type === 'conversation_deleted') {
@@ -224,6 +226,8 @@
       }
     });
     var domMsgIds = {};
+    var deletedMessageIds = {};
+    var deletingInProgress = {};
     var sessionMessageMap = {};
     var replyToId = 0;
     var allSessions = [];
@@ -1608,7 +1612,7 @@
     }
 
     function updateAdminLinkScanBadge(msg) {
-      if (!msg || !msg.id) return;
+      if (!msg || !msg.id || isMessagePermanentlyDeleted(msg.id)) return;
       var $msg = $messages.find('[data-msg-id="' + msg.id + '"]');
       if (!$msg.length) return;
       var $bubble = $msg.find('.pax-live-dashboard__msg-bubble');
@@ -1623,20 +1627,38 @@
       }
     }
 
+    function isMessagePermanentlyDeleted(messageId) {
+      return !!deletedMessageIds[String(messageId)];
+    }
+
+    function markMessagePermanentlyDeleted(messageId) {
+      deletedMessageIds[String(messageId)] = true;
+    }
+
     function animateAdminMessageDeletion(messageId, tombstone) {
+      var id = String(messageId);
+      if (deletingInProgress[id] || isMessagePermanentlyDeleted(messageId)) return;
+      deletingInProgress[id] = true;
+      markMessagePermanentlyDeleted(messageId);
+
       var $msg = $messages.find('[data-msg-id="' + messageId + '"]');
-      if (!$msg.length) return;
+      if (!$msg.length) {
+        delete domMsgIds[messageId];
+        delete sessionMessageMap[messageId];
+        if (!$messages.find('[data-msg-id="deleted-' + messageId + '"]').length) {
+          appendMessageDom({ id: 'deleted-' + messageId, role: 'system', content: tombstone });
+        }
+        return;
+      }
       window.requestAnimationFrame(function () {
         $msg.addClass('pax-live-dashboard__msg--deleting');
         window.setTimeout(function () {
           $msg.remove();
           delete domMsgIds[messageId];
           delete sessionMessageMap[messageId];
-          appendMessageDom({
-            id: 'deleted-' + messageId,
-            role: 'system',
-            content: tombstone
-          });
+          if (!$messages.find('[data-msg-id="deleted-' + messageId + '"]').length) {
+            appendMessageDom({ id: 'deleted-' + messageId, role: 'system', content: tombstone });
+          }
         }, 460);
       });
     }
@@ -1970,7 +1992,7 @@
       $messages.find('.pax-live-dashboard__empty').remove();
       items.sort(function (a, b) { return (a.id || 0) - (b.id || 0); });
       items.forEach(function (msg) {
-        if (!msg || !msg.id || domMsgIds[msg.id]) return;
+        if (!msg || !msg.id || domMsgIds[msg.id] || isMessagePermanentlyDeleted(msg.id)) return;
         domMsgIds[msg.id] = true;
         pollSeq = Math.max(pollSeq, msg.id);
         appendMessageDom(msg);

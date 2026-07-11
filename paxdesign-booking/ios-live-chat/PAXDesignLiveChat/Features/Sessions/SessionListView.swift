@@ -9,6 +9,7 @@ struct SessionListView: View {
     @State private var filter: SessionFilter = .all
     @State private var displayedSessions: [LiveSession] = []
     @State private var recomputeTask: Task<Void, Never>?
+    @State private var showChatSettings = false
     @FocusState private var isSearchFocused: Bool
     var onOpenSession: (String) -> Void = { _ in }
 
@@ -93,6 +94,7 @@ struct SessionListView: View {
     private var canViewChats: Bool { auth.canViewChats }
     private var canReplyChats: Bool { auth.canReplyChats }
     private var canViewRatings: Bool { auth.canViewRatings }
+    private var canAccessChatSettings: Bool { auth.canManageSettings || auth.canReplyChats }
 
     var body: some View {
         Group {
@@ -105,6 +107,35 @@ struct SessionListView: View {
         .paxScreenBackground()
         .navigationTitle(L10n.SessionTitle)
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            if canAccessChatSettings {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        PAXHaptics.light()
+                        showChatSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .font(.body.weight(.semibold))
+                    }
+                    .accessibilityLabel(L10n.SettingsSectionLiveChat)
+                }
+            }
+        }
+        .sheet(isPresented: $showChatSettings) {
+            NavigationStack {
+                LiveChatSettingsView()
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(L10n.CommonDone) {
+                                showChatSettings = false
+                            }
+                        }
+                    }
+            }
+            .environmentObject(auth)
+            .environmentObject(settings)
+            .environmentObject(coordinator)
+        }
         .onAppear { scheduleDisplayedSessionsRecompute(immediate: true) }
         .onDisappear {
             recomputeTask?.cancel()

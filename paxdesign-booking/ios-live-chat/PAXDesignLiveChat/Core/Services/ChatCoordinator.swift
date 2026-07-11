@@ -520,6 +520,7 @@ final class ChatThreadModel: ObservableObject {
 
     let sessionId: String
     private weak var auth: AuthStore?
+    private var permanentlyDeletedMessageIds = Set<Int>()
     private var pollSeq = 0
     private var pollTask: Task<Void, Never>?
     private var typingStopTask: Task<Void, Never>?
@@ -748,18 +749,18 @@ final class ChatThreadModel: ObservableObject {
     }
 
     private func applyLinkScanUpdate(_ updated: LiveMessage) {
-        guard updated.id > 0 else { return }
+        guard updated.id > 0, !permanentlyDeletedMessageIds.contains(updated.id) else { return }
         if let index = messages.firstIndex(where: { $0.id == updated.id }) {
             messages[index] = updated
             messagesRevision &+= 1
-        } else {
-            insertIncomingMessages([updated], source: "link-scan-updated")
         }
     }
 
     private func applyMessageDeleted(messageId: Int, tombstone: String) {
         guard messageId > 0 else { return }
+        guard !permanentlyDeletedMessageIds.contains(messageId) else { return }
         guard !deletingMessageIds.contains(messageId) else { return }
+        permanentlyDeletedMessageIds.insert(messageId)
         deletingMessageIds.insert(messageId)
         messagesRevision &+= 1
 
@@ -801,12 +802,14 @@ final class ChatThreadModel: ObservableObject {
     }
 
     private func insertIncomingMessages(_ incoming: [LiveMessage], source: String = "merge") {
+        let incoming = incoming.filter { $0.id <= 0 || !permanentlyDeletedMessageIds.contains($0.id) }
         guard !incoming.isEmpty else { return }
 
         let beforeCount = messages.count
         let existingIds = Set(messages.map(\.id))
         var newUserMessageId = 0
         for msg in incoming where msg.id > 0 {
+            if permanentlyDeletedMessageIds.contains(msg.id) { continue }
             if msg.role == "user" && !knownMessageIds.contains(msg.id) {
                 newUserMessageId = msg.id
             }

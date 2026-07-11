@@ -51,6 +51,8 @@
   var pollTimer          = null;
   var localMsgId         = 0;
   var domMsgIds          = {};
+  var deletedMessageIds  = {};
+  var deletingInProgress = {};
   var liveAgentPhase     = 0;
   var streamingMsgId     = 0;
   var adminTypingEl      = null;
@@ -187,8 +189,10 @@
       applyIncomingMessages(msgs);
     }
     if (data.type === 'link_scan_updated' && payload.message) {
-      updateCustomerLinkScanBadge(payload.message.id, payload.message);
-      refreshMessageScanState(payload.message);
+      if (!isMessagePermanentlyDeleted(payload.message.id)) {
+        updateCustomerLinkScanBadge(payload.message.id, payload.message);
+        refreshMessageScanState(payload.message);
+      }
     }
     if (data.type === 'message_deleted' && payload.message_id) {
       animateCustomerMessageDeletion(payload.message_id, payload.tombstone || 'This message was deleted by an employee.');
@@ -1555,6 +1559,7 @@
     var played = false;
     incoming.forEach(function (msg) {
       if (!msg || !msg.id) return;
+      if (isMessagePermanentlyDeleted(msg.id)) return;
       if (domMsgIds[msg.id]) return;
       if (msg.role === 'system' && msg.content === 'Der Kunde hat das Gespräch beendet.') {
         var existingClose = threadEl.querySelector('.paxdesign-booking-chat-message--system');
@@ -2169,16 +2174,39 @@
       : 'Dieser Link wurde als potenziell gefährlich eingestuft und kann nicht geöffnet werden.');
   }
 
+  function isMessagePermanentlyDeleted(messageId) {
+    return !!deletedMessageIds[String(messageId)];
+  }
+
+  function markMessagePermanentlyDeleted(messageId) {
+    deletedMessageIds[String(messageId)] = true;
+  }
+
   function animateCustomerMessageDeletion(messageId, tombstone) {
+    var id = String(messageId);
+    if (deletingInProgress[id] || isMessagePermanentlyDeleted(messageId)) return;
+    deletingInProgress[id] = true;
+    markMessagePermanentlyDeleted(messageId);
+
     var msgEl = threadEl.querySelector('[data-msg-id="' + messageId + '"]');
-    if (!msgEl) return;
+    if (!msgEl) {
+      delete domMsgIds[messageId];
+      messages = messages.filter(function (m) { return String(m.id) !== id; });
+      if (!threadEl.querySelector('[data-msg-id="deleted-' + messageId + '"]')) {
+        renderMessageDom('system', tombstone, 'deleted-' + messageId, { skipPush: true });
+      }
+      saveSessionSnapshot();
+      return;
+    }
     requestAnimationFrame(function () {
       msgEl.classList.add('paxdesign-booking-chat-message--deleting');
       window.setTimeout(function () {
         if (msgEl.parentNode) msgEl.parentNode.removeChild(msgEl);
         delete domMsgIds[messageId];
-        renderMessageDom('system', tombstone, 'deleted-' + messageId, { skipPush: true });
-        messages = messages.filter(function (m) { return String(m.id) !== String(messageId); });
+        if (!threadEl.querySelector('[data-msg-id="deleted-' + messageId + '"]')) {
+          renderMessageDom('system', tombstone, 'deleted-' + messageId, { skipPush: true });
+        }
+        messages = messages.filter(function (m) { return String(m.id) !== id; });
         saveSessionSnapshot();
       }, 460);
     });
@@ -2213,7 +2241,7 @@
   }
 
   function updateCustomerLinkScanBadge(msgId, serverMsg) {
-    if (!msgId) return;
+    if (!msgId || isMessagePermanentlyDeleted(msgId)) return;
     var msgEl = threadEl.querySelector('[data-msg-id="' + msgId + '"]');
     if (!msgEl) return;
     var bubble = msgEl.querySelector('.paxdesign-booking-chat-message-bubble');

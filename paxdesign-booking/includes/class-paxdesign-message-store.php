@@ -618,11 +618,11 @@ class PAXdesign_Message_Store {
         self::emit('session:' . $session_id, 'message_deleted', $payload, $msg_seq);
         self::emit('inbox:admins', 'message_deleted', $payload, $msg_seq);
 
-        self::purge_message_assets($message);
-
         if (class_exists('PAXdesign_Link_Scan_Service')) {
-            PAXdesign_Link_Scan_Service::delete_scan_rows($session_id, $msg_seq);
+            PAXdesign_Link_Scan_Service::cancel_message_scans($session_id, $msg_seq);
         }
+
+        self::purge_message_assets($message);
 
         self::rebuild_customer_projection($session_id, $channel);
 

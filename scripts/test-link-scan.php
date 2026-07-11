@@ -17,9 +17,42 @@ if (!defined('ABSPATH')) {
 
 if (!function_exists('get_option')) {
     function get_option($name, $default = false) {
-        return $default;
+        if (!isset($GLOBALS['pax_test_options'])) {
+            $GLOBALS['pax_test_options'] = array();
+        }
+        return array_key_exists($name, $GLOBALS['pax_test_options'])
+            ? $GLOBALS['pax_test_options'][$name]
+            : $default;
     }
 }
+if (!function_exists('update_option')) {
+    function update_option($name, $value, $autoload = false) {
+        if (!isset($GLOBALS['pax_test_options'])) {
+            $GLOBALS['pax_test_options'] = array();
+        }
+        $GLOBALS['pax_test_options'][$name] = $value;
+        return true;
+    }
+}
+if (!function_exists('wp_next_scheduled')) {
+    function wp_next_scheduled($hook, $args = array()) {
+        return false;
+    }
+}
+if (!function_exists('wp_unschedule_event')) {
+    function wp_unschedule_event($timestamp, $hook, $args = array()) {
+        return true;
+    }
+}
+if (!function_exists('wp_schedule_single_event')) {
+    function wp_schedule_single_event($timestamp, $hook, $args = array()) {
+        return true;
+    }
+}
+if (!function_exists('DAY_IN_SECONDS')) {
+    define('DAY_IN_SECONDS', 86400);
+}
+
 if (!function_exists('wp_json_encode')) {
     function wp_json_encode($data) {
         return json_encode($data);
@@ -72,12 +105,45 @@ if (!function_exists('is_wp_error')) {
     }
 }
 
+if (!isset($GLOBALS['wpdb'])) {
+    $GLOBALS['wpdb'] = new class {
+        public $prefix = 'wp_';
+        public function get_charset_collate() {
+            return 'DEFAULT CHARSET=utf8mb4';
+        }
+        public function query($sql) {
+            return true;
+        }
+        public function prepare($query, ...$args) {
+            return $query;
+        }
+        public function delete($table, $where, $where_format = null) {
+            return 1;
+        }
+    };
+}
+if (!function_exists('dbDelta')) {
+    function dbDelta($sql) {
+        return array();
+    }
+}
+
 require_once $root . '/paxdesign-booking/includes/class-paxdesign-link-scanner.php';
 require_once $root . '/paxdesign-booking/includes/class-paxdesign-link-scan-service.php';
 
 if (!function_exists('__')) {
     function __($text, $domain = '') {
         return $text;
+    }
+}
+if (!function_exists('sanitize_text_field')) {
+    function sanitize_text_field($str) {
+        return trim((string) $str);
+    }
+}
+if (!function_exists('absint')) {
+    function absint($value) {
+        return abs((int) $value);
     }
 }
 
@@ -132,6 +198,23 @@ $metaUser = PAXdesign_Link_Scanner::attach_scan_meta('visit https://example.com'
 assert_true('attach_scan_meta user with url sets checking', ($metaUser['link_scan_status'] ?? '') === 'checking');
 $metaAdmin = PAXdesign_Link_Scanner::attach_scan_meta('visit https://example.com', 'admin', array());
 assert_true('attach_scan_meta admin ignores urls', empty($metaAdmin['link_scan_status']));
+
+// Cancellation prevents dispatch and scan restart
+update_option('paxdesign_link_scan_schema', '1.0');
+PAXdesign_Link_Scan_Service::cancel_message_scans('sess_1', 42);
+assert_true('cancel marks scan as cancelled', PAXdesign_Link_Scan_Service::is_scan_cancelled('sess_1', 42));
+PAXdesign_Link_Scan_Service::dispatch_scan('sess_1', 42);
+$queue = new ReflectionClass('PAXdesign_Link_Scan_Service');
+$prop = $queue->getProperty('dispatch_queue');
+$prop->setAccessible(true);
+$queued = $prop->getValue();
+$hasCancelled = false;
+foreach ($queued as $item) {
+    if ($item[0] === 'sess_1' && (int) $item[1] === 42) {
+        $hasCancelled = true;
+    }
+}
+assert_true('cancelled message not queued for scan', !$hasCancelled);
 
 echo "\n{$passed} passed, {$failed} failed\n";
 exit($failed > 0 ? 1 : 0);
