@@ -564,7 +564,7 @@ final class TeamChatThreadModel: ObservableObject {
             if seq > currentSeq {
                 currentSeq = seq
             }
-            if let readerId = event.payload["user_id"] as? Int, readerId != auth?.profile?.userId {
+            if let readerId = event.payload["user_id"] as? Int, readerId != auth.profile?.userId {
                 otherReadSeq = max(otherReadSeq, seq)
             }
             return
