@@ -114,7 +114,7 @@ if (!defined('ABSPATH')) {
               </div>
             </div>
             <div class="pax-live-console__compose-row pax-live-app__compose-row">
-              <button type="button" class="pax-live-console__quick-links pax-live-app__quick-links" id="paxLiveChatQuickLinks" title="Website-Links senden" aria-label="Website-Links senden" hidden>+</button>
+              <button type="button" class="pax-live-dashboard__quick-links pax-live-console__quick-links pax-live-app__quick-links" id="paxLiveChatQuickLinks" title="Website-Links senden" aria-label="Website-Links senden" hidden>+</button>
               <label class="pax-live-console__attach pax-live-app__attach" id="paxLiveChatAttachLabel" title="Foto senden">
                 <input type="file" id="paxLiveChatAttach" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>

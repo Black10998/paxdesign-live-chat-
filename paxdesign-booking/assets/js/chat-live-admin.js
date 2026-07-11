@@ -1590,12 +1590,16 @@
         '</a>';
     }
 
+    function linkScanBadgeParts(status) {
+      if (status === 'checking') return { icon: '⟳', label: 'Checking link…' };
+      if (status === 'safe') return { icon: '✅', label: 'Safe Link' };
+      if (status === 'suspicious') return { icon: '⚠', label: 'Suspicious Link' };
+      if (status === 'dangerous') return { icon: '❌', label: 'Dangerous Link' };
+      return { icon: '', label: '' };
+    }
+
     function linkScanBadgeLabel(status) {
-      if (status === 'checking') return 'Checking link…';
-      if (status === 'safe') return '✅ Safe Link';
-      if (status === 'suspicious') return '⚠ Suspicious Link';
-      if (status === 'dangerous') return '❌ Dangerous Link';
-      return '';
+      return linkScanBadgeParts(status).label;
     }
 
     function buildLinkScanBadgeHtml(msg) {
@@ -1604,8 +1608,10 @@
       var urls = extractUrlsFromText(msg.content);
       if (!status && !urls.length) return '';
       if (!status) status = 'checking';
+      var parts = linkScanBadgeParts(status);
       return '<div class="pax-live-dashboard__link-scan pax-live-dashboard__link-scan--' + escapeHtml(status) + '" data-scan-status="' + escapeHtml(status) + '">' +
-        escapeHtml(linkScanBadgeLabel(status)) +
+        '<span class="pax-live-dashboard__link-scan-icon" aria-hidden="true">' + escapeHtml(parts.icon) + '</span>' +
+        '<span class="pax-live-dashboard__link-scan-label">' + escapeHtml(parts.label) + '</span>' +
         '</div>';
     }
 
@@ -1619,11 +1625,13 @@
         var $badge = $msg.find('.pax-live-dashboard__link-scan--checking');
         if (!$badge.length) return;
         var status = worstClientScanStatus(urls);
+        var parts = linkScanBadgeParts(status);
         $badge
           .removeClass('pax-live-dashboard__link-scan--checking')
           .addClass('pax-live-dashboard__link-scan--' + status)
-          .attr('data-scan-status', status)
-          .text(linkScanBadgeLabel(status));
+          .attr('data-scan-status', status);
+        $badge.find('.pax-live-dashboard__link-scan-icon').text(parts.icon);
+        $badge.find('.pax-live-dashboard__link-scan-label').text(parts.label);
       }, 420);
     }
 

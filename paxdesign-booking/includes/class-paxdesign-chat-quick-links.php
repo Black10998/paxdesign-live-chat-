@@ -133,6 +133,13 @@ class PAXdesign_Chat_Quick_Links {
             wp_send_json_error(array('message' => $result->get_error_message()), is_array($data) && !empty($data['status']) ? (int) $data['status'] : 500);
         }
 
+        if (!empty($result['message']) && is_array($result['message'])) {
+            $result['message'] = $live->format_sse_message_payload(
+                $result['message'],
+                (int) get_current_user_id()
+            );
+        }
+
         wp_send_json_success($result);
     }
 }

@@ -2211,6 +2211,24 @@ class PAXdesign_Chat_Live {
             if (!empty($msg['reaction'])) {
                 $entry['reaction'] = sanitize_text_field((string) $msg['reaction']);
             }
+            if (!empty($msg['attachment_type'])) {
+                $entry['attachment_type'] = sanitize_text_field((string) $msg['attachment_type']);
+            }
+            if (!empty($msg['link_url'])) {
+                $entry['link_url'] = esc_url_raw((string) $msg['link_url']);
+            }
+            if (!empty($msg['link_label'])) {
+                $entry['link_label'] = sanitize_text_field((string) $msg['link_label']);
+            }
+            if (!empty($msg['link_icon'])) {
+                $entry['link_icon'] = sanitize_text_field((string) $msg['link_icon']);
+            }
+            if ($role === 'user' && !empty($msg['link_scan_status'])) {
+                $entry['link_scan_status'] = sanitize_text_field((string) $msg['link_scan_status']);
+            }
+            if ($role === 'user' && !empty($msg['link_scan_urls'])) {
+                $entry['link_scan_urls'] = (string) $msg['link_scan_urls'];
+            }
             if ($role === 'admin') {
                 $sender_id = !empty($msg['sender_id']) ? absint($msg['sender_id']) : 0;
                 if ($sender_id <= 0 && $fallback_agent_id > 0) {
