@@ -419,12 +419,12 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         senderAvatar = avatar.isEmpty ? nil : avatar
         let roleLabel = LiveChatDecode.string(container, CodingKeys.senderRole)
         senderRole = roleLabel.isEmpty ? nil : roleLabel
-        attachmentType = decodeOptionalString(container, .attachmentType)
-        linkUrl = decodeOptionalString(container, .linkUrl)
-        linkLabel = decodeOptionalString(container, .linkLabel)
-        linkIcon = decodeOptionalString(container, .linkIcon)
-        linkScanStatus = decodeOptionalString(container, .linkScanStatus)
-        linkScanUrls = decodeOptionalString(container, .linkScanUrls)
+        attachmentType = Self.decodeOptionalString(container, .attachmentType)
+        linkUrl = Self.decodeOptionalString(container, .linkUrl)
+        linkLabel = Self.decodeOptionalString(container, .linkLabel)
+        linkIcon = Self.decodeOptionalString(container, .linkIcon)
+        linkScanStatus = Self.decodeOptionalString(container, .linkScanStatus)
+        linkScanUrls = Self.decodeOptionalString(container, .linkScanUrls)
     }
 
     private static func decodeOptionalString<C: CodingKey>(
