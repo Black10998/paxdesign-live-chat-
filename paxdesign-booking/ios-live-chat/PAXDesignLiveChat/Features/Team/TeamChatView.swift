@@ -41,7 +41,7 @@ struct TeamChatView: View {
                 onCopy: { UIPasteboard.general.string = $0.content },
                 onDelete: { _ in },
                 onImageTap: { _ in },
-                deletingMessageIds: []
+                deletingMessageIds: [],
                 teamOtherReadSeq: thread.otherReadSeq,
                 teamFailedClientMsgIds: thread.failedClientMsgIds,
                 onRetryTeamMessage: { clientId in
