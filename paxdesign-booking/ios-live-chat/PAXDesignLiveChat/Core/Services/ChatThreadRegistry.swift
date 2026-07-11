@@ -47,6 +47,12 @@ final class ChatThreadRegistry {
         teamThreads.removeAll()
     }
 
+    func updateQuickLinks(_ links: [QuickLink]) {
+        for thread in bookingThreads.values {
+            thread.quickLinks = links
+        }
+    }
+
     private var recentOrder: [String] = []
 
     private func touch(sessionId: String, isTeam: Bool) {

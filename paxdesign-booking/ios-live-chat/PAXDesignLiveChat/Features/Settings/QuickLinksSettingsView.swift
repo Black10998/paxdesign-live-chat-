@@ -2,7 +2,6 @@ import SwiftUI
 
 struct QuickLinksSettingsView: View {
     @EnvironmentObject private var auth: AuthStore
-    @EnvironmentObject private var coordinator: ChatCoordinator
 
     @State private var links: [QuickLink] = []
     @State private var isLoading = true
@@ -169,7 +168,7 @@ struct QuickLinksSettingsView: View {
         do {
             let saved = try await api.saveQuickLinks(links)
             links = saved.quickLinks
-            coordinator.quickLinks = saved.quickLinks
+            ChatThreadRegistry.shared.updateQuickLinks(saved.quickLinks)
             PAXHaptics.success()
         } catch {
             errorMessage = error.localizedDescription

@@ -134,7 +134,6 @@ struct SessionListView: View {
             }
             .environmentObject(auth)
             .environmentObject(settings)
-            .environmentObject(coordinator)
         }
         .onAppear { scheduleDisplayedSessionsRecompute(immediate: true) }
         .onDisappear {
