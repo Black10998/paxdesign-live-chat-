@@ -23,11 +23,12 @@ class PAXdesign_Booking_Update_Checker {
     const GITHUB_REPO = 'Black10998/paxdesign-live-chat-';
     const SLUG        = 'paxdesign-booking/paxdesign-booking.php';
     const CACHE_KEY   = 'paxdesign_booking_update_info';
-    const CACHE_TTL   = 1800;
+    const CACHE_TTL   = 900;
     const ZIP_PREFIX  = 'paxdesign-booking-v';
 
     public static function init() {
         add_filter('pre_set_site_transient_update_plugins', array(__CLASS__, 'check_for_update'));
+        add_filter('site_transient_update_plugins', array(__CLASS__, 'ensure_update_offered'));
         add_filter('plugins_api', array(__CLASS__, 'plugin_info'), 10, 3);
         add_filter('upgrader_pre_download', array(__CLASS__, 'authorize_package_download'), 10, 4);
         add_action('upgrader_process_complete', array(__CLASS__, 'clear_cache'), 10, 2);
@@ -79,7 +80,46 @@ class PAXdesign_Booking_Update_Checker {
 
         if (version_compare($installed, $cached['version'], '>=')) {
             delete_transient(self::CACHE_KEY);
+            delete_site_transient('update_plugins');
         }
+    }
+
+    /**
+     * Inject update offers when WordPress reads a stale update_plugins transient.
+     *
+     * @param mixed $transient
+     * @return mixed
+     */
+    public static function ensure_update_offered($transient) {
+        if (!is_object($transient)) {
+            return $transient;
+        }
+
+        if (!current_user_can('update_plugins')) {
+            return $transient;
+        }
+
+        $current = self::read_installed_version();
+        if ($current === '') {
+            return $transient;
+        }
+
+        $release = self::fetch_release($current);
+        if (!$release || empty($release['version']) || empty($release['zip'])) {
+            return $transient;
+        }
+
+        if (version_compare($current, $release['version'], '<')) {
+            if (empty($transient->response) || !is_array($transient->response)) {
+                $transient->response = array();
+            }
+            $transient->response[self::SLUG] = self::build_update_object($release);
+            if (!empty($transient->no_update) && is_array($transient->no_update) && isset($transient->no_update[self::SLUG])) {
+                unset($transient->no_update[self::SLUG]);
+            }
+        }
+
+        return $transient;
     }
 
     private static function read_installed_version() {
@@ -134,7 +174,7 @@ class PAXdesign_Booking_Update_Checker {
     /**
      * @param array<int, array<string, mixed>> $assets
      * @param string                            $version
-     * @return array{package: string, browser_package: string, asset_id: int}|null
+     * @return array{package: string, browser_package: string, api_package: string, asset_id: int}|null
      */
     private static function find_plugin_zip_asset(array $assets, $version) {
         if (empty($assets) || !is_array($assets)) {
@@ -165,8 +205,9 @@ class PAXdesign_Booking_Update_Checker {
             }
 
             $entry = array(
-                'package'         => $api_url !== '' ? $api_url : $browser,
+                'package'         => $browser !== '' ? $browser : $api_url,
                 'browser_package' => $browser,
+                'api_package'     => $api_url,
                 'asset_id'        => $asset_id,
             );
 
@@ -194,6 +235,95 @@ class PAXdesign_Booking_Update_Checker {
         return false;
     }
 
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>|null
+     */
+    private static function normalize_release_payload(array $data) {
+        if (empty($data['tag_name'])) {
+            return null;
+        }
+
+        $version = ltrim((string) $data['tag_name'], 'vV');
+        if (!preg_match('/^\d+\.\d+\.\d+/', $version)) {
+            return null;
+        }
+
+        $asset = self::find_plugin_zip_asset(!empty($data['assets']) ? $data['assets'] : array(), $version);
+        if ($asset === null || empty($asset['package'])) {
+            return null;
+        }
+
+        $sha256 = '';
+        if (!empty($data['body']) && preg_match('/SHA256:\s*([a-f0-9]{64})/i', (string) $data['body'], $m)) {
+            $sha256 = strtolower($m[1]);
+        }
+
+        $package = (string) $asset['package'];
+        if (self::github_token() !== '' && !empty($asset['api_package'])) {
+            $package = (string) $asset['api_package'];
+        }
+
+        return array(
+            'version'         => $version,
+            'tag'             => (string) $data['tag_name'],
+            'url'             => !empty($data['html_url']) ? (string) $data['html_url'] : 'https://github.com/' . self::GITHUB_REPO . '/releases',
+            'zip'             => $package,
+            'browser_zip'     => !empty($asset['browser_package']) ? (string) $asset['browser_package'] : '',
+            'asset_id'        => !empty($asset['asset_id']) ? (int) $asset['asset_id'] : 0,
+            'sha256'          => $sha256,
+            'notes'           => !empty($data['body']) ? (string) $data['body'] : '',
+        );
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private static function fetch_releases_payload() {
+        $response = wp_remote_get(
+            'https://api.github.com/repos/' . self::GITHUB_REPO . '/releases?per_page=12',
+            array(
+                'timeout' => 15,
+                'headers' => self::github_headers(false),
+            )
+        );
+
+        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+            return array();
+        }
+
+        $data = json_decode(wp_remote_retrieve_body($response), true);
+        return is_array($data) ? $data : array();
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $releases
+     * @return array<string, mixed>|null
+     */
+    private static function pick_newest_release(array $releases) {
+        $best = null;
+
+        foreach ($releases as $data) {
+            if (!is_array($data)) {
+                continue;
+            }
+            if (!empty($data['draft']) || !empty($data['prerelease'])) {
+                continue;
+            }
+
+            $release = self::normalize_release_payload($data);
+            if ($release === null) {
+                continue;
+            }
+
+            if ($best === null || version_compare($release['version'], $best['version'], '>')) {
+                $best = $release;
+            }
+        }
+
+        return $best;
+    }
+
     private static function fetch_release($installed_version = '') {
         $cached = get_transient(self::CACHE_KEY);
         if (!self::should_refresh_cached_release($cached, $installed_version)) {
@@ -202,45 +332,29 @@ class PAXdesign_Booking_Update_Checker {
 
         delete_transient(self::CACHE_KEY);
 
-        $response = wp_remote_get(
-            'https://api.github.com/repos/' . self::GITHUB_REPO . '/releases/latest',
-            array(
-                'timeout' => 15,
-                'headers' => self::github_headers(false),
-            )
-        );
+        $releases = self::fetch_releases_payload();
+        $release  = self::pick_newest_release($releases);
 
-        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+        if ($release === null) {
+            $response = wp_remote_get(
+                'https://api.github.com/repos/' . self::GITHUB_REPO . '/releases/latest',
+                array(
+                    'timeout' => 15,
+                    'headers' => self::github_headers(false),
+                )
+            );
+
+            if (!is_wp_error($response) && wp_remote_retrieve_response_code($response) === 200) {
+                $data = json_decode(wp_remote_retrieve_body($response), true);
+                if (is_array($data)) {
+                    $release = self::normalize_release_payload($data);
+                }
+            }
+        }
+
+        if ($release === null) {
             return is_array($cached) ? $cached : null;
         }
-
-        $data = json_decode(wp_remote_retrieve_body($response), true);
-        if (empty($data['tag_name'])) {
-            return is_array($cached) ? $cached : null;
-        }
-
-        $version = ltrim((string) $data['tag_name'], 'vV');
-        $asset   = self::find_plugin_zip_asset(!empty($data['assets']) ? $data['assets'] : array(), $version);
-
-        if ($asset === null || empty($asset['package'])) {
-            return is_array($cached) ? $cached : null;
-        }
-
-        $sha256 = '';
-        if (!empty($data['body']) && preg_match('/SHA256:\s*([a-f0-9]{64})/i', $data['body'], $m)) {
-            $sha256 = strtolower($m[1]);
-        }
-
-        $release = array(
-            'version'         => $version,
-            'tag'             => (string) $data['tag_name'],
-            'url'             => !empty($data['html_url']) ? $data['html_url'] : 'https://github.com/' . self::GITHUB_REPO . '/releases',
-            'zip'             => $asset['package'],
-            'browser_zip'     => !empty($asset['browser_package']) ? $asset['browser_package'] : '',
-            'asset_id'        => !empty($asset['asset_id']) ? (int) $asset['asset_id'] : 0,
-            'sha256'          => $sha256,
-            'notes'           => !empty($data['body']) ? $data['body'] : '',
-        );
 
         set_transient(self::CACHE_KEY, $release, self::CACHE_TTL);
         return $release;
@@ -271,6 +385,9 @@ class PAXdesign_Booking_Update_Checker {
 
         if (version_compare($current, $release['version'], '<')) {
             $transient->response[self::SLUG] = self::build_update_object($release);
+            if (!empty($transient->no_update) && is_array($transient->no_update) && isset($transient->no_update[self::SLUG])) {
+                unset($transient->no_update[self::SLUG]);
+            }
         }
 
         return $transient;
@@ -283,13 +400,17 @@ class PAXdesign_Booking_Update_Checker {
      * @return string|WP_Error Absolute path to a temp ZIP file.
      */
     private static function download_github_release_zip($package) {
-        $token = self::github_token();
-        $urls  = array($package);
-
+        $token  = self::github_token();
         $cached = get_transient(self::CACHE_KEY);
+        $urls   = array();
+
         if (is_array($cached) && !empty($cached['browser_zip'])) {
             $urls[] = (string) $cached['browser_zip'];
         }
+        if (is_array($cached) && !empty($cached['zip'])) {
+            $urls[] = (string) $cached['zip'];
+        }
+        $urls[] = $package;
 
         $last_error = null;
 
@@ -396,7 +517,6 @@ class PAXdesign_Booking_Update_Checker {
             return false;
         }
 
-        // ZIP local file header (PK\x03\x04) or empty archive (PK\x05\x06).
         return strncmp($body, "PK\x03\x04", 4) === 0 || strncmp($body, "PK\x05\x06", 4) === 0;
     }
 
