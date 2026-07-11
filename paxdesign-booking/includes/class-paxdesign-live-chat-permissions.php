@@ -313,6 +313,7 @@ class PAXdesign_Live_Chat_Permissions {
         $all[(string) $user_id] = array(
             'enabled'     => !empty($data['enabled']),
             'permissions' => $perms,
+            'team_role'   => !empty($data['team_role']) ? sanitize_key((string) $data['team_role']) : '',
             'updated_at'  => current_time('mysql'),
             'updated_by'  => get_current_user_id(),
         );
@@ -366,6 +367,7 @@ class PAXdesign_Live_Chat_Permissions {
                 'profile_notes' => (string) get_user_meta($uid, 'pax_live_profile_notes', true),
                 'onboarding_completed' => (bool) get_user_meta($uid, 'pax_live_onboarding_completed', true),
                 'enabled'     => !empty($record['enabled']),
+                'team_role'   => !empty($record['team_role']) ? (string) $record['team_role'] : '',
                 'permissions' => isset($record['permissions']) ? $record['permissions'] : array(),
             );
         }
@@ -391,6 +393,10 @@ class PAXdesign_Live_Chat_Permissions {
         $uid = (int) $user->ID;
         if (self::is_super_admin($uid)) {
             return 1;
+        }
+        $record = self::get_staff_record($uid);
+        if (is_array($record) && !empty($record['team_role']) && class_exists('PAXdesign_Team_Registry')) {
+            return PAXdesign_Team_Registry::rank_for_role((string) $record['team_role']);
         }
         if (user_can($uid, 'manage_options')) {
             return 2;
@@ -472,7 +478,8 @@ class PAXdesign_Live_Chat_Permissions {
         $settings = self::get_team_messaging_settings();
 
         if ($target_rank === 1 && $requester_rank > 1) {
-            return !empty($settings['require_ed_approval']);
+            // Permanent rule: everyone except the Executive Director must request access.
+            return true;
         }
         if ($target_rank === 2 && $requester_rank >= 4) {
             return !empty($settings['require_admin_approval']);
@@ -526,12 +533,21 @@ class PAXdesign_Live_Chat_Permissions {
      */
     private static function enrich_team_contact($member) {
         $uid = isset($member['user_id']) ? (int) $member['user_id'] : 0;
+        $viewer_id = get_current_user_id();
         $member['role_label'] = self::team_role_label_for_user($uid);
         $member['is_executive'] = self::is_super_admin($uid);
         $member['is_administrator'] = !empty($member['is_administrator'])
             || user_can($uid, 'manage_options')
             || self::is_super_admin($uid);
         $member['role_rank'] = self::team_role_rank($uid);
+        if (!empty($member['team_role'])) {
+            $member['team_role'] = sanitize_key((string) $member['team_role']);
+        } elseif (class_exists('PAXdesign_Team_Registry')) {
+            $member['team_role'] = PAXdesign_Team_Registry::get_assigned_role($uid);
+        }
+        $member['requires_ed_request'] = !empty($member['is_executive']) && !self::is_super_admin($viewer_id);
+        $member['requires_contact_request'] = self::requires_team_conversation_approval($viewer_id, $uid);
+        $member['can_message_ed_directly'] = self::is_super_admin($viewer_id);
         if ($member['profile_title'] === '' && $member['is_executive']) {
             $member['profile_title'] = 'Executive Director';
         }

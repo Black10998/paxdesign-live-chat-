@@ -756,6 +756,11 @@ struct StaffMember: Codable, Identifiable {
     let roleRank: Int
     let presenceStatus: String
     let lastSeen: Int
+    let teamRole: String?
+    let isProtected: Bool
+    let requiresEdRequest: Bool
+    let requiresContactRequest: Bool
+    let canMessageEdDirectly: Bool
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -772,6 +777,11 @@ struct StaffMember: Codable, Identifiable {
         case roleRank = "role_rank"
         case presenceStatus = "presence_status"
         case lastSeen = "last_seen"
+        case teamRole = "team_role"
+        case isProtected = "protected"
+        case requiresEdRequest = "requires_ed_request"
+        case requiresContactRequest = "requires_contact_request"
+        case canMessageEdDirectly = "can_message_ed_directly"
     }
 
     init(from decoder: Decoder) throws {
@@ -794,6 +804,11 @@ struct StaffMember: Codable, Identifiable {
         presenceStatus = LiveChatDecode.string(c, CodingKeys.presenceStatus).isEmpty
             ? "offline" : LiveChatDecode.string(c, CodingKeys.presenceStatus)
         lastSeen = LiveChatDecode.int(c, CodingKeys.lastSeen)
+        teamRole = try c.decodeIfPresent(String.self, forKey: .teamRole)
+        isProtected = (try? c.decode(Bool.self, forKey: .isProtected)) ?? false
+        requiresEdRequest = (try? c.decode(Bool.self, forKey: .requiresEdRequest)) ?? false
+        requiresContactRequest = (try? c.decode(Bool.self, forKey: .requiresContactRequest)) ?? false
+        canMessageEdDirectly = (try? c.decode(Bool.self, forKey: .canMessageEdDirectly)) ?? false
     }
 
     var displayRoleLabel: String {
@@ -855,4 +870,105 @@ extension LiveSession {
 struct IncomingLiveRequest: Identifiable, Equatable {
     let id: String
     let session: LiveSession
+}
+
+enum TeamRoleKey: String, CaseIterable, Identifiable {
+    case executiveDirector = "executive_director"
+    case administrator = "administrator"
+    case seniorStaff = "senior_staff"
+    case staffMember = "staff_member"
+    case teamMember = "team_member"
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .executiveDirector: return "Executive Director"
+        case .administrator: return "Administrator"
+        case .seniorStaff: return "Senior Staff"
+        case .staffMember: return "Staff Member"
+        case .teamMember: return "Team Member"
+        }
+    }
+
+    static var assignable: [TeamRoleKey] {
+        [.administrator, .seniorStaff, .staffMember, .teamMember]
+    }
+}
+
+struct TeamManagementOverview: Codable {
+    let executiveDirectorEmail: String
+    let totalMembers: Int
+    let enabledMembers: Int
+    let pendingRequestCount: Int
+    let membersByRole: [String: Int]
+    let policy: TeamContactPolicy
+    let hierarchy: [TeamHierarchyLevel]
+
+    enum CodingKeys: String, CodingKey {
+        case executiveDirectorEmail = "executive_director_email"
+        case totalMembers = "total_members"
+        case enabledMembers = "enabled_members"
+        case pendingRequestCount = "pending_request_count"
+        case membersByRole = "members_by_role"
+        case policy, hierarchy
+    }
+}
+
+struct TeamHierarchyLevel: Codable, Identifiable {
+    var id: String { role }
+    let role: String
+    let roleLabel: String
+    let members: [TeamHierarchyMember]
+
+    enum CodingKeys: String, CodingKey {
+        case role
+        case roleLabel = "role_label"
+        case members
+    }
+}
+
+struct TeamHierarchyMember: Codable, Identifiable {
+    var id: Int { userId }
+    let userId: Int
+    let name: String
+    let email: String
+    let enabled: Bool
+    let roleLabel: String
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case name, email, enabled
+        case roleLabel = "role_label"
+    }
+}
+
+struct TeamContactPolicy: Codable, Equatable {
+    let edRequestRequiredForAll: Bool
+    let requireEdApproval: Bool
+    let requireAdminApproval: Bool
+    let requireManagerApproval: Bool
+    let edEmail: String
+
+    enum CodingKeys: String, CodingKey {
+        case edRequestRequiredForAll = "ed_request_required_for_all"
+        case requireEdApproval = "require_ed_approval"
+        case requireAdminApproval = "require_admin_approval"
+        case requireManagerApproval = "require_manager_approval"
+        case edEmail = "ed_email"
+    }
+}
+
+struct TeamManagementMembersResponse: Codable {
+    let members: [StaffMember]
+}
+
+struct TeamManagementMemberResponse: Codable {
+    let ok: Bool
+    let member: StaffMember?
+}
+
+struct TeamManagementPolicyResponse: Codable {
+    let ok: Bool?
+    let policy: TeamContactPolicy
 }

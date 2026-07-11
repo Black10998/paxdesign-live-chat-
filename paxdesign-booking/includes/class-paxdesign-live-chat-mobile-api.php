@@ -412,6 +412,36 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => $auth,
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/management/overview', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'route_team_management_overview'),
+            'permission_callback' => $auth,
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/management/members', array(
+            'methods'             => array(WP_REST_Server::READABLE, WP_REST_Server::CREATABLE),
+            'callback'            => array(__CLASS__, 'route_team_management_members'),
+            'permission_callback' => $auth,
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/management/members/(?P<user_id>\d+)', array(
+            'methods'             => array(WP_REST_Server::EDITABLE, WP_REST_Server::DELETABLE),
+            'callback'            => array(__CLASS__, 'route_team_management_member'),
+            'permission_callback' => $auth,
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/management/policy', array(
+            'methods'             => array(WP_REST_Server::READABLE, WP_REST_Server::EDITABLE),
+            'callback'            => array(__CLASS__, 'route_team_management_policy'),
+            'permission_callback' => $auth,
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/management/pending-requests', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'route_team_management_pending'),
+            'permission_callback' => $auth,
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/events/stream', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'route_inbox_stream'),
@@ -1084,6 +1114,7 @@ class PAXdesign_Live_Chat_Mobile_API {
         $result = PAXdesign_Live_Chat_Permissions::save_staff_record($user_id, array(
             'enabled'     => !empty($params['enabled']),
             'permissions' => isset($params['permissions']) ? $params['permissions'] : array(),
+            'team_role'   => isset($params['team_role']) ? (string) $params['team_role'] : '',
         ));
         if (is_wp_error($result)) {
             return $result;
@@ -1437,6 +1468,72 @@ class PAXdesign_Live_Chat_Mobile_API {
     public static function route_team_presence(WP_REST_Request $request) {
         PAXdesign_Live_Chat_Permissions::touch_team_presence((int) wp_get_current_user()->ID);
         return rest_ensure_response(array('ok' => true));
+    }
+
+    public static function route_team_management_overview(WP_REST_Request $request) {
+        $check = PAXdesign_Team_Registry::require_executive_director();
+        if (is_wp_error($check)) {
+            return $check;
+        }
+        return rest_ensure_response(PAXdesign_Team_Registry::management_overview());
+    }
+
+    public static function route_team_management_members(WP_REST_Request $request) {
+        $check = PAXdesign_Team_Registry::require_executive_director();
+        if (is_wp_error($check)) {
+            return $check;
+        }
+        if ($request->get_method() === 'GET') {
+            return rest_ensure_response(array('members' => PAXdesign_Team_Registry::list_managed_members()));
+        }
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        $email = isset($params['email']) ? sanitize_email((string) $params['email']) : '';
+        return self::respond(PAXdesign_Team_Registry::add_member_by_email($email, $params));
+    }
+
+    public static function route_team_management_member(WP_REST_Request $request) {
+        $check = PAXdesign_Team_Registry::require_executive_director();
+        if (is_wp_error($check)) {
+            return $check;
+        }
+        if ($request->get_method() === 'DELETE') {
+            return self::respond(PAXdesign_Team_Registry::remove_member((int) $request['user_id']));
+        }
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        return self::respond(PAXdesign_Team_Registry::update_member((int) $request['user_id'], $params));
+    }
+
+    public static function route_team_management_member_update(WP_REST_Request $request) {
+        return self::route_team_management_member($request);
+    }
+
+    public static function route_team_management_policy(WP_REST_Request $request) {
+        $check = PAXdesign_Team_Registry::require_executive_director();
+        if (is_wp_error($check)) {
+            return $check;
+        }
+        if ($request->get_method() === 'GET') {
+            return rest_ensure_response(PAXdesign_Team_Registry::get_contact_policy());
+        }
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        return self::respond(PAXdesign_Team_Registry::save_contact_policy($params));
+    }
+
+    public static function route_team_management_pending(WP_REST_Request $request) {
+        $check = PAXdesign_Team_Registry::require_executive_director();
+        if (is_wp_error($check)) {
+            return $check;
+        }
+        return self::respond(PAXdesign_Team_Messaging::list_pending_requests_for_user((int) wp_get_current_user()->ID));
     }
 
     public static function route_platform_dashboard(WP_REST_Request $request) {
