@@ -14,6 +14,9 @@ struct ChatMessageListView: View {
     let onReply: (LiveMessage) -> Void
     let onCopy: (LiveMessage) -> Void
     let onImageTap: (URL) -> Void
+    var teamOtherReadSeq: Int = 0
+    var teamFailedClientMsgIds: Set<String> = []
+    var onRetryTeamMessage: ((String) -> Void)? = nil
 
     private var displayRows: [MessageDisplayRow] {
         var messageLookup: [Int: LiveMessage] = [:]
@@ -44,7 +47,10 @@ struct ChatMessageListView: View {
                             customerDisplayName: customerDisplayName,
                             onReply: { onReply(row.message) },
                             onCopy: { onCopy(row.message) },
-                            onImageTap: onImageTap
+                            onImageTap: onImageTap,
+                            teamOtherReadSeq: teamOtherReadSeq,
+                            teamFailedClientMsgIds: teamFailedClientMsgIds,
+                            onRetryTeamMessage: onRetryTeamMessage
                         )
                         .id(row.id)
                     }
@@ -105,6 +111,9 @@ private struct ChatMessageRow: View {
     let onReply: () -> Void
     let onCopy: () -> Void
     let onImageTap: (URL) -> Void
+    var teamOtherReadSeq: Int = 0
+    var teamFailedClientMsgIds: Set<String> = []
+    var onRetryTeamMessage: ((String) -> Void)? = nil
 
     private var showSenderLabel: Bool {
         row.message.role != "system" && (
@@ -158,8 +167,52 @@ private struct ChatMessageRow: View {
                     onCopy: onCopy,
                     onImageTap: { onImageTap($0) }
                 )
+                if handler == "team", row.message.role == "admin" {
+                    TeamMessageDeliveryStatus(
+                        message: row.message,
+                        otherReadSeq: teamOtherReadSeq,
+                        failedClientMsgIds: teamFailedClientMsgIds,
+                        onRetry: onRetryTeamMessage
+                    )
+                    .padding(.top, 2)
+                }
             }
         }
+    }
+}
+
+private struct TeamMessageDeliveryStatus: View {
+    let message: LiveMessage
+    let otherReadSeq: Int
+    let failedClientMsgIds: Set<String>
+    let onRetry: ((String) -> Void)?
+
+    private var label: String {
+        if let clientId = message.clientMsgId, failedClientMsgIds.contains(clientId) {
+            return "Failed"
+        }
+        if message.id < 0 { return "Sending" }
+        if otherReadSeq >= message.id && message.id > 0 { return "Read" }
+        if message.id > 0 { return "Delivered" }
+        return "Sent"
+    }
+
+    private var tint: Color {
+        label == "Failed" ? PAXTheme.danger : PAXTheme.textTertiary
+    }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(tint)
+            if label == "Failed", let clientId = message.clientMsgId, let onRetry {
+                Button("Retry") { onRetry(clientId) }
+                    .font(.caption2.weight(.semibold))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .padding(.trailing, 8)
     }
 }
 

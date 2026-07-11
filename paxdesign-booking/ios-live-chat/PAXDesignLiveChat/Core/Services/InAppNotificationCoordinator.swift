@@ -57,6 +57,20 @@ final class InAppNotificationCoordinator {
         )
     }
 
+    func handleTeamRequest(sessionId: String, preview: String) {
+        guard AppSettingsStore.shared.messageSoundEnabled else { return }
+        guard shouldPlay(since: &lastMessageSoundAt) else { return }
+
+        PAXNotificationSound.shared.play(.liveRequest)
+        PAXHaptics.medium()
+        postLocalNotification(
+            title: "Conversation request",
+            body: preview.isEmpty ? "A team member requested a conversation." : preview,
+            sessionId: sessionId,
+            type: "team_request"
+        )
+    }
+
     func handleAIAttention(sessionId: String, preview: String) {
         guard AppSettingsStore.shared.messageSoundEnabled else { return }
         guard shouldPlay(since: &lastAISoundAt) else { return }

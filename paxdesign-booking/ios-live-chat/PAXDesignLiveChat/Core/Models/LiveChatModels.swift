@@ -112,6 +112,20 @@ struct LiveSession: Identifiable, Codable, Hashable {
     let lastPreview: String
     let lastRole: String
     let customerLanguage: String
+    // Team-only metadata (defaults for customer sessions)
+    let otherUserId: Int
+    let requestStatus: String
+    let requestStatusLabel: String
+    let canSend: Bool
+    let canRespond: Bool
+    let requestedBy: Int
+    let isPinned: Bool
+    let isMuted: Bool
+    let assignedTo: Int
+    let otherRoleRank: Int
+    let otherRoleLabel: String
+    let otherPresence: String
+    let otherLastSeen: Int
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -128,6 +142,19 @@ struct LiveSession: Identifiable, Codable, Hashable {
         case lastPreview = "last_preview"
         case lastRole = "last_role"
         case customerLanguage = "customer_language"
+        case otherUserId = "other_user_id"
+        case requestStatus = "request_status"
+        case requestStatusLabel = "request_status_label"
+        case canSend = "can_send"
+        case canRespond = "can_respond"
+        case requestedBy = "requested_by"
+        case isPinned = "is_pinned"
+        case isMuted = "is_muted"
+        case assignedTo = "assigned_to"
+        case otherRoleRank = "other_role_rank"
+        case otherRoleLabel = "other_role_label"
+        case otherPresence = "other_presence"
+        case otherLastSeen = "other_last_seen"
     }
 
     init(
@@ -144,7 +171,20 @@ struct LiveSession: Identifiable, Codable, Hashable {
         seq: Int,
         lastPreview: String,
         lastRole: String,
-        customerLanguage: String = ""
+        customerLanguage: String = "",
+        otherUserId: Int = 0,
+        requestStatus: String = "accepted",
+        requestStatusLabel: String = "Accepted",
+        canSend: Bool = true,
+        canRespond: Bool = false,
+        requestedBy: Int = 0,
+        isPinned: Bool = false,
+        isMuted: Bool = false,
+        assignedTo: Int = 0,
+        otherRoleRank: Int = 99,
+        otherRoleLabel: String = "",
+        otherPresence: String = "offline",
+        otherLastSeen: Int = 0
     ) {
         self.id = id
         self.sessionId = sessionId
@@ -160,6 +200,19 @@ struct LiveSession: Identifiable, Codable, Hashable {
         self.lastPreview = lastPreview
         self.lastRole = lastRole
         self.customerLanguage = customerLanguage
+        self.otherUserId = otherUserId
+        self.requestStatus = requestStatus
+        self.requestStatusLabel = requestStatusLabel
+        self.canSend = canSend
+        self.canRespond = canRespond
+        self.requestedBy = requestedBy
+        self.isPinned = isPinned
+        self.isMuted = isMuted
+        self.assignedTo = assignedTo
+        self.otherRoleRank = otherRoleRank
+        self.otherRoleLabel = otherRoleLabel
+        self.otherPresence = otherPresence
+        self.otherLastSeen = otherLastSeen
     }
 
     init(from decoder: Decoder) throws {
@@ -178,7 +231,29 @@ struct LiveSession: Identifiable, Codable, Hashable {
         lastPreview = LiveChatDecode.string(container, CodingKeys.lastPreview)
         lastRole = LiveChatDecode.string(container, CodingKeys.lastRole)
         customerLanguage = LiveChatDecode.string(container, CodingKeys.customerLanguage)
+        otherUserId = LiveChatDecode.int(container, CodingKeys.otherUserId)
+        requestStatus = LiveChatDecode.string(container, CodingKeys.requestStatus).isEmpty
+            ? "accepted" : LiveChatDecode.string(container, CodingKeys.requestStatus)
+        requestStatusLabel = LiveChatDecode.string(container, CodingKeys.requestStatusLabel).isEmpty
+            ? "Accepted" : LiveChatDecode.string(container, CodingKeys.requestStatusLabel)
+        canSend = container.contains(.canSend) ? LiveChatDecode.bool(container, CodingKeys.canSend) : true
+        canRespond = LiveChatDecode.bool(container, CodingKeys.canRespond)
+        requestedBy = LiveChatDecode.int(container, CodingKeys.requestedBy)
+        isPinned = LiveChatDecode.bool(container, CodingKeys.isPinned)
+        isMuted = LiveChatDecode.bool(container, CodingKeys.isMuted)
+        assignedTo = LiveChatDecode.int(container, CodingKeys.assignedTo)
+        otherRoleRank = container.contains(.otherRoleRank)
+            ? LiveChatDecode.int(container, CodingKeys.otherRoleRank)
+            : 99
+        otherRoleLabel = LiveChatDecode.string(container, CodingKeys.otherRoleLabel)
+        otherPresence = LiveChatDecode.string(container, CodingKeys.otherPresence).isEmpty
+            ? "offline" : LiveChatDecode.string(container, CodingKeys.otherPresence)
+        otherLastSeen = LiveChatDecode.int(container, CodingKeys.otherLastSeen)
     }
+
+    var isRequestPending: Bool { requestStatus == "pending" }
+    var isRequestDeclined: Bool { requestStatus == "declined" || requestStatus == "locked" }
+    var isExecutiveConversation: Bool { otherRoleRank == 1 }
 
     var displayName: String {
         if isTeamDM {
@@ -387,11 +462,25 @@ struct PollResponse: Codable {
     let seq: Int
     let messageCount: Int
     let lastReadSeq: Int
+    let otherReadSeq: Int
     let messages: [LiveMessage]
     let adminTyping: Bool
     let userTyping: Bool
     let reactions: [String: String]
     let customerLanguage: String
+    let otherUserId: Int
+    let requestStatus: String
+    let requestStatusLabel: String
+    let canSend: Bool
+    let canRespond: Bool
+    let requestedBy: Int
+    let isPinned: Bool
+    let isMuted: Bool
+    let assignedTo: Int
+    let otherRoleRank: Int
+    let otherRoleLabel: String
+    let otherPresence: String
+    let otherLastSeen: Int
 
     enum CodingKeys: String, CodingKey {
         case handler
@@ -410,6 +499,20 @@ struct PollResponse: Codable {
         case adminTyping = "admin_typing"
         case userTyping = "user_typing"
         case lastReadSeq = "last_read_seq"
+        case otherReadSeq = "other_read_seq"
+        case otherUserId = "other_user_id"
+        case requestStatus = "request_status"
+        case requestStatusLabel = "request_status_label"
+        case canSend = "can_send"
+        case canRespond = "can_respond"
+        case requestedBy = "requested_by"
+        case isPinned = "is_pinned"
+        case isMuted = "is_muted"
+        case assignedTo = "assigned_to"
+        case otherRoleRank = "other_role_rank"
+        case otherRoleLabel = "other_role_label"
+        case otherPresence = "other_presence"
+        case otherLastSeen = "other_last_seen"
     }
 
     init(from decoder: Decoder) throws {
@@ -429,10 +532,25 @@ struct PollResponse: Codable {
         seq = LiveChatDecode.int(container, CodingKeys.seq)
         messageCount = LiveChatDecode.int(container, CodingKeys.messageCount)
         lastReadSeq = LiveChatDecode.int(container, CodingKeys.lastReadSeq)
+        otherReadSeq = LiveChatDecode.int(container, CodingKeys.otherReadSeq)
         messages = LiveChatDecode.decodeLiveMessages(from: container, key: CodingKeys.messages)
         adminTyping = LiveChatDecode.bool(container, CodingKeys.adminTyping)
         userTyping = LiveChatDecode.bool(container, CodingKeys.userTyping)
         reactions = (try? container.decode([String: String].self, forKey: .reactions)) ?? [:]
+        otherUserId = LiveChatDecode.int(container, CodingKeys.otherUserId)
+        requestStatus = LiveChatDecode.string(container, CodingKeys.requestStatus).isEmpty
+            ? "accepted" : LiveChatDecode.string(container, CodingKeys.requestStatus)
+        requestStatusLabel = LiveChatDecode.string(container, CodingKeys.requestStatusLabel)
+        canSend = container.contains(.canSend) ? LiveChatDecode.bool(container, CodingKeys.canSend) : true
+        canRespond = LiveChatDecode.bool(container, CodingKeys.canRespond)
+        requestedBy = LiveChatDecode.int(container, CodingKeys.requestedBy)
+        isPinned = LiveChatDecode.bool(container, CodingKeys.isPinned)
+        isMuted = LiveChatDecode.bool(container, CodingKeys.isMuted)
+        assignedTo = LiveChatDecode.int(container, CodingKeys.assignedTo)
+        otherRoleRank = LiveChatDecode.int(container, CodingKeys.otherRoleRank)
+        otherRoleLabel = LiveChatDecode.string(container, CodingKeys.otherRoleLabel)
+        otherPresence = LiveChatDecode.string(container, CodingKeys.otherPresence)
+        otherLastSeen = LiveChatDecode.int(container, CodingKeys.otherLastSeen)
     }
 }
 
@@ -635,6 +753,9 @@ struct StaffMember: Codable, Identifiable {
     let roleLabel: String?
     let isExecutive: Bool
     let isAdministrator: Bool
+    let roleRank: Int
+    let presenceStatus: String
+    let lastSeen: Int
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -648,6 +769,9 @@ struct StaffMember: Codable, Identifiable {
         case roleLabel = "role_label"
         case isExecutive = "is_executive"
         case isAdministrator = "is_administrator"
+        case roleRank = "role_rank"
+        case presenceStatus = "presence_status"
+        case lastSeen = "last_seen"
     }
 
     init(from decoder: Decoder) throws {
@@ -666,15 +790,21 @@ struct StaffMember: Codable, Identifiable {
         roleLabel = try c.decodeIfPresent(String.self, forKey: .roleLabel)
         isExecutive = (try? c.decode(Bool.self, forKey: .isExecutive)) ?? false
         isAdministrator = (try? c.decode(Bool.self, forKey: .isAdministrator)) ?? false
+        roleRank = LiveChatDecode.int(c, CodingKeys.roleRank)
+        presenceStatus = LiveChatDecode.string(c, CodingKeys.presenceStatus).isEmpty
+            ? "offline" : LiveChatDecode.string(c, CodingKeys.presenceStatus)
+        lastSeen = LiveChatDecode.int(c, CodingKeys.lastSeen)
     }
 
     var displayRoleLabel: String {
         if let roleLabel, !roleLabel.isEmpty { return roleLabel }
-        if isExecutive { return "Executive Manager" }
+        if isExecutive { return "Executive Director" }
         if isAdministrator { return "Administrator" }
-        if permissions.manageUsers { return "Manager" }
-        return "Team Member"
+        if permissions.manageUsers { return "Senior Staff" }
+        return "Staff Member"
     }
+
+    var isOnline: Bool { presenceStatus == "online" }
 }
 
 struct OnboardingPermissionStatus: Codable, Equatable {

@@ -5,6 +5,7 @@ final class TeamMessagingCoordinator: ObservableObject {
     static let shared = TeamMessagingCoordinator()
 
     @Published var teamSessions: [LiveSession] = []
+    @Published var pendingRequests: [LiveSession] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
 
@@ -84,6 +85,24 @@ final class TeamMessagingCoordinator: ObservableObject {
                     self.scheduleInboxListRefresh(auth: auth)
                     return
                 }
+                if event.type == "conversation_request" || event.type == "request_update" {
+                    Task { await self.refreshPendingRequests(auth: auth) }
+                    self.scheduleInboxListRefresh(auth: auth)
+                    if event.type == "conversation_request" {
+                        InAppNotificationCoordinator.shared.handleTeamRequest(
+                            sessionId: sessionId,
+                            preview: (event.payload["request_note"] as? String) ?? "New conversation request"
+                        )
+                    }
+                    return
+                }
+                if event.type == "typing" {
+                    let typing = StreamPayload.bool(event.payload["typing"])
+                    if typing {
+                        ChatThreadRegistry.shared.teamThread(sessionId: sessionId).setRemoteTyping(true)
+                    }
+                    return
+                }
                 if event.type == "message" {
                     let incoming = StreamPayload.messages(from: event.payload)
                     for inline in incoming {
@@ -116,6 +135,45 @@ final class TeamMessagingCoordinator: ObservableObject {
                 }
             }
         }
+        Task {
+            await refreshPendingRequests(auth: auth)
+            await touchPresence(auth: auth)
+        }
+    }
+
+    func refreshPendingRequests(auth: AuthStore) async {
+        guard auth.isLoggedIn, let api = auth.api else {
+            pendingRequests = []
+            return
+        }
+        if let response = try? await api.fetchPendingTeamRequests() {
+            pendingRequests = response.sessions
+        }
+    }
+
+    func touchPresence(auth: AuthStore) async {
+        guard let api = auth.api else { return }
+        _ = try? await api.touchTeamPresence()
+    }
+
+    func respondToRequest(sessionId: String, accept: Bool, auth: AuthStore) async -> Bool {
+        guard let api = auth.api else { return false }
+        do {
+            _ = try await api.respondToTeamRequest(sessionId, accept: accept)
+            await refresh(auth: auth)
+            await refreshPendingRequests(auth: auth)
+            NotificationCenter.default.post(name: .paxSessionSync, object: nil, userInfo: ["session_id": sessionId])
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
+    func pinConversation(sessionId: String, pinned: Bool, auth: AuthStore) async {
+        guard let api = auth.api else { return }
+        _ = try? await api.pinTeamConversation(sessionId, pinned: pinned)
+        await refresh(auth: auth, mode: .lightweight)
     }
 
     private func scheduleInboxListRefresh(auth: AuthStore) {
@@ -208,11 +266,12 @@ final class TeamMessagingCoordinator: ObservableObject {
         }
     }
 
-    func openConversation(with userId: Int, auth: AuthStore) async -> String? {
+    func openConversation(with userId: Int, auth: AuthStore, requestNote: String = "") async -> String? {
         guard let api = auth.api else { return nil }
         do {
-            let response = try await api.openTeamConversation(userId: userId)
+            let response = try await api.openTeamConversation(userId: userId, requestNote: requestNote)
             await refresh(auth: auth)
+            await refreshPendingRequests(auth: auth)
             return response.conversationId
         } catch {
             errorMessage = error.localizedDescription
@@ -231,6 +290,15 @@ final class TeamChatThreadModel: ObservableObject {
     @Published var isSending = false
     @Published var errorMessage: String?
     @Published var currentSeq = 0
+    @Published var otherReadSeq = 0
+    @Published var requestStatus = "accepted"
+    @Published var requestStatusLabel = "Accepted"
+    @Published var canSend = true
+    @Published var canRespond = false
+    @Published var remoteTyping = false
+    @Published var otherPresence = "offline"
+    @Published var otherLastSeen = 0
+    @Published var failedClientMsgIds: Set<String> = []
 
     let sessionId: String
     var onConversationRemoved: (() -> Void)?
@@ -245,6 +313,8 @@ final class TeamChatThreadModel: ObservableObject {
     private var historyBaselined = false
     private var serverMessageCount = 0
     private var lifecycleGeneration = 0
+    private var typingTask: Task<Void, Never>?
+    private var lastTypingSent = false
     private let streamStaleThreshold: TimeInterval = 12
 
     init(sessionId: String) {
@@ -302,6 +372,30 @@ final class TeamChatThreadModel: ObservableObject {
     func applySilentSync(_ data: PollResponse) {
         applyBaselineSnapshot(data, persistCache: false)
         isLoadingMessages = false
+    }
+
+    func setRemoteTyping(_ typing: Bool) {
+        remoteTyping = typing
+        if typing {
+            typingTask?.cancel()
+            typingTask = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                guard !Task.isCancelled else { return }
+                await MainActor.run { self?.remoteTyping = false }
+            }
+        }
+    }
+
+    func handleDraftChange(auth: AuthStore) {
+        let typing = !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard typing != lastTypingSent, let api = auth.api else { return }
+        lastTypingSent = typing
+        Task { try? await api.setTeamTyping(sessionId, typing: typing) }
+    }
+
+    func respondToRequest(accept: Bool, auth: AuthStore, teamCoordinator: TeamMessagingCoordinator) async {
+        _ = await teamCoordinator.respondToRequest(sessionId: sessionId, accept: accept, auth: auth)
+        await refreshNow(auth: auth)
     }
 
     func applyLiveMessage(_ message: LiveMessage, seq: Int) {
@@ -401,6 +495,7 @@ final class TeamChatThreadModel: ObservableObject {
 
     private func applyBaselineSnapshot(_ response: PollResponse, persistCache: Bool = true) {
         participantName = response.customerName
+        applyTeamMeta(response)
         let optimistic = messages.filter { $0.id < 0 }
         let serverMax = response.messages.map(\.id).filter { $0 > 0 }.max() ?? 0
         let liveAhead = messages.filter { $0.id > serverMax }
@@ -469,6 +564,17 @@ final class TeamChatThreadModel: ObservableObject {
             if seq > currentSeq {
                 currentSeq = seq
             }
+            if let readerId = event.payload["user_id"] as? Int, readerId != auth?.profile?.userId {
+                otherReadSeq = max(otherReadSeq, seq)
+            }
+            return
+        }
+        if event.type == "request_update" {
+            Task { await poll(auth: auth) }
+            return
+        }
+        if event.type == "typing" {
+            setRemoteTyping(StreamPayload.bool(event.payload["typing"]))
             return
         }
         if event.type == "message" {
@@ -548,6 +654,7 @@ final class TeamChatThreadModel: ObservableObject {
             }
             pollSeq = max(pollSeq, response.seq)
             currentSeq = max(currentSeq, response.seq)
+            applyTeamMeta(response)
             if response.messageCount > serverMessageCount {
                 serverMessageCount = response.messageCount
             }
@@ -632,7 +739,41 @@ final class TeamChatThreadModel: ObservableObject {
                 errorMessage = error.localizedDescription
             default:
                 errorMessage = "Nachricht wird automatisch erneut gesendet."
+                if let clientMsgId = optimistic.clientMsgId {
+                    failedClientMsgIds.insert(clientMsgId)
+                }
             }
+        }
+    }
+
+    func retryFailedMessage(_ clientMsgId: String, auth: AuthStore, teamCoordinator: TeamMessagingCoordinator) async {
+        guard let item = PendingMessageStore.shared.pending(sessionId: sessionId, channel: .team)
+            .first(where: { $0.id == clientMsgId }) else { return }
+        failedClientMsgIds.remove(clientMsgId)
+        guard let api = auth.api else { return }
+        do {
+            let sent = try await api.sendTeamMessage(sessionId, content: item.content, clientMsgId: clientMsgId)
+            insertIncomingMessages([sent.message])
+            pollSeq = max(pollSeq, sent.seq)
+            currentSeq = max(currentSeq, sent.seq)
+            PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
+            await teamCoordinator.refresh(auth: auth)
+        } catch {
+            failedClientMsgIds.insert(clientMsgId)
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func applyTeamMeta(_ response: PollResponse) {
+        otherReadSeq = max(otherReadSeq, response.otherReadSeq)
+        requestStatus = response.requestStatus.isEmpty ? "accepted" : response.requestStatus
+        requestStatusLabel = response.requestStatusLabel.isEmpty ? "Accepted" : response.requestStatusLabel
+        canSend = response.canSend
+        canRespond = response.canRespond
+        otherPresence = response.otherPresence.isEmpty ? "offline" : response.otherPresence
+        otherLastSeen = response.otherLastSeen
+        if response.userTyping {
+            setRemoteTyping(true)
         }
     }
 
@@ -769,4 +910,21 @@ struct TeamDeleteResponse: Codable {
     let ok: Bool
     let mode: String
     let message: String
+}
+
+struct TeamRespondResponse: Codable {
+    let ok: Bool
+    let requestStatus: String
+    let session: LiveSession?
+
+    enum CodingKeys: String, CodingKey {
+        case ok
+        case requestStatus = "request_status"
+        case session
+    }
+}
+
+struct TeamSessionActionResponse: Codable {
+    let ok: Bool
+    let session: LiveSession?
 }

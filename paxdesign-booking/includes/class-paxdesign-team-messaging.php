@@ -14,6 +14,11 @@ class PAXdesign_Team_Messaging {
 
     const OPTION_KEY = 'paxdesign_team_conversations';
     const HANDLER    = 'team_dm';
+    const STATUS_ACCEPTED = 'accepted';
+    const STATUS_PENDING  = 'pending';
+    const STATUS_DECLINED = 'declined';
+    const STATUS_LOCKED   = 'locked';
+    const TYPING_TTL      = 5;
 
     /**
      * @return array<string, array<string, mixed>>
@@ -83,12 +88,17 @@ class PAXdesign_Team_Messaging {
      * @param int $other_user_id
      * @return array<string, mixed>
      */
-    public static function open_conversation($current_user_id, $other_user_id) {
+    public static function open_conversation($current_user_id, $other_user_id, $request_note = '') {
         $current_user_id = absint($current_user_id);
         $other_user_id   = absint($other_user_id);
+        $request_note    = trim(wp_strip_all_tags((string) $request_note));
 
         if ($current_user_id <= 0 || $other_user_id <= 0 || $current_user_id === $other_user_id) {
             return array('error' => 'invalid_participants');
+        }
+
+        if (self::is_user_blocked($current_user_id, $other_user_id)) {
+            return array('error' => 'user_blocked');
         }
 
         $other = get_user_by('id', $other_user_id);
@@ -97,27 +107,58 @@ class PAXdesign_Team_Messaging {
         }
 
         $conv_id = self::conversation_id($current_user_id, $other_user_id);
-        $result = self::with_write_lock('open:' . $conv_id, function () use ($conv_id, $current_user_id, $other_user_id) {
+        $needs_approval = PAXdesign_Live_Chat_Permissions::requires_team_conversation_approval(
+            $current_user_id,
+            $other_user_id
+        );
+
+        $result = self::with_write_lock('open:' . $conv_id, function () use (
+            $conv_id,
+            $current_user_id,
+            $other_user_id,
+            $needs_approval,
+            $request_note
+        ) {
             $all = self::all_conversations();
 
             if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
+                $status = $needs_approval ? self::STATUS_PENDING : self::STATUS_ACCEPTED;
                 $all[$conv_id] = array(
-                    'participants' => array($current_user_id, $other_user_id),
-                    'messages'     => array(),
-                    'read_seq'     => array(),
-                    'hidden_for'   => array(),
-                    'seq'          => 0,
-                    'updated_at'   => gmdate('Y-m-d H:i:s'),
+                    'participants'   => array($current_user_id, $other_user_id),
+                    'messages'       => array(),
+                    'read_seq'       => array(),
+                    'hidden_for'     => array(),
+                    'pinned_for'     => array(),
+                    'muted_for'      => array(),
+                    'request_status' => $status,
+                    'requested_by'   => $needs_approval ? $current_user_id : 0,
+                    'requested_at'   => $needs_approval ? gmdate('Y-m-d H:i:s') : '',
+                    'responded_at'   => '',
+                    'responded_by'   => 0,
+                    'request_note'   => $needs_approval ? $request_note : '',
+                    'assigned_to'    => 0,
+                    'typing'         => array(),
+                    'seq'            => 0,
+                    'updated_at'     => gmdate('Y-m-d H:i:s'),
                 );
                 self::save_conversations($all);
-            } else {
-                if (!isset($all[$conv_id]['hidden_for']) || !is_array($all[$conv_id]['hidden_for'])) {
-                    $all[$conv_id]['hidden_for'] = array();
+                if ($needs_approval) {
+                    self::emit_request_event($conv_id, $all[$conv_id], $current_user_id, $other_user_id);
                 }
-                $all[$conv_id]['hidden_for'] = array_values(array_diff(
-                    array_map('absint', $all[$conv_id]['hidden_for']),
+            } else {
+                $conv = $all[$conv_id];
+                if (!isset($conv['hidden_for']) || !is_array($conv['hidden_for'])) {
+                    $conv['hidden_for'] = array();
+                }
+                $status = isset($conv['request_status']) ? (string) $conv['request_status'] : self::STATUS_ACCEPTED;
+                if ($status === self::STATUS_DECLINED || $status === self::STATUS_LOCKED) {
+                    return array('error' => 'conversation_declined');
+                }
+                $conv['hidden_for'] = array_values(array_diff(
+                    array_map('absint', $conv['hidden_for']),
                     array($current_user_id)
                 ));
+                $all[$conv_id] = $conv;
                 self::save_conversations($all);
             }
 
@@ -160,6 +201,16 @@ class PAXdesign_Team_Messaging {
         }
 
         usort($sessions, function ($a, $b) {
+            $pa = !empty($a['is_pinned']) ? 1 : 0;
+            $pb = !empty($b['is_pinned']) ? 1 : 0;
+            if ($pa !== $pb) {
+                return $pb - $pa;
+            }
+            $ra = isset($a['other_role_rank']) ? (int) $a['other_role_rank'] : 99;
+            $rb = isset($b['other_role_rank']) ? (int) $b['other_role_rank'] : 99;
+            if ($ra !== $rb) {
+                return $ra - $rb;
+            }
             return strcmp((string) $b['updated_at'], (string) $a['updated_at']);
         });
 
@@ -234,6 +285,11 @@ class PAXdesign_Team_Messaging {
         $other_identity = $other ? PAXdesign_Chat_Live::resolve_employee_identity((int) $other->ID) : null;
         $read_seq      = self::read_seq_for_user($conv, $current_user_id);
         $other_read    = $other ? self::read_seq_for_user($conv, (int) $other->ID) : 0;
+        $request_meta  = self::request_meta($conv, $current_user_id);
+        $other_typing  = $other ? self::is_user_typing($conv, (int) $other->ID) : false;
+        $other_presence = $other
+            ? PAXdesign_Live_Chat_Permissions::get_team_presence((int) $other->ID)
+            : array('status' => 'offline', 'last_seen' => 0);
 
         return array(
             'session_id'       => $conv_id,
@@ -251,7 +307,21 @@ class PAXdesign_Team_Messaging {
             'last_read_seq'    => $read_seq,
             'other_read_seq'   => $other_read,
             'messages'         => array_map(array(__CLASS__, 'format_message'), $out_messages),
-            'user_typing'      => false,
+            'user_typing'      => $other_typing,
+            'request_status'   => $request_meta['request_status'],
+            'request_status_label' => $request_meta['request_status_label'],
+            'can_send'         => $request_meta['can_send'],
+            'can_respond'      => $request_meta['can_respond'],
+            'requested_by'     => $request_meta['requested_by'],
+            'is_pinned'        => $request_meta['is_pinned'],
+            'is_muted'         => $request_meta['is_muted'],
+            'assigned_to'      => $request_meta['assigned_to'],
+            'other_role_rank'  => $other ? PAXdesign_Live_Chat_Permissions::team_role_rank((int) $other->ID) : 99,
+            'other_role_label' => $other
+                ? PAXdesign_Live_Chat_Permissions::team_role_label_for_user((int) $other->ID)
+                : '',
+            'other_presence'   => $other_presence['status'],
+            'other_last_seen'  => $other_presence['last_seen'],
         );
     }
 
@@ -279,6 +349,13 @@ class PAXdesign_Team_Messaging {
             $conv = $all[$conv_id];
             if (!self::user_in_conversation($conv, $current_user_id)) {
                 return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
+            }
+            if (!self::conversation_writable($conv, $current_user_id)) {
+                return new WP_Error(
+                    'pax_team_locked',
+                    'Conversation is awaiting approval or has been declined.',
+                    array('status' => 403)
+                );
             }
 
             if (!isset($conv['messages']) || !is_array($conv['messages'])) {
@@ -447,9 +524,24 @@ class PAXdesign_Team_Messaging {
      * @return array<string, mixed>
      */
     private static function format_session_row($conv_id, $conv, $current_user_id) {
-        $messages = isset($conv['messages']) && is_array($conv['messages']) ? $conv['messages'] : array();
-        $last     = !empty($messages) ? end($messages) : null;
         $other    = self::other_participant($conv, $current_user_id);
+        $seq      = 0;
+        $count    = 0;
+        $last     = null;
+
+        if (class_exists('PAXdesign_Message_Store')) {
+            $legacy_messages = isset($conv['messages']) && is_array($conv['messages']) ? $conv['messages'] : array();
+            PAXdesign_Message_Store::migrate_legacy($conv_id, $legacy_messages, 'team');
+            $messages = PAXdesign_Message_Store::all_messages($conv_id, 'team');
+            $seq      = PAXdesign_Message_Store::latest_seq($conv_id, 'team');
+            $count    = count($messages);
+            $last     = !empty($messages) ? end($messages) : null;
+        } else {
+            $messages = isset($conv['messages']) && is_array($conv['messages']) ? $conv['messages'] : array();
+            $count    = count($messages);
+            $seq      = isset($conv['seq']) ? absint($conv['seq']) : 0;
+            $last     = !empty($messages) ? end($messages) : null;
+        }
 
         $self_identity  = PAXdesign_Chat_Live::resolve_employee_identity($current_user_id);
         $other_identity = $other ? PAXdesign_Chat_Live::resolve_employee_identity((int) $other->ID) : null;
@@ -463,8 +555,11 @@ class PAXdesign_Team_Messaging {
             }
         }
 
-        $seq      = isset($conv['seq']) ? absint($conv['seq']) : 0;
         $read_seq = self::read_seq_for_user($conv, $current_user_id);
+        $request_meta = self::request_meta($conv, $current_user_id);
+        $other_presence = $other
+            ? PAXdesign_Live_Chat_Permissions::get_team_presence((int) $other->ID)
+            : array('status' => 'offline', 'last_seen' => 0);
 
         return array(
             'id'               => 0,
@@ -478,11 +573,25 @@ class PAXdesign_Team_Messaging {
             'session_rating'   => 0,
             'detected_service' => 'Team-Nachricht',
             'updated_at'       => isset($conv['updated_at']) ? (string) $conv['updated_at'] : '',
-            'message_count'    => count($messages),
+            'message_count'    => $count,
             'seq'              => $seq,
             'last_read_seq'    => $read_seq,
             'last_preview'     => $last_preview,
             'last_role'        => $last_role,
+            'request_status'   => $request_meta['request_status'],
+            'request_status_label' => $request_meta['request_status_label'],
+            'can_send'         => $request_meta['can_send'],
+            'can_respond'      => $request_meta['can_respond'],
+            'requested_by'     => $request_meta['requested_by'],
+            'is_pinned'        => $request_meta['is_pinned'],
+            'is_muted'         => $request_meta['is_muted'],
+            'assigned_to'      => $request_meta['assigned_to'],
+            'other_role_rank'  => $other ? PAXdesign_Live_Chat_Permissions::team_role_rank((int) $other->ID) : 99,
+            'other_role_label' => $other
+                ? PAXdesign_Live_Chat_Permissions::team_role_label_for_user((int) $other->ID)
+                : '',
+            'other_presence'   => $other_presence['status'],
+            'other_last_seen'  => $other_presence['last_seen'],
         );
     }
 
@@ -623,6 +732,426 @@ class PAXdesign_Team_Messaging {
                 'ok'      => true,
                 'mode'    => 'purged',
                 'message' => 'Conversation permanently deleted for all participants.',
+            );
+        });
+    }
+
+    /**
+     * @return array{sessions: array<int, array<string, mixed>>}
+     */
+    public static function list_pending_requests_for_user($current_user_id) {
+        $current_user_id = absint($current_user_id);
+        $all             = self::all_conversations();
+        $sessions        = array();
+
+        foreach ($all as $conv_id => $conv) {
+            if (!is_array($conv)) {
+                continue;
+            }
+            $status = isset($conv['request_status']) ? (string) $conv['request_status'] : self::STATUS_ACCEPTED;
+            if ($status !== self::STATUS_PENDING) {
+                continue;
+            }
+            if (!self::user_in_conversation($conv, $current_user_id)) {
+                continue;
+            }
+            if (self::is_hidden_for_user($conv, $current_user_id)) {
+                continue;
+            }
+            $meta = self::request_meta($conv, $current_user_id);
+            if (empty($meta['can_respond'])) {
+                continue;
+            }
+            $sessions[] = self::format_session_row($conv_id, $conv, $current_user_id);
+        }
+
+        usort($sessions, function ($a, $b) {
+            return strcmp((string) $b['updated_at'], (string) $a['updated_at']);
+        });
+
+        return array('sessions' => $sessions);
+    }
+
+    /**
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function respond_to_request($conv_id, $current_user_id, $accept) {
+        $conv_id         = sanitize_text_field($conv_id);
+        $current_user_id = absint($current_user_id);
+        $accept          = (bool) $accept;
+
+        return self::with_write_lock('respond:' . $conv_id, function () use ($conv_id, $current_user_id, $accept) {
+            $all = self::all_conversations();
+            if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
+                return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
+            }
+
+            $conv = $all[$conv_id];
+            if (!self::user_in_conversation($conv, $current_user_id)) {
+                return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
+            }
+
+            $meta = self::request_meta($conv, $current_user_id);
+            if (empty($meta['can_respond'])) {
+                return new WP_Error('pax_team_forbidden', 'Cannot respond to this request', array('status' => 403));
+            }
+
+            $status = isset($conv['request_status']) ? (string) $conv['request_status'] : self::STATUS_ACCEPTED;
+            if ($status !== self::STATUS_PENDING) {
+                return new WP_Error('pax_team_invalid', 'Request is no longer pending', array('status' => 400));
+            }
+
+            $conv['request_status'] = $accept ? self::STATUS_ACCEPTED : self::STATUS_DECLINED;
+            $conv['responded_at']   = gmdate('Y-m-d H:i:s');
+            $conv['responded_by']   = $current_user_id;
+            $conv['updated_at']     = gmdate('Y-m-d H:i:s');
+            $all[$conv_id]          = $conv;
+            self::save_conversations($all);
+
+            $requester_id = isset($conv['requested_by']) ? absint($conv['requested_by']) : 0;
+            if ($requester_id > 0 && class_exists('PAXdesign_APNS')) {
+                $responder = PAXdesign_Chat_Live::resolve_employee_identity($current_user_id);
+                $name      = $responder ? $responder['name'] : wp_get_current_user()->display_name;
+                if ($accept) {
+                    PAXdesign_APNS::notify_team_request_response(
+                        $requester_id,
+                        $name,
+                        'accepted',
+                        $conv_id
+                    );
+                } else {
+                    PAXdesign_APNS::notify_team_request_response(
+                        $requester_id,
+                        $name,
+                        'declined',
+                        $conv_id
+                    );
+                }
+            }
+
+            if (class_exists('PAXdesign_Chat_Event_Bus')) {
+                PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'request_update', array(
+                    'request_status' => $conv['request_status'],
+                    'responded_by'   => $current_user_id,
+                    'participants'   => isset($conv['participants']) ? $conv['participants'] : array(),
+                    'session_id'     => $conv_id,
+                ));
+            }
+
+            return array(
+                'ok'             => true,
+                'request_status' => $conv['request_status'],
+                'session'        => self::format_session_row($conv_id, $conv, $current_user_id),
+            );
+        });
+    }
+
+    /**
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function set_typing($conv_id, $current_user_id, $typing) {
+        $conv_id         = sanitize_text_field($conv_id);
+        $current_user_id = absint($current_user_id);
+        $typing          = (bool) $typing;
+
+        return self::with_write_lock('typing:' . $conv_id, function () use ($conv_id, $current_user_id, $typing) {
+            $all = self::all_conversations();
+            if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
+                return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
+            }
+
+            $conv = $all[$conv_id];
+            if (!self::user_in_conversation($conv, $current_user_id)) {
+                return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
+            }
+
+            if (!isset($conv['typing']) || !is_array($conv['typing'])) {
+                $conv['typing'] = array();
+            }
+            if ($typing) {
+                $conv['typing'][(string) $current_user_id] = time();
+            } else {
+                unset($conv['typing'][(string) $current_user_id]);
+            }
+            $all[$conv_id] = $conv;
+            self::save_conversations($all);
+
+            if ($typing && class_exists('PAXdesign_Chat_Event_Bus')) {
+                PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'typing', array(
+                    'user_id'      => $current_user_id,
+                    'typing'       => true,
+                    'participants' => isset($conv['participants']) ? $conv['participants'] : array(),
+                    'session_id'   => $conv_id,
+                ));
+            }
+
+            return array('ok' => true);
+        });
+    }
+
+    /**
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function pin_conversation($conv_id, $current_user_id, $pinned) {
+        return self::set_user_flag($conv_id, $current_user_id, 'pinned_for', (bool) $pinned);
+    }
+
+    /**
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function mute_conversation($conv_id, $current_user_id, $muted) {
+        return self::set_user_flag($conv_id, $current_user_id, 'muted_for', (bool) $muted, true);
+    }
+
+    /**
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function assign_conversation($conv_id, $current_user_id, $assignee_id) {
+        $conv_id      = sanitize_text_field($conv_id);
+        $current_user_id = absint($current_user_id);
+        $assignee_id  = absint($assignee_id);
+
+        if (!PAXdesign_Live_Chat_Permissions::is_super_admin($current_user_id)
+            && !PAXdesign_Live_Chat_Permissions::can($current_user_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)) {
+            return new WP_Error('pax_team_forbidden', 'Insufficient permissions', array('status' => 403));
+        }
+
+        return self::with_write_lock('assign:' . $conv_id, function () use ($conv_id, $current_user_id, $assignee_id) {
+            $all = self::all_conversations();
+            if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
+                return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
+            }
+            $conv = $all[$conv_id];
+            if (!self::user_in_conversation($conv, $current_user_id)) {
+                return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
+            }
+            $conv['assigned_to'] = $assignee_id;
+            $conv['updated_at']  = gmdate('Y-m-d H:i:s');
+            $all[$conv_id]       = $conv;
+            self::save_conversations($all);
+
+            if (class_exists('PAXdesign_Chat_Event_Bus')) {
+                PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'session_update', array(
+                    'assigned_to'  => $assignee_id,
+                    'participants' => isset($conv['participants']) ? $conv['participants'] : array(),
+                    'session_id'   => $conv_id,
+                ));
+            }
+
+            return array(
+                'ok'          => true,
+                'assigned_to' => $assignee_id,
+                'session'     => self::format_session_row($conv_id, $conv, $current_user_id),
+            );
+        });
+    }
+
+    /**
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function block_user($current_user_id, $blocked_user_id) {
+        $current_user_id = absint($current_user_id);
+        $blocked_user_id = absint($blocked_user_id);
+        if ($current_user_id <= 0 || $blocked_user_id <= 0 || $current_user_id === $blocked_user_id) {
+            return new WP_Error('pax_invalid', 'Invalid users', array('status' => 400));
+        }
+        if (!PAXdesign_Live_Chat_Permissions::is_super_admin($current_user_id)
+            && !PAXdesign_Live_Chat_Permissions::can($current_user_id, PAXdesign_Live_Chat_Permissions::PERM_MANAGE_USERS)) {
+            return new WP_Error('pax_team_forbidden', 'Insufficient permissions', array('status' => 403));
+        }
+
+        $key = 'pax_team_blocked_' . $current_user_id;
+        $blocked = get_option($key, array());
+        if (!is_array($blocked)) {
+            $blocked = array();
+        }
+        if (!in_array($blocked_user_id, array_map('absint', $blocked), true)) {
+            $blocked[] = $blocked_user_id;
+        }
+        update_option($key, array_values(array_unique(array_map('absint', $blocked))), false);
+
+        return array('ok' => true, 'blocked_user_id' => $blocked_user_id);
+    }
+
+    /**
+     * @param int $viewer_id
+     * @param int $other_id
+     */
+    public static function is_user_blocked($viewer_id, $other_id) {
+        $viewer_id = absint($viewer_id);
+        $other_id  = absint($other_id);
+        $blocked   = get_option('pax_team_blocked_' . $other_id, array());
+        if (!is_array($blocked)) {
+            return false;
+        }
+        return in_array($viewer_id, array_map('absint', $blocked), true);
+    }
+
+    /**
+     * @param string $conv_id
+     * @param int    $user_id
+     */
+    public static function assert_participant($conv_id, $user_id) {
+        $all = self::all_conversations();
+        if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
+            return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
+        }
+        if (!self::user_in_conversation($all[$conv_id], $user_id)) {
+            return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
+        }
+        return true;
+    }
+
+    /**
+     * @param array<string, mixed> $conv
+     * @param int                  $current_user_id
+     */
+    private static function conversation_writable($conv, $current_user_id) {
+        $status = isset($conv['request_status']) ? (string) $conv['request_status'] : self::STATUS_ACCEPTED;
+        if ($status === self::STATUS_ACCEPTED) {
+            return true;
+        }
+        if ($status === self::STATUS_DECLINED || $status === self::STATUS_LOCKED) {
+            return false;
+        }
+        return false;
+    }
+
+    /**
+     * @param array<string, mixed> $conv
+     * @param int                  $current_user_id
+     * @return array<string, mixed>
+     */
+    private static function request_meta($conv, $current_user_id) {
+        $status = isset($conv['request_status']) ? (string) $conv['request_status'] : self::STATUS_ACCEPTED;
+        $requested_by = isset($conv['requested_by']) ? absint($conv['requested_by']) : 0;
+        $current_user_id = absint($current_user_id);
+
+        $can_respond = false;
+        if ($status === self::STATUS_PENDING && $requested_by !== $current_user_id) {
+            $requester_rank = PAXdesign_Live_Chat_Permissions::team_role_rank($requested_by);
+            $viewer_rank    = PAXdesign_Live_Chat_Permissions::team_role_rank($current_user_id);
+            $can_respond    = $viewer_rank < $requester_rank;
+        }
+
+        $label = 'Accepted';
+        if ($status === self::STATUS_PENDING) {
+            $label = $requested_by === $current_user_id ? 'Waiting for approval' : 'Request pending';
+        } elseif ($status === self::STATUS_DECLINED) {
+            $label = 'Declined';
+        } elseif ($status === self::STATUS_LOCKED) {
+            $label = 'Locked';
+        }
+
+        $pinned_for = isset($conv['pinned_for']) && is_array($conv['pinned_for']) ? $conv['pinned_for'] : array();
+        $muted_for  = isset($conv['muted_for']) && is_array($conv['muted_for']) ? array_map('absint', $conv['muted_for']) : array();
+
+        return array(
+            'request_status'       => $status,
+            'request_status_label' => $label,
+            'can_send'             => self::conversation_writable($conv, $current_user_id),
+            'can_respond'          => $can_respond,
+            'requested_by'         => $requested_by,
+            'is_pinned'            => !empty($pinned_for[(string) $current_user_id]),
+            'is_muted'             => in_array($current_user_id, $muted_for, true),
+            'assigned_to'          => isset($conv['assigned_to']) ? absint($conv['assigned_to']) : 0,
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $conv
+     * @param int                  $user_id
+     */
+    private static function is_user_typing($conv, $user_id) {
+        if (!isset($conv['typing']) || !is_array($conv['typing'])) {
+            return false;
+        }
+        $key = (string) absint($user_id);
+        if (!isset($conv['typing'][$key])) {
+            return false;
+        }
+        return (time() - absint($conv['typing'][$key])) <= self::TYPING_TTL;
+    }
+
+    /**
+     * @param int    $requester_id
+     * @param int    $target_id
+     */
+    private static function emit_request_event($conv_id, $conv, $requester_id, $target_id) {
+        if (class_exists('PAXdesign_Chat_Event_Bus')) {
+            PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'conversation_request', array(
+                'request_status' => self::STATUS_PENDING,
+                'requested_by'   => $requester_id,
+                'participants'   => isset($conv['participants']) ? $conv['participants'] : array(),
+                'session_id'     => $conv_id,
+                'request_note'   => isset($conv['request_note']) ? (string) $conv['request_note'] : '',
+            ));
+        }
+        if (class_exists('PAXdesign_APNS')) {
+            $requester = PAXdesign_Chat_Live::resolve_employee_identity($requester_id);
+            $name      = $requester ? $requester['name'] : '';
+            PAXdesign_APNS::notify_team_request(
+                $target_id,
+                $name,
+                isset($conv['request_note']) ? (string) $conv['request_note'] : '',
+                $conv_id
+            );
+        }
+    }
+
+    /**
+     * @param string $conv_id
+     * @param int    $current_user_id
+     * @param string $field
+     * @param bool   $value
+     * @param bool   $list_field
+     * @return array<string, mixed>|WP_Error
+     */
+    private static function set_user_flag($conv_id, $current_user_id, $field, $value, $list_field = false) {
+        $conv_id         = sanitize_text_field($conv_id);
+        $current_user_id = absint($current_user_id);
+
+        return self::with_write_lock($field . ':' . $conv_id, function () use ($conv_id, $current_user_id, $field, $value, $list_field) {
+            $all = self::all_conversations();
+            if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
+                return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
+            }
+            $conv = $all[$conv_id];
+            if (!self::user_in_conversation($conv, $current_user_id)) {
+                return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
+            }
+
+            if ($list_field) {
+                if (!isset($conv[$field]) || !is_array($conv[$field])) {
+                    $conv[$field] = array();
+                }
+                $ids = array_map('absint', $conv[$field]);
+                if ($value) {
+                    if (!in_array($current_user_id, $ids, true)) {
+                        $ids[] = $current_user_id;
+                    }
+                } else {
+                    $ids = array_values(array_diff($ids, array($current_user_id)));
+                }
+                $conv[$field] = $ids;
+            } else {
+                if (!isset($conv[$field]) || !is_array($conv[$field])) {
+                    $conv[$field] = array();
+                }
+                if ($value) {
+                    $conv[$field][(string) $current_user_id] = true;
+                } else {
+                    unset($conv[$field][(string) $current_user_id]);
+                }
+            }
+
+            $conv['updated_at'] = gmdate('Y-m-d H:i:s');
+            $all[$conv_id]      = $conv;
+            self::save_conversations($all);
+
+            return array(
+                'ok'      => true,
+                'session' => self::format_session_row($conv_id, $conv, $current_user_id),
             );
         });
     }

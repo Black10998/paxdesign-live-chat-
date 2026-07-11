@@ -377,23 +377,147 @@ class PAXdesign_Live_Chat_Permissions {
      *
      * @param WP_User|int|null $user
      */
-    public static function team_role_label_for_user($user = null) {
+    /**
+     * Internal team hierarchy rank (lower = higher authority).
+     * 1 Executive Director, 2 Admin, 3 Senior staff, 4 Staff, 5 Other.
+     *
+     * @param WP_User|int|null $user
+     */
+    public static function team_role_rank($user = null) {
         $user = self::resolve_user($user);
         if (!$user) {
-            return 'Team Member';
+            return 5;
         }
         $uid = (int) $user->ID;
         if (self::is_super_admin($uid)) {
-            return 'Executive Manager';
+            return 1;
         }
         if (user_can($uid, 'manage_options')) {
-            return 'Administrator';
+            return 2;
         }
         $perms = self::get_effective_permissions($uid);
         if (!empty($perms[self::PERM_MANAGE_USERS])) {
-            return 'Manager';
+            return 3;
         }
-        return 'Team Member';
+        if (self::has_live_chat_access($uid)) {
+            return 4;
+        }
+        return 5;
+    }
+
+    /**
+     * @param int $rank
+     */
+    public static function team_role_label_for_rank($rank) {
+        switch ((int) $rank) {
+            case 1:
+                return 'Executive Director';
+            case 2:
+                return 'Administrator';
+            case 3:
+                return 'Senior Staff';
+            case 4:
+                return 'Staff Member';
+            default:
+                return 'Team Member';
+        }
+    }
+
+    public static function team_role_label_for_user($user = null) {
+        return self::team_role_label_for_rank(self::team_role_rank($user));
+    }
+
+    /**
+     * @return array<string, bool>
+     */
+    public static function get_team_messaging_settings() {
+        $stored = get_option('paxdesign_team_messaging_settings', array());
+        if (!is_array($stored)) {
+            $stored = array();
+        }
+        return array(
+            'require_ed_approval'      => array_key_exists('require_ed_approval', $stored)
+                ? !empty($stored['require_ed_approval'])
+                : true,
+            'require_admin_approval'   => array_key_exists('require_admin_approval', $stored)
+                ? !empty($stored['require_admin_approval'])
+                : true,
+            'require_manager_approval' => array_key_exists('require_manager_approval', $stored)
+                ? !empty($stored['require_manager_approval'])
+                : false,
+        );
+    }
+
+    /**
+     * Whether a new conversation between two users requires approval before messaging.
+     *
+     * @param int $requester_id
+     * @param int $target_id
+     */
+    public static function requires_team_conversation_approval($requester_id, $target_id) {
+        $requester_id = absint($requester_id);
+        $target_id    = absint($target_id);
+        if ($requester_id <= 0 || $target_id <= 0 || $requester_id === $target_id) {
+            return false;
+        }
+
+        $requester_rank = self::team_role_rank($requester_id);
+        $target_rank    = self::team_role_rank($target_id);
+
+        // Higher authority can always open without approval.
+        if ($requester_rank < $target_rank) {
+            return false;
+        }
+
+        $settings = self::get_team_messaging_settings();
+
+        if ($target_rank === 1 && $requester_rank > 1) {
+            return !empty($settings['require_ed_approval']);
+        }
+        if ($target_rank === 2 && $requester_rank >= 4) {
+            return !empty($settings['require_admin_approval']);
+        }
+        if ($target_rank === 3 && $requester_rank >= 4) {
+            return !empty($settings['require_manager_approval']);
+        }
+
+        return false;
+    }
+
+    /**
+     * @param int $user_id
+     */
+    public static function touch_team_presence($user_id) {
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return;
+        }
+        set_transient(
+            'pax_team_presence_' . $user_id,
+            array(
+                'online'    => true,
+                'last_seen' => time(),
+            ),
+            120
+        );
+    }
+
+    /**
+     * @param int $user_id
+     * @return array{status: string, last_seen: int}
+     */
+    public static function get_team_presence($user_id) {
+        $user_id = absint($user_id);
+        $data    = get_transient('pax_team_presence_' . $user_id);
+        $last    = is_array($data) && isset($data['last_seen']) ? absint($data['last_seen']) : 0;
+        $online  = is_array($data)
+            && !empty($data['online'])
+            && $last > 0
+            && (time() - $last) < 90;
+        return array(
+            'status'    => $online ? 'online' : 'offline',
+            'last_seen' => $last,
+        );
     }
 
     /**
@@ -407,9 +531,13 @@ class PAXdesign_Live_Chat_Permissions {
         $member['is_administrator'] = !empty($member['is_administrator'])
             || user_can($uid, 'manage_options')
             || self::is_super_admin($uid);
+        $member['role_rank'] = self::team_role_rank($uid);
         if ($member['profile_title'] === '' && $member['is_executive']) {
-            $member['profile_title'] = 'Executive Manager';
+            $member['profile_title'] = 'Executive Director';
         }
+        $presence = self::get_team_presence($uid);
+        $member['presence_status'] = $presence['status'];
+        $member['last_seen']       = $presence['last_seen'];
         return $member;
     }
 

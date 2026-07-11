@@ -290,6 +290,58 @@ class PAXdesign_APNS {
     }
 
     /**
+     * Push a pending team conversation request to the approver.
+     */
+    public static function notify_team_request($recipient_user_id, $requester_name, $note, $conv_id) {
+        $recipient_user_id = absint($recipient_user_id);
+        if ($recipient_user_id <= 0) {
+            return;
+        }
+
+        $body = ($requester_name !== '' ? $requester_name . ' ' : '') . 'requested a conversation';
+        if ($note !== '') {
+            $body .= ': ' . wp_html_excerpt((string) $note, 80, '…');
+        }
+
+        self::send_to_user(
+            $recipient_user_id,
+            'Team conversation request',
+            $body,
+            array(
+                'type'       => 'team_request',
+                'event'      => 'team_request',
+                'session_id' => (string) $conv_id,
+                'preview'    => wp_html_excerpt((string) $note, 160, '…'),
+            ),
+            false
+        );
+    }
+
+    /**
+     * Notify requester that their conversation request was accepted or declined.
+     */
+    public static function notify_team_request_response($recipient_user_id, $responder_name, $status, $conv_id) {
+        $recipient_user_id = absint($recipient_user_id);
+        if ($recipient_user_id <= 0) {
+            return;
+        }
+
+        $accepted = $status === 'accepted';
+        self::send_to_user(
+            $recipient_user_id,
+            $accepted ? 'Conversation accepted' : 'Conversation declined',
+            sanitize_text_field((string) $responder_name) . ($accepted ? ' accepted your request.' : ' declined your request.'),
+            array(
+                'type'       => 'team_request_update',
+                'event'      => 'team_request_update',
+                'session_id' => (string) $conv_id,
+                'status'     => (string) $status,
+            ),
+            false
+        );
+    }
+
+    /**
      * @param array<string, mixed> $data
      */
     public static function send_to_user($user_id, $title, $body, $data = array(), $silent = false) {

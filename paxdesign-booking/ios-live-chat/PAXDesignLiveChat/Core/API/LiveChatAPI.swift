@@ -457,11 +457,69 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url), endpoint: "team-contacts", as: StaffListResponse.self)
     }
 
-    func openTeamConversation(userId: Int) async throws -> TeamOpenResponse {
+    func deleteTeamConversation(_ sessionId: String, mode: String = "hide") async throws -> TeamDeleteResponse {
+        guard let url = liveAdminURL(path: "team/sessions/\(sessionId)") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONEncoder().encode(["mode": mode])
+        return try await perform(authRequest(url: url, method: "DELETE", body: body), endpoint: "team-delete", as: TeamDeleteResponse.self)
+    }
+
+    func fetchPendingTeamRequests() async throws -> SessionListResponse {
+        guard let url = liveAdminURL(path: "team/requests/pending") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "team-pending-requests", as: SessionListResponse.self)
+    }
+
+    func respondToTeamRequest(_ sessionId: String, accept: Bool) async throws -> TeamRespondResponse {
+        guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/respond") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONEncoder().encode(["accept": accept])
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-respond", as: TeamRespondResponse.self)
+    }
+
+    func setTeamTyping(_ sessionId: String, typing: Bool) async throws {
+        guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/typing") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONEncoder().encode(["typing": typing])
+        _ = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-typing", as: EmptyResponse.self)
+    }
+
+    func pinTeamConversation(_ sessionId: String, pinned: Bool) async throws -> TeamSessionActionResponse {
+        guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/pin") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONEncoder().encode(["pinned": pinned])
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-pin", as: TeamSessionActionResponse.self)
+    }
+
+    func muteTeamConversation(_ sessionId: String, muted: Bool) async throws -> TeamSessionActionResponse {
+        guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/mute") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONEncoder().encode(["muted": muted])
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-mute", as: TeamSessionActionResponse.self)
+    }
+
+    func touchTeamPresence() async throws {
+        guard let url = liveAdminURL(path: "team/presence") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "team-presence", as: EmptyResponse.self)
+    }
+
+    func openTeamConversation(userId: Int, requestNote: String = "") async throws -> TeamOpenResponse {
         guard let url = liveAdminURL(path: "team/sessions/open") else {
             throw LiveChatAPIError.invalidURL
         }
-        let body = try JSONSerialization.data(withJSONObject: ["user_id": userId])
+        var payload: [String: Any] = ["user_id": userId]
+        if !requestNote.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            payload["request_note"] = requestNote
+        }
+        let body = try JSONSerialization.data(withJSONObject: payload)
         return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-open", as: TeamOpenResponse.self)
     }
 
@@ -500,14 +558,6 @@ final class LiveChatAPI {
         }
         let body = try JSONEncoder().encode(["seq": seq])
         return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-read", as: TeamReadResponse.self)
-    }
-
-    func deleteTeamConversation(_ sessionId: String, mode: String = "hide") async throws -> TeamDeleteResponse {
-        guard let url = liveAdminURL(path: "team/sessions/\(sessionId)") else {
-            throw LiveChatAPIError.invalidURL
-        }
-        let body = try JSONEncoder().encode(["mode": mode])
-        return try await perform(authRequest(url: url, method: "DELETE", body: body), endpoint: "team-delete", as: TeamDeleteResponse.self)
     }
 
     func consumeEventStream(

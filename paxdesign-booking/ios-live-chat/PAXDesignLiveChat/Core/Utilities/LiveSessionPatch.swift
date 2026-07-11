@@ -38,7 +38,20 @@ enum LiveSessionPatch {
             seq: resolvedSeq,
             lastPreview: preview(from: message),
             lastRole: message.role,
-            customerLanguage: session.customerLanguage
+            customerLanguage: session.customerLanguage,
+            otherUserId: session.otherUserId,
+            requestStatus: session.requestStatus,
+            requestStatusLabel: session.requestStatusLabel,
+            canSend: session.canSend,
+            canRespond: session.canRespond,
+            requestedBy: session.requestedBy,
+            isPinned: session.isPinned,
+            isMuted: session.isMuted,
+            assignedTo: session.assignedTo,
+            otherRoleRank: session.otherRoleRank,
+            otherRoleLabel: session.otherRoleLabel,
+            otherPresence: session.otherPresence,
+            otherLastSeen: session.otherLastSeen
         )
     }
 }

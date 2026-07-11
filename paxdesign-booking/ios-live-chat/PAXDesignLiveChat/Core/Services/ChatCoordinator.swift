@@ -131,10 +131,8 @@ final class ChatCoordinator: ObservableObject {
                         )
                         for inline in incoming {
                             let messageSeq = max(seq, inline.id)
-                            ConversationHistoryStore.shared.mergeMessage(sessionId: sid, message: inline, seq: messageSeq)
                             if sid.hasPrefix("team_") {
-                                ChatThreadRegistry.shared.teamThread(sessionId: sid).applyLiveMessage(inline, seq: messageSeq)
-                                TeamMessagingCoordinator.shared.bumpTeamSession(sessionId: sid, message: inline, seq: messageSeq)
+                                // Team data merge is owned by TeamMessagingCoordinator.
                                 if self.activeSessionId != sid, inline.role != "admin" {
                                     InAppNotificationCoordinator.shared.handleTeamMessage(
                                         sessionId: sid,
@@ -144,6 +142,7 @@ final class ChatCoordinator: ObservableObject {
                                     )
                                 }
                             } else {
+                                ConversationHistoryStore.shared.mergeMessage(sessionId: sid, message: inline, seq: messageSeq)
                                 ChatThreadRegistry.shared.bookingThread(sessionId: sid).applyLiveMessage(inline, seq: messageSeq)
                                 self.bumpBookingSession(sessionId: sid, message: inline, seq: messageSeq)
                                 if self.activeSessionId != sid, inline.role == "user" {
@@ -275,7 +274,10 @@ final class ChatCoordinator: ObservableObject {
     func updateUnreadCounts() {
         let settings = AppSettingsStore.shared
         unreadChatCount = sessions.filter { !$0.isTeamDM && settings.isSessionUnread($0) }.count
-        unreadTeamCount = sessions.filter { $0.isTeamDM && settings.isSessionUnread($0) }.count
+        unreadTeamCount = TeamMessagingCoordinator.shared.unreadCount(
+            settings: settings,
+            coordinatorSessions: sessions
+        )
         PAXApplicationBadge.sync(
             unreadChats: unreadChatCount,
             unreadTeam: unreadTeamCount,

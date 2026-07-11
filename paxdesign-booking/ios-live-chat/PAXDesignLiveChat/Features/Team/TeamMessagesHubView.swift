@@ -22,6 +22,7 @@ struct TeamMessagesHubView: View {
     var body: some View {
         List {
             heroSection
+            pendingRequestsSection
             statsSection
             composeSection
             contactsSection
@@ -64,7 +65,11 @@ struct TeamMessagesHubView: View {
         }
         .onAppear {
             scheduleRecompute(immediate: true)
-            Task { await loadContacts() }
+            Task {
+                await loadContacts()
+                await teamCoordinator.refreshPendingRequests(auth: auth)
+                await teamCoordinator.touchPresence(auth: auth)
+            }
         }
         .onDisappear {
             recomputeTask?.cancel()
@@ -75,6 +80,7 @@ struct TeamMessagesHubView: View {
         .onChange(of: searchText) { _ in scheduleRecompute(immediate: false) }
         .onChange(of: settings.readSessionIds) { _ in scheduleRecompute(immediate: true) }
         .onChange(of: settings.readUpToSeq) { _ in scheduleRecompute(immediate: true) }
+        .onChange(of: teamCoordinator.pendingRequests) { _ in scheduleRecompute(immediate: true) }
     }
 
     private var heroSection: some View {
@@ -89,6 +95,61 @@ struct TeamMessagesHubView: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
         }
+    }
+
+    @ViewBuilder
+    private var pendingRequestsSection: some View {
+        if !teamCoordinator.pendingRequests.isEmpty {
+            Section("Pending requests") {
+                ForEach(teamCoordinator.pendingRequests) { session in
+                    pendingRequestRow(session)
+                }
+            }
+        }
+    }
+
+    private func pendingRequestRow(_ session: LiveSession) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                SessionAvatarView(name: session.displayName, size: 42, isTeam: true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(session.displayName)
+                        .font(.body.weight(.semibold))
+                    Text(session.otherRoleLabel.isEmpty ? session.requestStatusLabel : session.otherRoleLabel)
+                        .font(.caption)
+                        .foregroundStyle(.purple)
+                }
+                Spacer()
+                Text(session.requestStatusLabel)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.orange)
+            }
+            if !session.lastPreview.isEmpty {
+                Text(session.lastPreview)
+                    .font(.subheadline)
+                    .foregroundStyle(PAXTheme.textSecondary)
+                    .lineLimit(2)
+            }
+            HStack(spacing: 12) {
+                Button("Decline") {
+                    Task {
+                        _ = await teamCoordinator.respondToRequest(sessionId: session.sessionId, accept: false, auth: auth)
+                        scheduleRecompute(immediate: true)
+                    }
+                }
+                .buttonStyle(.bordered)
+                .tint(PAXTheme.danger)
+                Button("Accept") {
+                    Task {
+                        _ = await teamCoordinator.respondToRequest(sessionId: session.sessionId, accept: true, auth: auth)
+                        onOpenSession(session.sessionId)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(PAXBrand.accent)
+            }
+        }
+        .padding(.vertical, 4)
     }
 
     @ViewBuilder
@@ -208,7 +269,20 @@ struct TeamMessagesHubView: View {
         defer { contactsLoading = false }
         if let response = try? await api.fetchTeamContacts() {
             let currentId = auth.profile?.userId ?? 0
-            teamContacts = response.staff.filter { $0.userId != currentId && $0.enabled }
+            teamContacts = response.staff
+                .filter { $0.userId != currentId && $0.enabled }
+                .sorted { lhs, rhs in
+                    let rank: (StaffMember) -> Int = { member in
+                        if member.isExecutive { return 0 }
+                        if member.isAdministrator { return 1 }
+                        if member.permissions.manageUsers { return 2 }
+                        return 3
+                    }
+                    let lr = rank(lhs)
+                    let rr = rank(rhs)
+                    if lr != rr { return lr < rr }
+                    return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                }
         }
     }
 
@@ -251,11 +325,21 @@ struct TeamMessagesHubView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 5) {
-                    HStack {
+                    HStack(spacing: 6) {
                         Text(session.displayName)
                             .font(.body.weight(isUnread ? .bold : .semibold))
                             .foregroundStyle(PAXTheme.textPrimary)
                             .lineLimit(1)
+                        if session.isExecutiveConversation {
+                            Image(systemName: "crown.fill")
+                                .font(.caption2)
+                                .foregroundStyle(.purple)
+                        }
+                        if session.isPinned {
+                            Image(systemName: "pin.fill")
+                                .font(.caption2)
+                                .foregroundStyle(PAXBrand.accent)
+                        }
                         Spacer(minLength: 4)
                         if let time = MessageTimeFormatter.relativeUpdatedLabel(from: session.updatedAt) {
                             Text(time)
@@ -265,12 +349,27 @@ struct TeamMessagesHubView: View {
                     }
 
                     HStack(spacing: 8) {
-                        Text(L10n.SessionTeamBadge)
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(PAXBrand.accent)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(PAXBrand.accent.opacity(0.15)))
+                        if !session.otherRoleLabel.isEmpty {
+                            Text(session.otherRoleLabel)
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(session.isExecutiveConversation ? .purple : PAXBrand.accent)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill((session.isExecutiveConversation ? Color.purple : PAXBrand.accent).opacity(0.15)))
+                        } else {
+                            Text(L10n.SessionTeamBadge)
+                                .font(.caption2.weight(.bold))
+                                .foregroundStyle(PAXBrand.accent)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Capsule().fill(PAXBrand.accent.opacity(0.15)))
+                        }
+
+                        if session.isRequestPending {
+                            Text(session.requestStatusLabel)
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.orange)
+                        }
 
                         Text(session.lastPreview.isEmpty ? L10n.TeamChatPlaceholder : session.lastPreview)
                             .font(.subheadline)
@@ -404,11 +503,18 @@ struct TeamMessagesHubView: View {
             filtered = allSessions.filter {
                 $0.displayName.lowercased().contains(searchText)
                     || $0.lastPreview.lowercased().contains(searchText)
+                    || $0.otherRoleLabel.lowercased().contains(searchText)
             }
         }
 
+        let sorted = filtered.sorted { lhs, rhs in
+            if lhs.isPinned != rhs.isPinned { return lhs.isPinned && !rhs.isPinned }
+            if lhs.otherRoleRank != rhs.otherRoleRank { return lhs.otherRoleRank < rhs.otherRoleRank }
+            return lhs.updatedAt > rhs.updatedAt
+        }
+
         let unread = allSessions.filter { settings.isSessionUnread($0) }.count
-        return TeamHubListState(displayedSessions: filtered, teamSessionCount: allSessions.count, unreadCount: unread)
+        return TeamHubListState(displayedSessions: sorted, teamSessionCount: allSessions.count, unreadCount: unread)
     }
 
     private var teamEmptyState: some View {
@@ -498,11 +604,25 @@ private struct TeamContactRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                SessionAvatarView(name: member.name, size: 48, isTeam: true)
+                ZStack(alignment: .bottomTrailing) {
+                    SessionAvatarView(name: member.name, size: 48, isTeam: true)
+                    if member.isOnline {
+                        Circle().fill(Color.green).frame(width: 10, height: 10)
+                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                            .offset(x: 2, y: 2)
+                    }
+                }
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(member.name)
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(PAXTheme.textPrimary)
+                    HStack(spacing: 6) {
+                        Text(member.name)
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(PAXTheme.textPrimary)
+                        if member.isExecutive {
+                            Image(systemName: "crown.fill")
+                                .font(.caption2)
+                                .foregroundStyle(.purple)
+                        }
+                    }
                     Text(member.displayRoleLabel)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(roleTint)
