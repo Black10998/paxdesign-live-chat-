@@ -215,9 +215,6 @@ struct SettingsRootView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(auth.profile?.displayName ?? L10n.CommonAdministrator)
                         .font(.title3.weight(.semibold))
-                    Text(auth.profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
-                        .font(.subheadline)
-                        .foregroundStyle(PAXTheme.textSecondary)
                     if auth.profile?.isSuperAdmin == true {
                         Text(L10n.AccountSuperAdmin)
                             .font(.caption2.weight(.semibold))

@@ -58,7 +58,7 @@ struct TeamMessagesHubView: View {
             .environmentObject(auth)
             .environmentObject(teamCoordinator)
         }
-        .paxPremiumRefreshable(status: "Team-Unterhaltungen werden geladen", rowCount: 4) {
+        .paxPremiumRefreshable(status: L10n.LoadingTeamConversations, rowCount: 4) {
             await coordinator.fullConversationSync(auth: auth)
             await teamCoordinator.fullConversationSync(auth: auth)
             await loadContacts()
@@ -100,7 +100,7 @@ struct TeamMessagesHubView: View {
     @ViewBuilder
     private var pendingRequestsSection: some View {
         if !teamCoordinator.pendingRequests.isEmpty {
-            Section("Pending requests") {
+            Section(L10n.TeamPendingRequests) {
                 ForEach(teamCoordinator.pendingRequests) { session in
                     pendingRequestRow(session)
                 }
@@ -131,7 +131,7 @@ struct TeamMessagesHubView: View {
                     .lineLimit(2)
             }
             HStack(spacing: 12) {
-                Button("Decline") {
+                Button(L10n.TeamActionDecline) {
                     Task {
                         _ = await teamCoordinator.respondToRequest(sessionId: session.sessionId, accept: false, auth: auth)
                         scheduleRecompute(immediate: true)
@@ -139,7 +139,7 @@ struct TeamMessagesHubView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(PAXTheme.danger)
-                Button("Accept") {
+                Button(L10n.TeamActionAccept) {
                     Task {
                         _ = await teamCoordinator.respondToRequest(sessionId: session.sessionId, accept: true, auth: auth)
                         onOpenSession(session.sessionId)
@@ -174,7 +174,7 @@ struct TeamMessagesHubView: View {
         if canComposeTeam {
             Section {
                 HStack {
-                    Text("Start a conversation")
+                    Text(L10n.TeamStartConversation)
                         .font(.headline)
                     Spacer()
                     Button {
@@ -194,14 +194,13 @@ struct TeamMessagesHubView: View {
         if canComposeTeam {
             if contactsLoading && teamContacts.isEmpty {
                 Section {
-                    PAXScreenLoadingStack(status: "Contacts werden geladen", rowCount: 2)
+                    PAXScreenLoadingStack(status: L10n.LoadingContacts, rowCount: 2)
                 }
             } else if !teamContacts.isEmpty {
-                Section("Leadership & Team") {
+                Section(L10n.TeamSectionLeadership) {
                     ForEach(teamContacts) { member in
                         TeamContactRow(
                             member: member,
-                            revealFullEmail: auth.profile?.isSuperAdmin == true,
                             isOpening: openingContactId == member.userId
                         ) {
                             Task { await openContact(member) }
@@ -260,7 +259,7 @@ struct TeamMessagesHubView: View {
     }
 
     private var teamLoadingState: some View {
-        PAXScreenLoadingStack(status: "Team-Unterhaltungen werden geladen", rowCount: 4)
+        PAXScreenLoadingStack(status: L10n.LoadingTeamConversations, rowCount: 4)
     }
 
     private func loadContacts() async {
@@ -270,6 +269,7 @@ struct TeamMessagesHubView: View {
         if let response = try? await api.fetchTeamContacts() {
             let currentId = auth.profile?.userId ?? 0
             teamContacts = response.staff
+                .deduplicatedByUserId()
                 .filter { $0.userId != currentId && $0.enabled }
                 .sorted { lhs, rhs in
                     let rank: (StaffMember) -> Int = { member in
@@ -434,7 +434,7 @@ struct TeamMessagesHubView: View {
             Button(role: .destructive) {
                 Task { await deleteConversation(session.sessionId, mode: "hide") }
             } label: {
-                Label("Remove from my list", systemImage: "eye.slash")
+                Label(L10n.TeamContextRemoveFromList, systemImage: "eye.slash")
             }
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -590,7 +590,6 @@ private struct TeamStatPill: View {
 
 private struct TeamContactRow: View {
     let member: StaffMember
-    let revealFullEmail: Bool
     let isOpening: Bool
     let action: () -> Void
 
@@ -623,15 +622,11 @@ private struct TeamContactRow: View {
                                 .foregroundStyle(.purple)
                         }
                     }
-                    Text(member.displayRoleLabel)
+                    Text(member.publicDisplaySubtitle)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(roleTint)
                     if !member.profileTitle.orEmpty.isEmpty {
                         Text(member.profileTitle ?? "")
-                            .font(.caption)
-                            .foregroundStyle(PAXTheme.textSecondary)
-                    } else {
-                        Text(PrivacyMask.email(member.email, revealFull: revealFullEmail))
                             .font(.caption)
                             .foregroundStyle(PAXTheme.textSecondary)
                     }

@@ -147,7 +147,7 @@ struct StaffManagementView: View {
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(PAXTheme.textTertiary)
                 }
-                Text(PrivacyMask.email(member.email, revealFull: auth.profile?.isSuperAdmin == true))
+                Text(member.publicDisplaySubtitle)
                     .font(.caption)
                     .foregroundStyle(PAXTheme.textSecondary)
                 Text(member.onboardingCompleted ? "Onboarding abgeschlossen" : "Onboarding ausstehend")

@@ -21,6 +21,10 @@ struct TeamManagementHubView: View {
 
     private var isExecutiveDirector: Bool { auth.profile?.isSuperAdmin == true }
 
+    private var executiveDirectorName: String {
+        members.first(where: \.isExecutive)?.name ?? L10n.AdminOverviewEd
+    }
+
     var body: some View {
         Group {
             if isExecutiveDirector {
@@ -29,10 +33,10 @@ struct TeamManagementHubView: View {
                 accessDenied
             }
         }
-        .navigationTitle("Team Management")
+        .navigationTitle(L10n.AdminTeamManagement)
         .navigationBarTitleDisplayMode(.large)
         .task { await reload() }
-        .paxPremiumRefreshable(status: "Team Management wird geladen", rowCount: 5) {
+        .paxPremiumRefreshable(status: L10n.LoadingTeamManagement, rowCount: 5) {
             await reload()
         }
         .sheet(item: $editingMember) { member in
@@ -45,9 +49,9 @@ struct TeamManagementHubView: View {
             Image(systemName: "lock.shield")
                 .font(.system(size: 48, weight: .light))
                 .foregroundStyle(PAXTheme.textSecondary)
-            Text("Executive Director only")
+            Text(L10n.AdminAccessDeniedTitle)
                 .font(.title3.weight(.semibold))
-            Text("Only the Executive Director can access centralized team management.")
+            Text(L10n.AdminAccessDeniedSubtitle)
                 .font(.subheadline)
                 .foregroundStyle(PAXTheme.textSecondary)
                 .multilineTextAlignment(.center)
@@ -83,8 +87,8 @@ struct TeamManagementHubView: View {
     private var heroSection: some View {
         Section {
             PlatformHeroHeader(
-                title: "Team Management",
-                subtitle: "Central control for roster, hierarchy, permissions, and conversation requests.",
+                title: L10n.AdminTeamManagement,
+                subtitle: L10n.AdminTeamManagementSubtitle,
                 systemImage: "person.3.sequence.fill",
                 gradient: [.purple, .indigo]
             )
@@ -97,15 +101,15 @@ struct TeamManagementHubView: View {
     @ViewBuilder
     private var overviewSection: some View {
         if let overview {
-            Section("Overview") {
-                LabeledContent("Executive Director", value: overview.executiveDirectorEmail)
-                LabeledContent("Team members", value: "\(overview.totalMembers)")
-                LabeledContent("Active", value: "\(overview.enabledMembers)")
-                LabeledContent("Pending requests", value: "\(overview.pendingRequestCount)")
+            Section(L10n.AdminSectionOverview) {
+                LabeledContent(L10n.AdminOverviewEd, value: executiveDirectorName)
+                LabeledContent(L10n.AdminOverviewMembers, value: "\(overview.totalMembers)")
+                LabeledContent(L10n.AdminOverviewActive, value: "\(overview.enabledMembers)")
+                LabeledContent(L10n.AdminOverviewPending, value: "\(overview.pendingRequestCount)")
             }
         } else if isLoading {
             Section {
-                PAXScreenLoadingStack(status: "Overview wird geladen", rowCount: 2)
+                PAXScreenLoadingStack(status: L10n.LoadingOverview, rowCount: 2)
             }
         }
     }
@@ -113,7 +117,7 @@ struct TeamManagementHubView: View {
     @ViewBuilder
     private var pendingSection: some View {
         if !pendingRequests.isEmpty {
-            Section("Pending requests") {
+            Section(L10n.TeamPendingRequests) {
                 ForEach(pendingRequests) { session in
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
@@ -134,12 +138,12 @@ struct TeamManagementHubView: View {
                                 .lineLimit(2)
                         }
                         HStack(spacing: 12) {
-                            Button("Decline") {
+                            Button(L10n.TeamActionDecline) {
                                 Task { await respond(session, accept: false) }
                             }
                             .buttonStyle(.bordered)
                             .tint(PAXTheme.danger)
-                            Button("Approve") {
+                            Button(L10n.TeamActionApprove) {
                                 Task { await respond(session, accept: true) }
                             }
                             .buttonStyle(.borderedProminent)
@@ -155,21 +159,16 @@ struct TeamManagementHubView: View {
     @ViewBuilder
     private var hierarchySection: some View {
         if let overview, !overview.hierarchy.isEmpty {
-            Section("Hierarchy") {
+            Section(L10n.AdminSectionHierarchy) {
                 ForEach(overview.hierarchy) { level in
                     if !level.members.isEmpty {
                         DisclosureGroup {
                             ForEach(level.members) { member in
                                 HStack {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(member.name)
-                                            .font(.subheadline.weight(.semibold))
-                                        Text(PrivacyMask.email(member.email, revealFull: true))
-                                            .font(.caption)
-                                            .foregroundStyle(PAXTheme.textSecondary)
-                                    }
+                                    Text(member.name)
+                                        .font(.subheadline.weight(.semibold))
                                     Spacer()
-                                    Text(member.enabled ? "Active" : "Inactive")
+                                    Text(member.enabled ? L10n.CommonActive : L10n.CommonInactive)
                                         .font(.caption2.weight(.semibold))
                                         .foregroundStyle(member.enabled ? PAXTheme.success : PAXTheme.textTertiary)
                                 }
@@ -194,10 +193,10 @@ struct TeamManagementHubView: View {
     private var membersSection: some View {
         if isLoading && members.isEmpty {
             Section {
-                PAXScreenLoadingStack(status: "Team wird geladen", rowCount: 4)
+                PAXScreenLoadingStack(status: L10n.LoadingTeam, rowCount: 4)
             }
         } else {
-            Section("Team roster") {
+            Section(L10n.AdminSectionTeamRoster) {
                 ForEach(members.filter { !$0.isExecutive }) { member in
                     Button {
                         editingMember = member
@@ -211,15 +210,12 @@ struct TeamManagementHubView: View {
                                 Text(member.name)
                                     .font(.body.weight(.semibold))
                                     .foregroundStyle(PAXTheme.textPrimary)
-                                Text(member.displayRoleLabel)
+                                Text(member.publicDisplaySubtitle)
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.purple)
-                                Text(PrivacyMask.email(member.email, revealFull: true))
-                                    .font(.caption)
-                                    .foregroundStyle(PAXTheme.textSecondary)
                             }
                             Spacer()
-                            Text(member.enabled ? "Active" : "Inactive")
+                            Text(member.enabled ? L10n.CommonActive : L10n.CommonInactive)
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(member.enabled ? PAXTheme.success : PAXTheme.textTertiary)
                             Image(systemName: "chevron.right")
@@ -233,13 +229,15 @@ struct TeamManagementHubView: View {
                         if !member.isProtected {
                             Button(role: .destructive) {
                                 PAXDelete.confirm(
-                                    message: "This member will be removed from the team roster.",
-                                    itemTitle: member.name
+                                    title: L10n.CommonRemove,
+                                    message: L10n.AdminConfirmRemoveMember,
+                                    itemTitle: member.name,
+                                    confirmTitle: L10n.CommonRemove
                                 ) {
                                     Task { await removeMember(member) }
                                 }
                             } label: {
-                                Label("Remove", systemImage: "trash")
+                                Label(L10n.CommonRemove, systemImage: "trash")
                             }
                         }
                     }
@@ -249,51 +247,49 @@ struct TeamManagementHubView: View {
     }
 
     private var addMemberSection: some View {
-        Section("Add team member") {
+        Section(L10n.AdminSectionAddMember) {
             HStack {
-                TextField("WordPress email", text: $addEmail)
+                TextField(L10n.AdminFieldWordpressEmail, text: $addEmail)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
-                Button("Add") {
+                Button(L10n.CommonAdd) {
                     Task { await addMember() }
                 }
                 .disabled(addEmail.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSaving)
             }
-            Text("New members are added with Team Member role. Promote or demote from the roster.")
+            Text(L10n.AdminAddMemberHint)
                 .font(.caption)
                 .foregroundStyle(PAXTheme.textSecondary)
         }
     }
 
     private var policySection: some View {
-        Section("Contact policy") {
-            Toggle("Require approval for Administrator contact", isOn: $requireAdminApproval)
+        Section(L10n.AdminSectionContactPolicy) {
+            Toggle(L10n.AdminPolicyRequireAdminApproval, isOn: $requireAdminApproval)
                 .onChange(of: requireAdminApproval) { _ in
                     Task { await savePolicy() }
                 }
-            Toggle("Require approval for Senior Staff contact", isOn: $requireManagerApproval)
+            Toggle(L10n.AdminPolicyRequireManagerApproval, isOn: $requireManagerApproval)
                 .onChange(of: requireManagerApproval) { _ in
                     Task { await savePolicy() }
                 }
-            LabeledContent("Executive Director messaging") {
-                Text("Request required")
+            LabeledContent(L10n.AdminPolicyEdMessaging) {
+                Text(L10n.AdminPolicyRequestRequired)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.orange)
             }
-            if let policy {
-                Text("Everyone except \(policy.edEmail) must submit a conversation request before messaging the Executive Director.")
-                    .font(.caption)
-                    .foregroundStyle(PAXTheme.textSecondary)
-            }
+            Text(L10n.AdminPolicyEdHint)
+                .font(.caption)
+                .foregroundStyle(PAXTheme.textSecondary)
         }
     }
 
     private var messagingSection: some View {
-        Section("Conversations") {
+        Section(L10n.AdminSectionConversations) {
             NavigationLink {
                 TeamMessagesHubView()
             } label: {
-                Label("Team messages & inbox", systemImage: "bubble.left.and.bubble.right")
+                Label(L10n.AdminTeamMessagesInbox, systemImage: "bubble.left.and.bubble.right")
             }
         }
     }
@@ -302,36 +298,36 @@ struct TeamManagementHubView: View {
         NavigationStack {
             List {
                 Section(member.name) {
-                    Toggle("Active", isOn: $editEnabled)
-                    Picker("Role", selection: $editRole) {
+                    Toggle(L10n.CommonActive, isOn: $editEnabled)
+                    Picker(L10n.AdminMemberRole, selection: $editRole) {
                         ForEach(TeamRoleKey.assignable) { role in
                             Text(role.label).tag(role)
                         }
                     }
                 }
-                Section("Permissions") {
-                    PermissionToggle("View chats", keyPath: \.viewChats, permissions: $editPermissions)
-                    PermissionToggle("Reply to chats", keyPath: \.replyChats, permissions: $editPermissions)
-                    PermissionToggle("AI assistant", keyPath: \.useAI, permissions: $editPermissions)
-                    PermissionToggle("Send images", keyPath: \.sendImages, permissions: $editPermissions)
-                    PermissionToggle("Settings", keyPath: \.manageSettings, permissions: $editPermissions)
-                    PermissionToggle("Ratings", keyPath: \.viewRatings, permissions: $editPermissions)
-                    PermissionToggle("Manage team", keyPath: \.manageUsers, permissions: $editPermissions)
-                    PermissionToggle("Security", keyPath: \.accessSecurity, permissions: $editPermissions)
-                    PermissionToggle("Team permissions", keyPath: \.manageTeamPermissions, permissions: $editPermissions)
-                    PermissionToggle("Customer profiles", keyPath: \.manageCustomerProfiles, permissions: $editPermissions)
-                    PermissionToggle("Assign tasks", keyPath: \.assignTeamTasks, permissions: $editPermissions)
-                    PermissionToggle("Hub profile", keyPath: \.customizeHubProfile, permissions: $editPermissions)
+                Section(L10n.AdminSectionPermissions) {
+                    PermissionToggle(L10n.PermissionViewChats, keyPath: \.viewChats, permissions: $editPermissions)
+                    PermissionToggle(L10n.PermissionReplyChats, keyPath: \.replyChats, permissions: $editPermissions)
+                    PermissionToggle(L10n.PermissionAIAssistant, keyPath: \.useAI, permissions: $editPermissions)
+                    PermissionToggle(L10n.PermissionSendImages, keyPath: \.sendImages, permissions: $editPermissions)
+                    PermissionToggle(L10n.PermissionSettings, keyPath: \.manageSettings, permissions: $editPermissions)
+                    PermissionToggle(L10n.PermissionRatings, keyPath: \.viewRatings, permissions: $editPermissions)
+                    PermissionToggle(L10n.PermissionManageTeam, keyPath: \.manageUsers, permissions: $editPermissions)
+                    PermissionToggle(L10n.PermissionSecurity, keyPath: \.accessSecurity, permissions: $editPermissions)
+                    PermissionToggle(L10n.PermissionTeamPermissions, keyPath: \.manageTeamPermissions, permissions: $editPermissions)
+                    PermissionToggle(L10n.PermissionCustomerProfiles, keyPath: \.manageCustomerProfiles, permissions: $editPermissions)
+                    PermissionToggle(L10n.PermissionAssignTasks, keyPath: \.assignTeamTasks, permissions: $editPermissions)
+                    PermissionToggle(L10n.PermissionHubProfile, keyPath: \.customizeHubProfile, permissions: $editPermissions)
                 }
             }
-            .navigationTitle("Edit member")
+            .navigationTitle(L10n.AdminEditMemberTitle)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { editingMember = nil }
+                    Button(L10n.CommonCancel) { editingMember = nil }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
+                    Button(L10n.CommonSave) {
                         Task { await saveMember(member) }
                     }
                     .disabled(isSaving)

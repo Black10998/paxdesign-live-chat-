@@ -27,9 +27,6 @@ struct GeneralSettingsView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(auth.profile?.displayName ?? L10n.CommonAdministrator)
                             .font(.headline)
-                        Text(auth.profile?.displayEmail ?? PrivacyMask.email(auth.username, revealFull: false))
-                            .font(.subheadline)
-                            .foregroundStyle(PAXTheme.textSecondary)
                     }
                 }
                 .padding(.vertical, 4)
@@ -94,10 +91,11 @@ struct GeneralSettingsView: View {
 
                 Section {
                     Button(L10n.SettingsSignOut) {
-                        PAXDelete.confirm(
-                            message: "Sie werden von diesem Gerät abgemeldet.",
-                            confirmTitle: L10n.SettingsSignOut
-                        ) {
+                    PAXDelete.confirm(
+                        title: L10n.SettingsSignOut,
+                        message: L10n.SettingsSignOutMessage,
+                        confirmTitle: L10n.SettingsSignOut
+                    ) {
                             Task {
                                 await push.unregisterTokenFromBackend(auth: auth)
                                 auth.logout()

@@ -64,8 +64,8 @@ final class InAppNotificationCoordinator {
         PAXNotificationSound.shared.play(.liveRequest)
         PAXHaptics.medium()
         postLocalNotification(
-            title: "Conversation request",
-            body: preview.isEmpty ? "A team member requested a conversation." : preview,
+            title: L10n.NotifyTeamRequestTitle,
+            body: preview.isEmpty ? L10n.NotifyTeamRequestBody : preview,
             sessionId: sessionId,
             type: "team_request"
         )

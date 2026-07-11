@@ -37,7 +37,7 @@ struct AdministrationHubView: View {
 
             if isLoadingStaff {
                 Section {
-                    PAXScreenLoadingStack(status: "Administration wird geladen", rowCount: 3)
+                    PAXScreenLoadingStack(status: L10n.LoadingAdministration, rowCount: 3)
                 }
             }
 
@@ -87,7 +87,7 @@ struct AdministrationHubView: View {
                     NavigationLink {
                         CustomerProfilesView()
                     } label: {
-                        Label("Kundenprofile", systemImage: "person.crop.circle.badge.checkmark")
+                        Label(L10n.AdminCustomerProfiles, systemImage: "person.crop.circle.badge.checkmark")
                     }
                 }
                 NavigationLink {
@@ -134,7 +134,7 @@ struct AdministrationHubView: View {
         .navigationTitle(L10n.AdminTitle)
         .navigationBarTitleDisplayMode(.large)
         .task { await loadStaffCount() }
-        .paxPremiumRefreshable(status: "Administration wird geladen", rowCount: 3) {
+        .paxPremiumRefreshable(status: L10n.LoadingAdministration, rowCount: 3) {
             await coordinator.refreshSessions(auth: auth)
             await teamCoordinator.refresh(auth: auth)
             await loadStaffCount()
