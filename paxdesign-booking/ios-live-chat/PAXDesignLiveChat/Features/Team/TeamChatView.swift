@@ -39,6 +39,7 @@ struct TeamChatView: View {
                 customerDisplayName: thread.participantName.isEmpty ? L10n.TeamChatTitle : thread.participantName,
                 onReply: { _ in },
                 onCopy: { UIPasteboard.general.string = $0.content },
+                onDelete: { _ in },
                 onImageTap: { _ in },
                 teamOtherReadSeq: thread.otherReadSeq,
                 teamFailedClientMsgIds: thread.failedClientMsgIds,

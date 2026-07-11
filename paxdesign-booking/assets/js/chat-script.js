@@ -186,6 +186,13 @@
       var msgs = payload.message ? [payload.message] : payload.messages;
       applyIncomingMessages(msgs);
     }
+    if (data.type === 'link_scan_updated' && payload.message) {
+      updateCustomerLinkScanBadge(payload.message.id, payload.message);
+      refreshMessageScanState(payload.message);
+    }
+    if (data.type === 'message_deleted' && payload.message_id) {
+      animateCustomerMessageDeletion(payload.message_id, payload.tombstone || 'This message was deleted by an employee.');
+    }
     if (data.type === 'typing') {
       if (payload.active && payload.who === 'admin' && chatHandler === 'admin') {
         if (!adminTypingEl) showAdminTypingIndicator();
@@ -2115,43 +2122,62 @@
     return urls;
   }
 
-  function clientScanUrl(url) {
-    var lower = String(url || '').toLowerCase();
-    if (!lower) return 'none';
-    if (/^(javascript|data|file|vbscript|blob):/i.test(lower)) return 'dangerous';
-    var hostMatch = lower.match(/^https?:\/\/([^/?#]+)/i);
-    if (!hostMatch || !hostMatch[1]) return 'dangerous';
-    var host = hostMatch[1];
-    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return 'suspicious';
-    if (host.indexOf('xn--') !== -1) return 'suspicious';
-    var tldMatch = host.match(/\.([a-z0-9-]{2,24})$/i);
-    var suspiciousTlds = ['tk', 'ml', 'ga', 'cf', 'gq', 'zip', 'mov', 'top', 'xyz', 'click', 'loan'];
-    if (tldMatch && suspiciousTlds.indexOf(tldMatch[1]) !== -1) return 'suspicious';
-    if ((host.match(/\./g) || []).length >= 4) return 'suspicious';
-    if (lower.length > 300) return 'suspicious';
-    return 'safe';
-  }
-
-  function worstClientScanStatus(urls) {
-    var worst = 'safe';
-    urls.forEach(function (url) {
-      var status = clientScanUrl(url);
-      if (status === 'dangerous') worst = 'dangerous';
-      else if (status === 'suspicious' && worst !== 'dangerous') worst = 'suspicious';
-    });
-    return worst;
-  }
-
-  function customerLinkScanLabel(status, phase) {
+  function customerLinkScanLabel(status) {
     var isEn = document.documentElement.lang && document.documentElement.lang.indexOf('en') === 0;
     if (status === 'checking') {
-      if (phase === 1) return isEn ? 'Analyzing security…' : 'Sicherheit wird analysiert …';
-      return isEn ? 'Scanning your link…' : 'Ihr Link wird geprüft …';
+      return isEn ? 'Scanning...' : 'Wird geprüft …';
     }
-    if (status === 'safe') return isEn ? 'Your link appears to be safe.' : 'Ihr Link scheint sicher zu sein.';
-    if (status === 'suspicious') return isEn ? 'Your link may be suspicious.' : 'Ihr Link könnte verdächtig sein.';
-    if (status === 'dangerous') return isEn ? 'Your link has been flagged as potentially dangerous.' : 'Ihr Link wurde als potenziell gefährlich eingestuft.';
+    if (status === 'safe') return isEn ? 'Safe Link' : 'Sicherer Link';
+    if (status === 'suspicious') return isEn ? 'Suspicious Link' : 'Verdächtiger Link';
+    if (status === 'dangerous') return isEn ? 'Dangerous Link' : 'Gefährlicher Link';
+    if (status === 'failed' || status === 'timeout' || status === 'incomplete') {
+      return isEn ? 'Scan not completed.' : 'Scan nicht abgeschlossen.';
+    }
     return '';
+  }
+
+  function isFinalScanStatus(status) {
+    return status === 'safe' || status === 'suspicious' || status === 'dangerous'
+      || status === 'failed' || status === 'timeout' || status === 'incomplete';
+  }
+
+  function refreshMessageScanState(msg) {
+    if (!msg || !msg.id) return;
+    var msgEl = threadEl.querySelector('[data-msg-id="' + msg.id + '"]');
+    if (!msgEl) return;
+    if (msg.link_scan_status === 'dangerous') {
+      msgEl.classList.add('paxdesign-booking-chat-message--dangerous-link');
+      var bubble = msgEl.querySelector('.paxdesign-booking-chat-message-bubble');
+      if (bubble) {
+        bubble.querySelectorAll('a').forEach(function (anchor) {
+          anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            showDangerousLinkWarning();
+          });
+        });
+      }
+    }
+  }
+
+  function showDangerousLinkWarning() {
+    var isEn = document.documentElement.lang && document.documentElement.lang.indexOf('en') === 0;
+    showError(isEn
+      ? 'This link was flagged as potentially dangerous and cannot be opened.'
+      : 'Dieser Link wurde als potenziell gefährlich eingestuft und kann nicht geöffnet werden.');
+  }
+
+  function animateCustomerMessageDeletion(messageId, tombstone) {
+    var msgEl = threadEl.querySelector('[data-msg-id="' + messageId + '"]');
+    if (!msgEl) return;
+    msgEl.classList.add('paxdesign-booking-chat-message--deleting');
+    window.setTimeout(function () {
+      if (msgEl.parentNode) msgEl.parentNode.removeChild(msgEl);
+      delete domMsgIds[messageId];
+      renderMessageDom('system', tombstone, 'deleted-' + messageId, { skipPush: true });
+      messages = messages.filter(function (m) { return String(m.id) !== String(messageId); });
+      saveSessionSnapshot();
+    }, 360);
   }
 
   function linkScanShieldSvg(status) {
@@ -2192,8 +2218,12 @@
     var status = serverMsg && serverMsg.link_scan_status ? serverMsg.link_scan_status : '';
     var content = serverMsg && serverMsg.content ? serverMsg.content : '';
     var urls = extractUrlsFromText(content);
-    if (!status && urls.length) status = worstClientScanStatus(urls);
+    if (!status && urls.length) status = 'checking';
     if (!status) return;
+    msgEl.classList.remove('paxdesign-booking-chat-message--dangerous-link');
+    if (status === 'dangerous') {
+      msgEl.classList.add('paxdesign-booking-chat-message--dangerous-link');
+    }
     var existing = bubble.querySelector('.paxdesign-booking-chat-link-scan');
     var html = buildCustomerLinkScanHtml({ link_scan_status: status, content: content });
     if (existing) {
@@ -2201,23 +2231,7 @@
     } else if (html) {
       bubble.insertAdjacentHTML('beforeend', html);
     }
-  }
-
-  function resolvePendingCustomerLinkScan(msgId, content, serverStatus) {
-    var urls = extractUrlsFromText(content);
-    if (!urls.length) return;
-    if (serverStatus) {
-      updateCustomerLinkScanBadge(msgId, { link_scan_status: serverStatus, content: content });
-      return;
-    }
-    var msgEl = threadEl.querySelector('[data-msg-id="' + msgId + '"]');
-    if (!msgEl) return;
-    var badge = msgEl.querySelector('.paxdesign-booking-chat-link-scan--checking');
-    if (!badge) return;
-    window.setTimeout(function () {
-      var status = worstClientScanStatus(urls);
-      updateCustomerLinkScanBadge(msgId, { link_scan_status: status, content: content });
-    }, 520);
+    refreshMessageScanState({ id: msgId, link_scan_status: status, content: content });
   }
 
   function buildBubbleInnerHtml(role, content, opts) {
@@ -2284,8 +2298,8 @@
     }
     threadEl.appendChild(msg);
     scrollToBottom();
-    if (role === 'user' && (opts.link_scan_status === 'checking' || extractUrlsFromText(content).length)) {
-      resolvePendingCustomerLinkScan(msgId, content, opts.link_scan_status && opts.link_scan_status !== 'checking' ? opts.link_scan_status : null);
+    if (role === 'user' && opts.link_scan_status) {
+      refreshMessageScanState({ id: msgId, link_scan_status: opts.link_scan_status, content: content });
     }
     if (!opts.skipPush && msgId) saveSessionSnapshot();
     return { bubble: bubble, messageEl: msg };

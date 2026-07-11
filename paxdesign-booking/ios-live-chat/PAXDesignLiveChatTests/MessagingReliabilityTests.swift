@@ -117,6 +117,27 @@ final class MessagingReliabilityTests: XCTestCase {
         XCTAssertEqual(pollSeq, 4, "Poll cursor must stay behind server seq until message 5 is local")
     }
 
+    func testLinkScanStatusLabelsMatchProductionContract() {
+        XCTAssertEqual(LinkScanStatus(raw: "checking").label, L10n.ChatLinkScanChecking)
+        XCTAssertEqual(LinkScanStatus(raw: "safe").label, L10n.ChatLinkScanSafe)
+        XCTAssertEqual(LinkScanStatus(raw: "suspicious").label, L10n.ChatLinkScanSuspicious)
+        XCTAssertEqual(LinkScanStatus(raw: "dangerous").label, L10n.ChatLinkScanDangerous)
+        XCTAssertEqual(LinkScanStatus(raw: "failed").label, L10n.ChatLinkScanIncomplete)
+        XCTAssertEqual(LinkScanStatus(raw: "timeout").label, L10n.ChatLinkScanIncomplete)
+        XCTAssertEqual(LinkScanStatus(raw: "incomplete").label, L10n.ChatLinkScanIncomplete)
+    }
+
+    func testLinkScanSupportDefaultsToCheckingUntilServerResult() {
+        let message = LiveMessage(id: 3, role: "user", content: "See https://example.com")
+        XCTAssertEqual(LinkScanSupport.resolvedStatus(for: message), .checking)
+        XCTAssertFalse(LinkScanSupport.shouldBlockLinks(in: message))
+    }
+
+    func testLinkScanSupportBlocksDangerousLinksOnlyAfterServerVerdict() {
+        let dangerous = LiveMessage(id: 4, role: "user", content: "bad", linkScanStatus: "dangerous")
+        XCTAssertTrue(LinkScanSupport.shouldBlockLinks(in: dangerous))
+    }
+
     func testStreamPayloadDecodesInlineWebsiteMessage() {
         let payload: [String: Any] = [
             "session_id": "pax_test",

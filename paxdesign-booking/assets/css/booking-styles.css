@@ -3518,3 +3518,25 @@ html.paxdesign-scroll-lock body {
   border-color: rgba(239, 68, 68, 0.28);
   color: #b91c1c;
 }
+
+#paxdesign-booking-root .paxdesign-booking-chat-link-scan--failed,
+#paxdesign-booking-root .paxdesign-booking-chat-link-scan--timeout,
+#paxdesign-booking-root .paxdesign-booking-chat-link-scan--incomplete {
+  background: rgba(100, 116, 139, 0.12);
+  border-color: rgba(100, 116, 139, 0.28);
+  color: #475569;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-message--deleting {
+  opacity: 0;
+  transform: scale(0.96) translateY(6px);
+  filter: blur(2px);
+  transition: opacity 0.36s ease, transform 0.36s ease, filter 0.36s ease;
+  pointer-events: none;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-message--dangerous-link .paxdesign-booking-chat-message-bubble a {
+  pointer-events: none;
+  text-decoration: line-through;
+  opacity: 0.72;
+}

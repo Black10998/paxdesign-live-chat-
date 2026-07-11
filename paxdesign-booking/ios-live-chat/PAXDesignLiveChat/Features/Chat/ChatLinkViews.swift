@@ -5,9 +5,6 @@ import SwiftUI
 struct LinkScanBadgeView: View {
     let message: LiveMessage
     @State private var displayedStatus: LinkScanStatus
-    @State private var scanPhase = 0
-    @State private var progress: CGFloat = 0
-    @State private var glow = false
 
     init(message: LiveMessage) {
         self.message = message
@@ -17,27 +14,21 @@ struct LinkScanBadgeView: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            LinkScanShieldAnimationView(status: displayedStatus, glow: glow)
+            LinkScanShieldAnimationView(status: displayedStatus, glow: displayedStatus == .checking)
                 .frame(width: 40, height: 40)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(scanLabel)
+                Text(displayedStatus.label)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(tint)
                     .contentTransition(.numericText())
-                    .animation(.easeInOut(duration: 0.35), value: scanLabel)
+                    .animation(.easeInOut(duration: 0.35), value: displayedStatus.label)
 
                 if displayedStatus == .checking {
-                    GeometryReader { proxy in
-                        ZStack(alignment: .leading) {
-                            Capsule()
-                                .fill(tint.opacity(0.14))
-                            Capsule()
-                                .fill(tint.opacity(0.72))
-                                .frame(width: max(18, proxy.size.width * progress))
-                        }
-                    }
-                    .frame(height: 4)
+                    ProgressView()
+                        .progressViewStyle(.linear)
+                        .tint(tint)
+                        .frame(height: 4)
                 }
             }
         }
@@ -50,26 +41,16 @@ struct LinkScanBadgeView: View {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .stroke(border, lineWidth: 1)
                 )
-                .shadow(color: tint.opacity(displayedStatus == .checking ? 0.18 : 0.08), radius: glow ? 10 : 4)
         )
-        .onAppear {
-            if displayedStatus == .checking {
-                startCheckingAnimation()
-                resolveCheckingStatus()
+        .onChange(of: message.linkScanStatus) { _, newValue in
+            let resolved = LinkScanStatus(raw: newValue)
+            if resolved != .none {
+                withAnimation(.spring(response: 0.45, dampingFraction: 0.82)) {
+                    displayedStatus = resolved
+                }
             }
         }
         .animation(.spring(response: 0.45, dampingFraction: 0.82), value: displayedStatus)
-    }
-
-    private var scanLabel: String {
-        switch displayedStatus {
-        case .checking:
-            return scanPhase == 0 ? L10n.ChatLinkScanChecking : L10n.ChatLinkScanAnalyzing
-        case .safe: return L10n.ChatLinkScanSafe
-        case .suspicious: return L10n.ChatLinkScanSuspicious
-        case .dangerous: return L10n.ChatLinkScanDangerous
-        case .none: return ""
-        }
     }
 
     private var tint: Color {
@@ -78,6 +59,7 @@ struct LinkScanBadgeView: View {
         case .safe: return Color(red: 0.09, green: 0.50, blue: 0.24)
         case .suspicious: return Color(red: 0.71, green: 0.33, blue: 0.04)
         case .dangerous: return PAXTheme.danger
+        case .failed, .timeout, .incomplete: return Color(red: 0.45, green: 0.48, blue: 0.56)
         case .none: return PAXTheme.textSecondary
         }
     }
@@ -88,36 +70,12 @@ struct LinkScanBadgeView: View {
         case .safe: return Color(red: 0.13, green: 0.77, blue: 0.37, opacity: 0.12)
         case .suspicious: return Color(red: 0.96, green: 0.62, blue: 0.04, opacity: 0.14)
         case .dangerous: return PAXTheme.danger.opacity(0.12)
+        case .failed, .timeout, .incomplete: return Color(red: 0.45, green: 0.48, blue: 0.56, opacity: 0.12)
         case .none: return PAXTheme.surface.opacity(0.72)
         }
     }
 
     private var border: Color { tint.opacity(0.28) }
-
-    private func startCheckingAnimation() {
-        glow = true
-        withAnimation(.easeInOut(duration: 1.2).repeatForever(autoreverses: true)) {
-            progress = 0.92
-        }
-        Task { @MainActor in
-            while displayedStatus == .checking {
-                try? await Task.sleep(nanoseconds: 1_400_000_000)
-                guard displayedStatus == .checking else { break }
-                scanPhase = scanPhase == 0 ? 1 : 0
-            }
-        }
-    }
-
-    private func resolveCheckingStatus() {
-        guard displayedStatus == .checking else { return }
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 520_000_000)
-            let resolved = LinkScanSupport.resolvedStatus(for: message)
-            displayedStatus = resolved == .none ? .safe : resolved
-            glow = false
-            progress = 1
-        }
-    }
 }
 
 private struct LinkScanShieldAnimationView: View {
@@ -166,6 +124,10 @@ private struct LinkScanShieldAnimationView: View {
             Image(systemName: "xmark")
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(.white)
+        case .failed, .timeout, .incomplete:
+            Image(systemName: "questionmark")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.white)
         case .checking:
             Circle()
                 .trim(from: 0.08, to: 0.72)
@@ -183,6 +145,7 @@ private struct LinkScanShieldAnimationView: View {
         case .safe: return Color(red: 0.13, green: 0.72, blue: 0.38)
         case .suspicious: return Color(red: 0.92, green: 0.58, blue: 0.08)
         case .dangerous: return PAXTheme.danger
+        case .failed, .timeout, .incomplete: return Color(red: 0.45, green: 0.48, blue: 0.56)
         case .none: return PAXTheme.textSecondary
         }
     }

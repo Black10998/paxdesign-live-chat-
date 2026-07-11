@@ -134,6 +134,10 @@
           pollMessages();
         }
         loadList();
+      } else if (data.type === 'link_scan_updated' && sid === selectedSession && payload.message) {
+        updateAdminLinkScanBadge(payload.message);
+      } else if (data.type === 'message_deleted' && sid === selectedSession && payload.message_id) {
+        animateAdminMessageDeletion(payload.message_id, payload.tombstone || 'This message was deleted by an employee.');
       } else if (data.type === 'session_update' || data.type === 'conversation_deleted') {
         loadList();
       }
@@ -1545,31 +1549,15 @@
       return urls;
     }
 
-    function clientScanUrl(url) {
-      var lower = String(url || '').toLowerCase();
-      if (!lower) return 'none';
-      if (/^(javascript|data|file|vbscript|blob):/i.test(lower)) return 'dangerous';
-      var hostMatch = lower.match(/^https?:\/\/([^/?#]+)/i);
-      if (!hostMatch || !hostMatch[1]) return 'dangerous';
-      var host = hostMatch[1];
-      if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return 'suspicious';
-      if (host.indexOf('xn--') !== -1) return 'suspicious';
-      var tldMatch = host.match(/\.([a-z0-9-]{2,24})$/i);
-      var suspiciousTlds = ['tk', 'ml', 'ga', 'cf', 'gq', 'zip', 'mov', 'top', 'xyz', 'click', 'loan'];
-      if (tldMatch && suspiciousTlds.indexOf(tldMatch[1]) !== -1) return 'suspicious';
-      if ((host.match(/\./g) || []).length >= 4) return 'suspicious';
-      if (lower.length > 300) return 'suspicious';
-      return 'safe';
-    }
-
-    function worstClientScanStatus(urls) {
-      var worst = 'safe';
-      urls.forEach(function (url) {
-        var status = clientScanUrl(url);
-        if (status === 'dangerous') worst = 'dangerous';
-        else if (status === 'suspicious' && worst !== 'dangerous') worst = 'suspicious';
-      });
-      return worst;
+    function linkScanBadgeParts(status) {
+      if (status === 'checking') return { icon: '⟳', label: 'Scanning...' };
+      if (status === 'safe') return { icon: '✅', label: 'Safe Link' };
+      if (status === 'suspicious') return { icon: '⚠', label: 'Suspicious Link' };
+      if (status === 'dangerous') return { icon: '❌', label: 'Dangerous Link' };
+      if (status === 'failed' || status === 'timeout' || status === 'incomplete') {
+        return { icon: '…', label: 'Scan not completed.' };
+      }
+      return { icon: '', label: '' };
     }
 
     function linkCardDisplayLabel(label) {
@@ -1590,18 +1578,6 @@
         '</a>';
     }
 
-    function linkScanBadgeParts(status) {
-      if (status === 'checking') return { icon: '⟳', label: 'Checking link…' };
-      if (status === 'safe') return { icon: '✅', label: 'Safe Link' };
-      if (status === 'suspicious') return { icon: '⚠', label: 'Suspicious Link' };
-      if (status === 'dangerous') return { icon: '❌', label: 'Dangerous Link' };
-      return { icon: '', label: '' };
-    }
-
-    function linkScanBadgeLabel(status) {
-      return linkScanBadgeParts(status).label;
-    }
-
     function buildLinkScanBadgeHtml(msg) {
       if (!msg || msg.role !== 'user') return '';
       var status = msg.link_scan_status || '';
@@ -1615,24 +1591,54 @@
         '</div>';
     }
 
-    function resolvePendingLinkScan(msg) {
-      if (!msg || msg.role !== 'user' || msg.link_scan_status) return;
-      var urls = extractUrlsFromText(msg.content);
-      if (!urls.length) return;
+    function updateAdminLinkScanBadge(msg) {
+      if (!msg || !msg.id) return;
+      var $msg = $messages.find('[data-msg-id="' + msg.id + '"]');
+      if (!$msg.length) return;
+      var $bubble = $msg.find('.pax-live-dashboard__msg-bubble');
+      if (!$bubble.length) return;
+      sessionMessageMap[msg.id] = Object.assign({}, sessionMessageMap[msg.id] || {}, msg);
+      var $existing = $bubble.find('.pax-live-dashboard__link-scan');
+      var html = buildLinkScanBadgeHtml(msg);
+      if ($existing.length) {
+        $existing.replaceWith(html);
+      } else if (html) {
+        $bubble.append(html);
+      }
+    }
+
+    function animateAdminMessageDeletion(messageId, tombstone) {
+      var $msg = $messages.find('[data-msg-id="' + messageId + '"]');
+      if (!$msg.length) return;
+      $msg.addClass('pax-live-dashboard__msg--deleting');
       window.setTimeout(function () {
-        var $msg = $messages.find('[data-msg-id="' + msg.id + '"]');
-        if (!$msg.length) return;
-        var $badge = $msg.find('.pax-live-dashboard__link-scan--checking');
-        if (!$badge.length) return;
-        var status = worstClientScanStatus(urls);
-        var parts = linkScanBadgeParts(status);
-        $badge
-          .removeClass('pax-live-dashboard__link-scan--checking')
-          .addClass('pax-live-dashboard__link-scan--' + status)
-          .attr('data-scan-status', status);
-        $badge.find('.pax-live-dashboard__link-scan-icon').text(parts.icon);
-        $badge.find('.pax-live-dashboard__link-scan-label').text(parts.label);
-      }, 420);
+        $msg.remove();
+        delete domMsgIds[messageId];
+        delete sessionMessageMap[messageId];
+        appendMessageDom({
+          id: 'deleted-' + messageId,
+          role: 'system',
+          content: tombstone
+        });
+      }, 360);
+    }
+
+    function deleteAdminMessage(messageId) {
+      if (!selectedSession || !messageId || currentHandler !== 'admin') return;
+      if (!window.confirm('Diese Nachricht endgültig löschen? Sie wird für alle Teilnehmer entfernt.')) return;
+      ajax('paxdesign_chat_live_admin_delete_message', {
+        session_id: selectedSession,
+        message_id: messageId
+      }).done(function (res) {
+        if (!res.success) {
+          alert(res.data && res.data.message ? res.data.message : 'Nachricht konnte nicht gelöscht werden.');
+          return;
+        }
+        animateAdminMessageDeletion(messageId, (res.data && res.data.tombstone) || 'This message was deleted by an employee.');
+        loadList();
+      }).fail(function () {
+        alert('Nachricht konnte nicht gelöscht werden.');
+      });
     }
 
     function messageBubbleHtml(msg) {
@@ -1790,6 +1796,9 @@
       if (role === 'user') {
         html += '<button type="button" class="pax-live-dashboard__reply-btn" data-reply-to="' + msg.id + '">↩ Antworten</button>';
       }
+      if (currentHandler === 'admin' && !isPending && typeof msg.id === 'number' && msg.id > 0) {
+        html += '<button type="button" class="pax-live-dashboard__delete-btn" data-delete-msg="' + msg.id + '" title="Nachricht löschen">🗑</button>';
+      }
       html += '</div>';
       if (msg.reply_to) html += quoteHtml(msg.reply_to);
       html += '<div class="pax-live-dashboard__msg-bubble">' + messageBubbleHtml(msg) + '</div>';
@@ -1805,7 +1814,6 @@
       }
       html += '</div>';
       $messages.append(html);
-      resolvePendingLinkScan(msg);
     }
 
     function renderQuickLinksList() {
@@ -2175,6 +2183,11 @@
 
     $messages.on('click', '.pax-live-dashboard__reply-btn', function () {
       setReplyTo(parseInt($(this).attr('data-reply-to'), 10));
+    });
+
+    $messages.on('click', '.pax-live-dashboard__delete-btn', function () {
+      var msgId = parseInt($(this).attr('data-delete-msg'), 10);
+      if (msgId > 0) deleteAdminMessage(msgId);
     });
 
     $replyClear.on('click', clearReply);

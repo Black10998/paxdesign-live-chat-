@@ -13,6 +13,7 @@ struct ChatMessageListView: View {
     var customerDisplayName = L10n.ChatCustomer
     let onReply: (LiveMessage) -> Void
     let onCopy: (LiveMessage) -> Void
+    let onDelete: (LiveMessage) -> Void
     let onImageTap: (URL) -> Void
     var teamOtherReadSeq: Int = 0
     var teamFailedClientMsgIds: Set<String> = []
@@ -48,6 +49,7 @@ struct ChatMessageListView: View {
                             customerDisplayName: customerDisplayName,
                             onReply: { onReply(row.message) },
                             onCopy: { onCopy(row.message) },
+                            onDelete: { onDelete(row.message) },
                             onImageTap: onImageTap,
                             teamOtherReadSeq: teamOtherReadSeq,
                             teamFailedClientMsgIds: teamFailedClientMsgIds,
@@ -112,6 +114,7 @@ private struct ChatMessageRow: View {
     let customerDisplayName: String
     let onReply: () -> Void
     let onCopy: () -> Void
+    let onDelete: () -> Void
     let onImageTap: (URL) -> Void
     var teamOtherReadSeq: Int = 0
     var teamFailedClientMsgIds: Set<String> = []
@@ -162,6 +165,7 @@ private struct ChatMessageRow: View {
                     message: row.message,
                     quotedMessage: row.quotedMessage,
                     canReply: handler == "admin" && canReply && row.message.role != "system",
+                    canDelete: handler == "admin" && canReply && row.message.role != "system" && row.message.id > 0,
                     showTimestamp: MessageTimeFormatter.shouldShowTimestamp(current: row.message, next: row.next),
                     senderLabel: showSenderLabel ? senderLabel(for: row.message) : nil,
                     agentDisplayName: agentDisplayName,
@@ -169,6 +173,7 @@ private struct ChatMessageRow: View {
                     siteBaseURL: siteBaseURL,
                     onReply: onReply,
                     onCopy: onCopy,
+                    onDelete: onDelete,
                     onImageTap: { onImageTap($0) }
                 )
                 if handler == "team", row.message.role == "admin" {

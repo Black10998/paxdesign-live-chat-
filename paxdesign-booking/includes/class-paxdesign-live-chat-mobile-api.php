@@ -209,8 +209,16 @@ class PAXdesign_Live_Chat_Mobile_API {
         ));
 
         register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions/(?P<id>[a-zA-Z0-9_\-]+)/messages', array(
-            'methods'             => WP_REST_Server::CREATABLE,
-            'callback'            => array(__CLASS__, 'route_send_message'),
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array(__CLASS__, 'route_send_message'),
+                'permission_callback' => $auth,
+            ),
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions/(?P<id>[a-zA-Z0-9_\-]+)/messages/(?P<message_id>[0-9]+)', array(
+            'methods'             => WP_REST_Server::DELETABLE,
+            'callback'            => array(__CLASS__, 'route_delete_message'),
             'permission_callback' => $auth,
         ));
 
@@ -813,6 +821,18 @@ class PAXdesign_Live_Chat_Mobile_API {
         $reply_to = isset($params['reply_to']) ? $params['reply_to'] : $request->get_param('reply_to');
         $client_id = isset($params['client_msg_id']) ? $params['client_msg_id'] : $request->get_param('client_msg_id');
         return self::respond(self::live()->admin_send_message($request['id'], $message, $reply_to, $client_id));
+    }
+
+    public static function route_delete_message(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_REPLY_CHATS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
+        $message_id = absint($request['message_id']);
+        if ($message_id <= 0) {
+            return new WP_Error('invalid_message', 'Ungültige Nachricht.', array('status' => 400));
+        }
+        return self::respond(self::live()->admin_delete_message($request['id'], $message_id));
     }
 
     public static function route_send_image(WP_REST_Request $request) {

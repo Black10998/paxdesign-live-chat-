@@ -294,6 +294,13 @@ final class LiveChatAPI {
         return response.message
     }
 
+    func deleteMessage(_ sessionId: String, messageId: Int) async throws {
+        guard let url = liveAdminURL(path: "sessions/\(sessionId)/messages/\(messageId)") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        _ = try await perform(authRequest(url: url, method: "DELETE"), endpoint: "delete-message", as: EmptyResponse.self)
+    }
+
     func sendImage(
         _ sessionId: String,
         imageData: Data,

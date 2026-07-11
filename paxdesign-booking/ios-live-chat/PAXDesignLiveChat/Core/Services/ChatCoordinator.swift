@@ -726,8 +726,62 @@ final class ChatThreadModel: ObservableObject {
                 handler = incomingHandler
             }
             await poll(auth: auth)
+        case "link_scan_updated":
+            if let updated = StreamPayload.messages(from: event.payload).first {
+                applyLinkScanUpdate(updated)
+            } else if let raw = event.payload["message"] as? [String: Any],
+                      let data = try? JSONSerialization.data(withJSONObject: raw),
+                      let updated = try? JSONDecoder().decode(LiveMessage.self, from: data) {
+                applyLinkScanUpdate(updated)
+            }
+        case "message_deleted":
+            let messageId = StreamPayload.int(event.payload["message_id"])
+            let tombstone = StreamPayload.string(event.payload["tombstone"])
+            if messageId > 0 {
+                applyMessageDeleted(messageId: messageId, tombstone: tombstone.isEmpty ? L10n.ChatMessageDeletedByEmployee : tombstone)
+            }
         default:
             break
+        }
+    }
+
+    private func applyLinkScanUpdate(_ updated: LiveMessage) {
+        guard updated.id > 0 else { return }
+        if let index = messages.firstIndex(where: { $0.id == updated.id }) {
+            messages[index] = updated
+            messagesRevision &+= 1
+        } else {
+            insertIncomingMessages([updated], source: "link-scan-updated")
+        }
+    }
+
+    private func applyMessageDeleted(messageId: Int, tombstone: String) {
+        guard messageId > 0 else { return }
+        withAnimation(.easeOut(duration: 0.35)) {
+            messages.removeAll { $0.id == messageId }
+            let placeholder = LiveMessage(
+                id: messageId,
+                role: "system",
+                content: tombstone,
+                ts: Int(Date().timeIntervalSince1970)
+            )
+            if let insertIndex = messages.firstIndex(where: { $0.id > messageId }) {
+                messages.insert(placeholder, at: insertIndex)
+            } else {
+                messages.append(placeholder)
+            }
+            knownMessageIds.remove(messageId)
+            messagesRevision &+= 1
+        }
+    }
+
+    func deleteMessage(_ messageId: Int, auth: AuthStore) async {
+        guard messageId > 0, let api = auth.api else { return }
+        do {
+            try await api.deleteMessage(sessionId, messageId: messageId)
+            applyMessageDeleted(messageId: messageId, tombstone: L10n.ChatMessageDeletedByEmployee)
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 

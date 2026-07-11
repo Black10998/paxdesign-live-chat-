@@ -3310,3 +3310,42 @@ body.pax-live-agent-profile-open {
   border-color: rgba(239, 68, 68, 0.28);
   color: #b91c1c;
 }
+
+.pax-live-dashboard__link-scan--failed,
+.pax-live-dashboard__link-scan--timeout,
+.pax-live-dashboard__link-scan--incomplete {
+  background: rgba(100, 116, 139, 0.12);
+  border-color: rgba(100, 116, 139, 0.28);
+  color: #475569;
+}
+
+.pax-live-dashboard__delete-btn {
+  margin-left: 6px;
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.82rem;
+  padding: 2px 4px;
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.pax-live-dashboard__msg:hover .pax-live-dashboard__delete-btn,
+.pax-live-dashboard__delete-btn:focus-visible {
+  opacity: 1;
+}
+
+.pax-live-dashboard__delete-btn:hover {
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.pax-live-dashboard__msg--deleting {
+  opacity: 0;
+  transform: scale(0.96) translateY(6px);
+  filter: blur(2px);
+  transition: opacity 0.36s ease, transform 0.36s ease, filter 0.36s ease;
+  pointer-events: none;
+}

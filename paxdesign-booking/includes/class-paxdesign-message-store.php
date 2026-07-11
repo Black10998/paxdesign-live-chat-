@@ -495,6 +495,197 @@ class PAXdesign_Message_Store {
         return self::get_by_client_id(sanitize_text_field($session_id), $client_id);
     }
 
+    /**
+     * @return array<string, mixed>|null
+     */
+    public static function get_message($session_id, $msg_seq) {
+        global $wpdb;
+        self::maybe_upgrade();
+        $session_id = sanitize_text_field((string) $session_id);
+        $msg_seq      = absint($msg_seq);
+        if ($session_id === '' || $msg_seq <= 0) {
+            return null;
+        }
+        $table = self::messages_table();
+        $row = $wpdb->get_row($wpdb->prepare(
+            "SELECT msg_seq, client_msg_id, role, content, meta_json, created_at
+             FROM $table WHERE session_id = %s AND msg_seq = %d LIMIT 1",
+            $session_id,
+            $msg_seq
+        ));
+        return $row ? self::format_row($row) : null;
+    }
+
+    /**
+     * @param array<string, mixed> $meta_updates
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function update_message_meta($session_id, $msg_seq, array $meta_updates, $channel = 'customer') {
+        global $wpdb;
+        self::maybe_upgrade();
+        $session_id = sanitize_text_field((string) $session_id);
+        $msg_seq      = absint($msg_seq);
+        if ($session_id === '' || $msg_seq <= 0) {
+            return new WP_Error('pax_message_invalid', 'Invalid message.', array('status' => 400));
+        }
+
+        $table = self::messages_table();
+        $row = $wpdb->get_row($wpdb->prepare(
+            "SELECT msg_seq, client_msg_id, role, content, meta_json, created_at
+             FROM $table WHERE session_id = %s AND msg_seq = %d LIMIT 1",
+            $session_id,
+            $msg_seq
+        ));
+        if (!$row) {
+            return new WP_Error('pax_message_not_found', 'Message not found.', array('status' => 404));
+        }
+
+        $meta = json_decode((string) $row->meta_json, true);
+        if (!is_array($meta)) {
+            $meta = array();
+        }
+        $clean = self::sanitize_meta($meta_updates);
+        foreach ($clean as $key => $value) {
+            $meta[$key] = $value;
+        }
+
+        $updated = $wpdb->update(
+            $table,
+            array('meta_json' => wp_json_encode($meta)),
+            array(
+                'session_id' => $session_id,
+                'msg_seq'    => $msg_seq,
+            ),
+            array('%s'),
+            array('%s', '%d')
+        );
+        if ($updated === false) {
+            return new WP_Error('pax_message_update_failed', 'Message could not be updated.', array('status' => 500));
+        }
+
+        $message = self::format_row((object) array(
+            'msg_seq'       => $row->msg_seq,
+            'client_msg_id' => $row->client_msg_id,
+            'role'          => $row->role,
+            'content'       => $row->content,
+            'meta_json'     => wp_json_encode($meta),
+            'created_at'    => $row->created_at,
+        ));
+        self::rebuild_customer_projection($session_id, $channel);
+        return $message;
+    }
+
+    /**
+     * Permanently delete a single customer-chat message and purge related data.
+     *
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function delete_message($session_id, $msg_seq, $deleted_by = 0, $channel = 'customer') {
+        global $wpdb;
+        self::maybe_upgrade();
+        $session_id  = sanitize_text_field((string) $session_id);
+        $msg_seq     = absint($msg_seq);
+        $deleted_by  = absint($deleted_by);
+        if ($session_id === '' || $msg_seq <= 0) {
+            return new WP_Error('pax_message_invalid', 'Invalid message.', array('status' => 400));
+        }
+
+        $message = self::get_message($session_id, $msg_seq);
+        if (!$message) {
+            return new WP_Error('pax_message_not_found', 'Message not found.', array('status' => 404));
+        }
+
+        self::purge_message_assets($message);
+
+        if (class_exists('PAXdesign_Link_Scan_Service')) {
+            PAXdesign_Link_Scan_Service::delete_scan_rows($session_id, $msg_seq);
+        }
+
+        $table = self::messages_table();
+        $deleted = $wpdb->delete(
+            $table,
+            array(
+                'session_id' => $session_id,
+                'msg_seq'    => $msg_seq,
+            ),
+            array('%s', '%d')
+        );
+        if ($deleted === false) {
+            return new WP_Error('pax_message_delete_failed', 'Message could not be deleted.', array('status' => 500));
+        }
+
+        self::rebuild_customer_projection($session_id, $channel);
+
+        $tombstone = __('This message was deleted by an employee.', 'paxdesign-booking');
+        $payload = array(
+            'session_id'  => $session_id,
+            'message_id'  => $msg_seq,
+            'deleted_by'  => $deleted_by,
+            'tombstone'   => $tombstone,
+        );
+        self::emit('session:' . $session_id, 'message_deleted', $payload, $msg_seq);
+        self::emit('inbox:admins', 'message_deleted', $payload, $msg_seq);
+
+        return array(
+            'ok'          => true,
+            'message_id'  => $msg_seq,
+            'tombstone'   => $tombstone,
+            'deleted_by'  => $deleted_by,
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $message
+     */
+    private static function purge_message_assets($message) {
+        $image_url = !empty($message['image_url']) ? (string) $message['image_url'] : '';
+        if ($image_url !== '') {
+            self::delete_uploaded_file($image_url);
+        }
+        if (!empty($message['link_url'])) {
+            // Link card metadata only — no remote fetch cache retained.
+        }
+    }
+
+    private static function delete_uploaded_file($url) {
+        $uploads = wp_upload_dir();
+        if (empty($uploads['baseurl']) || empty($uploads['basedir'])) {
+            return;
+        }
+        if (strpos($url, $uploads['baseurl']) !== 0) {
+            return;
+        }
+        $relative = ltrim(substr($url, strlen($uploads['baseurl'])), '/');
+        $path = trailingslashit($uploads['basedir']) . $relative;
+        if (is_file($path)) {
+            @unlink($path);
+        }
+    }
+
+    private static function rebuild_customer_projection($session_id, $channel = 'customer') {
+        if ($channel !== 'customer' || !class_exists('PAXdesign_Chat_Log')) {
+            return;
+        }
+        global $wpdb;
+        $messages = self::fetch_all_rows($session_id);
+        $last = !empty($messages) ? end($messages) : null;
+        $preview = ($last && !empty($last['content'])) ? wp_html_excerpt($last['content'], 120, '…') : '';
+        $seq = $last && isset($last['id']) ? (int) $last['id'] : 0;
+        $wpdb->update(
+            PAXdesign_Chat_Log::table_name(),
+            array(
+                'messages'      => wp_json_encode($messages),
+                'message_seq'   => $seq,
+                'message_count' => count($messages),
+                'last_preview'  => $preview,
+                'updated_at'    => current_time('mysql'),
+            ),
+            array('session_id' => $session_id),
+            array('%s', '%d', '%d', '%s', '%s'),
+            array('%s')
+        );
+    }
+
     private static function migrate_customer_session_if_needed($session_id, $channel, $already_locked = false) {
         if ($channel !== 'customer' || !class_exists('PAXdesign_Chat_Live') || !class_exists('PAXdesign_Chat_Log')) {
             return;
@@ -541,7 +732,8 @@ class PAXdesign_Message_Store {
             'image_url', 'attachment_type', 'reply_to', 'reaction',
             'sender_id', 'sender_name', 'sender_avatar', 'sender_role', 'sender_email',
             'link_url', 'link_label', 'link_icon',
-            'link_scan_status', 'link_scan_urls',
+            'link_scan_status', 'link_scan_urls', 'link_scan_started_at',
+            'link_scan_completed_at', 'link_scan_provider',
         );
         $meta = array();
         foreach ($allowed as $key) {

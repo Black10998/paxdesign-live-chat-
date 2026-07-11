@@ -4,6 +4,7 @@ struct MessageBubbleView: View {
     let message: LiveMessage
     let quotedMessage: LiveMessage?
     let canReply: Bool
+    let canDelete: Bool
     let showTimestamp: Bool
     var senderLabel: String?
     var agentDisplayName = L10n.ChatAgent
@@ -11,6 +12,7 @@ struct MessageBubbleView: View {
     var siteBaseURL: String?
     let onReply: () -> Void
     let onCopy: () -> Void
+    let onDelete: () -> Void
     let onImageTap: (URL) -> Void
 
     var body: some View {
@@ -42,6 +44,13 @@ struct MessageBubbleView: View {
                                 onReply()
                             } label: {
                                 Label(L10n.CommonReply, systemImage: "arrowshape.turn.up.left")
+                            }
+                        }
+                        if canDelete {
+                            Button(role: .destructive) {
+                                onDelete()
+                            } label: {
+                                Label(L10n.ChatDeleteMessage, systemImage: "trash")
                             }
                         }
                     }

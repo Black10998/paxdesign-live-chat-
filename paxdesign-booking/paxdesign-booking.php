@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.107.4
+Version: 3.108.0
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.107.4');
+define('PAXDESIGN_BOOKING_VERSION', '3.108.0');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -49,6 +49,7 @@ require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-icons.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-quick-links.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-link-scanner.php';
+require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-link-scan-service.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-settings-admin.php';
 PAXdesign_Booking_Update_Checker::init();
 PAXdesign_Message_Store::init();
@@ -56,6 +57,7 @@ PAXdesign_Settings_Admin::init();
 PAXdesign_Chat_Log::get_instance();
 PAXdesign_Chat_Live::get_instance();
 PAXdesign_Chat_Quick_Links::init();
+PAXdesign_Link_Scan_Service::init();
 PAXdesign_Live_Chat_Shortcode::init();
 PAXdesign_Live_Chat_PWA::init();
 PAXdesign_APNS::init();
@@ -458,6 +460,7 @@ class PAXdesign_Booking {
     public function maybe_upgrade_database() {
         paxdesign_booking_upgrade_database();
         PAXdesign_Message_Store::maybe_upgrade();
+        PAXdesign_Link_Scan_Service::maybe_upgrade();
         paxdesign_booking_upgrade_live_notify_defaults();
     }
 

@@ -2313,9 +2313,9 @@
     },
     "chat.link_scan.checking": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Scanning link…" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Link wird geprüft …" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "جارٍ فحص الرابط…" } }
+        "en": { "stringUnit": { "state": "translated", "value": "Scanning..." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Wird geprüft …" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "جارٍ الفحص…" } }
       }
     },
     "chat.link_scan.analyzing": {
@@ -2327,23 +2327,58 @@
     },
     "chat.link_scan.safe": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "✅ Safe Link" } },
-        "de": { "stringUnit": { "state": "translated", "value": "✅ Sicherer Link" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "✅ رابط آمن" } }
+        "en": { "stringUnit": { "state": "translated", "value": "Safe Link" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Sicherer Link" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "رابط آمن" } }
       }
     },
     "chat.link_scan.suspicious": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "⚠ Suspicious Link" } },
-        "de": { "stringUnit": { "state": "translated", "value": "⚠ Verdächtiger Link" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "⚠ رابط مشبوه" } }
+        "en": { "stringUnit": { "state": "translated", "value": "Suspicious Link" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Verdächtiger Link" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "رابط مشبوه" } }
       }
     },
     "chat.link_scan.dangerous": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "❌ Dangerous Link" } },
-        "de": { "stringUnit": { "state": "translated", "value": "❌ Gefährlicher Link" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "❌ رابط خطير" } }
+        "en": { "stringUnit": { "state": "translated", "value": "Dangerous Link" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Gefährlicher Link" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "رابط خطير" } }
+      }
+    },
+    "chat.link_scan.incomplete": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Scan not completed." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Scan nicht abgeschlossen." } },
+        "ar": { "stringUnit": { "state": "translated", "value": "لم يكتمل الفحص." } }
+      }
+    },
+    "chat.message_deleted_by_employee": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "This message was deleted by an employee." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Diese Nachricht wurde von einem Mitarbeiter gelöscht." } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تم حذف هذه الرسالة بواسطة موظف." } }
+      }
+    },
+    "chat.delete_message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Delete Message" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Nachricht löschen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "حذف الرسالة" } }
+      }
+    },
+    "chat.delete_message_confirm": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "This message will be permanently removed for everyone in the conversation." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Diese Nachricht wird für alle Teilnehmer endgültig entfernt." } },
+        "ar": { "stringUnit": { "state": "translated", "value": "سيتم حذف هذه الرسالة نهائياً لجميع المشاركين في المحادثة." } }
+      }
+    },
+    "chat.dangerous_link_warning": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "This link was flagged as potentially dangerous and cannot be opened." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Dieser Link wurde als potenziell gefährlich eingestuft und kann nicht geöffnet werden." } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تم تصنيف هذا الرابط على أنه خطير ولا يمكن فتحه." } }
       }
     },
     "chat.quick_links.title": {

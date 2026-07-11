@@ -21,6 +21,8 @@ struct ChatView: View {
     @State private var showCamera = false
     @State private var showImagePreview = false
     @State private var showQuickLinksSheet = false
+    @State private var pendingDeleteMessage: LiveMessage?
+    @State private var showDeleteConfirm = false
 
     init(sessionId: String) {
         _thread = ObservedObject(wrappedValue: ChatThreadRegistry.shared.bookingThread(sessionId: sessionId))
@@ -53,6 +55,10 @@ struct ChatView: View {
                 customerDisplayName: thread.customerName,
                 onReply: { thread.setReply(to: $0) },
                 onCopy: copyMessage,
+                onDelete: { message in
+                    pendingDeleteMessage = message
+                    showDeleteConfirm = true
+                },
                 onImageTap: { imageViewer = ImageViewerItem(url: $0) },
                 siteBaseURL: auth.profile?.siteUrl ?? auth.siteURLString
             )
@@ -136,6 +142,18 @@ struct ChatView: View {
                     Task { await thread.sendQuickLink(link, auth: auth) }
                 }
             )
+        }
+        .alert(L10n.ChatDeleteMessage, isPresented: $showDeleteConfirm) {
+            Button(L10n.CommonCancel, role: .cancel) {
+                pendingDeleteMessage = nil
+            }
+            Button(L10n.CommonDelete, role: .destructive) {
+                guard let message = pendingDeleteMessage else { return }
+                pendingDeleteMessage = nil
+                Task { await thread.deleteMessage(message.id, auth: auth) }
+            }
+        } message: {
+            Text(L10n.ChatDeleteMessageConfirm)
         }
     }
 

@@ -265,6 +265,7 @@ class PAXdesign_Chat_Live {
         add_action('wp_ajax_paxdesign_chat_live_rating', array($this, 'handle_session_rating'));
         add_action('wp_ajax_nopriv_paxdesign_chat_live_rating', array($this, 'handle_session_rating'));
         add_action('wp_ajax_paxdesign_chat_live_admin_suggestions', array($this, 'handle_admin_suggestions'));
+        add_action('wp_ajax_paxdesign_chat_live_admin_delete_message', array($this, 'handle_admin_delete_message'));
         add_action('wp_ajax_paxdesign_chat_live_tour_complete', array($this, 'handle_tour_complete'));
         add_action('wp_ajax_paxdesign_chat_customer_history_list', array($this, 'handle_customer_history_list'));
         add_action('wp_ajax_nopriv_paxdesign_chat_customer_history_list', array($this, 'handle_customer_history_list'));
@@ -829,6 +830,16 @@ class PAXdesign_Chat_Live {
                 'handler'   => $handler,
                 'service'   => isset($row->detected_service) ? (string) $row->detected_service : '',
             ));
+        }
+
+        if (
+            $role === 'user'
+            && $id > 0
+            && class_exists('PAXdesign_Link_Scan_Service')
+            && !empty($entry['link_scan_status'])
+            && $entry['link_scan_status'] === PAXdesign_Link_Scan_Service::STATUS_CHECKING
+        ) {
+            PAXdesign_Link_Scan_Service::dispatch_scan($session_id, $id);
         }
 
         return $entry;
@@ -1768,6 +1779,34 @@ class PAXdesign_Chat_Live {
     /**
      * AI-assisted reply suggestions for admin (never sent to customer automatically).
      */
+    public function handle_admin_delete_message() {
+        $this->verify_admin_nonce();
+
+        $session_id = $this->sanitize_session_id(
+            isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
+        );
+        $message_id = isset($_POST['message_id']) ? absint($_POST['message_id']) : 0;
+
+        if ($session_id === '' || $message_id <= 0) {
+            wp_send_json_error(array('message' => 'Ungültige Nachricht.'), 400);
+        }
+
+        if (!$this->is_admin_handler($session_id)) {
+            wp_send_json_error(array('message' => 'Chat nicht übernommen.'), 409);
+        }
+
+        $result = $this->admin_delete_message($session_id, $message_id);
+        if (is_wp_error($result)) {
+            $data = $result->get_error_data();
+            wp_send_json_error(
+                array('message' => $result->get_error_message()),
+                is_array($data) && !empty($data['status']) ? (int) $data['status'] : 500
+            );
+        }
+
+        wp_send_json_success($result);
+    }
+
     public function handle_admin_suggestions() {
         $this->verify_admin_nonce();
 
@@ -2279,6 +2318,15 @@ class PAXdesign_Chat_Live {
             if ($role === 'user' && !empty($msg['link_scan_urls'])) {
                 $entry['link_scan_urls'] = (string) $msg['link_scan_urls'];
             }
+            if ($role === 'user' && !empty($msg['link_scan_started_at'])) {
+                $entry['link_scan_started_at'] = absint($msg['link_scan_started_at']);
+            }
+            if ($role === 'user' && !empty($msg['link_scan_completed_at'])) {
+                $entry['link_scan_completed_at'] = absint($msg['link_scan_completed_at']);
+            }
+            if ($role === 'user' && !empty($msg['link_scan_provider'])) {
+                $entry['link_scan_provider'] = sanitize_text_field((string) $msg['link_scan_provider']);
+            }
             if ($role === 'admin') {
                 $sender_id = !empty($msg['sender_id']) ? absint($msg['sender_id']) : 0;
                 if ($sender_id <= 0 && $fallback_agent_id > 0) {
@@ -2756,6 +2804,34 @@ class PAXdesign_Chat_Live {
      */
     public function admin_archive_session($session_id) {
         return $this->admin_close($session_id);
+    }
+
+    /**
+     * Permanently delete a single message from a customer live-chat session.
+     *
+     * @return array<string, mixed>|WP_Error
+     */
+    public function admin_delete_message($session_id, $message_id) {
+        $session_id = $this->sanitize_session_id($session_id);
+        $message_id = absint($message_id);
+        if ($session_id === '' || $message_id <= 0) {
+            return new WP_Error('invalid_message', 'Ungültige Nachricht.', array('status' => 400));
+        }
+
+        if (!$this->get_session_row($session_id)) {
+            return new WP_Error('not_found', 'Session nicht gefunden.', array('status' => 404));
+        }
+
+        if (!class_exists('PAXdesign_Message_Store')) {
+            return new WP_Error('unavailable', 'Message store unavailable.', array('status' => 500));
+        }
+
+        return PAXdesign_Message_Store::delete_message(
+            $session_id,
+            $message_id,
+            (int) get_current_user_id(),
+            'customer'
+        );
     }
 
     /**
