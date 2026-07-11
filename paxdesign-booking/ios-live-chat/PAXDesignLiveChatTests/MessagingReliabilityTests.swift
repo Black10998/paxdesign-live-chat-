@@ -74,6 +74,21 @@ final class MessagingReliabilityTests: XCTestCase {
         XCTAssertEqual(StreamPayload.int(event?.payload["seq"]), 7)
     }
 
+    func testLiveMessageDecodesLinkScanAndLinkCardFields() throws {
+        let json = """
+        {
+          "id": 12,
+          "role": "user",
+          "content": "See https://example.com/page",
+          "link_scan_status": "safe",
+          "link_scan_urls": "[{\\"url\\":\\"https://example.com/page\\",\\"status\\":\\"safe\\"}]"
+        }
+        """.data(using: .utf8)!
+        let message = try JSONDecoder().decode(LiveMessage.self, from: json)
+        XCTAssertEqual(message.linkScanStatus, "safe")
+        XCTAssertTrue(message.showsLinkScanBadge)
+    }
+
     func testSiteScopeKeyIsStable() {
         XCTAssertEqual(
             SiteScopeKey.make("https://example.com/wp-json"),

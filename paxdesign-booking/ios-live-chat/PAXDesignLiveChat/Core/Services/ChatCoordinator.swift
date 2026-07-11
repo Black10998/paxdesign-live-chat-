@@ -512,6 +512,7 @@ final class ChatThreadModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var replyToMessage: LiveMessage?
     @Published var quickReplies: [QuickReply] = []
+    @Published var quickLinks: [QuickLink] = []
     @Published var aiSuggestions: [String] = []
     @Published var suggestionsLoading = false
     @Published var suggestionsError: String?
@@ -565,13 +566,14 @@ final class ChatThreadModel: ObservableObject {
             guard let self else { return }
             self.beginEventStream(auth: auth, generation: generation)
             async let quickReplies: Void = self.loadQuickReplies(auth: auth)
+            async let quickLinks: Void = self.loadQuickLinks(auth: auth)
             async let history: Void = self.loadFullHistory(
                 auth: auth,
                 expectedServerSeq: expectedServerSeq,
                 showLoading: false
             )
             async let pending: Void = self.retryPendingMessages(auth: auth)
-            _ = await (quickReplies, history, pending)
+            _ = await (quickReplies, quickLinks, history, pending)
             guard !Task.isCancelled, self.lifecycleGeneration == generation else { return }
 
             self.lastStreamEventAt = Date()
@@ -1011,6 +1013,50 @@ final class ChatThreadModel: ObservableObject {
         guard let api = auth.api, quickReplies.isEmpty else { return }
         if let response = try? await api.fetchQuickReplies() {
             quickReplies = filteredQuickReplies(from: response.quickReplies)
+        }
+    }
+
+    private func loadQuickLinks(auth: AuthStore) async {
+        guard let api = auth.api, quickLinks.isEmpty else { return }
+        if let response = try? await api.fetchQuickLinks() {
+            quickLinks = response.quickLinks
+        }
+    }
+
+    func sendQuickLink(_ link: QuickLink, auth: AuthStore) async {
+        guard handler == "admin", let api = auth.api else { return }
+        let clientMsgId = UUID().uuidString.lowercased()
+        let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000)
+        let optimistic = LiveMessage(
+            id: tempId,
+            clientMsgId: clientMsgId,
+            role: "admin",
+            content: link.label,
+            ts: Int(Date().timeIntervalSince1970),
+            senderId: auth.profile?.userId,
+            senderName: auth.profile?.displayName,
+            attachmentType: "link_card",
+            linkUrl: link.url,
+            linkLabel: link.label,
+            linkIcon: link.icon
+        )
+        messages.append(optimistic)
+        knownMessageIds.insert(tempId)
+        isSending = true
+        defer { isSending = false }
+
+        do {
+            let msg = try await api.sendLinkCard(sessionId, linkId: link.id, clientMsgId: clientMsgId)
+            messages.removeAll { $0.id == tempId }
+            knownMessageIds.remove(tempId)
+            insertIncomingMessages([msg])
+        } catch {
+            messages.removeAll { $0.id == tempId }
+            knownMessageIds.remove(tempId)
+            if case LiveChatAPIError.unauthorized = error {
+                auth.handleUnauthorized()
+            }
+            errorMessage = error.localizedDescription
         }
     }
 

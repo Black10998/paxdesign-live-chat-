@@ -20,6 +20,7 @@ struct ChatView: View {
     @State private var pendingImage: UIImage?
     @State private var showCamera = false
     @State private var showImagePreview = false
+    @State private var showQuickLinksSheet = false
 
     init(sessionId: String) {
         _thread = ObservedObject(wrappedValue: ChatThreadRegistry.shared.bookingThread(sessionId: sessionId))
@@ -52,7 +53,8 @@ struct ChatView: View {
                 customerDisplayName: thread.customerName,
                 onReply: { thread.setReply(to: $0) },
                 onCopy: copyMessage,
-                onImageTap: { imageViewer = ImageViewerItem(url: $0) }
+                onImageTap: { imageViewer = ImageViewerItem(url: $0) },
+                siteBaseURL: auth.profile?.siteUrl ?? auth.siteURLString
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -125,6 +127,16 @@ struct ChatView: View {
             Task { await handlePhotoSelection(item) }
         }
         #endif
+        .sheet(isPresented: $showQuickLinksSheet) {
+            QuickLinksSheet(
+                links: thread.quickLinks,
+                isSending: thread.isSending,
+                onSelect: { link in
+                    showQuickLinksSheet = false
+                    Task { await thread.sendQuickLink(link, auth: auth) }
+                }
+            )
+        }
     }
 
     private func copyMessage(_ message: LiveMessage) {
@@ -361,23 +373,30 @@ struct ChatView: View {
 
     private var composer: some View {
         HStack(alignment: .bottom, spacing: 8) {
-            if thread.handler == "admin", canSendImages {
+            if thread.handler == "admin", canReply {
                 Menu {
-                    #if SIDELOAD
                     Button {
-                        showPhotoLibrary = true
+                        showQuickLinksSheet = true
                     } label: {
-                        Label(L10n.ChatPhotoLibrary, systemImage: "photo.on.rectangle")
+                        Label(L10n.ChatQuickLinksTitle, systemImage: "link.badge.plus")
                     }
-                    #else
-                    PhotosPicker(selection: $photoItem, matching: .images) {
-                        Label(L10n.ChatPhotoLibrary, systemImage: "photo.on.rectangle")
-                    }
-                    #endif
-                    Button {
-                        showCamera = true
-                    } label: {
-                        Label(L10n.ChatCamera, systemImage: "camera")
+                    if canSendImages {
+                        #if SIDELOAD
+                        Button {
+                            showPhotoLibrary = true
+                        } label: {
+                            Label(L10n.ChatPhotoLibrary, systemImage: "photo.on.rectangle")
+                        }
+                        #else
+                        PhotosPicker(selection: $photoItem, matching: .images) {
+                            Label(L10n.ChatPhotoLibrary, systemImage: "photo.on.rectangle")
+                        }
+                        #endif
+                        Button {
+                            showCamera = true
+                        } label: {
+                            Label(L10n.ChatCamera, systemImage: "camera")
+                        }
                     }
                 } label: {
                     Image(systemName: "plus.circle")
