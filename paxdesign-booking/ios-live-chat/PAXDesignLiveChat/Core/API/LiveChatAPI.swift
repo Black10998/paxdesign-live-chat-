@@ -301,6 +301,18 @@ final class LiveChatAPI {
         _ = try await perform(authRequest(url: url, method: "DELETE"), endpoint: "delete-message", as: EmptyResponse.self)
     }
 
+    func submitLinkScanReview(_ sessionId: String, messageId: Int, action: String) async throws -> LinkScanReviewResponse {
+        guard let url = liveAdminURL(path: "sessions/\(sessionId)/messages/\(messageId)/link-review") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONSerialization.data(withJSONObject: ["action": action])
+        return try await perform(
+            authRequest(url: url, method: "POST", body: body),
+            endpoint: "link-review",
+            as: LinkScanReviewResponse.self
+        )
+    }
+
     func sendImage(
         _ sessionId: String,
         imageData: Data,

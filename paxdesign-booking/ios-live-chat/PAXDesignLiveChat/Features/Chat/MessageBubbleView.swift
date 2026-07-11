@@ -13,6 +13,8 @@ struct MessageBubbleView: View {
     let onReply: () -> Void
     let onCopy: () -> Void
     let onDelete: () -> Void
+    var onLinkReview: ((String) -> Void)?
+    var isLinkReviewSubmitting = false
     let onImageTap: (URL) -> Void
 
     var body: some View {
@@ -108,7 +110,15 @@ struct MessageBubbleView: View {
                 }
 
                 if message.showsLinkScanBadge {
-                    LinkScanBadgeView(message: message)
+                    LinkScanBadgeView(message: message, useStaffDisplay: canDelete)
+                }
+
+                if canDelete && message.needsLinkScanReview, let onLinkReview {
+                    LinkScanReviewActionsView(
+                        message: message,
+                        isSubmitting: isLinkReviewSubmitting,
+                        onAction: onLinkReview
+                    )
                 }
             }
             .padding(.horizontal, PAXMessageStyle.bubblePaddingH)

@@ -517,6 +517,7 @@ final class ChatThreadModel: ObservableObject {
     @Published var suggestionsLoading = false
     @Published var suggestionsError: String?
     @Published var deletingMessageIds: Set<Int> = []
+    @Published var linkReviewSubmittingIds: Set<Int> = []
 
     let sessionId: String
     private weak var auth: AuthStore?
@@ -737,6 +738,14 @@ final class ChatThreadModel: ObservableObject {
                       let updated = try? JSONDecoder().decode(LiveMessage.self, from: data) {
                 applyLinkScanUpdate(updated)
             }
+        case "link_scan_review_ready":
+            if let updated = StreamPayload.messages(from: event.payload).first {
+                applyLinkScanUpdate(updated)
+            } else if let raw = event.payload["message"] as? [String: Any],
+                      let data = try? JSONSerialization.data(withJSONObject: raw),
+                      let updated = try? JSONDecoder().decode(LiveMessage.self, from: data) {
+                applyLinkScanUpdate(updated)
+            }
         case "message_deleted":
             let messageId = StreamPayload.int(event.payload["message_id"])
             let tombstone = StreamPayload.string(event.payload["tombstone"])
@@ -798,6 +807,25 @@ final class ChatThreadModel: ObservableObject {
             applyMessageDeleted(messageId: messageId, tombstone: L10n.ChatMessageDeletedByEmployee)
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    func submitLinkScanReview(messageId: Int, action: String, auth: AuthStore) async {
+        guard messageId > 0, let api = auth.api else { return }
+        linkReviewSubmittingIds.insert(messageId)
+        defer { linkReviewSubmittingIds.remove(messageId) }
+        do {
+            let response = try await api.submitLinkScanReview(sessionId, messageId: messageId, action: action)
+            if action == "delete_warn" {
+                let tombstone = response.tombstone ?? L10n.ChatLinkScanDeleteWarnTombstone
+                applyMessageDeleted(messageId: messageId, tombstone: tombstone)
+            } else if let updated = response.message {
+                applyLinkScanUpdate(updated)
+            }
+            PAXHaptics.success()
+        } catch {
+            errorMessage = error.localizedDescription
+            PAXHaptics.warning()
         }
     }
 

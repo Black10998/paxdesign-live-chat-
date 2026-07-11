@@ -59,6 +59,10 @@ struct ChatView: View {
                     pendingDeleteMessage = message
                     showDeleteConfirm = true
                 },
+                onLinkReview: { message, action in
+                    Task { await thread.submitLinkScanReview(messageId: message.id, action: action, auth: auth) }
+                },
+                linkReviewSubmittingIds: thread.linkReviewSubmittingIds,
                 onImageTap: { imageViewer = ImageViewerItem(url: $0) },
                 siteBaseURL: auth.profile?.siteUrl ?? auth.siteURLString,
                 deletingMessageIds: thread.deletingMessageIds

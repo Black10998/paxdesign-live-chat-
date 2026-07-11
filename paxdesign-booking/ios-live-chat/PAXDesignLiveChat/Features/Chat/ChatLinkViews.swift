@@ -4,11 +4,15 @@ import SwiftUI
 
 struct LinkScanBadgeView: View {
     let message: LiveMessage
+    var useStaffDisplay: Bool = false
     @State private var displayedStatus: LinkScanStatus
 
-    init(message: LiveMessage) {
+    init(message: LiveMessage, useStaffDisplay: Bool = false) {
         self.message = message
-        let initial = LinkScanSupport.resolvedStatus(for: message)
+        self.useStaffDisplay = useStaffDisplay
+        let initial = useStaffDisplay
+            ? LinkScanSupport.staffDisplayStatus(for: message)
+            : LinkScanSupport.resolvedStatus(for: message)
         _displayedStatus = State(initialValue: initial == .none && message.showsLinkScanBadge ? .checking : initial)
     }
 
@@ -31,12 +35,24 @@ struct LinkScanBadgeView: View {
                         .strokeBorder(border, lineWidth: 1.5)
                 )
         )
-        .onChange(of: message.linkScanStatus) { newValue in
-            let resolved = LinkScanStatus(raw: newValue)
-            if resolved != .none {
-                withAnimation(.easeInOut(duration: 0.28)) {
-                    displayedStatus = resolved
-                }
+        .onChange(of: message.linkScanStatus) { _ in
+            refreshDisplayedStatus()
+        }
+        .onChange(of: message.linkScanSystemStatus) { _ in
+            refreshDisplayedStatus()
+        }
+        .onChange(of: message.linkScanReviewPending) { _ in
+            refreshDisplayedStatus()
+        }
+    }
+
+    private func refreshDisplayedStatus() {
+        let resolved = useStaffDisplay
+            ? LinkScanSupport.staffDisplayStatus(for: message)
+            : LinkScanSupport.resolvedStatus(for: message)
+        if resolved != .none {
+            withAnimation(.easeInOut(duration: 0.28)) {
+                displayedStatus = resolved
             }
         }
     }
@@ -75,6 +91,66 @@ struct LinkScanBadgeView: View {
     }
 
     private var border: Color { foreground.opacity(0.55) }
+}
+
+struct LinkScanReviewActionsView: View {
+    let message: LiveMessage
+    let isSubmitting: Bool
+    let onAction: (String) -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.ChatLinkScanReviewTitle)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(PAXTheme.textSecondary)
+                .textCase(.uppercase)
+
+            HStack(spacing: 6) {
+                reviewButton(
+                    title: L10n.ChatLinkScanMarkSafe,
+                    tint: Color(red: 0.09, green: 0.64, blue: 0.29),
+                    action: "mark_safe"
+                )
+                reviewButton(
+                    title: L10n.ChatLinkScanMarkUnsafe,
+                    tint: Color(red: 0.86, green: 0.15, blue: 0.15),
+                    action: "mark_unsafe"
+                )
+            }
+
+            reviewButton(
+                title: L10n.ChatLinkScanDeleteWarn,
+                tint: Color(red: 0.85, green: 0.47, blue: 0.02),
+                action: "delete_warn",
+                fullWidth: true
+            )
+        }
+        .padding(.top, 4)
+    }
+
+    @ViewBuilder
+    private func reviewButton(title: String, tint: Color, action: String, fullWidth: Bool = false) -> some View {
+        Button {
+            onAction(action)
+        } label: {
+            Text(title)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(tint)
+                .frame(maxWidth: fullWidth ? .infinity : nil)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule(style: .continuous)
+                        .fill(tint.opacity(0.12))
+                        .overlay(
+                            Capsule(style: .continuous)
+                                .strokeBorder(tint.opacity(0.45), lineWidth: 1)
+                        )
+                )
+        }
+        .buttonStyle(.plain)
+        .disabled(isSubmitting)
+    }
 }
 
 // MARK: - Compact link card with SVG icon

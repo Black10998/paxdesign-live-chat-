@@ -14,6 +14,8 @@ struct ChatMessageListView: View {
     let onReply: (LiveMessage) -> Void
     let onCopy: (LiveMessage) -> Void
     let onDelete: (LiveMessage) -> Void
+    var onLinkReview: ((LiveMessage, String) -> Void)?
+    var linkReviewSubmittingIds: Set<Int> = []
     let onImageTap: (URL) -> Void
     var teamOtherReadSeq: Int = 0
     var teamFailedClientMsgIds: Set<String> = []
@@ -51,6 +53,10 @@ struct ChatMessageListView: View {
                             onReply: { onReply(row.message) },
                             onCopy: { onCopy(row.message) },
                             onDelete: { onDelete(row.message) },
+                            onLinkReview: onLinkReview.map { handler in
+                                { action in handler(row.message, action) }
+                            },
+                            linkReviewSubmittingIds: linkReviewSubmittingIds,
                             onImageTap: onImageTap,
                             teamOtherReadSeq: teamOtherReadSeq,
                             teamFailedClientMsgIds: teamFailedClientMsgIds,
@@ -117,6 +123,8 @@ private struct ChatMessageRow: View {
     let onReply: () -> Void
     let onCopy: () -> Void
     let onDelete: () -> Void
+    var onLinkReview: ((String) -> Void)?
+    var linkReviewSubmittingIds: Set<Int> = []
     let onImageTap: (URL) -> Void
     var teamOtherReadSeq: Int = 0
     var teamFailedClientMsgIds: Set<String> = []
@@ -177,6 +185,8 @@ private struct ChatMessageRow: View {
                     onReply: onReply,
                     onCopy: onCopy,
                     onDelete: onDelete,
+                    onLinkReview: onLinkReview,
+                    isLinkReviewSubmitting: linkReviewSubmittingIds.contains(row.message.id),
                     onImageTap: { onImageTap($0) }
                 )
                 .opacity(deletingMessageIds.contains(row.message.id) ? 0 : 1)

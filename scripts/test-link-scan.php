@@ -129,6 +129,7 @@ if (!function_exists('dbDelta')) {
 }
 
 require_once $root . '/paxdesign-booking/includes/class-paxdesign-link-scanner.php';
+require_once $root . '/paxdesign-booking/includes/class-paxdesign-message-store.php';
 require_once $root . '/paxdesign-booking/includes/class-paxdesign-link-scan-service.php';
 
 if (!function_exists('__')) {
@@ -215,6 +216,14 @@ foreach ($queued as $item) {
     }
 }
 assert_true('cancelled message not queued for scan', !$hasCancelled);
+
+$masked = PAXdesign_Message_Store::mask_message_for_customer(array(
+    'link_scan_status' => 'dangerous',
+    'link_scan_review_pending' => '1',
+    'link_scan_system_status' => 'dangerous',
+));
+assert_true('customer mask keeps checking while review pending', ($masked['link_scan_status'] ?? '') === 'checking');
+assert_true('customer mask strips internal fields', empty($masked['link_scan_system_status']) && empty($masked['link_scan_review_pending']));
 
 echo "\n{$passed} passed, {$failed} failed\n";
 exit($failed > 0 ? 1 : 0);

@@ -266,6 +266,7 @@ class PAXdesign_Chat_Live {
         add_action('wp_ajax_nopriv_paxdesign_chat_live_rating', array($this, 'handle_session_rating'));
         add_action('wp_ajax_paxdesign_chat_live_admin_suggestions', array($this, 'handle_admin_suggestions'));
         add_action('wp_ajax_paxdesign_chat_live_admin_delete_message', array($this, 'handle_admin_delete_message'));
+        add_action('wp_ajax_paxdesign_chat_live_admin_link_review', array($this, 'handle_admin_link_review'));
         add_action('wp_ajax_paxdesign_chat_live_tour_complete', array($this, 'handle_tour_complete'));
         add_action('wp_ajax_paxdesign_chat_customer_history_list', array($this, 'handle_customer_history_list'));
         add_action('wp_ajax_nopriv_paxdesign_chat_customer_history_list', array($this, 'handle_customer_history_list'));
@@ -1807,6 +1808,35 @@ class PAXdesign_Chat_Live {
         wp_send_json_success($result);
     }
 
+    public function handle_admin_link_review() {
+        $this->verify_admin_nonce();
+
+        $session_id = $this->sanitize_session_id(
+            isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
+        );
+        $message_id = isset($_POST['message_id']) ? absint($_POST['message_id']) : 0;
+        $action = isset($_POST['review_action']) ? sanitize_key(wp_unslash($_POST['review_action'])) : '';
+
+        if ($session_id === '' || $message_id <= 0 || $action === '') {
+            wp_send_json_error(array('message' => 'Ungültige Anfrage.'), 400);
+        }
+
+        if (!$this->is_admin_handler($session_id)) {
+            wp_send_json_error(array('message' => 'Chat nicht übernommen.'), 409);
+        }
+
+        $result = $this->admin_apply_link_review($session_id, $message_id, $action);
+        if (is_wp_error($result)) {
+            $data = $result->get_error_data();
+            wp_send_json_error(
+                array('message' => $result->get_error_message()),
+                is_array($data) && !empty($data['status']) ? (int) $data['status'] : 500
+            );
+        }
+
+        wp_send_json_success($result);
+    }
+
     public function handle_admin_suggestions() {
         $this->verify_admin_nonce();
 
@@ -2315,6 +2345,12 @@ class PAXdesign_Chat_Live {
             if ($role === 'user' && !empty($msg['link_scan_status'])) {
                 $entry['link_scan_status'] = sanitize_text_field((string) $msg['link_scan_status']);
             }
+            if ($role === 'user' && !empty($msg['link_scan_system_status'])) {
+                $entry['link_scan_system_status'] = sanitize_text_field((string) $msg['link_scan_system_status']);
+            }
+            if ($role === 'user' && !empty($msg['link_scan_review_pending'])) {
+                $entry['link_scan_review_pending'] = sanitize_text_field((string) $msg['link_scan_review_pending']);
+            }
             if ($role === 'user' && !empty($msg['link_scan_urls'])) {
                 $entry['link_scan_urls'] = (string) $msg['link_scan_urls'];
             }
@@ -2454,6 +2490,10 @@ class PAXdesign_Chat_Live {
         }
         $all = $this->format_messages_for_api($all, $agent['admin_user_id']);
         $new = $this->format_messages_for_api($new, $agent['admin_user_id']);
+        if (class_exists('PAXdesign_Message_Store')) {
+            $all = PAXdesign_Message_Store::mask_messages_for_customer($all);
+            $new = PAXdesign_Message_Store::mask_messages_for_customer($new);
+        }
 
         $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
 
@@ -2831,6 +2871,36 @@ class PAXdesign_Chat_Live {
             $message_id,
             (int) get_current_user_id(),
             'customer'
+        );
+    }
+
+    /**
+     * Apply employee link-scan review decision for a customer message.
+     *
+     * @return array<string, mixed>|WP_Error
+     */
+    public function admin_apply_link_review($session_id, $message_id, $action) {
+        $session_id = $this->sanitize_session_id($session_id);
+        $message_id = absint($message_id);
+        $action     = sanitize_key((string) $action);
+
+        if ($session_id === '' || $message_id <= 0 || $action === '') {
+            return new WP_Error('invalid_review', 'Ungültige Anfrage.', array('status' => 400));
+        }
+
+        if (!$this->get_session_row($session_id)) {
+            return new WP_Error('not_found', 'Session nicht gefunden.', array('status' => 404));
+        }
+
+        if (!class_exists('PAXdesign_Link_Scan_Service')) {
+            return new WP_Error('unavailable', 'Link scan service unavailable.', array('status' => 500));
+        }
+
+        return PAXdesign_Link_Scan_Service::apply_review_decision(
+            $session_id,
+            $message_id,
+            $action,
+            (int) get_current_user_id()
         );
     }
 

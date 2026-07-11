@@ -217,8 +217,16 @@ class PAXdesign_Live_Chat_Mobile_API {
         ));
 
         register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions/(?P<id>[a-zA-Z0-9_\-]+)/messages/(?P<message_id>[0-9]+)', array(
-            'methods'             => WP_REST_Server::DELETABLE,
-            'callback'            => array(__CLASS__, 'route_delete_message'),
+            array(
+                'methods'             => WP_REST_Server::DELETABLE,
+                'callback'            => array(__CLASS__, 'route_delete_message'),
+                'permission_callback' => $auth,
+            ),
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions/(?P<id>[a-zA-Z0-9_\-]+)/messages/(?P<message_id>[0-9]+)/link-review', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_link_review'),
             'permission_callback' => $auth,
         ));
 
@@ -833,6 +841,26 @@ class PAXdesign_Live_Chat_Mobile_API {
             return new WP_Error('invalid_message', 'Ungültige Nachricht.', array('status' => 400));
         }
         return self::respond(self::live()->admin_delete_message($request['id'], $message_id));
+    }
+
+    public static function route_link_review(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_REPLY_CHATS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
+        $message_id = absint($request['message_id']);
+        if ($message_id <= 0) {
+            return new WP_Error('invalid_message', 'Ungültige Nachricht.', array('status' => 400));
+        }
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        $action = isset($params['action']) ? sanitize_key((string) $params['action']) : '';
+        if ($action === '') {
+            return new WP_Error('invalid_action', 'Ungültige Aktion.', array('status' => 400));
+        }
+        return self::respond(self::live()->admin_apply_link_review($request['id'], $message_id, $action));
     }
 
     public static function route_send_image(WP_REST_Request $request) {

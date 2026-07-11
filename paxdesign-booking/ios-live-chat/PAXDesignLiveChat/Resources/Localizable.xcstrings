@@ -2353,6 +2353,41 @@
         "ar": { "stringUnit": { "state": "translated", "value": "لم يكتمل الفحص." } }
       }
     },
+    "chat.link_scan.review_title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Review scan result" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Scan-Ergebnis prüfen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "مراجعة نتيجة الفحص" } }
+      }
+    },
+    "chat.link_scan.mark_safe": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Mark as Safe" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Als sicher markieren" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "وضع علامة آمن" } }
+      }
+    },
+    "chat.link_scan.mark_unsafe": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Mark as Unsafe" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Als unsicher markieren" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "وضع علامة غير آمن" } }
+      }
+    },
+    "chat.link_scan.delete_warn": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Delete and Warn" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Löschen und warnen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "حذف وتحذير" } }
+      }
+    },
+    "chat.link_scan.delete_warn_tombstone": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "This message contained an unsafe link and was removed to protect you." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Diese Nachricht enthielt einen unsicheren Link und wurde zu Ihrem Schutz entfernt." } },
+        "ar": { "stringUnit": { "state": "translated", "value": "احتوت هذه الرسالة على رابط غير آمن وتمت إزالتها لحمايتك." } }
+      }
+    },
     "chat.message_deleted_by_employee": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "This message was deleted by an employee." } },

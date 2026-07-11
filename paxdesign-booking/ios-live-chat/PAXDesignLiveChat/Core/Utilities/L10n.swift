@@ -70,6 +70,11 @@ enum L10n {
     static var ChatLinkScanSuspicious: String { t("chat.link_scan.suspicious") }
     static var ChatLinkScanDangerous: String { t("chat.link_scan.dangerous") }
     static var ChatLinkScanIncomplete: String { t("chat.link_scan.incomplete") }
+    static var ChatLinkScanReviewTitle: String { t("chat.link_scan.review_title") }
+    static var ChatLinkScanMarkSafe: String { t("chat.link_scan.mark_safe") }
+    static var ChatLinkScanMarkUnsafe: String { t("chat.link_scan.mark_unsafe") }
+    static var ChatLinkScanDeleteWarn: String { t("chat.link_scan.delete_warn") }
+    static var ChatLinkScanDeleteWarnTombstone: String { t("chat.link_scan.delete_warn_tombstone") }
     static var ChatMessageDeletedByEmployee: String { t("chat.message_deleted_by_employee") }
     static var ChatDeleteMessage: String { t("chat.delete_message") }
     static var ChatDeleteMessageConfirm: String { t("chat.delete_message_confirm") }

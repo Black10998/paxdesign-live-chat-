@@ -318,6 +318,8 @@ struct LiveMessage: Identifiable, Codable, Hashable {
     let linkLabel: String?
     let linkIcon: String?
     let linkScanStatus: String?
+    let linkScanSystemStatus: String?
+    let linkScanReviewPending: String?
     let linkScanUrls: String?
 
     enum CodingKeys: String, CodingKey {
@@ -334,6 +336,8 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         case linkLabel = "link_label"
         case linkIcon = "link_icon"
         case linkScanStatus = "link_scan_status"
+        case linkScanSystemStatus = "link_scan_system_status"
+        case linkScanReviewPending = "link_scan_review_pending"
         case linkScanUrls = "link_scan_urls"
     }
 
@@ -359,6 +363,8 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         linkLabel: String? = nil,
         linkIcon: String? = nil,
         linkScanStatus: String? = nil,
+        linkScanSystemStatus: String? = nil,
+        linkScanReviewPending: String? = nil,
         linkScanUrls: String? = nil
     ) {
         self.id = id
@@ -378,7 +384,15 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         self.linkLabel = linkLabel
         self.linkIcon = linkIcon
         self.linkScanStatus = linkScanStatus
+        self.linkScanSystemStatus = linkScanSystemStatus
+        self.linkScanReviewPending = linkScanReviewPending
         self.linkScanUrls = linkScanUrls
+    }
+
+    var needsLinkScanReview: Bool {
+        guard role == "user" else { return false }
+        guard let pending = linkScanReviewPending, !pending.isEmpty else { return false }
+        return pending == "1" || pending.lowercased() == "true"
     }
 
     var isLinkCard: Bool {
@@ -424,6 +438,8 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         linkLabel = Self.decodeOptionalString(container, .linkLabel)
         linkIcon = Self.decodeOptionalString(container, .linkIcon)
         linkScanStatus = Self.decodeOptionalString(container, .linkScanStatus)
+        linkScanSystemStatus = Self.decodeOptionalString(container, .linkScanSystemStatus)
+        linkScanReviewPending = Self.decodeOptionalString(container, .linkScanReviewPending)
         linkScanUrls = Self.decodeOptionalString(container, .linkScanUrls)
     }
 
@@ -660,6 +676,19 @@ struct QuickLinksResponse: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         quickLinks = (try? container.decode([QuickLink].self, forKey: .quickLinks)) ?? []
+    }
+}
+
+struct LinkScanReviewResponse: Codable {
+    let ok: Bool?
+    let action: String?
+    let message: LiveMessage?
+    let tombstone: String?
+    let messageId: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case ok, action, message, tombstone
+        case messageId = "message_id"
     }
 }
 

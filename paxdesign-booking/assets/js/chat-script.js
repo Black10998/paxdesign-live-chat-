@@ -190,8 +190,9 @@
     }
     if (data.type === 'link_scan_updated' && payload.message) {
       if (!isMessagePermanentlyDeleted(payload.message.id)) {
-        updateCustomerLinkScanBadge(payload.message.id, payload.message);
-        refreshMessageScanState(payload.message);
+        var customerMsg = maskCustomerLinkScanMessage(payload.message);
+        updateCustomerLinkScanBadge(customerMsg.id, customerMsg);
+        refreshMessageScanState(customerMsg);
       }
     }
     if (data.type === 'message_deleted' && payload.message_id) {
@@ -1537,8 +1538,21 @@
     return true;
   }
 
+  function maskCustomerLinkScanMessage(msg) {
+    if (!msg) return msg;
+    if (msg.link_scan_review_pending === '1' || msg.link_scan_review_pending === 1 || msg.link_scan_review_pending === true) {
+      return Object.assign({}, msg, {
+        link_scan_status: 'checking',
+        link_scan_system_status: undefined,
+        link_scan_review_pending: undefined
+      });
+    }
+    return msg;
+  }
+
   function messageRenderOpts(msg, extra) {
     extra = extra || {};
+    msg = maskCustomerLinkScanMessage(msg);
     return Object.assign({
       reaction: msg.reaction || '',
       reply_to: msg.reply_to || 0,
@@ -1559,6 +1573,7 @@
     var played = false;
     incoming.forEach(function (msg) {
       if (!msg || !msg.id) return;
+      msg = maskCustomerLinkScanMessage(msg);
       if (isMessagePermanentlyDeleted(msg.id)) return;
       if (domMsgIds[msg.id]) return;
       if (msg.role === 'system' && msg.content === 'Der Kunde hat das Gespräch beendet.') {

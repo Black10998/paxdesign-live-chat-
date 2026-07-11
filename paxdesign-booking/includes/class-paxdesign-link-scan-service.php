@@ -271,10 +271,12 @@ class PAXdesign_Link_Scan_Service {
             $session_id,
             $message_seq,
             array(
-                'link_scan_status'       => $worst,
-                'link_scan_urls'         => wp_json_encode($results),
-                'link_scan_completed_at' => $completed,
-                'link_scan_provider'     => $provider_label,
+                'link_scan_status'         => self::STATUS_CHECKING,
+                'link_scan_system_status'  => $worst,
+                'link_scan_review_pending'   => '1',
+                'link_scan_urls'           => wp_json_encode($results),
+                'link_scan_completed_at'   => $completed,
+                'link_scan_provider'       => $provider_label,
             ),
             'customer'
         );
@@ -288,8 +290,79 @@ class PAXdesign_Link_Scan_Service {
             'seq'        => $message_seq,
             'message'    => $updated,
         );
+        PAXdesign_Message_Store::emit('inbox:admins', 'link_scan_review_ready', $payload, $message_seq);
+    }
+
+    /**
+     * Apply an employee's final link-scan decision for a customer message.
+     *
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function apply_review_decision($session_id, $message_seq, $action, $reviewer_id = 0) {
+        $session_id  = sanitize_text_field((string) $session_id);
+        $message_seq = absint($message_seq);
+        $action      = sanitize_key((string) $action);
+        $reviewer_id = absint($reviewer_id);
+
+        if ($session_id === '' || $message_seq <= 0) {
+            return new WP_Error('pax_link_review_invalid', 'Invalid message.', array('status' => 400));
+        }
+
+        $message = PAXdesign_Message_Store::get_message($session_id, $message_seq);
+        if (!$message) {
+            return new WP_Error('pax_link_review_not_found', 'Message not found.', array('status' => 404));
+        }
+        if (!PAXdesign_Message_Store::is_link_review_pending($message)) {
+            return new WP_Error('pax_link_review_not_pending', 'No pending link review for this message.', array('status' => 409));
+        }
+
+        if ($action === 'delete_warn') {
+            $tombstone = __('This message contained an unsafe link and was removed to protect you.', 'paxdesign-booking');
+            return PAXdesign_Message_Store::delete_message(
+                $session_id,
+                $message_seq,
+                $reviewer_id,
+                'customer',
+                $tombstone
+            );
+        }
+
+        if ($action === 'mark_safe') {
+            $customer_status = self::STATUS_SAFE;
+        } elseif ($action === 'mark_unsafe') {
+            $customer_status = self::STATUS_DANGEROUS;
+        } else {
+            return new WP_Error('pax_link_review_invalid_action', 'Invalid review action.', array('status' => 400));
+        }
+
+        $updated = PAXdesign_Message_Store::update_message_meta(
+            $session_id,
+            $message_seq,
+            array(
+                'link_scan_status'        => $customer_status,
+                'link_scan_review_pending' => '',
+            ),
+            'customer'
+        );
+        if (is_wp_error($updated) || !is_array($updated)) {
+            return $updated;
+        }
+
+        $payload = array(
+            'session_id' => $session_id,
+            'seq'        => $message_seq,
+            'message'    => $updated,
+            'reviewed_by'=> $reviewer_id,
+            'action'     => $action,
+        );
         PAXdesign_Message_Store::emit('session:' . $session_id, 'link_scan_updated', $payload, $message_seq);
         PAXdesign_Message_Store::emit('inbox:admins', 'link_scan_updated', $payload, $message_seq);
+
+        return array(
+            'ok'       => true,
+            'action'   => $action,
+            'message'  => $updated,
+        );
     }
 
     /**

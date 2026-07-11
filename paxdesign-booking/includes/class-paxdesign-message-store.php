@@ -580,7 +580,50 @@ class PAXdesign_Message_Store {
      *
      * @return array<string, mixed>|WP_Error
      */
-    public static function delete_message($session_id, $msg_seq, $deleted_by = 0, $channel = 'customer') {
+    public static function is_link_review_pending($message) {
+        if (!is_array($message)) {
+            return false;
+        }
+        $pending = $message['link_scan_review_pending'] ?? '';
+        return $pending === '1' || $pending === 1 || $pending === true;
+    }
+
+    /**
+     * Hide internal scan results from customer clients until an employee decides.
+     *
+     * @param array<string, mixed> $message
+     * @return array<string, mixed>
+     */
+    public static function mask_message_for_customer($message) {
+        if (!is_array($message)) {
+            return $message;
+        }
+        if (self::is_link_review_pending($message)) {
+            $message['link_scan_status'] = 'checking';
+        }
+        unset($message['link_scan_system_status'], $message['link_scan_review_pending']);
+        return $message;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $messages
+     * @return array<int, array<string, mixed>>
+     */
+    public static function mask_messages_for_customer($messages) {
+        if (!is_array($messages)) {
+            return array();
+        }
+        $out = array();
+        foreach ($messages as $message) {
+            if (!is_array($message)) {
+                continue;
+            }
+            $out[] = self::mask_message_for_customer($message);
+        }
+        return $out;
+    }
+
+    public static function delete_message($session_id, $msg_seq, $deleted_by = 0, $channel = 'customer', $tombstone = '') {
         global $wpdb;
         self::maybe_upgrade();
         $session_id  = sanitize_text_field((string) $session_id);
@@ -608,7 +651,11 @@ class PAXdesign_Message_Store {
             return new WP_Error('pax_message_delete_failed', 'Message could not be deleted.', array('status' => 500));
         }
 
-        $tombstone = __('This message was deleted by an employee.', 'paxdesign-booking');
+        if ($tombstone === '') {
+            $tombstone = __('This message was deleted by an employee.', 'paxdesign-booking');
+        } else {
+            $tombstone = sanitize_text_field((string) $tombstone);
+        }
         $payload = array(
             'session_id'  => $session_id,
             'message_id'  => $msg_seq,
@@ -732,7 +779,8 @@ class PAXdesign_Message_Store {
             'image_url', 'attachment_type', 'reply_to', 'reaction',
             'sender_id', 'sender_name', 'sender_avatar', 'sender_role', 'sender_email',
             'link_url', 'link_label', 'link_icon',
-            'link_scan_status', 'link_scan_urls', 'link_scan_started_at',
+            'link_scan_status', 'link_scan_system_status', 'link_scan_review_pending',
+            'link_scan_urls', 'link_scan_started_at',
             'link_scan_completed_at', 'link_scan_provider',
         );
         $meta = array();

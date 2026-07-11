@@ -59,6 +59,15 @@ enum LinkScanSupport {
         return urls
     }
 
+    static func staffDisplayStatus(for message: LiveMessage) -> LinkScanStatus {
+        if message.needsLinkScanReview,
+           let system = message.linkScanSystemStatus,
+           !system.isEmpty {
+            return LinkScanStatus(raw: system)
+        }
+        return resolvedStatus(for: message)
+    }
+
     static func resolvedStatus(for message: LiveMessage) -> LinkScanStatus {
         let status = LinkScanStatus(raw: message.linkScanStatus)
         if status != .none { return status }

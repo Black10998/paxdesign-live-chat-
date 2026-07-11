@@ -3315,6 +3315,57 @@ body.pax-live-agent-profile-open {
   color: #475569;
 }
 
+.pax-live-dashboard__link-scan-review {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.pax-live-dashboard__link-scan-review-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.pax-live-dashboard__link-scan-review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pax-live-dashboard__link-scan-review-btn {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.pax-live-dashboard__link-scan-review-btn--safe {
+  background: #ecfdf3;
+  border-color: #16a34a;
+  color: #15803d;
+}
+
+.pax-live-dashboard__link-scan-review-btn--unsafe {
+  background: #fef2f2;
+  border-color: #dc2626;
+  color: #b91c1c;
+}
+
+.pax-live-dashboard__link-scan-review-btn--delete {
+  background: #fff7ed;
+  border-color: #ea580c;
+  color: #c2410c;
+}
+
 .pax-live-dashboard__delete-btn {
   margin-left: 6px;
   border: 0;

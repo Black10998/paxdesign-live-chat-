@@ -138,6 +138,10 @@
         if (!isMessagePermanentlyDeleted(payload.message.id)) {
           updateAdminLinkScanBadge(payload.message);
         }
+      } else if (data.type === 'link_scan_review_ready' && sid === selectedSession && payload.message) {
+        if (!isMessagePermanentlyDeleted(payload.message.id)) {
+          updateAdminLinkScanBadge(payload.message);
+        }
       } else if (data.type === 'message_deleted' && sid === selectedSession && payload.message_id) {
         animateAdminMessageDeletion(payload.message_id, payload.tombstone || 'This message was deleted by an employee.');
       } else if (data.type === 'session_update' || data.type === 'conversation_deleted') {
@@ -1598,9 +1602,53 @@
         '</a>';
     }
 
+    function isLinkReviewPending(msg) {
+      if (!msg) return false;
+      return msg.link_scan_review_pending === '1' || msg.link_scan_review_pending === 1 || msg.link_scan_review_pending === true;
+    }
+
+    function adminEffectiveScanStatus(msg) {
+      if (!msg) return '';
+      if (isLinkReviewPending(msg) && msg.link_scan_system_status) {
+        return msg.link_scan_system_status;
+      }
+      return msg.link_scan_status || '';
+    }
+
+    function buildLinkScanReviewHtml(msg) {
+      if (!msg || !isLinkReviewPending(msg) || currentHandler !== 'admin') return '';
+      return '<div class="pax-live-dashboard__link-scan-review" data-review-msg="' + msg.id + '">' +
+        '<span class="pax-live-dashboard__link-scan-review-label">Review scan result</span>' +
+        '<div class="pax-live-dashboard__link-scan-review-actions">' +
+          '<button type="button" class="pax-live-dashboard__link-scan-review-btn pax-live-dashboard__link-scan-review-btn--safe" data-link-review="mark_safe" data-review-msg="' + msg.id + '">Mark as Safe</button>' +
+          '<button type="button" class="pax-live-dashboard__link-scan-review-btn pax-live-dashboard__link-scan-review-btn--unsafe" data-link-review="mark_unsafe" data-review-msg="' + msg.id + '">Mark as Unsafe</button>' +
+          '<button type="button" class="pax-live-dashboard__link-scan-review-btn pax-live-dashboard__link-scan-review-btn--delete" data-link-review="delete_warn" data-review-msg="' + msg.id + '">Delete and Warn</button>' +
+        '</div>' +
+      '</div>';
+    }
+
+    function updateAdminLinkScanReview(msg) {
+      if (!msg || !msg.id || isMessagePermanentlyDeleted(msg.id)) return;
+      var $msg = $messages.find('[data-msg-id="' + msg.id + '"]');
+      if (!$msg.length) return;
+      var $bubble = $msg.find('.pax-live-dashboard__msg-bubble');
+      if (!$bubble.length) return;
+      var $existing = $bubble.find('.pax-live-dashboard__link-scan-review');
+      var html = buildLinkScanReviewHtml(msg);
+      if ($existing.length) {
+        if (html) {
+          $existing.replaceWith(html);
+        } else {
+          $existing.remove();
+        }
+      } else if (html) {
+        $bubble.append(html);
+      }
+    }
+
     function buildLinkScanBadgeHtml(msg) {
       if (!msg || msg.role !== 'user') return '';
-      var status = msg.link_scan_status || '';
+      var status = adminEffectiveScanStatus(msg);
       var urls = extractUrlsFromText(msg.content);
       if (!status && !urls.length) return '';
       if (!status) status = 'checking';
@@ -1625,6 +1673,7 @@
       } else if (html) {
         $bubble.append(html);
       }
+      updateAdminLinkScanReview(msg);
     }
 
     function isMessagePermanentlyDeleted(messageId) {
@@ -1693,7 +1742,31 @@
         html += escapeHtml(String(msg.content));
       }
       html += buildLinkScanBadgeHtml(msg);
+      html += buildLinkScanReviewHtml(msg);
       return html || '<span class="pax-live-dashboard__msg-image-only">📷 Foto</span>';
+    }
+
+    function submitLinkScanReview(messageId, action) {
+      if (!selectedSession || !messageId || !action || currentHandler !== 'admin') return;
+      ajax('paxdesign_chat_live_admin_link_review', {
+        session_id: selectedSession,
+        message_id: messageId,
+        review_action: action
+      }).done(function (res) {
+        if (!res.success) {
+          alert(res.data && res.data.message ? res.data.message : 'Review could not be applied.');
+          return;
+        }
+        var data = res.data || {};
+        if (action === 'delete_warn') {
+          animateAdminMessageDeletion(messageId, data.tombstone || 'This message contained an unsafe link and was removed to protect you.');
+        } else if (data.message) {
+          updateAdminLinkScanBadge(data.message);
+        }
+        loadList();
+      }).fail(function () {
+        alert('Review could not be applied.');
+      });
     }
 
     function resizeChatImage(file) {
@@ -2228,6 +2301,16 @@
     $messages.on('click', '.pax-live-dashboard__delete-btn', function () {
       var msgId = parseInt($(this).attr('data-delete-msg'), 10);
       if (msgId > 0) deleteAdminMessage(msgId);
+    });
+
+    $messages.on('click', '.pax-live-dashboard__link-scan-review-btn', function () {
+      var msgId = parseInt($(this).attr('data-review-msg'), 10);
+      var action = $(this).attr('data-link-review') || '';
+      if (!(msgId > 0) || !action) return;
+      if (action === 'delete_warn') {
+        if (!window.confirm('Delete this message and warn the customer?')) return;
+      }
+      submitLinkScanReview(msgId, action);
     });
 
     $replyClear.on('click', clearReply);
