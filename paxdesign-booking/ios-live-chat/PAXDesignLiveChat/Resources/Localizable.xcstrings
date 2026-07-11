@@ -2311,6 +2311,62 @@
         }
       }
     },
+    "chat.link_scan.checking": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Checking link…" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Link wird geprüft …" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "جارٍ فحص الرابط…" } }
+      }
+    },
+    "chat.link_scan.safe": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "✅ Safe Link" } },
+        "de": { "stringUnit": { "state": "translated", "value": "✅ Sicherer Link" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "✅ رابط آمن" } }
+      }
+    },
+    "chat.link_scan.suspicious": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "⚠ Suspicious Link" } },
+        "de": { "stringUnit": { "state": "translated", "value": "⚠ Verdächtiger Link" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "⚠ رابط مشبوه" } }
+      }
+    },
+    "chat.link_scan.dangerous": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "❌ Dangerous Link" } },
+        "de": { "stringUnit": { "state": "translated", "value": "❌ Gefährlicher Link" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "❌ رابط خطير" } }
+      }
+    },
+    "chat.quick_links.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Website Links" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Website-Links" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "روابط الموقع" } }
+      }
+    },
+    "chat.quick_links.empty_title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No links configured" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Keine Links konfiguriert" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "لا توجد روابط مُعدّة" } }
+      }
+    },
+    "chat.quick_links.empty_body": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Add quick website links in the WordPress plugin settings." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Bitte im WordPress-Backend unter Einstellungen verwalten." } },
+        "ar": { "stringUnit": { "state": "translated", "value": "أضِف روابط الموقع السريعة من إعدادات إضافة ووردبريس." } }
+      }
+    },
+    "chat.quick_links.default_label": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Link" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Link" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "رابط" } }
+      }
+    },
     "chat.customer_typing": {
       "localizations": {
         "en": {

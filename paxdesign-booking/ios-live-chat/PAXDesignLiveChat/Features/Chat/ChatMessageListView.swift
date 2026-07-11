@@ -17,6 +17,7 @@ struct ChatMessageListView: View {
     var teamOtherReadSeq: Int = 0
     var teamFailedClientMsgIds: Set<String> = []
     var onRetryTeamMessage: ((String) -> Void)? = nil
+    var siteBaseURL: String?
 
     private var displayRows: [MessageDisplayRow] {
         var messageLookup: [Int: LiveMessage] = [:]
@@ -50,7 +51,8 @@ struct ChatMessageListView: View {
                             onImageTap: onImageTap,
                             teamOtherReadSeq: teamOtherReadSeq,
                             teamFailedClientMsgIds: teamFailedClientMsgIds,
-                            onRetryTeamMessage: onRetryTeamMessage
+                            onRetryTeamMessage: onRetryTeamMessage,
+                            siteBaseURL: siteBaseURL
                         )
                         .id(row.id)
                     }
@@ -114,6 +116,7 @@ private struct ChatMessageRow: View {
     var teamOtherReadSeq: Int = 0
     var teamFailedClientMsgIds: Set<String> = []
     var onRetryTeamMessage: ((String) -> Void)? = nil
+    var siteBaseURL: String?
 
     private var showSenderLabel: Bool {
         row.message.role != "system" && (
@@ -163,6 +166,7 @@ private struct ChatMessageRow: View {
                     senderLabel: showSenderLabel ? senderLabel(for: row.message) : nil,
                     agentDisplayName: agentDisplayName,
                     customerDisplayName: customerDisplayName,
+                    siteBaseURL: siteBaseURL,
                     onReply: onReply,
                     onCopy: onCopy,
                     onImageTap: { onImageTap($0) }

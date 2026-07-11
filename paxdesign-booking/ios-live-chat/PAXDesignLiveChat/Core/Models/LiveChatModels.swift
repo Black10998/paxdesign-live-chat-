@@ -313,6 +313,12 @@ struct LiveMessage: Identifiable, Codable, Hashable {
     let senderName: String?
     let senderAvatar: String?
     let senderRole: String?
+    let attachmentType: String?
+    let linkUrl: String?
+    let linkLabel: String?
+    let linkIcon: String?
+    let linkScanStatus: String?
+    let linkScanUrls: String?
 
     enum CodingKeys: String, CodingKey {
         case id, role, content, ts, reaction
@@ -323,6 +329,12 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         case senderName = "sender_name"
         case senderAvatar = "sender_avatar"
         case senderRole = "sender_role"
+        case attachmentType = "attachment_type"
+        case linkUrl = "link_url"
+        case linkLabel = "link_label"
+        case linkIcon = "link_icon"
+        case linkScanStatus = "link_scan_status"
+        case linkScanUrls = "link_scan_urls"
     }
 
     private enum LegacyCodingKeys: String, CodingKey {
@@ -341,7 +353,13 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         senderId: Int? = nil,
         senderName: String? = nil,
         senderAvatar: String? = nil,
-        senderRole: String? = nil
+        senderRole: String? = nil,
+        attachmentType: String? = nil,
+        linkUrl: String? = nil,
+        linkLabel: String? = nil,
+        linkIcon: String? = nil,
+        linkScanStatus: String? = nil,
+        linkScanUrls: String? = nil
     ) {
         self.id = id
         self.clientMsgId = clientMsgId
@@ -355,6 +373,22 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         self.senderName = senderName
         self.senderAvatar = senderAvatar
         self.senderRole = senderRole
+        self.attachmentType = attachmentType
+        self.linkUrl = linkUrl
+        self.linkLabel = linkLabel
+        self.linkIcon = linkIcon
+        self.linkScanStatus = linkScanStatus
+        self.linkScanUrls = linkScanUrls
+    }
+
+    var isLinkCard: Bool {
+        attachmentType == "link_card" && !(linkUrl ?? "").isEmpty
+    }
+
+    var showsLinkScanBadge: Bool {
+        guard role == "user" else { return false }
+        if let status = linkScanStatus, !status.isEmpty, status != "none" { return true }
+        return LinkScanSupport.urls(in: content).isEmpty == false
     }
 
     init(from decoder: Decoder) throws {
@@ -385,6 +419,20 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         senderAvatar = avatar.isEmpty ? nil : avatar
         let roleLabel = LiveChatDecode.string(container, CodingKeys.senderRole)
         senderRole = roleLabel.isEmpty ? nil : roleLabel
+        attachmentType = decodeOptionalString(container, .attachmentType)
+        linkUrl = decodeOptionalString(container, .linkUrl)
+        linkLabel = decodeOptionalString(container, .linkLabel)
+        linkIcon = decodeOptionalString(container, .linkIcon)
+        linkScanStatus = decodeOptionalString(container, .linkScanStatus)
+        linkScanUrls = decodeOptionalString(container, .linkScanUrls)
+    }
+
+    private static func decodeOptionalString<C: CodingKey>(
+        _ container: KeyedDecodingContainer<C>,
+        _ key: C
+    ) -> String? {
+        let value = LiveChatDecode.string(container, key)
+        return value.isEmpty ? nil : value
     }
 
     /// Decode a message embedded in an SSE event payload for instant UI insertion.
@@ -562,6 +610,33 @@ struct QuickReply: Identifiable, Codable, Hashable {
     var id: String { "\(lang)-\(label)" }
 }
 
+struct QuickLink: Identifiable, Codable, Hashable {
+    let id: String
+    let label: String
+    let url: String
+    let icon: String
+
+    init(id: String, label: String, url: String, icon: String = "🔗") {
+        self.id = id
+        self.label = label
+        self.url = url
+        self.icon = icon
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = LiveChatDecode.string(container, CodingKeys.id)
+        label = LiveChatDecode.string(container, CodingKeys.label)
+        url = LiveChatDecode.string(container, CodingKeys.url)
+        let decodedIcon = LiveChatDecode.string(container, CodingKeys.icon)
+        icon = decodedIcon.isEmpty ? "🔗" : decodedIcon
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, label, url, icon
+    }
+}
+
 struct QuickRepliesResponse: Codable {
     let quickReplies: [QuickReply]
 
@@ -572,6 +647,19 @@ struct QuickRepliesResponse: Codable {
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         quickReplies = (try? container.decode([QuickReply].self, forKey: .quickReplies)) ?? []
+    }
+}
+
+struct QuickLinksResponse: Codable {
+    let quickLinks: [QuickLink]
+
+    enum CodingKeys: String, CodingKey {
+        case quickLinks = "quick_links"
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        quickLinks = (try? container.decode([QuickLink].self, forKey: .quickLinks)) ?? []
     }
 }
 

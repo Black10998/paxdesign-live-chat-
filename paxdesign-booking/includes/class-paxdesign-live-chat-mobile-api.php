@@ -232,6 +232,18 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => $auth,
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/quick-links', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'route_quick_links'),
+            'permission_callback' => $auth,
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions/(?P<id>[a-zA-Z0-9_\-]+)/links', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_send_link'),
+            'permission_callback' => $auth,
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/sessions/(?P<id>[a-zA-Z0-9_\-]+)/suggestions', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'route_suggestions'),
@@ -837,6 +849,58 @@ class PAXdesign_Live_Chat_Mobile_API {
         return self::respond(array(
             'quick_replies' => PAXdesign_Chat_Live::get_admin_quick_replies(),
         ));
+    }
+
+    public static function route_quick_links(WP_REST_Request $request) {
+        $links = class_exists('PAXdesign_Chat_Quick_Links')
+            ? PAXdesign_Chat_Quick_Links::get_links()
+            : array();
+        return self::respond(array(
+            'quick_links' => $links,
+        ));
+    }
+
+    public static function route_send_link(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_REPLY_CHATS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
+
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+
+        $link_id = isset($params['link_id']) ? sanitize_key((string) $params['link_id']) : sanitize_key((string) $request->get_param('link_id'));
+        if ($link_id === '' || !class_exists('PAXdesign_Chat_Quick_Links')) {
+            return new WP_Error('invalid_link', 'Ungültiger Link.', array('status' => 400));
+        }
+
+        $link = PAXdesign_Chat_Quick_Links::find_link($link_id);
+        if (!$link) {
+            return new WP_Error('not_found', 'Link nicht gefunden.', array('status' => 404));
+        }
+
+        $client_id = isset($params['client_msg_id'])
+            ? sanitize_text_field((string) $params['client_msg_id'])
+            : sanitize_text_field((string) $request->get_param('client_msg_id'));
+        if ($client_id !== '') {
+            $_POST['client_msg_id'] = $client_id;
+        }
+
+        $result = self::live()->admin_send_link_card($request['id'], $link);
+        if (is_wp_error($result)) {
+            return $result;
+        }
+
+        if (!empty($result['message']) && is_array($result['message'])) {
+            $result['message'] = self::live()->format_sse_message_payload(
+                $result['message'],
+                (int) get_current_user_id()
+            );
+        }
+
+        return self::respond($result);
     }
 
     public static function route_suggestions(WP_REST_Request $request) {

@@ -8,6 +8,7 @@ struct MessageBubbleView: View {
     var senderLabel: String?
     var agentDisplayName = L10n.ChatAgent
     var customerDisplayName = L10n.ChatCustomer
+    var siteBaseURL: String?
     let onReply: () -> Void
     let onCopy: () -> Void
     let onImageTap: (URL) -> Void
@@ -83,7 +84,9 @@ struct MessageBubbleView: View {
                     }
                 }
 
-                if !message.content.isEmpty {
+                if message.isLinkCard {
+                    LinkCardBubbleView(message: message, siteBaseURL: siteBaseURL)
+                } else if !message.content.isEmpty {
                     Text(message.content)
                         .font(.subheadline)
                         .foregroundStyle(PAXTheme.textPrimary)
@@ -93,6 +96,10 @@ struct MessageBubbleView: View {
                     Text(L10n.ChatImage)
                         .font(.caption)
                         .foregroundStyle(PAXTheme.textSecondary)
+                }
+
+                if message.showsLinkScanBadge {
+                    LinkScanBadgeView(message: message)
                 }
             }
             .padding(.horizontal, PAXMessageStyle.bubblePaddingH)

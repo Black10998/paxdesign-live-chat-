@@ -364,6 +364,35 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url), endpoint: "quick-replies", as: QuickRepliesResponse.self)
     }
 
+    func fetchQuickLinks() async throws -> QuickLinksResponse {
+        guard let url = liveAdminURL(path: "quick-links") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "quick-links", as: QuickLinksResponse.self)
+    }
+
+    func sendLinkCard(
+        _ sessionId: String,
+        linkId: String,
+        clientMsgId: String = UUID().uuidString.lowercased()
+    ) async throws -> LiveMessage {
+        guard let url = liveAdminURL(path: "sessions/\(sessionId)/links") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let payload: [String: Any] = [
+            "link_id": linkId,
+            "client_msg_id": clientMsgId,
+        ]
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        struct SendResponse: Codable { let message: LiveMessage }
+        let response: SendResponse = try await perform(
+            authRequest(url: url, method: "POST", body: body),
+            endpoint: "send-link",
+            as: SendResponse.self
+        )
+        return response.message
+    }
+
     func fetchSuggestions(sessionId: String, messageId: Int) async throws -> SuggestionsResponse {
         guard let url = liveAdminURL(
             path: "sessions/\(sessionId)/suggestions",

@@ -64,6 +64,14 @@ enum L10n {
     static var ChatHandlerLiveRequest: String { t("chat.handler.live_request") }
     static var ChatImage: String { t("chat.image") }
     static var ChatImageUnavailable: String { t("chat.image_unavailable") }
+    static var ChatLinkScanChecking: String { t("chat.link_scan.checking") }
+    static var ChatLinkScanSafe: String { t("chat.link_scan.safe") }
+    static var ChatLinkScanSuspicious: String { t("chat.link_scan.suspicious") }
+    static var ChatLinkScanDangerous: String { t("chat.link_scan.dangerous") }
+    static var ChatQuickLinksTitle: String { t("chat.quick_links.title") }
+    static var ChatQuickLinksEmptyTitle: String { t("chat.quick_links.empty_title") }
+    static var ChatQuickLinksEmptyBody: String { t("chat.quick_links.empty_body") }
+    static var ChatQuickLinkDefaultLabel: String { t("chat.quick_links.default_label") }
     static var ChatMessagePlaceholder: String { t("chat.message_placeholder") }
     static var ChatSuggestionsEmpty: String { t("chat.suggestions_empty") }
     static var ChatMessages: String { t("chat.messages") }
