@@ -249,13 +249,14 @@ def add_build_to_group(client: ASCClient, group_id: str, build_id: str) -> None:
 
 
 def find_beta_tester(client: ASCClient, app_id: str, email: str) -> dict[str, Any] | None:
-    payload = client.get(
-        "/betaTesters",
-        **{"filter[apps]": app_id, "filter[email]": email, "limit": "1"},
-    )
-    data = payload.get("data") or []
-    if data:
-        return data[0]
+    if app_id:
+        payload = client.get(
+            "/betaTesters",
+            **{"filter[apps]": app_id, "filter[email]": email, "limit": "1"},
+        )
+        data = payload.get("data") or []
+        if data:
+            return data[0]
 
     payload = client.get(
         "/betaTesters",
@@ -265,8 +266,10 @@ def find_beta_tester(client: ASCClient, app_id: str, email: str) -> dict[str, An
     return data[0] if data else None
 
 
-def invite_beta_tester(client: ASCClient, app_id: str, email: str) -> dict[str, Any]:
-    existing = find_beta_tester(client, app_id, email)
+def invite_beta_tester(
+    client: ASCClient, group_id: str, email: str
+) -> dict[str, Any] | None:
+    existing = find_beta_tester(client, "", email)
     if existing:
         return existing
 
@@ -280,6 +283,11 @@ def invite_beta_tester(client: ASCClient, app_id: str, email: str) -> dict[str, 
                 "email": email,
                 "firstName": first_name,
                 "lastName": "Tester",
+            },
+            "relationships": {
+                "betaGroups": {
+                    "data": [{"type": "betaGroups", "id": group_id}],
+                }
             },
         }
     }
@@ -298,11 +306,15 @@ def invite_beta_tester(client: ASCClient, app_id: str, email: str) -> dict[str, 
             return payload["data"]
     except urllib.error.HTTPError as exc:
         if exc.code == 409:
-            existing = find_beta_tester(client, app_id, email)
+            existing = find_beta_tester(client, "", email)
             if existing:
                 return existing
         detail = exc.read().decode("utf-8", errors="replace")
-        fail(f"POST /betaTesters failed ({exc.code}): {detail}")
+        print(
+            f"WARNING: Could not create beta tester for {email} ({exc.code}): {detail}",
+            file=sys.stderr,
+        )
+        return None
 
 
 def add_tester_to_group(client: ASCClient, group_id: str, tester_id: str) -> None:
@@ -313,14 +325,19 @@ def add_tester_to_group(client: ASCClient, group_id: str, tester_id: str) -> Non
     print(f"Added tester {tester_id} to internal beta group {group_id}")
 
 
-def verify_group_has_build_and_tester(
-    client: ASCClient, group_id: str, build_id: str, email: str
+def verify_group_has_build(
+    client: ASCClient, group_id: str, build_id: str
 ) -> None:
     builds_payload = client.get(f"/betaGroups/{group_id}/builds", **{"limit": "20"})
     build_ids = {item["id"] for item in builds_payload.get("data") or []}
     if build_id not in build_ids:
         fail("Build is not visible on the internal TestFlight group yet")
+    print("Verified TestFlight internal group contains the build")
 
+
+def verify_group_has_tester(
+    client: ASCClient, group_id: str, email: str
+) -> bool:
     testers_payload = client.get(
         f"/betaGroups/{group_id}/betaTesters", **{"limit": "200"}
     )
@@ -328,10 +345,10 @@ def verify_group_has_build_and_tester(
         ((item.get("attributes") or {}).get("email") or "").lower()
         for item in testers_payload.get("data") or []
     }
-    if email not in emails:
-        fail(f"Tester {email} is not assigned to the internal TestFlight group yet")
-
-    print("Verified TestFlight internal group contains the build and tester")
+    if email in emails:
+        print(f"Verified tester {email} is assigned to the internal TestFlight group")
+        return True
+    return False
 
 
 def main() -> None:
@@ -361,11 +378,17 @@ def main() -> None:
     tester = find_beta_tester(client, app_id, TESTER_EMAIL)
     if tester is None:
         print(f"Creating beta tester invitation for {TESTER_EMAIL}")
-        tester = invite_beta_tester(client, app_id, TESTER_EMAIL)
-    tester_id = tester["id"]
-    add_tester_to_group(client, group_id, tester_id)
+        tester = invite_beta_tester(client, group_id, TESTER_EMAIL)
+    if tester is not None:
+        add_tester_to_group(client, group_id, tester["id"])
 
-    verify_group_has_build_and_tester(client, group_id, build_id, TESTER_EMAIL)
+    verify_group_has_build(client, group_id, build_id)
+    tester_assigned = verify_group_has_tester(client, group_id, TESTER_EMAIL)
+    if not tester_assigned:
+        print(
+            f"NOTE: Build is ready in internal TestFlight. If {TESTER_EMAIL} is an "
+            "App Store Connect team member, open the TestFlight app with that Apple ID."
+        )
 
     print("TESTFLIGHT_READY=true")
     print(f"TESTFLIGHT_APP={app_name}")
