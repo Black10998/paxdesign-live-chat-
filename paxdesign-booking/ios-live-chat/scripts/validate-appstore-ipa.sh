@@ -38,15 +38,22 @@ read_entitlements_value() {
   local target_path="$1"
   local plist_key="$2"
   local value=""
+  local temp_plist
 
   if [[ -f "$target_path/embedded.mobileprovision" ]]; then
-    value="$(security cms -D -i "$target_path/embedded.mobileprovision" 2>/dev/null \
-      | /usr/libexec/PlistBuddy -c "Print :Entitlements:$plist_key" /dev/stdin 2>/dev/null || true)"
+    temp_plist="$(mktemp)"
+    if security cms -D -i "$target_path/embedded.mobileprovision" > "$temp_plist" 2>/dev/null; then
+      value="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:$plist_key" "$temp_plist" 2>/dev/null || true)"
+    fi
+    rm -f "$temp_plist"
   fi
 
   if [[ -z "$value" ]]; then
-    value="$(codesign -d --entitlements :- "$target_path" 2>/dev/null \
-      | /usr/libexec/PlistBuddy -c "Print :$plist_key" /dev/stdin 2>/dev/null || true)"
+    temp_plist="$(mktemp)"
+    if codesign -d --entitlements :- "$target_path" > "$temp_plist" 2>/dev/null && [[ -s "$temp_plist" ]]; then
+      value="$(/usr/libexec/PlistBuddy -c "Print :$plist_key" "$temp_plist" 2>/dev/null || true)"
+    fi
+    rm -f "$temp_plist"
   fi
 
   [[ -n "$value" ]] || fail "Entitlement missing: $plist_key"
