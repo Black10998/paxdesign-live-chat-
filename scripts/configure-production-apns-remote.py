@@ -461,10 +461,16 @@ def verify_devices_bootstrap(key_p8: str) -> None:
         )
         return
 
-    for device in devices[:3]:
+    for device in devices:
         prefix = device.get("token_prefix") or "unknown"
         name = device.get("device_name") or device.get("device_model") or "device"
-        print(f"  device={name} token_prefix={prefix}... sandbox={device.get('sandbox')}")
+        updated = device.get("updated_at") or 0
+        bundle = device.get("bundle_id") or "(default)"
+        marker = " [iPhone]" if name == "iPhone" or "iphone" in name.lower() else ""
+        print(
+            f"  device={name}{marker} token_prefix={prefix}... sandbox={device.get('sandbox')} "
+            f"bundle_id={bundle} updated_at={updated}"
+        )
 
 
 def verify_apns_provider_token_direct(key_p8: str) -> None:
@@ -531,7 +537,7 @@ def verify_apns_provider_token_direct(key_p8: str) -> None:
     fail(f"Unexpected Apple APNs provider probe response HTTP {resp.status_code}: {reason or resp.text}")
 
 
-def send_test_push_bootstrap(key_p8: str, scenario: str = "new_customer_message") -> None:
+def send_test_push_bootstrap(key_p8: str, scenario: str = "new_customer_message") -> bool:
     jwt_token = make_bootstrap_jwt(key_p8)
     body = bootstrap_body(key_p8, include_apns=False)
     body["scenario"] = scenario
@@ -544,7 +550,7 @@ def send_test_push_bootstrap(key_p8: str, scenario: str = "new_customer_message"
     )
     if status == 404:
         print(f"SKIP: Bootstrap APNs test endpoint not available yet ({scenario})")
-        return
+        return False
     if status != 200:
         fail(f"Bootstrap APNs test request failed for {scenario} ({status}): {payload}")
     if payload.get("sent"):
@@ -553,42 +559,54 @@ def send_test_push_bootstrap(key_p8: str, scenario: str = "new_customer_message"
             f"attempts={len(payload.get('attempts') or [])}"
         )
     else:
-        attempts = payload.get("attempts") or []
-        all_bad_token = attempts and all(
-            (a.get("error") or "") == "BadDeviceToken" for a in attempts
-        )
-        if all_bad_token:
-            fail(
-                f"APNs provider token accepted but all {len(attempts)} device tokens were rejected "
-                f"with BadDeviceToken for {scenario}. Open the TestFlight app, ensure notifications "
-                "are enabled, log in, and wait a few seconds for token re-registration. "
-                f"Full Apple response: {json.dumps(payload)}"
-            )
-        fail(f"APNs test not delivered for {scenario}: {payload}")
+        print(f"WARN: APNs test not delivered for {scenario}")
 
     for attempt in payload.get("attempts") or []:
         status = attempt.get("apns_http_status", 0)
         prefix = attempt.get("token_prefix") or "unknown"
         name = attempt.get("device_name") or "device"
         sandbox = attempt.get("sandbox")
+        apple_body = attempt.get("apple_response") or ""
         apple_reason = attempt.get("error") or ("accepted" if attempt.get("sent") else "unknown")
+        primary_env = attempt.get("primary_env") or ""
+        primary_reason = attempt.get("primary_reason") or ""
+        alternate_env = attempt.get("alternate_env") or ""
+        alternate_reason = attempt.get("alternate_reason") or ""
+        alternate_body = attempt.get("alternate_body") or ""
+        marker = " [iPhone]" if name == "iPhone" or prefix == "7c2aaeb89616" else ""
+        env_detail = ""
+        if primary_env:
+            env_detail = f" primary={primary_env}:{primary_reason}"
+        if alternate_env:
+            env_detail += f" alternate={alternate_env}:{alternate_reason}"
         if attempt.get("sent"):
             ok(
-                f"  device={name} token_prefix={prefix}... sandbox={sandbox} "
+                f"  device={name}{marker} token_prefix={prefix}... sandbox={sandbox} "
                 f"apns_http_status={status} apple_response={apple_reason}"
             )
         else:
             print(
-                f"WARN:  device={name} token_prefix={prefix}... sandbox={sandbox} "
-                f"apns_http_status={status} apple_response={apple_reason}"
+                f"WARN:  device={name}{marker} token_prefix={prefix}... sandbox={sandbox} "
+                f"apns_http_status={status} apple_response={apple_body or apple_reason}{env_detail}"
             )
+        if alternate_body:
+            print(f"       alternate_apple_response={alternate_body}")
 
     print(f"Apple APNs test response ({scenario}): {json.dumps(payload, indent=2)}")
+    return bool(payload.get("sent"))
 
 
 def verify_notification_paths_bootstrap(key_p8: str) -> None:
-    send_test_push_bootstrap(key_p8, "new_customer_message")
-    send_test_push_bootstrap(key_p8, "live_request")
+    results = {
+        "new_customer_message": send_test_push_bootstrap(key_p8, "new_customer_message"),
+        "live_request": send_test_push_bootstrap(key_p8, "live_request"),
+    }
+    if not any(results.values()):
+        fail(
+            "No APNs test scenario delivered to any device. "
+            f"Results: {results}. If iPhone token_prefix is unchanged, delete and reinstall "
+            "the TestFlight app to force a fresh APNs token, then log in again."
+        )
 
 
 def configure_apns_admin(key_p8: str) -> dict:

@@ -1157,6 +1157,8 @@ class PAXdesign_Live_Chat_Mobile_API {
                         'device_model'=> isset($device['device_model']) ? (string) $device['device_model'] : '',
                         'sandbox'     => !empty($device['sandbox']),
                         'approved'    => !isset($device['approved']) || !empty($device['approved']),
+                        'bundle_id'   => isset($device['bundle_id']) ? (string) $device['bundle_id'] : '',
+                        'updated_at'  => isset($device['updated_at']) ? (int) $device['updated_at'] : 0,
                     );
                 }
             }

@@ -624,13 +624,25 @@ class PAXdesign_APNS {
 
         if ($code < 200 || $code >= 300) {
             $reason = self::format_apns_error($body_resp, '');
+            $error_data = array(
+                'status'           => $code,
+                'body'             => $body_resp,
+                'primary_env'      => $sandbox ? 'sandbox' : 'production',
+                'primary_reason'   => $reason !== '' ? $reason : 'APNs HTTP ' . $code,
+            );
             if ($reason === 'BadDeviceToken') {
                 $alt_host = $sandbox ? 'https://api.push.apple.com' : 'https://api.sandbox.push.apple.com';
+                $alt_env  = $sandbox ? 'production' : 'sandbox';
                 $alt_url  = $alt_host . '/3/device/' . $device['token'];
                 $alt_resp = self::apns_post($alt_url, $headers, wp_json_encode($payload));
                 if (!is_wp_error($alt_resp)) {
                     $alt_code = (int) ($alt_resp['status'] ?? 0);
                     $alt_body = (string) ($alt_resp['body'] ?? '');
+                    $alt_reason = self::format_apns_error($alt_body, '');
+                    $error_data['alternate_env'] = $alt_env;
+                    $error_data['alternate_status'] = $alt_code;
+                    $error_data['alternate_body'] = $alt_body;
+                    $error_data['alternate_reason'] = $alt_reason !== '' ? $alt_reason : 'APNs HTTP ' . $alt_code;
                     if ($alt_code >= 200 && $alt_code < 300) {
                         if ($user_id > 0) {
                             self::set_device_sandbox_flag($user_id, (string) $device['token'], !$sandbox);
@@ -639,6 +651,7 @@ class PAXdesign_APNS {
                     }
                     $body_resp = $alt_body;
                     $code      = $alt_code;
+                    $reason    = $alt_reason;
                 }
             }
 
@@ -647,8 +660,8 @@ class PAXdesign_APNS {
             }
             return new WP_Error(
                 'apns_failed',
-                self::format_apns_error($body_resp, 'APNs HTTP ' . $code),
-                array('status' => $code, 'body' => $body_resp)
+                $reason !== '' ? $reason : self::format_apns_error($body_resp, 'APNs HTTP ' . $code),
+                $error_data
             );
         }
 
@@ -790,6 +803,13 @@ class PAXdesign_APNS {
                     $entry['apns_http_status'] = is_array($error_data) && isset($error_data['status']) ? (int) $error_data['status'] : 0;
                     if (is_array($error_data) && !empty($error_data['body'])) {
                         $entry['apple_response'] = (string) $error_data['body'];
+                    }
+                    if (is_array($error_data)) {
+                        foreach (array('primary_env', 'primary_reason', 'alternate_env', 'alternate_status', 'alternate_body', 'alternate_reason') as $field) {
+                            if (isset($error_data[$field]) && $error_data[$field] !== '') {
+                                $entry[$field] = $error_data[$field];
+                            }
+                        }
                     }
                 } else {
                     $entry['sent'] = true;
