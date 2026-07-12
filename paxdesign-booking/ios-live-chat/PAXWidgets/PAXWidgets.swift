@@ -37,12 +37,12 @@ struct PAXDashboardWidgetView: View {
                 Spacer()
             }
             HStack {
-                metric("Chats", value: entry.snapshot.unreadChats, tint: .accentColor)
-                metric("Live", value: entry.snapshot.liveRequests, tint: .accentColor)
+                metric("Chats", value: entry.snapshot.unreadChats, tint: Color.accentColor)
+                metric("Live", value: entry.snapshot.liveRequests, tint: Color.accentColor)
             }
             HStack {
-                metric("Tasks", value: entry.snapshot.openTasks, tint: .accentColor)
-                metric("Events", value: entry.snapshot.upcomingEvents, tint: .accentColor)
+                metric("Tasks", value: entry.snapshot.openTasks, tint: Color.accentColor)
+                metric("Events", value: entry.snapshot.upcomingEvents, tint: Color.accentColor)
             }
         }
         .padding(12)
