@@ -254,6 +254,14 @@ def find_beta_tester(client: ASCClient, app_id: str, email: str) -> dict[str, An
         **{"filter[apps]": app_id, "filter[email]": email, "limit": "1"},
     )
     data = payload.get("data") or []
+    if data:
+        return data[0]
+
+    payload = client.get(
+        "/betaTesters",
+        **{"filter[email]": email, "limit": "1"},
+    )
+    data = payload.get("data") or []
     return data[0] if data else None
 
 
@@ -264,23 +272,37 @@ def invite_beta_tester(client: ASCClient, app_id: str, email: str) -> dict[str, 
 
     local_part = email.split("@", 1)[0]
     first_name = local_part.replace(".", " ").replace("_", " ").title() or "Tester"
-    payload = client.post(
-        "/betaTesters",
-        {
-            "data": {
-                "type": "betaTesters",
-                "attributes": {
-                    "email": email,
-                    "firstName": first_name,
-                    "lastName": "Tester",
-                },
-                "relationships": {
-                    "apps": {"data": [{"type": "apps", "id": app_id}]},
-                },
-            }
+    url = API_BASE + "/betaTesters"
+    body = {
+        "data": {
+            "type": "betaTesters",
+            "attributes": {
+                "email": email,
+                "firstName": first_name,
+                "lastName": "Tester",
+            },
+        }
+    }
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {client.token}",
+            "Content-Type": "application/json",
         },
+        method="POST",
     )
-    return payload["data"]
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
+            return payload["data"]
+    except urllib.error.HTTPError as exc:
+        if exc.code == 409:
+            existing = find_beta_tester(client, app_id, email)
+            if existing:
+                return existing
+        detail = exc.read().decode("utf-8", errors="replace")
+        fail(f"POST /betaTesters failed ({exc.code}): {detail}")
 
 
 def add_tester_to_group(client: ASCClient, group_id: str, tester_id: str) -> None:
