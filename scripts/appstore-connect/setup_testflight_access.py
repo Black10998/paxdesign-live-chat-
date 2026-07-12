@@ -24,7 +24,7 @@ TESTER_EMAIL = os.environ.get(
     "TESTFLIGHT_INTERNAL_TESTER_EMAIL",
     os.environ.get("TESTFLIGHT_TESTER_EMAIL", "awjime29@icloud.com"),
 ).strip().lower()
-TARGET_BUILD = os.environ.get("TESTFLIGHT_TARGET_BUILD", "85").strip()
+TARGET_BUILD = os.environ.get("TESTFLIGHT_TARGET_BUILD", "86").strip()
 EXTERNAL_GROUP_NAME = os.environ.get(
     "TESTFLIGHT_EXTERNAL_GROUP_NAME", "PAXDesign External Testers"
 )

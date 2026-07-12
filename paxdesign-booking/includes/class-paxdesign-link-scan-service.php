@@ -252,6 +252,15 @@ class PAXdesign_Link_Scan_Service {
             $worst = self::STATUS_INCOMPLETE;
         }
 
+        $message = PAXdesign_Message_Store::get_message($session_id, $message_seq);
+        if (
+            is_array($message)
+            && in_array($worst, array(self::STATUS_DANGEROUS, self::STATUS_SUSPICIOUS), true)
+            && class_exists('PAXdesign_APNS')
+        ) {
+            PAXdesign_APNS::notify_link_scan_attention($session_id, $message, $worst);
+        }
+
         $provider_label = implode('+', array_keys($providers));
         if ($provider_label === '') {
             $provider_label = 'server';

@@ -6,6 +6,8 @@ struct AdaptiveShellView: View {
     @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
     @EnvironmentObject private var appLock: AppLockService
     @EnvironmentObject private var settings: AppSettingsStore
+    @EnvironmentObject private var permissions: PermissionCoordinator
+    @EnvironmentObject private var push: PushService
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var chatsPath = NavigationPath()
     @State private var teamPath = NavigationPath()
@@ -156,11 +158,25 @@ struct AdaptiveShellView: View {
         .sheet(isPresented: $showGlobalSearch) {
             NavigationStack { GlobalSearchView() }
         }
+        .sheet(isPresented: $permissions.showNotificationPrompt) {
+            NotificationPermissionPromptView()
+                .presentationDetents([.medium])
+                .presentationDragIndicator(.visible)
+        }
         .onAppear {
             loadedTabs.insert(selectedTab)
             coordinator.updateUnreadCounts()
             schedulePlatformSync()
             PAXHaptics.prepare()
+            permissions.presentNotificationPromptIfNeeded(isLoggedIn: auth.isLoggedIn)
+            Task {
+                await PushDeepLinkRouter.shared.consumeIfReady(
+                    auth: auth,
+                    coordinator: coordinator,
+                    teamCoordinator: teamCoordinator,
+                    isShellReady: true
+                )
+            }
         }
         .onChange(of: settings.readSessionIds) { _ in
             coordinator.updateUnreadCounts()

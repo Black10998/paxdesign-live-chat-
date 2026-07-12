@@ -120,6 +120,11 @@ final class InAppNotificationCoordinator {
             body = preview.isEmpty ? L10n.NotifyNewLeadBody : preview
             tone = .aiAlert
             type = "new_lead_contact"
+        case "link_scan_attention":
+            title = L10n.NotifyAIAttentionTitle
+            body = preview.isEmpty ? L10n.NotifyAIAttentionBody : preview
+            tone = .aiAlert
+            type = "ai_attention"
         default:
             title = customerName.isEmpty ? L10n.NotifyNewMessageTitle : customerName
             body = preview.isEmpty ? L10n.NotifyNewMessageBody : preview
@@ -146,7 +151,7 @@ final class InAppNotificationCoordinator {
         activeSessionId: String?
     ) {
         switch event {
-        case "customer_waiting", "new_chat_started", "missed_chat", "assigned_chat_updated", "new_lead_contact":
+        case "customer_waiting", "new_chat_started", "missed_chat", "assigned_chat_updated", "new_lead_contact", "link_scan_attention":
             handleOperationalEvent(
                 event: event,
                 sessionId: sessionId,

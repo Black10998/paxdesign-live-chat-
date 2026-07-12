@@ -109,6 +109,11 @@ final class AuthStore: ObservableObject {
     }
 
     func logout() {
+        Task {
+            if let api = api, let token = PushService.shared.deviceToken {
+                try? await api.unregisterAPNs(token: token)
+            }
+        }
         PlatformSyncService.shared.reset()
         invalidateStoredSession(keepFormFields: false)
     }

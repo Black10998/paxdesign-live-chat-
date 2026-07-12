@@ -1519,6 +1519,55 @@
         }
       }
     },
+    "settings.notifications_status": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Permission status" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Berechtigungsstatus" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "حالة الإذن" } }
+      }
+    },
+    "settings.notifications_enable": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Enable iOS notifications" } },
+        "de": { "stringUnit": { "state": "translated", "value": "iOS-Benachrichtigungen aktivieren" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تفعيل إشعارات iOS" } }
+      }
+    },
+    "settings.notifications_status.authorized": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Allowed" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Erlaubt" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "مسموح" } }
+      }
+    },
+    "settings.notifications_status.denied": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Denied" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Abgelehnt" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "مرفوض" } }
+      }
+    },
+    "settings.notifications_status.provisional": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Provisional" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Vorläufig" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "مؤقت" } }
+      }
+    },
+    "settings.notifications_status.not_determined": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Not requested" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Nicht angefragt" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "لم يُطلب" } }
+      }
+    },
+    "settings.notifications_status.unknown": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Unknown" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Unbekannt" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "غير معروف" } }
+      }
+    },
     "settings.sound": {
       "localizations": {
         "en": {

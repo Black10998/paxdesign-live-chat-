@@ -84,10 +84,12 @@ struct PAXDesignLiveChatApp: App {
         LaunchDiagnostics.mark("startup.begin")
         let auth = AuthStore.shared
         let permissions = PermissionCoordinator.shared
+
         await permissions.refreshStatuses()
-        launchSplash.markBootstrapFinished()
 
         await auth.bootstrapSession()
+        launchSplash.markBootstrapFinished()
+        LaunchDiagnostics.mark("startup.session-ready")
 
         if auth.isLoggedIn {
             AppServicesController.startLoggedInServices(
@@ -95,17 +97,36 @@ struct PAXDesignLiveChatApp: App {
                 coordinator: coordinator,
                 teamCoordinator: TeamMessagingCoordinator.shared
             )
-            await coordinator.fullConversationSync(auth: auth)
-            await TeamMessagingCoordinator.shared.fullConversationSync(auth: auth)
+
+            Task(priority: .utility) {
+                LaunchDiagnostics.mark("startup.background-sync.begin")
+                await coordinator.fullConversationSync(auth: auth)
+                await TeamMessagingCoordinator.shared.fullConversationSync(auth: auth)
+                LaunchDiagnostics.mark("startup.background-sync.complete")
+                await PushDeepLinkRouter.shared.consumeIfReady(
+                    auth: auth,
+                    coordinator: coordinator,
+                    teamCoordinator: TeamMessagingCoordinator.shared,
+                    isShellReady: !launchSplash.isVisible
+                )
+            }
         }
 
-        LaunchDiagnostics.mark("startup.complete")
+        LaunchDiagnostics.mark("startup.interactive")
     }
 
     private func handlePushNotification(_ note: Notification, opened: Bool) {
         let auth = AuthStore.shared
-        guard auth.isLoggedIn,
-              let sessionId = note.userInfo?["session_id"] as? String,
+        guard auth.isLoggedIn else {
+            if opened, let userInfo = note.userInfo as? [AnyHashable: Any] {
+                PushDeepLinkRouter.shared.store(
+                    userInfo: userInfo,
+                    action: note.userInfo?["action"] as? String
+                )
+            }
+            return
+        }
+        guard let sessionId = note.userInfo?["session_id"] as? String,
               let type = note.userInfo?["type"] as? String else { return }
         let event = (note.userInfo?["event"] as? String) ?? type
 
@@ -137,6 +158,8 @@ struct PAXDesignLiveChatApp: App {
                         senderName: payload.customerName.isEmpty ? payload.preview : payload.customerName,
                         isActiveSession: coordinator.activeSessionId == sessionId
                     )
+                } else {
+                    coordinator.activeSessionId = sessionId
                 }
                 return
             }
@@ -151,6 +174,9 @@ struct PAXDesignLiveChatApp: App {
                 )
             }
             await coordinator.handlePush(sessionId: sessionId, type: type, auth: auth, payload: payload)
+            if opened {
+                coordinator.activeSessionId = sessionId
+            }
         }
     }
 }
@@ -228,8 +254,18 @@ struct RootView: View {
             }
         }
         .onChange(of: launchSplash.isVisible) { visible in
-            guard !visible, !settings.firstLaunchOnboardingCompleted else { return }
-            showFirstRunOnboarding = true
+            guard !visible else { return }
+            if !settings.firstLaunchOnboardingCompleted {
+                showFirstRunOnboarding = true
+            }
+            Task {
+                await PushDeepLinkRouter.shared.consumeIfReady(
+                    auth: auth,
+                    coordinator: coordinator,
+                    teamCoordinator: TeamMessagingCoordinator.shared,
+                    isShellReady: auth.isLoggedIn
+                )
+            }
         }
         .onChange(of: auth.isLoggedIn) { loggedIn in
             if loggedIn, auth.profile?.onboardingCompleted == true {

@@ -20,7 +20,7 @@ final class LaunchSplashController: ObservableObject {
 
     private func dismissIfReady() {
         guard animationFinished, bootstrapFinished, isVisible else { return }
-        withAnimation(.easeInOut(duration: 0.45)) {
+        withAnimation(.easeOut(duration: 0.24)) {
             isVisible = false
         }
     }

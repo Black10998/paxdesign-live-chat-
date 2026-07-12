@@ -73,7 +73,21 @@ final class PushService: NSObject, ObservableObject {
     }
 
     func updateDeviceToken(_ tokenData: Data) {
-        deviceToken = tokenData.map { String(format: "%02.2hhx", $0) }.joined()
+        let token = tokenData.map { String(format: "%02.2hhx", $0) }.joined()
+        guard deviceToken != token else { return }
+        deviceToken = token
+    }
+
+    func registerForRemoteNotificationsIfAuthorized() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            await MainActor.run {
+                UIApplication.shared.registerForRemoteNotifications()
+            }
+        default:
+            break
+        }
     }
 
     struct PushPayload {
@@ -106,15 +120,22 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         configureNativeChrome()
         UNUserNotificationCenter.current().delegate = self
+        PushService.shared.configureNotificationCategories()
         QuickActionsManager.configure(
             isLoggedIn: AuthStore.shared.isLoggedIn,
             canViewChats: AuthStore.shared.canViewChats,
             canManageUsers: AuthStore.shared.canManageUsers
         )
+        if let remoteNotification = launchOptions?[.remoteNotification] as? [AnyHashable: Any] {
+            PushDeepLinkRouter.shared.store(userInfo: remoteNotification)
+        }
         if let shortcut = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem {
             DispatchQueue.main.async {
                 NotificationCenter.default.post(name: .paxQuickAction, object: shortcut.type)
             }
+        }
+        Task { @MainActor in
+            await PushService.shared.registerForRemoteNotificationsIfAuthorized()
         }
         return true
     }
@@ -197,6 +218,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         var userInfo = pushUserInfo(from: payload)
         userInfo["action"] = response.actionIdentifier
 
+        PushDeepLinkRouter.shared.store(userInfo: info, action: response.actionIdentifier)
         NotificationCenter.default.post(name: .paxPushOpened, object: nil, userInfo: userInfo)
     }
 
