@@ -31,9 +31,85 @@ class PAXdesign_Booking_Update_Checker {
         add_filter('site_transient_update_plugins', array(__CLASS__, 'ensure_update_offered'));
         add_filter('plugins_api', array(__CLASS__, 'plugin_info'), 10, 3);
         add_filter('upgrader_pre_download', array(__CLASS__, 'authorize_package_download'), 10, 4);
+        add_filter('auto_update_plugin', array(__CLASS__, 'enable_auto_update'), 10, 2);
         add_action('upgrader_process_complete', array(__CLASS__, 'clear_cache'), 10, 2);
         add_action('load-update-core.php', array(__CLASS__, 'clear_update_cache'));
         add_action('load-plugins.php', array(__CLASS__, 'maybe_clear_stale_cache'));
+    }
+
+    /**
+     * @param bool  $update
+     * @param object $item
+     * @return bool
+     */
+    public static function enable_auto_update($update, $item) {
+        if (isset($item->plugin) && $item->plugin === self::SLUG) {
+            return true;
+        }
+        return $update;
+    }
+
+    /**
+     * Upgrade this plugin from the latest GitHub release ZIP.
+     *
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function upgrade_from_github() {
+        if (!current_user_can('update_plugins')) {
+            return new WP_Error('forbidden', 'update_plugins capability required.', array('status' => 403));
+        }
+
+        if (!function_exists('get_plugin_data')) {
+            require_once ABSPATH . 'wp-admin/includes/plugin.php';
+        }
+        require_once ABSPATH . 'wp-admin/includes/class-wp-upgrader.php';
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+
+        self::clear_update_cache();
+        $current = self::read_installed_version();
+        $release = self::fetch_release($current);
+        if (!$release || empty($release['version']) || empty($release['zip'])) {
+            return new WP_Error('no_release', 'No GitHub release available for upgrade.', array('status' => 404));
+        }
+
+        if (version_compare($current, $release['version'], '>=')) {
+            return array(
+                'updated'  => false,
+                'version'  => $current,
+                'message'  => 'Already on latest release.',
+            );
+        }
+
+        $package = self::download_github_release_zip((string) $release['zip']);
+        if (is_wp_error($package)) {
+            return $package;
+        }
+
+        $skin     = new Automatic_Upgrader_Skin();
+        $upgrader = new Plugin_Upgrader($skin);
+        $result   = $upgrader->install(
+            $package,
+            array(
+                'clear_destination' => true,
+                'overwrite_package' => true,
+            )
+        );
+
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        if ($result === false) {
+            return new WP_Error('upgrade_failed', 'Plugin upgrade failed.', array('status' => 500));
+        }
+
+        self::clear_update_cache();
+        $installed = self::read_installed_version();
+
+        return array(
+            'updated' => true,
+            'version' => $installed,
+            'release' => (string) $release['version'],
+        );
     }
 
     public static function clear_cache($upgrader, $options) {
