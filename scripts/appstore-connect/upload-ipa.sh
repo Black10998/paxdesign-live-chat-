@@ -30,7 +30,7 @@ if [[ "$PRIVATE_KEY" == *"\\n"* ]]; then
   PRIVATE_KEY="${PRIVATE_KEY//\\n/$'\n'}"
 fi
 
-KEY_DIR="${RUNNER_TEMP:-/tmp}/asc-private-keys"
+KEY_DIR="${HOME}/.appstoreconnect/private_keys"
 mkdir -p "$KEY_DIR"
 KEY_FILE="$KEY_DIR/AuthKey_${KEY_ID}.p8"
 printf '%s' "$PRIVATE_KEY" > "$KEY_FILE"
