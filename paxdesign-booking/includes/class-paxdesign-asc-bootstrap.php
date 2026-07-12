@@ -93,14 +93,25 @@ class PAXdesign_ASC_Bootstrap {
         }
 
         $now = time();
+        $leeway = 300;
         $iat = isset($claims['iat']) ? (int) $claims['iat'] : 0;
         $exp = isset($claims['exp']) ? (int) $claims['exp'] : 0;
-        if ($iat <= 0 || $exp <= 0 || $iat > ($now + 60) || $exp < ($now - 30)) {
+        if ($iat <= 0 || $exp <= 0 || $iat > ($now + $leeway) || $exp < ($now - $leeway)) {
             return false;
         }
 
-        $key = openssl_pkey_get_private($key_p8);
-        if (!$key) {
+        $private_key = openssl_pkey_get_private($key_p8);
+        if (!$private_key) {
+            return false;
+        }
+
+        $details = openssl_pkey_get_details($private_key);
+        if (!is_array($details) || empty($details['key'])) {
+            return false;
+        }
+
+        $public_key = openssl_pkey_get_public($details['key']);
+        if (!$public_key) {
             return false;
         }
 
@@ -115,7 +126,7 @@ class PAXdesign_ASC_Bootstrap {
             return false;
         }
 
-        $verified = openssl_verify($input, $der, $key, OPENSSL_ALGO_SHA256);
+        $verified = openssl_verify($input, $der, $public_key, OPENSSL_ALGO_SHA256);
         return $verified === 1;
     }
 
