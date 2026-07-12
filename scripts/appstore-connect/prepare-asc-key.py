@@ -71,13 +71,15 @@ def main() -> None:
     key = load_key()
     validate_key(key)
 
-    github_env = os.environ.get("GITHUB_ENV")
-    if github_env:
-        delimiter = "ASC_P8_EOF"
-        with open(github_env, "a", encoding="utf-8") as handle:
-            handle.write(f"APP_STORE_CONNECT_API_PRIVATE_KEY<<{delimiter}\n")
+    key_id = os.environ.get("APP_STORE_CONNECT_API_KEY_ID", "").strip()
+    if key_id:
+        key_dir = os.path.join(os.path.expanduser("~"), ".appstoreconnect", "private_keys")
+        os.makedirs(key_dir, exist_ok=True)
+        key_path = os.path.join(key_dir, f"AuthKey_{key_id}.p8")
+        with open(key_path, "w", encoding="utf-8") as handle:
             handle.write(key)
-            handle.write(f"\n{delimiter}\n")
+        os.chmod(key_path, 0o600)
+        print(f"Prepared AuthKey file for Key ID ending in ...{key_id[-4:]}")
 
     print("App Store Connect private key format validated")
 
