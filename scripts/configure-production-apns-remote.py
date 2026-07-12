@@ -215,6 +215,9 @@ def bootstrap_auth_works(key_p8: str) -> bool:
         return False
     if status == 403 and payload.get("code") == "asc_auth_invalid":
         return False
+    if status == 403:
+        # JWT accepted; endpoint rejected the action (e.g. update_plugins on older builds).
+        return payload.get("code") != "asc_auth_invalid"
     return status == 200
 
 
