@@ -553,7 +553,7 @@ class PAXdesign_APNS {
         }
 
         $cfg     = self::get_config();
-        $bundle  = !empty($device['bundle_id']) ? $device['bundle_id'] : $cfg['bundle_id'];
+        $bundle  = $cfg['bundle_id'];
         $sandbox = !empty($device['sandbox']);
         $host    = $sandbox ? 'https://api.sandbox.push.apple.com' : 'https://api.push.apple.com';
         $jwt     = self::make_jwt($cfg);
@@ -788,6 +788,9 @@ class PAXdesign_APNS {
                     $entry['sent'] = false;
                     $entry['error'] = $result->get_error_message();
                     $entry['apns_http_status'] = is_array($error_data) && isset($error_data['status']) ? (int) $error_data['status'] : 0;
+                    if (is_array($error_data) && !empty($error_data['body'])) {
+                        $entry['apple_response'] = (string) $error_data['body'];
+                    }
                 } else {
                     $entry['sent'] = true;
                     $entry['apns_http_status'] = 200;
