@@ -37,12 +37,18 @@ WIDGET_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$WIDGET_PAT
 read_entitlements_value() {
   local target_path="$1"
   local plist_key="$2"
-  local entitlements_file value
-  entitlements_file="$(mktemp)"
-  codesign -d --entitlements "$entitlements_file" "$target_path" 2>/dev/null \
-    || fail "Could not read entitlements from $(basename "$target_path")"
-  value="$(/usr/libexec/PlistBuddy -c "Print :$plist_key" "$entitlements_file" 2>/dev/null || true)"
-  rm -f "$entitlements_file"
+  local value=""
+
+  if [[ -f "$target_path/embedded.mobileprovision" ]]; then
+    value="$(security cms -D -i "$target_path/embedded.mobileprovision" 2>/dev/null \
+      | /usr/libexec/PlistBuddy -c "Print :Entitlements:$plist_key" /dev/stdin 2>/dev/null || true)"
+  fi
+
+  if [[ -z "$value" ]]; then
+    value="$(codesign -d --entitlements :- "$target_path" 2>/dev/null \
+      | /usr/libexec/PlistBuddy -c "Print :$plist_key" /dev/stdin 2>/dev/null || true)"
+  fi
+
   [[ -n "$value" ]] || fail "Entitlement missing: $plist_key"
   printf '%s' "$value"
 }
