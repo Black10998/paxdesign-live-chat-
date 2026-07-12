@@ -208,9 +208,7 @@ struct ChatView: View {
                 Button {
                     withAnimation(PAXTheme.quickSpring) { showCustomerOverview = false }
                 } label: {
-                    PAXIcon( "chevron.up")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(PAXTheme.textTertiary)
+                    PAXIcon("chevron.up", size: .inline, emphasis: .tertiary)
                 }
                 .buttonStyle(.plain)
             }
@@ -248,9 +246,7 @@ struct ChatView: View {
 
     private func overviewRow(icon: String, title: String, value: String) -> some View {
         HStack(spacing: 8) {
-            PAXIcon( icon)
-                .font(.caption2)
-                .foregroundStyle(PAXTheme.accent)
+            PAXIcon(icon, size: .inline)
                 .frame(width: 16)
             Text(title)
                 .font(.caption2)
@@ -281,7 +277,7 @@ struct ChatView: View {
                     showCustomerOverview.toggle()
                 }
             } label: {
-                PAXIcon( showCustomerOverview ? "person.crop.circle.fill" : "person.crop.circle")
+                PAXIcon(showCustomerOverview ? "person.crop.circle.fill" : "person.crop.circle")
             }
             .accessibilityLabel(L10n.ChatOverviewAccessibility)
         }
@@ -422,9 +418,7 @@ struct ChatView: View {
                         }
                     }
                 } label: {
-                    PAXIcon( "plus.circle")
-                        .font(.title3)
-                        .foregroundStyle(PAXTheme.accent)
+                    PAXIcon("plus.circle", size: .card)
                         .frame(width: 32, height: 32)
                 }
                 .disabled(thread.isSending)
@@ -445,9 +439,7 @@ struct ChatView: View {
                 PAXHaptics.light()
                 Task { await thread.send(auth: auth) }
             } label: {
-                PAXIcon( "arrow.up.circle.fill")
-                    .font(.system(size: 30))
-                    .foregroundStyle(canSend ? PAXTheme.accent : PAXTheme.textTertiary)
+                PAXIcon("arrow.up.circle.fill", size: .card)
             }
             .disabled(!canSend)
         }
@@ -490,9 +482,7 @@ struct ChatView: View {
 struct MessageReactionBadge: View {
     let reaction: String
     var body: some View {
-        PAXIcon( reaction == "like" ? "heart.fill" : "hand.thumbsdown.fill")
-            .font(.caption2)
-            .foregroundStyle(reaction == "like" ? .pink : .orange)
+        PAXIcon(reaction == "like" ? "heart.fill" : "hand.thumbsdown.fill", size: .inline)
             .padding(5)
             .background(
                 Circle()
@@ -510,9 +500,7 @@ struct SessionRatingBadge: View {
         self.rating = rating
     }
     var body: some View {
-        PAXIcon( rating == 5 ? "heart.fill" : "hand.thumbsdown.fill")
-            .font(.caption2)
-            .foregroundStyle(rating == 5 ? .pink : .orange)
+        PAXIcon(rating == 5 ? "heart.fill" : "hand.thumbsdown.fill", size: .inline)
     }
 }
 

@@ -18,8 +18,7 @@ struct LinkScanBadgeView: View {
 
     var body: some View {
         HStack(spacing: 5) {
-            PAXIcon( iconName)
-                .font(.system(size: 10, weight: .bold))
+            PAXIcon(iconName, size: .micro)
             Text(displayedStatus.label)
                 .font(.caption2.weight(.bold))
                 .lineLimit(1)
@@ -173,9 +172,7 @@ struct LinkCardBubbleView: View {
                         .foregroundStyle(PAXTheme.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: 0)
-                    PAXIcon( "arrow.up.right")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(PAXTheme.accent)
+                    PAXIcon("arrow.up.right", size: .inline)
                 }
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
@@ -198,14 +195,16 @@ struct QuickLinkIconView: View {
     let label: String
     let size: CGFloat
 
+    private var iconSize: PAXIconSize {
+        size >= 34 ? .card : .row
+    }
+
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
-                .fill(PAXTheme.accent.opacity(0.14))
+                .fill(Color(.tertiarySystemFill))
                 .frame(width: size, height: size)
-            PAXIcon(PAXIconCatalog.quickLinkSymbol(for: icon, label: label))
-                .font(.system(size: size * 0.42, weight: .regular))
-                .foregroundStyle(PAXTheme.accent)
+            PAXIcon(PAXIconCatalog.quickLinkSymbol(for: icon, label: label), size: iconSize)
         }
     }
 }
@@ -221,9 +220,7 @@ struct QuickLinksSheet: View {
             Group {
                 if links.isEmpty {
                     VStack(spacing: 10) {
-                        PAXIcon( "link.badge.plus")
-                            .font(.system(size: 34))
-                            .foregroundStyle(PAXTheme.textTertiary)
+                        PAXIcon("link.badge.plus", size: .card, emphasis: .tertiary)
                         Text(L10n.ChatQuickLinksEmptyTitle)
                             .font(.headline)
                         Text(L10n.SettingsQuickLinksEmptyBody)

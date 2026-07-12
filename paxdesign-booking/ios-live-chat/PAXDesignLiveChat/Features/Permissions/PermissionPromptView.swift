@@ -17,9 +17,7 @@ struct NotificationPermissionPromptView: View {
                     Circle()
                         .fill(PAXTheme.accentSoft)
                         .frame(width: 72, height: 72)
-                    PAXIcon( "bell.badge.fill")
-                        .font(.system(size: 32))
-                        .foregroundStyle(PAXTheme.accent)
+                    PAXIcon("bell.badge.fill", size: .hero)
                 }
 
                 VStack(spacing: 8) {

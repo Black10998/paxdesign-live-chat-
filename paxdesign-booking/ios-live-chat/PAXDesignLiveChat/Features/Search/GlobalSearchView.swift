@@ -98,8 +98,7 @@ struct GlobalSearchView: View {
 
     private func searchLabel(_ result: GlobalSearchResult) -> some View {
         HStack(spacing: 12) {
-            PAXIcon( result.module.systemImage)
-                .foregroundStyle(result.module.tint)
+            PAXIcon(result.module.systemImage)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(result.title).font(.subheadline.weight(.semibold))

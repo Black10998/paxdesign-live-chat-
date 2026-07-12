@@ -41,12 +41,12 @@ struct PlatformHubView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { showSearch = true } label: {
-                    PAXIcon( "magnifyingglass")
+                    PAXIcon("magnifyingglass")
                 }
             }
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink { ModuleSettingsHubView() } label: {
-                    PAXIcon( "slider.horizontal.3")
+                    PAXIcon("slider.horizontal.3")
                 }
             }
         }
@@ -120,9 +120,7 @@ struct PlatformHubView: View {
 
                 Spacer(minLength: 0)
 
-                PAXIcon( "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(PAXTheme.textTertiary)
+                PAXIcon("chevron.right", size: .inline, emphasis: .tertiary)
             }
             .paxCard(.hero)
         }
@@ -187,9 +185,7 @@ struct PlatformHubView: View {
 
     private func platformLinkRow(_ title: String, systemImage: String, detail: String = "") -> some View {
         HStack(spacing: 12) {
-            PAXIcon( systemImage)
-                .font(.body)
-                .foregroundStyle(PAXTheme.accent)
+            PAXIcon(systemImage, size: .row)
                 .frame(width: 28)
             Text(title)
                 .foregroundStyle(PAXTheme.textPrimary)
@@ -199,9 +195,7 @@ struct PlatformHubView: View {
                     .font(.caption)
                     .foregroundStyle(PAXTheme.textTertiary)
             }
-            PAXIcon( "chevron.right")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(PAXTheme.textTertiary)
+            PAXIcon("chevron.right", size: .inline, emphasis: .tertiary)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

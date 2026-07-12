@@ -152,7 +152,7 @@ struct DashboardView: View {
                     showSearch = true
                     PAXHaptics.light()
                 } label: {
-                    PAXIcon( "magnifyingglass")
+                    PAXIcon("magnifyingglass")
                 }
                 .accessibilityLabel(L10n.GlobalSearchTitle)
             }
@@ -369,8 +369,7 @@ struct DashboardView: View {
             } else {
                 ForEach(calendar.upcoming()) { event in
                     HStack(spacing: 12) {
-                        PAXIcon( event.category.systemImage)
-                            .foregroundStyle(.red)
+                        PAXIcon(event.category.systemImage)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(event.title).font(.subheadline.weight(.semibold))
                             Text(MessageTimeFormatter.relativeUpdatedLabel(from: event.startDate))
@@ -434,9 +433,7 @@ private struct DashboardStatusChipView: View {
 
     var body: some View {
         HStack(spacing: 9) {
-            PAXIcon( chip.icon)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(chip.tint)
+            PAXIcon(chip.icon, size: .inline)
             VStack(alignment: .leading, spacing: 1) {
                 Text(chip.value)
                     .font(.subheadline.weight(.semibold))
@@ -481,9 +478,7 @@ private struct DashboardTourOverlay: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
-                    PAXIcon( step.pointerSymbol)
-                        .font(.headline.weight(.bold))
-                        .foregroundStyle(PAXTheme.accent)
+                    PAXIcon(step.pointerSymbol, size: .row)
                     Text(L10n.DashboardTourStepOf(stepIndex + 1, totalSteps))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(PAXTheme.textSecondary)

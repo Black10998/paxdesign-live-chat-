@@ -31,28 +31,29 @@ struct PAXDashboardWidgetView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "chart.bar.doc.horizontal.fill")
-                    .foregroundStyle(Color.accentColor)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.primary)
                 Text("PAXDesign")
                     .font(.caption.weight(.bold))
                 Spacer()
             }
             HStack {
-                metric("Chats", value: entry.snapshot.unreadChats, tint: Color.accentColor)
-                metric("Live", value: entry.snapshot.liveRequests, tint: Color.accentColor)
+                metric("Chats", value: entry.snapshot.unreadChats)
+                metric("Live", value: entry.snapshot.liveRequests)
             }
             HStack {
-                metric("Tasks", value: entry.snapshot.openTasks, tint: Color.accentColor)
-                metric("Events", value: entry.snapshot.upcomingEvents, tint: Color.accentColor)
+                metric("Tasks", value: entry.snapshot.openTasks)
+                metric("Events", value: entry.snapshot.upcomingEvents)
             }
         }
         .padding(12)
     }
 
-    private func metric(_ title: String, value: Int, tint: Color) -> some View {
+    private func metric(_ title: String, value: Int) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text("\(value)")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(tint)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(.primary)
             Text(title)
                 .font(.caption2)
                 .foregroundStyle(.secondary)

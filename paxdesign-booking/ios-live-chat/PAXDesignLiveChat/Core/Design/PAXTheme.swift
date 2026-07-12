@@ -11,6 +11,10 @@ enum PAXTheme {
     static var textPrimary: Color { .primary }
     static var textSecondary: Color { .secondary }
     static var textTertiary: Color { Color(.tertiaryLabel) }
+    static var icon: Color { .primary }
+    static var iconSecondary: Color { .secondary }
+    static var iconTertiary: Color { Color(.tertiaryLabel) }
+    static var iconOnFill: Color { .white }
     static var userBubble: Color { Color(.systemGray5) }
 
     static var background: Color { Color(.systemGroupedBackground) }

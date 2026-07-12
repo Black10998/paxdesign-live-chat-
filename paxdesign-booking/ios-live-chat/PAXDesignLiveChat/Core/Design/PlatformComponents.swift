@@ -43,12 +43,13 @@ struct PermissionOverviewRow: View {
 
     var body: some View {
         HStack {
-            Label { Text(title) } icon: { PAXIcon(enabled ? "checkmark.circle.fill" : "minus.circle") }
-                .foregroundStyle(enabled ? .green : .secondary)
+            PAXIcon(enabled ? "checkmark.circle.fill" : "minus.circle", size: .row)
+            Text(title)
+                .foregroundStyle(PAXTheme.textPrimary)
             Spacer()
             Text(enabled ? L10n.CommonActive : L10n.SettingsDisabled)
                 .font(.caption)
-                .foregroundStyle(enabled ? .green : .secondary)
+                .foregroundStyle(enabled ? PAXTheme.textPrimary : PAXTheme.textSecondary)
         }
     }
 }

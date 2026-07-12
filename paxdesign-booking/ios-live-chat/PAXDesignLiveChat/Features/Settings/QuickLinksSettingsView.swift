@@ -27,9 +27,7 @@ struct QuickLinksSettingsView: View {
                     if links.isEmpty {
                         Section {
                             VStack(spacing: 10) {
-                                PAXIcon( "link.badge.plus")
-                                    .font(.system(size: 34))
-                                    .foregroundStyle(PAXTheme.textTertiary)
+                                PAXIcon("link.badge.plus", size: .card, emphasis: .tertiary)
                                 Text(L10n.ChatQuickLinksEmptyTitle)
                                     .font(.headline)
                                 Text(L10n.SettingsQuickLinksEmptyBody)
@@ -58,9 +56,7 @@ struct QuickLinksSettingsView: View {
                                                 .lineLimit(1)
                                         }
                                         Spacer(minLength: 0)
-                                        PAXIcon( "line.3.horizontal")
-                                            .font(.caption.weight(.semibold))
-                                            .foregroundStyle(PAXTheme.textTertiary)
+                                        PAXIcon("line.3.horizontal", size: .inline, emphasis: .tertiary)
                                     }
                                     .padding(.vertical, 2)
                                 }

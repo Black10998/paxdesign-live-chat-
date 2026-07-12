@@ -61,7 +61,8 @@ struct ProfileView: View {
             Section(L10n.ProfilePermissions) {
                 if profile?.isSuperAdmin == true {
                     HStack {
-                        Label { Text(L10n.AccountSuperAdmin) } icon: { PAXIcon("star.fill") }
+                        PAXIcon("star.fill", size: .row)
+                        Text(L10n.AccountSuperAdmin)
                             .foregroundStyle(PAXTheme.accent)
                         Spacer()
                         Text(L10n.CommonActive)

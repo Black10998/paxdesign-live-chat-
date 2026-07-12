@@ -99,8 +99,11 @@ struct AdministrationHubView: View {
 
             Section(L10n.AdminPermissionsOverview) {
                 if auth.profile?.isSuperAdmin == true {
-                    Label { Text(L10n.AccountSuperAdmin) } icon: { PAXIcon("star.fill") }
-                        .foregroundStyle(PAXTheme.accent)
+                    HStack {
+                        PAXIcon("star.fill", size: .row)
+                        Text(L10n.AccountSuperAdmin)
+                            .foregroundStyle(PAXTheme.accent)
+                    }
                 } else if let perms = auth.profile?.permissions {
                     ForEach(PermissionLabels.items(for: perms)) { item in
                         PermissionOverviewRow(title: item.title, enabled: item.enabled)
@@ -161,16 +164,13 @@ struct AdministrationHubView: View {
 
     private func activityTile(value: String, label: String, systemImage: String, tint: Color) -> some View {
         HStack(spacing: 14) {
-            PAXIcon( systemImage)
-                .font(.title3)
-                .foregroundStyle(tint)
-                .frame(width: 32)
+            PAXIcon(systemImage, size: .row)
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.subheadline)
                 Text(value)
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(tint)
+                    .font(.title3.weight(.bold))
+                    .foregroundStyle(PAXTheme.textPrimary)
             }
         }
         .padding(.vertical, 4)

@@ -24,9 +24,7 @@ struct LegalDocumentView: View {
                                     Text(link.title)
                                         .font(.subheadline.weight(.medium))
                                     Spacer()
-                                    PAXIcon( "arrow.up.right")
-                                        .font(.caption)
-                                        .foregroundStyle(PAXTheme.textTertiary)
+                                    PAXIcon("arrow.up.right", size: .inline, emphasis: .tertiary)
                                 }
                                 .padding(12)
                                 .paxGlassCardStyle(cornerRadius: 12, fillOpacity: 0.8, borderOpacity: 0.44, shadowOpacity: 0.1)
@@ -189,8 +187,7 @@ struct AboutView: View {
 
     private func aboutPill(_ text: String, icon: String) -> some View {
         HStack(spacing: 5) {
-            PAXIcon( icon)
-                .font(.caption2.weight(.semibold))
+            PAXIcon(icon, size: .inline)
             Text(text)
                 .font(.caption.weight(.semibold))
         }
@@ -235,11 +232,9 @@ struct AboutView: View {
 
     private func featureRow(icon: String, title: String, subtitle: String) -> some View {
         HStack(spacing: 14) {
-            PAXIcon( icon)
-                .font(.body.weight(.medium))
-                .foregroundStyle(PAXBrand.accent)
-                .frame(width: 32, height: 32)
-                .background(Circle().fill(PAXBrand.accent.opacity(0.12)))
+            PAXIcon(icon, size: .row)
+                .frame(width: 28, height: 28)
+                .background(Circle().fill(Color(.tertiarySystemFill)))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)

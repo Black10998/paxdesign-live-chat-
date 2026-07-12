@@ -112,9 +112,7 @@ private struct ThemePreviewRow: View {
             Spacer(minLength: 8)
 
             if isSelected {
-                PAXIcon( "checkmark.circle.fill")
-                    .foregroundStyle(PAXTheme.accent)
-                    .font(.title3)
+                PAXIcon("checkmark.circle.fill", size: .card)
                     .accessibilityLabel(L10n.CommonActive)
             }
         }

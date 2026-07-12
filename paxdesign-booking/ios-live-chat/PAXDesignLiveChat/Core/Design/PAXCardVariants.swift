@@ -83,9 +83,7 @@ struct PAXHeroCard: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
-            PAXIcon( systemImage)
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(tint)
+            PAXIcon(systemImage, size: .hero)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
@@ -114,9 +112,7 @@ struct PAXMetricCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                PAXIcon( icon)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(tint)
+                PAXIcon(icon, size: .row)
                 Spacer(minLength: 0)
             }
             Text(value)
@@ -141,9 +137,7 @@ struct PAXFeatureCard: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            PAXIcon( systemImage)
-                .font(.title3.weight(.medium))
-                .foregroundStyle(tint)
+            PAXIcon(systemImage, size: .card)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
@@ -168,9 +162,7 @@ struct PAXFeatureCard: View {
 
             Spacer(minLength: 0)
 
-            PAXIcon( "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(PAXTheme.textTertiary)
+            PAXIcon("chevron.right", size: .inline, emphasis: .tertiary)
                 .flipsForRightToLeftLayoutDirection(true)
         }
         .paxCard(.feature, tint: tint)
@@ -215,9 +207,7 @@ struct PAXAccentBannerCard: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            PAXIcon( systemImage)
-                .font(.title3)
-                .foregroundStyle(tint)
+            PAXIcon(systemImage, size: .card)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline.weight(.semibold))

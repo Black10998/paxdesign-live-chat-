@@ -15,9 +15,7 @@ struct LiveRequestTopBanner: View {
                         .fill(PAXTheme.accent.opacity(pulse ? 0.28 : 0.12))
                         .frame(width: 40, height: 40)
                         .scaleEffect(pulse ? 1.08 : 1)
-                    PAXIcon( "bell.and.waves.left.and.right.fill")
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(PAXTheme.accent)
+                    PAXIcon("bell.and.waves.left.and.right.fill", size: .row)
                         .scaleEffect(pulse ? 1.06 : 0.94)
                 }
 
@@ -42,9 +40,7 @@ struct LiveRequestTopBanner: View {
                 Spacer(minLength: 4)
 
                 Button(action: onDismiss) {
-                    PAXIcon( "xmark")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(PAXTheme.textTertiary)
+                    PAXIcon("xmark", size: .inline, emphasis: .tertiary)
                         .padding(8)
                 }
                 .buttonStyle(.plain)

@@ -92,9 +92,7 @@ struct CustomerProfilesView: View {
                 }
             }
             Spacer()
-            PAXIcon( "chevron.right")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(PAXTheme.textTertiary)
+            PAXIcon("chevron.right", size: .inline, emphasis: .tertiary)
         }
         .padding(.vertical, 4)
     }

@@ -7,9 +7,7 @@ struct PAXNativeSearchField: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            PAXIcon( "magnifyingglass")
-                .foregroundStyle(PAXTheme.textTertiary)
-                .font(.body)
+            PAXIcon("magnifyingglass", size: .row, emphasis: .tertiary)
 
             TextField(prompt, text: $text)
                 .textInputAutocapitalization(.never)

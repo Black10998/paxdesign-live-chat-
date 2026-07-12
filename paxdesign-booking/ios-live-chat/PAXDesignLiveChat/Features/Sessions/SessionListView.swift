@@ -114,8 +114,7 @@ struct SessionListView: View {
                         PAXHaptics.light()
                         showChatSettings = true
                     } label: {
-                        PAXIcon( "gearshape")
-                            .font(.body.weight(.semibold))
+                        PAXIcon("gearshape", size: .row)
                     }
                     .accessibilityLabel(L10n.SettingsSectionLiveChat)
                 }
@@ -314,9 +313,7 @@ struct SessionListView: View {
 
     private var noAccessView: some View {
         VStack(spacing: 14) {
-            PAXIcon( "lock.fill")
-                .font(.system(size: 42))
-                .foregroundStyle(PAXTheme.textTertiary)
+            PAXIcon("lock.fill", size: .hero, emphasis: .tertiary)
             Text(L10n.SessionNoAccessTitle)
                 .font(.title3.weight(.semibold))
             Text(L10n.SessionNoAccessMessage)
@@ -371,8 +368,7 @@ struct SessionListView: View {
 
     private func syncErrorBanner(_ message: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            PAXIcon( "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
+            PAXIcon("exclamationmark.triangle.fill")
             VStack(alignment: .leading, spacing: 4) {
                 Text(L10n.SessionSyncFailed)
                     .font(.subheadline.weight(.semibold))
@@ -395,9 +391,7 @@ struct SessionListView: View {
 
     private var liveBanner: some View {
         HStack(spacing: 12) {
-            PAXIcon( "bell.and.waves.left.and.right.fill")
-                .font(.title3)
-                .foregroundStyle(PAXTheme.accent)
+            PAXIcon("bell.and.waves.left.and.right.fill", size: .card)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(L10n.SessionLiveRequests(coordinator.liveCount))
@@ -418,9 +412,7 @@ struct SessionListView: View {
 
     private var emptyState: some View {
         VStack(spacing: 14) {
-            PAXIcon( "bubble.left.and.bubble.right")
-                .font(.system(size: 40, weight: .light))
-                .foregroundStyle(PAXTheme.textTertiary)
+            PAXIcon("bubble.left.and.bubble.right", size: .hero, emphasis: .tertiary)
             Text(L10n.SessionNoChats)
                 .font(.headline)
             Text(L10n.SessionNoChatsHint)

@@ -27,12 +27,10 @@ struct IncomingLiveRequestView: View {
                     }
 
                     Circle()
-                        .fill(PAXTheme.accentSoft)
+                        .fill(Color(.tertiarySystemFill))
                         .frame(width: 96, height: 96)
 
-                    PAXIcon( "person.crop.circle.badge.clock.fill")
-                        .font(.system(size: 44))
-                        .foregroundStyle(PAXTheme.accent)
+                    PAXIcon("person.crop.circle.badge.clock.fill", size: .hero)
                 }
                 .scaleEffect(appear ? 1 : 0.88)
                 .opacity(appear ? 1 : 0)
@@ -108,13 +106,11 @@ struct IncomingLiveRequestView: View {
     private func callAction(title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
         VStack(spacing: 10) {
             Button(action: action) {
-                PAXIcon( icon)
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(.white)
+                PAXIcon(icon, size: .hero)
                     .frame(width: 76, height: 76)
                     .background(
                         Circle()
-                            .fill(color)
+                            .fill(Color(.tertiarySystemFill))
                             .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
                     )
             }

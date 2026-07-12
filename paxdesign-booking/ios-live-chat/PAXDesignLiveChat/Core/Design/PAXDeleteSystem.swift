@@ -153,8 +153,7 @@ private struct PAXDeleteDialogCard: View {
                     .fill(PAXTheme.surfaceElevated)
                     .frame(width: 56, height: 56)
                     .overlay(
-                        PAXIcon( "person.fill")
-                            .foregroundStyle(PAXTheme.textTertiary)
+                        PAXIcon("person.fill", emphasis: .tertiary)
                     )
                     .offset(y: avatarOffsetY)
 

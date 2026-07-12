@@ -42,8 +42,7 @@ struct TeamMessagesHubView: View {
                         PAXHaptics.light()
                         showCompose = true
                     } label: {
-                        PAXIcon( "square.and.pencil")
-                            .font(.body.weight(.semibold))
+                        PAXIcon("square.and.pencil", size: .row)
                     }
                     .accessibilityLabel(L10n.TeamNewMessage)
                 }
@@ -316,11 +315,9 @@ struct TeamMessagesHubView: View {
             HStack(spacing: 14) {
                 ZStack(alignment: .bottomTrailing) {
                     SessionAvatarView(name: session.displayName, size: 48, isTeam: true)
-                    PAXIcon( "person.3.fill")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(.white)
+                    PAXIcon("person.3.fill", size: .micro)
                         .padding(3)
-                        .background(Circle().fill(PAXBrand.accent))
+                        .background(Circle().fill(Color(.tertiarySystemFill)))
                         .offset(x: 3, y: 3)
                 }
 
@@ -331,14 +328,10 @@ struct TeamMessagesHubView: View {
                             .foregroundStyle(PAXTheme.textPrimary)
                             .lineLimit(1)
                         if session.isExecutiveConversation {
-                            PAXIcon( "crown.fill")
-                                .font(.caption2)
-                                .foregroundStyle(PAXTheme.accent)
+                            PAXIcon("crown.fill", size: .inline)
                         }
                         if session.isPinned {
-                            PAXIcon( "pin.fill")
-                                .font(.caption2)
-                                .foregroundStyle(PAXBrand.accent)
+                            PAXIcon("pin.fill", size: .inline)
                         }
                         Spacer(minLength: 4)
                         if let time = MessageTimeFormatter.relativeUpdatedLabel(from: session.updatedAt) {
@@ -519,9 +512,7 @@ struct TeamMessagesHubView: View {
 
     private var teamEmptyState: some View {
         VStack(spacing: 16) {
-            PAXIcon( "person.3.sequence.fill")
-                .font(.system(size: 48, weight: .light))
-                .foregroundStyle(PAXBrand.accent.opacity(0.7))
+            PAXIcon("person.3.sequence.fill", size: .hero)
             Text(L10n.TeamHubEmpty)
                 .font(.title3.weight(.semibold))
             Text(L10n.TeamHubEmptyHint)
@@ -617,9 +608,7 @@ private struct TeamContactRow: View {
                             .font(.body.weight(.semibold))
                             .foregroundStyle(PAXTheme.textPrimary)
                         if member.isExecutive {
-                            PAXIcon( "crown.fill")
-                                .font(.caption2)
-                                .foregroundStyle(PAXTheme.accent)
+                            PAXIcon("crown.fill", size: .inline)
                         }
                     }
                     Text(member.publicDisplaySubtitle)
@@ -635,8 +624,7 @@ private struct TeamContactRow: View {
                 if isOpening {
                     ProgressView()
                 } else {
-                    PAXIcon( member.requiresEdRequest ? "paperplane" : "message.fill")
-                        .foregroundStyle(roleTint)
+                    PAXIcon(member.requiresEdRequest ? "paperplane" : "message.fill")
                 }
             }
             .padding(.vertical, 4)

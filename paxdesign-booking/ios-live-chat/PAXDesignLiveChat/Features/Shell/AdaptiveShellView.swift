@@ -554,16 +554,12 @@ private struct PAXAnimatedTabIcon: View {
 
     var body: some View {
         ZStack {
-            PAXIcon( symbol)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(PAXTheme.textSecondary)
+            PAXIcon(symbol, size: .tab, emphasis: .secondary)
                 .opacity(isSelected ? 0 : 1)
                 .offset(x: isSelected ? -10 : 0)
                 .scaleEffect(isSelected ? 0.82 : 1)
 
-            PAXIcon( selectedSymbol)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(PAXTheme.accent)
+            PAXIcon(selectedSymbol, size: .tab)
                 .opacity(isSelected ? 1 : 0)
                 .offset(x: isSelected ? 0 : 10)
                 .scaleEffect(isSelected ? 1.06 : 0.82)

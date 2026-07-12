@@ -106,7 +106,7 @@ struct TeamChatView: View {
                         }
                     }
                 } label: {
-                    PAXIcon( "ellipsis.circle")
+                    PAXIcon("ellipsis.circle")
                 }
                 .accessibilityLabel(L10n.TeamContextConversationOptions)
             }
@@ -185,8 +185,7 @@ struct TeamChatView: View {
 
     private var teamStatusBanner: some View {
         HStack(spacing: 8) {
-            PAXIcon( statusIcon)
-                .foregroundStyle(statusTint)
+            PAXIcon(statusIcon)
             VStack(alignment: .leading, spacing: 2) {
                 Text(thread.requestStatusLabel)
                     .font(.caption.weight(.semibold))
@@ -248,8 +247,7 @@ struct TeamChatView: View {
 
     private var lockedComposer: some View {
         HStack(spacing: 10) {
-            PAXIcon( "lock.fill")
-                .foregroundStyle(PAXTheme.textTertiary)
+            PAXIcon("lock.fill", emphasis: .tertiary)
             Text(thread.requestStatus == "declined" || thread.requestStatus == "locked"
                  ? L10n.TeamLockedConversation
                  : L10n.TeamWaitingApproval)
@@ -313,9 +311,7 @@ struct TeamChatView: View {
             Button {
                 Task { await thread.send(auth: auth, teamCoordinator: teamCoordinator) }
             } label: {
-                PAXIcon( "arrow.up.circle.fill")
-                    .font(.system(size: 34))
-                    .foregroundStyle(canSend ? PAXBrand.accent : PAXTheme.textTertiary)
+                PAXIcon("arrow.up.circle.fill", size: .card)
             }
             .disabled(!canSend)
         }
@@ -489,9 +485,7 @@ private struct StaffComposeRow: View {
                             .font(.body.weight(.semibold))
                             .foregroundStyle(PAXTheme.textPrimary)
                         if member.isExecutive {
-                            PAXIcon( "crown.fill")
-                                .font(.caption2)
-                                .foregroundStyle(PAXTheme.accent)
+                            PAXIcon("crown.fill", size: .inline)
                         }
                     }
                     Text(member.publicDisplaySubtitle)
@@ -504,8 +498,7 @@ private struct StaffComposeRow: View {
                 if isOpening {
                     PAXInlineLoader(size: 18)
                 } else {
-                    PAXIcon( member.requiresEdRequest ? "paperplane" : "message.fill")
-                        .foregroundStyle(roleTint)
+                    PAXIcon(member.requiresEdRequest ? "paperplane" : "message.fill")
                 }
             }
         }

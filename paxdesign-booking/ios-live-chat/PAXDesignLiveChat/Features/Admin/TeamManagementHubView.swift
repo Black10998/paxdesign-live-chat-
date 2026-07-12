@@ -46,9 +46,7 @@ struct TeamManagementHubView: View {
 
     private var accessDenied: some View {
         VStack(spacing: 16) {
-            PAXIcon( "lock.shield")
-                .font(.system(size: 48, weight: .light))
-                .foregroundStyle(PAXTheme.textSecondary)
+            PAXIcon("lock.shield", size: .hero, emphasis: .secondary)
             Text(L10n.AdminAccessDeniedTitle)
                 .font(.title3.weight(.semibold))
             Text(L10n.AdminAccessDeniedSubtitle)
@@ -218,9 +216,7 @@ struct TeamManagementHubView: View {
                             Text(member.enabled ? L10n.CommonActive : L10n.CommonInactive)
                                 .font(.caption2.weight(.semibold))
                                 .foregroundStyle(member.enabled ? PAXTheme.success : PAXTheme.textTertiary)
-                            PAXIcon( "chevron.right")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(PAXTheme.textTertiary)
+                            PAXIcon("chevron.right", size: .inline, emphasis: .tertiary)
                         }
                         .padding(.vertical, 2)
                     }

@@ -42,9 +42,7 @@ struct ChatThumbnailImage: View {
             .fill(PAXTheme.surface.opacity(0.4))
             .frame(width: 140, height: 100)
             .overlay {
-                PAXIcon( "photo")
-                    .font(.title3)
-                    .foregroundStyle(PAXTheme.textTertiary)
+                PAXIcon("photo", size: .card, emphasis: .tertiary)
             }
     }
 }

@@ -197,17 +197,16 @@ struct PAXSevenDayAnalyticsRings: View {
     private func trendPill(delta: Double) -> some View {
         let positive = delta >= 0
         return HStack(spacing: 4) {
-            PAXIcon( positive ? "arrow.up.right" : "arrow.down.right")
-                .font(.caption2.weight(.bold))
+            PAXIcon(positive ? "arrow.up.right" : "arrow.down.right", size: .inline)
             Text(String(format: "%+.0f%%", delta))
                 .font(.caption.weight(.semibold))
         }
-        .foregroundStyle(positive ? PAXTheme.success : PAXTheme.danger)
+        .foregroundStyle(PAXTheme.textPrimary)
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill((positive ? PAXTheme.success : PAXTheme.danger).opacity(0.12))
+                .fill(PAXTheme.surface.opacity(0.45))
         )
     }
 

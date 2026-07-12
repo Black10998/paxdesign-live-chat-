@@ -104,8 +104,7 @@ struct AppLockView: View {
                     } label: {
                         Group {
                             if key == "⌫" {
-                                PAXIcon( "delete.left")
-                                    .font(.title3)
+                                PAXIcon("delete.left", size: .card)
                             } else {
                                 Text(key)
                                     .font(.title2.weight(.medium))

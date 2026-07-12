@@ -5,10 +5,9 @@ enum PAXAppMark {
 
     @ViewBuilder
     static func image(size: CGFloat) -> some View {
-        PAXIcon( "bubble.left.and.bubble.right.fill")
-            .font(.system(size: size * 0.52))
-            .foregroundStyle(.tint)
-            .frame(width: size, height: size)
+        let iconSize: PAXIconSize = size >= 40 ? .display : size >= 24 ? .hero : .card
+        PAXIcon("bubble.left.and.bubble.right.fill", size: iconSize)
+            .scaleEffect(size / iconSize.length)
     }
 }
 

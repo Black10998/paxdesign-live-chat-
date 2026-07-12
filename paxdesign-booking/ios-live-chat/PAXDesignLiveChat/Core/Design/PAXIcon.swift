@@ -1,17 +1,54 @@
 import SwiftUI
 
-/// Centralized icon renderer using custom SVG-style vector strokes.
+enum PAXIconSize: CGFloat {
+    case micro = 10
+    case inline = 12
+    case row = 16
+    case card = 18
+    case hero = 20
+    case tab = 17
+    case action = 22
+    case display = 26
+
+    var length: CGFloat { rawValue }
+    static let strokeWidth: CGFloat = 1.5
+    var strokeWidth: CGFloat { Self.strokeWidth }
+}
+
+enum PAXIconEmphasis {
+    case primary, secondary, tertiary, onFill
+
+    var color: Color {
+        switch self {
+        case .primary: PAXTheme.icon
+        case .secondary: PAXTheme.iconSecondary
+        case .tertiary: PAXTheme.iconTertiary
+        case .onFill: PAXTheme.iconOnFill
+        }
+    }
+}
+
+/// Fixed-size monochrome vector icon. Do not apply `.font()` — use `size:` instead.
 struct PAXIcon: View {
     let systemName: String
+    var size: PAXIconSize = .row
+    var emphasis: PAXIconEmphasis = .primary
 
-    init(_ systemName: String) {
+    init(_ systemName: String, size: PAXIconSize = .row, emphasis: PAXIconEmphasis = .primary) {
         self.systemName = systemName
+        self.size = size
+        self.emphasis = emphasis
     }
 
     var body: some View {
         PAXVectorIconShape(name: PAXIconCatalog.outlineSymbol(for: systemName))
-            .stroke(style: StrokeStyle(lineWidth: 1.8, lineCap: .round, lineJoin: .round))
-            .aspectRatio(1, contentMode: .fit)
+            .stroke(
+                emphasis.color,
+                style: StrokeStyle(lineWidth: size.strokeWidth, lineCap: .round, lineJoin: .round)
+            )
+            .frame(width: size.length, height: size.length)
+            .fixedSize()
+            .accessibilityHidden(true)
     }
 }
 
@@ -54,22 +91,15 @@ enum PAXIconCatalog {
 
     static func outlineSymbol(for name: String) -> String {
         let lowered = name.lowercased()
-        if let mapped = explicitMappings[lowered] {
-            return mapped
-        }
-        let stripped = lowered
-            .replacingOccurrences(of: ".fill", with: "")
-            .replacingOccurrences(of: ".filled", with: "")
+        if let mapped = explicitMappings[lowered] { return mapped }
+        let stripped = lowered.replacingOccurrences(of: ".fill", with: "").replacingOccurrences(of: ".filled", with: "")
         return stripped.isEmpty ? "circle" : stripped
     }
 
     static func quickLinkSymbol(for icon: String, label: String) -> String {
         let raw = icon.hasPrefix("svg:") ? String(icon.dropFirst(4)) : icon
         let sanitized = raw.lowercased()
-        if sanitized.hasPrefix("sf:") {
-            return outlineSymbol(for: String(sanitized.dropFirst(3)))
-        }
-
+        if sanitized.hasPrefix("sf:") { return outlineSymbol(for: String(sanitized.dropFirst(3))) }
         switch sanitized {
         case "services": return "slider.horizontal.3"
         case "projects": return "square.grid.2x2"
@@ -95,7 +125,6 @@ enum PAXIconCatalog {
 
 private struct PAXVectorIconShape: Shape {
     let name: String
-
     func path(in rect: CGRect) -> Path {
         switch name {
         case "plus", "plus.circle": return plusPath(in: rect, withCircle: name == "plus.circle")
@@ -120,7 +149,7 @@ private struct PAXVectorIconShape: Shape {
         case "lock", "lock.shield": return lockPath(in: rect, withShield: name == "lock.shield")
         case "shield", "shield.checkered", "checkmark.shield", "xmark.shield", "exclamationmark.shield":
             return shieldPath(in: rect)
-        case "photo", "photo.on.rectangle", "camera": return photoPath(in: rect)
+        case "photo", "photo.on.rectangle", "camera", "photo.circle": return photoPath(in: rect)
         case "envelope", "envelope.badge", "envelope.open": return envelopePath(in: rect)
         case "safari", "globe": return globePath(in: rect)
         case "trash", "archivebox", "eye.slash": return binPath(in: rect)
@@ -136,7 +165,7 @@ private struct PAXVectorIconShape: Shape {
             return filesPath(in: rect)
         case "phone", "phone.down", "iphone", "iphone.slash":
             return devicePath(in: rect)
-        case "star", "crown", "pin":
+        case "star", "crown", "pin", "heart", "hand.thumbsdown":
             return badgePath(in: rect)
         case "delete.left":
             return deletePath(in: rect)
@@ -146,16 +175,14 @@ private struct PAXVectorIconShape: Shape {
             return fallbackPath(in: rect)
         }
     }
-
     private enum Direction { case up, right }
-
     private func fallbackPath(in r: CGRect) -> Path { Path(ellipseIn: r.insetBy(dx: r.width * 0.14, dy: r.height * 0.14)) }
     private func plusPath(in r: CGRect, withCircle: Bool) -> Path { var p = Path(); if withCircle { p.addEllipse(in: r.insetBy(dx: r.width*0.12, dy: r.height*0.12)) }; p.move(to: .init(x: r.midX, y: r.minY+r.height*0.24)); p.addLine(to: .init(x: r.midX, y: r.maxY-r.height*0.24)); p.move(to: .init(x: r.minX+r.width*0.24, y: r.midY)); p.addLine(to: .init(x: r.maxX-r.width*0.24, y: r.midY)); return p }
     private func minusCirclePath(in r: CGRect) -> Path { var p = Path(); p.addEllipse(in: r.insetBy(dx: r.width*0.12, dy: r.height*0.12)); p.move(to: .init(x: r.minX+r.width*0.26, y: r.midY)); p.addLine(to: .init(x: r.maxX-r.width*0.26, y: r.midY)); return p }
     private func xmarkPath(in r: CGRect, withCircle: Bool) -> Path { var p = Path(); if withCircle { p.addEllipse(in: r.insetBy(dx: r.width*0.12, dy: r.height*0.12)) }; p.move(to: .init(x: r.minX+r.width*0.26, y: r.minY+r.height*0.26)); p.addLine(to: .init(x: r.maxX-r.width*0.26, y: r.maxY-r.height*0.26)); p.move(to: .init(x: r.maxX-r.width*0.26, y: r.minY+r.height*0.26)); p.addLine(to: .init(x: r.minX+r.width*0.26, y: r.maxY-r.height*0.26)); return p }
     private func checkPath(in r: CGRect, withCircle: Bool) -> Path { var p = Path(); if withCircle { p.addEllipse(in: r.insetBy(dx: r.width*0.12, dy: r.height*0.12)) }; p.move(to: .init(x: r.minX+r.width*0.24, y: r.midY)); p.addLine(to: .init(x: r.midX-r.width*0.02, y: r.maxY-r.height*0.26)); p.addLine(to: .init(x: r.maxX-r.width*0.22, y: r.minY+r.height*0.3)); return p }
     private func chevronPath(in r: CGRect, direction: Direction) -> Path { var p = Path(); if direction == .right { p.move(to: .init(x: r.minX+r.width*0.36, y: r.minY+r.height*0.25)); p.addLine(to: .init(x: r.maxX-r.width*0.34, y: r.midY)); p.addLine(to: .init(x: r.minX+r.width*0.36, y: r.maxY-r.height*0.25)); } else { p.move(to: .init(x: r.minX+r.width*0.25, y: r.maxY-r.height*0.36)); p.addLine(to: .init(x: r.midX, y: r.minY+r.height*0.32)); p.addLine(to: .init(x: r.maxX-r.width*0.25, y: r.maxY-r.height*0.36)); }; return p }
-    private func arrowPath(in r: CGRect, name: String) -> Path { var p = Path(); p.addEllipse(in: name.hasSuffix(".circle") ? r.insetBy(dx: r.width*0.12, dy: r.height*0.12) : .zero); let c = CGPoint(x: r.midX, y: r.midY); let start = CGPoint(x: r.minX+r.width*0.28, y: r.maxY-r.height*0.28); var end = CGPoint(x: r.maxX-r.width*0.26, y: r.minY+r.height*0.28); if name.contains("down") { end = CGPoint(x: r.maxX-r.width*0.26, y: r.maxY-r.height*0.28) }; if name.contains("left") { end.x = r.minX + r.width*0.26 }; p.move(to: start); p.addLine(to: end); p.move(to: end); p.addLine(to: CGPoint(x: end.x - (end.x > c.x ? r.width*0.12 : -r.width*0.12), y: end.y + r.height*0.02)); p.move(to: end); p.addLine(to: CGPoint(x: end.x - (end.x > c.x ? r.width*0.02 : -r.width*0.02), y: end.y + (name.contains("down") ? -r.height*0.12 : r.height*0.12))); return p }
+    private func arrowPath(in r: CGRect, name: String) -> Path { var p = Path(); if name.hasSuffix(".circle") { p.addEllipse(in: r.insetBy(dx: r.width*0.12, dy: r.height*0.12)) }; let c = CGPoint(x: r.midX, y: r.midY); let start = CGPoint(x: r.minX+r.width*0.28, y: r.maxY-r.height*0.28); var end = CGPoint(x: r.maxX-r.width*0.26, y: r.minY+r.height*0.28); if name.contains("down") { end = CGPoint(x: r.maxX-r.width*0.26, y: r.maxY-r.height*0.28) }; if name.contains("left") { end.x = r.minX + r.width*0.26 }; p.move(to: start); p.addLine(to: end); p.move(to: end); p.addLine(to: CGPoint(x: end.x - (end.x > c.x ? r.width*0.12 : -r.width*0.12), y: end.y + r.height*0.02)); p.move(to: end); p.addLine(to: CGPoint(x: end.x - (end.x > c.x ? r.width*0.02 : -r.width*0.02), y: end.y + (name.contains("down") ? -r.height*0.12 : r.height*0.12))); return p }
     private func magnifierPath(in r: CGRect) -> Path { var p = Path(); p.addEllipse(in: CGRect(x: r.minX+r.width*0.16, y: r.minY+r.height*0.16, width: r.width*0.52, height: r.height*0.52)); p.move(to: .init(x: r.midX+r.width*0.12, y: r.midY+r.height*0.12)); p.addLine(to: .init(x: r.maxX-r.width*0.15, y: r.maxY-r.height*0.15)); return p }
     private func slidersPath(in r: CGRect) -> Path { var p = Path(); let y:[CGFloat]=[0.28,0.5,0.72]; let x:[CGFloat]=[0.62,0.38,0.56]; for (i,yy) in y.enumerated(){ p.move(to:.init(x:r.minX+r.width*0.18,y:r.minY+r.height*yy)); p.addLine(to:.init(x:r.maxX-r.width*0.18,y:r.minY+r.height*yy)); p.addEllipse(in:CGRect(x:r.minX+r.width*x[i]-r.width*0.08,y:r.minY+r.height*yy-r.height*0.08,width:r.width*0.16,height:r.height*0.16)); } ; return p }
     private func linkPath(in r: CGRect, addPlus: Bool) -> Path { var p = Path(); p.addEllipse(in: CGRect(x:r.minX+r.width*0.14,y:r.minY+r.height*0.34,width:r.width*0.34,height:r.height*0.32)); p.addEllipse(in: CGRect(x:r.minX+r.width*0.52,y:r.minY+r.height*0.34,width:r.width*0.34,height:r.height*0.32)); p.move(to:.init(x:r.midX-r.width*0.06,y:r.midY)); p.addLine(to:.init(x:r.midX+r.width*0.06,y:r.midY)); if addPlus { p.move(to:.init(x:r.maxX-r.width*0.2,y:r.minY+r.height*0.16)); p.addLine(to:.init(x:r.maxX-r.width*0.2,y:r.minY+r.height*0.34)); p.move(to:.init(x:r.maxX-r.width*0.29,y:r.minY+r.height*0.25)); p.addLine(to:.init(x:r.maxX-r.width*0.11,y:r.minY+r.height*0.25)); } ; return p }
@@ -177,6 +204,6 @@ private struct PAXVectorIconShape: Shape {
     private func settingsPath(in r: CGRect) -> Path { var p=Path(); p.addEllipse(in:r.insetBy(dx:r.width*0.18,dy:r.height*0.18)); p.addEllipse(in:r.insetBy(dx:r.width*0.36,dy:r.height*0.36)); return p }
     private func filesPath(in r: CGRect) -> Path { var p=Path(); p.addRoundedRect(in:r.insetBy(dx:r.width*0.16,dy:r.height*0.14), cornerSize:.init(width:r.width*0.08,height:r.height*0.08)); p.move(to:.init(x:r.minX+r.width*0.3,y:r.minY+r.height*0.34)); p.addLine(to:.init(x:r.maxX-r.width*0.3,y:r.minY+r.height*0.34)); p.move(to:.init(x:r.minX+r.width*0.3,y:r.midY)); p.addLine(to:.init(x:r.maxX-r.width*0.3,y:r.midY)); return p }
     private func devicePath(in r: CGRect) -> Path { var p=Path(); p.addRoundedRect(in:r.insetBy(dx:r.width*0.28,dy:r.height*0.1), cornerSize:.init(width:r.width*0.16,height:r.height*0.16)); p.addEllipse(in:CGRect(x:r.midX-r.width*0.04,y:r.maxY-r.height*0.2,width:r.width*0.08,height:r.height*0.08)); if name == "iphone.slash" { p.move(to:.init(x:r.minX+r.width*0.2,y:r.maxY-r.height*0.18)); p.addLine(to:.init(x:r.maxX-r.width*0.2,y:r.minY+r.height*0.18)); } ; return p }
-    private func badgePath(in r: CGRect) -> Path { var p=Path(); if name == "pin" { p.move(to:.init(x:r.midX,y:r.minY+r.height*0.14)); p.addLine(to:.init(x:r.midX,y:r.maxY-r.height*0.14)); p.addEllipse(in:CGRect(x:r.midX-r.width*0.14,y:r.minY+r.height*0.14,width:r.width*0.28,height:r.height*0.28)); } else { p.addEllipse(in:r.insetBy(dx:r.width*0.16,dy:r.height*0.16)); p.move(to:.init(x:r.minX+r.width*0.28,y:r.midY)); p.addLine(to:.init(x:r.maxX-r.width*0.28,y:r.midY)); }; return p }
+    private func badgePath(in r: CGRect) -> Path { var p=Path(); if name == "pin" { p.move(to:.init(x:r.midX,y:r.minY+r.height*0.14)); p.addLine(to:.init(x:r.midX,y:r.maxY-r.height*0.14)); p.addEllipse(in:CGRect(x:r.midX-r.width*0.14,y:r.minY+r.height*0.14,width:r.width*0.28,height:r.height*0.28)); } else if name == "heart" || name == "hand.thumbsdown" { p.addEllipse(in:r.insetBy(dx:r.width*0.18,dy:r.height*0.2)); } else { p.addEllipse(in:r.insetBy(dx:r.width*0.16,dy:r.height*0.16)); p.move(to:.init(x:r.minX+r.width*0.28,y:r.midY)); p.addLine(to:.init(x:r.maxX-r.width*0.28,y:r.midY)); }; return p }
     private func deletePath(in r: CGRect) -> Path { var p=Path(); p.addRoundedRect(in:r.insetBy(dx:r.width*0.12,dy:r.height*0.26), cornerSize:.init(width:r.width*0.08,height:r.height*0.08)); p.move(to:.init(x:r.maxX-r.width*0.22,y:r.minY+r.height*0.26)); p.addLine(to:.init(x:r.maxX-r.width*0.38,y:r.midY)); p.addLine(to:.init(x:r.maxX-r.width*0.22,y:r.maxY-r.height*0.26)); return p }
 }

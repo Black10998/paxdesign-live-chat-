@@ -129,15 +129,12 @@ struct NotificationsCenterView: View {
 
     private func notificationMetric(title: String, count: Int, systemImage: String, tint: Color) -> some View {
         HStack(spacing: 14) {
-            PAXIcon( systemImage)
-                .font(.title3)
-                .foregroundStyle(tint)
-                .frame(width: 32)
+            PAXIcon(systemImage, size: .row)
             Text(title)
             Spacer()
             Text("\(count)")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(count > 0 ? tint : PAXTheme.textTertiary)
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(count > 0 ? PAXTheme.textPrimary : PAXTheme.textTertiary)
         }
     }
 

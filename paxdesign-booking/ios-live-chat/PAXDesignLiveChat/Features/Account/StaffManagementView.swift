@@ -143,9 +143,7 @@ struct StaffManagementView: View {
                     Text(member.enabled ? L10n.CommonActive : L10n.CommonInactive)
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(member.enabled ? PAXTheme.success : PAXTheme.textTertiary)
-                    PAXIcon( "chevron.right")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(PAXTheme.textTertiary)
+                    PAXIcon("chevron.right", size: .inline, emphasis: .tertiary)
                 }
                 Text(member.publicDisplaySubtitle)
                     .font(.caption)

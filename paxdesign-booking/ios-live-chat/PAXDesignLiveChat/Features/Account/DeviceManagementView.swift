@@ -28,9 +28,7 @@ struct DeviceManagementView: View {
             } else if devices.isEmpty {
                 Section {
                     VStack(spacing: 10) {
-                        PAXIcon( "iphone.slash")
-                            .font(.system(size: 36, weight: .light))
-                            .foregroundStyle(PAXTheme.textTertiary)
+                        PAXIcon("iphone.slash", emphasis: .tertiary)
                         Text(L10n.DeviceNoneTitle)
                             .font(.headline)
                         Text(L10n.DeviceNoneBody)
@@ -110,8 +108,7 @@ struct DeviceManagementView: View {
     private func deviceRow(_ device: DeviceRecord) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                PAXIcon( "iphone")
-                    .foregroundStyle(device.revoked ? PAXTheme.danger : PAXTheme.accent)
+                PAXIcon("iphone")
                 Text(device.deviceName)
                     .font(.subheadline.weight(.semibold))
                 Spacer()

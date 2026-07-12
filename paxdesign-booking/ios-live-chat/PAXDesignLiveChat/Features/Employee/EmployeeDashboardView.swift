@@ -47,8 +47,11 @@ struct EmployeeDashboardView: View {
                         PermissionOverviewRow(title: item.title, enabled: item.enabled)
                     }
                 } else {
-                    Label { Text(L10n.AccountSuperAdmin) } icon: { PAXIcon("star.fill") }
-                        .foregroundStyle(PAXTheme.accent)
+                    HStack {
+                        PAXIcon("star.fill", size: .row)
+                        Text(L10n.AccountSuperAdmin)
+                            .foregroundStyle(PAXTheme.accent)
+                    }
                 }
             }
 
@@ -87,10 +90,10 @@ struct EmployeeDashboardView: View {
 
     private func metricRow(_ title: String, value: String, icon: String, tint: Color) -> some View {
         HStack(spacing: 12) {
-            PAXIcon( icon).foregroundStyle(tint).frame(width: 28)
+            PAXIcon(icon, size: .row)
             Text(title)
             Spacer()
-            Text(value).font(.headline).foregroundStyle(tint)
+            Text(value).font(.headline).foregroundStyle(PAXTheme.textPrimary)
         }
     }
 }
