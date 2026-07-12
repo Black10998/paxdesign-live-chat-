@@ -1,3 +1,5 @@
+"NSCameraUsageDescription" = "التقاط صور لإرسالها في محادثات الدردشة المباشرة.";
 "NSFaceIDUsageDescription" = "يُستخدم Face ID لفتح التطبيق بعد فترة الخمول.";
+"NSLocationWhenInUseUsageDescription" = "يُستخدم الموقع للتحقق من تسجيلات دخول الأجهزة ودعم إدارة أجهزة الموظفين بشكل آمن.";
 "NSPhotoLibraryUsageDescription" = "اختر صوراً من المكتبة لإرسالها في الدردشة المباشرة.";
 "NSUserNotificationsUsageDescription" = "إشعارات لطلبات الوكيل المباشر ورسائل العملاء الجديدة.";

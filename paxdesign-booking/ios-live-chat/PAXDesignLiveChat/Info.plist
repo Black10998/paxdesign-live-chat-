@@ -28,9 +28,15 @@
 	<string>Take photos to send in live chat conversations.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Face ID is used to unlock the app after inactivity.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Location is used to verify device sign-ins and support secure staff device management.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Select photos from your library to send in live chat.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Notifications for live agent requests and new customer messages.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

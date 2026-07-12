@@ -40,6 +40,17 @@ else
   fail "UIBackgroundModes missing from archived app Info.plist"
 fi
 
+for key in \
+  NSFaceIDUsageDescription \
+  NSCameraUsageDescription \
+  NSPhotoLibraryUsageDescription \
+  NSUserNotificationsUsageDescription \
+  NSLocationWhenInUseUsageDescription \
+  CFBundleDisplayName; do
+  value="$(/usr/libexec/PlistBuddy -c "Print :$key" "$APP_PATH/Info.plist" 2>/dev/null || true)"
+  [[ -n "$value" ]] || fail "Info.plist missing required key: $key"
+done
+
 read_entitlements_value() {
   local target_path="$1"
   local plist_key="$2"

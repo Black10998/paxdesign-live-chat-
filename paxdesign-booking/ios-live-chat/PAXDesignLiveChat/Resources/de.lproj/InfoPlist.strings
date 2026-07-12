@@ -1,3 +1,5 @@
+"NSCameraUsageDescription" = "Fotos aufnehmen, um sie in Live-Chat-Gesprächen zu senden.";
 "NSFaceIDUsageDescription" = "Face ID wird verwendet, um die App nach Inaktivität zu entsperren.";
+"NSLocationWhenInUseUsageDescription" = "Der Standort wird verwendet, um Geräteanmeldungen zu verifizieren und die sichere Verwaltung von Mitarbeitergeräten zu unterstützen.";
 "NSPhotoLibraryUsageDescription" = "Fotos aus der Mediathek auswählen, um sie im Live-Chat an Kunden zu senden.";
 "NSUserNotificationsUsageDescription" = "Benachrichtigungen für Live-Agent-Anfragen und neue Kundennachrichten.";

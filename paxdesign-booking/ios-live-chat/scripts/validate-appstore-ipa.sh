@@ -66,4 +66,22 @@ codesign --verify --deep --strict "$WIDGET_PATH" 2>/dev/null || fail "Exported w
 MAIN_APS="$(read_entitlements_value "$APP_PATH" "aps-environment")"
 [[ "$MAIN_APS" == "production" ]] || fail "Exported IPA aps-environment must be production"
 
+if /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "$APP_PATH/Info.plist" >/dev/null 2>&1; then
+  /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "$APP_PATH/Info.plist" | grep -q "remote-notification" \
+    || fail "UIBackgroundModes must include remote-notification for production push"
+else
+  fail "UIBackgroundModes missing from exported IPA Info.plist"
+fi
+
+for key in \
+  NSFaceIDUsageDescription \
+  NSCameraUsageDescription \
+  NSPhotoLibraryUsageDescription \
+  NSUserNotificationsUsageDescription \
+  NSLocationWhenInUseUsageDescription \
+  CFBundleDisplayName; do
+  value="$(/usr/libexec/PlistBuddy -c "Print :$key" "$APP_PATH/Info.plist" 2>/dev/null || true)"
+  [[ -n "$value" ]] || fail "Info.plist missing required key: $key"
+done
+
 echo "App Store IPA validation passed: $(basename "$IPA_PATH")"

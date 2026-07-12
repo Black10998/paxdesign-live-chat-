@@ -28,7 +28,7 @@ fail() {
 find "$APP_PATH" -type d -name 'nlu.appintents' | grep -q . && fail "Localized nlu.appintents bundles must be absent for sideload stability"
 
 PLIST="$APP_PATH/Info.plist"
-for key in NSFaceIDUsageDescription NSCameraUsageDescription NSPhotoLibraryUsageDescription NSUserNotificationsUsageDescription CFBundleDisplayName; do
+for key in NSFaceIDUsageDescription NSCameraUsageDescription NSPhotoLibraryUsageDescription NSUserNotificationsUsageDescription NSLocationWhenInUseUsageDescription CFBundleDisplayName; do
   /usr/libexec/PlistBuddy -c "Print :$key" "$PLIST" >/dev/null 2>&1 || fail "Info.plist missing required key: $key"
 done
 
