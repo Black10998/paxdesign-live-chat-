@@ -29,6 +29,7 @@ list_groups = _SETUP.list_groups
 add_build_to_group = _SETUP.add_build_to_group
 get_build_beta_detail = _SETUP.get_build_beta_detail
 make_token = _SETUP.make_token
+make_client = _SETUP.make_client
 load_config = _SETUP.load_config
 print_diagnostics = _SETUP.print_diagnostics
 
@@ -357,7 +358,7 @@ def wait_for_internal_ready(client: ASCClient, build_id: str, timeout: int = 120
 
 def main() -> None:
     issuer_id, key_id, private_key = load_config()
-    client = ASCClient(make_token(issuer_id, key_id, private_key))
+    client = make_client(issuer_id, key_id, private_key)
 
     app = find_app(client)
     app_id = app["id"]

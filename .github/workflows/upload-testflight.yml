@@ -15,6 +15,7 @@ permissions:
 jobs:
   upload-testflight:
     runs-on: macos-latest
+    timeout-minutes: 90
     env:
       APP_BUNDLE_ID: at.paxdesign.livechat
       TESTFLIGHT_INTERNAL_TESTER_EMAIL: awjime29@icloud.com
@@ -137,4 +138,8 @@ jobs:
           ./scripts/appstore-connect/upload-ipa.sh artifacts/ipa/PAXDesignLiveChat-AppStore.ipa
 
       - name: Enable internal TestFlight testing
-        run: python3 scripts/appstore-connect/enable_internal_testflight.py
+        env:
+          TESTFLIGHT_TARGET_BUILD: ${{ steps.version.outputs.build }}
+          TESTFLIGHT_POLL_SECONDS: "30"
+          TESTFLIGHT_POLL_TIMEOUT: "3600"
+        run: python3 scripts/appstore-connect/enable_testflight_build.py

@@ -87,11 +87,66 @@ def make_token(issuer_id: str, key_id: str, private_key: str) -> str:
     return jwt.encode(payload, private_key, algorithm="ES256", headers=headers)
 
 
+def make_client(issuer_id: str, key_id: str, private_key: str) -> ASCClient:
+    return ASCClient(
+        make_token(issuer_id, key_id, private_key),
+        issuer_id=issuer_id,
+        key_id=key_id,
+        private_key=private_key,
+    )
+
+
+TOKEN_REFRESH_SECONDS = 900
+
+
 class ASCClient:
-    def __init__(self, token: str) -> None:
+    def __init__(
+        self,
+        token: str,
+        *,
+        issuer_id: str | None = None,
+        key_id: str | None = None,
+        private_key: str | None = None,
+    ) -> None:
         self.token = token
+        self.issuer_id = issuer_id
+        self.key_id = key_id
+        self.private_key = private_key
+        self._token_created_at = int(time.time())
+
+    def refresh_token(self) -> None:
+        if not (self.issuer_id and self.key_id and self.private_key):
+            fail("Cannot refresh App Store Connect API token without credentials")
+        self.token = make_token(self.issuer_id, self.key_id, self.private_key)
+        self._token_created_at = int(time.time())
+
+    def _refresh_token_if_needed(self) -> None:
+        if not (self.issuer_id and self.key_id and self.private_key):
+            return
+        if time.time() - self._token_created_at >= TOKEN_REFRESH_SECONDS:
+            self.refresh_token()
 
     def request(
+        self,
+        method: str,
+        path: str,
+        *,
+        params: dict[str, str] | None = None,
+        body: dict[str, Any] | None = None,
+        allow_error: bool = False,
+    ) -> tuple[int, dict[str, Any]]:
+        self._refresh_token_if_needed()
+        status, payload = self._request_once(
+            method, path, params=params, body=body, allow_error=allow_error
+        )
+        if status == 401 and self.issuer_id and self.key_id and self.private_key:
+            self.refresh_token()
+            status, payload = self._request_once(
+                method, path, params=params, body=body, allow_error=allow_error
+            )
+        return status, payload
+
+    def _request_once(
         self,
         method: str,
         path: str,
