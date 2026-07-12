@@ -18,9 +18,34 @@ class PAXdesign_Live_Chat_Mobile_API {
     }
 
     /**
+     * Application Password auth is REST-only; never touch wp-admin cookie sessions.
+     */
+    private static function is_rest_api_request() {
+        if (defined('REST_REQUEST') && REST_REQUEST) {
+            return true;
+        }
+
+        $uri = isset($_SERVER['REQUEST_URI']) ? (string) wp_unslash($_SERVER['REQUEST_URI']) : '';
+        if ($uri === '') {
+            return false;
+        }
+
+        $path = (string) wp_parse_url($uri, PHP_URL_PATH);
+        if ($path === '') {
+            $path = $uri;
+        }
+
+        return (strpos($path, '/wp-json/') !== false);
+    }
+
+    /**
      * Hostinger/LiteSpeed/Apache often strip Authorization unless passed through.
      */
     public static function bootstrap_basic_auth() {
+        if (!self::is_rest_api_request()) {
+            return;
+        }
+
         if (!empty($_SERVER['PHP_AUTH_USER'])) {
             return;
         }
@@ -53,6 +78,10 @@ class PAXdesign_Live_Chat_Mobile_API {
      * @return int|false
      */
     public static function resolve_basic_auth_login($user_id) {
+        if (!self::is_rest_api_request()) {
+            return $user_id;
+        }
+
         if ($user_id) {
             return $user_id;
         }
