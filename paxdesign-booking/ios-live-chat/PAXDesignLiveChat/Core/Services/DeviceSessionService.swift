@@ -52,7 +52,9 @@ final class DeviceSessionService: ObservableObject {
     static let shared = DeviceSessionService()
 
     private var heartbeatTask: Task<Void, Never>?
+    private var tokenObservationTask: Task<Void, Never>?
     private var lastRegisteredToken: String?
+    private weak var observedAuth: AuthStore?
 
     func resetRegistrationState() {
         lastRegisteredToken = nil
@@ -60,17 +62,24 @@ final class DeviceSessionService: ObservableObject {
 
     func start(auth: AuthStore) {
         stop()
+        observedAuth = auth
         heartbeatTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.sendHeartbeat(auth: auth)
                 try? await Task.sleep(nanoseconds: 300_000_000_000) // 5 min
             }
         }
+        tokenObservationTask = Task { [weak self] in
+            await self?.observeTokenChanges(auth: auth)
+        }
     }
 
     func stop() {
         heartbeatTask?.cancel()
         heartbeatTask = nil
+        tokenObservationTask?.cancel()
+        tokenObservationTask = nil
+        observedAuth = nil
         lastRegisteredToken = nil
     }
 
@@ -84,7 +93,7 @@ final class DeviceSessionService: ObservableObject {
 
         if PushService.shared.deviceToken == nil {
             await PushService.shared.registerForRemoteNotificationsIfAuthorized()
-            for _ in 0..<5 where PushService.shared.deviceToken == nil {
+            for _ in 0..<30 where PushService.shared.deviceToken == nil {
                 try? await Task.sleep(nanoseconds: 500_000_000)
             }
         }
@@ -166,6 +175,20 @@ final class DeviceSessionService: ObservableObject {
         #else
         return false
         #endif
+    }
+
+    private func observeTokenChanges(auth: AuthStore) async {
+        var lastSeen = PushService.shared.deviceToken
+        while !Task.isCancelled {
+            let current = PushService.shared.deviceToken
+            if current != lastSeen {
+                lastSeen = current
+                if current != nil {
+                    await registerTokenWithServer(auth: auth)
+                }
+            }
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
     }
 }
 

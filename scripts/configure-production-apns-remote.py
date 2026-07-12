@@ -482,7 +482,7 @@ def verify_devices_bootstrap(key_p8: str) -> None:
     if active_total <= 0:
         print(
             "WARN: No active device tokens on production yet. "
-            "Open TestFlight Build 86, enable notifications, and log in."
+            "Open TestFlight Build 89, enable notifications when prompted, and log in."
         )
         return
 

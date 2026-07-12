@@ -1149,7 +1149,7 @@ class PAXdesign_Live_Chat_Mobile_API {
         $devices = array();
         $active_total = 0;
         if (class_exists('PAXdesign_APNS')) {
-            foreach (PAXdesign_APNS::get_admin_user_ids() as $uid) {
+            foreach (PAXdesign_APNS::get_live_chat_user_ids() as $uid) {
                 foreach (PAXdesign_APNS::get_user_devices((int) $uid) as $device) {
                     if (!empty($device['revoked'])) {
                         continue;
@@ -1243,14 +1243,9 @@ class PAXdesign_Live_Chat_Mobile_API {
         }
 
         $cfg = PAXdesign_APNS::get_config();
-        $device_total = 0;
-        foreach (PAXdesign_APNS::get_admin_user_ids() as $uid) {
-            foreach (PAXdesign_APNS::get_user_devices((int) $uid) as $device) {
-                if (empty($device['revoked'])) {
-                    $device_total++;
-                }
-            }
-        }
+        $device_total = class_exists('PAXdesign_APNS')
+            ? PAXdesign_APNS::count_active_devices()
+            : 0;
 
         return self::respond(array(
             'configured'    => PAXdesign_APNS::is_configured(),
@@ -1454,7 +1449,11 @@ class PAXdesign_Live_Chat_Mobile_API {
             PAXdesign_APNS::register_device($user_id, $device_token, $sandbox, $bundle_id, $params);
         }
 
-        return PAXdesign_Device_Sessions::heartbeat($user_id, $device_id, $params);
+        $result = PAXdesign_Device_Sessions::heartbeat($user_id, $device_id, $params);
+        if (is_wp_error($result) && $result->get_error_code() === 'device_not_found' && $device_token !== '') {
+            return rest_ensure_response(array('ok' => true, 'registered' => true));
+        }
+        return $result;
     }
 
     public static function route_devices_revoke(WP_REST_Request $request) {

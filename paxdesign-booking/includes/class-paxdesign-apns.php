@@ -38,6 +38,44 @@ class PAXdesign_APNS {
     /**
      * @return array<int, int>
      */
+    public static function get_live_chat_user_ids() {
+        $users = get_users(array('fields' => array('ID')));
+        $ids   = array();
+        foreach ($users as $user) {
+            $uid = (int) $user->ID;
+            if ($uid <= 0) {
+                continue;
+            }
+            if (!PAXdesign_Live_Chat_Permissions::has_live_chat_access($uid)) {
+                continue;
+            }
+            $ids[] = $uid;
+        }
+        return $ids;
+    }
+
+    /**
+     * @return int
+     */
+    public static function count_active_devices() {
+        $total = 0;
+        foreach (self::get_live_chat_user_ids() as $uid) {
+            foreach (self::get_user_devices((int) $uid) as $device) {
+                if (empty($device['token']) || !empty($device['revoked'])) {
+                    continue;
+                }
+                if (isset($device['approved']) && empty($device['approved'])) {
+                    continue;
+                }
+                $total++;
+            }
+        }
+        return $total;
+    }
+
+    /**
+     * @return array<int, int>
+     */
     public static function get_admin_user_ids() {
         $users = get_users(array('fields' => array('ID')));
         $ids   = array();
