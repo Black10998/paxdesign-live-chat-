@@ -388,7 +388,12 @@ def main() -> None:
     ensure_export_compliance(client, build)
     ensure_beta_app_localization(client, app_id)
     ensure_beta_build_localization(client, build_id)
-    submit_external_beta_review(client, build_id)
+    import os
+
+    if os.environ.get("ALLOW_EXTERNAL_BETA_REVIEW", "").strip() == "1":
+        submit_external_beta_review(client, build_id)
+    else:
+        print("Skipping external beta review (ALLOW_EXTERNAL_BETA_REVIEW not set)")
 
     internal_group = find_internal_group(client, app_id)
     internal_group_id = internal_group["id"]
