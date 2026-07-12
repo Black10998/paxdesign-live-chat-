@@ -52,6 +52,11 @@ final class DeviceSessionService: ObservableObject {
     static let shared = DeviceSessionService()
 
     private var heartbeatTask: Task<Void, Never>?
+    private var lastRegisteredToken: String?
+
+    func resetRegistrationState() {
+        lastRegisteredToken = nil
+    }
 
     func start(auth: AuthStore) {
         stop()
@@ -66,33 +71,55 @@ final class DeviceSessionService: ObservableObject {
     func stop() {
         heartbeatTask?.cancel()
         heartbeatTask = nil
+        lastRegisteredToken = nil
     }
 
     func registerWithPush(auth: AuthStore) async {
+        await registerTokenWithServer(auth: auth)
+        await sendHeartbeat(auth: auth)
+    }
+
+    private func registerTokenWithServer(auth: AuthStore) async {
         guard auth.isLoggedIn, let api = auth.api else { return }
-        if let token = PushService.shared.deviceToken {
-            var lastError: Error?
-            for attempt in 1...3 {
-                do {
-                    try await api.registerAPNs(
-                        token: token,
-                        sandbox: isSandbox,
-                        metadata: PAXDeviceInfo.registrationPayload
-                    )
-                    lastError = nil
-                    break
-                } catch {
-                    lastError = error
-                    if attempt < 3 {
-                        try? await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
-                    }
-                }
-            }
-            if let lastError {
-                PushRegistrationDiagnostics.registerFailed(lastError.localizedDescription)
+
+        if PushService.shared.deviceToken == nil {
+            await PushService.shared.registerForRemoteNotificationsIfAuthorized()
+            for _ in 0..<5 where PushService.shared.deviceToken == nil {
+                try? await Task.sleep(nanoseconds: 500_000_000)
             }
         }
-        await sendHeartbeat(auth: auth)
+
+        guard let token = PushService.shared.deviceToken else {
+            PushRegistrationDiagnostics.registerFailed("No APNs device token from iOS yet")
+            return
+        }
+
+        if token == lastRegisteredToken {
+            return
+        }
+
+        var lastError: Error?
+        for attempt in 1...3 {
+            do {
+                try await api.registerAPNs(
+                    token: token,
+                    sandbox: isSandbox,
+                    metadata: PAXDeviceInfo.registrationPayload
+                )
+                lastRegisteredToken = token
+                PushRegistrationDiagnostics.registerSucceeded(tokenPrefix: String(token.prefix(12)))
+                lastError = nil
+                break
+            } catch {
+                lastError = error
+                if attempt < 3 {
+                    try? await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                }
+            }
+        }
+        if let lastError {
+            PushRegistrationDiagnostics.registerFailed(lastError.localizedDescription)
+        }
     }
 
     private func heartbeatPayload() -> [String: Any] {
@@ -107,6 +134,13 @@ final class DeviceSessionService: ObservableObject {
 
     private func sendHeartbeat(auth: AuthStore) async {
         guard auth.isLoggedIn, let api = auth.api else { return }
+
+        if PushService.shared.deviceToken == nil {
+            await PushService.shared.registerForRemoteNotificationsIfAuthorized()
+        } else if PushService.shared.deviceToken != lastRegisteredToken {
+            await registerTokenWithServer(auth: auth)
+        }
+
         do {
             try await api.sendDeviceHeartbeat(metadata: heartbeatPayload())
         } catch {
@@ -140,5 +174,9 @@ enum PushRegistrationDiagnostics {
 
     static func registerFailed(_ message: String) {
         log.error("APNs register failed: \(message, privacy: .public)")
+    }
+
+    static func registerSucceeded(tokenPrefix: String) {
+        log.info("APNs register succeeded token_prefix=\(tokenPrefix, privacy: .public)")
     }
 }

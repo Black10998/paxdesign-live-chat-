@@ -76,6 +76,7 @@ final class PushService: NSObject, ObservableObject {
         let token = tokenData.map { String(format: "%02.2hhx", $0) }.joined()
         guard deviceToken != token else { return }
         deviceToken = token
+        DeviceSessionService.shared.resetRegistrationState()
     }
 
     func registerForRemoteNotificationsIfAuthorized() async {
@@ -168,6 +169,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             if AuthStore.shared.isLoggedIn {
                 await PushService.shared.registerTokenWithBackend(auth: AuthStore.shared)
             }
+        }
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        Task { @MainActor in
+            PushRegistrationDiagnostics.registerFailed("didFailToRegister: \(error.localizedDescription)")
         }
     }
 

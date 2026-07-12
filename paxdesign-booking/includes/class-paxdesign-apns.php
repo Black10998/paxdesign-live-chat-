@@ -539,7 +539,14 @@ class PAXdesign_APNS {
      * @param int[] $exclude_user_ids
      */
     public static function send_to_admins($title, $body, $data = array(), $silent = false, $exclude_user_ids = array()) {
-        self::send_to_user_ids(self::get_admin_user_ids(), $title, $body, $data, $silent, $exclude_user_ids);
+        $user_ids = array();
+        foreach (get_users(array('fields' => array('ID'))) as $user) {
+            $uid = (int) $user->ID;
+            if ($uid > 0 && PAXdesign_Live_Chat_Permissions::has_live_chat_access($uid)) {
+                $user_ids[] = $uid;
+            }
+        }
+        self::send_to_user_ids($user_ids, $title, $body, $data, $silent, $exclude_user_ids);
     }
 
     /**
@@ -570,12 +577,12 @@ class PAXdesign_APNS {
         $interruption = $is_live_request ? 'time-sensitive' : 'active';
 
         $aps = array(
-            'badge'              => $user_id > 0 ? self::count_user_badge($user_id) : self::count_pending_badge(),
-            'mutable-content'    => 1,
-            'content-available'  => 1,
+            'badge' => $user_id > 0 ? self::count_user_badge($user_id) : self::count_pending_badge(),
         );
 
-        if (!$silent) {
+        if ($silent) {
+            $aps['content-available'] = 1;
+        } else {
             $aps['alert'] = array(
                 'title' => (string) $title,
                 'body'  => (string) $body,
