@@ -43,6 +43,38 @@ require_cmd() {
   command -v "$1" >/dev/null 2>&1 || fail "$1 is required"
 }
 
+decode_base64_secret() {
+  local secret_value="$1"
+  local output_path="$2"
+  local label="$3"
+
+  local sanitized
+  sanitized="$(printf '%s' "$secret_value" | tr -d '[:space:]')"
+  [[ -n "$sanitized" ]] || fail "$label secret is empty"
+
+  if ! printf '%s' "$sanitized" | base64 -D > "$output_path" 2>"$SIGNING_DIR/${label}.decode.err"; then
+    rm -f "$output_path"
+    fail "Failed to base64-decode $label (ensure the GitHub Secret contains only base64 text)"
+  fi
+
+  [[ -s "$output_path" ]] || fail "$label decoded to an empty file"
+}
+
+verify_certificate_payload() {
+  if ! openssl pkcs12 -in "$CERTIFICATE_PATH" -noout -passin "pass:${APPLE_CERTIFICATE_PASSWORD}" \
+    2>"$SIGNING_DIR/certificate.verify.err"; then
+    fail "Invalid Apple Distribution .p12 or incorrect APPLE_CERTIFICATE_PASSWORD"
+  fi
+}
+
+verify_mobileprovision_payload() {
+  local profile_path="$1"
+  local label="$2"
+  if ! security cms -D -i "$profile_path" > "$SIGNING_DIR/${label}.plist" 2>"$SIGNING_DIR/${label}.verify.err"; then
+    fail "Invalid $label provisioning profile payload (check base64 secret formatting)"
+  fi
+}
+
 profile_field() {
   local profile_path="$1"
   local field="$2"
@@ -74,29 +106,48 @@ setup_signing_assets() {
   echo "==> Preparing signing assets"
   mkdir -p "$SIGNING_DIR"
   rm -f "$KEYCHAIN_PATH" "$CERTIFICATE_PATH" "$MAIN_PROFILE_PATH" "$WIDGET_PROFILE_PATH"
+  rm -f "$SIGNING_DIR"/*.err "$SIGNING_DIR"/*.plist 2>/dev/null || true
 
-  printf '%s' "$APPLE_CERTIFICATE_P12_BASE64" | base64 -D > "$CERTIFICATE_PATH"
-  printf '%s' "$APPLE_PROVISIONING_PROFILE_MAIN_BASE64" | base64 -D > "$MAIN_PROFILE_PATH"
-  printf '%s' "$APPLE_PROVISIONING_PROFILE_WIDGET_BASE64" | base64 -D > "$WIDGET_PROFILE_PATH"
+  echo "==> Decoding signing secrets"
+  decode_base64_secret "$APPLE_CERTIFICATE_P12_BASE64" "$CERTIFICATE_PATH" "certificate"
+  decode_base64_secret "$APPLE_PROVISIONING_PROFILE_MAIN_BASE64" "$MAIN_PROFILE_PATH" "main-profile"
+  decode_base64_secret "$APPLE_PROVISIONING_PROFILE_WIDGET_BASE64" "$WIDGET_PROFILE_PATH" "widget-profile"
 
-  security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+  echo "==> Validating decoded signing payloads"
+  verify_certificate_payload
+  verify_mobileprovision_payload "$MAIN_PROFILE_PATH" "main-profile"
+  verify_mobileprovision_payload "$WIDGET_PROFILE_PATH" "widget-profile"
+
+  echo "==> Creating temporary keychain"
+  security delete-keychain "$KEYCHAIN_PATH" >/dev/null 2>&1 || true
+  security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" \
+    || fail "Failed to create temporary keychain"
   security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-  security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+  security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" \
+    || fail "Failed to unlock temporary keychain"
 
   existing_keychains="$(security list-keychains -d user | tr -d '"')"
   # shellcheck disable=SC2086
   security list-keychains -d user -s "$KEYCHAIN_PATH" $existing_keychains
 
-  security import "$CERTIFICATE_PATH" \
+  echo "==> Importing Apple Distribution certificate"
+  if ! security import "$CERTIFICATE_PATH" \
     -k "$KEYCHAIN_PATH" \
     -P "$APPLE_CERTIFICATE_PASSWORD" \
     -A \
     -T /usr/bin/codesign \
     -T /usr/bin/security \
-    -f pkcs12 >/dev/null
+    -f pkcs12 \
+    2>"$SIGNING_DIR/certificate.import.err"; then
+    fail "Apple Distribution certificate import failed (verify .p12 secret and password)"
+  fi
 
-  security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" >/dev/null
+  if ! security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" \
+    2>"$SIGNING_DIR/keychain.partition.err"; then
+    fail "Failed to configure keychain partition list for codesign"
+  fi
 
+  echo "==> Installing provisioning profiles"
   install_provisioning_profile "$MAIN_PROFILE_PATH" "$MAIN_BUNDLE_ID" "Main"
   MAIN_PROFILE_UUID="$(profile_field "$MAIN_PROFILE_PATH" UUID)"
   MAIN_PROFILE_NAME="$(profile_field "$MAIN_PROFILE_PATH" Name)"
@@ -104,6 +155,10 @@ setup_signing_assets() {
   install_provisioning_profile "$WIDGET_PROFILE_PATH" "$WIDGET_BUNDLE_ID" "Widget"
   WIDGET_PROFILE_UUID="$(profile_field "$WIDGET_PROFILE_PATH" UUID)"
   WIDGET_PROFILE_NAME="$(profile_field "$WIDGET_PROFILE_PATH" Name)"
+
+  echo "==> Signing assets ready"
+  echo "    Main profile: $MAIN_PROFILE_NAME ($MAIN_PROFILE_UUID)"
+  echo "    Widget profile: $WIDGET_PROFILE_NAME ($WIDGET_PROFILE_UUID)"
 
   rm -f "$CERTIFICATE_PATH"
 }
@@ -149,7 +204,7 @@ echo "==> App Store build starting"
 require_cmd xcodegen
 require_cmd xcodebuild
 require_cmd security
-require_cmd codesign
+require_cmd openssl
 
 setup_signing_assets
 verify_entitlements_source
