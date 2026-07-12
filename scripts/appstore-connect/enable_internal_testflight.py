@@ -209,7 +209,30 @@ def find_internal_group(client: ASCClient, app_id: str) -> dict[str, Any]:
     )
     groups = payload.get("data") or []
     if not groups:
-        fail("No internal TestFlight group found for this app")
+        payload = client.get(f"/apps/{app_id}/betaGroups", **{"limit": "200"})
+        groups = [
+            group
+            for group in payload.get("data") or []
+            if (group.get("attributes") or {}).get("isInternalGroup") is True
+        ]
+    if not groups:
+        print("No internal TestFlight group found; creating one")
+        payload = client.post(
+            "/betaGroups",
+            {
+                "data": {
+                    "type": "betaGroups",
+                    "attributes": {
+                        "name": "Internal Testing",
+                        "isInternalGroup": True,
+                    },
+                    "relationships": {
+                        "app": {"data": {"type": "apps", "id": app_id}},
+                    },
+                }
+            },
+        )
+        groups = [payload["data"]]
     for group in groups:
         name = (group.get("attributes") or {}).get("name", "")
         if "internal" in name.lower() or "team" in name.lower():

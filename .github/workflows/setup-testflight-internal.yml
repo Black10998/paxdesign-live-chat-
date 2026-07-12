@@ -1,0 +1,35 @@
+name: Setup TestFlight Internal Testing
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/testflight-internal-setup'
+
+permissions:
+  contents: read
+
+jobs:
+  setup-internal-testflight:
+    runs-on: macos-latest
+    env:
+      APP_BUNDLE_ID: at.paxdesign.livechat
+      TESTFLIGHT_INTERNAL_TESTER_EMAIL: awjime29@icloud.com
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate App Store Connect private key
+        run: python3 scripts/appstore-connect/prepare-asc-key.py
+
+      - name: Install App Store Connect API dependencies
+        run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
+
+      - name: Enable internal TestFlight testing
+        run: python3 scripts/appstore-connect/enable_internal_testflight.py
