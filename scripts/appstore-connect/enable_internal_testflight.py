@@ -34,24 +34,26 @@ def fail(message: str) -> None:
 
 
 def load_private_key() -> str:
-    raw = os.environ.get("APP_STORE_CONNECT_API_PRIVATE_KEY") or os.environ.get(
-        "APPSTORE_API_PRIVATE_KEY", ""
-    )
-    if not raw:
-        b64 = os.environ.get("APP_STORE_CONNECT_API_KEY_P8_BASE64", "")
-        if b64:
-            import base64
+    import base64
 
+    b64 = os.environ.get("APP_STORE_CONNECT_API_KEY_P8_BASE64", "").strip()
+    if b64:
+        try:
             raw = base64.b64decode("".join(b64.split())).decode("utf-8")
-    raw = raw.strip()
+        except Exception as exc:  # noqa: BLE001
+            fail(f"Could not decode APP_STORE_CONNECT_API_KEY_P8_BASE64: {exc}")
+    else:
+        raw = os.environ.get("APP_STORE_CONNECT_API_PRIVATE_KEY") or os.environ.get(
+            "APPSTORE_API_PRIVATE_KEY", ""
+        )
+
+    raw = raw.strip().strip('"').replace("\\n", "\n").replace("\r", "")
     if not raw:
         fail("Missing App Store Connect API private key secret")
-    raw = raw.strip('"')
-    raw = raw.replace("\\n", "\n").replace("\r", "")
     if not raw.endswith("\n"):
         raw += "\n"
     if not openssl_validate_key(raw):
-        fail("APP_STORE_CONNECT_API_PRIVATE_KEY is not a valid PKCS8 private key")
+        fail("App Store Connect API private key is not a valid PKCS8 private key")
     return raw
 
 

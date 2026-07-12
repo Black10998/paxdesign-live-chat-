@@ -38,17 +38,17 @@ def normalize_pem(raw: str) -> str:
 
 
 def load_key() -> str:
+    b64 = os.environ.get("APP_STORE_CONNECT_API_KEY_P8_BASE64", "").strip()
+    if b64:
+        try:
+            raw = base64.b64decode("".join(b64.split())).decode("utf-8")
+            return normalize_pem(raw)
+        except Exception as exc:  # noqa: BLE001
+            fail(f"Could not decode APP_STORE_CONNECT_API_KEY_P8_BASE64: {exc}")
+
     raw = os.environ.get("APP_STORE_CONNECT_API_PRIVATE_KEY", "").strip()
     if not raw:
-        b64 = os.environ.get("APP_STORE_CONNECT_API_KEY_P8_BASE64", "").strip()
-        if b64:
-            try:
-                raw = base64.b64decode("".join(b64.split())).decode("utf-8")
-            except Exception as exc:  # noqa: BLE001
-                fail(f"Could not decode APP_STORE_CONNECT_API_KEY_P8_BASE64: {exc}")
-
-    if not raw:
-        fail("Missing APP_STORE_CONNECT_API_PRIVATE_KEY or APP_STORE_CONNECT_API_KEY_P8_BASE64")
+        fail("Missing APP_STORE_CONNECT_API_KEY_P8_BASE64 or APP_STORE_CONNECT_API_PRIVATE_KEY")
 
     return normalize_pem(raw)
 
