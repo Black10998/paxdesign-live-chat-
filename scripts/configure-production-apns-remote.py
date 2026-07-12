@@ -337,6 +337,14 @@ def wait_for_plugin_version(key_p8: str) -> None:
         ok(f"Production plugin v{current}")
         return
 
+    if current == "3.108.10" and EXPECTED_PLUGIN == "3.108.11" and bootstrap_auth_works(key_p8):
+        print(
+            "WARN: Production is on v3.108.10; continuing with bootstrap APNs verification. "
+            "Update to v3.108.11 for bootstrap test push and remote self-update."
+        )
+        ok(f"Production plugin v{current}")
+        return
+
     if current == "3.108.9" and EXPECTED_PLUGIN == "3.108.10" and bootstrap_endpoint_available():
         if not bootstrap_auth_works(key_p8):
             fail(
