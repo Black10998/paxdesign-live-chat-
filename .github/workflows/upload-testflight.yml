@@ -62,7 +62,7 @@ jobs:
         run: python3 scripts/appstore-connect/prepare-asc-key.py
 
       - name: Install App Store Connect API dependencies
-        run: python3 -m pip install --quiet PyJWT cryptography
+        run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
 
       - name: Verify App Store Connect API credentials
         run: python3 scripts/appstore-connect/verify-asc-credentials.py
