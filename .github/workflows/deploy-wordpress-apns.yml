@@ -1,0 +1,108 @@
+name: Deploy WordPress APNs Backend
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/wordpress-deploy-apns'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-wordpress-apns:
+    runs-on: ubuntu-latest
+    env:
+      PAX_SITE: https://paxdesign.at
+      PAX_APNS_TEAM_ID: "4ZSP8S5A7B"
+      PAX_APNS_BUNDLE_ID: at.paxdesign.livechat
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+      WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+      WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+      WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+      WP_PATH: ${{ secrets.WP_PATH }}
+      PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
+      PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deployment secrets
+        id: secrets
+        run: |
+          missing=0
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            if [ -z "${!key:-}" ]; then
+              echo "Missing secret: $key"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo "has_ssh=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "has_ssh=true" >> "$GITHUB_OUTPUT"
+
+      - name: Abort when SSH deployment secrets are missing
+        if: steps.secrets.outputs.has_ssh != 'true'
+        run: |
+          echo "SSH deployment secrets are not configured."
+          echo "Configure WP_SSH_HOST, WP_SSH_USER, WP_SSH_PRIVATE_KEY, and WP_PATH in GitHub repository secrets."
+          exit 1
+
+      - name: Read plugin version
+        id: version
+        run: |
+          VERSION=$(grep "define('PAXDESIGN_BOOKING_VERSION'" paxdesign-booking/paxdesign-booking.php | sed "s/.*'\([^']*\)'.*/\1/")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Plugin version: $VERSION"
+
+      - name: Deploy plugin and configure APNs on production
+        if: steps.secrets.outputs.has_ssh == 'true'
+        run: |
+          set -euo pipefail
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          rsync -az --delete -e "ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no" \
+            paxdesign-booking/ "${WP_SSH_USER}@${WP_SSH_HOST}:${TARGET}/"
+          python3 scripts/appstore-connect/prepare-asc-key.py
+          python3 - <<'PY' > /tmp/apns-key.pem
+          import base64, os, re
+          b64 = os.environ["APP_STORE_CONNECT_API_KEY_P8_BASE64"].strip()
+          raw = base64.b64decode("".join(b64.split())).decode("utf-8").strip()
+          raw = raw.replace("\\n", "\n")
+          if raw.count("\n") < 2 and "BEGIN PRIVATE KEY" in raw:
+              m = re.search(r"-----BEGIN PRIVATE KEY-----\s*(.+?)\s*-----END PRIVATE KEY-----", raw, re.DOTALL)
+              if m:
+                  body = re.sub(r"\s+", "", m.group(1))
+                  wrapped = "\n".join(body[i:i+64] for i in range(0, len(body), 64))
+                  raw = f"-----BEGIN PRIVATE KEY-----\n{wrapped}\n-----END PRIVATE KEY-----\n"
+          print(raw if raw.endswith("\n") else raw + "\n", end="")
+          PY
+          scp -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no /tmp/apns-key.pem \
+            "${WP_SSH_USER}@${WP_SSH_HOST}:${WP_PATH%/}/apns-key.pem"
+          ssh -i ~/.ssh/id_deploy -o StrictHostKeyChecking=no \
+            "${WP_SSH_USER}@${WP_SSH_HOST}" \
+            "cd '${WP_PATH}' && \
+             (command -v wp >/dev/null && wp plugin activate paxdesign-booking || true) && \
+             (command -v wp >/dev/null && wp cache flush || true) && \
+             wp option update paxdesign_apns_key_id '${APP_STORE_CONNECT_API_KEY_ID}' && \
+             wp option update paxdesign_apns_team_id '${PAX_APNS_TEAM_ID}' && \
+             wp option update paxdesign_apns_bundle_id '${PAX_APNS_BUNDLE_ID}' && \
+             wp eval 'update_option(\"paxdesign_apns_key_p8\", file_get_contents(\"apns-key.pem\"));' && \
+             rm -f apns-key.pem && \
+             wp eval-file wp-content/plugins/paxdesign-booking/scripts/setup-production-apns.php"
+
+      - name: Install verification dependencies
+        run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
+
+      - name: Verify production REST endpoints
+        env:
+          PAX_EXPECTED_PLUGIN: ${{ steps.version.outputs.version }}
+        run: python3 scripts/verify-production-apns.py
