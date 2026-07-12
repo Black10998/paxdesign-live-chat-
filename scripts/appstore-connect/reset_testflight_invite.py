@@ -324,7 +324,9 @@ def verify_invite_ready(
 
     state = get_tester_state(client, app_id, TESTER_EMAIL)
     print(f"Tester invite state: {state}")
-    if state not in {"INVITED", "ACCEPTED", "INSTALLED"}:
+    if invite_sent and state not in {"INVITED", "ACCEPTED", "INSTALLED"}:
+        fail(f"Unexpected tester state after invite reset: {state}")
+    if not invite_sent and state not in {"NOT_INVITED", "INVITED", "ACCEPTED", "INSTALLED"}:
         fail(f"Unexpected tester state after invite reset: {state}")
 
     detail = get_build_beta_detail(client, build_id)
