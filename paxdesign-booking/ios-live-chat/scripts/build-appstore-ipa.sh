@@ -236,12 +236,14 @@ text = pbxproj.read_text()
 
 targets = [
     {
+        "target_name": "PAXDesignLiveChat",
         "bundle_id": os.environ["MAIN_BUNDLE_ID"],
         "team_id": os.environ["APPLE_TEAM_ID"],
         "profile_uuid": os.environ["MAIN_PROFILE_UUID"],
         "profile_name": os.environ["MAIN_PROFILE_NAME"],
     },
     {
+        "target_name": "PAXWidgets",
         "bundle_id": os.environ["WIDGET_BUNDLE_ID"],
         "team_id": os.environ["APPLE_TEAM_ID"],
         "profile_uuid": os.environ["WIDGET_PROFILE_UUID"],
@@ -256,9 +258,7 @@ def upsert_setting(block: str, key: str, value: str) -> str:
         return pattern.sub(line, block, count=1)
     return block.replace("buildSettings = {", "buildSettings = {\n\t\t\t\t" + line, 1)
 
-def patch_release_block(block: str, bundle_id: str, team_id: str, profile_uuid: str, profile_name: str) -> str:
-    if f"PRODUCT_BUNDLE_IDENTIFIER = {bundle_id};" not in block:
-        return block
+def patch_release_block(block: str, team_id: str, profile_uuid: str, profile_name: str) -> str:
     block = upsert_setting(block, "CODE_SIGN_STYLE", "Manual")
     block = upsert_setting(block, "DEVELOPMENT_TEAM", team_id)
     block = upsert_setting(block, "CODE_SIGN_IDENTITY", '"Apple Distribution"')
@@ -266,30 +266,65 @@ def patch_release_block(block: str, bundle_id: str, team_id: str, profile_uuid: 
     block = upsert_setting(block, "PROVISIONING_PROFILE_SPECIFIER", f'"{profile_name}"')
     return block
 
-parts = re.split(r"(?=\/\* Release \*\/ = \{)", text)
-if len(parts) < 2:
-    raise SystemExit("Could not locate Release build configurations in project.pbxproj")
+def release_config_ids_for_target(text: str, target_name: str) -> list[str]:
+    target_match = re.search(
+        rf"buildConfigurationList = ([A-F0-9]+) /\* Build configuration list for PBXNativeTarget \"{re.escape(target_name)}\" \*/;",
+        text,
+    )
+    if not target_match:
+        raise SystemExit(f"Could not find build configuration list for target {target_name}")
+    config_list_id = target_match.group(1)
+    list_match = re.search(
+        rf"{config_list_id} /\* Build configuration list for PBXNativeTarget \"{re.escape(target_name)}\" \*/ = \{{\n\t\t\tisa = XCConfigurationList;\n\t\t\tbuildConfigurations = \((.*?)\);",
+        text,
+        re.DOTALL,
+    )
+    if not list_match:
+        raise SystemExit(f"Could not parse configuration list for target {target_name}")
+    return re.findall(r"([A-F0-9]+) /\* (Debug|Release) \*/", list_match.group(1))
 
-patched_bundle_ids = set()
-for idx in range(1, len(parts)):
-    for target in targets:
-        bundle_id = target["bundle_id"]
-        if bundle_id in patched_bundle_ids:
-            continue
-        updated = patch_release_block(parts[idx], bundle_id, target["team_id"], target["profile_uuid"], target["profile_name"])
-        if updated != parts[idx]:
-            parts[idx] = updated
-            patched_bundle_ids.add(bundle_id)
-            break
+def patch_target(text: str, target_name: str, team_id: str, profile_uuid: str, profile_name: str) -> str:
+    release_ids = {
+        config_id
+        for config_id, config_name in release_config_ids_for_target(text, target_name)
+        if config_name == "Release"
+    }
+    if not release_ids:
+        raise SystemExit(f"No Release configuration found for target {target_name}")
 
-missing = {t["bundle_id"] for t in targets} - patched_bundle_ids
-if missing:
-    raise SystemExit(f"Failed to patch Release configs for bundle ids: {', '.join(sorted(missing))}")
+    patched = 0
+    for config_id in release_ids:
+        pattern = re.compile(
+            rf"({config_id} /\* Release \*/ = \{{\n\t\t\tisa = XCBuildConfiguration;\n\t\t\tbuildSettings = \{{.*?\n\t\t\}};)",
+            re.DOTALL,
+        )
 
-text = "".join(parts)
+        def repl(match):
+            nonlocal patched
+            patched += 1
+            return patch_release_block(match.group(1), team_id, profile_uuid, profile_name)
+
+        text, count = pattern.subn(repl, text, count=1)
+        if count != 1:
+            raise SystemExit(f"Failed to patch Release block {config_id} for target {target_name}")
+
+    if patched == 0:
+        raise SystemExit(f"Failed to patch Release config for target {target_name}")
+    return text
+
+for target in targets:
+    text = patch_target(
+        text,
+        target["target_name"],
+        target["team_id"],
+        target["profile_uuid"],
+        target["profile_name"],
+    )
+
 text = text.replace("CODE_SIGN_STYLE = Automatic;", "CODE_SIGN_STYLE = Manual;")
 text = text.replace('DEVELOPMENT_TEAM = "";', f'DEVELOPMENT_TEAM = {os.environ["APPLE_TEAM_ID"]};')
 pbxproj.write_text(text)
+print("Patched manual signing for targets: PAXDesignLiveChat, PAXWidgets")
 PY
 
 echo "==> Archiving $SCHEME ($CONFIGURATION)"
