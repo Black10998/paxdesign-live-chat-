@@ -769,11 +769,15 @@ class PAXdesign_APNS {
      * @param array<string, string> $cfg
      */
     private static function make_jwt($cfg) {
-        $header  = self::base64url(wp_json_encode(array('alg' => 'ES256', 'kid' => $cfg['key_id'])));
-        $claims  = self::base64url(wp_json_encode(array(
+        $header  = self::base64url(json_encode(array(
+            'alg' => 'ES256',
+            'kid' => $cfg['key_id'],
+            'typ' => 'JWT',
+        ), JSON_UNESCAPED_SLASHES));
+        $claims  = self::base64url(json_encode(array(
             'iss' => $cfg['team_id'],
             'iat' => time(),
-        )));
+        ), JSON_UNESCAPED_SLASHES));
         $input   = $header . '.' . $claims;
 
         $key = openssl_pkey_get_private($cfg['key_p8']);
