@@ -350,7 +350,7 @@ def verify_invite_ready(
         print("INVITE_VALID=true")
         return
 
-    if internal_state == "IN_BETA_TESTING":
+    if internal_state in {"IN_BETA_TESTING", "READY_FOR_BETA_TESTING"}:
         print("INTERNAL_ACCESS_VALID=true")
         print(
             "For this App Store Connect account, open the TestFlight app directly "
