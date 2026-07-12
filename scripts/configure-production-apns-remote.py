@@ -553,6 +553,17 @@ def send_test_push_bootstrap(key_p8: str, scenario: str = "new_customer_message"
             f"attempts={len(payload.get('attempts') or [])}"
         )
     else:
+        attempts = payload.get("attempts") or []
+        all_bad_token = attempts and all(
+            (a.get("error") or "") == "BadDeviceToken" for a in attempts
+        )
+        if all_bad_token:
+            fail(
+                f"APNs provider token accepted but all {len(attempts)} device tokens were rejected "
+                f"with BadDeviceToken for {scenario}. Open the TestFlight app, ensure notifications "
+                "are enabled, log in, and wait a few seconds for token re-registration. "
+                f"Full Apple response: {json.dumps(payload)}"
+            )
         fail(f"APNs test not delivered for {scenario}: {payload}")
 
     for attempt in payload.get("attempts") or []:

@@ -623,6 +623,25 @@ class PAXdesign_APNS {
         }
 
         if ($code < 200 || $code >= 300) {
+            $reason = self::format_apns_error($body_resp, '');
+            if ($reason === 'BadDeviceToken') {
+                $alt_host = $sandbox ? 'https://api.push.apple.com' : 'https://api.sandbox.push.apple.com';
+                $alt_url  = $alt_host . '/3/device/' . $device['token'];
+                $alt_resp = self::apns_post($alt_url, $headers, wp_json_encode($payload));
+                if (!is_wp_error($alt_resp)) {
+                    $alt_code = (int) ($alt_resp['status'] ?? 0);
+                    $alt_body = (string) ($alt_resp['body'] ?? '');
+                    if ($alt_code >= 200 && $alt_code < 300) {
+                        if ($user_id > 0) {
+                            self::set_device_sandbox_flag($user_id, (string) $device['token'], !$sandbox);
+                        }
+                        return true;
+                    }
+                    $body_resp = $alt_body;
+                    $code      = $alt_code;
+                }
+            }
+
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('[PAXdesign APNs] HTTP ' . $code . ' user=' . (int) $user_id . ' body=' . $body_resp);
             }
@@ -634,6 +653,27 @@ class PAXdesign_APNS {
         }
 
         return true;
+    }
+
+    /**
+     * @param int $user_id
+     * @param string $token
+     * @param bool $sandbox
+     */
+    private static function set_device_sandbox_flag($user_id, $token, $sandbox) {
+        $token = preg_replace('/[^a-fA-F0-9]/', '', (string) $token);
+        if ($token === '') {
+            return;
+        }
+
+        $all = self::get_user_devices($user_id);
+        if (!isset($all[$token]) || !is_array($all[$token])) {
+            return;
+        }
+
+        $all[$token]['sandbox'] = (bool) $sandbox;
+        $all[$token]['updated_at'] = time();
+        update_user_meta((int) $user_id, self::USER_META_KEY, $all);
     }
 
     /**
