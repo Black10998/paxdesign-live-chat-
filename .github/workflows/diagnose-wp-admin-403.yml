@@ -56,8 +56,15 @@ jobs:
           printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
           ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-          ssh "${SSH_OPTS[@]}" "$REMOTE" "WP_PATH=${WP_PATH_QUOTED} PAX_SITE='${PAX_SITE}' bash -s" \
-            < scripts/diagnose-wp-admin-403.sh
+          if ! ssh "${SSH_OPTS[@]}" "$REMOTE" "WP_PATH=${WP_PATH_QUOTED} PAX_SITE='${PAX_SITE}' bash -s" \
+            < scripts/diagnose-wp-admin-403.sh > ./remote-stdout.log 2>&1; then
+            echo "Diagnosis script exited with error. Last 30 lines (sanitized):"
+            tail -30 ./remote-stdout.log | sed -E \
+              -e 's/(Authorization:[[:space:]]*Basic[[:space:]]+)[A-Za-z0-9+\/=]+/\1[REDACTED]/gi' \
+              -e 's/([A-Za-z0-9._%+-]+)@([A-Za-z0-9.-]+\.[A-Za-z]{2,})/[REDACTED_EMAIL]/g' || true
+            exit 1
+          fi
+          echo "Remote diagnosis finished; full output stored only in server report file."
 
           REMOTE_REPORT=$(ssh "${SSH_OPTS[@]}" "$REMOTE" "ls -t ${WP_PATH_QUOTED}/wp-content/pax-admin-403-diagnosis-*.txt 2>/dev/null | head -1")
           if [ -z "$REMOTE_REPORT" ]; then
