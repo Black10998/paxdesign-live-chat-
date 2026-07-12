@@ -125,6 +125,18 @@ class PAXdesign_Live_Chat_Mobile_API {
     public static function register_routes() {
         $auth = array(__CLASS__, 'permission_admin');
 
+        register_rest_route(self::REST_NAMESPACE, '/system/bootstrap/update', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_bootstrap_plugin_update'),
+            'permission_callback' => '__return_true',
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/system/bootstrap/apns', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_bootstrap_apns_configure'),
+            'permission_callback' => '__return_true',
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/me', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'route_me'),
@@ -304,6 +316,12 @@ class PAXdesign_Live_Chat_Mobile_API {
         register_rest_route(self::REST_NAMESPACE, '/live-admin/system/apns/test', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'route_apns_system_test'),
+            'permission_callback' => array(__CLASS__, 'permission_apns_admin'),
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/system/plugin/update', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_plugin_system_update'),
             'permission_callback' => array(__CLASS__, 'permission_apns_admin'),
         ));
 
@@ -1043,6 +1061,54 @@ class PAXdesign_Live_Chat_Mobile_API {
         ));
     }
 
+    public static function route_bootstrap_plugin_update(WP_REST_Request $request) {
+        $check = PAXdesign_ASC_Bootstrap::authorize_request($request);
+        if (is_wp_error($check)) {
+            return $check;
+        }
+
+        if (!class_exists('PAXdesign_Booking_Update_Checker')) {
+            return new WP_Error('update_unavailable', 'Update checker unavailable.', array('status' => 501));
+        }
+
+        return self::respond(PAXdesign_Booking_Update_Checker::upgrade_from_github());
+    }
+
+    public static function route_bootstrap_apns_configure(WP_REST_Request $request) {
+        $check = PAXdesign_ASC_Bootstrap::authorize_request($request);
+        if (is_wp_error($check)) {
+            return $check;
+        }
+
+        if (!class_exists('PAXdesign_APNS')) {
+            return new WP_Error('apns_unavailable', 'APNs module unavailable.', array('status' => 501));
+        }
+
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+
+        $key_id = isset($params['key_id']) ? sanitize_text_field((string) $params['key_id']) : '';
+        $team_id = isset($params['team_id']) ? sanitize_text_field((string) $params['team_id']) : '';
+        $bundle_id = isset($params['bundle_id']) ? sanitize_text_field((string) $params['bundle_id']) : '';
+        $key_p8 = isset($params['key_p8']) ? trim((string) $params['key_p8']) : '';
+
+        if ($key_id === '' || $team_id === '' || $key_p8 === '') {
+            return new WP_Error('apns_missing_fields', 'key_id, team_id, and key_p8 are required.', array('status' => 400));
+        }
+
+        update_option('paxdesign_apns_key_id', $key_id);
+        update_option('paxdesign_apns_team_id', $team_id);
+        update_option(
+            'paxdesign_apns_bundle_id',
+            $bundle_id !== '' ? $bundle_id : 'at.paxdesign.livechat'
+        );
+        update_option('paxdesign_apns_key_p8', $key_p8);
+
+        return self::route_apns_system_status($request);
+    }
+
     public static function route_apns_system_status(WP_REST_Request $request) {
         if (!class_exists('PAXdesign_APNS')) {
             return new WP_Error('apns_unavailable', 'APNs module unavailable.', array('status' => 501));
@@ -1170,16 +1236,51 @@ class PAXdesign_Live_Chat_Mobile_API {
             $params = array();
         }
 
+        if (!empty($params['configure_apns'])) {
+            $check = self::permission_apns_admin();
+            if (is_wp_error($check)) {
+                return $check;
+            }
+
+            $key_id = isset($params['key_id']) ? sanitize_text_field((string) $params['key_id']) : '';
+            $team_id = isset($params['team_id']) ? sanitize_text_field((string) $params['team_id']) : '';
+            $bundle_id = isset($params['bundle_id']) ? sanitize_text_field((string) $params['bundle_id']) : '';
+            $key_p8 = isset($params['key_p8']) ? trim((string) $params['key_p8']) : '';
+
+            if ($key_id === '' || $team_id === '' || $key_p8 === '') {
+                return new WP_Error('apns_missing_fields', 'key_id, team_id, and key_p8 are required.', array('status' => 400));
+            }
+
+            update_option('paxdesign_apns_key_id', $key_id);
+            update_option('paxdesign_apns_team_id', $team_id);
+            update_option(
+                'paxdesign_apns_bundle_id',
+                $bundle_id !== '' ? $bundle_id : 'at.paxdesign.livechat'
+            );
+            update_option('paxdesign_apns_key_p8', $key_p8);
+        }
+
         $token    = isset($params['device_token']) ? sanitize_text_field($params['device_token']) : '';
         $sandbox  = !empty($params['sandbox']);
         $bundle   = isset($params['bundle_id']) ? sanitize_text_field($params['bundle_id']) : '';
 
         if ($token === '') {
+            if (!empty($params['configure_apns'])) {
+                return self::route_apns_system_status($request);
+            }
             return new WP_Error('invalid_token', 'device_token required.', array('status' => 400));
         }
 
         PAXdesign_APNS::register_device((int) get_current_user_id(), $token, $sandbox, $bundle, $params);
         return rest_ensure_response(array('ok' => true));
+    }
+
+    public static function route_plugin_system_update(WP_REST_Request $request) {
+        if (!class_exists('PAXdesign_Booking_Update_Checker')) {
+            return new WP_Error('update_unavailable', 'Update checker unavailable.', array('status' => 501));
+        }
+
+        return self::respond(PAXdesign_Booking_Update_Checker::upgrade_from_github());
     }
 
     public static function route_devices_list(WP_REST_Request $request) {
