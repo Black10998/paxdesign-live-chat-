@@ -1,0 +1,36 @@
+name: Enable TestFlight Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/testflight-enable-build'
+
+permissions:
+  contents: read
+
+jobs:
+  enable-testflight-build:
+    runs-on: macos-latest
+    env:
+      APP_BUNDLE_ID: at.paxdesign.livechat
+      TESTFLIGHT_TARGET_BUILD: "85"
+      TESTFLIGHT_INTERNAL_TESTER_EMAIL: awjime29@icloud.com
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate App Store Connect private key
+        run: python3 scripts/appstore-connect/prepare-asc-key.py
+
+      - name: Install App Store Connect API dependencies
+        run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
+
+      - name: Enable TestFlight build for internal testing
+        run: python3 scripts/appstore-connect/enable_testflight_build.py
