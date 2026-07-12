@@ -1232,36 +1232,6 @@ class PAXdesign_Live_Chat_Mobile_API {
             return new WP_Error('apns_not_configured', 'APNs is not configured.', array('status' => 400));
         }
 
-        $user_id = (int) get_current_user_id();
-        $devices = PAXdesign_APNS::get_user_devices($user_id);
-        $token = '';
-        foreach ($devices as $device) {
-            if (empty($device['revoked']) && !empty($device['token'])) {
-                $token = (string) $device['token'];
-                break;
-            }
-        }
-
-        if ($token === '') {
-            $admin_ids = PAXdesign_APNS::get_admin_user_ids();
-            if (!empty($admin_ids)) {
-                $user_id = (int) $admin_ids[0];
-                foreach (PAXdesign_APNS::get_user_devices($user_id) as $device) {
-                    if (empty($device['revoked']) && !empty($device['token'])) {
-                        $token = (string) $device['token'];
-                        break;
-                    }
-                }
-            }
-        }
-
-        if ($token === '') {
-            return self::respond(array(
-                'sent'    => false,
-                'message' => 'No active device tokens registered yet.',
-            ));
-        }
-
         $params = $request->get_json_params();
         if (!is_array($params)) {
             $params = array();
@@ -1288,32 +1258,17 @@ class PAXdesign_Live_Chat_Mobile_API {
             );
         }
 
-        $result = PAXdesign_APNS::send_to_user(
-            $user_id,
-            $title,
-            $body,
-            $data,
-            false
-        );
+        $result = PAXdesign_APNS::send_test_to_registered_devices($title, $body, $data);
 
-        if (is_wp_error($result)) {
-            $error_data = $result->get_error_data();
+        if (empty($result['attempts'])) {
             return self::respond(array(
-                'sent'             => false,
-                'scenario'         => $scenario,
-                'user_id'          => $user_id,
-                'message'          => $result->get_error_message(),
-                'apns_http_status' => is_array($error_data) && isset($error_data['status']) ? (int) $error_data['status'] : 0,
+                'sent'     => false,
+                'scenario' => $scenario,
+                'message'  => 'No active device tokens registered yet.',
             ));
         }
 
-        return self::respond(array_merge(
-            is_array($result) ? $result : array('sent' => true),
-            array(
-                'scenario' => $scenario,
-                'user_id'  => $user_id,
-            )
-        ));
+        return self::respond(array_merge($result, array('scenario' => $scenario)));
     }
 
     public static function route_apns_register(WP_REST_Request $request) {
