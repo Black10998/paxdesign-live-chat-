@@ -104,9 +104,9 @@ class PAXdesign_APNS {
     }
 
     public static function register_device($user_id, $token, $sandbox = false, $bundle_id = '', $meta = array()) {
-        $token = preg_replace('/[^a-fA-F0-9]/', '', (string) $token);
+        $token = self::normalize_token($token);
         if ($token === '') {
-            return;
+            return false;
         }
 
         $all = self::get_user_devices($user_id);
@@ -154,6 +154,31 @@ class PAXdesign_APNS {
             );
         }
         update_user_meta((int) $user_id, self::USER_META_KEY, $all);
+        return true;
+    }
+
+    /**
+     * Normalize and validate an APNs device token (hex, 32–256 chars).
+     */
+    public static function normalize_token($token) {
+        $token = strtolower(preg_replace('/[^a-fA-F0-9]/', '', (string) $token));
+        $length = strlen($token);
+        if ($length < 32 || $length > 256) {
+            return '';
+        }
+        return $token;
+    }
+
+    /**
+     * Whether a stored device record is push-capable.
+     *
+     * @param array<string, mixed> $device
+     */
+    public static function device_is_push_enabled(array $device) {
+        return !empty($device['token'])
+            && empty($device['session_only'])
+            && empty($device['revoked'])
+            && (!isset($device['approved']) || !empty($device['approved']));
     }
 
     /**

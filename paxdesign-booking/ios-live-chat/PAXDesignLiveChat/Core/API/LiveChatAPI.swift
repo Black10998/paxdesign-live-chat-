@@ -768,7 +768,7 @@ final class LiveChatAPI {
         )
     }
 
-    func registerAPNs(token: String, sandbox: Bool, metadata: [String: Any] = [:]) async throws {
+    func registerAPNs(token: String, sandbox: Bool, metadata: [String: Any] = [:]) async throws -> APNsRegisterResponse {
         guard let url = liveAdminURL(path: "push/apns") else {
             throw LiveChatAPIError.invalidURL
         }
@@ -796,6 +796,10 @@ final class LiveChatAPI {
             let message = wpErrorMessage(from: data) ?? "HTTP \(http.statusCode)"
             throw LiveChatAPIError.rejected(message)
         }
+        if let decoded = try? JSONDecoder().decode(APNsRegisterResponse.self, from: data) {
+            return decoded
+        }
+        return APNsRegisterResponse(ok: true, pushRegistered: true, tokenStored: true, error: nil)
     }
 
     func unregisterAPNs(token: String) async throws {
@@ -808,12 +812,12 @@ final class LiveChatAPI {
         _ = try await perform(request, endpoint: "apns-unregister", as: EmptyResponse.self)
     }
 
-    func sendDeviceHeartbeat(metadata: [String: Any]) async throws {
+    func sendDeviceHeartbeat(metadata: [String: Any]) async throws -> DeviceHeartbeatResponse {
         guard let url = liveAdminURL(path: "devices/heartbeat") else {
             throw LiveChatAPIError.invalidURL
         }
         let json = try JSONSerialization.data(withJSONObject: metadata)
-        _ = try await perform(authRequest(url: url, method: "POST", body: json), endpoint: "device-heartbeat", as: EmptyResponse.self)
+        return try await perform(authRequest(url: url, method: "POST", body: json), endpoint: "device-heartbeat", as: DeviceHeartbeatResponse.self)
     }
 
     func sendPushDiagnosticTest() async throws -> PushDiagnosticResponse {
@@ -1182,8 +1186,56 @@ struct DeviceRecord: Codable, Identifiable {
         online = (try? c.decode(Bool.self, forKey: .online)) ?? false
         isCurrent = (try? c.decode(Bool.self, forKey: .isCurrent)) ?? false
         sandbox = (try? c.decode(Bool.self, forKey: .sandbox)) ?? false
-        pushRegistered = (try? c.decode(Bool.self, forKey: .pushRegistered)) ?? !deviceToken.isEmpty
+        pushRegistered = (try? c.decode(Bool.self, forKey: .pushRegistered)) ?? false
         pushEnvironment = (try? c.decode(String.self, forKey: .pushEnvironment)) ?? (sandbox ? "sandbox" : "production")
+    }
+}
+
+struct APNsRegisterResponse: Codable {
+    let ok: Bool
+    let pushRegistered: Bool
+    let tokenStored: Bool
+    let error: String?
+
+    enum CodingKeys: String, CodingKey {
+        case ok
+        case pushRegistered = "push_registered"
+        case tokenStored = "token_stored"
+        case error
+    }
+
+    init(ok: Bool, pushRegistered: Bool, tokenStored: Bool, error: String?) {
+        self.ok = ok
+        self.pushRegistered = pushRegistered
+        self.tokenStored = tokenStored
+        self.error = error
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        ok = (try? c.decode(Bool.self, forKey: .ok)) ?? false
+        pushRegistered = (try? c.decode(Bool.self, forKey: .pushRegistered)) ?? false
+        tokenStored = (try? c.decode(Bool.self, forKey: .tokenStored)) ?? pushRegistered
+        error = try? c.decode(String.self, forKey: .error)
+    }
+}
+
+struct DeviceHeartbeatResponse: Codable {
+    let ok: Bool
+    let pushRegistered: Bool
+    let registered: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case ok
+        case pushRegistered = "push_registered"
+        case registered
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        ok = (try? c.decode(Bool.self, forKey: .ok)) ?? false
+        pushRegistered = (try? c.decode(Bool.self, forKey: .pushRegistered)) ?? false
+        registered = (try? c.decode(Bool.self, forKey: .registered)) ?? false
     }
 }
 

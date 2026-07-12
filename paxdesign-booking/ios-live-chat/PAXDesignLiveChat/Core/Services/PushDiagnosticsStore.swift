@@ -7,9 +7,24 @@ final class PushDiagnosticsStore: ObservableObject {
 
     @Published private(set) var authorizationStatus: String = "unknown"
     @Published private(set) var deviceTokenPrefix: String = "—"
+    @Published private(set) var deviceTokenSuffix: String = "—"
     @Published private(set) var apnsEnvironment: String = "—"
+    @Published private(set) var apsEntitlement: String = "—"
+
+    @Published private(set) var registrationRequested: Bool = false
+    @Published private(set) var registrationRequestCount: Int = 0
+    @Published private(set) var lastRegistrationRequestAt: Date?
+    @Published private(set) var apnsResponded: Bool = false
+    @Published private(set) var tokenReceived: Bool = false
+    @Published private(set) var tokenReceivedAt: Date?
+    @Published private(set) var iosRegistrationStatus: String = "—"
+    @Published private(set) var iosRegistrationError: String?
+
     @Published private(set) var serverRegistrationStatus: String = "—"
     @Published private(set) var serverRegistrationAt: Date?
+    @Published private(set) var serverPushEnabled: Bool = false
+    @Published private(set) var serverUploadAttempted: Bool = false
+    @Published private(set) var serverAccepted: Bool = false
     @Published private(set) var lastServerError: String?
     @Published private(set) var lastTestResult: PushTestResult?
     @Published private(set) var isRefreshing = false
@@ -30,21 +45,86 @@ final class PushDiagnosticsStore: ObservableObject {
     func refreshLocalState(push: PushService) async {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
         authorizationStatus = label(for: settings.authorizationStatus)
+        apnsEnvironment = push.apnsEnvironmentLabel
+        apsEntitlement = PAXAPNsEnvironment.entitlementValue
+
+        registrationRequested = push.registrationRequestCount > 0
+        registrationRequestCount = push.registrationRequestCount
+        lastRegistrationRequestAt = push.lastRegistrationRequestAt
+        apnsResponded = push.apnsDidRespond
+        tokenReceived = push.deviceToken != nil
+        tokenReceivedAt = push.tokenReceivedAt
+
         if let token = push.deviceToken, !token.isEmpty {
-            deviceTokenPrefix = String(token.prefix(12)) + "…"
+            deviceTokenPrefix = String(token.prefix(8))
+            deviceTokenSuffix = String(token.suffix(8))
         } else {
             deviceTokenPrefix = "—"
+            deviceTokenSuffix = "—"
         }
-        apnsEnvironment = push.apnsEnvironmentLabel
+
+        if let token = push.deviceToken, !token.isEmpty {
+            iosRegistrationStatus = "registered"
+            iosRegistrationError = nil
+        } else if let error = push.lastIOSRegistrationError, !error.isEmpty {
+            iosRegistrationStatus = "failed"
+            iosRegistrationError = error
+        } else if push.registrationRequestCount > 0 {
+            iosRegistrationStatus = push.apnsDidRespond ? "failed" : "waiting"
+            iosRegistrationError = push.apnsDidRespond ? "APNs responded without a device token." : nil
+        } else {
+            iosRegistrationStatus = "not_requested"
+            iosRegistrationError = nil
+        }
     }
 
-    func recordServerRegistration(success: Bool, tokenPrefix: String?, error: String? = nil) {
+    func recordRegistrationRequested(count: Int, at: Date) {
+        registrationRequested = true
+        registrationRequestCount = count
+        lastRegistrationRequestAt = at
+        iosRegistrationStatus = "waiting"
+    }
+
+    func recordRegistrationAttemptStarted() {
+        iosRegistrationStatus = "waiting"
+    }
+
+    func recordRegistrationAttemptFinished(success: Bool, error: String?) {
         if success {
-            serverRegistrationStatus = "registered"
+            iosRegistrationStatus = "registered"
+            iosRegistrationError = nil
+        } else {
+            iosRegistrationStatus = "failed"
+            iosRegistrationError = error
+        }
+    }
+
+    func recordTokenReceived(token: String) {
+        tokenReceived = true
+        tokenReceivedAt = Date()
+        apnsResponded = true
+        deviceTokenPrefix = String(token.prefix(8))
+        deviceTokenSuffix = String(token.suffix(8))
+        iosRegistrationStatus = "registered"
+        iosRegistrationError = nil
+    }
+
+    func recordIOSRegistrationFailure(_ detail: String) {
+        apnsResponded = true
+        iosRegistrationStatus = "failed"
+        iosRegistrationError = detail
+    }
+
+    func recordServerRegistration(success: Bool, tokenPrefix: String?, error: String? = nil, pushEnabled: Bool = false, accepted: Bool = false) {
+        serverUploadAttempted = true
+        serverAccepted = accepted || success
+        serverPushEnabled = pushEnabled || success
+        if success {
+            serverRegistrationStatus = pushEnabled ? "push_enabled" : "registered"
             serverRegistrationAt = Date()
             lastServerError = nil
             if let tokenPrefix, !tokenPrefix.isEmpty {
-                deviceTokenPrefix = tokenPrefix + "…"
+                deviceTokenPrefix = String(tokenPrefix.prefix(8))
             }
         } else {
             serverRegistrationStatus = "failed"
@@ -54,6 +134,25 @@ final class PushDiagnosticsStore: ObservableObject {
 
     func recordServerRegistrationPending() {
         serverRegistrationStatus = "pending"
+        serverUploadAttempted = true
+    }
+
+    func refreshWithRegistration(auth: AuthStore, push: PushService) async {
+        isRefreshing = true
+        defer { isRefreshing = false }
+        await refreshLocalState(push: push)
+        if auth.isLoggedIn {
+            await DeviceSessionService.shared.registerWithPush(auth: auth)
+            await refreshLocalState(push: push)
+        }
+    }
+
+    func repairRegistration(auth: AuthStore, push: PushService) async {
+        isRefreshing = true
+        defer { isRefreshing = false }
+        _ = await push.ensureDeviceToken()
+        await push.registerTokenWithBackend(auth: auth)
+        await refreshLocalState(push: push)
     }
 
     func runTestPush(auth: AuthStore) async {

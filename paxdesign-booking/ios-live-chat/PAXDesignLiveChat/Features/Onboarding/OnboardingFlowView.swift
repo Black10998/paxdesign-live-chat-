@@ -537,6 +537,7 @@ struct OnboardingFlowView: View {
             try? await Task.sleep(nanoseconds: 300_000_000)
             await permissions.refreshStatuses()
         case .authorized, .provisional, .ephemeral:
+            _ = await push.ensureDeviceToken()
             break
         case .denied:
             break
@@ -649,6 +650,10 @@ struct OnboardingFlowView: View {
     private func refreshPermissionStatuses() async {
         await permissions.refreshStatuses()
         locationPermission.refreshStatus()
+        if mode == .postLogin, notificationsGranted {
+            _ = await push.ensureDeviceToken()
+            await push.registerTokenWithBackend(auth: auth)
+        }
     }
 
     private func completeFirstLaunch() {

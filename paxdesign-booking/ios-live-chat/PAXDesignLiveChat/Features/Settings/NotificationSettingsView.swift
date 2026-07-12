@@ -46,8 +46,10 @@ struct NotificationSettingsView: View {
                                 await permissions.refreshStatuses()
                                 if permissions.canRequestNotificationPermission {
                                     await requestPermission()
-                                } else if permissions.notificationStatus == .authorized {
-                                    await push.registerForRemoteNotificationsIfAuthorized()
+                                } else if permissions.notificationStatus == .authorized
+                                            || permissions.notificationStatus == .provisional
+                                            || permissions.notificationStatus == .ephemeral {
+                                    _ = await push.ensureDeviceToken()
                                     await push.registerTokenWithBackend(auth: auth)
                                 }
                             }
@@ -78,8 +80,10 @@ struct NotificationSettingsView: View {
         }
         .onChange(of: permissions.notificationStatus) { _ in
             Task {
-                if permissions.notificationStatus == .authorized {
-                    await push.registerForRemoteNotificationsIfAuthorized()
+                if permissions.notificationStatus == .authorized
+                    || permissions.notificationStatus == .provisional
+                    || permissions.notificationStatus == .ephemeral {
+                    _ = await push.ensureDeviceToken()
                     await push.registerTokenWithBackend(auth: auth)
                 }
             }

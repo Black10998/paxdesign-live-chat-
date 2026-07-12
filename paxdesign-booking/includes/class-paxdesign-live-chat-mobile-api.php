@@ -1375,7 +1375,7 @@ class PAXdesign_Live_Chat_Mobile_API {
             update_option('paxdesign_apns_key_p8', $key_p8);
         }
 
-        $token    = isset($params['device_token']) ? sanitize_text_field($params['device_token']) : '';
+        $token    = isset($params['device_token']) ? sanitize_text_field((string) $params['device_token']) : '';
         $sandbox  = !empty($params['sandbox']);
         $bundle   = isset($params['bundle_id']) ? sanitize_text_field($params['bundle_id']) : '';
 
@@ -1386,8 +1386,25 @@ class PAXdesign_Live_Chat_Mobile_API {
             return new WP_Error('invalid_token', 'device_token required.', array('status' => 400));
         }
 
-        PAXdesign_APNS::register_device((int) get_current_user_id(), $token, $sandbox, $bundle, $params);
-        return rest_ensure_response(array('ok' => true));
+        $normalized = class_exists('PAXdesign_APNS') ? PAXdesign_APNS::normalize_token($token) : '';
+        if ($normalized === '') {
+            return new WP_Error(
+                'invalid_token',
+                'device_token must be a valid hexadecimal APNs token (32–256 characters).',
+                array('status' => 400)
+            );
+        }
+
+        $stored = PAXdesign_APNS::register_device((int) get_current_user_id(), $normalized, $sandbox, $bundle, $params);
+        if (!$stored) {
+            return new WP_Error('token_store_failed', 'Could not store APNs device token.', array('status' => 500));
+        }
+
+        return rest_ensure_response(array(
+            'ok'              => true,
+            'push_registered' => true,
+            'token_stored'    => true,
+        ));
     }
 
     public static function route_plugin_system_update(WP_REST_Request $request) {
@@ -1448,11 +1465,16 @@ class PAXdesign_Live_Chat_Mobile_API {
         }
 
         $user_id = (int) get_current_user_id();
-        $device_token = isset($params['device_token']) ? sanitize_text_field($params['device_token']) : '';
+        $device_token = isset($params['device_token']) ? sanitize_text_field((string) $params['device_token']) : '';
+        $normalized_token = '';
         if ($device_token !== '' && class_exists('PAXdesign_APNS')) {
+            $normalized_token = PAXdesign_APNS::normalize_token($device_token);
+        }
+
+        if ($normalized_token !== '' && class_exists('PAXdesign_APNS')) {
             $sandbox = !empty($params['sandbox']);
             $bundle_id = isset($params['bundle_id']) ? sanitize_text_field($params['bundle_id']) : '';
-            PAXdesign_APNS::register_device($user_id, $device_token, $sandbox, $bundle_id, $params);
+            PAXdesign_APNS::register_device($user_id, $normalized_token, $sandbox, $bundle_id, $params);
         } elseif (class_exists('PAXdesign_APNS')) {
             PAXdesign_APNS::register_device_session($user_id, $params);
         }
@@ -1460,11 +1482,21 @@ class PAXdesign_Live_Chat_Mobile_API {
         $result = PAXdesign_Device_Sessions::heartbeat($user_id, $device_id, $params);
         if (is_wp_error($result) && $result->get_error_code() === 'device_not_found') {
             if (class_exists('PAXdesign_APNS')) {
-                PAXdesign_APNS::register_device_session($user_id, $params);
+                if ($normalized_token !== '') {
+                    $sandbox = !empty($params['sandbox']);
+                    $bundle_id = isset($params['bundle_id']) ? sanitize_text_field($params['bundle_id']) : '';
+                    PAXdesign_APNS::register_device($user_id, $normalized_token, $sandbox, $bundle_id, $params);
+                } else {
+                    PAXdesign_APNS::register_device_session($user_id, $params);
+                }
                 $result = PAXdesign_Device_Sessions::heartbeat($user_id, $device_id, $params);
             }
             if (is_wp_error($result) && $result->get_error_code() === 'device_not_found') {
-                return rest_ensure_response(array('ok' => true, 'registered' => true));
+                return rest_ensure_response(array(
+                    'ok'              => true,
+                    'registered'      => true,
+                    'push_registered' => $normalized_token !== '',
+                ));
             }
         }
         return $result;

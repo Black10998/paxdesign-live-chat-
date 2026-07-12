@@ -13364,6 +13364,97 @@
         "ar": { "stringUnit": { "state": "translated", "value": "تحديث الحالة" } }
       }
     },
+    "push.diag_repair": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Repair APNs Registration" } },
+        "de": { "stringUnit": { "state": "translated", "value": "APNs-Registrierung reparieren" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "إصلاح تسجيل APNs" } }
+      }
+    },
+    "push.diag_token_prefix": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Token Prefix" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Token-Präfix" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "بادئة الرمز" } }
+      }
+    },
+    "push.diag_token_suffix": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Token Suffix" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Token-Suffix" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "لاحقة الرمز" } }
+      }
+    },
+    "push.diag_token_at": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Token Received At" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Token erhalten um" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "وقت استلام الرمز" } }
+      }
+    },
+    "push.diag_aps_entitlement": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "APS Entitlement" } },
+        "de": { "stringUnit": { "state": "translated", "value": "APS-Berechtigung" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "صلاحية APS" } }
+      }
+    },
+    "push.diag_registration_requested": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Registration Requested" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Registrierung angefordert" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تم طلب التسجيل" } }
+      }
+    },
+    "push.diag_registration_count": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Registration Attempts" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Registrierungsversuche" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "محاولات التسجيل" } }
+      }
+    },
+    "push.diag_registration_at": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Last Registration Request" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Letzte Registrierungsanfrage" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "آخر طلب تسجيل" } }
+      }
+    },
+    "push.diag_apns_responded": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "APNs Responded" } },
+        "de": { "stringUnit": { "state": "translated", "value": "APNs hat geantwortet" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "استجاب APNs" } }
+      }
+    },
+    "push.diag_ios_status": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "iOS Registration Status" } },
+        "de": { "stringUnit": { "state": "translated", "value": "iOS-Registrierungsstatus" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "حالة التسجيل في iOS" } }
+      }
+    },
+    "push.diag_server_upload": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Uploaded to Server" } },
+        "de": { "stringUnit": { "state": "translated", "value": "An Server gesendet" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "أُرسل للخادم" } }
+      }
+    },
+    "push.diag_server_accepted": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Server Accepted" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Server akzeptiert" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "قبله الخادم" } }
+      }
+    },
+    "push.diag_server_push_enabled": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Push Enabled on Server" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Push auf Server aktiv" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الإشعارات مفعّلة على الخادم" } }
+      }
+    },
     "push.diag_send_test": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Send Test Alert Push" } },

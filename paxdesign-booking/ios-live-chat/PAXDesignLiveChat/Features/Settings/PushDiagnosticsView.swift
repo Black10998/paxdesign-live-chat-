@@ -10,12 +10,34 @@ struct PushDiagnosticsView: View {
         List {
             Section(L10n.PushDiagSectionLocal) {
                 diagRow(L10n.PushDiagPermission, diagnostics.authorizationStatus)
-                diagRow(L10n.PushDiagToken, diagnostics.deviceTokenPrefix)
+                diagRow(L10n.PushDiagRegistrationRequested, diagnostics.registrationRequested ? L10n.CommonYes : L10n.CommonNo)
+                if diagnostics.registrationRequestCount > 0 {
+                    diagRow(L10n.PushDiagRegistrationCount, String(diagnostics.registrationRequestCount))
+                }
+                if let at = diagnostics.lastRegistrationRequestAt {
+                    diagRow(L10n.PushDiagRegistrationAt, at.formatted(date: .abbreviated, time: .shortened))
+                }
+                diagRow(L10n.PushDiagApnsResponded, diagnostics.apnsResponded ? L10n.CommonYes : L10n.CommonNo)
+                diagRow(L10n.PushDiagIosStatus, diagnostics.iosRegistrationStatus)
+                diagRow(L10n.PushDiagTokenPrefix, diagnostics.deviceTokenPrefix)
+                diagRow(L10n.PushDiagTokenSuffix, diagnostics.deviceTokenSuffix)
+                if let at = diagnostics.tokenReceivedAt {
+                    diagRow(L10n.PushDiagTokenAt, at.formatted(date: .abbreviated, time: .shortened))
+                }
                 diagRow(L10n.PushDiagEnvironment, diagnostics.apnsEnvironment)
+                diagRow(L10n.PushDiagApsEntitlement, diagnostics.apsEntitlement)
                 diagRow(L10n.PushDiagDeviceId, PAXDeviceInfo.deviceId)
+                if let error = diagnostics.iosRegistrationError, !error.isEmpty {
+                    Text(error)
+                        .font(.caption)
+                        .foregroundStyle(PAXTheme.danger)
+                }
             }
 
             Section(L10n.PushDiagSectionServer) {
+                diagRow(L10n.PushDiagServerUpload, diagnostics.serverUploadAttempted ? L10n.CommonYes : L10n.CommonNo)
+                diagRow(L10n.PushDiagServerAccepted, diagnostics.serverAccepted ? L10n.CommonYes : L10n.CommonNo)
+                diagRow(L10n.PushDiagServerPushEnabled, diagnostics.serverPushEnabled ? L10n.CommonYes : L10n.CommonNo)
                 diagRow(L10n.PushDiagServerStatus, diagnostics.serverRegistrationStatus)
                 if let at = diagnostics.serverRegistrationAt {
                     diagRow(L10n.PushDiagServerAt, at.formatted(date: .abbreviated, time: .shortened))
@@ -60,6 +82,19 @@ struct PushDiagnosticsView: View {
                 .disabled(diagnostics.isRefreshing)
 
                 Button {
+                    Task { await runRepair() }
+                } label: {
+                    HStack {
+                        Text(L10n.PushDiagRepair)
+                        Spacer()
+                        if diagnostics.isRefreshing {
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(diagnostics.isRefreshing || auth.api == nil)
+
+                Button {
                     Task { await diagnostics.runTestPush(auth: auth) }
                 } label: {
                     HStack {
@@ -100,7 +135,11 @@ struct PushDiagnosticsView: View {
     }
 
     private func refreshAll() async {
-        await diagnostics.refreshLocalState(push: push)
+        await diagnostics.refreshWithRegistration(auth: auth, push: push)
         await permissions.refreshStatuses()
+    }
+
+    private func runRepair() async {
+        await diagnostics.repairRegistration(auth: auth, push: push)
     }
 }

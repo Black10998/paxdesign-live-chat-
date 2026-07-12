@@ -38,7 +38,7 @@ enum ForegroundRefreshCoordinator {
             if permissions.notificationStatus == .authorized
                 || permissions.notificationStatus == .provisional
                 || permissions.notificationStatus == .ephemeral {
-                await PushService.shared.registerForRemoteNotificationsIfAuthorized()
+                _ = await PushService.shared.ensureDeviceToken(maxAttempts: 1, perAttemptTimeout: 15)
                 await DeviceSessionService.shared.registerWithPush(auth: auth)
             }
             #endif

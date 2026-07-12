@@ -657,8 +657,20 @@ enum L10n {
     static var PushDiagSectionLastTest: String { t("push.diag_section_last_test") }
     static var PushDiagPermission: String { t("push.diag_permission") }
     static var PushDiagToken: String { t("push.diag_token") }
+    static var PushDiagTokenPrefix: String { t("push.diag_token_prefix") }
+    static var PushDiagTokenSuffix: String { t("push.diag_token_suffix") }
+    static var PushDiagTokenAt: String { t("push.diag_token_at") }
     static var PushDiagEnvironment: String { t("push.diag_environment") }
+    static var PushDiagApsEntitlement: String { t("push.diag_aps_entitlement") }
     static var PushDiagDeviceId: String { t("push.diag_device_id") }
+    static var PushDiagRegistrationRequested: String { t("push.diag_registration_requested") }
+    static var PushDiagRegistrationCount: String { t("push.diag_registration_count") }
+    static var PushDiagRegistrationAt: String { t("push.diag_registration_at") }
+    static var PushDiagApnsResponded: String { t("push.diag_apns_responded") }
+    static var PushDiagIosStatus: String { t("push.diag_ios_status") }
+    static var PushDiagServerUpload: String { t("push.diag_server_upload") }
+    static var PushDiagServerAccepted: String { t("push.diag_server_accepted") }
+    static var PushDiagServerPushEnabled: String { t("push.diag_server_push_enabled") }
     static var PushDiagServerStatus: String { t("push.diag_server_status") }
     static var PushDiagServerAt: String { t("push.diag_server_at") }
     static var PushDiagTestSent: String { t("push.diag_test_sent") }
@@ -667,6 +679,7 @@ enum L10n {
     static var PushDiagAppleResponse: String { t("push.diag_apple_response") }
     static var PushDiagTestAt: String { t("push.diag_test_at") }
     static var PushDiagRefresh: String { t("push.diag_refresh") }
+    static var PushDiagRepair: String { t("push.diag_repair") }
     static var PushDiagSendTest: String { t("push.diag_send_test") }
     static var CommonYes: String { t("common.yes") }
     static var CommonNo: String { t("common.no") }

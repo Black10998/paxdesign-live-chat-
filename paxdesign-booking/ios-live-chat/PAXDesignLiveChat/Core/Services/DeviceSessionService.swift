@@ -100,36 +100,45 @@ final class DeviceSessionService: ObservableObject {
 
         PushDiagnosticsStore.shared.recordServerRegistrationPending()
 
-        if PushService.shared.deviceToken == nil {
-            await PushService.shared.registerForRemoteNotificationsIfAuthorized()
-            for _ in 0..<30 where PushService.shared.deviceToken == nil {
-                try? await Task.sleep(nanoseconds: 500_000_000)
-            }
-        }
-
-        guard let token = PushService.shared.deviceToken else {
+        let tokenResult = await PushService.shared.ensureDeviceToken()
+        let token: String
+        switch tokenResult {
+        case .success(let resolvedToken):
+            token = resolvedToken
+        case .failure(let failure):
             await registerSessionWithoutToken(auth: auth)
-            PushRegistrationDiagnostics.registerFailed("No APNs device token from iOS yet")
-            PushDiagnosticsStore.shared.recordServerRegistration(success: false, tokenPrefix: nil, error: "No APNs device token")
+            let message = failure.detailedMessage
+            PushRegistrationDiagnostics.registerFailed(message)
+            PushDiagnosticsStore.shared.recordServerRegistration(success: false, tokenPrefix: nil, error: message)
             return
         }
 
         if token == lastRegisteredToken {
-            PushDiagnosticsStore.shared.recordServerRegistration(success: true, tokenPrefix: String(token.prefix(12)))
+            let verified = await verifyServerPushState(auth: auth, token: token)
+            PushDiagnosticsStore.shared.recordServerRegistration(
+                success: true,
+                tokenPrefix: String(token.prefix(12)),
+                pushEnabled: verified,
+                accepted: true
+            )
             return
         }
 
         var lastError: Error?
+        var accepted = false
         for attempt in 1...3 {
             do {
-                try await api.registerAPNs(
+                let response = try await api.registerAPNs(
                     token: token,
-                    sandbox: isSandbox,
+                    sandbox: PAXAPNsEnvironment.isSandbox,
                     metadata: PAXDeviceInfo.registrationPayload
                 )
+                accepted = response.ok
+                if !accepted {
+                    throw LiveChatAPIError.rejected(response.error ?? "Server rejected APNs token.")
+                }
                 lastRegisteredToken = token
                 PushRegistrationDiagnostics.registerSucceeded(tokenPrefix: String(token.prefix(12)))
-                PushDiagnosticsStore.shared.recordServerRegistration(success: true, tokenPrefix: String(token.prefix(12)))
                 lastError = nil
                 break
             } catch {
@@ -139,22 +148,49 @@ final class DeviceSessionService: ObservableObject {
                 }
             }
         }
+
+        let pushEnabled = await verifyServerPushState(auth: auth, token: token)
         if let lastError {
             PushRegistrationDiagnostics.registerFailed(lastError.localizedDescription)
-            PushDiagnosticsStore.shared.recordServerRegistration(success: false, tokenPrefix: String(token.prefix(12)), error: lastError.localizedDescription)
+            PushDiagnosticsStore.shared.recordServerRegistration(
+                success: false,
+                tokenPrefix: String(token.prefix(12)),
+                error: lastError.localizedDescription,
+                pushEnabled: pushEnabled,
+                accepted: accepted
+            )
+            return
+        }
+
+        PushDiagnosticsStore.shared.recordServerRegistration(
+            success: true,
+            tokenPrefix: String(token.prefix(12)),
+            pushEnabled: pushEnabled,
+            accepted: accepted
+        )
+    }
+
+    private func verifyServerPushState(auth: AuthStore, token: String) async -> Bool {
+        guard let api = auth.api else { return false }
+        do {
+            let response = try await api.fetchEmployeeDevices(currentDeviceId: PAXDeviceInfo.deviceId)
+            let current = response.devices.first { $0.deviceId == PAXDeviceInfo.deviceId }
+            return current?.pushRegistered == true
+        } catch {
+            return false
         }
     }
 
     private func registerSessionWithoutToken(auth: AuthStore) async {
         guard auth.isLoggedIn, let api = auth.api else { return }
-        try? await api.sendDeviceHeartbeat(metadata: heartbeatPayload(includeToken: false))
+        _ = try? await api.sendDeviceHeartbeat(metadata: heartbeatPayload(includeToken: false))
     }
 
     private func heartbeatPayload(includeToken: Bool = true) -> [String: Any] {
         var payload = PAXDeviceInfo.registrationPayload
         if includeToken, let token = PushService.shared.deviceToken {
             payload["device_token"] = token
-            payload["sandbox"] = isSandbox
+            payload["sandbox"] = PAXAPNsEnvironment.isSandbox
             payload["bundle_id"] = Bundle.main.bundleIdentifier ?? "at.paxdesign.livechat"
         }
         return payload
@@ -164,13 +200,21 @@ final class DeviceSessionService: ObservableObject {
         guard auth.isLoggedIn, let api = auth.api else { return }
 
         if PushService.shared.deviceToken == nil {
-            await PushService.shared.registerForRemoteNotificationsIfAuthorized()
+            _ = await PushService.shared.ensureDeviceToken(maxAttempts: 1, perAttemptTimeout: 15)
         } else if PushService.shared.deviceToken != lastRegisteredToken {
             await registerTokenWithServer(auth: auth)
         }
 
         do {
-            try await api.sendDeviceHeartbeat(metadata: heartbeatPayload())
+            let response = try await api.sendDeviceHeartbeat(metadata: heartbeatPayload())
+            if response.pushRegistered {
+                PushDiagnosticsStore.shared.recordServerRegistration(
+                    success: true,
+                    tokenPrefix: PushService.shared.deviceToken.map { String($0.prefix(12)) },
+                    pushEnabled: true,
+                    accepted: true
+                )
+            }
         } catch {
             if case LiveChatAPIError.server(let message) = error {
                 let lowered = message.lowercased()
@@ -186,18 +230,6 @@ final class DeviceSessionService: ObservableObject {
                 auth.handleUnauthorized()
             }
         }
-    }
-
-    private var isSandbox: Bool {
-        #if targetEnvironment(simulator)
-        return true
-        #else
-        #if DEBUG
-        return true
-        #else
-        return false
-        #endif
-        #endif
     }
 
     private func observeTokenChanges(auth: AuthStore) async {
