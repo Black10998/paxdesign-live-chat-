@@ -76,26 +76,36 @@ verify_mobileprovision_payload() {
 }
 
 profile_field() {
-  local profile_path="$1"
+  local plist_path="$1"
   local field="$2"
-  security cms -D -i "$profile_path" 2>/dev/null \
-    | /usr/libexec/PlistBuddy -c "Print :$field" /dev/stdin 2>/dev/null
+  /usr/libexec/PlistBuddy -c "Print :$field" "$plist_path" 2>/dev/null
 }
 
 install_provisioning_profile() {
   local profile_path="$1"
-  local expected_bundle_suffix="$2"
-  local label="$3"
+  local plist_path="$2"
+  local expected_bundle_suffix="$3"
+  local label="$4"
 
-  local uuid name app_id
-  uuid="$(profile_field "$profile_path" UUID)"
-  name="$(profile_field "$profile_path" Name)"
-  app_id="$(profile_field "$profile_path" Entitlements:application-identifier)"
+  local uuid name app_id team_id
+  uuid="$(profile_field "$plist_path" UUID)"
+  name="$(profile_field "$plist_path" Name)"
+  app_id="$(profile_field "$plist_path" Entitlements:application-identifier)"
+  team_id="$(profile_field "$plist_path" Entitlements:com.apple.developer.team-identifier)"
 
   [[ -n "$uuid" ]] || fail "Could not read UUID from $label provisioning profile"
   [[ -n "$name" ]] || fail "Could not read Name from $label provisioning profile"
+  [[ -n "$app_id" ]] || fail "Could not read application-identifier from $label provisioning profile"
+
+  if [[ "$label" == "Main" && "$app_id" == *".widgets"* ]]; then
+    fail "Main provisioning profile secret appears to contain the widget profile"
+  fi
+  if [[ "$label" == "Widget" && "$app_id" != *".widgets"* ]]; then
+    fail "Widget provisioning profile secret appears to contain the main app profile"
+  fi
+
   [[ "$app_id" == *"$expected_bundle_suffix" ]] \
-    || fail "$label provisioning profile bundle ID mismatch (expected *$expected_bundle_suffix*, got ${app_id:-<empty>})"
+    || fail "$label provisioning profile bundle ID mismatch (expected *$expected_bundle_suffix*, got ${app_id:-<empty>}, team ${team_id:-<unknown>})"
 
   local profiles_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
   mkdir -p "$profiles_dir"
@@ -143,18 +153,18 @@ setup_signing_assets() {
   fi
 
   if ! security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" \
-    2>"$SIGNING_DIR/keychain.partition.err"; then
+    >"$SIGNING_DIR/keychain.partition.out" 2>"$SIGNING_DIR/keychain.partition.err"; then
     fail "Failed to configure keychain partition list for codesign"
   fi
 
   echo "==> Installing provisioning profiles"
-  install_provisioning_profile "$MAIN_PROFILE_PATH" "$MAIN_BUNDLE_ID" "Main"
-  MAIN_PROFILE_UUID="$(profile_field "$MAIN_PROFILE_PATH" UUID)"
-  MAIN_PROFILE_NAME="$(profile_field "$MAIN_PROFILE_PATH" Name)"
+  install_provisioning_profile "$MAIN_PROFILE_PATH" "$SIGNING_DIR/main-profile.plist" "$MAIN_BUNDLE_ID" "Main"
+  MAIN_PROFILE_UUID="$(profile_field "$SIGNING_DIR/main-profile.plist" UUID)"
+  MAIN_PROFILE_NAME="$(profile_field "$SIGNING_DIR/main-profile.plist" Name)"
 
-  install_provisioning_profile "$WIDGET_PROFILE_PATH" "$WIDGET_BUNDLE_ID" "Widget"
-  WIDGET_PROFILE_UUID="$(profile_field "$WIDGET_PROFILE_PATH" UUID)"
-  WIDGET_PROFILE_NAME="$(profile_field "$WIDGET_PROFILE_PATH" Name)"
+  install_provisioning_profile "$WIDGET_PROFILE_PATH" "$SIGNING_DIR/widget-profile.plist" "$WIDGET_BUNDLE_ID" "Widget"
+  WIDGET_PROFILE_UUID="$(profile_field "$SIGNING_DIR/widget-profile.plist" UUID)"
+  WIDGET_PROFILE_NAME="$(profile_field "$SIGNING_DIR/widget-profile.plist" Name)"
 
   echo "==> Signing assets ready"
   echo "    Main profile: $MAIN_PROFILE_NAME ($MAIN_PROFILE_UUID)"
