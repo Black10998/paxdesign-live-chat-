@@ -222,6 +222,17 @@ verify_entitlements_source
 echo "==> Generating Xcode project from project.yml"
 xcodegen generate --spec "$PROJECT_SPEC"
 
+echo "==> Applying manual signing settings to generated Xcode project"
+python3 - <<PY
+from pathlib import Path
+
+pbxproj = Path("$ROOT/PAXDesignLiveChat.xcodeproj/project.pbxproj")
+text = pbxproj.read_text()
+text = text.replace("CODE_SIGN_STYLE = Automatic;", "CODE_SIGN_STYLE = Manual;")
+text = text.replace('DEVELOPMENT_TEAM = "";', 'DEVELOPMENT_TEAM = $APPLE_TEAM_ID;')
+pbxproj.write_text(text)
+PY
+
 echo "==> Archiving $SCHEME ($CONFIGURATION)"
 rm -rf "$DERIVED_DATA" "$ARCHIVE_PATH" "$EXPORT_DIR"
 mkdir -p "$DERIVED_DATA" "$EXPORT_DIR"
@@ -236,6 +247,10 @@ xcodebuild archive \
   CODE_SIGN_STYLE=Manual \
   DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
   CODE_SIGN_IDENTITY="Apple Distribution" \
+  "PAXDesignLiveChat_CODE_SIGN_STYLE=Manual" \
+  "PAXWidgets_CODE_SIGN_STYLE=Manual" \
+  "PAXDesignLiveChat_DEVELOPMENT_TEAM=$APPLE_TEAM_ID" \
+  "PAXWidgets_DEVELOPMENT_TEAM=$APPLE_TEAM_ID" \
   "PAXDesignLiveChat_CODE_SIGN_IDENTITY=Apple Distribution" \
   "PAXWidgets_CODE_SIGN_IDENTITY=Apple Distribution" \
   "PAXDesignLiveChat_PROVISIONING_PROFILE=$MAIN_PROFILE_UUID" \
