@@ -62,7 +62,7 @@ enum PAXGlyphPaths {
         case "square.and.pencil": return composePath(in: rect)
         case "exclamationmark.triangle", "exclamationmark.shield": return warningPath(in: rect)
         case "checkmark.shield", "checkmark.seal", "checkmark.seal.fill": return verifiedPath(in: rect)
-        case "person.crop.circle.badge.clock", "person.crop.circle.badge.checkmark": return profileBadgePath(in: rect, clock: name.contains("clock"))
+        case "person.crop.circle.badge.clock", "person.crop.circle.badge.checkmark": return profileBadgePath(in: rect, clock: glyph.contains("clock"))
         case "bell.badge", "bell.and.waves.left.and.right": return livePath(in: rect, filled: false)
         case "number", "questionmark.circle", "info.circle": return infoGlyphPath(in: rect, kind: glyph)
         case "briefcase", "dollarsign.circle": return businessPath(in: rect, kind: glyph)
