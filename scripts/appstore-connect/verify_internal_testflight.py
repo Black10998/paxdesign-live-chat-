@@ -34,6 +34,9 @@ get_build_beta_detail = _SETUP.get_build_beta_detail
 find_asc_user = _SETUP.find_asc_user
 make_token = _SETUP.make_token
 load_config = _SETUP.load_config
+ensure_export_compliance = _SETUP.ensure_export_compliance
+ensure_beta_localization = _SETUP.ensure_beta_localization
+ensure_beta_build_localization = _SETUP.ensure_beta_build_localization
 
 
 def check(label: str, ok: bool, detail: str) -> bool:
