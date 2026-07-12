@@ -160,9 +160,8 @@ final class PushService: NSObject, ObservableObject {
         PushDiagnosticsStore.shared.recordRegistrationAttemptStarted()
 
         #if targetEnvironment(simulator)
-        let failure = APNsRegistrationFailure.simulator
-        PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: failure.detailedMessage)
-        return .failure(failure)
+        PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: APNsRegistrationFailure.simulator.detailedMessage)
+        return .failure(.simulator)
         #endif
 
         await refreshAuthorizationStatus()
@@ -170,9 +169,9 @@ final class PushService: NSObject, ObservableObject {
         case .authorized, .provisional, .ephemeral:
             break
         default:
-            let failure = APNsRegistrationFailure.notAuthorized(authorizationStatus)
-            PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: failure.detailedMessage)
-            return .failure(failure)
+            let authFailure = APNsRegistrationFailure.notAuthorized(authorizationStatus)
+            PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: authFailure.detailedMessage)
+            return .failure(authFailure)
         }
 
         if let token = deviceToken, !token.isEmpty {
@@ -216,14 +215,14 @@ final class PushService: NSObject, ObservableObject {
         }
 
         if let iosError = lastIOSRegistrationError {
-            let failure = parseNSErrorDetail(iosError)
-            PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: failure.detailedMessage)
-            return .failure(failure)
+            let iosFailure = parseNSErrorDetail(iosError)
+            PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: iosFailure.detailedMessage)
+            return .failure(iosFailure)
         }
 
-        let failure = APNsRegistrationFailure.timeout(requestsSent: registrationRequestCount)
-        PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: failure.detailedMessage)
-        return .failure(failure)
+        let timeoutFailure = APNsRegistrationFailure.timeout(requestsSent: registrationRequestCount)
+        PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: timeoutFailure.detailedMessage)
+        return .failure(timeoutFailure)
     }
 
     private func recordRegistrationRequest() {
