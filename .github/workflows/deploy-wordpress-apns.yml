@@ -31,6 +31,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Read plugin version
+        id: version
+        run: |
+          VERSION=$(grep "define('PAXDESIGN_BOOKING_VERSION'" paxdesign-booking/paxdesign-booking.php | sed "s/.*'\([^']*\)'.*/\1/")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Plugin version: $VERSION"
+
       - name: Validate deployment secrets
         id: secrets
         run: |
@@ -47,19 +54,15 @@ jobs:
           fi
           echo "has_ssh=true" >> "$GITHUB_OUTPUT"
 
-      - name: Abort when SSH deployment secrets are missing
+      - name: Manual deploy instructions when SSH secrets are missing
         if: steps.secrets.outputs.has_ssh != 'true'
         run: |
-          echo "SSH deployment secrets are not configured."
-          echo "Configure WP_SSH_HOST, WP_SSH_USER, WP_SSH_PRIVATE_KEY, and WP_PATH in GitHub repository secrets."
-          exit 1
-
-      - name: Read plugin version
-        id: version
-        run: |
-          VERSION=$(grep "define('PAXDESIGN_BOOKING_VERSION'" paxdesign-booking/paxdesign-booking.php | sed "s/.*'\([^']*\)'.*/\1/")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Plugin version: $VERSION"
+          echo "::warning::SSH deployment secrets are not configured."
+          echo "GitHub release v${{ steps.version.outputs.version }} is available for WordPress one-click update."
+          echo "Manual options:"
+          echo "  1) WordPress Admin → Dashboard → Updates → update PAXdesign Booking to v${{ steps.version.outputs.version }}"
+          echo "  2) Hostinger SSH: run scripts/hostinger-deploy-apns.sh from public_html"
+          echo "  3) Add WP_SSH_HOST, WP_SSH_USER, WP_SSH_PRIVATE_KEY, WP_PATH repo secrets and re-run this workflow"
 
       - name: Deploy plugin and configure APNs on production
         if: steps.secrets.outputs.has_ssh == 'true'

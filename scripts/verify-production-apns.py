@@ -25,9 +25,15 @@ def ok(message: str) -> None:
     print(f"PASS: {message}")
 
 
+DEFAULT_HEADERS = {
+    "Accept": "application/json",
+    "User-Agent": "PAXdesign-Production-Verify/1.0",
+}
+
+
 def request(method: str, url: str, *, auth: tuple[str, str] | None = None, body: dict | None = None):
     data = None
-    headers = {"Accept": "application/json"}
+    headers = dict(DEFAULT_HEADERS)
     if body is not None:
         data = json.dumps(body).encode("utf-8")
         headers["Content-Type"] = "application/json"
@@ -53,7 +59,8 @@ def request(method: str, url: str, *, auth: tuple[str, str] | None = None, body:
 def main() -> None:
     print(f"=== Production APNs verification ({SITE}) ===")
 
-    html = urllib.request.urlopen(f"{SITE}/", timeout=30).read().decode("utf-8", errors="replace")
+    home_req = urllib.request.Request(f"{SITE}/", headers={"User-Agent": DEFAULT_HEADERS["User-Agent"]})
+    html = urllib.request.urlopen(home_req, timeout=30).read().decode("utf-8", errors="replace")
     asset_ver = ""
     for part in html.split("chat-script.js?ver="):
         if part[:1].isdigit():
