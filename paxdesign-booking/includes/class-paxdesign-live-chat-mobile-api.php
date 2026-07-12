@@ -149,6 +149,12 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => '__return_true',
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/system/bootstrap/devices/purge', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_bootstrap_devices_purge'),
+            'permission_callback' => '__return_true',
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/me', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'route_me'),
@@ -1170,6 +1176,48 @@ class PAXdesign_Live_Chat_Mobile_API {
         ));
     }
 
+    public static function route_bootstrap_devices_purge(WP_REST_Request $request) {
+        $check = PAXdesign_ASC_Bootstrap::authorize_request($request);
+        if (is_wp_error($check)) {
+            return $check;
+        }
+
+        if (!class_exists('PAXdesign_APNS')) {
+            return self::respond(array('purged' => 0, 'remaining' => 0));
+        }
+
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        $keep_prefix = isset($params['keep_token_prefix']) ? sanitize_text_field($params['keep_token_prefix']) : '';
+
+        $purged = 0;
+        $remaining = 0;
+        foreach (PAXdesign_APNS::get_admin_user_ids() as $uid) {
+            $all = PAXdesign_APNS::get_user_devices((int) $uid);
+            $next = array();
+            foreach ($all as $token => $device) {
+                if (!is_array($device)) {
+                    continue;
+                }
+                $prefix = substr((string) $token, 0, 12);
+                if ($keep_prefix !== '' && $prefix === $keep_prefix) {
+                    $next[$token] = $device;
+                    continue;
+                }
+                $purged++;
+            }
+            $remaining += count($next);
+            update_user_meta((int) $uid, PAXdesign_APNS::USER_META_KEY, $next);
+        }
+
+        return self::respond(array(
+            'purged'    => $purged,
+            'remaining' => $remaining,
+        ));
+    }
+
     public static function route_apns_system_status(WP_REST_Request $request) {
         if (!class_exists('PAXdesign_APNS')) {
             return new WP_Error('apns_unavailable', 'APNs module unavailable.', array('status' => 501));
@@ -1379,7 +1427,15 @@ class PAXdesign_Live_Chat_Mobile_API {
             return new WP_Error('invalid_device', 'device_id required.', array('status' => 400));
         }
 
-        return PAXdesign_Device_Sessions::heartbeat((int) get_current_user_id(), $device_id, $params);
+        $user_id = (int) get_current_user_id();
+        $device_token = isset($params['device_token']) ? sanitize_text_field($params['device_token']) : '';
+        if ($device_token !== '' && class_exists('PAXdesign_APNS')) {
+            $sandbox = !empty($params['sandbox']);
+            $bundle_id = isset($params['bundle_id']) ? sanitize_text_field($params['bundle_id']) : '';
+            PAXdesign_APNS::register_device($user_id, $device_token, $sandbox, $bundle_id, $params);
+        }
+
+        return PAXdesign_Device_Sessions::heartbeat($user_id, $device_id, $params);
     }
 
     public static function route_devices_revoke(WP_REST_Request $request) {

@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import os
 
 enum PAXDeviceInfo {
     static var deviceId: String {
@@ -70,15 +71,44 @@ final class DeviceSessionService: ObservableObject {
     func registerWithPush(auth: AuthStore) async {
         guard auth.isLoggedIn, let api = auth.api else { return }
         if let token = PushService.shared.deviceToken {
-            try? await api.registerAPNs(token: token, sandbox: isSandbox, metadata: PAXDeviceInfo.registrationPayload)
+            var lastError: Error?
+            for attempt in 1...3 {
+                do {
+                    try await api.registerAPNs(
+                        token: token,
+                        sandbox: isSandbox,
+                        metadata: PAXDeviceInfo.registrationPayload
+                    )
+                    lastError = nil
+                    break
+                } catch {
+                    lastError = error
+                    if attempt < 3 {
+                        try? await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                    }
+                }
+            }
+            if let lastError {
+                PushRegistrationDiagnostics.registerFailed(lastError.localizedDescription)
+            }
         }
         await sendHeartbeat(auth: auth)
+    }
+
+    private func heartbeatPayload() -> [String: Any] {
+        var payload = PAXDeviceInfo.registrationPayload
+        if let token = PushService.shared.deviceToken {
+            payload["device_token"] = token
+            payload["sandbox"] = isSandbox
+            payload["bundle_id"] = Bundle.main.bundleIdentifier ?? "at.paxdesign.livechat"
+        }
+        return payload
     }
 
     private func sendHeartbeat(auth: AuthStore) async {
         guard auth.isLoggedIn, let api = auth.api else { return }
         do {
-            try await api.sendDeviceHeartbeat(metadata: PAXDeviceInfo.registrationPayload)
+            try await api.sendDeviceHeartbeat(metadata: heartbeatPayload())
         } catch {
             if case LiveChatAPIError.server(let message) = error {
                 let lowered = message.lowercased()
@@ -102,5 +132,13 @@ final class DeviceSessionService: ObservableObject {
         #else
         return false
         #endif
+    }
+}
+
+enum PushRegistrationDiagnostics {
+    private static let log = Logger(subsystem: "at.paxdesign.livechat", category: "Push")
+
+    static func registerFailed(_ message: String) {
+        log.error("APNs register failed: \(message, privacy: .public)")
     }
 }

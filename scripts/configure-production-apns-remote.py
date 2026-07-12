@@ -421,6 +421,24 @@ def configure_apns_bootstrap(key_p8: str) -> dict | None:
     return payload
 
 
+def purge_stale_devices_bootstrap(key_p8: str) -> None:
+    jwt_token = make_bootstrap_jwt(key_p8)
+    status, payload = request(
+        "POST",
+        "/system/bootstrap/devices/purge",
+        body=bootstrap_body(key_p8, include_apns=False),
+        auth_header=f"Bearer {jwt_token}",
+        allow_404=True,
+    )
+    if status == 404:
+        print("SKIP: Bootstrap device purge endpoint not available yet")
+        return
+    if status != 200:
+        print(f"WARN: Bootstrap device purge failed ({status}): {payload}")
+        return
+    ok(f"Purged stale APNs devices removed={payload.get('purged', 0)} remaining={payload.get('remaining', 0)}")
+
+
 def verify_devices_bootstrap(key_p8: str) -> None:
     jwt_token = make_bootstrap_jwt(key_p8)
     status, payload = request(
@@ -747,6 +765,8 @@ def main() -> None:
     trigger_bootstrap_plugin_update(key_p8)
     wait_for_plugin_version(key_p8)
     configure_apns(key_p8)
+
+    purge_stale_devices_bootstrap(key_p8)
 
     if ADMIN_USER and ADMIN_PASS:
         status, devices_payload = request("GET", "/live-admin/devices")
