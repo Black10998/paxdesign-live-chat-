@@ -129,6 +129,22 @@ def main() -> None:
 
     build = find_build(client, app_id, TARGET_BUILD)
     if build is None:
+        print(f"ERROR: Build {TARGET_BUILD} not found. Recent builds in App Store Connect:")
+        payload = client.get(
+            "/builds",
+            **{
+                "filter[app]": app_id,
+                "sort": "-uploadedDate",
+                "limit": "15",
+            },
+        )
+        for item in payload.get("data") or []:
+            attrs = item.get("attributes") or {}
+            print(
+                f"  build={attrs.get('version')} "
+                f"processing={attrs.get('processingState')} "
+                f"uploaded={attrs.get('uploadedDate')}"
+            )
         fail(f"Build {TARGET_BUILD} not found")
     build_id = build["id"]
     build_version = str((build.get("attributes") or {}).get("version", TARGET_BUILD))
