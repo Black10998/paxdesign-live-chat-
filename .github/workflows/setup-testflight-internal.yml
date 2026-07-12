@@ -31,5 +31,5 @@ jobs:
       - name: Install App Store Connect API dependencies
         run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
 
-      - name: Enable internal TestFlight testing
-        run: python3 scripts/appstore-connect/enable_internal_testflight.py
+      - name: Verify and fix TestFlight access
+        run: python3 scripts/appstore-connect/setup_testflight_access.py
