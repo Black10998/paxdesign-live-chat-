@@ -23,6 +23,22 @@ final class PushNotificationTests: XCTestCase {
         XCTAssertEqual(parsed?.preview, "Hello there")
     }
 
+    func testParseFlattenedNotificationPayload() {
+        let payload: [AnyHashable: Any] = [
+            "session_id": "pax_456",
+            "type": "team_message",
+            "event": "team_message",
+            "preview": "Hello team",
+        ]
+
+        let parsed = PushService.shared.parseFlattenedNotification(userInfo: payload)
+
+        XCTAssertEqual(parsed?.sessionId, "pax_456")
+        XCTAssertEqual(parsed?.type, "team_message")
+        XCTAssertEqual(parsed?.event, "team_message")
+        XCTAssertEqual(parsed?.preview, "Hello team")
+    }
+
     func testParseNotificationRequiresSessionId() {
         let payload: [AnyHashable: Any] = [
             "pax": [

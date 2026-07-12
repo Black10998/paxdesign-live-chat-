@@ -35,13 +35,8 @@ enum AppServicesController {
             #if !SIDELOAD
             let permissions = PermissionCoordinator.shared
             switch permissions.notificationStatus {
-            case .notDetermined:
-                _ = await PushService.shared.requestAuthorization()
-                await permissions.refreshStatuses()
             case .authorized, .provisional, .ephemeral:
-                await MainActor.run {
-                    UIApplication.shared.registerForRemoteNotifications()
-                }
+                await PushService.shared.registerForRemoteNotificationsIfAuthorized()
             default:
                 break
             }

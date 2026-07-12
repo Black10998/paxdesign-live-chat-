@@ -20,15 +20,22 @@ final class PushDeepLinkRouter: ObservableObject {
     private init() {}
 
     func store(userInfo: [AnyHashable: Any], action: String? = nil) {
-        guard let payload = PushService.shared.parseNotification(userInfo: userInfo) else { return }
+        let payload: PushService.PushPayload?
+        if let parsed = PushService.shared.parseNotification(userInfo: userInfo) {
+            payload = parsed
+        } else if let flattened = PushService.shared.parseFlattenedNotification(userInfo: userInfo) {
+            payload = flattened
+        } else {
+            return
+        }
         pending = PendingRoute(
-            sessionId: payload.sessionId,
-            type: payload.type,
-            event: payload.event,
+            sessionId: payload!.sessionId,
+            type: payload!.type,
+            event: payload!.event,
             action: action,
-            customerName: payload.customerName,
-            service: payload.service,
-            preview: payload.preview
+            customerName: payload!.customerName,
+            service: payload!.service,
+            preview: payload!.preview
         )
     }
 
@@ -61,6 +68,7 @@ final class PushDeepLinkRouter: ObservableObject {
             auth: auth,
             payload: payload
         )
+        coordinator.activeSessionId = route.sessionId
 
         if route.type == "team_message" || route.sessionId.hasPrefix("team_") {
             await teamCoordinator.refresh(auth: auth)

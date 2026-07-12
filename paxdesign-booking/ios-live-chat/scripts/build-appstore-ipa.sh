@@ -238,6 +238,9 @@ require_cmd openssl
 setup_signing_assets
 verify_entitlements_source
 
+echo "==> Generating notification sound assets"
+python3 "$SCRIPT_DIR/generate-notification-sounds.py"
+
 echo "==> Generating Xcode project from project.yml"
 xcodegen generate --spec "$PROJECT_SPEC"
 

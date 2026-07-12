@@ -644,6 +644,32 @@ enum L10n {
     static var DeviceActionRevoke: String { t("device.action_revoke") }
     static var DeviceRevokeMessage: String { t("device.revoke_message") }
     static var DeviceRevokeConfirm: String { t("device.revoke_confirm") }
+    static var DeviceChipPushOn: String { t("device.chip_push_on") }
+    static var DeviceChipPushOff: String { t("device.chip_push_off") }
+    static var DeviceChipSandbox: String { t("device.chip_sandbox") }
+    static var DeviceChipProduction: String { t("device.chip_production") }
+    static var DeviceMetaToken: String { t("device.meta_token") }
+
+    // MARK: - Push Diagnostics
+    static var PushDiagTitle: String { t("push.diag_title") }
+    static var PushDiagSectionLocal: String { t("push.diag_section_local") }
+    static var PushDiagSectionServer: String { t("push.diag_section_server") }
+    static var PushDiagSectionLastTest: String { t("push.diag_section_last_test") }
+    static var PushDiagPermission: String { t("push.diag_permission") }
+    static var PushDiagToken: String { t("push.diag_token") }
+    static var PushDiagEnvironment: String { t("push.diag_environment") }
+    static var PushDiagDeviceId: String { t("push.diag_device_id") }
+    static var PushDiagServerStatus: String { t("push.diag_server_status") }
+    static var PushDiagServerAt: String { t("push.diag_server_at") }
+    static var PushDiagTestSent: String { t("push.diag_test_sent") }
+    static var PushDiagTestType: String { t("push.diag_test_type") }
+    static var PushDiagTestStatus: String { t("push.diag_test_status") }
+    static var PushDiagAppleResponse: String { t("push.diag_apple_response") }
+    static var PushDiagTestAt: String { t("push.diag_test_at") }
+    static var PushDiagRefresh: String { t("push.diag_refresh") }
+    static var PushDiagSendTest: String { t("push.diag_send_test") }
+    static var CommonYes: String { t("common.yes") }
+    static var CommonNo: String { t("common.no") }
 
     // MARK: - Customer Profiles
     static var CustomerManagementHint: String { t("customer.management_hint") }

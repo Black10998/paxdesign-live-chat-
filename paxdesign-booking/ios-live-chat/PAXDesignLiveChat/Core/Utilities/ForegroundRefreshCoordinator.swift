@@ -34,6 +34,15 @@ enum ForegroundRefreshCoordinator {
             await teamCoordinator.refresh(auth: auth, mode: .lightweight)
             await permissions.refreshStatuses()
 
+            #if !SIDELOAD
+            if permissions.notificationStatus == .authorized
+                || permissions.notificationStatus == .provisional
+                || permissions.notificationStatus == .ephemeral {
+                await PushService.shared.registerForRemoteNotificationsIfAuthorized()
+                await DeviceSessionService.shared.registerWithPush(auth: auth)
+            }
+            #endif
+
             Task(priority: .utility) {
                 await PlatformSyncService.shared.sync(auth: auth)
             }

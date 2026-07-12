@@ -816,6 +816,15 @@ final class LiveChatAPI {
         _ = try await perform(authRequest(url: url, method: "POST", body: json), endpoint: "device-heartbeat", as: EmptyResponse.self)
     }
 
+    func sendPushDiagnosticTest() async throws -> PushDiagnosticResponse {
+        guard let url = liveAdminURL(path: "push/diagnostic-test") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let payload: [String: Any] = ["device_id": PAXDeviceInfo.deviceId]
+        let json = try JSONSerialization.data(withJSONObject: payload)
+        return try await perform(authRequest(url: url, method: "POST", body: json), endpoint: "push-diagnostic-test", as: PushDiagnosticResponse.self)
+    }
+
     func fetchEmployeeDevices(userId: Int? = nil, currentDeviceId: String? = nil) async throws -> DeviceListResponse {
         var query: [URLQueryItem] = []
         if let userId, userId > 0 {
@@ -1131,6 +1140,8 @@ struct DeviceRecord: Codable, Identifiable {
     let online: Bool
     let isCurrent: Bool
     let sandbox: Bool
+    let pushRegistered: Bool
+    let pushEnvironment: String
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -1147,6 +1158,8 @@ struct DeviceRecord: Codable, Identifiable {
         case ipAddress = "ip_address"
         case location, revoked, approved, online, sandbox
         case isCurrent = "is_current"
+        case pushRegistered = "push_registered"
+        case pushEnvironment = "push_environment"
     }
 
     init(from decoder: Decoder) throws {
@@ -1169,6 +1182,39 @@ struct DeviceRecord: Codable, Identifiable {
         online = (try? c.decode(Bool.self, forKey: .online)) ?? false
         isCurrent = (try? c.decode(Bool.self, forKey: .isCurrent)) ?? false
         sandbox = (try? c.decode(Bool.self, forKey: .sandbox)) ?? false
+        pushRegistered = (try? c.decode(Bool.self, forKey: .pushRegistered)) ?? !deviceToken.isEmpty
+        pushEnvironment = (try? c.decode(String.self, forKey: .pushEnvironment)) ?? (sandbox ? "sandbox" : "production")
+    }
+}
+
+struct PushDiagnosticResponse: Codable {
+    let sent: Bool
+    let pushType: String
+    let apnsHTTPStatus: Int
+    let tokenPrefix: String
+    let environment: String
+    let appleResponse: String
+    let failureReason: String
+
+    enum CodingKeys: String, CodingKey {
+        case sent
+        case pushType = "push_type"
+        case apnsHTTPStatus = "apns_http_status"
+        case tokenPrefix = "token_prefix"
+        case environment
+        case appleResponse = "apple_response"
+        case failureReason = "failure_reason"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        sent = (try? c.decode(Bool.self, forKey: .sent)) ?? false
+        pushType = (try? c.decode(String.self, forKey: .pushType)) ?? "alert"
+        apnsHTTPStatus = (try? c.decode(Int.self, forKey: .apnsHTTPStatus)) ?? 0
+        tokenPrefix = (try? c.decode(String.self, forKey: .tokenPrefix)) ?? ""
+        environment = (try? c.decode(String.self, forKey: .environment)) ?? ""
+        appleResponse = (try? c.decode(String.self, forKey: .appleResponse)) ?? ""
+        failureReason = (try? c.decode(String.self, forKey: .failureReason)) ?? ""
     }
 }
 

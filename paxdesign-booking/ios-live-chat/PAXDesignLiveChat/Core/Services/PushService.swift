@@ -7,6 +7,23 @@ final class PushService: NSObject, ObservableObject {
     static let shared = PushService()
 
     @Published private(set) var deviceToken: String?
+    @Published private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
+
+    var apnsEnvironmentLabel: String {
+        isSandbox ? "sandbox" : "production"
+    }
+
+    private var isSandbox: Bool {
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+        #endif
+    }
 
     private let liveRequestCategory = "PAX_LIVE_REQUEST"
     private let messageCategory = "PAX_MESSAGE"
@@ -37,11 +54,17 @@ final class PushService: NSObject, ObservableObject {
         UNUserNotificationCenter.current().setNotificationCategories([liveCategory, messageCategoryObj])
     }
 
+    func refreshAuthorizationStatus() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        authorizationStatus = settings.authorizationStatus
+    }
+
     @discardableResult
     func requestAuthorization() async -> Bool {
         configureNotificationCategories()
         let center = UNUserNotificationCenter.current()
         let currentSettings = await center.notificationSettings()
+        authorizationStatus = currentSettings.authorizationStatus
         switch currentSettings.authorizationStatus {
         case .authorized, .provisional, .ephemeral:
             await MainActor.run {
@@ -52,6 +75,7 @@ final class PushService: NSObject, ObservableObject {
             return false
         case .notDetermined:
             let granted = (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+            await refreshAuthorizationStatus()
             if granted {
                 await MainActor.run {
                     UIApplication.shared.registerForRemoteNotifications()
@@ -75,12 +99,17 @@ final class PushService: NSObject, ObservableObject {
     func updateDeviceToken(_ tokenData: Data) {
         let token = tokenData.map { String(format: "%02.2hhx", $0) }.joined()
         guard deviceToken != token else { return }
+        let previous = deviceToken
         deviceToken = token
         DeviceSessionService.shared.resetRegistrationState()
+        if let previous, previous != token {
+            PushDiagnosticsStore.shared.recordServerRegistrationPending()
+        }
     }
 
     func registerForRemoteNotificationsIfAuthorized() async {
         let settings = await UNUserNotificationCenter.current().notificationSettings()
+        authorizationStatus = settings.authorizationStatus
         switch settings.authorizationStatus {
         case .authorized, .provisional, .ephemeral:
             await MainActor.run {
@@ -102,6 +131,26 @@ final class PushService: NSObject, ObservableObject {
 
     func parseNotification(userInfo: [AnyHashable: Any]) -> PushPayload? {
         guard let pax = userInfo["pax"] as? [String: Any] else { return nil }
+        return parsePaxDictionary(pax)
+    }
+
+    func parseFlattenedNotification(userInfo: [AnyHashable: Any]) -> PushPayload? {
+        guard userInfo["pax"] == nil else { return nil }
+        let sessionId = (userInfo["session_id"] as? String) ?? ""
+        guard !sessionId.isEmpty else { return nil }
+        let type = (userInfo["type"] as? String) ?? "message"
+        let event = (userInfo["event"] as? String) ?? type
+        return PushPayload(
+            sessionId: sessionId,
+            type: type,
+            event: event,
+            customerName: (userInfo["customer_name"] as? String) ?? "",
+            service: (userInfo["service"] as? String) ?? "",
+            preview: (userInfo["preview"] as? String) ?? ""
+        )
+    }
+
+    private func parsePaxDictionary(_ pax: [String: Any]) -> PushPayload? {
         let sessionId = (pax["session_id"] as? String) ?? ""
         let type = (pax["type"] as? String) ?? "message"
         let event = (pax["event"] as? String) ?? type

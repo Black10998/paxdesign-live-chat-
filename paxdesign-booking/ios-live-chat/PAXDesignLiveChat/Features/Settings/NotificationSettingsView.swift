@@ -59,6 +59,14 @@ struct NotificationSettingsView: View {
             } footer: {
                 Text(L10n.SettingsNotificationsFooter)
             }
+
+            Section {
+                NavigationLink {
+                    PushDiagnosticsView()
+                } label: {
+                    Label { Text(L10n.PushDiagTitle) } icon: { PAXIcon("bell.badge") }
+                }
+            }
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)

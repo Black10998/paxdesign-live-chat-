@@ -318,6 +318,12 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => $auth,
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/push/diagnostic-test', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_push_diagnostic_test'),
+            'permission_callback' => $auth,
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/system/apns', array(
             array(
                 'methods'             => WP_REST_Server::READABLE,
@@ -1447,11 +1453,19 @@ class PAXdesign_Live_Chat_Mobile_API {
             $sandbox = !empty($params['sandbox']);
             $bundle_id = isset($params['bundle_id']) ? sanitize_text_field($params['bundle_id']) : '';
             PAXdesign_APNS::register_device($user_id, $device_token, $sandbox, $bundle_id, $params);
+        } elseif (class_exists('PAXdesign_APNS')) {
+            PAXdesign_APNS::register_device_session($user_id, $params);
         }
 
         $result = PAXdesign_Device_Sessions::heartbeat($user_id, $device_id, $params);
-        if (is_wp_error($result) && $result->get_error_code() === 'device_not_found' && $device_token !== '') {
-            return rest_ensure_response(array('ok' => true, 'registered' => true));
+        if (is_wp_error($result) && $result->get_error_code() === 'device_not_found') {
+            if (class_exists('PAXdesign_APNS')) {
+                PAXdesign_APNS::register_device_session($user_id, $params);
+                $result = PAXdesign_Device_Sessions::heartbeat($user_id, $device_id, $params);
+            }
+            if (is_wp_error($result) && $result->get_error_code() === 'device_not_found') {
+                return rest_ensure_response(array('ok' => true, 'registered' => true));
+            }
         }
         return $result;
     }
@@ -1600,6 +1614,30 @@ class PAXdesign_Live_Chat_Mobile_API {
             PAXdesign_APNS::unregister_device((int) get_current_user_id(), $token);
         }
         return rest_ensure_response(array('ok' => true));
+    }
+
+    public static function route_push_diagnostic_test(WP_REST_Request $request) {
+        if (!class_exists('PAXdesign_APNS')) {
+            return new WP_Error('apns_unavailable', 'APNs module unavailable.', array('status' => 501));
+        }
+
+        if (!PAXdesign_APNS::is_configured()) {
+            return new WP_Error('apns_not_configured', 'APNs is not configured.', array('status' => 400));
+        }
+
+        $user_id = (int) get_current_user_id();
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        $device_id = isset($params['device_id']) ? sanitize_text_field($params['device_id']) : '';
+
+        $result = PAXdesign_APNS::send_diagnostic_test_to_user($user_id, $device_id);
+        if (is_wp_error($result)) {
+            return $result;
+        }
+
+        return self::respond($result);
     }
 
     public static function route_staff_list(WP_REST_Request $request) {

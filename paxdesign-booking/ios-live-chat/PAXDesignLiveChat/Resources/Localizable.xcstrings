@@ -13203,6 +13203,174 @@
         }
       }
     },
+    "device.chip_push_on": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Push on" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Push aktiv" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الإشعارات مفعّلة" } }
+      }
+    },
+    "device.chip_push_off": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Push off" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Push inaktiv" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الإشعارات معطّلة" } }
+      }
+    },
+    "device.chip_sandbox": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sandbox" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Sandbox" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "Sandbox" } }
+      }
+    },
+    "device.chip_production": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Production" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Produktion" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الإنتاج" } }
+      }
+    },
+    "device.meta_token": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Token" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Token" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الرمز" } }
+      }
+    },
+    "common.yes": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Yes" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Ja" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "نعم" } }
+      }
+    },
+    "common.no": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Nein" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "لا" } }
+      }
+    },
+    "push.diag_title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Push Diagnostics" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Push-Diagnose" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تشخيص الإشعارات" } }
+      }
+    },
+    "push.diag_section_local": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Device" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Gerät" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الجهاز" } }
+      }
+    },
+    "push.diag_section_server": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Server Registration" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Server-Registrierung" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تسجيل الخادم" } }
+      }
+    },
+    "push.diag_section_last_test": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Last Test Push" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Letzter Test-Push" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "آخر إشعار تجريبي" } }
+      }
+    },
+    "push.diag_permission": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Permission" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Berechtigung" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الإذن" } }
+      }
+    },
+    "push.diag_token": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Device Token" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Geräte-Token" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "رمز الجهاز" } }
+      }
+    },
+    "push.diag_environment": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "APNs Environment" } },
+        "de": { "stringUnit": { "state": "translated", "value": "APNs-Umgebung" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "بيئة APNs" } }
+      }
+    },
+    "push.diag_device_id": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Device ID" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Geräte-ID" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "معرّف الجهاز" } }
+      }
+    },
+    "push.diag_server_status": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Status" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Status" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الحالة" } }
+      }
+    },
+    "push.diag_server_at": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Registered At" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Registriert am" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تاريخ التسجيل" } }
+      }
+    },
+    "push.diag_test_sent": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "APNs Accepted" } },
+        "de": { "stringUnit": { "state": "translated", "value": "APNs akzeptiert" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "قبول APNs" } }
+      }
+    },
+    "push.diag_test_type": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Push Type" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Push-Typ" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "نوع الإشعار" } }
+      }
+    },
+    "push.diag_test_status": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "HTTP Status" } },
+        "de": { "stringUnit": { "state": "translated", "value": "HTTP-Status" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "حالة HTTP" } }
+      }
+    },
+    "push.diag_apple_response": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Apple Response" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Apple-Antwort" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "استجابة Apple" } }
+      }
+    },
+    "push.diag_test_at": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Tested At" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Getestet am" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "وقت الاختبار" } }
+      }
+    },
+    "push.diag_refresh": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Refresh Status" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Status aktualisieren" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تحديث الحالة" } }
+      }
+    },
+    "push.diag_send_test": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Send Test Alert Push" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Test-Alert-Push senden" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "إرسال إشعار تجريبي" } }
+      }
+    },
     "device.default_employee": {
       "localizations": {
         "en": {

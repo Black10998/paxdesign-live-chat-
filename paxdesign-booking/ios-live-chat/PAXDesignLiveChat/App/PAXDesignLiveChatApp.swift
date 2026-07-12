@@ -118,11 +118,13 @@ struct PAXDesignLiveChatApp: App {
     private func handlePushNotification(_ note: Notification, opened: Bool) {
         let auth = AuthStore.shared
         guard auth.isLoggedIn else {
-            if opened, let userInfo = note.userInfo as? [AnyHashable: Any] {
-                PushDeepLinkRouter.shared.store(
-                    userInfo: userInfo,
-                    action: note.userInfo?["action"] as? String
-                )
+            if opened {
+                if let userInfo = note.userInfo as? [AnyHashable: Any] {
+                    PushDeepLinkRouter.shared.store(
+                        userInfo: userInfo,
+                        action: note.userInfo?["action"] as? String
+                    )
+                }
             }
             return
         }

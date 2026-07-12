@@ -18,14 +18,21 @@ enum PAXDeviceInfo {
     }
 
     static var deviceModel: String {
+        PAXDeviceModelMapper.friendlyName(for: machineIdentifier)
+    }
+
+    static var machineIdentifier: String {
         var systemInfo = utsname()
         uname(&systemInfo)
-        let machine = withUnsafePointer(to: &systemInfo.machine) {
+        return withUnsafePointer(to: &systemInfo.machine) {
             $0.withMemoryRebound(to: CChar.self, capacity: 1) {
                 String(cString: $0)
             }
         }
-        return machine
+    }
+
+    static var deviceKind: PAXDeviceKind {
+        PAXDeviceModelMapper.deviceKind
     }
 
     static var osVersion: String {
@@ -91,6 +98,8 @@ final class DeviceSessionService: ObservableObject {
     private func registerTokenWithServer(auth: AuthStore) async {
         guard auth.isLoggedIn, let api = auth.api else { return }
 
+        PushDiagnosticsStore.shared.recordServerRegistrationPending()
+
         if PushService.shared.deviceToken == nil {
             await PushService.shared.registerForRemoteNotificationsIfAuthorized()
             for _ in 0..<30 where PushService.shared.deviceToken == nil {
@@ -99,11 +108,14 @@ final class DeviceSessionService: ObservableObject {
         }
 
         guard let token = PushService.shared.deviceToken else {
+            await registerSessionWithoutToken(auth: auth)
             PushRegistrationDiagnostics.registerFailed("No APNs device token from iOS yet")
+            PushDiagnosticsStore.shared.recordServerRegistration(success: false, tokenPrefix: nil, error: "No APNs device token")
             return
         }
 
         if token == lastRegisteredToken {
+            PushDiagnosticsStore.shared.recordServerRegistration(success: true, tokenPrefix: String(token.prefix(12)))
             return
         }
 
@@ -117,6 +129,7 @@ final class DeviceSessionService: ObservableObject {
                 )
                 lastRegisteredToken = token
                 PushRegistrationDiagnostics.registerSucceeded(tokenPrefix: String(token.prefix(12)))
+                PushDiagnosticsStore.shared.recordServerRegistration(success: true, tokenPrefix: String(token.prefix(12)))
                 lastError = nil
                 break
             } catch {
@@ -128,12 +141,18 @@ final class DeviceSessionService: ObservableObject {
         }
         if let lastError {
             PushRegistrationDiagnostics.registerFailed(lastError.localizedDescription)
+            PushDiagnosticsStore.shared.recordServerRegistration(success: false, tokenPrefix: String(token.prefix(12)), error: lastError.localizedDescription)
         }
     }
 
-    private func heartbeatPayload() -> [String: Any] {
+    private func registerSessionWithoutToken(auth: AuthStore) async {
+        guard auth.isLoggedIn, let api = auth.api else { return }
+        try? await api.sendDeviceHeartbeat(metadata: heartbeatPayload(includeToken: false))
+    }
+
+    private func heartbeatPayload(includeToken: Bool = true) -> [String: Any] {
         var payload = PAXDeviceInfo.registrationPayload
-        if let token = PushService.shared.deviceToken {
+        if includeToken, let token = PushService.shared.deviceToken {
             payload["device_token"] = token
             payload["sandbox"] = isSandbox
             payload["bundle_id"] = Bundle.main.bundleIdentifier ?? "at.paxdesign.livechat"
@@ -170,24 +189,26 @@ final class DeviceSessionService: ObservableObject {
     }
 
     private var isSandbox: Bool {
+        #if targetEnvironment(simulator)
+        return true
+        #else
         #if DEBUG
         return true
         #else
         return false
         #endif
+        #endif
     }
 
     private func observeTokenChanges(auth: AuthStore) async {
         var lastSeen = PushService.shared.deviceToken
-        while !Task.isCancelled {
-            let current = PushService.shared.deviceToken
-            if current != lastSeen {
-                lastSeen = current
-                if current != nil {
+        for await token in PushService.shared.$deviceToken.values {
+            if token != lastSeen {
+                lastSeen = token
+                if token != nil {
                     await registerTokenWithServer(auth: auth)
                 }
             }
-            try? await Task.sleep(nanoseconds: 500_000_000)
         }
     }
 }

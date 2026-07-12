@@ -107,10 +107,15 @@ struct DeviceManagementView: View {
 
     private func deviceRow(_ device: DeviceRecord) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                PAXIcon("iphone")
-                Text(device.deviceName)
-                    .font(.subheadline.weight(.semibold))
+            HStack(spacing: 12) {
+                PAXDeviceGlyph(machine: device.deviceModel, size: 30)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(device.deviceName)
+                        .font(.subheadline.weight(.semibold))
+                    Text(PAXDeviceModelMapper.friendlyName(for: device.deviceModel))
+                        .font(.caption)
+                        .foregroundStyle(PAXTheme.textSecondary)
+                }
                 Spacer()
                 statusBadge(device)
             }
@@ -121,10 +126,12 @@ struct DeviceManagementView: View {
                 }
                 chip(device.online ? L10n.CommonOnline : L10n.DeviceChipOffline, color: device.online ? .green : .gray)
                 chip(device.approved && !device.revoked ? L10n.DeviceChipApproved : L10n.DeviceChipNotApproved, color: device.approved && !device.revoked ? .mint : .orange)
+                chip(device.pushRegistered ? L10n.DeviceChipPushOn : L10n.DeviceChipPushOff, color: device.pushRegistered ? .green : .orange)
+                chip(device.pushEnvironment == "sandbox" ? L10n.DeviceChipSandbox : L10n.DeviceChipProduction, color: device.pushEnvironment == "sandbox" ? .orange : .blue)
             }
 
             if !device.deviceModel.isEmpty {
-                metaRow(L10n.DeviceMetaModel, device.deviceModel)
+                metaRow(L10n.DeviceMetaModel, PAXDeviceModelMapper.friendlyName(for: device.deviceModel))
             }
             metaRow(L10n.DeviceMetaSystem, device.osVersion)
             metaRow(L10n.DeviceMetaApp, device.appVersion)
@@ -135,6 +142,9 @@ struct DeviceManagementView: View {
             }
             if !device.location.isEmpty {
                 metaRow(L10n.DeviceMetaLocation, device.location)
+            }
+            if !device.deviceToken.isEmpty {
+                metaRow(L10n.DeviceMetaToken, device.deviceToken)
             }
 
             if canManage {

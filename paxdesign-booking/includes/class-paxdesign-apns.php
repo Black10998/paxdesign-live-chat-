@@ -110,6 +110,11 @@ class PAXdesign_APNS {
         }
 
         $all = self::get_user_devices($user_id);
+        $device_id = isset($meta['device_id']) ? sanitize_text_field((string) $meta['device_id']) : '';
+        if ($device_id !== '') {
+            $all = self::purge_stale_device_tokens($all, $device_id, $token);
+        }
+
         $existing = isset($all[$token]) && is_array($all[$token]) ? $all[$token] : array();
         $was_revoked = !empty($existing['revoked']) || (isset($existing['approved']) && empty($existing['approved']));
         $now = time();
@@ -119,20 +124,28 @@ class PAXdesign_APNS {
             'sandbox'    => (bool) $sandbox,
             'bundle_id'  => sanitize_text_field($bundle_id),
             'updated_at' => $now,
+            'session_only' => false,
         ));
 
         if (class_exists('PAXdesign_Device_Sessions')) {
             $record = PAXdesign_Device_Sessions::merge_device_meta($record, $meta, $now);
         }
 
-        if ($was_revoked) {
+        if ($was_revoked && empty($existing['revoked_reason'])) {
             $record['approved'] = false;
             $record['revoked']  = true;
         } else {
             $record['approved'] = true;
             $record['revoked']  = false;
+            unset($record['revoked_at'], $record['revoked_by'], $record['revoked_reason']);
         }
         $all[$token] = $record;
+        if ($device_id !== '') {
+            $session_key = 'did_' . $device_id;
+            if (isset($all[$session_key])) {
+                unset($all[$session_key]);
+            }
+        }
         if (class_exists('PAXdesign_Device_Sessions')) {
             $all = PAXdesign_Device_Sessions::enforce_single_device_login(
                 $all,
@@ -141,6 +154,73 @@ class PAXdesign_APNS {
             );
         }
         update_user_meta((int) $user_id, self::USER_META_KEY, $all);
+    }
+
+    /**
+     * Register or refresh a device session before an APNs token is available.
+     *
+     * @param array<string, mixed> $meta
+     */
+    public static function register_device_session($user_id, $meta = array()) {
+        if (!is_array($meta)) {
+            $meta = array();
+        }
+        $device_id = isset($meta['device_id']) ? sanitize_text_field((string) $meta['device_id']) : '';
+        if ($device_id === '') {
+            return;
+        }
+
+        $all = self::get_user_devices($user_id);
+        $now = time();
+        $session_key = 'did_' . $device_id;
+        $existing = isset($all[$session_key]) && is_array($all[$session_key]) ? $all[$session_key] : array();
+
+        foreach ($all as $key => $device) {
+            if (!is_array($device) || $key === $session_key) {
+                continue;
+            }
+            $id = isset($device['device_id']) ? (string) $device['device_id'] : '';
+            if ($id === $device_id && !empty($device['token'])) {
+                if (class_exists('PAXdesign_Device_Sessions')) {
+                    $all[$key] = PAXdesign_Device_Sessions::merge_device_meta($device, $meta, $now);
+                }
+                update_user_meta((int) $user_id, self::USER_META_KEY, $all);
+                return;
+            }
+        }
+
+        $record = array_merge($existing, array(
+            'device_id'    => $device_id,
+            'session_only' => true,
+            'approved'     => true,
+            'revoked'      => false,
+            'updated_at'   => $now,
+        ));
+        if (class_exists('PAXdesign_Device_Sessions')) {
+            $record = PAXdesign_Device_Sessions::merge_device_meta($record, $meta, $now);
+        }
+        $all[$session_key] = $record;
+        update_user_meta((int) $user_id, self::USER_META_KEY, $all);
+    }
+
+    /**
+     * @param array<string, array<string, mixed>> $all
+     * @return array<string, array<string, mixed>>
+     */
+    private static function purge_stale_device_tokens(array $all, $device_id, $except_token = '') {
+        foreach ($all as $key => $device) {
+            if (!is_array($device)) {
+                continue;
+            }
+            if ($except_token !== '' && $key === $except_token) {
+                continue;
+            }
+            $id = isset($device['device_id']) ? (string) $device['device_id'] : '';
+            if ($id !== '' && $id === $device_id) {
+                unset($all[$key]);
+            }
+        }
+        return $all;
     }
 
     /**
@@ -276,6 +356,11 @@ class PAXdesign_APNS {
             'assigned_chat_updated',
             'new_chat_started',
             'missed_chat',
+            'new_customer_message',
+            'team_message',
+            'team_request',
+            'team_request_update',
+            'link_scan_attention',
         );
         $silent = !in_array($event, $visible_events, true) && !$is_new && !$needs_ai_attention;
         if ($last_role === 'admin' && $event !== 'customer_waiting') {
@@ -475,6 +560,12 @@ class PAXdesign_APNS {
             if (!empty($device['revoked'])) {
                 continue;
             }
+            if (isset($device['approved']) && empty($device['approved'])) {
+                continue;
+            }
+            if (!empty($device['session_only']) || empty($device['token'])) {
+                continue;
+            }
             $token = isset($device['token']) ? (string) $device['token'] : '';
             $result = self::send($device, $title, $body, $data, $user_id, $silent);
             if (is_wp_error($result)) {
@@ -618,8 +709,6 @@ class PAXdesign_APNS {
         $handler  = isset($data['handler']) ? (string) $data['handler'] : '';
         $sound    = self::sound_for_type($type, $handler, $event);
         $category = ($type === 'live_request') ? 'PAX_LIVE_REQUEST' : 'PAX_MESSAGE';
-        $is_live_request = ($type === 'live_request' || $event === 'customer_waiting');
-        $interruption = $is_live_request ? 'time-sensitive' : 'active';
 
         $aps = array(
             'badge' => $user_id > 0 ? self::count_user_badge($user_id) : self::count_pending_badge(),
@@ -635,7 +724,6 @@ class PAXdesign_APNS {
             $aps['sound'] = $sound;
             // Keep app state in sync even when iOS delivers only the visible alert.
             $aps['content-available'] = 1;
-            $aps['interruption-level'] = $interruption;
             $aps['category'] = $category;
         }
 
@@ -665,6 +753,7 @@ class PAXdesign_APNS {
 
         $response = self::apns_post($url, $headers, wp_json_encode($payload));
         if (is_wp_error($response)) {
+            self::log_delivery($user_id, $device, $silent, $push_type, 0, $response->get_error_message());
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('[PAXdesign APNs] transport error: ' . $response->get_error_message());
             }
@@ -674,6 +763,7 @@ class PAXdesign_APNS {
         $code = (int) ($response['status'] ?? 0);
         $body_resp = (string) ($response['body'] ?? '');
         if ($code === 410 || $code === 404) {
+            self::log_delivery($user_id, $device, $silent, $push_type, $code, $body_resp);
             return new WP_Error('apns_invalid_token', self::format_apns_error($body_resp, 'Invalid device token.'), array('status' => $code, 'body' => $body_resp));
         }
 
@@ -702,6 +792,7 @@ class PAXdesign_APNS {
                         if ($user_id > 0) {
                             self::set_device_sandbox_flag($user_id, (string) $device['token'], !$sandbox);
                         }
+                        self::log_delivery($user_id, $device, $silent, $push_type, $alt_code, $alt_body, $alt_env);
                         return true;
                     }
                     $body_resp = $alt_body;
@@ -713,6 +804,7 @@ class PAXdesign_APNS {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('[PAXdesign APNs] HTTP ' . $code . ' user=' . (int) $user_id . ' body=' . $body_resp);
             }
+            self::log_delivery($user_id, $device, $silent, $push_type, $code, $body_resp, $sandbox ? 'sandbox' : 'production', $reason);
             return new WP_Error(
                 'apns_failed',
                 $reason !== '' ? $reason : self::format_apns_error($body_resp, 'APNs HTTP ' . $code),
@@ -720,7 +812,113 @@ class PAXdesign_APNS {
             );
         }
 
+        self::log_delivery($user_id, $device, $silent, $push_type, $code, $body_resp, $sandbox ? 'sandbox' : 'production');
         return true;
+    }
+
+    /**
+     * Send a diagnostic alert push to the current user's active device.
+     *
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function send_diagnostic_test_to_user($user_id, $device_id = '') {
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return new WP_Error('apns_invalid_user', 'Invalid user id.');
+        }
+
+        $title = 'PAXDesign Push Diagnostic';
+        $body  = 'Diagnostic alert push from WordPress at ' . gmdate('H:i:s') . ' UTC';
+        $data  = array(
+            'type'       => 'message',
+            'event'      => 'diagnostic_test',
+            'session_id' => 'diag_' . time(),
+            'preview'    => 'Push diagnostic verification',
+        );
+
+        $target = null;
+        foreach (self::get_user_devices($user_id) as $device) {
+            if (!is_array($device) || !empty($device['revoked']) || !empty($device['session_only'])) {
+                continue;
+            }
+            if (empty($device['token'])) {
+                continue;
+            }
+            if (isset($device['approved']) && empty($device['approved'])) {
+                continue;
+            }
+            if ($device_id !== '') {
+                $id = isset($device['device_id']) ? (string) $device['device_id'] : '';
+                if ($id !== $device_id) {
+                    continue;
+                }
+            }
+            $target = $device;
+            break;
+        }
+
+        if ($target === null) {
+            return new WP_Error('apns_no_devices', 'No active push-enabled device registered for this account.');
+        }
+
+        $token = (string) $target['token'];
+        $result = self::send($target, $title, $body, $data, $user_id, false);
+        $env = !empty($target['sandbox']) ? 'sandbox' : 'production';
+
+        if (is_wp_error($result)) {
+            $error_data = $result->get_error_data();
+            $status = is_array($error_data) && isset($error_data['status']) ? (int) $error_data['status'] : 0;
+            $apple_body = is_array($error_data) && isset($error_data['body']) ? (string) $error_data['body'] : '';
+            if ($result->get_error_code() === 'apns_invalid_token') {
+                self::unregister_device($user_id, $token);
+            }
+            return array(
+                'sent'              => false,
+                'push_type'         => 'alert',
+                'apns_http_status'  => $status,
+                'token_prefix'      => substr($token, 0, 12),
+                'environment'       => $env,
+                'apple_response'    => $apple_body,
+                'failure_reason'    => $result->get_error_message(),
+            );
+        }
+
+        return array(
+            'sent'              => true,
+            'push_type'         => 'alert',
+            'apns_http_status'  => 200,
+            'token_prefix'      => substr($token, 0, 12),
+            'environment'       => $env,
+            'apple_response'    => '',
+            'failure_reason'    => '',
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $device
+     */
+    private static function log_delivery($user_id, $device, $silent, $push_type, $status, $body, $environment = '', $reason = '') {
+        $token = isset($device['token']) ? (string) $device['token'] : '';
+        $entry = array(
+            'at'           => time(),
+            'user_id'      => (int) $user_id,
+            'token_prefix' => $token !== '' ? substr($token, 0, 12) : '',
+            'device_id'    => isset($device['device_id']) ? (string) $device['device_id'] : '',
+            'silent'       => (bool) $silent,
+            'push_type'    => (string) $push_type,
+            'status'       => (int) $status,
+            'environment'  => $environment !== '' ? $environment : (!empty($device['sandbox']) ? 'sandbox' : 'production'),
+            'reason'       => $reason !== '' ? $reason : self::format_apns_error((string) $body, ''),
+            'body'         => (string) $body,
+        );
+
+        $log = get_option('paxdesign_apns_delivery_log', array());
+        if (!is_array($log)) {
+            $log = array();
+        }
+        array_unshift($log, $entry);
+        $log = array_slice($log, 0, 100);
+        update_option('paxdesign_apns_delivery_log', $log, false);
     }
 
     /**
@@ -856,6 +1054,9 @@ class PAXdesign_APNS {
                     $entry['sent'] = false;
                     $entry['error'] = $result->get_error_message();
                     $entry['apns_http_status'] = is_array($error_data) && isset($error_data['status']) ? (int) $error_data['status'] : 0;
+                    if ($result->get_error_code() === 'apns_invalid_token') {
+                        self::unregister_device($uid, $token);
+                    }
                     if (is_array($error_data) && !empty($error_data['body'])) {
                         $entry['apple_response'] = (string) $error_data['body'];
                     }
@@ -895,6 +1096,7 @@ class PAXdesign_APNS {
         $claims  = self::base64url(json_encode(array(
             'iss' => $cfg['team_id'],
             'iat' => time(),
+            'exp' => time() + 3600,
         ), JSON_UNESCAPED_SLASHES));
         $input   = $header . '.' . $claims;
 

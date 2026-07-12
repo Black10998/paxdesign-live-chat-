@@ -109,13 +109,17 @@ final class AuthStore: ObservableObject {
     }
 
     func logout() {
-        Task {
-            if let api = api, let token = PushService.shared.deviceToken {
-                try? await api.unregisterAPNs(token: token)
-            }
-        }
+        let apiClient = api
+        let tokenToUnregister = PushService.shared.deviceToken
+        DeviceSessionService.shared.stop()
         PlatformSyncService.shared.reset()
         invalidateStoredSession(keepFormFields: false)
+        PushDiagnosticsStore.shared.recordServerRegistration(success: false, tokenPrefix: nil, error: "logged out")
+        if let apiClient, let token = tokenToUnregister {
+            Task {
+                try? await apiClient.unregisterAPNs(token: token)
+            }
+        }
     }
 
     func refreshProfile() async {

@@ -134,13 +134,14 @@ class PAXdesign_Device_Sessions {
         $last_active = (int) ($device['last_active_at'] ?? $device['updated_at'] ?? 0);
         $is_online   = !$revoked && $approved && $last_active > 0 && (time() - $last_active) <= self::ONLINE_WINDOW_SECONDS;
         $is_current  = $current_device_id !== '' && $current_device_id === $device_id;
+        $has_token   = !empty($device['token']) && empty($device['session_only']);
 
         return array(
             'user_id'        => (int) $user_id,
             'employee_name'  => $display_name,
             'employee_email' => $email,
             'device_id'      => $device_id,
-            'device_token'   => substr($token, 0, 8) . '…',
+            'device_token'   => $has_token ? substr((string) $device['token'], 0, 8) . '…' : '',
             'device_name'    => (string) ($device['device_name'] ?? 'Unbekanntes Gerät'),
             'device_model'   => (string) ($device['device_model'] ?? ''),
             'os_version'     => (string) ($device['os_version'] ?? ''),
@@ -154,6 +155,8 @@ class PAXdesign_Device_Sessions {
             'online'         => $is_online,
             'is_current'     => $is_current,
             'sandbox'        => !empty($device['sandbox']),
+            'push_registered'=> $has_token,
+            'push_environment' => !empty($device['sandbox']) ? 'sandbox' : 'production',
         );
     }
 
@@ -175,7 +178,11 @@ class PAXdesign_Device_Sessions {
             }
             $devices[$token] = self::merge_device_meta($device, $meta);
             update_user_meta((int) $user_id, PAXdesign_APNS::USER_META_KEY, $devices);
-            return rest_ensure_response(array('ok' => true, 'revoked' => false));
+            return rest_ensure_response(array(
+                'ok' => true,
+                'revoked' => false,
+                'push_registered' => !empty($devices[$token]['token']) && empty($devices[$token]['session_only']),
+            ));
         }
         return new WP_Error('device_not_found', 'Device not registered.', array('status' => 404));
     }
