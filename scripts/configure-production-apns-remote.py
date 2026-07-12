@@ -17,9 +17,15 @@ from pathlib import Path
 SITE = os.environ.get("PAX_SITE", "https://paxdesign.at").rstrip("/")
 ADMIN_USER = os.environ.get("PAX_ADMIN_USER", "").strip()
 ADMIN_PASS = os.environ.get("PAX_ADMIN_APP_PASSWORD", "").strip()
-TEAM_ID = os.environ.get("PAX_APNS_TEAM_ID", "4ZSP8S5A7B").strip()
+TEAM_ID = os.environ.get(
+    "APNS_TEAM_ID",
+    os.environ.get("PAX_APNS_TEAM_ID", "4ZSP8S5A7B"),
+).strip()
 BUNDLE_ID = os.environ.get("PAX_APNS_BUNDLE_ID", "at.paxdesign.livechat").strip()
-KEY_ID = os.environ.get("APP_STORE_CONNECT_API_KEY_ID", os.environ.get("PAX_APNS_KEY_ID", "")).strip()
+KEY_ID = os.environ.get(
+    "APNS_KEY_ID",
+    os.environ.get("PAX_APNS_KEY_ID", ""),
+).strip()
 EXPECTED_PLUGIN = os.environ.get("PAX_EXPECTED_PLUGIN", "3.108.14").strip()
 HOSTINGER_TOKEN = os.environ.get("HOSTINGER_MANAGE_BEARER_TOKEN", "").strip()
 HOSTINGER_API_TOKEN = os.environ.get("HOSTINGER_API_TOKEN", "").strip()
@@ -40,8 +46,8 @@ def ok(message: str) -> None:
 
 def load_p8_key() -> str:
     spec = importlib.util.spec_from_file_location(
-        "prepare_asc_key",
-        Path(__file__).resolve().parent / "appstore-connect" / "prepare-asc-key.py",
+        "prepare_apns_key",
+        Path(__file__).resolve().parent / "appstore-connect" / "prepare-apns-key.py",
     )
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -509,17 +515,17 @@ def verify_apns_provider_token_direct(key_p8: str) -> None:
 
     if reason == "BadDeviceToken":
         ok(
-            f"Apple accepted APNs provider token (got BadDeviceToken as expected; "
+            f"Apple accepted APNs provider token (HTTP {resp.status_code} BadDeviceToken; "
             f"kid=...{KEY_ID[-4:]}, team_id={TEAM_ID})"
         )
+        print(f"Apple APNs provider probe response: {json.dumps({'status': resp.status_code, 'reason': reason})}")
         return
 
     if reason == "InvalidProviderToken":
         fail(
             "Apple rejected the APNs provider token (InvalidProviderToken). "
-            "The AuthKey in GitHub secrets must have Apple Push Notifications service (APNs) enabled "
-            "in Apple Developer → Certificates, Identifiers & Profiles → Keys. "
-            "App Store Connect API access alone is not enough for push delivery."
+            "Verify APNS_KEY_ID, APNS_TEAM_ID, and APNS_KEY_P8_BASE64 in GitHub secrets "
+            "match the APNs Auth Key in Apple Developer → Keys."
         )
 
     fail(f"Unexpected Apple APNs provider probe response HTTP {resp.status_code}: {reason or resp.text}")
@@ -554,17 +560,22 @@ def send_test_push_bootstrap(key_p8: str, scenario: str = "new_customer_message"
         prefix = attempt.get("token_prefix") or "unknown"
         name = attempt.get("device_name") or "device"
         sandbox = attempt.get("sandbox")
+        apple_reason = attempt.get("error") or ("accepted" if attempt.get("sent") else "unknown")
         if attempt.get("sent"):
-            ok(f"  device={name} token_prefix={prefix}... sandbox={sandbox} apns_http_status={status}")
+            ok(
+                f"  device={name} token_prefix={prefix}... sandbox={sandbox} "
+                f"apns_http_status={status} apple_response={apple_reason}"
+            )
         else:
             print(
                 f"WARN:  device={name} token_prefix={prefix}... sandbox={sandbox} "
-                f"apns_http_status={status} error={attempt.get('error')}"
+                f"apns_http_status={status} apple_response={apple_reason}"
             )
+
+    print(f"Apple APNs test response ({scenario}): {json.dumps(payload, indent=2)}")
 
 
 def verify_notification_paths_bootstrap(key_p8: str) -> None:
-    verify_apns_provider_token_direct(key_p8)
     send_test_push_bootstrap(key_p8, "new_customer_message")
     send_test_push_bootstrap(key_p8, "live_request")
 
@@ -698,10 +709,11 @@ def main() -> None:
     print(f"=== Remote APNs configuration ({SITE}) ===")
 
     if not KEY_ID:
-        fail("APP_STORE_CONNECT_API_KEY_ID is required")
+        fail("APNS_KEY_ID is required")
 
     key_p8 = load_p8_key()
     verify_bootstrap_jwt_locally(key_p8)
+    verify_apns_provider_token_direct(key_p8)
     verify_admin_auth()
     trigger_bootstrap_plugin_update(key_p8)
     wait_for_plugin_version(key_p8)

@@ -18,10 +18,9 @@ jobs:
       PAX_SITE: https://paxdesign.at
       PAX_APNS_TEAM_ID: "4ZSP8S5A7B"
       PAX_APNS_BUNDLE_ID: at.paxdesign.livechat
-      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
-      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+      APNS_KEY_ID: ${{ secrets.APNS_KEY_ID }}
+      APNS_TEAM_ID: ${{ secrets.APNS_TEAM_ID }}
+      APNS_KEY_P8_BASE64: ${{ secrets.APNS_KEY_P8_BASE64 }}
       PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
       PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
       HOSTINGER_MANAGE_BEARER_TOKEN: ${{ secrets.HOSTINGER_MANAGE_BEARER_TOKEN }}
@@ -39,8 +38,8 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Plugin version: $VERSION"
 
-      - name: Validate App Store Connect key
-        run: python3 scripts/appstore-connect/prepare-asc-key.py
+      - name: Validate APNs Auth Key
+        run: python3 scripts/appstore-connect/prepare-apns-key.py
 
       - name: Install dependencies
         run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography httpx h2
