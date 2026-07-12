@@ -31,7 +31,7 @@ struct PAXDashboardWidgetView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "chart.bar.doc.horizontal.fill")
-                    .foregroundStyle(.accentColor)
+                    .foregroundStyle(Color.accentColor)
                 Text("PAXDesign")
                     .font(.caption.weight(.bold))
                 Spacer()
