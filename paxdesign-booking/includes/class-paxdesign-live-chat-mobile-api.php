@@ -1192,6 +1192,25 @@ class PAXdesign_Live_Chat_Mobile_API {
         }
         $keep_prefix = isset($params['keep_token_prefix']) ? sanitize_text_field($params['keep_token_prefix']) : '';
 
+        if ($keep_prefix === '') {
+            $remaining = 0;
+            foreach (PAXdesign_APNS::get_admin_user_ids() as $uid) {
+                foreach (PAXdesign_APNS::get_user_devices((int) $uid) as $device) {
+                    if (!is_array($device) || !empty($device['revoked'])) {
+                        continue;
+                    }
+                    $remaining++;
+                }
+            }
+
+            return self::respond(array(
+                'purged'    => 0,
+                'remaining' => $remaining,
+                'skipped'   => true,
+                'message'   => 'keep_token_prefix is required to purge stale devices.',
+            ));
+        }
+
         $purged = 0;
         $remaining = 0;
         foreach (PAXdesign_APNS::get_admin_user_ids() as $uid) {

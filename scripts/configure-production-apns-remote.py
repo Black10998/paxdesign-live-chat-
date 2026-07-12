@@ -422,11 +422,18 @@ def configure_apns_bootstrap(key_p8: str) -> dict | None:
 
 
 def purge_stale_devices_bootstrap(key_p8: str) -> None:
+    keep_prefix = os.environ.get("PAX_KEEP_TOKEN_PREFIX", "").strip()
+    if not keep_prefix:
+        print("SKIP: Device purge requires PAX_KEEP_TOKEN_PREFIX (prevents wiping all tokens)")
+        return
+
     jwt_token = make_bootstrap_jwt(key_p8)
+    body = bootstrap_body(key_p8, include_apns=False)
+    body["keep_token_prefix"] = keep_prefix
     status, payload = request(
         "POST",
         "/system/bootstrap/devices/purge",
-        body=bootstrap_body(key_p8, include_apns=False),
+        body=body,
         auth_header=f"Bearer {jwt_token}",
         allow_404=True,
     )
