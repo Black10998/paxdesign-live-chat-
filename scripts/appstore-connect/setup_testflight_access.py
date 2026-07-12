@@ -348,6 +348,57 @@ def add_tester_to_group(client: ASCClient, group_id: str, tester_id: str) -> boo
     return False
 
 
+def add_internal_tester(
+    client: ASCClient,
+    group_id: str,
+    email: str,
+    asc_user: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    """Add an App Store Connect team user to an internal TestFlight group."""
+    if asc_user is None:
+        warn(f"Cannot add internal tester: {email} is not an App Store Connect user")
+        return None
+
+    existing = find_beta_tester(client, email)
+    if existing:
+        add_tester_to_group(client, group_id, existing["id"])
+        return existing
+
+    username = ((asc_user.get("attributes") or {}).get("username") or email).lower()
+    local_part = username.split("@", 1)[0]
+    first_name = local_part.replace(".", " ").replace("_", " ").title() or "Internal"
+    status, payload = client.request(
+        "POST",
+        "/betaTesters",
+        body={
+            "data": {
+                "type": "betaTesters",
+                "attributes": {
+                    "email": email,
+                    "firstName": first_name,
+                    "lastName": "Tester",
+                },
+                "relationships": {
+                    "betaGroups": {
+                        "data": [{"type": "betaGroups", "id": group_id}],
+                    }
+                },
+            }
+        },
+        allow_error=True,
+    )
+    if status in {200, 201}:
+        print(f"Added internal tester {email} to group {group_id}")
+        return payload.get("data")
+    if status == 409:
+        existing = find_beta_tester(client, email)
+        if existing:
+            add_tester_to_group(client, group_id, existing["id"])
+            return existing
+    warn(f"Could not add internal tester ({status}): {json.dumps(payload)}")
+    return None
+
+
 def ensure_beta_build_localization(client: ASCClient, build_id: str) -> None:
     payload = client.get(
         "/betaBuildLocalizations",
