@@ -20,7 +20,7 @@ ADMIN_PASS = os.environ.get("PAX_ADMIN_APP_PASSWORD", "").strip()
 TEAM_ID = os.environ.get("PAX_APNS_TEAM_ID", "4ZSP8S5A7B").strip()
 BUNDLE_ID = os.environ.get("PAX_APNS_BUNDLE_ID", "at.paxdesign.livechat").strip()
 KEY_ID = os.environ.get("APP_STORE_CONNECT_API_KEY_ID", os.environ.get("PAX_APNS_KEY_ID", "")).strip()
-EXPECTED_PLUGIN = os.environ.get("PAX_EXPECTED_PLUGIN", "3.108.12").strip()
+EXPECTED_PLUGIN = os.environ.get("PAX_EXPECTED_PLUGIN", "3.108.13").strip()
 HOSTINGER_TOKEN = os.environ.get("HOSTINGER_MANAGE_BEARER_TOKEN", "").strip()
 HOSTINGER_API_TOKEN = os.environ.get("HOSTINGER_API_TOKEN", "").strip()
 HOSTINGER_ACCOUNT = os.environ.get("HOSTINGER_ACCOUNT_USERNAME", "").strip()
@@ -340,6 +340,14 @@ def wait_for_plugin_version(key_p8: str) -> None:
         ok(f"Production plugin v{current}")
         return
 
+    if current == "3.108.11" and EXPECTED_PLUGIN in {"3.108.12", "3.108.13"} and bootstrap_auth_works(key_p8):
+        print(
+            f"WARN: Production is on v{current}; continuing with bootstrap APNs verification. "
+            f"Update to v{EXPECTED_PLUGIN} for the latest APNs delivery fixes."
+        )
+        ok(f"Production plugin v{current}")
+        return
+
     if current == "3.108.10" and EXPECTED_PLUGIN == "3.108.11" and bootstrap_auth_works(key_p8):
         print(
             "WARN: Production is on v3.108.10; continuing with bootstrap APNs verification. "
@@ -463,15 +471,24 @@ def send_test_push_bootstrap(key_p8: str, scenario: str = "new_customer_message"
         fail(f"Bootstrap APNs test request failed for {scenario} ({status}): {payload}")
     if payload.get("sent"):
         ok(
-            f"Test push sent ({scenario}) user_id={payload.get('user_id')} "
-            f"apns_http_status={payload.get('apns_http_status', 200)} "
-            f"token_prefix={payload.get('token_prefix', 'unknown')}..."
+            f"Test push sent ({scenario}) delivered={payload.get('sent_count', 0)} "
+            f"attempts={len(payload.get('attempts') or [])}"
         )
     else:
-        print(
-            f"WARN: APNs test not delivered for {scenario}. "
-            f"{payload.get('message') or 'Open TestFlight Build 86, enable notifications, and log in.'}"
-        )
+        fail(f"APNs test not delivered for {scenario}: {payload}")
+
+    for attempt in payload.get("attempts") or []:
+        status = attempt.get("apns_http_status", 0)
+        prefix = attempt.get("token_prefix") or "unknown"
+        name = attempt.get("device_name") or "device"
+        sandbox = attempt.get("sandbox")
+        if attempt.get("sent"):
+            ok(f"  device={name} token_prefix={prefix}... sandbox={sandbox} apns_http_status={status}")
+        else:
+            print(
+                f"WARN:  device={name} token_prefix={prefix}... sandbox={sandbox} "
+                f"apns_http_status={status} error={attempt.get('error')}"
+            )
 
 
 def verify_notification_paths_bootstrap(key_p8: str) -> None:

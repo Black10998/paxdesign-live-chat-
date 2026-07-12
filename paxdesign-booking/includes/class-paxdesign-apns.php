@@ -608,12 +608,7 @@ class PAXdesign_APNS {
             $headers['apns-collapse-id'] = $collapse_id;
         }
 
-        $response = wp_remote_post($url, array(
-            'timeout' => 12,
-            'headers' => $headers,
-            'body'    => wp_json_encode($payload),
-        ));
-
+        $response = self::apns_post($url, $headers, wp_json_encode($payload));
         if (is_wp_error($response)) {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('[PAXdesign APNs] transport error: ' . $response->get_error_message());
@@ -621,20 +616,153 @@ class PAXdesign_APNS {
             return $response;
         }
 
-        $code = (int) wp_remote_retrieve_response_code($response);
+        $code = (int) ($response['status'] ?? 0);
+        $body_resp = (string) ($response['body'] ?? '');
         if ($code === 410 || $code === 404) {
-            return new WP_Error('apns_invalid_token', 'Invalid device token.', array('status' => $code));
+            return new WP_Error('apns_invalid_token', self::format_apns_error($body_resp, 'Invalid device token.'), array('status' => $code, 'body' => $body_resp));
         }
 
         if ($code < 200 || $code >= 300) {
-            $body_resp = wp_remote_retrieve_body($response);
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('[PAXdesign APNs] HTTP ' . $code . ' user=' . (int) $user_id . ' body=' . $body_resp);
             }
-            return new WP_Error('apns_failed', 'APNs HTTP ' . $code, array('status' => $code));
+            return new WP_Error(
+                'apns_failed',
+                self::format_apns_error($body_resp, 'APNs HTTP ' . $code),
+                array('status' => $code, 'body' => $body_resp)
+            );
         }
 
         return true;
+    }
+
+    /**
+     * Apple Push Notification service requires HTTP/2.
+     *
+     * @param string $url
+     * @param array<string, string> $headers
+     * @param string $body
+     * @return array{status:int,body:string}|WP_Error
+     */
+    private static function apns_post($url, $headers, $body) {
+        if (!function_exists('curl_init')) {
+            return new WP_Error('apns_curl_missing', 'cURL is required for Apple Push Notifications.');
+        }
+
+        if (!defined('CURL_HTTP_VERSION_2_0')) {
+            return new WP_Error(
+                'apns_http2_unavailable',
+                'HTTP/2 cURL support is required for Apple Push Notifications on this server.'
+            );
+        }
+
+        $ch = curl_init($url);
+        if ($ch === false) {
+            return new WP_Error('apns_curl_init', 'Could not initialize cURL for APNs.');
+        }
+
+        $header_lines = array();
+        foreach ($headers as $name => $value) {
+            $header_lines[] = $name . ': ' . $value;
+        }
+
+        curl_setopt_array($ch, array(
+            CURLOPT_POST           => true,
+            CURLOPT_POSTFIELDS     => $body,
+            CURLOPT_HTTPHEADER     => $header_lines,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_HEADER         => true,
+            CURLOPT_TIMEOUT        => 12,
+            CURLOPT_HTTP_VERSION   => CURL_HTTP_VERSION_2_0,
+        ));
+
+        $raw = curl_exec($ch);
+        if ($raw === false) {
+            $message = curl_error($ch);
+            curl_close($ch);
+            return new WP_Error('apns_transport', $message !== '' ? $message : 'APNs transport failed.');
+        }
+
+        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $header_size = (int) curl_getinfo($ch, CURLINFO_HEADER_SIZE);
+        curl_close($ch);
+
+        return array(
+            'status' => $status,
+            'body'   => substr($raw, $header_size),
+        );
+    }
+
+    /**
+     * @param string $body
+     * @param string $fallback
+     * @return string
+     */
+    private static function format_apns_error($body, $fallback) {
+        $decoded = json_decode($body, true);
+        if (!is_array($decoded)) {
+            return $fallback;
+        }
+
+        $reason = isset($decoded['reason']) ? trim((string) $decoded['reason']) : '';
+        if ($reason === '') {
+            return $fallback;
+        }
+
+        return $reason;
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    public static function send_test_to_registered_devices($title, $body, $data = array()) {
+        $attempts = array();
+        $sent = 0;
+
+        foreach (get_users(array('fields' => array('ID'))) as $user) {
+            $uid = (int) $user->ID;
+            if ($uid <= 0 || !PAXdesign_Live_Chat_Permissions::has_live_chat_access($uid)) {
+                continue;
+            }
+
+            foreach (self::get_user_devices($uid) as $device) {
+                if (empty($device['token']) || !empty($device['revoked'])) {
+                    continue;
+                }
+                if (isset($device['approved']) && empty($device['approved'])) {
+                    continue;
+                }
+
+                $token = (string) $device['token'];
+                $result = self::send($device, $title, $body, $data, $uid, false);
+                $entry = array(
+                    'user_id'      => $uid,
+                    'token_prefix' => substr($token, 0, 12),
+                    'sandbox'      => !empty($device['sandbox']),
+                    'device_name'  => isset($device['device_name']) ? (string) $device['device_name'] : '',
+                );
+
+                if (is_wp_error($result)) {
+                    $error_data = $result->get_error_data();
+                    $entry['sent'] = false;
+                    $entry['error'] = $result->get_error_message();
+                    $entry['apns_http_status'] = is_array($error_data) && isset($error_data['status']) ? (int) $error_data['status'] : 0;
+                } else {
+                    $entry['sent'] = true;
+                    $entry['apns_http_status'] = 200;
+                    $sent++;
+                }
+
+                $attempts[] = $entry;
+            }
+        }
+
+        return array(
+            'sent'       => $sent > 0,
+            'sent_count' => $sent,
+            'attempts'   => $attempts,
+        );
     }
 
     /**
