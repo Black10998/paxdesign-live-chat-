@@ -51,7 +51,13 @@ targets:
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDisplayName: PAXDesign Live Chat
+        NSCameraUsageDescription: "Take photos to send in live chat conversations."
+        NSFaceIDUsageDescription: "Face ID is used to unlock the app after inactivity."
         NSLocationWhenInUseUsageDescription: "Location is used to verify device sign-ins and support secure staff device management."
+        NSPhotoLibraryUsageDescription: "Select photos from your library to send in live chat."
+        NSUserNotificationsUsageDescription: "Notifications for live agent requests and new customer messages."
+        ITSAppUsesNonExemptEncryption: false
         CFBundleLocalizations:
           - en
           - de

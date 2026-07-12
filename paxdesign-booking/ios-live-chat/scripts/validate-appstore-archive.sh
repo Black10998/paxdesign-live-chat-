@@ -28,6 +28,11 @@ MAIN_EXECUTABLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP_
 WIDGET_EXECUTABLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$WIDGET_PATH/Info.plist" 2>/dev/null || true)"
 [[ -n "$WIDGET_EXECUTABLE" && -f "$WIDGET_PATH/$WIDGET_EXECUTABLE" ]] || fail "Widget executable missing from archived extension"
 
+MAIN_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_PATH/Info.plist" 2>/dev/null || true)"
+WIDGET_BUILD="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$WIDGET_PATH/Info.plist" 2>/dev/null || true)"
+[[ -n "$MAIN_BUILD" && "$MAIN_BUILD" == "$WIDGET_BUILD" ]] \
+  || fail "Widget CFBundleVersion ($WIDGET_BUILD) must match main app ($MAIN_BUILD)"
+
 MAIN_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist" 2>/dev/null || true)"
 WIDGET_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$WIDGET_PATH/Info.plist" 2>/dev/null || true)"
 [[ "$MAIN_ID" == "$MAIN_BUNDLE_ID" ]] || fail "Main bundle ID mismatch (expected $MAIN_BUNDLE_ID, got ${MAIN_ID:-<empty>})"
