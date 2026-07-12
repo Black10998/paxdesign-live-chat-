@@ -1,0 +1,99 @@
+name: Diagnose wp-admin 403
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/diagnose-wp-admin-403.yml'
+      - 'scripts/diagnose-wp-admin-403.sh'
+      - 'scripts/redact-diagnosis-report.sh'
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate SSH secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            if [ -z "${!key:-}" ]; then
+              echo "Missing secret: $key"
+              exit 1
+            fi
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Run read-only diagnosis on server
+        id: remote
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+          PAX_SITE: https://paxdesign.at
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          scp "${SSH_OPTS[@]}" scripts/diagnose-wp-admin-403.sh "${REMOTE}:/tmp/diagnose-wp-admin-403.sh"
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "chmod +x /tmp/diagnose-wp-admin-403.sh && WP_PATH='${WP_PATH}' PAX_SITE='${PAX_SITE}' /tmp/diagnose-wp-admin-403.sh"
+
+          REMOTE_REPORT=$(ssh "${SSH_OPTS[@]}" "$REMOTE" "ls -t '${WP_PATH}/wp-content/pax-admin-403-diagnosis-'*.txt 2>/dev/null | head -1")
+          if [ -z "$REMOTE_REPORT" ]; then
+            echo "No diagnosis report found on server."
+            exit 1
+          fi
+          echo "remote_report=$REMOTE_REPORT" >> "$GITHUB_OUTPUT"
+          scp "${SSH_OPTS[@]}" "${REMOTE}:${REMOTE_REPORT}" ./report-raw.txt
+          echo "Report downloaded from server (not printed to avoid leaking sensitive log lines)."
+
+      - name: Redact sensitive data
+        run: |
+          chmod +x scripts/redact-diagnosis-report.sh
+          scripts/redact-diagnosis-report.sh ./report-raw.txt ./report-redacted.txt
+
+      - name: Upload diagnosis artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pax-admin-403-diagnosis
+          path: report-redacted.txt
+          if-no-files-found: error
+
+      - name: Print sanitized summary
+        run: |
+          set -euo pipefail
+          echo "=== Diagnosis summary (sanitized) ==="
+          echo "Server report path: ${{ steps.remote.outputs.remote_report }}"
+          echo
+          echo "--- users.php HTTP headers (unauthenticated) ---"
+          awk '/HTTP response headers — users.php/,/HTTP probes — other admin/' report-redacted.txt \
+            | head -40 || true
+          echo
+          echo "--- wp-admin/.htaccess present? ---"
+          awk '/\.htaccess — wp-admin/,/\.htaccess — wp-content/' report-redacted.txt \
+            | head -30 || true
+          echo
+          echo "--- Log hits (403 / ModSecurity / users.php / Authorization) ---"
+          grep -iE '403|Forbidden|ModSecurity|Access denied|client denied|Rule ID|users\.php|Authorization|PHP_REACHED' report-redacted.txt \
+            | head -60 || echo "(no high-signal lines matched in redacted report)"
+          echo
+          echo "Full redacted report attached as artifact: pax-admin-403-diagnosis"
