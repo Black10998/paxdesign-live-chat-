@@ -100,15 +100,19 @@ def app_primary_locale(client: ASCClient, app_id: str) -> str:
 def ensure_beta_app_localization(client: ASCClient, app_id: str) -> None:
     payload = client.get(f"/apps/{app_id}/betaAppLocalizations", **{"limit": "20"})
     existing = payload.get("data") or []
-    if existing:
-        locales = [
-            (item.get("attributes") or {}).get("locale", "?") for item in existing
-        ]
+    locales = {
+        (item.get("attributes") or {}).get("locale", "?"): item for item in existing
+    }
+    if locales:
         print(f"Beta app localizations exist: {', '.join(locales)}")
-        return
 
     locale = app_primary_locale(client, app_id)
+    targets = []
     for candidate in (locale, "en-US", "de-DE", "en"):
+        if candidate not in locales and candidate not in targets:
+            targets.append(candidate)
+
+    for candidate in targets:
         status, response = client.request(
             "POST",
             "/betaAppLocalizations",
@@ -119,6 +123,8 @@ def ensure_beta_app_localization(client: ASCClient, app_id: str) -> None:
                         "locale": candidate,
                         "description": "PAXDesign Live Chat TestFlight beta.",
                         "feedbackEmail": TESTER_EMAIL,
+                        "marketingUrl": "https://paxdesign.at",
+                        "privacyPolicyUrl": "https://paxdesign.at/privacy",
                     },
                     "relationships": {
                         "app": {"data": {"type": "apps", "id": app_id}},
@@ -129,11 +135,39 @@ def ensure_beta_app_localization(client: ASCClient, app_id: str) -> None:
         )
         if status in {200, 201}:
             print(f"Created beta app localization ({candidate})")
-            return
-        if status == 409:
+        elif status == 409:
             print(f"Beta app localization already exists ({candidate})")
-            return
-    fail(f"Could not create beta app localization: {json.dumps(response)}")
+        else:
+            warn(
+                f"Could not create beta app localization ({candidate}, {status}): "
+                f"{json.dumps(response)}"
+            )
+
+    payload = client.get(f"/apps/{app_id}/betaAppLocalizations", **{"limit": "20"})
+    for item in payload.get("data") or []:
+        loc_id = item["id"]
+        attrs = item.get("attributes") or {}
+        if attrs.get("privacyPolicyUrl") and attrs.get("marketingUrl"):
+            continue
+        client.patch(
+            f"/betaAppLocalizations/{loc_id}",
+            {
+                "data": {
+                    "type": "betaAppLocalizations",
+                    "id": loc_id,
+                    "attributes": {
+                        "privacyPolicyUrl": "https://paxdesign.at/privacy",
+                        "marketingUrl": "https://paxdesign.at",
+                        "feedbackEmail": TESTER_EMAIL,
+                    },
+                }
+            },
+        )
+        print(f"Updated beta app localization {attrs.get('locale', loc_id)} metadata")
+
+    payload = client.get(f"/apps/{app_id}/betaAppLocalizations", **{"limit": "20"})
+    if not payload.get("data"):
+        fail("No beta app localizations exist after setup")
 
 
 def submit_external_beta_review(client: ASCClient, build_id: str) -> bool:
@@ -205,7 +239,7 @@ def create_external_tester(
     return tester
 
 
-def resend_invitation(client: ASCClient, app_id: str, tester_id: str) -> None:
+def resend_invitation(client: ASCClient, app_id: str, tester_id: str) -> bool:
     status, payload = client.request(
         "POST",
         "/betaTesterInvitations",
@@ -220,9 +254,17 @@ def resend_invitation(client: ASCClient, app_id: str, tester_id: str) -> None:
         },
         allow_error=True,
     )
-    if status not in {200, 201}:
-        fail(f"Could not resend TestFlight invitation ({status}): {json.dumps(payload)}")
-    print(f"Resent TestFlight invitation to {TESTER_EMAIL}")
+    if status in {200, 201}:
+        print(f"Resent TestFlight invitation to {TESTER_EMAIL}")
+        return True
+    detail = json.dumps(payload)
+    if "NO_INSTALLABLE_BUILDS" in detail:
+        warn(
+            "Cannot send external email invite yet: build is not installable for "
+            "external testers until Apple approves external beta review."
+        )
+        return False
+    fail(f"Could not resend TestFlight invitation ({status}): {detail}")
 
 
 def get_tester_state(client: ASCClient, app_id: str, email: str) -> str:
@@ -234,6 +276,15 @@ def get_tester_state(client: ASCClient, app_id: str, email: str) -> str:
     if not data:
         return "NOT_FOUND"
     return (data[0].get("attributes") or {}).get("state", "UNKNOWN")
+
+
+def find_internal_group(client: ASCClient, app_id: str) -> dict[str, Any]:
+    groups = list_groups(client, app_id)
+    for group in groups:
+        attrs = group.get("attributes") or {}
+        if attrs.get("isInternalGroup") is True:
+            return group
+    fail(f"No internal TestFlight group found for app {app_id}")
 
 
 def find_external_group(client: ASCClient, app_id: str) -> dict[str, Any]:
@@ -252,16 +303,23 @@ def find_external_group(client: ASCClient, app_id: str) -> dict[str, Any]:
 def verify_invite_ready(
     client: ASCClient,
     app_id: str,
-    group_id: str,
+    external_group_id: str,
+    internal_group_id: str,
     build_id: str,
     build_version: str,
-    tester_id: str,
+    *,
+    invite_sent: bool,
 ) -> None:
-    builds = group_build_versions(client, group_id)
-    testers = group_tester_emails(client, group_id)
-    if build_version not in builds:
+    external_builds = group_build_versions(client, external_group_id)
+    external_testers = group_tester_emails(client, external_group_id)
+    internal_builds = group_build_versions(client, internal_group_id)
+    internal_testers = group_tester_emails(client, internal_group_id)
+
+    if build_version not in external_builds:
         fail(f"Build {build_version} is not linked to external group after reset")
-    if TESTER_EMAIL not in testers:
+    if build_version not in internal_builds:
+        fail(f"Build {build_version} is not linked to internal group after reset")
+    if TESTER_EMAIL not in external_testers:
         fail(f"{TESTER_EMAIL} is not in external group after reset")
 
     state = get_tester_state(client, app_id, TESTER_EMAIL)
@@ -281,19 +339,28 @@ def verify_invite_ready(
         else "UNKNOWN"
     )
     print(f"Build states: internal={internal_state} external={external_state}")
+    print(
+        f"Internal group build_{build_version}={build_version in internal_builds} "
+        f"tester_in_group={TESTER_EMAIL in internal_testers}"
+    )
 
-    if external_state not in {"IN_BETA_TESTING", "READY_FOR_BETA_TESTING"}:
-        warn(
-            "External beta review is not approved yet; email invite may stay invalid "
-            f"until external state becomes IN_BETA_TESTING (current={external_state})."
-        )
-        if internal_state == "IN_BETA_TESTING":
-            print(
-                "INTERNAL_FALLBACK=true: Open TestFlight app directly (no email link) "
-                f"while signed in as {TESTER_EMAIL}."
-            )
-    else:
+    if invite_sent and external_state in {"IN_BETA_TESTING", "READY_FOR_BETA_TESTING"}:
         print("INVITE_VALID=true")
+        return
+
+    if internal_state == "IN_BETA_TESTING":
+        print("INTERNAL_ACCESS_VALID=true")
+        print(
+            "For this App Store Connect account, open the TestFlight app directly "
+            f"(signed in as {TESTER_EMAIL}). Do not use the email invite link until "
+            "external beta review is approved."
+        )
+        return
+
+    fail(
+        "Build is not installable yet for internal or external TestFlight access. "
+        f"internal={internal_state} external={external_state}"
+    )
 
 
 def main() -> None:
@@ -321,6 +388,13 @@ def main() -> None:
     ensure_beta_build_localization(client, build_id)
     submit_external_beta_review(client, build_id)
 
+    internal_group = find_internal_group(client, app_id)
+    internal_group_id = internal_group["id"]
+    internal_group_name = (internal_group.get("attributes") or {}).get("name", internal_group_id)
+    if not add_build_to_group(client, internal_group_id, build_id):
+        fail(f"Could not link build {build_version} to internal group")
+    print(f"Linked build {build_version} to internal group '{internal_group_name}'")
+
     external_group = find_external_group(client, app_id)
     group_id = external_group["id"]
     group_name = (external_group.get("attributes") or {}).get("name", group_id)
@@ -330,19 +404,34 @@ def main() -> None:
         fail(f"Could not link build {build_version} to external group")
 
     tester = create_external_tester(client, group_id, TESTER_EMAIL)
-    resend_invitation(client, app_id, tester["id"])
+    invite_sent = resend_invitation(client, app_id, tester["id"])
 
     print("=== Post-reset verification ===")
     print_diagnostics(client, app, build, list_groups(client, app_id))
-    verify_invite_ready(client, app_id, group_id, build_id, build_version, tester["id"])
+    verify_invite_ready(
+        client,
+        app_id,
+        group_id,
+        internal_group_id,
+        build_id,
+        build_version,
+        invite_sent=invite_sent,
+    )
 
     print("TESTFLIGHT_INVITE_RESET=true")
     print(f"TESTFLIGHT_BUILD={build_version}")
     print(f"TESTFLIGHT_TESTER={TESTER_EMAIL}")
-    print(
-        "TESTFLIGHT_NEXT_STEP=Use the NEW invitation email only. "
-        "Do not reuse the old invite link."
-    )
+    if invite_sent:
+        print(
+            "TESTFLIGHT_NEXT_STEP=Use the NEW invitation email only. "
+            "Do not reuse the old invite link."
+        )
+    else:
+        print(
+            "TESTFLIGHT_NEXT_STEP=Open the TestFlight app directly while signed in as "
+            f"{TESTER_EMAIL}. Email invite links stay invalid until external beta review "
+            "is approved by Apple."
+        )
 
 
 if __name__ == "__main__":
