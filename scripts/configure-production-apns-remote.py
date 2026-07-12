@@ -20,7 +20,7 @@ ADMIN_PASS = os.environ.get("PAX_ADMIN_APP_PASSWORD", "").strip()
 TEAM_ID = os.environ.get("PAX_APNS_TEAM_ID", "4ZSP8S5A7B").strip()
 BUNDLE_ID = os.environ.get("PAX_APNS_BUNDLE_ID", "at.paxdesign.livechat").strip()
 KEY_ID = os.environ.get("APP_STORE_CONNECT_API_KEY_ID", os.environ.get("PAX_APNS_KEY_ID", "")).strip()
-EXPECTED_PLUGIN = os.environ.get("PAX_EXPECTED_PLUGIN", "3.108.13").strip()
+EXPECTED_PLUGIN = os.environ.get("PAX_EXPECTED_PLUGIN", "3.108.14").strip()
 HOSTINGER_TOKEN = os.environ.get("HOSTINGER_MANAGE_BEARER_TOKEN", "").strip()
 HOSTINGER_API_TOKEN = os.environ.get("HOSTINGER_API_TOKEN", "").strip()
 HOSTINGER_ACCOUNT = os.environ.get("HOSTINGER_ACCOUNT_USERNAME", "").strip()
@@ -453,6 +453,70 @@ def verify_devices_bootstrap(key_p8: str) -> None:
         print(f"  device={name} token_prefix={prefix}... sandbox={device.get('sandbox')}")
 
 
+def verify_apns_provider_token_direct(key_p8: str) -> None:
+    """Probe Apple with a dummy device token to validate the provider JWT."""
+    import jwt
+
+    try:
+        import httpx
+    except ImportError:
+        print("SKIP: httpx not installed for direct APNs provider token probe")
+        return
+
+    provider = jwt.encode(
+        {"iss": TEAM_ID, "iat": int(time.time())},
+        key_p8,
+        algorithm="ES256",
+        headers={"alg": "ES256", "kid": KEY_ID, "typ": "JWT"},
+    )
+    dummy_token = "0" * 64
+    url = f"https://api.push.apple.com/3/device/{dummy_token}"
+    headers = {
+        "authorization": f"bearer {provider}",
+        "apns-topic": BUNDLE_ID,
+        "apns-push-type": "alert",
+        "apns-priority": "10",
+        "content-type": "application/json",
+    }
+    payload = json.dumps(
+        {
+            "aps": {
+                "alert": {"title": "Provider probe", "body": "APNs provider token validation"},
+                "sound": "default",
+            }
+        }
+    )
+    with httpx.Client(http2=True) as client:
+        resp = client.post(url, headers=headers, content=payload, timeout=15)
+
+    reason = ""
+    try:
+        reason = resp.json().get("reason", "")
+    except Exception:  # noqa: BLE001
+        reason = resp.text
+
+    if resp.status_code == 200:
+        ok("Apple accepted APNs provider token (unexpected 200 on dummy token)")
+        return
+
+    if reason == "BadDeviceToken":
+        ok(
+            f"Apple accepted APNs provider token (got BadDeviceToken as expected; "
+            f"kid=...{KEY_ID[-4:]}, team_id={TEAM_ID})"
+        )
+        return
+
+    if reason == "InvalidProviderToken":
+        fail(
+            "Apple rejected the APNs provider token (InvalidProviderToken). "
+            "The AuthKey in GitHub secrets must have Apple Push Notifications service (APNs) enabled "
+            "in Apple Developer → Certificates, Identifiers & Profiles → Keys. "
+            "App Store Connect API access alone is not enough for push delivery."
+        )
+
+    fail(f"Unexpected Apple APNs provider probe response HTTP {resp.status_code}: {reason or resp.text}")
+
+
 def send_test_push_bootstrap(key_p8: str, scenario: str = "new_customer_message") -> None:
     jwt_token = make_bootstrap_jwt(key_p8)
     body = bootstrap_body(key_p8, include_apns=False)
@@ -492,6 +556,7 @@ def send_test_push_bootstrap(key_p8: str, scenario: str = "new_customer_message"
 
 
 def verify_notification_paths_bootstrap(key_p8: str) -> None:
+    verify_apns_provider_token_direct(key_p8)
     send_test_push_bootstrap(key_p8, "new_customer_message")
     send_test_push_bootstrap(key_p8, "live_request")
 

@@ -43,7 +43,7 @@ jobs:
         run: python3 scripts/appstore-connect/prepare-asc-key.py
 
       - name: Install dependencies
-        run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
+        run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography httpx h2
 
       - name: Configure APNs on production via REST
         env:
