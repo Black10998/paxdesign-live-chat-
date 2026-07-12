@@ -1262,26 +1262,57 @@ class PAXdesign_Live_Chat_Mobile_API {
             ));
         }
 
-        $result = PAXdesign_APNS::send_to_user(
-            $user_id,
-            'PAXDesign Test',
-            'Production APNs verification push from WordPress backend.',
-            array(
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        $scenario = isset($params['scenario']) ? sanitize_key((string) $params['scenario']) : 'new_customer_message';
+
+        if ($scenario === 'live_request') {
+            $title = 'Kunde wartet';
+            $body  = 'Production APNs live chat verification push.';
+            $data  = array(
+                'type'       => 'live_request',
+                'event'      => 'customer_waiting',
+                'session_id' => 'apns_verify_live_' . time(),
+                'preview'    => 'Live chat APNs test',
+            );
+        } else {
+            $title = 'PAXDesign Test';
+            $body  = 'Production APNs verification push from WordPress backend.';
+            $data  = array(
                 'type'       => 'message',
                 'event'      => 'new_customer_message',
                 'session_id' => 'apns_verify_' . time(),
                 'preview'    => 'Backend APNs test',
-            ),
+            );
+        }
+
+        $result = PAXdesign_APNS::send_to_user(
+            $user_id,
+            $title,
+            $body,
+            $data,
             false
         );
 
         if (is_wp_error($result)) {
-            return $result;
+            $error_data = $result->get_error_data();
+            return self::respond(array(
+                'sent'             => false,
+                'scenario'         => $scenario,
+                'user_id'          => $user_id,
+                'message'          => $result->get_error_message(),
+                'apns_http_status' => is_array($error_data) && isset($error_data['status']) ? (int) $error_data['status'] : 0,
+            ));
         }
 
-        return self::respond(array(
-            'sent'    => true,
-            'user_id' => $user_id,
+        return self::respond(array_merge(
+            is_array($result) ? $result : array('sent' => true),
+            array(
+                'scenario' => $scenario,
+                'user_id'  => $user_id,
+            )
         ));
     }
 

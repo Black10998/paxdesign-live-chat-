@@ -413,23 +413,55 @@ class PAXdesign_APNS {
      */
     public static function send_to_user($user_id, $title, $body, $data = array(), $silent = false) {
         if (!self::is_configured()) {
-            return;
+            return new WP_Error('apns_not_configured', 'APNs is not configured.');
         }
 
         $user_id = absint($user_id);
         if ($user_id <= 0) {
-            return;
+            return new WP_Error('apns_invalid_user', 'Invalid user id.');
         }
+
+        $sent = 0;
+        $last_error = null;
+        $last_status = 0;
+        $last_token_prefix = '';
 
         foreach (self::get_user_devices($user_id) as $device) {
             if (!empty($device['revoked'])) {
                 continue;
             }
+            $token = isset($device['token']) ? (string) $device['token'] : '';
             $result = self::send($device, $title, $body, $data, $user_id, $silent);
-            if (is_wp_error($result) && $result->get_error_code() === 'apns_invalid_token') {
-                self::unregister_device($user_id, (string) $device['token']);
+            if (is_wp_error($result)) {
+                $last_error = $result;
+                $error_data = $result->get_error_data();
+                if (is_array($error_data) && isset($error_data['status'])) {
+                    $last_status = (int) $error_data['status'];
+                }
+                if ($result->get_error_code() === 'apns_invalid_token') {
+                    self::unregister_device($user_id, $token);
+                }
+                continue;
             }
+
+            $sent++;
+            $last_status = 200;
+            $last_token_prefix = $token !== '' ? substr($token, 0, 12) : '';
         }
+
+        if ($sent <= 0) {
+            if ($last_error instanceof WP_Error) {
+                return $last_error;
+            }
+            return new WP_Error('apns_no_devices', 'No active device tokens registered yet.');
+        }
+
+        return array(
+            'sent'             => true,
+            'sent_count'       => $sent,
+            'apns_http_status' => $last_status,
+            'token_prefix'     => $last_token_prefix,
+        );
     }
 
     public static function count_user_badge($user_id) {
