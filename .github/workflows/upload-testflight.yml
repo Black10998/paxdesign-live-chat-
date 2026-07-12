@@ -1,0 +1,72 @@
+name: Upload TestFlight Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/testflight-upload'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  upload-testflight:
+    runs-on: macos-latest
+    env:
+      APP_BUNDLE_ID: at.paxdesign.livechat
+      TESTFLIGHT_INTERNAL_TESTER_EMAIL: awjime29@icloud.com
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+      APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+      APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+      APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve latest successful App Store IPA run
+        id: latest_ipa
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          RUN_ID="$(gh run list \
+            --repo "${{ github.repository }}" \
+            --workflow release-appstore.yml \
+            --branch main \
+            --status success \
+            --limit 1 \
+            --json databaseId \
+            --jq '.[0].databaseId')"
+          if [[ -z "$RUN_ID" || "$RUN_ID" == "null" ]]; then
+            echo "No successful App Store IPA workflow run found" >&2
+            exit 1
+          fi
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "Using App Store IPA from workflow run $RUN_ID"
+
+      - name: Download signed App Store IPA artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: PAXDesignLiveChat-AppStore-ipa
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.latest_ipa.outputs.run_id }}
+          path: artifacts/ipa
+
+      - name: Upload IPA to TestFlight
+        shell: bash
+        run: |
+          set +x
+          chmod +x scripts/appstore-connect/upload-ipa.sh
+          ./scripts/appstore-connect/upload-ipa.sh artifacts/ipa/PAXDesignLiveChat-AppStore.ipa
+
+      - name: Install App Store Connect API dependencies
+        run: python3 -m pip install --quiet PyJWT cryptography
+
+      - name: Enable internal TestFlight testing
+        run: python3 scripts/appstore-connect/enable_internal_testflight.py
