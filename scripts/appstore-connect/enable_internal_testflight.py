@@ -46,9 +46,25 @@ def load_private_key() -> str:
     raw = raw.strip()
     if not raw:
         fail("Missing App Store Connect API private key secret")
-    if "\\n" in raw and "BEGIN PRIVATE KEY" in raw:
-        raw = raw.replace("\\n", "\n")
+    raw = raw.strip('"')
+    raw = raw.replace("\\n", "\n").replace("\r", "")
+    if not raw.endswith("\n"):
+        raw += "\n"
+    if not openssl_validate_key(raw):
+        fail("APP_STORE_CONNECT_API_PRIVATE_KEY is not a valid PKCS8 private key")
     return raw
+
+
+def openssl_validate_key(raw: str) -> bool:
+    import subprocess
+
+    proc = subprocess.run(
+        ["openssl", "pkey", "-noout"],
+        input=raw.encode("utf-8"),
+        capture_output=True,
+        check=False,
+    )
+    return proc.returncode == 0
 
 
 def load_config() -> tuple[str, str, str]:

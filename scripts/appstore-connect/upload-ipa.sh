@@ -29,6 +29,15 @@ fi
 if [[ "$PRIVATE_KEY" == *"\\n"* ]]; then
   PRIVATE_KEY="${PRIVATE_KEY//\\n/$'\n'}"
 fi
+PRIVATE_KEY="${PRIVATE_KEY//$'\r'/}"
+PRIVATE_KEY="${PRIVATE_KEY#\"}"
+PRIVATE_KEY="${PRIVATE_KEY%\"}"
+
+if ! printf '%s' "$PRIVATE_KEY" | openssl pkey -noout >/dev/null 2>&1; then
+  echo "ERROR: APP_STORE_CONNECT_API_PRIVATE_KEY is not a valid PKCS8 private key." >&2
+  echo "Ensure the GitHub secret contains the full .p8 file, including BEGIN/END lines." >&2
+  exit 1
+fi
 
 KEY_DIR="${HOME}/.appstoreconnect/private_keys"
 mkdir -p "$KEY_DIR"
