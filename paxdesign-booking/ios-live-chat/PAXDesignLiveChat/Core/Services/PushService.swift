@@ -2,7 +2,7 @@ import Foundation
 import UIKit
 import UserNotifications
 
-enum APNsRegistrationFailure: Equatable {
+enum APNsRegistrationFailure: Error, Equatable {
     case notAuthorized(UNAuthorizationStatus)
     case iosError(domain: String, code: Int, message: String)
     case timeout(requestsSent: Int)

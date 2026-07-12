@@ -49,8 +49,8 @@ struct NotificationSettingsView: View {
                                 } else if permissions.notificationStatus == .authorized
                                             || permissions.notificationStatus == .provisional
                                             || permissions.notificationStatus == .ephemeral {
-                                    _ = await push.ensureDeviceToken()
-                                    await push.registerTokenWithBackend(auth: auth)
+                                    _ = await PushService.shared.ensureDeviceToken()
+                                    await PushService.shared.registerTokenWithBackend(auth: auth)
                                 }
                             }
                         }
@@ -83,8 +83,8 @@ struct NotificationSettingsView: View {
                 if permissions.notificationStatus == .authorized
                     || permissions.notificationStatus == .provisional
                     || permissions.notificationStatus == .ephemeral {
-                    _ = await push.ensureDeviceToken()
-                    await push.registerTokenWithBackend(auth: auth)
+                    _ = await PushService.shared.ensureDeviceToken()
+                    await PushService.shared.registerTokenWithBackend(auth: auth)
                 }
             }
         }

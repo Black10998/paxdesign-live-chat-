@@ -537,7 +537,7 @@ struct OnboardingFlowView: View {
             try? await Task.sleep(nanoseconds: 300_000_000)
             await permissions.refreshStatuses()
         case .authorized, .provisional, .ephemeral:
-            _ = await push.ensureDeviceToken()
+            _ = await PushService.shared.ensureDeviceToken()
             break
         case .denied:
             break
@@ -651,7 +651,7 @@ struct OnboardingFlowView: View {
         await permissions.refreshStatuses()
         locationPermission.refreshStatus()
         if mode == .postLogin, notificationsGranted {
-            _ = await push.ensureDeviceToken()
+            _ = await PushService.shared.ensureDeviceToken()
             await push.registerTokenWithBackend(auth: auth)
         }
     }
