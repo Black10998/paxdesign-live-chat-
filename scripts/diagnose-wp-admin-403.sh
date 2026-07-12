@@ -7,18 +7,17 @@ WP_ROOT="${WP_PATH:-$(pwd)}"
 SITE="${PAX_SITE:-https://paxdesign.at}"
 REPORT="${WP_ROOT}/wp-content/pax-admin-403-diagnosis-$(date +%Y%m%d-%H%M%S).txt"
 
-exec > >(tee -a "$REPORT") 2>&1
+section() { echo; echo "######## $1 ########"; }
 
+LOG_PATTERNS='403|Forbidden|ModSecurity|mod_security|Access denied|client denied|Rule ID|Authorization|users\.php|wp-admin'
+
+run_diagnosis() {
 echo "=== PAXdesign wp-admin 403 diagnosis (read-only) ==="
 echo "Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 echo "WP_ROOT: $WP_ROOT"
 echo "SITE: $SITE"
 echo "Host: $(hostname 2>/dev/null || echo unknown)"
 echo
-
-section() { echo; echo "######## $1 ########"; }
-
-LOG_PATTERNS='403|Forbidden|ModSecurity|mod_security|Access denied|client denied|Rule ID|Authorization|users\.php|wp-admin'
 
 section "WordPress core + active plugins"
 if command -v wp >/dev/null 2>&1; then
@@ -191,14 +190,6 @@ while IFS= read -r log; do
 done < <(printf '%s\n' "${MODSEC_LOGS[@]}" 2>/dev/null | sort -u)
 [[ "$found_mod" -eq 0 ]] && echo "(no ModSecurity/Imunify log files with matches found)"
 
-section "Rule ID extraction (from collected log matches above)"
-RULE_IDS=$(grep -oiE 'id "?[0-9]+"?|rule id[[:space:]]*"?[0-9]+"?|\[id "[0-9]+"\]' "$REPORT" 2>/dev/null | sort -u | head -20 || true)
-if [[ -n "$RULE_IDS" ]]; then
-  echo "$RULE_IDS"
-else
-  echo "(no Rule ID patterns found in this report — check hPanel security events or ask Hostinger support)"
-fi
-
 section "Interpretation"
 cat <<'GUIDE'
 Unauthenticated users.php:
@@ -215,3 +206,7 @@ GUIDE
 echo
 echo "REPORT_PATH=$REPORT"
 echo "Diagnosis complete (read-only, no cache purge, no plugin changes)."
+}
+
+mkdir -p "${WP_ROOT}/wp-content"
+run_diagnosis 2>&1 | tee "$REPORT"
