@@ -33,6 +33,7 @@ add_internal_tester = _SETUP.add_internal_tester
 get_build_beta_detail = _SETUP.get_build_beta_detail
 find_asc_user = _SETUP.find_asc_user
 make_token = _SETUP.make_token
+make_client = _SETUP.make_client
 load_config = _SETUP.load_config
 ensure_export_compliance = _SETUP.ensure_export_compliance
 ensure_beta_localization = _SETUP.ensure_beta_localization
@@ -120,7 +121,7 @@ def verify_beta_tester_record(client: ASCClient, app_id: str, email: str) -> Non
 
 def main() -> None:
     issuer_id, key_id, private_key = load_config()
-    client = ASCClient(make_token(issuer_id, key_id, private_key))
+    client = make_client(issuer_id, key_id, private_key)
 
     app = find_app(client)
     app_id = app["id"]
