@@ -317,12 +317,29 @@ def invite_beta_tester(
         return None
 
 
-def add_tester_to_group(client: ASCClient, group_id: str, tester_id: str) -> None:
-    client.post(
-        f"/betaGroups/{group_id}/relationships/betaTesters",
-        {"data": [{"type": "betaTesters", "id": tester_id}]},
+def add_tester_to_group(client: ASCClient, group_id: str, tester_id: str) -> bool:
+    url = API_BASE + f"/betaGroups/{group_id}/relationships/betaTesters"
+    body = {"data": [{"type": "betaTesters", "id": tester_id}]}
+    req = urllib.request.Request(
+        url,
+        data=json.dumps(body).encode("utf-8"),
+        headers={
+            "Authorization": f"Bearer {client.token}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
     )
-    print(f"Added tester {tester_id} to internal beta group {group_id}")
+    try:
+        with urllib.request.urlopen(req, timeout=120):
+            print(f"Added tester {tester_id} to internal beta group {group_id}")
+            return True
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        print(
+            f"WARNING: Could not add tester {tester_id} to group ({exc.code}): {detail}",
+            file=sys.stderr,
+        )
+        return False
 
 
 def verify_group_has_build(
