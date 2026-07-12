@@ -1,0 +1,50 @@
+name: App Store iOS Build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  appstore-build:
+    runs-on: macos-latest
+    env:
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_PROVISIONING_PROFILE_MAIN_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_MAIN_BASE64 }}
+      APPLE_PROVISIONING_PROFILE_WIDGET_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_WIDGET_BASE64 }}
+      MAIN_BUNDLE_ID: at.paxdesign.livechat
+      WIDGET_BUNDLE_ID: at.paxdesign.livechat.widgets
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Build signed App Store IPA
+        shell: bash
+        run: |
+          set +x
+          cd paxdesign-booking/ios-live-chat
+          chmod +x scripts/build-appstore-ipa.sh \
+            scripts/validate-appstore-archive.sh \
+            scripts/validate-appstore-ipa.sh
+          ./scripts/build-appstore-ipa.sh
+
+      - name: Upload App Store IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PAXDesignLiveChat-AppStore-ipa
+          path: paxdesign-booking/ios-live-chat/build/AppStore/export/PAXDesignLiveChat-AppStore.ipa
+          if-no-files-found: error
+
+      - name: Upload ExportOptions.plist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PAXDesignLiveChat-AppStore-export-options
+          path: paxdesign-booking/ios-live-chat/build/AppStore/ExportOptions.plist
+          if-no-files-found: error
