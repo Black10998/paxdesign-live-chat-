@@ -241,6 +241,24 @@ verify_entitlements_source
 echo "==> Generating Xcode project from project.yml"
 xcodegen generate --spec "$PROJECT_SPEC"
 
+echo "==> Syncing Info.plist build versions"
+MARKETING_VERSION="$(grep 'MARKETING_VERSION:' "$PROJECT_SPEC" | head -1 | sed 's/.*"\([^"]*\)".*/\1/')"
+BUILD_VERSION="$(grep 'CURRENT_PROJECT_VERSION:' "$PROJECT_SPEC" | head -1 | sed 's/.*"\([0-9]*\)".*/\1/')"
+[[ -n "$MARKETING_VERSION" && -n "$BUILD_VERSION" ]] || fail "Could not read MARKETING_VERSION/CURRENT_PROJECT_VERSION from $PROJECT_SPEC"
+
+sync_plist_version() {
+  local plist_path="$1"
+  [[ -f "$plist_path" ]] || fail "Missing plist: $plist_path"
+  /usr/libexec/PlistBuddy -c "Delete :CFBundleShortVersionString" "$plist_path" >/dev/null 2>&1 || true
+  /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string $MARKETING_VERSION" "$plist_path"
+  /usr/libexec/PlistBuddy -c "Delete :CFBundleVersion" "$plist_path" >/dev/null 2>&1 || true
+  /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_VERSION" "$plist_path"
+}
+
+sync_plist_version "$ROOT/PAXDesignLiveChat/Info.plist"
+sync_plist_version "$ROOT/PAXWidgets/Info.plist"
+echo "    Synced CFBundleVersion=$BUILD_VERSION CFBundleShortVersionString=$MARKETING_VERSION"
+
 echo "==> Applying manual signing settings to generated Xcode project"
 export ROOT MAIN_BUNDLE_ID WIDGET_BUNDLE_ID APPLE_TEAM_ID \
   MAIN_PROFILE_UUID MAIN_PROFILE_NAME WIDGET_PROFILE_UUID WIDGET_PROFILE_NAME
