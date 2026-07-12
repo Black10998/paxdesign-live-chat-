@@ -561,25 +561,31 @@ def main() -> None:
             "Skipping internal-only access; tester is not an App Store Connect team user."
         )
 
-    ensure_beta_localization(client, app_id)
     ensure_beta_build_localization(client, build_id)
-    external_group = find_or_create_group(
-        client, app_id, internal=False, name=EXTERNAL_GROUP_NAME
-    )
-    external_group_id = external_group["id"]
-    add_build_to_group(client, external_group_id, build_id)
-    invite_external_tester(client, external_group_id, TESTER_EMAIL)
-    submit_beta_review(client, build_id)
+    import os
 
-    groups = list_groups(client, app_id)
-    print_diagnostics(client, app, build, groups)
+    if os.environ.get("ALLOW_EXTERNAL_BETA_REVIEW", "").strip() == "1":
+        external_group = find_or_create_group(
+            client, app_id, internal=False, name=EXTERNAL_GROUP_NAME
+        )
+        external_group_id = external_group["id"]
+        add_build_to_group(client, external_group_id, build_id)
+        invite_external_tester(client, external_group_id, TESTER_EMAIL)
+        submit_beta_review(client, build_id)
 
-    external_builds = group_build_versions(client, external_group_id)
-    external_testers = group_tester_emails(client, external_group_id)
-    if build_version not in external_builds:
-        fail(f"Build {build_version} is still not linked to external group")
-    if TESTER_EMAIL not in external_testers:
-        fail(f"Tester {TESTER_EMAIL} is still not linked to external group")
+        groups = list_groups(client, app_id)
+        print_diagnostics(client, app, build, groups)
+
+        external_builds = group_build_versions(client, external_group_id)
+        external_testers = group_tester_emails(client, external_group_id)
+        if build_version not in external_builds:
+            fail(f"Build {build_version} is still not linked to external group")
+        if TESTER_EMAIL not in external_testers:
+            fail(f"Tester {TESTER_EMAIL} is still not linked to external group")
+    else:
+        print("Skipping external TestFlight setup (ALLOW_EXTERNAL_BETA_REVIEW not set)")
+        groups = list_groups(client, app_id)
+        print_diagnostics(client, app, build, groups)
 
     print("TESTFLIGHT_READY=true")
     print(f"TESTFLIGHT_APP={(app.get('attributes') or {}).get('name', BUNDLE_ID)}")

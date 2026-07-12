@@ -356,7 +356,12 @@ def main() -> None:
     add_build_to_group(client, internal_group_id, build_id)
     print(f"Linked build {build_version} to internal group '{internal_name}'")
 
-    submit_external_beta_review(client, build_id)
+    import os
+
+    if os.environ.get("ALLOW_EXTERNAL_BETA_REVIEW", "").strip() == "1":
+        submit_external_beta_review(client, build_id)
+    else:
+        print("Skipping external beta review (ALLOW_EXTERNAL_BETA_REVIEW not set)")
 
     print("=== Waiting for internal TestFlight state ===")
     internal_state = wait_for_internal_ready(client, build_id)
