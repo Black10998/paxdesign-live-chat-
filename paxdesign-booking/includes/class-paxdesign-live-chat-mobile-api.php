@@ -288,6 +288,25 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => $auth,
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/system/apns', array(
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array(__CLASS__, 'route_apns_system_status'),
+                'permission_callback' => array(__CLASS__, 'permission_apns_admin'),
+            ),
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array(__CLASS__, 'route_apns_system_configure'),
+                'permission_callback' => array(__CLASS__, 'permission_apns_admin'),
+            ),
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/system/apns/test', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_apns_system_test'),
+            'permission_callback' => array(__CLASS__, 'permission_apns_admin'),
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/devices', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'route_devices_list'),
@@ -610,6 +629,27 @@ class PAXdesign_Live_Chat_Mobile_API {
 
     public static function permission_admin() {
         return PAXdesign_Live_Chat_Permissions::authorize_api_access();
+    }
+
+    /**
+     * WordPress administrators and Live Chat settings managers may configure APNs.
+     *
+     * @return bool|WP_Error
+     */
+    public static function permission_apns_admin() {
+        if (!is_user_logged_in()) {
+            return new WP_Error(
+                'rest_not_logged_in',
+                __('Use your WordPress username (or account email) and a valid Application Password via HTTP Basic Auth.', 'paxdesign-booking'),
+                array('status' => 401)
+            );
+        }
+
+        if (current_user_can('manage_options') || PAXdesign_Live_Chat_Permissions::is_super_admin()) {
+            return true;
+        }
+
+        return self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_MANAGE_SETTINGS);
     }
 
     /**
@@ -1000,6 +1040,123 @@ class PAXdesign_Live_Chat_Mobile_API {
         return self::respond(self::live()->admin_get_suggestions(
             $request['id'],
             (int) $request->get_param('message_id')
+        ));
+    }
+
+    public static function route_apns_system_status(WP_REST_Request $request) {
+        if (!class_exists('PAXdesign_APNS')) {
+            return new WP_Error('apns_unavailable', 'APNs module unavailable.', array('status' => 501));
+        }
+
+        $cfg = PAXdesign_APNS::get_config();
+        $device_total = 0;
+        foreach (PAXdesign_APNS::get_admin_user_ids() as $uid) {
+            foreach (PAXdesign_APNS::get_user_devices((int) $uid) as $device) {
+                if (empty($device['revoked'])) {
+                    $device_total++;
+                }
+            }
+        }
+
+        return self::respond(array(
+            'configured'    => PAXdesign_APNS::is_configured(),
+            'key_id'        => $cfg['key_id'],
+            'team_id'       => $cfg['team_id'],
+            'bundle_id'     => $cfg['bundle_id'],
+            'device_total'  => $device_total,
+            'plugin_version'=> defined('PAXDESIGN_BOOKING_VERSION') ? PAXDESIGN_BOOKING_VERSION : '',
+        ));
+    }
+
+    public static function route_apns_system_configure(WP_REST_Request $request) {
+        if (!class_exists('PAXdesign_APNS')) {
+            return new WP_Error('apns_unavailable', 'APNs module unavailable.', array('status' => 501));
+        }
+
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+
+        $key_id = isset($params['key_id']) ? sanitize_text_field((string) $params['key_id']) : '';
+        $team_id = isset($params['team_id']) ? sanitize_text_field((string) $params['team_id']) : '';
+        $bundle_id = isset($params['bundle_id']) ? sanitize_text_field((string) $params['bundle_id']) : '';
+        $key_p8 = isset($params['key_p8']) ? trim((string) $params['key_p8']) : '';
+
+        if ($key_id === '' || $team_id === '' || $key_p8 === '') {
+            return new WP_Error('apns_missing_fields', 'key_id, team_id, and key_p8 are required.', array('status' => 400));
+        }
+
+        update_option('paxdesign_apns_key_id', $key_id);
+        update_option('paxdesign_apns_team_id', $team_id);
+        update_option(
+            'paxdesign_apns_bundle_id',
+            $bundle_id !== '' ? $bundle_id : 'at.paxdesign.livechat'
+        );
+        update_option('paxdesign_apns_key_p8', $key_p8);
+
+        return self::route_apns_system_status($request);
+    }
+
+    public static function route_apns_system_test(WP_REST_Request $request) {
+        if (!class_exists('PAXdesign_APNS')) {
+            return new WP_Error('apns_unavailable', 'APNs module unavailable.', array('status' => 501));
+        }
+
+        if (!PAXdesign_APNS::is_configured()) {
+            return new WP_Error('apns_not_configured', 'APNs is not configured.', array('status' => 400));
+        }
+
+        $user_id = (int) get_current_user_id();
+        $devices = PAXdesign_APNS::get_user_devices($user_id);
+        $token = '';
+        foreach ($devices as $device) {
+            if (empty($device['revoked']) && !empty($device['token'])) {
+                $token = (string) $device['token'];
+                break;
+            }
+        }
+
+        if ($token === '') {
+            $admin_ids = PAXdesign_APNS::get_admin_user_ids();
+            if (!empty($admin_ids)) {
+                $user_id = (int) $admin_ids[0];
+                foreach (PAXdesign_APNS::get_user_devices($user_id) as $device) {
+                    if (empty($device['revoked']) && !empty($device['token'])) {
+                        $token = (string) $device['token'];
+                        break;
+                    }
+                }
+            }
+        }
+
+        if ($token === '') {
+            return self::respond(array(
+                'sent'    => false,
+                'message' => 'No active device tokens registered yet.',
+            ));
+        }
+
+        $result = PAXdesign_APNS::send_to_user(
+            $user_id,
+            'PAXDesign Test',
+            'Production APNs verification push from WordPress backend.',
+            array(
+                'type'       => 'message',
+                'event'      => 'new_customer_message',
+                'session_id' => 'apns_verify_' . time(),
+                'preview'    => 'Backend APNs test',
+            ),
+            false
+        );
+
+        if (is_wp_error($result)) {
+            return $result;
+        }
+
+        return self::respond(array(
+            'sent'    => true,
+            'user_id' => $user_id,
         ));
     }
 

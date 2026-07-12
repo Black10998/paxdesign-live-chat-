@@ -13,7 +13,7 @@ import urllib.request
 SITE = os.environ.get("PAX_SITE", "https://paxdesign.at").rstrip("/")
 ADMIN_USER = os.environ.get("PAX_ADMIN_USER", "").strip()
 ADMIN_PASS = os.environ.get("PAX_ADMIN_APP_PASSWORD", "").strip()
-EXPECTED_PLUGIN = os.environ.get("PAX_EXPECTED_PLUGIN", "3.108.6").strip()
+EXPECTED_PLUGIN = os.environ.get("PAX_EXPECTED_PLUGIN", "3.108.7").strip()
 
 
 def fail(message: str) -> None:
@@ -74,6 +74,19 @@ def main() -> None:
     if status not in {401, 403}:
         fail(f"Push register endpoint unexpected status {status}: {payload}")
     ok("Push register endpoint exists and requires authentication")
+
+    if ADMIN_USER and ADMIN_PASS:
+        status, apns_status = request("GET", f"{SITE}/wp-json/paxdesign/v1/live-admin/system/apns", auth=(ADMIN_USER, ADMIN_PASS))
+        if status == 200:
+            if apns_status.get("configured"):
+                ok(
+                    "APNs configured on production "
+                    f"(key_id={apns_status.get('key_id')}, devices={apns_status.get('device_total', 0)})"
+                )
+            else:
+                fail("APNs is not configured on production yet")
+        elif status != 404:
+            fail(f"APNs status check failed ({status}): {apns_status}")
 
     if not ADMIN_USER or not ADMIN_PASS:
         print("SKIP: Device list verification requires PAX_ADMIN_USER and PAX_ADMIN_APP_PASSWORD")
