@@ -348,6 +348,41 @@ def add_tester_to_group(client: ASCClient, group_id: str, tester_id: str) -> boo
     return False
 
 
+def ensure_beta_build_localization(client: ASCClient, build_id: str) -> None:
+    payload = client.get(
+        "/betaBuildLocalizations",
+        **{"filter[build]": build_id, "limit": "10"},
+    )
+    if payload.get("data"):
+        print("Beta build localization already exists")
+        return
+
+    status, response = client.request(
+        "POST",
+        "/betaBuildLocalizations",
+        body={
+            "data": {
+                "type": "betaBuildLocalizations",
+                "attributes": {
+                    "locale": "en-US",
+                    "whatsNew": "PAXDesign Live Chat build for TestFlight testing.",
+                },
+                "relationships": {
+                    "build": {"data": {"type": "builds", "id": build_id}},
+                },
+            }
+        },
+        allow_error=True,
+    )
+    if status in {200, 201}:
+        print("Created beta build localization (en-US)")
+        return
+    if status == 409:
+        print("Beta build localization already exists (409)")
+        return
+    warn(f"Could not create beta build localization ({status}): {json.dumps(response)}")
+
+
 def ensure_beta_localization(client: ASCClient, app_id: str) -> None:
     payload = client.get(f"/apps/{app_id}/betaAppLocalizations", **{"limit": "10"})
     if payload.get("data"):
@@ -494,6 +529,8 @@ def main() -> None:
         fail(f"Build {build_version} is not VALID (state={processing})")
 
     ensure_export_compliance(client, build)
+    ensure_beta_localization(client, app_id)
+    ensure_beta_build_localization(client, build_id)
     groups = list_groups(client, app_id)
     print_diagnostics(client, app, build, groups)
 
@@ -525,6 +562,7 @@ def main() -> None:
         )
 
     ensure_beta_localization(client, app_id)
+    ensure_beta_build_localization(client, build_id)
     external_group = find_or_create_group(
         client, app_id, internal=False, name=EXTERNAL_GROUP_NAME
     )
