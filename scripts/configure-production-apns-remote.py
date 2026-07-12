@@ -20,7 +20,7 @@ ADMIN_PASS = os.environ.get("PAX_ADMIN_APP_PASSWORD", "").strip()
 TEAM_ID = os.environ.get("PAX_APNS_TEAM_ID", "4ZSP8S5A7B").strip()
 BUNDLE_ID = os.environ.get("PAX_APNS_BUNDLE_ID", "at.paxdesign.livechat").strip()
 KEY_ID = os.environ.get("APP_STORE_CONNECT_API_KEY_ID", os.environ.get("PAX_APNS_KEY_ID", "")).strip()
-EXPECTED_PLUGIN = os.environ.get("PAX_EXPECTED_PLUGIN", "3.108.10").strip()
+EXPECTED_PLUGIN = os.environ.get("PAX_EXPECTED_PLUGIN", "3.108.11").strip()
 HOSTINGER_TOKEN = os.environ.get("HOSTINGER_MANAGE_BEARER_TOKEN", "").strip()
 HOSTINGER_API_TOKEN = os.environ.get("HOSTINGER_API_TOKEN", "").strip()
 HOSTINGER_ACCOUNT = os.environ.get("HOSTINGER_ACCOUNT_USERNAME", "").strip()
@@ -382,9 +382,79 @@ def configure_apns_bootstrap(key_p8: str) -> dict | None:
         fail(f"ASC bootstrap APNs response did not mark backend as configured: {payload}")
     ok(
         "APNs credentials saved via ASC bootstrap "
-        f"(team_id={payload.get('team_id')}, bundle_id={payload.get('bundle_id')}, key_id={payload.get('key_id')})"
+        f"(team_id={payload.get('team_id')}, bundle_id={payload.get('bundle_id')}, "
+        f"key_id={payload.get('key_id')}, devices={payload.get('device_total', 0)})"
     )
     return payload
+
+
+def verify_devices_bootstrap(key_p8: str) -> None:
+    jwt_token = make_bootstrap_jwt(key_p8)
+    status, payload = request(
+        "POST",
+        "/system/bootstrap/devices",
+        body=bootstrap_body(key_p8, include_apns=False),
+        auth_header=f"Bearer {jwt_token}",
+        allow_404=True,
+    )
+    if status == 404:
+        status, payload = request(
+            "POST",
+            "/system/bootstrap/apns",
+            body=bootstrap_body(key_p8),
+            auth_header=f"Bearer {jwt_token}",
+        )
+        if status == 200:
+            total = int(payload.get("device_total") or 0)
+            ok(f"APNs status reachable via bootstrap; active_devices={total}")
+            if total <= 0:
+                print(
+                    "WARN: No active device tokens on production yet. "
+                    "Open TestFlight Build 86, enable notifications, and log in."
+                )
+            return
+        fail(f"Bootstrap device status failed ({status}): {payload}")
+
+    if status != 200:
+        fail(f"Bootstrap device list failed ({status}): {payload}")
+
+    devices = payload.get("devices") or []
+    active_total = int(payload.get("active_total") or len(devices))
+    ok(f"Device API reachable via bootstrap; active_devices={active_total}")
+    if active_total <= 0:
+        print(
+            "WARN: No active device tokens on production yet. "
+            "Open TestFlight Build 86, enable notifications, and log in."
+        )
+        return
+
+    for device in devices[:3]:
+        prefix = device.get("token_prefix") or "unknown"
+        name = device.get("device_name") or device.get("device_model") or "device"
+        print(f"  device={name} token_prefix={prefix}... sandbox={device.get('sandbox')}")
+
+
+def send_test_push_bootstrap(key_p8: str) -> None:
+    jwt_token = make_bootstrap_jwt(key_p8)
+    status, payload = request(
+        "POST",
+        "/system/bootstrap/apns/test",
+        body=bootstrap_body(key_p8, include_apns=False),
+        auth_header=f"Bearer {jwt_token}",
+        allow_404=True,
+    )
+    if status == 404:
+        print("SKIP: Bootstrap APNs test endpoint not available yet")
+        return
+    if status != 200:
+        fail(f"Bootstrap APNs test request failed ({status}): {payload}")
+    if payload.get("sent"):
+        ok(f"Test push sent to user_id={payload.get('user_id')}")
+    else:
+        print(
+            "WARN: APNs configured but no active device token yet. "
+            f"{payload.get('message') or 'Open TestFlight Build 86, enable notifications, and log in.'}"
+        )
 
 
 def configure_apns_admin(key_p8: str) -> dict:
@@ -548,10 +618,8 @@ def main() -> None:
                 "Open TestFlight Build 86, enable notifications, and log in."
             )
     else:
-        print(
-            "SKIP: Device list and test push require PAX_ADMIN_USER/PAX_ADMIN_APP_PASSWORD "
-            "(APNs credentials were configured via ASC bootstrap)."
-        )
+        verify_devices_bootstrap(key_p8)
+        send_test_push_bootstrap(key_p8)
 
 
 if __name__ == "__main__":

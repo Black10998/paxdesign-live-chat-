@@ -54,8 +54,8 @@ class PAXdesign_Booking_Update_Checker {
      *
      * @return array<string, mixed>|WP_Error
      */
-    public static function upgrade_from_github() {
-        if (!current_user_can('update_plugins')) {
+    public static function upgrade_from_github($bootstrap = false) {
+        if (!$bootstrap && !current_user_can('update_plugins')) {
             return new WP_Error('forbidden', 'update_plugins capability required.', array('status' => 403));
         }
 
