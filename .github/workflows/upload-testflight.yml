@@ -29,12 +29,56 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Resolve latest successful App Store IPA run
+      - name: Read expected build number
+        id: version
+        run: |
+          BUILD=$(grep 'CURRENT_PROJECT_VERSION:' paxdesign-booking/ios-live-chat/project.yml | head -1 | sed 's/.*"\([0-9]*\)".*/\1/')
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "Expected CFBundleVersion: $BUILD"
+
+      - name: Resolve App Store IPA run
         id: latest_ipa
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          EXPECTED="${{ steps.version.outputs.build }}"
+          SHA="${{ github.sha }}"
+          DEADLINE=$(( $(date +%s) + 1800 ))
+          RUN_ID=""
+
+          while [[ $(date +%s) -lt $DEADLINE ]]; do
+            RUN_ID="$(gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow release-appstore.yml \
+              --commit "$SHA" \
+              --status success \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId // empty')"
+            if [[ -n "$RUN_ID" ]]; then
+              echo "Using App Store IPA from commit $SHA (run $RUN_ID)"
+              echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+
+            IN_PROGRESS="$(gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow release-appstore.yml \
+              --commit "$SHA" \
+              --status in_progress \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId // empty')"
+            if [[ -n "$IN_PROGRESS" ]]; then
+              echo "Waiting for App Store build run $IN_PROGRESS on commit $SHA..."
+              sleep 30
+              continue
+            fi
+
+            break
+          done
+
           RUN_ID="$(gh run list \
             --repo "${{ github.repository }}" \
             --workflow release-appstore.yml \
@@ -42,13 +86,13 @@ jobs:
             --status success \
             --limit 1 \
             --json databaseId \
-            --jq '.[0].databaseId')"
-          if [[ -z "$RUN_ID" || "$RUN_ID" == "null" ]]; then
+            --jq '.[0].databaseId // empty')"
+          if [[ -z "$RUN_ID" ]]; then
             echo "No successful App Store IPA workflow run found" >&2
             exit 1
           fi
+          echo "Using latest successful App Store IPA run $RUN_ID (commit may differ from $SHA)"
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-          echo "Using App Store IPA from workflow run $RUN_ID"
 
       - name: Download signed App Store IPA artifact
         uses: actions/download-artifact@v4
@@ -57,6 +101,24 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ steps.latest_ipa.outputs.run_id }}
           path: artifacts/ipa
+
+      - name: Validate IPA build number
+        run: |
+          set -euo pipefail
+          IPA="artifacts/ipa/PAXDesignLiveChat-AppStore.ipa"
+          [[ -f "$IPA" ]] || { echo "IPA missing: $IPA" >&2; exit 1; }
+          WORKDIR="$(mktemp -d)"
+          trap 'rm -rf "$WORKDIR"' EXIT
+          unzip -q "$IPA" -d "$WORKDIR"
+          APP_PATH="$(find "$WORKDIR/Payload" -maxdepth 1 -name '*.app' -type d | head -1)"
+          BUNDLE_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_PATH/Info.plist")"
+          EXPECTED="${{ steps.version.outputs.build }}"
+          echo "IPA CFBundleVersion=$BUNDLE_VERSION (expected $EXPECTED)"
+          if [[ "$BUNDLE_VERSION" != "$EXPECTED" ]]; then
+            echo "ERROR: IPA build number $BUNDLE_VERSION does not match project.yml ($EXPECTED)." >&2
+            echo "Wait for the App Store build workflow on this commit, then rerun upload." >&2
+            exit 1
+          fi
 
       - name: Validate App Store Connect private key
         run: python3 scripts/appstore-connect/prepare-asc-key.py
