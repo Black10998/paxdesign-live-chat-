@@ -1,0 +1,51 @@
+name: Configure WordPress APNs
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/configure-wordpress-apns'
+
+permissions:
+  contents: read
+
+jobs:
+  configure-wordpress-apns:
+    runs-on: ubuntu-latest
+    env:
+      PAX_SITE: https://paxdesign.at
+      PAX_APNS_TEAM_ID: "4ZSP8S5A7B"
+      PAX_APNS_BUNDLE_ID: at.paxdesign.livechat
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+      PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
+      PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read plugin version
+        id: version
+        run: |
+          VERSION=$(grep "define('PAXDESIGN_BOOKING_VERSION'" paxdesign-booking/paxdesign-booking.php | sed "s/.*'\([^']*\)'.*/\1/")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Plugin version: $VERSION"
+
+      - name: Validate App Store Connect key
+        run: python3 scripts/appstore-connect/prepare-asc-key.py
+
+      - name: Install dependencies
+        run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
+
+      - name: Configure APNs on production via REST
+        env:
+          PAX_EXPECTED_PLUGIN: ${{ steps.version.outputs.version }}
+        run: python3 scripts/configure-production-apns-remote.py
+
+      - name: Verify production REST endpoints
+        env:
+          PAX_EXPECTED_PLUGIN: ${{ steps.version.outputs.version }}
+        run: python3 scripts/verify-production-apns.py
