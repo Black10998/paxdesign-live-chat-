@@ -171,11 +171,20 @@ def hostinger_api_request(method: str, path: str, body: dict | None = None):
 
 
 def homepage_plugin_version() -> str:
-    req = urllib.request.Request(
-        f"{SITE}/",
-        headers={"User-Agent": "PAXdesign-APNs-Configure/1.0"},
-    )
-    html = urllib.request.urlopen(req, timeout=30).read().decode("utf-8", errors="replace")
+    for attempt in range(3):
+        req = urllib.request.Request(
+            f"{SITE}/",
+            headers={"User-Agent": "PAXdesign-APNs-Configure/1.0"},
+        )
+        try:
+            html = urllib.request.urlopen(req, timeout=30).read().decode("utf-8", errors="replace")
+            break
+        except urllib.error.HTTPError as exc:
+            if exc.code in {403, 429, 503} and attempt < 2:
+                print(f"WARN: Homepage returned {exc.code}; retrying version probe")
+                time.sleep(5)
+                continue
+            raise
     for part in html.split("chat-script.js?ver="):
         if part[:1].isdigit():
             return part.split('"', 1)[0].split("'", 1)[0]
@@ -191,6 +200,22 @@ def verify_admin_auth() -> bool:
         return False
     ok(f"Authenticated as {payload.get('email') or payload.get('username') or ADMIN_USER}")
     return True
+
+
+def bootstrap_auth_works(key_p8: str) -> bool:
+    jwt_token = make_bootstrap_jwt(key_p8)
+    status, payload = request(
+        "POST",
+        "/system/bootstrap/update",
+        body=bootstrap_body(key_p8, include_apns=False),
+        auth_header=f"Bearer {jwt_token}",
+        allow_404=True,
+    )
+    if status == 404:
+        return False
+    if status == 403 and payload.get("code") == "asc_auth_invalid":
+        return False
+    return status == 200
 
 
 def trigger_bootstrap_plugin_update(key_p8: str) -> bool:
@@ -311,6 +336,14 @@ def wait_for_plugin_version(key_p8: str) -> None:
     if current == EXPECTED_PLUGIN:
         ok(f"Production plugin v{current}")
         return
+
+    if current == "3.108.9" and EXPECTED_PLUGIN == "3.108.10" and bootstrap_endpoint_available():
+        if not bootstrap_auth_works(key_p8):
+            fail(
+                "Production is on v3.108.9 with a broken ASC bootstrap verifier (OpenSSL 3.x). "
+                "Update the plugin to v3.108.10 once from WordPress Admin → Dashboard → Updates, "
+                "then rerun this workflow."
+            )
 
     if not bootstrap_endpoint_available() and not has_plugin_update_mechanism():
         fail(
