@@ -24,7 +24,7 @@ struct PAXField: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label(title, systemImage: icon)
+            Label { Text(title) } icon: { PAXIcon(icon) }
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 

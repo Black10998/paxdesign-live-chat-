@@ -163,7 +163,7 @@ struct TasksModuleView: View {
                     }
                 }
                 if !task.assignedUserName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Label(task.assignedUserName, systemImage: "person.crop.circle")
+                    Label { Text(task.assignedUserName) } icon: { PAXIcon("person.crop.circle") }
                         .font(.caption2)
                         .foregroundStyle(PAXTheme.textSecondary)
                 }
@@ -173,7 +173,7 @@ struct TasksModuleView: View {
             Button {
                 Task { await store.toggleComplete(task, auth: auth) }
             } label: {
-                Label(task.isCompleted ? L10n.CommonReopen : L10n.CommonAccept, systemImage: "checkmark")
+                Label { Text(task.isCompleted ? L10n.CommonReopen : L10n.CommonAccept) } icon: { PAXIcon("checkmark") }
             }
             .tint(.green)
         }
@@ -182,7 +182,7 @@ struct TasksModuleView: View {
                 Button {
                     requestDeleteTask(task)
                 } label: {
-                    Label(L10n.CommonDelete, systemImage: "trash")
+                    Label { Text(L10n.CommonDelete) } icon: { PAXIcon("trash") }
                 }
                 .tint(.red)
             }
@@ -191,13 +191,13 @@ struct TasksModuleView: View {
             Button {
                 Task { await store.toggleComplete(task, auth: auth) }
             } label: {
-                Label(task.isCompleted ? L10n.CommonReopen : L10n.CommonAccept, systemImage: "checkmark")
+                Label { Text(task.isCompleted ? L10n.CommonReopen : L10n.CommonAccept) } icon: { PAXIcon("checkmark") }
             }
             if auth.canAssignTeamTasks {
                 Button {
                     requestDeleteTask(task)
                 } label: {
-                    Label(L10n.CommonDelete, systemImage: "trash")
+                    Label { Text(L10n.CommonDelete) } icon: { PAXIcon("trash") }
                 }
             }
         }

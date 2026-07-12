@@ -75,7 +75,7 @@ struct QuickLinksSettingsView: View {
                         Button {
                             showAddSheet = true
                         } label: {
-                            Label(L10n.SettingsQuickLinksAdd, systemImage: "plus.circle.fill")
+                            Label { Text(L10n.SettingsQuickLinksAdd) } icon: { PAXIcon("plus.circle.fill") }
                         }
                     }
 

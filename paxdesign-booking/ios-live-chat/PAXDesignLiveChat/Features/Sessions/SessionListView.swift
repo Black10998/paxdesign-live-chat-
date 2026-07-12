@@ -222,21 +222,21 @@ struct SessionListView: View {
                             Button {
                                 onOpenSession(session.sessionId)
                             } label: {
-                                Label(L10n.CommonOpen, systemImage: "arrow.up.right.circle")
+                                Label { Text(L10n.CommonOpen) } icon: { PAXIcon("arrow.up.right.circle") }
                             }
                             if isUnread {
                                 Button {
                                     settings.markSessionRead(session.sessionId)
                                     PAXHaptics.light()
                                 } label: {
-                                    Label(L10n.CommonMarkRead, systemImage: "envelope.open")
+                                    Label { Text(L10n.CommonMarkRead) } icon: { PAXIcon("envelope.open") }
                                 }
                             } else {
                                 Button {
                                     settings.markSessionUnread(session.sessionId)
                                     PAXHaptics.light()
                                 } label: {
-                                    Label(L10n.CommonMarkUnread, systemImage: "envelope.badge")
+                                    Label { Text(L10n.CommonMarkUnread) } icon: { PAXIcon("envelope.badge") }
                                 }
                             }
                             if canReplyChats {
@@ -244,12 +244,12 @@ struct SessionListView: View {
                                     PAXHaptics.light()
                                     Task { await coordinator.archiveSession(auth: auth, session: session) }
                                 } label: {
-                                    Label(L10n.CommonArchive, systemImage: "archivebox")
+                                    Label { Text(L10n.CommonArchive) } icon: { PAXIcon("archivebox") }
                                 }
                                 Button {
                                     requestDeleteSession(session)
                                 } label: {
-                                    Label(L10n.CommonDelete, systemImage: "trash")
+                                    Label { Text(L10n.CommonDelete) } icon: { PAXIcon("trash") }
                                 }
                             }
                         }
@@ -259,7 +259,7 @@ struct SessionListView: View {
                                     settings.markSessionRead(session.sessionId)
                                     PAXHaptics.success()
                                 } label: {
-                                    Label(L10n.CommonMarkRead, systemImage: "envelope.open")
+                                    Label { Text(L10n.CommonMarkRead) } icon: { PAXIcon("envelope.open") }
                                 }
                                 .tint(.blue)
                             } else {
@@ -267,7 +267,7 @@ struct SessionListView: View {
                                     settings.markSessionUnread(session.sessionId)
                                     PAXHaptics.light()
                                 } label: {
-                                    Label(L10n.CommonMarkUnread, systemImage: "envelope.badge")
+                                    Label { Text(L10n.CommonMarkUnread) } icon: { PAXIcon("envelope.badge") }
                                 }
                                 .tint(.gray)
                             }
@@ -277,7 +277,7 @@ struct SessionListView: View {
                                 Button {
                                     requestDeleteSession(session)
                                 } label: {
-                                    Label(L10n.CommonDelete, systemImage: "trash")
+                                    Label { Text(L10n.CommonDelete) } icon: { PAXIcon("trash") }
                                 }
                                 .tint(.red)
 
@@ -285,7 +285,7 @@ struct SessionListView: View {
                                     PAXHaptics.light()
                                     Task { await coordinator.archiveSession(auth: auth, session: session) }
                                 } label: {
-                                    Label(L10n.CommonArchive, systemImage: "archivebox")
+                                    Label { Text(L10n.CommonArchive) } icon: { PAXIcon("archivebox") }
                                 }
                                 .tint(.orange)
                             }

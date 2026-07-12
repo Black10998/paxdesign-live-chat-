@@ -7,7 +7,7 @@ struct LegalWebLinkRow: View {
     var body: some View {
         Link(destination: url) {
             HStack {
-                Label(title, systemImage: "safari")
+                Label { Text(title) } icon: { PAXIcon("safari") }
                 Spacer()
                 PAXIcon( "arrow.up.right")
                     .font(.caption.weight(.semibold))

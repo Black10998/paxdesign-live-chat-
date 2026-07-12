@@ -53,7 +53,7 @@ struct FilesModuleView: View {
                                     Task { await store.delete(document, auth: auth) }
                                 }
                             } label: {
-                                Label(L10n.CommonDelete, systemImage: "trash")
+                                Label { Text(L10n.CommonDelete) } icon: { PAXIcon("trash") }
                             }
                             .tint(.red)
                         }

@@ -14,12 +14,12 @@ struct AboutSettingsView: View {
                 NavigationLink {
                     HelpView()
                 } label: {
-                    Label(L10n.AccountHelp, systemImage: "questionmark.circle")
+                    Label { Text(L10n.AccountHelp) } icon: { PAXIcon("questionmark.circle") }
                 }
                 NavigationLink {
                     AboutView()
                 } label: {
-                    Label(L10n.AccountAbout, systemImage: "info.circle")
+                    Label { Text(L10n.AccountAbout) } icon: { PAXIcon("info.circle") }
                 }
             }
         }

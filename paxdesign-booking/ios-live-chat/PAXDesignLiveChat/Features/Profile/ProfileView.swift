@@ -61,7 +61,7 @@ struct ProfileView: View {
             Section(L10n.ProfilePermissions) {
                 if profile?.isSuperAdmin == true {
                     HStack {
-                        Label(L10n.AccountSuperAdmin, systemImage: "star.fill")
+                        Label { Text(L10n.AccountSuperAdmin) } icon: { PAXIcon("star.fill") }
                             .foregroundStyle(PAXTheme.accent)
                         Spacer()
                         Text(L10n.CommonActive)
@@ -79,12 +79,12 @@ struct ProfileView: View {
                 NavigationLink {
                     SettingsRootView()
                 } label: {
-                    Label(L10n.AccountSettings, systemImage: "gearshape")
+                    Label { Text(L10n.AccountSettings) } icon: { PAXIcon("gearshape") }
                 }
                 NavigationLink {
                     AppLockSettingsView()
                 } label: {
-                    Label(L10n.SettingsAppLock, systemImage: "lock.shield")
+                    Label { Text(L10n.SettingsAppLock) } icon: { PAXIcon("lock.shield") }
                 }
             }
 

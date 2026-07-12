@@ -180,7 +180,7 @@ struct TeamMessagesHubView: View {
                     Button {
                         showCompose = true
                     } label: {
-                        Label(L10n.TeamNewMessage, systemImage: "square.and.pencil")
+                        Label { Text(L10n.TeamNewMessage) } icon: { PAXIcon("square.and.pencil") }
                             .font(.subheadline.weight(.semibold))
                     }
                 }
@@ -423,18 +423,18 @@ struct TeamMessagesHubView: View {
                 settings.markSessionRead(session.sessionId, seq: session.seq)
                 PAXHaptics.light()
             } label: {
-                Label(L10n.CommonMarkRead, systemImage: "envelope.open")
+                Label { Text(L10n.CommonMarkRead) } icon: { PAXIcon("envelope.open") }
             }
             Button {
                 settings.markSessionUnread(session.sessionId)
                 PAXHaptics.light()
             } label: {
-                Label(L10n.CommonMarkUnread, systemImage: "envelope.badge")
+                Label { Text(L10n.CommonMarkUnread) } icon: { PAXIcon("envelope.badge") }
             }
             Button(role: .destructive) {
                 Task { await deleteConversation(session.sessionId, mode: "hide") }
             } label: {
-                Label(L10n.TeamContextRemoveFromList, systemImage: "eye.slash")
+                Label { Text(L10n.TeamContextRemoveFromList) } icon: { PAXIcon("eye.slash") }
             }
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -443,7 +443,7 @@ struct TeamMessagesHubView: View {
                     settings.markSessionRead(session.sessionId, seq: session.seq)
                     PAXHaptics.success()
                 } label: {
-                    Label(L10n.CommonMarkRead, systemImage: "envelope.open")
+                    Label { Text(L10n.CommonMarkRead) } icon: { PAXIcon("envelope.open") }
                 }
                 .tint(.blue)
             } else {
@@ -451,7 +451,7 @@ struct TeamMessagesHubView: View {
                     settings.markSessionUnread(session.sessionId)
                     PAXHaptics.light()
                 } label: {
-                    Label(L10n.CommonMarkUnread, systemImage: "envelope.badge")
+                    Label { Text(L10n.CommonMarkUnread) } icon: { PAXIcon("envelope.badge") }
                 }
                 .tint(.gray)
             }
@@ -532,7 +532,7 @@ struct TeamMessagesHubView: View {
                 Button {
                     showCompose = true
                 } label: {
-                    Label(L10n.TeamNewMessage, systemImage: "square.and.pencil")
+                    Label { Text(L10n.TeamNewMessage) } icon: { PAXIcon("square.and.pencil") }
                         .font(.subheadline.weight(.semibold))
                         .padding(.horizontal, 18)
                         .padding(.vertical, 10)

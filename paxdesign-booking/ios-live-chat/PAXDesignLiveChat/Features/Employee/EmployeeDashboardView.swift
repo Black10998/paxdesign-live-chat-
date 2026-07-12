@@ -47,20 +47,20 @@ struct EmployeeDashboardView: View {
                         PermissionOverviewRow(title: item.title, enabled: item.enabled)
                     }
                 } else {
-                    Label(L10n.AccountSuperAdmin, systemImage: "star.fill")
+                    Label { Text(L10n.AccountSuperAdmin) } icon: { PAXIcon("star.fill") }
                         .foregroundStyle(PAXTheme.accent)
                 }
             }
 
             Section(L10n.EmployeeShortcuts) {
                 NavigationLink { TasksModuleView() } label: {
-                    Label(L10n.ModuleTasks, systemImage: "checklist")
+                    Label { Text(L10n.ModuleTasks) } icon: { PAXIcon("checklist") }
                 }
                 NavigationLink { CalendarModuleView() } label: {
-                    Label(L10n.ModuleCalendar, systemImage: "calendar")
+                    Label { Text(L10n.ModuleCalendar) } icon: { PAXIcon("calendar") }
                 }
                 NavigationLink { NotificationsCenterView() } label: {
-                    Label(L10n.PlatformNotifications, systemImage: "bell.badge")
+                    Label { Text(L10n.PlatformNotifications) } icon: { PAXIcon("bell.badge") }
                 }
             }
             }

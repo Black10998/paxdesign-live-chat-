@@ -186,7 +186,7 @@ struct SettingsRootView: View {
                     NavigationLink {
                         StaffManagementView()
                     } label: {
-                        Label(L10n.AccountTeam, systemImage: "person.3")
+                        Label { Text(L10n.AccountTeam) } icon: { PAXIcon("person.3") }
                     }
                 }
             }

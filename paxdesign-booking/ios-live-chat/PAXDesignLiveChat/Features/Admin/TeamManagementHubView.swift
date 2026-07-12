@@ -237,7 +237,7 @@ struct TeamManagementHubView: View {
                                     Task { await removeMember(member) }
                                 }
                             } label: {
-                                Label(L10n.CommonRemove, systemImage: "trash")
+                                Label { Text(L10n.CommonRemove) } icon: { PAXIcon("trash") }
                             }
                         }
                     }
@@ -289,7 +289,7 @@ struct TeamManagementHubView: View {
             NavigationLink {
                 TeamMessagesHubView()
             } label: {
-                Label(L10n.AdminTeamMessagesInbox, systemImage: "bubble.left.and.bubble.right")
+                Label { Text(L10n.AdminTeamMessagesInbox) } icon: { PAXIcon("bubble.left.and.bubble.right") }
             }
         }
     }

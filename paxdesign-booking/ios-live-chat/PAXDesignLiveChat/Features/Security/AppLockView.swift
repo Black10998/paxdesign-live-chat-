@@ -34,10 +34,11 @@ struct AppLockView: View {
                             if success { PAXHaptics.success() }
                         }
                     } label: {
-                        Label(
-                            appLock.canUseBiometrics ? appLock.biometricTypeLabel : L10n.ApplockDevicePasscode,
-                            systemImage: biometricIcon
-                        )
+                        Label {
+                            Text(appLock.canUseBiometrics ? appLock.biometricTypeLabel : L10n.ApplockDevicePasscode)
+                        } icon: {
+                            PAXIcon(biometricIcon)
+                        }
                         .font(.headline)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)

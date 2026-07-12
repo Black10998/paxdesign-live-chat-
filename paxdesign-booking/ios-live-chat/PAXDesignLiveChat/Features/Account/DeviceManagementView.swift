@@ -146,7 +146,7 @@ struct DeviceManagementView: View {
                         Button {
                             confirmApprove = device
                         } label: {
-                            Label(L10n.DeviceActionApprove, systemImage: "checkmark.shield")
+                            Label { Text(L10n.DeviceActionApprove) } icon: { PAXIcon("checkmark.shield") }
                                 .font(.caption.weight(.semibold))
                         }
                         .buttonStyle(.bordered)
@@ -160,7 +160,7 @@ struct DeviceManagementView: View {
                                 Task { await revoke(device) }
                             }
                         } label: {
-                            Label(L10n.DeviceActionRevoke, systemImage: "xmark.shield")
+                            Label { Text(L10n.DeviceActionRevoke) } icon: { PAXIcon("xmark.shield") }
                                 .font(.caption.weight(.semibold))
                         }
                         .buttonStyle(.bordered)

@@ -79,7 +79,7 @@ struct StaffManagementView: View {
                                     Task { await removeStaff(member) }
                                 }
                             } label: {
-                                Label(L10n.CommonRemove, systemImage: "trash")
+                                Label { Text(L10n.CommonRemove) } icon: { PAXIcon("trash") }
                             }
                             .tint(.red)
                         }

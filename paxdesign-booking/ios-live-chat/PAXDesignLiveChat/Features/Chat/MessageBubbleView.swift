@@ -34,25 +34,25 @@ struct MessageBubbleView: View {
                             Button {
                                 onCopy()
                             } label: {
-                                Label(L10n.CommonCopy, systemImage: "doc.on.doc")
+                                Label { Text(L10n.CommonCopy) } icon: { PAXIcon("doc.on.doc") }
                             }
 
                             ShareLink(item: message.content) {
-                                Label(L10n.CommonShare, systemImage: "square.and.arrow.up")
+                                Label { Text(L10n.CommonShare) } icon: { PAXIcon("square.and.arrow.up") }
                             }
                         }
                         if canReply {
                             Button {
                                 onReply()
                             } label: {
-                                Label(L10n.CommonReply, systemImage: "arrowshape.turn.up.left")
+                                Label { Text(L10n.CommonReply) } icon: { PAXIcon("arrowshape.turn.up.left") }
                             }
                         }
                         if canDelete {
                             Button(role: .destructive) {
                                 onDelete()
                             } label: {
-                                Label(L10n.ChatDeleteMessage, systemImage: "trash")
+                                Label { Text(L10n.ChatDeleteMessage) } icon: { PAXIcon("trash") }
                             }
                         }
                     }

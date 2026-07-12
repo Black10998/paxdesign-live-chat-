@@ -129,15 +129,15 @@ struct SupportSettingsView: View {
                 NavigationLink {
                     HelpView()
                 } label: {
-                    Label(L10n.AccountHelp, systemImage: "questionmark.circle")
+                    Label { Text(L10n.AccountHelp) } icon: { PAXIcon("questionmark.circle") }
                 }
 
                 Link(destination: PAXLegalLinks.support) {
-                    Label(L10n.SettingsContactSupport, systemImage: "envelope")
+                    Label { Text(L10n.SettingsContactSupport) } icon: { PAXIcon("envelope") }
                 }
 
                 Link(destination: URL(string: "https://paxdesign.at")!) {
-                    Label(L10n.AccountOfficialWebsite, systemImage: "globe")
+                    Label { Text(L10n.AccountOfficialWebsite) } icon: { PAXIcon("globe") }
                 }
             }
 
@@ -145,7 +145,7 @@ struct SupportSettingsView: View {
                 NavigationLink {
                     AboutView()
                 } label: {
-                    Label(L10n.AccountAbout, systemImage: "info.circle")
+                    Label { Text(L10n.AccountAbout) } icon: { PAXIcon("info.circle") }
                 }
 
                 LabeledContent(L10n.CommonVersion, value: PAXAppInfo.fullVersion)

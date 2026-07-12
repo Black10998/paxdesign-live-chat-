@@ -67,39 +67,39 @@ struct AdministrationHubView: View {
                     NavigationLink {
                         TeamManagementHubView()
                     } label: {
-                        Label(L10n.AdminTeamManagement, systemImage: "person.3.sequence.fill")
+                        Label { Text(L10n.AdminTeamManagement) } icon: { PAXIcon("person.3.sequence.fill") }
                     }
                 } else {
                     if canManageTeamPermissions {
                         NavigationLink {
                             StaffManagementView()
                         } label: {
-                            Label(L10n.AdminEmployeeManagement, systemImage: "person.2.badge.gearshape")
+                            Label { Text(L10n.AdminEmployeeManagement) } icon: { PAXIcon("person.2.badge.gearshape") }
                         }
                     }
                     NavigationLink {
                         TeamMessagesHubView()
                     } label: {
-                        Label(L10n.AdminTeamManagement, systemImage: "person.3.sequence")
+                        Label { Text(L10n.AdminTeamManagement) } icon: { PAXIcon("person.3.sequence") }
                     }
                 }
                 if canManageCustomers {
                     NavigationLink {
                         CustomerProfilesView()
                     } label: {
-                        Label(L10n.AdminCustomerProfiles, systemImage: "person.crop.circle.badge.checkmark")
+                        Label { Text(L10n.AdminCustomerProfiles) } icon: { PAXIcon("person.crop.circle.badge.checkmark") }
                     }
                 }
                 NavigationLink {
                     DeviceManagementView()
                 } label: {
-                    Label(L10n.PlatformDevices, systemImage: "iphone.and.arrow.forward")
+                    Label { Text(L10n.PlatformDevices) } icon: { PAXIcon("iphone.and.arrow.forward") }
                 }
             }
 
             Section(L10n.AdminPermissionsOverview) {
                 if auth.profile?.isSuperAdmin == true {
-                    Label(L10n.AccountSuperAdmin, systemImage: "star.fill")
+                    Label { Text(L10n.AccountSuperAdmin) } icon: { PAXIcon("star.fill") }
                         .foregroundStyle(PAXTheme.accent)
                 } else if let perms = auth.profile?.permissions {
                     ForEach(PermissionLabels.items(for: perms)) { item in
@@ -112,19 +112,19 @@ struct AdministrationHubView: View {
                 NavigationLink {
                     SettingsRootView()
                 } label: {
-                    Label(L10n.AccountSettings, systemImage: "gearshape")
+                    Label { Text(L10n.AccountSettings) } icon: { PAXIcon("gearshape") }
                 }
                 if auth.canAccessSecurity {
                     NavigationLink {
                         SecurityView()
                     } label: {
-                        Label(L10n.LegalSecurity, systemImage: "lock.shield")
+                        Label { Text(L10n.LegalSecurity) } icon: { PAXIcon("lock.shield") }
                     }
                 }
                 NavigationLink {
                     LiveChatSettingsView()
                 } label: {
-                    Label(L10n.SettingsSectionLiveChat, systemImage: "bubble.left.and.bubble.right")
+                    Label { Text(L10n.SettingsSectionLiveChat) } icon: { PAXIcon("bubble.left.and.bubble.right") }
                 }
             }
         }

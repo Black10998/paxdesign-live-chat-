@@ -85,7 +85,6 @@ struct PAXHeroCard: View {
         HStack(alignment: .center, spacing: 14) {
             PAXIcon( systemImage)
                 .font(.title2.weight(.semibold))
-                .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(tint)
 
             VStack(alignment: .leading, spacing: 4) {

@@ -78,31 +78,31 @@ struct TeamChatView: View {
                         Button {
                             Task { await thread.respondToRequest(accept: true, auth: auth, teamCoordinator: teamCoordinator) }
                         } label: {
-                            Label(L10n.TeamContextAcceptRequest, systemImage: "checkmark.circle")
+                            Label { Text(L10n.TeamContextAcceptRequest) } icon: { PAXIcon("checkmark.circle") }
                         }
                         Button(role: .destructive) {
                             Task { await thread.respondToRequest(accept: false, auth: auth, teamCoordinator: teamCoordinator) }
                         } label: {
-                            Label(L10n.TeamContextDeclineRequest, systemImage: "xmark.circle")
+                            Label { Text(L10n.TeamContextDeclineRequest) } icon: { PAXIcon("xmark.circle") }
                         }
                     }
                     Button {
                         Task { await teamCoordinator.pinConversation(sessionId: thread.sessionId, pinned: true, auth: auth) }
                     } label: {
-                        Label(L10n.TeamContextPinConversation, systemImage: "pin")
+                        Label { Text(L10n.TeamContextPinConversation) } icon: { PAXIcon("pin") }
                     }
                     Button(role: .destructive) {
                         deleteMode = "hide"
                         showDeleteConfirm = true
                     } label: {
-                        Label(L10n.TeamContextRemoveFromList, systemImage: "eye.slash")
+                        Label { Text(L10n.TeamContextRemoveFromList) } icon: { PAXIcon("eye.slash") }
                     }
                     if canPurgeForAll {
                         Button(role: .destructive) {
                             deleteMode = "purge_all"
                             showDeleteConfirm = true
                         } label: {
-                            Label(L10n.TeamContextDeleteForAll, systemImage: "trash")
+                            Label { Text(L10n.TeamContextDeleteForAll) } icon: { PAXIcon("trash") }
                         }
                     }
                 } label: {

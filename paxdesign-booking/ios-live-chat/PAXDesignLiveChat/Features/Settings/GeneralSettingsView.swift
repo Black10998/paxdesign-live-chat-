@@ -35,11 +35,11 @@ struct GeneralSettingsView: View {
                 Button {
                     showPhotoLibrary = true
                 } label: {
-                    Label(L10n.SettingsChangePhoto, systemImage: "photo.circle")
+                    Label { Text(L10n.SettingsChangePhoto) } icon: { PAXIcon("photo.circle") }
                 }
                 #else
                 PhotosPicker(selection: $photoItem, matching: .images) {
-                    Label(L10n.SettingsChangePhoto, systemImage: "photo.circle")
+                    Label { Text(L10n.SettingsChangePhoto) } icon: { PAXIcon("photo.circle") }
                 }
                 .onChange(of: photoItem) { item in
                     Task {

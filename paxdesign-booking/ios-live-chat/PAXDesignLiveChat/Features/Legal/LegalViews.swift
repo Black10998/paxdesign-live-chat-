@@ -63,7 +63,7 @@ struct SecurityView: View {
                 NavigationLink {
                     AppLockSettingsView()
                 } label: {
-                    Label(L10n.LegalAppLockLabel, systemImage: "lock.shield.fill")
+                    Label { Text(L10n.LegalAppLockLabel) } icon: { PAXIcon("lock.shield.fill") }
                 }
             } footer: {
                 Text(L10n.LegalAppLockFooter)

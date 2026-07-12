@@ -43,7 +43,7 @@ struct PermissionOverviewRow: View {
 
     var body: some View {
         HStack {
-            Label(title, systemImage: enabled ? "checkmark.circle.fill" : "minus.circle")
+            Label { Text(title) } icon: { PAXIcon(enabled ? "checkmark.circle.fill" : "minus.circle") }
                 .foregroundStyle(enabled ? .green : .secondary)
             Spacer()
             Text(enabled ? L10n.CommonActive : L10n.SettingsDisabled)

@@ -38,7 +38,7 @@ struct CalendarModuleView: View {
                                         Task { await store.delete(event, auth: auth) }
                                     }
                                 } label: {
-                                    Label(L10n.CommonDelete, systemImage: "trash")
+                                    Label { Text(L10n.CommonDelete) } icon: { PAXIcon("trash") }
                                 }
                                 .tint(.red)
                             }

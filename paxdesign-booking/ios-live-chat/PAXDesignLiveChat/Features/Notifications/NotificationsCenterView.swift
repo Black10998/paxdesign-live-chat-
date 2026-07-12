@@ -81,18 +81,18 @@ struct NotificationsCenterView: View {
                 NavigationLink {
                     NotificationSettingsView()
                 } label: {
-                    Label(L10n.SettingsSectionNotifications, systemImage: "bell.badge")
+                    Label { Text(L10n.SettingsSectionNotifications) } icon: { PAXIcon("bell.badge") }
                 }
                 NavigationLink {
                     SoundSettingsView()
                 } label: {
-                    Label(L10n.SettingsSound, systemImage: "speaker.wave.2")
+                    Label { Text(L10n.SettingsSound) } icon: { PAXIcon("speaker.wave.2") }
                 }
                 if permissions.notificationStatus == .denied {
                     Button {
                         permissions.openSystemSettings()
                     } label: {
-                        Label(L10n.SettingsOpenIosSettings, systemImage: "arrow.up.forward.app")
+                        Label { Text(L10n.SettingsOpenIosSettings) } icon: { PAXIcon("arrow.up.forward.app") }
                     }
                 }
             }
@@ -102,7 +102,7 @@ struct NotificationsCenterView: View {
                     Button {
                         markAllRead()
                     } label: {
-                        Label(L10n.NotificationsMarkAllRead, systemImage: "envelope.open.fill")
+                        Label { Text(L10n.NotificationsMarkAllRead) } icon: { PAXIcon("envelope.open.fill") }
                     }
                 }
             }
@@ -173,7 +173,7 @@ struct NotificationsCenterView: View {
                     coordinator.activeSessionId = session.sessionId
                     PAXHaptics.light()
                 } label: {
-                    Label(L10n.CommonMarkRead, systemImage: "envelope.open")
+                    Label { Text(L10n.CommonMarkRead) } icon: { PAXIcon("envelope.open") }
                         .font(.caption.weight(.semibold))
                 }
                 .buttonStyle(.bordered)
@@ -183,7 +183,7 @@ struct NotificationsCenterView: View {
                         coordinator.presentIncomingFullscreen()
                         PAXHaptics.medium()
                     } label: {
-                        Label(L10n.CommonOpen, systemImage: "bell.and.waves.left.and.right")
+                        Label { Text(L10n.CommonOpen) } icon: { PAXIcon("bell.and.waves.left.and.right") }
                             .font(.caption.weight(.semibold))
                     }
                     .buttonStyle(.borderedProminent)
@@ -196,12 +196,12 @@ struct NotificationsCenterView: View {
             Button {
                 settings.readSessionIds.insert(session.sessionId)
             } label: {
-                Label(L10n.CommonMarkRead, systemImage: "envelope.open")
+                Label { Text(L10n.CommonMarkRead) } icon: { PAXIcon("envelope.open") }
             }
             Button {
                 coordinator.activeSessionId = session.sessionId
             } label: {
-                Label(L10n.CommonOpen, systemImage: "arrow.up.right.circle")
+                Label { Text(L10n.CommonOpen) } icon: { PAXIcon("arrow.up.right.circle") }
             }
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -209,7 +209,7 @@ struct NotificationsCenterView: View {
                 settings.readSessionIds.insert(session.sessionId)
                 PAXHaptics.success()
             } label: {
-                Label(L10n.CommonMarkRead, systemImage: "envelope.open")
+                Label { Text(L10n.CommonMarkRead) } icon: { PAXIcon("envelope.open") }
             }
             .tint(.blue)
         }

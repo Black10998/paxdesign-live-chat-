@@ -283,7 +283,7 @@ struct AdaptiveShellView: View {
                     Button {
                         iPadSection = section
                     } label: {
-                        Label(section.title, systemImage: section.systemImage)
+                        Label { Text(section.title) } icon: { PAXIcon(section.systemImage) }
                     }
                     .foregroundStyle(iPadSection == section ? PAXTheme.accent : PAXTheme.textPrimary)
                 }
@@ -556,7 +556,6 @@ private struct PAXAnimatedTabIcon: View {
         ZStack {
             PAXIcon( symbol)
                 .font(.system(size: 18, weight: .semibold))
-                .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(PAXTheme.textSecondary)
                 .opacity(isSelected ? 0 : 1)
                 .offset(x: isSelected ? -10 : 0)
@@ -564,7 +563,6 @@ private struct PAXAnimatedTabIcon: View {
 
             PAXIcon( selectedSymbol)
                 .font(.system(size: 18, weight: .semibold))
-                .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(PAXTheme.accent)
                 .opacity(isSelected ? 1 : 0)
                 .offset(x: isSelected ? 0 : 10)

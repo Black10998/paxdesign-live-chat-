@@ -11,37 +11,37 @@ struct ModuleSettingsHubView: View {
 
             Section(L10n.ModuleCategoryWorkspace) {
                 NavigationLink { ModuleCalendarSettingsView() } label: {
-                    Label(L10n.ModuleCalendar, systemImage: "calendar")
+                    Label { Text(L10n.ModuleCalendar) } icon: { PAXIcon("calendar") }
                 }
                 NavigationLink { ModuleTasksSettingsView() } label: {
-                    Label(L10n.ModuleTasks, systemImage: "checklist")
+                    Label { Text(L10n.ModuleTasks) } icon: { PAXIcon("checklist") }
                 }
                 NavigationLink { ModuleFilesSettingsView() } label: {
-                    Label(L10n.ModuleFiles, systemImage: "folder.fill")
+                    Label { Text(L10n.ModuleFiles) } icon: { PAXIcon("folder.fill") }
                 }
             }
 
             Section(L10n.ModuleCategoryInsights) {
                 NavigationLink { ModuleReportsSettingsView() } label: {
-                    Label(L10n.ModuleReports, systemImage: "chart.xyaxis.line")
+                    Label { Text(L10n.ModuleReports) } icon: { PAXIcon("chart.xyaxis.line") }
                 }
                 NavigationLink { ModuleActivitySettingsView() } label: {
-                    Label(L10n.ModuleActivityLog, systemImage: "clock.arrow.circlepath")
+                    Label { Text(L10n.ModuleActivityLog) } icon: { PAXIcon("clock.arrow.circlepath") }
                 }
                 NavigationLink { ModuleDashboardSettingsView() } label: {
-                    Label(L10n.ModuleDashboard, systemImage: "house.fill")
+                    Label { Text(L10n.ModuleDashboard) } icon: { PAXIcon("house.fill") }
                 }
             }
 
             Section(L10n.ModuleCategoryCommunication) {
                 NavigationLink { ModuleNotificationsSettingsView() } label: {
-                    Label(L10n.PlatformNotifications, systemImage: "bell.badge")
+                    Label { Text(L10n.PlatformNotifications) } icon: { PAXIcon("bell.badge") }
                 }
             }
 
             Section(L10n.SettingsSectionAppearance) {
                 NavigationLink { AccentColorSettingsView() } label: {
-                    Label(L10n.AccentColorTitle, systemImage: "paintpalette.fill")
+                    Label { Text(L10n.AccentColorTitle) } icon: { PAXIcon("paintpalette.fill") }
                 }
             }
         }

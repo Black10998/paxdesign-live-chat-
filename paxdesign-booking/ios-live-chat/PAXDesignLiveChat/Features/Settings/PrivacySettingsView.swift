@@ -11,32 +11,32 @@ struct PrivacySettingsView: View {
                 NavigationLink {
                     PrivacyPolicyView()
                 } label: {
-                    Label(L10n.AccountPrivacy, systemImage: "hand.raised")
+                    Label { Text(L10n.AccountPrivacy) } icon: { PAXIcon("hand.raised") }
                 }
                 NavigationLink {
                     TermsOfServiceView()
                 } label: {
-                    Label(L10n.AccountTerms, systemImage: "doc.text")
+                    Label { Text(L10n.AccountTerms) } icon: { PAXIcon("doc.text") }
                 }
                 NavigationLink {
                     DataHandlingView()
                 } label: {
-                    Label(L10n.AccountDataHandling, systemImage: "externaldrive")
+                    Label { Text(L10n.AccountDataHandling) } icon: { PAXIcon("externaldrive") }
                 }
             }
 
             Section(L10n.AccountLegal) {
                 Link(destination: PAXLegalLinks.privacyPolicy) {
-                    Label(L10n.AccountPrivacyWeb, systemImage: "safari")
+                    Label { Text(L10n.AccountPrivacyWeb) } icon: { PAXIcon("safari") }
                 }
                 Link(destination: PAXLegalLinks.impressum) {
-                    Label(L10n.AccountImprintWeb, systemImage: "safari")
+                    Label { Text(L10n.AccountImprintWeb) } icon: { PAXIcon("safari") }
                 }
                 if canAccessSecurity {
                     NavigationLink {
                         SecurityView()
                     } label: {
-                        Label(L10n.LegalSecurity, systemImage: "lock.shield")
+                        Label { Text(L10n.LegalSecurity) } icon: { PAXIcon("lock.shield") }
                     }
                 }
             }

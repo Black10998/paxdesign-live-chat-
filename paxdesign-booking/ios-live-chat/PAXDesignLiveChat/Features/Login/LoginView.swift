@@ -15,7 +15,6 @@ struct LoginView: View {
                     VStack(spacing: 12) {
                         PAXIcon( "bubble.left.and.bubble.right.fill")
                             .font(.system(size: 44))
-                            .symbolRenderingMode(.hierarchical)
                             .foregroundStyle(.tint)
                         Text(L10n.LoginTitle)
                             .font(.title2.weight(.semibold))

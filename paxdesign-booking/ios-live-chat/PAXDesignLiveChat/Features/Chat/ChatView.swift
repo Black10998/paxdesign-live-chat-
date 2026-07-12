@@ -401,24 +401,24 @@ struct ChatView: View {
                     Button {
                         showQuickLinksSheet = true
                     } label: {
-                        Label(L10n.ChatQuickLinksTitle, systemImage: "link.badge.plus")
+                        Label { Text(L10n.ChatQuickLinksTitle) } icon: { PAXIcon("link.badge.plus") }
                     }
                     if canSendImages {
                         #if SIDELOAD
                         Button {
                             showPhotoLibrary = true
                         } label: {
-                            Label(L10n.ChatPhotoLibrary, systemImage: "photo.on.rectangle")
+                            Label { Text(L10n.ChatPhotoLibrary) } icon: { PAXIcon("photo.on.rectangle") }
                         }
                         #else
                         PhotosPicker(selection: $photoItem, matching: .images) {
-                            Label(L10n.ChatPhotoLibrary, systemImage: "photo.on.rectangle")
+                            Label { Text(L10n.ChatPhotoLibrary) } icon: { PAXIcon("photo.on.rectangle") }
                         }
                         #endif
                         Button {
                             showCamera = true
                         } label: {
-                            Label(L10n.ChatCamera, systemImage: "camera")
+                            Label { Text(L10n.ChatCamera) } icon: { PAXIcon("camera") }
                         }
                     }
                 } label: {

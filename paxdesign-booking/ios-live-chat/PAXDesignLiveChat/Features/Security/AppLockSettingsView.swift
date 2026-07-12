@@ -19,7 +19,7 @@ struct AppLockSettingsView: View {
                     if appLock.canUseBiometrics {
                         Toggle(appLock.biometricTypeLabel, isOn: $appLock.biometricEnabled)
                     } else {
-                        Label(L10n.ApplockBiometryUnavailable, systemImage: "exclamationmark.triangle")
+                        Label { Text(L10n.ApplockBiometryUnavailable) } icon: { PAXIcon("exclamationmark.triangle") }
                             .font(.footnote)
                             .foregroundStyle(PAXTheme.textSecondary)
                     }

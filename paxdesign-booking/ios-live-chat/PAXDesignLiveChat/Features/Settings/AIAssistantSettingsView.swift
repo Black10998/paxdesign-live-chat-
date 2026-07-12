@@ -14,7 +14,7 @@ struct AIAssistantSettingsView: View {
             }
 
             Section {
-                Label(L10n.SettingsAIInfo, systemImage: "sparkles")
+                Label { Text(L10n.SettingsAIInfo) } icon: { PAXIcon("sparkles") }
                     .font(.subheadline)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
