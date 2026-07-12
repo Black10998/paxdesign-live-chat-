@@ -340,7 +340,15 @@ def wait_for_plugin_version(key_p8: str) -> None:
         ok(f"Production plugin v{current}")
         return
 
-    if current == "3.108.11" and EXPECTED_PLUGIN in {"3.108.12", "3.108.13"} and bootstrap_auth_works(key_p8):
+    if current == "3.108.13" and EXPECTED_PLUGIN == "3.108.14" and bootstrap_auth_works(key_p8):
+        print(
+            f"WARN: Production is on v{current}; continuing with bootstrap APNs verification. "
+            f"Update to v{EXPECTED_PLUGIN} for the latest provider JWT fix."
+        )
+        ok(f"Production plugin v{current}")
+        return
+
+    if current == "3.108.11" and EXPECTED_PLUGIN in {"3.108.12", "3.108.13", "3.108.14"} and bootstrap_auth_works(key_p8):
         print(
             f"WARN: Production is on v{current}; continuing with bootstrap APNs verification. "
             f"Update to v{EXPECTED_PLUGIN} for the latest APNs delivery fixes."
