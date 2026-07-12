@@ -20,7 +20,7 @@ ADMIN_PASS = os.environ.get("PAX_ADMIN_APP_PASSWORD", "").strip()
 TEAM_ID = os.environ.get("PAX_APNS_TEAM_ID", "4ZSP8S5A7B").strip()
 BUNDLE_ID = os.environ.get("PAX_APNS_BUNDLE_ID", "at.paxdesign.livechat").strip()
 KEY_ID = os.environ.get("APP_STORE_CONNECT_API_KEY_ID", os.environ.get("PAX_APNS_KEY_ID", "")).strip()
-EXPECTED_PLUGIN = os.environ.get("PAX_EXPECTED_PLUGIN", "3.108.9").strip()
+EXPECTED_PLUGIN = os.environ.get("PAX_EXPECTED_PLUGIN", "3.108.10").strip()
 HOSTINGER_TOKEN = os.environ.get("HOSTINGER_MANAGE_BEARER_TOKEN", "").strip()
 HOSTINGER_API_TOKEN = os.environ.get("HOSTINGER_API_TOKEN", "").strip()
 HOSTINGER_ACCOUNT = os.environ.get("HOSTINGER_ACCOUNT_USERNAME", "").strip()
@@ -428,6 +428,57 @@ def configure_apns(key_p8: str) -> dict:
     return configure_apns_admin(key_p8)
 
 
+def verify_bootstrap_jwt_locally(key_p8: str) -> None:
+    """Ensure the ASC key can produce a JWT our WordPress bootstrap verifier accepts."""
+    import jwt
+
+    token = make_bootstrap_jwt(key_p8)
+    parts = token.split(".")
+    if len(parts) != 3:
+        fail("Bootstrap JWT self-test failed: malformed token")
+
+    def b64url_decode(data: str) -> bytes:
+        remainder = len(data) % 4
+        if remainder > 0:
+            data += "=" * (4 - remainder)
+        return base64.urlsafe_b64decode(data)
+
+    def jose_to_der(jose: bytes) -> bytes:
+        if len(jose) < 64:
+            return b""
+        r = jose[:32].lstrip(b"\x00")
+        s = jose[32:64].lstrip(b"\x00")
+        if r and (r[0] & 0x80):
+            r = b"\x00" + r
+        if s and (s[0] & 0x80):
+            s = b"\x00" + s
+        seq = bytes([0x02, len(r)]) + r + bytes([0x02, len(s)]) + s
+        return bytes([0x30, len(seq)]) + seq
+
+    header = json.loads(b64url_decode(parts[0]))
+    claims = json.loads(b64url_decode(parts[1]))
+    if header.get("alg") != "ES256" or header.get("kid") != KEY_ID:
+        fail("Bootstrap JWT self-test failed: unexpected header")
+    if claims.get("iss") != TEAM_ID or claims.get("aud") != BOOTSTRAP_AUDIENCE:
+        fail("Bootstrap JWT self-test failed: unexpected claims")
+
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+
+    private_key = serialization.load_pem_private_key(key_p8.encode("utf-8"), password=None)
+    public_key = private_key.public_key()
+    der = jose_to_der(b64url_decode(parts[2]))
+    if der == b"":
+        fail("Bootstrap JWT self-test failed: invalid ES256 signature encoding")
+
+    try:
+        public_key.verify(der, (parts[0] + "." + parts[1]).encode("utf-8"), ec.ECDSA(hashes.SHA256()))
+    except Exception as exc:  # noqa: BLE001
+        fail(f"Bootstrap JWT self-test failed: {exc}")
+
+    ok("Bootstrap JWT self-test passed locally")
+
+
 def main() -> None:
     print(f"=== Remote APNs configuration ({SITE}) ===")
 
@@ -435,6 +486,7 @@ def main() -> None:
         fail("APP_STORE_CONNECT_API_KEY_ID is required")
 
     key_p8 = load_p8_key()
+    verify_bootstrap_jwt_locally(key_p8)
     verify_admin_auth()
     trigger_bootstrap_plugin_update(key_p8)
     wait_for_plugin_version(key_p8)

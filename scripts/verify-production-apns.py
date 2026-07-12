@@ -13,7 +13,7 @@ import urllib.request
 SITE = os.environ.get("PAX_SITE", "https://paxdesign.at").rstrip("/")
 ADMIN_USER = os.environ.get("PAX_ADMIN_USER", "").strip()
 ADMIN_PASS = os.environ.get("PAX_ADMIN_APP_PASSWORD", "").strip()
-EXPECTED_PLUGIN = os.environ.get("PAX_EXPECTED_PLUGIN", "3.108.9").strip()
+EXPECTED_PLUGIN = os.environ.get("PAX_EXPECTED_PLUGIN", "3.108.10").strip()
 
 
 def fail(message: str) -> None:
