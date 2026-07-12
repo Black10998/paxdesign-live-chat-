@@ -27,6 +27,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Select Xcode 26 SDK
+        run: |
+          set -euo pipefail
+          for candidate in Xcode_26.5.app Xcode_26.app Xcode_26.0.app; do
+            if [[ -d "/Applications/$candidate" ]]; then
+              sudo xcode-select -s "/Applications/$candidate/Contents/Developer"
+              xcodebuild -version
+              exit 0
+            fi
+          done
+          echo "ERROR: Xcode 26 not found on runner" >&2
+          ls -1 /Applications/Xcode*.app || true
+          exit 1
+
       - name: Install xcodegen
         run: brew install xcodegen
 

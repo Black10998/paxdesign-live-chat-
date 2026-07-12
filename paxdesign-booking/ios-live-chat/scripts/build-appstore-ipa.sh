@@ -210,7 +210,26 @@ generate_export_options() {
 EOF
 }
 
+select_xcode_26() {
+  local xcode_app=""
+  for candidate in Xcode_26.5.app Xcode_26.app Xcode_26.0.app; do
+    if [[ -d "/Applications/$candidate" ]]; then
+      xcode_app="/Applications/$candidate"
+      break
+    fi
+  done
+  if [[ -z "$xcode_app" ]]; then
+    echo "ERROR: Xcode 26 is required for App Store Connect uploads." >&2
+    ls -1 /Applications/Xcode*.app 2>/dev/null || true
+    exit 1
+  fi
+  export DEVELOPER_DIR="$xcode_app/Contents/Developer"
+  echo "Using DEVELOPER_DIR=$DEVELOPER_DIR"
+  xcodebuild -version
+}
+
 echo "==> App Store build starting"
+select_xcode_26
 require_cmd xcodegen
 require_cmd xcodebuild
 require_cmd security
