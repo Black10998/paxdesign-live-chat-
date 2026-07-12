@@ -84,12 +84,26 @@ struct TeamMessagesHubView: View {
 
     private var heroSection: some View {
         Section {
-            PlatformHeroHeader(
-                title: L10n.TeamHubTitle,
-                subtitle: L10n.TeamHubSubtitle,
-                systemImage: "person.3.fill",
-                tint: PAXTheme.accent
-            )
+            HStack(spacing: 14) {
+                ProfileAvatarView(size: 56)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(auth.profile?.displayName ?? L10n.CommonAdministrator)
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(PAXTheme.textPrimary)
+                    Text(auth.roleLabel)
+                        .font(.subheadline)
+                        .foregroundStyle(PAXTheme.textSecondary)
+                    if let email = auth.profile?.email.trimmingCharacters(in: .whitespacesAndNewlines), !email.isEmpty {
+                        Text(email)
+                            .font(.caption)
+                            .foregroundStyle(PAXTheme.textTertiary)
+                            .lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+                PAXIcon("person.3.fill", size: .hero, emphasis: .tertiary)
+            }
+            .padding(.vertical, 4)
             .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)

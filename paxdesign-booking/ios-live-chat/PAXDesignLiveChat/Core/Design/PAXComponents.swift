@@ -89,6 +89,34 @@ struct PAXPressButtonStyle: ButtonStyle {
     }
 }
 
+struct PAXIconTapStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.9 : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.2, dampingFraction: 0.62), value: configuration.isPressed)
+    }
+}
+
+struct PAXSendButton: View {
+    let isEnabled: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            PAXIcon("arrow.up.circle.fill", size: .action, emphasis: isEnabled ? .primary : .tertiary)
+                .frame(width: 36, height: 36)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PAXIconTapStyle())
+        .disabled(!isEnabled)
+        .opacity(isEnabled ? 1 : 0.55)
+        .layoutPriority(1)
+        .accessibilityLabel(L10n.CommonSend)
+    }
+}
+
 struct PAXAvatar: View {
     let name: String
     var size: CGFloat = 40

@@ -6997,13 +6997,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Management"
+            "value": "Administration"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Verwaltung"
+            "value": "Administration"
           }
         },
         "ar": {
@@ -7019,19 +7019,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "System"
+            "value": "Account"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "System"
+            "value": "Konto"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "النظام"
+            "value": "الحساب"
           }
         }
       }

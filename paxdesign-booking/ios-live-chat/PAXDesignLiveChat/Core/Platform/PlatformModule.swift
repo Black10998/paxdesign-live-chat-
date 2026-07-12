@@ -72,12 +72,12 @@ enum PlatformModule: String, CaseIterable, Identifiable, Hashable {
         case .tasks: return "checklist"
         case .files: return "folder.fill"
         case .chats: return "bubble.left.and.bubble.right.fill"
-        case .team: return "person.3.fill"
+        case .team: return "person.3.sequence.fill"
         case .live: return "bell.and.waves.left.and.right.fill"
         case .notifications: return "bell.badge.fill"
         case .reports: return "chart.xyaxis.line"
         case .activityLog: return "clock.arrow.circlepath"
-        case .employee: return "person.crop.circle.badge.checkmark"
+        case .employee: return "person.badge.key.fill"
         case .administration: return "shield.lefthalf.filled"
         case .devices: return "iphone.and.arrow.forward"
         case .settings: return "gearshape.fill"
@@ -191,9 +191,9 @@ enum PlatformShellSection: String, CaseIterable, Identifiable, Hashable {
 
     var systemImage: String {
         switch self {
-        case .dashboard: return "house.fill"
-        case .chats: return "bubble.left.and.bubble.right"
-        case .team: return "person.3.fill"
+        case .dashboard: return "chart.bar.doc.horizontal.fill"
+        case .chats: return "bubble.left.and.bubble.right.fill"
+        case .team: return "person.3.sequence.fill"
         case .live: return "bell.and.waves.left.and.right.fill"
         case .platform: return "square.grid.2x2.fill"
         }

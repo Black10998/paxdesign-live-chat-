@@ -426,22 +426,21 @@ struct ChatView: View {
 
             TextField(L10n.ChatMessagePlaceholder, text: $thread.draft, axis: .vertical)
                 .font(.subheadline)
-                .lineLimit(1...4)
+                .lineLimit(1...6)
+                .layoutPriority(0)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
+                .frame(minHeight: 36)
                 .paxGlassCardStyle(cornerRadius: 20, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.08)
                 .disabled(thread.handler != "admin" || !canReply)
                 .onChange(of: thread.draft) { _ in
                     thread.handleDraftChange(auth: auth)
                 }
 
-            Button {
+            PAXSendButton(isEnabled: canSend) {
                 PAXHaptics.light()
                 Task { await thread.send(auth: auth) }
-            } label: {
-                PAXIcon("arrow.up.circle.fill", size: .card)
             }
-            .disabled(!canSend)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)

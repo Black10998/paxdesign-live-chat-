@@ -303,17 +303,16 @@ struct TeamChatView: View {
     private var teamComposer: some View {
         HStack(spacing: 10) {
             TextField(L10n.TeamChatPlaceholder, text: $thread.draft, axis: .vertical)
-                .lineLimit(1...5)
+                .lineLimit(1...6)
+                .layoutPriority(0)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
+                .frame(minHeight: 36)
                 .paxGlassCardStyle(cornerRadius: 22, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.08)
 
-            Button {
+            PAXSendButton(isEnabled: canSend) {
                 Task { await thread.send(auth: auth, teamCoordinator: teamCoordinator) }
-            } label: {
-                PAXIcon("arrow.up.circle.fill", size: .card)
             }
-            .disabled(!canSend)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)

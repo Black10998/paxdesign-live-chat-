@@ -943,8 +943,23 @@ struct StaffMember: Codable, Identifiable {
 
     var publicDisplaySubtitle: String {
         if isExecutive { return L10n.RoleExecutiveDirector }
-        if let profileTitle, !profileTitle.isEmpty { return profileTitle }
+        if let profileTitle, !profileTitle.isEmpty {
+            let trimmed = profileTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty, !Self.isPlaceholderProfileTitle(trimmed) {
+                return trimmed
+            }
+        }
+        if let roleLabel, !roleLabel.isEmpty, !Self.isPlaceholderProfileTitle(roleLabel) {
+            return roleLabel
+        }
         return displayRoleLabel
+    }
+
+    private static func isPlaceholderProfileTitle(_ value: String) -> Bool {
+        let normalized = value.lowercased()
+        return normalized.contains("management system")
+            || normalized == "system"
+            || normalized == "management"
     }
 }
 

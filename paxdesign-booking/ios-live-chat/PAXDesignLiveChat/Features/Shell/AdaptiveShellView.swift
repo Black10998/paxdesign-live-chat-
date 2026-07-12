@@ -74,8 +74,8 @@ struct AdaptiveShellView: View {
             .init(
                 tag: tags.dashboard,
                 title: L10n.TabDashboard,
-                symbol: "house",
-                selectedSymbol: "house.fill"
+                symbol: "chart.bar.doc.horizontal",
+                selectedSymbol: "chart.bar.doc.horizontal.fill"
             )
         ]
 
@@ -96,8 +96,8 @@ struct AdaptiveShellView: View {
                 .init(
                     tag: teamTag,
                     title: L10n.TabTeam,
-                    symbol: "person.3",
-                    selectedSymbol: "person.3.fill",
+                    symbol: "person.3.sequence",
+                    selectedSymbol: "person.3.sequence.fill",
                     badgeCount: unreadTeamCount
                 )
             )
@@ -486,17 +486,18 @@ private struct PAXBottomTabBar: View {
     private func button(for item: ShellTabItem) -> some View {
         let selected = selection == item.tag
         return Button {
-            guard selection != item.tag else { return }
-            if reduceMotion {
-                selection = item.tag
-            } else {
-                withAnimation(.spring(response: 0.42, dampingFraction: 0.84)) {
+            if selection != item.tag {
+                if reduceMotion {
                     selection = item.tag
+                } else {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+                        selection = item.tag
+                    }
                 }
+                PAXHaptics.light()
             }
-            PAXHaptics.light()
         } label: {
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 ZStack(alignment: .topTrailing) {
                     PAXAnimatedTabIcon(
                         symbol: item.symbol,
@@ -522,15 +523,18 @@ private struct PAXBottomTabBar: View {
                     .foregroundStyle(selected ? PAXTheme.textPrimary : PAXTheme.textSecondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
-                    .offset(y: selected ? -1 : 0)
-                    .animation(.spring(response: 0.36, dampingFraction: 0.82), value: selected)
+
+                Capsule()
+                    .fill(selected ? PAXTheme.icon : Color.clear)
+                    .frame(width: selected ? 4 : 0, height: 4)
+                    .animation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.8), value: selected)
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 6)
             .padding(.bottom, 2)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PAXIconTapStyle())
         .accessibilityLabel(item.title)
         .accessibilityValue(selected ? L10n.ShellSelected : "")
     }
@@ -549,39 +553,9 @@ private struct PAXAnimatedTabIcon: View {
     let isSelected: Bool
     let reduceMotion: Bool
 
-    @State private var pulseScale: CGFloat = 1
-    @State private var slideOffset: CGFloat = 0
-
     var body: some View {
-        ZStack {
-            PAXIcon(symbol, size: .tab, emphasis: .secondary)
-                .opacity(isSelected ? 0 : 1)
-                .offset(x: isSelected ? -10 : 0)
-                .scaleEffect(isSelected ? 0.82 : 1)
-
-            PAXIcon(selectedSymbol, size: .tab)
-                .opacity(isSelected ? 1 : 0)
-                .offset(x: isSelected ? 0 : 10)
-                .scaleEffect(isSelected ? 1.06 : 0.82)
-        }
-        .scaleEffect(pulseScale)
-        .offset(x: slideOffset)
-        .animation(.spring(response: 0.38, dampingFraction: 0.78), value: isSelected)
-        .onChange(of: isSelected) { selected in
-            guard selected, !reduceMotion else {
-                pulseScale = 1
-                slideOffset = 0
-                return
-            }
-            slideOffset = -6
-            pulseScale = 0.88
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.62)) {
-                slideOffset = 0
-                pulseScale = 1.12
-            }
-            withAnimation(.easeOut(duration: 0.18).delay(0.12)) {
-                pulseScale = 1
-            }
-        }
+        PAXIcon(isSelected ? selectedSymbol : symbol, size: .tab, emphasis: isSelected ? .primary : .tertiary)
+            .scaleEffect(isSelected ? 1.08 : 1)
+            .animation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.76), value: isSelected)
     }
 }
