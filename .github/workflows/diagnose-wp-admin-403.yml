@@ -66,13 +66,19 @@ jobs:
           fi
           echo "Remote diagnosis finished; full output stored only in server report file."
 
-          REMOTE_REPORT=$(ssh "${SSH_OPTS[@]}" "$REMOTE" "ls -t ${WP_PATH_QUOTED}/wp-content/pax-admin-403-diagnosis-*.txt 2>/dev/null | head -1")
+          REMOTE_REPORT=$(ssh "${SSH_OPTS[@]}" "$REMOTE" "ls -t ${WP_PATH_QUOTED}/wp-content/pax-admin-403-diagnosis-*.txt 2>/dev/null | head -1 | tr -d '\r'")
           if [ -z "$REMOTE_REPORT" ]; then
             echo "No diagnosis report found on server."
             exit 1
           fi
+          REMOTE_REPORT_QUOTED=$(printf '%q' "$REMOTE_REPORT")
+          if ! ssh "${SSH_OPTS[@]}" "$REMOTE" "test -f ${REMOTE_REPORT_QUOTED}"; then
+            echo "Report path resolved but file is missing on server."
+            exit 1
+          fi
           echo "remote_report=$REMOTE_REPORT" >> "$GITHUB_OUTPUT"
-          scp "${SSH_OPTS[@]}" "${REMOTE}:${REMOTE_REPORT}" ./report-raw.txt
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "cat ${REMOTE_REPORT_QUOTED}" > ./report-raw.txt
+          test -s ./report-raw.txt
           echo "Report downloaded from server (not printed to avoid leaking sensitive log lines)."
 
       - name: Redact sensitive data
