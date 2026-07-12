@@ -17,7 +17,7 @@ jobs:
     timeout-minutes: 90
     env:
       APP_BUNDLE_ID: at.paxdesign.livechat
-      TESTFLIGHT_TARGET_BUILD: "87"
+      TESTFLIGHT_TARGET_BUILD: "88"
       TESTFLIGHT_POLL_SECONDS: "30"
       TESTFLIGHT_POLL_TIMEOUT: "3600"
       TESTFLIGHT_INTERNAL_TESTER_EMAIL: awjime29@icloud.com
