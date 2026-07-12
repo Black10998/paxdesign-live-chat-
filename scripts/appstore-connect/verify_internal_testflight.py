@@ -29,6 +29,7 @@ group_build_versions = _SETUP.group_build_versions
 group_tester_emails = _SETUP.group_tester_emails
 find_beta_tester = _SETUP.find_beta_tester
 add_build_to_group = _SETUP.add_build_to_group
+add_internal_tester = _SETUP.add_internal_tester
 get_build_beta_detail = _SETUP.get_build_beta_detail
 find_asc_user = _SETUP.find_asc_user
 make_token = _SETUP.make_token
@@ -51,18 +52,6 @@ def remove_tester_from_group(client: ASCClient, group_id: str, tester_id: str) -
     if status in {200, 204, 404}:
         return True
     warn(f"Could not remove tester from group {group_id}: {json.dumps(payload)}")
-    return False
-
-
-def delete_beta_tester(client: ASCClient, tester_id: str) -> bool:
-    status, payload = client.request(
-        "DELETE",
-        f"/betaTesters/{tester_id}",
-        allow_error=True,
-    )
-    if status in {200, 204}:
-        return True
-    warn(f"Could not delete beta tester {tester_id}: {json.dumps(payload)}")
     return False
 
 
@@ -97,7 +86,7 @@ def print_group_report(
         f"hasAccessToAllBuilds={access_all}"
     )
     print(f"    builds: {builds or '(none)'}")
-    print(f"    betaTesters: {testers or '(none)'}")
+    print(f"    betaTesters ({len(testers)}): {testers or '(none)'}")
     print(f"    build_{build_version}_present={build_version in builds}")
     print(f"    email_in_betaTesters={email in testers}")
 
@@ -118,22 +107,12 @@ def verify_asc_user(client: ASCClient, email: str) -> dict[str, Any] | None:
 def verify_beta_tester_record(client: ASCClient, app_id: str, email: str) -> None:
     tester = find_beta_tester(client, email)
     if tester is None:
-        print("  no betaTester record (expected for pure internal ASC access)")
+        print("  no betaTester record yet (will be created for internal group)")
         return
     attrs = tester.get("attributes") or {}
     print(f"  betaTester_id={tester['id']}")
     print(f"  state={attrs.get('state', 'UNKNOWN')}")
     print(f"  inviteType={attrs.get('inviteType', 'UNKNOWN')}")
-    payload = client.get(
-        "/betaTesters",
-        **{"filter[email]": email, "filter[apps]": app_id, "limit": "1"},
-    )
-    apps_linked = payload.get("data") or []
-    print(f"  linked_to_app={bool(apps_linked)}")
-    print(
-        "  note=betaTester records are for EXTERNAL invites; "
-        "internal ASC users should not rely on them"
-    )
 
 
 def main() -> None:
@@ -195,7 +174,7 @@ def main() -> None:
             f"roles={roles}",
         )
 
-    print("\n--- 2) betaTester record (external vs internal) ---")
+    print("\n--- 2) betaTester record ---")
     verify_beta_tester_record(client, app_id, TESTER_EMAIL)
     tester = find_beta_tester(client, TESTER_EMAIL)
 
@@ -206,17 +185,12 @@ def main() -> None:
     print("\n--- 4) Internal-only fix (no external review actions) ---")
     if tester is not None:
         tester_id = tester["id"]
-        for group in groups:
+        for group in external_groups:
             gid = group["id"]
             name = (group.get("attributes") or {}).get("name", gid)
             if TESTER_EMAIL in group_tester_emails(client, gid):
                 remove_tester_from_group(client, gid, tester_id)
-                print(f"  removed {TESTER_EMAIL} from group '{name}'")
-        delete_beta_tester(client, tester_id)
-        if find_beta_tester(client, TESTER_EMAIL) is None:
-            print("  deleted stale betaTester record")
-        else:
-            warn("betaTester record still exists after delete attempt")
+                print(f"  removed {TESTER_EMAIL} from external group '{name}'")
 
     for group in external_groups:
         gid = group["id"]
@@ -224,8 +198,6 @@ def main() -> None:
         if build_version in group_build_versions(client, gid):
             remove_build_from_group(client, gid, build_id)
             print(f"  removed build {build_version} from external group '{name}'")
-        if TESTER_EMAIL in group_tester_emails(client, gid):
-            warn(f"{TESTER_EMAIL} still listed in external group '{name}'")
 
     if not internal_groups:
         fail("No internal TestFlight group exists for this app")
@@ -235,9 +207,18 @@ def main() -> None:
         name = (group.get("attributes") or {}).get("name", gid)
         add_build_to_group(client, gid, build_id)
         print(f"  ensured build {build_version} linked to internal group '{name}'")
+        added = add_internal_tester(client, gid, TESTER_EMAIL, user)
+        if added is None:
+            warn(f"Could not add {TESTER_EMAIL} to internal group '{name}'")
+        else:
+            print(f"  ensured {TESTER_EMAIL} is an internal tester in '{name}'")
 
     print("\n--- 5) Beta groups after fix ---")
     groups = list_groups(client, app_id)
+    internal_groups = [g for g in groups if (g.get("attributes") or {}).get("isInternalGroup")]
+    external_groups = [
+        g for g in groups if (g.get("attributes") or {}).get("isInternalGroup") is False
+    ]
     for group in groups:
         print_group_report(client, group, build_version, TESTER_EMAIL)
 
@@ -251,18 +232,28 @@ def main() -> None:
         "see group reports above",
     )
 
-    tester_after = find_beta_tester(client, TESTER_EMAIL)
+    internal_tester_count = sum(
+        len(group_tester_emails(client, g["id"])) for g in internal_groups
+    )
+    in_internal_group = any(
+        TESTER_EMAIL in group_tester_emails(client, g["id"]) for g in internal_groups
+    )
     check(
-        "No stale external betaTester record",
-        tester_after is None,
-        "betaTester should be absent for ASC internal access",
+        "Internal group has at least one tester",
+        internal_tester_count >= 1,
+        f"tester_count={internal_tester_count} (ASC UI should not show '0 Testers')",
+    )
+    check(
+        f"{TESTER_EMAIL} assigned to internal group",
+        in_internal_group,
+        "see group reports above",
     )
 
     in_external_group = any(
         TESTER_EMAIL in group_tester_emails(client, g["id"]) for g in external_groups
     )
     check(
-        "Not assigned as external betaTester",
+        "Not assigned to external beta group",
         not in_external_group,
         f"{TESTER_EMAIL} must not be in external groups",
     )
@@ -282,16 +273,23 @@ def main() -> None:
     print(f"TESTER={TESTER_EMAIL}")
     print(f"BUILD={build_version}")
     print(f"INTERNAL_BUILD_STATE={internal_state}")
+    print(f"INTERNAL_GROUP_TESTER_COUNT={internal_tester_count}")
     print(
-        "INTERNAL_ACCESS_MODEL=App Store Connect team member; "
-        "open TestFlight app directly (no email invite link)."
+        "INTERNAL_ACCESS_MODEL=App Store Connect user assigned to internal beta group; "
+        "open TestFlight app with the same Apple ID."
     )
     print(
         "DEVICE_STEP=Sign in to TestFlight with the same Apple ID as ASC username "
         f"({TESTER_EMAIL}), then pull to refresh."
     )
 
-    if not asc_ok or not internal_ready or not internal_build_linked:
+    if (
+        not asc_ok
+        or not internal_ready
+        or not internal_build_linked
+        or not in_internal_group
+        or internal_tester_count < 1
+    ):
         fail("One or more internal TestFlight checks failed; see report above")
 
 
