@@ -118,30 +118,53 @@ else
 fi
 
 section "Log discovery"
-declare -a ERROR_LOGS=()
-declare -a ACCESS_LOGS=()
-declare -a MODSEC_LOGS=()
+ERROR_LOGS=()
+ACCESS_LOGS=()
+MODSEC_LOGS=()
+TMP_LIST="$(mktemp)"
 
-while IFS= read -r -d '' f; do ERROR_LOGS+=("$f"); done < <(
-  find "$HOME" -maxdepth 5 -type f \( -name 'error.log' -o -name 'error_log' -o -name 'stderr.log' \) 2>/dev/null | head -20 | tr '\n' '\0'
-)
-while IFS= read -r -d '' f; do ACCESS_LOGS+=("$f"); done < <(
-  find "$HOME" -maxdepth 5 -type f \( -name 'access.log' -o -name 'access_log' \) 2>/dev/null | head -20 | tr '\n' '\0'
-)
-while IFS= read -r -d '' f; do MODSEC_LOGS+=("$f"); done < <(
-  { find "$HOME" -maxdepth 5 -type f \( -iname '*modsec*' -o -iname '*imunify*' \) 2>/dev/null
-    find /var/log /usr/local/lsws/logs -maxdepth 4 -type f \( -name 'modsec_audit.log' -o -name 'audit.log' \) 2>/dev/null; } \
-    | head -20 | tr '\n' '\0'
-) || true
+append_unique() {
+  local arr_name="$1"
+  local value="$2"
+  local existing item
+  eval "existing=(\"\${${arr_name}[@]}\")"
+  for item in "${existing[@]}"; do
+    [[ "$item" == "$value" ]] && return 0
+  done
+  eval "${arr_name}+=(\"\$value\")"
+}
 
-# Common Hostinger paths
+find "$HOME" -maxdepth 5 -type f \( -name 'error.log' -o -name 'error_log' -o -name 'stderr.log' \) 2>/dev/null | head -20 > "$TMP_LIST" || true
+while IFS= read -r f; do
+  [[ -n "$f" ]] && append_unique ERROR_LOGS "$f"
+done < "$TMP_LIST"
+
+find "$HOME" -maxdepth 5 -type f \( -name 'access.log' -o -name 'access_log' \) 2>/dev/null | head -20 > "$TMP_LIST" || true
+while IFS= read -r f; do
+  [[ -n "$f" ]] && append_unique ACCESS_LOGS "$f"
+done < "$TMP_LIST"
+
+find "$HOME" -maxdepth 5 -type f \( -iname '*modsec*' -o -iname '*imunify*' \) 2>/dev/null | head -20 > "$TMP_LIST" || true
+while IFS= read -r f; do
+  [[ -n "$f" ]] && append_unique MODSEC_LOGS "$f"
+done < "$TMP_LIST"
+rm -f "$TMP_LIST"
+
 for p in \
   "$HOME/logs/error.log" \
-  "$HOME/logs/access.log" \
   "$HOME/domains/paxdesign.at/logs/error.log" \
-  "$HOME/domains/paxdesign.at/logs/access.log" \
   "$WP_ROOT/error_log"; do
-  [[ -f "$p" ]] && ERROR_LOGS+=("$p")
+  [[ -f "$p" ]] && append_unique ERROR_LOGS "$p"
+done
+
+for p in \
+  "$HOME/logs/access.log" \
+  "$HOME/domains/paxdesign.at/logs/access.log"; do
+  [[ -f "$p" ]] && append_unique ACCESS_LOGS "$p"
+done
+
+for p in /var/log/modsec_audit.log /usr/local/lsws/logs/audit.log; do
+  [[ -f "$p" ]] && append_unique MODSEC_LOGS "$p"
 done
 
 echo "Error log candidates (${#ERROR_LOGS[@]}):"
@@ -153,7 +176,7 @@ printf '  %s\n' "${MODSEC_LOGS[@]}" 2>/dev/null | sort -u || true
 
 section "Error logs — grep: 403/users.php/ModSecurity/Authorization"
 found_err=0
-while IFS= read -r log; do
+for log in $(printf '%s\n' "${ERROR_LOGS[@]}" 2>/dev/null | sort -u); do
   [[ -z "$log" || ! -f "$log" ]] && continue
   matches=$(grep -iE "$LOG_PATTERNS" "$log" 2>/dev/null | tail -120 || true)
   if [[ -n "$matches" ]]; then
@@ -161,12 +184,12 @@ while IFS= read -r log; do
     echo "$matches"
     found_err=1
   fi
-done < <(printf '%s\n' "${ERROR_LOGS[@]}" 2>/dev/null | sort -u)
+done
 [[ "$found_err" -eq 0 ]] && echo "(no matching lines in discovered error logs)"
 
 section "Access logs — grep: users.php / 403"
 found_acc=0
-while IFS= read -r log; do
+for log in $(printf '%s\n' "${ACCESS_LOGS[@]}" 2>/dev/null | sort -u); do
   [[ -z "$log" || ! -f "$log" ]] && continue
   matches=$(grep -iE 'users\.php| 403 |" 403 |wp-admin/users' "$log" 2>/dev/null | tail -80 || true)
   if [[ -n "$matches" ]]; then
@@ -174,12 +197,12 @@ while IFS= read -r log; do
     echo "$matches"
     found_acc=1
   fi
-done < <(printf '%s\n' "${ACCESS_LOGS[@]}" 2>/dev/null | sort -u)
+done
 [[ "$found_acc" -eq 0 ]] && echo "(no matching lines in discovered access logs)"
 
 section "ModSecurity / Imunify360 logs — grep"
 found_mod=0
-while IFS= read -r log; do
+for log in $(printf '%s\n' "${MODSEC_LOGS[@]}" 2>/dev/null | sort -u); do
   [[ -z "$log" || ! -f "$log" ]] && continue
   matches=$(grep -iE "$LOG_PATTERNS" "$log" 2>/dev/null | tail -80 || true)
   if [[ -n "$matches" ]]; then
@@ -187,7 +210,7 @@ while IFS= read -r log; do
     echo "$matches"
     found_mod=1
   fi
-done < <(printf '%s\n' "${MODSEC_LOGS[@]}" 2>/dev/null | sort -u)
+done
 [[ "$found_mod" -eq 0 ]] && echo "(no ModSecurity/Imunify log files with matches found)"
 
 section "Interpretation"
