@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   appstore-build:
-    runs-on: macos-26-arm64
+    runs-on: macos-latest
     env:
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
