@@ -1,2 +1,2 @@
-# Enable Build 87 for internal TestFlight after upload processing
-2026-07-12T15:48:00Z
+# Enable Build 87 for internal TestFlight (poll until Apple processing completes)
+2026-07-12T15:50:00Z
