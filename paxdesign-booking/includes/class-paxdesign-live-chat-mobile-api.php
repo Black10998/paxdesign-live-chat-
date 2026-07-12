@@ -137,6 +137,18 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => '__return_true',
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/system/bootstrap/apns/test', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_bootstrap_apns_test'),
+            'permission_callback' => '__return_true',
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/system/bootstrap/devices', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_bootstrap_devices'),
+            'permission_callback' => '__return_true',
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/me', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'route_me'),
@@ -1071,7 +1083,7 @@ class PAXdesign_Live_Chat_Mobile_API {
             return new WP_Error('update_unavailable', 'Update checker unavailable.', array('status' => 501));
         }
 
-        return self::respond(PAXdesign_Booking_Update_Checker::upgrade_from_github());
+        return self::respond(PAXdesign_Booking_Update_Checker::upgrade_from_github(true));
     }
 
     public static function route_bootstrap_apns_configure(WP_REST_Request $request) {
@@ -1107,6 +1119,53 @@ class PAXdesign_Live_Chat_Mobile_API {
         update_option('paxdesign_apns_key_p8', $key_p8);
 
         return self::route_apns_system_status($request);
+    }
+
+    public static function route_bootstrap_apns_test(WP_REST_Request $request) {
+        $check = PAXdesign_ASC_Bootstrap::authorize_request($request);
+        if (is_wp_error($check)) {
+            return $check;
+        }
+
+        return self::route_apns_system_test($request);
+    }
+
+    public static function route_bootstrap_devices(WP_REST_Request $request) {
+        $check = PAXdesign_ASC_Bootstrap::authorize_request($request);
+        if (is_wp_error($check)) {
+            return $check;
+        }
+
+        if (!class_exists('PAXdesign_Device_Sessions')) {
+            return self::respond(array('devices' => array(), 'active_total' => 0));
+        }
+
+        $devices = array();
+        $active_total = 0;
+        if (class_exists('PAXdesign_APNS')) {
+            foreach (PAXdesign_APNS::get_admin_user_ids() as $uid) {
+                foreach (PAXdesign_APNS::get_user_devices((int) $uid) as $device) {
+                    if (!empty($device['revoked'])) {
+                        continue;
+                    }
+                    $active_total++;
+                    $token = isset($device['token']) ? (string) $device['token'] : '';
+                    $devices[] = array(
+                        'user_id'     => (int) $uid,
+                        'token_prefix'=> $token !== '' ? substr($token, 0, 12) : '',
+                        'device_name' => isset($device['device_name']) ? (string) $device['device_name'] : '',
+                        'device_model'=> isset($device['device_model']) ? (string) $device['device_model'] : '',
+                        'sandbox'     => !empty($device['sandbox']),
+                        'approved'    => !isset($device['approved']) || !empty($device['approved']),
+                    );
+                }
+            }
+        }
+
+        return self::respond(array(
+            'devices'      => $devices,
+            'active_total' => $active_total,
+        ));
     }
 
     public static function route_apns_system_status(WP_REST_Request $request) {
