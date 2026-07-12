@@ -181,16 +181,7 @@ struct LinkCardBubbleView: View {
                 .padding(.vertical, 8)
                 .background(
                     RoundedRectangle(cornerRadius: 11, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    PAXTheme.accent.opacity(0.14),
-                                    PAXTheme.accent.opacity(0.05),
-                                ],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .fill(PAXTheme.accent.opacity(0.1))
                         .overlay(
                             RoundedRectangle(cornerRadius: 11, style: .continuous)
                                 .stroke(PAXTheme.accent.opacity(0.24), lineWidth: 1)

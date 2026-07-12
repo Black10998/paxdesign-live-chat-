@@ -34,30 +34,6 @@ struct PAXAnimatedGlassReflection: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .overlay {
-                GeometryReader { geo in
-                    RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [
-                                    .clear,
-                                    Color.white.opacity(0.14),
-                                    Color.white.opacity(0.05),
-                                    .clear
-                                ],
-                                startPoint: UnitPoint(x: phase, y: 0),
-                                endPoint: UnitPoint(x: phase + 0.42, y: 1)
-                            )
-                        )
-                        .blendMode(.overlay)
-                        .allowsHitTesting(false)
-                        .onAppear {
-                            withAnimation(.easeInOut(duration: 5.5).repeatForever(autoreverses: true)) {
-                                phase = 0.65
-                            }
-                        }
-                }
-            }
     }
 }
 
@@ -74,21 +50,7 @@ struct PAXCardDecorLayer: View {
     let tint: Color
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Circle()
-                .fill(tint.opacity(0.07))
-                .frame(width: 72, height: 72)
-                .offset(x: 18, y: -22)
-                .blur(radius: 1)
-
-            RoundedRectangle(cornerRadius: cornerRadius * 0.55, style: .continuous)
-                .stroke(tint.opacity(0.12), lineWidth: 1)
-                .frame(width: 44, height: 44)
-                .rotationEffect(.degrees(-12))
-                .offset(x: -10, y: 28)
-                .allowsHitTesting(false)
-        }
-        .allowsHitTesting(false)
+        EmptyView()
     }
 }
 

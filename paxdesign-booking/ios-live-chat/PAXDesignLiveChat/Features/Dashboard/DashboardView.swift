@@ -222,7 +222,7 @@ struct DashboardView: View {
             title: L10n.DashboardWelcome(auth.profile?.displayName ?? L10n.CommonAdministrator),
             subtitle: L10n.DashboardSubtitle,
             systemImage: "chart.bar.doc.horizontal.fill",
-            gradient: [.blue, .cyan]
+            tint: PAXTheme.accent
         )
         .paxStaggeredAppear(index: 0)
         .transition(PAXMotion.heroReveal)
@@ -234,7 +234,7 @@ struct DashboardView: View {
                 title: L10n.DashboardMetricSessions,
                 value: "\(platform.dashboard?.sessionsTotal ?? customerSessions.count)",
                 icon: "bubble.left.and.bubble.right.fill",
-                tint: .blue,
+                tint: PAXTheme.accent,
                 helpText: L10n.DashboardMetricSessionsHelp
             )
             .paxStaggeredAppear(index: 0)
@@ -242,7 +242,7 @@ struct DashboardView: View {
                 title: L10n.DashboardMetricUnread,
                 value: "\(unreadCount)",
                 icon: "envelope.badge.fill",
-                tint: .orange,
+                tint: PAXTheme.accent,
                 helpText: L10n.DashboardMetricUnreadHelp
             )
             .paxStaggeredAppear(index: 1)
@@ -250,7 +250,7 @@ struct DashboardView: View {
                 title: L10n.DashboardMetricLive,
                 value: "\(platform.dashboard?.liveCount ?? coordinator.liveCount)",
                 icon: "bell.and.waves.left.and.right.fill",
-                tint: .red,
+                tint: PAXTheme.accent,
                 helpText: L10n.DashboardMetricLiveHelp
             )
             .paxStaggeredAppear(index: 2)

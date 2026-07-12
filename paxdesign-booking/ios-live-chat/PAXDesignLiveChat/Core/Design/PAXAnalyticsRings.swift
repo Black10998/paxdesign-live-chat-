@@ -265,17 +265,7 @@ private struct PAXAnalyticsBarColumn: View {
                     .frame(height: 72)
 
                 RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                barTint.opacity(0.55),
-                                barTint,
-                                barTint.opacity(0.88)
-                            ],
-                            startPoint: .bottom,
-                            endPoint: .top
-                        )
-                    )
+                    .fill(barTint.opacity(item.value > 0 ? 0.85 : 0.2))
                     .frame(height: displayedHeight)
                     .overlay(alignment: .top) {
                         if isPeak, item.value > 0 {

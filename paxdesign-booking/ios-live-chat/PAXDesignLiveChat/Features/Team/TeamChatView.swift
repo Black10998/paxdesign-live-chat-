@@ -400,7 +400,7 @@ struct TeamComposeView: View {
                 Section {
                     Text(errorMessage)
                         .font(.footnote)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(PAXTheme.accent)
                 }
             } else if filteredStaff.isEmpty {
                 Section {
@@ -463,7 +463,7 @@ private struct StaffComposeRow: View {
     let action: () -> Void
 
     private var roleTint: Color {
-        if member.isExecutive { return .purple }
+        if member.isExecutive { return PAXTheme.accent }
         if member.isAdministrator { return PAXBrand.accent }
         if member.permissions.manageUsers { return .blue }
         return PAXTheme.textSecondary
@@ -491,7 +491,7 @@ private struct StaffComposeRow: View {
                         if member.isExecutive {
                             Image(systemName: "crown.fill")
                                 .font(.caption2)
-                                .foregroundStyle(.purple)
+                                .foregroundStyle(PAXTheme.accent)
                         }
                     }
                     Text(member.publicDisplaySubtitle)

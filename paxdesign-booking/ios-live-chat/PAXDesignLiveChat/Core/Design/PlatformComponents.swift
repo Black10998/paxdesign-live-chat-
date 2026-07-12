@@ -25,14 +25,14 @@ struct PlatformHeroHeader: View {
     let title: String
     let subtitle: String
     let systemImage: String
-    let gradient: [Color]
+    var tint: Color = PAXTheme.accent
 
     var body: some View {
         PAXHeroCard(
             title: title,
             subtitle: subtitle,
             systemImage: systemImage,
-            tint: gradient.first ?? PAXTheme.accent
+            tint: tint
         )
     }
 }

@@ -28,17 +28,17 @@ struct EmployeeDashboardView: View {
                     title: L10n.EmployeeWelcome(platform.employee?.name ?? auth.profile?.displayName ?? L10n.ProfileRoleStaff),
                     subtitle: L10n.ModuleEmployeeSubtitle,
                     systemImage: "person.crop.circle.badge.checkmark",
-                    gradient: [.mint, .teal]
+                    tint: PAXTheme.accent
                 )
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
             }
 
             Section(L10n.EmployeeToday) {
-                metricRow(L10n.EmployeeAssignedChats, value: "\(platform.employee?.assignedChats ?? mySessions.count)", icon: "bubble.left.and.bubble.right.fill", tint: .blue)
-                metricRow(L10n.EmployeeUnread, value: "\(platform.employee?.unreadChats ?? unreadCount)", icon: "envelope.badge.fill", tint: .orange)
-                metricRow(L10n.EmployeeOpenTasks, value: "\(platform.employee?.openTasks ?? tasks.openCount)", icon: "checklist", tint: .green)
-                metricRow(L10n.EmployeeRole, value: auth.roleLabel, icon: "person.badge.key.fill", tint: .purple)
+                metricRow(L10n.EmployeeAssignedChats, value: "\(platform.employee?.assignedChats ?? mySessions.count)", icon: "bubble.left.and.bubble.right.fill", tint: PAXTheme.accent)
+                metricRow(L10n.EmployeeUnread, value: "\(platform.employee?.unreadChats ?? unreadCount)", icon: "envelope.badge.fill", tint: PAXTheme.accent)
+                metricRow(L10n.EmployeeOpenTasks, value: "\(platform.employee?.openTasks ?? tasks.openCount)", icon: "checklist", tint: PAXTheme.accent)
+                metricRow(L10n.EmployeeRole, value: auth.roleLabel, icon: "person.badge.key.fill", tint: PAXTheme.accent)
             }
 
             Section(L10n.EmployeePermissions) {

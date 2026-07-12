@@ -31,18 +31,18 @@ struct PAXDashboardWidgetView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Image(systemName: "chart.bar.doc.horizontal.fill")
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.accentColor)
                 Text("PAXDesign")
                     .font(.caption.weight(.bold))
                 Spacer()
             }
             HStack {
-                metric("Chats", value: entry.snapshot.unreadChats, tint: .orange)
-                metric("Live", value: entry.snapshot.liveRequests, tint: .red)
+                metric("Chats", value: entry.snapshot.unreadChats, tint: .accentColor)
+                metric("Live", value: entry.snapshot.liveRequests, tint: .accentColor)
             }
             HStack {
-                metric("Tasks", value: entry.snapshot.openTasks, tint: .green)
-                metric("Events", value: entry.snapshot.upcomingEvents, tint: .purple)
+                metric("Tasks", value: entry.snapshot.openTasks, tint: .accentColor)
+                metric("Events", value: entry.snapshot.upcomingEvents, tint: .accentColor)
             }
         }
         .padding(12)

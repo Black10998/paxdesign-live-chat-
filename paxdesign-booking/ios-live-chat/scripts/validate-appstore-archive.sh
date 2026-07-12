@@ -52,8 +52,9 @@ for key in \
   NSUserNotificationsUsageDescription \
   NSLocationWhenInUseUsageDescription \
   CFBundleDisplayName; do
-  value="$(/usr/libexec/PlistBuddy -c "Print :$key" "$APP_PATH/Info.plist" 2>/dev/null || true)"
-  [[ -n "$value" ]] || fail "Info.plist missing required key: $key"
+  if ! /usr/libexec/PlistBuddy -c "Print :$key" "$APP_PATH/Info.plist" >/dev/null 2>&1; then
+    fail "Info.plist missing required key: $key"
+  fi
 done
 
 read_entitlements_value() {

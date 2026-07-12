@@ -89,7 +89,7 @@ struct TeamMessagesHubView: View {
                 title: L10n.TeamHubTitle,
                 subtitle: L10n.TeamHubSubtitle,
                 systemImage: "person.3.fill",
-                gradient: [PAXBrand.accent, PAXBrand.accent.opacity(0.65)]
+                tint: PAXTheme.accent
             )
             .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
             .listRowBackground(Color.clear)
@@ -117,12 +117,12 @@ struct TeamMessagesHubView: View {
                         .font(.body.weight(.semibold))
                     Text(session.otherRoleLabel.isEmpty ? session.requestStatusLabel : session.otherRoleLabel)
                         .font(.caption)
-                        .foregroundStyle(.purple)
+                        .foregroundStyle(PAXTheme.accent)
                 }
                 Spacer()
                 Text(session.requestStatusLabel)
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(PAXTheme.accent)
             }
             if !session.lastPreview.isEmpty {
                 Text(session.lastPreview)
@@ -159,7 +159,7 @@ struct TeamMessagesHubView: View {
                 HStack(spacing: 12) {
                     TeamStatPill(value: "\(teamSessionCount)", label: L10n.TeamHubConversations, tint: PAXBrand.accent)
                     if unreadCount > 0 {
-                        TeamStatPill(value: "\(unreadCount)", label: L10n.FilterUnread, tint: .orange)
+                        TeamStatPill(value: "\(unreadCount)", label: L10n.FilterUnread, tint: PAXTheme.accent)
                     }
                 }
                 .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
@@ -333,7 +333,7 @@ struct TeamMessagesHubView: View {
                         if session.isExecutiveConversation {
                             Image(systemName: "crown.fill")
                                 .font(.caption2)
-                                .foregroundStyle(.purple)
+                                .foregroundStyle(PAXTheme.accent)
                         }
                         if session.isPinned {
                             Image(systemName: "pin.fill")
@@ -355,7 +355,7 @@ struct TeamMessagesHubView: View {
                                 .foregroundStyle(session.isExecutiveConversation ? .purple : PAXBrand.accent)
                                 .padding(.horizontal, 6)
                                 .padding(.vertical, 2)
-                                .background(Capsule().fill((session.isExecutiveConversation ? Color.purple : PAXBrand.accent).opacity(0.15)))
+                                .background(Capsule().fill(PAXTheme.accent.opacity(0.15)))
                         } else {
                             Text(L10n.SessionTeamBadge)
                                 .font(.caption2.weight(.bold))
@@ -368,7 +368,7 @@ struct TeamMessagesHubView: View {
                         if session.isRequestPending {
                             Text(session.requestStatusLabel)
                                 .font(.caption2.weight(.semibold))
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(PAXTheme.accent)
                         }
 
                         Text(session.lastPreview.isEmpty ? L10n.TeamChatPlaceholder : session.lastPreview)
@@ -594,7 +594,7 @@ private struct TeamContactRow: View {
     let action: () -> Void
 
     private var roleTint: Color {
-        if member.isExecutive { return .purple }
+        if member.isExecutive { return PAXTheme.accent }
         if member.isAdministrator { return PAXBrand.accent }
         if member.permissions.manageUsers { return .blue }
         return PAXTheme.textSecondary
@@ -619,7 +619,7 @@ private struct TeamContactRow: View {
                         if member.isExecutive {
                             Image(systemName: "crown.fill")
                                 .font(.caption2)
-                                .foregroundStyle(.purple)
+                                .foregroundStyle(PAXTheme.accent)
                         }
                     }
                     Text(member.publicDisplaySubtitle)

@@ -86,16 +86,7 @@ private struct ThemePreviewRow: View {
                     .frame(width: 52, height: 52)
                     .overlay {
                         RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        palette.glowPrimary.opacity(0.35),
-                                        palette.glowSecondary.opacity(0.25)
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
+                            .fill(palette.accent.opacity(0.12))
                     }
                     .overlay(
                         RoundedRectangle(cornerRadius: 10, style: .continuous)

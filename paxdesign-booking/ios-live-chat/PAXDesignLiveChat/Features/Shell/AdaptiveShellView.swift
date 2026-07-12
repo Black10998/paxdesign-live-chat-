@@ -537,69 +537,9 @@ private struct PAXBottomTabBar: View {
 }
 
 private struct PAXTabBarGlassBackground: View {
-    @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var shimmerPhase: CGFloat = -1
-
     var body: some View {
-        ZStack {
-            Rectangle()
-                .fill(.ultraThinMaterial)
-
-            Rectangle()
-                .fill(.bar.opacity(colorScheme == .dark ? 0.55 : 0.42))
-
-            LinearGradient(
-                colors: [
-                    Color.white.opacity(colorScheme == .dark ? 0.16 : 0.34),
-                    Color.white.opacity(colorScheme == .dark ? 0.05 : 0.1),
-                    .clear
-                ],
-                startPoint: .top,
-                endPoint: .center
-            )
-            .blendMode(.overlay)
-
-            if !reduceMotion {
-                LinearGradient(
-                    colors: [
-                        .clear,
-                        Color.white.opacity(colorScheme == .dark ? 0.12 : 0.22),
-                        .clear
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-                .scaleEffect(x: 2.2, y: 1)
-                .offset(x: shimmerPhase * 220)
-                .blendMode(.plusLighter)
-                .allowsHitTesting(false)
-            }
-
-            VStack(spacing: 0) {
-                Rectangle()
-                    .fill(
-                        LinearGradient(
-                            colors: [
-                                Color.white.opacity(colorScheme == .dark ? 0.28 : 0.55),
-                                Color.white.opacity(0.08),
-                                .clear
-                            ],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .frame(height: 0.66)
-                Spacer(minLength: 0)
-            }
-        }
-        .onAppear {
-            guard !reduceMotion else { return }
-            shimmerPhase = -1
-            withAnimation(.linear(duration: 4.8).repeatForever(autoreverses: false)) {
-                shimmerPhase = 1
-            }
-        }
+        Rectangle()
+            .fill(.bar)
     }
 }
 

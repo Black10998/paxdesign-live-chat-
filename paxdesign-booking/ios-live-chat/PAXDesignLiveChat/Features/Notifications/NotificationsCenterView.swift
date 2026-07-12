@@ -30,7 +30,7 @@ struct NotificationsCenterView: View {
                     title: L10n.NotificationsCenterTitle,
                     subtitle: L10n.NotificationsCenterSubtitle,
                     systemImage: "bell.badge.fill",
-                    gradient: [.orange, .pink]
+                    tint: PAXTheme.accent
                 )
                 .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                 .listRowBackground(Color.clear)
@@ -48,14 +48,14 @@ struct NotificationsCenterView: View {
                     title: L10n.NotificationsLiveRequests,
                     count: platform.notifications?.liveRequests ?? coordinator.liveCount,
                     systemImage: "bell.and.waves.left.and.right.fill",
-                    tint: .orange
+                    tint: PAXTheme.accent
                 )
                 if let openTasks = platform.notifications?.openTasks {
                     notificationMetric(
                         title: L10n.DashboardMetricTasks,
                         count: openTasks,
                         systemImage: "checklist",
-                        tint: .green
+                        tint: PAXTheme.accent
                     )
                 }
                 LabeledContent(L10n.SettingsPush) {
@@ -68,7 +68,7 @@ struct NotificationsCenterView: View {
                 Section(L10n.NotificationsRecentActivity) {
                     if coordinator.liveCount > 0 {
                         ForEach(liveSessions.prefix(5)) { session in
-                            activityRow(session, badge: L10n.FilterLive, tint: .orange)
+                            activityRow(session, badge: L10n.FilterLive, tint: PAXTheme.accent)
                         }
                     }
                     ForEach(unreadSessions.prefix(8)) { session in
@@ -187,7 +187,7 @@ struct NotificationsCenterView: View {
                             .font(.caption.weight(.semibold))
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(.orange)
+                    .tint(PAXTheme.accent)
                 }
             }
         }

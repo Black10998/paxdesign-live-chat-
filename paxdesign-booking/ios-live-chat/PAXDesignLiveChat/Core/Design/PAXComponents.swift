@@ -261,12 +261,7 @@ private struct PAXLoaderMeterFill: View {
             RoundedRectangle(cornerRadius: 999, style: .continuous)
                 .fill(
                     LinearGradient(
-                        colors: [
-                            PAXTheme.accent.opacity(0),
-                            PAXTheme.accent.opacity(0.45),
-                            PAXTheme.success.opacity(0.4),
-                            PAXTheme.accent.opacity(0)
-                        ],
+                        colors: [PAXTheme.accent.opacity(0), PAXTheme.accent.opacity(0.55), PAXTheme.accent.opacity(0)],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
@@ -307,13 +302,7 @@ struct PAXTimelineLoaderCard: View {
                     )
             }
             .padding(12)
-            .background(
-                LinearGradient(
-                    colors: [PAXTheme.surface.opacity(0.78), PAXTheme.surface.opacity(0.45)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
+            .background(PAXTheme.surface)
 
             VStack(spacing: 10) {
                 ForEach(0..<2, id: \.self) { idx in

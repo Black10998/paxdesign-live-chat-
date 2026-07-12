@@ -612,7 +612,7 @@ class PAXdesign_APNS {
         $sound    = self::sound_for_type($type, $handler, $event);
         $category = ($type === 'live_request') ? 'PAX_LIVE_REQUEST' : 'PAX_MESSAGE';
         $is_live_request = ($type === 'live_request' || $event === 'customer_waiting');
-        $interruption = $is_live_request ? 'time-sensitive' : 'active';
+        $interruption = $is_live_request ? 'active' : 'active';
 
         $aps = array(
             'badge' => $user_id > 0 ? self::count_user_badge($user_id) : self::count_pending_badge(),

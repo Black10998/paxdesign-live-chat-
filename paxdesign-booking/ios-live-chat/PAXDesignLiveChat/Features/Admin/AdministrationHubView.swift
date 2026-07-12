@@ -18,7 +18,7 @@ struct AdministrationHubView: View {
                     title: L10n.AdminTitle,
                     subtitle: L10n.AdminSubtitle,
                     systemImage: "shield.lefthalf.filled",
-                    gradient: [.purple, .indigo]
+                    tint: PAXTheme.accent
                 )
                 .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
                 .listRowBackground(Color.clear)
@@ -52,13 +52,13 @@ struct AdministrationHubView: View {
                     value: "\(coordinator.liveCount)",
                     label: L10n.AdminActivityLive,
                     systemImage: "bell.and.waves.left.and.right",
-                    tint: .orange
+                    tint: PAXTheme.accent
                 )
                 activityTile(
                     value: isLoadingStaff ? "…" : "\(staffCount)",
                     label: L10n.AdminActivityTeam,
                     systemImage: "person.3",
-                    tint: .teal
+                    tint: PAXTheme.accent
                 )
             }
 

@@ -22,9 +22,9 @@ struct ReportsAnalyticsView: View {
         let active = customerSessions.filter { $0.isAdmin && !$0.isClosed }.count
         let closed = customerSessions.filter(\.isClosed).count
         return [
-            ReportSlice(label: L10n.FilterLive, value: live, color: .orange),
-            ReportSlice(label: L10n.FilterActive, value: active, color: .blue),
-            ReportSlice(label: L10n.FilterClosed, value: closed, color: .gray)
+            ReportSlice(label: L10n.FilterLive, value: live, color: PAXTheme.accent),
+            ReportSlice(label: L10n.FilterActive, value: active, color: PAXTheme.accent.opacity(0.72)),
+            ReportSlice(label: L10n.FilterClosed, value: closed, color: Color.secondary)
         ].filter { $0.value > 0 }
     }
 
@@ -40,7 +40,7 @@ struct ReportsAnalyticsView: View {
                     title: L10n.ModuleReports,
                     subtitle: L10n.ModuleReportsSubtitle,
                     systemImage: "chart.xyaxis.line",
-                    gradient: [.purple, .pink]
+                    tint: PAXTheme.accent
                 )
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
@@ -112,9 +112,9 @@ struct ReportsAnalyticsView: View {
 
     private func colorForMix(_ label: String) -> Color {
         switch label {
-        case "live": return .orange
-        case "active": return .blue
-        case "closed": return .gray
+        case "live": return PAXTheme.accent
+        case "active": return PAXTheme.accent.opacity(0.72)
+        case "closed": return Color.secondary
         default: return PAXTheme.accent
         }
     }

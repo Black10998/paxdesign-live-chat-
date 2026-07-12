@@ -4,3 +4,4 @@ paxdesign-booking/ios-live-chat/build/
 paxdesign-booking/ios-live-chat/DerivedData/
 paxdesign-booking/ios-live-chat/.build/
 paxdesign-booking/ios-live-chat/PAXDesignLiveChat.xcodeproj/
+*.pyc

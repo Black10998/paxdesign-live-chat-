@@ -90,7 +90,7 @@ struct TeamManagementHubView: View {
                 title: L10n.AdminTeamManagement,
                 subtitle: L10n.AdminTeamManagementSubtitle,
                 systemImage: "person.3.sequence.fill",
-                gradient: [.purple, .indigo]
+                tint: PAXTheme.accent
             )
             .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
             .listRowBackground(Color.clear)
@@ -127,7 +127,7 @@ struct TeamManagementHubView: View {
                                     .font(.body.weight(.semibold))
                                 Text(session.otherRoleLabel.isEmpty ? session.requestStatusLabel : session.otherRoleLabel)
                                     .font(.caption)
-                                    .foregroundStyle(.purple)
+                                    .foregroundStyle(PAXTheme.accent)
                             }
                             Spacer()
                         }
@@ -212,7 +212,7 @@ struct TeamManagementHubView: View {
                                     .foregroundStyle(PAXTheme.textPrimary)
                                 Text(member.publicDisplaySubtitle)
                                     .font(.caption.weight(.semibold))
-                                    .foregroundStyle(.purple)
+                                    .foregroundStyle(PAXTheme.accent)
                             }
                             Spacer()
                             Text(member.enabled ? L10n.CommonActive : L10n.CommonInactive)
@@ -276,7 +276,7 @@ struct TeamManagementHubView: View {
             LabeledContent(L10n.AdminPolicyEdMessaging) {
                 Text(L10n.AdminPolicyRequestRequired)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(PAXTheme.accent)
             }
             Text(L10n.AdminPolicyEdHint)
                 .font(.caption)

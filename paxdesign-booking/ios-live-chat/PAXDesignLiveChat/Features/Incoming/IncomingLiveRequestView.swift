@@ -114,14 +114,8 @@ struct IncomingLiveRequestView: View {
                     .frame(width: 76, height: 76)
                     .background(
                         Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [color, color.opacity(0.75)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                            .shadow(color: color.opacity(0.35), radius: 16, y: 8)
+                            .fill(color)
+                            .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
                     )
             }
             .buttonStyle(PAXPressButtonStyle())
