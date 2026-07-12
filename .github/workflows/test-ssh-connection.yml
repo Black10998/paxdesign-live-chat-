@@ -2,6 +2,10 @@ name: Test SSH Connection
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/test-ssh-connection.yml'
 
 permissions:
   contents: read
