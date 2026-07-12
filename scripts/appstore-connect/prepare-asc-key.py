@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+"""Normalize and validate an App Store Connect API private key from env."""
+
+from __future__ import annotations
+
+import base64
+import os
+import re
+import subprocess
+import sys
+
+
+def fail(message: str) -> None:
+    print(f"ERROR: {message}", file=sys.stderr)
+    sys.exit(1)
+
+
+def normalize_pem(raw: str) -> str:
+    key = raw.strip().strip('"').replace("\r", "")
+    key = key.replace("\\n", "\n")
+    if "BEGIN PRIVATE KEY" not in key:
+        return key
+
+    if key.count("\n") >= 2:
+        return key if key.endswith("\n") else key + "\n"
+
+    match = re.search(
+        r"-----BEGIN PRIVATE KEY-----\s*(.+?)\s*-----END PRIVATE KEY-----",
+        key,
+        re.DOTALL,
+    )
+    if not match:
+        return key
+
+    body = re.sub(r"\s+", "", match.group(1))
+    wrapped = "\n".join(body[i : i + 64] for i in range(0, len(body), 64))
+    return f"-----BEGIN PRIVATE KEY-----\n{wrapped}\n-----END PRIVATE KEY-----\n"
+
+
+def load_key() -> str:
+    raw = os.environ.get("APP_STORE_CONNECT_API_PRIVATE_KEY", "").strip()
+    if not raw:
+        b64 = os.environ.get("APP_STORE_CONNECT_API_KEY_P8_BASE64", "").strip()
+        if b64:
+            try:
+                raw = base64.b64decode("".join(b64.split())).decode("utf-8")
+            except Exception as exc:  # noqa: BLE001
+                fail(f"Could not decode APP_STORE_CONNECT_API_KEY_P8_BASE64: {exc}")
+
+    if not raw:
+        fail("Missing APP_STORE_CONNECT_API_PRIVATE_KEY or APP_STORE_CONNECT_API_KEY_P8_BASE64")
+
+    return normalize_pem(raw)
+
+
+def validate_key(key: str) -> None:
+    proc = subprocess.run(
+        ["openssl", "pkey", "-noout"],
+        input=key.encode("utf-8"),
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        fail(
+            "App Store Connect API private key is invalid. Paste the full AuthKey_XXXX.p8 "
+            "file or store it base64-encoded in APP_STORE_CONNECT_API_KEY_P8_BASE64."
+        )
+
+
+def main() -> None:
+    key = load_key()
+    validate_key(key)
+
+    github_env = os.environ.get("GITHUB_ENV")
+    if github_env:
+        delimiter = "ASC_P8_EOF"
+        with open(github_env, "a", encoding="utf-8") as handle:
+            handle.write(f"APP_STORE_CONNECT_API_PRIVATE_KEY<<{delimiter}\n")
+            handle.write(key)
+            handle.write(f"\n{delimiter}\n")
+
+    print("App Store Connect private key format validated")
+
+
+if __name__ == "__main__":
+    main()

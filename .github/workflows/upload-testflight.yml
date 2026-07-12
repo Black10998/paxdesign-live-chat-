@@ -58,21 +58,8 @@ jobs:
           run-id: ${{ steps.latest_ipa.outputs.run_id }}
           path: artifacts/ipa
 
-      - name: Validate App Store Connect private key
-        shell: bash
-        run: |
-          set +x
-          KEY="${APP_STORE_CONNECT_API_PRIVATE_KEY:-}"
-          KEY="${KEY//$'\r'/}"
-          KEY="${KEY#\"}"
-          KEY="${KEY%\"}"
-          KEY="${KEY//\\n/$'\n'}"
-          if ! printf '%s' "$KEY" | openssl pkey -noout >/dev/null 2>&1; then
-            echo "ERROR: APP_STORE_CONNECT_API_PRIVATE_KEY secret is invalid or malformed." >&2
-            echo "Paste the entire AuthKey_XXXX.p8 file contents into the GitHub secret." >&2
-            exit 1
-          fi
-          echo "App Store Connect private key format validated"
+      - name: Validate and normalize App Store Connect private key
+        run: python3 scripts/appstore-connect/prepare-asc-key.py
 
       - name: Upload IPA to TestFlight
         uses: apple-actions/upload-testflight-build@v3
@@ -81,7 +68,7 @@ jobs:
           app-type: ios
           issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           api-key-id: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          api-private-key: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+          api-private-key: ${{ env.APP_STORE_CONNECT_API_PRIVATE_KEY }}
           uses-non-exempt-encryption: 'false'
           wait-for-processing: 'true'
 
