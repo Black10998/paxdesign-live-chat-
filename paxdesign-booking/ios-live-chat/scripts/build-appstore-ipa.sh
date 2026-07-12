@@ -223,13 +223,72 @@ echo "==> Generating Xcode project from project.yml"
 xcodegen generate --spec "$PROJECT_SPEC"
 
 echo "==> Applying manual signing settings to generated Xcode project"
-python3 - <<PY
+export ROOT MAIN_BUNDLE_ID WIDGET_BUNDLE_ID APPLE_TEAM_ID \
+  MAIN_PROFILE_UUID MAIN_PROFILE_NAME WIDGET_PROFILE_UUID WIDGET_PROFILE_NAME
+python3 - <<'PY'
+import os
+import re
 from pathlib import Path
 
-pbxproj = Path("$ROOT/PAXDesignLiveChat.xcodeproj/project.pbxproj")
+root = Path(os.environ["ROOT"])
+pbxproj = root / "PAXDesignLiveChat.xcodeproj/project.pbxproj"
 text = pbxproj.read_text()
+
+targets = [
+    {
+        "bundle_id": os.environ["MAIN_BUNDLE_ID"],
+        "team_id": os.environ["APPLE_TEAM_ID"],
+        "profile_uuid": os.environ["MAIN_PROFILE_UUID"],
+        "profile_name": os.environ["MAIN_PROFILE_NAME"],
+    },
+    {
+        "bundle_id": os.environ["WIDGET_BUNDLE_ID"],
+        "team_id": os.environ["APPLE_TEAM_ID"],
+        "profile_uuid": os.environ["WIDGET_PROFILE_UUID"],
+        "profile_name": os.environ["WIDGET_PROFILE_NAME"],
+    },
+]
+
+def upsert_setting(block: str, key: str, value: str) -> str:
+    line = f"{key} = {value};"
+    pattern = re.compile(rf"^\s*{re.escape(key)} = .*?;$", re.MULTILINE)
+    if pattern.search(block):
+        return pattern.sub(line, block, count=1)
+    return block.replace("buildSettings = {", "buildSettings = {\n\t\t\t\t" + line, 1)
+
+def patch_release_block(block: str, bundle_id: str, team_id: str, profile_uuid: str, profile_name: str) -> str:
+    if f"PRODUCT_BUNDLE_IDENTIFIER = {bundle_id};" not in block:
+        return block
+    block = upsert_setting(block, "CODE_SIGN_STYLE", "Manual")
+    block = upsert_setting(block, "DEVELOPMENT_TEAM", team_id)
+    block = upsert_setting(block, "CODE_SIGN_IDENTITY", '"Apple Distribution"')
+    block = upsert_setting(block, "PROVISIONING_PROFILE", profile_uuid)
+    block = upsert_setting(block, "PROVISIONING_PROFILE_SPECIFIER", f'"{profile_name}"')
+    return block
+
+parts = re.split(r"(?=\/\* Release \*\/ = \{)", text)
+if len(parts) < 2:
+    raise SystemExit("Could not locate Release build configurations in project.pbxproj")
+
+patched_bundle_ids = set()
+for idx in range(1, len(parts)):
+    for target in targets:
+        bundle_id = target["bundle_id"]
+        if bundle_id in patched_bundle_ids:
+            continue
+        updated = patch_release_block(parts[idx], bundle_id, target["team_id"], target["profile_uuid"], target["profile_name"])
+        if updated != parts[idx]:
+            parts[idx] = updated
+            patched_bundle_ids.add(bundle_id)
+            break
+
+missing = {t["bundle_id"] for t in targets} - patched_bundle_ids
+if missing:
+    raise SystemExit(f"Failed to patch Release configs for bundle ids: {', '.join(sorted(missing))}")
+
+text = "".join(parts)
 text = text.replace("CODE_SIGN_STYLE = Automatic;", "CODE_SIGN_STYLE = Manual;")
-text = text.replace('DEVELOPMENT_TEAM = "";', 'DEVELOPMENT_TEAM = $APPLE_TEAM_ID;')
+text = text.replace('DEVELOPMENT_TEAM = "";', f'DEVELOPMENT_TEAM = {os.environ["APPLE_TEAM_ID"]};')
 pbxproj.write_text(text)
 PY
 
