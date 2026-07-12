@@ -18,7 +18,7 @@ struct LinkScanBadgeView: View {
 
     var body: some View {
         HStack(spacing: 5) {
-            Image(systemName: iconName)
+            PAXIcon( iconName)
                 .font(.system(size: 10, weight: .bold))
             Text(displayedStatus.label)
                 .font(.caption2.weight(.bold))
@@ -173,7 +173,7 @@ struct LinkCardBubbleView: View {
                         .foregroundStyle(PAXTheme.textPrimary)
                         .lineLimit(1)
                     Spacer(minLength: 0)
-                    Image(systemName: "arrow.up.right")
+                    PAXIcon( "arrow.up.right")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(PAXTheme.accent)
                 }
@@ -203,75 +203,9 @@ struct QuickLinkIconView: View {
             RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
                 .fill(PAXTheme.accent.opacity(0.14))
                 .frame(width: size, height: size)
-            if icon.hasPrefix("sf:") {
-                Image(systemName: String(icon.dropFirst(3)))
-                    .font(.system(size: size * 0.42, weight: .semibold))
-                    .foregroundStyle(PAXTheme.accent)
-            } else {
-                QuickLinkVectorIcon(name: resolvedIconKey)
-                    .frame(width: size * 0.52, height: size * 0.52)
-                    .foregroundStyle(PAXTheme.accent)
-            }
-        }
-    }
-
-    private var resolvedIconKey: String {
-        let raw = icon.hasPrefix("svg:") ? String(icon.dropFirst(4)) : icon
-        if raw.range(of: #"^[a-z0-9_-]+$"#, options: .regularExpression) != nil, raw.count <= 24 {
-            return raw
-        }
-        let lower = label.lowercased()
-        if lower.contains("service") { return "services" }
-        if lower.contains("project") { return "projects" }
-        if lower.contains("pric") { return "pricing" }
-        if lower.contains("contact") { return "contact" }
-        if lower.contains("about") { return "about" }
-        if lower.contains("faq") { return "faq" }
-        if lower.contains("portfolio") { return "portfolio" }
-        return "link"
-    }
-}
-
-private struct QuickLinkVectorIcon: View {
-    let name: String
-
-    var body: some View {
-        Canvas { context, size in
-            let rect = CGRect(origin: .zero, size: size)
-            var path = Path()
-            switch name {
-            case "services":
-                path.move(to: CGPoint(x: rect.minX + rect.width * 0.15, y: rect.midY - rect.height * 0.18))
-                path.addLine(to: CGPoint(x: rect.maxX - rect.width * 0.15, y: rect.midY - rect.height * 0.18))
-                path.move(to: CGPoint(x: rect.minX + rect.width * 0.15, y: rect.midY))
-                path.addLine(to: CGPoint(x: rect.maxX - rect.width * 0.35, y: rect.midY))
-                path.move(to: CGPoint(x: rect.minX + rect.width * 0.15, y: rect.midY + rect.height * 0.18))
-                path.addLine(to: CGPoint(x: rect.maxX - rect.width * 0.15, y: rect.midY + rect.height * 0.18))
-            case "projects":
-                path.move(to: CGPoint(x: rect.midX - rect.width * 0.28, y: rect.maxY - rect.height * 0.12))
-                path.addLine(to: CGPoint(x: rect.midX, y: rect.minY + rect.height * 0.12))
-                path.addLine(to: CGPoint(x: rect.midX + rect.width * 0.28, y: rect.maxY - rect.height * 0.12))
-                path.closeSubpath()
-            case "pricing":
-                path.addEllipse(in: rect.insetBy(dx: rect.width * 0.12, dy: rect.height * 0.12))
-                path.move(to: CGPoint(x: rect.midX, y: rect.midY - rect.height * 0.12))
-                path.addLine(to: CGPoint(x: rect.midX, y: rect.midY + rect.height * 0.12))
-                path.move(to: CGPoint(x: rect.midX - rect.width * 0.14, y: rect.midY))
-                path.addLine(to: CGPoint(x: rect.midX + rect.width * 0.14, y: rect.midY))
-            case "contact":
-                path.addRoundedRect(in: rect.insetBy(dx: rect.width * 0.1, dy: rect.height * 0.18), cornerSize: CGSize(width: 2, height: 2))
-            case "about":
-                path.addEllipse(in: rect.insetBy(dx: rect.width * 0.12, dy: rect.height * 0.12))
-                path.addEllipse(in: CGRect(x: rect.midX - 1.2, y: rect.midY + rect.height * 0.08, width: 2.4, height: 2.4))
-            case "faq":
-                path.addEllipse(in: rect.insetBy(dx: rect.width * 0.12, dy: rect.height * 0.12))
-            case "portfolio":
-                path.addRoundedRect(in: rect.insetBy(dx: rect.width * 0.1, dy: rect.height * 0.16), cornerSize: CGSize(width: 2, height: 2))
-            default:
-                path.addEllipse(in: CGRect(x: rect.midX - rect.width * 0.22, y: rect.midY - rect.height * 0.08, width: rect.width * 0.44, height: rect.height * 0.16))
-                path.addEllipse(in: CGRect(x: rect.midX - rect.width * 0.22, y: rect.midY + rect.height * 0.08, width: rect.width * 0.44, height: rect.height * 0.16))
-            }
-            context.stroke(path, with: .foreground, style: StrokeStyle(lineWidth: 1.6, lineCap: .round, lineJoin: .round))
+            PAXIcon(PAXIconCatalog.quickLinkSymbol(for: icon, label: label))
+                .font(.system(size: size * 0.42, weight: .regular))
+                .foregroundStyle(PAXTheme.accent)
         }
     }
 }
@@ -287,7 +221,7 @@ struct QuickLinksSheet: View {
             Group {
                 if links.isEmpty {
                     VStack(spacing: 10) {
-                        Image(systemName: "link.badge.plus")
+                        PAXIcon( "link.badge.plus")
                             .font(.system(size: 34))
                             .foregroundStyle(PAXTheme.textTertiary)
                         Text(L10n.ChatQuickLinksEmptyTitle)

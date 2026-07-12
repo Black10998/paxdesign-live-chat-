@@ -87,7 +87,7 @@ struct EmployeeDashboardView: View {
 
     private func metricRow(_ title: String, value: String, icon: String, tint: Color) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: icon).foregroundStyle(tint).frame(width: 28)
+            PAXIcon( icon).foregroundStyle(tint).frame(width: 28)
             Text(title)
             Spacer()
             Text(value).font(.headline).foregroundStyle(tint)

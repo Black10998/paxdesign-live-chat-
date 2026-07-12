@@ -9,7 +9,7 @@ struct LegalWebLinkRow: View {
             HStack {
                 Label(title, systemImage: "safari")
                 Spacer()
-                Image(systemName: "arrow.up.right")
+                PAXIcon( "arrow.up.right")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(PAXTheme.textTertiary)
             }

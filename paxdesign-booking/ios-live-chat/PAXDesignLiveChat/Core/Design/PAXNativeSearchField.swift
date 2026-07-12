@@ -7,7 +7,7 @@ struct PAXNativeSearchField: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
+            PAXIcon( "magnifyingglass")
                 .foregroundStyle(PAXTheme.textTertiary)
                 .font(.body)
 

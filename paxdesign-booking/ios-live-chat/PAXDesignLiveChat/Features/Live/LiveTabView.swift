@@ -76,7 +76,7 @@ struct LiveTabView: View {
 
     private var emptyLiveState: some View {
         VStack(spacing: 14) {
-            Image(systemName: "checkmark.seal.fill")
+            PAXIcon( "checkmark.seal.fill")
                 .font(.system(size: 44))
                 .foregroundStyle(PAXTheme.success.opacity(0.85))
             Text(L10n.LiveAllClear)

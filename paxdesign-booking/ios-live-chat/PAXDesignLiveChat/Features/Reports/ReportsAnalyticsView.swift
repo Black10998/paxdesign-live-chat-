@@ -82,7 +82,7 @@ struct ReportsAnalyticsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink { ModuleReportsSettingsView() } label: {
-                    Image(systemName: "slider.horizontal.3")
+                    PAXIcon( "slider.horizontal.3")
                 }
             }
         }

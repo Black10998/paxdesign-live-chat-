@@ -161,7 +161,7 @@ struct AdministrationHubView: View {
 
     private func activityTile(value: String, label: String, systemImage: String, tint: Color) -> some View {
         HStack(spacing: 14) {
-            Image(systemName: systemImage)
+            PAXIcon( systemImage)
                 .font(.title3)
                 .foregroundStyle(tint)
                 .frame(width: 32)

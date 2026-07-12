@@ -49,7 +49,7 @@ struct ActivityLogView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink { ModuleActivitySettingsView() } label: {
-                    Image(systemName: "slider.horizontal.3")
+                    PAXIcon( "slider.horizontal.3")
                 }
             }
             if !log.entries.isEmpty, auth.canManageUsers {

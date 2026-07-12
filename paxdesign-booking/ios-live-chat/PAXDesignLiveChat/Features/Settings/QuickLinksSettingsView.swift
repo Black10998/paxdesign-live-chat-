@@ -27,7 +27,7 @@ struct QuickLinksSettingsView: View {
                     if links.isEmpty {
                         Section {
                             VStack(spacing: 10) {
-                                Image(systemName: "link.badge.plus")
+                                PAXIcon( "link.badge.plus")
                                     .font(.system(size: 34))
                                     .foregroundStyle(PAXTheme.textTertiary)
                                 Text(L10n.ChatQuickLinksEmptyTitle)
@@ -58,7 +58,7 @@ struct QuickLinksSettingsView: View {
                                                 .lineLimit(1)
                                         }
                                         Spacer(minLength: 0)
-                                        Image(systemName: "line.3.horizontal")
+                                        PAXIcon( "line.3.horizontal")
                                             .font(.caption.weight(.semibold))
                                             .foregroundStyle(PAXTheme.textTertiary)
                                     }

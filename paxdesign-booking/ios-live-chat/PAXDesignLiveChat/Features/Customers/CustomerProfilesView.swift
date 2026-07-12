@@ -92,7 +92,7 @@ struct CustomerProfilesView: View {
                 }
             }
             Spacer()
-            Image(systemName: "chevron.right")
+            PAXIcon( "chevron.right")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(PAXTheme.textTertiary)
         }

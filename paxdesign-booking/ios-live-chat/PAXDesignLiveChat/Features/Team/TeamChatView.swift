@@ -106,7 +106,7 @@ struct TeamChatView: View {
                         }
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    PAXIcon( "ellipsis.circle")
                 }
                 .accessibilityLabel(L10n.TeamContextConversationOptions)
             }
@@ -185,7 +185,7 @@ struct TeamChatView: View {
 
     private var teamStatusBanner: some View {
         HStack(spacing: 8) {
-            Image(systemName: statusIcon)
+            PAXIcon( statusIcon)
                 .foregroundStyle(statusTint)
             VStack(alignment: .leading, spacing: 2) {
                 Text(thread.requestStatusLabel)
@@ -248,7 +248,7 @@ struct TeamChatView: View {
 
     private var lockedComposer: some View {
         HStack(spacing: 10) {
-            Image(systemName: "lock.fill")
+            PAXIcon( "lock.fill")
                 .foregroundStyle(PAXTheme.textTertiary)
             Text(thread.requestStatus == "declined" || thread.requestStatus == "locked"
                  ? L10n.TeamLockedConversation
@@ -313,7 +313,7 @@ struct TeamChatView: View {
             Button {
                 Task { await thread.send(auth: auth, teamCoordinator: teamCoordinator) }
             } label: {
-                Image(systemName: "arrow.up.circle.fill")
+                PAXIcon( "arrow.up.circle.fill")
                     .font(.system(size: 34))
                     .foregroundStyle(canSend ? PAXBrand.accent : PAXTheme.textTertiary)
             }
@@ -489,7 +489,7 @@ private struct StaffComposeRow: View {
                             .font(.body.weight(.semibold))
                             .foregroundStyle(PAXTheme.textPrimary)
                         if member.isExecutive {
-                            Image(systemName: "crown.fill")
+                            PAXIcon( "crown.fill")
                                 .font(.caption2)
                                 .foregroundStyle(PAXTheme.accent)
                         }
@@ -504,7 +504,7 @@ private struct StaffComposeRow: View {
                 if isOpening {
                     PAXInlineLoader(size: 18)
                 } else {
-                    Image(systemName: member.requiresEdRequest ? "paperplane" : "message.fill")
+                    PAXIcon( member.requiresEdRequest ? "paperplane" : "message.fill")
                         .foregroundStyle(roleTint)
                 }
             }

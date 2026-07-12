@@ -114,7 +114,7 @@ struct SessionListView: View {
                         PAXHaptics.light()
                         showChatSettings = true
                     } label: {
-                        Image(systemName: "gearshape")
+                        PAXIcon( "gearshape")
                             .font(.body.weight(.semibold))
                     }
                     .accessibilityLabel(L10n.SettingsSectionLiveChat)
@@ -314,7 +314,7 @@ struct SessionListView: View {
 
     private var noAccessView: some View {
         VStack(spacing: 14) {
-            Image(systemName: "lock.fill")
+            PAXIcon( "lock.fill")
                 .font(.system(size: 42))
                 .foregroundStyle(PAXTheme.textTertiary)
             Text(L10n.SessionNoAccessTitle)
@@ -371,7 +371,7 @@ struct SessionListView: View {
 
     private func syncErrorBanner(_ message: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "exclamationmark.triangle.fill")
+            PAXIcon( "exclamationmark.triangle.fill")
                 .foregroundStyle(.orange)
             VStack(alignment: .leading, spacing: 4) {
                 Text(L10n.SessionSyncFailed)
@@ -395,7 +395,7 @@ struct SessionListView: View {
 
     private var liveBanner: some View {
         HStack(spacing: 12) {
-            Image(systemName: "bell.and.waves.left.and.right.fill")
+            PAXIcon( "bell.and.waves.left.and.right.fill")
                 .font(.title3)
                 .foregroundStyle(PAXTheme.accent)
 
@@ -418,7 +418,7 @@ struct SessionListView: View {
 
     private var emptyState: some View {
         VStack(spacing: 14) {
-            Image(systemName: "bubble.left.and.bubble.right")
+            PAXIcon( "bubble.left.and.bubble.right")
                 .font(.system(size: 40, weight: .light))
                 .foregroundStyle(PAXTheme.textTertiary)
             Text(L10n.SessionNoChats)

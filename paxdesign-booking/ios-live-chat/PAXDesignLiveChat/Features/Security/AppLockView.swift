@@ -103,7 +103,7 @@ struct AppLockView: View {
                     } label: {
                         Group {
                             if key == "⌫" {
-                                Image(systemName: "delete.left")
+                                PAXIcon( "delete.left")
                                     .font(.title3)
                             } else {
                                 Text(key)

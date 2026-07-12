@@ -235,7 +235,7 @@ struct SettingsRowLabel: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: systemImage)
+            PAXIcon( systemImage)
                 .font(.body.weight(.medium))
                 .foregroundStyle(PAXTheme.accent)
                 .frame(width: 28, height: 28)

@@ -554,7 +554,7 @@ private struct PAXAnimatedTabIcon: View {
 
     var body: some View {
         ZStack {
-            Image(systemName: symbol)
+            PAXIcon( symbol)
                 .font(.system(size: 18, weight: .semibold))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(PAXTheme.textSecondary)
@@ -562,7 +562,7 @@ private struct PAXAnimatedTabIcon: View {
                 .offset(x: isSelected ? -10 : 0)
                 .scaleEffect(isSelected ? 0.82 : 1)
 
-            Image(systemName: selectedSymbol)
+            PAXIcon( selectedSymbol)
                 .font(.system(size: 18, weight: .semibold))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(PAXTheme.accent)

@@ -61,13 +61,13 @@ struct CalendarModuleView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink { ModuleCalendarSettingsView() } label: {
-                    Image(systemName: "slider.horizontal.3")
+                    PAXIcon( "slider.horizontal.3")
                 }
             }
             if auth.canManageCalendar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showAdd = true } label: {
-                        Image(systemName: "plus")
+                        PAXIcon( "plus")
                     }
                 }
             }
@@ -92,7 +92,7 @@ struct CalendarModuleView: View {
 
     private func calendarRow(_ event: PAXCalendarEvent) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: event.category.systemImage)
+            PAXIcon( event.category.systemImage)
                 .foregroundStyle(.red)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 3) {

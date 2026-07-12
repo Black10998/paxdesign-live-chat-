@@ -68,14 +68,14 @@ struct AccentColorSettingsView: View {
                             if let color = preset.color {
                                 Circle().fill(color).frame(width: 22, height: 22)
                             } else {
-                                Image(systemName: "paintbrush.pointed.fill")
+                                PAXIcon( "paintbrush.pointed.fill")
                                     .foregroundStyle(PAXTheme.accent)
                             }
                             Text(preset.title)
                                 .foregroundStyle(PAXTheme.textPrimary)
                             Spacer()
                             if settings.accentColorPreset == preset {
-                                Image(systemName: "checkmark.circle.fill")
+                                PAXIcon( "checkmark.circle.fill")
                                     .foregroundStyle(PAXTheme.accent)
                             }
                         }

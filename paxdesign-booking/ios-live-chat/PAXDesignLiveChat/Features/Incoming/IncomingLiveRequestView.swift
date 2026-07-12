@@ -30,7 +30,7 @@ struct IncomingLiveRequestView: View {
                         .fill(PAXTheme.accentSoft)
                         .frame(width: 96, height: 96)
 
-                    Image(systemName: "person.crop.circle.badge.clock.fill")
+                    PAXIcon( "person.crop.circle.badge.clock.fill")
                         .font(.system(size: 44))
                         .foregroundStyle(PAXTheme.accent)
                 }
@@ -108,7 +108,7 @@ struct IncomingLiveRequestView: View {
     private func callAction(title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
         VStack(spacing: 10) {
             Button(action: action) {
-                Image(systemName: icon)
+                PAXIcon( icon)
                     .font(.title2.weight(.semibold))
                     .foregroundStyle(.white)
                     .frame(width: 76, height: 76)

@@ -197,7 +197,7 @@ struct PAXSevenDayAnalyticsRings: View {
     private func trendPill(delta: Double) -> some View {
         let positive = delta >= 0
         return HStack(spacing: 4) {
-            Image(systemName: positive ? "arrow.up.right" : "arrow.down.right")
+            PAXIcon( positive ? "arrow.up.right" : "arrow.down.right")
                 .font(.caption2.weight(.bold))
             Text(String(format: "%+.0f%%", delta))
                 .font(.caption.weight(.semibold))

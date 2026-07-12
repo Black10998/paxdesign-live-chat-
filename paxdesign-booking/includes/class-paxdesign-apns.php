@@ -270,7 +270,14 @@ class PAXdesign_APNS {
         if (preg_match('/lead|kontakt|contact/i', $preview . ' ' . $service)) {
             $event = 'new_lead_contact';
         }
-        $silent = !$is_new && !$needs_ai_attention && $event !== 'customer_waiting' && $event !== 'new_lead_contact';
+        $visible_events = array(
+            'customer_waiting',
+            'new_lead_contact',
+            'assigned_chat_updated',
+            'new_chat_started',
+            'missed_chat',
+        );
+        $silent = !in_array($event, $visible_events, true) && !$is_new && !$needs_ai_attention;
         if ($last_role === 'admin' && $event !== 'customer_waiting') {
             $silent = true;
         }
@@ -612,7 +619,7 @@ class PAXdesign_APNS {
         $sound    = self::sound_for_type($type, $handler, $event);
         $category = ($type === 'live_request') ? 'PAX_LIVE_REQUEST' : 'PAX_MESSAGE';
         $is_live_request = ($type === 'live_request' || $event === 'customer_waiting');
-        $interruption = $is_live_request ? 'active' : 'active';
+        $interruption = $is_live_request ? 'time-sensitive' : 'active';
 
         $aps = array(
             'badge' => $user_id > 0 ? self::count_user_badge($user_id) : self::count_pending_badge(),
@@ -626,6 +633,8 @@ class PAXdesign_APNS {
                 'body'  => (string) $body,
             );
             $aps['sound'] = $sound;
+            // Keep app state in sync even when iOS delivers only the visible alert.
+            $aps['content-available'] = 1;
             $aps['interruption-level'] = $interruption;
             $aps['category'] = $category;
         }
@@ -638,6 +647,7 @@ class PAXdesign_APNS {
         $url = $host . '/3/device/' . $device['token'];
         $push_type = $silent ? 'background' : 'alert';
         $priority  = $silent ? '5' : '10';
+        $expiration = $silent ? (time() + 300) : (time() + 3600);
         $session_id = isset($data['session_id']) ? (string) $data['session_id'] : '';
         $collapse_id = $session_id !== '' ? substr($type . '-' . $session_id, 0, 64) : '';
 
@@ -646,7 +656,7 @@ class PAXdesign_APNS {
             'apns-topic'     => $bundle,
             'apns-push-type' => $push_type,
             'apns-priority'  => $priority,
-            'apns-expiration'=> (string) (time() + 120),
+            'apns-expiration'=> (string) $expiration,
             'content-type'   => 'application/json',
         );
         if ($collapse_id !== '') {

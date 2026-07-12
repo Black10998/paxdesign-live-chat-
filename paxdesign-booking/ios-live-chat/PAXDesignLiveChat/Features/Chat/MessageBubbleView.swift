@@ -260,7 +260,7 @@ struct ReplyBarView: View {
             Spacer()
 
             Button(action: onClear) {
-                Image(systemName: "xmark.circle.fill")
+                PAXIcon( "xmark.circle.fill")
                     .foregroundStyle(PAXTheme.textTertiary)
             }
             .buttonStyle(.plain)

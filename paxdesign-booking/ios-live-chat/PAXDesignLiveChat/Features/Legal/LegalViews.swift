@@ -24,7 +24,7 @@ struct LegalDocumentView: View {
                                     Text(link.title)
                                         .font(.subheadline.weight(.medium))
                                     Spacer()
-                                    Image(systemName: "arrow.up.right")
+                                    PAXIcon( "arrow.up.right")
                                         .font(.caption)
                                         .foregroundStyle(PAXTheme.textTertiary)
                                 }
@@ -189,7 +189,7 @@ struct AboutView: View {
 
     private func aboutPill(_ text: String, icon: String) -> some View {
         HStack(spacing: 5) {
-            Image(systemName: icon)
+            PAXIcon( icon)
                 .font(.caption2.weight(.semibold))
             Text(text)
                 .font(.caption.weight(.semibold))
@@ -235,7 +235,7 @@ struct AboutView: View {
 
     private func featureRow(icon: String, title: String, subtitle: String) -> some View {
         HStack(spacing: 14) {
-            Image(systemName: icon)
+            PAXIcon( icon)
                 .font(.body.weight(.medium))
                 .foregroundStyle(PAXBrand.accent)
                 .frame(width: 32, height: 32)

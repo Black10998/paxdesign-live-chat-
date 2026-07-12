@@ -152,7 +152,7 @@ struct DashboardView: View {
                     showSearch = true
                     PAXHaptics.light()
                 } label: {
-                    Image(systemName: "magnifyingglass")
+                    PAXIcon( "magnifyingglass")
                 }
                 .accessibilityLabel(L10n.GlobalSearchTitle)
             }
@@ -369,7 +369,7 @@ struct DashboardView: View {
             } else {
                 ForEach(calendar.upcoming()) { event in
                     HStack(spacing: 12) {
-                        Image(systemName: event.category.systemImage)
+                        PAXIcon( event.category.systemImage)
                             .foregroundStyle(.red)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(event.title).font(.subheadline.weight(.semibold))
@@ -434,7 +434,7 @@ private struct DashboardStatusChipView: View {
 
     var body: some View {
         HStack(spacing: 9) {
-            Image(systemName: chip.icon)
+            PAXIcon( chip.icon)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(chip.tint)
             VStack(alignment: .leading, spacing: 1) {
@@ -481,7 +481,7 @@ private struct DashboardTourOverlay: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 8) {
-                    Image(systemName: step.pointerSymbol)
+                    PAXIcon( step.pointerSymbol)
                         .font(.headline.weight(.bold))
                         .foregroundStyle(PAXTheme.accent)
                     Text(L10n.DashboardTourStepOf(stepIndex + 1, totalSteps))

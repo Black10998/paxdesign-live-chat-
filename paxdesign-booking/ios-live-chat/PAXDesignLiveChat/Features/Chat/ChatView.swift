@@ -208,7 +208,7 @@ struct ChatView: View {
                 Button {
                     withAnimation(PAXTheme.quickSpring) { showCustomerOverview = false }
                 } label: {
-                    Image(systemName: "chevron.up")
+                    PAXIcon( "chevron.up")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(PAXTheme.textTertiary)
                 }
@@ -248,7 +248,7 @@ struct ChatView: View {
 
     private func overviewRow(icon: String, title: String, value: String) -> some View {
         HStack(spacing: 8) {
-            Image(systemName: icon)
+            PAXIcon( icon)
                 .font(.caption2)
                 .foregroundStyle(PAXTheme.accent)
                 .frame(width: 16)
@@ -281,7 +281,7 @@ struct ChatView: View {
                     showCustomerOverview.toggle()
                 }
             } label: {
-                Image(systemName: showCustomerOverview ? "person.crop.circle.fill" : "person.crop.circle")
+                PAXIcon( showCustomerOverview ? "person.crop.circle.fill" : "person.crop.circle")
             }
             .accessibilityLabel(L10n.ChatOverviewAccessibility)
         }
@@ -422,7 +422,7 @@ struct ChatView: View {
                         }
                     }
                 } label: {
-                    Image(systemName: "plus.circle")
+                    PAXIcon( "plus.circle")
                         .font(.title3)
                         .foregroundStyle(PAXTheme.accent)
                         .frame(width: 32, height: 32)
@@ -445,7 +445,7 @@ struct ChatView: View {
                 PAXHaptics.light()
                 Task { await thread.send(auth: auth) }
             } label: {
-                Image(systemName: "arrow.up.circle.fill")
+                PAXIcon( "arrow.up.circle.fill")
                     .font(.system(size: 30))
                     .foregroundStyle(canSend ? PAXTheme.accent : PAXTheme.textTertiary)
             }
@@ -490,7 +490,7 @@ struct ChatView: View {
 struct MessageReactionBadge: View {
     let reaction: String
     var body: some View {
-        Image(systemName: reaction == "like" ? "heart.fill" : "hand.thumbsdown.fill")
+        PAXIcon( reaction == "like" ? "heart.fill" : "hand.thumbsdown.fill")
             .font(.caption2)
             .foregroundStyle(reaction == "like" ? .pink : .orange)
             .padding(5)
@@ -510,7 +510,7 @@ struct SessionRatingBadge: View {
         self.rating = rating
     }
     var body: some View {
-        Image(systemName: rating == 5 ? "heart.fill" : "hand.thumbsdown.fill")
+        PAXIcon( rating == 5 ? "heart.fill" : "hand.thumbsdown.fill")
             .font(.caption2)
             .foregroundStyle(rating == 5 ? .pink : .orange)
     }

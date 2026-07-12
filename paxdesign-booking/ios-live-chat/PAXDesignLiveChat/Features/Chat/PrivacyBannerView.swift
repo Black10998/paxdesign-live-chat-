@@ -5,7 +5,7 @@ struct PrivacyBannerView: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            Image(systemName: "lock.shield.fill")
+            PAXIcon( "lock.shield.fill")
                 .font(.caption)
                 .foregroundStyle(PAXTheme.success)
 
@@ -16,7 +16,7 @@ struct PrivacyBannerView: View {
 
             if let onDismiss {
                 Button(action: onDismiss) {
-                    Image(systemName: "xmark")
+                    PAXIcon( "xmark")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(PAXTheme.textTertiary)
                         .padding(6)

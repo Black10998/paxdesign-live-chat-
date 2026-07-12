@@ -167,7 +167,7 @@ struct OnboardingFlowView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            Image(systemName: page.systemImage)
+            PAXIcon( page.systemImage)
                 .font(.system(size: 52))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.tint)
@@ -270,7 +270,7 @@ struct OnboardingFlowView: View {
 
     private var postLoginStepHeader: some View {
         VStack(spacing: 20) {
-            Image(systemName: postLoginStepIcon)
+            PAXIcon( postLoginStepIcon)
                 .font(.system(size: 56))
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.tint)

@@ -42,7 +42,7 @@ struct TeamMessagesHubView: View {
                         PAXHaptics.light()
                         showCompose = true
                     } label: {
-                        Image(systemName: "square.and.pencil")
+                        PAXIcon( "square.and.pencil")
                             .font(.body.weight(.semibold))
                     }
                     .accessibilityLabel(L10n.TeamNewMessage)
@@ -316,7 +316,7 @@ struct TeamMessagesHubView: View {
             HStack(spacing: 14) {
                 ZStack(alignment: .bottomTrailing) {
                     SessionAvatarView(name: session.displayName, size: 48, isTeam: true)
-                    Image(systemName: "person.3.fill")
+                    PAXIcon( "person.3.fill")
                         .font(.system(size: 9, weight: .bold))
                         .foregroundStyle(.white)
                         .padding(3)
@@ -331,12 +331,12 @@ struct TeamMessagesHubView: View {
                             .foregroundStyle(PAXTheme.textPrimary)
                             .lineLimit(1)
                         if session.isExecutiveConversation {
-                            Image(systemName: "crown.fill")
+                            PAXIcon( "crown.fill")
                                 .font(.caption2)
                                 .foregroundStyle(PAXTheme.accent)
                         }
                         if session.isPinned {
-                            Image(systemName: "pin.fill")
+                            PAXIcon( "pin.fill")
                                 .font(.caption2)
                                 .foregroundStyle(PAXBrand.accent)
                         }
@@ -519,7 +519,7 @@ struct TeamMessagesHubView: View {
 
     private var teamEmptyState: some View {
         VStack(spacing: 16) {
-            Image(systemName: "person.3.sequence.fill")
+            PAXIcon( "person.3.sequence.fill")
                 .font(.system(size: 48, weight: .light))
                 .foregroundStyle(PAXBrand.accent.opacity(0.7))
             Text(L10n.TeamHubEmpty)
@@ -617,7 +617,7 @@ private struct TeamContactRow: View {
                             .font(.body.weight(.semibold))
                             .foregroundStyle(PAXTheme.textPrimary)
                         if member.isExecutive {
-                            Image(systemName: "crown.fill")
+                            PAXIcon( "crown.fill")
                                 .font(.caption2)
                                 .foregroundStyle(PAXTheme.accent)
                         }
@@ -635,7 +635,7 @@ private struct TeamContactRow: View {
                 if isOpening {
                     ProgressView()
                 } else {
-                    Image(systemName: member.requiresEdRequest ? "paperplane" : "message.fill")
+                    PAXIcon( member.requiresEdRequest ? "paperplane" : "message.fill")
                         .foregroundStyle(roleTint)
                 }
             }

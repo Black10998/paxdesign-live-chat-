@@ -13,7 +13,7 @@ struct LoginView: View {
             ScrollView {
                 VStack(spacing: 20) {
                     VStack(spacing: 12) {
-                        Image(systemName: "bubble.left.and.bubble.right.fill")
+                        PAXIcon( "bubble.left.and.bubble.right.fill")
                             .font(.system(size: 44))
                             .symbolRenderingMode(.hierarchical)
                             .foregroundStyle(.tint)

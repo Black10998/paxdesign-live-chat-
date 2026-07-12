@@ -129,7 +129,7 @@ struct NotificationsCenterView: View {
 
     private func notificationMetric(title: String, count: Int, systemImage: String, tint: Color) -> some View {
         HStack(spacing: 14) {
-            Image(systemName: systemImage)
+            PAXIcon( systemImage)
                 .font(.title3)
                 .foregroundStyle(tint)
                 .frame(width: 32)

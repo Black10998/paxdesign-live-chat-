@@ -70,7 +70,7 @@ struct FilesModuleView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink { ModuleFilesSettingsView() } label: {
-                    Image(systemName: "slider.horizontal.3")
+                    PAXIcon( "slider.horizontal.3")
                 }
             }
         }
@@ -101,7 +101,7 @@ struct FilesModuleView: View {
 
     private func fileRow(_ document: PAXDocumentItem) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: document.category.systemImage)
+            PAXIcon( document.category.systemImage)
                 .foregroundStyle(.indigo)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 3) {
@@ -123,7 +123,7 @@ struct FileDetailView: View {
         List {
             Section {
                 HStack {
-                    Image(systemName: document.category.systemImage)
+                    PAXIcon( document.category.systemImage)
                         .font(.largeTitle)
                         .foregroundStyle(.indigo)
                     VStack(alignment: .leading, spacing: 4) {

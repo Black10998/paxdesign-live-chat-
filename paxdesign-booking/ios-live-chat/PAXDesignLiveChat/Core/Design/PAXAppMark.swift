@@ -5,7 +5,7 @@ enum PAXAppMark {
 
     @ViewBuilder
     static func image(size: CGFloat) -> some View {
-        Image(systemName: "bubble.left.and.bubble.right.fill")
+        PAXIcon( "bubble.left.and.bubble.right.fill")
             .font(.system(size: size * 0.52))
             .symbolRenderingMode(.hierarchical)
             .foregroundStyle(.tint)

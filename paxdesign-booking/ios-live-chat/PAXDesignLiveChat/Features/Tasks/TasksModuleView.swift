@@ -84,13 +84,13 @@ struct TasksModuleView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink { ModuleTasksSettingsView() } label: {
-                    Image(systemName: "slider.horizontal.3")
+                    PAXIcon( "slider.horizontal.3")
                 }
             }
             if auth.canAssignTeamTasks {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showAdd = true } label: {
-                        Image(systemName: "plus")
+                        PAXIcon( "plus")
                     }
                 }
             }
@@ -140,7 +140,7 @@ struct TasksModuleView: View {
                     PAXHaptics.light()
                 }
             } label: {
-                Image(systemName: task.isCompleted ? "checkmark.circle.fill" : "circle")
+                PAXIcon( task.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.title3)
                     .foregroundStyle(task.isCompleted ? PAXTheme.success : PAXTheme.textTertiary)
             }
