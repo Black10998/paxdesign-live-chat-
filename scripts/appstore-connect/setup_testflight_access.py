@@ -349,28 +349,36 @@ def add_tester_to_group(client: ASCClient, group_id: str, tester_id: str) -> boo
 
 
 def ensure_beta_localization(client: ASCClient, app_id: str) -> None:
-    payload = client.get(f"/apps/{app_id}/betaAppLocalizations", **{"limit": "1"})
+    payload = client.get(f"/apps/{app_id}/betaAppLocalizations", **{"limit": "10"})
     if payload.get("data"):
+        print("Beta app localization already exists")
         return
-    client.post(
+
+    status, response = client.request(
+        "POST",
         "/betaAppLocalizations",
-        {
+        body={
             "data": {
                 "type": "betaAppLocalizations",
                 "attributes": {
                     "locale": "en-US",
                     "description": "PAXDesign Live Chat TestFlight build.",
                     "feedbackEmail": TESTER_EMAIL,
-                    "marketingUrl": "https://paxdesign.at",
-                    "privacyPolicyUrl": "https://paxdesign.at/privacy",
                 },
                 "relationships": {
                     "app": {"data": {"type": "apps", "id": app_id}},
                 },
             }
         },
+        allow_error=True,
     )
-    print("Created beta app localization (en-US)")
+    if status in {200, 201}:
+        print("Created beta app localization (en-US)")
+        return
+    if status == 409:
+        print("Beta app localization already exists (409)")
+        return
+    fail(f"Could not create beta app localization ({status}): {json.dumps(response)}")
 
 
 def submit_beta_review(client: ASCClient, build_id: str) -> None:
@@ -388,23 +396,30 @@ def submit_beta_review(client: ASCClient, build_id: str) -> None:
         warn(f"Build not ready for beta submission (state={external_state})")
         return
 
-    status, payload = client.request(
-        "POST",
-        "/betaAppReviewSubmissions",
-        body={
-            "data": {
-                "type": "betaAppReviewSubmissions",
-                "relationships": {
-                    "build": {"data": {"type": "builds", "id": build_id}},
-                },
-            }
-        },
-        allow_error=True,
-    )
-    if status in {200, 201}:
-        print("Submitted build for external beta app review")
+    for attempt in range(1, 4):
+        status, payload = client.request(
+            "POST",
+            "/betaAppReviewSubmissions",
+            body={
+                "data": {
+                    "type": "betaAppReviewSubmissions",
+                    "relationships": {
+                        "build": {"data": {"type": "builds", "id": build_id}},
+                    },
+                }
+            },
+            allow_error=True,
+        )
+        if status in {200, 201}:
+            print("Submitted build for external beta app review")
+            return
+        detail_text = json.dumps(payload)
+        if "betaAppLocalization" in detail_text and attempt < 3:
+            print(f"Waiting for beta localization propagation (attempt {attempt})")
+            time.sleep(5)
+            continue
+        warn(f"Beta review submission returned {status}: {detail_text}")
         return
-    warn(f"Beta review submission returned {status}: {json.dumps(payload)}")
 
 
 def print_diagnostics(
@@ -483,18 +498,30 @@ def main() -> None:
     print_diagnostics(client, app, build, groups)
 
     asc_user = find_asc_user(client, TESTER_EMAIL)
+    internal_groups = [
+        group
+        for group in groups
+        if (group.get("attributes") or {}).get("isInternalGroup") is True
+    ]
+    if not internal_groups:
+        internal_groups = [
+            find_or_create_group(client, app_id, internal=True, name="Internal Testing")
+        ]
+
+    for group in internal_groups:
+        group_name = (group.get("attributes") or {}).get("name", group["id"])
+        add_build_to_group(client, group["id"], build_id)
+        print(f"Internal path: build {build_version} linked to {group_name}")
+
     if asc_user:
-        internal_group = find_or_create_group(
-            client, app_id, internal=True, name="Internal Testing"
-        )
-        add_build_to_group(client, internal_group["id"], build_id)
+        roles = (asc_user.get("attributes") or {}).get("roles", [])
         print(
-            f"Internal path: build {build_version} linked to "
-            f"{(internal_group.get('attributes') or {}).get('name')}"
+            f"Internal TestFlight eligible via App Store Connect membership "
+            f"({TESTER_EMAIL}, roles={roles})"
         )
     else:
         print(
-            "Skipping internal-only setup; tester is not an App Store Connect team user."
+            "Skipping internal-only access; tester is not an App Store Connect team user."
         )
 
     ensure_beta_localization(client, app_id)
