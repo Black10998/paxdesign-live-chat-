@@ -233,6 +233,17 @@ class PAXdesign_APNS {
             $event = 'new_lead_contact';
         }
         $silent = !$is_new && !$needs_ai_attention && $event !== 'customer_waiting' && $event !== 'new_lead_contact';
+        if ($last_role === 'admin' && $event !== 'customer_waiting') {
+            $silent = true;
+        }
+
+        $exclude = array();
+        if ($last_role === 'admin') {
+            $actor = get_current_user_id();
+            if ($actor > 0) {
+                $exclude[] = $actor;
+            }
+        }
 
         self::send_to_admins(
             $event === 'customer_waiting'
@@ -248,22 +259,78 @@ class PAXdesign_APNS {
                 'seq'        => $seq,
                 'handler'    => $handler,
             ),
-            $silent
+            $silent,
+            $exclude
         );
     }
 
-    public static function notify_new_customer_message($session_id, $content) {
+    public static function notify_new_customer_message($session_id, $content, $exclude_user_id = 0) {
+        $session_id = (string) $session_id;
+        $customer_name = self::session_customer_name($session_id);
+        $title = $customer_name !== '' ? $customer_name : 'Neue Kundennachricht';
+        $preview = wp_html_excerpt((string) $content, 120, '…');
+
         self::send_to_admins(
-            'Neue Kundennachricht',
-            wp_html_excerpt((string) $content, 120, '…'),
+            $title,
+            $preview,
             array(
-                'type'       => 'message',
-                'event'      => 'new_customer_message',
-                'session_id' => (string) $session_id,
-                'preview'    => wp_html_excerpt((string) $content, 160, '…'),
+                'type'          => 'message',
+                'event'         => 'new_customer_message',
+                'session_id'    => $session_id,
+                'preview'       => wp_html_excerpt((string) $content, 160, '…'),
+                'customer_name' => $customer_name,
+            ),
+            false,
+            array(absint($exclude_user_id))
+        );
+    }
+
+    /**
+     * Alert staff when automated link scanning flags a risky URL.
+     *
+     * @param array<string, mixed> $message
+     */
+    public static function notify_link_scan_attention($session_id, $message, $status) {
+        $session_id = (string) $session_id;
+        $customer_name = self::session_customer_name($session_id);
+        $preview = isset($message['content']) ? wp_html_excerpt((string) $message['content'], 120, '…') : '';
+        $title = $status === (class_exists('PAXdesign_Link_Scan_Service') ? PAXdesign_Link_Scan_Service::STATUS_DANGEROUS : 'dangerous')
+            ? 'Unsicherer Link erkannt'
+            : 'Verdächtiger Link erkannt';
+
+        self::send_to_admins(
+            $title,
+            ($customer_name !== '' ? $customer_name . ' — ' : '') . $preview,
+            array(
+                'type'          => 'ai_attention',
+                'event'         => 'link_scan_attention',
+                'session_id'    => $session_id,
+                'preview'       => $preview,
+                'customer_name' => $customer_name,
+                'link_status'   => (string) $status,
             ),
             false
         );
+    }
+
+    private static function link_status_dangerous() {
+        return class_exists('PAXdesign_Link_Scan_Service')
+            ? PAXdesign_Link_Scan_Service::STATUS_DANGEROUS
+            : 'dangerous';
+    }
+
+    private static function session_customer_name($session_id) {
+        if (!class_exists('PAXdesign_Chat_Log')) {
+            return '';
+        }
+        global $wpdb;
+        PAXdesign_Chat_Log::create_table();
+        $table = PAXdesign_Chat_Log::table_name();
+        $name = $wpdb->get_var($wpdb->prepare(
+            "SELECT customer_name FROM $table WHERE session_id = %s LIMIT 1",
+            (string) $session_id
+        ));
+        return sanitize_text_field((string) $name);
     }
 
     /**
@@ -365,6 +432,23 @@ class PAXdesign_APNS {
         }
     }
 
+    public static function count_user_badge($user_id) {
+        if (!class_exists('PAXdesign_Chat_Log')) {
+            return 1;
+        }
+
+        global $wpdb;
+        PAXdesign_Chat_Log::create_table();
+        $table = PAXdesign_Chat_Log::table_name();
+        $count = (int) $wpdb->get_var(
+            $wpdb->prepare(
+                "SELECT COUNT(*) FROM $table WHERE handler = %s",
+                'live_request'
+            )
+        );
+        return max(1, $count);
+    }
+
     public static function on_missed_chat($session_id, $service, $preview, $customer = '') {
         $body = ($customer !== '' ? $customer . ' — ' : '') . ($preview !== '' ? $preview : 'Live-Anfrage wurde nicht beantwortet');
         if ($service !== '') {
@@ -403,21 +487,27 @@ class PAXdesign_APNS {
      * @param int[] $user_ids
      * @param array<string, mixed> $data
      */
-    public static function send_to_user_ids($user_ids, $title, $body, $data = array(), $silent = false) {
+    public static function send_to_user_ids($user_ids, $title, $body, $data = array(), $silent = false, $exclude_user_ids = array()) {
         if (!self::is_configured()) {
             return;
         }
 
+        $exclude = array_map('absint', (array) $exclude_user_ids);
         foreach ($user_ids as $user_id) {
-            self::send_to_user((int) $user_id, $title, $body, $data, $silent);
+            $uid = absint($user_id);
+            if ($uid <= 0 || in_array($uid, $exclude, true)) {
+                continue;
+            }
+            self::send_to_user($uid, $title, $body, $data, $silent);
         }
     }
 
     /**
      * @param array<string, mixed> $data
+     * @param int[] $exclude_user_ids
      */
-    public static function send_to_admins($title, $body, $data = array(), $silent = false) {
-        self::send_to_user_ids(self::get_admin_user_ids(), $title, $body, $data, $silent);
+    public static function send_to_admins($title, $body, $data = array(), $silent = false, $exclude_user_ids = array()) {
+        self::send_to_user_ids(self::get_admin_user_ids(), $title, $body, $data, $silent, $exclude_user_ids);
     }
 
     /**
@@ -444,10 +534,11 @@ class PAXdesign_APNS {
         $handler  = isset($data['handler']) ? (string) $data['handler'] : '';
         $sound    = self::sound_for_type($type, $handler, $event);
         $category = ($type === 'live_request') ? 'PAX_LIVE_REQUEST' : 'PAX_MESSAGE';
-        $interruption = ($type === 'live_request' || $event === 'customer_waiting') ? 'critical' : 'time-sensitive';
+        $is_live_request = ($type === 'live_request' || $event === 'customer_waiting');
+        $interruption = $is_live_request ? 'time-sensitive' : 'active';
 
         $aps = array(
-            'badge'              => self::count_pending_badge(),
+            'badge'              => $user_id > 0 ? self::count_user_badge($user_id) : self::count_pending_badge(),
             'mutable-content'    => 1,
             'content-available'  => 1,
         );
@@ -470,17 +561,24 @@ class PAXdesign_APNS {
         $url = $host . '/3/device/' . $device['token'];
         $push_type = $silent ? 'background' : 'alert';
         $priority  = $silent ? '5' : '10';
+        $session_id = isset($data['session_id']) ? (string) $data['session_id'] : '';
+        $collapse_id = $session_id !== '' ? substr($type . '-' . $session_id, 0, 64) : '';
+
+        $headers = array(
+            'authorization'  => 'bearer ' . $jwt,
+            'apns-topic'     => $bundle,
+            'apns-push-type' => $push_type,
+            'apns-priority'  => $priority,
+            'apns-expiration'=> (string) (time() + 120),
+            'content-type'   => 'application/json',
+        );
+        if ($collapse_id !== '') {
+            $headers['apns-collapse-id'] = $collapse_id;
+        }
 
         $response = wp_remote_post($url, array(
             'timeout' => 12,
-            'headers' => array(
-                'authorization'  => 'bearer ' . $jwt,
-                'apns-topic'     => $bundle,
-                'apns-push-type' => $push_type,
-                'apns-priority'  => $priority,
-                'apns-expiration'=> (string) (time() + 120),
-                'content-type'   => 'application/json',
-            ),
+            'headers' => $headers,
             'body'    => wp_json_encode($payload),
         ));
 

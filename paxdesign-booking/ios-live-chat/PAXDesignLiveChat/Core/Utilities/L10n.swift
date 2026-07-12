@@ -189,6 +189,13 @@ enum L10n {
     static var SettingsNoPermission: String { t("settings.no_permission") }
     static var SettingsNotifications: String { t("settings.notifications") }
     static var SettingsNotificationsFooter: String { t("settings.notifications_footer") }
+    static var SettingsNotificationsStatus: String { t("settings.notifications_status") }
+    static var SettingsNotificationsEnable: String { t("settings.notifications_enable") }
+    static var SettingsNotificationsStatusAuthorized: String { t("settings.notifications_status.authorized") }
+    static var SettingsNotificationsStatusDenied: String { t("settings.notifications_status.denied") }
+    static var SettingsNotificationsStatusProvisional: String { t("settings.notifications_status.provisional") }
+    static var SettingsNotificationsStatusNotDetermined: String { t("settings.notifications_status.not_determined") }
+    static var SettingsNotificationsStatusUnknown: String { t("settings.notifications_status.unknown") }
     static var SettingsOpenIosSettings: String { t("settings.open_ios_settings") }
     static var SettingsProfile: String { t("settings.profile") }
     static var SettingsPush: String { t("settings.push") }

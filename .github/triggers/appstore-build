@@ -1,4 +1,2 @@
-# Touch this file and push to main to run the App Store iOS Build workflow.
-# Last triggered: 2026-07-12T02:10:00Z
-
-run=9
+# Trigger App Store build for 1.55.0 (86) — startup + push fixes
+2026-07-12T11:15:00Z

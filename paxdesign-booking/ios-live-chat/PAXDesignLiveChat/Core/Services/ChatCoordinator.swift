@@ -424,7 +424,7 @@ final class ChatCoordinator: ObservableObject {
             } else {
                 postSessionSync(sessionId: sessionId)
             }
-        case "assigned_chat_updated", "new_lead_contact", "missed_chat":
+        case "assigned_chat_updated", "new_lead_contact", "missed_chat", "link_scan_attention":
             await refreshSessions(auth: auth)
             postSessionSync(sessionId: sessionId)
         case "session_sync":
