@@ -304,6 +304,36 @@ def submit_external_beta_review(client: ASCClient, build_id: str) -> bool:
     return False
 
 
+def wait_for_target_build(client: ASCClient, app_id: str) -> dict[str, Any]:
+    import os
+
+    poll_seconds = int(os.environ.get("TESTFLIGHT_POLL_SECONDS", "30"))
+    poll_timeout = int(os.environ.get("TESTFLIGHT_POLL_TIMEOUT", "3600"))
+    deadline = time.time() + poll_timeout
+    seen_states: set[str] = set()
+
+    while time.time() < deadline:
+        build = find_build(client, app_id, TARGET_BUILD)
+        if build is None:
+            print(f"Waiting for build {TARGET_BUILD} to appear in App Store Connect...")
+            time.sleep(poll_seconds)
+            continue
+
+        state = (build.get("attributes") or {}).get("processingState", "UNKNOWN")
+        if state not in seen_states:
+            print(f"Build {TARGET_BUILD} processing state: {state}")
+            seen_states.add(state)
+
+        if state == "VALID":
+            return build
+        if state in {"FAILED", "INVALID"}:
+            fail(f"Build {TARGET_BUILD} processing failed with state {state}")
+
+        time.sleep(poll_seconds)
+
+    fail(f"Timed out waiting for build {TARGET_BUILD} to become VALID")
+
+
 def wait_for_internal_ready(client: ASCClient, build_id: str, timeout: int = 120) -> str:
     deadline = time.time() + timeout
     last = ""
@@ -331,11 +361,7 @@ def main() -> None:
 
     app = find_app(client)
     app_id = app["id"]
-    build = find_build(client, app_id, TARGET_BUILD)
-    if build is None:
-        fail(f"Build {TARGET_BUILD} not found")
-    if (build.get("attributes") or {}).get("processingState") != "VALID":
-        fail("Build is not VALID")
+    build = wait_for_target_build(client, app_id)
 
     build_id = build["id"]
     build_version = str((build.get("attributes") or {}).get("version", TARGET_BUILD))
