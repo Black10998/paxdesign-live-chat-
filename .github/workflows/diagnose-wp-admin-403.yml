@@ -46,18 +46,20 @@ jobs:
           PAX_SITE: https://paxdesign.at
         run: |
           set -euo pipefail
+          test -f scripts/diagnose-wp-admin-403.sh
           PORT="${WP_SSH_PORT:-22}"
           SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
           REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          WP_PATH_QUOTED=$(printf '%q' "$WP_PATH")
 
           install -m 600 -D /dev/null ~/.ssh/id_deploy
           printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
           ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
-          scp "${SSH_OPTS[@]}" scripts/diagnose-wp-admin-403.sh "${REMOTE}:/tmp/diagnose-wp-admin-403.sh"
-          ssh "${SSH_OPTS[@]}" "$REMOTE" "chmod +x /tmp/diagnose-wp-admin-403.sh && WP_PATH='${WP_PATH}' PAX_SITE='${PAX_SITE}' /tmp/diagnose-wp-admin-403.sh"
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "WP_PATH=${WP_PATH_QUOTED} PAX_SITE='${PAX_SITE}' bash -s" \
+            < scripts/diagnose-wp-admin-403.sh
 
-          REMOTE_REPORT=$(ssh "${SSH_OPTS[@]}" "$REMOTE" "ls -t '${WP_PATH}/wp-content/pax-admin-403-diagnosis-'*.txt 2>/dev/null | head -1")
+          REMOTE_REPORT=$(ssh "${SSH_OPTS[@]}" "$REMOTE" "ls -t ${WP_PATH_QUOTED}/wp-content/pax-admin-403-diagnosis-*.txt 2>/dev/null | head -1")
           if [ -z "$REMOTE_REPORT" ]; then
             echo "No diagnosis report found on server."
             exit 1

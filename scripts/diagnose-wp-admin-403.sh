@@ -130,9 +130,10 @@ while IFS= read -r -d '' f; do ACCESS_LOGS+=("$f"); done < <(
   find "$HOME" -maxdepth 5 -type f \( -name 'access.log' -o -name 'access_log' \) 2>/dev/null | head -20 | tr '\n' '\0'
 )
 while IFS= read -r -d '' f; do MODSEC_LOGS+=("$f"); done < <(
-  find "$HOME" /var/log /usr/local/lsws/logs -maxdepth 4 -type f 2>/dev/null \
-    \( -name 'modsec_audit.log' -o -name 'modsec.log' -o -name 'audit.log' -o -iname '*imunify*' -o -iname '*modsec*' \) 2>/dev/null | head -20 | tr '\n' '\0'
-)
+  { find "$HOME" -maxdepth 5 -type f \( -iname '*modsec*' -o -iname '*imunify*' \) 2>/dev/null
+    find /var/log /usr/local/lsws/logs -maxdepth 4 -type f \( -name 'modsec_audit.log' -o -name 'audit.log' \) 2>/dev/null; } \
+    | head -20 | tr '\n' '\0'
+) || true
 
 # Common Hostinger paths
 for p in \
