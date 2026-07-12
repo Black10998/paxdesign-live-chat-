@@ -25,7 +25,7 @@ enum PAXGlyphPaths {
         case "about.info": return aboutInfoPath(in: rect)
         case "profile.user": return profileUserPath(in: rect)
         case "chat.bubble": return singleChatBubblePath(in: rect)
-        case "link.chain", "link.badge.plus": return linkChainPath(in: rect, plus: name.contains("plus"))
+        case "link.chain", "link.badge.plus": return linkChainPath(in: rect, plus: glyph.contains("plus"))
         case "search": return searchPath(in: rect)
         case "compose": return composePath(in: rect)
         case "plus": return plusPath(in: rect, circle: false)
