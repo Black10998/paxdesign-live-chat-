@@ -1,75 +1,99 @@
-# App Store Metadata
+# App Store Metadata — v2.0.0 (Build 113)
 
-Use these values in App Store Connect.
+Use these values in App Store Connect. Machine-readable copy: [metadata.json](metadata.json).
 
 ## App Information
 
 | Field | Value |
 |-------|-------|
 | Name | PAXDesign Live Chat |
-| Subtitle | Live Support für Teams |
+| Subtitle (DE) | Live-Support für Teams |
+| Subtitle (EN) | Live Support for Teams |
 | Bundle ID | at.paxdesign.livechat |
 | SKU | paxdesign-livechat |
-| Primary Language | German (Austria) |
-| Category | Business |
-| Secondary Category | Productivity |
+| Primary Language | German (Austria) — de-DE |
+| Category (Primary) | Business |
+| Category (Secondary) | Productivity |
 | Age Rating | 4+ |
+| Copyright | © 2026 PAXdesign / PrimoJob GmbH |
 
-## Description (German)
+## Promotional Text
 
-**PAXDesign Live Chat** ist die native iOS-App für autorisierte Support-Mitarbeiter. Bearbeiten Sie Kundenanfragen in Echtzeit — mit Push-Benachrichtigungen, KI-Antwortvorschlägen und voller Parität zum Browser-Admin-Panel.
+**German (de-DE):**  
+Echtzeit-Kundensupport mit Team-Chat, KI-Antworten, Sprachnachrichten und Push-Benachrichtigungen — nativ für iOS.
 
-Funktionen:
-- Echtzeit-Chat mit Kunden
-- Live-Agent-Anfragen mit Vollbild-Alarm
-- KI-Vorschläge und Schnellantworten
-- Bilder senden und anzeigen
-- Nachrichten kopieren, teilen und beantworten
-- Push-Benachrichtigungen für neue Anfragen
+**English (en-US):**  
+Real-time customer support with team chat, AI replies, voice messages, and push alerts — native for iOS.
 
-Voraussetzung: WordPress-Administrator-Zugang mit Application Password.
+## Description (German — primary)
+
+**PAXDesign Live Chat** ist die native iOS-App für autorisierte Support-Mitarbeiter von PAXdesign. Bearbeiten Sie Kundenanfragen in Echtzeit — mit Push-Benachrichtigungen, KI-Antwortvorschlägen, Team-Chat und voller Parität zum WordPress-Admin-Panel.
+
+Hauptfunktionen:
+- Live Team Chat — koordinieren Sie mit Kollegen in Echtzeit
+- KI-Antwort-Assistent — intelligente Vorschläge für schnellere Antworten
+- Sprachnachrichten — aufnehmen, senden und abspielen
+- Fotos & Standort — Bilder und Position sicher teilen
+- Echtzeit-Kundensupport — Live-Anfragen mit Vollbild-Alarm
+- Push-Benachrichtigungen — verpassen Sie keine neue Anfrage
+- Analytics-Dashboard — Übersicht über aktive und Live-Sessions
+- Mehrsprachig — Deutsch, Englisch und Arabisch
+
+Voraussetzung: WordPress-Administrator-Zugang mit Application Password für paxdesign.at.
+
+Keine In-App-Käufe. Keine Werbung. Kein Tracking.
+
+## What's New (v2.0.0)
+
+Offizielle App-Store-Veröffentlichung 2.0:
+- Live Team Chat mit Sprachnachrichten
+- KI-Antwort-Assistent für Kunden-Chats
+- Professionelles Analytics-Dashboard
+- App-weite Themes und Akzentfarben
+- Zuverlässige Push-Benachrichtigungen
+- Fotos, Standort und Medienfreigabe
+- Verbesserte Stabilität und Performance
 
 ## Keywords
 
-live chat, support, kundenservice, wordpress, admin, helpdesk, agent
+**de-DE:** live chat, support, kundenservice, team, helpdesk, agent, wordpress, push  
+**en-US:** live chat, support, customer service, team, helpdesk, agent, wordpress, push
 
-## Privacy Policy URL
+## URLs
 
-https://paxdesign.at/datenschutz/
+| Field | URL |
+|-------|-----|
+| Privacy Policy | https://paxdesign.at/datenschutz/ |
+| Support | https://paxdesign.at |
+| Marketing | https://paxdesign.at |
 
-## Support URL
+## Screenshots
 
-https://paxdesign.at
+Generated marketing screenshots (6.7" — 1290×2796):
 
-## Marketing URL
+| # | File | Feature |
+|---|------|---------|
+| 1 | `screenshots/6.7-inch/01-team-chat.png` | Live Team Chat |
+| 2 | `screenshots/6.7-inch/02-ai-assistant.png` | AI Reply Assistant |
+| 3 | `screenshots/6.7-inch/03-voice-messages.png` | Voice Messages |
+| 4 | `screenshots/6.7-inch/04-photo-location.png` | Photo & Location Sharing |
+| 5 | `screenshots/6.7-inch/05-live-support.png` | Live Support & Push Notifications |
 
-https://paxdesign.at
+Regenerate: `python3 scripts/appstore-connect/generate_screenshots.py`
 
-## Copyright
+## Review Notes (App Store Connect)
 
-© 2026 PAXdesign / PrimoJob GmbH
-
-## Screenshots (required)
-
-Capture on physical iPhone in portrait:
-
-1. **Login** — Anmeldemaske mit Datenschutz-Links
-2. **Chats** — Session-Liste mit aktiven Gesprächen
-3. **Chat** — Nachrichtenverlauf mit Privacy-Banner
-4. **Konto** — Profil und Rechtliches
-5. **Live-Anfrage** — Vollbild-Alarm (optional)
-
-Sizes: 6.7" (1290×2796), 6.5" (1284×2778), 5.5" (1242×2208) if supporting older devices.
-
-## Review Notes (paste into App Store Connect)
-
-> Internal employee app for PAXdesign customer support staff.
-> Requires WordPress admin credentials + Application Password.
-> Demo account: [provide test credentials in App Store Connect private field]
-> No in-app purchases. No ads. No tracking.
-> Privacy Policy: https://paxdesign.at/datenschutz/
+> Internal employee app for PAXdesign customer support staff. Login requires a WordPress administrator account and Application Password for https://paxdesign.at. Demo credentials are provided in the App Store Connect review notes field. No in-app purchases. No ads. No tracking. Privacy Policy: https://paxdesign.at/datenschutz/
 
 ## Export Compliance
 
 - Uses only standard HTTPS/TLS (exempt encryption)
 - `ITSAppUsesNonExemptEncryption` = NO
+
+## Version Alignment
+
+| Component | Version |
+|-----------|---------|
+| iOS Marketing | 2.0.0 |
+| iOS Build | 113 |
+| WordPress Plugin | 3.124.0 |
