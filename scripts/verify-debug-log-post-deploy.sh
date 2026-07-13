@@ -29,11 +29,12 @@ if grep -q "email_mapped_to_login" "$WP_ROOT/wp-content/plugins/paxdesign-bookin
 fi
 pass "email_mapped_to_login removed from source"
 
-LOG_BEFORE=0
-LOG_AFTER=0
+LOG_BEFORE_LINES=0
+LOG_BEFORE_BYTES=0
 if [[ -f "$DEBUG_LOG" ]]; then
-  LOG_BEFORE=$(wc -c < "$DEBUG_LOG" | tr -d ' ')
-  echo "debug.log size before probe: ${LOG_BEFORE} bytes"
+  LOG_BEFORE_BYTES=$(wc -c < "$DEBUG_LOG" | tr -d ' ')
+  LOG_BEFORE_LINES=$(wc -l < "$DEBUG_LOG" | tr -d ' ')
+  echo "debug.log size before probe: ${LOG_BEFORE_BYTES} bytes (${LOG_BEFORE_LINES} lines)"
   BEFORE_COUNT=$(grep -c 'email_mapped_to_login' "$DEBUG_LOG" 2>/dev/null || echo 0)
   echo "Historical email_mapped_to_login lines in file: $BEFORE_COUNT"
 fi
@@ -54,22 +55,28 @@ fi
 sleep 2
 
 if [[ -f "$DEBUG_LOG" ]]; then
-  LOG_AFTER=$(wc -c < "$DEBUG_LOG" | tr -d ' ')
-  GROWTH=$((LOG_AFTER - LOG_BEFORE))
-  echo "debug.log size after probe: ${LOG_AFTER} bytes (delta ${GROWTH} bytes)"
-  NEW_LINES=$(tail -n 200 "$DEBUG_LOG" | grep -c 'email_mapped_to_login' || true)
-  NEW_LINES=${NEW_LINES:-0}
+  LOG_AFTER_BYTES=$(wc -c < "$DEBUG_LOG" | tr -d ' ')
+  LOG_AFTER_LINES=$(wc -l < "$DEBUG_LOG" | tr -d ' ')
+  GROWTH_BYTES=$((LOG_AFTER_BYTES - LOG_BEFORE_BYTES))
+  NEW_LINES=$((LOG_AFTER_LINES - LOG_BEFORE_LINES))
+  echo "debug.log size after probe: ${LOG_AFTER_BYTES} bytes (${LOG_AFTER_LINES} lines)"
+  echo "Delta: ${GROWTH_BYTES} bytes, ${NEW_LINES} new lines"
   if [[ "$NEW_LINES" -gt 0 ]]; then
-    fail "email_mapped_to_login appeared in last 200 debug.log lines ($NEW_LINES)"
-  fi
-  pass "No new email_mapped_to_login in debug.log tail"
-  AUTH_SPAM=$(tail -n 200 "$DEBUG_LOG" | grep -c '\[PAXdesign Live Chat Mobile API\]' || true)
-  AUTH_SPAM=${AUTH_SPAM:-0}
-  echo "PAX Mobile API log lines in tail: $AUTH_SPAM"
-  if [[ "$GROWTH" -gt 50000 ]]; then
-    echo "WARN: debug.log grew ${GROWTH} bytes during short probe — check WP_DEBUG_LOG"
+    tail -n "$NEW_LINES" "$DEBUG_LOG" > /tmp/pax-debug-new-lines.txt
+    NEW_MAPPED=$(grep -c 'email_mapped_to_login' /tmp/pax-debug-new-lines.txt || true)
+    NEW_MAPPED=${NEW_MAPPED:-0}
+    if [[ "$NEW_MAPPED" -gt 0 ]]; then
+      fail "email_mapped_to_login in ${NEW_MAPPED} NEW debug.log lines during probe"
+    fi
+    pass "No email_mapped_to_login in ${NEW_LINES} new debug.log lines"
   else
-    pass "debug.log growth within expected bounds (${GROWTH} bytes)"
+    pass "debug.log did not grow during probe (no new lines)"
+  fi
+  AUTH_SPAM=$(tail -n 50 "$DEBUG_LOG" | grep -c '\[PAXdesign Live Chat Mobile API\]' || true)
+  AUTH_SPAM=${AUTH_SPAM:-0}
+  echo "PAX Mobile API log lines in last 50 (historical tail): $AUTH_SPAM"
+  if [[ "$GROWTH_BYTES" -gt 50000 ]]; then
+    echo "WARN: debug.log grew ${GROWTH_BYTES} bytes during short probe — check WP_DEBUG_LOG"
   fi
 else
   echo "debug.log not present (WP_DEBUG_LOG may be off) — OK for production"
