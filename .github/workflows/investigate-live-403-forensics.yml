@@ -1,0 +1,98 @@
+name: Investigate live 403 forensics
+
+on:
+  workflow_dispatch:
+    inputs:
+      incident_ts:
+        description: 'User-reported incident time (UTC), e.g. 2026-07-13 02:30 UTC'
+        required: false
+        default: 'unknown'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/investigate-live-403-forensics.yml'
+      - 'scripts/investigate-live-403-forensics.sh'
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  forensics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate SSH secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: External probes (GitHub Actions egress)
+        run: |
+          set -euo pipefail
+          echo "Probe IP: $(curl -sS --max-time 5 https://api.ipify.org || echo unknown)"
+          for p in / /wp-admin/users.php /wp-json/ /wp-json/paxdesign/v1/live-admin/me; do
+            echo "=== GET https://paxdesign.at${p} ==="
+            curl -sS -D - -o /tmp/b.txt --max-time 15 "https://paxdesign.at${p}" | head -25
+            head -c 200 /tmp/b.txt; echo; echo
+          done | tee ./external-probes.txt
+
+      - name: Run server forensics over SSH
+        id: remote
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+          PAX_SITE: https://paxdesign.at
+          INCIDENT_TS: ${{ github.event.inputs.incident_ts || 'user screenshot ~2026-07-13 02:30-02:55 UTC' }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          WP_PATH_QUOTED=$(printf '%q' "$WP_PATH")
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "WP_PATH=${WP_PATH_QUOTED} PAX_SITE=${PAX_SITE} INCIDENT_TS=$(printf '%q' "$INCIDENT_TS") bash -s" \
+            < scripts/investigate-live-403-forensics.sh > ./remote-forensics-raw.log 2>&1
+          REMOTE_REPORT=$(ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "ls -t ${WP_PATH_QUOTED}/wp-content/pax-live-403-forensics-*.txt 2>/dev/null | head -1 | tr -d '\r'")
+          [ -n "$REMOTE_REPORT" ]
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "cat $(printf '%q' "$REMOTE_REPORT")" > ./forensics-raw.txt
+          echo "remote_report=$REMOTE_REPORT" >> "$GITHUB_OUTPUT"
+
+      - name: Redact and upload
+        run: |
+          chmod +x scripts/redact-diagnosis-report.sh
+          scripts/redact-diagnosis-report.sh ./forensics-raw.txt ./forensics-redacted.txt
+          scripts/redact-diagnosis-report.sh ./external-probes.txt ./external-probes-redacted.txt
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-403-forensics
+          path: |
+            forensics-redacted.txt
+            external-probes-redacted.txt
+          if-no-files-found: error
+
+      - name: Print forensic summary
+        run: |
+          echo "=== Live 403 forensic summary ==="
+          grep -E 'PROBE |Top client IPs|Rule ID|\[id "|403|denied|fail2ban|Server egress|Capture time|Incident' forensics-redacted.txt | head -80 || true
+          echo
+          echo "--- External (CI) vs server egress ---"
+          head -30 external-probes-redacted.txt
