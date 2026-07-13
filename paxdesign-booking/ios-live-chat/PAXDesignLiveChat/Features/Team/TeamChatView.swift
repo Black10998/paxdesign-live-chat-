@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 #if !SIDELOAD
 import PhotosUI
 #endif
@@ -25,6 +26,7 @@ struct TeamChatView: View {
     @State private var isSendingLocation = false
     @State private var mediaError: String?
     @State private var sendError: String?
+    @State private var showFileImporter = false
 
     init(sessionId: String) {
         _thread = ObservedObject(wrappedValue: ChatThreadRegistry.shared.teamThread(sessionId: sessionId))
@@ -222,7 +224,37 @@ struct TeamChatView: View {
             let inlineMessage = note.userInfo?["inline_message"]
             Task { await thread.refreshNow(auth: auth, inlineMessage: inlineMessage) }
         }
+        .fileImporter(
+            isPresented: $showFileImporter,
+            allowedContentTypes: [.item],
+            allowsMultipleSelection: false
+        ) { result in
+            Task { await handleFileImport(result) }
+        }
         .disabled(isDeleting)
+    }
+
+    private func handleFileImport(_ result: Result<[URL], Error>) async {
+        switch result {
+        case .failure(let error):
+            mediaError = error.localizedDescription
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let data = try Data(contentsOf: url)
+                let filename = url.lastPathComponent
+                await thread.sendFile(
+                    auth: auth,
+                    teamCoordinator: teamCoordinator,
+                    fileData: data,
+                    filename: filename
+                )
+            } catch {
+                mediaError = error.localizedDescription
+            }
+        }
     }
 
     private var presenceLabel: String {
@@ -231,6 +263,7 @@ struct TeamChatView: View {
             return thread.canRespond ? L10n.TeamPresenceRequestPending : thread.requestStatusLabel
         }
         if thread.otherPresence == "online" { return L10n.TeamPresenceOnline }
+        if thread.otherPresence == "away" { return L10n.TeamPresenceAway }
         if thread.otherLastSeen > 0,
            let label = MessageTimeFormatter.relativeUpdatedLabel(from: teamLastSeenTimestamp(thread.otherLastSeen)) {
             return L10n.TeamPresenceLastSeen(label)
@@ -409,6 +442,11 @@ struct TeamChatView: View {
                     }
                     #endif
                     Button {
+                        showFileImporter = true
+                    } label: {
+                        Label { Text(L10n.TeamSendFile) } icon: { PAXIcon("doc.text") }
+                    }
+                    Button {
                         Task { await shareCurrentLocation() }
                     } label: {
                         Label { Text(L10n.TeamShareLocation) } icon: { PAXIcon("location.fill") }
@@ -557,7 +595,7 @@ struct TeamComposeView: View {
         if !searchText.isEmpty {
             let q = searchText.lowercased()
             items = items.filter {
-                $0.name.lowercased().contains(q) || $0.email.lowercased().contains(q)
+                $0.displayName.lowercased().contains(q) || $0.email.lowercased().contains(q)
             }
         }
         return items.sorted { lhs, rhs in
@@ -673,37 +711,29 @@ private struct StaffComposeRow: View {
     let action: () -> Void
 
     private var roleTint: Color {
-        if member.isExecutive { return PAXTheme.accent }
-        if member.isAdministrator { return PAXBrand.accent }
-        if member.permissions.manageUsers { return .blue }
-        return PAXTheme.textSecondary
+        PAXTheme.textSecondary
     }
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 ZStack(alignment: .bottomTrailing) {
-                    SessionAvatarView(name: member.name, size: 48, isTeam: true)
-                    if member.isOnline {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 10, height: 10)
-                            .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                            .offset(x: 2, y: 2)
-                    }
+                    StaffAvatarView(name: member.displayName, avatarUrl: member.avatarUrl, size: 48)
+                    TeamPresenceGlyph(status: member.presenceStatus)
+                        .offset(x: 2, y: 2)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
-                        Text(member.name)
+                        Text(member.displayName)
                             .font(.body.weight(.semibold))
                             .foregroundStyle(PAXTheme.textPrimary)
                         if member.isExecutive {
-                            PAXIcon("crown.fill", size: .inline)
+                            PAXIcon("crown.fill", size: .inline, emphasis: .secondary)
                         }
                     }
                     Text(member.publicDisplaySubtitle)
-                        .font(.caption.weight(.semibold))
+                        .font(.caption.weight(.medium))
                         .foregroundStyle(roleTint)
                 }
 

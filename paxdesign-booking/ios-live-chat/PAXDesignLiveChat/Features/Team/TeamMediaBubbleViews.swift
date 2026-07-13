@@ -266,3 +266,70 @@ private struct LocationPin: Identifiable {
     let id = UUID()
     let coordinate: CLLocationCoordinate2D
 }
+
+struct TeamFileBubbleView: View {
+    let message: LiveMessage
+    let isOutgoing: Bool
+
+    private var isPending: Bool {
+        (message.fileUrl ?? "").hasPrefix("pending://")
+    }
+
+    private var displayName: String {
+        if let name = message.fileName, !name.isEmpty { return name }
+        if !message.content.isEmpty { return message.content }
+        return L10n.TeamSendFile
+    }
+
+    var body: some View {
+        Button {
+            openFile()
+        } label: {
+            HStack(spacing: 12) {
+                PAXIcon("doc.text", size: .card, emphasis: .secondary)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Color.primary.opacity(0.05))
+                    )
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(displayName)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(PAXTheme.textPrimary)
+                        .lineLimit(2)
+                    if isPending {
+                        Text(L10n.TeamVoiceSending)
+                            .font(.caption2)
+                            .foregroundStyle(PAXTheme.textTertiary)
+                    } else {
+                        Text(L10n.TeamOpenFile)
+                            .font(.caption2)
+                            .foregroundStyle(PAXTheme.textSecondary)
+                    }
+                }
+                Spacer(minLength: 0)
+                if !isPending {
+                    PAXIcon("arrow.up.right", size: .inline, emphasis: .tertiary)
+                }
+            }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color.primary.opacity(isOutgoing ? 0.06 : 0.04))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(PAXTheme.border.opacity(0.35), lineWidth: 0.5)
+                    )
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(isPending)
+    }
+
+    private func openFile() {
+        guard let urlString = message.fileUrl,
+              !urlString.hasPrefix("pending://"),
+              let url = URL(string: urlString) else { return }
+        UIApplication.shared.open(url)
+    }
+}

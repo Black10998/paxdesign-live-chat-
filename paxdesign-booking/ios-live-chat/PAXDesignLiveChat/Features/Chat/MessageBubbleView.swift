@@ -92,6 +92,13 @@ struct MessageBubbleView: View {
                     maxWidth: min(280, UIScreen.main.bounds.width * PAXMessageStyle.maxBubbleWidthRatio),
                     alignment: isOutgoing ? .trailing : .leading
                 )
+        } else if message.isFileMessage,
+                  message.imageUrl == nil || (message.imageUrl ?? "").hasPrefix("pending://") {
+            TeamFileBubbleView(message: message, isOutgoing: isOutgoing)
+                .frame(
+                    maxWidth: min(280, UIScreen.main.bounds.width * PAXMessageStyle.maxBubbleWidthRatio),
+                    alignment: isOutgoing ? .trailing : .leading
+                )
         } else {
             standardBubbleContent
         }

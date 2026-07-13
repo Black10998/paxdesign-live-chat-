@@ -185,6 +185,13 @@ enum PAXIconCatalog {
         "pause.fill": "pause",
         "waveform": "waveform",
         "location.fill": "location",
+        "headphones": "team.headset",
+        "headset": "team.headset",
+        "team.headset": "team.headset",
+        "team.broadcast": "team.broadcast",
+        "team.alert": "team.alert",
+        "megaphone": "team.broadcast",
+        "megaphone.fill": "team.broadcast",
         "arrow.triangle.turn.up.right.circle.fill": "arrow.up.right.circle"
     ]
 

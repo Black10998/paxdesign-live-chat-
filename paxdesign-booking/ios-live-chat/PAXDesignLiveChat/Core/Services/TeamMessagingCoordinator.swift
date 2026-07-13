@@ -1002,6 +1002,54 @@ final class TeamChatThreadModel: ObservableObject {
         }
     }
 
+    func sendFile(
+        auth: AuthStore,
+        teamCoordinator: TeamMessagingCoordinator,
+        fileData: Data,
+        filename: String,
+        caption: String = ""
+    ) async {
+        guard let api = auth.api else { return }
+        let clientMsgId = UUID().uuidString.lowercased()
+        let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000)
+        let optimistic = LiveMessage(
+            id: tempId,
+            clientMsgId: clientMsgId,
+            role: "admin",
+            content: caption,
+            ts: Int(Date().timeIntervalSince1970),
+            senderId: auth.profile?.userId,
+            senderName: auth.profile?.displayName,
+            attachmentType: "file",
+            fileUrl: "pending://\(clientMsgId)",
+            fileName: filename
+        )
+        messages.append(optimistic)
+        messagesRevision &+= 1
+        isSending = true
+        defer { isSending = false }
+
+        do {
+            let sent = try await api.sendTeamFile(
+                sessionId,
+                fileData: fileData,
+                filename: filename,
+                caption: caption,
+                clientMsgId: clientMsgId
+            )
+            insertIncomingMessages([sent.message])
+            messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
+            pollSeq = max(pollSeq, sent.seq)
+            currentSeq = max(currentSeq, sent.seq)
+            MessageSendSound.shared.playIfEnabled()
+            await teamCoordinator.refresh(auth: auth)
+            await markRead(auth: auth)
+            PAXHaptics.light()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     private func applyTeamMeta(_ response: PollResponse) {
         otherReadSeq = max(otherReadSeq, response.otherReadSeq)
         requestStatus = response.requestStatus.isEmpty ? "accepted" : response.requestStatus
