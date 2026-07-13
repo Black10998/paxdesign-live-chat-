@@ -102,6 +102,10 @@ final class ChatCoordinator: ObservableObject {
         listTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
+                if NetworkCircuitBreaker.shared.isOpen {
+                    try? await Task.sleep(nanoseconds: 60_000_000_000)
+                    continue
+                }
                 self.listLoopCounter += 1
                 if self.listLoopCounter.isMultiple(of: Self.fullSyncEveryListCycles) {
                     await self.refreshSessions(auth: auth, mode: .full)
@@ -603,8 +607,12 @@ final class ChatThreadModel: ObservableObject {
             self.lastStreamEventAt = Date()
 
             while !Task.isCancelled, self.lifecycleGeneration == generation {
+                if NetworkCircuitBreaker.shared.pollingSuspended {
+                    try? await Task.sleep(nanoseconds: 5_000_000_000)
+                    continue
+                }
                 let streamFresh = Date().timeIntervalSince(self.lastStreamEventAt) < self.streamStaleThreshold
-                if !streamFresh {
+                if !streamFresh, !AppRefreshPolicy.sseHealthy {
                     await self.poll(auth: auth)
                 }
                 if self.historyBaselined,

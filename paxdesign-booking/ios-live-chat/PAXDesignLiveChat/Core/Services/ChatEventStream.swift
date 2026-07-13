@@ -132,7 +132,9 @@ final class ChatEventStream {
                     }
                 } catch {
                     if Task.isCancelled { break }
-                    try? await Task.sleep(nanoseconds: Self.reconnectDelayNs)
+                    AppRefreshPolicy.sseHealthy = false
+                    let delay = NetworkCircuitBreaker.shared.nextSSEReconnectDelayNs()
+                    try? await Task.sleep(nanoseconds: delay)
                 }
             }
         }
@@ -194,7 +196,9 @@ final class ChatEventStream {
                     }
                 } catch {
                     if Task.isCancelled { break }
-                    try? await Task.sleep(nanoseconds: Self.reconnectDelayNs)
+                    AppRefreshPolicy.sseHealthy = false
+                    let delay = NetworkCircuitBreaker.shared.nextSSEReconnectDelayNs()
+                    try? await Task.sleep(nanoseconds: delay)
                 }
             }
         }

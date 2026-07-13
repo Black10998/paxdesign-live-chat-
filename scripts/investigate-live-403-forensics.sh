@@ -98,7 +98,9 @@ for p in \
   "$HOME/error_log" \
   "$HOME/logs/error.log" \
   "$HOME/domains/paxdesign.at/logs/error.log" \
+  "$HOME/domains/paxdesign.at/logs/ssl_error.log" \
   "$HOME/domains/paxdesign.at/public_html/error_log" \
+  "$HOME/domains/paxdesign.at/public_html/wp-content/debug.log" \
   "$WP_ROOT/error_log" \
   "$WP_ROOT/wp-content/debug.log" \
   /usr/local/lsws/logs/error.log \
@@ -110,22 +112,45 @@ for p in \
   "$HOME/logs/access.log" \
   "$HOME/domains/paxdesign.at/logs/access.log" \
   "$HOME/domains/paxdesign.at/logs/ssl_access.log" \
+  "$HOME/domains/paxdesign.at/public_html/logs/access.log" \
   /usr/local/lsws/logs/access.log; do
   [[ -f "$p" ]] && append ACCESS_LOGS "$p"
 done
 for p in \
   "$HOME/logs/modsec_audit.log" \
   "$HOME/domains/paxdesign.at/logs/modsec_audit.log" \
+  "$HOME/domains/paxdesign.at/logs/modsec" \
   /var/log/modsec_audit.log \
   /usr/local/lsws/logs/audit.log; do
   [[ -f "$p" ]] && append MODSEC_LOGS "$p"
 done
+# Hostinger may store logs only under hpanel paths — discover dynamically
+while IFS= read -r -d '' found; do
+  case "$found" in
+    *access*) append ACCESS_LOGS "$found" ;;
+    *modsec*|*audit*) append MODSEC_LOGS "$found" ;;
+    *error*|*debug*) append ERROR_LOGS "$found" ;;
+  esac
+done < <(find "$HOME/domains/paxdesign.at" -maxdepth 4 \( -name 'access.log' -o -name 'ssl_access.log' -o -name 'error.log' -o -name 'modsec*' -o -name 'debug.log' \) -type f -print0 2>/dev/null)
 echo "Error logs: $(printf '%s\n' "${ERROR_LOGS[@]}" 2>/dev/null | sort -u | wc -l)"
 printf '  %s\n' $(printf '%s\n' "${ERROR_LOGS[@]}" 2>/dev/null | sort -u) || true
 echo "Access logs: $(printf '%s\n' "${ACCESS_LOGS[@]}" 2>/dev/null | sort -u | wc -l)"
 printf '  %s\n' $(printf '%s\n' "${ACCESS_LOGS[@]}" 2>/dev/null | sort -u) || true
 echo "ModSec logs: $(printf '%s\n' "${MODSEC_LOGS[@]}" 2>/dev/null | sort -u | wc -l)"
 printf '  %s\n' $(printf '%s\n' "${MODSEC_LOGS[@]}" 2>/dev/null | sort -u) || true
+
+section "WordPress debug.log — REST auth burst (email_mapped_to_login)"
+DEBUG_LOG="$WP_ROOT/wp-content/debug.log"
+if [[ -f "$DEBUG_LOG" ]]; then
+  echo "--- Auth resolution events in last 180m ---"
+  tail -n 5000 "$DEBUG_LOG" 2>/dev/null | grep -c 'email_mapped_to_login' || echo "0"
+  echo "--- Per-second burst around incident window ---"
+  tail -n 5000 "$DEBUG_LOG" 2>/dev/null | grep 'email_mapped_to_login' \
+    | sed -E 's/^\[([0-9-]+ [0-9:]+) UTC\].*/\1/' | sort | uniq -c | sort -rn | head -20 || true
+  echo "Each line above = parallel REST requests resolving Basic Auth email in that second."
+else
+  echo "debug.log not found at $DEBUG_LOG"
+fi
 
 section "Access logs — 403 bursts and client IPs (last ~2000 lines)"
 for log in $(printf '%s\n' "${ACCESS_LOGS[@]}" 2>/dev/null | sort -u); do
