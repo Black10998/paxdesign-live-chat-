@@ -24,6 +24,7 @@ struct TeamChatView: View {
     @State private var showImagePreview = false
     @State private var isSendingLocation = false
     @State private var mediaError: String?
+    @State private var sendError: String?
 
     init(sessionId: String) {
         _thread = ObservedObject(wrappedValue: ChatThreadRegistry.shared.teamThread(sessionId: sessionId))
@@ -44,6 +45,7 @@ struct TeamChatView: View {
             isLoading: thread.isLoadingMessages,
             agentDisplayName: auth.profile?.displayName ?? L10n.ChatAgent,
             customerDisplayName: thread.participantName.isEmpty ? L10n.TeamChatTitle : thread.participantName,
+            layoutRevision: teamLayoutRevision,
             onReply: { _ in },
             onCopy: { UIPasteboard.general.string = $0.content },
             onDelete: { _ in },
@@ -146,6 +148,14 @@ struct TeamChatView: View {
         } message: {
             Text(mediaError ?? "")
         }
+        .alert(L10n.TeamSendErrorTitle, isPresented: Binding(
+            get: { sendError != nil },
+            set: { if !$0 { sendError = nil } }
+        )) {
+            Button(L10n.CommonOK, role: .cancel) { sendError = nil }
+        } message: {
+            Text(sendError ?? "")
+        }
         .sheet(isPresented: $showImagePreview) {
             if let pendingImage {
                 ImagePreviewSheet(
@@ -197,6 +207,14 @@ struct TeamChatView: View {
         }
         .onChange(of: thread.draft) { _ in
             thread.handleDraftChange(auth: auth)
+        }
+        .onChange(of: teamLayoutRevision) { _ in
+            ChatScrollHelper.scrollToBottom(sessionId: thread.sessionId)
+        }
+        .onChange(of: thread.errorMessage) { error in
+            guard let error, !error.isEmpty else { return }
+            sendError = error
+            thread.errorMessage = nil
         }
         .onReceive(NotificationCenter.default.publisher(for: .paxSessionSync)) { note in
             guard let syncedId = note.userInfo?["session_id"] as? String,
@@ -339,6 +357,14 @@ struct TeamChatView: View {
         }
     }
 
+    private var teamLayoutRevision: Int {
+        var hasher = Hasher()
+        hasher.combine(voiceRecorder.isRecording)
+        hasher.combine(thread.isSending)
+        hasher.combine(isSendingLocation)
+        return hasher.finalize()
+    }
+
     private var canSend: Bool {
         thread.canSend
             && !thread.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -362,9 +388,17 @@ struct TeamChatView: View {
                 Button {
                     Task { await beginVoiceRecording() }
                 } label: {
-                    PAXIcon("mic.circle.fill", size: .card)
-                        .foregroundStyle(voiceRecorder.isRecording ? PAXTheme.accent : PAXTheme.textSecondary)
+                    PAXIcon("mic.fill", size: .inline)
+                        .foregroundStyle(voiceRecorder.isRecording ? .white : PAXTheme.textSecondary)
                         .frame(width: 32, height: 32)
+                        .background(
+                            Circle()
+                                .fill(voiceRecorder.isRecording ? PAXTheme.accent : PAXTheme.surface.opacity(0.55))
+                                .overlay(
+                                    Circle()
+                                        .stroke(PAXTheme.border.opacity(voiceRecorder.isRecording ? 0 : 0.35), lineWidth: 0.5)
+                                )
+                        )
                 }
                 .disabled(thread.isSending || voiceRecorder.isRecording || isSendingLocation)
                 .accessibilityLabel(L10n.TeamRecordVoice)
@@ -465,15 +499,21 @@ struct TeamChatView: View {
                 filename: recording.filename,
                 duration: recording.duration
             )
+            ChatScrollHelper.scrollToBottom(sessionId: thread.sessionId)
         } catch {
             mediaError = error.localizedDescription
         }
     }
 
     private func shareCurrentLocation() async {
+        let status = await LocationPermissionService.shared.requestWhenInUse()
+        guard LocationPermissionService.isAuthorized(status) else {
+            mediaError = L10n.TeamLocationDenied
+            return
+        }
         isSendingLocation = true
         defer { isSendingLocation = false }
-        guard let coordinate = await LocationCaptureService.shared.captureCurrentLocation() else {
+        guard let coordinate = await LocationPermissionService.shared.fetchCurrentLocation() else {
             mediaError = L10n.TeamLocationDenied
             return
         }
@@ -483,6 +523,7 @@ struct TeamChatView: View {
             latitude: coordinate.latitude,
             longitude: coordinate.longitude
         )
+        ChatScrollHelper.scrollToBottom(sessionId: thread.sessionId)
     }
 }
 

@@ -5229,6 +5229,13 @@
         "ar": { "stringUnit": { "state": "translated", "value": "رسالة صوتية" } }
       }
     },
+    "team.voice_sending": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sending…" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Wird gesendet…" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "جارٍ الإرسال…" } }
+      }
+    },
     "team.share_location": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Share Location" } },
@@ -5269,6 +5276,13 @@
         "en": { "stringUnit": { "state": "translated", "value": "Could Not Send Attachment" } },
         "de": { "stringUnit": { "state": "translated", "value": "Anhang konnte nicht gesendet werden" } },
         "ar": { "stringUnit": { "state": "translated", "value": "تعذر إرسال المرفق" } }
+      }
+    },
+    "team.send_error.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Message Not Sent" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Nachricht nicht gesendet" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "لم يتم إرسال الرسالة" } }
       }
     },
     "team.recording_voice": {

@@ -435,6 +435,36 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         attachmentType == "in_place_warning"
     }
 
+    func replacingId(_ newId: Int) -> LiveMessage {
+        LiveMessage(
+            id: newId,
+            clientMsgId: clientMsgId,
+            role: role,
+            content: content,
+            ts: ts,
+            imageUrl: imageUrl,
+            replyTo: replyTo,
+            reaction: reaction,
+            senderId: senderId,
+            senderName: senderName,
+            senderAvatar: senderAvatar,
+            senderRole: senderRole,
+            attachmentType: attachmentType,
+            linkUrl: linkUrl,
+            linkLabel: linkLabel,
+            linkIcon: linkIcon,
+            linkScanStatus: linkScanStatus,
+            linkScanSystemStatus: linkScanSystemStatus,
+            linkScanReviewPending: linkScanReviewPending,
+            linkScanUrls: linkScanUrls,
+            audioUrl: audioUrl,
+            audioDuration: audioDuration,
+            locationLat: locationLat,
+            locationLng: locationLng,
+            locationLabel: locationLabel
+        )
+    }
+
     var showsLinkScanBadge: Bool {
         guard role == "user" else { return false }
         if let status = linkScanStatus, !status.isEmpty, status != "none" { return true }

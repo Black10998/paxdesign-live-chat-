@@ -658,7 +658,22 @@ class PAXdesign_Team_Messaging {
         }
 
         $name  = isset($file['name']) ? (string) $file['name'] : ($kind === 'image' ? 'image.jpg' : 'voice.m4a');
+        if ($kind === 'audio' && !preg_match('/\.(m4a|mp4|aac|caf)$/i', $name)) {
+            $name .= '.m4a';
+        }
+        if ($kind === 'audio' && !empty($file['tmp_name']) && is_string($file['tmp_name'])) {
+            $tmp_with_ext = $file['tmp_name'] . '.m4a';
+            if (!file_exists($tmp_with_ext) && @copy($file['tmp_name'], $tmp_with_ext)) {
+                $file['tmp_name'] = $tmp_with_ext;
+            }
+        }
         $check = wp_check_filetype($name, $allowed);
+        if ($kind === 'audio' && (empty($check['type']) || empty($check['ext']))) {
+            $check = array(
+                'ext'  => 'm4a',
+                'type' => 'audio/mp4',
+            );
+        }
         if (empty($check['type']) || !in_array($check['type'], array_values($allowed), true)) {
             return new WP_Error('invalid_type', 'Unsupported file type.', array('status' => 400));
         }

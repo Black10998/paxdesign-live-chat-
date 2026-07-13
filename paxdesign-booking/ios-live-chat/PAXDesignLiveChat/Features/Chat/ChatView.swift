@@ -53,6 +53,7 @@ struct ChatView: View {
                 isLoading: thread.isLoadingMessages,
                 agentDisplayName: agentDisplayName,
                 customerDisplayName: thread.customerName,
+                layoutRevision: chatLayoutRevision,
                 onReply: { thread.setReply(to: $0) },
                 onCopy: copyMessage,
                 onDelete: { message in
@@ -164,6 +165,9 @@ struct ChatView: View {
             }
         } message: {
             Text(L10n.ChatDeleteMessageConfirm)
+        }
+        .onChange(of: chatLayoutRevision) { _ in
+            ChatScrollHelper.scrollToBottom(sessionId: thread.sessionId)
         }
     }
 
@@ -362,6 +366,18 @@ struct ChatView: View {
         showQuickReplyStrip || showAISuggestionsStrip
     }
 
+    private var chatLayoutRevision: Int {
+        var hasher = Hasher()
+        hasher.combine(showAssistStrip)
+        hasher.combine(thread.replyToMessage?.id ?? -1)
+        hasher.combine(thread.suggestionsLoading)
+        hasher.combine(thread.aiSuggestions.count)
+        hasher.combine(thread.suggestionsError ?? "")
+        hasher.combine(thread.filteredQuickReplies().count)
+        hasher.combine(showCustomerOverview)
+        return hasher.finalize()
+    }
+
     private var assistStrip: some View {
         VStack(alignment: .leading, spacing: 10) {
             if showQuickReplyStrip {
@@ -500,7 +516,10 @@ struct ChatView: View {
 
             PAXSendButton(isEnabled: canSend) {
                 PAXHaptics.light()
-                Task { await thread.send(auth: auth) }
+                Task {
+                    await thread.send(auth: auth)
+                    ChatScrollHelper.scrollToBottom(sessionId: thread.sessionId)
+                }
             }
         }
         .padding(.horizontal, 10)

@@ -885,8 +885,8 @@ final class TeamChatThreadModel: ObservableObject {
                 caption: caption,
                 clientMsgId: clientMsgId
             )
-            messages.removeAll { $0.id == tempId }
             insertIncomingMessages([sent.message])
+            messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
             pollSeq = max(pollSeq, sent.seq)
             currentSeq = max(currentSeq, sent.seq)
             MessageSendSound.shared.playIfEnabled()
@@ -894,7 +894,6 @@ final class TeamChatThreadModel: ObservableObject {
             await markRead(auth: auth)
             PAXHaptics.light()
         } catch {
-            messages.removeAll { $0.id == tempId }
             errorMessage = error.localizedDescription
         }
     }
@@ -918,7 +917,8 @@ final class TeamChatThreadModel: ObservableObject {
             senderId: auth.profile?.userId,
             senderName: auth.profile?.displayName,
             attachmentType: "voice",
-            audioDuration: duration
+            audioDuration: duration,
+            audioUrl: "pending://\(clientMsgId)"
         )
         messages.append(optimistic)
         messagesRevision &+= 1
@@ -933,16 +933,17 @@ final class TeamChatThreadModel: ObservableObject {
                 duration: duration,
                 clientMsgId: clientMsgId
             )
-            messages.removeAll { $0.id == tempId }
             insertIncomingMessages([sent.message])
+            messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
             pollSeq = max(pollSeq, sent.seq)
             currentSeq = max(currentSeq, sent.seq)
+            failedClientMsgIds.remove(clientMsgId)
             MessageSendSound.shared.playIfEnabled()
             await teamCoordinator.refresh(auth: auth)
             await markRead(auth: auth)
             PAXHaptics.light()
         } catch {
-            messages.removeAll { $0.id == tempId }
+            failedClientMsgIds.insert(clientMsgId)
             errorMessage = error.localizedDescription
         }
     }
@@ -983,8 +984,8 @@ final class TeamChatThreadModel: ObservableObject {
                 label: label,
                 clientMsgId: clientMsgId
             )
-            messages.removeAll { $0.id == tempId }
             insertIncomingMessages([sent.message])
+            messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
             pollSeq = max(pollSeq, sent.seq)
             currentSeq = max(currentSeq, sent.seq)
             MessageSendSound.shared.playIfEnabled()
@@ -992,7 +993,6 @@ final class TeamChatThreadModel: ObservableObject {
             await markRead(auth: auth)
             PAXHaptics.light()
         } catch {
-            messages.removeAll { $0.id == tempId }
             errorMessage = error.localizedDescription
         }
     }

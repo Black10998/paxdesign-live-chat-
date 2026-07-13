@@ -12,6 +12,7 @@ struct ChatMessageListView: View {
     var isLoading = false
     var agentDisplayName = L10n.ChatAgent
     var customerDisplayName = L10n.ChatCustomer
+    var layoutRevision = 0
     let onReply: (LiveMessage) -> Void
     let onCopy: (LiveMessage) -> Void
     let onDelete: (LiveMessage) -> Void
@@ -27,6 +28,8 @@ struct ChatMessageListView: View {
 
     @State private var lastTrackedMessageId: Int?
     @State private var animatedRowIds = Set<String>()
+
+    private static let bottomAnchorId = "chat-bottom-anchor"
 
     private var displayRows: [MessageDisplayRow] {
         var messageLookup: [Int: LiveMessage] = [:]
@@ -90,6 +93,9 @@ struct ChatMessageListView: View {
                         TypingIndicator(customerName: customerDisplayName)
                             .id("typing-indicator")
                     }
+                    Color.clear
+                        .frame(height: 1)
+                        .id(Self.bottomAnchorId)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
@@ -97,38 +103,36 @@ struct ChatMessageListView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: messagesRevision) { _ in
-                ChatLiveDiagnostics.uiRows(
-                    sessionId: sessionId,
-                    messageCount: messages.count,
-                    rowCount: displayRows.count,
-                    revision: messagesRevision
-                )
-                let latestId = messages.last?.id
-                let appended = latestId != nil && latestId != lastTrackedMessageId
-                lastTrackedMessageId = latestId
-                if appended || userTyping || messages.count > 0 {
-                    scrollToBottom(proxy: proxy, animated: true)
-                }
+                trackAndScroll(proxy: proxy)
+            }
+            .onChange(of: messages.count) { _ in
+                trackAndScroll(proxy: proxy)
+            }
+            .onChange(of: layoutRevision) { _ in
+                scheduleScrollToBottom(proxy: proxy, animated: true)
             }
             .onChange(of: userTyping) { typing in
                 if typing {
-                    scrollToBottom(proxy: proxy, animated: true)
+                    scheduleScrollToBottom(proxy: proxy, animated: true)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    scrollToBottom(proxy: proxy, animated: true)
-                }
+                scheduleScrollToBottom(proxy: proxy, animated: true)
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { _ in
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                    scrollToBottom(proxy: proxy, animated: true)
-                }
+                scheduleScrollToBottom(proxy: proxy, animated: true)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
+                scheduleScrollToBottom(proxy: proxy, animated: true)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .paxChatScrollToBottom)) { note in
+                guard shouldHandleScrollNotification(note) else { return }
+                scheduleScrollToBottom(proxy: proxy, animated: true)
             }
             .onAppear {
                 lastTrackedMessageId = messages.last?.id
                 animatedRowIds = Set(displayRows.map(\.id))
-                scrollToBottom(proxy: proxy, animated: false)
+                scheduleScrollToBottom(proxy: proxy, animated: false)
             }
         }
         .onAppear {
@@ -141,6 +145,22 @@ struct ChatMessageListView: View {
         }
     }
 
+    private func shouldHandleScrollNotification(_ note: Notification) -> Bool {
+        guard let target = note.userInfo?["session_id"] as? String else { return true }
+        return target == sessionId
+    }
+
+    private func trackAndScroll(proxy: ScrollViewProxy) {
+        ChatLiveDiagnostics.uiRows(
+            sessionId: sessionId,
+            messageCount: messages.count,
+            rowCount: displayRows.count,
+            revision: messagesRevision
+        )
+        lastTrackedMessageId = messages.last?.id
+        scheduleScrollToBottom(proxy: proxy, animated: true)
+    }
+
     private func messageRowId(_ message: LiveMessage) -> String {
         if let clientId = message.clientMsgId, !clientId.isEmpty {
             return "c:\(clientId)"
@@ -148,13 +168,18 @@ struct ChatMessageListView: View {
         return "m:\(message.id)"
     }
 
+    private func scheduleScrollToBottom(proxy: ScrollViewProxy, animated: Bool) {
+        let delays: [TimeInterval] = animated ? [0, 0.05, 0.12, 0.28] : [0]
+        for delay in delays {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                scrollToBottom(proxy: proxy, animated: animated && delay > 0)
+            }
+        }
+    }
+
     private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool) {
         let action = {
-            if userTyping {
-                proxy.scrollTo("typing-indicator", anchor: .bottom)
-            } else if let last = displayRows.last {
-                proxy.scrollTo(last.id, anchor: .bottom)
-            }
+            proxy.scrollTo(Self.bottomAnchorId, anchor: .bottom)
         }
         if animated {
             withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
@@ -344,6 +369,7 @@ private struct TeamMessageDeliveryStatus: View {
             return "Failed"
         }
         if message.id < 0 { return "Sending" }
+        if (message.audioUrl ?? "").hasPrefix("pending://") { return "Sending" }
         if otherReadSeq >= message.id && message.id > 0 { return "Read" }
         if message.id > 0 { return "Delivered" }
         return "Sent"
@@ -409,5 +435,15 @@ private struct TypingIndicator: View {
         }
         .accessibilityLabel("\(customerName) \(L10n.ChatCustomerTyping)")
         .onAppear { animate = true }
+    }
+}
+
+enum ChatScrollHelper {
+    static func scrollToBottom(sessionId: String) {
+        NotificationCenter.default.post(
+            name: .paxChatScrollToBottom,
+            object: nil,
+            userInfo: ["session_id": sessionId]
+        )
     }
 }

@@ -296,12 +296,14 @@ enum L10n {
     static var TeamVoicePlay: String { t("team.voice_play") }
     static var TeamVoicePause: String { t("team.voice_pause") }
     static var TeamVoiceMessage: String { t("team.voice_message") }
+    static var TeamVoiceSending: String { t("team.voice_sending") }
     static var TeamShareLocation: String { t("team.share_location") }
     static var TeamSharedLocation: String { t("team.shared_location") }
     static var TeamOpenInMaps: String { t("team.open_in_maps") }
     static var TeamMicrophoneDenied: String { t("team.microphone_denied") }
     static var TeamLocationDenied: String { t("team.location_denied") }
     static var TeamMediaErrorTitle: String { t("team.media_error.title") }
+    static var TeamSendErrorTitle: String { t("team.send_error.title") }
     static func TeamRecordingVoice(_ elapsed: TimeInterval) -> String {
         let seconds = max(0, Int(elapsed.rounded()))
         return String(format: String(localized: "team.recording_voice"), seconds)
