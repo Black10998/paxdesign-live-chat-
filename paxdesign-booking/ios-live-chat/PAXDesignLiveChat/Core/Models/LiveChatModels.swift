@@ -1057,6 +1057,9 @@ struct StaffMember: Codable, Identifiable {
         if !cleaned.isEmpty, !Self.looksLikeInternalUsername(cleaned, login: username) {
             return cleaned
         }
+        if let profileTitle, !profileTitle.isEmpty, !Self.isPlaceholderProfileTitle(profileTitle) {
+            return Self.localizedRoleLabel(profileTitle)
+        }
         if let derived = Self.nameFromEmail(email), !derived.isEmpty {
             return derived
         }
@@ -1072,6 +1075,7 @@ struct StaffMember: Codable, Identifiable {
         if normalized.hasPrefix("manage-") || normalized.hasPrefix("system-") || normalized.hasPrefix("admin-") {
             return true
         }
+        if normalized.contains("manage-system") || normalized.contains("system-user") { return true }
         if value.contains("-") || value.contains("_") {
             return !value.contains(where: { $0.isUppercase })
         }
@@ -1088,51 +1092,6 @@ struct StaffMember: Codable, Identifiable {
         }
         guard !words.isEmpty else { return nil }
         return words.joined(separator: " ")
-    }
-
-    var isAway: Bool { presenceStatus == "away" }
-
-    /// Human-facing name only — never exposes internal WordPress login slugs.
-    var displayName: String {
-        let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !cleaned.isEmpty, !Self.looksLikeInternalUsername(cleaned, login: username) {
-            return cleaned
-        }
-        if let profileTitle, !profileTitle.isEmpty, !Self.isPlaceholderProfileTitle(profileTitle) {
-            return Self.localizedRoleLabel(profileTitle)
-        }
-        let emailLocal = email.split(separator: "@").first.map(String.init) ?? ""
-        if !emailLocal.isEmpty {
-            let parts = emailLocal.split(whereSeparator: { $0 == "." || $0 == "_" || $0 == "-" || $0 == "+" })
-                .map { part in
-                    part.prefix(1).uppercased() + part.dropFirst().lowercased()
-                }
-            if !parts.isEmpty {
-                return parts.joined(separator: " ")
-            }
-        }
-        return cleaned.isEmpty ? L10n.CommonAdministrator : cleaned
-    }
-
-    var presenceLabel: String {
-        if isOnline { return L10n.TeamPresenceOnline }
-        if isAway { return L10n.TeamPresenceAway }
-        return L10n.TeamPresenceOffline
-    }
-
-    var presenceColor: Color {
-        if isOnline { return .green }
-        if isAway { return .orange }
-        return Color(.systemGray3)
-    }
-
-    private static func looksLikeInternalUsername(_ value: String, login: String) -> Bool {
-        let normalized = value.lowercased()
-        let loginNorm = login.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        if !loginNorm.isEmpty, normalized == loginNorm { return true }
-        if normalized.contains("manage-system") || normalized.contains("system-user") { return true }
-        if value.contains("-") || value.contains("_"), !value.contains(" ") { return true }
-        return isPlaceholderProfileTitle(value)
     }
 
     var publicDisplaySubtitle: String {
