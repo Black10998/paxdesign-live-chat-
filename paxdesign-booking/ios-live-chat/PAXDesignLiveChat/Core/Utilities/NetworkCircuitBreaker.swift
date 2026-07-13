@@ -33,7 +33,7 @@ final class NetworkCircuitBreaker {
     private var consecutiveRateLimitHits = 0
 
     /// Hard cap: max REST requests per rolling second.
-    var maxRequestsPerSecond = 3
+    var maxRequestsPerSecond = 8
     /// Minimum pause after first edge 403/429.
     var minOpenDuration: TimeInterval = 300
     var maxOpenDuration: TimeInterval = 600
@@ -54,7 +54,7 @@ final class NetworkCircuitBreaker {
         isOpen || AppRefreshPolicy.sseHealthy
     }
 
-    func recordRequestStart(endpoint: String) throws {
+    func recordRequestStart(endpoint: String, method: String = "GET") throws {
         if endpoint.hasPrefix("device-") || endpoint == "devices-list" {
             return
         }
@@ -73,9 +73,13 @@ final class NetworkCircuitBreaker {
         }
         requestTimestamps.append(now)
 
-        guard inflightKeys.insert(endpoint).inserted else {
-            log.debug("dedupe skip endpoint=\(endpoint, privacy: .public)")
-            throw NetworkCircuitBreakerError.rateLimited
+        let isSafeRead = method.uppercased() == "GET"
+            && (endpoint.hasPrefix("suggestions:") || endpoint.hasPrefix("poll:") || endpoint == "me")
+        if !isSafeRead {
+            guard inflightKeys.insert(endpoint).inserted else {
+                log.debug("dedupe skip endpoint=\(endpoint, privacy: .public)")
+                throw NetworkCircuitBreakerError.rateLimited
+            }
         }
     }
 

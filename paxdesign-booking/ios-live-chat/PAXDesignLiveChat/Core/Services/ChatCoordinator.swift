@@ -1396,6 +1396,25 @@ final class ChatThreadModel: ObservableObject {
         typingNotifyTask?.cancel()
         await notifyTypingStop(auth: auth)
 
+        if handler == "closed" {
+            errorMessage = L10n.ChatHandlerClosed
+            draft = text
+            return
+        }
+        if handler != "admin" {
+            do {
+                try await api.takeover(sessionId)
+                handler = "admin"
+                if adminName.isEmpty {
+                    adminName = auth.profile?.displayName ?? L10n.ChatAgent
+                }
+            } catch {
+                errorMessage = error.localizedDescription
+                draft = text
+                return
+            }
+        }
+
         let replyId = replyToMessage?.id
         let clientMsgId = UUID().uuidString.lowercased()
         let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000)

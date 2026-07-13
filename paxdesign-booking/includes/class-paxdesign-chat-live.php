@@ -580,6 +580,43 @@ class PAXdesign_Chat_Live {
         return $this->get_handler($session_id) === self::HANDLER_ADMIN;
     }
 
+    /**
+     * Ensure the current agent owns the chat; optionally auto-takeover from AI/live queue.
+     *
+     * @return true|WP_Error
+     */
+    public function ensure_admin_handler_for_agent($session_id, $auto_takeover = true) {
+        $handler = $this->get_handler($session_id);
+        if ($handler === self::HANDLER_ADMIN) {
+            return true;
+        }
+        if ($handler === self::HANDLER_CLOSED) {
+            return new WP_Error('closed', 'Chat ist geschlossen.', array('status' => 409));
+        }
+        if (!$auto_takeover) {
+            return new WP_Error('not_admin', 'Chat nicht übernommen.', array('status' => 409));
+        }
+        $result = $this->admin_takeover($session_id);
+        return is_wp_error($result) ? $result : true;
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function session_messages_for_agent($session_id) {
+        if (class_exists('PAXdesign_Message_Store')) {
+            $messages = PAXdesign_Message_Store::all_messages($session_id, 'customer');
+            if (!empty($messages)) {
+                return $this->sort_messages($messages);
+            }
+        }
+        $row = $this->get_session_row($session_id);
+        if (!$row) {
+            return array();
+        }
+        return $this->sort_messages($this->decode_messages($row->messages));
+    }
+
     public function is_ai_blocked($session_id) {
         return in_array($this->get_handler($session_id), array(
             self::HANDLER_ADMIN,
@@ -1736,8 +1773,9 @@ class PAXdesign_Chat_Live {
             return new WP_Error('invalid_request', 'Ungültige Anfrage.', array('status' => 400));
         }
 
-        if (!$this->is_admin_handler($session_id)) {
-            return new WP_Error('not_admin', 'Chat nicht übernommen.', array('status' => 409));
+        $ensure = $this->ensure_admin_handler_for_agent($session_id);
+        if (is_wp_error($ensure)) {
+            return $ensure;
         }
 
         $row = $this->get_session_row($session_id);
@@ -1745,7 +1783,7 @@ class PAXdesign_Chat_Live {
             return new WP_Error('not_found', 'Session nicht gefunden.', array('status' => 404));
         }
 
-        $messages = $this->sort_messages($this->decode_messages($row->messages));
+        $messages = $this->session_messages_for_agent($session_id);
         $target   = null;
         foreach ($messages as $msg) {
             if (is_array($msg) && isset($msg['id']) && (int) $msg['id'] === $message_id) {
@@ -1901,8 +1939,9 @@ class PAXdesign_Chat_Live {
             return new WP_Error('invalid_payload', 'Kein Bild übermittelt.', array('status' => 400));
         }
 
-        if (!$this->is_admin_handler($session_id)) {
-            return new WP_Error('not_admin', 'Chat nicht übernommen.', array('status' => 409));
+        $ensure = $this->ensure_admin_handler_for_agent($session_id);
+        if (is_wp_error($ensure)) {
+            return $ensure;
         }
         global $wpdb;
         $lock_name = 'pax_msg_' . md5($session_id);
@@ -2756,8 +2795,9 @@ class PAXdesign_Chat_Live {
             return new WP_Error('invalid_payload', 'Ungültige Nachricht.', array('status' => 400));
         }
 
-        if (!$this->is_admin_handler($session_id)) {
-            return new WP_Error('not_admin', 'Chat nicht übernommen.', array('status' => 409));
+        $ensure = $this->ensure_admin_handler_for_agent($session_id);
+        if (is_wp_error($ensure)) {
+            return $ensure;
         }
 
         $reply_to = (int) $reply_to;
@@ -2786,8 +2826,9 @@ class PAXdesign_Chat_Live {
             return new WP_Error('invalid_session', 'Ungültige Session.', array('status' => 400));
         }
 
-        if (!$this->is_admin_handler($session_id)) {
-            return new WP_Error('not_admin', 'Chat nicht übernommen.', array('status' => 409));
+        $ensure = $this->ensure_admin_handler_for_agent($session_id);
+        if (is_wp_error($ensure)) {
+            return $ensure;
         }
 
         $label = sanitize_text_field((string) ($link['label'] ?? ''));
