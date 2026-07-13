@@ -60,6 +60,8 @@ enum AppServicesController {
         ConversationHistoryStore.shared.clearAll()
         SessionListCache.shared.clear()
         PendingMessageStore.shared.clearAll()
+        ConversationSyncCoordinator.reset()
+        NetworkRequestTracker.shared.reset()
         #if !SIDELOAD
         DeviceSessionService.shared.stop()
         #endif

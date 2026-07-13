@@ -1,6 +1,6 @@
 import Foundation
 
-/// Central refresh cadence — slower when idle, faster when live traffic is active.
+/// Central refresh cadence — SSE-first with conservative HTTP fallback.
 @MainActor
 enum AppRefreshPolicy {
     static var scenePhase: SceneActivity = .active
@@ -15,30 +15,41 @@ enum AppRefreshPolicy {
 
     static var isForeground: Bool { scenePhase == .active }
 
-    /// Session inbox polling.
+    /// Session inbox polling (HTTP fallback when SSE is active).
     static var sessionListInterval: UInt64 {
         guard isForeground else { return 15_000_000_000 }
-        if liveRequestCount > 0 { return 800_000_000 }
-        if hasOpenChat { return 1_000_000_000 }
-        return 2_500_000_000
+        if liveRequestCount > 0 { return 1_500_000_000 }
+        if hasOpenChat { return 2_000_000_000 }
+        return 4_000_000_000
     }
 
-    /// Open customer chat thread polling.
+    /// Customer thread poll when SSE stream is healthy.
+    static var chatThreadIntervalLive: UInt64 { 5_000_000_000 }
+
+    /// Customer thread poll when SSE is stale or disconnected.
+    static var chatThreadIntervalStale: UInt64 { 2_000_000_000 }
+
+    /// Legacy accessor kept for callers that only need idle/open distinction.
     static var chatThreadInterval: UInt64 {
         guard isForeground else { return 12_000_000_000 }
-        return hasOpenChat ? 250_000_000 : 900_000_000
+        return hasOpenChat ? chatThreadIntervalLive : 900_000_000
     }
 
     /// Team inbox list polling.
     static var teamListInterval: UInt64 {
         guard isForeground else { return 15_000_000_000 }
-        return hasOpenChat ? 1_500_000_000 : 3_000_000_000
+        return hasOpenChat ? 2_000_000_000 : 4_000_000_000
     }
 
-    /// Open team thread polling.
+    /// Team thread poll when SSE stream is healthy.
+    static var teamThreadIntervalLive: UInt64 { 5_000_000_000 }
+
+    /// Team thread poll when SSE is stale or disconnected.
+    static var teamThreadIntervalStale: UInt64 { 2_000_000_000 }
+
     static var teamThreadInterval: UInt64 {
         guard isForeground else { return 12_000_000_000 }
-        return hasOpenChat ? 300_000_000 : 1_000_000_000
+        return hasOpenChat ? teamThreadIntervalLive : 1_000_000_000
     }
 
     static func update(scenePhase: SceneActivity) {

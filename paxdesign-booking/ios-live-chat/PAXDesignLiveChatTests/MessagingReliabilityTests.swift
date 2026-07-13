@@ -159,4 +159,37 @@ final class MessagingReliabilityTests: XCTestCase {
         XCTAssertEqual(decoded.first?.content, "Hello from website")
         XCTAssertEqual(decoded.first?.clientMsgId, "abc-123")
     }
+
+    func testConversationSyncCooldownBlocksRapidRepeats() {
+        ConversationSyncCoordinator.reset()
+        XCTAssertTrue(ConversationSyncCoordinator.shouldRunFullSync())
+        ConversationSyncCoordinator.beginFullSync()
+        ConversationSyncCoordinator.endFullSync()
+        XCTAssertFalse(ConversationSyncCoordinator.shouldRunFullSync())
+    }
+
+    func testOpenChatPollingIntervalsAreConservative() {
+        AppRefreshPolicy.update(scenePhase: .active)
+        AppRefreshPolicy.update(liveCount: 0, openChat: true)
+        XCTAssertEqual(AppRefreshPolicy.chatThreadIntervalLive, 5_000_000_000)
+        XCTAssertEqual(AppRefreshPolicy.teamThreadIntervalLive, 5_000_000_000)
+        XCTAssertEqual(AppRefreshPolicy.sessionListInterval, 2_000_000_000)
+        XCTAssertEqual(AppRefreshPolicy.teamListInterval, 2_000_000_000)
+    }
+
+    func testIdlePollingIntervalsReducedVersusAggressiveBaseline() {
+        AppRefreshPolicy.update(scenePhase: .active)
+        AppRefreshPolicy.update(liveCount: 0, openChat: false)
+        XCTAssertGreaterThanOrEqual(AppRefreshPolicy.sessionListInterval, 4_000_000_000)
+        XCTAssertGreaterThanOrEqual(AppRefreshPolicy.teamListInterval, 4_000_000_000)
+    }
+
+    func testNetworkRequestTrackerCountsEndpoints() async {
+        await NetworkRequestTracker.shared.reset()
+        await NetworkRequestTracker.shared.record(endpoint: "sessions")
+        await NetworkRequestTracker.shared.record(endpoint: "sessions")
+        await NetworkRequestTracker.shared.record(endpoint: "poll:test")
+        XCTAssertEqual(await NetworkRequestTracker.shared.totalInWindow, 3)
+        XCTAssertEqual(await NetworkRequestTracker.shared.snapshot()["sessions"], 2)
+    }
 }

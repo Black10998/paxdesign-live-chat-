@@ -124,6 +124,9 @@ final class LiveChatAPI {
     }
 
     private func perform<T: Decodable>(_ request: URLRequest, endpoint: String, as type: T.Type) async throws -> T {
+        await MainActor.run {
+            NetworkRequestTracker.shared.record(endpoint: endpoint)
+        }
         let data: Data
         let http: HTTPURLResponse
         do {

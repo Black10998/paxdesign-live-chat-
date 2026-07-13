@@ -63,12 +63,23 @@ final class ChatEventStream {
         }
     }
 
+    private struct PendingAck {
+        let api: LiveChatAPI
+        let channel: String
+        let eventId: Int
+        let seq: Int
+    }
+
     private var inboxHandlers: [UUID: InboxHandler] = [:]
     private var inboxTask: Task<Void, Never>?
     private weak var inboxApi: LiveChatAPI?
     private var inboxSince = 0
 
     private var threadSubscriptions: [UUID: ThreadSubscription] = [:]
+    private var pendingAcks: [String: PendingAck] = [:]
+    private var ackFlushTask: Task<Void, Never>?
+    private static let ackDebounceNs: UInt64 = 1_500_000_000
+    private static let reconnectDelayNs: UInt64 = 1_000_000_000
 
     func subscribeInbox(id: UUID, api: LiveChatAPI, handler: @escaping InboxHandler) {
         inboxHandlers[id] = handler
@@ -111,18 +122,17 @@ final class ChatEventStream {
                                 channel: current.channel,
                                 eventId: event.id
                             )
-                            Task {
-                                try? await current.api.acknowledgeEvent(
-                                    channel: current.channel,
-                                    eventId: event.id,
-                                    seq: StreamPayload.int(event.payload["seq"])
-                                )
-                            }
+                            self.scheduleAck(
+                                api: current.api,
+                                channel: current.channel,
+                                eventId: event.id,
+                                seq: StreamPayload.int(event.payload["seq"])
+                            )
                         }
                     }
                 } catch {
                     if Task.isCancelled { break }
-                    try? await Task.sleep(nanoseconds: 20_000_000)
+                    try? await Task.sleep(nanoseconds: Self.reconnectDelayNs)
                 }
             }
         }
@@ -140,6 +150,7 @@ final class ChatEventStream {
         inboxTask = nil
         inboxApi = nil
         inboxSince = 0
+        flushAcksNow()
     }
 
     func stopThreads() {
@@ -147,6 +158,7 @@ final class ChatEventStream {
             subscription.task?.cancel()
         }
         threadSubscriptions.removeAll()
+        flushAcksNow()
     }
 
     func stopAll() {
@@ -172,19 +184,54 @@ final class ChatEventStream {
                                 channel: "inbox",
                                 eventId: event.id
                             )
-                            Task {
-                                try? await api.acknowledgeEvent(
-                                    channel: event.channel.isEmpty ? "inbox:admins" : event.channel,
-                                    eventId: event.id,
-                                    seq: StreamPayload.int(event.payload["seq"])
-                                )
-                            }
+                            self.scheduleAck(
+                                api: api,
+                                channel: event.channel.isEmpty ? "inbox:admins" : event.channel,
+                                eventId: event.id,
+                                seq: StreamPayload.int(event.payload["seq"])
+                            )
                         }
                     }
                 } catch {
                     if Task.isCancelled { break }
-                    try? await Task.sleep(nanoseconds: 20_000_000)
+                    try? await Task.sleep(nanoseconds: Self.reconnectDelayNs)
                 }
+            }
+        }
+    }
+
+    private func scheduleAck(api: LiveChatAPI, channel: String, eventId: Int, seq: Int) {
+        guard eventId > 0 else { return }
+        let existing = pendingAcks[channel]
+        if let existing, existing.eventId >= eventId {
+            return
+        }
+        pendingAcks[channel] = PendingAck(api: api, channel: channel, eventId: eventId, seq: seq)
+        ackFlushTask?.cancel()
+        ackFlushTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: Self.ackDebounceNs)
+            guard !Task.isCancelled else { return }
+            await self.flushAcks()
+        }
+    }
+
+    private func flushAcks() async {
+        let batch = pendingAcks.values
+        pendingAcks.removeAll()
+        ackFlushTask = nil
+        for ack in batch {
+            try? await ack.api.acknowledgeEvent(channel: ack.channel, eventId: ack.eventId, seq: ack.seq)
+        }
+    }
+
+    private func flushAcksNow() {
+        ackFlushTask?.cancel()
+        ackFlushTask = nil
+        let batch = pendingAcks.values
+        pendingAcks.removeAll()
+        for ack in batch {
+            Task {
+                try? await ack.api.acknowledgeEvent(channel: ack.channel, eventId: ack.eventId, seq: ack.seq)
             }
         }
     }

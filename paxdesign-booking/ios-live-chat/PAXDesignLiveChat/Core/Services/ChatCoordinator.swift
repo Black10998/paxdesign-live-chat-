@@ -40,6 +40,7 @@ final class ChatCoordinator: ObservableObject {
     private var inboxRefreshTask: Task<Void, Never>?
     private var fullSyncTask: Task<Void, Never>?
     private var listLoopCounter = 0
+    private let sessionRefreshGuard = RequestInFlightGuard()
     private static let inboxDebounceNs: UInt64 = 1_500_000_000
     private static let fullSyncEveryListCycles = 24
 
@@ -161,8 +162,22 @@ final class ChatCoordinator: ObservableObject {
                         self.postSessionSync(sessionId: sid, inlineMessage: event.payload["message"])
                     }
                 }
-                self.scheduleInboxListRefresh(auth: auth)
+                if self.inboxEventNeedsListRefresh(event) {
+                    self.scheduleInboxListRefresh(auth: auth)
+                }
             }
+        }
+    }
+
+    private func inboxEventNeedsListRefresh(_ event: ChatStreamEvent) -> Bool {
+        switch event.type {
+        case "handler", "session_update", "conversation_deleted", "conversation_request", "request_update":
+            return true
+        case "message":
+            guard let sessionId = event.payload["session_id"] as? String else { return true }
+            return sessionId.hasPrefix("team_")
+        default:
+            return false
         }
     }
 
@@ -218,7 +233,10 @@ final class ChatCoordinator: ObservableObject {
     }
 
     func fullConversationSync(auth: AuthStore) async {
+        guard ConversationSyncCoordinator.shouldRunFullSync() else { return }
         guard let api = auth.api else { return }
+        ConversationSyncCoordinator.beginFullSync()
+        defer { ConversationSyncCoordinator.endFullSync() }
         let shouldShowSync = sessions.isEmpty
         if shouldShowSync { isSyncing = true }
         defer { if shouldShowSync { isSyncing = false } }
@@ -250,6 +268,8 @@ final class ChatCoordinator: ObservableObject {
 
     private func refreshSessionsLightweight(auth: AuthStore) async {
         guard let api = auth.api else { return }
+        guard sessionRefreshGuard.tryEnter("sessions-lightweight") else { return }
+        defer { sessionRefreshGuard.leave("sessions-lightweight") }
         do {
             let response = try await api.fetchSessions()
             sessions = response.sessions
@@ -583,15 +603,18 @@ final class ChatThreadModel: ObservableObject {
             self.lastStreamEventAt = Date()
 
             while !Task.isCancelled, self.lifecycleGeneration == generation {
-                await self.poll(auth: auth)
+                let streamFresh = Date().timeIntervalSince(self.lastStreamEventAt) < self.streamStaleThreshold
+                if !streamFresh {
+                    await self.poll(auth: auth)
+                }
                 if self.historyBaselined,
                    self.serverMessageCount > 0,
                    self.persistedMessageCount() < self.serverMessageCount {
                     await self.reloadFullHistory(auth: auth)
                 }
-                let interval = Date().timeIntervalSince(self.lastStreamEventAt) < self.streamStaleThreshold
-                    ? AppRefreshPolicy.chatThreadInterval
-                    : UInt64(2_000_000_000)
+                let interval = streamFresh
+                    ? AppRefreshPolicy.chatThreadIntervalLive
+                    : AppRefreshPolicy.chatThreadIntervalStale
                 try? await Task.sleep(nanoseconds: interval)
             }
         }
@@ -615,9 +638,11 @@ final class ChatThreadModel: ObservableObject {
     }
 
     func refreshNow(auth: AuthStore, expectedServerSeq: Int = 0, inlineMessage: Any? = nil) async {
+        var appliedInline = false
         if let inline = LiveMessage.fromStreamPayload(inlineMessage) {
             insertIncomingMessages([inline], source: "refresh-inline")
             lastStreamEventAt = Date()
+            appliedInline = true
             if historyBaselined {
                 let targetSeq = max(expectedServerSeq, inline.id)
                 if needsHistoryRecovery(expectedServerSeq: targetSeq) {
@@ -628,12 +653,19 @@ final class ChatThreadModel: ObservableObject {
             await recoverMissingHistory(auth: auth, throughSeq: expectedServerSeq)
         }
 
-        await poll(auth: auth)
+        let shouldPoll = !streamIsFresh() || !appliedInline || needsHistoryRecovery(expectedServerSeq: max(expectedServerSeq, pollSeq))
+        if shouldPoll {
+            await poll(auth: auth)
+        }
 
         if historyBaselined,
            needsHistoryRecovery(expectedServerSeq: max(expectedServerSeq, pollSeq)) {
             await recoverMissingHistory(auth: auth, throughSeq: max(expectedServerSeq, pollSeq))
         }
+    }
+
+    private func streamIsFresh() -> Bool {
+        Date().timeIntervalSince(lastStreamEventAt) < streamStaleThreshold
     }
 
     func suspend() {
@@ -721,15 +753,16 @@ final class ChatThreadModel: ObservableObject {
             let who = StreamPayload.string(event.payload["who"])
             if who == "user" {
                 userTyping = StreamPayload.bool(event.payload["active"])
-            } else {
-                await poll(auth: auth)
             }
         case "handler":
             let incomingHandler = StreamPayload.string(event.payload["handler"])
             if !incomingHandler.isEmpty {
                 handler = incomingHandler
             }
-            await poll(auth: auth)
+            let incomingAdmin = StreamPayload.string(event.payload["admin_name"])
+            if !incomingAdmin.isEmpty {
+                adminName = incomingAdmin
+            }
         case "link_scan_updated":
             if let updated = StreamPayload.messages(from: event.payload).first {
                 applyLinkScanUpdate(updated)

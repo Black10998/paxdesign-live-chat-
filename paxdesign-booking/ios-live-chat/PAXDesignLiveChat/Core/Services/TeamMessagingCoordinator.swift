@@ -12,9 +12,8 @@ final class TeamMessagingCoordinator: ObservableObject {
     private var pollTask: Task<Void, Never>?
     private let inboxSubscriptionId = UUID()
     private var inboxRefreshTask: Task<Void, Never>?
-    private var listLoopCounter = 0
+    private let teamRefreshGuard = RequestInFlightGuard()
     private static let inboxDebounceNs: UInt64 = 1_500_000_000
-    private static let fullSyncEveryListCycles = 24
 
     static func mergeTeamSessions(teamSessions: [LiveSession], coordinatorSessions: [LiveSession]) -> [LiveSession] {
         var merged: [String: LiveSession] = [:]
@@ -66,12 +65,7 @@ final class TeamMessagingCoordinator: ObservableObject {
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
-                self.listLoopCounter += 1
-                if self.listLoopCounter.isMultiple(of: Self.fullSyncEveryListCycles) {
-                    await self.refresh(auth: auth, mode: .full)
-                } else {
-                    await self.refresh(auth: auth, mode: .lightweight)
-                }
+                await self.refresh(auth: auth, mode: .lightweight)
                 try? await Task.sleep(nanoseconds: AppRefreshPolicy.teamListInterval)
             }
         }
@@ -190,7 +184,6 @@ final class TeamMessagingCoordinator: ObservableObject {
         pollTask = nil
         inboxRefreshTask?.cancel()
         inboxRefreshTask = nil
-        listLoopCounter = 0
         ChatEventStream.shared.unsubscribeInbox(id: inboxSubscriptionId)
     }
 
@@ -223,10 +216,13 @@ final class TeamMessagingCoordinator: ObservableObject {
     }
 
     func fullConversationSync(auth: AuthStore) async {
+        guard ConversationSyncCoordinator.shouldRunFullSync() else { return }
         guard auth.isLoggedIn, let api = auth.api else {
             if !teamSessions.isEmpty { teamSessions = [] }
             return
         }
+        ConversationSyncCoordinator.beginFullSync()
+        defer { ConversationSyncCoordinator.endFullSync() }
         let shouldShowLoading = teamSessions.isEmpty
         if shouldShowLoading { isLoading = true }
         defer { if shouldShowLoading { isLoading = false } }
@@ -253,6 +249,8 @@ final class TeamMessagingCoordinator: ObservableObject {
             if !teamSessions.isEmpty { teamSessions = [] }
             return
         }
+        guard teamRefreshGuard.tryEnter("team-sessions-lightweight") else { return }
+        defer { teamRefreshGuard.leave("team-sessions-lightweight") }
         do {
             let response = try await api.fetchTeamSessions()
             applyTeamSessions(response.sessions)
@@ -348,15 +346,18 @@ final class TeamChatThreadModel: ObservableObject {
             self.lastStreamEventAt = Date()
 
             while !Task.isCancelled, self.lifecycleGeneration == generation {
-                await self.poll(auth: auth)
+                let streamFresh = Date().timeIntervalSince(self.lastStreamEventAt) < self.streamStaleThreshold
+                if !streamFresh {
+                    await self.poll(auth: auth)
+                }
                 if self.historyBaselined,
                    self.serverMessageCount > 0,
                    self.persistedMessageCount() < self.serverMessageCount {
                     await self.reloadFullHistory(auth: auth)
                 }
-                let interval = Date().timeIntervalSince(self.lastStreamEventAt) < self.streamStaleThreshold
-                    ? AppRefreshPolicy.teamThreadInterval
-                    : UInt64(2_000_000_000)
+                let interval = streamFresh
+                    ? AppRefreshPolicy.teamThreadIntervalLive
+                    : AppRefreshPolicy.teamThreadIntervalStale
                 try? await Task.sleep(nanoseconds: interval)
             }
         }
@@ -408,9 +409,11 @@ final class TeamChatThreadModel: ObservableObject {
     }
 
     func refreshNow(auth: AuthStore, inlineMessage: Any? = nil) async {
+        var appliedInline = false
         if let inline = LiveMessage.fromStreamPayload(inlineMessage) {
             insertIncomingMessages([inline])
             lastStreamEventAt = Date()
+            appliedInline = true
             if historyBaselined {
                 let targetSeq = max(currentSeq, inline.id)
                 if needsHistoryRecovery(throughSeq: targetSeq) {
@@ -418,7 +421,13 @@ final class TeamChatThreadModel: ObservableObject {
                 }
             }
         }
-        await poll(auth: auth)
+        if !streamIsFresh() || !appliedInline {
+            await poll(auth: auth)
+        }
+    }
+
+    private func streamIsFresh() -> Bool {
+        Date().timeIntervalSince(lastStreamEventAt) < streamStaleThreshold
     }
 
     func suspend() {
@@ -570,7 +579,10 @@ final class TeamChatThreadModel: ObservableObject {
             return
         }
         if event.type == "request_update" {
-            Task { await poll(auth: auth) }
+            let status = StreamPayload.string(event.payload["request_status"])
+            if !status.isEmpty {
+                requestStatus = status
+            }
             return
         }
         if event.type == "typing" {

@@ -18,9 +18,31 @@ class PAXdesign_Live_Chat_Mobile_API {
     }
 
     /**
+     * Only apply Application Password Basic Auth to live-admin REST routes.
+     * Prevents Authorization header leakage into wp-admin page loads.
+     */
+    private static function is_live_admin_rest_request() {
+        $uri = isset($_SERVER['REQUEST_URI']) ? (string) $_SERVER['REQUEST_URI'] : '';
+        if ($uri !== '' && strpos($uri, '/wp-json/paxdesign/v1/live-admin') !== false) {
+            return true;
+        }
+        if (defined('REST_REQUEST') && REST_REQUEST) {
+            $route = '';
+            if (isset($GLOBALS['wp']) && is_object($GLOBALS['wp']) && !empty($GLOBALS['wp']->query_vars['rest_route'])) {
+                $route = (string) $GLOBALS['wp']->query_vars['rest_route'];
+            }
+            return $route !== '' && strpos($route, '/paxdesign/v1/live-admin') === 0;
+        }
+        return false;
+    }
+
+    /**
      * Hostinger/LiteSpeed/Apache often strip Authorization unless passed through.
      */
     public static function bootstrap_basic_auth() {
+        if (!self::is_live_admin_rest_request()) {
+            return;
+        }
         if (!empty($_SERVER['PHP_AUTH_USER'])) {
             return;
         }
@@ -53,6 +75,9 @@ class PAXdesign_Live_Chat_Mobile_API {
      * @return int|false
      */
     public static function resolve_basic_auth_login($user_id) {
+        if (!self::is_live_admin_rest_request()) {
+            return $user_id;
+        }
         if ($user_id) {
             return $user_id;
         }
