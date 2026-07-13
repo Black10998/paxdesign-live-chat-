@@ -37,8 +37,37 @@ def load_metadata() -> dict[str, Any]:
     return json.loads(METADATA_PATH.read_text(encoding="utf-8"))
 
 
+def find_or_create_version(client: ASCClient, app_id: str, version_string: str) -> dict[str, Any]:
+    payload = client.get(
+        f"/apps/{app_id}/appStoreVersions",
+        **{"filter[platform]": "IOS", "limit": "30"},
+    )
+    for item in payload.get("data") or []:
+        attrs = item.get("attributes") or {}
+        if attrs.get("versionString") == version_string:
+            return item
+
+    payload = client.post(
+        "/appStoreVersions",
+        {
+            "data": {
+                "type": "appStoreVersions",
+                "attributes": {
+                    "platform": "IOS",
+                    "versionString": version_string,
+                },
+                "relationships": {
+                    "app": {"data": {"type": "apps", "id": app_id}},
+                },
+            }
+        },
+    )
+    print(f"Created App Store version {version_string}")
+    return payload["data"]
+
+
 def find_editable_version(client: ASCClient, app_id: str, version_string: str) -> dict[str, Any]:
-    for state in ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "READY_FOR_SUBMISSION", "WAITING_FOR_REVIEW"):
+    for state in ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "WAITING_FOR_REVIEW", "READY_FOR_REVIEW"):
         payload = client.get(
             f"/apps/{app_id}/appStoreVersions",
             **{
