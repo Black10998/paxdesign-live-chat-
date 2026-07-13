@@ -24,6 +24,9 @@ struct ChatMessageListView: View {
     var siteBaseURL: String?
     var deletingMessageIds: Set<Int> = []
 
+    @State private var stickToBottom = true
+    @State private var lastTrackedMessageId: Int?
+
     private var displayRows: [MessageDisplayRow] {
         var messageLookup: [Int: LiveMessage] = [:]
         for message in messages {
@@ -31,7 +34,7 @@ struct ChatMessageListView: View {
         }
         return messages.enumerated().map { index, message in
             MessageDisplayRow(
-                id: "\(index)-\(message.id)",
+                id: messageRowId(message),
                 message: message,
                 previous: index > 0 ? messages[index - 1] : nil,
                 next: index + 1 < messages.count ? messages[index + 1] : nil,
@@ -41,6 +44,16 @@ struct ChatMessageListView: View {
     }
 
     var body: some View {
+        Group {
+            if isLoading, messages.isEmpty {
+                PAXChatThreadLoadingStack()
+            } else {
+                messageScrollView
+            }
+        }
+    }
+
+    private var messageScrollView: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: PAXMessageStyle.threadSpacing) {
@@ -87,9 +100,23 @@ struct ChatMessageListView: View {
                     rowCount: displayRows.count,
                     revision: messagesRevision
                 )
+                let latestId = messages.last?.id
+                let appended = latestId != nil && latestId != lastTrackedMessageId
+                lastTrackedMessageId = latestId
+                if stickToBottom || appended || userTyping {
+                    scrollToBottom(proxy: proxy)
+                }
+            }
+            .onChange(of: userTyping) { typing in
+                if typing && stickToBottom {
+                    scrollToBottom(proxy: proxy)
+                }
+            }
+            .onAppear {
+                lastTrackedMessageId = messages.last?.id
+                stickToBottom = true
                 scrollToBottom(proxy: proxy)
             }
-            .onChange(of: userTyping) { _ in scrollToBottom(proxy: proxy) }
         }
         .onAppear {
             ChatLiveDiagnostics.uiRows(
@@ -99,6 +126,13 @@ struct ChatMessageListView: View {
                 revision: messagesRevision
             )
         }
+    }
+
+    private func messageRowId(_ message: LiveMessage) -> String {
+        if let clientId = message.clientMsgId, !clientId.isEmpty {
+            return "c:\(clientId)"
+        }
+        return "m:\(message.id)"
     }
 
     private func scrollToBottom(proxy: ScrollViewProxy) {

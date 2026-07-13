@@ -9,6 +9,11 @@ final class ConversationPrefetcher {
 
     private init() {}
 
+    func reset() {
+        inflight.removeAll()
+        queued.removeAll()
+    }
+
     func schedulePrefetch(sessionId: String, api: LiveChatAPI, isTeam: Bool, priority: Bool = false) {
         guard !sessionId.isEmpty else { return }
         if ConversationHistoryStore.shared.isFresh(sessionId) { return }

@@ -17,6 +17,11 @@ enum ChatImageCache {
         return URLSession(configuration: config)
     }()
 
+    static func clearAll() {
+        cache.removeAllCachedResponses()
+        URLCache.shared.removeAllCachedResponses()
+    }
+
     static func cachedImage(for url: URL) async -> UIImage? {
         let request = URLRequest(url: url, cachePolicy: .returnCacheDataElseLoad)
         if let cached = cache.cachedResponse(for: request),

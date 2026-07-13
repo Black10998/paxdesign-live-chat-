@@ -59,11 +59,11 @@ struct ProfileView: View {
             }
 
             Section(L10n.ProfilePermissions) {
-                if profile?.isSuperAdmin == true {
-                    HStack {
-                        PAXIcon("star.fill", size: .row)
-                        Text(L10n.AccountSuperAdmin)
-                            .foregroundStyle(PAXTheme.accent)
+        if profile?.isSuperAdmin == true {
+            HStack {
+                PAXIcon("star.fill", size: .row)
+                Text(L10n.RoleExecutiveDirector)
+                    .foregroundStyle(PAXTheme.accent)
                         Spacer()
                         Text(L10n.CommonActive)
                             .font(.caption.weight(.semibold))
@@ -119,7 +119,7 @@ struct ProfileView: View {
     @ViewBuilder
     private var roleBadge: some View {
         if profile?.isSuperAdmin == true {
-            Text(L10n.AccountSuperAdmin)
+            Text(L10n.RoleExecutiveDirector)
                 .font(.caption2.weight(.bold))
                 .foregroundStyle(PAXTheme.accent)
                 .padding(.horizontal, 8)

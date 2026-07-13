@@ -49,7 +49,7 @@ struct EmployeeDashboardView: View {
                 } else {
                     HStack {
                         PAXIcon("star.fill", size: .row)
-                        Text(L10n.AccountSuperAdmin)
+                        Text(L10n.RoleExecutiveDirector)
                             .foregroundStyle(PAXTheme.accent)
                     }
                 }

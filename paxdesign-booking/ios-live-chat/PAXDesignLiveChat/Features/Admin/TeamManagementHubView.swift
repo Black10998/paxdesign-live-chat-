@@ -123,7 +123,7 @@ struct TeamManagementHubView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(session.displayName)
                                     .font(.body.weight(.semibold))
-                                Text(session.otherRoleLabel.isEmpty ? session.requestStatusLabel : session.otherRoleLabel)
+                                Text(session.localizedOtherRoleLabel)
                                     .font(.caption)
                                     .foregroundStyle(PAXTheme.accent)
                             }
@@ -173,7 +173,7 @@ struct TeamManagementHubView: View {
                             }
                         } label: {
                             HStack {
-                                Text(level.roleLabel)
+                                Text(level.localizedRoleLabel)
                                     .font(.subheadline.weight(.semibold))
                                 Spacer()
                                 Text("\(level.members.count)")

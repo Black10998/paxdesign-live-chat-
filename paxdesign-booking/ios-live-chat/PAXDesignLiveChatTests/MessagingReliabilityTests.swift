@@ -248,6 +248,12 @@ final class MessagingReliabilityTests: XCTestCase {
         try? await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "suggestions:pax_test:12")
     }
 
+    func testRoleLabelFormatterMapsFeminineExecutiveTitle() {
+        XCTAssertEqual(RoleLabelFormatter.localized("Geschäftsführerin"), L10n.RoleExecutiveDirector)
+        XCTAssertEqual(RoleLabelFormatter.localized("Executive Director"), L10n.RoleExecutiveDirector)
+        XCTAssertEqual(RoleLabelFormatter.localized("Administrator"), L10n.RoleAdministrator)
+    }
+
     func testAPNsPermanentFailureDetection() {
         XCTAssertTrue(APNsRegistrationPolicy.isPermanentFailureMessage(
             "NSCocoaErrorDomain (3000): No valid 'aps-environment' entitlement string found for application."

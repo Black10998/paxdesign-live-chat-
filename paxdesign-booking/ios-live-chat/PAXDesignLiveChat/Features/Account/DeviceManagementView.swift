@@ -24,7 +24,7 @@ struct DeviceManagementView: View {
 
             if isLoading {
                 Section {
-                    PAXScreenLoadingStack(status: L10n.DeviceLoading, rowCount: 3)
+                    PAXScreenLoadingStack(status: L10n.DeviceLoading, rowCount: 3, preset: .deviceCards)
                 }
             } else if devices.isEmpty {
                 Section {

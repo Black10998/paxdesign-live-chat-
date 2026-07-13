@@ -191,7 +191,7 @@ struct DashboardView: View {
         List {
             if isInitialLoading {
                 Section {
-                    PAXScreenLoadingStack(status: L10n.DashboardLoading, rowCount: 3)
+                    PAXScreenLoadingStack(status: L10n.DashboardLoading, rowCount: 3, preset: .dashboard)
                 }
             } else {
                 Section {
