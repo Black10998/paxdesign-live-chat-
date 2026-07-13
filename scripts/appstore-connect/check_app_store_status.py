@@ -69,6 +69,23 @@ def get_submission(client: ASCClient, version_id: str) -> dict[str, Any] | None:
     return data[0] if data else None
 
 
+def get_age_rating_declaration(client: ASCClient, app_id: str) -> dict[str, Any] | None:
+    info_payload = client.get(f"/apps/{app_id}/appInfos", **{"limit": "5"})
+    infos = info_payload.get("data") or []
+    if not infos:
+        return None
+    info_id = infos[0]["id"]
+    status, payload = client.request(
+        "GET",
+        f"/appInfos/{info_id}/ageRatingDeclaration",
+        allow_error=True,
+    )
+    if status != 200:
+        return None
+    data = payload.get("data") or {}
+    return (data.get("attributes") or {}) if data else None
+
+
 def main() -> None:
     issuer_id, key_id, private_key = load_config()
     client = make_client(issuer_id, key_id, private_key)
@@ -135,6 +152,10 @@ def main() -> None:
         ),
         "build": build_info,
         "submission": submission_state,
+        "ageRatingDeclaration": get_age_rating_declaration(client, app_id),
+        "ascAgeRatingUrl": f"https://appstoreconnect.apple.com/apps/{app_id}/distribution/agerating",
+        "ascAppInformationUrl": f"https://appstoreconnect.apple.com/apps/{app_id}/distribution/info",
+        "ascBusinessComplianceUrl": "https://appstoreconnect.apple.com/business/compliance",
         "ascVersionUrl": f"https://appstoreconnect.apple.com/apps/{app_id}/distribution/ios/version/inflight",
         "ascAppUrl": f"https://appstoreconnect.apple.com/apps/{app_id}/appstore",
     }
