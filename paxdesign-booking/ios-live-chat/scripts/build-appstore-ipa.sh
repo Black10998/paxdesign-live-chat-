@@ -426,27 +426,43 @@ ARCHIVE_APP="$(find "$ARCHIVE_PATH/Products/Applications" -maxdepth 1 -name '*.a
 ARCHIVE_WIDGET="$ARCHIVE_APP/PlugIns/PAXWidgets.appex"
 [[ -d "$ARCHIVE_WIDGET" ]] || fail "Archived widget extension not found"
 
+prepare_keychain_for_codesign() {
+  security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" \
+    || fail "Failed to unlock signing keychain before re-sign"
+  security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" \
+    >/dev/null 2>&1 || true
+  local existing_keychains
+  existing_keychains="$(security list-keychains -d user | tr -d '"')"
+  # shellcheck disable=SC2086
+  security list-keychains -d user -s "$KEYCHAIN_PATH" $existing_keychains
+}
+
 resign_archived_products() {
   local app_path="$1"
   local widget_path="$2"
-  local identity
+  local identity_line identity_hash
 
-  identity="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" 2>/dev/null \
-    | grep 'Apple Distribution' | head -1 \
-    | sed -E 's/^[[:space:]]*[0-9]+[[:space:]]+[A-F0-9]+[[:space:]]+"([^"]+)".*/\1/')"
-  [[ -n "$identity" ]] || fail "Apple Distribution signing identity not found in keychain"
+  prepare_keychain_for_codesign
 
-  echo "==> Re-signing archived products with explicit entitlements"
-  codesign --force --sign "$identity" \
+  identity_line="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" 2>/dev/null \
+    | grep 'Apple Distribution' | head -1 || true)"
+  [[ -n "$identity_line" ]] || fail "Apple Distribution signing identity not found in keychain"
+  identity_hash="$(printf '%s\n' "$identity_line" | sed -E 's/^[[:space:]]*[0-9]+[[:space:]]+([A-F0-9]+)[[:space:]]+.*/\1/')"
+  [[ -n "$identity_hash" ]] || fail "Could not parse Apple Distribution identity hash"
+
+  echo "==> Re-signing archived products with explicit entitlements ($identity_hash)"
+  codesign --force --sign "$identity_hash" \
     --keychain "$KEYCHAIN_PATH" \
     --entitlements "$ROOT/PAXWidgets/PAXWidgets.entitlements" \
     --generate-entitlement-der \
-    "$widget_path"
-  codesign --force --sign "$identity" \
+    "$widget_path" 2>"$SIGNING_DIR/resign-widget.err" \
+    || fail "Widget re-sign failed: $(cat "$SIGNING_DIR/resign-widget.err" 2>/dev/null || echo unknown)"
+  codesign --force --sign "$identity_hash" \
     --keychain "$KEYCHAIN_PATH" \
     --entitlements "$ROOT/PAXDesignLiveChat/PAXDesignLiveChat.entitlements" \
     --generate-entitlement-der \
-    "$app_path"
+    "$app_path" 2>"$SIGNING_DIR/resign-app.err" \
+    || fail "Main app re-sign failed: $(cat "$SIGNING_DIR/resign-app.err" 2>/dev/null || echo unknown)"
 }
 
 echo "==> Re-signing archive to embed push entitlements in codesign signature"
