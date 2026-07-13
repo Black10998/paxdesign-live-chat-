@@ -38,7 +38,26 @@ struct NetworkDiagnosticsView: View {
                 Button("Zähler zurücksetzen") {
                     NetworkRequestTracker.shared.reset()
                     NetworkCircuitBreaker.shared.reset()
+                    HTTPResponseForensics.shared.reset()
                     refresh()
+                }
+            }
+
+            if let block = HTTPResponseForensics.shared.lastEdge403 {
+                Section("Letzter 403/429 (WAF)") {
+                    LabeledContent("Zeit", value: block.at.formatted(date: .abbreviated, time: .standard))
+                    LabeledContent("Status", value: "\(block.status)")
+                    LabeledContent("Endpoint", value: block.endpoint)
+                    LabeledContent("Edge-Block", value: block.isEdgeBlock ? "Ja (LiteSpeed)" : "Nein (REST?)")
+                    LabeledContent("cf-ray", value: block.cfRay)
+                    LabeledContent("server", value: block.server)
+                    LabeledContent("retry-after", value: block.retryAfter)
+                    LabeledContent("x-powered-by", value: block.poweredBy)
+                    LabeledContent("User-Agent", value: block.requestHeaders["user-agent"] ?? "—")
+                    LabeledContent("Authorization", value: block.requestHeaders["authorization"] != nil ? "Basic (gesetzt)" : "—")
+                    Text(block.bodySnippet)
+                        .font(.caption2)
+                        .foregroundStyle(PAXTheme.textSecondary)
                 }
             }
         }

@@ -91,6 +91,7 @@ final class LiveChatAPI {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        request.setValue(HTTPResponseForensics.userAgent, forHTTPHeaderField: "User-Agent")
         if body != nil {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }
@@ -149,6 +150,12 @@ final class LiveChatAPI {
 
         let bodySnippet = String(data: data, encoding: .utf8) ?? ""
         await MainActor.run {
+            HTTPResponseForensics.shared.record(
+                request: request,
+                endpoint: endpoint,
+                response: http,
+                bodySnippet: bodySnippet
+            )
             NetworkCircuitBreaker.shared.recordHTTPResponse(
                 status: http.statusCode,
                 bodySnippet: bodySnippet,
@@ -761,6 +768,12 @@ final class LiveChatAPI {
             throw LiveChatAPIError.server("Stream failed")
         }
         await MainActor.run {
+            HTTPResponseForensics.shared.record(
+                request: request,
+                endpoint: endpoint,
+                response: http,
+                bodySnippet: http.statusCode >= 400 ? "SSE stream HTTP \(http.statusCode)" : ""
+            )
             NetworkCircuitBreaker.shared.recordHTTPResponse(
                 status: http.statusCode,
                 bodySnippet: "",

@@ -63,6 +63,7 @@ enum AppServicesController {
         ConversationSyncCoordinator.reset()
         NetworkRequestTracker.shared.reset()
         NetworkCircuitBreaker.shared.reset()
+        HTTPResponseForensics.shared.reset()
         AppRefreshPolicy.sseHealthy = false
         #if !SIDELOAD
         DeviceSessionService.shared.stop()
