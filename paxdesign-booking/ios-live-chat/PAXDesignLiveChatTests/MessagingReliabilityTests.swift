@@ -235,7 +235,18 @@ final class MessagingReliabilityTests: XCTestCase {
         try? await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "devices-list")
     }
 
-    func testAPNsPermanentFailureDetection() {
+    func testSuggestionReadsBypassInflightDedup() async {
+        await NetworkCircuitBreaker.shared.reset()
+        XCTAssertNoThrow(try await NetworkCircuitBreaker.shared.recordRequestStart(
+            endpoint: "suggestions:pax_test:12",
+            method: "GET"
+        ))
+        XCTAssertNoThrow(try await NetworkCircuitBreaker.shared.recordRequestStart(
+            endpoint: "suggestions:pax_test:12",
+            method: "GET"
+        ))
+        try? await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "suggestions:pax_test:12")
+    }
         XCTAssertTrue(APNsRegistrationPolicy.isPermanentFailureMessage(
             "NSCocoaErrorDomain (3000): No valid 'aps-environment' entitlement string found for application."
         ))

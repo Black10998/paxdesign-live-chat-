@@ -237,17 +237,48 @@ class PAXdesign_Chat_Log {
         $sanitized = $this->sanitize_messages($messages);
         $consult   = !empty($payload['consultation_started']) ? 1 : 0;
         if (empty($sanitized) && $consult) {
-            $sanitized = array(
-                array(
-                    'role'          => 'system',
-                    'content'       => 'Chat-Session gestartet.',
-                    'client_msg_id' => 'sys:session_started',
-                    'id'            => 1,
-                    'ts'            => time(),
-                ),
+            $table = self::table_name();
+            $existing_row = $wpdb->get_row(
+                $wpdb->prepare("SELECT consultation_started FROM $table WHERE session_id = %s LIMIT 1", $session_id)
             );
+            $already_started = $existing_row && !empty($existing_row->consultation_started);
+            if (!$already_started && class_exists('PAXdesign_Message_Store')) {
+                $already_started = (bool) PAXdesign_Message_Store::get_by_client_id($session_id, 'sys:session_started');
+            }
+            if (!$already_started) {
+                $sanitized = array(
+                    array(
+                        'role'          => 'system',
+                        'content'       => 'Chat-Session gestartet.',
+                        'client_msg_id' => 'sys:session_started',
+                        'id'            => 1,
+                        'ts'            => time(),
+                    ),
+                );
+            }
         }
         if (empty($sanitized)) {
+            if ($consult) {
+                $table = self::table_name();
+                $existing = $wpdb->get_row(
+                    $wpdb->prepare("SELECT id, consultation_started FROM $table WHERE session_id = %s LIMIT 1", $session_id)
+                );
+                if ($existing) {
+                    if (empty($existing->consultation_started)) {
+                        $wpdb->update(
+                            $table,
+                            array(
+                                'consultation_started' => 1,
+                                'updated_at'           => current_time('mysql'),
+                            ),
+                            array('id' => (int) $existing->id),
+                            array('%d', '%s'),
+                            array('%d')
+                        );
+                    }
+                    return (int) $existing->id;
+                }
+            }
             return false;
         }
 

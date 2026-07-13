@@ -125,8 +125,9 @@ final class LiveChatAPI {
     }
 
     private func perform<T: Decodable>(_ request: URLRequest, endpoint: String, as type: T.Type) async throws -> T {
+        let method = request.httpMethod ?? "GET"
         try await MainActor.run {
-            try NetworkCircuitBreaker.shared.recordRequestStart(endpoint: endpoint)
+            try NetworkCircuitBreaker.shared.recordRequestStart(endpoint: endpoint, method: method)
             NetworkRequestTracker.shared.record(endpoint: endpoint)
         }
         defer {
@@ -321,7 +322,7 @@ final class LiveChatAPI {
         }
         let body = try JSONSerialization.data(withJSONObject: payload)
         struct SendResponse: Codable { let message: LiveMessage }
-        let response: SendResponse = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "send", as: SendResponse.self)
+        let response: SendResponse = try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "send:\(sessionId)", as: SendResponse.self)
         return response.message
     }
 
@@ -472,7 +473,7 @@ final class LiveChatAPI {
         ) else {
             throw LiveChatAPIError.invalidURL
         }
-        return try await perform(authRequest(url: url), endpoint: "suggestions", as: SuggestionsResponse.self)
+        return try await perform(authRequest(url: url), endpoint: "suggestions:\(sessionId):\(messageId)", as: SuggestionsResponse.self)
     }
 
     func fetchStaff() async throws -> StaffListResponse {
@@ -748,7 +749,7 @@ final class LiveChatAPI {
     ) async throws {
         let endpoint = "sse:\(path)"
         try await MainActor.run {
-            try NetworkCircuitBreaker.shared.recordRequestStart(endpoint: endpoint)
+            try NetworkCircuitBreaker.shared.recordRequestStart(endpoint: endpoint, method: "GET")
         }
         defer {
             Task { @MainActor in
