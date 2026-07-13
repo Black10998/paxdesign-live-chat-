@@ -80,6 +80,27 @@ assert_true(!is_wp_error($first) && !is_wp_error($retry), 'Idempotent append fai
 assert_true($first['id'] === $retry['id'], 'Retry returned a different sequence');
 assert_true(PAXdesign_Message_Store::count($session) === 1, 'Retry created a duplicate row');
 
+$close_first = PAXdesign_Message_Store::append(
+    $session,
+    'system',
+    'Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten.',
+    array(),
+    'customer'
+);
+$close_retry = PAXdesign_Message_Store::append(
+    $session,
+    'system',
+    'Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten.',
+    array(),
+    'customer'
+);
+assert_true(!is_wp_error($close_first) && !is_wp_error($close_retry), 'System notice append failed');
+assert_true($close_first['id'] === $close_retry['id'], 'System notice retry returned a different sequence');
+assert_true(
+    ($close_first['client_msg_id'] ?? '') === 'sys:chat_closed',
+    'System notice missing stable client_msg_id'
+);
+
 // Concurrent writers: all messages must survive with contiguous server ordering.
 $workers = (int) (getenv('PAX_TEST_WORKERS') ?: 8);
 $perWorker = (int) (getenv('PAX_TEST_MESSAGES_PER_WORKER') ?: 50);

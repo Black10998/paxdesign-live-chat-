@@ -932,7 +932,9 @@ struct StaffMember: Codable, Identifiable {
     }
 
     var displayRoleLabel: String {
-        if let roleLabel, !roleLabel.isEmpty { return roleLabel }
+        if let roleLabel, !roleLabel.isEmpty {
+            return Self.localizedRoleLabel(roleLabel)
+        }
         if isExecutive { return L10n.RoleExecutiveDirector }
         if isAdministrator { return L10n.RoleAdministrator }
         if permissions.manageUsers { return L10n.RoleSeniorStaff }
@@ -946,13 +948,28 @@ struct StaffMember: Codable, Identifiable {
         if let profileTitle, !profileTitle.isEmpty {
             let trimmed = profileTitle.trimmingCharacters(in: .whitespacesAndNewlines)
             if !trimmed.isEmpty, !Self.isPlaceholderProfileTitle(trimmed) {
-                return trimmed
+                return Self.localizedRoleLabel(trimmed)
             }
         }
         if let roleLabel, !roleLabel.isEmpty, !Self.isPlaceholderProfileTitle(roleLabel) {
-            return roleLabel
+            return Self.localizedRoleLabel(roleLabel)
         }
         return displayRoleLabel
+    }
+
+    private static func localizedRoleLabel(_ value: String) -> String {
+        switch value.trimmingCharacters(in: .whitespacesAndNewlines) {
+        case "Executive Director":
+            return L10n.RoleExecutiveDirector
+        case "Administrator":
+            return L10n.RoleAdministrator
+        case "Senior Staff":
+            return L10n.RoleSeniorStaff
+        case "Staff Member", "Team Member":
+            return L10n.RoleStaffMember
+        default:
+            return value
+        }
     }
 
     private static func isPlaceholderProfileTitle(_ value: String) -> Bool {

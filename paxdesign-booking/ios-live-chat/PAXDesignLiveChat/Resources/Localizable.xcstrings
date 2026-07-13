@@ -10316,7 +10316,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Geschäftsführerin"
+            "value": "Geschäftsführer"
           }
         },
         "ar": {
@@ -10624,7 +10624,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nachricht an die Geschäftsführerin"
+            "value": "Nachricht an den Geschäftsführer"
           }
         },
         "ar": {
@@ -10668,7 +10668,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sie können die Geschäftsführerin nicht direkt anschreiben. Senden Sie eine Anfrage und warten Sie auf die Freigabe."
+            "value": "Sie können den Geschäftsführer nicht direkt anschreiben. Senden Sie eine Anfrage und warten Sie auf die Freigabe."
           }
         },
         "ar": {
@@ -10932,7 +10932,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nur Geschäftsführerin"
+            "value": "Nur Geschäftsführer"
           }
         },
         "ar": {
@@ -10954,7 +10954,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nur die Geschäftsführerin hat Zugriff auf die zentrale Teamverwaltung."
+            "value": "Nur der Geschäftsführer hat Zugriff auf die zentrale Teamverwaltung."
           }
         },
         "ar": {
@@ -10998,7 +10998,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Geschäftsführerin"
+            "value": "Geschäftsführer"
           }
         },
         "ar": {
@@ -11284,7 +11284,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nachrichten an Geschäftsführerin"
+            "value": "Nachrichten an den Geschäftsführer"
           }
         },
         "ar": {
@@ -11328,7 +11328,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Alle außer der Geschäftsführerin müssen eine Gesprächsanfrage senden, bevor sie die Geschäftsführerin kontaktieren."
+            "value": "Alle außer dem Geschäftsführer müssen eine Gesprächsanfrage senden, bevor sie den Geschäftsführer kontaktieren."
           }
         },
         "ar": {

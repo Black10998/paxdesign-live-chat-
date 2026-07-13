@@ -135,6 +135,34 @@ class PAXdesign_Message_Store {
     }
 
     /**
+     * Stable client_msg_id for system notices so retries/reconnects never duplicate rows.
+     */
+    public static function system_notice_client_id($content) {
+        $content = sanitize_textarea_field((string) $content);
+        static $exact = null;
+        if ($exact === null) {
+            $exact = array(
+                'Chat-Session gestartet.' => 'sys:session_started',
+                'Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten.' => 'sys:chat_closed',
+                'Der Kunde hat das Gespräch beendet.' => 'sys:customer_closed',
+                'Der KI-Assistent übernimmt den Chat wieder.' => 'sys:ai_reclaimed',
+                'Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.' => 'sys:live_agent_notified',
+                'Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter.' => 'sys:live_transfer_thanks',
+            );
+        }
+        if (isset($exact[$content])) {
+            return $exact[$content];
+        }
+        if (preg_match('/^(.+) ist dem Chat beigetreten\.$/u', $content)) {
+            return 'sys:admin_joined:' . substr(md5($content), 0, 12);
+        }
+        if (strpos($content, 'Der Chat wurde wieder geöffnet.') === 0) {
+            return 'sys:chat_reopened:' . substr(md5($content), 0, 12);
+        }
+        return 'sys:content:' . substr(md5($content), 0, 24);
+    }
+
+    /**
      * Import legacy JSON exactly once. Existing message IDs become msg_seq.
      */
     public static function migrate_legacy($session_id, $messages, $channel = 'customer') {
@@ -179,9 +207,13 @@ class PAXdesign_Message_Store {
             $created = !empty($message['ts'])
                 ? gmdate('Y-m-d H:i:s', absint($message['ts']))
                 : current_time('mysql', true);
-            $legacy_id = !empty($message['client_msg_id'])
-                ? self::normalize_client_id($message['client_msg_id'])
-                : 'legacy:' . $seq;
+            if (!empty($message['client_msg_id'])) {
+                $legacy_id = self::normalize_client_id($message['client_msg_id']);
+            } elseif ($role === 'system') {
+                $legacy_id = self::system_notice_client_id($content);
+            } else {
+                $legacy_id = 'legacy:' . $seq;
+            }
 
             $wpdb->query($wpdb->prepare(
                 "INSERT IGNORE INTO $table
@@ -218,6 +250,9 @@ class PAXdesign_Message_Store {
             return new WP_Error('pax_message_empty', 'Message cannot be empty.', array('status' => 400));
         }
 
+        if ($role === 'system' && empty($extra['client_msg_id'])) {
+            $extra['client_msg_id'] = self::system_notice_client_id($content);
+        }
         $client_id = self::normalize_client_id(isset($extra['client_msg_id']) ? $extra['client_msg_id'] : '');
         $lock_name = 'pax_msg_' . md5($session_id);
         $owns_lock = empty($extra['lock_already_held']);

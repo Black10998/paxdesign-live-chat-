@@ -695,10 +695,11 @@ class PAXdesign_Chat_Live {
         if (empty($messages)) {
             $messages = array(
                 array(
-                    'id'      => 1,
-                    'role'    => 'system',
-                    'content' => 'Chat-Session gestartet.',
-                    'ts'      => time(),
+                    'id'            => 1,
+                    'role'          => 'system',
+                    'content'       => 'Chat-Session gestartet.',
+                    'client_msg_id' => 'sys:session_started',
+                    'ts'            => time(),
                 ),
             );
         }
