@@ -124,9 +124,16 @@ final class LiveChatAPI {
     }
 
     private func perform<T: Decodable>(_ request: URLRequest, endpoint: String, as type: T.Type) async throws -> T {
-        await MainActor.run {
+        try await MainActor.run {
+            try NetworkCircuitBreaker.shared.recordRequestStart(endpoint: endpoint)
             NetworkRequestTracker.shared.record(endpoint: endpoint)
         }
+        defer {
+            Task { @MainActor in
+                NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: endpoint)
+            }
+        }
+
         let data: Data
         let http: HTTPURLResponse
         do {
@@ -138,6 +145,20 @@ final class LiveChatAPI {
             http = response
         } catch {
             throw error
+        }
+
+        let bodySnippet = String(data: data, encoding: .utf8) ?? ""
+        await MainActor.run {
+            NetworkCircuitBreaker.shared.recordHTTPResponse(
+                status: http.statusCode,
+                bodySnippet: bodySnippet,
+                endpoint: endpoint,
+                retryAfter: http.value(forHTTPHeaderField: "Retry-After")
+            )
+        }
+        if await MainActor.run(body: { NetworkCircuitBreaker.shared.isOpen }) {
+            let until = await MainActor.run { NetworkCircuitBreaker.shared.openUntil ?? Date() }
+            throw LiveChatAPIError.server(NetworkCircuitBreakerError.open(until: until).localizedDescription ?? "Netzwerk-Schutz aktiv.")
         }
 
         if http.statusCode == 401 || http.statusCode == 403 {
@@ -718,6 +739,16 @@ final class LiveChatAPI {
         since: Int,
         onEvent: @escaping @MainActor (ChatStreamEvent) async -> Void
     ) async throws {
+        let endpoint = "sse:\(path)"
+        try await MainActor.run {
+            try NetworkCircuitBreaker.shared.recordRequestStart(endpoint: endpoint)
+        }
+        defer {
+            Task { @MainActor in
+                NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: endpoint)
+            }
+        }
+
         guard let url = liveAdminURL(path: path, query: [URLQueryItem(name: "since", value: String(since))]) else {
             throw LiveChatAPIError.invalidURL
         }
@@ -726,14 +757,33 @@ final class LiveChatAPI {
         request.timeoutInterval = 30
 
         let (bytes, response) = try await session.bytes(for: request)
-        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+        guard let http = response as? HTTPURLResponse else {
             throw LiveChatAPIError.server("Stream failed")
+        }
+        await MainActor.run {
+            NetworkCircuitBreaker.shared.recordHTTPResponse(
+                status: http.statusCode,
+                bodySnippet: "",
+                endpoint: endpoint,
+                retryAfter: http.value(forHTTPHeaderField: "Retry-After")
+            )
+        }
+        if await MainActor.run(body: { NetworkCircuitBreaker.shared.isOpen }) {
+            let until = await MainActor.run { NetworkCircuitBreaker.shared.openUntil ?? Date() }
+            throw LiveChatAPIError.server(NetworkCircuitBreakerError.open(until: until).localizedDescription ?? "Netzwerk-Schutz aktiv.")
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            throw LiveChatAPIError.server("Stream failed (HTTP \(http.statusCode))")
         }
 
         var dataBuffer = ""
         for try await line in bytes.lines {
             if Task.isCancelled { break }
             if let event = ChatEventStreamParser.parseLine(line, dataBuffer: &dataBuffer) {
+                await MainActor.run {
+                    AppRefreshPolicy.sseHealthy = true
+                    NetworkCircuitBreaker.shared.recordSuccess()
+                }
                 await onEvent(event)
             }
         }

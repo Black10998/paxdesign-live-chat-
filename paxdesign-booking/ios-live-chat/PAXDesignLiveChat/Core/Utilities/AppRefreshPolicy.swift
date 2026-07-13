@@ -6,6 +6,8 @@ enum AppRefreshPolicy {
     static var scenePhase: SceneActivity = .active
     static var hasOpenChat = false
     static var liveRequestCount = 0
+    /// When true, HTTP polling loops should stay idle (SSE carries updates).
+    static var sseHealthy = false
 
     enum SceneActivity {
         case active
@@ -17,6 +19,7 @@ enum AppRefreshPolicy {
 
     /// Session inbox polling (HTTP fallback when SSE is active).
     static var sessionListInterval: UInt64 {
+        if sseHealthy || NetworkCircuitBreaker.shared.pollingSuspended { return 60_000_000_000 }
         guard isForeground else { return 15_000_000_000 }
         if liveRequestCount > 0 { return 1_500_000_000 }
         if hasOpenChat { return 2_000_000_000 }
@@ -37,6 +40,7 @@ enum AppRefreshPolicy {
 
     /// Team inbox list polling.
     static var teamListInterval: UInt64 {
+        if sseHealthy || NetworkCircuitBreaker.shared.pollingSuspended { return 60_000_000_000 }
         guard isForeground else { return 15_000_000_000 }
         return hasOpenChat ? 2_000_000_000 : 4_000_000_000
     }

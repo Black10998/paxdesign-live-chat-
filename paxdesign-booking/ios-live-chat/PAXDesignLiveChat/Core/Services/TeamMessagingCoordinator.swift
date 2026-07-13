@@ -65,6 +65,10 @@ final class TeamMessagingCoordinator: ObservableObject {
         pollTask = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self else { return }
+                if NetworkCircuitBreaker.shared.isOpen {
+                    try? await Task.sleep(nanoseconds: 60_000_000_000)
+                    continue
+                }
                 await self.refresh(auth: auth, mode: .lightweight)
                 try? await Task.sleep(nanoseconds: AppRefreshPolicy.teamListInterval)
             }
@@ -346,8 +350,12 @@ final class TeamChatThreadModel: ObservableObject {
             self.lastStreamEventAt = Date()
 
             while !Task.isCancelled, self.lifecycleGeneration == generation {
+                if NetworkCircuitBreaker.shared.pollingSuspended {
+                    try? await Task.sleep(nanoseconds: 5_000_000_000)
+                    continue
+                }
                 let streamFresh = Date().timeIntervalSince(self.lastStreamEventAt) < self.streamStaleThreshold
-                if !streamFresh {
+                if !streamFresh, !AppRefreshPolicy.sseHealthy {
                     await self.poll(auth: auth)
                 }
                 if self.historyBaselined,

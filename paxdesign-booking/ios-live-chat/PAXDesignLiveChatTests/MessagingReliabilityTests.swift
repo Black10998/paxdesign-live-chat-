@@ -192,4 +192,44 @@ final class MessagingReliabilityTests: XCTestCase {
         XCTAssertEqual(await NetworkRequestTracker.shared.totalInWindow, 3)
         XCTAssertEqual(await NetworkRequestTracker.shared.snapshot()["sessions"], 2)
     }
+
+    func testCircuitBreakerOpensOnEdge403() async {
+        await NetworkCircuitBreaker.shared.reset()
+        await NetworkCircuitBreaker.shared.recordHTTPResponse(
+            status: 403,
+            bodySnippet: "Access to this resource on the server is denied!",
+            endpoint: "sessions",
+            retryAfter: nil
+        )
+        XCTAssertTrue(await NetworkCircuitBreaker.shared.isOpen)
+        XCTAssertTrue(await NetworkCircuitBreaker.shared.pollingSuspended)
+    }
+
+    func testCircuitBreakerRateCapBlocksBurst() async {
+        await NetworkCircuitBreaker.shared.reset()
+        await MainActor.run {
+            NetworkCircuitBreaker.shared.maxRequestsPerSecond = 2
+        }
+        try? await NetworkCircuitBreaker.shared.recordRequestStart(endpoint: "a")
+        try? await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "a")
+        try? await NetworkCircuitBreaker.shared.recordRequestStart(endpoint: "b")
+        try? await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "b")
+        do {
+            try await NetworkCircuitBreaker.shared.recordRequestStart(endpoint: "c")
+            XCTFail("Expected rate cap")
+        } catch NetworkCircuitBreakerError.rateLimited {
+            XCTAssertTrue(true)
+        } catch {
+            XCTFail("Unexpected error \(error)")
+        }
+    }
+
+    func testSSEHealthySuspendsListPolling() {
+        AppRefreshPolicy.sseHealthy = true
+        AppRefreshPolicy.update(scenePhase: .active)
+        AppRefreshPolicy.update(liveCount: 2, openChat: true)
+        XCTAssertEqual(AppRefreshPolicy.sessionListInterval, 60_000_000_000)
+        XCTAssertEqual(AppRefreshPolicy.teamListInterval, 60_000_000_000)
+        AppRefreshPolicy.sseHealthy = false
+    }
 }
