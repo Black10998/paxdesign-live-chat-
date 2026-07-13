@@ -218,7 +218,7 @@ struct RootView: View {
 
             case .main:
                 AdaptiveShellView()
-                    .id(auth.sessionEpoch)
+                    .id("\(auth.sessionEpoch.uuidString)-\(settings.themeRevision.uuidString)")
                     .transition(.opacity)
 
             case .login:

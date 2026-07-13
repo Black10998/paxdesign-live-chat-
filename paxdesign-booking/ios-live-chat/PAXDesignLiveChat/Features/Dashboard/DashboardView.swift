@@ -13,6 +13,9 @@ struct DashboardView: View {
     @State private var dashboardTourStepIndex = 0
     @State private var isInitialLoading = true
     @State private var cachedChartData: [DashboardMetric] = []
+    @State private var cachedActivitySeries: [PlatformActivityDay] = []
+    @State private var cachedTrends = PlatformDashboardTrends()
+    @State private var cachedCategories: [PlatformReportSlice] = []
     @State private var cachedRecentActivity: [LiveSession] = []
 
     private var customerSessions: [LiveSession] {
@@ -34,8 +37,24 @@ struct DashboardView: View {
     private func recomputeDashboardMetrics() {
         let sessions = customerSessions
         let chart: [DashboardMetric]
-        if let serverChart = platform.dashboard?.activityChart, !serverChart.isEmpty {
-            chart = serverChart.map { DashboardMetric(label: formatChartLabel($0.label), value: $0.value) }
+        var series: [PlatformActivityDay] = []
+        var trends = PlatformDashboardTrends()
+        var categories: [PlatformReportSlice] = []
+
+        if let dashboard = platform.dashboard {
+            if !dashboard.activitySeries.isEmpty {
+                series = dashboard.activitySeries
+                chart = series.map { DashboardMetric(label: formatChartLabel($0.label), value: $0.messages) }
+            } else if !dashboard.activityChart.isEmpty {
+                chart = dashboard.activityChart.map { DashboardMetric(label: formatChartLabel($0.label), value: $0.value) }
+                series = dashboard.activityChart.map {
+                    PlatformActivityDay(label: $0.label, sessions: $0.value, messages: $0.value)
+                }
+            } else {
+                chart = []
+            }
+            trends = dashboard.trends
+            categories = dashboard.categoryTotals
         } else {
             let calendar = Calendar.current
             chart = (0..<7).reversed().compactMap { offset -> DashboardMetric? in
@@ -47,7 +66,11 @@ struct DashboardView: View {
                 let label = MessageTimeFormatter.relativeUpdatedLabel(from: day)
                 return DashboardMetric(label: label, value: count)
             }
+            series = chart.map {
+                PlatformActivityDay(label: $0.label, sessions: $0.value, messages: $0.value)
+            }
         }
+
         let recent = sessions
             .sorted {
                 MessageTimeFormatter.date(fromUpdatedAt: $0.updatedAt) ?? .distantPast >
@@ -56,6 +79,9 @@ struct DashboardView: View {
             .prefix(5)
             .map { $0 }
         cachedChartData = chart
+        cachedActivitySeries = series
+        cachedTrends = trends
+        cachedCategories = categories
         cachedRecentActivity = recent
     }
 
@@ -272,14 +298,15 @@ struct DashboardView: View {
                 value: "\(platform.dashboard?.sessionsTotal ?? customerSessions.count)",
                 icon: "bubble.left.and.bubble.right.fill",
                 tint: PAXTheme.accent,
-                helpText: L10n.DashboardMetricSessionsHelp
+                helpText: L10n.DashboardMetricSessionsHelp,
+                trend: cachedTrends.sessionsPct
             )
             .paxStaggeredAppear(index: 0)
             PAXMetricCard(
                 title: L10n.DashboardMetricUnread,
                 value: "\(unreadCount)",
                 icon: "envelope.badge.fill",
-                tint: PAXTheme.accent,
+                tint: unreadCount > 0 ? PAXTheme.danger : PAXTheme.accentSecondary,
                 helpText: L10n.DashboardMetricUnreadHelp
             )
             .paxStaggeredAppear(index: 1)
@@ -287,8 +314,9 @@ struct DashboardView: View {
                 title: L10n.DashboardMetricLive,
                 value: "\(platform.dashboard?.liveCount ?? coordinator.liveCount)",
                 icon: "bell.and.waves.left.and.right.fill",
-                tint: PAXTheme.accent,
-                helpText: L10n.DashboardMetricLiveHelp
+                tint: PAXTheme.danger,
+                helpText: L10n.DashboardMetricLiveHelp,
+                trend: cachedTrends.liveRequestsPct
             )
             .paxStaggeredAppear(index: 2)
             PAXMetricCard(
@@ -352,17 +380,24 @@ struct DashboardView: View {
     }
 
     private var activityChart: some View {
-        PAXSevenDayAnalyticsRings(
+        PAXProfessionalAnalyticsDashboard(
             title: L10n.DashboardChartTitle,
-            items: chartData.enumerated().map { index, point in
-                let emphasis = 0.55 + (Double(index + 1) / Double(max(chartData.count, 1))) * 0.45
-                return PAXRingMetric(
-                    label: point.label,
-                    value: point.value,
-                    tint: PAXTheme.accent.opacity(emphasis)
-                )
-            }
+            days: cachedActivitySeries,
+            trends: cachedTrends,
+            categories: cachedCategories.isEmpty ? fallbackCategories : cachedCategories
         )
+    }
+
+    private var fallbackCategories: [PlatformReportSlice] {
+        let live = customerSessions.filter(\.isLiveRequest).count
+        let closed = customerSessions.filter(\.isClosed).count
+        let active = max(0, customerSessions.count - live - closed)
+        return [
+            PlatformReportSlice(label: "live", value: live),
+            PlatformReportSlice(label: "active", value: active),
+            PlatformReportSlice(label: "closed", value: closed),
+            PlatformReportSlice(label: "tasks", value: platform.dashboard?.openTasks ?? tasks.openCount),
+        ]
     }
 
     private var quickModules: some View {

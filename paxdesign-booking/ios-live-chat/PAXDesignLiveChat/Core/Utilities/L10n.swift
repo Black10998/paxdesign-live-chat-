@@ -297,6 +297,7 @@ enum L10n {
     static var TeamVoicePause: String { t("team.voice_pause") }
     static var TeamVoiceMessage: String { t("team.voice_message") }
     static var TeamVoiceSending: String { t("team.voice_sending") }
+    static var TeamVoiceEmpty: String { t("team.voice_empty") }
     static var TeamShareLocation: String { t("team.share_location") }
     static var TeamSharedLocation: String { t("team.shared_location") }
     static var TeamOpenInMaps: String { t("team.open_in_maps") }
@@ -856,6 +857,14 @@ enum L10n {
     static var AnalyticsPeak: String { t("analytics.peak") }
     static var AnalyticsAvgPerDay: String { t("analytics.avg_per_day") }
     static var AnalyticsRingTotal: String { t("analytics.ring_total") }
+    static var AnalyticsMessages: String { t("analytics.messages") }
+    static var AnalyticsSessions: String { t("analytics.sessions") }
+    static var AnalyticsLiveRequests: String { t("analytics.live_requests") }
+    static var AnalyticsTeamMessages: String { t("analytics.team_messages") }
+    static var AnalyticsTrend: String { t("analytics.trend") }
+    static var AnalyticsActivityLevel: String { t("analytics.activity_level") }
+    static var AnalyticsCategoryBreakdown: String { t("analytics.category_breakdown") }
+    static var AnalyticsLineChart: String { t("analytics.line_chart") }
 
     // MARK: - Shell
     static var ShellSelected: String { t("shell.selected") }

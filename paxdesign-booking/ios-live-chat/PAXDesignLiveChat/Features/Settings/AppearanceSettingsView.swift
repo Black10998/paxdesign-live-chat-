@@ -74,7 +74,7 @@ struct AppearanceSettingsView: View {
                         ThemePreviewCard(
                             theme: theme,
                             isSelected: settings.visualTheme == theme,
-                            isDark: resolvedIsDark
+                            isDark: settings.resolvedIsDark(for: colorScheme)
                         )
                     }
                     .buttonStyle(.plain)
@@ -116,14 +116,6 @@ struct AppearanceSettingsView: View {
             .paxPremiumGlass(tier: .standard, cornerRadius: 18)
         }
         .buttonStyle(.plain)
-    }
-
-    private var resolvedIsDark: Bool {
-        switch settings.appearanceMode {
-        case .dark: return true
-        case .light: return false
-        case .system: return colorScheme == .dark
-        }
     }
 }
 
