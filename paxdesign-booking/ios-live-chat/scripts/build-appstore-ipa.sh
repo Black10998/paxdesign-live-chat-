@@ -447,8 +447,8 @@ resign_archived_products() {
   identity_line="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" 2>/dev/null \
     | grep 'Apple Distribution' | head -1 || true)"
   [[ -n "$identity_line" ]] || fail "Apple Distribution signing identity not found in keychain"
-  identity_hash="$(printf '%s\n' "$identity_line" | sed -E 's/^[[:space:]]*[0-9]+[[:space:]]+([A-F0-9]+)[[:space:]]+.*/\1/')"
-  [[ -n "$identity_hash" ]] || fail "Could not parse Apple Distribution identity hash"
+  identity_hash="$(printf '%s\n' "$identity_line" | sed -E 's/^[[:space:]]*[0-9]+\)[[:space:]]+([A-F0-9]+)[[:space:]]+.*/\1/')"
+  [[ "$identity_hash" =~ ^[A-F0-9]{40}$ ]] || fail "Could not parse Apple Distribution identity hash from: $identity_line"
 
   echo "==> Re-signing archived products with explicit entitlements ($identity_hash)"
   codesign --force --sign "$identity_hash" \
