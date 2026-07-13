@@ -11,6 +11,9 @@ class PAXdesign_Live_Chat_Mobile_API {
 
     const REST_NAMESPACE = 'paxdesign/v1';
 
+    /** @var bool|null Per-request guard: email→login mapping already applied. */
+    private static $basic_auth_email_resolved = false;
+
     public static function init() {
         add_action('init', array(__CLASS__, 'bootstrap_basic_auth'), 1);
         add_filter('determine_current_user', array(__CLASS__, 'resolve_basic_auth_login'), 15);
@@ -81,36 +84,50 @@ class PAXdesign_Live_Chat_Mobile_API {
         if ($user_id) {
             return $user_id;
         }
+        if (self::$basic_auth_email_resolved) {
+            return $user_id;
+        }
 
         if (empty($_SERVER['PHP_AUTH_USER'])) {
             return $user_id;
         }
 
         $login = sanitize_text_field(wp_unslash((string) $_SERVER['PHP_AUTH_USER']));
-        if ($login === '' || !is_email($login)) {
+        if ($login === '') {
+            return $user_id;
+        }
+
+        // Valid user_login (including when login equals email) — no email lookup needed.
+        $by_login = get_user_by('login', $login);
+        if ($by_login instanceof WP_User) {
+            self::$basic_auth_email_resolved = true;
+            return $user_id;
+        }
+
+        if (!is_email($login)) {
             return $user_id;
         }
 
         $user = get_user_by('email', $login);
         if (!$user instanceof WP_User) {
             self::log_auth_event('email_lookup_failed', array('email' => $login));
+            self::$basic_auth_email_resolved = true;
             return $user_id;
         }
 
         $_SERVER['PHP_AUTH_USER'] = $user->user_login;
-        self::log_auth_event('email_mapped_to_login', array(
-            'email' => $login,
-            'login' => $user->user_login,
-        ));
+        self::$basic_auth_email_resolved = true;
 
         return $user_id;
     }
 
     /**
+     * Auth diagnostics only when WordPress debug logging is fully enabled.
+     *
      * @param array<string, mixed> $context
      */
     private static function log_auth_event($event, array $context = array()) {
-        if (!defined('WP_DEBUG') || !WP_DEBUG) {
+        if (!self::is_debug_logging_enabled()) {
             return;
         }
 
@@ -119,6 +136,14 @@ class PAXdesign_Live_Chat_Mobile_API {
             $line .= ' ' . wp_json_encode($context);
         }
         error_log($line);
+    }
+
+    /**
+     * True only when wp-config enables real debug.log output (not WP_DEBUG alone).
+     */
+    private static function is_debug_logging_enabled() {
+        return defined('WP_DEBUG') && WP_DEBUG
+            && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG;
     }
 
     /**
@@ -1459,7 +1484,7 @@ class PAXdesign_Live_Chat_Mobile_API {
         try {
             $devices = PAXdesign_Device_Sessions::list_employee_devices($filter, $current_device_id);
         } catch (Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
+            if (self::is_debug_logging_enabled()) {
                 error_log('[PAXdesign Device Sessions] list failed: ' . $e->getMessage());
             }
         }

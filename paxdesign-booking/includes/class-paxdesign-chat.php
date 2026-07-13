@@ -1105,6 +1105,9 @@ class PAXdesign_Chat {
     }
 
     private function log_event($event, $context = array()) {
+        if (!defined('WP_DEBUG') || !WP_DEBUG || !defined('WP_DEBUG_LOG') || !WP_DEBUG_LOG) {
+            return;
+        }
         error_log('PAXdesign Chat [' . $event . ']: ' . wp_json_encode($context));
     }
 
