@@ -319,7 +319,7 @@ $chat_quick_links   = class_exists('PAXdesign_Chat_Quick_Links') ? PAXdesign_Cha
             <div class="ps-member-list">
               <div class="ps-member-row">
                 <div class="ps-member-ava">
-                  <img src="https://paxdesign.at/wp-content/uploads/2025/12/38319D43-77FD-42D8-91BA-69E23BE7879C-e1767119492655.avif" alt="Ahmad Alkhalaf">
+                  <img src="<?php echo esc_url(PAXdesign_Chat_Live::DEFAULT_AGENT_AVATAR); ?>" alt="Ahmad Alkhalaf" width="48" height="48" data-skip-lazy="1">
                 </div>
                 <div class="ps-member-meta">
                   <strong>Ahmad Alkhalaf</strong>

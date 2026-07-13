@@ -133,7 +133,7 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
                    data-availability="<?php echo esc_attr($availability); ?>"
                    <?php echo !$is_selectable ? 'data-disabled="true"' : ''; ?>>
                 <div class="paxdesign-booking-team-avatar">
-                  <img src="<?php echo esc_url($member['image']); ?>" alt="<?php echo esc_attr($member['name']); ?>">
+                  <img src="<?php echo esc_url($member['image']); ?>" alt="<?php echo esc_attr($member['name']); ?>" width="120" height="120" loading="lazy" data-skip-lazy="1">
                   <?php if (!$is_selectable) : ?>
                   <span class="paxdesign-availability-badge paxdesign-badge-<?php echo esc_attr($availability); ?>">
                     <?php echo esc_html($availability_label); ?>

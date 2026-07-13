@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.112.0
+Version: 3.113.0
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,11 +21,12 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.112.0');
+define('PAXDESIGN_BOOKING_VERSION', '3.113.0');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
 
+require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-litespeed-compat.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-update-checker.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-email-templates.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-service-icons.php';
@@ -242,7 +243,7 @@ class PAXdesign_Booking {
                 'role' => 'Gründer & Geschäftsführer – PAXDesign',
                 'role_en' => 'Founder & CEO – PAXDesign',
                 'email' => get_option('paxdesign_booking_email_ahmad', 'info@paxdesign.at'),
-                'image' => 'https://paxdesign.at/wp-content/uploads/2025/12/38319D43-77FD-42D8-91BA-69E23BE7879C-e1767119492655.avif',
+                'image' => PAXdesign_Chat_Live::DEFAULT_AGENT_AVATAR,
                 'has_services' => true,
                 'is_founder' => true,
             ),
