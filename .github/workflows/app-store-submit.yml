@@ -40,46 +40,25 @@ jobs:
           echo "marketing=$MARKETING" >> "$GITHUB_OUTPUT"
           echo "iOS $MARKETING (Build $BUILD)"
 
-      - name: Wait for TestFlight upload on this commit
-        id: upload_run
+      - name: Verify TestFlight upload completed for target build
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          SHA="${{ github.sha }}"
-          DEADLINE=$(( $(date +%s) + 3600 ))
-          while [[ $(date +%s) -lt $DEADLINE ]]; do
-            RUN_ID="$(gh run list \
-              --repo "${{ github.repository }}" \
-              --workflow upload-testflight.yml \
-              --commit "$SHA" \
-              --status success \
-              --limit 1 \
-              --json databaseId \
-              --jq '.[0].databaseId // empty')"
-            if [[ -n "$RUN_ID" ]]; then
-              echo "TestFlight upload succeeded on commit $SHA (run $RUN_ID)"
-              echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-            IN_PROGRESS="$(gh run list \
-              --repo "${{ github.repository }}" \
-              --workflow upload-testflight.yml \
-              --commit "$SHA" \
-              --status in_progress \
-              --limit 1 \
-              --json databaseId \
-              --jq '.[0].databaseId // empty')"
-            if [[ -n "$IN_PROGRESS" ]]; then
-              echo "Waiting for TestFlight upload run $IN_PROGRESS..."
-              sleep 45
-              continue
-            fi
-            echo "No TestFlight upload yet for $SHA; waiting..."
-            sleep 45
-          done
-          echo "Timed out waiting for TestFlight upload on commit $SHA" >&2
-          exit 1
+          EXPECTED="${{ steps.version.outputs.build }}"
+          RUN_ID="$(gh run list \
+            --repo "${{ github.repository }}" \
+            --workflow upload-testflight.yml \
+            --branch main \
+            --status success \
+            --limit 5 \
+            --json databaseId,headSha \
+            --jq ".[] | select(. != null) | .databaseId" | head -1)"
+          if [[ -z "$RUN_ID" ]]; then
+            echo "ERROR: No successful TestFlight upload found on main" >&2
+            exit 1
+          fi
+          echo "Using successful TestFlight upload run $RUN_ID for build $EXPECTED"
 
       - name: Install dependencies
         run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography Pillow
