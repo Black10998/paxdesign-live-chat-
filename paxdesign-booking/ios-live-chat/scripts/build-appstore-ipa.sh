@@ -181,12 +181,15 @@ setup_signing_assets() {
   rm -f "$CERTIFICATE_PATH"
 }
 
+APS_ENTITLEMENT_VALUE=""
+
 verify_entitlements_source() {
   local entitlements_file="$ROOT/PAXDesignLiveChat/PAXDesignLiveChat.entitlements"
   local aps_value
   aps_value="$(/usr/libexec/PlistBuddy -c 'Print :aps-environment' "$entitlements_file" 2>/dev/null || true)"
   [[ "$aps_value" == "production" ]] \
     || fail "PAXDesignLiveChat.entitlements must use aps-environment=production for App Store builds"
+  APS_ENTITLEMENT_VALUE="$aps_value"
 }
 
 generate_export_options() {
