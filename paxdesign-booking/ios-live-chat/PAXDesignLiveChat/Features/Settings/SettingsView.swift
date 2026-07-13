@@ -150,6 +150,15 @@ struct SettingsRootView: View {
 
             Section(L10n.SettingsSupport) {
                 NavigationLink {
+                    NetworkDiagnosticsView()
+                } label: {
+                    SettingsRowLabel(
+                        title: "Netzwerk-Diagnose",
+                        subtitle: "REST-Anfragen / Circuit Breaker",
+                        systemImage: "antenna.radiowaves.left.and.right"
+                    )
+                }
+                NavigationLink {
                     ModuleSettingsHubView()
                 } label: {
                     SettingsRowLabel(
