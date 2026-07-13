@@ -190,6 +190,10 @@ final class PushService: NSObject, ObservableObject {
             registrationBlocked = true
             registrationBlockedReason = failure.detailedMessage
             registrationCooldownUntil = Date().addingTimeInterval(APNsRegistrationPolicy.permanentFailureCooldown)
+            if case .iosError(_, _, let message) = failure,
+               APNsRegistrationPolicy.isPermanentFailureMessage(message) {
+                PAXPushEntitlementState.runtimeMissing = true
+            }
             return
         }
         let pause = APNsRegistrationPolicy.retryCooldown(afterFailures: consecutiveRegistrationFailures)
@@ -202,6 +206,7 @@ final class PushService: NSObject, ObservableObject {
         registrationCooldownUntil = nil
         consecutiveRegistrationFailures = 0
         lastIOSRegistrationError = nil
+        PAXPushEntitlementState.runtimeMissing = false
     }
 
     func registerForRemoteNotificationsIfAuthorized() async {
