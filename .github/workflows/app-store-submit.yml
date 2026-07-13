@@ -1,0 +1,103 @@
+name: App Store Submit for Review
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/app-store-submit'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  app-store-submit:
+    runs-on: macos-latest
+    timeout-minutes: 120
+    env:
+      APP_BUNDLE_ID: at.paxdesign.livechat
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+      APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+      APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+      APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+      APP_STORE_POLL_SECONDS: "30"
+      APP_STORE_POLL_TIMEOUT: "3600"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read version metadata
+        id: version
+        run: |
+          BUILD=$(grep 'CURRENT_PROJECT_VERSION:' paxdesign-booking/ios-live-chat/project.yml | head -1 | sed 's/.*"\([0-9]*\)".*/\1/')
+          MARKETING=$(grep 'MARKETING_VERSION:' paxdesign-booking/ios-live-chat/project.yml | head -1 | sed 's/.*"\([^"]*\)".*/\1/')
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "marketing=$MARKETING" >> "$GITHUB_OUTPUT"
+          echo "iOS $MARKETING (Build $BUILD)"
+
+      - name: Wait for TestFlight upload on this commit
+        id: upload_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          SHA="${{ github.sha }}"
+          DEADLINE=$(( $(date +%s) + 3600 ))
+          while [[ $(date +%s) -lt $DEADLINE ]]; do
+            RUN_ID="$(gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow upload-testflight.yml \
+              --commit "$SHA" \
+              --status success \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId // empty')"
+            if [[ -n "$RUN_ID" ]]; then
+              echo "TestFlight upload succeeded on commit $SHA (run $RUN_ID)"
+              echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            IN_PROGRESS="$(gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow upload-testflight.yml \
+              --commit "$SHA" \
+              --status in_progress \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId // empty')"
+            if [[ -n "$IN_PROGRESS" ]]; then
+              echo "Waiting for TestFlight upload run $IN_PROGRESS..."
+              sleep 45
+              continue
+            fi
+            echo "No TestFlight upload yet for $SHA; waiting..."
+            sleep 45
+          done
+          echo "Timed out waiting for TestFlight upload on commit $SHA" >&2
+          exit 1
+
+      - name: Install dependencies
+        run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography Pillow
+
+      - name: Validate App Store Connect credentials
+        run: python3 scripts/appstore-connect/verify-asc-credentials.py
+
+      - name: Upload App Store screenshots
+        run: python3 scripts/appstore-connect/upload_app_store_screenshots.py
+
+      - name: Submit metadata and request Apple review
+        env:
+          APP_STORE_TARGET_BUILD: ${{ steps.version.outputs.build }}
+        run: python3 scripts/appstore-connect/submit_app_store_review.py
+
+      - name: Upload release report artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-store-release-report
+          path: docs/app-store/RELEASE_REPORT.md
+          if-no-files-found: warn

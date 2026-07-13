@@ -19,7 +19,9 @@ enum ChatLiveDiagnostics {
     }
 
     static func uiRows(sessionId: String, messageCount: Int, rowCount: Int, revision: Int) {
+        #if DEBUG
         log.debug("ui session=\(sessionId, privacy: .public) messages=\(messageCount) rows=\(rowCount) revision=\(revision)")
+        #endif
     }
 
     static func cursorAdjusted(sessionId: String, reason: String, pollSeq: Int) {

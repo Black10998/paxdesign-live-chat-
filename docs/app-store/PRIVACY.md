@@ -1,4 +1,4 @@
-# App Store Privacy Documentation
+# App Store Privacy Documentation — v2.0.0
 
 ## App Privacy Questionnaire (App Store Connect)
 
@@ -7,7 +7,9 @@
 | Email address | Yes | Yes | No | App functionality (login) |
 | Name | Yes | Yes | No | App functionality (profile display) |
 | User ID | Yes | Yes | No | App functionality |
-| Photos | Yes (optional) | Yes | No | Send images in chat |
+| Photos or Videos | Yes (optional) | Yes | No | Send images in chat |
+| Audio Data | Yes (optional) | Yes | No | Voice messages in team chat |
+| Precise Location | Yes (optional) | Yes | No | Share location in team chat; device sign-in verification |
 | Other User Content | Yes | Yes | No | Chat messages |
 | Device ID | Yes | Yes | No | Push notifications (APNs token) |
 
@@ -33,15 +35,18 @@ Web: https://paxdesign.at/datenschutz/
 | Key | Purpose |
 |-----|---------|
 | NSPhotoLibraryUsageDescription | Select photos to send in chat |
+| NSCameraUsageDescription | Take photos to send in chat |
+| NSMicrophoneUsageDescription | Record voice messages in team chat |
+| NSLocationWhenInUseUsageDescription | Share location in team chat; device sign-in verification |
 | NSUserNotificationsUsageDescription | Live request and message alerts |
-
-Camera is **not** used — no NSCameraUsageDescription required.
+| NSFaceIDUsageDescription | Optional app lock after inactivity |
 
 ## Privacy manifest
 
-File: `ios-live-chat/PAXDesignLiveChat/PrivacyInfo.xcprivacy`
+File: `paxdesign-booking/ios-live-chat/PAXDesignLiveChat/PrivacyInfo.xcprivacy`
 
-Matches the table above. Includes UserDefaults API reason CA92.1.
+Declares: Email, Name, Photos/Videos, Other User Content, User ID, Precise Location, Device ID.  
+API: UserDefaults (CA92.1). No tracking.
 
 ## Submission
 
