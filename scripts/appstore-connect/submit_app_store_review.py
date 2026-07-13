@@ -244,7 +244,7 @@ def ensure_export_compliance(client: ASCClient, build: dict[str, Any]) -> None:
     print("Set usesNonExemptEncryption=false")
 
 
-def submit_for_review(client: ASCClient, version_id: str) -> dict[str, Any]:
+def submit_for_review(client: ASCClient, version_id: str) -> dict[str, Any] | None:
     status, payload = client.request(
         "POST",
         "/appStoreVersionSubmissions",
@@ -264,6 +264,12 @@ def submit_for_review(client: ASCClient, version_id: str) -> dict[str, Any]:
     if status == 409:
         warn("Version may already be submitted for review")
         return payload
+    if status == 403:
+        detail = json.dumps(payload)
+        if "does not allow 'CREATE'" in detail or "Allowed operation is: DELETE" in detail:
+            print("App Store version is already submitted for review")
+            return {"alreadySubmitted": True}
+        fail(f"Review submission forbidden (403): {detail}")
     fail(f"Review submission failed ({status}): {json.dumps(payload)}")
 
 
@@ -306,9 +312,12 @@ def write_report(
     ]
     if submission:
         lines.append("- **Submitted for Apple review:** Yes")
-        lines.append(f"- **Submission ID:** {submission.get('id', 'n/a')}")
+        if submission.get("alreadySubmitted"):
+            lines.append("- **Note:** Version was already in review queue before this run")
+        else:
+            lines.append(f"- **Submission ID:** {submission.get('id', 'n/a')}")
     else:
-        lines.append("- **Submitted for Apple review:** Pending or already in review")
+        lines.append("- **Submitted for Apple review:** Pending manual confirmation in App Store Connect")
     lines.extend(["", "## Warnings & recommendations", ""])
     if warnings:
         for item in warnings:
@@ -388,8 +397,12 @@ def main() -> None:
         version_attrs = version_status(client, version_id)
     elif state in {"WAITING_FOR_REVIEW", "READY_FOR_REVIEW", "IN_REVIEW", "PENDING_DEVELOPER_RELEASE", "READY_FOR_SALE"}:
         print(f"Version already in review/release state: {state}")
+        submission = {"alreadySubmitted": True}
     else:
-        warnings.append(f"Version state {state} — manual review in App Store Connect may be required")
+        submission = submit_for_review(client, version_id)
+        version_attrs = version_status(client, version_id)
+        if submission is None:
+            warnings.append(f"Version state {state} — confirm status in App Store Connect")
 
     detail = get_build_beta_detail(client, build["id"])
     if detail:
