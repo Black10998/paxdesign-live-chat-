@@ -23,6 +23,67 @@ final class MessagingReliabilityTests: XCTestCase {
         XCTAssertEqual(result.messages, [server])
     }
 
+    func testVoiceAttachmentFieldsSurviveClientIdMerge() {
+        let clientId = UUID().uuidString.lowercased()
+        let optimistic = LiveMessage(
+            id: -99,
+            clientMsgId: clientId,
+            role: "admin",
+            content: "",
+            attachmentType: "voice",
+            audioUrl: "pending://\(clientId)",
+            audioDuration: 12.4
+        )
+        let server = LiveMessage(
+            id: 77,
+            clientMsgId: clientId,
+            role: "admin",
+            content: "",
+            attachmentType: "voice",
+            audioUrl: "https://paxdesign.at/wp-content/uploads/voice.m4a",
+            audioDuration: 12.4
+        )
+
+        let result = MessageMerge.mergeSorted(existing: [optimistic], incoming: [server])
+
+        XCTAssertEqual(result.messages.count, 1)
+        XCTAssertEqual(result.messages.first?.id, 77)
+        XCTAssertEqual(result.messages.first?.attachmentType, "voice")
+        XCTAssertEqual(result.messages.first?.audioUrl, server.audioUrl)
+        XCTAssertEqual(result.messages.first?.audioDuration, 12.4)
+    }
+
+    func testLocationAttachmentFieldsSurviveClientIdMerge() {
+        let clientId = UUID().uuidString.lowercased()
+        let optimistic = LiveMessage(
+            id: -12,
+            clientMsgId: clientId,
+            role: "admin",
+            content: "Office",
+            attachmentType: "location",
+            locationLat: 48.2082,
+            locationLng: 16.3738,
+            locationLabel: "Office"
+        )
+        let server = LiveMessage(
+            id: 88,
+            clientMsgId: clientId,
+            role: "admin",
+            content: "Office",
+            attachmentType: "location",
+            locationLat: 48.2082,
+            locationLng: 16.3738,
+            locationLabel: "Office"
+        )
+
+        let result = MessageMerge.mergeSorted(existing: [optimistic], incoming: [server])
+
+        XCTAssertEqual(result.messages.count, 1)
+        XCTAssertEqual(result.messages.first?.locationLat, 48.2082)
+        XCTAssertEqual(result.messages.first?.locationLng, 16.3738)
+        XCTAssertEqual(result.messages.first?.locationLabel, "Office")
+    }
+
     func testDuplicateIngressNeverCreatesDuplicateIDs() {
         let message = LiveMessage(id: 8, role: "user", content: "once")
         let existing = [message, message]

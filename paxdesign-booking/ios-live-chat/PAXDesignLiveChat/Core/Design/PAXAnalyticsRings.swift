@@ -74,85 +74,63 @@ struct PAXSevenDayAnalyticsRings: View {
 
             Spacer(minLength: 8)
 
-            VStack(alignment: .trailing, spacing: 4) {
-                Text("\(totalValue)")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(PAXTheme.textPrimary)
-
-                Text(L10n.AnalyticsRingTotal)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(PAXTheme.textSecondary)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(PAXTheme.accentSoft)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(PAXTheme.accent.opacity(0.18), lineWidth: 0.5)
+            ZStack {
+                Circle()
+                    .stroke(PAXTheme.accent.opacity(0.14), lineWidth: 4)
+                Circle()
+                    .trim(from: 0, to: animateChart ? 1 : 0)
+                    .stroke(
+                        PAXTheme.accent,
+                        style: StrokeStyle(lineWidth: 4, lineCap: .round)
                     )
-            )
+                    .rotationEffect(.degrees(-90))
+
+                VStack(spacing: 0) {
+                    Text("\(totalValue)")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(PAXTheme.textPrimary)
+                    Text(L10n.AnalyticsRingTotal)
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(PAXTheme.textSecondary)
+                }
+            }
+            .frame(width: 52, height: 52)
         }
     }
 
     private var chartPanel: some View {
-        VStack(spacing: 8) {
-            ZStack(alignment: .bottom) {
-                chartGrid
-
-                HStack(alignment: .bottom, spacing: 8) {
-                    ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                        PAXAnalyticsBarColumn(
-                            item: item,
-                            maxValue: maxValue,
-                            isPeak: item.id == peakItem?.id && item.value > 0,
-                            isLatest: index == items.count - 1,
-                            animate: animateChart,
-                            delay: Double(index) * 0.04
-                        )
-                        .frame(maxWidth: .infinity)
-                    }
-                }
-                .frame(height: 88)
-                .padding(.horizontal, 2)
-            }
-            .frame(height: 88)
-
-            HStack(spacing: 8) {
-                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                    Text(shortDayLabel(item.label, index: index))
-                        .font(.system(size: 10, weight: index == items.count - 1 ? .bold : .medium))
-                        .foregroundStyle(index == items.count - 1 ? PAXTheme.accent : PAXTheme.textTertiary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .frame(maxWidth: .infinity)
-                }
+        HStack(spacing: 6) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                PAXAnalyticsDayRing(
+                    item: item,
+                    maxValue: maxValue,
+                    isPeak: item.id == peakItem?.id && item.value > 0,
+                    isLatest: index == items.count - 1,
+                    animate: animateChart,
+                    delay: Double(index) * 0.05
+                )
+                .frame(maxWidth: .infinity)
             }
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 10)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 14)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(PAXTheme.surface.opacity(colorScheme == .dark ? 0.34 : 0.42))
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            PAXTheme.surface.opacity(colorScheme == .dark ? 0.38 : 0.5),
+                            PAXTheme.surface.opacity(colorScheme == .dark ? 0.22 : 0.32),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .stroke(PAXTheme.border.opacity(0.22), lineWidth: 0.5)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(PAXTheme.border.opacity(0.2), lineWidth: 0.5)
                 )
         )
-    }
-
-    private var chartGrid: some View {
-        VStack(spacing: 0) {
-            ForEach(0..<4, id: \.self) { line in
-                if line > 0 { Spacer(minLength: 0) }
-                Rectangle()
-                    .fill(PAXTheme.border.opacity(line == 0 ? 0.28 : 0.14))
-                    .frame(height: 0.5)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        .padding(.bottom, 1)
     }
 
     private var footerStats: some View {
@@ -210,12 +188,6 @@ struct PAXSevenDayAnalyticsRings: View {
         )
     }
 
-    private func shortDayLabel(_ label: String, index: Int) -> String {
-        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.count <= 3 { return trimmed }
-        return String(trimmed.prefix(3))
-    }
-
     private func startChartAnimation() {
         guard !reduceMotion else {
             animateChart = true
@@ -227,7 +199,7 @@ struct PAXSevenDayAnalyticsRings: View {
     }
 }
 
-private struct PAXAnalyticsBarColumn: View {
+private struct PAXAnalyticsDayRing: View {
     let item: PAXRingMetric
     let maxValue: Int
     let isPeak: Bool
@@ -237,55 +209,54 @@ private struct PAXAnalyticsBarColumn: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var targetHeight: CGFloat {
-        guard maxValue > 0 else { return 4 }
-        let ratio = CGFloat(item.value) / CGFloat(maxValue)
-        return max(4, ratio * 72)
+    private var progress: CGFloat {
+        guard maxValue > 0, item.value > 0 else { return 0 }
+        return max(0.08, CGFloat(item.value) / CGFloat(maxValue))
     }
 
-    private var displayedHeight: CGFloat {
-        animate ? targetHeight : 4
+    private var ringTint: Color {
+        isPeak ? item.tint : item.tint.opacity(isLatest ? 0.95 : 0.72)
     }
 
-    private var barTint: Color {
-        isPeak ? item.tint : item.tint.opacity(isLatest ? 0.92 : 0.72)
+    private var shortDayLabel: String {
+        let trimmed = item.label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.count <= 3 { return trimmed }
+        return String(trimmed.prefix(3))
     }
 
     var body: some View {
-        VStack(spacing: 4) {
-            Text(item.value > 0 ? "\(item.value)" : "·")
-                .font(.system(size: 9, weight: .semibold, design: .rounded))
-                .foregroundStyle(item.value > 0 ? PAXTheme.textSecondary : PAXTheme.textTertiary)
-                .frame(height: 12)
+        VStack(spacing: 6) {
+            ZStack {
+                Circle()
+                    .stroke(ringTint.opacity(0.14), lineWidth: 4.5)
 
-            ZStack(alignment: .bottom) {
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(item.tint.opacity(0.08))
-                    .frame(height: 72)
-
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(barTint.opacity(item.value > 0 ? 0.85 : 0.2))
-                    .frame(height: displayedHeight)
-                    .overlay(alignment: .top) {
-                        if isPeak, item.value > 0 {
-                            Circle()
-                                .fill(barTint)
-                                .frame(width: 5, height: 5)
-                                .offset(y: -2)
-                        }
-                    }
-                    .shadow(
-                        color: isPeak ? barTint.opacity(0.28) : .clear,
-                        radius: 4,
-                        x: 0,
-                        y: 1
+                Circle()
+                    .trim(from: 0, to: animate ? progress : 0)
+                    .stroke(
+                        AngularGradient(
+                            colors: [ringTint.opacity(0.55), ringTint, ringTint.opacity(0.85)],
+                            center: .center
+                        ),
+                        style: StrokeStyle(lineWidth: 4.5, lineCap: .round)
                     )
+                    .rotationEffect(.degrees(-90))
+                    .shadow(color: isPeak ? ringTint.opacity(0.22) : .clear, radius: 3, x: 0, y: 1)
+
+                Text(item.value > 0 ? "\(item.value)" : "·")
+                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                    .foregroundStyle(item.value > 0 ? PAXTheme.textPrimary : PAXTheme.textTertiary)
             }
-            .frame(height: 72, alignment: .bottom)
+            .frame(width: 40, height: 40)
             .animation(
                 reduceMotion ? nil : .spring(response: 0.68, dampingFraction: 0.84).delay(delay),
-                value: displayedHeight
+                value: animate
             )
+
+            Text(shortDayLabel)
+                .font(.system(size: 10, weight: isLatest ? .bold : .medium))
+                .foregroundStyle(isLatest ? PAXTheme.accent : PAXTheme.textTertiary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(item.label): \(item.value)")

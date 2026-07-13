@@ -37,7 +37,10 @@ final class LocationPermissionService: NSObject, ObservableObject, CLLocationMan
     func captureCurrentLocation() async -> CLLocationCoordinate2D? {
         let status = await requestWhenInUse()
         guard Self.isAuthorized(status) else { return nil }
+        return await fetchCurrentLocation()
+    }
 
+    func fetchCurrentLocation() async -> CLLocationCoordinate2D? {
         return await withCheckedContinuation { continuation in
             self.locationContinuation = continuation
             manager.requestLocation()

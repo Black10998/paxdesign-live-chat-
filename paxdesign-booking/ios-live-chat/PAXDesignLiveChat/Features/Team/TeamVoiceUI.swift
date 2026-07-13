@@ -147,6 +147,7 @@ final class TeamVoicePlaybackController: ObservableObject {
     private init() {}
 
     func toggle(message: LiveMessage) {
+        if (message.audioUrl ?? "").hasPrefix("pending://") { return }
         if activeMessageId == message.id, isPlaying {
             pause()
             return
@@ -188,6 +189,7 @@ final class TeamVoicePlaybackController: ObservableObject {
     private func loadAndPlay(message: LiveMessage) async {
         stop()
         guard let urlString = message.audioUrl,
+              !urlString.hasPrefix("pending://"),
               let url = URL(string: urlString) else { return }
 
         do {

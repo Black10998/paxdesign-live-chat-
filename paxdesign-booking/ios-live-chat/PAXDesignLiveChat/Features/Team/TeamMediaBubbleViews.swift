@@ -9,6 +9,10 @@ struct VoiceMessageBubbleView: View {
     @ObservedObject private var playback = TeamVoicePlaybackController.shared
     @State private var showPlaybackPanel = false
 
+    private var isPendingUpload: Bool {
+        (message.audioUrl ?? "").hasPrefix("pending://")
+    }
+
     private var isActiveMessage: Bool {
         playback.activeMessageId == message.id
     }
@@ -29,16 +33,49 @@ struct VoiceMessageBubbleView: View {
     }
 
     var body: some View {
+        Group {
+            if isPendingUpload {
+                pendingBubble
+            } else {
+                playableBubble
+            }
+        }
+    }
+
+    private var pendingBubble: some View {
+        HStack(spacing: 10) {
+            PAXInlineLoader(size: 22)
+            VStack(alignment: .leading, spacing: 6) {
+                TeamVoiceWaveformView(
+                    levels: displayLevels,
+                    barColor: isOutgoing ? PAXBrand.accent.opacity(0.9) : Color.white.opacity(0.82),
+                    idleLevel: 0.12,
+                    maxHeight: 28
+                )
+                Text(L10n.TeamVoiceSending)
+                    .font(.caption2)
+                    .foregroundStyle(PAXTheme.textSecondary)
+            }
+            .frame(minWidth: 140)
+        }
+    }
+
+    private var playableBubble: some View {
         Button {
             showPlaybackPanel = true
             playback.toggle(message: message)
         } label: {
             HStack(spacing: 10) {
                 PAXIcon(
-                    isActiveMessage && playback.isPlaying ? "pause.circle.fill" : "play.circle.fill",
-                    size: .card
+                    isActiveMessage && playback.isPlaying ? "pause.fill" : "play.fill",
+                    size: .inline
                 )
                 .foregroundStyle(isOutgoing ? PAXBrand.accent : PAXTheme.accent)
+                .frame(width: 28, height: 28)
+                .background(
+                    Circle()
+                        .fill((isOutgoing ? PAXBrand.accent : PAXTheme.accent).opacity(0.14))
+                )
 
                 VStack(alignment: .leading, spacing: 6) {
                     TeamVoiceWaveformView(
@@ -142,7 +179,7 @@ struct LocationMessageBubbleView: View {
                         .foregroundStyle(PAXTheme.textPrimary)
                         .lineLimit(2)
                     Spacer(minLength: 0)
-                    PAXIcon("arrow.up.right.square", size: .inline)
+                    PAXIcon("arrow.triangle.turn.up.right.circle.fill", size: .inline)
                         .foregroundStyle(PAXBrand.accent)
                 }
             }
@@ -163,10 +200,12 @@ struct LocationMessageBubbleView: View {
         guard let coordinate else { return }
         let latitude = coordinate.latitude
         let longitude = coordinate.longitude
-        let query = locationTitle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let destination = "\(latitude),\(longitude)"
+        let encodedName = locationTitle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
         let candidates = [
-            URL(string: "maps://?ll=\(latitude),\(longitude)&q=\(query)"),
-            URL(string: "http://maps.apple.com/?ll=\(latitude),\(longitude)&q=\(query)"),
+            URL(string: "maps://?daddr=\(destination)&dirflg=d"),
+            URL(string: "http://maps.apple.com/?daddr=\(destination)&dirflg=d&q=\(encodedName)"),
+            URL(string: "maps://?ll=\(destination)&q=\(encodedName)"),
         ]
         for url in candidates.compactMap({ $0 }) {
             if UIApplication.shared.canOpenURL(url) {

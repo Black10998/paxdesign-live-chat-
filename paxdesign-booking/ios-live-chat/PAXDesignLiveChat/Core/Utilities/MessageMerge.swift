@@ -87,28 +87,7 @@ enum MessageMerge {
 
             var normalized = msg
             if resolvedId != msg.id, resolvedId > 0 {
-                normalized = LiveMessage(
-                    id: resolvedId,
-                    clientMsgId: msg.clientMsgId,
-                    role: msg.role,
-                    content: msg.content,
-                    ts: msg.ts,
-                    imageUrl: msg.imageUrl,
-                    replyTo: msg.replyTo,
-                    reaction: msg.reaction,
-                    senderId: msg.senderId,
-                    senderName: msg.senderName,
-                    senderAvatar: msg.senderAvatar,
-                    senderRole: msg.senderRole,
-                    attachmentType: msg.attachmentType,
-                    linkUrl: msg.linkUrl,
-                    linkLabel: msg.linkLabel,
-                    linkIcon: msg.linkIcon,
-                    linkScanStatus: msg.linkScanStatus,
-                    linkScanSystemStatus: msg.linkScanSystemStatus,
-                    linkScanReviewPending: msg.linkScanReviewPending,
-                    linkScanUrls: msg.linkScanUrls
-                )
+                normalized = msg.replacingId(resolvedId)
             }
 
             if let prior = map[resolvedId] {
