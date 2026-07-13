@@ -130,27 +130,27 @@ Apple cannot determine trader status for you — **you must confirm** with your 
 
 ---
 
-## Information I need from you
+## Information status (updated 2026-07-13)
 
-Please provide the following so we can complete compliance **accurately**:
-
-### A. Age Ratings confirmation
+### A. Age Ratings confirmation — pending explicit OK
 
 1. Confirm you agree with the recommended answers in the table above (**especially Social Media = No**).
 2. If App Store Connect shows different wording, send a **screenshot** of the exact questions and I will map answers line by line.
 
-### B. EU Trader / DSA (if "This is a trader account")
+### B. EU Trader / DSA — **details received** (Account Holder must complete ASC UI)
 
-| # | Item | Example / notes |
-|---|------|-----------------|
-| 1 | **Confirm trader status** | "Yes, PrimoJob GmbH is a trader" |
-| 2 | **Public phone number** (displayed on EU App Store page) | e.g. +43 … |
-| 3 | **Public support email** (displayed on EU App Store page) | e.g. info@paxdesign.at |
-| 4 | **Confirm D-U-N-S address** is correct in Apple Developer account | Or provide corrected legal address |
-| 5 | **Business verification document** | Company registration, Gewerbeschein, or equivalent (PDF) — uploaded by Account Holder |
-| 6 | **Account Holder availability** | To complete phone/email 2FA verification in ASC |
-| 7 | **Payment/banking** in ASC | Confirm Agreements, Tax, and Banking are complete |
-| 8 | **Labels and Markings URL** (optional) | Only if required by EU law for your product |
+| # | Item | Value / status |
+|---|------|----------------|
+| 1 | **Trader status** | ✅ **Trader** (confirmed by product owner) |
+| 2 | **Public phone** | ✅ +43 681 20543638 |
+| 3 | **Public email** | ✅ info@paxdesign.at |
+| 4 | **Public address** | ✅ Franzensbrückenstraße 14, 1020 Wien, Austria |
+| 5 | **Business verification document** | ⏳ Account Holder must upload in ASC |
+| 6 | **Email/phone 2FA** | ⏳ Account Holder must verify in ASC |
+| 7 | **Payment/banking** in ASC | ⏳ Confirm Agreements, Tax, and Banking are complete |
+| 8 | **Labels and Markings URL** (optional) | Not required unless EU law mandates |
+
+Copy-paste guide for Account Holder: [DSA_TRADER_SETUP.md](DSA_TRADER_SETUP.md)
 
 ### C. If NOT a trader (unlikely for GmbH)
 
