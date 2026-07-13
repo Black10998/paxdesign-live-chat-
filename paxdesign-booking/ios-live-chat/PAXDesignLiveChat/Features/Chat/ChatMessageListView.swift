@@ -82,6 +82,12 @@ struct ChatMessageListView: View {
                             deletingMessageIds: deletingMessageIds
                         )
                         .id(row.id)
+                        .transition(.asymmetric(
+                            insertion: .opacity
+                                .combined(with: .move(edge: .bottom))
+                                .combined(with: .scale(scale: 0.96, anchor: isOutgoingMessage(row.message) ? .bottomTrailing : .bottomLeading)),
+                            removal: .opacity
+                        ))
                     }
                     if userTyping {
                         TypingIndicator(customerName: customerDisplayName)
@@ -91,6 +97,7 @@ struct ChatMessageListView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
                 .padding(.bottom, 8)
+                .animation(.spring(response: 0.42, dampingFraction: 0.84), value: messagesRevision)
             }
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: messagesRevision) { _ in
@@ -141,6 +148,10 @@ struct ChatMessageListView: View {
         } else if let last = displayRows.last {
             proxy.scrollTo(last.id, anchor: .bottom)
         }
+    }
+
+    private func isOutgoingMessage(_ message: LiveMessage) -> Bool {
+        message.role == "admin" || message.role == "assistant"
     }
 }
 

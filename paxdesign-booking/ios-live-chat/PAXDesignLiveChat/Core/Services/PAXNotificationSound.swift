@@ -125,6 +125,12 @@ final class PAXNotificationSound {
         liveLoopPlayer = nil
     }
 
+    func stopAll() {
+        stopLiveRequestLoop()
+        activePlayer?.stop()
+        activePlayer = nil
+    }
+
     private func activateSession(for tone: Tone) {
         let session = AVAudioSession.sharedInstance()
         let category: AVAudioSession.Category = tone == .liveRequest ? .playback : .ambient

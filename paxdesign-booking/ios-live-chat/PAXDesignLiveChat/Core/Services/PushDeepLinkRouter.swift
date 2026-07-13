@@ -70,10 +70,9 @@ final class PushDeepLinkRouter: ObservableObject {
             sessionId: route.sessionId,
             type: route.type,
             auth: auth,
-            payload: payload
+            payload: payload,
+            shouldNavigate: false
         )
-        coordinator.activeSessionId = route.sessionId
-        AppRefreshPolicy.setActiveSession(route.sessionId)
 
         if route.type == "team_message" || route.sessionId.hasPrefix("team_") {
             await teamCoordinator.refresh(auth: auth)

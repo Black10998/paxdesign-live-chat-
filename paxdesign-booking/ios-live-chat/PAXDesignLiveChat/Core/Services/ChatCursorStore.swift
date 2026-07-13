@@ -50,4 +50,13 @@ final class ChatCursorStore {
     private func key(site: String, channel: String) -> String {
         "pax.chat.cursor.\(SiteScopeKey.make(site)).\(channel)"
     }
+
+    func resetAll() {
+        lock.lock()
+        defer { lock.unlock() }
+        let prefix = "pax.chat.cursor."
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(prefix) {
+            defaults.removeObject(forKey: key)
+        }
+    }
 }

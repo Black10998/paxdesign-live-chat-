@@ -744,6 +744,7 @@ final class TeamChatThreadModel: ObservableObject {
             senderName: auth.profile?.displayName
         )
         messages.append(optimistic)
+        messagesRevision &+= 1
         let queued = PendingMessageStore.shared.enqueue(PendingOutboundMessage(
             id: clientMsgId,
             sessionId: sessionId,
@@ -809,6 +810,152 @@ final class TeamChatThreadModel: ObservableObject {
             await teamCoordinator.refresh(auth: auth)
         } catch {
             failedClientMsgIds.insert(clientMsgId)
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func sendImage(
+        auth: AuthStore,
+        teamCoordinator: TeamMessagingCoordinator,
+        imageData: Data,
+        filename: String,
+        caption: String = ""
+    ) async {
+        guard let api = auth.api else { return }
+        let clientMsgId = UUID().uuidString.lowercased()
+        let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000)
+        let optimistic = LiveMessage(
+            id: tempId,
+            clientMsgId: clientMsgId,
+            role: "admin",
+            content: caption,
+            ts: Int(Date().timeIntervalSince1970),
+            imageUrl: "pending://\(clientMsgId)",
+            attachmentType: "image",
+            senderId: auth.profile?.userId,
+            senderName: auth.profile?.displayName
+        )
+        messages.append(optimistic)
+        messagesRevision &+= 1
+        isSending = true
+        defer { isSending = false }
+
+        do {
+            let sent = try await api.sendTeamImage(
+                sessionId,
+                imageData: imageData,
+                filename: filename,
+                caption: caption,
+                clientMsgId: clientMsgId
+            )
+            messages.removeAll { $0.id == tempId }
+            insertIncomingMessages([sent.message])
+            pollSeq = max(pollSeq, sent.seq)
+            currentSeq = max(currentSeq, sent.seq)
+            MessageSendSound.shared.playIfEnabled()
+            await teamCoordinator.refresh(auth: auth)
+            await markRead(auth: auth)
+            PAXHaptics.light()
+        } catch {
+            messages.removeAll { $0.id == tempId }
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func sendAudio(
+        auth: AuthStore,
+        teamCoordinator: TeamMessagingCoordinator,
+        audioData: Data,
+        filename: String,
+        duration: TimeInterval
+    ) async {
+        guard let api = auth.api else { return }
+        let clientMsgId = UUID().uuidString.lowercased()
+        let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000)
+        let optimistic = LiveMessage(
+            id: tempId,
+            clientMsgId: clientMsgId,
+            role: "admin",
+            content: "",
+            ts: Int(Date().timeIntervalSince1970),
+            attachmentType: "voice",
+            audioDuration: duration,
+            senderId: auth.profile?.userId,
+            senderName: auth.profile?.displayName
+        )
+        messages.append(optimistic)
+        messagesRevision &+= 1
+        isSending = true
+        defer { isSending = false }
+
+        do {
+            let sent = try await api.sendTeamAudio(
+                sessionId,
+                audioData: audioData,
+                filename: filename,
+                duration: duration,
+                clientMsgId: clientMsgId
+            )
+            messages.removeAll { $0.id == tempId }
+            insertIncomingMessages([sent.message])
+            pollSeq = max(pollSeq, sent.seq)
+            currentSeq = max(currentSeq, sent.seq)
+            MessageSendSound.shared.playIfEnabled()
+            await teamCoordinator.refresh(auth: auth)
+            await markRead(auth: auth)
+            PAXHaptics.light()
+        } catch {
+            messages.removeAll { $0.id == tempId }
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func sendLocation(
+        auth: AuthStore,
+        teamCoordinator: TeamMessagingCoordinator,
+        latitude: Double,
+        longitude: Double,
+        label: String = ""
+    ) async {
+        guard let api = auth.api else { return }
+        let clientMsgId = UUID().uuidString.lowercased()
+        let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000)
+        let optimistic = LiveMessage(
+            id: tempId,
+            clientMsgId: clientMsgId,
+            role: "admin",
+            content: label,
+            ts: Int(Date().timeIntervalSince1970),
+            attachmentType: "location",
+            locationLat: latitude,
+            locationLng: longitude,
+            locationLabel: label,
+            senderId: auth.profile?.userId,
+            senderName: auth.profile?.displayName
+        )
+        messages.append(optimistic)
+        messagesRevision &+= 1
+        isSending = true
+        defer { isSending = false }
+
+        do {
+            let sent = try await api.sendTeamLocation(
+                sessionId,
+                latitude: latitude,
+                longitude: longitude,
+                label: label,
+                clientMsgId: clientMsgId
+            )
+            messages.removeAll { $0.id == tempId }
+            insertIncomingMessages([sent.message])
+            pollSeq = max(pollSeq, sent.seq)
+            currentSeq = max(currentSeq, sent.seq)
+            MessageSendSound.shared.playIfEnabled()
+            await teamCoordinator.refresh(auth: auth)
+            await markRead(auth: auth)
+            PAXHaptics.light()
+        } catch {
+            messages.removeAll { $0.id == tempId }
             errorMessage = error.localizedDescription
         }
     }
@@ -915,6 +1062,7 @@ final class TeamChatThreadModel: ObservableObject {
         guard message.role != expectedRole else { return message }
         return LiveMessage(
             id: message.id,
+            clientMsgId: message.clientMsgId,
             role: expectedRole,
             content: message.content,
             ts: message.ts,
@@ -924,7 +1072,13 @@ final class TeamChatThreadModel: ObservableObject {
             senderId: message.senderId,
             senderName: message.senderName,
             senderAvatar: message.senderAvatar,
-            senderRole: message.senderRole
+            senderRole: message.senderRole,
+            attachmentType: message.attachmentType,
+            audioUrl: message.audioUrl,
+            audioDuration: message.audioDuration,
+            locationLat: message.locationLat,
+            locationLng: message.locationLng,
+            locationLabel: message.locationLabel
         )
     }
 }

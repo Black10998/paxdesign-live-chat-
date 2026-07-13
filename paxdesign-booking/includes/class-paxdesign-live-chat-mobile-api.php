@@ -498,6 +498,24 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => $auth,
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/sessions/(?P<id>team_[0-9]+_[0-9]+)/images', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_team_send_image'),
+            'permission_callback' => $auth,
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/sessions/(?P<id>team_[0-9]+_[0-9]+)/audio', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_team_send_audio'),
+            'permission_callback' => $auth,
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/sessions/(?P<id>team_[0-9]+_[0-9]+)/location', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_team_send_location'),
+            'permission_callback' => $auth,
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/team/sessions/(?P<id>team_[0-9]+_[0-9]+)/read', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'route_team_mark_read'),
@@ -1937,6 +1955,59 @@ class PAXdesign_Live_Chat_Mobile_API {
             $request['id'],
             (int) wp_get_current_user()->ID,
             $content,
+            $client_id
+        ));
+    }
+
+    public static function route_team_send_image(WP_REST_Request $request) {
+        $files = $request->get_file_params();
+        if (empty($files['image'])) {
+            return new WP_Error('invalid_payload', 'No image uploaded.', array('status' => 400));
+        }
+        $params    = $request->get_body_params();
+        $caption   = isset($params['caption']) ? $params['caption'] : $request->get_param('caption');
+        $client_id = isset($params['client_msg_id']) ? $params['client_msg_id'] : $request->get_param('client_msg_id');
+        return self::respond(PAXdesign_Team_Messaging::send_image(
+            $request['id'],
+            (int) wp_get_current_user()->ID,
+            $files['image'],
+            $caption,
+            $client_id
+        ));
+    }
+
+    public static function route_team_send_audio(WP_REST_Request $request) {
+        $files = $request->get_file_params();
+        if (empty($files['audio'])) {
+            return new WP_Error('invalid_payload', 'No audio uploaded.', array('status' => 400));
+        }
+        $params    = $request->get_body_params();
+        $duration  = isset($params['duration']) ? (float) $params['duration'] : (float) $request->get_param('duration');
+        $client_id = isset($params['client_msg_id']) ? $params['client_msg_id'] : $request->get_param('client_msg_id');
+        return self::respond(PAXdesign_Team_Messaging::send_audio(
+            $request['id'],
+            (int) wp_get_current_user()->ID,
+            $files['audio'],
+            $duration,
+            $client_id
+        ));
+    }
+
+    public static function route_team_send_location(WP_REST_Request $request) {
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+        $lat       = isset($params['lat']) ? (float) $params['lat'] : (float) $request->get_param('lat');
+        $lng       = isset($params['lng']) ? (float) $params['lng'] : (float) $request->get_param('lng');
+        $label     = isset($params['label']) ? (string) $params['label'] : (string) $request->get_param('label');
+        $client_id = isset($params['client_msg_id']) ? (string) $params['client_msg_id'] : (string) $request->get_param('client_msg_id');
+        return self::respond(PAXdesign_Team_Messaging::send_location(
+            $request['id'],
+            (int) wp_get_current_user()->ID,
+            $lat,
+            $lng,
+            $label,
             $client_id
         ));
     }

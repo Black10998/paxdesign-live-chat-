@@ -54,6 +54,11 @@ final class PAXDeletePresenter: ObservableObject {
         action()
         PAXHaptics.medium()
     }
+
+    func dismissActive() {
+        activeRequest = nil
+        isAnimating = false
+    }
 }
 
 struct PAXDeleteOverlay: View {

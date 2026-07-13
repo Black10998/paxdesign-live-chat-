@@ -287,6 +287,19 @@ enum L10n {
     static var TabLive: String { t("tab.live") }
     static var TeamChatTitle: String { t("team.chat.title") }
     static var TeamChatPlaceholder: String { t("team.chat.placeholder") }
+    static var TeamSendPhoto: String { t("team.send_photo") }
+    static var TeamRecordVoice: String { t("team.record_voice") }
+    static var TeamSendVoice: String { t("team.send_voice") }
+    static var TeamShareLocation: String { t("team.share_location") }
+    static var TeamSharedLocation: String { t("team.shared_location") }
+    static var TeamOpenInMaps: String { t("team.open_in_maps") }
+    static var TeamMicrophoneDenied: String { t("team.microphone_denied") }
+    static var TeamLocationDenied: String { t("team.location_denied") }
+    static var TeamMediaErrorTitle: String { t("team.media_error.title") }
+    static func TeamRecordingVoice(_ elapsed: TimeInterval) -> String {
+        let seconds = max(0, Int(elapsed.rounded()))
+        return String(format: String(localized: "team.recording_voice"), seconds)
+    }
     static var TeamComposeTitle: String { t("team.compose.title") }
     static var TeamComposeSection: String { t("team.compose.section") }
     static var TeamComposeEmpty: String { t("team.compose.empty") }

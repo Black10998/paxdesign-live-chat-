@@ -734,6 +734,99 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-send", as: TeamSendResponse.self)
     }
 
+    func sendTeamImage(
+        _ sessionId: String,
+        imageData: Data,
+        filename: String,
+        caption: String = "",
+        clientMsgId: String = UUID().uuidString.lowercased()
+    ) async throws -> TeamSendResponse {
+        guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/images") else {
+            throw LiveChatAPIError.invalidURL
+        }
+
+        let boundary = "PAXBoundary\(UUID().uuidString)"
+        var body = Data()
+        let mime = mimeType(for: filename)
+
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"image\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
+        body.append(imageData)
+        body.append("\r\n".data(using: .utf8)!)
+
+        if !caption.isEmpty {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"caption\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(caption)\r\n".data(using: .utf8)!)
+        }
+
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"client_msg_id\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(clientMsgId)\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        var request = authRequest(url: url, method: "POST", body: body)
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        return try await perform(request, endpoint: "team-send-image", as: TeamSendResponse.self)
+    }
+
+    func sendTeamAudio(
+        _ sessionId: String,
+        audioData: Data,
+        filename: String,
+        duration: TimeInterval,
+        clientMsgId: String = UUID().uuidString.lowercased()
+    ) async throws -> TeamSendResponse {
+        guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/audio") else {
+            throw LiveChatAPIError.invalidURL
+        }
+
+        let boundary = "PAXBoundary\(UUID().uuidString)"
+        var body = Data()
+
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"audio\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: audio/mp4\r\n\r\n".data(using: .utf8)!)
+        body.append(audioData)
+        body.append("\r\n".data(using: .utf8)!)
+
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"duration\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(duration)\r\n".data(using: .utf8)!)
+
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"client_msg_id\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(clientMsgId)\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        var request = authRequest(url: url, method: "POST", body: body)
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        return try await perform(request, endpoint: "team-send-audio", as: TeamSendResponse.self)
+    }
+
+    func sendTeamLocation(
+        _ sessionId: String,
+        latitude: Double,
+        longitude: Double,
+        label: String = "",
+        clientMsgId: String = UUID().uuidString.lowercased()
+    ) async throws -> TeamSendResponse {
+        guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/location") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        var payload: [String: Any] = [
+            "lat": latitude,
+            "lng": longitude,
+            "client_msg_id": clientMsgId,
+        ]
+        if !label.isEmpty {
+            payload["label"] = label
+        }
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-send-location", as: TeamSendResponse.self)
+    }
+
     func markTeamSessionRead(_ sessionId: String, seq: Int) async throws -> TeamReadResponse {
         guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/read") else {
             throw LiveChatAPIError.invalidURL

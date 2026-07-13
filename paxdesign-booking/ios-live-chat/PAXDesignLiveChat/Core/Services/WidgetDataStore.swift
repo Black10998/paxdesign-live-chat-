@@ -45,6 +45,12 @@ final class WidgetDataStore {
         return snapshot
     }
 
+    func resetOnLogout() {
+        ChatCoordinatorProxy.liveCount = 0
+        ChatCoordinatorProxy.sessions = []
+        defaults.removeObject(forKey: snapshotKey)
+    }
+
     private func unreadChatCount() -> Int {
         let settings = AppSettingsStore.shared
         return ChatCoordinatorProxy.sessions.filter {

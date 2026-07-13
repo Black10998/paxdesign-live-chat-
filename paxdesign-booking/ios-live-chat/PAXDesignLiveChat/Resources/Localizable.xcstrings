@@ -5166,6 +5166,76 @@
         }
       }
     },
+    "team.send_photo": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Send Photo" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Foto senden" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "إرسال صورة" } }
+      }
+    },
+    "team.record_voice": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Record Voice Message" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Sprachnachricht aufnehmen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تسجيل رسالة صوتية" } }
+      }
+    },
+    "team.send_voice": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Send" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Senden" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "إرسال" } }
+      }
+    },
+    "team.share_location": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Share Location" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Standort teilen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "مشاركة الموقع" } }
+      }
+    },
+    "team.shared_location": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Shared location" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Geteilter Standort" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "موقع مشترك" } }
+      }
+    },
+    "team.open_in_maps": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Open in Maps" } },
+        "de": { "stringUnit": { "state": "translated", "value": "In Karten öffnen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "فتح في الخرائط" } }
+      }
+    },
+    "team.microphone_denied": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Microphone access is required to record voice messages." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Mikrofonzugriff ist für Sprachnachrichten erforderlich." } },
+        "ar": { "stringUnit": { "state": "translated", "value": "يلزم الوصول إلى الميكrofon لتسجيل الرسائل الصوتية." } }
+      }
+    },
+    "team.location_denied": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Location access is required to share your current position." } },
+        "de": { "stringUnit": { "state": "translated", "value": "Standortzugriff ist erforderlich, um Ihre Position zu teilen." } },
+        "ar": { "stringUnit": { "state": "translated", "value": "يلزم الوصول إلى الموقع لمشاركة موقعك الحالي." } }
+      }
+    },
+    "team.media_error.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Could Not Send Attachment" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Anhang konnte nicht gesendet werden" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تعذر إرسال المرفق" } }
+      }
+    },
+    "team.recording_voice": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Recording… %d s" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Aufnahme… %d s" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "جارٍ التسجيل… %d ث" } }
+      }
+    },
     "team.compose.title": {
       "localizations": {
         "en": {

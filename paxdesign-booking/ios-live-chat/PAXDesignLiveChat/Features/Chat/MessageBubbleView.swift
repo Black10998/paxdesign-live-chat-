@@ -98,10 +98,20 @@ struct MessageBubbleView: View {
                     )
                 }
 
-                if let imageUrl = message.imageUrl, let url = URL(string: imageUrl) {
+                if let imageUrl = message.imageUrl,
+                   !imageUrl.hasPrefix("pending://"),
+                   let url = URL(string: imageUrl) {
                     CachedChatImage(url: url) {
                         onImageTap(url)
                     }
+                }
+
+                if message.isVoiceMessage {
+                    VoiceMessageBubbleView(message: message, isOutgoing: isOutgoing)
+                }
+
+                if message.isLocationMessage {
+                    LocationMessageBubbleView(message: message)
                 }
 
                 if message.isLinkCard {
@@ -111,7 +121,7 @@ struct MessageBubbleView: View {
                         .font(.subheadline)
                         .foregroundStyle(message.isInPlaceWarnStyle ? Color(red: 0.6, green: 0.2, blue: 0.07) : PAXTheme.textSecondary)
                         .multilineTextAlignment(.leading)
-                } else if !message.content.isEmpty {
+                } else if !message.content.isEmpty && !message.isVoiceMessage && !message.isLocationMessage {
                     Text(message.content)
                         .font(.subheadline)
                         .foregroundStyle(PAXTheme.textPrimary)

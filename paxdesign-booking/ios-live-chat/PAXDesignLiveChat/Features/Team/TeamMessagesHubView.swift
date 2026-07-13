@@ -34,7 +34,8 @@ struct TeamMessagesHubView: View {
         .scrollContentBackground(.hidden)
         .paxScreenBackground()
         .navigationTitle(L10n.TeamHubTitle)
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             if canComposeTeam {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -57,7 +58,7 @@ struct TeamMessagesHubView: View {
             .environmentObject(auth)
             .environmentObject(teamCoordinator)
         }
-        .paxPremiumRefreshable(status: L10n.LoadingTeamConversations, rowCount: 4) {
+        .refreshable {
             await coordinator.fullConversationSync(auth: auth)
             await teamCoordinator.fullConversationSync(auth: auth)
             await loadContacts()

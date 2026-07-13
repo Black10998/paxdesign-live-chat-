@@ -427,6 +427,294 @@ class PAXdesign_Team_Messaging {
     }
 
     /**
+     * @param string               $conv_id
+     * @param int                  $current_user_id
+     * @param array<string, mixed> $file
+     * @param string               $caption
+     * @param string               $client_msg_id
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function send_image($conv_id, $current_user_id, $file, $caption = '', $client_msg_id = '') {
+        $upload = self::handle_media_upload($file, 'image');
+        if (is_wp_error($upload)) {
+            return $upload;
+        }
+
+        $caption = trim(wp_strip_all_tags((string) $caption));
+        return self::append_attachment_message(
+            $conv_id,
+            $current_user_id,
+            $caption,
+            array(
+                'image_url'       => $upload['url'],
+                'attachment_type' => 'image',
+            ),
+            $client_msg_id,
+            $upload['preview']
+        );
+    }
+
+    /**
+     * @param string               $conv_id
+     * @param int                  $current_user_id
+     * @param array<string, mixed> $file
+     * @param float                $duration
+     * @param string               $client_msg_id
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function send_audio($conv_id, $current_user_id, $file, $duration = 0, $client_msg_id = '') {
+        $upload = self::handle_media_upload($file, 'audio');
+        if (is_wp_error($upload)) {
+            return $upload;
+        }
+
+        return self::append_attachment_message(
+            $conv_id,
+            $current_user_id,
+            '',
+            array(
+                'audio_url'       => $upload['url'],
+                'audio_duration'  => max(0, (float) $duration),
+                'attachment_type' => 'voice',
+            ),
+            $client_msg_id,
+            'Voice message'
+        );
+    }
+
+    /**
+     * @param string $conv_id
+     * @param int    $current_user_id
+     * @param float  $lat
+     * @param float  $lng
+     * @param string $label
+     * @param string $client_msg_id
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function send_location($conv_id, $current_user_id, $lat, $lng, $label = '', $client_msg_id = '') {
+        $lat   = (float) $lat;
+        $lng   = (float) $lng;
+        $label = trim(wp_strip_all_tags((string) $label));
+
+        if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+            return new WP_Error('pax_team_invalid_location', 'Invalid coordinates.', array('status' => 400));
+        }
+
+        $content = $label !== '' ? $label : sprintf('%.5f, %.5f', $lat, $lng);
+        return self::append_attachment_message(
+            $conv_id,
+            $current_user_id,
+            $content,
+            array(
+                'location_lat'    => $lat,
+                'location_lng'    => $lng,
+                'location_label'  => $label,
+                'attachment_type' => 'location',
+            ),
+            $client_msg_id,
+            'Location'
+        );
+    }
+
+    /**
+     * @param string               $conv_id
+     * @param int                  $current_user_id
+     * @param string               $content
+     * @param array<string, mixed> $attachment_meta
+     * @param string               $client_msg_id
+     * @param string               $push_preview
+     * @return array<string, mixed>|WP_Error
+     */
+    private static function append_attachment_message(
+        $conv_id,
+        $current_user_id,
+        $content,
+        array $attachment_meta,
+        $client_msg_id,
+        $push_preview
+    ) {
+        return self::with_write_lock('attach:' . $conv_id, function () use (
+            $conv_id,
+            $current_user_id,
+            $content,
+            $attachment_meta,
+            $client_msg_id,
+            $push_preview
+        ) {
+            $all = self::all_conversations();
+            if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
+                return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
+            }
+
+            $conv = $all[$conv_id];
+            if (!self::user_in_conversation($conv, $current_user_id)) {
+                return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
+            }
+            if (!self::conversation_writable($conv, $current_user_id)) {
+                return new WP_Error(
+                    'pax_team_locked',
+                    'Conversation is awaiting approval or has been declined.',
+                    array('status' => 403)
+                );
+            }
+
+            if (!isset($conv['messages']) || !is_array($conv['messages'])) {
+                $conv['messages'] = array();
+            }
+            if (!isset($conv['read_seq']) || !is_array($conv['read_seq'])) {
+                $conv['read_seq'] = array();
+            }
+
+            $identity = PAXdesign_Chat_Live::resolve_employee_identity($current_user_id);
+            $extra = array_merge($attachment_meta, array(
+                'client_msg_id'     => $client_msg_id,
+                'sender_id'         => $current_user_id,
+                'sender_name'       => $identity ? $identity['name'] : wp_get_current_user()->display_name,
+                'sender_avatar'     => $identity ? $identity['avatar'] : '',
+                'sender_role'       => $identity ? $identity['role'] : '',
+                'participants'      => isset($conv['participants']) ? $conv['participants'] : array(),
+                'legacy_messages'   => $conv['messages'],
+                'lock_already_held' => true,
+            ));
+
+            $stored = PAXdesign_Message_Store::append(
+                $conv_id,
+                'admin',
+                $content,
+                $extra,
+                'team'
+            );
+            if (is_wp_error($stored)) {
+                return $stored;
+            }
+
+            $seq    = isset($stored['id']) ? absint($stored['id']) : 0;
+            $msg_id = $seq;
+
+            $already_projected = false;
+            foreach ($conv['messages'] as $projected) {
+                if (isset($projected['id']) && absint($projected['id']) === $msg_id) {
+                    $already_projected = true;
+                    break;
+                }
+            }
+            if (!$already_projected) {
+                $conv['messages'][] = $stored;
+            }
+            $conv['seq']        = $seq;
+            $conv['updated_at'] = gmdate('Y-m-d H:i:s');
+            $conv['read_seq'][(string) $current_user_id] = $seq;
+
+            $all[$conv_id] = $conv;
+            self::save_conversations($all);
+
+            $formatted = self::format_message($stored);
+
+            $recipient = self::other_participant($conv, $current_user_id);
+            if (empty($stored['_deduplicated']) && $recipient && class_exists('PAXdesign_APNS')) {
+                $sender_name = $identity ? $identity['name'] : wp_get_current_user()->display_name;
+                PAXdesign_APNS::notify_team_message(
+                    (int) $recipient->ID,
+                    $sender_name,
+                    $push_preview,
+                    $conv_id
+                );
+            }
+
+            return array(
+                'ok'      => true,
+                'message' => $formatted,
+                'seq'     => $seq,
+            );
+        });
+    }
+
+    /**
+     * @param array<string, mixed> $file
+     * @param string               $kind
+     * @return array<string, string>|WP_Error
+     */
+    private static function handle_media_upload($file, $kind) {
+        if (empty($file) || !empty($file['error'])) {
+            return new WP_Error('upload_failed', 'Upload failed.', array('status' => 400));
+        }
+
+        if ($kind === 'image') {
+            $allowed = array(
+                'jpg|jpeg|jpe' => 'image/jpeg',
+                'png'          => 'image/png',
+                'webp'         => 'image/webp',
+                'gif'          => 'image/gif',
+            );
+            $max_size = 8 * 1024 * 1024;
+        } else {
+            $allowed = array(
+                'm4a' => 'audio/mp4',
+                'mp4' => 'audio/mp4',
+                'aac' => 'audio/aac',
+                'caf' => 'audio/x-caf',
+            );
+            $max_size = 5 * 1024 * 1024;
+        }
+
+        $name  = isset($file['name']) ? (string) $file['name'] : ($kind === 'image' ? 'image.jpg' : 'voice.m4a');
+        $check = wp_check_filetype($name, $allowed);
+        if (empty($check['type']) || !in_array($check['type'], array_values($allowed), true)) {
+            return new WP_Error('invalid_type', 'Unsupported file type.', array('status' => 400));
+        }
+        if (!empty($file['size']) && (int) $file['size'] > $max_size) {
+            return new WP_Error('too_large', 'File is too large.', array('status' => 400));
+        }
+
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+
+        $upload = wp_handle_upload($file, array('test_form' => false, 'mimes' => $allowed));
+        if (!empty($upload['error'])) {
+            return new WP_Error('upload_failed', $upload['error'], array('status' => 500));
+        }
+
+        $url = (string) $upload['url'];
+        if ($kind === 'image' && !empty($upload['file'])) {
+            $url = self::optimize_team_image($upload['file'], $url);
+        }
+
+        return array(
+            'url'     => $url,
+            'preview' => $kind === 'image' ? 'Photo' : 'Voice message',
+        );
+    }
+
+    /**
+     * @param string $file_path
+     * @param string $url
+     * @return string
+     */
+    private static function optimize_team_image($file_path, $url) {
+        if (!function_exists('wp_get_image_editor')) {
+            return $url;
+        }
+        $editor = wp_get_image_editor($file_path);
+        if (is_wp_error($editor)) {
+            return $url;
+        }
+        $size = $editor->get_size();
+        if (!empty($size['width']) && (int) $size['width'] > 960) {
+            $editor->resize(960, null, false);
+            $saved = $editor->save($file_path);
+            if (!is_wp_error($saved) && !empty($saved['path'])) {
+                $uploads = wp_upload_dir();
+                if (!empty($uploads['basedir']) && !empty($uploads['baseurl'])) {
+                    $relative = ltrim(str_replace($uploads['basedir'], '', $saved['path']), '/');
+                    return trailingslashit($uploads['baseurl']) . $relative;
+                }
+            }
+        }
+        return $url;
+    }
+
+    /**
      * @param string $conv_id
      * @param int    $current_user_id
      * @param int    $seq
@@ -549,7 +837,15 @@ class PAXdesign_Team_Messaging {
         $last_preview = '';
         $last_role    = 'admin';
         if (is_array($last)) {
-            $last_preview = isset($last['content']) ? (string) $last['content'] : '';
+            if (!empty($last['image_url'])) {
+                $last_preview = 'Photo';
+            } elseif (!empty($last['audio_url'])) {
+                $last_preview = 'Voice message';
+            } elseif (isset($last['location_lat'], $last['location_lng'])) {
+                $last_preview = 'Location';
+            } else {
+                $last_preview = isset($last['content']) ? (string) $last['content'] : '';
+            }
             if (isset($last['sender_id']) && absint($last['sender_id']) !== absint($current_user_id)) {
                 $last_role = 'user';
             }
@@ -605,19 +901,25 @@ class PAXdesign_Team_Messaging {
         $is_self   = $sender_id === get_current_user_id();
 
         return array(
-            'id'            => isset($msg['id']) ? absint($msg['id']) : 0,
-            'client_msg_id' => isset($msg['client_msg_id']) ? sanitize_text_field($msg['client_msg_id']) : '',
-            'role'          => $is_self ? 'admin' : 'user',
-            'content'       => isset($msg['content']) ? (string) $msg['content'] : '',
-            'ts'            => isset($msg['ts']) ? absint($msg['ts']) : time(),
-            'image_url'     => '',
-            'reply_to'      => null,
-            'reaction'      => null,
-            'sender_id'     => $sender_id,
-            'sender_name'   => $identity ? $identity['name'] : '',
-            'sender_avatar' => $identity ? $identity['avatar'] : '',
-            'sender_role'   => $identity ? $identity['role'] : '',
-            'sender'        => $identity ? $identity['name'] : '',
+            'id'              => isset($msg['id']) ? absint($msg['id']) : 0,
+            'client_msg_id'   => isset($msg['client_msg_id']) ? sanitize_text_field($msg['client_msg_id']) : '',
+            'role'            => $is_self ? 'admin' : 'user',
+            'content'         => isset($msg['content']) ? (string) $msg['content'] : '',
+            'ts'              => isset($msg['ts']) ? absint($msg['ts']) : time(),
+            'image_url'       => !empty($msg['image_url']) ? esc_url_raw((string) $msg['image_url']) : '',
+            'audio_url'       => !empty($msg['audio_url']) ? esc_url_raw((string) $msg['audio_url']) : '',
+            'audio_duration'  => isset($msg['audio_duration']) ? (float) $msg['audio_duration'] : 0,
+            'attachment_type' => !empty($msg['attachment_type']) ? sanitize_key((string) $msg['attachment_type']) : '',
+            'location_lat'    => isset($msg['location_lat']) ? (float) $msg['location_lat'] : null,
+            'location_lng'    => isset($msg['location_lng']) ? (float) $msg['location_lng'] : null,
+            'location_label'  => !empty($msg['location_label']) ? sanitize_text_field((string) $msg['location_label']) : '',
+            'reply_to'        => null,
+            'reaction'        => null,
+            'sender_id'       => $sender_id,
+            'sender_name'     => $identity ? $identity['name'] : '',
+            'sender_avatar'   => $identity ? $identity['avatar'] : '',
+            'sender_role'     => $identity ? $identity['role'] : '',
+            'sender'          => $identity ? $identity['name'] : '',
         );
     }
 

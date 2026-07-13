@@ -1,4 +1,7 @@
 import SwiftUI
+#if !SIDELOAD
+import PhotosUI
+#endif
 
 struct TeamChatView: View {
     @EnvironmentObject private var auth: AuthStore
@@ -7,11 +10,20 @@ struct TeamChatView: View {
     @EnvironmentObject private var settings: AppSettingsStore
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var thread: TeamChatThreadModel
+    @ObservedObject private var voiceRecorder = TeamVoiceRecorderService.shared
 
     @State private var showDeleteConfirm = false
     @State private var deleteMode = "hide"
     @State private var isDeleting = false
     @State private var deleteFeedback: String?
+    @State private var imageViewer: TeamImageViewerItem?
+    #if !SIDELOAD
+    @State private var photoItem: PhotosPickerItem?
+    #endif
+    @State private var pendingImage: UIImage?
+    @State private var showImagePreview = false
+    @State private var isSendingLocation = false
+    @State private var mediaError: String?
 
     init(sessionId: String) {
         _thread = ObservedObject(wrappedValue: ChatThreadRegistry.shared.teamThread(sessionId: sessionId))
@@ -22,35 +34,34 @@ struct TeamChatView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        ChatMessageListView(
+            messages: thread.messages,
+            messagesRevision: thread.messagesRevision,
+            sessionId: thread.sessionId,
+            userTyping: thread.remoteTyping,
+            canReply: false,
+            handler: "team",
+            isLoading: thread.isLoadingMessages,
+            agentDisplayName: auth.profile?.displayName ?? L10n.ChatAgent,
+            customerDisplayName: thread.participantName.isEmpty ? L10n.TeamChatTitle : thread.participantName,
+            onReply: { _ in },
+            onCopy: { UIPasteboard.general.string = $0.content },
+            onDelete: { _ in },
+            onImageTap: { imageViewer = TeamImageViewerItem(url: $0) },
+            teamOtherReadSeq: thread.otherReadSeq,
+            teamFailedClientMsgIds: thread.failedClientMsgIds,
+            onRetryTeamMessage: { clientId in
+                Task { await thread.retryFailedMessage(clientId, auth: auth, teamCoordinator: teamCoordinator) }
+            },
+            deletingMessageIds: []
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .paxChatScreenBackground()
+        .safeAreaInset(edge: .top, spacing: 0) {
             if !thread.requestStatusLabel.isEmpty {
                 teamStatusBanner
             }
-
-            ChatMessageListView(
-                messages: thread.messages,
-                messagesRevision: thread.messagesRevision,
-                sessionId: thread.sessionId,
-                userTyping: thread.remoteTyping,
-                canReply: false,
-                handler: "team",
-                isLoading: thread.isLoadingMessages,
-                agentDisplayName: auth.profile?.displayName ?? L10n.ChatAgent,
-                customerDisplayName: thread.participantName.isEmpty ? L10n.TeamChatTitle : thread.participantName,
-                onReply: { _ in },
-                onCopy: { UIPasteboard.general.string = $0.content },
-                onDelete: { _ in },
-                onImageTap: { _ in },
-                teamOtherReadSeq: thread.otherReadSeq,
-                teamFailedClientMsgIds: thread.failedClientMsgIds,
-                onRetryTeamMessage: { clientId in
-                    Task { await thread.retryFailedMessage(clientId, auth: auth, teamCoordinator: teamCoordinator) }
-                },
-                deletingMessageIds: []
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .paxChatScreenBackground()
         .safeAreaInset(edge: .bottom, spacing: 0) {
             if thread.canSend {
                 teamComposer
@@ -60,8 +71,8 @@ struct TeamChatView: View {
                     .background(PAXBackground())
             }
         }
-        .navigationTitle(thread.participantName.isEmpty ? L10n.TeamChatTitle : thread.participantName)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
                 VStack(spacing: 2) {
@@ -127,6 +138,38 @@ struct TeamChatView: View {
         } message: {
             Text(deleteFeedback ?? "")
         }
+        .alert(L10n.TeamMediaErrorTitle, isPresented: Binding(
+            get: { mediaError != nil },
+            set: { if !$0 { mediaError = nil } }
+        )) {
+            Button(L10n.CommonOK, role: .cancel) { mediaError = nil }
+        } message: {
+            Text(mediaError ?? "")
+        }
+        .sheet(isPresented: $showImagePreview) {
+            if let pendingImage {
+                ImagePreviewSheet(
+                    image: pendingImage,
+                    caption: $thread.draft,
+                    onSend: {
+                        showImagePreview = false
+                        Task { await sendPendingImage(pendingImage) }
+                    },
+                    onCancel: {
+                        showImagePreview = false
+                        self.pendingImage = nil
+                    }
+                )
+            }
+        }
+        .sheet(item: $imageViewer) { item in
+            FullScreenImageView(url: item.url)
+        }
+        #if !SIDELOAD
+        .onChange(of: photoItem) { item in
+            Task { await handlePhotoSelection(item) }
+        }
+        #endif
         .onAppear {
             thread.onConversationRemoved = { dismiss() }
             thread.start(auth: auth)
@@ -303,22 +346,155 @@ struct TeamChatView: View {
     }
 
     private var teamComposer: some View {
-        HStack(spacing: 10) {
-            TextField(L10n.TeamChatPlaceholder, text: $thread.draft, axis: .vertical)
-                .lineLimit(1...6)
-                .layoutPriority(0)
+        VStack(spacing: 8) {
+            if voiceRecorder.isRecording {
+                HStack(spacing: 10) {
+                    PAXIcon("waveform", emphasis: .accent)
+                    Text(L10n.TeamRecordingVoice(voiceRecorder.elapsed))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(PAXTheme.accent)
+                    Spacer()
+                    Button(L10n.CommonCancel) {
+                        voiceRecorder.cancelRecording()
+                    }
+                    .font(.caption.weight(.semibold))
+                    Button(L10n.TeamSendVoice) {
+                        Task { await finishVoiceRecording() }
+                    }
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(PAXBrand.accent)
+                }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .frame(minHeight: 36)
-                .paxGlassCardStyle(cornerRadius: 22, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.08)
+            }
 
-            PAXSendButton(isEnabled: canSend) {
-                Task { await thread.send(auth: auth, teamCoordinator: teamCoordinator) }
+            HStack(alignment: .bottom, spacing: 10) {
+                Menu {
+                    #if !SIDELOAD
+                    PhotosPicker(selection: $photoItem, matching: .images) {
+                        Label { Text(L10n.TeamSendPhoto) } icon: { PAXIcon("photo.on.rectangle") }
+                    }
+                    #endif
+                    Button {
+                        Task { await beginVoiceRecording() }
+                    } label: {
+                        Label { Text(L10n.TeamRecordVoice) } icon: { PAXIcon("mic.fill") }
+                    }
+                    Button {
+                        Task { await shareCurrentLocation() }
+                    } label: {
+                        Label { Text(L10n.TeamShareLocation) } icon: { PAXIcon("location.fill") }
+                    }
+                } label: {
+                    PAXIcon("plus.circle", size: .card)
+                        .frame(width: 32, height: 32)
+                }
+                .disabled(thread.isSending || voiceRecorder.isRecording || isSendingLocation)
+
+                TextField(L10n.TeamChatPlaceholder, text: $thread.draft, axis: .vertical)
+                    .lineLimit(1...6)
+                    .layoutPriority(0)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .frame(minHeight: 36)
+                    .paxGlassCardStyle(cornerRadius: 22, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.08)
+                    .disabled(voiceRecorder.isRecording)
+
+                if voiceRecorder.isRecording {
+                    PAXIcon("mic.fill", emphasis: .accent)
+                        .frame(width: 36, height: 36)
+                } else {
+                    PAXSendButton(isEnabled: canSend) {
+                        Task { await thread.send(auth: auth, teamCoordinator: teamCoordinator) }
+                    }
+                }
             }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.82, borderOpacity: 0.44, shadowOpacity: 0.16)
+    }
+
+    #if !SIDELOAD
+    private func handlePhotoSelection(_ item: PhotosPickerItem?) async {
+        guard let item,
+              let raw = try? await item.loadTransferable(type: Data.self),
+              let image = UIImage(data: raw) else { return }
+        await MainActor.run {
+            pendingImage = image
+            showImagePreview = true
+            photoItem = nil
+        }
+    }
+    #endif
+
+    private func sendPendingImage(_ image: UIImage) async {
+        guard let prepared = ImageUploadPreprocessor.prepareForUpload(image) else {
+            pendingImage = nil
+            return
+        }
+        let caption = thread.draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        thread.draft = ""
+        await thread.sendImage(
+            auth: auth,
+            teamCoordinator: teamCoordinator,
+            imageData: prepared.data,
+            filename: prepared.filename,
+            caption: caption
+        )
+        pendingImage = nil
+    }
+
+    private func beginVoiceRecording() async {
+        let granted = await voiceRecorder.requestPermission()
+        guard granted else {
+            mediaError = L10n.TeamMicrophoneDenied
+            return
+        }
+        do {
+            try voiceRecorder.startRecording()
+        } catch {
+            mediaError = error.localizedDescription
+        }
+    }
+
+    private func finishVoiceRecording() async {
+        do {
+            let recording = try voiceRecorder.stopRecording()
+            await thread.sendAudio(
+                auth: auth,
+                teamCoordinator: teamCoordinator,
+                audioData: recording.data,
+                filename: recording.filename,
+                duration: recording.duration
+            )
+        } catch {
+            mediaError = error.localizedDescription
+        }
+    }
+
+    private func shareCurrentLocation() async {
+        isSendingLocation = true
+        defer { isSendingLocation = false }
+        guard let coordinate = await LocationCaptureService.shared.captureCurrentLocation() else {
+            mediaError = L10n.TeamLocationDenied
+            return
+        }
+        await thread.sendLocation(
+            auth: auth,
+            teamCoordinator: teamCoordinator,
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude
+        )
+    }
+}
+
+private struct TeamImageViewerItem: Identifiable {
+    let id = UUID()
+    let url: URL
+
+    init(url: URL) {
+        self.url = url
     }
 }
 

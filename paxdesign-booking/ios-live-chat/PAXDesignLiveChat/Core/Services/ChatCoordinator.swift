@@ -408,7 +408,6 @@ final class ChatCoordinator: ObservableObject {
         do {
             try await api.takeover(session.sessionId)
             acknowledgeIncomingRequest(session.sessionId)
-            activeSessionId = session.sessionId
             await refreshSessions(auth: auth)
             PAXHaptics.success()
         } catch {
@@ -458,19 +457,17 @@ final class ChatCoordinator: ObservableObject {
         }
     }
 
-    func handlePush(sessionId: String, type: String, auth: AuthStore, payload: PushService.PushPayload? = nil) async {
+    func handlePush(sessionId: String, type: String, auth: AuthStore, payload: PushService.PushPayload? = nil, shouldNavigate: Bool = false) async {
         let event = payload?.event ?? type
         switch event {
         case "customer_waiting", "live_request":
             await presentLiveRequest(sessionId: sessionId, auth: auth, payload: payload)
         case "new_chat_started", "new_chat", "new_customer_message", "message":
             await refreshSessions(auth: auth)
-            if event == "new_customer_message" || type == "message" {
+            if shouldNavigate, event == "new_customer_message" || type == "message" {
                 activeSessionId = sessionId
-                postSessionSync(sessionId: sessionId)
-            } else {
-                postSessionSync(sessionId: sessionId)
             }
+            postSessionSync(sessionId: sessionId)
         case "assigned_chat_updated", "new_lead_contact", "missed_chat", "link_scan_attention":
             await refreshSessions(auth: auth)
             postSessionSync(sessionId: sessionId)
@@ -483,15 +480,15 @@ final class ChatCoordinator: ObservableObject {
                 await presentLiveRequest(sessionId: sessionId, auth: auth, payload: payload)
             case "new_chat", "message":
                 await refreshSessions(auth: auth)
-                if type == "message" {
+                if shouldNavigate, type == "message" {
                     activeSessionId = sessionId
-                    postSessionSync(sessionId: sessionId)
-                } else {
-                    postSessionSync(sessionId: sessionId)
                 }
+                postSessionSync(sessionId: sessionId)
             default:
                 await refreshSessions(auth: auth)
-                activeSessionId = sessionId
+                if shouldNavigate {
+                    activeSessionId = sessionId
+                }
                 postSessionSync(sessionId: sessionId)
             }
         }
