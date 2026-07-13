@@ -35,8 +35,6 @@ enum PAXAPNsEnvironment {
     }
 
     private static func readEntitlement(_ key: String) -> String? {
-        guard let task = SecTaskCreateFromSelf(nil) else { return nil }
-        guard let value = SecTaskCopyValueForEntitlement(task, key as CFString) else { return nil }
-        return value as? String
+        PAXCopyEntitlement(key)
     }
 }
