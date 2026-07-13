@@ -349,7 +349,8 @@ struct TeamChatView: View {
         VStack(spacing: 8) {
             if voiceRecorder.isRecording {
                 HStack(spacing: 10) {
-                    PAXIcon("waveform", emphasis: .accent)
+                    PAXIcon("waveform", emphasis: .primary)
+                        .foregroundStyle(PAXTheme.accent)
                     Text(L10n.TeamRecordingVoice(voiceRecorder.elapsed))
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(PAXTheme.accent)
@@ -401,7 +402,8 @@ struct TeamChatView: View {
                     .disabled(voiceRecorder.isRecording)
 
                 if voiceRecorder.isRecording {
-                    PAXIcon("mic.fill", emphasis: .accent)
+                    PAXIcon("mic.fill", emphasis: .primary)
+                        .foregroundStyle(PAXTheme.accent)
                         .frame(width: 36, height: 36)
                 } else {
                     PAXSendButton(isEnabled: canSend) {
