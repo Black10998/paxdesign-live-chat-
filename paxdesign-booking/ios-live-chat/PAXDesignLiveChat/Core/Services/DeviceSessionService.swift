@@ -88,26 +88,30 @@ final class DeviceSessionService: ObservableObject {
         tokenObservationTask = nil
         observedAuth = nil
         lastRegisteredToken = nil
+        PushRegistrationCoordinator.reset()
     }
 
-    func registerWithPush(auth: AuthStore) async {
+    func registerWithPush(auth: AuthStore, reason: PushRegistrationCoordinator.RegistrationReason = .login) async {
         guard PushService.shared.canAttemptRegistration || PushService.shared.deviceToken != nil else {
             await registerSessionWithoutToken(auth: auth)
-            if let reason = PushService.shared.registrationBlockedReason {
+            if let blockedReason = PushService.shared.registrationBlockedReason {
                 PushDiagnosticsStore.shared.recordServerRegistration(
                     success: false,
                     tokenPrefix: nil,
-                    error: reason,
+                    error: blockedReason,
                     accepted: false
                 )
             }
             return
         }
-        await registerTokenWithServer(auth: auth)
+        await PushRegistrationCoordinator.registerWithServer(auth: auth, reason: reason)
         await sendHeartbeat(auth: auth)
     }
 
-    private func registerTokenWithServer(auth: AuthStore) async {
+    func runRegisterTokenWithServer(
+        auth: AuthStore,
+        reason: PushRegistrationCoordinator.RegistrationReason
+    ) async {
         guard auth.isLoggedIn, let api = auth.api else { return }
 
         PushDiagnosticsStore.shared.recordServerRegistrationPending()
@@ -117,7 +121,21 @@ final class DeviceSessionService: ObservableObject {
             return
         }
 
-        let tokenResult = await PushService.shared.ensureDeviceToken(maxAttempts: 2, perAttemptTimeout: 20)
+        let maxAttempts = reason == .manualRepair ? 2 : 1
+        let tokenResult: Result<String, APNsRegistrationFailure>
+        if PushRegistrationCoordinator.shouldAttemptAutomaticApns(reason: reason) {
+            tokenResult = await PushService.shared.ensureDeviceToken(
+                maxAttempts: maxAttempts,
+                perAttemptTimeout: 20,
+                reason: reason
+            )
+        } else if let existing = PushService.shared.deviceToken, !existing.isEmpty {
+            tokenResult = .success(existing)
+        } else {
+            await registerSessionWithoutToken(auth: auth)
+            return
+        }
+
         let token: String
         switch tokenResult {
         case .success(let resolvedToken):
@@ -143,7 +161,8 @@ final class DeviceSessionService: ObservableObject {
 
         var lastError: Error?
         var accepted = false
-        for attempt in 1...3 {
+        let serverAttempts = reason == .manualRepair ? 2 : 1
+        for attempt in 1...serverAttempts {
             do {
                 let response = try await api.registerAPNs(
                     token: token,
@@ -160,8 +179,9 @@ final class DeviceSessionService: ObservableObject {
                 break
             } catch {
                 lastError = error
-                if attempt < 3 {
-                    try? await Task.sleep(nanoseconds: UInt64(attempt) * 1_000_000_000)
+                if attempt < serverAttempts {
+                    let backoff = APNsRegistrationPolicy.retryCooldown(afterFailures: attempt)
+                    try? await Task.sleep(nanoseconds: UInt64(backoff * 1_000_000_000))
                 }
             }
         }
@@ -216,10 +236,12 @@ final class DeviceSessionService: ObservableObject {
     private func sendHeartbeat(auth: AuthStore) async {
         guard auth.isLoggedIn, let api = auth.api else { return }
 
-        if PushService.shared.deviceToken == nil, PushService.shared.canAttemptRegistration {
-            _ = await PushService.shared.ensureDeviceToken(maxAttempts: 1, perAttemptTimeout: 15)
-        } else if PushService.shared.deviceToken != lastRegisteredToken, PushService.shared.deviceToken != nil {
-            await registerTokenWithServer(auth: auth)
+        if PushService.shared.deviceToken == nil,
+           PushRegistrationCoordinator.shouldAttemptAutomaticApns(reason: .heartbeat) {
+            await PushRegistrationCoordinator.registerWithServer(auth: auth, reason: .heartbeat)
+        } else if PushService.shared.deviceToken != lastRegisteredToken,
+                  PushService.shared.deviceToken != nil {
+            await PushRegistrationCoordinator.registerWithServer(auth: auth, reason: .tokenReceived)
         }
 
         do {
@@ -255,7 +277,7 @@ final class DeviceSessionService: ObservableObject {
             if token != lastSeen {
                 lastSeen = token
                 if token != nil {
-                    await registerTokenWithServer(auth: auth)
+                    await PushRegistrationCoordinator.registerWithServer(auth: auth, reason: .tokenReceived)
                 }
             }
         }

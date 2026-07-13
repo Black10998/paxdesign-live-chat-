@@ -848,24 +848,11 @@ final class LiveChatAPI {
         }
         let json = try JSONSerialization.data(withJSONObject: payload)
         let request = authRequest(url: url, method: "POST", body: json)
-        let (data, response) = try await session.data(for: request)
-        guard let http = response as? HTTPURLResponse else {
-            throw LiveChatAPIError.server("Keine Server-Antwort.")
+        do {
+            return try await perform(request, endpoint: "push-apns-register", as: APNsRegisterResponse.self)
+        } catch LiveChatAPIError.decoding {
+            return APNsRegisterResponse(ok: true, pushRegistered: true, tokenStored: true, error: nil)
         }
-        if http.statusCode == 401 || http.statusCode == 403 {
-            if let message = wpErrorMessage(from: data) {
-                throw LiveChatAPIError.server(message)
-            }
-            throw LiveChatAPIError.unauthorized
-        }
-        guard (200..<300).contains(http.statusCode) else {
-            let message = wpErrorMessage(from: data) ?? "HTTP \(http.statusCode)"
-            throw LiveChatAPIError.rejected(message)
-        }
-        if let decoded = try? JSONDecoder().decode(APNsRegisterResponse.self, from: data) {
-            return decoded
-        }
-        return APNsRegisterResponse(ok: true, pushRegistered: true, tokenStored: true, error: nil)
     }
 
     func unregisterAPNs(token: String) async throws {

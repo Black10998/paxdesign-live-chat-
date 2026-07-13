@@ -39,7 +39,7 @@ enum PAXAPNsEnvironment {
         #if DEBUG
         return "development"
         #else
-        return "production"
+        return "missing"
         #endif
     }
 

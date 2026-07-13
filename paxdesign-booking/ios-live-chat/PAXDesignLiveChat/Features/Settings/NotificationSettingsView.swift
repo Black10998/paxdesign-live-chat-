@@ -49,8 +49,7 @@ struct NotificationSettingsView: View {
                                 } else if permissions.notificationStatus == .authorized
                                             || permissions.notificationStatus == .provisional
                                             || permissions.notificationStatus == .ephemeral {
-                                    _ = await PushService.shared.ensureDeviceToken()
-                                    await PushService.shared.registerTokenWithBackend(auth: auth)
+                                    await DeviceSessionService.shared.registerWithPush(auth: auth, reason: .settings)
                                 }
                             }
                         }
@@ -80,11 +79,11 @@ struct NotificationSettingsView: View {
         }
         .onChange(of: permissions.notificationStatus) { _ in
             Task {
+                guard PushService.shared.canAttemptRegistration || PushService.shared.deviceToken != nil else { return }
                 if permissions.notificationStatus == .authorized
                     || permissions.notificationStatus == .provisional
                     || permissions.notificationStatus == .ephemeral {
-                    _ = await PushService.shared.ensureDeviceToken()
-                    await PushService.shared.registerTokenWithBackend(auth: auth)
+                    await DeviceSessionService.shared.registerWithPush(auth: auth, reason: .settings)
                 }
             }
         }
@@ -108,7 +107,7 @@ struct NotificationSettingsView: View {
         defer { isRequestingPermission = false }
         let granted = await permissions.requestNotifications(push: push)
         if granted {
-            await push.registerTokenWithBackend(auth: auth)
+            await push.registerTokenWithBackend(auth: auth, reason: .userAction)
         }
     }
 }

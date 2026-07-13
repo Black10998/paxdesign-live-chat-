@@ -150,10 +150,14 @@ final class PushDiagnosticsStore: ObservableObject {
     func repairRegistration(auth: AuthStore, push: PushService) async {
         isRefreshing = true
         defer { isRefreshing = false }
+        guard PAXAPNsEnvironment.hasPushEntitlement else {
+            await refreshLocalState(push: push)
+            return
+        }
         push.resetRegistrationBackoff()
-        _ = await push.ensureDeviceToken(maxAttempts: 2, perAttemptTimeout: 25)
+        _ = await push.ensureDeviceToken(maxAttempts: 2, perAttemptTimeout: 25, reason: .manualRepair)
         if auth.isLoggedIn {
-            await push.registerTokenWithBackend(auth: auth)
+            await DeviceSessionService.shared.registerWithPush(auth: auth, reason: .manualRepair)
         }
         await refreshLocalState(push: push)
     }

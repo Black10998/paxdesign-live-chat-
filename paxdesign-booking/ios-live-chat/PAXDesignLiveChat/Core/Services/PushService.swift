@@ -121,8 +121,11 @@ final class PushService: NSObject, ObservableObject {
         }
     }
 
-    func registerTokenWithBackend(auth: AuthStore) async {
-        await DeviceSessionService.shared.registerWithPush(auth: auth)
+    func registerTokenWithBackend(
+        auth: AuthStore,
+        reason: PushRegistrationCoordinator.RegistrationReason = .userAction
+    ) async {
+        await DeviceSessionService.shared.registerWithPush(auth: auth, reason: reason)
     }
 
     func unregisterTokenFromBackend(auth: AuthStore) async {
@@ -175,6 +178,7 @@ final class PushService: NSObject, ObservableObject {
             registrationBlocked = true
             registrationBlockedReason = detail
             registrationCooldownUntil = Date().addingTimeInterval(APNsRegistrationPolicy.permanentFailureCooldown)
+            registrationRequestCount = 0
             if APNsRegistrationPolicy.isPermanentFailureMessage(detail) {
                 PAXPushEntitlementState.runtimeMissing = true
             }
@@ -190,6 +194,7 @@ final class PushService: NSObject, ObservableObject {
             registrationBlocked = true
             registrationBlockedReason = failure.detailedMessage
             registrationCooldownUntil = Date().addingTimeInterval(APNsRegistrationPolicy.permanentFailureCooldown)
+            registrationRequestCount = 0
             if case .iosError(_, _, let message) = failure,
                APNsRegistrationPolicy.isPermanentFailureMessage(message) {
                 PAXPushEntitlementState.runtimeMissing = true
@@ -201,6 +206,7 @@ final class PushService: NSObject, ObservableObject {
     }
 
     func resetRegistrationBackoff() {
+        guard PAXAPNsEnvironment.hasPushEntitlement else { return }
         registrationBlocked = false
         registrationBlockedReason = nil
         registrationCooldownUntil = nil
@@ -215,13 +221,21 @@ final class PushService: NSObject, ObservableObject {
 
     /// Full APNs registration lifecycle: permission check → registerForRemoteNotifications → wait for token or iOS error.
     @discardableResult
-    func ensureDeviceToken(maxAttempts: Int = 3, perAttemptTimeout: TimeInterval = 20) async -> Result<String, APNsRegistrationFailure> {
+    func ensureDeviceToken(
+        maxAttempts: Int = 1,
+        perAttemptTimeout: TimeInterval = 20,
+        reason: PushRegistrationCoordinator.RegistrationReason = .userAction
+    ) async -> Result<String, APNsRegistrationFailure> {
         if let inFlight = registrationInFlight {
             return await inFlight.value
         }
 
         let task = Task { @MainActor in
-            await self.runEnsureDeviceToken(maxAttempts: maxAttempts, perAttemptTimeout: perAttemptTimeout)
+            await self.runEnsureDeviceToken(
+                maxAttempts: maxAttempts,
+                perAttemptTimeout: perAttemptTimeout,
+                reason: reason
+            )
         }
         registrationInFlight = task
         let result = await task.value
@@ -229,7 +243,11 @@ final class PushService: NSObject, ObservableObject {
         return result
     }
 
-    private func runEnsureDeviceToken(maxAttempts: Int, perAttemptTimeout: TimeInterval) async -> Result<String, APNsRegistrationFailure> {
+    private func runEnsureDeviceToken(
+        maxAttempts: Int,
+        perAttemptTimeout: TimeInterval,
+        reason: PushRegistrationCoordinator.RegistrationReason
+    ) async -> Result<String, APNsRegistrationFailure> {
         PushDiagnosticsStore.shared.recordRegistrationAttemptStarted()
 
         #if targetEnvironment(simulator)
@@ -243,12 +261,21 @@ final class PushService: NSObject, ObservableObject {
             let message = "Push entitlement missing from signed app (aps-environment). Install a TestFlight build with Push Notifications enabled."
             registrationBlocked = true
             registrationBlockedReason = message
+            registrationRequestCount = 0
             PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: message)
             return .failure(.iosError(domain: "Entitlements", code: -1, message: message))
         }
 
         if registrationBlocked, deviceToken == nil {
             let message = registrationBlockedReason ?? "APNs registration paused after a permanent failure."
+            PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: message)
+            return .failure(.iosError(domain: "APNs", code: -1, message: message))
+        }
+
+        if reason != .manualRepair,
+           !PushRegistrationCoordinator.shouldAttemptAutomaticApns(reason: reason),
+           deviceToken == nil {
+            let message = "APNs registration waiting for retry cooldown."
             PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: message)
             return .failure(.iosError(domain: "APNs", code: -1, message: message))
         }
@@ -275,10 +302,11 @@ final class PushService: NSObject, ObservableObject {
             return .success(token)
         }
 
-        let attempts = max(1, maxAttempts)
+        let attempts = max(1, min(maxAttempts, reason == .manualRepair ? 2 : 1))
         for attempt in 1...attempts {
             lastIOSRegistrationError = nil
             apnsDidRespond = false
+            PushRegistrationCoordinator.noteAutomaticApnsAttempt()
             recordRegistrationRequest()
 
             UIApplication.shared.registerForRemoteNotifications()
@@ -412,7 +440,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
         Task { @MainActor in
             if PushService.shared.canAttemptRegistration {
-                await PushService.shared.ensureDeviceToken(maxAttempts: 1, perAttemptTimeout: 25)
+                await PushService.shared.ensureDeviceToken(maxAttempts: 1, perAttemptTimeout: 25, reason: .login)
             }
         }
         return true
@@ -444,7 +472,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         Task { @MainActor in
             PushService.shared.updateDeviceToken(deviceToken)
             if AuthStore.shared.isLoggedIn {
-                await PushService.shared.registerTokenWithBackend(auth: AuthStore.shared)
+                await DeviceSessionService.shared.registerWithPush(
+                    auth: AuthStore.shared,
+                    reason: .tokenReceived
+                )
             }
         }
     }

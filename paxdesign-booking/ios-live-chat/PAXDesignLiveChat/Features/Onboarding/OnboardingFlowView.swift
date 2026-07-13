@@ -537,7 +537,6 @@ struct OnboardingFlowView: View {
             try? await Task.sleep(nanoseconds: 300_000_000)
             await permissions.refreshStatuses()
         case .authorized, .provisional, .ephemeral:
-            _ = await PushService.shared.ensureDeviceToken()
             break
         case .denied:
             break
@@ -545,7 +544,7 @@ struct OnboardingFlowView: View {
             break
         }
         if notificationsGranted {
-            await push.registerTokenWithBackend(auth: auth)
+            await push.registerTokenWithBackend(auth: auth, reason: .userAction)
         }
     }
 
@@ -637,7 +636,7 @@ struct OnboardingFlowView: View {
                 auth.applyProfileUpdate(updatedProfile)
             }
             settings.onboardingCompleted = true
-            await push.registerTokenWithBackend(auth: auth)
+            await push.registerTokenWithBackend(auth: auth, reason: .userAction)
             PAXHaptics.success()
             onComplete()
         } catch {
@@ -651,8 +650,7 @@ struct OnboardingFlowView: View {
         await permissions.refreshStatuses()
         locationPermission.refreshStatus()
         if mode == .postLogin, notificationsGranted {
-            _ = await PushService.shared.ensureDeviceToken()
-            await push.registerTokenWithBackend(auth: auth)
+            await push.registerTokenWithBackend(auth: auth, reason: .userAction)
         }
     }
 

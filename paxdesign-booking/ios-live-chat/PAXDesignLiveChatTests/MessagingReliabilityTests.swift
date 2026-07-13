@@ -173,15 +173,15 @@ final class MessagingReliabilityTests: XCTestCase {
         AppRefreshPolicy.update(liveCount: 0, openChat: true)
         XCTAssertEqual(AppRefreshPolicy.chatThreadIntervalLive, 5_000_000_000)
         XCTAssertEqual(AppRefreshPolicy.teamThreadIntervalLive, 5_000_000_000)
-        XCTAssertEqual(AppRefreshPolicy.sessionListInterval, 2_000_000_000)
-        XCTAssertEqual(AppRefreshPolicy.teamListInterval, 2_000_000_000)
+        XCTAssertEqual(AppRefreshPolicy.sessionListInterval, 3_000_000_000)
+        XCTAssertEqual(AppRefreshPolicy.teamListInterval, 3_000_000_000)
     }
 
     func testIdlePollingIntervalsReducedVersusAggressiveBaseline() {
         AppRefreshPolicy.update(scenePhase: .active)
         AppRefreshPolicy.update(liveCount: 0, openChat: false)
-        XCTAssertGreaterThanOrEqual(AppRefreshPolicy.sessionListInterval, 4_000_000_000)
-        XCTAssertGreaterThanOrEqual(AppRefreshPolicy.teamListInterval, 4_000_000_000)
+        XCTAssertGreaterThanOrEqual(AppRefreshPolicy.sessionListInterval, 6_000_000_000)
+        XCTAssertGreaterThanOrEqual(AppRefreshPolicy.teamListInterval, 6_000_000_000)
     }
 
     func testNetworkRequestTrackerCountsEndpoints() async {
@@ -249,5 +249,24 @@ final class MessagingReliabilityTests: XCTestCase {
         XCTAssertEqual(AppRefreshPolicy.sessionListInterval, 60_000_000_000)
         XCTAssertEqual(AppRefreshPolicy.teamListInterval, 60_000_000_000)
         AppRefreshPolicy.sseHealthy = false
+    }
+
+    func testPushRegistrationCoordinatorEnforcesAutomaticSpacing() async {
+        PushRegistrationCoordinator.reset()
+        XCTAssertTrue(PushRegistrationCoordinator.shouldAttemptAutomaticApns(reason: .login))
+        PushRegistrationCoordinator.noteAutomaticApnsAttempt()
+        XCTAssertFalse(PushRegistrationCoordinator.shouldAttemptAutomaticApns(reason: .foreground))
+        XCTAssertFalse(PushRegistrationCoordinator.shouldAttemptAutomaticApns(reason: .heartbeat))
+        XCTAssertTrue(PushRegistrationCoordinator.shouldAttemptAutomaticApns(reason: .manualRepair))
+        XCTAssertTrue(PushRegistrationCoordinator.shouldAttemptAutomaticApns(reason: .tokenReceived))
+    }
+
+    func testReleaseBuildWithoutSignedEntitlementIsBlocked() {
+        #if !DEBUG
+        // Release builds without PAXSignedAPSEnvironment mirror must not claim push entitlement.
+        if Bundle.main.infoDictionary?["PAXSignedAPSEnvironment"] == nil {
+            XCTAssertFalse(PAXAPNsEnvironment.hasPushEntitlement)
+        }
+        #endif
     }
 }

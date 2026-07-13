@@ -40,7 +40,7 @@ struct NotificationPermissionPromptView: View {
                             defer { isRequesting = false }
                             let granted = await permissions.requestNotifications(push: push)
                             if granted {
-                                await push.registerTokenWithBackend(auth: AuthStore.shared)
+                                await push.registerTokenWithBackend(auth: AuthStore.shared, reason: .userAction)
                             }
                         }
                     }

@@ -148,7 +148,7 @@ struct PushDiagnosticsView: View {
         await diagnostics.refreshWithRegistration(auth: auth, push: push)
         await permissions.refreshStatuses()
         if auth.isLoggedIn {
-            await DeviceSessionService.shared.registerWithPush(auth: auth)
+            await DeviceSessionService.shared.registerWithPush(auth: auth, reason: .userAction)
             await diagnostics.refreshLocalOnly(push: push)
         }
     }

@@ -33,7 +33,7 @@ final class NetworkCircuitBreaker {
     private var consecutiveRateLimitHits = 0
 
     /// Hard cap: max REST requests per rolling second.
-    var maxRequestsPerSecond = 3
+    var maxRequestsPerSecond = 2
     /// Minimum pause after first edge 403/429.
     var minOpenDuration: TimeInterval = 300
     var maxOpenDuration: TimeInterval = 600

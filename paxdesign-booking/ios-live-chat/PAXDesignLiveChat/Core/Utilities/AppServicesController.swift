@@ -33,16 +33,7 @@ enum AppServicesController {
         Task(priority: .utility) {
             await PermissionCoordinator.shared.refreshStatuses()
             #if !SIDELOAD
-            let permissions = PermissionCoordinator.shared
-            switch permissions.notificationStatus {
-            case .authorized, .provisional, .ephemeral:
-                if PushService.shared.canAttemptRegistration || PushService.shared.deviceToken != nil {
-                    _ = await PushService.shared.ensureDeviceToken(maxAttempts: 1, perAttemptTimeout: 20)
-                }
-            default:
-                break
-            }
-            await DeviceSessionService.shared.registerWithPush(auth: auth)
+            await DeviceSessionService.shared.registerWithPush(auth: auth, reason: .login)
             #endif
             await PlatformSyncService.shared.sync(auth: auth)
             #if !SIDELOAD
@@ -69,6 +60,7 @@ enum AppServicesController {
         AppRefreshPolicy.sseHealthy = false
         #if !SIDELOAD
         DeviceSessionService.shared.stop()
+        PushRegistrationCoordinator.reset()
         #endif
         AppLockService.shared.resetOnLogout()
     }

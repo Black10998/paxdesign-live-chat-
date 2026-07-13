@@ -65,9 +65,8 @@ final class PermissionCoordinator: ObservableObject {
         UserDefaults.standard.set(true, forKey: Keys.onboardingDone)
         showNotificationPrompt = false
         if granted || notificationStatus == .authorized || notificationStatus == .provisional || notificationStatus == .ephemeral {
-            _ = await push.ensureDeviceToken()
             if AuthStore.shared.isLoggedIn {
-                await push.registerTokenWithBackend(auth: AuthStore.shared)
+                await push.registerTokenWithBackend(auth: AuthStore.shared, reason: .userAction)
             }
         }
         return granted || notificationStatus == .authorized || notificationStatus == .provisional

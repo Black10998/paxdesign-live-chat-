@@ -5,7 +5,7 @@ import Foundation
 enum ForegroundRefreshCoordinator {
     private static var lastRefresh: Date?
     private static var task: Task<Void, Never>?
-    private static let minimumInterval: TimeInterval = 8
+    private static let minimumInterval: TimeInterval = 15
 
     static func schedule(
         auth: AuthStore,
@@ -33,20 +33,6 @@ enum ForegroundRefreshCoordinator {
 
             await teamCoordinator.refresh(auth: auth, mode: .lightweight)
             await permissions.refreshStatuses()
-
-            #if !SIDELOAD
-            if permissions.notificationStatus == .authorized
-                || permissions.notificationStatus == .provisional
-                || permissions.notificationStatus == .ephemeral,
-               PushService.shared.canAttemptRegistration || PushService.shared.deviceToken != nil {
-                if PushService.shared.deviceToken == nil {
-                    _ = await PushService.shared.ensureDeviceToken(maxAttempts: 1, perAttemptTimeout: 15)
-                }
-                if PushService.shared.deviceToken != nil {
-                    await DeviceSessionService.shared.registerWithPush(auth: auth)
-                }
-            }
-            #endif
 
             Task(priority: .utility) {
                 await PlatformSyncService.shared.sync(auth: auth)
