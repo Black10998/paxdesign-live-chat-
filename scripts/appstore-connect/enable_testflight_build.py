@@ -254,17 +254,39 @@ def enable_build_beta_detail(client: ASCClient, build_id: str) -> None:
         warn("No buildBetaDetail to patch")
         return
     detail_id = detail["id"]
-    client.patch(
-        f"/buildBetaDetails/{detail_id}",
-        {
-            "data": {
-                "type": "buildBetaDetails",
-                "id": detail_id,
-                "attributes": {"autoNotifyEnabled": True},
-            }
-        },
-    )
-    print("Enabled autoNotifyEnabled on buildBetaDetail")
+    attrs = detail.get("attributes") or {}
+    if attrs.get("autoNotifyEnabled") is True:
+        print("autoNotifyEnabled already true on buildBetaDetail")
+        return
+
+    for attempt in range(1, 4):
+        status, payload = client.request(
+            "PATCH",
+            f"/buildBetaDetails/{detail_id}",
+            body={
+                "data": {
+                    "type": "buildBetaDetails",
+                    "id": detail_id,
+                    "attributes": {"autoNotifyEnabled": True},
+                }
+            },
+            allow_error=True,
+        )
+        if status in {200, 201}:
+            print("Enabled autoNotifyEnabled on buildBetaDetail")
+            return
+        if status >= 500 and attempt < 3:
+            warn(
+                f"buildBetaDetails PATCH returned {status}; retrying ({attempt}/3): "
+                f"{json.dumps(payload)}"
+            )
+            time.sleep(5 * attempt)
+            continue
+        warn(
+            f"Could not enable autoNotifyEnabled ({status}); continuing with group assignment: "
+            f"{json.dumps(payload)}"
+        )
+        return
 
 
 def find_internal_group(client: ASCClient, app_id: str) -> dict[str, Any]:
