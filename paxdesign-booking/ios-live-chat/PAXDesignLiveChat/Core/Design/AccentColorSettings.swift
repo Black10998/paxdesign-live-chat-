@@ -59,7 +59,7 @@ extension PAXThemePalette {
             accentSecondary: accentSecondary,
             success: success,
             danger: danger,
-            adminBubble: adminBubble,
+            adminBubble: color.opacity(0.9),
             glowPrimary: color,
             glowSecondary: color.opacity(0.65),
             glowTertiary: color.opacity(0.35),

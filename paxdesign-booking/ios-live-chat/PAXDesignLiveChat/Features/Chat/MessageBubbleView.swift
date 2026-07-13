@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct MessageBubbleView: View {
+    @Environment(\.paxPalette) private var palette
+
     let message: LiveMessage
     let quotedMessage: LiveMessage?
     let canReply: Bool
@@ -84,9 +86,22 @@ struct MessageBubbleView: View {
 
     @ViewBuilder
     private var bubbleContent: some View {
+        if message.isVoiceMessage {
+            VoiceMessageBubbleView(message: message, isOutgoing: isOutgoing)
+                .frame(
+                    maxWidth: min(280, UIScreen.main.bounds.width * PAXMessageStyle.maxBubbleWidthRatio),
+                    alignment: isOutgoing ? .trailing : .leading
+                )
+        } else {
+            standardBubbleContent
+        }
+    }
+
+    @ViewBuilder
+    private var standardBubbleContent: some View {
         HStack(alignment: .bottom, spacing: 0) {
             if !isOutgoing {
-                BubbleTail(isOutgoing: false)
+                BubbleTail(isOutgoing: false, fill: bubbleFill)
             }
 
             VStack(alignment: .leading, spacing: 5) {
@@ -104,10 +119,6 @@ struct MessageBubbleView: View {
                     CachedChatImage(url: url) {
                         onImageTap(url)
                     }
-                }
-
-                if message.isVoiceMessage {
-                    VoiceMessageBubbleView(message: message, isOutgoing: isOutgoing)
                 }
 
                 if message.isLocationMessage {
@@ -157,7 +168,7 @@ struct MessageBubbleView: View {
             )
 
             if isOutgoing {
-                BubbleTail(isOutgoing: true)
+                BubbleTail(isOutgoing: true, fill: bubbleFill)
             }
         }
     }
@@ -171,16 +182,17 @@ struct MessageBubbleView: View {
         if message.isInPlaceWarning {
             return Color(red: 0.97, green: 0.98, blue: 0.99)
         }
-        return PAXMessageStyle.bubbleColor(role: message.role, isOutgoing: isOutgoing)
+        return PAXMessageStyle.bubbleColor(role: message.role, isOutgoing: isOutgoing, palette: palette)
     }
 }
 
 private struct BubbleTail: View {
     let isOutgoing: Bool
+    let fill: Color
 
     var body: some View {
         BubbleTailShape(isOutgoing: isOutgoing)
-            .fill(PAXMessageStyle.bubbleColor(role: isOutgoing ? "admin" : "user", isOutgoing: isOutgoing))
+            .fill(fill)
             .frame(width: PAXMessageStyle.tailWidth, height: PAXMessageStyle.tailHeight)
             .offset(x: isOutgoing ? 1 : -1, y: 2)
     }

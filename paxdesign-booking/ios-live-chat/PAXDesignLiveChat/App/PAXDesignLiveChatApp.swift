@@ -7,6 +7,7 @@ struct PAXDesignLiveChatApp: App {
     #endif
     @StateObject private var coordinator = ChatCoordinator()
     @StateObject private var launchSplash = LaunchSplashController()
+    @ObservedObject private var settings = AppSettingsStore.shared
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -19,15 +20,14 @@ struct PAXDesignLiveChatApp: App {
                 .environmentObject(AuthStore.shared)
                 .environmentObject(coordinator)
                 .environmentObject(PushService.shared)
-                .environmentObject(AppSettingsStore.shared)
+                .environmentObject(settings)
                 .environmentObject(PermissionCoordinator.shared)
                 .environmentObject(AppLockService.shared)
                 .environmentObject(TeamMessagingCoordinator.shared)
                 .environmentObject(launchSplash)
-                .environment(\.locale, AppSettingsStore.shared.resolvedLocale)
-                .environment(\.paxPalette, AppSettingsStore.shared.palette)
+                .environment(\.locale, settings.resolvedLocale)
+                .paxObserveAppearance(settings: settings)
                 .modifier(PAXLayoutDirectionModifier())
-                .preferredColorScheme(AppSettingsStore.shared.appearanceMode.colorScheme)
                 .task {
                     await runStartupSequence()
                 }
@@ -50,11 +50,7 @@ struct PAXDesignLiveChatApp: App {
                     switch phase {
                     case .active:
                         AppRefreshPolicy.update(scenePhase: .active)
-                        PAXApplicationBadge.sync(
-                            unreadChats: coordinator.unreadChatCount,
-                            unreadTeam: coordinator.unreadTeamCount,
-                            liveRequests: coordinator.liveCount
-                        )
+                        PAXApplicationBadge.sync(total: coordinator.unreadChatCount + coordinator.unreadTeamCount)
                     case .inactive:
                         AppRefreshPolicy.update(scenePhase: .inactive)
                     case .background:

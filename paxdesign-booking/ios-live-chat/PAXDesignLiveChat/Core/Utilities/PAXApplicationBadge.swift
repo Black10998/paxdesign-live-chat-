@@ -1,12 +1,12 @@
 import UIKit
 import UserNotifications
 
-/// Keeps the home-screen badge in sync with unread chats and live requests.
+/// Keeps the home-screen badge in sync with unread message counts.
 @MainActor
 enum PAXApplicationBadge {
-    static func sync(unreadChats: Int, unreadTeam: Int = 0, liveRequests: Int = 0) {
-        let total = max(0, unreadChats + unreadTeam + liveRequests)
-        UNUserNotificationCenter.current().setBadgeCount(total) { _ in }
+    static func sync(total: Int) {
+        let count = max(0, total)
+        UNUserNotificationCenter.current().setBadgeCount(count) { _ in }
     }
 
     static func clear() {

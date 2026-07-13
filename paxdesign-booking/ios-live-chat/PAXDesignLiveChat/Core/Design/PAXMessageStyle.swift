@@ -14,11 +14,11 @@ enum PAXMessageStyle {
     static let tailWidth: CGFloat = 6
     static let tailHeight: CGFloat = 10
 
-    static func bubbleColor(role: String, isOutgoing: Bool) -> Color {
-        if isOutgoing { return PAXTheme.adminBubble }
+    static func bubbleColor(role: String, isOutgoing: Bool, palette: PAXThemePalette) -> Color {
+        if isOutgoing { return palette.adminBubble }
         switch role {
         case "user": return PAXTheme.userBubble
-        case "system": return PAXTheme.systemBubble
+        case "system": return palette.accent.opacity(0.14)
         default: return PAXTheme.userBubble
         }
     }

@@ -388,12 +388,11 @@ struct TeamChatView: View {
                 Button {
                     Task { await beginVoiceRecording() }
                 } label: {
-                    PAXIcon("mic.fill", size: .inline)
-                        .foregroundStyle(voiceRecorder.isRecording ? .white : PAXTheme.textSecondary)
-                        .frame(width: 32, height: 32)
+                    PAXIcon("mic.fill", size: .action, emphasis: voiceRecorder.isRecording ? .onFill : .primary)
+                        .frame(width: 36, height: 36)
                         .background(
                             Circle()
-                                .fill(voiceRecorder.isRecording ? PAXTheme.accent : PAXTheme.surface.opacity(0.55))
+                                .fill(voiceRecorder.isRecording ? PAXTheme.accent : Color(.tertiarySystemFill))
                                 .overlay(
                                     Circle()
                                         .stroke(PAXTheme.border.opacity(voiceRecorder.isRecording ? 0 : 0.35), lineWidth: 0.5)

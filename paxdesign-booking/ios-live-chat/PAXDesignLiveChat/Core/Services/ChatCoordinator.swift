@@ -320,16 +320,14 @@ final class ChatCoordinator: ObservableObject {
 
     func updateUnreadCounts() {
         let settings = AppSettingsStore.shared
-        unreadChatCount = sessions.filter { !$0.isTeamDM && settings.isSessionUnread($0) }.count
+        unreadChatCount = sessions
+            .filter { !$0.isTeamDM }
+            .reduce(0) { $0 + settings.unreadMessageCount(for: $1) }
         unreadTeamCount = TeamMessagingCoordinator.shared.unreadCount(
             settings: settings,
             coordinatorSessions: sessions
         )
-        PAXApplicationBadge.sync(
-            unreadChats: unreadChatCount,
-            unreadTeam: unreadTeamCount,
-            liveRequests: liveCount
-        )
+        PAXApplicationBadge.sync(total: unreadChatCount + unreadTeamCount)
     }
 
     private func detectNewSessions(_ items: [LiveSession]) {

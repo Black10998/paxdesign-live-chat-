@@ -53,9 +53,9 @@ final class WidgetDataStore {
 
     private func unreadChatCount() -> Int {
         let settings = AppSettingsStore.shared
-        return ChatCoordinatorProxy.sessions.filter {
-            !$0.isTeamDM && $0.needsReply && !settings.readSessionIds.contains($0.sessionId)
-        }.count
+        return ChatCoordinatorProxy.sessions
+            .filter { !$0.isTeamDM }
+            .reduce(0) { $0 + settings.unreadMessageCount(for: $1) }
     }
 }
 

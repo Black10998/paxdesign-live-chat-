@@ -131,6 +131,23 @@ extension View {
     }
 }
 
+struct PAXAppearanceObserver: ViewModifier {
+    @ObservedObject var settings: AppSettingsStore
+
+    func body(content: Content) -> some View {
+        content
+            .environment(\.paxPalette, settings.palette)
+            .tint(settings.palette.accent)
+            .preferredColorScheme(settings.appearanceMode.colorScheme)
+    }
+}
+
+extension View {
+    func paxObserveAppearance(settings: AppSettingsStore) -> some View {
+        modifier(PAXAppearanceObserver(settings: settings))
+    }
+}
+
 enum PAXHaptics {
     private static let lightGenerator = UIImpactFeedbackGenerator(style: .light)
     private static let mediumGenerator = UIImpactFeedbackGenerator(style: .medium)

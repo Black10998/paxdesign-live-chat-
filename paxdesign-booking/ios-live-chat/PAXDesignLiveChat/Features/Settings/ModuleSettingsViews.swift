@@ -56,40 +56,115 @@ struct ModuleSettingsHubView: View {
 struct AccentColorSettingsView: View {
     @EnvironmentObject private var settings: AppSettingsStore
 
+    private let accentColumns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
+
     var body: some View {
-        List {
-            Section(L10n.AccentColorTitle) {
-                ForEach(AccentColorPreset.allCases) { preset in
-                    Button {
-                        settings.accentColorPreset = preset
-                        PAXHaptics.light()
-                    } label: {
-                        HStack {
-                            if let color = preset.color {
-                                Circle().fill(color).frame(width: 22, height: 22)
-                            } else {
-                                PAXIcon("paintbrush.pointed.fill")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text(L10n.AccentColorFooter)
+                    .font(.caption)
+                    .foregroundStyle(PAXTheme.textSecondary)
+
+                LazyVGrid(columns: accentColumns, spacing: 12) {
+                    ForEach(AccentColorPreset.allCases) { preset in
+                        Button {
+                            withAnimation(PAXTheme.spring) {
+                                settings.accentColorPreset = preset
+                                PAXHaptics.light()
                             }
-                            Text(preset.title)
-                                .foregroundStyle(PAXTheme.textPrimary)
-                            Spacer()
-                            if settings.accentColorPreset == preset {
-                                PAXIcon("checkmark.circle.fill")
-                            }
+                        } label: {
+                            AccentColorCard(
+                                preset: preset,
+                                isSelected: settings.accentColorPreset == preset,
+                                previewAccent: previewAccent(for: preset)
+                            )
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }
-            Section {
-                Text(L10n.AccentColorFooter)
-                    .font(.footnote)
-                    .foregroundStyle(PAXTheme.textSecondary)
-            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
         .paxScreenBackground()
         .navigationTitle(L10n.AccentColorTitle)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func previewAccent(for preset: AccentColorPreset) -> Color {
+        if let color = preset.color {
+            return color
+        }
+        return settings.basePalette.accent
+    }
+}
+
+private struct AccentColorCard: View {
+    let preset: AccentColorPreset
+    let isSelected: Bool
+    let previewAccent: Color
+
+    var body: some View {
+        VStack(spacing: 10) {
+            ZStack {
+                Circle()
+                    .stroke(
+                        AngularGradient(
+                            colors: [previewAccent, previewAccent.opacity(0.55), previewAccent],
+                            center: .center
+                        ),
+                        lineWidth: isSelected ? 3.5 : 2
+                    )
+                    .frame(width: 52, height: 52)
+
+                if let color = preset.color {
+                    Circle()
+                        .fill(color)
+                        .frame(width: 34, height: 34)
+                } else {
+                    Circle()
+                        .fill(Color(.tertiarySystemFill))
+                        .frame(width: 34, height: 34)
+                        .overlay {
+                            PAXIcon("paintbrush.pointed.fill", size: .row, emphasis: .secondary)
+                        }
+                }
+
+                if isSelected {
+                    PAXIcon("checkmark", size: .micro, emphasis: .onFill)
+                        .offset(x: 18, y: -18)
+                        .background(
+                            Circle()
+                                .fill(previewAccent)
+                                .frame(width: 16, height: 16)
+                                .offset(x: 18, y: -18)
+                        )
+                }
+            }
+
+            Text(preset.title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(PAXTheme.textPrimary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+                .multilineTextAlignment(.center)
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity, minHeight: 118)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground).opacity(0.72))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(isSelected ? previewAccent.opacity(0.55) : PAXTheme.border.opacity(0.22), lineWidth: isSelected ? 1.5 : 0.5)
+                )
+        )
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

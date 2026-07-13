@@ -66,6 +66,12 @@ enum PAXGlyphPaths {
         case "bell.badge", "bell.and.waves.left.and.right": return livePath(in: rect, filled: false)
         case "number", "questionmark.circle", "info.circle": return infoGlyphPath(in: rect, kind: glyph)
         case "briefcase", "dollarsign.circle": return businessPath(in: rect, kind: glyph)
+        case "mic", "mic.fill": return micPath(in: rect)
+        case "play", "play.fill": return playPath(in: rect)
+        case "pause", "pause.fill": return pausePath(in: rect)
+        case "waveform": return waveformPath(in: rect)
+        case "location", "location.fill": return locationPath(in: rect)
+        case "arrow.up.right.circle": return arrowPath(in: rect, name: "arrow.up.right.circle")
         default: return fallbackPath(in: rect)
         }
     }
@@ -765,6 +771,67 @@ enum PAXGlyphPaths {
         p.addEllipse(in: r.insetBy(dx: r.width * 0.14, dy: r.height * 0.14))
         p.move(to: CGPoint(x: r.midX, y: r.minY + r.height * 0.34))
         p.addLine(to: CGPoint(x: r.midX, y: r.midY))
+        return p
+    }
+
+    private static func micPath(in r: CGRect) -> Path {
+        var p = Path()
+        let capsule = CGRect(x: r.midX - r.width * 0.12, y: r.minY + r.height * 0.14, width: r.width * 0.24, height: r.height * 0.42)
+        p.addRoundedRect(in: capsule, cornerSize: .init(width: r.width * 0.12, height: r.height * 0.12))
+        p.move(to: CGPoint(x: r.midX, y: capsule.maxY))
+        p.addLine(to: CGPoint(x: r.midX, y: r.maxY - r.height * 0.28))
+        p.move(to: CGPoint(x: r.midX - r.width * 0.18, y: r.maxY - r.height * 0.24))
+        p.addQuadCurve(
+            to: CGPoint(x: r.midX + r.width * 0.18, y: r.maxY - r.height * 0.24),
+            control: CGPoint(x: r.midX, y: r.maxY - r.height * 0.1)
+        )
+        p.move(to: CGPoint(x: r.midX - r.width * 0.08, y: r.minY + r.height * 0.24))
+        p.addLine(to: CGPoint(x: r.midX + r.width * 0.08, y: r.minY + r.height * 0.24))
+        return p
+    }
+
+    private static func playPath(in r: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: r.minX + r.width * 0.34, y: r.minY + r.height * 0.24))
+        p.addLine(to: CGPoint(x: r.maxX - r.width * 0.28, y: r.midY))
+        p.addLine(to: CGPoint(x: r.minX + r.width * 0.34, y: r.maxY - r.height * 0.24))
+        p.closeSubpath()
+        return p
+    }
+
+    private static func pausePath(in r: CGRect) -> Path {
+        var p = Path()
+        p.addRoundedRect(in: CGRect(x: r.minX + r.width * 0.28, y: r.minY + r.height * 0.24, width: r.width * 0.12, height: r.height * 0.52), cornerSize: .init(width: 2, height: 2))
+        p.addRoundedRect(in: CGRect(x: r.maxX - r.width * 0.4, y: r.minY + r.height * 0.24, width: r.width * 0.12, height: r.height * 0.52), cornerSize: .init(width: 2, height: 2))
+        return p
+    }
+
+    private static func waveformPath(in r: CGRect) -> Path {
+        var p = Path()
+        let bars: [CGFloat] = [0.34, 0.56, 0.28, 0.62, 0.4, 0.52, 0.3]
+        for (index, height) in bars.enumerated() {
+            let x = r.minX + r.width * (0.16 + CGFloat(index) * 0.12)
+            let bar = CGRect(x: x, y: r.midY - r.height * height * 0.24, width: r.width * 0.06, height: r.height * height * 0.48)
+            p.addRoundedRect(in: bar, cornerSize: .init(width: 1.5, height: 1.5))
+        }
+        return p
+    }
+
+    private static func locationPath(in r: CGRect) -> Path {
+        var p = Path()
+        p.move(to: CGPoint(x: r.midX, y: r.minY + r.height * 0.12))
+        p.addCurve(
+            to: CGPoint(x: r.midX, y: r.maxY - r.height * 0.22),
+            control1: CGPoint(x: r.maxX - r.width * 0.12, y: r.minY + r.height * 0.22),
+            control2: CGPoint(x: r.maxX - r.width * 0.12, y: r.midY + r.height * 0.08)
+        )
+        p.addCurve(
+            to: CGPoint(x: r.midX, y: r.minY + r.height * 0.12),
+            control1: CGPoint(x: r.minX + r.width * 0.12, y: r.midY + r.height * 0.08),
+            control2: CGPoint(x: r.minX + r.width * 0.12, y: r.minY + r.height * 0.22)
+        )
+        p.closeSubpath()
+        p.addEllipse(in: CGRect(x: r.midX - r.width * 0.08, y: r.maxY - r.height * 0.28, width: r.width * 0.16, height: r.height * 0.16))
         return p
     }
 }

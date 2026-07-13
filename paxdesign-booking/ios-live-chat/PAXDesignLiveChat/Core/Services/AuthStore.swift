@@ -15,6 +15,7 @@ final class AuthStore: ObservableObject {
     @Published var appPassword = ""
 
     private(set) var api: LiveChatAPI?
+    private var unauthorizedRecoveryTask: Task<Void, Never>?
 
     private let service = "at.paxdesign.livechat.credentials"
 
@@ -43,7 +44,11 @@ final class AuthStore: ObservableObject {
         do {
             try await login()
         } catch {
-            invalidateStoredSession(keepFormFields: true)
+            if case LiveChatAPIError.unauthorized = error {
+                invalidateStoredSession(keepFormFields: true)
+            } else {
+                restoreOfflineSession()
+            }
         }
     }
 
@@ -85,17 +90,38 @@ final class AuthStore: ObservableObject {
                 await PlatformSyncService.shared.sync(auth: self)
             }
         } catch {
-            invalidateStoredSession(keepFormFields: true)
+            if case LiveChatAPIError.unauthorized = error {
+                invalidateStoredSession(keepFormFields: true)
+            }
             throw error
         }
     }
 
     /// Called when the server rejects stored credentials (HTTP 401/403).
     func handleUnauthorized() {
-        invalidateStoredSession(keepFormFields: true)
+        guard unauthorizedRecoveryTask == nil else { return }
+        unauthorizedRecoveryTask = Task { @MainActor [weak self] in
+            defer { self?.unauthorizedRecoveryTask = nil }
+            guard let self else { return }
+            guard !username.isEmpty, !appPassword.isEmpty, !siteURLString.isEmpty else {
+                invalidateStoredSession(keepFormFields: true)
+                return
+            }
+            do {
+                try await login()
+            } catch {
+                if case LiveChatAPIError.unauthorized = error {
+                    invalidateStoredSession(keepFormFields: true)
+                } else {
+                    restoreOfflineSession()
+                }
+            }
+        }
     }
 
     func invalidateStoredSession(keepFormFields: Bool = false) {
+        unauthorizedRecoveryTask?.cancel()
+        unauthorizedRecoveryTask = nil
         api = nil
         profile = nil
         isLoggedIn = false
@@ -113,6 +139,8 @@ final class AuthStore: ObservableObject {
     }
 
     func logout() {
+        unauthorizedRecoveryTask?.cancel()
+        unauthorizedRecoveryTask = nil
         let apiClient = api
         let tokenToUnregister = PushService.shared.deviceToken
         DeviceSessionService.shared.stop()
@@ -136,6 +164,17 @@ final class AuthStore: ObservableObject {
 
     func applyProfileUpdate(_ updated: AdminProfile) {
         profile = updated
+    }
+
+    private func restoreOfflineSession() {
+        guard !username.isEmpty, !appPassword.isEmpty, !siteURLString.isEmpty else { return }
+        guard let site = try? SecureURLValidator.validateHTTPS(siteURLString) else { return }
+        let normalizedSite = LiveChatAPI.normalizeSiteURL(site)
+        let user = LiveChatAPI.normalizeUsername(username)
+        let password = LiveChatAPI.normalizeAppPassword(appPassword)
+        guard !user.isEmpty, !password.isEmpty else { return }
+        api = LiveChatAPI(siteURL: normalizedSite, username: user, appPassword: password)
+        isLoggedIn = true
     }
 
     private func clearFormFields() {
