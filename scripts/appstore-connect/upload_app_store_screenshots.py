@@ -16,6 +16,16 @@ ROOT = Path(__file__).resolve().parents[2]
 METADATA_PATH = ROOT / "docs" / "app-store" / "metadata.json"
 
 _SPEC = importlib.util.spec_from_file_location(
+    "asc_version",
+    Path(__file__).resolve().parent / "asc_version.py",
+)
+_VERSION_MOD = importlib.util.module_from_spec(_SPEC)
+assert _SPEC.loader is not None
+_SPEC.loader.exec_module(_VERSION_MOD)
+
+find_or_create_version = _VERSION_MOD.find_or_create_version
+
+_SPEC = importlib.util.spec_from_file_location(
     "setup_testflight_access",
     Path(__file__).resolve().parent / "setup_testflight_access.py",
 )
@@ -35,61 +45,6 @@ def load_metadata() -> dict[str, Any]:
     if not METADATA_PATH.exists():
         fail(f"Missing metadata file: {METADATA_PATH}")
     return json.loads(METADATA_PATH.read_text(encoding="utf-8"))
-
-
-def find_or_create_version(client: ASCClient, app_id: str, version_string: str) -> dict[str, Any]:
-    payload = client.get(
-        f"/apps/{app_id}/appStoreVersions",
-        **{"filter[platform]": "IOS", "limit": "30"},
-    )
-    for item in payload.get("data") or []:
-        attrs = item.get("attributes") or {}
-        if attrs.get("versionString") == version_string:
-            return item
-
-    payload = client.post(
-        "/appStoreVersions",
-        {
-            "data": {
-                "type": "appStoreVersions",
-                "attributes": {
-                    "platform": "IOS",
-                    "versionString": version_string,
-                },
-                "relationships": {
-                    "app": {"data": {"type": "apps", "id": app_id}},
-                },
-            }
-        },
-    )
-    print(f"Created App Store version {version_string}")
-    return payload["data"]
-
-
-def find_editable_version(client: ASCClient, app_id: str, version_string: str) -> dict[str, Any]:
-    for state in ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "WAITING_FOR_REVIEW", "READY_FOR_REVIEW"):
-        payload = client.get(
-            f"/apps/{app_id}/appStoreVersions",
-            **{
-                "filter[platform]": "IOS",
-                "filter[appStoreState]": state,
-                "limit": "20",
-            },
-        )
-        for item in payload.get("data") or []:
-            attrs = item.get("attributes") or {}
-            if attrs.get("versionString") == version_string:
-                return item
-
-    payload = client.get(
-        f"/apps/{app_id}/appStoreVersions",
-        **{"filter[platform]": "IOS", "limit": "20"},
-    )
-    for item in payload.get("data") or []:
-        attrs = item.get("attributes") or {}
-        if attrs.get("versionString") == version_string:
-            return item
-    fail(f"No App Store version found for {version_string}")
 
 
 def get_localization(client: ASCClient, version_id: str, locale: str) -> dict[str, Any] | None:
@@ -249,7 +204,7 @@ def main() -> None:
     app = find_app(client)
     app_id = app["id"]
     version_string = metadata.get("versionString", os.environ.get("APP_STORE_VERSION", "2.0.0"))
-    version = find_or_create_version(client, app_id, version_string)
+    version = find_or_create_version(client, app_id, version_string, fail=fail, warn=warn)
     version_id = version["id"]
 
     display_type = metadata.get("screenshotDisplayType", "APP_IPHONE_67")
