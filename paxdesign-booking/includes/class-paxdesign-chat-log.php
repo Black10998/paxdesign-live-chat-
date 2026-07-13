@@ -239,10 +239,11 @@ class PAXdesign_Chat_Log {
         if (empty($sanitized) && $consult) {
             $sanitized = array(
                 array(
-                    'role'    => 'system',
-                    'content' => 'Chat-Session gestartet.',
-                    'id'      => 1,
-                    'ts'      => time(),
+                    'role'          => 'system',
+                    'content'       => 'Chat-Session gestartet.',
+                    'client_msg_id' => 'sys:session_started',
+                    'id'            => 1,
+                    'ts'            => time(),
                 ),
             );
         }

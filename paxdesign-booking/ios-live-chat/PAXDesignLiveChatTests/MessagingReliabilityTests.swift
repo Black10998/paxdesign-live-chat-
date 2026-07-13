@@ -269,4 +269,42 @@ final class MessagingReliabilityTests: XCTestCase {
         }
         #endif
     }
+
+    func testSystemNoticeRetryCollapsesToSingleMessage() {
+        let first = LiveMessage(
+            id: 1,
+            clientMsgId: "sys:chat_closed",
+            role: "system",
+            content: "Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten."
+        )
+        let retry = LiveMessage(
+            id: 2,
+            clientMsgId: "sys:chat_closed",
+            role: "system",
+            content: "Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten."
+        )
+
+        let result = MessageMerge.mergeSorted(existing: [first], incoming: [retry])
+
+        XCTAssertEqual(result.messages.count, 1)
+        XCTAssertEqual(result.messages.first?.id, 1)
+    }
+
+    func testLegacySystemDuplicateWithoutClientIdCollapses() {
+        let first = LiveMessage(
+            id: 1,
+            role: "system",
+            content: "Chat-Session gestartet."
+        )
+        let duplicate = LiveMessage(
+            id: 4,
+            role: "system",
+            content: "Chat-Session gestartet."
+        )
+
+        let result = MessageMerge.mergeSorted(existing: [first], incoming: [duplicate])
+
+        XCTAssertEqual(result.messages.count, 1)
+        XCTAssertEqual(result.messages.first?.id, 1)
+    }
 }

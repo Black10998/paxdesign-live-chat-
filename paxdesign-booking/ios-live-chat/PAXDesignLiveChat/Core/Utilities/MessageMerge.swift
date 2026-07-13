@@ -1,6 +1,48 @@
 import Foundation
 
 enum MessageMerge {
+    /// Stable merge key for system notices — aligns with server `sys:*` client_msg_id values.
+    static func systemMergeKey(for message: LiveMessage) -> String? {
+        guard message.role == "system" else { return nil }
+        if let clientId = message.clientMsgId?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !clientId.isEmpty {
+            return clientId
+        }
+        switch message.content {
+        case "Chat-Session gestartet.":
+            return "sys:session_started"
+        case "Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten.":
+            return "sys:chat_closed"
+        case "Der Kunde hat das Gespräch beendet.":
+            return "sys:customer_closed"
+        case "Der KI-Assistent übernimmt den Chat wieder.":
+            return "sys:ai_reclaimed"
+        case "Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.":
+            return "sys:live_agent_notified"
+        case "Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter.":
+            return "sys:live_transfer_thanks"
+        default:
+            if message.content.hasPrefix("Der Chat wurde wieder geöffnet.") {
+                return "sys:chat_reopened:\(message.content.hashValue)"
+            }
+            if message.content.hasSuffix(" ist dem Chat beigetreten.") {
+                return "sys:admin_joined:\(message.content.hashValue)"
+            }
+            return "sys:content:\(message.content.hashValue)"
+        }
+    }
+
+    private static func mergeKey(for message: LiveMessage) -> String {
+        if let systemKey = systemMergeKey(for: message) {
+            return "system:\(systemKey)"
+        }
+        if let clientId = message.clientMsgId?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !clientId.isEmpty {
+            return "client:\(clientId)"
+        }
+        return "id:\(message.id)"
+    }
+
     /// Append-only merge for sorted message lists — avoids full re-sort on every poll tick.
     static func mergeSorted(
         existing: [LiveMessage],
@@ -14,7 +56,7 @@ enum MessageMerge {
         guard !incoming.isEmpty else { return (existing, false) }
 
         if existing.isEmpty {
-            let sorted = incoming.sorted { $0.id < $1.id }
+            let sorted = dedupeByMergeKey(incoming.sorted { $0.id < $1.id })
             return (sorted, true)
         }
 
@@ -23,6 +65,11 @@ enum MessageMerge {
             guard message.id < 0, let clientId = message.clientMsgId else { return true }
             return !incomingClientIds.contains(clientId)
         }
+        var keyToId: [String: Int] = [:]
+        for message in reconciledExisting where message.id > 0 {
+            keyToId[mergeKey(for: message)] = message.id
+        }
+
         var map: [Int: LiveMessage] = [:]
         for message in reconciledExisting {
             map[message.id] = message
@@ -31,27 +78,75 @@ enum MessageMerge {
             || map.count != reconciledExisting.count
 
         for msg in incoming {
-            if let prior = map[msg.id] {
-                var merged = msg
+            let resolvedId: Int
+            if msg.id > 0, let existingId = keyToId[mergeKey(for: msg)] {
+                resolvedId = existingId
+            } else {
+                resolvedId = msg.id
+            }
+
+            var normalized = msg
+            if resolvedId != msg.id, resolvedId > 0 {
+                normalized = LiveMessage(
+                    id: resolvedId,
+                    clientMsgId: msg.clientMsgId,
+                    role: msg.role,
+                    content: msg.content,
+                    ts: msg.ts,
+                    imageUrl: msg.imageUrl,
+                    replyTo: msg.replyTo,
+                    reaction: msg.reaction,
+                    senderId: msg.senderId,
+                    senderName: msg.senderName,
+                    senderAvatar: msg.senderAvatar,
+                    senderRole: msg.senderRole,
+                    attachmentType: msg.attachmentType,
+                    linkUrl: msg.linkUrl,
+                    linkLabel: msg.linkLabel,
+                    linkIcon: msg.linkIcon,
+                    linkScanStatus: msg.linkScanStatus,
+                    linkScanSystemStatus: msg.linkScanSystemStatus,
+                    linkScanReviewPending: msg.linkScanReviewPending,
+                    linkScanUrls: msg.linkScanUrls
+                )
+            }
+
+            if let prior = map[resolvedId] {
+                var merged = normalized
                 merged = preserveReaction(merged, prior)
                 if merged != prior {
-                    map[msg.id] = merged
+                    map[resolvedId] = merged
                     changed = true
                 }
             } else {
-                map[msg.id] = msg
+                map[resolvedId] = normalized
                 changed = true
+            }
+            if resolvedId > 0 {
+                keyToId[mergeKey(for: normalized)] = resolvedId
             }
         }
 
         guard changed else { return (existing, false) }
 
-        return (map.values.sorted { $0.id < $1.id }, true)
+        return (dedupeByMergeKey(map.values.sorted { $0.id < $1.id }), true)
+    }
+
+    private static func dedupeByMergeKey(_ messages: [LiveMessage]) -> [LiveMessage] {
+        var seenKeys = Set<String>()
+        var result: [LiveMessage] = []
+        for message in messages {
+            let key = mergeKey(for: message)
+            guard !seenKeys.contains(key) else { continue }
+            seenKeys.insert(key)
+            result.append(message)
+        }
+        return result
     }
 
     /// Establish authoritative server history while preserving in-flight optimistic sends.
     static func baseline(server: [LiveMessage], preservingOptimistic optimistic: [LiveMessage]) -> [LiveMessage] {
-        let sorted = server.sorted { $0.id < $1.id }
+        let sorted = dedupeByMergeKey(server.sorted { $0.id < $1.id })
         let acknowledgedClientIds = Set(sorted.compactMap(\.clientMsgId))
         let pending = optimistic.filter {
             $0.id < 0 && ($0.clientMsgId.map { !acknowledgedClientIds.contains($0) } ?? true)
