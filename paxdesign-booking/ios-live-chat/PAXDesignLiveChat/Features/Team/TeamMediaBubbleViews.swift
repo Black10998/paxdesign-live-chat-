@@ -6,9 +6,12 @@ struct VoiceMessageBubbleView: View {
     let message: LiveMessage
     let isOutgoing: Bool
 
-    @State private var player: AVAudioPlayer?
-    @State private var isPlaying = false
-    @State private var progress: Double = 0
+    @ObservedObject private var playback = TeamVoicePlaybackController.shared
+    @State private var showPlaybackPanel = false
+
+    private var isActiveMessage: Bool {
+        playback.activeMessageId == message.id
+    }
 
     private var durationLabel: String {
         let seconds = message.audioDuration ?? 0
@@ -18,90 +21,77 @@ struct VoiceMessageBubbleView: View {
         return String(format: "%d:%02d", minutes, remainder)
     }
 
-    var body: some View {
-        HStack(spacing: 10) {
-            Button {
-                togglePlayback()
-            } label: {
-                PAXIcon(isPlaying ? "pause.circle.fill" : "play.circle.fill", size: .card)
-            }
-            .buttonStyle(.plain)
-
-            VStack(alignment: .leading, spacing: 4) {
-                ProgressView(value: progress)
-                    .tint(isOutgoing ? PAXBrand.accent : PAXTheme.accent)
-                Text(durationLabel)
-                    .font(.caption2)
-                    .foregroundStyle(PAXTheme.textSecondary)
-            }
-            .frame(minWidth: 120)
+    private var displayLevels: [CGFloat] {
+        if isActiveMessage, !playback.levels.isEmpty {
+            return playback.levels
         }
-        .onDisappear {
-            stopPlayback()
-        }
+        return Array(repeating: 0.14, count: 9)
     }
 
-    private func togglePlayback() {
-        guard let urlString = message.audioUrl, let url = URL(string: urlString) else { return }
-        if isPlaying {
-            stopPlayback()
-            return
+    var body: some View {
+        Button {
+            showPlaybackPanel = true
+            playback.toggle(message: message)
+        } label: {
+            HStack(spacing: 10) {
+                PAXIcon(
+                    isActiveMessage && playback.isPlaying ? "pause.circle.fill" : "play.circle.fill",
+                    size: .card
+                )
+                .foregroundStyle(isOutgoing ? PAXBrand.accent : PAXTheme.accent)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    TeamVoiceWaveformView(
+                        levels: displayLevels,
+                        barColor: isOutgoing ? PAXBrand.accent.opacity(0.9) : Color.white.opacity(0.82),
+                        idleLevel: 0.12,
+                        maxHeight: 28
+                    )
+                    Text(durationLabel)
+                        .font(.caption2.monospacedDigit())
+                        .foregroundStyle(PAXTheme.textSecondary)
+                }
+                .frame(minWidth: 140)
+            }
         }
-        Task {
-            do {
-                let (data, _) = try await URLSession.shared.data(from: url)
-                await MainActor.run {
-                    player = try? AVAudioPlayer(data: data)
-                    player?.delegate = PlaybackDelegate.shared
-                    PlaybackDelegate.shared.onFinish = {
-                        Task { @MainActor in
-                            isPlaying = false
-                            progress = 0
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showPlaybackPanel, onDismiss: {
+            playback.stop()
+        }) {
+            NavigationStack {
+                VStack(spacing: 16) {
+                    TeamVoiceActivityPanel(
+                        mode: .playback,
+                        duration: message.audioDuration ?? 0,
+                        levels: displayLevels,
+                        isPlaying: isActiveMessage && playback.isPlaying,
+                        onTogglePlayback: {
+                            playback.toggle(message: message)
+                        }
+                    )
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, 20)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color.black.opacity(0.96))
+                .navigationTitle(L10n.TeamVoiceMessage)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button(L10n.CommonDone) {
+                            showPlaybackPanel = false
                         }
                     }
-                    player?.play()
-                    isPlaying = true
-                    progress = 0
-                    startProgressTimer()
-                }
-            } catch {
-                await MainActor.run { isPlaying = false }
-            }
-        }
-    }
-
-    private func startProgressTimer() {
-        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
-            Task { @MainActor in
-                guard let player, isPlaying else {
-                    timer.invalidate()
-                    return
-                }
-                let total = max(player.duration, 0.1)
-                progress = player.currentTime / total
-                if !player.isPlaying {
-                    isPlaying = false
-                    progress = 0
-                    timer.invalidate()
                 }
             }
+            .presentationDetents([.height(220)])
+            .presentationDragIndicator(.visible)
         }
-    }
-
-    private func stopPlayback() {
-        player?.stop()
-        player = nil
-        isPlaying = false
-        progress = 0
-    }
-}
-
-private final class PlaybackDelegate: NSObject, AVAudioPlayerDelegate {
-    static let shared = PlaybackDelegate()
-    var onFinish: (() -> Void)?
-
-    func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        onFinish?()
+        .onDisappear {
+            if isActiveMessage {
+                playback.stop()
+            }
+        }
     }
 }
 
@@ -132,31 +122,32 @@ struct LocationMessageBubbleView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if let coordinate {
-                Map(coordinateRegion: $region, annotationItems: [LocationPin(coordinate: coordinate)]) { pin in
-                    MapMarker(coordinate: pin.coordinate, tint: PAXBrand.accent)
+        Button {
+            openInMaps()
+        } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                if let coordinate {
+                    Map(coordinateRegion: $region, annotationItems: [LocationPin(coordinate: coordinate)]) { pin in
+                        MapMarker(coordinate: pin.coordinate, tint: PAXBrand.accent)
+                    }
+                    .frame(height: 140)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .allowsHitTesting(false)
                 }
-                .frame(height: 140)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .allowsHitTesting(false)
-            }
 
-            HStack(spacing: 8) {
-                PAXIcon("location.fill", size: .inline)
-                Text(locationTitle)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(PAXTheme.textPrimary)
-                    .lineLimit(2)
-            }
-
-            if let coordinate, let url = mapsURL(for: coordinate) {
-                Link(destination: url) {
-                    Label { Text(L10n.TeamOpenInMaps) } icon: { PAXIcon("map") }
-                        .font(.caption.weight(.semibold))
+                HStack(spacing: 8) {
+                    PAXIcon("location.fill", size: .inline)
+                    Text(locationTitle)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(PAXTheme.textPrimary)
+                        .lineLimit(2)
+                    Spacer(minLength: 0)
+                    PAXIcon("arrow.up.right.square", size: .inline)
+                        .foregroundStyle(PAXBrand.accent)
                 }
             }
         }
+        .buttonStyle(.plain)
     }
 
     private var locationTitle: String {
@@ -168,8 +159,21 @@ struct LocationMessageBubbleView: View {
         return L10n.TeamSharedLocation
     }
 
-    private func mapsURL(for coordinate: CLLocationCoordinate2D) -> URL? {
-        URL(string: "http://maps.apple.com/?ll=\(coordinate.latitude),\(coordinate.longitude)")
+    private func openInMaps() {
+        guard let coordinate else { return }
+        let latitude = coordinate.latitude
+        let longitude = coordinate.longitude
+        let query = locationTitle.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        let candidates = [
+            URL(string: "maps://?ll=\(latitude),\(longitude)&q=\(query)"),
+            URL(string: "http://maps.apple.com/?ll=\(latitude),\(longitude)&q=\(query)"),
+        ]
+        for url in candidates.compactMap({ $0 }) {
+            if UIApplication.shared.canOpenURL(url) {
+                UIApplication.shared.open(url)
+                return
+            }
+        }
     }
 }
 

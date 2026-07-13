@@ -521,8 +521,18 @@ struct TeamMessagesHubView: View {
             return lhs.updatedAt > rhs.updatedAt
         }
 
+        var seenOtherUserIds = Set<Int>()
+        let deduped = sorted.filter { session in
+            guard session.isTeamDM, session.otherUserId > 0 else { return true }
+            if seenOtherUserIds.contains(session.otherUserId) {
+                return false
+            }
+            seenOtherUserIds.insert(session.otherUserId)
+            return true
+        }
+
         let unread = allSessions.filter { settings.isSessionUnread($0) }.count
-        return TeamHubListState(displayedSessions: sorted, teamSessionCount: allSessions.count, unreadCount: unread)
+        return TeamHubListState(displayedSessions: deduped, teamSessionCount: allSessions.count, unreadCount: unread)
     }
 
     private var teamEmptyState: some View {

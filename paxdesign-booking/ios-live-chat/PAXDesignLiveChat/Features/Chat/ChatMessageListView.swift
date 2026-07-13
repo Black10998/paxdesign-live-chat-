@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Shared lazy message list — renders directly from `messages` so live inserts always appear.
 struct ChatMessageListView: View {
@@ -24,8 +25,8 @@ struct ChatMessageListView: View {
     var siteBaseURL: String?
     var deletingMessageIds: Set<Int> = []
 
-    @State private var stickToBottom = true
     @State private var lastTrackedMessageId: Int?
+    @State private var animatedRowIds = Set<String>()
 
     private var displayRows: [MessageDisplayRow] {
         var messageLookup: [Int: LiveMessage] = [:]
@@ -58,12 +59,14 @@ struct ChatMessageListView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: PAXMessageStyle.threadSpacing) {
                     ForEach(displayRows) { row in
-                        ChatMessageRow(
+                        AnimatedChatMessageRow(
                             row: row,
                             canReply: canReply,
                             handler: handler,
                             agentDisplayName: agentDisplayName,
                             customerDisplayName: customerDisplayName,
+                            isOutgoing: isOutgoingMessage(row.message),
+                            animatedRowIds: $animatedRowIds,
                             onReply: { onReply(row.message) },
                             onCopy: { onCopy(row.message) },
                             onDelete: { onDelete(row.message) },
@@ -82,12 +85,6 @@ struct ChatMessageListView: View {
                             deletingMessageIds: deletingMessageIds
                         )
                         .id(row.id)
-                        .transition(.asymmetric(
-                            insertion: .opacity
-                                .combined(with: .move(edge: .bottom))
-                                .combined(with: .scale(scale: 0.96, anchor: isOutgoingMessage(row.message) ? .bottomTrailing : .bottomLeading)),
-                            removal: .opacity
-                        ))
                     }
                     if userTyping {
                         TypingIndicator(customerName: customerDisplayName)
@@ -97,7 +94,6 @@ struct ChatMessageListView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
                 .padding(.bottom, 8)
-                .animation(.spring(response: 0.42, dampingFraction: 0.84), value: messagesRevision)
             }
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: messagesRevision) { _ in
@@ -110,19 +106,29 @@ struct ChatMessageListView: View {
                 let latestId = messages.last?.id
                 let appended = latestId != nil && latestId != lastTrackedMessageId
                 lastTrackedMessageId = latestId
-                if stickToBottom || appended || userTyping {
-                    scrollToBottom(proxy: proxy)
+                if appended || userTyping || messages.count > 0 {
+                    scrollToBottom(proxy: proxy, animated: true)
                 }
             }
             .onChange(of: userTyping) { typing in
-                if typing && stickToBottom {
-                    scrollToBottom(proxy: proxy)
+                if typing {
+                    scrollToBottom(proxy: proxy, animated: true)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    scrollToBottom(proxy: proxy, animated: true)
+                }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { _ in
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    scrollToBottom(proxy: proxy, animated: true)
                 }
             }
             .onAppear {
                 lastTrackedMessageId = messages.last?.id
-                stickToBottom = true
-                scrollToBottom(proxy: proxy)
+                animatedRowIds = Set(displayRows.map(\.id))
+                scrollToBottom(proxy: proxy, animated: false)
             }
         }
         .onAppear {
@@ -142,16 +148,84 @@ struct ChatMessageListView: View {
         return "m:\(message.id)"
     }
 
-    private func scrollToBottom(proxy: ScrollViewProxy) {
-        if userTyping {
-            proxy.scrollTo("typing-indicator", anchor: .bottom)
-        } else if let last = displayRows.last {
-            proxy.scrollTo(last.id, anchor: .bottom)
+    private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool) {
+        let action = {
+            if userTyping {
+                proxy.scrollTo("typing-indicator", anchor: .bottom)
+            } else if let last = displayRows.last {
+                proxy.scrollTo(last.id, anchor: .bottom)
+            }
+        }
+        if animated {
+            withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
+                action()
+            }
+        } else {
+            action()
         }
     }
 
     private func isOutgoingMessage(_ message: LiveMessage) -> Bool {
         message.role == "admin" || message.role == "assistant"
+    }
+}
+
+private struct AnimatedChatMessageRow: View {
+    let row: MessageDisplayRow
+    let canReply: Bool
+    let handler: String
+    let agentDisplayName: String
+    let customerDisplayName: String
+    let isOutgoing: Bool
+    @Binding var animatedRowIds: Set<String>
+    let onReply: () -> Void
+    let onCopy: () -> Void
+    let onDelete: () -> Void
+    var onAnalyze: (() -> Void)?
+    var onLinkReview: ((String) -> Void)?
+    var linkReviewSubmittingIds: Set<Int> = []
+    let onImageTap: (URL) -> Void
+    var teamOtherReadSeq: Int = 0
+    var teamFailedClientMsgIds: Set<String> = []
+    var onRetryTeamMessage: ((String) -> Void)? = nil
+    var siteBaseURL: String?
+    var deletingMessageIds: Set<Int> = []
+
+    @State private var isVisible = false
+
+    var body: some View {
+        ChatMessageRow(
+            row: row,
+            canReply: canReply,
+            handler: handler,
+            agentDisplayName: agentDisplayName,
+            customerDisplayName: customerDisplayName,
+            onReply: onReply,
+            onCopy: onCopy,
+            onDelete: onDelete,
+            onAnalyze: onAnalyze,
+            onLinkReview: onLinkReview,
+            linkReviewSubmittingIds: linkReviewSubmittingIds,
+            onImageTap: onImageTap,
+            teamOtherReadSeq: teamOtherReadSeq,
+            teamFailedClientMsgIds: teamFailedClientMsgIds,
+            onRetryTeamMessage: onRetryTeamMessage,
+            siteBaseURL: siteBaseURL,
+            deletingMessageIds: deletingMessageIds
+        )
+        .opacity(isVisible ? 1 : 0)
+        .scaleEffect(isVisible ? 1 : 0.92, anchor: isOutgoing ? .bottomTrailing : .bottomLeading)
+        .offset(y: isVisible ? 0 : 6)
+        .onAppear {
+            if animatedRowIds.contains(row.id) {
+                isVisible = true
+            } else {
+                animatedRowIds.insert(row.id)
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.84)) {
+                    isVisible = true
+                }
+            }
+        }
     }
 }
 

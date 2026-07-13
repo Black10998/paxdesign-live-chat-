@@ -290,6 +290,12 @@ enum L10n {
     static var TeamSendPhoto: String { t("team.send_photo") }
     static var TeamRecordVoice: String { t("team.record_voice") }
     static var TeamSendVoice: String { t("team.send_voice") }
+    static var TeamVoiceListening: String { t("team.voice_listening") }
+    static var TeamVoicePlaying: String { t("team.voice_playing") }
+    static var TeamVoicePaused: String { t("team.voice_paused") }
+    static var TeamVoicePlay: String { t("team.voice_play") }
+    static var TeamVoicePause: String { t("team.voice_pause") }
+    static var TeamVoiceMessage: String { t("team.voice_message") }
     static var TeamShareLocation: String { t("team.share_location") }
     static var TeamSharedLocation: String { t("team.shared_location") }
     static var TeamOpenInMaps: String { t("team.open_in_maps") }

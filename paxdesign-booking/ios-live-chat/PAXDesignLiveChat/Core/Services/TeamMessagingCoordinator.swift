@@ -27,7 +27,14 @@ final class TeamMessagingCoordinator: ObservableObject {
                 merged[session.sessionId] = session
             }
         }
-        return merged.values.sorted { $0.updatedAt > $1.updatedAt }
+        let sorted = merged.values.sorted { $0.updatedAt > $1.updatedAt }
+        var seenOtherUserIds = Set<Int>()
+        return sorted.filter { session in
+            guard session.isTeamDM, session.otherUserId > 0 else { return true }
+            if seenOtherUserIds.contains(session.otherUserId) { return false }
+            seenOtherUserIds.insert(session.otherUserId)
+            return true
+        }
     }
 
     func unreadCount(settings: AppSettingsStore, coordinatorSessions: [LiveSession] = []) -> Int {
@@ -277,7 +284,26 @@ final class TeamMessagingCoordinator: ObservableObject {
     }
 
     func openConversation(with userId: Int, auth: AuthStore, requestNote: String = "") async -> String? {
-        guard let api = auth.api else { return nil }
+        guard let api = auth.api, let myId = auth.profile?.userId else { return nil }
+
+        let expectedSessionId = TeamVoiceRecorderService.teamConversationId(
+            currentUserId: myId,
+            otherUserId: userId
+        )
+        if let existing = teamSessions.first(where: {
+            $0.sessionId == expectedSessionId || $0.otherUserId == userId
+        }) {
+            do {
+                _ = try await api.openTeamConversation(userId: userId, requestNote: requestNote)
+                await refresh(auth: auth, mode: .lightweight)
+                await refreshPendingRequests(auth: auth)
+                return existing.sessionId
+            } catch {
+                errorMessage = error.localizedDescription
+                return existing.sessionId
+            }
+        }
+
         do {
             let response = try await api.openTeamConversation(userId: userId, requestNote: requestNote)
             await refresh(auth: auth)
@@ -287,6 +313,17 @@ final class TeamMessagingCoordinator: ObservableObject {
             errorMessage = error.localizedDescription
             return nil
         }
+    }
+
+    func existingConversationId(for userId: Int, auth: AuthStore) -> String? {
+        guard let myId = auth.profile?.userId else { return nil }
+        let expectedSessionId = TeamVoiceRecorderService.teamConversationId(
+            currentUserId: myId,
+            otherUserId: userId
+        )
+        return teamSessions.first(where: {
+            $0.sessionId == expectedSessionId || $0.otherUserId == userId
+        })?.sessionId
     }
 }
 

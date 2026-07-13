@@ -8,13 +8,15 @@ final class LocationPermissionService: NSObject, ObservableObject, CLLocationMan
     @Published private(set) var status: CLAuthorizationStatus
 
     private let manager: CLLocationManager
-    private var continuation: CheckedContinuation<CLAuthorizationStatus, Never>?
+    private var authContinuation: CheckedContinuation<CLAuthorizationStatus, Never>?
+    private var locationContinuation: CheckedContinuation<CLLocationCoordinate2D?, Never>?
 
     private override init() {
         manager = CLLocationManager()
         status = manager.authorizationStatus
         super.init()
         manager.delegate = self
+        manager.desiredAccuracy = kCLLocationAccuracyBest
     }
 
     func refreshStatus() {
@@ -27,8 +29,18 @@ final class LocationPermissionService: NSObject, ObservableObject, CLLocationMan
             return status
         }
         return await withCheckedContinuation { continuation in
-            self.continuation = continuation
+            self.authContinuation = continuation
             manager.requestWhenInUseAuthorization()
+        }
+    }
+
+    func captureCurrentLocation() async -> CLLocationCoordinate2D? {
+        let status = await requestWhenInUse()
+        guard Self.isAuthorized(status) else { return nil }
+
+        return await withCheckedContinuation { continuation in
+            self.locationContinuation = continuation
+            manager.requestLocation()
         }
     }
 
@@ -41,8 +53,22 @@ final class LocationPermissionService: NSObject, ObservableObject, CLLocationMan
             guard let self else { return }
             let newStatus = manager.authorizationStatus
             status = newStatus
-            continuation?.resume(returning: newStatus)
-            continuation = nil
+            authContinuation?.resume(returning: newStatus)
+            authContinuation = nil
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        Task { @MainActor [weak self] in
+            self?.locationContinuation?.resume(returning: locations.last?.coordinate)
+            self?.locationContinuation = nil
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        Task { @MainActor [weak self] in
+            self?.locationContinuation?.resume(returning: nil)
+            self?.locationContinuation = nil
         }
     }
 }

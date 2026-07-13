@@ -350,6 +350,10 @@ struct AdaptiveShellView: View {
     }
 
     private func openSession(_ sessionId: String, path: Binding<NavigationPath>) {
+        if routingSessionId == sessionId, !path.wrappedValue.isEmpty {
+            return
+        }
+
         let isNewRoute = routingSessionId != sessionId
         if isNewRoute {
             routingSessionId = sessionId

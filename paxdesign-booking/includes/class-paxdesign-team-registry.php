@@ -192,7 +192,10 @@ class PAXdesign_Team_Registry {
             'role_rank'        => $rank,
             'role_label'       => PAXdesign_Live_Chat_Permissions::team_role_label_for_rank($rank),
             'permissions'      => $perms,
-            'profile_title'    => (string) get_user_meta($uid, 'pax_live_profile_title', true),
+            'profile_title'    => PAXdesign_Live_Chat_Permissions::normalize_profile_title(
+                (string) get_user_meta($uid, 'pax_live_profile_title', true),
+                $uid
+            ),
             'profile_phone'    => (string) get_user_meta($uid, 'pax_live_profile_phone', true),
             'profile_notes'    => (string) get_user_meta($uid, 'pax_live_profile_notes', true),
             'avatar_url'       => get_avatar_url($uid, array('size' => 256)),
