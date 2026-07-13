@@ -19,6 +19,10 @@ final class PushDeepLinkRouter: ObservableObject {
 
     private init() {}
 
+    func clearPending() {
+        pending = nil
+    }
+
     func store(userInfo: [AnyHashable: Any], action: String? = nil) {
         let payload: PushService.PushPayload?
         if let parsed = PushService.shared.parseNotification(userInfo: userInfo) {

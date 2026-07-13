@@ -18,14 +18,14 @@ extension AuthStore {
     var canExportReports: Bool { modulePerms?.exportReports ?? (canManageUsers || canViewRatings) }
 
     var roleLabel: String {
+        if profile?.isSuperAdmin == true { return L10n.RoleExecutiveDirector }
         if let employeeRole = PlatformSyncService.shared.employee?.roleLabel {
             switch employeeRole {
-            case "super_admin": return L10n.AccountSuperAdmin
+            case "super_admin": return L10n.RoleExecutiveDirector
             case "manager": return L10n.ProfileRoleManager
             default: return L10n.ProfileRoleStaff
             }
         }
-        if profile?.isSuperAdmin == true { return L10n.AccountSuperAdmin }
         if canManageUsers { return L10n.ProfileRoleManager }
         return L10n.ProfileRoleStaff
     }

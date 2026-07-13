@@ -958,18 +958,17 @@ struct StaffMember: Codable, Identifiable {
     }
 
     private static func localizedRoleLabel(_ value: String) -> String {
-        switch value.trimmingCharacters(in: .whitespacesAndNewlines) {
-        case "Executive Director":
+        RoleLabelFormatter.localized(value)
+    }
+
+    var localizedProfileTitle: String {
+        guard let profileTitle, !profileTitle.isEmpty else { return "" }
+        let trimmed = profileTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !Self.isPlaceholderProfileTitle(trimmed) else { return "" }
+        if isExecutive || RoleLabelFormatter.isExecutiveRole(trimmed) {
             return L10n.RoleExecutiveDirector
-        case "Administrator":
-            return L10n.RoleAdministrator
-        case "Senior Staff":
-            return L10n.RoleSeniorStaff
-        case "Staff Member", "Team Member":
-            return L10n.RoleStaffMember
-        default:
-            return value
         }
+        return RoleLabelFormatter.localized(trimmed)
     }
 
     private static func isPlaceholderProfileTitle(_ value: String) -> Bool {
@@ -1006,6 +1005,13 @@ struct StaffListResponse: Codable {
 }
 
 extension LiveSession {
+    var localizedOtherRoleLabel: String {
+        if otherRoleLabel.isEmpty {
+            return requestStatusLabel
+        }
+        return RoleLabelFormatter.localized(otherRoleLabel)
+    }
+
     static func fromPushPayload(sessionId: String, payload: PushService.PushPayload) -> LiveSession {
         LiveSession(
             id: 0,
@@ -1079,6 +1085,8 @@ struct TeamHierarchyLevel: Codable, Identifiable {
     let roleLabel: String
     let members: [TeamHierarchyMember]
 
+    var localizedRoleLabel: String { RoleLabelFormatter.localized(roleLabel) }
+
     enum CodingKeys: String, CodingKey {
         case role
         case roleLabel = "role_label"
@@ -1093,6 +1101,8 @@ struct TeamHierarchyMember: Codable, Identifiable {
     let email: String
     let enabled: Bool
     let roleLabel: String
+
+    var localizedRoleLabel: String { RoleLabelFormatter.localized(roleLabel) }
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"

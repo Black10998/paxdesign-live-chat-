@@ -70,4 +70,11 @@ enum AppRefreshPolicy {
     static func setActiveSession(_ sessionId: String?) {
         activeSessionId = sessionId?.isEmpty == false ? sessionId : nil
     }
+
+    static func resetOnLogout() {
+        hasOpenChat = false
+        activeSessionId = nil
+        liveRequestCount = 0
+        sseHealthy = false
+    }
 }

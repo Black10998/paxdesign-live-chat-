@@ -225,7 +225,7 @@ struct SettingsRootView: View {
                     Text(auth.profile?.displayName ?? L10n.CommonAdministrator)
                         .font(.title3.weight(.semibold))
                     if auth.profile?.isSuperAdmin == true {
-                        Text(L10n.AccountSuperAdmin)
+                        Text(L10n.RoleExecutiveDirector)
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(PAXTheme.accent)
                     }

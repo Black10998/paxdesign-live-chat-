@@ -128,7 +128,7 @@ struct TeamMessagesHubView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(session.displayName)
                         .font(.body.weight(.semibold))
-                    Text(session.otherRoleLabel.isEmpty ? session.requestStatusLabel : session.otherRoleLabel)
+                    Text(session.localizedOtherRoleLabel)
                         .font(.caption)
                         .foregroundStyle(PAXTheme.accent)
                 }
@@ -357,7 +357,7 @@ struct TeamMessagesHubView: View {
 
                     HStack(spacing: 8) {
                         if !session.otherRoleLabel.isEmpty {
-                            Text(session.otherRoleLabel)
+                            Text(session.localizedOtherRoleLabel)
                                 .font(.caption2.weight(.bold))
                                 .foregroundStyle(session.isExecutiveConversation ? .purple : PAXBrand.accent)
                                 .padding(.horizontal, 6)
@@ -628,8 +628,8 @@ private struct TeamContactRow: View {
                     Text(member.publicDisplaySubtitle)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(roleTint)
-                    if !member.profileTitle.orEmpty.isEmpty {
-                        Text(member.profileTitle ?? "")
+                    if !member.localizedProfileTitle.isEmpty {
+                        Text(member.localizedProfileTitle)
                             .font(.caption)
                             .foregroundStyle(PAXTheme.textSecondary)
                     }

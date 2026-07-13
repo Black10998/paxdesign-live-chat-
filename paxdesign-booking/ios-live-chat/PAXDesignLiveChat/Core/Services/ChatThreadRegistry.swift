@@ -38,13 +38,14 @@ final class ChatThreadRegistry {
 
     func clearAll() {
         for thread in bookingThreads.values {
-            thread.suspend()
+            thread.resetForLogout()
         }
         for thread in teamThreads.values {
-            thread.suspend()
+            thread.resetForLogout()
         }
         bookingThreads.removeAll()
         teamThreads.removeAll()
+        recentOrder.removeAll()
     }
 
     func updateQuickLinks(_ links: [QuickLink]) {

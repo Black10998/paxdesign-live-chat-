@@ -88,9 +88,12 @@ class PAXdesign_Chat_Live {
         $avatar      = $avatar_meta !== '' ? esc_url_raw($avatar_meta) : get_avatar_url($user_id, array('size' => 256));
 
         $title = trim((string) get_user_meta($user_id, 'pax_live_profile_title', true));
+        if (class_exists('PAXdesign_Live_Chat_Permissions')) {
+            $title = PAXdesign_Live_Chat_Permissions::normalize_profile_title($title, $user_id);
+        }
         if ($title === '' && class_exists('PAXdesign_Live_Chat_Permissions')) {
             $title = PAXdesign_Live_Chat_Permissions::is_super_admin($user)
-                ? __('Administrator', 'paxdesign-booking')
+                ? 'Executive Director'
                 : __('Mitarbeiter', 'paxdesign-booking');
         }
 

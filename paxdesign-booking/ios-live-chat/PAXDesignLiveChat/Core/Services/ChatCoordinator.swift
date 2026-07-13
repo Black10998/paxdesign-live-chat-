@@ -227,6 +227,29 @@ final class ChatCoordinator: ObservableObject {
         IncomingCallRingtone.shared.stopRinging()
     }
 
+    func resetLoggedOutState() {
+        stop()
+        sessions = []
+        liveCount = 0
+        unreadChatCount = 0
+        unreadTeamCount = 0
+        isLoading = false
+        isSyncing = false
+        lastSyncAt = nil
+        errorMessage = nil
+        incomingRequest = nil
+        activeSessionId = nil
+        showIncomingFullscreen = false
+        incomingBannerDismissed = false
+        knownSessionIds.removeAll()
+        knownLiveRequests.removeAll()
+        lastKnownPreviews.removeAll()
+        sessionServerSeq.removeAll()
+        fullscreenTask?.cancel()
+        fullscreenTask = nil
+        lastSessionRefreshAt = nil
+    }
+
     func refreshSessions(auth: AuthStore, mode: SessionRefreshMode = .lightweight) async {
         switch mode {
         case .full:
@@ -718,6 +741,33 @@ final class ChatThreadModel: ObservableObject {
         pendingStreamEvents = []
         pendingInlineMessages = []
         isLoadingMessages = true
+    }
+
+    func resetForLogout() {
+        suspend()
+        resetThreadState()
+        draft = ""
+        isSending = false
+        errorMessage = nil
+        replyToMessage = nil
+        quickReplies = []
+        aiSuggestions = []
+        suggestionsLoading = false
+        suggestionsError = nil
+        deletingMessageIds = []
+        linkReviewSubmittingIds = []
+        userTyping = false
+        handler = "ai"
+        customerName = "Kunde"
+        customerLanguage = ""
+        adminName = ""
+        assignedAgent = nil
+        detectedService = ""
+        updatedAt = ""
+        sessionRating = 0
+        messagesRevision = 0
+        suggestionsForMessageId = 0
+        auth = nil
     }
 
     private func beginEventStream(auth: AuthStore, generation: Int) {

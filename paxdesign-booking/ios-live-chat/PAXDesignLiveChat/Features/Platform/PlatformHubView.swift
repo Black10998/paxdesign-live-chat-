@@ -109,7 +109,7 @@ struct PlatformHubView: View {
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(PAXTheme.textPrimary)
                     if auth.profile?.isSuperAdmin == true {
-                        Text(L10n.AccountSuperAdmin)
+                        Text(L10n.RoleExecutiveDirector)
                             .font(.caption2.weight(.bold))
                             .foregroundStyle(PAXTheme.accent)
                             .padding(.horizontal, 8)

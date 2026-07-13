@@ -191,6 +191,14 @@ final class TeamMessagingCoordinator: ObservableObject {
         ChatEventStream.shared.unsubscribeInbox(id: inboxSubscriptionId)
     }
 
+    func resetLoggedOutState() {
+        stop()
+        teamSessions = []
+        pendingRequests = []
+        isLoading = false
+        errorMessage = nil
+    }
+
     func deleteConversation(sessionId: String, mode: String, auth: AuthStore) async -> (success: Bool, message: String?) {
         guard let api = auth.api else { return (false, "Not signed in.") }
         do {
@@ -475,6 +483,27 @@ final class TeamChatThreadModel: ObservableObject {
         pendingStreamEvents = []
         pendingInlineMessages = []
         isLoadingMessages = true
+    }
+
+    func resetForLogout() {
+        suspend()
+        resetThreadState()
+        draft = ""
+        isSending = false
+        errorMessage = nil
+        remoteTyping = false
+        participantName = ""
+        currentSeq = 0
+        otherReadSeq = 0
+        requestStatus = "accepted"
+        requestStatusLabel = "Accepted"
+        canSend = true
+        canRespond = false
+        otherPresence = "offline"
+        otherLastSeen = 0
+        failedClientMsgIds = []
+        messagesRevision = 0
+        auth = nil
     }
 
     private func loadFullHistory(auth: AuthStore, showLoading: Bool = false) async {

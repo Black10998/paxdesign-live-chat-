@@ -101,7 +101,7 @@ struct AdministrationHubView: View {
                 if auth.profile?.isSuperAdmin == true {
                     HStack {
                         PAXIcon("star.fill", size: .row)
-                        Text(L10n.AccountSuperAdmin)
+                        Text(L10n.RoleExecutiveDirector)
                             .foregroundStyle(PAXTheme.accent)
                     }
                 } else if let perms = auth.profile?.permissions {
@@ -154,7 +154,7 @@ struct AdministrationHubView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(auth.profile?.displayName ?? L10n.CommonAdministrator)
                     .font(.headline)
-                Text(L10n.AccountSuperAdmin)
+                Text(L10n.RoleExecutiveDirector)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(PAXTheme.accent)
             }

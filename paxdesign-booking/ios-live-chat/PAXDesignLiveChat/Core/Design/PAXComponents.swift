@@ -386,18 +386,81 @@ struct PAXInlineLoader: View {
     }
 }
 
+enum PAXSkeletonPreset {
+    case list
+    case dashboard
+    case chatThread
+    case deviceCards
+}
+
 struct PAXScreenLoadingStack: View {
     var status: String
     var rowCount: Int = 4
+    var preset: PAXSkeletonPreset = .list
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             PAXTimelineLoaderCard(status: status)
-            ForEach(0..<rowCount, id: \.self) { _ in
-                PAXSkeletonListRow()
+            switch preset {
+            case .list:
+                ForEach(0..<rowCount, id: \.self) { _ in
+                    PAXSkeletonListRow()
+                        .paxCard(.list)
+                }
+            case .dashboard:
+                HStack(spacing: 10) {
+                    ForEach(0..<2, id: \.self) { _ in
+                        VStack(alignment: .leading, spacing: 8) {
+                            PAXSkeletonBlock(width: 72, height: 10, cornerRadius: 6)
+                            PAXSkeletonBlock(width: 48, height: 22, cornerRadius: 8)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(14)
+                        .paxCard(.list)
+                    }
+                }
+                ForEach(0..<max(1, rowCount - 1), id: \.self) { _ in
+                    PAXSkeletonListRow()
+                        .paxCard(.list)
+                }
+            case .chatThread:
+                ForEach(0..<max(3, rowCount), id: \.self) { index in
+                    PAXSkeletonChatRow(outgoing: index.isMultiple(of: 3))
+                        .padding(.horizontal, 4)
+                }
+            case .deviceCards:
+                ForEach(0..<rowCount, id: \.self) { _ in
+                    HStack(spacing: 12) {
+                        PAXSkeletonCircle(size: 34)
+                        VStack(alignment: .leading, spacing: 7) {
+                            PAXSkeletonBlock(width: 120, height: 11, cornerRadius: 8)
+                            PAXSkeletonBlock(width: 180, height: 9, cornerRadius: 8)
+                        }
+                        Spacer(minLength: 0)
+                        PAXSkeletonBlock(width: 54, height: 24, cornerRadius: 12)
+                    }
+                    .padding(.vertical, 6)
                     .paxCard(.list)
+                }
             }
         }
+    }
+}
+
+struct PAXChatThreadLoadingStack: View {
+    var status: String = L10n.LoadingSessions
+    var rowCount: Int = 5
+
+    var body: some View {
+        VStack(spacing: 14) {
+            PAXTimelineLoaderCard(status: status)
+            ForEach(0..<rowCount, id: \.self) { index in
+                PAXSkeletonChatRow(outgoing: index.isMultiple(of: 3))
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
     }
 }
 

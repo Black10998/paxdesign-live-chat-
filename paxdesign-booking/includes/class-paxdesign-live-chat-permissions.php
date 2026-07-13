@@ -435,6 +435,29 @@ class PAXdesign_Live_Chat_Permissions {
     }
 
     /**
+     * Normalize stored profile titles — maps legacy feminine German executive titles
+     * to the canonical English label consumed by iOS localization.
+     *
+     * @param string $title
+     * @param int    $user_id
+     */
+    public static function normalize_profile_title($title, $user_id = 0) {
+        $title = trim((string) $title);
+        $lower = function_exists('mb_strtolower') ? mb_strtolower($title, 'UTF-8') : strtolower($title);
+
+        $is_feminine_ed = ($lower === 'geschäftsführerin' || $lower === 'geschaeftsfuehrerin');
+        $is_executive   = $user_id > 0 && self::is_super_admin($user_id);
+
+        if ($is_executive && ($title === '' || $is_feminine_ed)) {
+            return 'Executive Director';
+        }
+        if ($is_feminine_ed || $lower === 'geschäftsführer' || $lower === 'geschaeftsfuehrer') {
+            return 'Executive Director';
+        }
+        return $title;
+    }
+
+    /**
      * @return array<string, bool>
      */
     public static function get_team_messaging_settings() {
@@ -552,6 +575,10 @@ class PAXdesign_Live_Chat_Permissions {
         if ($member['profile_title'] === '' && $member['is_executive']) {
             $member['profile_title'] = 'Executive Director';
         }
+        $member['profile_title'] = self::normalize_profile_title(
+            (string) $member['profile_title'],
+            $uid
+        );
         $presence = self::get_team_presence($uid);
         $member['presence_status'] = $presence['status'];
         $member['last_seen']       = $presence['last_seen'];

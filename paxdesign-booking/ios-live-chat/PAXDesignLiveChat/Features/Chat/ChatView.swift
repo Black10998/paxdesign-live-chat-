@@ -347,9 +347,24 @@ struct ChatView: View {
         }
     }
 
+    private var showQuickReplyStrip: Bool {
+        thread.handler == "admin" && canReply && !thread.quickReplies.isEmpty
+    }
+
+    private var showAISuggestionsStrip: Bool {
+        guard thread.handler == "admin", canUseAI, settings.aiSuggestionsEnabled else { return false }
+        return thread.suggestionsLoading
+            || !thread.aiSuggestions.isEmpty
+            || (thread.suggestionsError != nil && !thread.suggestionsError!.isEmpty)
+    }
+
+    private var showAssistStrip: Bool {
+        showQuickReplyStrip || showAISuggestionsStrip
+    }
+
     private var assistStrip: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if thread.handler == "admin", canReply, !thread.quickReplies.isEmpty {
+            if showQuickReplyStrip {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(L10n.ChatQuickRepliesTitle)
                         .font(.caption2.weight(.semibold))
@@ -364,7 +379,7 @@ struct ChatView: View {
                 }
             }
 
-            if thread.handler == "admin", canUseAI, settings.aiSuggestionsEnabled {
+            if showAISuggestionsStrip {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 6) {
                         PAXIcon("sparkles", size: .inline)
@@ -376,9 +391,11 @@ struct ChatView: View {
                                 .scaleEffect(0.7)
                         }
                         Spacer()
-                        Text(L10n.ChatAITapToInsert)
-                            .font(.caption2)
-                            .foregroundStyle(PAXTheme.textTertiary)
+                        if !thread.aiSuggestions.isEmpty {
+                            Text(L10n.ChatAITapToInsert)
+                                .font(.caption2)
+                                .foregroundStyle(PAXTheme.textTertiary)
+                        }
                     }
 
                     if let error = thread.suggestionsError, thread.aiSuggestions.isEmpty, !thread.suggestionsLoading {
@@ -410,7 +427,7 @@ struct ChatView: View {
 
     private var chatInputBar: some View {
         VStack(spacing: 0) {
-            if thread.handler == "admin", (canReply && !thread.quickReplies.isEmpty) || (canUseAI && settings.aiSuggestionsEnabled) {
+            if showAssistStrip {
                 assistStrip
             }
 

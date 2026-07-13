@@ -47,8 +47,8 @@ enum AppServicesController {
         teamCoordinator: TeamMessagingCoordinator
     ) {
         didStart = false
-        coordinator.stop()
-        teamCoordinator.stop()
+        coordinator.resetLoggedOutState()
+        teamCoordinator.resetLoggedOutState()
         ChatThreadRegistry.shared.clearAll()
         ConversationHistoryStore.shared.clearAll()
         SessionListCache.shared.clear()
@@ -57,7 +57,11 @@ enum AppServicesController {
         NetworkRequestTracker.shared.reset()
         NetworkCircuitBreaker.shared.reset()
         HTTPResponseForensics.shared.reset()
-        AppRefreshPolicy.sseHealthy = false
+        AppRefreshPolicy.resetOnLogout()
+        ConversationPrefetcher.shared.reset()
+        PushDeepLinkRouter.shared.clearPending()
+        ChatImageCache.clearAll()
+        PAXApplicationBadge.clear()
         #if !SIDELOAD
         DeviceSessionService.shared.stop()
         PushRegistrationCoordinator.reset()
