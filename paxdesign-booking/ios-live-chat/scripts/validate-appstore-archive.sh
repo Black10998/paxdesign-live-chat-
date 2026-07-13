@@ -57,6 +57,18 @@ for key in \
   fi
 done
 
+read_codesign_entitlement() {
+  local target_path="$1"
+  local plist_key="$2"
+  local temp_plist value=""
+  temp_plist="$(mktemp)"
+  if codesign -d --entitlements :- "$target_path" > "$temp_plist" 2>/dev/null && [[ -s "$temp_plist" ]]; then
+    value="$(/usr/libexec/PlistBuddy -c "Print :$plist_key" "$temp_plist" 2>/dev/null || true)"
+  fi
+  rm -f "$temp_plist"
+  printf '%s' "$value"
+}
+
 read_entitlements_value() {
   local target_path="$1"
   local plist_key="$2"
@@ -84,8 +96,9 @@ read_entitlements_value() {
 codesign --verify --deep --strict "$APP_PATH" 2>/dev/null || fail "Main app codesign verification failed"
 codesign --verify --deep --strict "$WIDGET_PATH" 2>/dev/null || fail "Widget extension codesign verification failed"
 
-MAIN_APS="$(read_entitlements_value "$APP_PATH" "aps-environment")"
-[[ "$MAIN_APS" == "production" ]] || fail "Main app aps-environment must be production (got ${MAIN_APS:-<missing>})"
+MAIN_APS="$(read_codesign_entitlement "$APP_PATH" "aps-environment")"
+[[ -n "$MAIN_APS" ]] || fail "Codesign entitlements missing aps-environment in archive (Push not embedded in signature)"
+[[ "$MAIN_APS" == "production" ]] || fail "Main app codesign aps-environment must be production (got ${MAIN_APS})"
 
 APS_MIRROR="$(/usr/libexec/PlistBuddy -c 'Print :PAXSignedAPSEnvironment' "$APP_PATH/Info.plist" 2>/dev/null || true)"
 [[ "$APS_MIRROR" == "production" ]] || fail "Archived Info.plist missing PAXSignedAPSEnvironment=production"
@@ -100,4 +113,5 @@ echo "App Store archive validation passed"
 echo "  Archive: $ARCHIVE_PATH"
 echo "  Main app: $MAIN_ID"
 echo "  Widget: $WIDGET_ID (embedded)"
-echo "  APNs: production"
+echo "  codesign aps-environment=$MAIN_APS"
+echo "  PAXSignedAPSEnvironment=$APS_MIRROR"
