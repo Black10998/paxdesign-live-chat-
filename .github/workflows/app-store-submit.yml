@@ -69,9 +69,10 @@ jobs:
       - name: Upload App Store screenshots
         run: python3 scripts/appstore-connect/upload_app_store_screenshots.py
 
-      - name: Submit metadata and request Apple review
+      - name: Prepare metadata (no App Store review submission)
         env:
           APP_STORE_TARGET_BUILD: ${{ steps.version.outputs.build }}
+          SUBMIT_FOR_REVIEW: "0"
         run: python3 scripts/appstore-connect/submit_app_store_review.py
 
       - name: Upload release report artifact

@@ -1,0 +1,24 @@
+name: Update App Store Age Rating
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/triggers/update-age-rating'
+
+permissions:
+  contents: read
+
+jobs:
+  age-rating:
+    runs-on: ubuntu-latest
+    env:
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install --quiet PyJWT cryptography
+      - run: python3 scripts/appstore-connect/update_age_rating.py

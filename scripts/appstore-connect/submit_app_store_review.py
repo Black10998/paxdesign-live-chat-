@@ -392,7 +392,20 @@ def main() -> None:
     version_attrs = version_status(client, version_id)
     state = version_attrs.get("appStoreState", "")
     submission = None
-    if state in {"PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED"}:
+    submit_enabled = os.environ.get("SUBMIT_FOR_REVIEW", "").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+    if not submit_enabled:
+        print(
+            "SUBMIT_FOR_REVIEW not set — skipping App Store review submission "
+            "(TestFlight-only policy; see docs/app-store/RELEASE_POLICY.md)"
+        )
+        warnings.append(
+            "App Store review submission skipped (TestFlight-only until product owner confirms)"
+        )
+    elif state in {"PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED"}:
         submission = submit_for_review(client, version_id)
         version_attrs = version_status(client, version_id)
     elif state in {"WAITING_FOR_REVIEW", "READY_FOR_REVIEW", "IN_REVIEW", "PENDING_DEVELOPER_RELEASE", "READY_FOR_SALE"}:
