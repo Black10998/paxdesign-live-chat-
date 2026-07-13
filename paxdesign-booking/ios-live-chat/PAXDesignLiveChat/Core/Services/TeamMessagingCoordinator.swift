@@ -831,9 +831,9 @@ final class TeamChatThreadModel: ObservableObject {
             content: caption,
             ts: Int(Date().timeIntervalSince1970),
             imageUrl: "pending://\(clientMsgId)",
-            attachmentType: "image",
             senderId: auth.profile?.userId,
-            senderName: auth.profile?.displayName
+            senderName: auth.profile?.displayName,
+            attachmentType: "image"
         )
         messages.append(optimistic)
         messagesRevision &+= 1
@@ -878,10 +878,10 @@ final class TeamChatThreadModel: ObservableObject {
             role: "admin",
             content: "",
             ts: Int(Date().timeIntervalSince1970),
-            attachmentType: "voice",
-            audioDuration: duration,
             senderId: auth.profile?.userId,
-            senderName: auth.profile?.displayName
+            senderName: auth.profile?.displayName,
+            attachmentType: "voice",
+            audioDuration: duration
         )
         messages.append(optimistic)
         messagesRevision &+= 1
@@ -926,12 +926,12 @@ final class TeamChatThreadModel: ObservableObject {
             role: "admin",
             content: label,
             ts: Int(Date().timeIntervalSince1970),
+            senderId: auth.profile?.userId,
+            senderName: auth.profile?.displayName,
             attachmentType: "location",
             locationLat: latitude,
             locationLng: longitude,
-            locationLabel: label,
-            senderId: auth.profile?.userId,
-            senderName: auth.profile?.displayName
+            locationLabel: label
         )
         messages.append(optimistic)
         messagesRevision &+= 1
