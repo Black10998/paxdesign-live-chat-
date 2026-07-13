@@ -88,25 +88,35 @@ def update_localization(
     support_url: str | None = None,
     marketing_url: str | None = None,
 ) -> None:
-    attrs: dict[str, Any] = {}
-    if description is not None:
-        attrs["description"] = description
-    if keywords is not None:
-        attrs["keywords"] = keywords
-    if promotional_text is not None:
-        attrs["promotionalText"] = promotional_text
-    if whats_new is not None:
-        attrs["whatsNew"] = whats_new
-    if support_url is not None:
-        attrs["supportUrl"] = support_url
-    if marketing_url is not None:
-        attrs["marketingUrl"] = marketing_url
-    if not attrs:
-        return
-    client.patch(
-        f"/appStoreVersionLocalizations/{loc_id}",
-        {"data": {"type": "appStoreVersionLocalizations", "id": loc_id, "attributes": attrs}},
-    )
+    fields: list[tuple[str, str | None]] = [
+        ("description", description),
+        ("keywords", keywords),
+        ("promotionalText", promotional_text),
+        ("whatsNew", whats_new),
+        ("supportUrl", support_url),
+        ("marketingUrl", marketing_url),
+    ]
+    for key, value in fields:
+        if value is None:
+            continue
+        status, response = client.request(
+            "PATCH",
+            f"/appStoreVersionLocalizations/{loc_id}",
+            body={
+                "data": {
+                    "type": "appStoreVersionLocalizations",
+                    "id": loc_id,
+                    "attributes": {key: value},
+                }
+            },
+            allow_error=True,
+        )
+        if status in {200, 201}:
+            continue
+        if status == 409 and key == "whatsNew":
+            warn(f"Skipping whatsNew for localization {loc_id} (not editable in current state)")
+            continue
+        warn(f"Could not update {key} on localization {loc_id} ({status}): {json.dumps(response)}")
 
 
 def update_app_info_localization(
@@ -165,9 +175,10 @@ def update_app_info_localization(
 
 
 def attach_build(client: ASCClient, version_id: str, build_id: str) -> None:
-    client.patch(
+    status, response = client.request(
+        "PATCH",
         f"/appStoreVersions/{version_id}",
-        {
+        body={
             "data": {
                 "type": "appStoreVersions",
                 "id": version_id,
@@ -176,8 +187,15 @@ def attach_build(client: ASCClient, version_id: str, build_id: str) -> None:
                 },
             }
         },
+        allow_error=True,
     )
-    print(f"Attached build {build_id} to version {version_id}")
+    if status in {200, 201}:
+        print(f"Attached build {build_id} to version {version_id}")
+        return
+    if status == 409:
+        warn(f"Build {build_id} may already be attached to version {version_id}")
+        return
+    warn(f"Could not attach build ({status}): {json.dumps(response)}")
 
 
 def wait_for_build(client: ASCClient, app_id: str, build_number: str) -> dict[str, Any]:
