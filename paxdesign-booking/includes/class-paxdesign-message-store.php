@@ -242,11 +242,15 @@ class PAXdesign_Message_Store {
         $role       = sanitize_key($role);
         $channel    = sanitize_key($channel);
         $content    = sanitize_textarea_field($content);
-        $has_image  = !empty($extra['image_url']);
+        $has_image    = !empty($extra['image_url']);
+        $has_audio    = !empty($extra['audio_url']);
+        $has_location = isset($extra['location_lat'], $extra['location_lng'])
+            && $extra['location_lat'] !== ''
+            && $extra['location_lng'] !== '';
         if ($session_id === '' || !in_array($role, array('user', 'assistant', 'admin', 'system'), true)) {
             return new WP_Error('pax_message_invalid', 'Invalid message.', array('status' => 400));
         }
-        if ($content === '' && !$has_image) {
+        if ($content === '' && !$has_image && !$has_audio && !$has_location) {
             return new WP_Error('pax_message_empty', 'Message cannot be empty.', array('status' => 400));
         }
 
@@ -779,6 +783,10 @@ class PAXdesign_Message_Store {
         if ($image_url !== '') {
             self::delete_uploaded_file($image_url);
         }
+        $audio_url = !empty($message['audio_url']) ? (string) $message['audio_url'] : '';
+        if ($audio_url !== '') {
+            self::delete_uploaded_file($audio_url);
+        }
         if (!empty($message['link_url'])) {
             // Link card metadata only — no remote fetch cache retained.
         }
@@ -866,7 +874,8 @@ class PAXdesign_Message_Store {
 
     private static function sanitize_meta($extra) {
         $allowed = array(
-            'image_url', 'attachment_type', 'reply_to', 'reaction',
+            'image_url', 'audio_url', 'audio_duration', 'attachment_type', 'reply_to', 'reaction',
+            'location_lat', 'location_lng', 'location_label',
             'sender_id', 'sender_name', 'sender_avatar', 'sender_role', 'sender_email',
             'link_url', 'link_label', 'link_icon',
             'link_scan_status', 'link_scan_system_status', 'link_scan_review_pending',

@@ -8,6 +8,8 @@ final class AuthStore: ObservableObject {
     @Published private(set) var isLoggedIn = false
     @Published private(set) var profile: AdminProfile?
     @Published private(set) var isBootstrapping = true
+    /// Bumped on every login/logout so SwiftUI rebuilds the shell and drops stale UI state.
+    @Published private(set) var sessionEpoch = UUID()
     @Published var siteURLString = ""
     @Published var username = ""
     @Published var appPassword = ""
@@ -69,6 +71,7 @@ final class AuthStore: ObservableObject {
             api = client
             profile = me
             isLoggedIn = true
+            sessionEpoch = UUID()
             AppSettingsStore.shared.onboardingCompleted = me.onboardingCompleted
 
             let stored = StoredCredentials(siteURL: siteURLString, username: username, appPassword: appPassword)
@@ -96,6 +99,7 @@ final class AuthStore: ObservableObject {
         api = nil
         profile = nil
         isLoggedIn = false
+        sessionEpoch = UUID()
         let service = self.service
         Task.detached(priority: .utility) {
             KeychainHelper.delete(service: service)

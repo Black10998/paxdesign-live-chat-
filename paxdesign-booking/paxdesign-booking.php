@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.118.0
+Version: 3.119.0
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later

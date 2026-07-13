@@ -321,6 +321,11 @@ struct LiveMessage: Identifiable, Codable, Hashable {
     let linkScanSystemStatus: String?
     let linkScanReviewPending: String?
     let linkScanUrls: String?
+    let audioUrl: String?
+    let audioDuration: Double?
+    let locationLat: Double?
+    let locationLng: Double?
+    let locationLabel: String?
 
     enum CodingKeys: String, CodingKey {
         case id, role, content, ts, reaction
@@ -339,6 +344,11 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         case linkScanSystemStatus = "link_scan_system_status"
         case linkScanReviewPending = "link_scan_review_pending"
         case linkScanUrls = "link_scan_urls"
+        case audioUrl = "audio_url"
+        case audioDuration = "audio_duration"
+        case locationLat = "location_lat"
+        case locationLng = "location_lng"
+        case locationLabel = "location_label"
     }
 
     private enum LegacyCodingKeys: String, CodingKey {
@@ -365,7 +375,12 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         linkScanStatus: String? = nil,
         linkScanSystemStatus: String? = nil,
         linkScanReviewPending: String? = nil,
-        linkScanUrls: String? = nil
+        linkScanUrls: String? = nil,
+        audioUrl: String? = nil,
+        audioDuration: Double? = nil,
+        locationLat: Double? = nil,
+        locationLng: Double? = nil,
+        locationLabel: String? = nil
     ) {
         self.id = id
         self.clientMsgId = clientMsgId
@@ -387,6 +402,11 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         self.linkScanSystemStatus = linkScanSystemStatus
         self.linkScanReviewPending = linkScanReviewPending
         self.linkScanUrls = linkScanUrls
+        self.audioUrl = audioUrl
+        self.audioDuration = audioDuration
+        self.locationLat = locationLat
+        self.locationLng = locationLng
+        self.locationLabel = locationLabel
     }
 
     var needsLinkScanReview: Bool {
@@ -397,6 +417,14 @@ struct LiveMessage: Identifiable, Codable, Hashable {
 
     var isLinkCard: Bool {
         attachmentType == "link_card" && !(linkUrl ?? "").isEmpty
+    }
+
+    var isVoiceMessage: Bool {
+        attachmentType == "voice" || !(audioUrl ?? "").isEmpty
+    }
+
+    var isLocationMessage: Bool {
+        attachmentType == "location" || (locationLat != nil && locationLng != nil)
     }
 
     var isInPlaceWarning: Bool {
@@ -449,6 +477,11 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         linkScanSystemStatus = Self.decodeOptionalString(container, .linkScanSystemStatus)
         linkScanReviewPending = Self.decodeOptionalString(container, .linkScanReviewPending)
         linkScanUrls = Self.decodeOptionalString(container, .linkScanUrls)
+        audioUrl = Self.decodeOptionalString(container, .audioUrl)
+        audioDuration = try container.decodeIfPresent(Double.self, forKey: .audioDuration)
+        locationLat = try container.decodeIfPresent(Double.self, forKey: .locationLat)
+        locationLng = try container.decodeIfPresent(Double.self, forKey: .locationLng)
+        locationLabel = Self.decodeOptionalString(container, .locationLabel)
     }
 
     private static func decodeOptionalString<C: CodingKey>(

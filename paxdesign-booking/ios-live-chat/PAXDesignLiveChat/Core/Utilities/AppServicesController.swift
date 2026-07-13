@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 #if !SIDELOAD
 import UIKit
 #endif
@@ -62,6 +63,13 @@ enum AppServicesController {
         PushDeepLinkRouter.shared.clearPending()
         ChatImageCache.clearAll()
         PAXApplicationBadge.clear()
+        InAppNotificationCoordinator.shared.resetOnLogout()
+        ChatCursorStore.shared.resetAll()
+        WidgetDataStore.shared.resetOnLogout()
+        PAXNotificationSound.shared.stopAll()
+        PAXDeletePresenter.shared.dismissActive()
+        UNUserNotificationCenter.current().removeAllDeliveredNotifications()
+        UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
         #if !SIDELOAD
         DeviceSessionService.shared.stop()
         PushRegistrationCoordinator.reset()

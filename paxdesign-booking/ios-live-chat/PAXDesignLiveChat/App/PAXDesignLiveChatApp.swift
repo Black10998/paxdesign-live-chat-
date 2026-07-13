@@ -160,9 +160,6 @@ struct PAXDesignLiveChatApp: App {
                         senderName: payload.customerName.isEmpty ? payload.preview : payload.customerName,
                         isActiveSession: coordinator.activeSessionId == sessionId
                     )
-                } else {
-                    coordinator.activeSessionId = sessionId
-                    AppRefreshPolicy.setActiveSession(sessionId)
                 }
                 return
             }
@@ -176,11 +173,7 @@ struct PAXDesignLiveChatApp: App {
                     activeSessionId: coordinator.activeSessionId
                 )
             }
-            await coordinator.handlePush(sessionId: sessionId, type: type, auth: auth, payload: payload)
-            if opened {
-                coordinator.activeSessionId = sessionId
-                AppRefreshPolicy.setActiveSession(sessionId)
-            }
+            await coordinator.handlePush(sessionId: sessionId, type: type, auth: auth, payload: payload, shouldNavigate: false)
         }
     }
 }
@@ -229,6 +222,7 @@ struct RootView: View {
 
             case .main:
                 AdaptiveShellView()
+                    .id(auth.sessionEpoch)
                     .transition(.opacity)
 
             case .login:

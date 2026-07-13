@@ -1,7 +1,7 @@
 import Foundation
 import UserNotifications
 
-/// Plays in-app tones and posts local notifications when the app is foregrounded.
+/// Foreground notification coordinator — uses system default sounds and deduplicates by session.
 @MainActor
 final class InAppNotificationCoordinator {
     static let shared = InAppNotificationCoordinator()
@@ -9,15 +9,24 @@ final class InAppNotificationCoordinator {
     private var lastMessageSoundAt: Date?
     private var lastAISoundAt: Date?
     private var lastNewChatSoundAt: Date?
+    private var recentNotificationKeys: [String: Date] = [:]
     private let minInterval: TimeInterval = 0.8
+    private let dedupWindow: TimeInterval = 30
 
     private init() {}
 
+    func resetOnLogout() {
+        lastMessageSoundAt = nil
+        lastAISoundAt = nil
+        lastNewChatSoundAt = nil
+        recentNotificationKeys.removeAll()
+    }
+
     func handleNewChatStarted(sessionId: String, customerName: String, preview: String) {
         guard AppSettingsStore.shared.notificationsEnabled else { return }
+        guard shouldDeliver(sessionId: sessionId, type: "new_chat") else { return }
         guard shouldPlay(since: &lastNewChatSoundAt) else { return }
 
-        PAXNotificationSound.shared.play(.message)
         PAXHaptics.medium()
         postLocalNotification(
             title: customerName.isEmpty ? L10n.NotifyNewChatTitle : customerName,
@@ -30,9 +39,9 @@ final class InAppNotificationCoordinator {
     func handleNewCustomerMessage(sessionId: String, preview: String, customerName: String, isActiveSession: Bool) {
         guard AppSettingsStore.shared.messageSoundEnabled else { return }
         guard !isActiveSession else { return }
+        guard shouldDeliver(sessionId: sessionId, type: "message") else { return }
         guard shouldPlay(since: &lastMessageSoundAt) else { return }
 
-        PAXNotificationSound.shared.play(.message)
         PAXHaptics.light()
         postLocalNotification(
             title: customerName.isEmpty ? L10n.NotifyNewMessageTitle : customerName,
@@ -45,9 +54,9 @@ final class InAppNotificationCoordinator {
     func handleTeamMessage(sessionId: String, preview: String, senderName: String, isActiveSession: Bool) {
         guard AppSettingsStore.shared.messageSoundEnabled else { return }
         guard !isActiveSession else { return }
+        guard shouldDeliver(sessionId: sessionId, type: "team_message") else { return }
         guard shouldPlay(since: &lastMessageSoundAt) else { return }
 
-        PAXNotificationSound.shared.play(.message)
         PAXHaptics.light()
         postLocalNotification(
             title: senderName.isEmpty ? L10n.NotifyTeamMessageTitle : senderName,
@@ -59,9 +68,9 @@ final class InAppNotificationCoordinator {
 
     func handleTeamRequest(sessionId: String, preview: String) {
         guard AppSettingsStore.shared.messageSoundEnabled else { return }
+        guard shouldDeliver(sessionId: sessionId, type: "team_request") else { return }
         guard shouldPlay(since: &lastMessageSoundAt) else { return }
 
-        PAXNotificationSound.shared.play(.liveRequest)
         PAXHaptics.medium()
         postLocalNotification(
             title: L10n.NotifyTeamRequestTitle,
@@ -73,9 +82,9 @@ final class InAppNotificationCoordinator {
 
     func handleAIAttention(sessionId: String, preview: String) {
         guard AppSettingsStore.shared.messageSoundEnabled else { return }
+        guard shouldDeliver(sessionId: sessionId, type: "ai_attention") else { return }
         guard shouldPlay(since: &lastAISoundAt) else { return }
 
-        PAXNotificationSound.shared.play(.aiAlert)
         PAXHaptics.medium()
         postLocalNotification(
             title: L10n.NotifyAIAttentionTitle,
@@ -87,59 +96,46 @@ final class InAppNotificationCoordinator {
 
     func handleOperationalEvent(event: String, sessionId: String, preview: String, customerName: String) {
         guard AppSettingsStore.shared.messageSoundEnabled else { return }
+        guard shouldDeliver(sessionId: sessionId, type: event) else { return }
         guard shouldPlay(since: &lastAISoundAt) else { return }
 
         let title: String
         let body: String
-        let tone: PAXNotificationSound.Tone
         let type: String
 
         switch event {
         case "customer_waiting":
             title = L10n.NotifyCustomerWaitingTitle
             body = preview.isEmpty ? L10n.NotifyCustomerWaitingBody : preview
-            tone = .liveRequest
             type = "live_request"
         case "new_chat_started":
             title = L10n.NotifyNewChatTitle
             body = preview.isEmpty ? L10n.NotifyNewChatBody : preview
-            tone = .message
             type = "new_chat"
         case "missed_chat":
             title = L10n.NotifyMissedChatTitle
             body = preview.isEmpty ? L10n.NotifyMissedChatBody : preview
-            tone = .aiAlert
             type = "missed_chat"
         case "assigned_chat_updated":
             title = L10n.NotifyAssignedChatTitle
             body = preview.isEmpty ? L10n.NotifyAssignedChatBody : preview
-            tone = .aiAlert
             type = "session_sync"
         case "new_lead_contact":
             title = L10n.NotifyNewLeadTitle
             body = preview.isEmpty ? L10n.NotifyNewLeadBody : preview
-            tone = .aiAlert
             type = "new_lead_contact"
         case "link_scan_attention":
             title = L10n.NotifyAIAttentionTitle
             body = preview.isEmpty ? L10n.NotifyAIAttentionBody : preview
-            tone = .aiAlert
             type = "ai_attention"
         default:
             title = customerName.isEmpty ? L10n.NotifyNewMessageTitle : customerName
             body = preview.isEmpty ? L10n.NotifyNewMessageBody : preview
-            tone = .message
             type = "message"
         }
 
-        PAXNotificationSound.shared.play(tone)
         PAXHaptics.medium()
-        postLocalNotification(
-            title: title,
-            body: body,
-            sessionId: sessionId,
-            type: type
-        )
+        postLocalNotification(title: title, body: body, sessionId: sessionId, type: type)
     }
 
     func handlePushForeground(
@@ -165,7 +161,7 @@ final class InAppNotificationCoordinator {
 
         switch type {
         case "live_request":
-            break // ringtone handled by ChatCoordinator
+            break
         case "message", "new_chat":
             handleNewCustomerMessage(
                 sessionId: sessionId,
@@ -185,6 +181,17 @@ final class InAppNotificationCoordinator {
         default:
             break
         }
+    }
+
+    private func shouldDeliver(sessionId: String, type: String) -> Bool {
+        let key = "\(type):\(sessionId)"
+        let now = Date()
+        if let last = recentNotificationKeys[key], now.timeIntervalSince(last) < dedupWindow {
+            return false
+        }
+        recentNotificationKeys[key] = now
+        recentNotificationKeys = recentNotificationKeys.filter { now.timeIntervalSince($0.value) < dedupWindow * 2 }
+        return true
     }
 
     private func shouldPlay(since lastPlayed: inout Date?) -> Bool {
@@ -209,8 +216,9 @@ final class InAppNotificationCoordinator {
             ]
         ]
 
+        let identifier = "pax-foreground-\(type)-\(sessionId)"
         let request = UNNotificationRequest(
-            identifier: "pax-foreground-\(sessionId)-\(UUID().uuidString)",
+            identifier: identifier,
             content: content,
             trigger: nil
         )

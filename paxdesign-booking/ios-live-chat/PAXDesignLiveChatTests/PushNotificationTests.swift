@@ -58,4 +58,29 @@ final class PushNotificationTests: XCTestCase {
         AppRefreshPolicy.setActiveSession("")
         XCTAssertNil(AppRefreshPolicy.activeSessionId)
     }
+
+    @MainActor
+    func testPushHandlerDoesNotNavigateByDefault() async {
+        let auth = AuthStore.shared
+        let coordinator = ChatCoordinator()
+        coordinator.activeSessionId = nil
+        let sessionId = "pax_test_no_nav"
+
+        await coordinator.handlePush(
+            sessionId: sessionId,
+            type: "message",
+            auth: auth,
+            payload: PushService.PushPayload(
+                sessionId: sessionId,
+                type: "message",
+                event: "new_customer_message",
+                customerName: "Jane",
+                service: "Support",
+                preview: "Hello"
+            ),
+            shouldNavigate: false
+        )
+
+        XCTAssertNil(coordinator.activeSessionId)
+    }
 }
