@@ -1,17 +1,20 @@
 import SwiftUI
 import UIKit
 
-@MainActor
 enum PAXTheme {
-    private static var palette: PAXThemePalette {
-        AppSettingsStore.shared.effectivePalette
+    private(set) static var cachedPalette: PAXThemePalette = PAXThemePalette.palette(for: .classic)
+    private(set) static var cachedIsDark = false
+
+    static func applyPalette(_ palette: PAXThemePalette, isDark: Bool) {
+        cachedPalette = palette
+        cachedIsDark = isDark
     }
 
-    static var accent: Color { palette.accent }
-    static var accentSecondary: Color { palette.accentSecondary }
-    static var success: Color { palette.success }
-    static var danger: Color { palette.danger }
-    static var adminBubble: Color { palette.adminBubble }
+    static var accent: Color { cachedPalette.accent }
+    static var accentSecondary: Color { cachedPalette.accentSecondary }
+    static var success: Color { cachedPalette.success }
+    static var danger: Color { cachedPalette.danger }
+    static var adminBubble: Color { cachedPalette.adminBubble }
 
     static var border: Color { Color(.separator) }
     static var textPrimary: Color { .primary }
@@ -23,23 +26,14 @@ enum PAXTheme {
     static var iconOnFill: Color { .white }
     static var userBubble: Color { Color(.systemGray5) }
 
-    private static var prefersDarkInterface: Bool {
-        switch AppSettingsStore.shared.appearanceMode {
-        case .dark: return true
-        case .light: return false
-        case .system:
-            return UITraitCollection.current.userInterfaceStyle == .dark
-        }
-    }
-
     static var background: Color {
-        palette.background(isDark: prefersDarkInterface)
+        cachedPalette.background(isDark: cachedIsDark)
     }
     static var surface: Color {
-        palette.surface(isDark: prefersDarkInterface)
+        cachedPalette.surface(isDark: cachedIsDark)
     }
     static var surfaceElevated: Color {
-        palette.surfaceElevated(isDark: prefersDarkInterface)
+        cachedPalette.surfaceElevated(isDark: cachedIsDark)
     }
 
     static var systemBubble: Color { accent.opacity(0.14) }

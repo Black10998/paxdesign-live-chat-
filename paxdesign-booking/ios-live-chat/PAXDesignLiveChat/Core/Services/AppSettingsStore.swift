@@ -228,6 +228,14 @@ final class AppSettingsStore: ObservableObject {
     }
 
     private func bumpThemeRevision() {
+        let isDark: Bool
+        switch appearanceMode {
+        case .dark: isDark = true
+        case .light: isDark = false
+        case .system:
+            isDark = UITraitCollection.current.userInterfaceStyle == .dark
+        }
+        PAXTheme.applyPalette(effectivePalette, isDark: isDark)
         themeRevision = UUID()
     }
 
@@ -407,5 +415,6 @@ final class AppSettingsStore: ObservableObject {
         } else {
             accentColorPreset = .themeDefault
         }
+        bumpThemeRevision()
     }
 }
