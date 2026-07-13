@@ -65,6 +65,13 @@ read_codesign_entitlement() {
   if codesign -d --entitlements :- "$target_path" > "$temp_plist" 2>/dev/null && [[ -s "$temp_plist" ]]; then
     value="$(/usr/libexec/PlistBuddy -c "Print :$plist_key" "$temp_plist" 2>/dev/null || true)"
   fi
+  if [[ -z "$value" ]]; then
+    rm -f "$temp_plist"
+    temp_plist="$(mktemp)"
+    if codesign -d --entitlements "$temp_plist" "$target_path" 2>/dev/null && [[ -s "$temp_plist" ]]; then
+      value="$(/usr/libexec/PlistBuddy -c "Print :$plist_key" "$temp_plist" 2>/dev/null || true)"
+    fi
+  fi
   rm -f "$temp_plist"
   printf '%s' "$value"
 }
