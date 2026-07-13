@@ -33,7 +33,7 @@ final class NetworkCircuitBreaker {
     private var consecutiveRateLimitHits = 0
 
     /// Hard cap: max REST requests per rolling second.
-    var maxRequestsPerSecond = 2
+    var maxRequestsPerSecond = 3
     /// Minimum pause after first edge 403/429.
     var minOpenDuration: TimeInterval = 300
     var maxOpenDuration: TimeInterval = 600
@@ -55,7 +55,7 @@ final class NetworkCircuitBreaker {
     }
 
     func recordRequestStart(endpoint: String) throws {
-        if endpoint.hasPrefix("device-") || endpoint.hasPrefix("employee-devices") {
+        if endpoint.hasPrefix("device-") || endpoint == "devices-list" {
             return
         }
         if let until = openUntil, Date() < until {

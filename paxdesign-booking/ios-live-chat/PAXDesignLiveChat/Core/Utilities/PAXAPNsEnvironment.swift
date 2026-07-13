@@ -27,10 +27,13 @@ enum PAXAPNsEnvironment {
         #endif
     }
 
-    /// Build-time signed entitlement mirrored into Info.plist, or "missing" after iOS reports error 3000.
+    /// Prefer embedded provisioning profile (matches what iOS uses), then build-time Info.plist mirror.
     static var entitlementValue: String {
         if PAXPushEntitlementState.runtimeMissing {
             return "missing"
+        }
+        if let embedded = PAXEmbeddedProvisionReader.apsEnvironmentValue() {
+            return embedded
         }
         if let fromPlist = Bundle.main.infoDictionary?[signedEntitlementPlistKey] as? String,
            !fromPlist.isEmpty {
