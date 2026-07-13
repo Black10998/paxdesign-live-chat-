@@ -917,8 +917,8 @@ final class TeamChatThreadModel: ObservableObject {
             senderId: auth.profile?.userId,
             senderName: auth.profile?.displayName,
             attachmentType: "voice",
-            audioDuration: duration,
-            audioUrl: "pending://\(clientMsgId)"
+            audioUrl: "pending://\(clientMsgId)",
+            audioDuration: duration
         )
         messages.append(optimistic)
         messagesRevision &+= 1
