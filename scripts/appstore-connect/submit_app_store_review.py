@@ -57,13 +57,14 @@ def get_localization(client: ASCClient, version_id: str, locale: str) -> dict[st
     return None
 
 
-def ensure_localization(client: ASCClient, version_id: str, locale: str) -> dict[str, Any]:
+def ensure_localization(client: ASCClient, version_id: str, locale: str) -> dict[str, Any] | None:
     existing = get_localization(client, version_id, locale)
     if existing:
         return existing
-    payload = client.post(
+    status, response = client.request(
+        "POST",
         "/appStoreVersionLocalizations",
-        {
+        body={
             "data": {
                 "type": "appStoreVersionLocalizations",
                 "attributes": {"locale": locale},
@@ -72,9 +73,16 @@ def ensure_localization(client: ASCClient, version_id: str, locale: str) -> dict
                 },
             }
         },
+        allow_error=True,
     )
-    print(f"Created localization {locale}")
-    return payload["data"]
+    if status in {200, 201}:
+        print(f"Created localization {locale}")
+        return response["data"]
+    if status == 409:
+        warn(f"Localization {locale} already exists or is unavailable")
+        return get_localization(client, version_id, locale)
+    warn(f"Could not create localization {locale} ({status}): {json.dumps(response)}")
+    return None
 
 
 def update_localization(
@@ -344,6 +352,9 @@ def main() -> None:
 
     for locale in metadata.get("locales", ["de-DE"]):
         loc = ensure_localization(client, version_id, locale)
+        if not loc:
+            warn(f"Skipping metadata update for unavailable locale {locale}")
+            continue
         loc_id = loc["id"]
         update_localization(
             client,

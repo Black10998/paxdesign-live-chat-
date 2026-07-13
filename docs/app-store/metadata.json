@@ -2,7 +2,7 @@
   "bundleId": "at.paxdesign.livechat",
   "sku": "paxdesign-livechat",
   "primaryLocale": "de-DE",
-  "locales": ["de-DE", "en-US", "ar"],
+  "locales": ["de-DE", "en-US"],
   "versionString": "2.0.0",
   "buildNumber": "113",
   "wordpressVersion": "3.124.0",
