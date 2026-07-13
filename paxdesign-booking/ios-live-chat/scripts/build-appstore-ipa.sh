@@ -266,7 +266,18 @@ sync_plist_version() {
   /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string $BUILD_VERSION" "$plist_path"
 }
 
+inject_signed_aps_environment() {
+  local plist_path="$1"
+  local entitlements_file="$ROOT/PAXDesignLiveChat/PAXDesignLiveChat.entitlements"
+  local aps_value
+  aps_value="$(/usr/libexec/PlistBuddy -c 'Print :aps-environment' "$entitlements_file" 2>/dev/null || true)"
+  [[ -n "$aps_value" ]] || fail "Could not read aps-environment from entitlements file"
+  /usr/libexec/PlistBuddy -c "Delete :PAXSignedAPSEnvironment" "$plist_path" >/dev/null 2>&1 || true
+  /usr/libexec/PlistBuddy -c "Add :PAXSignedAPSEnvironment string $aps_value" "$plist_path"
+}
+
 sync_plist_version "$ROOT/PAXDesignLiveChat/Info.plist"
+inject_signed_aps_environment "$ROOT/PAXDesignLiveChat/Info.plist"
 sync_plist_version "$ROOT/PAXWidgets/Info.plist"
 echo "    Synced CFBundleVersion=$BUILD_VERSION CFBundleShortVersionString=$MARKETING_VERSION"
 

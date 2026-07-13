@@ -44,7 +44,6 @@ targets:
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
         INFOPLIST_KEY_NSSupportsLiveActivities: YES
         ENABLE_PREVIEWS: YES
-        SWIFT_OBJC_BRIDGING_HEADER: PAXDesignLiveChat/PAXDesignLiveChat-Bridging-Header.h
     entitlements:
       path: PAXDesignLiveChat/PAXDesignLiveChat.entitlements
     info:

@@ -175,6 +175,9 @@ final class PushService: NSObject, ObservableObject {
             registrationBlocked = true
             registrationBlockedReason = detail
             registrationCooldownUntil = Date().addingTimeInterval(APNsRegistrationPolicy.permanentFailureCooldown)
+            if APNsRegistrationPolicy.isPermanentFailureMessage(detail) {
+                PAXPushEntitlementState.runtimeMissing = true
+            }
             return
         }
         let pause = APNsRegistrationPolicy.retryCooldown(afterFailures: consecutiveRegistrationFailures)

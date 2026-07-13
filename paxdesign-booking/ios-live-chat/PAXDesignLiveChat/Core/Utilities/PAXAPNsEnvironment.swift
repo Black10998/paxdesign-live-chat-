@@ -1,8 +1,9 @@
 import Foundation
-import Security
 
-/// Runtime APNs environment detection from the signed `aps-environment` entitlement.
+/// APNs environment detection for TestFlight/App Store (production) vs debug/simulator (sandbox).
 enum PAXAPNsEnvironment {
+    private static let signedEntitlementPlistKey = "PAXSignedAPSEnvironment"
+
     static var label: String {
         isSandbox ? "sandbox" : "production"
     }
@@ -11,30 +12,39 @@ enum PAXAPNsEnvironment {
         #if targetEnvironment(simulator)
         return true
         #else
-        if let entitlement = readEntitlement("aps-environment") {
-            return entitlement == "development"
+        switch entitlementValue {
+        case "development":
+            return true
+        case "production":
+            return false
+        default:
+            #if DEBUG
+            return true
+            #else
+            return false
+            #endif
         }
-        #if DEBUG
-        return true
-        #else
-        return false
-        #endif
         #endif
     }
 
-    /// Actual signed entitlement value, or "missing" when absent from the app binary.
+    /// Build-time signed entitlement mirrored into Info.plist, or "missing" after iOS reports error 3000.
     static var entitlementValue: String {
-        readEntitlement("aps-environment") ?? "missing"
+        if PAXPushEntitlementState.runtimeMissing {
+            return "missing"
+        }
+        if let fromPlist = Bundle.main.infoDictionary?[signedEntitlementPlistKey] as? String,
+           !fromPlist.isEmpty {
+            return fromPlist
+        }
+        #if DEBUG
+        return "development"
+        #else
+        return "production"
+        #endif
     }
 
     static var hasPushEntitlement: Bool {
-        guard let value = readEntitlement("aps-environment"), !value.isEmpty else {
-            return false
-        }
+        let value = entitlementValue
         return value == "production" || value == "development"
-    }
-
-    private static func readEntitlement(_ key: String) -> String? {
-        PAXCopyEntitlement(key)
     }
 }
