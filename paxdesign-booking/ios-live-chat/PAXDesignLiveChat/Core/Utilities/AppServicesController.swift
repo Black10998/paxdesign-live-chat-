@@ -36,7 +36,9 @@ enum AppServicesController {
             let permissions = PermissionCoordinator.shared
             switch permissions.notificationStatus {
             case .authorized, .provisional, .ephemeral:
-                _ = await PushService.shared.ensureDeviceToken()
+                if PushService.shared.canAttemptRegistration || PushService.shared.deviceToken != nil {
+                    _ = await PushService.shared.ensureDeviceToken(maxAttempts: 1, perAttemptTimeout: 20)
+                }
             default:
                 break
             }

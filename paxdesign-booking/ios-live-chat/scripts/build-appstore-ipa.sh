@@ -108,6 +108,13 @@ install_provisioning_profile() {
   [[ "$app_id" == *"$expected_bundle_suffix" ]] \
     || fail "$label provisioning profile bundle ID mismatch (expected *$expected_bundle_suffix*, got ${app_id:-<empty>}, team ${team_id:-<unknown>})"
 
+  if [[ "$label" == "Main" ]]; then
+    local aps_value
+    aps_value="$(profile_field "$plist_path" Entitlements:aps-environment)"
+    [[ "$aps_value" == "production" ]] \
+      || fail "Main provisioning profile must include aps-environment=production (enable Push Notifications for $expected_bundle_suffix in Apple Developer)"
+  fi
+
   local profiles_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
   mkdir -p "$profiles_dir"
   cp "$profile_path" "$profiles_dir/$uuid.mobileprovision"

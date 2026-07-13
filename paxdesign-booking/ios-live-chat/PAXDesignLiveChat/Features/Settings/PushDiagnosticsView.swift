@@ -26,6 +26,16 @@ struct PushDiagnosticsView: View {
                 }
                 diagRow(L10n.PushDiagEnvironment, diagnostics.apnsEnvironment)
                 diagRow(L10n.PushDiagApsEntitlement, diagnostics.apsEntitlement)
+                if !PAXAPNsEnvironment.hasPushEntitlement {
+                    Text("Push entitlement is missing from this build. Reinstall from TestFlight after a new build is uploaded.")
+                        .font(.caption)
+                        .foregroundStyle(PAXTheme.danger)
+                }
+                if push.registrationBlocked {
+                    Text(push.registrationBlockedReason ?? "APNs registration paused.")
+                        .font(.caption)
+                        .foregroundStyle(PAXTheme.danger)
+                }
                 diagRow(L10n.PushDiagDeviceId, PAXDeviceInfo.deviceId)
                 if let error = diagnostics.iosRegistrationError, !error.isEmpty {
                     Text(error)
@@ -119,7 +129,7 @@ struct PushDiagnosticsView: View {
         .paxScreenBackground()
         .navigationTitle(L10n.PushDiagTitle)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await refreshAll() }
+        .task { await diagnostics.refreshLocalOnly(push: push) }
     }
 
     private func diagRow(_ title: String, _ value: String) -> some View {
@@ -137,6 +147,10 @@ struct PushDiagnosticsView: View {
     private func refreshAll() async {
         await diagnostics.refreshWithRegistration(auth: auth, push: push)
         await permissions.refreshStatuses()
+        if auth.isLoggedIn {
+            await DeviceSessionService.shared.registerWithPush(auth: auth)
+            await diagnostics.refreshLocalOnly(push: push)
+        }
     }
 
     private func runRepair() async {

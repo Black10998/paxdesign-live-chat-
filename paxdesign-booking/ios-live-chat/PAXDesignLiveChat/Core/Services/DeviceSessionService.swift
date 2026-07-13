@@ -91,6 +91,18 @@ final class DeviceSessionService: ObservableObject {
     }
 
     func registerWithPush(auth: AuthStore) async {
+        guard PushService.shared.canAttemptRegistration || PushService.shared.deviceToken != nil else {
+            await registerSessionWithoutToken(auth: auth)
+            if let reason = PushService.shared.registrationBlockedReason {
+                PushDiagnosticsStore.shared.recordServerRegistration(
+                    success: false,
+                    tokenPrefix: nil,
+                    error: reason,
+                    accepted: false
+                )
+            }
+            return
+        }
         await registerTokenWithServer(auth: auth)
         await sendHeartbeat(auth: auth)
     }
@@ -100,7 +112,12 @@ final class DeviceSessionService: ObservableObject {
 
         PushDiagnosticsStore.shared.recordServerRegistrationPending()
 
-        let tokenResult = await PushService.shared.ensureDeviceToken()
+        if !PushService.shared.canAttemptRegistration, PushService.shared.deviceToken == nil {
+            await registerSessionWithoutToken(auth: auth)
+            return
+        }
+
+        let tokenResult = await PushService.shared.ensureDeviceToken(maxAttempts: 2, perAttemptTimeout: 20)
         let token: String
         switch tokenResult {
         case .success(let resolvedToken):
@@ -199,9 +216,9 @@ final class DeviceSessionService: ObservableObject {
     private func sendHeartbeat(auth: AuthStore) async {
         guard auth.isLoggedIn, let api = auth.api else { return }
 
-        if PushService.shared.deviceToken == nil {
+        if PushService.shared.deviceToken == nil, PushService.shared.canAttemptRegistration {
             _ = await PushService.shared.ensureDeviceToken(maxAttempts: 1, perAttemptTimeout: 15)
-        } else if PushService.shared.deviceToken != lastRegisteredToken {
+        } else if PushService.shared.deviceToken != lastRegisteredToken, PushService.shared.deviceToken != nil {
             await registerTokenWithServer(auth: auth)
         }
 

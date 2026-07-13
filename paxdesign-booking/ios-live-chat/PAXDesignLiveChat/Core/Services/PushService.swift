@@ -45,10 +45,23 @@ final class PushService: NSObject, ObservableObject {
     @Published private(set) var apnsDidRespond = false
     @Published private(set) var lastIOSRegistrationError: String?
     @Published private(set) var isRegisteredWithAPNs = false
+    @Published private(set) var registrationBlocked = false
+    @Published private(set) var registrationBlockedReason: String?
 
     var apnsEnvironmentLabel: String {
         PAXAPNsEnvironment.label
     }
+
+    var canAttemptRegistration: Bool {
+        if registrationBlocked { return false }
+        if let until = registrationCooldownUntil, Date() < until { return false }
+        if !PAXAPNsEnvironment.hasPushEntitlement { return false }
+        return true
+    }
+
+    private var registrationInFlight: Task<Result<String, APNsRegistrationFailure>, Never>?
+    private var registrationCooldownUntil: Date?
+    private var consecutiveRegistrationFailures = 0
 
     private let liveRequestCategory = "PAX_LIVE_REQUEST"
     private let messageCategory = "PAX_MESSAGE"
@@ -127,6 +140,10 @@ final class PushService: NSObject, ObservableObject {
         apnsDidRespond = true
         isRegisteredWithAPNs = true
         lastIOSRegistrationError = nil
+        registrationBlocked = false
+        registrationBlockedReason = nil
+        registrationCooldownUntil = nil
+        consecutiveRegistrationFailures = 0
 
         DeviceSessionService.shared.resetRegistrationState()
         PushDiagnosticsStore.shared.recordTokenReceived(token: token)
@@ -146,8 +163,42 @@ final class PushService: NSObject, ObservableObject {
         lastIOSRegistrationError = detail
         apnsDidRespond = true
         isRegisteredWithAPNs = false
+        noteRegistrationFailure(error, detail: detail)
         PushDiagnosticsStore.shared.recordIOSRegistrationFailure(detail)
         PushRegistrationDiagnostics.registerFailed("didFailToRegister: \(detail)")
+    }
+
+    private func noteRegistrationFailure(_ error: Error, detail: String) {
+        consecutiveRegistrationFailures += 1
+        if APNsRegistrationPolicy.isPermanentFailure(error)
+            || APNsRegistrationPolicy.isPermanentFailureMessage(detail) {
+            registrationBlocked = true
+            registrationBlockedReason = detail
+            registrationCooldownUntil = Date().addingTimeInterval(APNsRegistrationPolicy.permanentFailureCooldown)
+            return
+        }
+        let pause = APNsRegistrationPolicy.retryCooldown(afterFailures: consecutiveRegistrationFailures)
+        registrationCooldownUntil = Date().addingTimeInterval(pause)
+    }
+
+    private func noteRegistrationFailure(_ failure: APNsRegistrationFailure) {
+        consecutiveRegistrationFailures += 1
+        if APNsRegistrationPolicy.isPermanentFailure(failure) {
+            registrationBlocked = true
+            registrationBlockedReason = failure.detailedMessage
+            registrationCooldownUntil = Date().addingTimeInterval(APNsRegistrationPolicy.permanentFailureCooldown)
+            return
+        }
+        let pause = APNsRegistrationPolicy.retryCooldown(afterFailures: consecutiveRegistrationFailures)
+        registrationCooldownUntil = Date().addingTimeInterval(pause)
+    }
+
+    func resetRegistrationBackoff() {
+        registrationBlocked = false
+        registrationBlockedReason = nil
+        registrationCooldownUntil = nil
+        consecutiveRegistrationFailures = 0
+        lastIOSRegistrationError = nil
     }
 
     func registerForRemoteNotificationsIfAuthorized() async {
@@ -157,12 +208,49 @@ final class PushService: NSObject, ObservableObject {
     /// Full APNs registration lifecycle: permission check → registerForRemoteNotifications → wait for token or iOS error.
     @discardableResult
     func ensureDeviceToken(maxAttempts: Int = 3, perAttemptTimeout: TimeInterval = 20) async -> Result<String, APNsRegistrationFailure> {
+        if let inFlight = registrationInFlight {
+            return await inFlight.value
+        }
+
+        let task = Task { @MainActor in
+            await self.runEnsureDeviceToken(maxAttempts: maxAttempts, perAttemptTimeout: perAttemptTimeout)
+        }
+        registrationInFlight = task
+        let result = await task.value
+        registrationInFlight = nil
+        return result
+    }
+
+    private func runEnsureDeviceToken(maxAttempts: Int, perAttemptTimeout: TimeInterval) async -> Result<String, APNsRegistrationFailure> {
         PushDiagnosticsStore.shared.recordRegistrationAttemptStarted()
 
         #if targetEnvironment(simulator)
-        PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: APNsRegistrationFailure.simulator.detailedMessage)
-        return .failure(.simulator)
+        let simulatorFailure = APNsRegistrationFailure.simulator
+        noteRegistrationFailure(simulatorFailure)
+        PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: simulatorFailure.detailedMessage)
+        return .failure(simulatorFailure)
         #endif
+
+        if !PAXAPNsEnvironment.hasPushEntitlement {
+            let message = "Push entitlement missing from signed app (aps-environment). Install a TestFlight build with Push Notifications enabled."
+            registrationBlocked = true
+            registrationBlockedReason = message
+            PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: message)
+            return .failure(.iosError(domain: "Entitlements", code: -1, message: message))
+        }
+
+        if registrationBlocked, deviceToken == nil {
+            let message = registrationBlockedReason ?? "APNs registration paused after a permanent failure."
+            PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: message)
+            return .failure(.iosError(domain: "APNs", code: -1, message: message))
+        }
+
+        if let until = registrationCooldownUntil, Date() < until, deviceToken == nil {
+            let remaining = Int(until.timeIntervalSinceNow)
+            let message = "APNs registration cooling down (\(remaining)s)."
+            PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: message)
+            return .failure(.iosError(domain: "APNs", code: -1, message: message))
+        }
 
         await refreshAuthorizationStatus()
         switch authorizationStatus {
@@ -195,7 +283,8 @@ final class PushService: NSObject, ObservableObject {
                 }
                 if let iosError = lastIOSRegistrationError {
                     let nsFailure = parseNSErrorDetail(iosError)
-                    if attempt >= attempts {
+                    noteRegistrationFailure(nsFailure)
+                    if attempt >= attempts || APNsRegistrationPolicy.isPermanentFailure(nsFailure) {
                         PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: nsFailure.detailedMessage)
                         return .failure(nsFailure)
                     }
@@ -209,18 +298,22 @@ final class PushService: NSObject, ObservableObject {
                 PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: true, error: nil)
                 return .success(token)
             }
-            if attempt < attempts {
+            if attempt < attempts, !registrationBlocked {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
+            } else {
+                break
             }
         }
 
         if let iosError = lastIOSRegistrationError {
             let iosFailure = parseNSErrorDetail(iosError)
+            noteRegistrationFailure(iosFailure)
             PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: iosFailure.detailedMessage)
             return .failure(iosFailure)
         }
 
         let timeoutFailure = APNsRegistrationFailure.timeout(requestsSent: registrationRequestCount)
+        noteRegistrationFailure(timeoutFailure)
         PushDiagnosticsStore.shared.recordRegistrationAttemptFinished(success: false, error: timeoutFailure.detailedMessage)
         return .failure(timeoutFailure)
     }
@@ -310,7 +403,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             }
         }
         Task { @MainActor in
-            await PushService.shared.ensureDeviceToken(maxAttempts: 2, perAttemptTimeout: 25)
+            if PushService.shared.canAttemptRegistration {
+                await PushService.shared.ensureDeviceToken(maxAttempts: 1, perAttemptTimeout: 25)
+            }
         }
         return true
     }
@@ -349,9 +444,6 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         Task { @MainActor in
             PushService.shared.recordRegistrationFailure(error)
-            if AuthStore.shared.isLoggedIn {
-                await DeviceSessionService.shared.registerWithPush(auth: AuthStore.shared)
-            }
         }
     }
 

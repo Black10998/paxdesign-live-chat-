@@ -92,10 +92,16 @@ struct DeviceManagementView: View {
     private func startRealtimeRefresh() {
         liveRefreshTask?.cancel()
         liveRefreshTask = Task {
+            var intervalNs: UInt64 = 20_000_000_000
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 20_000_000_000)
+                try? await Task.sleep(nanoseconds: intervalNs)
                 guard !Task.isCancelled else { return }
-                await loadDevices()
+                if NetworkCircuitBreaker.shared.isOpen {
+                    intervalNs = 60_000_000_000
+                    continue
+                }
+                let hadError = await loadDevices()
+                intervalNs = hadError ? 45_000_000_000 : 20_000_000_000
             }
         }
     }
@@ -223,8 +229,9 @@ struct DeviceManagementView: View {
         return date.formatted(date: .abbreviated, time: .shortened)
     }
 
-    private func loadDevices() async {
-        guard let api = auth.api else { return }
+    @discardableResult
+    private func loadDevices() async -> Bool {
+        guard let api = auth.api else { return false }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -234,8 +241,10 @@ struct DeviceManagementView: View {
             )
             devices = response.devices
             errorMessage = nil
+            return false
         } catch {
             errorMessage = error.localizedDescription
+            return true
         }
     }
 

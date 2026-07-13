@@ -224,6 +224,24 @@ final class MessagingReliabilityTests: XCTestCase {
         }
     }
 
+    func testDeviceEndpointsBypassCircuitRateCap() async {
+        await NetworkCircuitBreaker.shared.reset()
+        await MainActor.run {
+            NetworkCircuitBreaker.shared.maxRequestsPerSecond = 1
+        }
+        try? await NetworkCircuitBreaker.shared.recordRequestStart(endpoint: "sessions")
+        try? await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "sessions")
+        XCTAssertNoThrow(try await NetworkCircuitBreaker.shared.recordRequestStart(endpoint: "employee-devices"))
+        try? await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "employee-devices")
+    }
+
+    func testAPNsPermanentFailureDetection() {
+        XCTAssertTrue(APNsRegistrationPolicy.isPermanentFailureMessage(
+            "NSCocoaErrorDomain (3000): No valid 'aps-environment' entitlement string found for application."
+        ))
+        XCTAssertFalse(APNsRegistrationPolicy.isPermanentFailureMessage("network timeout"))
+    }
+
     func testSSEHealthySuspendsListPolling() {
         AppRefreshPolicy.sseHealthy = true
         AppRefreshPolicy.update(scenePhase: .active)

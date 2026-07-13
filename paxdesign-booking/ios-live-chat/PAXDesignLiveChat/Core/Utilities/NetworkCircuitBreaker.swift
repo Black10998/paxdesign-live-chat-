@@ -55,6 +55,9 @@ final class NetworkCircuitBreaker {
     }
 
     func recordRequestStart(endpoint: String) throws {
+        if endpoint.hasPrefix("device-") || endpoint.hasPrefix("employee-devices") {
+            return
+        }
         if let until = openUntil, Date() < until {
             isOpen = true
             throw NetworkCircuitBreakerError.open(until: until)

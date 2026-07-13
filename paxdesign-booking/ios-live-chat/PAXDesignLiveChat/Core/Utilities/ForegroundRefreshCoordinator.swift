@@ -37,9 +37,14 @@ enum ForegroundRefreshCoordinator {
             #if !SIDELOAD
             if permissions.notificationStatus == .authorized
                 || permissions.notificationStatus == .provisional
-                || permissions.notificationStatus == .ephemeral {
-                _ = await PushService.shared.ensureDeviceToken(maxAttempts: 1, perAttemptTimeout: 15)
-                await DeviceSessionService.shared.registerWithPush(auth: auth)
+                || permissions.notificationStatus == .ephemeral,
+               PushService.shared.canAttemptRegistration || PushService.shared.deviceToken != nil {
+                if PushService.shared.deviceToken == nil {
+                    _ = await PushService.shared.ensureDeviceToken(maxAttempts: 1, perAttemptTimeout: 15)
+                }
+                if PushService.shared.deviceToken != nil {
+                    await DeviceSessionService.shared.registerWithPush(auth: auth)
+                }
             }
             #endif
 

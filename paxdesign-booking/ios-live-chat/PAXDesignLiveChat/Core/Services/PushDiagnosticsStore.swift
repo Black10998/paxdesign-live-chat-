@@ -141,17 +141,20 @@ final class PushDiagnosticsStore: ObservableObject {
         isRefreshing = true
         defer { isRefreshing = false }
         await refreshLocalState(push: push)
-        if auth.isLoggedIn {
-            await DeviceSessionService.shared.registerWithPush(auth: auth)
-            await refreshLocalState(push: push)
-        }
+    }
+
+    func refreshLocalOnly(push: PushService) async {
+        await refreshLocalState(push: push)
     }
 
     func repairRegistration(auth: AuthStore, push: PushService) async {
         isRefreshing = true
         defer { isRefreshing = false }
-        _ = await push.ensureDeviceToken()
-        await push.registerTokenWithBackend(auth: auth)
+        push.resetRegistrationBackoff()
+        _ = await push.ensureDeviceToken(maxAttempts: 2, perAttemptTimeout: 25)
+        if auth.isLoggedIn {
+            await push.registerTokenWithBackend(auth: auth)
+        }
         await refreshLocalState(push: push)
     }
 
