@@ -687,16 +687,63 @@ class PAXdesign_Platform_Store {
         }
 
         $chart = array();
+        $series = array();
         for ($i = 6; $i >= 0; $i--) {
             $day = gmdate('Y-m-d', strtotime("-{$i} days"));
-            $count = 0;
+            $session_count = 0;
+            $live_count_day = 0;
             foreach ($customer as $session) {
                 $updated = isset($session['updated_at']) ? strtotime((string) $session['updated_at']) : 0;
                 if ($updated > 0 && gmdate('Y-m-d', $updated) === $day) {
-                    $count++;
+                    $session_count++;
+                }
+                $handler = isset($session['handler']) ? (string) $session['handler'] : '';
+                $created = isset($session['created_at']) ? strtotime((string) $session['created_at']) : 0;
+                if ($handler === 'live_request' && $created > 0 && gmdate('Y-m-d', $created) === $day) {
+                    $live_count_day++;
                 }
             }
-            $chart[] = array('label' => $day, 'value' => $count);
+            $message_count = class_exists('PAXdesign_Message_Store')
+                ? PAXdesign_Message_Store::count_messages_on_day($day, 'customer')
+                : 0;
+            $team_count = class_exists('PAXdesign_Message_Store')
+                ? PAXdesign_Message_Store::count_messages_on_day($day, 'team')
+                : 0;
+            $chart[] = array('label' => $day, 'value' => $session_count);
+            $series[] = array(
+                'label'         => $day,
+                'sessions'      => $session_count,
+                'messages'      => $message_count,
+                'live_requests' => $live_count_day,
+                'team_messages' => $team_count,
+            );
+        }
+
+        $recent_sessions = array_sum(array_column(array_slice($series, -3), 'sessions'));
+        $earlier_sessions = array_sum(array_column(array_slice($series, 0, 3), 'sessions'));
+        $recent_messages = array_sum(array_column(array_slice($series, -3), 'messages'));
+        $earlier_messages = array_sum(array_column(array_slice($series, 0, 3), 'messages'));
+        $recent_live = array_sum(array_column(array_slice($series, -3), 'live_requests'));
+        $earlier_live = array_sum(array_column(array_slice($series, 0, 3), 'live_requests'));
+
+        $trends = array(
+            'sessions_pct'      => self::percent_delta($recent_sessions, $earlier_sessions),
+            'messages_pct'      => self::percent_delta($recent_messages, $earlier_messages),
+            'live_requests_pct' => self::percent_delta($recent_live, $earlier_live),
+        );
+
+        $live_n = 0;
+        $active_n = 0;
+        $closed_n = 0;
+        foreach ($customer as $session) {
+            $handler = isset($session['handler']) ? (string) $session['handler'] : '';
+            if ($handler === 'live_request') {
+                $live_n++;
+            } elseif ($handler === 'closed') {
+                $closed_n++;
+            } else {
+                $active_n++;
+            }
         }
 
         return array(
@@ -706,8 +753,30 @@ class PAXdesign_Platform_Store {
             'overdue_tasks'    => $overdue_tasks,
             'upcoming_events'  => count(self::upcoming_events(5)),
             'activity_chart'   => $chart,
+            'activity_series'  => $series,
+            'trends'           => $trends,
+            'category_totals'  => array(
+                array('label' => 'live', 'value' => $live_n),
+                array('label' => 'active', 'value' => $active_n),
+                array('label' => 'closed', 'value' => $closed_n),
+                array('label' => 'tasks', 'value' => $open_tasks),
+            ),
             'server_time'      => current_time('mysql'),
         );
+    }
+
+    /**
+     * @param int|float $recent
+     * @param int|float $earlier
+     * @return float
+     */
+    private static function percent_delta($recent, $earlier) {
+        $recent = (float) $recent;
+        $earlier = (float) $earlier;
+        if ($earlier <= 0) {
+            return $recent > 0 ? 100.0 : 0.0;
+        }
+        return round((($recent - $earlier) / $earlier) * 100, 1);
     }
 
     /**

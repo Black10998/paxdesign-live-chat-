@@ -439,6 +439,38 @@ class PAXdesign_Message_Store {
         ));
     }
 
+    /**
+     * Count messages created on a specific UTC day (YYYY-MM-DD).
+     *
+     * @param string $day
+     * @param string $channel customer|team|*
+     * @return int
+     */
+    public static function count_messages_on_day($day, $channel = 'customer') {
+        global $wpdb;
+        self::maybe_upgrade();
+        $table = self::messages_table();
+        $day   = sanitize_text_field($day);
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) {
+            return 0;
+        }
+        $start = $day . ' 00:00:00';
+        $end   = $day . ' 23:59:59';
+        if ($channel === '*') {
+            return (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT COUNT(*) FROM $table WHERE created_at BETWEEN %s AND %s",
+                $start,
+                $end
+            ));
+        }
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table WHERE channel = %s AND created_at BETWEEN %s AND %s",
+            sanitize_text_field($channel),
+            $start,
+            $end
+        ));
+    }
+
     public static function emit($channel_key, $event_type, $payload, $message_seq = 0) {
         global $wpdb;
         self::maybe_upgrade();

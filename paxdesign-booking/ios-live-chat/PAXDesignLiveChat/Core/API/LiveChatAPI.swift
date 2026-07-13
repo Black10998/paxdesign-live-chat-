@@ -802,6 +802,7 @@ final class LiveChatAPI {
 
         var request = authRequest(url: url, method: "POST", body: body)
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue("\(body.count)", forHTTPHeaderField: "Content-Length")
         return try await perform(request, endpoint: "team-send-audio", as: TeamSendResponse.self)
     }
 

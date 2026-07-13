@@ -190,6 +190,58 @@ struct PlatformChartPoint: Codable, Identifiable {
     let value: Int
 }
 
+struct PlatformActivityDay: Codable, Identifiable, Equatable {
+    var id: String { label }
+    let label: String
+    let sessions: Int
+    let messages: Int
+    let liveRequests: Int
+    let teamMessages: Int
+
+    enum CodingKeys: String, CodingKey {
+        case label
+        case sessions
+        case messages
+        case liveRequests = "live_requests"
+        case teamMessages = "team_messages"
+    }
+
+    init(label: String, sessions: Int = 0, messages: Int = 0, liveRequests: Int = 0, teamMessages: Int = 0) {
+        self.label = label
+        self.sessions = sessions
+        self.messages = messages
+        self.liveRequests = liveRequests
+        self.teamMessages = teamMessages
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        label = try container.decode(String.self, forKey: .label)
+        sessions = try container.decodeIfPresent(Int.self, forKey: .sessions) ?? 0
+        messages = try container.decodeIfPresent(Int.self, forKey: .messages) ?? 0
+        liveRequests = try container.decodeIfPresent(Int.self, forKey: .liveRequests) ?? 0
+        teamMessages = try container.decodeIfPresent(Int.self, forKey: .teamMessages) ?? 0
+    }
+}
+
+struct PlatformDashboardTrends: Codable, Equatable {
+    let sessionsPct: Double
+    let messagesPct: Double
+    let liveRequestsPct: Double
+
+    enum CodingKeys: String, CodingKey {
+        case sessionsPct = "sessions_pct"
+        case messagesPct = "messages_pct"
+        case liveRequestsPct = "live_requests_pct"
+    }
+
+    init(sessionsPct: Double = 0, messagesPct: Double = 0, liveRequestsPct: Double = 0) {
+        self.sessionsPct = sessionsPct
+        self.messagesPct = messagesPct
+        self.liveRequestsPct = liveRequestsPct
+    }
+}
+
 struct PlatformDashboardPayload: Codable {
     let sessionsTotal: Int
     let liveCount: Int
@@ -197,6 +249,9 @@ struct PlatformDashboardPayload: Codable {
     let overdueTasks: Int
     let upcomingEvents: Int
     let activityChart: [PlatformChartPoint]
+    let activitySeries: [PlatformActivityDay]
+    let trends: PlatformDashboardTrends
+    let categoryTotals: [PlatformReportSlice]
     let serverTime: String?
 
     enum CodingKeys: String, CodingKey {
@@ -206,7 +261,48 @@ struct PlatformDashboardPayload: Codable {
         case overdueTasks = "overdue_tasks"
         case upcomingEvents = "upcoming_events"
         case activityChart = "activity_chart"
+        case activitySeries = "activity_series"
+        case trends
+        case categoryTotals = "category_totals"
         case serverTime = "server_time"
+    }
+
+    init(
+        sessionsTotal: Int,
+        liveCount: Int,
+        openTasks: Int,
+        overdueTasks: Int,
+        upcomingEvents: Int,
+        activityChart: [PlatformChartPoint],
+        activitySeries: [PlatformActivityDay] = [],
+        trends: PlatformDashboardTrends = PlatformDashboardTrends(),
+        categoryTotals: [PlatformReportSlice] = [],
+        serverTime: String? = nil
+    ) {
+        self.sessionsTotal = sessionsTotal
+        self.liveCount = liveCount
+        self.openTasks = openTasks
+        self.overdueTasks = overdueTasks
+        self.upcomingEvents = upcomingEvents
+        self.activityChart = activityChart
+        self.activitySeries = activitySeries
+        self.trends = trends
+        self.categoryTotals = categoryTotals
+        self.serverTime = serverTime
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        sessionsTotal = try container.decodeIfPresent(Int.self, forKey: .sessionsTotal) ?? 0
+        liveCount = try container.decodeIfPresent(Int.self, forKey: .liveCount) ?? 0
+        openTasks = try container.decodeIfPresent(Int.self, forKey: .openTasks) ?? 0
+        overdueTasks = try container.decodeIfPresent(Int.self, forKey: .overdueTasks) ?? 0
+        upcomingEvents = try container.decodeIfPresent(Int.self, forKey: .upcomingEvents) ?? 0
+        activityChart = try container.decodeIfPresent([PlatformChartPoint].self, forKey: .activityChart) ?? []
+        activitySeries = try container.decodeIfPresent([PlatformActivityDay].self, forKey: .activitySeries) ?? []
+        trends = try container.decodeIfPresent(PlatformDashboardTrends.self, forKey: .trends) ?? PlatformDashboardTrends()
+        categoryTotals = try container.decodeIfPresent([PlatformReportSlice].self, forKey: .categoryTotals) ?? []
+        serverTime = try container.decodeIfPresent(String.self, forKey: .serverTime)
     }
 }
 

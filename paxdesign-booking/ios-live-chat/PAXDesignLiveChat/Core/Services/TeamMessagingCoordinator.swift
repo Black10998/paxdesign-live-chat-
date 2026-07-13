@@ -907,6 +907,10 @@ final class TeamChatThreadModel: ObservableObject {
         duration: TimeInterval
     ) async {
         guard let api = auth.api else { return }
+        guard audioData.count >= 256 else {
+            errorMessage = L10n.TeamVoiceEmpty
+            return
+        }
         let clientMsgId = UUID().uuidString.lowercased()
         let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000)
         let optimistic = LiveMessage(

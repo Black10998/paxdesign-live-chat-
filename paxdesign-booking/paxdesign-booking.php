@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.122.0
+Version: 3.123.0
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.122.0');
+define('PAXDESIGN_BOOKING_VERSION', '3.123.0');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -55,6 +55,14 @@ require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-link-scan-
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-settings-admin.php';
 PAXdesign_Booking_Update_Checker::init();
 PAXdesign_Message_Store::init();
+
+add_filter('upload_mimes', function ($mimes) {
+    $mimes['m4a'] = 'audio/mp4';
+    $mimes['aac'] = 'audio/aac';
+    $mimes['caf'] = 'audio/x-caf';
+    return $mimes;
+});
+
 PAXdesign_Settings_Admin::init();
 PAXdesign_Chat_Log::get_instance();
 PAXdesign_Chat_Live::get_instance();

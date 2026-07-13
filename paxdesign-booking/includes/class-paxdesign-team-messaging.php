@@ -673,6 +673,10 @@ class PAXdesign_Team_Messaging {
             return new WP_Error('upload_failed', 'Upload failed.', array('status' => 400));
         }
 
+        if ($kind === 'audio') {
+            return self::store_audio_upload($file);
+        }
+
         if ($kind === 'image') {
             $allowed = array(
                 'jpg|jpeg|jpe' => 'image/jpeg',
@@ -681,57 +685,87 @@ class PAXdesign_Team_Messaging {
                 'gif'          => 'image/gif',
             );
             $max_size = 8 * 1024 * 1024;
-        } else {
-            $allowed = array(
-                'm4a' => 'audio/mp4',
-                'mp4' => 'audio/mp4',
-                'aac' => 'audio/aac',
-                'caf' => 'audio/x-caf',
+            $name  = isset($file['name']) ? (string) $file['name'] : 'image.jpg';
+            $check = wp_check_filetype($name, $allowed);
+            if (empty($check['type']) || !in_array($check['type'], array_values($allowed), true)) {
+                return new WP_Error('invalid_type', 'Unsupported file type.', array('status' => 400));
+            }
+            if (!empty($file['size']) && (int) $file['size'] > $max_size) {
+                return new WP_Error('too_large', 'File is too large.', array('status' => 400));
+            }
+
+            require_once ABSPATH . 'wp-admin/includes/file.php';
+            require_once ABSPATH . 'wp-admin/includes/image.php';
+            require_once ABSPATH . 'wp-admin/includes/media.php';
+
+            $upload = wp_handle_upload($file, array('test_form' => false, 'mimes' => $allowed));
+            if (!empty($upload['error'])) {
+                return new WP_Error('upload_failed', $upload['error'], array('status' => 500));
+            }
+
+            $url = (string) $upload['url'];
+            if (!empty($upload['file'])) {
+                $url = self::optimize_team_image($upload['file'], $url);
+            }
+
+            return array(
+                'url'     => $url,
+                'preview' => 'Photo',
             );
-            $max_size = 5 * 1024 * 1024;
         }
 
-        $name  = isset($file['name']) ? (string) $file['name'] : ($kind === 'image' ? 'image.jpg' : 'voice.m4a');
-        if ($kind === 'audio' && !preg_match('/\.(m4a|mp4|aac|caf)$/i', $name)) {
-            $name .= '.m4a';
+        return new WP_Error('invalid_type', 'Unsupported file type.', array('status' => 400));
+    }
+
+    /**
+     * Store AAC/M4A voice uploads without wp_handle_upload MIME probing.
+     * iOS recordings are valid MP4 containers but often fail WordPress upload tests.
+     *
+     * @param array<string, mixed> $file
+     * @return array<string, string>|WP_Error
+     */
+    private static function store_audio_upload($file) {
+        $tmp_name = isset($file['tmp_name']) ? (string) $file['tmp_name'] : '';
+        if ($tmp_name === '' || !is_uploaded_file($tmp_name)) {
+            return new WP_Error('upload_failed', 'Invalid audio upload.', array('status' => 400));
         }
-        if ($kind === 'audio' && !empty($file['tmp_name']) && is_string($file['tmp_name'])) {
-            $tmp_with_ext = $file['tmp_name'] . '.m4a';
-            if (!file_exists($tmp_with_ext) && @copy($file['tmp_name'], $tmp_with_ext)) {
-                $file['tmp_name'] = $tmp_with_ext;
-            }
+
+        $size = isset($file['size']) ? (int) $file['size'] : 0;
+        if ($size <= 0) {
+            return new WP_Error('upload_failed', 'Empty audio file.', array('status' => 400));
         }
-        $check = wp_check_filetype($name, $allowed);
-        if ($kind === 'audio' && (empty($check['type']) || empty($check['ext']))) {
-            $check = array(
-                'ext'  => 'm4a',
-                'type' => 'audio/mp4',
-            );
-        }
-        if (empty($check['type']) || !in_array($check['type'], array_values($allowed), true)) {
-            return new WP_Error('invalid_type', 'Unsupported file type.', array('status' => 400));
-        }
-        if (!empty($file['size']) && (int) $file['size'] > $max_size) {
+        if ($size > 5 * 1024 * 1024) {
             return new WP_Error('too_large', 'File is too large.', array('status' => 400));
         }
 
-        require_once ABSPATH . 'wp-admin/includes/file.php';
-        require_once ABSPATH . 'wp-admin/includes/image.php';
-        require_once ABSPATH . 'wp-admin/includes/media.php';
+        $contents = file_get_contents($tmp_name);
+        if ($contents === false || $contents === '') {
+            return new WP_Error('upload_failed', 'Could not read uploaded audio.', array('status' => 400));
+        }
 
-        $upload = wp_handle_upload($file, array('test_form' => false, 'mimes' => $allowed));
+        if (strlen($contents) < 12) {
+            return new WP_Error('invalid_type', 'Unsupported audio format.', array('status' => 400));
+        }
+
+        $signature = substr($contents, 4, 4);
+        if ($signature !== 'ftyp' && $signature !== 'M4A ' && $signature !== 'mp42') {
+            return new WP_Error('invalid_type', 'Unsupported audio format.', array('status' => 400));
+        }
+
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+
+        $filename = 'pax-voice-' . gmdate('Ymd-His') . '-' . wp_generate_password(8, false, false) . '.m4a';
+        $upload   = wp_upload_bits($filename, null, $contents);
         if (!empty($upload['error'])) {
             return new WP_Error('upload_failed', $upload['error'], array('status' => 500));
         }
-
-        $url = (string) $upload['url'];
-        if ($kind === 'image' && !empty($upload['file'])) {
-            $url = self::optimize_team_image($upload['file'], $url);
+        if (empty($upload['url'])) {
+            return new WP_Error('upload_failed', 'Audio upload did not return a URL.', array('status' => 500));
         }
 
         return array(
-            'url'     => $url,
-            'preview' => $kind === 'image' ? 'Photo' : 'Voice message',
+            'url'     => (string) $upload['url'],
+            'preview' => 'Voice message',
         );
     }
 

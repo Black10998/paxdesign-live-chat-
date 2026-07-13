@@ -108,12 +108,18 @@ struct PAXMetricCard: View {
     let icon: String
     var tint: Color = PAXTheme.accent
     var helpText: String?
+    var trend: Double?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 PAXIcon(icon, size: .row)
                 Spacer(minLength: 0)
+                if let trend {
+                    Text(String(format: "%+.0f%%", trend))
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(trend >= 0 ? PAXTheme.success : PAXTheme.danger)
+                }
             }
             Text(value)
                 .font(.title.weight(.bold))

@@ -1,11 +1,17 @@
 import SwiftUI
 import UIKit
 
+@MainActor
 enum PAXTheme {
-    static var accent: Color { .accentColor }
-    static var success: Color { .green }
-    static var danger: Color { .red }
-    static var adminBubble: Color { Color(.systemBlue) }
+    private static var palette: PAXThemePalette {
+        AppSettingsStore.shared.effectivePalette
+    }
+
+    static var accent: Color { palette.accent }
+    static var accentSecondary: Color { palette.accentSecondary }
+    static var success: Color { palette.success }
+    static var danger: Color { palette.danger }
+    static var adminBubble: Color { palette.adminBubble }
 
     static var border: Color { Color(.separator) }
     static var textPrimary: Color { .primary }
@@ -17,9 +23,24 @@ enum PAXTheme {
     static var iconOnFill: Color { .white }
     static var userBubble: Color { Color(.systemGray5) }
 
-    static var background: Color { Color(.systemGroupedBackground) }
-    static var surface: Color { Color(.secondarySystemGroupedBackground) }
-    static var surfaceElevated: Color { Color(.tertiarySystemGroupedBackground) }
+    private static var prefersDarkInterface: Bool {
+        switch AppSettingsStore.shared.appearanceMode {
+        case .dark: return true
+        case .light: return false
+        case .system:
+            return UITraitCollection.current.userInterfaceStyle == .dark
+        }
+    }
+
+    static var background: Color {
+        palette.background(isDark: prefersDarkInterface)
+    }
+    static var surface: Color {
+        palette.surface(isDark: prefersDarkInterface)
+    }
+    static var surfaceElevated: Color {
+        palette.surfaceElevated(isDark: prefersDarkInterface)
+    }
 
     static var systemBubble: Color { accent.opacity(0.14) }
     static var accentSoft: Color { accent.opacity(0.12) }
@@ -54,8 +75,11 @@ enum PAXGlassTier {
 }
 
 struct PAXBackground: View {
+    @EnvironmentObject private var settings: AppSettingsStore
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
-        Color(.systemGroupedBackground)
+        settings.palette.background(isDark: settings.resolvedIsDark(for: colorScheme))
             .ignoresSafeArea()
     }
 }

@@ -122,13 +122,19 @@ final class AppSettingsStore: ObservableObject {
     }
 
     @Published var appearanceMode: AppearanceMode {
-        didSet { DeferredUserDefaults.set(appearanceMode.rawValue, forKey: Keys.appearance) }
+        didSet {
+            DeferredUserDefaults.set(appearanceMode.rawValue, forKey: Keys.appearance)
+            bumpThemeRevision()
+        }
     }
     @Published var languageMode: LanguageMode {
         didSet { DeferredUserDefaults.set(languageMode.rawValue, forKey: Keys.language) }
     }
     @Published var visualTheme: VisualTheme {
-        didSet { DeferredUserDefaults.set(visualTheme.rawValue, forKey: Keys.visualTheme) }
+        didSet {
+            DeferredUserDefaults.set(visualTheme.rawValue, forKey: Keys.visualTheme)
+            bumpThemeRevision()
+        }
     }
     @Published var aiSuggestionsEnabled: Bool {
         didSet { DeferredUserDefaults.set(aiSuggestionsEnabled, forKey: Keys.aiSuggestions) }
@@ -199,12 +205,30 @@ final class AppSettingsStore: ObservableObject {
         didSet { DeferredUserDefaults.set(dashboardTourCompleted, forKey: Keys.dashboardTourCompleted) }
     }
     @Published var accentColorPreset: AccentColorPreset {
-        didSet { DeferredUserDefaults.set(accentColorPreset.rawValue, forKey: Keys.accentPreset) }
+        didSet {
+            DeferredUserDefaults.set(accentColorPreset.rawValue, forKey: Keys.accentPreset)
+            bumpThemeRevision()
+        }
     }
+
+    /// Bumped whenever theme, accent, or appearance mode changes to force shell refresh.
+    @Published private(set) var themeRevision = UUID()
 
     /// Resolved theme palette including optional accent override.
     var palette: PAXThemePalette {
         effectivePalette
+    }
+
+    func resolvedIsDark(for colorScheme: ColorScheme) -> Bool {
+        switch appearanceMode {
+        case .dark: return true
+        case .light: return false
+        case .system: return colorScheme == .dark
+        }
+    }
+
+    private func bumpThemeRevision() {
+        themeRevision = UUID()
     }
 
     var resolvedLocale: Locale {

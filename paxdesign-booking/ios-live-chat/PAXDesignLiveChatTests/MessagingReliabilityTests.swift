@@ -504,4 +504,38 @@ final class MessagingReliabilityTests: XCTestCase {
         XCTAssertEqual(result.messages.count, 1)
         XCTAssertEqual(result.messages.first?.id, 1)
     }
+
+    func testPlatformDashboardDecodesAnalyticsSeries() throws {
+        let json = """
+        {
+          "sessions_total": 12,
+          "live_count": 2,
+          "open_tasks": 4,
+          "overdue_tasks": 1,
+          "upcoming_events": 3,
+          "activity_chart": [{"label":"2026-07-12","value":2}],
+          "activity_series": [{
+            "label":"2026-07-12",
+            "sessions":2,
+            "messages":8,
+            "live_requests":1,
+            "team_messages":3
+          }],
+          "trends": {
+            "sessions_pct": 12.5,
+            "messages_pct": -4.0,
+            "live_requests_pct": 0
+          },
+          "category_totals": [
+            {"label":"live","value":2},
+            {"label":"active","value":8}
+          ]
+        }
+        """.data(using: .utf8)!
+        let payload = try JSONDecoder().decode(PlatformDashboardPayload.self, from: json)
+        XCTAssertEqual(payload.activitySeries.count, 1)
+        XCTAssertEqual(payload.activitySeries.first?.messages, 8)
+        XCTAssertEqual(payload.trends.messagesPct, -4.0)
+        XCTAssertEqual(payload.categoryTotals.count, 2)
+    }
 }
