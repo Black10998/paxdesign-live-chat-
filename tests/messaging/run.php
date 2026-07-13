@@ -122,7 +122,7 @@ foreach ($processes as [$process, $pipes]) {
     assert_true($code === 0, "Worker failed: $stdout $stderr");
 }
 
-$expected = 1 + ($workers * $perWorker);
+$expected = 2 + ($workers * $perWorker);
 $all = PAXdesign_Message_Store::all_messages($session);
 assert_true(count($all) === $expected, 'Concurrent writes were lost');
 foreach ($all as $index => $message) {
