@@ -2,6 +2,10 @@ name: Check App Store Status
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/triggers/check-app-store-status'
 
 permissions:
   contents: read
