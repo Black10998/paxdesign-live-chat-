@@ -74,12 +74,12 @@ if [[ -n "$SERVER_REPORT" && -f "$SERVER_REPORT" ]]; then
     fi
     if grep -q 'SERVER_PROBE' "$SERVER_REPORT"; then
       if grep 'SERVER_PROBE public' "$SERVER_REPORT" | grep -qE '\|403\||\|429\||\|503\||\|000\|'; then
-        if grep 'SERVER_PROBE localhost' "$SERVER_REPORT" | grep -qvE '\|403\||\|429\||\|503\||\|000\|'; then
-          echo "DIAGNOSIS: Public egress blocked but localhost OK -> edge/IP rate limit (not app crash)"
+        if grep 'SERVER_PROBE localhost_vhost' "$SERVER_REPORT" | grep -qvE '\|403\||\|429\||\|503\||\|000\|'; then
+          echo "DIAGNOSIS: Public egress blocked but localhost vhost OK -> edge/IP rate limit (not app crash)"
         fi
       fi
-      if grep 'SERVER_PROBE localhost' "$SERVER_REPORT" | grep -qE '\|403\||\|429\||\|503\||\|000\|'; then
-        echo "DIAGNOSIS: Localhost also failing -> site-wide server/WAF block or resource collapse"
+      if grep 'SERVER_PROBE localhost_vhost' "$SERVER_REPORT" | grep -qE '\|403\||\|429\||\|503\||\|000\|'; then
+        echo "DIAGNOSIS: Localhost vhost also failing -> site-wide server/WAF block or resource collapse"
       fi
     fi
   }

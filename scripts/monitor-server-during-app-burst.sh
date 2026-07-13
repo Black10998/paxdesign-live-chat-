@@ -12,11 +12,12 @@ REPORT="${REPORT_PATH:-${1:-/tmp/server-outage-monitor.txt}}"
 server_probe() {
   local label="$1"
   local url="$2"
+  shift 2
   local tmp_body tmp_hdr
   tmp_body="$(mktemp)"
   tmp_hdr="$(mktemp)"
   local http_code
-  http_code=$(curl -sS -D "$tmp_hdr" -o "$tmp_body" --max-time 12 -w "%{http_code}" "$url" 2>/dev/null || echo "000")
+  http_code=$(curl -sS -D "$tmp_hdr" -o "$tmp_body" --max-time 12 -w "%{http_code}" "$@" "$url" 2>/dev/null || echo "000")
   local server powered cf_ray retry_after body_snip
   server=$(grep -im1 '^server:' "$tmp_hdr" 2>/dev/null | cut -d: -f2- | xargs || true)
   powered=$(grep -im1 '^x-powered-by:' "$tmp_hdr" 2>/dev/null | cut -d: -f2- | xargs || true)
@@ -72,8 +73,9 @@ while [[ $(date +%s) -lt $end_epoch ]]; do
   server_probe "public_home" "${SITE}/"
   server_probe "public_users" "${SITE}/wp-admin/users.php"
   server_probe "public_wpjson" "${SITE}/wp-json/"
-  server_probe "localhost_home" "http://127.0.0.1/"
-  server_probe "localhost_users" "http://127.0.0.1/wp-admin/users.php" 2>/dev/null || server_probe "localhost_users" "http://localhost/wp-admin/users.php"
+  # Local vhost (Hostinger default vhost 403 without Host header)
+  server_probe "localhost_vhost_home" "http://127.0.0.1/" -H "Host: paxdesign.at"
+  server_probe "localhost_vhost_users" "http://127.0.0.1/wp-admin/users.php" -H "Host: paxdesign.at"
 
   for f in \
     "$HOME/error_log" \

@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Continuous site health monitor during simulated iOS app load (10+ minutes).
 # Read-only. Logs state transitions, block pages, and recovery events.
+#
+# Run from YOUR Wi-Fi (same network as iPhone) to capture per-IP edge blocks:
+#   export PAX_ADMIN_USER='your-wp-username'
+#   export PAX_ADMIN_APP_PASSWORD='your-app-password'
+#   ./scripts/monitor-site-during-app-burst.sh ./my-network-outage.txt
+# During run: open the iPhone app normally. Upload the report if outage occurs.
 set -euo pipefail
 
 SITE="${PAX_SITE:-https://paxdesign.at}"
