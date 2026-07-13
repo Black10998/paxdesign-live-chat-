@@ -8,6 +8,7 @@ on:
       - '.github/workflows/monitor-site-outage-during-burst.yml'
       - 'scripts/monitor-site-during-app-burst.sh'
       - 'scripts/monitor-server-during-app-burst.sh'
+      - 'scripts/analyze-outage-recovery.sh'
 
 permissions:
   contents: read
@@ -46,6 +47,7 @@ jobs:
           WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
           WP_PATH: ${{ secrets.WP_PATH }}
           DURATION_SEC: 720
+          PAX_SITE: https://paxdesign.at
         run: |
           set -euo pipefail
           PORT="${WP_SSH_PORT:-22}"
@@ -59,7 +61,7 @@ jobs:
           REMOTE_REPORT_QUOTED=$(printf '%q' "$REMOTE_REPORT")
           echo "remote_server_report=$REMOTE_REPORT" >> "$GITHUB_ENV"
           ssh "${SSH_OPTS[@]}" "$REMOTE" \
-            "WP_PATH=${WP_PATH_QUOTED} DURATION_SEC=${DURATION_SEC} REPORT_PATH=${REMOTE_REPORT_QUOTED} bash -s" \
+            "WP_PATH=${WP_PATH_QUOTED} PAX_SITE=${PAX_SITE} DURATION_SEC=${DURATION_SEC} REPORT_PATH=${REMOTE_REPORT_QUOTED} bash -s" \
             < scripts/monitor-server-during-app-burst.sh > ./server-monitor-remote.log 2>&1 &
           echo $! > server-monitor.pid
           echo "Server monitor started in background (pid $(cat server-monitor.pid))"
@@ -74,7 +76,9 @@ jobs:
         run: |
           set -euo pipefail
           chmod +x scripts/monitor-site-during-app-burst.sh
+          echo "Starting 12-minute site-wide monitor with real app burst simulation"
           scripts/monitor-site-during-app-burst.sh ./site-monitor-raw.txt
+          echo "App sim rounds: $(grep -E '\[app-sim\] Stopped after round=' site-monitor-raw.txt || echo 'MISSING')"
 
       - name: Wait for server monitor completion
         run: |
@@ -120,15 +124,13 @@ jobs:
           path: |
             site-monitor-redacted.txt
             server-monitor-redacted.txt
+            outage-analysis-summary.txt
           if-no-files-found: error
 
       - name: Print outage analysis summary
         run: |
-          echo "=== 12-minute site outage analysis ==="
-          grep -E 'OUTAGE_START|OUTAGE_RECOVERY|TRANSITION|PERSISTENT_ISSUE|No site-wide outage|Recovery timing' site-monitor-redacted.txt || true
+          chmod +x scripts/analyze-outage-recovery.sh
+          scripts/analyze-outage-recovery.sh ./site-monitor-redacted.txt ./server-monitor-redacted.txt | tee ./outage-analysis-summary.txt
           echo
-          echo "--- Final probe snapshot ---"
-          awk '/Final snapshot/,/Outage summary/' site-monitor-redacted.txt | head -20
-          echo
-          echo "--- Server resource/log highlights ---"
-          grep -iE 'php_processes=|tcp_established=|403|429|503|ModSecurity|denied|rate limit|max children|out of memory|fail2ban' server-monitor-redacted.txt | tail -40 || true
+          echo "=== Quick grep: app simulation ==="
+          grep -E '\[app-sim\]' site-monitor-redacted.txt || true

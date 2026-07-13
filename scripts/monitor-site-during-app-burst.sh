@@ -171,15 +171,27 @@ PROBE_URLS=(
   "wpjson|${SITE}/wp-json/|0"
   "app_me|${SITE}/wp-json/paxdesign/v1/live-admin/me|1"
   "app_sessions|${SITE}/wp-json/paxdesign/v1/live-admin/sessions|1"
+  "app_team_sessions|${SITE}/wp-json/paxdesign/v1/live-admin/team/sessions|1"
+  "app_pending|${SITE}/wp-json/paxdesign/v1/live-admin/team/requests/pending|1"
+  "app_sync|${SITE}/wp-json/paxdesign/v1/live-admin/conversations/sync|1"
+  "app_platform|${SITE}/wp-json/paxdesign/v1/live-admin/platform/sync|1"
 )
 
 end_epoch=$(( $(date +%s) + DURATION_SEC ))
 probe_count=0
 
 section "Continuous probes (1 Hz)"
+echo "Probe IP (egress): $(curl -sS --max-time 5 https://api.ipify.org 2>/dev/null || echo unknown)"
 while [[ $(date +%s) -lt $end_epoch ]]; do
   ts="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   probe_count=$((probe_count + 1))
+  if [[ $((probe_count % 60)) -eq 0 ]]; then
+    echo "[$ts] HEARTBEAT probe_round=$probe_count elapsed=$((end_epoch - $(date +%s)))s_remaining"
+    for entry in "${PROBE_URLS[@]}"; do
+      IFS='|' read -r id _ _ <<< "$entry"
+      echo "  state[$id]=${LAST_STATE[$id]:-unknown}"
+    done
+  fi
   for entry in "${PROBE_URLS[@]}"; do
     IFS='|' read -r id url auth <<< "$entry"
     line=$(probe_one "$id" "$url" "$auth")
@@ -216,14 +228,20 @@ section "Outage summary"
 if [[ -n "$OUTAGE_START" && -n "$OUTAGE_END" ]]; then
   start_e=$(date -d "$OUTAGE_START" +%s 2>/dev/null || echo 0)
   end_e=$(date -d "$OUTAGE_END" +%s 2>/dev/null || echo 0)
-  echo "Detected outage window: $OUTAGE_START -> $OUTAGE_END (${end_e}-${start_e}s)"
-  if [[ $((end_e - start_e)) -ge 240 && $((end_e - start_e)) -le 420 ]]; then
+  duration=$((end_e - start_e))
+  echo "Detected outage window: $OUTAGE_START -> $OUTAGE_END (duration_sec=$duration)"
+  if [[ $duration -ge 240 && $duration -le 420 ]]; then
     echo "Recovery timing matches ~5 minute automatic block/rate-limit window."
   fi
+  echo "First transitions during outage window:"
+  grep -E 'TRANSITION|OUTAGE_' "$REPORT" 2>/dev/null | awk -v s="$OUTAGE_START" -v e="$OUTAGE_END" '
+    $0 ~ s || $0 ~ e || /TRANSITION/ {print}
+  ' | head -30 || true
 elif [[ "$OUTAGE_ACTIVE" -eq 1 ]]; then
   echo "Outage still active at end of monitoring window (started $OUTAGE_START)."
 else
   echo "No site-wide outage detected during monitoring window from this probe IP."
+  echo "NOTE: User-reported 5min network-wide blocks may only affect client subnet/Wi-Fi IP, not CI egress."
 fi
 
 section "Recovery hypothesis guide"
