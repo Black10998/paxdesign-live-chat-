@@ -1,0 +1,90 @@
+name: Reproduce app burst then admin 403
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate SSH secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            if [ -z "${!key:-}" ]; then
+              echo "Missing secret: $key"
+              exit 1
+            fi
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Run burst reproduction from CI runner
+        id: burst
+        env:
+          PAX_SITE: https://paxdesign.at
+          PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
+          PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
+          BURST_ROUNDS: 20
+          BURST_SLEEP: 0.3
+        run: |
+          set -euo pipefail
+          chmod +x scripts/reproduce-app-then-admin-403.sh
+          scripts/reproduce-app-then-admin-403.sh ./burst-report.txt
+          if [ -z "${PAX_ADMIN_USER:-}" ] || [ -z "${PAX_ADMIN_APP_PASSWORD:-}" ]; then
+            echo "auth_configured=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "auth_configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Redact burst report
+        run: |
+          chmod +x scripts/redact-diagnosis-report.sh
+          scripts/redact-diagnosis-report.sh ./burst-report.txt ./burst-report-redacted.txt
+
+      - name: Upload reproduction artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-burst-admin-403-reproduction
+          path: burst-report-redacted.txt
+
+      - name: Print sanitized summary
+        run: |
+          echo "=== App burst reproduction summary ==="
+          echo "Auth configured: ${{ steps.burst.outputs.auth_configured }}"
+          grep -E 'RESULT:|before_burst|after_burst|SKIP burst' burst-report-redacted.txt || true
+          echo
+          awk '/Baseline — users.php BEFORE/,/Probe — users.php IMMEDIATELY/' burst-report-redacted.txt | head -25
+          echo
+          awk '/IMMEDIATELY AFTER app burst/,/Probe — other admin/' burst-report-redacted.txt | head -25
+
+      - name: Save reproduction report on server (read-only)
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          WP_PATH_QUOTED=$(printf '%q' "$WP_PATH")
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          REMOTE_PATH="${WP_PATH}/wp-content/pax-app-burst-reproduction-$(date +%Y%m%d-%H%M%S).txt"
+          REMOTE_PATH_QUOTED=$(printf '%q' "$REMOTE_PATH")
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "cat > ${REMOTE_PATH_QUOTED}" < ./burst-report-redacted.txt
+          echo "Saved on server: $REMOTE_PATH"
