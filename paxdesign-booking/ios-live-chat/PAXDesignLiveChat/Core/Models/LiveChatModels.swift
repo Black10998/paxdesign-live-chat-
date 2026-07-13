@@ -944,7 +944,13 @@ struct StaffMember: Codable, Identifiable {
         email = LiveChatDecode.string(c, CodingKeys.email)
         username = LiveChatDecode.string(c, CodingKeys.username)
         avatarUrl = try c.decodeIfPresent(String.self, forKey: .avatarUrl)
-        profileTitle = try c.decodeIfPresent(String.self, forKey: .profileTitle)
+        let rawProfileTitle = try c.decodeIfPresent(String.self, forKey: .profileTitle)
+        if let rawProfileTitle,
+           RoleLabelFormatter.canonicalKey(for: rawProfileTitle) == "executive_director" {
+            profileTitle = "Executive Director"
+        } else {
+            profileTitle = rawProfileTitle
+        }
         profilePhone = try c.decodeIfPresent(String.self, forKey: .profilePhone)
         profileNotes = try c.decodeIfPresent(String.self, forKey: .profileNotes)
         onboardingCompleted = (try? c.decode(Bool.self, forKey: .onboardingCompleted)) ?? false

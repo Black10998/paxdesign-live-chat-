@@ -5187,6 +5187,48 @@
         "ar": { "stringUnit": { "state": "translated", "value": "إرسال" } }
       }
     },
+    "team.voice_listening": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Listening" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Aufnahme läuft" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "جاري الاستماع" } }
+      }
+    },
+    "team.voice_playing": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Playing" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Wiedergabe" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "قيد التشغيل" } }
+      }
+    },
+    "team.voice_paused": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Paused" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Pausiert" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "متوقف مؤقتًا" } }
+      }
+    },
+    "team.voice_play": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Play" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Abspielen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تشغيل" } }
+      }
+    },
+    "team.voice_pause": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Pause" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Pause" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "إيقاف مؤقت" } }
+      }
+    },
+    "team.voice_message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Voice message" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Sprachnachricht" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "رسالة صوتية" } }
+      }
+    },
     "team.share_location": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Share Location" } },

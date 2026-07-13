@@ -348,39 +348,33 @@ struct TeamChatView: View {
     private var teamComposer: some View {
         VStack(spacing: 8) {
             if voiceRecorder.isRecording {
-                HStack(spacing: 10) {
-                    PAXIcon("waveform", emphasis: .primary)
-                        .foregroundStyle(PAXTheme.accent)
-                    Text(L10n.TeamRecordingVoice(voiceRecorder.elapsed))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(PAXTheme.accent)
-                    Spacer()
-                    Button(L10n.CommonCancel) {
-                        voiceRecorder.cancelRecording()
-                    }
-                    .font(.caption.weight(.semibold))
-                    Button(L10n.TeamSendVoice) {
-                        Task { await finishVoiceRecording() }
-                    }
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(PAXBrand.accent)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
+                TeamVoiceActivityPanel(
+                    mode: .recording,
+                    elapsed: voiceRecorder.elapsed,
+                    levels: voiceRecorder.audioLevels,
+                    onCancel: { voiceRecorder.cancelRecording() },
+                    onSend: { Task { await finishVoiceRecording() } }
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
             HStack(alignment: .bottom, spacing: 10) {
+                Button {
+                    Task { await beginVoiceRecording() }
+                } label: {
+                    PAXIcon("mic.circle.fill", size: .card)
+                        .foregroundStyle(voiceRecorder.isRecording ? PAXTheme.accent : PAXTheme.textSecondary)
+                        .frame(width: 32, height: 32)
+                }
+                .disabled(thread.isSending || voiceRecorder.isRecording || isSendingLocation)
+                .accessibilityLabel(L10n.TeamRecordVoice)
+
                 Menu {
                     #if !SIDELOAD
                     PhotosPicker(selection: $photoItem, matching: .images) {
                         Label { Text(L10n.TeamSendPhoto) } icon: { PAXIcon("photo.on.rectangle") }
                     }
                     #endif
-                    Button {
-                        Task { await beginVoiceRecording() }
-                    } label: {
-                        Label { Text(L10n.TeamRecordVoice) } icon: { PAXIcon("mic.fill") }
-                    }
                     Button {
                         Task { await shareCurrentLocation() }
                     } label: {
@@ -402,7 +396,7 @@ struct TeamChatView: View {
                     .disabled(voiceRecorder.isRecording)
 
                 if voiceRecorder.isRecording {
-                    PAXIcon("mic.fill", emphasis: .primary)
+                    PAXIcon("waveform", emphasis: .primary)
                         .foregroundStyle(PAXTheme.accent)
                         .frame(width: 36, height: 36)
                 } else {
@@ -415,6 +409,7 @@ struct TeamChatView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.82, borderOpacity: 0.44, shadowOpacity: 0.16)
+        .animation(.spring(response: 0.34, dampingFraction: 0.86), value: voiceRecorder.isRecording)
     }
 
     #if !SIDELOAD

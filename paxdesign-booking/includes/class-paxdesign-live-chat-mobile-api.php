@@ -1881,7 +1881,11 @@ class PAXdesign_Live_Chat_Mobile_API {
         }
 
         if (array_key_exists('profile_title', $params)) {
-            update_user_meta((int) $user_id, 'pax_live_profile_title', sanitize_text_field((string) $params['profile_title']));
+            $title = PAXdesign_Live_Chat_Permissions::normalize_profile_title(
+                sanitize_text_field((string) $params['profile_title']),
+                (int) $user_id
+            );
+            update_user_meta((int) $user_id, 'pax_live_profile_title', $title);
         }
         if (array_key_exists('profile_phone', $params)) {
             update_user_meta((int) $user_id, 'pax_live_profile_phone', sanitize_text_field((string) $params['profile_phone']));

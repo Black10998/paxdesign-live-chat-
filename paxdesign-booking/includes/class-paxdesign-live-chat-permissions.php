@@ -363,7 +363,10 @@ class PAXdesign_Live_Chat_Permissions {
                 'email'       => $user->user_email,
                 'username'    => $user->user_login,
                 'avatar_url'  => $avatar_url,
-                'profile_title' => (string) get_user_meta($uid, 'pax_live_profile_title', true),
+                'profile_title' => PAXdesign_Live_Chat_Permissions::normalize_profile_title(
+                    (string) get_user_meta($uid, 'pax_live_profile_title', true),
+                    $uid
+                ),
                 'profile_phone' => (string) get_user_meta($uid, 'pax_live_profile_phone', true),
                 'profile_notes' => (string) get_user_meta($uid, 'pax_live_profile_notes', true),
                 'onboarding_completed' => (bool) get_user_meta($uid, 'pax_live_onboarding_completed', true),
@@ -628,7 +631,10 @@ class PAXdesign_Live_Chat_Permissions {
                 'email'       => $user->user_email,
                 'username'    => $user->user_login,
                 'avatar_url'  => $avatar_url,
-                'profile_title' => (string) get_user_meta($uid, 'pax_live_profile_title', true),
+                'profile_title' => PAXdesign_Live_Chat_Permissions::normalize_profile_title(
+                    (string) get_user_meta($uid, 'pax_live_profile_title', true),
+                    $uid
+                ),
                 'profile_phone' => (string) get_user_meta($uid, 'pax_live_profile_phone', true),
                 'profile_notes' => (string) get_user_meta($uid, 'pax_live_profile_notes', true),
                 'onboarding_completed' => (bool) get_user_meta($uid, 'pax_live_onboarding_completed', true),

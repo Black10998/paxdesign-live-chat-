@@ -254,6 +254,17 @@ final class MessagingReliabilityTests: XCTestCase {
         XCTAssertEqual(RoleLabelFormatter.localized("Administrator"), L10n.RoleAdministrator)
     }
 
+    func testTeamConversationIdIsStableRegardlessOfCallerOrder() {
+        XCTAssertEqual(
+            TeamVoiceRecorderService.teamConversationId(currentUserId: 12, otherUserId: 34),
+            "team_12_34"
+        )
+        XCTAssertEqual(
+            TeamVoiceRecorderService.teamConversationId(currentUserId: 34, otherUserId: 12),
+            "team_12_34"
+        )
+    }
+
     func testAPNsPermanentFailureDetection() {
         XCTAssertTrue(APNsRegistrationPolicy.isPermanentFailureMessage(
             "NSCocoaErrorDomain (3000): No valid 'aps-environment' entitlement string found for application."
