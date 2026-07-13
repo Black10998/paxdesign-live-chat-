@@ -71,6 +71,9 @@ enum PAXGlyphPaths {
         case "pause", "pause.fill": return pausePath(in: rect)
         case "waveform": return waveformPath(in: rect)
         case "location", "location.fill": return locationPath(in: rect)
+        case "team.headset": return teamHeadsetPath(in: rect)
+        case "team.broadcast": return teamBroadcastPath(in: rect)
+        case "team.alert": return teamAlertPath(in: rect)
         case "arrow.up.right.circle": return arrowPath(in: rect, name: "arrow.up.right.circle")
         default: return fallbackPath(in: rect)
         }
@@ -832,6 +835,43 @@ enum PAXGlyphPaths {
         )
         p.closeSubpath()
         p.addEllipse(in: CGRect(x: r.midX - r.width * 0.08, y: r.maxY - r.height * 0.28, width: r.width * 0.16, height: r.height * 0.16))
+        return p
+    }
+
+    private static func teamHeadsetPath(in r: CGRect) -> Path {
+        var p = Path()
+        p.addRoundedRect(
+            in: CGRect(x: r.minX + r.width * 0.18, y: r.minY + r.height * 0.34, width: r.width * 0.64, height: r.height * 0.34),
+            cornerSize: CGSize(width: r.width * 0.18, height: r.height * 0.18)
+        )
+        p.addRoundedRect(in: CGRect(x: r.minX + r.width * 0.08, y: r.minY + r.height * 0.42, width: r.width * 0.18, height: r.height * 0.28), cornerSize: CGSize(width: 6, height: 6))
+        p.addRoundedRect(in: CGRect(x: r.maxX - r.width * 0.26, y: r.minY + r.height * 0.42, width: r.width * 0.18, height: r.height * 0.28), cornerSize: CGSize(width: 6, height: 6))
+        p.move(to: CGPoint(x: r.midX, y: r.minY + r.height * 0.34))
+        p.addCurve(
+            to: CGPoint(x: r.midX, y: r.minY + r.height * 0.14),
+            control1: CGPoint(x: r.minX + r.width * 0.22, y: r.minY + r.height * 0.18),
+            control2: CGPoint(x: r.minX + r.width * 0.22, y: r.minY + r.height * 0.1)
+        )
+        return p
+    }
+
+    private static func teamBroadcastPath(in r: CGRect) -> Path {
+        var p = Path()
+        p.addEllipse(in: CGRect(x: r.minX + r.width * 0.34, y: r.minY + r.height * 0.3, width: r.width * 0.32, height: r.height * 0.32))
+        p.move(to: CGPoint(x: r.midX, y: r.minY + r.height * 0.62))
+        p.addLine(to: CGPoint(x: r.midX, y: r.maxY - r.height * 0.12))
+        p.move(to: CGPoint(x: r.minX + r.width * 0.22, y: r.maxY - r.height * 0.12))
+        p.addLine(to: CGPoint(x: r.maxX - r.width * 0.22, y: r.maxY - r.height * 0.12))
+        p.move(to: CGPoint(x: r.minX + r.width * 0.08, y: r.minY + r.height * 0.42))
+        p.addQuadCurve(to: CGPoint(x: r.minX + r.width * 0.08, y: r.minY + r.height * 0.18), control: CGPoint(x: r.minX - r.width * 0.04, y: r.midY))
+        p.move(to: CGPoint(x: r.maxX - r.width * 0.08, y: r.minY + r.height * 0.42))
+        p.addQuadCurve(to: CGPoint(x: r.maxX - r.width * 0.08, y: r.minY + r.height * 0.18), control: CGPoint(x: r.maxX + r.width * 0.04, y: r.midY))
+        return p
+    }
+
+    private static func teamAlertPath(in r: CGRect) -> Path {
+        var p = notificationPath(in: r)
+        p.addEllipse(in: CGRect(x: r.maxX - r.width * 0.28, y: r.minY + r.height * 0.12, width: r.width * 0.14, height: r.height * 0.14))
         return p
     }
 }

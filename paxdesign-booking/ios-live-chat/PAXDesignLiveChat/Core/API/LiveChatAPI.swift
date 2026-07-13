@@ -828,6 +828,44 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "team-send-location", as: TeamSendResponse.self)
     }
 
+    func sendTeamFile(
+        _ sessionId: String,
+        fileData: Data,
+        filename: String,
+        caption: String = "",
+        clientMsgId: String = UUID().uuidString.lowercased()
+    ) async throws -> TeamSendResponse {
+        guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/files") else {
+            throw LiveChatAPIError.invalidURL
+        }
+
+        let boundary = "PAXBoundary\(UUID().uuidString)"
+        var body = Data()
+        let mime = mimeType(for: filename)
+
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n".data(using: .utf8)!)
+
+        if !caption.isEmpty {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"caption\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(caption)\r\n".data(using: .utf8)!)
+        }
+
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"client_msg_id\"\r\n\r\n".data(using: .utf8)!)
+        body.append("\(clientMsgId)\r\n".data(using: .utf8)!)
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        var request = authRequest(url: url, method: "POST", body: body)
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.setValue("\(body.count)", forHTTPHeaderField: "Content-Length")
+        return try await perform(request, endpoint: "team-send-file", as: TeamSendResponse.self)
+    }
+
     func markTeamSessionRead(_ sessionId: String, seq: Int) async throws -> TeamReadResponse {
         guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/read") else {
             throw LiveChatAPIError.invalidURL

@@ -553,6 +553,46 @@ class PAXdesign_Team_Messaging {
     /**
      * @param string               $conv_id
      * @param int                  $current_user_id
+     * @param array<string, mixed> $file
+     * @param string               $caption
+     * @param string               $client_msg_id
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function send_file($conv_id, $current_user_id, $file, $caption = '', $client_msg_id = '') {
+        $upload = self::handle_media_upload($file, 'file');
+        if (is_wp_error($upload)) {
+            return $upload;
+        }
+
+        $caption = trim(wp_strip_all_tags((string) $caption));
+        $attachment_type = !empty($upload['attachment_type']) ? (string) $upload['attachment_type'] : 'file';
+        $meta = array(
+            'file_url'        => $upload['url'],
+            'file_name'       => $upload['name'],
+            'file_mime'       => $upload['mime'],
+            'attachment_type' => $attachment_type,
+        );
+        if (!empty($upload['image_url'])) {
+            $meta['image_url'] = $upload['image_url'];
+        }
+        if (!empty($upload['audio_url'])) {
+            $meta['audio_url'] = $upload['audio_url'];
+            $meta['attachment_type'] = 'voice';
+        }
+
+        return self::append_attachment_message(
+            $conv_id,
+            $current_user_id,
+            $caption,
+            $meta,
+            $client_msg_id,
+            $upload['preview']
+        );
+    }
+
+    /**
+     * @param string               $conv_id
+     * @param int                  $current_user_id
      * @param string               $content
      * @param array<string, mixed> $attachment_meta
      * @param string               $client_msg_id
@@ -683,8 +723,11 @@ class PAXdesign_Team_Messaging {
                 'png'          => 'image/png',
                 'webp'         => 'image/webp',
                 'gif'          => 'image/gif',
+                'heic'         => 'image/heic',
+                'heif'         => 'image/heif',
+                'tif|tiff'     => 'image/tiff',
             );
-            $max_size = 8 * 1024 * 1024;
+            $max_size = 24 * 1024 * 1024;
             $name  = isset($file['name']) ? (string) $file['name'] : 'image.jpg';
             $check = wp_check_filetype($name, $allowed);
             if (empty($check['type']) || !in_array($check['type'], array_values($allowed), true)) {
@@ -714,7 +757,111 @@ class PAXdesign_Team_Messaging {
             );
         }
 
+        if ($kind === 'file') {
+            return self::store_generic_file_upload($file);
+        }
+
         return new WP_Error('invalid_type', 'Unsupported file type.', array('status' => 400));
+    }
+
+    /**
+     * Store design/work files for team chat (PDF, vectors, archives, office docs, etc.).
+     *
+     * @param array<string, mixed> $file
+     * @return array<string, string>|WP_Error
+     */
+    private static function store_generic_file_upload($file) {
+        $tmp_name = isset($file['tmp_name']) ? (string) $file['tmp_name'] : '';
+        if ($tmp_name === '' || !is_uploaded_file($tmp_name)) {
+            return new WP_Error('upload_failed', 'Invalid file upload.', array('status' => 400));
+        }
+
+        $size = isset($file['size']) ? (int) $file['size'] : 0;
+        if ($size <= 0) {
+            return new WP_Error('upload_failed', 'Empty file.', array('status' => 400));
+        }
+        if ($size > 64 * 1024 * 1024) {
+            return new WP_Error('too_large', 'File is too large.', array('status' => 400));
+        }
+
+        $original_name = isset($file['name']) ? sanitize_file_name((string) $file['name']) : 'attachment.bin';
+        if ($original_name === '') {
+            $original_name = 'attachment.bin';
+        }
+
+        $allowed = array(
+            'pdf'                          => 'application/pdf',
+            'svg'                          => 'image/svg+xml',
+            'ai'                           => 'application/postscript',
+            'eps'                          => 'application/postscript',
+            'dxf'                          => 'application/dxf',
+            'lbrn2'                        => 'application/octet-stream',
+            'zip'                          => 'application/zip',
+            'rar'                          => 'application/vnd.rar',
+            'json'                         => 'application/json',
+            'xml'                          => 'application/xml',
+            'csv'                          => 'text/csv',
+            'txt'                          => 'text/plain',
+            'psd'                          => 'image/vnd.adobe.photoshop',
+            'doc'                          => 'application/msword',
+            'docx'                         => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'xls'                          => 'application/vnd.ms-excel',
+            'xlsx'                         => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'ppt'                          => 'application/vnd.ms-powerpoint',
+            'pptx'                         => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'mov'                          => 'video/quicktime',
+            'mp4'                          => 'video/mp4',
+            'm4v'                          => 'video/x-m4v',
+            'vcf'                          => 'text/vcard',
+            'jpg|jpeg|jpe'                 => 'image/jpeg',
+            'png'                          => 'image/png',
+            'webp'                         => 'image/webp',
+            'gif'                          => 'image/gif',
+            'heic'                         => 'image/heic',
+            'heif'                         => 'image/heif',
+            'tif|tiff'                     => 'image/tiff',
+        );
+
+        $check = wp_check_filetype($original_name, $allowed);
+        if (empty($check['type'])) {
+            return new WP_Error('invalid_type', 'Unsupported file type.', array('status' => 400));
+        }
+
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+
+        $upload = wp_handle_upload(
+            $file,
+            array(
+                'test_form' => false,
+                'mimes'     => $allowed,
+            )
+        );
+        if (!empty($upload['error'])) {
+            return new WP_Error('upload_failed', $upload['error'], array('status' => 500));
+        }
+
+        $mime = (string) $check['type'];
+        $url  = (string) $upload['url'];
+        $preview = $original_name;
+        $attachment_type = 'file';
+        $result = array(
+            'url'             => $url,
+            'name'            => $original_name,
+            'mime'            => $mime,
+            'preview'         => $preview,
+            'attachment_type' => $attachment_type,
+        );
+
+        if (strpos($mime, 'image/') === 0) {
+            $result['image_url'] = $url;
+            $result['attachment_type'] = 'image';
+            $result['preview'] = 'Photo';
+        } elseif (strpos($mime, 'video/') === 0) {
+            $result['attachment_type'] = 'video';
+            $result['preview'] = 'Video';
+        }
+
+        return $result;
     }
 
     /**
@@ -783,8 +930,8 @@ class PAXdesign_Team_Messaging {
             return $url;
         }
         $size = $editor->get_size();
-        if (!empty($size['width']) && (int) $size['width'] > 960) {
-            $editor->resize(960, null, false);
+        if (!empty($size['width']) && (int) $size['width'] > 2048) {
+            $editor->resize(2048, null, false);
             $saved = $editor->save($file_path);
             if (!is_wp_error($saved) && !empty($saved['path'])) {
                 $uploads = wp_upload_dir();
@@ -996,6 +1143,9 @@ class PAXdesign_Team_Messaging {
             'location_lat'    => isset($msg['location_lat']) ? (float) $msg['location_lat'] : null,
             'location_lng'    => isset($msg['location_lng']) ? (float) $msg['location_lng'] : null,
             'location_label'  => !empty($msg['location_label']) ? sanitize_text_field((string) $msg['location_label']) : '',
+            'file_url'        => !empty($msg['file_url']) ? esc_url_raw((string) $msg['file_url']) : '',
+            'file_name'       => !empty($msg['file_name']) ? sanitize_file_name((string) $msg['file_name']) : '',
+            'file_mime'       => !empty($msg['file_mime']) ? sanitize_mime_type((string) $msg['file_mime']) : '',
             'reply_to'        => null,
             'reaction'        => null,
             'sender_id'       => $sender_id,

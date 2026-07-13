@@ -516,6 +516,12 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => $auth,
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/sessions/(?P<id>team_[0-9]+_[0-9]+)/files', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_team_send_file'),
+            'permission_callback' => $auth,
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/team/sessions/(?P<id>team_[0-9]+_[0-9]+)/read', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'route_team_mark_read'),
@@ -2012,6 +2018,23 @@ class PAXdesign_Live_Chat_Mobile_API {
             $lat,
             $lng,
             $label,
+            $client_id
+        ));
+    }
+
+    public static function route_team_send_file(WP_REST_Request $request) {
+        $files = $request->get_file_params();
+        if (empty($files['file'])) {
+            return new WP_Error('invalid_payload', 'No file uploaded.', array('status' => 400));
+        }
+        $params    = $request->get_body_params();
+        $caption   = isset($params['caption']) ? $params['caption'] : $request->get_param('caption');
+        $client_id = isset($params['client_msg_id']) ? $params['client_msg_id'] : $request->get_param('client_msg_id');
+        return self::respond(PAXdesign_Team_Messaging::send_file(
+            $request['id'],
+            (int) wp_get_current_user()->ID,
+            $files['file'],
+            $caption,
             $client_id
         ));
     }

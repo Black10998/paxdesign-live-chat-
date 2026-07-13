@@ -326,6 +326,9 @@ struct LiveMessage: Identifiable, Codable, Hashable {
     let locationLat: Double?
     let locationLng: Double?
     let locationLabel: String?
+    let fileUrl: String?
+    let fileName: String?
+    let fileMime: String?
 
     enum CodingKeys: String, CodingKey {
         case id, role, content, ts, reaction
@@ -349,6 +352,9 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         case locationLat = "location_lat"
         case locationLng = "location_lng"
         case locationLabel = "location_label"
+        case fileUrl = "file_url"
+        case fileName = "file_name"
+        case fileMime = "file_mime"
     }
 
     private enum LegacyCodingKeys: String, CodingKey {
@@ -380,7 +386,10 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         audioDuration: Double? = nil,
         locationLat: Double? = nil,
         locationLng: Double? = nil,
-        locationLabel: String? = nil
+        locationLabel: String? = nil,
+        fileUrl: String? = nil,
+        fileName: String? = nil,
+        fileMime: String? = nil
     ) {
         self.id = id
         self.clientMsgId = clientMsgId
@@ -407,6 +416,9 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         self.locationLat = locationLat
         self.locationLng = locationLng
         self.locationLabel = locationLabel
+        self.fileUrl = fileUrl
+        self.fileName = fileName
+        self.fileMime = fileMime
     }
 
     var needsLinkScanReview: Bool {
@@ -425,6 +437,18 @@ struct LiveMessage: Identifiable, Codable, Hashable {
 
     var isLocationMessage: Bool {
         attachmentType == "location" || (locationLat != nil && locationLng != nil)
+    }
+
+    var isFileMessage: Bool {
+        if attachmentType == "file" || attachmentType == "video" { return true }
+        guard let url = fileUrl, !url.isEmpty, !url.hasPrefix("pending://") else {
+            return attachmentType == "file" && (fileUrl ?? "").hasPrefix("pending://")
+        }
+        return imageUrl == nil && audioUrl == nil && !isLocationMessage
+    }
+
+    var isVideoMessage: Bool {
+        attachmentType == "video" || (fileMime ?? "").hasPrefix("video/")
     }
 
     var isInPlaceWarning: Bool {
@@ -461,7 +485,10 @@ struct LiveMessage: Identifiable, Codable, Hashable {
             audioDuration: audioDuration,
             locationLat: locationLat,
             locationLng: locationLng,
-            locationLabel: locationLabel
+            locationLabel: locationLabel,
+            fileUrl: fileUrl,
+            fileName: fileName,
+            fileMime: fileMime
         )
     }
 
@@ -512,6 +539,9 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         locationLat = try container.decodeIfPresent(Double.self, forKey: .locationLat)
         locationLng = try container.decodeIfPresent(Double.self, forKey: .locationLng)
         locationLabel = Self.decodeOptionalString(container, .locationLabel)
+        fileUrl = Self.decodeOptionalString(container, .fileUrl)
+        fileName = Self.decodeOptionalString(container, .fileName)
+        fileMime = Self.decodeOptionalString(container, .fileMime)
     }
 
     private static func decodeOptionalString<C: CodingKey>(
@@ -1011,6 +1041,99 @@ struct StaffMember: Codable, Identifiable {
     }
 
     var isOnline: Bool { presenceStatus == "online" }
+    var isAway: Bool { presenceStatus == "away" }
+
+    var presenceLabel: String {
+        switch presenceStatus {
+        case "online": return L10n.TeamPresenceOnline
+        case "away": return L10n.TeamPresenceAway
+        default: return L10n.TeamPresenceOffline
+        }
+    }
+
+    /// Human-facing name only — never internal WordPress login slugs.
+    var displayName: String {
+        let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cleaned.isEmpty, !Self.looksLikeInternalUsername(cleaned, login: username) {
+            return cleaned
+        }
+        if let derived = Self.nameFromEmail(email), !derived.isEmpty {
+            return derived
+        }
+        return cleaned.isEmpty ? L10n.CommonAdministrator : cleaned
+    }
+
+    private static func looksLikeInternalUsername(_ value: String, login: String) -> Bool {
+        let normalized = value.lowercased()
+        let loginNorm = login.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if !loginNorm.isEmpty, normalized == loginNorm { return true }
+        if normalized.contains(" ") { return false }
+        if normalized.contains("@") { return false }
+        if normalized.hasPrefix("manage-") || normalized.hasPrefix("system-") || normalized.hasPrefix("admin-") {
+            return true
+        }
+        if value.contains("-") || value.contains("_") {
+            return !value.contains(where: { $0.isUppercase })
+        }
+        return isPlaceholderProfileTitle(value)
+    }
+
+    private static func nameFromEmail(_ email: String) -> String? {
+        guard let local = email.split(separator: "@").first else { return nil }
+        let parts = local.split(whereSeparator: { "._-+".contains($0) })
+        let words = parts.compactMap { part -> String? in
+            let trimmed = String(part).trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { return nil }
+            return trimmed.prefix(1).uppercased() + trimmed.dropFirst().lowercased()
+        }
+        guard !words.isEmpty else { return nil }
+        return words.joined(separator: " ")
+    }
+
+    var isAway: Bool { presenceStatus == "away" }
+
+    /// Human-facing name only — never exposes internal WordPress login slugs.
+    var displayName: String {
+        let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !cleaned.isEmpty, !Self.looksLikeInternalUsername(cleaned, login: username) {
+            return cleaned
+        }
+        if let profileTitle, !profileTitle.isEmpty, !Self.isPlaceholderProfileTitle(profileTitle) {
+            return Self.localizedRoleLabel(profileTitle)
+        }
+        let emailLocal = email.split(separator: "@").first.map(String.init) ?? ""
+        if !emailLocal.isEmpty {
+            let parts = emailLocal.split(whereSeparator: { $0 == "." || $0 == "_" || $0 == "-" || $0 == "+" })
+                .map { part in
+                    part.prefix(1).uppercased() + part.dropFirst().lowercased()
+                }
+            if !parts.isEmpty {
+                return parts.joined(separator: " ")
+            }
+        }
+        return cleaned.isEmpty ? L10n.CommonAdministrator : cleaned
+    }
+
+    var presenceLabel: String {
+        if isOnline { return L10n.TeamPresenceOnline }
+        if isAway { return L10n.TeamPresenceAway }
+        return L10n.TeamPresenceOffline
+    }
+
+    var presenceColor: Color {
+        if isOnline { return .green }
+        if isAway { return .orange }
+        return Color(.systemGray3)
+    }
+
+    private static func looksLikeInternalUsername(_ value: String, login: String) -> Bool {
+        let normalized = value.lowercased()
+        let loginNorm = login.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        if !loginNorm.isEmpty, normalized == loginNorm { return true }
+        if normalized.contains("manage-system") || normalized.contains("system-user") { return true }
+        if value.contains("-") || value.contains("_"), !value.contains(" ") { return true }
+        return isPlaceholderProfileTitle(value)
+    }
 
     var publicDisplaySubtitle: String {
         if isExecutive { return L10n.RoleExecutiveDirector }
@@ -1214,5 +1337,14 @@ extension Array where Element == StaffMember {
     func deduplicatedByUserId() -> [StaffMember] {
         var seen = Set<Int>()
         return filter { seen.insert($0.userId).inserted }
+    }
+
+    func deduplicatedByDisplayName() -> [StaffMember] {
+        var seen = Set<String>()
+        return filter { member in
+            let key = member.displayName.lowercased()
+            guard !key.isEmpty else { return true }
+            return seen.insert(key).inserted
+        }
     }
 }

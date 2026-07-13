@@ -119,15 +119,58 @@ class PAXdesign_Chat_Live {
             return $candidate;
         }
 
+        $user = get_user_by('id', $user_id);
+        $login = ($user && is_string($user->user_login)) ? trim($user->user_login) : '';
+
         $is_placeholder = (bool) preg_match('/^management\s+system/i', $candidate)
             || (bool) preg_match('/^system\s+account/i', $candidate)
+            || (bool) preg_match('/^(manage|system|admin)[\-_]/i', $candidate)
             || strtolower($candidate) === 'administrator'
-            || strtolower($candidate) === 'admin';
+            || strtolower($candidate) === 'admin'
+            || ($login !== '' && strcasecmp($candidate, $login) === 0)
+            || self::looks_like_internal_username_slug($candidate);
 
         if (!$is_placeholder) {
             return $candidate;
         }
 
+        $resolved = self::resolve_human_name_from_user_meta($user_id, $user);
+        if ($resolved !== '') {
+            return $resolved;
+        }
+
+        return $candidate;
+    }
+
+    /**
+     * Detect WordPress login slugs that should never be shown as display names.
+     *
+     * @param string $candidate
+     * @return bool
+     */
+    private static function looks_like_internal_username_slug($candidate) {
+        $candidate = trim((string) $candidate);
+        if ($candidate === '') {
+            return false;
+        }
+        if (strpos($candidate, ' ') !== false) {
+            return false;
+        }
+        if (strpos($candidate, '@') !== false) {
+            return false;
+        }
+        if (preg_match('/[\-_.]{1,}/', $candidate) && !preg_match('/^[A-Z][a-z]+$/', $candidate)) {
+            return true;
+        }
+        return (bool) preg_match('/^(manage|system|admin|user)[\-_]/i', $candidate);
+    }
+
+    /**
+     * @param int              $user_id
+     * @param WP_User|false    $user
+     * @return string
+     */
+    private static function resolve_human_name_from_user_meta($user_id, $user) {
         $first = trim((string) get_user_meta($user_id, 'first_name', true));
         $last  = trim((string) get_user_meta($user_id, 'last_name', true));
         $full  = trim($first . ' ' . $last);
@@ -135,7 +178,6 @@ class PAXdesign_Chat_Live {
             return $full;
         }
 
-        $user = get_user_by('id', $user_id);
         if ($user && is_string($user->user_email) && strpos($user->user_email, '@') !== false) {
             $local = strstr($user->user_email, '@', true);
             if (is_string($local) && $local !== '') {
@@ -152,7 +194,7 @@ class PAXdesign_Chat_Live {
             }
         }
 
-        return $candidate;
+        return '';
     }
 
     /**

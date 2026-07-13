@@ -544,12 +544,14 @@ class PAXdesign_Live_Chat_Permissions {
         $user_id = absint($user_id);
         $data    = get_transient('pax_team_presence_' . $user_id);
         $last    = is_array($data) && isset($data['last_seen']) ? absint($data['last_seen']) : 0;
-        $online  = is_array($data)
+        $age = $last > 0 ? (time() - $last) : PHP_INT_MAX;
+        $online = is_array($data)
             && !empty($data['online'])
             && $last > 0
-            && (time() - $last) < 90;
+            && $age < 90;
+        $away = !$online && $last > 0 && $age < 900;
         return array(
-            'status'    => $online ? 'online' : 'offline',
+            'status'    => $online ? 'online' : ($away ? 'away' : 'offline'),
             'last_seen' => $last,
         );
     }
@@ -561,6 +563,15 @@ class PAXdesign_Live_Chat_Permissions {
     private static function enrich_team_contact($member) {
         $uid = isset($member['user_id']) ? (int) $member['user_id'] : 0;
         $viewer_id = get_current_user_id();
+        if ($uid > 0) {
+            $identity = PAXdesign_Chat_Live::resolve_employee_identity($uid);
+            if ($identity && !empty($identity['name'])) {
+                $member['name'] = $identity['name'];
+            }
+            if ($identity && !empty($identity['avatar']) && empty($member['avatar_url'])) {
+                $member['avatar_url'] = $identity['avatar'];
+            }
+        }
         $member['role_label'] = self::team_role_label_for_user($uid);
         $member['is_executive'] = self::is_super_admin($uid);
         $member['is_administrator'] = !empty($member['is_administrator'])

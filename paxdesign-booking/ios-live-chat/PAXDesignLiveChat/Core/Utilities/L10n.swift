@@ -369,6 +369,24 @@ enum L10n {
     static var TeamPresenceRequestPending: String { t("team.presence_request_pending") }
     static var TeamPresenceOnline: String { t("team.presence_online") }
     static var TeamPresenceOffline: String { t("team.presence_offline") }
+    static var TeamPresenceAway: String { String(localized: "team.presence_away", defaultValue: "Away") }
+    static var TeamMetricActiveConversations: String { String(localized: "team.metric.active", defaultValue: "Active conversations") }
+    static var TeamMetricNewAlerts: String { String(localized: "team.metric.alerts", defaultValue: "New alerts") }
+    static var TeamMetricWaitingReply: String { String(localized: "team.metric.waiting", defaultValue: "Waiting for reply") }
+    static var TeamStartConversationHint: String { String(localized: "team.start_hint", defaultValue: "Start live support instantly") }
+    static var TeamMessageTeam: String { String(localized: "team.message_team", defaultValue: "Message team") }
+    static var TeamMessageTeamHint: String { String(localized: "team.message_team_hint", defaultValue: "Send a message to the whole team") }
+    static var TeamLiveAlerts: String { String(localized: "team.live_alerts", defaultValue: "Live alerts") }
+    static var TeamShowAll: String { String(localized: "team.show_all", defaultValue: "Show all") }
+    static var TeamAlertPendingRequest: String { String(localized: "team.alert.pending", defaultValue: "Pending request") }
+    static var TeamAlertUnreadMessage: String { String(localized: "team.alert.unread", defaultValue: "Unread message") }
+    static var TeamBroadcastHint: String { String(localized: "team.broadcast.hint", defaultValue: "Your message will be delivered to each team member individually.") }
+    static var TeamBroadcastMessage: String { String(localized: "team.broadcast.message", defaultValue: "Message") }
+    static var TeamBroadcastRecipientCount: String { String(localized: "team.broadcast.recipients", defaultValue: "%d recipients") }
+    static var TeamBroadcastProgress: String { String(localized: "team.broadcast.progress", defaultValue: "Sending %d of %d…") }
+    static var TeamBroadcastDone: String { String(localized: "team.broadcast.done", defaultValue: "Sent to %d team members") }
+    static var TeamSendFile: String { String(localized: "team.send_file", defaultValue: "Send file") }
+    static var TeamOpenFile: String { String(localized: "team.open_file", defaultValue: "Open file") }
     static func TeamPresenceLastSeen(_ label: String) -> String {
         String(format: String(localized: "team.presence_last_seen"), label)
     }
