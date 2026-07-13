@@ -300,6 +300,7 @@ targets = [
         "team_id": os.environ["APPLE_TEAM_ID"],
         "profile_uuid": os.environ["MAIN_PROFILE_UUID"],
         "profile_name": os.environ["MAIN_PROFILE_NAME"],
+        "entitlements_path": "PAXDesignLiveChat/PAXDesignLiveChat.entitlements",
     },
     {
         "target_name": "PAXWidgets",
@@ -307,6 +308,7 @@ targets = [
         "team_id": os.environ["APPLE_TEAM_ID"],
         "profile_uuid": os.environ["WIDGET_PROFILE_UUID"],
         "profile_name": os.environ["WIDGET_PROFILE_NAME"],
+        "entitlements_path": "PAXWidgets/PAXWidgets.entitlements",
     },
 ]
 
@@ -317,12 +319,13 @@ def upsert_setting(block: str, key: str, value: str) -> str:
         return pattern.sub(line, block, count=1)
     return block.replace("buildSettings = {", "buildSettings = {\n\t\t\t\t" + line, 1)
 
-def patch_release_block(block: str, team_id: str, profile_uuid: str, profile_name: str) -> str:
+def patch_release_block(block: str, team_id: str, profile_uuid: str, profile_name: str, entitlements_path: str) -> str:
     block = upsert_setting(block, "CODE_SIGN_STYLE", "Manual")
     block = upsert_setting(block, "DEVELOPMENT_TEAM", team_id)
     block = upsert_setting(block, "CODE_SIGN_IDENTITY", '"Apple Distribution"')
     block = upsert_setting(block, "PROVISIONING_PROFILE", profile_uuid)
     block = upsert_setting(block, "PROVISIONING_PROFILE_SPECIFIER", f'"{profile_name}"')
+    block = upsert_setting(block, "CODE_SIGN_ENTITLEMENTS", f'"{entitlements_path}"')
     return block
 
 def release_config_ids_for_target(text: str, target_name: str) -> list[str]:
@@ -342,7 +345,7 @@ def release_config_ids_for_target(text: str, target_name: str) -> list[str]:
         raise SystemExit(f"Could not parse configuration list for target {target_name}")
     return re.findall(r"([A-F0-9]+) /\* (Debug|Release) \*/", list_match.group(1))
 
-def patch_target(text: str, target_name: str, team_id: str, profile_uuid: str, profile_name: str) -> str:
+def patch_target(text: str, target_name: str, team_id: str, profile_uuid: str, profile_name: str, entitlements_path: str) -> str:
     release_ids = {
         config_id
         for config_id, config_name in release_config_ids_for_target(text, target_name)
@@ -361,7 +364,7 @@ def patch_target(text: str, target_name: str, team_id: str, profile_uuid: str, p
         def repl(match):
             nonlocal patched
             patched += 1
-            return patch_release_block(match.group(1), team_id, profile_uuid, profile_name)
+            return patch_release_block(match.group(1), team_id, profile_uuid, profile_name, entitlements_path)
 
         text, count = pattern.subn(repl, text, count=1)
         if count != 1:
@@ -378,6 +381,7 @@ for target in targets:
         target["team_id"],
         target["profile_uuid"],
         target["profile_name"],
+        target["entitlements_path"],
     )
 
 text = text.replace("CODE_SIGN_STYLE = Automatic;", "CODE_SIGN_STYLE = Manual;")
@@ -410,10 +414,20 @@ xcodebuild archive \
   "PAXWidgets_PROVISIONING_PROFILE=$WIDGET_PROFILE_UUID" \
   "PAXDesignLiveChat_PROVISIONING_PROFILE_SPECIFIER=$MAIN_PROFILE_NAME" \
   "PAXWidgets_PROVISIONING_PROFILE_SPECIFIER=$WIDGET_PROFILE_NAME" \
+  "PAXDesignLiveChat_CODE_SIGN_ENTITLEMENTS=PAXDesignLiveChat/PAXDesignLiveChat.entitlements" \
+  "PAXWidgets_CODE_SIGN_ENTITLEMENTS=PAXWidgets/PAXWidgets.entitlements" \
   "PAXDesignLiveChatTests_CODE_SIGNING_ALLOWED=NO" \
   OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH"
 
 [[ -x "$VALIDATE_ARCHIVE_SCRIPT" ]] || fail "Missing validator: $VALIDATE_ARCHIVE_SCRIPT"
+
+ARCHIVE_APP="$(find "$ARCHIVE_PATH/Products/Applications" -maxdepth 1 -name '*.app' -type d | head -1)"
+[[ -n "$ARCHIVE_APP" && -d "$ARCHIVE_APP" ]] || fail "Archived app bundle not found"
+echo "==> Injecting PAXSignedAPSEnvironment into archived app Info.plist"
+inject_signed_aps_environment "$ARCHIVE_APP/Info.plist"
+APS_MIRROR="$(/usr/libexec/PlistBuddy -c 'Print :PAXSignedAPSEnvironment' "$ARCHIVE_APP/Info.plist" 2>/dev/null || true)"
+[[ "$APS_MIRROR" == "$APS_ENTITLEMENT_VALUE" ]] || fail "Archived Info.plist missing PAXSignedAPSEnvironment mirror"
+
 echo "==> Validating archive before export"
 "$VALIDATE_ARCHIVE_SCRIPT" "$ARCHIVE_PATH"
 

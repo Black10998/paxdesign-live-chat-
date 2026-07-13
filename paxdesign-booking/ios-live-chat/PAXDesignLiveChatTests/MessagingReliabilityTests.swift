@@ -231,8 +231,8 @@ final class MessagingReliabilityTests: XCTestCase {
         }
         try? await NetworkCircuitBreaker.shared.recordRequestStart(endpoint: "sessions")
         try? await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "sessions")
-        XCTAssertNoThrow(try await NetworkCircuitBreaker.shared.recordRequestStart(endpoint: "employee-devices"))
-        try? await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "employee-devices")
+        XCTAssertNoThrow(try await NetworkCircuitBreaker.shared.recordRequestStart(endpoint: "devices-list"))
+        try? await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "devices-list")
     }
 
     func testAPNsPermanentFailureDetection() {

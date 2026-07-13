@@ -63,18 +63,16 @@ read_entitlements_value() {
   local value=""
   local temp_plist
 
-  if [[ -f "$target_path/embedded.mobileprovision" ]]; then
+  temp_plist="$(mktemp)"
+  if codesign -d --entitlements :- "$target_path" > "$temp_plist" 2>/dev/null && [[ -s "$temp_plist" ]]; then
+    value="$(/usr/libexec/PlistBuddy -c "Print :$plist_key" "$temp_plist" 2>/dev/null || true)"
+  fi
+  rm -f "$temp_plist"
+
+  if [[ -z "$value" ]] && [[ -f "$target_path/embedded.mobileprovision" ]]; then
     temp_plist="$(mktemp)"
     if security cms -D -i "$target_path/embedded.mobileprovision" > "$temp_plist" 2>/dev/null; then
       value="$(/usr/libexec/PlistBuddy -c "Print :Entitlements:$plist_key" "$temp_plist" 2>/dev/null || true)"
-    fi
-    rm -f "$temp_plist"
-  fi
-
-  if [[ -z "$value" ]]; then
-    temp_plist="$(mktemp)"
-    if codesign -d --entitlements :- "$target_path" > "$temp_plist" 2>/dev/null && [[ -s "$temp_plist" ]]; then
-      value="$(/usr/libexec/PlistBuddy -c "Print :$plist_key" "$temp_plist" 2>/dev/null || true)"
     fi
     rm -f "$temp_plist"
   fi
@@ -88,6 +86,9 @@ codesign --verify --deep --strict "$WIDGET_PATH" 2>/dev/null || fail "Widget ext
 
 MAIN_APS="$(read_entitlements_value "$APP_PATH" "aps-environment")"
 [[ "$MAIN_APS" == "production" ]] || fail "Main app aps-environment must be production (got ${MAIN_APS:-<missing>})"
+
+APS_MIRROR="$(/usr/libexec/PlistBuddy -c 'Print :PAXSignedAPSEnvironment' "$APP_PATH/Info.plist" 2>/dev/null || true)"
+[[ "$APS_MIRROR" == "production" ]] || fail "Archived Info.plist missing PAXSignedAPSEnvironment=production"
 
 MAIN_GROUPS="$(read_entitlements_value "$APP_PATH" "com.apple.security.application-groups:0")"
 [[ "$MAIN_GROUPS" == "group.at.paxdesign.livechat" ]] || fail "Main app App Group entitlement missing or incorrect"

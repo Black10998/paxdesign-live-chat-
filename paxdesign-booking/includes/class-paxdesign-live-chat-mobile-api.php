@@ -1452,6 +1452,7 @@ class PAXdesign_Live_Chat_Mobile_API {
 
         return rest_ensure_response(array(
             'ok'              => true,
+            'accepted'        => true,
             'push_registered' => true,
             'token_stored'    => true,
         ));

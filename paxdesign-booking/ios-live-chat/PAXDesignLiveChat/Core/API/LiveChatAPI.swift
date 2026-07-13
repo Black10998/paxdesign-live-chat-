@@ -851,7 +851,7 @@ final class LiveChatAPI {
         do {
             return try await perform(request, endpoint: "push-apns-register", as: APNsRegisterResponse.self)
         } catch LiveChatAPIError.decoding {
-            return APNsRegisterResponse(ok: true, pushRegistered: true, tokenStored: true, error: nil)
+            return APNsRegisterResponse(ok: true, accepted: true, pushRegistered: true, tokenStored: true, error: nil)
         }
     }
 
@@ -1246,19 +1246,22 @@ struct DeviceRecord: Codable, Identifiable {
 
 struct APNsRegisterResponse: Codable {
     let ok: Bool
+    let accepted: Bool
     let pushRegistered: Bool
     let tokenStored: Bool
     let error: String?
 
     enum CodingKeys: String, CodingKey {
         case ok
+        case accepted
         case pushRegistered = "push_registered"
         case tokenStored = "token_stored"
         case error
     }
 
-    init(ok: Bool, pushRegistered: Bool, tokenStored: Bool, error: String?) {
+    init(ok: Bool, accepted: Bool, pushRegistered: Bool, tokenStored: Bool, error: String?) {
         self.ok = ok
+        self.accepted = accepted
         self.pushRegistered = pushRegistered
         self.tokenStored = tokenStored
         self.error = error
@@ -1267,6 +1270,7 @@ struct APNsRegisterResponse: Codable {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         ok = (try? c.decode(Bool.self, forKey: .ok)) ?? false
+        accepted = (try? c.decode(Bool.self, forKey: .accepted)) ?? ok
         pushRegistered = (try? c.decode(Bool.self, forKey: .pushRegistered)) ?? false
         tokenStored = (try? c.decode(Bool.self, forKey: .tokenStored)) ?? pushRegistered
         error = try? c.decode(String.self, forKey: .error)

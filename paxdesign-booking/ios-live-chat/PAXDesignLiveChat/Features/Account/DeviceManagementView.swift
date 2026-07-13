@@ -8,6 +8,7 @@ struct DeviceManagementView: View {
     @State private var selectedEmployeeId: Int?
     @State private var confirmApprove: DeviceRecord?
     @State private var liveRefreshTask: Task<Void, Never>?
+    private let loadGuard = RequestInFlightGuard()
 
     private var canManage: Bool { auth.canManageUsers || auth.canManageTeamPermissions }
 
@@ -63,10 +64,7 @@ struct DeviceManagementView: View {
         .navigationTitle(L10n.PlatformDevices)
         .navigationBarTitleDisplayMode(.inline)
         .paxPremiumRefreshable(status: L10n.DeviceLoading, rowCount: 3) { await loadDevices() }
-        .task {
-            await loadDevices()
-            startRealtimeRefresh()
-        }
+        .task { startRealtimeRefresh() }
         .onDisappear { stopRealtimeRefresh() }
         .confirmationDialog(
             L10n.DeviceConfirmTitle,
@@ -92,16 +90,16 @@ struct DeviceManagementView: View {
     private func startRealtimeRefresh() {
         liveRefreshTask?.cancel()
         liveRefreshTask = Task {
-            var intervalNs: UInt64 = 20_000_000_000
+            var intervalNs: UInt64 = 30_000_000_000
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: intervalNs)
-                guard !Task.isCancelled else { return }
                 if NetworkCircuitBreaker.shared.isOpen {
                     intervalNs = 60_000_000_000
+                    try? await Task.sleep(nanoseconds: intervalNs)
                     continue
                 }
                 let hadError = await loadDevices()
-                intervalNs = hadError ? 45_000_000_000 : 20_000_000_000
+                intervalNs = hadError ? 60_000_000_000 : 30_000_000_000
+                try? await Task.sleep(nanoseconds: intervalNs)
             }
         }
     }
@@ -231,8 +229,10 @@ struct DeviceManagementView: View {
 
     @discardableResult
     private func loadDevices() async -> Bool {
+        guard loadGuard.tryEnter("devices-list") else { return false }
+        defer { loadGuard.leave("devices-list") }
         guard let api = auth.api else { return false }
-        isLoading = true
+        isLoading = devices.isEmpty
         defer { isLoading = false }
         do {
             let response = try await api.fetchEmployeeDevices(

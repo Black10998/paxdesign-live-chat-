@@ -34,12 +34,21 @@ WIDGET_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$WIDGET_PAT
 [[ -f "$APP_PATH/embedded.mobileprovision" ]] || fail "embedded.mobileprovision missing from main app"
 [[ -f "$WIDGET_PATH/embedded.mobileprovision" ]] || fail "embedded.mobileprovision missing from widget extension"
 
-read_entitlements_value() {
+read_codesign_entitlement() {
   local target_path="$1"
   local plist_key="$2"
-  local value=""
   local temp_plist
+  temp_plist="$(mktemp)"
+  if codesign -d --entitlements :- "$target_path" > "$temp_plist" 2>/dev/null && [[ -s "$temp_plist" ]]; then
+    /usr/libexec/PlistBuddy -c "Print :$plist_key" "$temp_plist" 2>/dev/null || true
+  fi
+  rm -f "$temp_plist"
+}
 
+read_profile_entitlement() {
+  local target_path="$1"
+  local plist_key="$2"
+  local temp_plist value=""
   if [[ -f "$target_path/embedded.mobileprovision" ]]; then
     temp_plist="$(mktemp)"
     if security cms -D -i "$target_path/embedded.mobileprovision" > "$temp_plist" 2>/dev/null; then
@@ -47,24 +56,21 @@ read_entitlements_value() {
     fi
     rm -f "$temp_plist"
   fi
-
-  if [[ -z "$value" ]]; then
-    temp_plist="$(mktemp)"
-    if codesign -d --entitlements :- "$target_path" > "$temp_plist" 2>/dev/null && [[ -s "$temp_plist" ]]; then
-      value="$(/usr/libexec/PlistBuddy -c "Print :$plist_key" "$temp_plist" 2>/dev/null || true)"
-    fi
-    rm -f "$temp_plist"
-  fi
-
-  [[ -n "$value" ]] || fail "Entitlement missing: $plist_key"
   printf '%s' "$value"
 }
 
 codesign --verify --deep --strict "$APP_PATH" 2>/dev/null || fail "Exported main app codesign verification failed"
 codesign --verify --deep --strict "$WIDGET_PATH" 2>/dev/null || fail "Exported widget codesign verification failed"
 
-MAIN_APS="$(read_entitlements_value "$APP_PATH" "aps-environment")"
-[[ "$MAIN_APS" == "production" ]] || fail "Exported IPA aps-environment must be production"
+MAIN_APS="$(read_codesign_entitlement "$APP_PATH" "aps-environment")"
+[[ -n "$MAIN_APS" ]] || fail "Codesign entitlements missing aps-environment in exported IPA (Push not embedded in signature)"
+[[ "$MAIN_APS" == "production" ]] || fail "Exported IPA codesign aps-environment must be production (got ${MAIN_APS})"
+
+PROFILE_APS="$(read_profile_entitlement "$APP_PATH" "aps-environment")"
+[[ "$PROFILE_APS" == "production" ]] || fail "embedded.mobileprovision aps-environment must be production (got ${PROFILE_APS:-<missing>})"
+
+APS_MIRROR="$(/usr/libexec/PlistBuddy -c 'Print :PAXSignedAPSEnvironment' "$APP_PATH/Info.plist" 2>/dev/null || true)"
+[[ "$APS_MIRROR" == "production" ]] || fail "Info.plist missing PAXSignedAPSEnvironment=production (got ${APS_MIRROR:-<missing>})"
 
 if /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "$APP_PATH/Info.plist" >/dev/null 2>&1; then
   /usr/libexec/PlistBuddy -c "Print :UIBackgroundModes" "$APP_PATH/Info.plist" | grep -q "remote-notification" \
@@ -86,3 +92,6 @@ for key in \
 done
 
 echo "App Store IPA validation passed: $(basename "$IPA_PATH")"
+echo "  codesign aps-environment=$MAIN_APS"
+echo "  profile aps-environment=$PROFILE_APS"
+echo "  PAXSignedAPSEnvironment=$APS_MIRROR"

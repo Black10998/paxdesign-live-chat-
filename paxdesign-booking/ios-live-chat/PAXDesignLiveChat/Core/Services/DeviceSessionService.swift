@@ -169,7 +169,7 @@ final class DeviceSessionService: ObservableObject {
                     sandbox: PAXAPNsEnvironment.isSandbox,
                     metadata: PAXDeviceInfo.registrationPayload
                 )
-                accepted = response.ok
+                accepted = response.ok && (response.accepted || response.tokenStored)
                 if !accepted {
                     throw LiveChatAPIError.rejected(response.error ?? "Server rejected APNs token.")
                 }
@@ -203,7 +203,7 @@ final class DeviceSessionService: ObservableObject {
             success: true,
             tokenPrefix: String(token.prefix(12)),
             pushEnabled: pushEnabled,
-            accepted: accepted
+            accepted: true
         )
     }
 
