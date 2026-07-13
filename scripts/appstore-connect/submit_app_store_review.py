@@ -47,8 +47,8 @@ def find_or_create_version(client: ASCClient, app_id: str, version_string: str) 
     editable_states = {
         "PREPARE_FOR_SUBMISSION",
         "DEVELOPER_REJECTED",
-        "READY_FOR_SUBMISSION",
         "WAITING_FOR_REVIEW",
+        "READY_FOR_REVIEW",
         "PENDING_DEVELOPER_RELEASE",
     }
     for item in payload.get("data") or []:
@@ -384,10 +384,10 @@ def main() -> None:
     version_attrs = version_status(client, version_id)
     state = version_attrs.get("appStoreState", "")
     submission = None
-    if state in {"PREPARE_FOR_SUBMISSION", "READY_FOR_SUBMISSION", "DEVELOPER_REJECTED"}:
+    if state in {"PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED"}:
         submission = submit_for_review(client, version_id)
         version_attrs = version_status(client, version_id)
-    elif state in {"WAITING_FOR_REVIEW", "IN_REVIEW", "PENDING_DEVELOPER_RELEASE", "READY_FOR_SALE"}:
+    elif state in {"WAITING_FOR_REVIEW", "READY_FOR_REVIEW", "IN_REVIEW", "PENDING_DEVELOPER_RELEASE", "READY_FOR_SALE"}:
         print(f"Version already in review/release state: {state}")
     else:
         warnings.append(f"Version state {state} — manual review in App Store Connect may be required")
