@@ -156,8 +156,8 @@ echo "Site: $SITE"
 echo "Duration: ${DURATION_SEC}s, probe interval: ${PROBE_INTERVAL}s"
 echo "Auth for REST probes: $([ -n "$USER" ] && echo yes || echo no)"
 
-STOP_FILE="$(mktemp)"
-trap 'touch "$STOP_FILE"; rm -f "$STOP_FILE"' EXIT
+STOP_FILE="$(mktemp -u)"
+trap 'touch "$STOP_FILE" 2>/dev/null || true' EXIT
 
 simulate_app_load "$STOP_FILE" &
 APP_SIM_PID=$!
