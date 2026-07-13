@@ -249,7 +249,7 @@ def main() -> None:
     app = find_app(client)
     app_id = app["id"]
     version_string = metadata.get("versionString", os.environ.get("APP_STORE_VERSION", "2.0.0"))
-    version = find_editable_version(client, app_id, version_string)
+    version = find_or_create_version(client, app_id, version_string)
     version_id = version["id"]
 
     display_type = metadata.get("screenshotDisplayType", "APP_IPHONE_67")
