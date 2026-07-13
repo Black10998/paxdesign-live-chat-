@@ -626,8 +626,52 @@ class PAXdesign_APNS {
     }
 
     public static function count_user_badge($user_id) {
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return 0;
+        }
+
+        $total = 0;
+
+        if (class_exists('PAXdesign_Chat_Live')) {
+            $live = PAXdesign_Chat_Live::get_instance();
+            $list = $live->get_live_list_data();
+            if (!is_wp_error($list) && !empty($list['sessions']) && is_array($list['sessions'])) {
+                foreach ($list['sessions'] as $session) {
+                    if (!is_array($session)) {
+                        continue;
+                    }
+                    $sid = isset($session['session_id']) ? (string) $session['session_id'] : '';
+                    if ($sid === '' || strpos($sid, 'team_') === 0) {
+                        continue;
+                    }
+                    $handler = isset($session['handler']) ? (string) $session['handler'] : '';
+                    if ($handler === 'closed') {
+                        continue;
+                    }
+                    $last_role = isset($session['last_role']) ? (string) $session['last_role'] : '';
+                    if ($last_role !== 'user') {
+                        continue;
+                    }
+                    if (class_exists('PAXdesign_Message_Store')) {
+                        $total += PAXdesign_Message_Store::count_unread_customer_messages($sid);
+                    } else {
+                        $total += 1;
+                    }
+                }
+            }
+        }
+
+        if (class_exists('PAXdesign_Team_Messaging')) {
+            $total += PAXdesign_Team_Messaging::count_unread_messages_for_user($user_id);
+        }
+
+        return max(0, $total);
+    }
+
+    public static function count_pending_badge() {
         if (!class_exists('PAXdesign_Chat_Log')) {
-            return 1;
+            return 0;
         }
 
         global $wpdb;
@@ -639,7 +683,7 @@ class PAXdesign_APNS {
                 'live_request'
             )
         );
-        return max(1, $count);
+        return max(0, $count);
     }
 
     public static function on_missed_chat($session_id, $service, $preview, $customer = '') {
@@ -660,20 +704,6 @@ class PAXdesign_APNS {
             ),
             false
         );
-    }
-
-    public static function count_pending_badge() {
-        if (!class_exists('PAXdesign_Chat_Log')) {
-            return 1;
-        }
-
-        global $wpdb;
-        PAXdesign_Chat_Log::create_table();
-        $table = PAXdesign_Chat_Log::table_name();
-        $count = (int) $wpdb->get_var(
-            "SELECT COUNT(*) FROM $table WHERE handler = 'live_request'"
-        );
-        return max(1, $count);
     }
 
     /**

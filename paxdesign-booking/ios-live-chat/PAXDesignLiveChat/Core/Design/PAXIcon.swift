@@ -1,17 +1,17 @@
 import SwiftUI
 
 enum PAXIconSize: CGFloat {
-    case micro = 10
-    case inline = 12
-    case row = 16
-    case card = 18
-    case hero = 20
-    case tab = 17
-    case action = 22
-    case display = 26
+    case micro = 11
+    case inline = 14
+    case row = 18
+    case card = 20
+    case hero = 22
+    case tab = 19
+    case action = 24
+    case display = 28
 
     var length: CGFloat { rawValue }
-    static let strokeWidth: CGFloat = 1.5
+    static let strokeWidth: CGFloat = 1.55
     var strokeWidth: CGFloat { Self.strokeWidth }
 }
 
@@ -178,7 +178,14 @@ enum PAXIconCatalog {
         "circle": "plus.circle",
         "iphone.slash": "iphone.slash",
         "hourglass": "clock.history",
-        "pin": "pin"
+        "pin": "pin",
+        "mic": "mic",
+        "mic.fill": "mic",
+        "play.fill": "play",
+        "pause.fill": "pause",
+        "waveform": "waveform",
+        "location.fill": "location",
+        "arrow.triangle.turn.up.right.circle.fill": "arrow.up.right.circle"
     ]
 
     static func glyph(for name: String) -> String {

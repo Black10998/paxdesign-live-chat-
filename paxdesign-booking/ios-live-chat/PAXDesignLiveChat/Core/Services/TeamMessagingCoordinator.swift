@@ -39,8 +39,9 @@ final class TeamMessagingCoordinator: ObservableObject {
 
     func unreadCount(settings: AppSettingsStore, coordinatorSessions: [LiveSession] = []) -> Int {
         Self.mergeTeamSessions(teamSessions: teamSessions, coordinatorSessions: coordinatorSessions)
-            .filter { settings.isSessionUnread($0) }
-            .count
+            .reduce(0) { partial, session in
+                partial + settings.unreadMessageCount(for: session)
+            }
     }
 
     func bumpTeamSession(sessionId: String, message: LiveMessage, seq: Int) {

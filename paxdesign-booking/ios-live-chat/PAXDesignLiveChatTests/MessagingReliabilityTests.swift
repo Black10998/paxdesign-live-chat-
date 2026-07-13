@@ -381,6 +381,112 @@ final class MessagingReliabilityTests: XCTestCase {
         XCTAssertEqual(result.messages.first?.id, 1)
     }
 
+    @MainActor
+    func testUnreadMessageCountUsesMessageDeltaNotConversationCount() {
+        let settings = AppSettingsStore.shared
+        let session = LiveSession(
+            id: 1,
+            sessionId: "pax_badge_test",
+            handler: "admin",
+            handlerLabel: "Admin",
+            adminName: "Admin",
+            customerName: "Customer",
+            sessionRating: 0,
+            detectedService: "",
+            updatedAt: "",
+            messageCount: 5,
+            seq: 5,
+            lastPreview: "Hello",
+            lastRole: "user"
+        )
+
+        XCTAssertEqual(settings.unreadMessageCount(for: session), 5)
+
+        settings.markSessionRead(session.sessionId, seq: 3)
+        XCTAssertEqual(settings.unreadMessageCount(for: session), 2)
+
+        settings.markSessionRead(session.sessionId, seq: 5)
+        XCTAssertEqual(settings.unreadMessageCount(for: session), 0)
+    }
+
+    @MainActor
+    func testUnreadMessageCountIgnoresClosedAndAdminLastMessageSessions() {
+        let settings = AppSettingsStore.shared
+        let closed = LiveSession(
+            id: 2,
+            sessionId: "pax_closed",
+            handler: "closed",
+            handlerLabel: "Closed",
+            adminName: "Admin",
+            customerName: "Customer",
+            sessionRating: 0,
+            detectedService: "",
+            updatedAt: "",
+            messageCount: 4,
+            seq: 4,
+            lastPreview: "Bye",
+            lastRole: "user"
+        )
+        let replied = LiveSession(
+            id: 3,
+            sessionId: "pax_replied",
+            handler: "admin",
+            handlerLabel: "Admin",
+            adminName: "Admin",
+            customerName: "Customer",
+            sessionRating: 0,
+            detectedService: "",
+            updatedAt: "",
+            messageCount: 6,
+            seq: 6,
+            lastPreview: "Reply",
+            lastRole: "admin"
+        )
+
+        XCTAssertEqual(settings.unreadMessageCount(for: closed), 0)
+        XCTAssertEqual(settings.unreadMessageCount(for: replied), 0)
+    }
+
+    @MainActor
+    func testTeamUnreadMessageCountCountsIncomingOnly() {
+        let settings = AppSettingsStore.shared
+        let incoming = LiveSession(
+            id: 4,
+            sessionId: "team_12_34",
+            handler: "team_dm",
+            handlerLabel: "Team",
+            adminName: "",
+            customerName: "Alex",
+            sessionRating: 0,
+            detectedService: "",
+            updatedAt: "",
+            messageCount: 3,
+            seq: 3,
+            lastPreview: "Ping",
+            lastRole: "user",
+            otherUserId: 34
+        )
+        let outgoing = LiveSession(
+            id: 5,
+            sessionId: "team_12_56",
+            handler: "team_dm",
+            handlerLabel: "Team",
+            adminName: "",
+            customerName: "Sam",
+            sessionRating: 0,
+            detectedService: "",
+            updatedAt: "",
+            messageCount: 2,
+            seq: 2,
+            lastPreview: "Sent",
+            lastRole: "admin",
+            otherUserId: 56
+        )
+
+        XCTAssertEqual(settings.unreadMessageCount(for: incoming), 3)
+        XCTAssertEqual(settings.unreadMessageCount(for: outgoing), 0)
+    }
+
     func testLegacySystemDuplicateWithoutClientIdCollapses() {
         let first = LiveMessage(
             id: 1,

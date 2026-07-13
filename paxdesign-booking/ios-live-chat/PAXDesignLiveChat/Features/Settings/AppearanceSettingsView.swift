@@ -4,22 +4,66 @@ struct AppearanceSettingsView: View {
     @EnvironmentObject private var settings: AppSettingsStore
     @Environment(\.colorScheme) private var colorScheme
 
-    var body: some View {
-        List {
-            Section {
-                Picker(L10n.AppearanceTitle, selection: $settings.appearanceMode) {
-                    ForEach(AppSettingsStore.AppearanceMode.allCases) { mode in
-                        Text(mode.title).tag(mode)
-                    }
-                }
-                .pickerStyle(.inline)
-            } header: {
-                Text(L10n.AppearanceColorScheme)
-            } footer: {
-                Text(L10n.AppearanceFooter)
-            }
+    private let themeColumns = [
+        GridItem(.flexible(), spacing: 12),
+        GridItem(.flexible(), spacing: 12)
+    ]
 
-            Section {
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                appearanceModeSection
+                themeSection
+                accentSection
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .paxScreenBackground()
+        .navigationTitle(L10n.SettingsSectionAppearance)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var appearanceModeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(L10n.AppearanceColorScheme)
+                .font(.headline)
+
+            HStack(spacing: 8) {
+                ForEach(AppSettingsStore.AppearanceMode.allCases) { mode in
+                    Button {
+                        withAnimation(PAXTheme.spring) {
+                            settings.appearanceMode = mode
+                            PAXHaptics.light()
+                        }
+                    } label: {
+                        Text(mode.title)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(settings.appearanceMode == mode ? Color.white : PAXTheme.textPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 11)
+                            .background(
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(settings.appearanceMode == mode ? settings.palette.accent : Color(.tertiarySystemFill))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(16)
+        .paxPremiumGlass(tier: .standard, cornerRadius: 18)
+    }
+
+    private var themeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(L10n.ThemeTitle)
+                .font(.headline)
+            Text(L10n.ThemeFooter)
+                .font(.caption)
+                .foregroundStyle(PAXTheme.textSecondary)
+
+            LazyVGrid(columns: themeColumns, spacing: 12) {
                 ForEach(AppSettingsStore.VisualTheme.allCases) { theme in
                     Button {
                         withAnimation(PAXTheme.spring) {
@@ -27,7 +71,7 @@ struct AppearanceSettingsView: View {
                             PAXHaptics.light()
                         }
                     } label: {
-                        ThemePreviewRow(
+                        ThemePreviewCard(
                             theme: theme,
                             isSelected: settings.visualTheme == theme,
                             isDark: resolvedIsDark
@@ -35,31 +79,43 @@ struct AppearanceSettingsView: View {
                     }
                     .buttonStyle(.plain)
                 }
-            } header: {
-                Text(L10n.ThemeTitle)
-            } footer: {
-                Text(L10n.ThemeFooter)
-            }
-
-            Section {
-                NavigationLink {
-                    AccentColorSettingsView()
-                } label: {
-                    HStack {
-                        Text(L10n.AccentColorTitle)
-                        Spacer()
-                        Text(settings.accentColorPreset.title)
-                            .font(.caption)
-                            .foregroundStyle(PAXTheme.textSecondary)
-                    }
-                }
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .paxScreenBackground()
-        .navigationTitle(L10n.SettingsSectionAppearance)
-        .navigationBarTitleDisplayMode(.inline)
+        .padding(16)
+        .paxPremiumGlass(tier: .standard, cornerRadius: 18)
+    }
+
+    private var accentSection: some View {
+        NavigationLink {
+            AccentColorSettingsView()
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            AngularGradient(
+                                colors: [settings.palette.accent, settings.palette.accentSecondary, settings.palette.accent],
+                                center: .center
+                            )
+                        )
+                        .frame(width: 42, height: 42)
+                    PAXIcon("paintpalette", size: .row, emphasis: .onFill)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(L10n.AccentColorTitle)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(PAXTheme.textPrimary)
+                    Text(settings.accentColorPreset.title)
+                        .font(.caption)
+                        .foregroundStyle(PAXTheme.textSecondary)
+                }
+                Spacer(minLength: 0)
+                PAXIcon("chevron.right", size: .inline, emphasis: .tertiary)
+            }
+            .padding(16)
+            .paxPremiumGlass(tier: .standard, cornerRadius: 18)
+        }
+        .buttonStyle(.plain)
     }
 
     private var resolvedIsDark: Bool {
@@ -71,7 +127,7 @@ struct AppearanceSettingsView: View {
     }
 }
 
-private struct ThemePreviewRow: View {
+private struct ThemePreviewCard: View {
     let theme: AppSettingsStore.VisualTheme
     let isSelected: Bool
     let isDark: Bool
@@ -79,46 +135,62 @@ private struct ThemePreviewRow: View {
     var body: some View {
         let palette = PAXThemePalette.palette(for: theme)
 
-        HStack(spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(palette.background(isDark: isDark))
-                    .frame(width: 52, height: 52)
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(palette.accent.opacity(0.12))
-                    }
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(palette.accent.opacity(0.35), lineWidth: 1)
+                Circle()
+                    .stroke(
+                        AngularGradient(
+                            colors: [palette.accent, palette.accentSecondary, palette.glowTertiary, palette.accent],
+                            center: .center
+                        ),
+                        lineWidth: isSelected ? 4 : 2.5
                     )
+                    .frame(width: 54, height: 54)
 
                 Circle()
                     .fill(palette.accent)
-                    .frame(width: 14, height: 14)
-                    .offset(x: 14, y: 14)
-            }
-            .accessibilityHidden(true)
+                    .frame(width: 22, height: 22)
 
-            VStack(alignment: .leading, spacing: 3) {
+                if isSelected {
+                    PAXIcon("checkmark", size: .micro, emphasis: .onFill)
+                        .offset(x: 18, y: -18)
+                        .background(
+                            Circle()
+                                .fill(palette.accent)
+                                .frame(width: 16, height: 16)
+                                .offset(x: 18, y: -18)
+                        )
+                }
+            }
+            .frame(maxWidth: .infinity)
+
+            VStack(alignment: .leading, spacing: 2) {
                 Text(theme.title)
-                    .font(.body.weight(.medium))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(PAXTheme.textPrimary)
                 Text(theme.subtitle)
-                    .font(.caption)
+                    .font(.caption2)
                     .foregroundStyle(PAXTheme.textSecondary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
             }
 
-            Spacer(minLength: 8)
-
-            if isSelected {
-                PAXIcon("checkmark.circle.fill", size: .card)
-                    .accessibilityLabel(L10n.CommonActive)
+            HStack(spacing: 6) {
+                Circle().fill(palette.background(isDark: isDark)).frame(width: 12, height: 12)
+                Circle().fill(palette.surface(isDark: isDark)).frame(width: 12, height: 12)
+                Circle().fill(palette.accent).frame(width: 12, height: 12)
             }
         }
-        .padding(.vertical, 4)
-        .contentShape(Rectangle())
-        .accessibilityElement(children: .combine)
+        .padding(12)
+        .frame(maxWidth: .infinity, minHeight: 148, alignment: .topLeading)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(palette.surface(isDark: isDark).opacity(0.55))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(isSelected ? palette.accent.opacity(0.65) : PAXTheme.border.opacity(0.28), lineWidth: isSelected ? 1.5 : 0.5)
+                )
+        )
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }

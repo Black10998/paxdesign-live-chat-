@@ -236,6 +236,40 @@ class PAXdesign_Team_Messaging {
     }
 
     /**
+     * @param int $user_id
+     * @return int
+     */
+    public static function count_unread_messages_for_user($user_id) {
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return 0;
+        }
+
+        $total = 0;
+        $all   = self::all_conversations();
+        foreach ($all as $conv_id => $conv) {
+            if (!is_array($conv)) {
+                continue;
+            }
+            $participants = isset($conv['participants']) && is_array($conv['participants'])
+                ? array_map('absint', $conv['participants'])
+                : array();
+            if (!in_array($user_id, $participants, true)) {
+                continue;
+            }
+            if (self::is_hidden_for_user($conv, $user_id)) {
+                continue;
+            }
+            $read_seq = self::read_seq_for_user($conv, $user_id);
+            if (class_exists('PAXdesign_Message_Store')) {
+                $total += PAXdesign_Message_Store::count_incoming_messages_since($conv_id, $read_seq, 'team');
+            }
+        }
+
+        return max(0, $total);
+    }
+
+    /**
      * @param string $conv_id
      * @param int    $current_user_id
      * @param int    $since

@@ -409,6 +409,36 @@ class PAXdesign_Message_Store {
         ));
     }
 
+    public static function count_unread_customer_messages($session_id) {
+        global $wpdb;
+        self::maybe_upgrade();
+        self::migrate_customer_session_if_needed($session_id, 'customer');
+        $table = self::messages_table();
+        $session_id = sanitize_text_field($session_id);
+        $last_staff = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COALESCE(MAX(msg_seq), 0) FROM $table WHERE session_id = %s AND channel = 'customer' AND role IN ('admin', 'assistant')",
+            $session_id
+        ));
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table WHERE session_id = %s AND channel = 'customer' AND role = 'user' AND msg_seq > %d",
+            $session_id,
+            $last_staff
+        ));
+    }
+
+    public static function count_incoming_messages_since($session_id, $since_seq, $channel = 'team') {
+        global $wpdb;
+        self::maybe_upgrade();
+        self::migrate_customer_session_if_needed($session_id, $channel);
+        $table = self::messages_table();
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table WHERE session_id = %s AND channel = %s AND role = 'user' AND msg_seq > %d",
+            sanitize_text_field($session_id),
+            sanitize_text_field($channel),
+            absint($since_seq)
+        ));
+    }
+
     public static function emit($channel_key, $event_type, $payload, $message_seq = 0) {
         global $wpdb;
         self::maybe_upgrade();

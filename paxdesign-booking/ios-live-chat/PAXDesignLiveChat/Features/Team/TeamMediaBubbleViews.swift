@@ -6,6 +6,8 @@ struct VoiceMessageBubbleView: View {
     let message: LiveMessage
     let isOutgoing: Bool
 
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.paxPalette) private var palette
     @ObservedObject private var playback = TeamVoicePlaybackController.shared
     @State private var showPlaybackPanel = false
 
@@ -29,69 +31,34 @@ struct VoiceMessageBubbleView: View {
         if isActiveMessage, !playback.levels.isEmpty {
             return playback.levels
         }
-        return Array(repeating: 0.14, count: 9)
+        return [0.18, 0.42, 0.28, 0.56, 0.34, 0.48, 0.22, 0.38, 0.3]
+    }
+
+    private var accentTint: Color { palette.accent }
+
+    private var cardFill: Color {
+        if isOutgoing {
+            return accentTint.opacity(colorScheme == .dark ? 0.24 : 0.16)
+        }
+        return Color(.tertiarySystemFill)
+    }
+
+    private var cardBorder: Color {
+        accentTint.opacity(isOutgoing ? 0.28 : 0.12)
+    }
+
+    private var waveformTint: Color {
+        isOutgoing ? accentTint.opacity(0.95) : Color.primary.opacity(colorScheme == .dark ? 0.82 : 0.68)
     }
 
     var body: some View {
         Group {
             if isPendingUpload {
-                pendingBubble
+                pendingCard
             } else {
-                playableBubble
+                playableCard
             }
         }
-    }
-
-    private var pendingBubble: some View {
-        HStack(spacing: 10) {
-            PAXInlineLoader(size: 22)
-            VStack(alignment: .leading, spacing: 6) {
-                TeamVoiceWaveformView(
-                    levels: displayLevels,
-                    barColor: isOutgoing ? PAXBrand.accent.opacity(0.9) : Color.white.opacity(0.82),
-                    idleLevel: 0.12,
-                    maxHeight: 28
-                )
-                Text(L10n.TeamVoiceSending)
-                    .font(.caption2)
-                    .foregroundStyle(PAXTheme.textSecondary)
-            }
-            .frame(minWidth: 140)
-        }
-    }
-
-    private var playableBubble: some View {
-        Button {
-            showPlaybackPanel = true
-            playback.toggle(message: message)
-        } label: {
-            HStack(spacing: 10) {
-                PAXIcon(
-                    isActiveMessage && playback.isPlaying ? "pause.fill" : "play.fill",
-                    size: .inline
-                )
-                .foregroundStyle(isOutgoing ? PAXBrand.accent : PAXTheme.accent)
-                .frame(width: 28, height: 28)
-                .background(
-                    Circle()
-                        .fill((isOutgoing ? PAXBrand.accent : PAXTheme.accent).opacity(0.14))
-                )
-
-                VStack(alignment: .leading, spacing: 6) {
-                    TeamVoiceWaveformView(
-                        levels: displayLevels,
-                        barColor: isOutgoing ? PAXBrand.accent.opacity(0.9) : Color.white.opacity(0.82),
-                        idleLevel: 0.12,
-                        maxHeight: 28
-                    )
-                    Text(durationLabel)
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(PAXTheme.textSecondary)
-                }
-                .frame(minWidth: 140)
-            }
-        }
-        .buttonStyle(.plain)
         .sheet(isPresented: $showPlaybackPanel, onDismiss: {
             playback.stop()
         }) {
@@ -129,6 +96,85 @@ struct VoiceMessageBubbleView: View {
                 playback.stop()
             }
         }
+    }
+
+    private var pendingCard: some View {
+        voiceCard {
+            HStack(spacing: 12) {
+                PAXInlineLoader(size: 24)
+                VStack(alignment: .leading, spacing: 8) {
+                    TeamVoiceWaveformView(
+                        levels: displayLevels,
+                        barColor: waveformTint,
+                        idleLevel: 0.12,
+                        maxHeight: 30
+                    )
+                    Text(L10n.TeamVoiceSending)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(PAXTheme.textSecondary)
+                }
+                Spacer(minLength: 0)
+                Text(durationLabel)
+                    .font(.caption.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(PAXTheme.textSecondary)
+            }
+        }
+    }
+
+    private var playableCard: some View {
+        Button {
+            showPlaybackPanel = true
+            playback.toggle(message: message)
+        } label: {
+            voiceCard {
+                HStack(spacing: 12) {
+                    playButton
+
+                    TeamVoiceWaveformView(
+                        levels: displayLevels,
+                        barColor: waveformTint,
+                        idleLevel: 0.12,
+                        maxHeight: 30
+                    )
+                    .frame(maxWidth: .infinity)
+
+                    Text(durationLabel)
+                        .font(.caption.monospacedDigit().weight(.semibold))
+                        .foregroundStyle(PAXTheme.textSecondary)
+                        .frame(minWidth: 34, alignment: .trailing)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var playButton: some View {
+        ZStack {
+            Circle()
+                .fill(isOutgoing ? accentTint : accentTint.opacity(0.18))
+                .frame(width: 36, height: 36)
+            PAXIcon(
+                isActiveMessage && playback.isPlaying ? "pause.fill" : "play.fill",
+                size: .inline,
+                emphasis: isOutgoing ? .onFill : .primary
+            )
+        }
+        .accessibilityLabel(isActiveMessage && playback.isPlaying ? "Pause" : "Play")
+    }
+
+    private func voiceCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        content()
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .frame(minWidth: 196, maxWidth: 260)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(cardFill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .stroke(cardBorder, lineWidth: 0.5)
+                    )
+            )
     }
 }
 

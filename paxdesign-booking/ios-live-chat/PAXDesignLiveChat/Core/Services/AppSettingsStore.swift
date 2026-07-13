@@ -218,11 +218,31 @@ final class AppSettingsStore: ObservableObject {
     private var readSeqPersistTask: Task<Void, Never>?
 
     func isSessionUnread(_ session: LiveSession) -> Bool {
-        guard session.needsReply else { return false }
-        if let readSeq = readUpToSeq[session.sessionId] {
-            return session.seq > readSeq
+        unreadMessageCount(for: session) > 0
+    }
+
+    /// Number of unread incoming messages in a session (not just conversation count).
+    func unreadMessageCount(for session: LiveSession) -> Int {
+        guard !session.isClosed else { return 0 }
+        let readSeq = resolvedReadSeq(for: session)
+        guard session.seq > readSeq else { return 0 }
+
+        if session.isTeamDM {
+            return session.lastRole == "user" ? max(0, session.seq - readSeq) : 0
         }
-        return !readSessionIds.contains(session.sessionId)
+
+        guard session.needsReply || session.lastRole == "user" else { return 0 }
+        return max(0, session.seq - readSeq)
+    }
+
+    private func resolvedReadSeq(for session: LiveSession) -> Int {
+        if let readSeq = readUpToSeq[session.sessionId] {
+            return readSeq
+        }
+        if readSessionIds.contains(session.sessionId) {
+            return session.seq
+        }
+        return 0
     }
 
     func markSessionRead(_ sessionId: String, seq: Int? = nil) {
