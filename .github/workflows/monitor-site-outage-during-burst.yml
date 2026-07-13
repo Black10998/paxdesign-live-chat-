@@ -1,0 +1,134 @@
+name: Monitor site outage during app burst
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/monitor-site-outage-during-burst.yml'
+      - 'scripts/monitor-site-during-app-burst.sh'
+      - 'scripts/monitor-server-during-app-burst.sh'
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH PAX_ADMIN_USER PAX_ADMIN_APP_PASSWORD; do
+            if [ -z "${!key:-}" ]; then
+              echo "Missing secret: $key"
+              exit 1
+            fi
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+          PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
+          PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
+
+      - name: Start server-side monitor over SSH (background)
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+          DURATION_SEC: 720
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          WP_PATH_QUOTED=$(printf '%q' "$WP_PATH")
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          REMOTE_REPORT="${WP_PATH}/wp-content/pax-server-outage-monitor-$(date +%Y%m%d-%H%M%S).txt"
+          REMOTE_REPORT_QUOTED=$(printf '%q' "$REMOTE_REPORT")
+          echo "remote_server_report=$REMOTE_REPORT" >> "$GITHUB_ENV"
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "WP_PATH=${WP_PATH_QUOTED} DURATION_SEC=${DURATION_SEC} REPORT_PATH=${REMOTE_REPORT_QUOTED} bash -s" \
+            < scripts/monitor-server-during-app-burst.sh > ./server-monitor-remote.log 2>&1 &
+          echo $! > server-monitor.pid
+          echo "Server monitor started in background (pid $(cat server-monitor.pid))"
+
+      - name: Run 12-minute site-wide monitor with app simulation
+        env:
+          PAX_SITE: https://paxdesign.at
+          PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
+          PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
+          DURATION_SEC: 720
+          PROBE_INTERVAL: 1
+        run: |
+          set -euo pipefail
+          chmod +x scripts/monitor-site-during-app-burst.sh
+          scripts/monitor-site-during-app-burst.sh ./site-monitor-raw.txt
+
+      - name: Wait for server monitor completion
+        run: |
+          if [ -f server-monitor.pid ]; then
+            wait "$(cat server-monitor.pid)" 2>/dev/null || true
+          fi
+          echo "Server monitor remote log tail (sanitized):"
+          tail -30 ./server-monitor-remote.log | sed -E \
+            -e 's/([A-Za-z0-9._%+-]+)@([A-Za-z0-9.-]+\.[A-Za-z]{2,})/[REDACTED_EMAIL]/g' || true
+
+      - name: Download server monitor report
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          REMOTE_REPORT_QUOTED=$(printf '%q' "${remote_server_report}")
+          if ssh "${SSH_OPTS[@]}" "$REMOTE" "test -f ${REMOTE_REPORT_QUOTED}"; then
+            ssh "${SSH_OPTS[@]}" "$REMOTE" "cat ${REMOTE_REPORT_QUOTED}" > ./server-monitor-raw.txt
+          else
+            echo "Server report file missing; using remote log fallback" > ./server-monitor-raw.txt
+            cat ./server-monitor-remote.log >> ./server-monitor-raw.txt
+          fi
+
+      - name: Redact reports
+        run: |
+          chmod +x scripts/redact-diagnosis-report.sh
+          scripts/redact-diagnosis-report.sh ./site-monitor-raw.txt ./site-monitor-redacted.txt
+          scripts/redact-diagnosis-report.sh ./server-monitor-raw.txt ./server-monitor-redacted.txt
+
+      - name: Upload monitoring artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-outage-monitor-12min
+          path: |
+            site-monitor-redacted.txt
+            server-monitor-redacted.txt
+          if-no-files-found: error
+
+      - name: Print outage analysis summary
+        run: |
+          echo "=== 12-minute site outage analysis ==="
+          grep -E 'OUTAGE_START|OUTAGE_RECOVERY|TRANSITION|PERSISTENT_ISSUE|No site-wide outage|Recovery timing' site-monitor-redacted.txt || true
+          echo
+          echo "--- Final probe snapshot ---"
+          awk '/Final snapshot/,/Outage summary/' site-monitor-redacted.txt | head -20
+          echo
+          echo "--- Server resource/log highlights ---"
+          grep -iE 'php_processes=|tcp_established=|403|429|503|ModSecurity|denied|rate limit|max children|out of memory|fail2ban' server-monitor-redacted.txt | tail -40 || true
