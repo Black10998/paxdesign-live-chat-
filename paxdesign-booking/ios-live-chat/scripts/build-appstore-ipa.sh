@@ -426,6 +426,39 @@ ARCHIVE_APP="$(find "$ARCHIVE_PATH/Products/Applications" -maxdepth 1 -name '*.a
 ARCHIVE_WIDGET="$ARCHIVE_APP/PlugIns/PAXWidgets.appex"
 [[ -d "$ARCHIVE_WIDGET" ]] || fail "Archived widget extension not found"
 
+write_entitlements_from_embedded_profile() {
+  local bundle_path="$1"
+  local output_plist="$2"
+  local decoded
+  decoded="$(mktemp)"
+  [[ -f "$bundle_path/embedded.mobileprovision" ]] \
+    || fail "embedded.mobileprovision missing in $(basename "$bundle_path")"
+  security cms -D -i "$bundle_path/embedded.mobileprovision" > "$decoded"
+  /usr/libexec/PlistBuddy -x -c 'Print :Entitlements' "$decoded" > "$output_plist"
+  rm -f "$decoded"
+  [[ -s "$output_plist" ]] || fail "Could not extract entitlements from embedded profile in $(basename "$bundle_path")"
+}
+
+read_signed_entitlement() {
+  local target_path="$1"
+  local plist_key="$2"
+  local temp_plist value=""
+
+  temp_plist="$(mktemp)"
+  if codesign -d --entitlements :- "$target_path" > "$temp_plist" 2>/dev/null && [[ -s "$temp_plist" ]]; then
+    value="$(/usr/libexec/PlistBuddy -c "Print :$plist_key" "$temp_plist" 2>/dev/null || true)"
+  fi
+  if [[ -z "$value" ]]; then
+    rm -f "$temp_plist"
+    temp_plist="$(mktemp)"
+    if codesign -d --entitlements "$temp_plist" "$target_path" 2>/dev/null && [[ -s "$temp_plist" ]]; then
+      value="$(/usr/libexec/PlistBuddy -c "Print :$plist_key" "$temp_plist" 2>/dev/null || true)"
+    fi
+  fi
+  rm -f "$temp_plist"
+  printf '%s' "$value"
+}
+
 prepare_keychain_for_codesign() {
   security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" \
     || fail "Failed to unlock signing keychain before re-sign"
@@ -441,6 +474,8 @@ resign_archived_products() {
   local app_path="$1"
   local widget_path="$2"
   local identity_line identity_hash
+  local main_entitlements="$SIGNING_DIR/main-resign.entitlements"
+  local widget_entitlements="$SIGNING_DIR/widget-resign.entitlements"
 
   prepare_keychain_for_codesign
 
@@ -450,19 +485,33 @@ resign_archived_products() {
   identity_hash="$(printf '%s\n' "$identity_line" | sed -E 's/^[[:space:]]*[0-9]+\)[[:space:]]+([A-F0-9]+)[[:space:]]+.*/\1/')"
   [[ "$identity_hash" =~ ^[A-F0-9]{40}$ ]] || fail "Could not parse Apple Distribution identity hash from: $identity_line"
 
-  echo "==> Re-signing archived products with explicit entitlements ($identity_hash)"
+  write_entitlements_from_embedded_profile "$widget_path" "$widget_entitlements"
+  write_entitlements_from_embedded_profile "$app_path" "$main_entitlements"
+
+  local profile_aps
+  profile_aps="$(/usr/libexec/PlistBuddy -c 'Print :aps-environment' "$main_entitlements" 2>/dev/null || true)"
+  [[ "$profile_aps" == "production" ]] \
+    || fail "Main embedded profile entitlements missing aps-environment=production (got ${profile_aps:-<missing>})"
+
+  echo "==> Re-signing archived products with embedded profile entitlements ($identity_hash)"
   codesign --force --sign "$identity_hash" \
     --keychain "$KEYCHAIN_PATH" \
-    --entitlements "$ROOT/PAXWidgets/PAXWidgets.entitlements" \
+    --entitlements "$widget_entitlements" \
     --generate-entitlement-der \
     "$widget_path" 2>"$SIGNING_DIR/resign-widget.err" \
     || fail "Widget re-sign failed: $(cat "$SIGNING_DIR/resign-widget.err" 2>/dev/null || echo unknown)"
   codesign --force --sign "$identity_hash" \
     --keychain "$KEYCHAIN_PATH" \
-    --entitlements "$ROOT/PAXDesignLiveChat/PAXDesignLiveChat.entitlements" \
+    --entitlements "$main_entitlements" \
     --generate-entitlement-der \
     "$app_path" 2>"$SIGNING_DIR/resign-app.err" \
     || fail "Main app re-sign failed: $(cat "$SIGNING_DIR/resign-app.err" 2>/dev/null || echo unknown)"
+
+  local signed_aps
+  signed_aps="$(read_signed_entitlement "$app_path" "aps-environment")"
+  [[ "$signed_aps" == "production" ]] \
+    || fail "Re-signed archive still missing codesign aps-environment=production (got ${signed_aps:-<missing>})"
+  echo "    Verified codesign aps-environment=$signed_aps"
 }
 
 echo "==> Re-signing archive to embed push entitlements in codesign signature"
