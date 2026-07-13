@@ -69,10 +69,6 @@ final class HTTPResponseForensics {
         lastEdge403 = nil
     }
 
-    static var userAgent: String {
-        "PAXDesignLiveChat/\(PAXAppInfo.marketingVersion) (iOS; Build \(PAXAppInfo.buildNumber); CFNetwork)"
-    }
-
     private func normalizedHeaders(_ raw: [String: String]) -> [String: String] {
         var out: [String: String] = [:]
         for (k, v) in raw {

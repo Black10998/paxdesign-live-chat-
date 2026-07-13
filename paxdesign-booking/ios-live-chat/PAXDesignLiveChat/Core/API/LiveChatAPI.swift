@@ -91,7 +91,7 @@ final class LiveChatAPI {
         request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
-        request.setValue(HTTPResponseForensics.userAgent, forHTTPHeaderField: "User-Agent")
+        request.setValue(PAXAppInfo.httpUserAgent, forHTTPHeaderField: "User-Agent")
         if body != nil {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         }

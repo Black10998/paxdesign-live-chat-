@@ -12,4 +12,9 @@ enum PAXAppInfo {
     static var fullVersion: String {
         "\(marketingVersion) (\(buildNumber))"
     }
+
+    /// Sent on every live-admin REST/SSE request for WAF log correlation.
+    static var httpUserAgent: String {
+        "PAXDesignLiveChat/\(marketingVersion) (iOS; Build \(buildNumber); CFNetwork)"
+    }
 }
