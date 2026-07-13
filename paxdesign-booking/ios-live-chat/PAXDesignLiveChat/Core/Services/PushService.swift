@@ -507,7 +507,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
-        if let payload = PushService.shared.parseNotification(userInfo: notification.request.content.userInfo) {
+        let payload = PushService.shared.parseNotification(userInfo: notification.request.content.userInfo)
+        if let payload {
             NotificationCenter.default.post(
                 name: .paxPushReceived,
                 object: nil,
@@ -516,11 +517,29 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
 
         guard AppSettingsStore.shared.notificationsEnabled else { return [] }
+
+        let activeSessionId = await MainActor.run { AppRefreshPolicy.activeSessionId }
+        if let payload,
+           !payload.sessionId.isEmpty,
+           payload.sessionId == activeSessionId,
+           isConversationNotification(payload) {
+            return []
+        }
+
         var options: UNNotificationPresentationOptions = [.banner, .badge]
         if AppSettingsStore.shared.messageSoundEnabled || payloadIsLiveRequest(notification) {
             options.insert(.sound)
         }
         return options
+    }
+
+    private func isConversationNotification(_ payload: PushService.PushPayload) -> Bool {
+        switch payload.type {
+        case "message", "new_chat", "team_message", "chat_message":
+            return true
+        default:
+            return payload.event == "message" || payload.event == "new_message"
+        }
     }
 
     func userNotificationCenter(

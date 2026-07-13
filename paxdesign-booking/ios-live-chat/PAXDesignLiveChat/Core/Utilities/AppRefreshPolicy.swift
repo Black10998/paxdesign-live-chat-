@@ -5,6 +5,8 @@ import Foundation
 enum AppRefreshPolicy {
     static var scenePhase: SceneActivity = .active
     static var hasOpenChat = false
+    /// Session ID of the conversation currently visible in a chat screen (for push suppression).
+    static var activeSessionId: String?
     static var liveRequestCount = 0
     /// When true, HTTP polling loops should stay idle (SSE carries updates).
     static var sseHealthy = false
@@ -63,5 +65,9 @@ enum AppRefreshPolicy {
     static func update(liveCount: Int, openChat: Bool) {
         liveRequestCount = liveCount
         hasOpenChat = openChat
+    }
+
+    static func setActiveSession(_ sessionId: String?) {
+        activeSessionId = sessionId?.isEmpty == false ? sessionId : nil
     }
 }

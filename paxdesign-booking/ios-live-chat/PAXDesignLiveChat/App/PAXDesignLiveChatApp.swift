@@ -162,6 +162,7 @@ struct PAXDesignLiveChatApp: App {
                     )
                 } else {
                     coordinator.activeSessionId = sessionId
+                    AppRefreshPolicy.setActiveSession(sessionId)
                 }
                 return
             }
@@ -178,6 +179,7 @@ struct PAXDesignLiveChatApp: App {
             await coordinator.handlePush(sessionId: sessionId, type: type, auth: auth, payload: payload)
             if opened {
                 coordinator.activeSessionId = sessionId
+                AppRefreshPolicy.setActiveSession(sessionId)
             }
         }
     }

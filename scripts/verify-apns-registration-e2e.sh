@@ -25,7 +25,7 @@ PAYLOAD=$(cat <<JSON
   "device_name": "E2E Verify",
   "device_model": "iPhone",
   "os_version": "iOS 18",
-  "app_version": "1.64.0"
+  "app_version": "1.65.0"
 }
 JSON
 )

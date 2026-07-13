@@ -14,6 +14,7 @@ struct ChatMessageListView: View {
     let onReply: (LiveMessage) -> Void
     let onCopy: (LiveMessage) -> Void
     let onDelete: (LiveMessage) -> Void
+    var onAnalyze: ((LiveMessage) -> Void)?
     var onLinkReview: ((LiveMessage, String) -> Void)?
     var linkReviewSubmittingIds: Set<Int> = []
     let onImageTap: (URL) -> Void
@@ -53,6 +54,9 @@ struct ChatMessageListView: View {
                             onReply: { onReply(row.message) },
                             onCopy: { onCopy(row.message) },
                             onDelete: { onDelete(row.message) },
+                            onAnalyze: onAnalyze.map { handler in
+                                { handler(row.message) }
+                            },
                             onLinkReview: onLinkReview.map { handler in
                                 { action in handler(row.message, action) }
                             },
@@ -123,6 +127,7 @@ private struct ChatMessageRow: View {
     let onReply: () -> Void
     let onCopy: () -> Void
     let onDelete: () -> Void
+    var onAnalyze: (() -> Void)?
     var onLinkReview: ((String) -> Void)?
     var linkReviewSubmittingIds: Set<Int> = []
     let onImageTap: (URL) -> Void
@@ -177,6 +182,7 @@ private struct ChatMessageRow: View {
                     quotedMessage: row.quotedMessage,
                     canReply: handler == "admin" && canReply && row.message.role != "system",
                     canDelete: handler == "admin" && canReply && row.message.role != "system" && row.message.id > 0,
+                    canAnalyze: handler == "admin" && row.message.role == "user" && onAnalyze != nil,
                     showTimestamp: MessageTimeFormatter.shouldShowTimestamp(current: row.message, next: row.next),
                     senderLabel: showSenderLabel ? senderLabel(for: row.message) : nil,
                     agentDisplayName: agentDisplayName,
@@ -185,6 +191,7 @@ private struct ChatMessageRow: View {
                     onReply: onReply,
                     onCopy: onCopy,
                     onDelete: onDelete,
+                    onAnalyze: onAnalyze,
                     onLinkReview: onLinkReview,
                     isLinkReviewSubmitting: linkReviewSubmittingIds.contains(row.message.id),
                     onImageTap: { onImageTap($0) }

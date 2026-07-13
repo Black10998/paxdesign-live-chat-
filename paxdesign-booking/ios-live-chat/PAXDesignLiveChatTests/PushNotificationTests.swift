@@ -48,4 +48,14 @@ final class PushNotificationTests: XCTestCase {
 
         XCTAssertNil(PushService.shared.parseNotification(userInfo: payload))
     }
+
+    @MainActor
+    func testActiveSessionTrackingForPushSuppression() {
+        AppRefreshPolicy.setActiveSession("pax_open_chat")
+        XCTAssertEqual(AppRefreshPolicy.activeSessionId, "pax_open_chat")
+        AppRefreshPolicy.setActiveSession(nil)
+        XCTAssertNil(AppRefreshPolicy.activeSessionId)
+        AppRefreshPolicy.setActiveSession("")
+        XCTAssertNil(AppRefreshPolicy.activeSessionId)
+    }
 }

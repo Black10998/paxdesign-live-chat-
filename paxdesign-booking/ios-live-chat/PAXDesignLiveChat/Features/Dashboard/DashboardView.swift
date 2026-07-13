@@ -121,67 +121,129 @@ struct DashboardView: View {
     }
 
     var body: some View {
-        ScrollView {
+        dashboardList
+            .navigationTitle(L10n.ModuleDashboard)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showSearch = true
+                        PAXHaptics.light()
+                    } label: {
+                        PAXIcon("magnifyingglass")
+                    }
+                    .accessibilityLabel(L10n.GlobalSearchTitle)
+                }
+            }
+            .sheet(isPresented: $showSearch) {
+                NavigationStack { GlobalSearchView() }
+                    .environmentObject(auth)
+                    .environmentObject(coordinator)
+                    .environmentObject(teamCoordinator)
+            }
+            .overlay {
+                if showDashboardTour, dashboardTourSteps.indices.contains(dashboardTourStepIndex) {
+                    DashboardTourOverlay(
+                        step: dashboardTourSteps[dashboardTourStepIndex],
+                        stepIndex: dashboardTourStepIndex,
+                        totalSteps: dashboardTourSteps.count,
+                        onBack: { dashboardTourStepIndex = max(dashboardTourStepIndex - 1, 0) },
+                        onNext: {
+                            guard dashboardTourStepIndex + 1 < dashboardTourSteps.count else {
+                                completeDashboardTour()
+                                return
+                            }
+                            dashboardTourStepIndex += 1
+                        },
+                        onSkip: completeDashboardTour,
+                        onFinish: completeDashboardTour
+                    )
+                }
+            }
+            .onAppear {
+                Task {
+                    await ActivityLogService.shared.log(
+                        category: L10n.ModuleDashboard,
+                        title: L10n.ActivityDashboardOpened,
+                        module: PlatformModule.dashboard.rawValue,
+                        auth: auth
+                    )
+                    startDashboardTourIfNeeded()
+                    async let sessions: Void = coordinator.refreshSessions(auth: auth)
+                    async let platformSync: Void = platform.sync(auth: auth)
+                    async let teamSync: Void = teamCoordinator.refresh(auth: auth)
+                    _ = await (sessions, platformSync, teamSync)
+                    recomputeDashboardMetrics()
+                    withAnimation(.easeOut(duration: 0.25)) {
+                        isInitialLoading = false
+                    }
+                }
+            }
+            .onChange(of: coordinator.sessions) { _ in recomputeDashboardMetrics() }
+            .onChange(of: settings.dashboardTourCompleted) { completed in
+                if !completed {
+                    startDashboardTourIfNeeded()
+                }
+            }
+    }
+
+    private var dashboardList: some View {
+        List {
             if isInitialLoading {
-                PAXScreenLoadingStack(status: L10n.DashboardLoading, rowCount: 3)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
+                Section {
+                    PAXScreenLoadingStack(status: L10n.DashboardLoading, rowCount: 3)
+                }
             } else {
-                VStack(alignment: .leading, spacing: 20) {
+                Section {
                     heroHeader
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+
+                Section {
                     metricsGrid
-                    if PlatformModuleSettingsStore.shared.dashboardShowChart {
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+
+                if PlatformModuleSettingsStore.shared.dashboardShowChart {
+                    Section {
                         activityChart
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                     }
+                }
+
+                Section {
                     activityFeed
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+
+                Section {
                     quickModules
-                    if PlatformModuleSettingsStore.shared.dashboardShowUpcoming {
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+
+                if PlatformModuleSettingsStore.shared.dashboardShowUpcoming {
+                    Section {
                         upcomingSection
+                            .listRowInsets(EdgeInsets())
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
                     }
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
             }
         }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
         .paxScreenBackground()
-        .navigationTitle(L10n.ModuleDashboard)
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showSearch = true
-                    PAXHaptics.light()
-                } label: {
-                    PAXIcon("magnifyingglass")
-                }
-                .accessibilityLabel(L10n.GlobalSearchTitle)
-            }
-        }
-        .sheet(isPresented: $showSearch) {
-            NavigationStack { GlobalSearchView() }
-                .environmentObject(auth)
-                .environmentObject(coordinator)
-                .environmentObject(teamCoordinator)
-        }
-        .overlay {
-            if showDashboardTour, dashboardTourSteps.indices.contains(dashboardTourStepIndex) {
-                DashboardTourOverlay(
-                    step: dashboardTourSteps[dashboardTourStepIndex],
-                    stepIndex: dashboardTourStepIndex,
-                    totalSteps: dashboardTourSteps.count,
-                    onBack: { dashboardTourStepIndex = max(dashboardTourStepIndex - 1, 0) },
-                    onNext: {
-                        guard dashboardTourStepIndex + 1 < dashboardTourSteps.count else {
-                            completeDashboardTour()
-                            return
-                        }
-                        dashboardTourStepIndex += 1
-                    },
-                    onSkip: completeDashboardTour,
-                    onFinish: completeDashboardTour
-                )
-            }
-        }
         .paxPremiumRefreshable(status: L10n.DashboardLoading, rowCount: 3) {
             async let sessions: Void = coordinator.refreshSessions(auth: auth)
             async let platformSync: Void = platform.sync(auth: auth)
@@ -189,31 +251,6 @@ struct DashboardView: View {
             _ = await (sessions, platformSync, teamSync)
             WidgetDataStore.shared.syncFromApp()
             recomputeDashboardMetrics()
-        }
-        .onAppear {
-            Task {
-                await ActivityLogService.shared.log(
-                    category: L10n.ModuleDashboard,
-                    title: L10n.ActivityDashboardOpened,
-                    module: PlatformModule.dashboard.rawValue,
-                    auth: auth
-                )
-                startDashboardTourIfNeeded()
-                async let sessions: Void = coordinator.refreshSessions(auth: auth)
-                async let platformSync: Void = platform.sync(auth: auth)
-                async let teamSync: Void = teamCoordinator.refresh(auth: auth)
-                _ = await (sessions, platformSync, teamSync)
-                recomputeDashboardMetrics()
-                withAnimation(.easeOut(duration: 0.25)) {
-                    isInitialLoading = false
-                }
-            }
-        }
-        .onChange(of: coordinator.sessions) { _ in recomputeDashboardMetrics() }
-        .onChange(of: settings.dashboardTourCompleted) { completed in
-            if !completed {
-                startDashboardTourIfNeeded()
-            }
         }
     }
 

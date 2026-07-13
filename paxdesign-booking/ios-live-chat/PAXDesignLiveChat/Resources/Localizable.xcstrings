@@ -9918,6 +9918,41 @@
         }
       }
     },
+    "chat.ai_suggestions_title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "AI Suggestions" } },
+        "de": { "stringUnit": { "state": "translated", "value": "KI-Vorschläge" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "اقتراحات الذكاء الاصطناعي" } }
+      }
+    },
+    "chat.quick_replies_title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Quick replies" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Schnellantworten" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "ردود سريعة" } }
+      }
+    },
+    "chat.ai_tap_to_insert": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Tap to insert" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Tippen zum Einfügen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "اضغط للإدراج" } }
+      }
+    },
+    "chat.analyze_message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Analyze message" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Nachricht analysieren" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تحليل الرسالة" } }
+      }
+    },
+    "chat.analyze_latest_message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Analyze latest customer message" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Letzte Kundennachricht analysieren" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "تحليل آخر رسالة من العميل" } }
+      }
+    },
     "common.ok": {
       "localizations": {
         "en": {

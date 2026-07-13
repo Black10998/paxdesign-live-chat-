@@ -85,6 +85,11 @@ enum L10n {
     static var ChatQuickLinkDefaultLabel: String { t("chat.quick_links.default_label") }
     static var ChatMessagePlaceholder: String { t("chat.message_placeholder") }
     static var ChatSuggestionsEmpty: String { t("chat.suggestions_empty") }
+    static var ChatAISuggestionsTitle: String { t("chat.ai_suggestions_title") }
+    static var ChatQuickRepliesTitle: String { t("chat.quick_replies_title") }
+    static var ChatAITapToInsert: String { t("chat.ai_tap_to_insert") }
+    static var ChatAnalyzeMessage: String { t("chat.analyze_message") }
+    static var ChatAnalyzeLatestMessage: String { t("chat.analyze_latest_message") }
     static var ChatMessages: String { t("chat.messages") }
     static var ChatPrivacyBanner: String { t("chat.privacy_banner") }
     static var ChatReadOnly: String { t("chat.read_only") }
