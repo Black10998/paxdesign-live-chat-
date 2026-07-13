@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Reproduce: iOS app REST burst → probe wp-admin/users.php
+# Triggered manually after PAX_ADMIN_USER + PAX_ADMIN_APP_PASSWORD secrets were added.
 # Read-only. Does not modify server config, plugins, or cache.
 set -euo pipefail
 
@@ -7,7 +8,7 @@ SITE="${PAX_SITE:-https://paxdesign.at}"
 USER="${PAX_ADMIN_USER:-}"
 PASS="${PAX_ADMIN_APP_PASSWORD:-}"
 REPORT="${1:-./app-burst-reproduction.txt}"
-BURST_ROUNDS="${BURST_ROUNDS:-15}"
+BURST_ROUNDS="${BURST_ROUNDS:-20}"
 BURST_SLEEP="${BURST_SLEEP:-0.35}"
 
 exec > >(tee "$REPORT") 2>&1
