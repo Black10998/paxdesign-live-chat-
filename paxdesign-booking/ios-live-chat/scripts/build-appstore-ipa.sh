@@ -423,10 +423,34 @@ xcodebuild archive \
 
 ARCHIVE_APP="$(find "$ARCHIVE_PATH/Products/Applications" -maxdepth 1 -name '*.app' -type d | head -1)"
 [[ -n "$ARCHIVE_APP" && -d "$ARCHIVE_APP" ]] || fail "Archived app bundle not found"
-echo "==> Injecting PAXSignedAPSEnvironment into archived app Info.plist"
-inject_signed_aps_environment "$ARCHIVE_APP/Info.plist"
-APS_MIRROR="$(/usr/libexec/PlistBuddy -c 'Print :PAXSignedAPSEnvironment' "$ARCHIVE_APP/Info.plist" 2>/dev/null || true)"
-[[ "$APS_MIRROR" == "$APS_ENTITLEMENT_VALUE" ]] || fail "Archived Info.plist missing PAXSignedAPSEnvironment mirror"
+ARCHIVE_WIDGET="$ARCHIVE_APP/PlugIns/PAXWidgets.appex"
+[[ -d "$ARCHIVE_WIDGET" ]] || fail "Archived widget extension not found"
+
+resign_archived_products() {
+  local app_path="$1"
+  local widget_path="$2"
+  local identity
+
+  identity="$(security find-identity -v -p codesigning "$KEYCHAIN_PATH" 2>/dev/null \
+    | grep 'Apple Distribution' | head -1 \
+    | sed -E 's/^[[:space:]]*[0-9]+[[:space:]]+[A-F0-9]+[[:space:]]+"([^"]+)".*/\1/')"
+  [[ -n "$identity" ]] || fail "Apple Distribution signing identity not found in keychain"
+
+  echo "==> Re-signing archived products with explicit entitlements"
+  codesign --force --sign "$identity" \
+    --keychain "$KEYCHAIN_PATH" \
+    --entitlements "$ROOT/PAXWidgets/PAXWidgets.entitlements" \
+    --generate-entitlement-der \
+    "$widget_path"
+  codesign --force --sign "$identity" \
+    --keychain "$KEYCHAIN_PATH" \
+    --entitlements "$ROOT/PAXDesignLiveChat/PAXDesignLiveChat.entitlements" \
+    --generate-entitlement-der \
+    "$app_path"
+}
+
+echo "==> Re-signing archive to embed push entitlements in codesign signature"
+resign_archived_products "$ARCHIVE_APP" "$ARCHIVE_WIDGET"
 
 echo "==> Validating archive before export"
 "$VALIDATE_ARCHIVE_SCRIPT" "$ARCHIVE_PATH"
