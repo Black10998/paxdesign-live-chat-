@@ -271,12 +271,9 @@ sync_plist_version() {
 
 inject_signed_aps_environment() {
   local plist_path="$1"
-  local entitlements_file="$ROOT/PAXDesignLiveChat/PAXDesignLiveChat.entitlements"
-  local aps_value
-  aps_value="$(/usr/libexec/PlistBuddy -c 'Print :aps-environment' "$entitlements_file" 2>/dev/null || true)"
-  [[ -n "$aps_value" ]] || fail "Could not read aps-environment from entitlements file"
+  [[ -n "$APS_ENTITLEMENT_VALUE" ]] || fail "APS entitlement value not captured during build validation"
   /usr/libexec/PlistBuddy -c "Delete :PAXSignedAPSEnvironment" "$plist_path" >/dev/null 2>&1 || true
-  /usr/libexec/PlistBuddy -c "Add :PAXSignedAPSEnvironment string $aps_value" "$plist_path"
+  /usr/libexec/PlistBuddy -c "Add :PAXSignedAPSEnvironment string $APS_ENTITLEMENT_VALUE" "$plist_path"
 }
 
 sync_plist_version "$ROOT/PAXDesignLiveChat/Info.plist"
