@@ -192,9 +192,9 @@ struct AdaptiveShellView: View {
         .onChange(of: coordinator.activeSessionId) { sessionId in
             guard let sessionId else {
                 routingSessionId = nil
+                AppRefreshPolicy.setActiveSession(nil)
                 return
             }
-            guard routingSessionId != sessionId else { return }
             routeToSession(sessionId)
         }
         .onChange(of: auth.isLoggedIn) { loggedIn in
@@ -350,36 +350,38 @@ struct AdaptiveShellView: View {
     }
 
     private func openSession(_ sessionId: String, path: Binding<NavigationPath>) {
-        guard routingSessionId != sessionId else { return }
-        routingSessionId = sessionId
-        appLock.recordActivity()
-        coordinator.acknowledgeIncomingRequest(sessionId)
-        coordinator.activeSessionId = sessionId
-        AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: true)
+        let isNewRoute = routingSessionId != sessionId
+        if isNewRoute {
+            routingSessionId = sessionId
+            appLock.recordActivity()
+            coordinator.acknowledgeIncomingRequest(sessionId)
+            coordinator.activeSessionId = sessionId
+            AppRefreshPolicy.setActiveSession(sessionId)
+            AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: true)
 
-        if let api = AuthStore.shared.api {
-            ConversationPrefetcher.shared.schedulePrefetch(
-                sessionId: sessionId,
-                api: api,
-                isTeam: sessionId.hasPrefix("team_"),
-                priority: true
-            )
-        }
-
-        if path.wrappedValue.isEmpty {
-            path.wrappedValue.append(sessionId)
-        } else {
-            path.wrappedValue.removeLast(path.wrappedValue.count)
-            path.wrappedValue.append(sessionId)
-        }
-
-        Task { @MainActor in
-            if let session = coordinator.sessions.first(where: { $0.sessionId == sessionId })
-                ?? teamCoordinator.teamSessions.first(where: { $0.sessionId == sessionId }) {
-                settings.markSessionRead(sessionId, seq: session.seq)
-            } else {
-                settings.markSessionRead(sessionId)
+            if let api = AuthStore.shared.api {
+                ConversationPrefetcher.shared.schedulePrefetch(
+                    sessionId: sessionId,
+                    api: api,
+                    isTeam: sessionId.hasPrefix("team_"),
+                    priority: true
+                )
             }
+
+            Task { @MainActor in
+                if let session = coordinator.sessions.first(where: { $0.sessionId == sessionId })
+                    ?? teamCoordinator.teamSessions.first(where: { $0.sessionId == sessionId }) {
+                    settings.markSessionRead(sessionId, seq: session.seq)
+                } else {
+                    settings.markSessionRead(sessionId)
+                }
+            }
+        }
+
+        // Ensure list root + chat destination so Back returns to the inbox.
+        if path.wrappedValue.isEmpty || isNewRoute {
+            path.wrappedValue = NavigationPath()
+            path.wrappedValue.append(sessionId)
         }
     }
 

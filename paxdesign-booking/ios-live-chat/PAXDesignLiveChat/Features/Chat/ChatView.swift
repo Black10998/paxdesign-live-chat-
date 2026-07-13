@@ -59,6 +59,9 @@ struct ChatView: View {
                     pendingDeleteMessage = message
                     showDeleteConfirm = true
                 },
+                onAnalyze: canUseAI && settings.aiSuggestionsEnabled && thread.handler == "admin"
+                    ? { thread.fetchSuggestions(messageId: $0.id) }
+                    : nil,
                 onLinkReview: { message, action in
                     Task { await thread.submitLinkScanReview(messageId: message.id, action: action, auth: auth) }
                 },
@@ -83,6 +86,7 @@ struct ChatView: View {
             let serverSeq = coordinator.serverSeq(for: thread.sessionId)
             thread.start(auth: auth, expectedServerSeq: serverSeq)
             coordinator.activeSessionId = thread.sessionId
+            AppRefreshPolicy.setActiveSession(thread.sessionId)
             AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: true)
             settings.markSessionRead(thread.sessionId, seq: serverSeq)
         }
@@ -91,6 +95,7 @@ struct ChatView: View {
             thread.suspend()
             if coordinator.activeSessionId == thread.sessionId {
                 coordinator.activeSessionId = nil
+                AppRefreshPolicy.setActiveSession(nil)
             }
             AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: false)
         }
@@ -282,6 +287,16 @@ struct ChatView: View {
             .accessibilityLabel(L10n.ChatOverviewAccessibility)
         }
         ToolbarItemGroup(placement: .topBarTrailing) {
+            if thread.handler == "admin", canUseAI, settings.aiSuggestionsEnabled {
+                Button {
+                    PAXHaptics.light()
+                    thread.maybeFetchSuggestionsForLatestUserMessage()
+                } label: {
+                    PAXIcon("sparkles")
+                }
+                .disabled(thread.suggestionsLoading)
+                .accessibilityLabel(L10n.ChatAnalyzeLatestMessage)
+            }
             if thread.handler == "live_request", canReply {
                 Button(L10n.CommonTakeover) {
                     PAXHaptics.medium()
@@ -333,40 +348,69 @@ struct ChatView: View {
     }
 
     private var assistStrip: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if !thread.quickReplies.isEmpty {
-                AssistChipRow {
-                    ForEach(thread.filteredQuickReplies()) { item in
-                        AssistChip(title: item.label, subtitle: item.text) {
-                            thread.applyQuickReply(item.text)
+        VStack(alignment: .leading, spacing: 10) {
+            if thread.handler == "admin", canReply, !thread.quickReplies.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(L10n.ChatQuickRepliesTitle)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(PAXTheme.textTertiary)
+                    AssistChipRow {
+                        ForEach(thread.filteredQuickReplies()) { item in
+                            AssistChip(title: item.label, subtitle: item.text) {
+                                thread.applyQuickReply(item.text)
+                            }
                         }
                     }
                 }
             }
-            if thread.suggestionsLoading || !thread.aiSuggestions.isEmpty {
-                AssistChipRow {
-                    if thread.suggestionsLoading {
-                        HStack(spacing: 8) {
-                            PAXSkeletonBlock(width: 88, height: 28, cornerRadius: 14)
-                            PAXSkeletonBlock(width: 124, height: 28, cornerRadius: 14)
+
+            if thread.handler == "admin", canUseAI, settings.aiSuggestionsEnabled {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        PAXIcon("sparkles", size: .inline)
+                        Text(L10n.ChatAISuggestionsTitle)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(PAXTheme.textTertiary)
+                        if thread.suggestionsLoading {
+                            ProgressView()
+                                .scaleEffect(0.7)
                         }
+                        Spacer()
+                        Text(L10n.ChatAITapToInsert)
+                            .font(.caption2)
+                            .foregroundStyle(PAXTheme.textTertiary)
                     }
-                    ForEach(Array(thread.aiSuggestions.enumerated()), id: \.offset) { _, text in
-                        AssistChip(title: String(text.prefix(48)) + (text.count > 48 ? "…" : ""), subtitle: text) {
-                            thread.applySuggestion(text)
+
+                    if let error = thread.suggestionsError, thread.aiSuggestions.isEmpty, !thread.suggestionsLoading {
+                        Text(error)
+                            .font(.caption)
+                            .foregroundStyle(PAXTheme.textSecondary)
+                    } else if thread.suggestionsLoading || !thread.aiSuggestions.isEmpty {
+                        AssistChipRow {
+                            if thread.suggestionsLoading {
+                                HStack(spacing: 8) {
+                                    PAXSkeletonBlock(width: 88, height: 28, cornerRadius: 14)
+                                    PAXSkeletonBlock(width: 124, height: 28, cornerRadius: 14)
+                                }
+                            }
+                            ForEach(Array(thread.aiSuggestions.enumerated()), id: \.offset) { _, text in
+                                AssistChip(title: String(text.prefix(48)) + (text.count > 48 ? "…" : ""), subtitle: text) {
+                                    thread.applySuggestion(text)
+                                }
+                            }
                         }
                     }
                 }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
         .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.82, borderOpacity: 0.46, shadowOpacity: 0.16)
     }
 
     private var chatInputBar: some View {
         VStack(spacing: 0) {
-            if thread.handler == "admin", canUseAI, settings.aiSuggestionsEnabled {
+            if thread.handler == "admin", (canReply && !thread.quickReplies.isEmpty) || (canUseAI && settings.aiSuggestionsEnabled) {
                 assistStrip
             }
 

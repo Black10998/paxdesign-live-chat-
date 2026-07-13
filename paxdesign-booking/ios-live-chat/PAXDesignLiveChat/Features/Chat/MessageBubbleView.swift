@@ -5,6 +5,7 @@ struct MessageBubbleView: View {
     let quotedMessage: LiveMessage?
     let canReply: Bool
     let canDelete: Bool
+    var canAnalyze = false
     let showTimestamp: Bool
     var senderLabel: String?
     var agentDisplayName = L10n.ChatAgent
@@ -13,6 +14,7 @@ struct MessageBubbleView: View {
     let onReply: () -> Void
     let onCopy: () -> Void
     let onDelete: () -> Void
+    var onAnalyze: (() -> Void)?
     var onLinkReview: ((String) -> Void)?
     var isLinkReviewSubmitting = false
     let onImageTap: (URL) -> Void
@@ -46,6 +48,13 @@ struct MessageBubbleView: View {
                                 onReply()
                             } label: {
                                 Label { Text(L10n.CommonReply) } icon: { PAXIcon("arrowshape.turn.up.left") }
+                            }
+                        }
+                        if canAnalyze, let onAnalyze {
+                            Button {
+                                onAnalyze()
+                            } label: {
+                                Label { Text(L10n.ChatAnalyzeMessage) } icon: { PAXIcon("sparkles") }
                             }
                         }
                         if canDelete {

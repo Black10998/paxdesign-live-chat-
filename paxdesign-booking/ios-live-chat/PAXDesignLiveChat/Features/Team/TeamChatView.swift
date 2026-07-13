@@ -131,6 +131,7 @@ struct TeamChatView: View {
             thread.onConversationRemoved = { dismiss() }
             thread.start(auth: auth)
             coordinator.activeSessionId = thread.sessionId
+            AppRefreshPolicy.setActiveSession(thread.sessionId)
             AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: true)
             settings.markSessionRead(thread.sessionId, seq: thread.currentSeq)
             Task {
@@ -142,6 +143,7 @@ struct TeamChatView: View {
             thread.suspend()
             if coordinator.activeSessionId == thread.sessionId {
                 coordinator.activeSessionId = nil
+                AppRefreshPolicy.setActiveSession(nil)
             }
             AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: false)
             settings.markSessionRead(thread.sessionId, seq: thread.currentSeq)
