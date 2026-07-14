@@ -27,7 +27,7 @@ jobs:
       APP_REVIEW_CONTACT_FIRST: PAXdesign
       APP_REVIEW_CONTACT_LAST: Support
       APP_REVIEW_USERNAME: test@apple.app.com
-      APP_REVIEW_APP_PASSWORD: "EDFx ui8o XZma 3Wu3 89T3 hFR2"
+      APP_REVIEW_APP_PASSWORD: ${{ secrets.APP_REVIEW_APP_PASSWORD }}
       APP_REVIEW_SERVER_URL: https://paxdesign.at
       SUBMIT_FOR_REVIEW: "0"
     steps:
