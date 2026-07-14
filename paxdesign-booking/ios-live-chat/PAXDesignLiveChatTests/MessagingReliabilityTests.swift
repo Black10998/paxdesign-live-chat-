@@ -118,6 +118,50 @@ final class MessagingReliabilityTests: XCTestCase {
         XCTAssertEqual(result.messages.map(\.id), [2, 3, 4])
     }
 
+    func testOptimisticMessagesSortAfterServerHistory() {
+        let server = [
+            LiveMessage(id: 10, role: "user", content: "ten", ts: 100),
+            LiveMessage(id: 11, role: "admin", content: "eleven", ts: 110),
+        ]
+        let optimistic = LiveMessage(
+            id: -42,
+            clientMsgId: UUID().uuidString.lowercased(),
+            role: "admin",
+            content: "pending",
+            ts: 120
+        )
+
+        let result = MessageMerge.mergeSorted(existing: server, incoming: [optimistic])
+
+        XCTAssertEqual(result.messages.map(\.id), [10, 11, -42])
+    }
+
+    @MainActor
+    func testForcedUnreadSurvivesAdminLastReply() {
+        let settings = AppSettingsStore.shared
+        let session = LiveSession(
+            id: 6,
+            sessionId: "pax_forced_unread",
+            handler: "admin",
+            handlerLabel: "Admin",
+            adminName: "Admin",
+            customerName: "Customer",
+            sessionRating: 0,
+            detectedService: "",
+            updatedAt: "",
+            messageCount: 3,
+            seq: 3,
+            lastPreview: "Reply",
+            lastRole: "admin"
+        )
+
+        settings.markSessionRead(session.sessionId, seq: 3)
+        XCTAssertFalse(settings.isSessionUnread(session))
+
+        settings.markSessionUnread(session.sessionId)
+        XCTAssertTrue(settings.isSessionUnread(session))
+    }
+
     func testSSEParserSupportsDurableChannelAndMultilineData() {
         var buffer = ""
         XCTAssertNil(ChatEventStreamParser.parseLine(

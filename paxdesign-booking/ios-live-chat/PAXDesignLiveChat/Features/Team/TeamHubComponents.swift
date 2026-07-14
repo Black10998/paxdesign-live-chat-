@@ -237,24 +237,20 @@ struct TeamBroadcastSheet: View {
 
     private func sendBroadcast() async {
         let text = message.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+        guard !text.isEmpty, let api = auth.api else { return }
         isSending = true
         defer { isSending = false }
 
-        var sent = 0
-        for (index, member) in recipients.enumerated() {
-            progress = String(format: L10n.TeamBroadcastProgress, index + 1, recipients.count)
-            guard let sessionId = await teamCoordinator.openConversation(with: member.userId, auth: auth) else {
-                continue
-            }
-            if let api = auth.api {
-                _ = try? await api.sendTeamMessage(sessionId, content: text)
-            }
-            sent += 1
+        do {
+            progress = String(format: L10n.TeamBroadcastProgress, 1, recipients.count)
+            let response = try await api.sendTeamBroadcast(text)
+            progress = String(format: L10n.TeamBroadcastDone, response.sent)
+            await teamCoordinator.refresh(auth: auth)
+            PAXHaptics.success()
+            try? await Task.sleep(nanoseconds: 600_000_000)
+            dismiss()
+        } catch {
+            self.error = error.localizedDescription
         }
-        progress = String(format: L10n.TeamBroadcastDone, sent)
-        PAXHaptics.success()
-        try? await Task.sleep(nanoseconds: 600_000_000)
-        dismiss()
     }
 }

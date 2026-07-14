@@ -428,17 +428,10 @@ final class ChatCoordinator: ObservableObject {
     }
 
     func archiveSession(auth: AuthStore, session: LiveSession) async {
-        guard let api = auth.api else { return }
         let sessionId = session.sessionId
-        do {
-            try await api.archive(sessionId)
-            await refreshSessions(auth: auth)
-            if activeSessionId == sessionId { activeSessionId = nil }
-            PAXHaptics.light()
-        } catch {
-            errorMessage = error.localizedDescription
-            await refreshSessions(auth: auth)
-        }
+        AppSettingsStore.shared.archiveSession(sessionId)
+        if activeSessionId == sessionId { activeSessionId = nil }
+        PAXHaptics.light()
     }
 
     func deleteSession(auth: AuthStore, session: LiveSession) async {

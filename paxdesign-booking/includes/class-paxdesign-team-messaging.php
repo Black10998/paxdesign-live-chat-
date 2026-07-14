@@ -461,6 +461,68 @@ class PAXdesign_Team_Messaging {
     }
 
     /**
+     * Broadcast a text message to every enabled team contact (server-side fan-out).
+     *
+     * @param int    $current_user_id
+     * @param string $content
+     * @param string $client_msg_id
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function broadcast_message($current_user_id, $content, $client_msg_id = '') {
+        $current_user_id = absint($current_user_id);
+        $content         = trim(wp_strip_all_tags((string) $content));
+
+        if ($content === '') {
+            return new WP_Error('pax_team_empty', 'Message cannot be empty', array('status' => 400));
+        }
+
+        if (!class_exists('PAXdesign_Live_Chat_Permissions')) {
+            return new WP_Error('pax_team_unavailable', 'Team permissions unavailable', array('status' => 500));
+        }
+
+        $contacts   = PAXdesign_Live_Chat_Permissions::list_team_contacts_for_api();
+        $sent       = 0;
+        $skipped    = array();
+        $client_base = $client_msg_id !== '' ? sanitize_text_field((string) $client_msg_id) : wp_generate_uuid4();
+
+        foreach ($contacts as $member) {
+            if (!is_array($member)) {
+                continue;
+            }
+            $uid = isset($member['user_id']) ? absint($member['user_id']) : 0;
+            if ($uid <= 0 || $uid === $current_user_id) {
+                continue;
+            }
+
+            $open = self::open_conversation($current_user_id, $uid);
+            if (!is_array($open) || isset($open['error'])) {
+                $skipped[] = $uid;
+                continue;
+            }
+
+            $conv_id = isset($open['conversation_id']) ? sanitize_text_field((string) $open['conversation_id']) : '';
+            if ($conv_id === '') {
+                $skipped[] = $uid;
+                continue;
+            }
+
+            $per_client = $client_base . ':' . $uid;
+            $result     = self::send_message($conv_id, $current_user_id, $content, $per_client);
+            if (is_wp_error($result)) {
+                $skipped[] = $uid;
+                continue;
+            }
+            $sent++;
+        }
+
+        return array(
+            'ok'      => true,
+            'sent'    => $sent,
+            'skipped' => $skipped,
+        );
+    }
+
+    /**
      * @param string               $conv_id
      * @param int                  $current_user_id
      * @param array<string, mixed> $file

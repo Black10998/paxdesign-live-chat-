@@ -559,6 +559,24 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url), endpoint: "team-contacts", as: StaffListResponse.self)
     }
 
+    func sendTeamBroadcast(
+        _ content: String,
+        clientMsgId: String = UUID().uuidString.lowercased()
+    ) async throws -> TeamBroadcastResponse {
+        guard let url = liveAdminURL(path: "team/broadcast") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let body = try JSONEncoder().encode([
+            "content": content,
+            "client_msg_id": clientMsgId,
+        ])
+        return try await perform(
+            authRequest(url: url, method: "POST", body: body),
+            endpoint: "team-broadcast",
+            as: TeamBroadcastResponse.self
+        )
+    }
+
     func deleteTeamConversation(_ sessionId: String, mode: String = "hide") async throws -> TeamDeleteResponse {
         guard let url = liveAdminURL(path: "team/sessions/\(sessionId)") else {
             throw LiveChatAPIError.invalidURL

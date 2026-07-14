@@ -135,6 +135,8 @@ enum PAXIconCatalog {
         "star.fill": "star",
         "crown.fill": "crown",
         "pin.fill": "pin",
+        "pin.slash": "pin",
+        "bell.slash": "eye.slash",
         "heart.fill": "heart",
         "phone.fill": "phone",
         "phone.down.fill": "phone.down",
