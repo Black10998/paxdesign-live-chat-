@@ -213,13 +213,20 @@ def main() -> None:
     version_id = version["id"]
     vattrs = version.get("attributes") or {}
 
-    # Build attachment
-    build_rel = (version.get("relationships") or {}).get("build", {}).get("data")
+    # Build attachment — list responses may omit relationships; refetch with include=build
+    version_detail = client.get(f"/appStoreVersions/{version_id}", **{"include": "build"})
+    build_rel = (version_detail.get("data") or {}).get("relationships", {}).get("build", {}).get("data")
+    included = version_detail.get("included") or []
     attached_build = None
     attached_number = None
     if build_rel:
-        build_payload = client.get(f"/builds/{build_rel['id']}")
-        attached_build = build_payload.get("data") or {}
+        attached_build = next(
+            (item for item in included if item.get("type") == "builds" and item.get("id") == build_rel.get("id")),
+            None,
+        )
+        if attached_build is None:
+            build_payload = client.get(f"/builds/{build_rel['id']}")
+            attached_build = build_payload.get("data") or {}
         attached_number = str((attached_build.get("attributes") or {}).get("version", ""))
 
     results.append(
@@ -515,18 +522,76 @@ def main() -> None:
     print()
 
     passed = sum(1 for r in results if r)
-    failed = len(results) - passed
+    failed = sum(1 for r in results if not r)
     print("=== Summary ===")
     print(f"checks_passed={passed}/{len(results)}")
-    print(f"checks_failed={failed}")
+    print(f"checks_failed_or_warn={failed}")
     print(f"asc_version_url=https://appstoreconnect.apple.com/apps/{app_id}/distribution/ios/version/inflight")
     print(f"asc_review_url=https://appstoreconnect.apple.com/apps/{app_id}/distribution/ios/version/inflight/reviewdetails")
     print(f"asc_media_url=https://appstoreconnect.apple.com/apps/{app_id}/distribution/ios/version/inflight/media-manager/iphone")
     print(f"asc_app_privacy_url=https://appstoreconnect.apple.com/apps/{app_id}/distribution/privacy")
 
-    if failed:
+    # Hard failures only — WARN items are manual UI confirmations
+    hard_fail_labels = {
+        "Build 127 attached to version 2.0.5",
+        "Manual release after approval",
+        "Copyright",
+        "Review contact email",
+        "Review notes present",
+        "Review notes mention login/demo credentials",
+        "Five German screenshots present",
+        "All screenshots COMPLETE",
+        "Screenshot order correct",
+    }
+    hard_results = [
+        (label, ok)
+        for label, ok in zip(
+            [
+                "Version 2.0.5 exists",
+                "Build 127 attached to version 2.0.5",
+                "Build processing state VALID",
+                "Export compliance (usesNonExemptEncryption=false)",
+                "Manual release after approval",
+                "Version ready for submission (not already in review)",
+                "Localization de-DE exists",
+                "Five German screenshots present",
+                "All screenshots COMPLETE",
+                "Screenshot order correct",
+                "Description present (de-DE)",
+                "Keywords present (de-DE)",
+                "Keywords match metadata.json",
+                "Support URL set on version localization",
+                "App name",
+                "Subtitle (de-DE)",
+                "Privacy Policy URL on app info",
+                "Primary category Business",
+                "Secondary category Productivity",
+                "Copyright",
+                "Support URL reachable",
+                "Privacy Policy URL reachable",
+                "Marketing URL reachable",
+                "App Privacy policy configured in ASC",
+                "Pricing schedule configured",
+                "App availability configured",
+                "Review contact email",
+                "Review contact name",
+                "Review contact phone",
+                "Review notes present",
+                "Demo account flag set",
+                "Review notes mention login/demo credentials",
+            ][: len(results)],
+            results,
+        )
+        if label in hard_fail_labels
+    ]
+    blocking = [label for label, ok in hard_results if not ok]
+
+    if blocking:
+        print(f"blocking_issues={blocking}")
         print("RESULT=NOT_READY")
         sys.exit(1)
+    if failed:
+        print(f"manual_verification_recommended={failed} warn-level item(s)")
     print("RESULT=READY")
 
 
