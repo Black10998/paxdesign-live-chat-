@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
 import mimetypes
@@ -189,21 +190,41 @@ def upload_binary(client: ASCClient, screenshot_id: str, path: Path) -> None:
         method = op.get("method", "PUT")
         url = op["url"]
         headers = {h["name"]: h["value"] for h in op.get("requestHeaders") or []}
-        req = urllib.request.Request(url, data=data, headers=headers, method=method)
+        offset = int(op.get("offset", 0))
+        length = int(op.get("length", len(data)))
+        chunk = data[offset : offset + length]
+        req = urllib.request.Request(url, data=chunk, headers=headers, method=method)
         try:
             with urllib.request.urlopen(req, timeout=300) as resp:
                 resp.read()
         except urllib.error.HTTPError as exc:
             fail(f"Screenshot upload failed for {path.name} ({exc.code}): {exc.read().decode()}")
 
-    for attempt in range(1, 25):
+    checksum = hashlib.md5(data).hexdigest()
+    client.patch(
+        f"/appScreenshots/{screenshot_id}",
+        {
+            "data": {
+                "type": "appScreenshots",
+                "id": screenshot_id,
+                "attributes": {
+                    "uploaded": True,
+                    "sourceFileChecksum": checksum,
+                },
+            }
+        },
+    )
+
+    state = "UNKNOWN"
+    for attempt in range(1, 37):
         payload = client.get(f"/appScreenshots/{screenshot_id}")
         state = ((payload.get("data") or {}).get("attributes") or {}).get("assetDeliveryState", {}).get("state")
         if state == "COMPLETE":
             print(f"Uploaded {path.name}")
             return
         if state in {"FAILED", "REJECTED"}:
-            fail(f"Screenshot processing failed for {path.name}: {state}")
+            errors = ((payload.get("data") or {}).get("attributes") or {}).get("assetDeliveryState", {}).get("errors")
+            fail(f"Screenshot processing failed for {path.name}: {state} {errors}")
         time.sleep(5)
     fail(f"Screenshot {path.name} did not reach COMPLETE (last state={state})")
 
