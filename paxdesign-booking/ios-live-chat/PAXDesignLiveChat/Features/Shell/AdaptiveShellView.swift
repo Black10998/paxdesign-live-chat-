@@ -154,6 +154,7 @@ struct AdaptiveShellView: View {
                     selection: $selectedTab,
                     reduceMotion: reduceMotion
                 )
+                .padding(.bottom, PAXShellLayout.bottomSafeArea)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }

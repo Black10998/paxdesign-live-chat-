@@ -8,7 +8,7 @@ private enum SCBarMotion {
     static let item = Animation.easeInOut(duration: 0.5)
 }
 
-private struct SCItemCenterKey: PreferenceKey {
+private struct SCItemOffsetLeftKey: PreferenceKey {
     static var defaultValue: [Int: CGFloat] = [:]
     static func reduce(value: inout [Int: CGFloat], nextValue: () -> [Int: CGFloat]) {
         value.merge(nextValue(), uniquingKeysWith: { $1 })
@@ -30,12 +30,12 @@ struct SCBottomBarView: View {
     @Binding var selection: Int
     let reduceMotion: Bool
 
-    @State private var itemCenters: [Int: CGFloat] = [:]
+    @State private var itemOffsetLefts: [Int: CGFloat] = [:]
 
     /// `menu_position = offsetLeft - 16` from the reference script.
     private var indicatorLeft: CGFloat {
-        guard let center = itemCenters[selection] else { return 0 }
-        return center - 16
+        guard let offsetLeft = itemOffsetLefts[selection] else { return 0 }
+        return offsetLeft - 16
     }
 
     /// `backgroundPosition = menu_position - 8` from the reference script.
@@ -52,37 +52,41 @@ struct SCBottomBarView: View {
             SCBottomBarIndicator()
                 .offset(x: indicatorLeft, y: -SCBarMetrics.indicatorBottomOffset)
                 .animation(reduceMotion ? nil : SCBarMotion.indicator, value: indicatorLeft)
+                .zIndex(1)
 
-            HStack(spacing: 0) {
-                ForEach(items) { item in
-                    menuItem(item)
-                }
-            }
-            .padding(.horizontal, SCBarMetrics.horizontalPadding)
-            .padding(.vertical, SCBarMetrics.verticalPadding)
-            .frame(maxWidth: .infinity)
-            .frame(height: SCBarMetrics.barHeight, alignment: .bottom)
+            menuRow
+                .zIndex(2)
         }
         .frame(maxWidth: .infinity)
         .frame(height: SCBarMetrics.totalHeight, alignment: .bottom)
         .coordinateSpace(name: "sc-bottom-bar")
-        .onPreferenceChange(SCItemCenterKey.self) { centers in
-            itemCenters = centers
+        .onPreferenceChange(SCItemOffsetLeftKey.self) { offsets in
+            itemOffsetLefts = offsets
         }
         .accessibilityElement(children: .contain)
+    }
+
+    /// Reference: `display:flex; justify-content:space-between; padding: 16px 36px;`
+    private var menuRow: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                if index > 0 {
+                    Spacer(minLength: 0)
+                }
+                menuItem(item)
+            }
+        }
+        .padding(.horizontal, SCBarMetrics.horizontalPadding)
+        .padding(.vertical, SCBarMetrics.verticalPadding)
+        .frame(maxWidth: .infinity)
+        .frame(height: SCBarMetrics.barHeight, alignment: .bottom)
     }
 
     private func menuItem(_ item: SCBottomBarItem) -> some View {
         let isCurrent = selection == item.tag
         return Button {
             guard selection != item.tag else { return }
-            if reduceMotion {
-                selection = item.tag
-            } else {
-                withAnimation(SCBarMotion.indicator) {
-                    selection = item.tag
-                }
-            }
+            selection = item.tag
             PAXHaptics.light()
         } label: {
             ZStack(alignment: .topTrailing) {
@@ -105,13 +109,12 @@ struct SCBottomBarView: View {
                         .offset(x: 8, y: -6)
                 }
             }
-            .frame(maxWidth: .infinity)
             .frame(height: SCBarMetrics.iconRowHeight)
             .background(
                 GeometryReader { geo in
                     Color.clear.preference(
-                        key: SCItemCenterKey.self,
-                        value: [item.tag: geo.frame(in: .named("sc-bottom-bar")).midX]
+                        key: SCItemOffsetLeftKey.self,
+                        value: [item.tag: geo.frame(in: .named("sc-bottom-bar")).minX]
                     )
                 }
             )
@@ -132,6 +135,7 @@ enum SCBarMetrics {
     static let indicatorBottomOffset: CGFloat = 28
     static let cornerRadius: CGFloat = 30
     static let radialHoleRadius: CGFloat = 36
+    static let radialHoleCenterY: CGFloat = 6
 
     static var barHeight: CGFloat {
         iconRowHeight + verticalPadding * 2
@@ -146,9 +150,12 @@ enum SCBarMetrics {
     }
 }
 
+// MARK: - Dark glossy glass background (reference white bar adapted for iOS appearance)
+
 private struct SCBottomBarGlassBackground: View {
     let gradientFocusX: CGFloat
 
+    /// `radial-gradient(circle at 36px 6px, ...)` + `backgroundPosition = menu_position - 8`
     private var holeCenterX: CGFloat {
         gradientFocusX + SCBarMetrics.radialHoleRadius
     }
@@ -156,7 +163,7 @@ private struct SCBottomBarGlassBackground: View {
     var body: some View {
         let shape = SCBottomBarRadialGlassShape(
             holeCenterX: holeCenterX,
-            holeCenterY: 6,
+            holeCenterY: SCBarMetrics.radialHoleCenterY,
             holeRadius: SCBarMetrics.radialHoleRadius,
             cornerRadius: SCBarMetrics.cornerRadius
         )
@@ -166,8 +173,8 @@ private struct SCBottomBarGlassBackground: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color(red: 0.12, green: 0.12, blue: 0.14).opacity(0.94),
-                            Color(red: 0.07, green: 0.07, blue: 0.09).opacity(0.98),
+                            Color(red: 0.11, green: 0.11, blue: 0.13).opacity(0.92),
+                            Color(red: 0.06, green: 0.06, blue: 0.08).opacity(0.97),
                         ],
                         startPoint: .top,
                         endPoint: .bottom
@@ -180,8 +187,8 @@ private struct SCBottomBarGlassBackground: View {
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color.white.opacity(0.22),
-                            Color.white.opacity(0.04),
+                            Color.white.opacity(0.24),
+                            Color.white.opacity(0.05),
                             Color.clear,
                         ],
                         startPoint: .top,
@@ -189,12 +196,17 @@ private struct SCBottomBarGlassBackground: View {
                     ),
                     style: FillStyle(eoFill: true)
                 )
+
+            shape
+                .stroke(Color.white.opacity(0.10), lineWidth: 0.5)
         }
+        .compositingGroup()
         .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: -2)
         .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: -1)
     }
 }
 
+/// Reference: `border-bottom-left-radius:30px; border-bottom-right-radius:30px` with radial cutout.
 private struct SCBottomBarRadialGlassShape: Shape {
     var holeCenterX: CGFloat
     var holeCenterY: CGFloat
@@ -210,7 +222,12 @@ private struct SCBottomBarRadialGlassShape: Shape {
         var path = Path()
         path.addRoundedRect(
             in: CGRect(x: 0, y: 0, width: rect.width, height: rect.height),
-            cornerSize: CGSize(width: cornerRadius, height: cornerRadius),
+            cornerRadii: RectangleCornerRadii(
+                topLeading: 0,
+                bottomLeading: cornerRadius,
+                bottomTrailing: cornerRadius,
+                topTrailing: 0
+            ),
             style: .continuous
         )
         path.addEllipse(
@@ -225,39 +242,13 @@ private struct SCBottomBarRadialGlassShape: Shape {
     }
 }
 
+/// Reference: `background-color:#000000; box-shadow: var(--main-cast-shadow); border-radius:50%`
 private struct SCBottomBarIndicator: View {
     var body: some View {
-        ZStack {
-            Circle()
-                .fill(
-                    RadialGradient(
-                        colors: [
-                            Color(red: 0.22, green: 0.22, blue: 0.24),
-                            Color.black,
-                        ],
-                        center: .topLeading,
-                        startRadius: 4,
-                        endRadius: 34
-                    )
-                )
-            Circle()
-                .stroke(Color.white.opacity(0.14), lineWidth: 1)
-            Circle()
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.white.opacity(0.28),
-                            Color.clear,
-                        ],
-                        startPoint: .top,
-                        endPoint: .center
-                    )
-                )
-                .padding(6)
-                .clipShape(Circle())
-        }
-        .frame(width: SCBarMetrics.indicatorSize, height: SCBarMetrics.indicatorSize)
-        .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 3)
-        .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 3)
+        Circle()
+            .fill(Color.black)
+            .frame(width: SCBarMetrics.indicatorSize, height: SCBarMetrics.indicatorSize)
+            .shadow(color: Color.black.opacity(0.12), radius: 12, x: 0, y: 3)
+            .shadow(color: Color.black.opacity(0.08), radius: 6, x: 0, y: 3)
     }
 }
