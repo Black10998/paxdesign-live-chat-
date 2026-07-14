@@ -5,7 +5,8 @@ import SwiftUI
 enum UiverseMenuMetrics {
     static let horizontalMargin: CGFloat = 10
     static let maxWidth: CGFloat = 520
-    static let bottomOffset: CGFloat = 12
+    /// Small gap above the home indicator (native iOS tab bar feel).
+    static let bottomOffset: CGFloat = 4
     static let menuPadding: CGFloat = 8
     static let itemGap: CGFloat = 8
     static let itemPaddingVertical: CGFloat = 10
@@ -32,18 +33,49 @@ enum UiverseMenuMetrics {
     }
 }
 
-private enum UiverseMenuStyle {
-    static let glassBorder = Color.white.opacity(0.35)
-    static let menuBackground = Color(red: 0, green: 122 / 255, blue: 1, opacity: 0.404)
-    static let inactiveColor = Color.white.opacity(0.9)
-    static let activeColor = Color(red: 0, green: 122 / 255, blue: 1, opacity: 0.9)
-    static let activeBackground = Color(red: 237 / 255, green: 237 / 255, blue: 237 / 255, opacity: 0.6)
-    static let hoverBackground = Color.white.opacity(0.3)
-    static let hoverColor = Color(red: 0, green: 122 / 255, blue: 1, opacity: 0.7)
-    static let menuShadow = Color.black.opacity(0.06)
+/// Adaptive glass palette — same Apple glass style, colors follow system appearance.
+private struct UiverseMenuPalette {
+    let colorScheme: ColorScheme
+
+    var menuBackground: Color {
+        Color(red: 0, green: 122 / 255, blue: 1, opacity: colorScheme == .dark ? 0.34 : 0.404)
+    }
+
+    var inactiveColor: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.88)
+            : Color.white.opacity(0.9)
+    }
+
+    var activeColor: Color {
+        Color(red: 0, green: 122 / 255, blue: 1, opacity: colorScheme == .dark ? 0.95 : 0.9)
+    }
+
+    var activeBackground: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.16)
+            : Color(red: 237 / 255, green: 237 / 255, blue: 237 / 255, opacity: 0.6)
+    }
+
+    var glassBorder: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.2)
+            : Color.white.opacity(0.35)
+    }
+
+    var menuShadow: Color {
+        colorScheme == .dark
+            ? Color.black.opacity(0.28)
+            : Color.black.opacity(0.06)
+    }
+
+    var insetHighlight: Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.22)
+            : Color.white.opacity(0.4)
+    }
 
     static let springAnimation = Animation.timingCurve(0.34, 1.56, 0.64, 1, duration: 0.18)
-    static let shadowAnimation = Animation.easeInOut(duration: 0.3)
 }
 
 struct UiverseMenuBarItem: Identifiable {
@@ -59,6 +91,12 @@ struct UiverseMenuBarView: View {
     let items: [UiverseMenuBarItem]
     @Binding var selection: Int
     let reduceMotion: Bool
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var palette: UiverseMenuPalette {
+        UiverseMenuPalette(colorScheme: colorScheme)
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -78,14 +116,15 @@ struct UiverseMenuBarView: View {
             }
         }
         .padding(UiverseMenuMetrics.menuPadding)
-        .background { UiverseMenuGlassBackground() }
+        .background { UiverseMenuGlassBackground(palette: palette) }
         .clipShape(Capsule())
-        .overlay { UiverseMenuInsetHighlightOverlay() }
+        .overlay { UiverseMenuInsetHighlightOverlay(palette: palette) }
         .overlay {
             Capsule()
-                .strokeBorder(UiverseMenuStyle.glassBorder, lineWidth: 1)
+                .strokeBorder(palette.glassBorder, lineWidth: 1)
         }
-        .shadow(color: UiverseMenuStyle.menuShadow, radius: 30, x: 0, y: 10)
+        .shadow(color: palette.menuShadow, radius: 30, x: 0, y: 10)
+        .animation(reduceMotion ? nil : UiverseMenuPalette.springAnimation, value: colorScheme)
     }
 
     private func menuItem(_ item: UiverseMenuBarItem) -> some View {
@@ -98,7 +137,7 @@ struct UiverseMenuBarView: View {
             VStack(spacing: UiverseMenuMetrics.labelMarginTop) {
                 UiverseMenuIcons.icon(
                     item.glyph,
-                    color: isActive ? UiverseMenuStyle.activeColor : UiverseMenuStyle.inactiveColor,
+                    color: isActive ? palette.activeColor : palette.inactiveColor,
                     size: UiverseMenuMetrics.iconSize
                 )
                 Text(item.title)
@@ -106,15 +145,16 @@ struct UiverseMenuBarView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
-            .foregroundStyle(isActive ? UiverseMenuStyle.activeColor : UiverseMenuStyle.inactiveColor)
+            .foregroundStyle(isActive ? palette.activeColor : palette.inactiveColor)
             .frame(maxWidth: .infinity)
             .padding(.vertical, UiverseMenuMetrics.itemPaddingVertical)
             .padding(.horizontal, UiverseMenuMetrics.itemPaddingHorizontal)
             .background {
                 Capsule()
-                    .fill(isActive ? UiverseMenuStyle.activeBackground : Color.clear)
+                    .fill(isActive ? palette.activeBackground : Color.clear)
             }
-            .animation(reduceMotion ? nil : UiverseMenuStyle.springAnimation, value: isActive)
+            .animation(reduceMotion ? nil : UiverseMenuPalette.springAnimation, value: isActive)
+            .animation(reduceMotion ? nil : UiverseMenuPalette.springAnimation, value: colorScheme)
         }
         .buttonStyle(UiverseMenuItemButtonStyle(reduceMotion: reduceMotion))
         .accessibilityLabel(item.title)
@@ -125,49 +165,50 @@ struct UiverseMenuBarView: View {
 // MARK: - Glass background (backdrop-filter: blur(12px) saturate(180%) contrast(200%))
 
 private struct UiverseMenuGlassBackground: View {
+    let palette: UiverseMenuPalette
+
     var body: some View {
         ZStack {
             UiverseMenuBackdropBlur()
-            UiverseMenuStyle.menuBackground
+            palette.menuBackground
         }
     }
 }
 
 private struct UiverseMenuBackdropBlur: UIViewRepresentable {
+    @Environment(\.colorScheme) private var colorScheme
+
     func makeUIView(context: Context) -> UIVisualEffectView {
-        let view = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+        let view = UIVisualEffectView(effect: blurEffect)
         view.backgroundColor = .clear
         return view
     }
 
-    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {}
+    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {
+        uiView.effect = blurEffect
+    }
+
+    private var blurEffect: UIBlurEffect {
+        UIBlurEffect(style: colorScheme == .dark ? .systemUltraThinMaterialDark : .systemUltraThinMaterialLight)
+    }
 }
 
-/// Reference `.menu::after` inset highlight shadows.
+/// Reference `.menu::after` inset highlight shadows (no top separator line).
 private struct UiverseMenuInsetHighlightOverlay: View {
+    let palette: UiverseMenuPalette
+
     var body: some View {
         Capsule()
-            .strokeBorder(Color.clear, lineWidth: 0)
-            .background {
-                Capsule()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.4), Color.clear],
-                            startPoint: .topLeading,
-                            endPoint: .center
-                        )
-                    )
-                    .padding(2)
-                    .blur(radius: 2)
-                    .mask(Capsule())
-            }
-            .overlay(alignment: .topLeading) {
-                Capsule()
-                    .fill(Color.white.opacity(0.2))
-                    .frame(height: 2)
-                    .padding(.horizontal, 8)
-                    .offset(y: 1)
-            }
+            .fill(
+                LinearGradient(
+                    colors: [palette.insetHighlight, Color.clear],
+                    startPoint: .topLeading,
+                    endPoint: .center
+                )
+            )
+            .padding(2)
+            .blur(radius: 2)
+            .mask(Capsule())
             .allowsHitTesting(false)
     }
 }
@@ -180,6 +221,6 @@ private struct UiverseMenuItemButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(reduceMotion ? nil : UiverseMenuStyle.springAnimation, value: configuration.isPressed)
+            .animation(reduceMotion ? nil : UiverseMenuPalette.springAnimation, value: configuration.isPressed)
     }
 }
