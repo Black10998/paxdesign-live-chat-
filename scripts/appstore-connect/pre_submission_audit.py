@@ -59,7 +59,11 @@ def warn_check(label: str, ok: bool, detail: str) -> bool:
 
 def url_ok(url: str) -> tuple[bool, str]:
     try:
-        req = urllib.request.Request(url, method="HEAD")
+        req = urllib.request.Request(
+            url,
+            method="GET",
+            headers={"User-Agent": "Mozilla/5.0 (compatible; PAXDesignASCVerify/1.0)"},
+        )
         with urllib.request.urlopen(req, timeout=20) as resp:
             code = resp.status
             return 200 <= code < 400, f"HTTP {code}"
@@ -381,7 +385,7 @@ def main() -> None:
 
     # Copyright on version
     copyright_text = vattrs.get("copyright", "")
-    expected_copyright = metadata.get("copyright", "")
+    expected_copyright = os.environ.get("APP_STORE_COPYRIGHT", metadata.get("copyright", ""))
     results.append(
         check(
             "Copyright",
@@ -476,7 +480,14 @@ def main() -> None:
     # Demo credentials are usually in notes, not a separate API field for password
     has_login_hint = any(
         token in notes.lower()
-        for token in ("password", "application password", "username", "login", "demo")
+        for token in (
+            "password",
+            "application password",
+            "username",
+            "test@apple.app.com",
+            "sign in",
+            "sign-in",
+        )
     )
     results.append(
         check(

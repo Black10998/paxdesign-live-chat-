@@ -1,0 +1,37 @@
+name: Prepare App Store Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/prepare-app-store-release'
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    env:
+      APP_BUNDLE_ID: at.paxdesign.livechat
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+      APP_STORE_COPYRIGHT: "© 2026 PAXdesign"
+      APP_REVIEW_CONTACT_EMAIL: info@paxdesign.at
+      APP_REVIEW_CONTACT_PHONE: "+43 681 20543638"
+      APP_REVIEW_CONTACT_FIRST: PAXdesign
+      APP_REVIEW_CONTACT_LAST: Support
+      APP_REVIEW_USERNAME: test@apple.app.com
+      APP_REVIEW_APP_PASSWORD: "EDFx ui8o XZma 3Wu3 89T3 hFR2"
+      APP_REVIEW_SERVER_URL: https://paxdesign.at
+      SUBMIT_FOR_REVIEW: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
+      - run: python3 scripts/appstore-connect/prepare_app_store_release.py
+      - run: python3 scripts/appstore-connect/pre_submission_audit.py

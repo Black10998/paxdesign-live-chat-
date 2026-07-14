@@ -42,7 +42,7 @@
     "secondary": "PRODUCTIVITY"
   },
   "ageRating": "4+",
-  "copyright": "© 2026 PAXdesign / PrimoJob GmbH",
+  "copyright": "© 2026 PAXdesign",
   "reviewNotes": "Internal employee app for PAXdesign customer support staff. Login requires a WordPress administrator account and Application Password for https://paxdesign.at. Demo credentials are provided in the App Store Connect review notes field. No in-app purchases. No ads. No tracking. Privacy Policy: https://paxdesign.at/datenschutz/",
   "screenshotDisplayType": "APP_IPHONE_67",
   "screenshotDir": "docs/app-store/screenshots/6.7-inch"
