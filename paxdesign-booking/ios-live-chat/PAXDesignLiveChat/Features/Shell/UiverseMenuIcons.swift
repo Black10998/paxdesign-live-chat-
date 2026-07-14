@@ -255,10 +255,10 @@ private enum UiverseMenuSVGPathParser {
                 }
                 lastCommand = "T"
             case "A":
-                while let rx = readNumber(), let ry = readNumber(), _ = readNumber(),
+                while let rx = readNumber(), let ry = readNumber(), let angle = readNumber(),
                       let largeArc = readNumber(), let sweep = readNumber(), let end = readPoint() {
                     let absEnd = isRelative ? CGPoint(x: current.x + end.x, y: current.y + end.y) : end
-                    addArc(to: &path, from: current, to: absEnd, rx: rx, ry: ry,
+                    addArc(to: &path, from: current, to: absEnd, rx: rx, ry: ry, angle: angle,
                            largeArc: largeArc != 0, sweep: sweep != 0, transform: transform)
                     current = absEnd
                 }
@@ -276,8 +276,9 @@ private enum UiverseMenuSVGPathParser {
 
     private static func addArc(
         to path: inout Path, from start: CGPoint, to end: CGPoint,
-        rx: CGFloat, ry: CGFloat, largeArc: Bool, sweep: Bool, transform: CGAffineTransform
+        rx: CGFloat, ry: CGFloat, angle: CGFloat, largeArc: Bool, sweep: Bool, transform: CGAffineTransform
     ) {
+        _ = angle
         guard start != end else { return }
         var rx = abs(rx), ry = abs(ry)
         if rx == 0 || ry == 0 { path.addLine(to: end.applying(transform)); return }
