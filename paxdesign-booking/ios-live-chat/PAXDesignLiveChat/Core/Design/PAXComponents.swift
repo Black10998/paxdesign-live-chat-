@@ -482,7 +482,7 @@ enum PAXShellLayout {
     }
 
     static var uiverseMenuScrollInset: CGFloat {
-        UiverseMenuMetrics.scrollInset + bottomSafeArea
+        UiverseMenuMetrics.scrollInset
     }
 
     /// Full obstruction from the bottom edge: tab bar chrome + home indicator + breathing room.

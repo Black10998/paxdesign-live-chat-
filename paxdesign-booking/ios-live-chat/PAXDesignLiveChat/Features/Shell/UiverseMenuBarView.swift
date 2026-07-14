@@ -5,8 +5,8 @@ import SwiftUI
 enum UiverseMenuMetrics {
     static let horizontalMargin: CGFloat = 10
     static let maxWidth: CGFloat = 520
-    /// Flush with safe-area padding for a native iOS tab bar feel.
-    static let bottomOffset: CGFloat = 0
+    /// ~1 mm above the Home Indicator (≈3 pt @ 326 ppi).
+    static let homeIndicatorGap: CGFloat = 3
     static let menuPadding: CGFloat = 8
     static let itemGap: CGFloat = 8
     static let itemPaddingVertical: CGFloat = 10
@@ -15,7 +15,13 @@ enum UiverseMenuMetrics {
     static let labelFontSize: CGFloat = 12.8
     static let labelMarginTop: CGFloat = 4
     static let pillRadius: CGFloat = 9_999
-    static let scrollCompressedScale: CGFloat = 0.94
+
+    static let scrollScaleFull: CGFloat = 1.0
+    static let scrollScaleStage2: CGFloat = 0.90
+    static let scrollScaleStage3: CGFloat = 0.82
+    static let scrollCompressionStart: CGFloat = 8
+    static let scrollStage1Distance: CGFloat = 50
+    static let scrollStage2Distance: CGFloat = 80
 
     static var itemContentHeight: CGFloat {
         iconSize + labelMarginTop + labelFontSize
@@ -30,7 +36,7 @@ enum UiverseMenuMetrics {
     }
 
     static var scrollInset: CGFloat {
-        bottomOffset + menuHeight + 12
+        menuHeight + homeIndicatorGap + 12
     }
 }
 
@@ -38,53 +44,56 @@ enum UiverseMenuMetrics {
 
 @MainActor
 final class UiverseMenuScrollState: ObservableObject {
-    @Published private(set) var barScale: CGFloat = 1
-
-    private var lastOffset: CGFloat = 0
+    @Published private(set) var barScale: CGFloat = UiverseMenuMetrics.scrollScaleFull
 
     func ingestScrollOffset(_ offset: CGFloat, reduceMotion: Bool) {
-        let delta = offset - lastOffset
-        lastOffset = offset
-
-        let target: CGFloat
-        if offset <= 8 {
-            target = 1
-        } else if delta > 1.5 {
-            target = UiverseMenuMetrics.scrollCompressedScale
-        } else if delta < -1.5 {
-            target = 1
-        } else {
-            return
-        }
-        applyScale(target, reduceMotion: reduceMotion)
+        let scale = Self.scale(forScrollOffset: offset)
+        guard abs(barScale - scale) > 0.0005 else { return }
+        barScale = scale
     }
 
     func reset(reduceMotion: Bool) {
-        lastOffset = 0
-        applyScale(1, reduceMotion: reduceMotion)
-    }
-
-    private func applyScale(_ scale: CGFloat, reduceMotion: Bool) {
-        guard abs(barScale - scale) > 0.001 else { return }
         if reduceMotion {
-            barScale = scale
+            barScale = UiverseMenuMetrics.scrollScaleFull
         } else {
             withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) {
-                barScale = scale
+                barScale = UiverseMenuMetrics.scrollScaleFull
             }
         }
     }
+
+    /// Progressive three-stage scale tied directly to scroll distance (no delta jumps).
+    static func scale(forScrollOffset offset: CGFloat) -> CGFloat {
+        let compressed = max(0, offset - UiverseMenuMetrics.scrollCompressionStart)
+        let d1 = UiverseMenuMetrics.scrollStage1Distance
+        let d2 = UiverseMenuMetrics.scrollStage2Distance
+
+        if compressed <= 0 {
+            return UiverseMenuMetrics.scrollScaleFull
+        }
+        if compressed <= d1 {
+            let t = compressed / d1
+            return UiverseMenuMetrics.scrollScaleFull
+                + t * (UiverseMenuMetrics.scrollScaleStage2 - UiverseMenuMetrics.scrollScaleFull)
+        }
+        if compressed <= d1 + d2 {
+            let t = (compressed - d1) / d2
+            return UiverseMenuMetrics.scrollScaleStage2
+                + t * (UiverseMenuMetrics.scrollScaleStage3 - UiverseMenuMetrics.scrollScaleStage2)
+        }
+        return UiverseMenuMetrics.scrollScaleStage3
+    }
 }
 
-/// Adaptive glass palette — distinct Light and Dark appearances, same structure.
+/// Adaptive glass palette — neutral system glass in Light/Dark, accent only on active tab.
 private struct UiverseMenuPalette {
     let colorScheme: ColorScheme
 
     var menuBackground: Color {
         Color(uiColor: UIColor { traits in
             traits.userInterfaceStyle == .dark
-                ? UIColor(red: 0.04, green: 0.22, blue: 0.42, alpha: 0.72)
-                : UIColor(red: 0, green: 0.478, blue: 1, alpha: 0.404)
+                ? UIColor(red: 0.14, green: 0.15, blue: 0.19, alpha: 0.58)
+                : UIColor(white: 1.0, alpha: 0.68)
         })
     }
 
@@ -92,7 +101,7 @@ private struct UiverseMenuPalette {
         Color(uiColor: UIColor { traits in
             traits.userInterfaceStyle == .dark
                 ? UIColor(white: 1, alpha: 0.74)
-                : UIColor(white: 1, alpha: 0.9)
+                : UIColor(white: 0.42, alpha: 0.88)
         })
     }
 
@@ -108,7 +117,7 @@ private struct UiverseMenuPalette {
         Color(uiColor: UIColor { traits in
             traits.userInterfaceStyle == .dark
                 ? UIColor(white: 1, alpha: 0.14)
-                : UIColor(red: 237 / 255, green: 237 / 255, blue: 237 / 255, alpha: 0.6)
+                : UIColor(white: 0.92, alpha: 0.55)
         })
     }
 
@@ -131,13 +140,12 @@ private struct UiverseMenuPalette {
     var insetHighlight: Color {
         Color(uiColor: UIColor { traits in
             traits.userInterfaceStyle == .dark
-                ? UIColor(white: 1, alpha: 0.1)
+                ? UIColor(white: 1, alpha: 0.08)
                 : UIColor(white: 1, alpha: 0.4)
         })
     }
 
     static let springAnimation = Animation.timingCurve(0.34, 1.56, 0.64, 1, duration: 0.18)
-    static let scrollScaleAnimation = Animation.spring(response: 0.38, dampingFraction: 0.84)
 }
 
 struct UiverseMenuBarItem: Identifiable {
@@ -167,7 +175,6 @@ struct UiverseMenuBarView: View {
                 .frame(maxWidth: UiverseMenuMetrics.maxWidth)
             Spacer(minLength: UiverseMenuMetrics.horizontalMargin)
         }
-        .padding(.bottom, UiverseMenuMetrics.bottomOffset)
         .accessibilityElement(children: .contain)
     }
 
@@ -224,7 +231,7 @@ struct UiverseMenuBarView: View {
     }
 }
 
-// MARK: - Glass background (backdrop-filter: blur(12px) saturate(180%) contrast(200%))
+// MARK: - Glass background (neutral system material + subtle tint)
 
 private struct UiverseMenuGlassBackground: View {
     let palette: UiverseMenuPalette
@@ -233,7 +240,7 @@ private struct UiverseMenuGlassBackground: View {
     var body: some View {
         ZStack {
             Rectangle()
-                .fill(colorScheme == .dark ? .ultraThinMaterial : .thinMaterial)
+                .fill(colorScheme == .dark ? .regularMaterial : .thinMaterial)
             palette.menuBackground
         }
     }

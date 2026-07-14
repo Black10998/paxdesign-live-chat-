@@ -152,7 +152,8 @@ struct AdaptiveShellView: View {
                     reduceMotion: reduceMotion
                 )
                 .scaleEffect(menuScrollState.barScale, anchor: .bottom)
-                .padding(.bottom, PAXShellLayout.bottomSafeArea)
+                .padding(.bottom, UiverseMenuMetrics.homeIndicatorGap)
+                .ignoresSafeArea(edges: .bottom)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
