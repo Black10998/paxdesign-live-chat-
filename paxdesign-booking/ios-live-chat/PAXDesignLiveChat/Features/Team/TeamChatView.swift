@@ -657,17 +657,15 @@ struct TeamComposeView: View {
     }
 
     private func loadStaff() async {
-        guard let api = auth.api else { return }
         isLoading = true
         defer { isLoading = false }
         do {
-            let response = try await api.fetchTeamContacts()
-            staff = response.staff
-                .deduplicatedByUserId()
-                .deduplicatedByEmail()
-                .deduplicatedByDisplayName()
+            staff = try await TeamContactsCache.shared.fetch(auth: auth, force: false)
+            errorMessage = nil
         } catch {
-            errorMessage = error.localizedDescription
+            if staff.isEmpty {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 

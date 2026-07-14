@@ -33,7 +33,7 @@ final class NetworkCircuitBreaker {
     private var consecutiveRateLimitHits = 0
 
     /// Hard cap: max REST requests per rolling second.
-    var maxRequestsPerSecond = 8
+    var maxRequestsPerSecond = 12
     /// Minimum pause after first edge 403/429.
     var minOpenDuration: TimeInterval = 300
     var maxOpenDuration: TimeInterval = 600
@@ -74,7 +74,17 @@ final class NetworkCircuitBreaker {
         requestTimestamps.append(now)
 
         let isSafeRead = method.uppercased() == "GET"
-            && (endpoint.hasPrefix("suggestions:") || endpoint.hasPrefix("poll:") || endpoint == "me")
+            && (endpoint.hasPrefix("suggestions:")
+                || endpoint.hasPrefix("poll:")
+                || endpoint == "me"
+                || endpoint == "team-contacts"
+                || endpoint == "team-sessions"
+                || endpoint == "team-management-overview"
+                || endpoint == "team-management-members"
+                || endpoint == "team-management-pending"
+                || endpoint == "team-management-policy"
+                || endpoint == "team-pending-requests"
+                || endpoint.hasPrefix("team-management-"))
         if !isSafeRead {
             guard inflightKeys.insert(endpoint).inserted else {
                 log.debug("dedupe skip endpoint=\(endpoint, privacy: .public)")

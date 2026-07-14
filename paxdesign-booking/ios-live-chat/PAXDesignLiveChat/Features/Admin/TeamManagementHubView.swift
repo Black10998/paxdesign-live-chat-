@@ -341,12 +341,12 @@ struct TeamManagementHubView: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            async let overviewTask = api.fetchTeamManagementOverview()
-            async let membersTask = api.fetchTeamManagementMembers()
-            async let pendingTask = api.fetchTeamManagementPendingRequests()
-            overview = try await overviewTask
-            members = try await membersTask.members
-            pendingRequests = try await pendingTask.sessions
+            let overviewResult = try await api.fetchTeamManagementOverview()
+            let membersResult = try await api.fetchTeamManagementMembers()
+            let pendingResult = try await api.fetchTeamManagementPendingRequests()
+            overview = overviewResult
+            members = membersResult.members
+            pendingRequests = pendingResult.sessions
             if let loadedPolicy = overview?.policy {
                 policy = loadedPolicy
                 requireAdminApproval = loadedPolicy.requireAdminApproval

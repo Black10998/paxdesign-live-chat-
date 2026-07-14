@@ -704,13 +704,14 @@ class PAXdesign_Live_Chat_Permissions {
 
         $seen_names  = array();
         $seen_emails = array();
+        $seen_uids   = array();
         $deduped     = array();
         foreach ($out as $item) {
             if (!is_array($item)) {
                 continue;
             }
             $uid = (int) (isset($item['user_id']) ? $item['user_id'] : 0);
-            if ($uid > 0 && isset($seen[$uid])) {
+            if ($uid > 0 && isset($seen_uids[$uid])) {
                 continue;
             }
             $email = strtolower(trim((string) (isset($item['email']) ? $item['email'] : '')));
@@ -722,7 +723,7 @@ class PAXdesign_Live_Chat_Permissions {
                 continue;
             }
             if ($uid > 0) {
-                $seen[$uid] = true;
+                $seen_uids[$uid] = true;
             }
             if ($email !== '') {
                 $seen_emails[$email] = true;

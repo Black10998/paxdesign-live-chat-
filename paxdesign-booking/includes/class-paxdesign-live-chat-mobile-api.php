@@ -601,21 +601,42 @@ class PAXdesign_Live_Chat_Mobile_API {
         ));
 
         register_rest_route(self::REST_NAMESPACE, '/live-admin/team/management/members', array(
-            'methods'             => array(WP_REST_Server::READABLE, WP_REST_Server::CREATABLE),
-            'callback'            => array(__CLASS__, 'route_team_management_members'),
-            'permission_callback' => $auth,
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array(__CLASS__, 'route_team_management_members'),
+                'permission_callback' => $auth,
+            ),
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array(__CLASS__, 'route_team_management_members'),
+                'permission_callback' => $auth,
+            ),
         ));
 
         register_rest_route(self::REST_NAMESPACE, '/live-admin/team/management/members/(?P<user_id>\d+)', array(
-            'methods'             => array(WP_REST_Server::EDITABLE, WP_REST_Server::DELETABLE),
-            'callback'            => array(__CLASS__, 'route_team_management_member'),
-            'permission_callback' => $auth,
+            array(
+                'methods'             => WP_REST_Server::EDITABLE,
+                'callback'            => array(__CLASS__, 'route_team_management_member'),
+                'permission_callback' => $auth,
+            ),
+            array(
+                'methods'             => WP_REST_Server::DELETABLE,
+                'callback'            => array(__CLASS__, 'route_team_management_member'),
+                'permission_callback' => $auth,
+            ),
         ));
 
         register_rest_route(self::REST_NAMESPACE, '/live-admin/team/management/policy', array(
-            'methods'             => array(WP_REST_Server::READABLE, WP_REST_Server::EDITABLE),
-            'callback'            => array(__CLASS__, 'route_team_management_policy'),
-            'permission_callback' => $auth,
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array(__CLASS__, 'route_team_management_policy'),
+                'permission_callback' => $auth,
+            ),
+            array(
+                'methods'             => WP_REST_Server::EDITABLE,
+                'callback'            => array(__CLASS__, 'route_team_management_policy'),
+                'permission_callback' => $auth,
+            ),
         ));
 
         register_rest_route(self::REST_NAMESPACE, '/live-admin/team/management/pending-requests', array(

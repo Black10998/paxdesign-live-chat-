@@ -682,7 +682,7 @@ final class LiveChatAPI {
         if let enabled { payload["enabled"] = enabled }
         if let permissions { payload["permissions"] = permissions.apiDictionary }
         let body = try JSONSerialization.data(withJSONObject: payload)
-        return try await perform(authRequest(url: url, method: "PUT", body: body), endpoint: "team-management-update", as: TeamManagementMemberResponse.self)
+        return try await perform(authRequest(url: url, method: "PATCH", body: body), endpoint: "team-management-update", as: TeamManagementMemberResponse.self)
     }
 
     func removeTeamManagementMember(userId: Int) async throws {
@@ -708,7 +708,7 @@ final class LiveChatAPI {
             "require_manager_approval": requireManagerApproval,
         ]
         let body = try JSONSerialization.data(withJSONObject: payload)
-        return try await perform(authRequest(url: url, method: "PUT", body: body), endpoint: "team-management-policy-save", as: TeamManagementPolicyResponse.self)
+        return try await perform(authRequest(url: url, method: "PATCH", body: body), endpoint: "team-management-policy-save", as: TeamManagementPolicyResponse.self)
     }
 
     func fetchTeamManagementPendingRequests() async throws -> SessionListResponse {

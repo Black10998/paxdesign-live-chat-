@@ -181,7 +181,7 @@ struct TeamMessagesHubView: View {
                         .foregroundStyle(PAXTheme.textSecondary)
                         .padding(.vertical, 8)
                 } else {
-                    ForEach(contactsWithoutActiveConversations) { member in
+                    ForEach(teamContacts) { member in
                         TeamHubMemberRow(
                             member: member,
                             isOpening: openingContactId == member.userId
@@ -298,11 +298,6 @@ struct TeamMessagesHubView: View {
         .paxPremiumGlass(tier: .standard, cornerRadius: 16)
     }
 
-    private var contactsWithoutActiveConversations: [StaffMember] {
-        let activeOtherIds = Set(displayedSessions.map(\.otherUserId).filter { $0 > 0 })
-        return teamContacts.filter { !activeOtherIds.contains($0.userId) }
-    }
-
     private func conversationRow(_ session: LiveSession) -> some View {
         let isUnread = settings.isSessionUnread(session)
         return Button {
@@ -382,29 +377,16 @@ struct TeamMessagesHubView: View {
     }
 
     private func loadContacts(force: Bool = false) async {
-        guard canComposeTeam, let api = auth.api else { return }
+        guard canComposeTeam, auth.isLoggedIn else { return }
         contactsLoading = true
         defer { contactsLoading = false }
-        if let response = try? await api.fetchTeamContacts() {
-            let currentId = auth.profile?.userId ?? 0
-            teamContacts = response.staff
-                .deduplicatedByUserId()
-                .deduplicatedByEmail()
-                .deduplicatedByDisplayName()
-                .filter { $0.userId != currentId && $0.enabled }
-                .sorted { lhs, rhs in
-                    let rank: (StaffMember) -> Int = { member in
-                        if member.isExecutive { return 0 }
-                        if member.isAdministrator { return 1 }
-                        if member.permissions.manageUsers { return 2 }
-                        return 3
-                    }
-                    let lr = rank(lhs)
-                    let rr = rank(rhs)
-                    if lr != rr { return lr < rr }
-                    return lhs.displayName.localizedCaseInsensitiveCompare(rhs.displayName) == .orderedAscending
-                }
+        do {
+            teamContacts = try await TeamContactsCache.shared.fetch(auth: auth, force: force)
             if force {
+                contactsRevision &+= 1
+            }
+        } catch {
+            if teamContacts.isEmpty {
                 contactsRevision &+= 1
             }
         }
