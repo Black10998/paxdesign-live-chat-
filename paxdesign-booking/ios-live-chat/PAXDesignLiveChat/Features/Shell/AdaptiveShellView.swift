@@ -68,14 +68,24 @@ struct AdaptiveShellView: View {
         !isPad && !isShellDetailActive
     }
 
+    private var scBottomBarItems: [SCBottomBarItem] {
+        iPhoneTabItems.map { item in
+            SCBottomBarItem(
+                tag: item.tag,
+                glyph: item.glyph,
+                title: item.title,
+                badgeCount: item.badgeCount
+            )
+        }
+    }
+
     private var iPhoneTabItems: [ShellTabItem] {
         let tags = tabTags
         var items: [ShellTabItem] = [
             .init(
                 tag: tags.dashboard,
                 title: L10n.TabDashboard,
-                symbol: "chart.bar.doc.horizontal",
-                selectedSymbol: "chart.bar.doc.horizontal.fill"
+                glyph: .list
             )
         ]
 
@@ -84,8 +94,7 @@ struct AdaptiveShellView: View {
                 .init(
                     tag: chatsTag,
                     title: L10n.TabChats,
-                    symbol: "bubble.left.and.bubble.right",
-                    selectedSymbol: "bubble.left.and.bubble.right.fill",
+                    glyph: .comments,
                     badgeCount: unreadChatCount
                 )
             )
@@ -96,8 +105,7 @@ struct AdaptiveShellView: View {
                 .init(
                     tag: teamTag,
                     title: L10n.TabTeam,
-                    symbol: "person.3.sequence",
-                    selectedSymbol: "person.3.sequence.fill",
+                    glyph: .users,
                     badgeCount: unreadTeamCount
                 )
             )
@@ -107,8 +115,7 @@ struct AdaptiveShellView: View {
             .init(
                 tag: tags.live,
                 title: L10n.TabLive,
-                symbol: "bell.and.waves.left.and.right",
-                selectedSymbol: "bell.and.waves.left.and.right.fill",
+                glyph: .bell,
                 badgeCount: coordinator.liveCount
             )
         )
@@ -116,8 +123,7 @@ struct AdaptiveShellView: View {
             .init(
                 tag: tags.platform,
                 title: L10n.TabPlatform,
-                symbol: "square.grid.2x2",
-                selectedSymbol: "square.grid.2x2.fill"
+                glyph: .calendarAlt
             )
         )
         return items
@@ -143,8 +149,8 @@ struct AdaptiveShellView: View {
         }
         .overlay(alignment: .bottom) {
             if shouldShowBottomTabBar {
-                PAXBottomTabBar(
-                    items: iPhoneTabItems,
+                SCBottomBarView(
+                    items: scBottomBarItems,
                     selection: $selectedTab,
                     reduceMotion: reduceMotion
                 )
@@ -153,7 +159,7 @@ struct AdaptiveShellView: View {
         }
         .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.9), value: shouldShowBottomTabBar)
         .environment(\.shellTabBarVisible, shouldShowBottomTabBar)
-        .environment(\.shellTabBarScrollInset, shouldShowBottomTabBar ? PAXShellLayout.tabBarScrollInset : 0)
+        .environment(\.shellTabBarScrollInset, shouldShowBottomTabBar ? PAXShellLayout.scBottomBarScrollInset : 0)
         .tint(PAXTheme.accent)
         .sheet(isPresented: $showGlobalSearch) {
             NavigationStack { GlobalSearchView() }
@@ -455,113 +461,8 @@ struct AdaptiveShellView: View {
 private struct ShellTabItem: Identifiable {
     let tag: Int
     let title: String
-    let symbol: String
-    let selectedSymbol: String
+    let glyph: SCBottomBarIcons.Glyph
     var badgeCount: Int = 0
 
     var id: Int { tag }
-}
-
-private struct PAXBottomTabBar: View {
-    let items: [ShellTabItem]
-    @Binding var selection: Int
-    let reduceMotion: Bool
-
-    var body: some View {
-        VStack(spacing: 0) {
-            Rectangle()
-                .fill(PAXTheme.border.opacity(0.35))
-                .frame(height: 0.33)
-
-            HStack(spacing: 0) {
-                ForEach(items) { item in
-                    button(for: item)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: PAXShellLayout.tabBarContentHeight)
-            .padding(.horizontal, 4)
-        }
-        .background {
-            PAXTabBarGlassBackground()
-                .ignoresSafeArea(edges: .bottom)
-        }
-        .accessibilityElement(children: .contain)
-    }
-
-    private func button(for item: ShellTabItem) -> some View {
-        let selected = selection == item.tag
-        return Button {
-            if selection != item.tag {
-                if reduceMotion {
-                    selection = item.tag
-                } else {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
-                        selection = item.tag
-                    }
-                }
-                PAXHaptics.light()
-            }
-        } label: {
-            VStack(spacing: 3) {
-                ZStack(alignment: .topTrailing) {
-                    PAXAnimatedTabIcon(
-                        symbol: item.symbol,
-                        selectedSymbol: item.selectedSymbol,
-                        isSelected: selected,
-                        reduceMotion: reduceMotion
-                    )
-
-                    if item.badgeCount > 0 {
-                        Text("\(min(item.badgeCount, 99))")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 4.5)
-                            .padding(.vertical, 1.5)
-                            .background(Capsule().fill(PAXTheme.danger))
-                            .offset(x: 10, y: -6)
-                            .transition(.scale.combined(with: .opacity))
-                    }
-                }
-
-                Text(item.title)
-                    .font(.system(size: 10, weight: selected ? .semibold : .regular))
-                    .foregroundStyle(selected ? PAXTheme.textPrimary : PAXTheme.textSecondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-
-                Capsule()
-                    .fill(selected ? PAXTheme.icon : Color.clear)
-                    .frame(width: selected ? 4 : 0, height: 4)
-                    .animation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.8), value: selected)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.top, 6)
-            .padding(.bottom, 2)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PAXIconTapStyle())
-        .accessibilityLabel(item.title)
-        .accessibilityValue(selected ? L10n.ShellSelected : "")
-    }
-}
-
-private struct PAXTabBarGlassBackground: View {
-    var body: some View {
-        Rectangle()
-            .fill(.bar)
-    }
-}
-
-private struct PAXAnimatedTabIcon: View {
-    let symbol: String
-    let selectedSymbol: String
-    let isSelected: Bool
-    let reduceMotion: Bool
-
-    var body: some View {
-        PAXIcon(isSelected ? selectedSymbol : symbol, size: .tab, emphasis: isSelected ? .primary : .tertiary)
-            .scaleEffect(isSelected ? 1.08 : 1)
-            .animation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.76), value: isSelected)
-    }
 }
