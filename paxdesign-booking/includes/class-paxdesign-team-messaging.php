@@ -214,6 +214,8 @@ class PAXdesign_Team_Messaging {
             return strcmp((string) $b['updated_at'], (string) $a['updated_at']);
         });
 
+        $sessions = self::dedupe_sessions_by_other_user($sessions);
+
         $threads = array();
         if ($include_threads) {
             foreach ($sessions as $session) {
@@ -1751,5 +1753,288 @@ class PAXdesign_Team_Messaging {
                 'session' => self::format_session_row($conv_id, $conv, $current_user_id),
             );
         });
+    }
+
+    /**
+     * One-time reconciliation after upgrades: canonicalize conversation ids,
+     * merge duplicate participant pairs, and purge orphan records.
+     */
+    public static function maybe_reconcile_store() {
+        $flag = 'paxdesign_team_store_reconciled_' . PAXDESIGN_BOOKING_VERSION;
+        if (get_option($flag)) {
+            return;
+        }
+        self::reconcile_team_store();
+        update_option($flag, gmdate('c'), false);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function reconcile_team_store() {
+        $result = self::with_write_lock('reconcile', function () {
+            $all     = self::all_conversations();
+            $merged  = array();
+            $orphans = array();
+
+            foreach ($all as $conv_id => $conv) {
+                if (!is_array($conv)) {
+                    $orphans[] = $conv_id;
+                    continue;
+                }
+
+                $participants = isset($conv['participants']) && is_array($conv['participants'])
+                    ? array_values(array_unique(array_filter(array_map('absint', $conv['participants']))))
+                    : array();
+                sort($participants);
+
+                if (count($participants) < 2 || $participants[0] === $participants[1]) {
+                    $orphans[] = $conv_id;
+                    continue;
+                }
+
+                $canonical_id = self::conversation_id($participants[0], $participants[1]);
+                if (!isset($merged[$canonical_id])) {
+                    $merged[$canonical_id] = self::blank_conversation($participants);
+                }
+
+                self::merge_conversation_record(
+                    $merged[$canonical_id],
+                    $conv,
+                    $conv_id,
+                    $canonical_id
+                );
+
+                if ($conv_id !== $canonical_id) {
+                    $orphans[] = $conv_id;
+                }
+            }
+
+            foreach ($orphans as $orphan_id) {
+                if (isset($merged[$orphan_id])) {
+                    continue;
+                }
+                if (class_exists('PAXdesign_Message_Store')) {
+                    PAXdesign_Message_Store::delete_session($orphan_id);
+                }
+            }
+
+            self::save_conversations($merged);
+
+            return array(
+                'ok'               => true,
+                'conversation_count' => count($merged),
+                'purged_orphans'   => count($orphans),
+            );
+        });
+
+        if (is_wp_error($result)) {
+            return array('ok' => false, 'error' => $result->get_error_code());
+        }
+
+        return $result;
+    }
+
+    /**
+     * Permanently delete a single team message (Executive Administrator only).
+     *
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function delete_message($conv_id, $current_user_id, $message_id) {
+        $conv_id         = sanitize_text_field($conv_id);
+        $current_user_id = absint($current_user_id);
+        $message_id      = absint($message_id);
+
+        if (!PAXdesign_Live_Chat_Permissions::is_super_admin($current_user_id)) {
+            return new WP_Error('pax_team_forbidden', 'Executive Administrator permission required.', array('status' => 403));
+        }
+        if ($message_id <= 0) {
+            return new WP_Error('pax_team_invalid', 'Invalid message.', array('status' => 400));
+        }
+
+        return self::with_write_lock('delete_msg:' . $conv_id, function () use ($conv_id, $current_user_id, $message_id) {
+            $all = self::all_conversations();
+            if (!isset($all[$conv_id]) || !is_array($all[$conv_id])) {
+                return new WP_Error('pax_team_not_found', 'Conversation not found', array('status' => 404));
+            }
+
+            $conv = $all[$conv_id];
+            if (!self::user_in_conversation($conv, $current_user_id)) {
+                return new WP_Error('pax_team_forbidden', 'Not a participant', array('status' => 403));
+            }
+
+            if (!class_exists('PAXdesign_Message_Store')) {
+                return new WP_Error('pax_team_unavailable', 'Message store unavailable.', array('status' => 500));
+            }
+
+            $deleted = PAXdesign_Message_Store::delete_message(
+                $conv_id,
+                $message_id,
+                $current_user_id,
+                'team',
+                ''
+            );
+            if (is_wp_error($deleted)) {
+                return $deleted;
+            }
+
+            if (isset($conv['messages']) && is_array($conv['messages'])) {
+                $conv['messages'] = array_values(array_filter($conv['messages'], function ($row) use ($message_id) {
+                    return !(is_array($row) && isset($row['id']) && absint($row['id']) === $message_id);
+                }));
+            }
+            $latest = PAXdesign_Message_Store::latest_seq($conv_id, 'team');
+            $conv['seq'] = $latest;
+            $conv['updated_at'] = gmdate('Y-m-d H:i:s');
+            $all[$conv_id] = $conv;
+            self::save_conversations($all);
+
+            $participants = isset($conv['participants']) ? array_map('absint', $conv['participants']) : array();
+            if (class_exists('PAXdesign_Chat_Event_Bus')) {
+                PAXdesign_Chat_Event_Bus::emit_team($conv_id, 'message_deleted', array(
+                    'message_id'   => $message_id,
+                    'deleted_by'   => $current_user_id,
+                    'participants' => $participants,
+                    'permanent'    => true,
+                ));
+            }
+
+            return array(
+                'ok'         => true,
+                'message_id' => $message_id,
+            );
+        });
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $sessions
+     * @return array<int, array<string, mixed>>
+     */
+    private static function dedupe_sessions_by_other_user($sessions) {
+        $best = array();
+        foreach ($sessions as $session) {
+            if (!is_array($session)) {
+                continue;
+            }
+            $other_id = isset($session['other_user_id']) ? absint($session['other_user_id']) : 0;
+            if ($other_id <= 0) {
+                $best[] = $session;
+                continue;
+            }
+            if (!isset($best[$other_id])) {
+                $best[$other_id] = $session;
+                continue;
+            }
+            $existing = $best[$other_id];
+            $existing_ts = isset($existing['updated_at']) ? (string) $existing['updated_at'] : '';
+            $incoming_ts = isset($session['updated_at']) ? (string) $session['updated_at'] : '';
+            if (strcmp($incoming_ts, $existing_ts) > 0) {
+                $best[$other_id] = $session;
+            }
+        }
+
+        $out = array();
+        foreach ($best as $key => $session) {
+            if (is_int($key)) {
+                $out[] = $session;
+            } else {
+                $out[] = $session;
+            }
+        }
+
+        usort($out, function ($a, $b) {
+            $pa = !empty($a['is_pinned']) ? 1 : 0;
+            $pb = !empty($b['is_pinned']) ? 1 : 0;
+            if ($pa !== $pb) {
+                return $pb - $pa;
+            }
+            $ra = isset($a['other_role_rank']) ? (int) $a['other_role_rank'] : 99;
+            $rb = isset($b['other_role_rank']) ? (int) $b['other_role_rank'] : 99;
+            if ($ra !== $rb) {
+                return $ra - $rb;
+            }
+            return strcmp((string) $b['updated_at'], (string) $a['updated_at']);
+        });
+
+        return array_values($out);
+    }
+
+    /**
+     * @param array<int, int> $participants
+     * @return array<string, mixed>
+     */
+    private static function blank_conversation($participants) {
+        return array(
+            'participants'   => array_values($participants),
+            'messages'       => array(),
+            'read_seq'       => array(),
+            'hidden_for'     => array(),
+            'pinned_for'     => array(),
+            'muted_for'      => array(),
+            'request_status' => self::STATUS_ACCEPTED,
+            'requested_by'   => 0,
+            'requested_at'   => '',
+            'responded_at'   => '',
+            'responded_by'   => 0,
+            'request_note'   => '',
+            'assigned_to'    => 0,
+            'typing'         => array(),
+            'seq'            => 0,
+            'updated_at'     => gmdate('Y-m-d H:i:s'),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $target
+     * @param array<string, mixed> $source
+     * @param string               $source_id
+     * @param string               $canonical_id
+     */
+    private static function merge_conversation_record(&$target, $source, $source_id, $canonical_id) {
+        $target['participants'] = isset($source['participants']) && is_array($source['participants'])
+            ? array_values(array_unique(array_map('absint', $source['participants'])))
+            : $target['participants'];
+        sort($target['participants']);
+
+        foreach (array('read_seq', 'hidden_for', 'pinned_for', 'muted_for') as $list_key) {
+            if (!isset($target[$list_key]) || !is_array($target[$list_key])) {
+                $target[$list_key] = array();
+            }
+            if (isset($source[$list_key]) && is_array($source[$list_key])) {
+                if ($list_key === 'read_seq') {
+                    foreach ($source[$list_key] as $uid => $seq) {
+                        $uid_key = (string) absint($uid);
+                        $target[$list_key][$uid_key] = max(
+                            isset($target[$list_key][$uid_key]) ? absint($target[$list_key][$uid_key]) : 0,
+                            absint($seq)
+                        );
+                    }
+                } else {
+                    $merged = array_merge(
+                        array_map('absint', $target[$list_key]),
+                        array_map('absint', $source[$list_key])
+                    );
+                    $target[$list_key] = array_values(array_unique($merged));
+                }
+            }
+        }
+
+        $source_updated = isset($source['updated_at']) ? (string) $source['updated_at'] : '';
+        $target_updated = isset($target['updated_at']) ? (string) $target['updated_at'] : '';
+        if ($source_updated !== '' && strcmp($source_updated, $target_updated) > 0) {
+            $target['updated_at'] = $source_updated;
+        }
+
+        $source_seq = isset($source['seq']) ? absint($source['seq']) : 0;
+        $target['seq'] = max(isset($target['seq']) ? absint($target['seq']) : 0, $source_seq);
+
+        if (!empty($source['messages']) && is_array($source['messages']) && class_exists('PAXdesign_Message_Store')) {
+            PAXdesign_Message_Store::migrate_legacy($canonical_id, $source['messages'], 'team');
+        }
+        if ($source_id !== $canonical_id && class_exists('PAXdesign_Message_Store')) {
+            PAXdesign_Message_Store::reassign_session($source_id, $canonical_id, 'team');
+        }
+
+        $target['messages'] = array();
     }
 }

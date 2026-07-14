@@ -18,6 +18,7 @@ struct TeamMessagesHubView: View {
     @State private var contactsLoading = false
     @State private var contactsRevision = 0
     @State private var openingContactId: Int?
+    @State private var deletingSessionIds = Set<String>()
 
     var onOpenSession: (String) -> Void = { _ in }
 
@@ -180,7 +181,7 @@ struct TeamMessagesHubView: View {
                         .foregroundStyle(PAXTheme.textSecondary)
                         .padding(.vertical, 8)
                 } else {
-                    ForEach(teamContacts) { member in
+                    ForEach(contactsWithoutActiveConversations) { member in
                         TeamHubMemberRow(
                             member: member,
                             isOpening: openingContactId == member.userId
@@ -226,9 +227,17 @@ struct TeamMessagesHubView: View {
         if !displayedSessions.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 sectionHeader(L10n.TeamHubConversations)
-                ForEach(displayedSessions) { session in
-                    conversationRow(session)
+                List {
+                    ForEach(displayedSessions) { session in
+                        conversationRow(session)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                    }
                 }
+                .listStyle(.plain)
+                .scrollDisabled(true)
+                .frame(height: CGFloat(displayedSessions.count) * 72)
             }
         } else if teamCoordinator.isLoading {
             PAXScreenLoadingStack(status: L10n.LoadingTeamConversations, rowCount: 2)
@@ -289,6 +298,11 @@ struct TeamMessagesHubView: View {
         .paxPremiumGlass(tier: .standard, cornerRadius: 16)
     }
 
+    private var contactsWithoutActiveConversations: [StaffMember] {
+        let activeOtherIds = Set(displayedSessions.map(\.otherUserId).filter { $0 > 0 })
+        return teamContacts.filter { !activeOtherIds.contains($0.userId) }
+    }
+
     private func conversationRow(_ session: LiveSession) -> some View {
         let isUnread = settings.isSessionUnread(session)
         return Button {
@@ -326,6 +340,34 @@ struct TeamMessagesHubView: View {
             .paxPremiumGlass(tier: .subtle, cornerRadius: 14)
         }
         .buttonStyle(.plain)
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                Task { await deleteTeamSession(session) }
+            } label: {
+                Label { Text(L10n.CommonDelete) } icon: { PAXIcon("trash") }
+            }
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button(role: .destructive) {
+                Task { await deleteTeamSession(session) }
+            } label: {
+                Label { Text(L10n.CommonDelete) } icon: { PAXIcon("trash") }
+            }
+        }
+        .opacity(deletingSessionIds.contains(session.sessionId) ? 0.45 : 1)
+    }
+
+    private func deleteTeamSession(_ session: LiveSession) async {
+        guard !deletingSessionIds.contains(session.sessionId) else { return }
+        deletingSessionIds.insert(session.sessionId)
+        let result = await teamCoordinator.deleteConversation(sessionId: session.sessionId, mode: "hide", auth: auth)
+        deletingSessionIds.remove(session.sessionId)
+        if result.success {
+            displayedSessions.removeAll { $0.sessionId == session.sessionId }
+            settings.markSessionRead(session.sessionId, seq: session.seq)
+            PAXHaptics.success()
+            scheduleRecompute(immediate: true)
+        }
     }
 
     // MARK: - Data
@@ -347,6 +389,7 @@ struct TeamMessagesHubView: View {
             let currentId = auth.profile?.userId ?? 0
             teamContacts = response.staff
                 .deduplicatedByUserId()
+                .deduplicatedByEmail()
                 .deduplicatedByDisplayName()
                 .filter { $0.userId != currentId && $0.enabled }
                 .sorted { lhs, rhs in

@@ -146,6 +146,12 @@ final class ConversationHistoryStore {
         }
     }
 
+    func purge(sessionId: String) {
+        memory.removeValue(forKey: sessionId)
+        memoryOrder.removeAll { $0 == sessionId }
+        try? FileManager.default.removeItem(at: fileURL(for: sessionId))
+    }
+
     private func storeInMemory(_ snapshot: ConversationSnapshot) {
         memory[snapshot.sessionId] = snapshot
         memoryOrder.removeAll { $0 == snapshot.sessionId }

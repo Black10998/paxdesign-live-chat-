@@ -534,6 +534,12 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => $auth,
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/team/sessions/(?P<id>team_[0-9]+_[0-9]+)/messages/(?P<message_id>[0-9]+)', array(
+            'methods'             => WP_REST_Server::DELETABLE,
+            'callback'            => array(__CLASS__, 'route_team_delete_message'),
+            'permission_callback' => $auth,
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/team/sessions/(?P<id>team_[0-9]+_[0-9]+)', array(
             'methods'             => WP_REST_Server::DELETABLE,
             'callback'            => array(__CLASS__, 'route_team_delete'),
@@ -2092,6 +2098,20 @@ class PAXdesign_Live_Chat_Mobile_API {
             return self::respond(PAXdesign_Team_Messaging::purge_conversation($request['id'], $user_id));
         }
         return self::respond(PAXdesign_Team_Messaging::hide_conversation($request['id'], $user_id));
+    }
+
+    public static function route_team_delete_message(WP_REST_Request $request) {
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_VIEW_CHATS);
+        if (is_wp_error($check)) {
+            return $check;
+        }
+        $user_id = (int) wp_get_current_user()->ID;
+        $message_id = isset($request['message_id']) ? absint($request['message_id']) : 0;
+        return self::respond(PAXdesign_Team_Messaging::delete_message(
+            $request['id'],
+            $user_id,
+            $message_id
+        ));
     }
 
     public static function route_inbox_stream(WP_REST_Request $request) {

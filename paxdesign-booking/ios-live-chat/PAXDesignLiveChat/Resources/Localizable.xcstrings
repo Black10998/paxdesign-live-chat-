@@ -5809,6 +5809,28 @@
         }
       }
     },
+    "team.voice_tap_cancel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Press to cancel the conversation"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippen zum Abbrechen der Aufnahme"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اضغط لإلغاء المحادثة"
+          }
+        }
+      }
+    },
     "team.voice_playing": {
       "localizations": {
         "en": {

@@ -291,6 +291,7 @@ enum L10n {
     static var TeamRecordVoice: String { t("team.record_voice") }
     static var TeamSendVoice: String { t("team.send_voice") }
     static var TeamVoiceListening: String { t("team.voice_listening") }
+    static var TeamVoiceTapToCancel: String { t("team.voice_tap_cancel") }
     static var TeamVoicePlaying: String { t("team.voice_playing") }
     static var TeamVoicePaused: String { t("team.voice_paused") }
     static var TeamVoicePlay: String { t("team.voice_play") }

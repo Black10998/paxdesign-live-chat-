@@ -209,12 +209,21 @@ final class TeamMessagingCoordinator: ObservableObject {
 
     func deleteConversation(sessionId: String, mode: String, auth: AuthStore) async -> (success: Bool, message: String?) {
         guard let api = auth.api else { return (false, "Not signed in.") }
+        let previous = teamSessions
+        teamSessions.removeAll { $0.sessionId == sessionId }
+        persistTeamListCache()
+        ConversationHistoryStore.shared.purge(sessionId: sessionId)
+        ChatThreadRegistry.shared.teamThread(sessionId: sessionId).resetForLogout()
         do {
             let response = try await api.deleteTeamConversation(sessionId, mode: mode)
-            teamSessions.removeAll { $0.sessionId == sessionId }
-            await refresh(auth: auth)
+            if !response.ok {
+                teamSessions = previous
+                persistTeamListCache()
+            }
             return (response.ok, response.message)
         } catch {
+            teamSessions = previous
+            persistTeamListCache()
             return (false, error.localizedDescription)
         }
     }
@@ -347,6 +356,7 @@ final class TeamChatThreadModel: ObservableObject {
     @Published var otherPresence = "offline"
     @Published var otherLastSeen = 0
     @Published var failedClientMsgIds: Set<String> = []
+    @Published var deletingMessageIds: Set<Int> = []
 
     let sessionId: String
     var onConversationRemoved: (() -> Void)?
@@ -540,6 +550,7 @@ final class TeamChatThreadModel: ObservableObject {
         otherPresence = "offline"
         otherLastSeen = 0
         failedClientMsgIds = []
+        deletingMessageIds = []
         messagesRevision = 0
         auth = nil
     }
@@ -680,6 +691,12 @@ final class TeamChatThreadModel: ObservableObject {
                 await poll(auth: auth)
             }
         }
+        if event.type == "message_deleted" {
+            let messageId = StreamPayload.int(event.payload["message_id"])
+            if messageId > 0 {
+                applyPermanentMessageDeletion(messageId: messageId)
+            }
+        }
     }
 
     private func needsHistoryRecovery(throughSeq: Int) -> Bool {
@@ -814,8 +831,7 @@ final class TeamChatThreadModel: ObservableObject {
             currentSeq = max(currentSeq, sent.seq)
             PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
             MessageSendSound.shared.playIfEnabled()
-            await teamCoordinator.refresh(auth: auth)
-            await markRead(auth: auth)
+            schedulePostSendTasks(auth: auth, teamCoordinator: teamCoordinator)
             await poll(auth: auth)
             PAXHaptics.light()
         } catch {
@@ -875,27 +891,27 @@ final class TeamChatThreadModel: ObservableObject {
         )
         messages.append(optimistic)
         messagesRevision &+= 1
-        isSending = true
-        defer { isSending = false }
 
-        do {
-            let sent = try await api.sendTeamImage(
-                sessionId,
-                imageData: imageData,
-                filename: filename,
-                caption: caption,
-                clientMsgId: clientMsgId
-            )
-            insertIncomingMessages([sent.message])
-            messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
-            pollSeq = max(pollSeq, sent.seq)
-            currentSeq = max(currentSeq, sent.seq)
-            MessageSendSound.shared.playIfEnabled()
-            await teamCoordinator.refresh(auth: auth)
-            await markRead(auth: auth)
-            PAXHaptics.light()
-        } catch {
-            errorMessage = error.localizedDescription
+        Task {
+            do {
+                let sent = try await api.sendTeamImage(
+                    sessionId,
+                    imageData: imageData,
+                    filename: filename,
+                    caption: caption,
+                    clientMsgId: clientMsgId
+                )
+                insertIncomingMessages([sent.message])
+                messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
+                pollSeq = max(pollSeq, sent.seq)
+                currentSeq = max(currentSeq, sent.seq)
+                MessageSendSound.shared.playIfEnabled()
+                schedulePostSendTasks(auth: auth, teamCoordinator: teamCoordinator)
+                PAXHaptics.light()
+            } catch {
+                messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -927,29 +943,28 @@ final class TeamChatThreadModel: ObservableObject {
         )
         messages.append(optimistic)
         messagesRevision &+= 1
-        isSending = true
-        defer { isSending = false }
 
-        do {
-            let sent = try await api.sendTeamAudio(
-                sessionId,
-                audioData: audioData,
-                filename: filename,
-                duration: duration,
-                clientMsgId: clientMsgId
-            )
-            insertIncomingMessages([sent.message])
-            messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
-            pollSeq = max(pollSeq, sent.seq)
-            currentSeq = max(currentSeq, sent.seq)
-            failedClientMsgIds.remove(clientMsgId)
-            MessageSendSound.shared.playIfEnabled()
-            await teamCoordinator.refresh(auth: auth)
-            await markRead(auth: auth)
-            PAXHaptics.light()
-        } catch {
-            failedClientMsgIds.insert(clientMsgId)
-            errorMessage = error.localizedDescription
+        Task {
+            do {
+                let sent = try await api.sendTeamAudio(
+                    sessionId,
+                    audioData: audioData,
+                    filename: filename,
+                    duration: duration,
+                    clientMsgId: clientMsgId
+                )
+                insertIncomingMessages([sent.message])
+                messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
+                pollSeq = max(pollSeq, sent.seq)
+                currentSeq = max(currentSeq, sent.seq)
+                failedClientMsgIds.remove(clientMsgId)
+                MessageSendSound.shared.playIfEnabled()
+                schedulePostSendTasks(auth: auth, teamCoordinator: teamCoordinator)
+                PAXHaptics.light()
+            } catch {
+                failedClientMsgIds.insert(clientMsgId)
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -978,27 +993,27 @@ final class TeamChatThreadModel: ObservableObject {
         )
         messages.append(optimistic)
         messagesRevision &+= 1
-        isSending = true
-        defer { isSending = false }
 
-        do {
-            let sent = try await api.sendTeamLocation(
-                sessionId,
-                latitude: latitude,
-                longitude: longitude,
-                label: label,
-                clientMsgId: clientMsgId
-            )
-            insertIncomingMessages([sent.message])
-            messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
-            pollSeq = max(pollSeq, sent.seq)
-            currentSeq = max(currentSeq, sent.seq)
-            MessageSendSound.shared.playIfEnabled()
-            await teamCoordinator.refresh(auth: auth)
-            await markRead(auth: auth)
-            PAXHaptics.light()
-        } catch {
-            errorMessage = error.localizedDescription
+        Task {
+            do {
+                let sent = try await api.sendTeamLocation(
+                    sessionId,
+                    latitude: latitude,
+                    longitude: longitude,
+                    label: label,
+                    clientMsgId: clientMsgId
+                )
+                insertIncomingMessages([sent.message])
+                messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
+                pollSeq = max(pollSeq, sent.seq)
+                currentSeq = max(currentSeq, sent.seq)
+                MessageSendSound.shared.playIfEnabled()
+                schedulePostSendTasks(auth: auth, teamCoordinator: teamCoordinator)
+                PAXHaptics.light()
+            } catch {
+                messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
@@ -1026,28 +1041,67 @@ final class TeamChatThreadModel: ObservableObject {
         )
         messages.append(optimistic)
         messagesRevision &+= 1
-        isSending = true
-        defer { isSending = false }
 
+        Task {
+            do {
+                let sent = try await api.sendTeamFile(
+                    sessionId,
+                    fileData: fileData,
+                    filename: filename,
+                    caption: caption,
+                    clientMsgId: clientMsgId
+                )
+                insertIncomingMessages([sent.message])
+                messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
+                pollSeq = max(pollSeq, sent.seq)
+                currentSeq = max(currentSeq, sent.seq)
+                MessageSendSound.shared.playIfEnabled()
+                schedulePostSendTasks(auth: auth, teamCoordinator: teamCoordinator)
+                PAXHaptics.light()
+            } catch {
+                messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    func deleteMessage(_ messageId: Int, auth: AuthStore) async {
+        guard messageId > 0, let api = auth.api else { return }
+        applyPermanentMessageDeletion(messageId: messageId)
         do {
-            let sent = try await api.sendTeamFile(
-                sessionId,
-                fileData: fileData,
-                filename: filename,
-                caption: caption,
-                clientMsgId: clientMsgId
-            )
-            insertIncomingMessages([sent.message])
-            messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
-            pollSeq = max(pollSeq, sent.seq)
-            currentSeq = max(currentSeq, sent.seq)
-            MessageSendSound.shared.playIfEnabled()
-            await teamCoordinator.refresh(auth: auth)
-            await markRead(auth: auth)
-            PAXHaptics.light()
+            try await api.deleteTeamMessage(sessionId, messageId: messageId)
         } catch {
             errorMessage = error.localizedDescription
+            await poll(auth: auth)
         }
+    }
+
+    private func applyPermanentMessageDeletion(messageId: Int) {
+        guard messageId > 0 else { return }
+        deletingMessageIds.insert(messageId)
+        messagesRevision &+= 1
+        messages.removeAll { $0.id == messageId }
+        deletingMessageIds.remove(messageId)
+        messagesRevision &+= 1
+        let payload = CachedPollPayload(
+            handler: "team_dm",
+            handlerLabel: "Team",
+            adminName: auth?.profile?.displayName ?? "",
+            customerName: participantName,
+            assignedAgent: nil,
+            sessionRating: 0,
+            detectedService: "Team-Nachricht",
+            updatedAt: "",
+            seq: pollSeq,
+            messageCount: max(serverMessageCount, messages.count, pollSeq),
+            messages: messages
+        )
+        ConversationHistoryStore.shared.save(payload.asPollResponse(), sessionId: sessionId)
+    }
+
+    private func schedulePostSendTasks(auth: AuthStore, teamCoordinator: TeamMessagingCoordinator) {
+        Task { await teamCoordinator.refresh(auth: auth, mode: .lightweight) }
+        Task { await markRead(auth: auth) }
     }
 
     private func applyTeamMeta(_ response: PollResponse) {

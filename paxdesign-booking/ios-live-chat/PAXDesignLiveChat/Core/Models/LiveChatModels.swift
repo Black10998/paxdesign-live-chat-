@@ -1306,4 +1306,13 @@ extension Array where Element == StaffMember {
             return seen.insert(key).inserted
         }
     }
+
+    func deduplicatedByEmail() -> [StaffMember] {
+        var seen = Set<String>()
+        return filter { member in
+            let key = member.email.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !key.isEmpty else { return true }
+            return seen.insert(key).inserted
+        }
+    }
 }

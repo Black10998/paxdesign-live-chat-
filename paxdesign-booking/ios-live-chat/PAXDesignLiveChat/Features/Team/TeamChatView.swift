@@ -23,10 +23,15 @@ struct TeamChatView: View {
     #endif
     @State private var pendingImage: UIImage?
     @State private var showImagePreview = false
-    @State private var isSendingLocation = false
     @State private var mediaError: String?
     @State private var sendError: String?
     @State private var showFileImporter = false
+    @State private var showLocationPicker = false
+    @State private var pendingDeleteMessage: LiveMessage?
+    @State private var showMessageDeleteConfirm = false
+    #if !SIDELOAD
+    @State private var showPhotoPicker = false
+    #endif
 
     init(sessionId: String) {
         _thread = ObservedObject(wrappedValue: ChatThreadRegistry.shared.teamThread(sessionId: sessionId))
@@ -34,6 +39,10 @@ struct TeamChatView: View {
 
     private var canPurgeForAll: Bool {
         auth.canManageUsers || auth.profile?.isSuperAdmin == true
+    }
+
+    private var canDeleteTeamMessages: Bool {
+        auth.profile?.isSuperAdmin == true
     }
 
     var body: some View {
@@ -50,14 +59,18 @@ struct TeamChatView: View {
             layoutRevision: teamLayoutRevision,
             onReply: { _ in },
             onCopy: { UIPasteboard.general.string = $0.content },
-            onDelete: { _ in },
+            onDelete: { message in
+                pendingDeleteMessage = message
+                showMessageDeleteConfirm = true
+            },
             onImageTap: { imageViewer = TeamImageViewerItem(url: $0) },
             teamOtherReadSeq: thread.otherReadSeq,
             teamFailedClientMsgIds: thread.failedClientMsgIds,
             onRetryTeamMessage: { clientId in
                 Task { await thread.retryFailedMessage(clientId, auth: auth, teamCoordinator: teamCoordinator) }
             },
-            deletingMessageIds: []
+            canDeleteTeamMessages: canDeleteTeamMessages,
+            deletingMessageIds: thread.deletingMessageIds
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .paxChatScreenBackground()
@@ -158,6 +171,35 @@ struct TeamChatView: View {
         } message: {
             Text(sendError ?? "")
         }
+        .alert(L10n.ChatDeleteMessage, isPresented: $showMessageDeleteConfirm) {
+            Button(L10n.CommonCancel, role: .cancel) {
+                pendingDeleteMessage = nil
+            }
+            Button(L10n.CommonDelete, role: .destructive) {
+                guard let message = pendingDeleteMessage else { return }
+                pendingDeleteMessage = nil
+                Task { await thread.deleteMessage(message.id, auth: auth) }
+            }
+        } message: {
+            Text(L10n.ChatDeleteMessageConfirm)
+        }
+        .sheet(isPresented: $showLocationPicker) {
+            TeamLocationPickerSheet { latitude, longitude, label in
+                Task {
+                    await thread.sendLocation(
+                        auth: auth,
+                        teamCoordinator: teamCoordinator,
+                        latitude: latitude,
+                        longitude: longitude,
+                        label: label
+                    )
+                    ChatScrollHelper.scrollToBottom(sessionId: thread.sessionId)
+                }
+            }
+        }
+        #if !SIDELOAD
+        .photosPicker(isPresented: $showPhotoPicker, selection: $photoItem, matching: .images)
+        #endif
         .sheet(isPresented: $showImagePreview) {
             if let pendingImage {
                 ImagePreviewSheet(
@@ -394,7 +436,6 @@ struct TeamChatView: View {
         var hasher = Hasher()
         hasher.combine(voiceRecorder.isRecording)
         hasher.combine(thread.isSending)
-        hasher.combine(isSendingLocation)
         return hasher.finalize()
     }
 
@@ -405,82 +446,40 @@ struct TeamChatView: View {
     }
 
     private var teamComposer: some View {
-        VStack(spacing: 8) {
-            if voiceRecorder.isRecording {
-                TeamVoiceActivityPanel(
-                    mode: .recording,
-                    elapsed: voiceRecorder.elapsed,
-                    levels: voiceRecorder.audioLevels,
-                    onCancel: { voiceRecorder.cancelRecording() },
-                    onSend: { Task { await finishVoiceRecording() } }
-                )
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+        TeamIAChatComposer(
+            draft: $thread.draft,
+            voiceRecorder: voiceRecorder,
+            isSending: thread.isSending,
+            canSendText: canSend,
+            onSendText: {
+                Task { await thread.send(auth: auth, teamCoordinator: teamCoordinator) }
+            },
+            onBeginVoice: {
+                Task { await beginVoiceRecording() }
+            },
+            onFinishVoice: {
+                Task { await finishVoiceRecording() }
+            },
+            onCancelVoice: {
+                voiceRecorder.cancelRecording()
+            },
+            onPickPhoto: {
+                #if SIDELOAD
+                mediaError = L10n.TeamSendPhoto
+                #else
+                showPhotoPicker = true
+                #endif
+            },
+            onPickFile: {
+                showFileImporter = true
+            },
+            onPickLocation: {
+                showLocationPicker = true
             }
-
-            HStack(alignment: .bottom, spacing: 10) {
-                Button {
-                    Task { await beginVoiceRecording() }
-                } label: {
-                    PAXIcon("mic.fill", size: .action, emphasis: voiceRecorder.isRecording ? .onFill : .primary)
-                        .frame(width: 36, height: 36)
-                        .background(
-                            Circle()
-                                .fill(voiceRecorder.isRecording ? PAXTheme.accent : Color(.tertiarySystemFill))
-                                .overlay(
-                                    Circle()
-                                        .stroke(PAXTheme.border.opacity(voiceRecorder.isRecording ? 0 : 0.35), lineWidth: 0.5)
-                                )
-                        )
-                }
-                .disabled(thread.isSending || voiceRecorder.isRecording || isSendingLocation)
-                .accessibilityLabel(L10n.TeamRecordVoice)
-
-                Menu {
-                    #if !SIDELOAD
-                    PhotosPicker(selection: $photoItem, matching: .images) {
-                        Label { Text(L10n.TeamSendPhoto) } icon: { PAXIcon("photo.on.rectangle") }
-                    }
-                    #endif
-                    Button {
-                        showFileImporter = true
-                    } label: {
-                        Label { Text(L10n.TeamSendFile) } icon: { PAXIcon("doc.text") }
-                    }
-                    Button {
-                        Task { await shareCurrentLocation() }
-                    } label: {
-                        Label { Text(L10n.TeamShareLocation) } icon: { PAXIcon("location.fill") }
-                    }
-                } label: {
-                    PAXIcon("plus.circle", size: .card)
-                        .frame(width: 32, height: 32)
-                }
-                .disabled(thread.isSending || voiceRecorder.isRecording || isSendingLocation)
-
-                TextField(L10n.TeamChatPlaceholder, text: $thread.draft, axis: .vertical)
-                    .lineLimit(1...6)
-                    .layoutPriority(0)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 10)
-                    .frame(minHeight: 36)
-                    .paxGlassCardStyle(cornerRadius: 22, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.08)
-                    .disabled(voiceRecorder.isRecording)
-
-                if voiceRecorder.isRecording {
-                    PAXIcon("waveform", emphasis: .primary)
-                        .foregroundStyle(PAXTheme.accent)
-                        .frame(width: 36, height: 36)
-                } else {
-                    PAXSendButton(isEnabled: canSend) {
-                        Task { await thread.send(auth: auth, teamCoordinator: teamCoordinator) }
-                    }
-                }
-            }
-        }
+        )
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
         .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.82, borderOpacity: 0.44, shadowOpacity: 0.16)
-        .animation(.spring(response: 0.34, dampingFraction: 0.86), value: voiceRecorder.isRecording)
     }
 
     #if !SIDELOAD
@@ -540,27 +539,6 @@ struct TeamChatView: View {
         } catch {
             mediaError = error.localizedDescription
         }
-    }
-
-    private func shareCurrentLocation() async {
-        let status = await LocationPermissionService.shared.requestWhenInUse()
-        guard LocationPermissionService.isAuthorized(status) else {
-            mediaError = L10n.TeamLocationDenied
-            return
-        }
-        isSendingLocation = true
-        defer { isSendingLocation = false }
-        guard let coordinate = await LocationPermissionService.shared.fetchCurrentLocation() else {
-            mediaError = L10n.TeamLocationDenied
-            return
-        }
-        await thread.sendLocation(
-            auth: auth,
-            teamCoordinator: teamCoordinator,
-            latitude: coordinate.latitude,
-            longitude: coordinate.longitude
-        )
-        ChatScrollHelper.scrollToBottom(sessionId: thread.sessionId)
     }
 }
 
@@ -684,7 +662,10 @@ struct TeamComposeView: View {
         defer { isLoading = false }
         do {
             let response = try await api.fetchTeamContacts()
-            staff = response.staff.deduplicatedByUserId()
+            staff = response.staff
+                .deduplicatedByUserId()
+                .deduplicatedByEmail()
+                .deduplicatedByDisplayName()
         } catch {
             errorMessage = error.localizedDescription
         }

@@ -585,6 +585,13 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url, method: "DELETE", body: body), endpoint: "team-delete", as: TeamDeleteResponse.self)
     }
 
+    func deleteTeamMessage(_ sessionId: String, messageId: Int) async throws {
+        guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/messages/\(messageId)") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        _ = try await perform(authRequest(url: url, method: "DELETE"), endpoint: "team-delete-message", as: EmptyResponse.self)
+    }
+
     func fetchPendingTeamRequests() async throws -> SessionListResponse {
         guard let url = liveAdminURL(path: "team/requests/pending") else {
             throw LiveChatAPIError.invalidURL

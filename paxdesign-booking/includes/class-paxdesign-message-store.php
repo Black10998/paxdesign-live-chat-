@@ -586,6 +586,37 @@ class PAXdesign_Message_Store {
         return true;
     }
 
+    /**
+     * Move all messages from one session id to another (team deduplication).
+     */
+    public static function reassign_session($from_id, $to_id, $channel = 'team') {
+        global $wpdb;
+        self::maybe_upgrade();
+        $from_id = sanitize_text_field((string) $from_id);
+        $to_id   = sanitize_text_field((string) $to_id);
+        $channel = sanitize_key((string) $channel);
+        if ($from_id === '' || $to_id === '' || $from_id === $to_id) {
+            return false;
+        }
+
+        $table = self::messages_table();
+        $updated = $wpdb->update(
+            $table,
+            array('session_id' => $to_id),
+            array(
+                'session_id' => $from_id,
+                'channel'    => $channel,
+            ),
+            array('%s'),
+            array('%s', '%s')
+        );
+        if ($updated === false) {
+            return false;
+        }
+        self::delete_session($from_id);
+        return true;
+    }
+
     private static function get_by_client_id($session_id, $client_id) {
         global $wpdb;
         $table = self::messages_table();

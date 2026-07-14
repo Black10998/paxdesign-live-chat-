@@ -23,6 +23,7 @@ struct ChatMessageListView: View {
     var teamOtherReadSeq: Int = 0
     var teamFailedClientMsgIds: Set<String> = []
     var onRetryTeamMessage: ((String) -> Void)? = nil
+    var canDeleteTeamMessages = false
     var siteBaseURL: String?
     var deletingMessageIds: Set<Int> = []
 
@@ -84,6 +85,7 @@ struct ChatMessageListView: View {
                             teamOtherReadSeq: teamOtherReadSeq,
                             teamFailedClientMsgIds: teamFailedClientMsgIds,
                             onRetryTeamMessage: onRetryTeamMessage,
+                            canDeleteTeamMessages: canDeleteTeamMessages,
                             siteBaseURL: siteBaseURL,
                             deletingMessageIds: deletingMessageIds
                         )
@@ -213,6 +215,7 @@ private struct AnimatedChatMessageRow: View {
     var teamOtherReadSeq: Int = 0
     var teamFailedClientMsgIds: Set<String> = []
     var onRetryTeamMessage: ((String) -> Void)? = nil
+    var canDeleteTeamMessages = false
     var siteBaseURL: String?
     var deletingMessageIds: Set<Int> = []
 
@@ -235,6 +238,7 @@ private struct AnimatedChatMessageRow: View {
             teamOtherReadSeq: teamOtherReadSeq,
             teamFailedClientMsgIds: teamFailedClientMsgIds,
             onRetryTeamMessage: onRetryTeamMessage,
+            canDeleteTeamMessages: canDeleteTeamMessages,
             siteBaseURL: siteBaseURL,
             deletingMessageIds: deletingMessageIds
         )
@@ -278,6 +282,7 @@ private struct ChatMessageRow: View {
     var teamOtherReadSeq: Int = 0
     var teamFailedClientMsgIds: Set<String> = []
     var onRetryTeamMessage: ((String) -> Void)? = nil
+    var canDeleteTeamMessages = false
     var siteBaseURL: String?
     var deletingMessageIds: Set<Int> = []
 
@@ -325,7 +330,8 @@ private struct ChatMessageRow: View {
                     message: row.message,
                     quotedMessage: row.quotedMessage,
                     canReply: handler == "admin" && canReply && row.message.role != "system",
-                    canDelete: handler == "admin" && canReply && row.message.role != "system" && row.message.id > 0,
+                    canDelete: (handler == "admin" && canReply && row.message.role != "system" && row.message.id > 0)
+                        || (handler == "team" && canDeleteTeamMessages && row.message.id > 0),
                     canAnalyze: handler == "admin" && row.message.role == "user" && onAnalyze != nil,
                     showTimestamp: MessageTimeFormatter.shouldShowTimestamp(current: row.message, next: row.next),
                     senderLabel: showSenderLabel ? senderLabel(for: row.message) : nil,
