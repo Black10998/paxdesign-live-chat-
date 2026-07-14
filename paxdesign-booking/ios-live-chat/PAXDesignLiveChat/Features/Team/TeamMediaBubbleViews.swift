@@ -19,18 +19,17 @@ struct VoiceMessageBubbleView: View {
     }
 
     private var durationLabel: String {
-        let seconds = message.audioDuration ?? 0
-        let total = max(1, Int(seconds.rounded()))
-        let minutes = total / 60
-        let remainder = total % 60
-        return String(format: "%d:%02d", minutes, remainder)
+        TeamVoiceActivityPanel.formatDuration(message.audioDuration ?? 0)
+    }
+
+    private var progressLabel: String {
+        let duration = message.audioDuration ?? 0
+        let current = duration * (isActiveMessage ? playback.progress : 0)
+        return TeamVoiceActivityPanel.formatDuration(current)
     }
 
     private var displayLevels: [CGFloat] {
-        if isActiveMessage, !playback.levels.isEmpty {
-            return playback.levels
-        }
-        return [0.18, 0.42, 0.28, 0.56, 0.34, 0.48, 0.22, 0.38, 0.3]
+        playback.levels(for: message)
     }
 
     private var cardFill: Color {
@@ -66,6 +65,7 @@ struct VoiceMessageBubbleView: View {
                         mode: .playback,
                         duration: message.audioDuration ?? 0,
                         levels: displayLevels,
+                        progress: isActiveMessage ? playback.progress : 0,
                         isPlaying: isActiveMessage && playback.isPlaying,
                         onTogglePlayback: {
                             playback.toggle(message: message)
@@ -103,7 +103,7 @@ struct VoiceMessageBubbleView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     TeamVoiceWaveformView(
                         levels: displayLevels,
-                        barColor: waveformTint,
+                        barColor: waveformTint.opacity(0.45),
                         idleLevel: 0.12,
                         maxHeight: 30
                     )
@@ -130,16 +130,25 @@ struct VoiceMessageBubbleView: View {
 
                     TeamVoiceWaveformView(
                         levels: displayLevels,
-                        barColor: waveformTint,
+                        progress: isActiveMessage ? playback.progress : 0,
+                        barColor: waveformTint.opacity(0.45),
+                        playedColor: waveformTint,
                         idleLevel: 0.12,
                         maxHeight: 30
                     )
                     .frame(maxWidth: .infinity)
 
-                    Text(durationLabel)
-                        .font(.caption.monospacedDigit().weight(.semibold))
-                        .foregroundStyle(PAXTheme.textSecondary)
-                        .frame(minWidth: 34, alignment: .trailing)
+                    VStack(alignment: .trailing, spacing: 1) {
+                        if isActiveMessage && playback.isPlaying {
+                            Text(progressLabel)
+                                .font(.caption2.monospacedDigit().weight(.semibold))
+                                .foregroundStyle(PAXTheme.textSecondary)
+                        }
+                        Text(durationLabel)
+                            .font(.caption.monospacedDigit().weight(.semibold))
+                            .foregroundStyle(PAXTheme.textSecondary)
+                    }
+                    .frame(minWidth: 38, alignment: .trailing)
                 }
             }
         }

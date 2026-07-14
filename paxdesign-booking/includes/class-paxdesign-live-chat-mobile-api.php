@@ -2067,12 +2067,14 @@ class PAXdesign_Live_Chat_Mobile_API {
         $params    = $request->get_body_params();
         $duration  = isset($params['duration']) ? (float) $params['duration'] : (float) $request->get_param('duration');
         $client_id = isset($params['client_msg_id']) ? $params['client_msg_id'] : $request->get_param('client_msg_id');
+        $waveform  = isset($params['waveform']) ? $params['waveform'] : $request->get_param('waveform');
         return self::respond(PAXdesign_Team_Messaging::send_audio(
             $request['id'],
             (int) wp_get_current_user()->ID,
             $files['audio'],
             $duration,
-            $client_id
+            $client_id,
+            $waveform
         ));
     }
 

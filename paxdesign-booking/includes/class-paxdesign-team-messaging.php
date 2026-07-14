@@ -336,7 +336,7 @@ class PAXdesign_Team_Messaging {
             'other_user_id'    => $other ? (int) $other->ID : 0,
             'assigned_agent'   => $other_identity,
             'detected_service' => 'Team-Nachricht',
-            'updated_at'       => isset($conv['updated_at']) ? (string) $conv['updated_at'] : '',
+            'updated_at'       => PAXdesign_API_Time::format(isset($conv['updated_at']) ? (string) $conv['updated_at'] : '', true),
             'session_rating'   => 0,
             'seq'              => $seq,
             'message_count'    => count($messages),
@@ -560,11 +560,13 @@ class PAXdesign_Team_Messaging {
      * @param string               $client_msg_id
      * @return array<string, mixed>|WP_Error
      */
-    public static function send_audio($conv_id, $current_user_id, $file, $duration = 0, $client_msg_id = '') {
+    public static function send_audio($conv_id, $current_user_id, $file, $duration = 0, $client_msg_id = '', $waveform = array()) {
         $upload = self::handle_media_upload($file, 'audio');
         if (is_wp_error($upload)) {
             return $upload;
         }
+
+        $waveform = self::sanitize_waveform($waveform);
 
         return self::append_attachment_message(
             $conv_id,
@@ -573,6 +575,7 @@ class PAXdesign_Team_Messaging {
             array(
                 'audio_url'       => $upload['url'],
                 'audio_duration'  => max(0, (float) $duration),
+                'audio_waveform'  => $waveform,
                 'attachment_type' => 'voice',
             ),
             $client_msg_id,
@@ -1162,7 +1165,7 @@ class PAXdesign_Team_Messaging {
             'assigned_agent'   => $other_identity,
             'session_rating'   => 0,
             'detected_service' => 'Team-Nachricht',
-            'updated_at'       => isset($conv['updated_at']) ? (string) $conv['updated_at'] : '',
+            'updated_at'       => PAXdesign_API_Time::format(isset($conv['updated_at']) ? (string) $conv['updated_at'] : '', true),
             'message_count'    => $count,
             'seq'              => $seq,
             'last_read_seq'    => $read_seq,
@@ -1203,6 +1206,7 @@ class PAXdesign_Team_Messaging {
             'image_url'       => !empty($msg['image_url']) ? esc_url_raw((string) $msg['image_url']) : '',
             'audio_url'       => !empty($msg['audio_url']) ? esc_url_raw((string) $msg['audio_url']) : '',
             'audio_duration'  => isset($msg['audio_duration']) ? (float) $msg['audio_duration'] : 0,
+            'audio_waveform'  => self::normalize_waveform(isset($msg['audio_waveform']) ? $msg['audio_waveform'] : null),
             'attachment_type' => !empty($msg['attachment_type']) ? sanitize_key((string) $msg['attachment_type']) : '',
             'location_lat'    => isset($msg['location_lat']) ? (float) $msg['location_lat'] : null,
             'location_lng'    => isset($msg['location_lng']) ? (float) $msg['location_lng'] : null,
@@ -2036,5 +2040,42 @@ class PAXdesign_Team_Messaging {
         }
 
         $target['messages'] = array();
+    }
+
+    /**
+     * @param mixed $raw
+     * @return array<int, float>
+     */
+    private static function sanitize_waveform($raw) {
+        if (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : array();
+        }
+        if (!is_array($raw)) {
+            return array();
+        }
+        $out = array();
+        foreach ($raw as $value) {
+            if (!is_numeric($value)) {
+                continue;
+            }
+            $out[] = round(max(0.05, min(1, (float) $value)), 3);
+            if (count($out) >= 96) {
+                break;
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * @param mixed $raw
+     * @return array<int, float>
+     */
+    private static function normalize_waveform($raw) {
+        if (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : array();
+        }
+        return self::sanitize_waveform($raw);
     }
 }

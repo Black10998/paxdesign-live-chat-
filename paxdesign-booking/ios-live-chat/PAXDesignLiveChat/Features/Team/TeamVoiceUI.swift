@@ -5,32 +5,48 @@ import SwiftUI
 
 struct TeamVoiceWaveformView: View {
     let levels: [CGFloat]
+    var progress: Double = 0
     var barColor: Color = Color.white.opacity(0.88)
+    var playedColor: Color?
     var idleLevel: CGFloat = 0.08
     var maxHeight: CGFloat = 40
+    var barWidth: CGFloat = 2
+    var barSpacing: CGFloat = 2
 
     private var normalizedLevels: [CGFloat] {
         guard !levels.isEmpty else {
-            return Array(repeating: idleLevel, count: 9)
+            return Array(repeating: idleLevel, count: 24)
         }
         return levels
     }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 4) {
-            ForEach(Array(normalizedLevels.enumerated()), id: \.offset) { index, level in
-                Capsule()
-                    .fill(barColor)
-                    .frame(width: 2, height: max(2, maxHeight * level))
-                    .animation(
-                        .spring(response: 0.22, dampingFraction: 0.72)
-                            .delay(Double(index) * 0.03),
-                        value: level
-                    )
+        GeometryReader { proxy in
+            let count = normalizedLevels.count
+            let spacing = barSpacing
+            let width = barWidth
+            let totalWidth = CGFloat(count) * width + CGFloat(max(0, count - 1)) * spacing
+            let scale = totalWidth > proxy.size.width ? proxy.size.width / totalWidth : 1
+            let clampedProgress = min(1, max(0, progress))
+
+            HStack(alignment: .center, spacing: spacing) {
+                ForEach(Array(normalizedLevels.enumerated()), id: \.offset) { index, level in
+                    let barProgress = CGFloat(index + 1) / CGFloat(max(count, 1))
+                    Capsule()
+                        .fill(color(for: barProgress, overall: clampedProgress))
+                        .frame(width: width * scale, height: max(2, maxHeight * level))
+                }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
         }
-        .frame(maxWidth: .infinity)
         .frame(height: maxHeight)
+    }
+
+    private func color(for barProgress: CGFloat, overall: CGFloat) -> Color {
+        if let playedColor, overall > 0, barProgress <= overall {
+            return playedColor
+        }
+        return barColor
     }
 }
 
@@ -46,6 +62,7 @@ struct TeamVoiceActivityPanel: View {
     var elapsed: TimeInterval = 0
     var duration: TimeInterval = 0
     var levels: [CGFloat] = []
+    var progress: Double = 0
     var isPlaying = false
     var onCancel: (() -> Void)?
     var onSend: (() -> Void)?
@@ -61,7 +78,22 @@ struct TeamVoiceActivityPanel: View {
     }
 
     private var timeLabel: String {
+        let value: TimeInterval
+        switch mode {
+        case .recording:
+            value = elapsed
+        case .playback:
+            value = duration * progress
+        }
+        return Self.formatDuration(value)
+    }
+
+    private var totalLabel: String {
         let value = mode == .recording ? elapsed : duration
+        return Self.formatDuration(value)
+    }
+
+    static func formatDuration(_ value: TimeInterval) -> String {
         let total = max(0, Int(value.rounded()))
         let minutes = total / 60
         let seconds = total % 60
@@ -77,12 +109,23 @@ struct TeamVoiceActivityPanel: View {
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(Color.white.opacity(0.72))
                 Spacer(minLength: 0)
-                Text(timeLabel)
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(Color.white.opacity(0.55))
+                if mode == .playback {
+                    Text("\(timeLabel) / \(totalLabel)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(Color.white.opacity(0.55))
+                } else {
+                    Text(totalLabel)
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(Color.white.opacity(0.55))
+                }
             }
 
-            TeamVoiceWaveformView(levels: levels)
+            TeamVoiceWaveformView(
+                levels: levels,
+                progress: mode == .playback ? progress : 0,
+                barColor: Color.white.opacity(0.35),
+                playedColor: Color.white.opacity(0.9)
+            )
 
             if mode == .recording {
                 HStack(spacing: 12) {
@@ -137,12 +180,11 @@ final class TeamVoicePlaybackController: ObservableObject {
 
     @Published private(set) var isPlaying = false
     @Published private(set) var progress: Double = 0
-    @Published private(set) var levels: [CGFloat] = Array(repeating: 0.1, count: 9)
     @Published private(set) var activeMessageId: Int?
 
     private var player: AVAudioPlayer?
     private var timer: Timer?
-    private var meterPhase = 0
+    private var storedLevels: [CGFloat] = []
 
     private init() {}
 
@@ -166,9 +208,20 @@ final class TeamVoicePlaybackController: ObservableObject {
         player = nil
         isPlaying = false
         progress = 0
-        levels = Array(repeating: 0.1, count: 9)
+        storedLevels = []
         activeMessageId = nil
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+
+    func levels(for message: LiveMessage) -> [CGFloat] {
+        if activeMessageId == message.id, !storedLevels.isEmpty {
+            return storedLevels
+        }
+        if let waveform = message.audioWaveform, !waveform.isEmpty {
+            return waveform
+        }
+        let barCount = TeamVoiceWaveformAnalyzer.barCount(for: message.audioDuration ?? 1)
+        return Array(repeating: 0.12, count: barCount)
     }
 
     private func pause() {
@@ -192,12 +245,13 @@ final class TeamVoicePlaybackController: ObservableObject {
               !urlString.hasPrefix("pending://"),
               let url = URL(string: urlString) else { return }
 
+        storedLevels = levels(for: message)
+
         do {
             let (data, _) = try await URLSession.shared.data(from: url)
             await MainActor.run {
                 configurePlaybackSession()
                 player = try? AVAudioPlayer(data: data)
-                player?.isMeteringEnabled = true
                 player?.prepareToPlay()
                 player?.play()
                 activeMessageId = message.id
@@ -218,7 +272,7 @@ final class TeamVoicePlaybackController: ObservableObject {
 
     private func startProgressTimer() {
         timer?.invalidate()
-        timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+        timer = Timer.scheduledTimer(withTimeInterval: 0.03, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 self?.tick()
             }
@@ -234,19 +288,7 @@ final class TeamVoicePlaybackController: ObservableObject {
             return
         }
         let total = max(player.duration, 0.1)
-        progress = player.currentTime / total
-        player.updateMeters()
-        let power = player.averagePower(forChannel: 0)
-        let level = TeamVoiceRecorderService.normalizedMeterLevel(power)
-        var next = levels
-        if !next.isEmpty {
-            next.removeFirst()
-            next.append(level)
-        } else {
-            next = Array(repeating: level, count: 9)
-        }
-        levels = next
-        meterPhase &+= 1
+        progress = min(1, player.currentTime / total)
 
         if !player.isPlaying, progress > 0.98 {
             stop()

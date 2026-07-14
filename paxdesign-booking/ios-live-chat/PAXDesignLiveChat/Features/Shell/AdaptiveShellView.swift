@@ -20,6 +20,8 @@ struct AdaptiveShellView: View {
     @State private var syncTask: Task<Void, Never>?
     @State private var loadedTabs: Set<Int> = [0]
     @State private var routingSessionId: String?
+    @State private var tabSwipeOffset: CGFloat = 0
+    @GestureState private var tabDragTranslation: CGFloat = 0
 
     private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
@@ -71,12 +73,7 @@ struct AdaptiveShellView: View {
     private var iPhoneTabItems: [ShellTabItem] {
         let tags = tabTags
         var items: [ShellTabItem] = [
-            .init(
-                tag: tags.dashboard,
-                title: L10n.TabDashboard,
-                symbol: "chart.bar.doc.horizontal",
-                selectedSymbol: "chart.bar.doc.horizontal.fill"
-            )
+            .init(tag: tags.dashboard, title: L10n.TabDashboard, kind: .dashboard)
         ]
 
         if canViewChats, let chatsTag = tags.chats {
@@ -84,8 +81,7 @@ struct AdaptiveShellView: View {
                 .init(
                     tag: chatsTag,
                     title: L10n.TabChats,
-                    symbol: "bubble.left.and.bubble.right",
-                    selectedSymbol: "bubble.left.and.bubble.right.fill",
+                    kind: .chats,
                     badgeCount: unreadChatCount
                 )
             )
@@ -96,8 +92,7 @@ struct AdaptiveShellView: View {
                 .init(
                     tag: teamTag,
                     title: L10n.TabTeam,
-                    symbol: "person.3.sequence",
-                    selectedSymbol: "person.3.sequence.fill",
+                    kind: .team,
                     badgeCount: unreadTeamCount
                 )
             )
@@ -107,20 +102,25 @@ struct AdaptiveShellView: View {
             .init(
                 tag: tags.live,
                 title: L10n.TabLive,
-                symbol: "bell.and.waves.left.and.right",
-                selectedSymbol: "bell.and.waves.left.and.right.fill",
+                kind: .live,
                 badgeCount: coordinator.liveCount
             )
         )
         items.append(
-            .init(
-                tag: tags.platform,
-                title: L10n.TabPlatform,
-                symbol: "square.grid.2x2",
-                selectedSymbol: "square.grid.2x2.fill"
-            )
+            .init(tag: tags.platform, title: L10n.TabPlatform, kind: .platform)
         )
         return items
+    }
+
+    private var orderedTabTags: [Int] {
+        iPhoneTabItems.map(\.tag)
+    }
+
+    private var tabSwipeProgress: CGFloat {
+        guard let selectedIndex = orderedTabTags.firstIndex(of: selectedTab) else { return 0 }
+        let width = max(UIScreen.main.bounds.width, 320)
+        let delta = (tabSwipeOffset + tabDragTranslation) / width
+        return CGFloat(selectedIndex) - delta
     }
 
     var body: some View {
@@ -146,6 +146,7 @@ struct AdaptiveShellView: View {
                 PAXBottomTabBar(
                     items: iPhoneTabItems,
                     selection: $selectedTab,
+                    swipeProgress: tabSwipeProgress,
                     reduceMotion: reduceMotion
                 )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -263,6 +264,41 @@ struct AdaptiveShellView: View {
                 }
             }
         }
+        .highPriorityGesture(tabSwipeGesture)
+    }
+
+    private var tabSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 18, coordinateSpace: .local)
+            .updating($tabDragTranslation) { value, state, _ in
+                guard shouldShowBottomTabBar else { return }
+                state = value.translation.width
+            }
+            .onChanged { value in
+                guard shouldShowBottomTabBar else { return }
+                tabSwipeOffset = value.translation.width
+            }
+            .onEnded { value in
+                guard shouldShowBottomTabBar else {
+                    tabSwipeOffset = 0
+                    return
+                }
+                let projected = tabSwipeProgress
+                let nearest = Int(projected.rounded())
+                let clamped = min(max(nearest, 0), orderedTabTags.count - 1)
+                let target = orderedTabTags[clamped]
+                tabSwipeOffset = 0
+                if target != selectedTab {
+                    if reduceMotion {
+                        selectedTab = target
+                    } else {
+                        withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.86)) {
+                            selectedTab = target
+                        }
+                    }
+                    PAXHaptics.light()
+                }
+                _ = value
+            }
     }
 
     @ViewBuilder
@@ -455,8 +491,7 @@ struct AdaptiveShellView: View {
 private struct ShellTabItem: Identifiable {
     let tag: Int
     let title: String
-    let symbol: String
-    let selectedSymbol: String
+    let kind: ShellTabKind
     var badgeCount: Int = 0
 
     var id: Int { tag }
@@ -465,6 +500,7 @@ private struct ShellTabItem: Identifiable {
 private struct PAXBottomTabBar: View {
     let items: [ShellTabItem]
     @Binding var selection: Int
+    let swipeProgress: CGFloat
     let reduceMotion: Bool
 
     var body: some View {
@@ -491,12 +527,15 @@ private struct PAXBottomTabBar: View {
 
     private func button(for item: ShellTabItem) -> some View {
         let selected = selection == item.tag
+        let itemIndex = CGFloat(items.firstIndex(where: { $0.tag == item.tag }) ?? 0)
+        let distance = abs(swipeProgress - itemIndex)
+        let activation = max(0, min(1, 1 - distance))
         return Button {
             if selection != item.tag {
                 if reduceMotion {
                     selection = item.tag
                 } else {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+                    withAnimation(.interactiveSpring(response: 0.34, dampingFraction: 0.82)) {
                         selection = item.tag
                     }
                 }
@@ -505,12 +544,12 @@ private struct PAXBottomTabBar: View {
         } label: {
             VStack(spacing: 3) {
                 ZStack(alignment: .topTrailing) {
-                    PAXAnimatedTabIcon(
-                        symbol: item.symbol,
-                        selectedSymbol: item.selectedSymbol,
-                        isSelected: selected,
+                    ShellAnimatedTabGlyph(
+                        kind: item.kind,
+                        progress: activation,
                         reduceMotion: reduceMotion
                     )
+                    .scaleEffect(1 + (0.08 * activation))
 
                     if item.badgeCount > 0 {
                         Text("\(min(item.badgeCount, 99))")
@@ -531,9 +570,8 @@ private struct PAXBottomTabBar: View {
                     .minimumScaleFactor(0.85)
 
                 Capsule()
-                    .fill(selected ? PAXTheme.icon : Color.clear)
-                    .frame(width: selected ? 4 : 0, height: 4)
-                    .animation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.8), value: selected)
+                    .fill(PAXTheme.icon.opacity(Double(activation)))
+                    .frame(width: 4 + (6 * activation), height: 4)
             }
             .frame(maxWidth: .infinity)
             .padding(.top, 6)
@@ -550,18 +588,5 @@ private struct PAXTabBarGlassBackground: View {
     var body: some View {
         Rectangle()
             .fill(.bar)
-    }
-}
-
-private struct PAXAnimatedTabIcon: View {
-    let symbol: String
-    let selectedSymbol: String
-    let isSelected: Bool
-    let reduceMotion: Bool
-
-    var body: some View {
-        PAXIcon(isSelected ? selectedSymbol : symbol, size: .tab, emphasis: isSelected ? .primary : .tertiary)
-            .scaleEffect(isSelected ? 1.08 : 1)
-            .animation(reduceMotion ? nil : .spring(response: 0.24, dampingFraction: 0.76), value: isSelected)
     }
 }

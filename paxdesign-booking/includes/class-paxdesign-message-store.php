@@ -967,7 +967,7 @@ class PAXdesign_Message_Store {
 
     private static function sanitize_meta($extra) {
         $allowed = array(
-            'image_url', 'audio_url', 'audio_duration', 'attachment_type', 'reply_to', 'reaction',
+            'image_url', 'audio_url', 'audio_duration', 'audio_waveform', 'attachment_type', 'reply_to', 'reaction',
             'location_lat', 'location_lng', 'location_label',
             'sender_id', 'sender_name', 'sender_avatar', 'sender_role', 'sender_email',
             'link_url', 'link_label', 'link_icon',
@@ -977,9 +977,14 @@ class PAXdesign_Message_Store {
         );
         $meta = array();
         foreach ($allowed as $key) {
-            if (isset($extra[$key]) && $extra[$key] !== '') {
-                $meta[$key] = $extra[$key];
+            if (!isset($extra[$key]) || $extra[$key] === '') {
+                continue;
             }
+            if ($key === 'audio_waveform' && is_array($extra[$key])) {
+                $meta[$key] = wp_json_encode(array_values($extra[$key]));
+                continue;
+            }
+            $meta[$key] = $extra[$key];
         }
         return $meta;
     }
@@ -996,6 +1001,10 @@ class PAXdesign_Message_Store {
             'content'       => (string) $row->content,
             'ts'            => strtotime($row->created_at . ' UTC'),
         ), $meta);
+        if (isset($entry['audio_waveform']) && is_string($entry['audio_waveform'])) {
+            $decoded = json_decode($entry['audio_waveform'], true);
+            $entry['audio_waveform'] = is_array($decoded) ? $decoded : array();
+        }
         return $entry;
     }
 }

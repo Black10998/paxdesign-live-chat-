@@ -69,7 +69,7 @@ final class TeamVoiceRecorderService: NSObject, ObservableObject {
         startTimers()
     }
 
-    func stopRecording() throws -> (data: Data, duration: TimeInterval, filename: String) {
+    func stopRecording() throws -> (data: Data, duration: TimeInterval, filename: String, waveform: [CGFloat]) {
         guard isRecording, let recorder, let url = fileURL else {
             throw NSError(domain: "TeamVoiceRecorder", code: 2, userInfo: [NSLocalizedDescriptionKey: "No active recording"])
         }
@@ -87,9 +87,10 @@ final class TeamVoiceRecorderService: NSObject, ObservableObject {
         }
 
         let data = try Data(contentsOf: url)
+        let waveform = TeamVoiceWaveformAnalyzer.levels(from: data, duration: duration)
         try? FileManager.default.removeItem(at: url)
         fileURL = nil
-        return (data, duration, "voice.m4a")
+        return (data, duration, "voice.m4a", waveform)
     }
 
     func cancelRecording() {

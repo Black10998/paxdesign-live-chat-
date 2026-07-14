@@ -550,7 +550,8 @@ struct TeamChatView: View {
                 teamCoordinator: teamCoordinator,
                 audioData: recording.data,
                 filename: recording.filename,
-                duration: recording.duration
+                duration: recording.duration,
+                waveform: recording.waveform
             )
             ChatScrollHelper.scrollToBottom(sessionId: thread.sessionId)
         } catch {

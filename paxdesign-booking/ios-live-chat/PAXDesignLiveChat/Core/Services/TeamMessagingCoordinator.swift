@@ -894,7 +894,8 @@ final class TeamChatThreadModel: ObservableObject {
         teamCoordinator: TeamMessagingCoordinator,
         audioData: Data,
         filename: String,
-        duration: TimeInterval
+        duration: TimeInterval,
+        waveform: [CGFloat] = []
     ) async {
         guard let api = auth.api else { return }
         guard audioData.count >= 256 else {
@@ -903,6 +904,9 @@ final class TeamChatThreadModel: ObservableObject {
         }
         let clientMsgId = UUID().uuidString.lowercased()
         let tempId = -(Int(Date().timeIntervalSince1970 * 1000) % 1_000_000_000)
+        let resolvedWaveform = waveform.isEmpty
+            ? TeamVoiceWaveformAnalyzer.levels(from: audioData, duration: duration)
+            : waveform
         let optimistic = LiveMessage(
             id: tempId,
             clientMsgId: clientMsgId,
@@ -913,7 +917,8 @@ final class TeamChatThreadModel: ObservableObject {
             senderName: auth.profile?.displayName,
             attachmentType: "voice",
             audioUrl: "pending://\(clientMsgId)",
-            audioDuration: duration
+            audioDuration: duration,
+            audioWaveform: resolvedWaveform
         )
         messages.append(optimistic)
         messagesRevision &+= 1
@@ -925,6 +930,7 @@ final class TeamChatThreadModel: ObservableObject {
                     audioData: audioData,
                     filename: filename,
                     duration: duration,
+                    waveform: TeamVoiceWaveformAnalyzer.encodeForAPI(resolvedWaveform),
                     clientMsgId: clientMsgId
                 )
                 insertIncomingMessages([sent.message])
@@ -1194,6 +1200,7 @@ final class TeamChatThreadModel: ObservableObject {
             attachmentType: message.attachmentType,
             audioUrl: message.audioUrl,
             audioDuration: message.audioDuration,
+            audioWaveform: message.audioWaveform,
             locationLat: message.locationLat,
             locationLng: message.locationLng,
             locationLabel: message.locationLabel

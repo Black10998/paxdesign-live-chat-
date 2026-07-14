@@ -137,7 +137,7 @@ struct MessageBubbleView: View {
     private var standardBubbleContent: some View {
         HStack(alignment: .bottom, spacing: 0) {
             if !isOutgoing {
-                BubbleTail(isOutgoing: false, fill: bubbleFill)
+                BubbleTail(isOutgoing: false, fill: incomingBubbleFill)
             }
 
             VStack(alignment: .leading, spacing: 5) {
@@ -165,19 +165,20 @@ struct MessageBubbleView: View {
                     LinkCardBubbleView(message: message, siteBaseURL: siteBaseURL)
                 } else if message.isInPlaceWarning {
                     Text(message.content)
-                        .font(.subheadline)
+                        .font(.system(size: PAXMessageStyle.bubbleFontSize))
                         .foregroundStyle(message.isInPlaceWarnStyle ? Color(red: 0.6, green: 0.2, blue: 0.07) : PAXTheme.textSecondary)
                         .multilineTextAlignment(.leading)
                 } else if !message.content.isEmpty && !message.isVoiceMessage && !message.isLocationMessage {
                     Text(message.content)
-                        .font(.subheadline)
-                        .foregroundStyle(PAXTheme.textPrimary)
+                        .font(.system(size: PAXMessageStyle.bubbleFontSize))
+                        .lineSpacing(PAXMessageStyle.bubbleLineSpacing)
+                        .foregroundStyle(PAXMessageStyle.bubbleTextColor(isOutgoing: isOutgoing))
                         .multilineTextAlignment(PAXTextAlignment.natural(for: message.content))
                         .environment(\.layoutDirection, PAXTextAlignment.layoutDirection(for: message.content))
                 } else if message.imageUrl != nil {
                     Text(L10n.ChatImage)
                         .font(.caption)
-                        .foregroundStyle(PAXTheme.textSecondary)
+                        .foregroundStyle(PAXMessageStyle.bubbleTextColor(isOutgoing: isOutgoing).opacity(0.8))
                 }
 
                 if message.showsLinkScanBadge && !message.isInPlaceWarning {
@@ -193,20 +194,55 @@ struct MessageBubbleView: View {
                 }
             }
             .padding(.horizontal, PAXMessageStyle.bubblePaddingH)
-            .padding(.vertical, PAXMessageStyle.bubblePaddingV)
-            .background(
-                RoundedRectangle(cornerRadius: PAXMessageStyle.bubbleRadius, style: .continuous)
-                    .fill(bubbleFill)
-            )
+            .padding(.top, PAXMessageStyle.bubblePaddingV)
+            .padding(.bottom, PAXMessageStyle.bubblePaddingBottom)
+            .background { bubbleBackground }
             .frame(
                 maxWidth: min(300, UIScreen.main.bounds.width * PAXMessageStyle.maxBubbleWidthRatio),
                 alignment: isOutgoing ? .trailing : .leading
             )
 
             if isOutgoing {
-                BubbleTail(isOutgoing: true, fill: bubbleFill)
+                BubbleTail(isOutgoing: true, fill: outgoingTailFill)
             }
         }
+    }
+
+    @ViewBuilder
+    private var bubbleBackground: some View {
+        if isOutgoing && !message.isInPlaceWarning && !message.isInPlaceWarnStyle {
+            UnevenRoundedRectangle(
+                topLeadingRadius: PAXMessageStyle.bubbleRadius,
+                bottomLeadingRadius: PAXMessageStyle.bubbleRadius,
+                bottomTrailingRadius: 0,
+                topTrailingRadius: PAXMessageStyle.bubbleRadius,
+                style: .continuous
+            )
+            .fill(PAXMessageStyle.outgoingGradient)
+        } else {
+            UnevenRoundedRectangle(
+                topLeadingRadius: PAXMessageStyle.bubbleRadius,
+                bottomLeadingRadius: 0,
+                bottomTrailingRadius: PAXMessageStyle.bubbleRadius,
+                topTrailingRadius: PAXMessageStyle.bubbleRadius,
+                style: .continuous
+            )
+            .fill(bubbleFill)
+        }
+    }
+
+    private var incomingBubbleFill: Color {
+        if message.isInPlaceWarnStyle {
+            return Color(red: 1.0, green: 0.97, blue: 0.94)
+        }
+        if message.isInPlaceWarning {
+            return Color(red: 0.97, green: 0.98, blue: 0.99)
+        }
+        return PAXMessageStyle.incomingFill
+    }
+
+    private var outgoingTailFill: Color {
+        Color(red: 37 / 255, green: 114 / 255, blue: 135 / 255)
     }
 
     private var isOutgoing: Bool { message.role == "admin" || message.role == "assistant" }
@@ -217,6 +253,9 @@ struct MessageBubbleView: View {
         }
         if message.isInPlaceWarning {
             return Color(red: 0.97, green: 0.98, blue: 0.99)
+        }
+        if isOutgoing {
+            return Color(red: 37 / 255, green: 114 / 255, blue: 135 / 255)
         }
         return PAXMessageStyle.bubbleColor(role: message.role, isOutgoing: isOutgoing, palette: palette)
     }
@@ -229,8 +268,11 @@ private struct BubbleTail: View {
     var body: some View {
         BubbleTailShape(isOutgoing: isOutgoing)
             .fill(fill)
-            .frame(width: PAXMessageStyle.tailWidth, height: PAXMessageStyle.tailHeight)
-            .offset(x: isOutgoing ? 1 : -1, y: 2)
+            .frame(
+                width: isOutgoing ? PAXMessageStyle.outgoingTailWidth : PAXMessageStyle.tailWidth,
+                height: isOutgoing ? PAXMessageStyle.outgoingTailHeight : PAXMessageStyle.tailHeight
+            )
+            .offset(x: isOutgoing ? 0 : -1, y: isOutgoing ? 1 : 2)
     }
 }
 
@@ -240,19 +282,15 @@ private struct BubbleTailShape: Shape {
     func path(in rect: CGRect) -> Path {
         var path = Path()
         if isOutgoing {
-            path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
-            path.addQuadCurve(
-                to: CGPoint(x: rect.maxX, y: rect.minY),
-                control: CGPoint(x: rect.minX, y: rect.minY)
-            )
-            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        } else {
             path.move(to: CGPoint(x: rect.maxX, y: rect.maxY))
-            path.addQuadCurve(
-                to: CGPoint(x: rect.minX, y: rect.minY),
-                control: CGPoint(x: rect.maxX, y: rect.minY)
-            )
-            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+            path.closeSubpath()
+        } else {
+            path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
+            path.closeSubpath()
         }
         return path
     }

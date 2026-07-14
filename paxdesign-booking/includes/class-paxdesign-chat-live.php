@@ -1376,7 +1376,7 @@ class PAXdesign_Chat_Live {
             $sessions[] = array(
                 'session_id'     => $row->session_id,
                 'customer_name'  => isset($row->customer_name) ? (string) $row->customer_name : '',
-                'updated_at'     => $row->updated_at,
+                'updated_at'     => PAXdesign_API_Time::format(isset($row->updated_at) ? (string) $row->updated_at : '', false),
                 'started_at'     => $row->started_at,
                 'message_count'  => (int) $row->message_count,
                 'session_rating' => isset($row->session_rating) ? (int) $row->session_rating : 0,
@@ -1415,7 +1415,7 @@ class PAXdesign_Chat_Live {
         wp_send_json_success(array(
             'session_id'     => $row->session_id,
             'customer_name'  => isset($row->customer_name) ? (string) $row->customer_name : '',
-            'updated_at'     => $row->updated_at,
+            'updated_at'     => PAXdesign_API_Time::format(isset($row->updated_at) ? (string) $row->updated_at : '', false),
             'started_at'     => $row->started_at,
             'session_rating' => isset($row->session_rating) ? (int) $row->session_rating : 0,
             'messages'       => $this->sort_messages($this->decode_messages($row->messages)),
@@ -2329,7 +2329,7 @@ class PAXdesign_Chat_Live {
         return array(
             'sessions'    => $sessions,
             'live_count'  => $live_count,
-            'server_time' => current_time('mysql'),
+            'server_time' => PAXdesign_API_Time::format(current_time('mysql'), false),
             'threads'     => $threads,
         );
     }
@@ -2358,7 +2358,7 @@ class PAXdesign_Chat_Live {
             'customer_name'    => isset($row->customer_name) ? (string) $row->customer_name : '',
             'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
             'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
-            'updated_at'       => isset($row->updated_at) ? (string) $row->updated_at : '',
+            'updated_at'       => PAXdesign_API_Time::format(isset($row->updated_at) ? (string) $row->updated_at : '', false),
             'message_count'    => isset($row->message_count) ? (int) $row->message_count : 0,
             'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
             'last_preview'     => $preview,
@@ -2530,7 +2530,7 @@ class PAXdesign_Chat_Live {
             'customer_name'    => isset($row->customer_name) ? (string) $row->customer_name : '',
             'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
             'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
-            'updated_at'       => isset($row->updated_at) ? (string) $row->updated_at : '',
+            'updated_at'       => PAXdesign_API_Time::format(isset($row->updated_at) ? (string) $row->updated_at : '', false),
             'seq'              => $authoritative_seq,
             'message_count'    => count($all_messages),
             'last_read_seq'    => 0,
@@ -2591,7 +2591,7 @@ class PAXdesign_Chat_Live {
             'customer_name'    => isset($row->customer_name) ? (string) $row->customer_name : '',
             'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
             'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
-            'updated_at'       => isset($row->updated_at) ? (string) $row->updated_at : '',
+            'updated_at'       => PAXdesign_API_Time::format(isset($row->updated_at) ? (string) $row->updated_at : '', false),
             'seq'              => $message_seq,
             'message_count'    => count($all),
             'messages'         => $new,

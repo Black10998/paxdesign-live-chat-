@@ -323,6 +323,7 @@ struct LiveMessage: Identifiable, Codable, Hashable {
     let linkScanUrls: String?
     let audioUrl: String?
     let audioDuration: Double?
+    let audioWaveform: [CGFloat]?
     let locationLat: Double?
     let locationLng: Double?
     let locationLabel: String?
@@ -349,6 +350,7 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         case linkScanUrls = "link_scan_urls"
         case audioUrl = "audio_url"
         case audioDuration = "audio_duration"
+        case audioWaveform = "audio_waveform"
         case locationLat = "location_lat"
         case locationLng = "location_lng"
         case locationLabel = "location_label"
@@ -384,6 +386,7 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         linkScanUrls: String? = nil,
         audioUrl: String? = nil,
         audioDuration: Double? = nil,
+        audioWaveform: [CGFloat]? = nil,
         locationLat: Double? = nil,
         locationLng: Double? = nil,
         locationLabel: String? = nil,
@@ -413,6 +416,7 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         self.linkScanUrls = linkScanUrls
         self.audioUrl = audioUrl
         self.audioDuration = audioDuration
+        self.audioWaveform = audioWaveform
         self.locationLat = locationLat
         self.locationLng = locationLng
         self.locationLabel = locationLabel
@@ -483,6 +487,7 @@ struct LiveMessage: Identifiable, Codable, Hashable {
             linkScanUrls: linkScanUrls,
             audioUrl: audioUrl,
             audioDuration: audioDuration,
+            audioWaveform: audioWaveform,
             locationLat: locationLat,
             locationLng: locationLng,
             locationLabel: locationLabel,
@@ -536,6 +541,11 @@ struct LiveMessage: Identifiable, Codable, Hashable {
         linkScanUrls = Self.decodeOptionalString(container, .linkScanUrls)
         audioUrl = Self.decodeOptionalString(container, .audioUrl)
         audioDuration = try container.decodeIfPresent(Double.self, forKey: .audioDuration)
+        if let rawWaveform = try container.decodeIfPresent([Double].self, forKey: .audioWaveform) {
+            audioWaveform = TeamVoiceWaveformAnalyzer.decodeFromAPI(rawWaveform)
+        } else {
+            audioWaveform = nil
+        }
         locationLat = try container.decodeIfPresent(Double.self, forKey: .locationLat)
         locationLng = try container.decodeIfPresent(Double.self, forKey: .locationLng)
         locationLabel = Self.decodeOptionalString(container, .locationLabel)

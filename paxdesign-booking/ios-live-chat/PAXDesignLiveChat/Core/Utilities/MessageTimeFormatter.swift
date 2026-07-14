@@ -47,6 +47,8 @@ enum MessageTimeFormatter {
 
     private static let fallbackUpdatedAtFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
         formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
         return formatter
     }()
@@ -122,7 +124,6 @@ enum MessageTimeFormatter {
             return date
         }
 
-        fallbackUpdatedAtFormatter.locale = locale
         if let date = fallbackUpdatedAtFormatter.date(from: trimmed) {
             updatedAtCache.setObject(date as NSDate, forKey: trimmed as NSString)
             return date

@@ -2319,10 +2319,10 @@ body.paxdesign-agent-profile-open {
 }
 
 #paxdesign-booking-root .paxdesign-booking-chat-message-bubble {
-  padding: 8px 10px;
-  border-radius: var(--pax-radius-sm);
-  font-size: 12px;
-  line-height: 1.5;
+  padding: 6px 10px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.4;
   word-break: break-word;
   width: fit-content;
   max-width: 100%;
@@ -2330,25 +2330,25 @@ body.paxdesign-agent-profile-open {
 }
 
 #paxdesign-booking-root .paxdesign-booking-chat-message--user .paxdesign-booking-chat-message-bubble {
-  background-image: var(--pax-btn-gradient);
-  box-shadow: var(--pax-shadow-inset);
-  color: var(--pax-placeholder);
-  border-bottom-right-radius: 4px;
+  background: linear-gradient(120deg, #248A52, #257287);
+  color: #fff;
+  border-bottom-right-radius: 0;
+  box-shadow: none;
 }
 
 #paxdesign-booking-root .paxdesign-booking-chat-message--assistant .paxdesign-booking-chat-message-bubble {
-  background: var(--pax-gray-darker);
-  color: var(--pax-white);
-  border: var(--pax-border-subtle);
-  border-bottom-left-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.92);
+  border: none;
+  border-bottom-left-radius: 0;
 }
 
 #paxdesign-booking-root .paxdesign-booking-chat-message--admin .paxdesign-booking-chat-message-bubble {
-  background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-  color: #f8fafc;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-bottom-left-radius: 4px;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+  background: rgba(0, 0, 0, 0.3);
+  color: rgba(255, 255, 255, 0.92);
+  border: none;
+  border-bottom-left-radius: 0;
+  box-shadow: none;
 }
 
 #paxdesign-booking-root .paxdesign-booking-chat-message-image {

@@ -801,6 +801,7 @@ final class LiveChatAPI {
         audioData: Data,
         filename: String,
         duration: TimeInterval,
+        waveform: [Double] = [],
         clientMsgId: String = UUID().uuidString.lowercased()
     ) async throws -> TeamSendResponse {
         guard let url = liveAdminURL(path: "team/sessions/\(sessionId)/audio") else {
@@ -819,6 +820,14 @@ final class LiveChatAPI {
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"duration\"\r\n\r\n".data(using: .utf8)!)
         body.append("\(duration)\r\n".data(using: .utf8)!)
+
+        if !waveform.isEmpty,
+           let waveformData = try? JSONSerialization.data(withJSONObject: waveform),
+           let waveformString = String(data: waveformData, encoding: .utf8) {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"waveform\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(waveformString)\r\n".data(using: .utf8)!)
+        }
 
         body.append("--\(boundary)\r\n".data(using: .utf8)!)
         body.append("Content-Disposition: form-data; name=\"client_msg_id\"\r\n\r\n".data(using: .utf8)!)
