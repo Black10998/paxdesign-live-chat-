@@ -7,7 +7,6 @@ struct VoiceMessageBubbleView: View {
     let isOutgoing: Bool
 
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.paxPalette) private var palette
     @ObservedObject private var playback = TeamVoicePlaybackController.shared
     @State private var showPlaybackPanel = false
 
@@ -34,21 +33,20 @@ struct VoiceMessageBubbleView: View {
         return [0.18, 0.42, 0.28, 0.56, 0.34, 0.48, 0.22, 0.38, 0.3]
     }
 
-    private var accentTint: Color { palette.accent }
-
     private var cardFill: Color {
-        if isOutgoing {
-            return accentTint.opacity(colorScheme == .dark ? 0.24 : 0.16)
-        }
-        return Color(.tertiarySystemFill)
+        Color(.secondarySystemGroupedBackground)
     }
 
     private var cardBorder: Color {
-        accentTint.opacity(isOutgoing ? 0.28 : 0.12)
+        Color(.separator).opacity(colorScheme == .dark ? 0.35 : 0.25)
     }
 
     private var waveformTint: Color {
-        isOutgoing ? accentTint.opacity(0.95) : Color.primary.opacity(colorScheme == .dark ? 0.82 : 0.68)
+        Color.primary.opacity(colorScheme == .dark ? 0.82 : 0.68)
+    }
+
+    private var playFill: Color {
+        Color(.tertiarySystemFill)
     }
 
     var body: some View {
@@ -151,12 +149,12 @@ struct VoiceMessageBubbleView: View {
     private var playButton: some View {
         ZStack {
             Circle()
-                .fill(isOutgoing ? accentTint : accentTint.opacity(0.18))
+                .fill(playFill)
                 .frame(width: 36, height: 36)
             PAXIcon(
                 isActiveMessage && playback.isPlaying ? "pause.fill" : "play.fill",
                 size: .inline,
-                emphasis: isOutgoing ? .onFill : .primary
+                emphasis: .primary
             )
         }
         .accessibilityLabel(isActiveMessage && playback.isPlaying ? "Pause" : "Play")
@@ -226,9 +224,18 @@ struct LocationMessageBubbleView: View {
                         .lineLimit(2)
                     Spacer(minLength: 0)
                     PAXIcon("arrow.triangle.turn.up.right.circle.fill", size: .inline)
-                        .foregroundStyle(PAXBrand.accent)
+                        .foregroundStyle(PAXTheme.textSecondary)
                 }
             }
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color(.secondarySystemGroupedBackground))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .stroke(Color(.separator).opacity(0.35), lineWidth: 0.5)
+                    )
+            )
         }
         .buttonStyle(.plain)
     }
@@ -317,10 +324,10 @@ struct TeamFileBubbleView: View {
             .padding(12)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Color.primary.opacity(isOutgoing ? 0.06 : 0.04))
+                    .fill(Color(.secondarySystemGroupedBackground))
                     .overlay(
                         RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .stroke(PAXTheme.border.opacity(0.35), lineWidth: 0.5)
+                            .stroke(Color(.separator).opacity(0.35), lineWidth: 0.5)
                     )
             )
         }
@@ -344,5 +351,62 @@ struct TeamFileBubbleView: View {
               !urlString.hasPrefix("pending://"),
               URL(string: urlString) != nil else { return }
         showPreview = true
+    }
+}
+
+struct TeamImageBubbleView: View {
+    let message: LiveMessage
+    let onImageTap: (URL) -> Void
+
+    private var isPending: Bool {
+        (message.imageUrl ?? "").hasPrefix("pending://")
+    }
+
+    private var caption: String {
+        let text = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        return text
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if isPending {
+                pendingImageCard
+            } else if let imageUrl = message.imageUrl,
+                      let url = URL(string: imageUrl) {
+                CachedChatImage(url: url) {
+                    onImageTap(url)
+                }
+            }
+
+            if !caption.isEmpty {
+                Text(caption)
+                    .font(.subheadline)
+                    .foregroundStyle(PAXTheme.textPrimary)
+                    .padding(.horizontal, 4)
+            }
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(.secondarySystemGroupedBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(Color(.separator).opacity(0.35), lineWidth: 0.5)
+                )
+        )
+    }
+
+    private var pendingImageCard: some View {
+        RoundedRectangle(cornerRadius: PAXMessageStyle.imageCornerRadius, style: .continuous)
+            .fill(Color(.tertiarySystemFill))
+            .frame(width: 180, height: 120)
+            .overlay {
+                VStack(spacing: 8) {
+                    PAXInlineLoader(size: 24)
+                    Text(L10n.TeamVoiceSending)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(PAXTheme.textSecondary)
+                }
+            }
     }
 }

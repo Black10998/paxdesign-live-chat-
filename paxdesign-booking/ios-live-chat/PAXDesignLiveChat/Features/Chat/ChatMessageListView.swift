@@ -344,7 +344,8 @@ private struct ChatMessageRow: View {
                     onAnalyze: onAnalyze,
                     onLinkReview: onLinkReview,
                     isLinkReviewSubmitting: linkReviewSubmittingIds.contains(row.message.id),
-                    onImageTap: { onImageTap($0) }
+                    onImageTap: { onImageTap($0) },
+                    isTeamChat: handler == "team"
                 )
                 .opacity(deletingMessageIds.contains(row.message.id) ? 0 : 1)
                 .scaleEffect(deletingMessageIds.contains(row.message.id) ? 0.9 : 1, anchor: .center)

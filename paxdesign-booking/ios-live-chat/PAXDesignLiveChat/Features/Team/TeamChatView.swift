@@ -9,6 +9,7 @@ struct TeamChatView: View {
     @EnvironmentObject private var coordinator: ChatCoordinator
     @EnvironmentObject private var teamCoordinator: TeamMessagingCoordinator
     @EnvironmentObject private var settings: AppSettingsStore
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @ObservedObject private var thread: TeamChatThreadModel
     @ObservedObject private var voiceRecorder = TeamVoiceRecorderService.shared
@@ -435,21 +436,18 @@ struct TeamChatView: View {
     private var teamLayoutRevision: Int {
         var hasher = Hasher()
         hasher.combine(voiceRecorder.isRecording)
-        hasher.combine(thread.isSending)
         return hasher.finalize()
     }
 
     private var canSend: Bool {
         thread.canSend
             && !thread.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !thread.isSending
     }
 
     private var teamComposer: some View {
         TeamIAChatComposer(
             draft: $thread.draft,
             voiceRecorder: voiceRecorder,
-            isSending: thread.isSending,
             canSendText: canSend,
             onSendText: {
                 Task { await thread.send(auth: auth, teamCoordinator: teamCoordinator) }
@@ -479,7 +477,8 @@ struct TeamChatView: View {
         )
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.82, borderOpacity: 0.44, shadowOpacity: 0.16)
+        .padding(.bottom, 2)
+        .paxGlassCardStyle(cornerRadius: 18, fillOpacity: colorScheme == .dark ? 0.55 : 0.82, borderOpacity: 0.44, shadowOpacity: 0.16)
     }
 
     #if !SIDELOAD

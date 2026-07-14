@@ -29,11 +29,11 @@ final class NetworkCircuitBreaker {
     private(set) var sseReconnectDelayNs: UInt64 = 1_000_000_000
 
     private var requestTimestamps: [Date] = []
-    private var inflightKeys = Set<String>()
+    private var inflightCounts: [String: Int] = [:]
     private var consecutiveRateLimitHits = 0
 
     /// Hard cap: max REST requests per rolling second.
-    var maxRequestsPerSecond = 12
+    var maxRequestsPerSecond = 8
     /// Minimum pause after first edge 403/429.
     var minOpenDuration: TimeInterval = 300
     var maxOpenDuration: TimeInterval = 600
@@ -45,7 +45,7 @@ final class NetworkCircuitBreaker {
         openUntil = nil
         lastTripReason = ""
         requestTimestamps = []
-        inflightKeys = []
+        inflightCounts = [:]
         consecutiveRateLimitHits = 0
         sseReconnectDelayNs = 1_000_000_000
     }
@@ -65,6 +65,26 @@ final class NetworkCircuitBreaker {
         isOpen = false
         openUntil = nil
 
+        let isCoalescedRead = method.uppercased() == "GET"
+            && (endpoint.hasPrefix("suggestions:")
+                || endpoint.hasPrefix("poll:")
+                || endpoint == "me"
+                || endpoint == "team-contacts"
+                || endpoint == "team-sessions"
+                || endpoint == "conversations-sync"
+                || endpoint == "sessions"
+                || endpoint == "team-management-overview"
+                || endpoint == "team-management-members"
+                || endpoint == "team-management-pending"
+                || endpoint == "team-management-policy"
+                || endpoint == "team-pending-requests"
+                || endpoint.hasPrefix("team-management-"))
+
+        if isCoalescedRead {
+            inflightCounts[endpoint, default: 0] += 1
+            return
+        }
+
         let now = Date()
         requestTimestamps.removeAll { now.timeIntervalSince($0) > 1.0 }
         if requestTimestamps.count >= maxRequestsPerSecond {
@@ -72,29 +92,16 @@ final class NetworkCircuitBreaker {
             throw NetworkCircuitBreakerError.rateLimited
         }
         requestTimestamps.append(now)
-
-        let isSafeRead = method.uppercased() == "GET"
-            && (endpoint.hasPrefix("suggestions:")
-                || endpoint.hasPrefix("poll:")
-                || endpoint == "me"
-                || endpoint == "team-contacts"
-                || endpoint == "team-sessions"
-                || endpoint == "team-management-overview"
-                || endpoint == "team-management-members"
-                || endpoint == "team-management-pending"
-                || endpoint == "team-management-policy"
-                || endpoint == "team-pending-requests"
-                || endpoint.hasPrefix("team-management-"))
-        if !isSafeRead {
-            guard inflightKeys.insert(endpoint).inserted else {
-                log.debug("dedupe skip endpoint=\(endpoint, privacy: .public)")
-                throw NetworkCircuitBreakerError.rateLimited
-            }
-        }
+        inflightCounts[endpoint, default: 0] += 1
     }
 
     func recordRequestEnd(endpoint: String) {
-        inflightKeys.remove(endpoint)
+        let remaining = (inflightCounts[endpoint] ?? 0) - 1
+        if remaining <= 0 {
+            inflightCounts.removeValue(forKey: endpoint)
+        } else {
+            inflightCounts[endpoint] = remaining
+        }
     }
 
     func recordSuccess() {

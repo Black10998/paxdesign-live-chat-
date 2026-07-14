@@ -368,8 +368,11 @@ struct TeamMessagesHubView: View {
     // MARK: - Data
 
     private func refreshAll() async {
-        await coordinator.fullConversationSync(auth: auth)
-        await teamCoordinator.fullConversationSync(auth: auth)
+        await ConversationSyncCoordinator.performUnifiedFullSync(
+            auth: auth,
+            chatCoordinator: coordinator,
+            teamCoordinator: teamCoordinator
+        )
         await loadContacts(force: true)
         await teamCoordinator.refreshPendingRequests(auth: auth)
         await teamCoordinator.touchPresence(auth: auth)

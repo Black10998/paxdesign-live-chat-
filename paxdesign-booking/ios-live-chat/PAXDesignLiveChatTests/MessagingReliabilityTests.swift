@@ -268,9 +268,22 @@ final class MessagingReliabilityTests: XCTestCase {
     func testConversationSyncCooldownBlocksRapidRepeats() {
         ConversationSyncCoordinator.reset()
         XCTAssertTrue(ConversationSyncCoordinator.shouldRunFullSync())
-        ConversationSyncCoordinator.beginFullSync()
         ConversationSyncCoordinator.endFullSync()
         XCTAssertFalse(ConversationSyncCoordinator.shouldRunFullSync())
+    }
+
+    func testCoalescedReadsAllowParallelInflight() async {
+        await NetworkCircuitBreaker.shared.reset()
+        XCTAssertNoThrow(try await NetworkCircuitBreaker.shared.recordRequestStart(
+            endpoint: "team-contacts",
+            method: "GET"
+        ))
+        XCTAssertNoThrow(try await NetworkCircuitBreaker.shared.recordRequestStart(
+            endpoint: "team-contacts",
+            method: "GET"
+        ))
+        await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "team-contacts")
+        await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "team-contacts")
     }
 
     func testOpenChatPollingIntervalsAreConservative() {

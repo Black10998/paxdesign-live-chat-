@@ -425,8 +425,11 @@ struct SessionListView: View {
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .paxPremiumRefreshable(status: L10n.LoadingSessions, rowCount: 5) {
-            await coordinator.fullConversationSync(auth: auth)
-            await teamCoordinator.fullConversationSync(auth: auth)
+            await ConversationSyncCoordinator.performUnifiedFullSync(
+                auth: auth,
+                chatCoordinator: coordinator,
+                teamCoordinator: teamCoordinator
+            )
         }
     }
 

@@ -245,32 +245,7 @@ final class TeamMessagingCoordinator: ObservableObject {
     }
 
     func fullConversationSync(auth: AuthStore) async {
-        guard ConversationSyncCoordinator.shouldRunFullSync() else { return }
-        guard auth.isLoggedIn, let api = auth.api else {
-            if !teamSessions.isEmpty { teamSessions = [] }
-            return
-        }
-        ConversationSyncCoordinator.beginFullSync()
-        defer { ConversationSyncCoordinator.endFullSync() }
-        let shouldShowLoading = teamSessions.isEmpty
-        if shouldShowLoading { isLoading = true }
-        defer { if shouldShowLoading { isLoading = false } }
-        do {
-            let response = try await api.fetchConversationSync()
-            ConversationLocalSync.shared.apply(response)
-            applyTeamSessions(response.teamSessions)
-            SessionListCache.shared.save(
-                sessions: response.sessions,
-                teamSessions: response.teamSessions,
-                liveCount: response.liveCount
-            )
-        } catch {
-            if case LiveChatAPIError.unauthorized = error {
-                auth.handleUnauthorized()
-            } else if teamSessions.isEmpty {
-                errorMessage = error.localizedDescription
-            }
-        }
+        // No-op: unified sync is performed by ChatCoordinator via ConversationSyncCoordinator.
     }
 
     private func refreshLightweight(auth: AuthStore) async {
@@ -816,35 +791,34 @@ final class TeamChatThreadModel: ObservableObject {
             return
         }
         draft = ""
-        isSending = true
-        defer { isSending = false }
+        PAXHaptics.light()
 
-        do {
-            let sent = try await api.sendTeamMessage(
-                sessionId,
-                content: text,
-                clientMsgId: clientMsgId
-            )
-            messages.removeAll { $0.id == tempId }
-            insertIncomingMessages([sent.message])
-            pollSeq = max(pollSeq, sent.seq)
-            currentSeq = max(currentSeq, sent.seq)
-            PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
-            MessageSendSound.shared.playIfEnabled()
-            schedulePostSendTasks(auth: auth, teamCoordinator: teamCoordinator)
-            await poll(auth: auth)
-            PAXHaptics.light()
-        } catch {
-            switch error {
-            case LiveChatAPIError.unauthorized, LiveChatAPIError.rejected(_):
-                PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
+        Task {
+            do {
+                let sent = try await api.sendTeamMessage(
+                    sessionId,
+                    content: text,
+                    clientMsgId: clientMsgId
+                )
                 messages.removeAll { $0.id == tempId }
-                draft = text
-                errorMessage = error.localizedDescription
-            default:
-                errorMessage = "Nachricht wird automatisch erneut gesendet."
-                if let clientMsgId = optimistic.clientMsgId {
-                    failedClientMsgIds.insert(clientMsgId)
+                insertIncomingMessages([sent.message])
+                pollSeq = max(pollSeq, sent.seq)
+                currentSeq = max(currentSeq, sent.seq)
+                PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
+                MessageSendSound.shared.playIfEnabled()
+                schedulePostSendTasks(auth: auth, teamCoordinator: teamCoordinator)
+            } catch {
+                switch error {
+                case LiveChatAPIError.unauthorized, LiveChatAPIError.rejected(_):
+                    PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
+                    messages.removeAll { $0.id == tempId }
+                    draft = text
+                    errorMessage = error.localizedDescription
+                default:
+                    errorMessage = "Nachricht wird automatisch erneut gesendet."
+                    if let clientMsgId = optimistic.clientMsgId {
+                        failedClientMsgIds.insert(clientMsgId)
+                    }
                 }
             }
         }

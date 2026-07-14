@@ -96,8 +96,11 @@ struct PAXDesignLiveChatApp: App {
 
             Task(priority: .utility) {
                 LaunchDiagnostics.mark("startup.background-sync.begin")
-                await coordinator.fullConversationSync(auth: auth)
-                await TeamMessagingCoordinator.shared.fullConversationSync(auth: auth)
+                await ConversationSyncCoordinator.performUnifiedFullSync(
+                    auth: auth,
+                    chatCoordinator: coordinator,
+                    teamCoordinator: TeamMessagingCoordinator.shared
+                )
                 LaunchDiagnostics.mark("startup.background-sync.complete")
                 await PushDeepLinkRouter.shared.consumeIfReady(
                     auth: auth,

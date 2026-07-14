@@ -19,6 +19,7 @@ struct MessageBubbleView: View {
     var onAnalyze: (() -> Void)?
     var onLinkReview: ((String) -> Void)?
     var isLinkReviewSubmitting = false
+    var isTeamChat = false
     let onImageTap: (URL) -> Void
 
     var body: some View {
@@ -86,7 +87,31 @@ struct MessageBubbleView: View {
 
     @ViewBuilder
     private var bubbleContent: some View {
-        if message.isVoiceMessage {
+        if isTeamChat, message.isVoiceMessage {
+            VoiceMessageBubbleView(message: message, isOutgoing: isOutgoing)
+                .frame(
+                    maxWidth: min(280, UIScreen.main.bounds.width * PAXMessageStyle.maxBubbleWidthRatio),
+                    alignment: isOutgoing ? .trailing : .leading
+                )
+        } else if isTeamChat, message.isLocationMessage {
+            LocationMessageBubbleView(message: message)
+                .frame(
+                    maxWidth: min(280, UIScreen.main.bounds.width * PAXMessageStyle.maxBubbleWidthRatio),
+                    alignment: isOutgoing ? .trailing : .leading
+                )
+        } else if isTeamChat, hasStandaloneImage {
+            TeamImageBubbleView(message: message, onImageTap: onImageTap)
+                .frame(
+                    maxWidth: min(280, UIScreen.main.bounds.width * PAXMessageStyle.maxBubbleWidthRatio),
+                    alignment: isOutgoing ? .trailing : .leading
+                )
+        } else if isTeamChat, message.isFileMessage {
+            TeamFileBubbleView(message: message, isOutgoing: isOutgoing)
+                .frame(
+                    maxWidth: min(280, UIScreen.main.bounds.width * PAXMessageStyle.maxBubbleWidthRatio),
+                    alignment: isOutgoing ? .trailing : .leading
+                )
+        } else if message.isVoiceMessage {
             VoiceMessageBubbleView(message: message, isOutgoing: isOutgoing)
                 .frame(
                     maxWidth: min(280, UIScreen.main.bounds.width * PAXMessageStyle.maxBubbleWidthRatio),
@@ -102,6 +127,10 @@ struct MessageBubbleView: View {
         } else {
             standardBubbleContent
         }
+    }
+
+    private var hasStandaloneImage: Bool {
+        message.imageUrl != nil || message.attachmentType == "image"
     }
 
     @ViewBuilder

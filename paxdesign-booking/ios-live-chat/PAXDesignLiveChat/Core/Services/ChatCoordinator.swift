@@ -260,17 +260,25 @@ final class ChatCoordinator: ObservableObject {
     }
 
     func fullConversationSync(auth: AuthStore) async {
-        guard ConversationSyncCoordinator.shouldRunFullSync() else { return }
+        await ConversationSyncCoordinator.performUnifiedFullSync(
+            auth: auth,
+            chatCoordinator: self,
+            teamCoordinator: TeamMessagingCoordinator.shared
+        )
+    }
+
+    func performUnifiedConversationSync(
+        auth: AuthStore,
+        teamCoordinator: TeamMessagingCoordinator
+    ) async {
         guard let api = auth.api else { return }
-        ConversationSyncCoordinator.beginFullSync()
-        defer { ConversationSyncCoordinator.endFullSync() }
         let shouldShowSync = sessions.isEmpty
         if shouldShowSync { isSyncing = true }
         defer { if shouldShowSync { isSyncing = false } }
         do {
             let response = try await api.fetchConversationSync()
             ConversationLocalSync.shared.apply(response)
-            TeamMessagingCoordinator.shared.applyTeamSessions(response.teamSessions)
+            teamCoordinator.applyTeamSessions(response.teamSessions)
 
             sessions = response.sessions
             liveCount = response.liveCount
