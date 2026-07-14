@@ -83,11 +83,21 @@ private struct SCBottomBarIconShape: Shape {
             path.addCurve(to: p(12, 22), control1: p(16, 20.21), control2: p(14.21, 22))
             path.closeSubpath()
         case .thLarge:
-            // fa-th-large / calendar grid block reference companion
+            // fa-th-large
             path.addRect(CGRect(x: p(5, 4).x, y: p(5, 4).y, width: 6 * scale, height: 6 * scale))
             path.addRect(CGRect(x: p(13, 4).x, y: p(13, 4).y, width: 6 * scale, height: 6 * scale))
             path.addRect(CGRect(x: p(5, 12).x, y: p(5, 12).y, width: 6 * scale, height: 6 * scale))
             path.addRect(CGRect(x: p(13, 12).x, y: p(13, 12).y, width: 6 * scale, height: 6 * scale))
+        case .calendarAlt:
+            // fa-calendar-alt
+            path.addRect(CGRect(x: p(5, 6).x, y: p(5, 6).y, width: 14 * scale, height: 14 * scale))
+            path.move(to: p(8, 4))
+            path.addLine(to: p(8, 6))
+            path.move(to: p(16, 4))
+            path.addLine(to: p(16, 6))
+            path.move(to: p(5, 10))
+            path.addLine(to: p(19, 10))
+            path.addRect(CGRect(x: p(7, 12).x, y: p(7, 12).y, width: 10 * scale, height: 6 * scale))
         }
         return path
     }
