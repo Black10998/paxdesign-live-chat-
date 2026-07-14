@@ -76,7 +76,7 @@ struct TeamChatView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .paxChatScreenBackground()
         .safeAreaInset(edge: .top, spacing: 0) {
-            if !thread.requestStatusLabel.isEmpty {
+            if showsTeamStatusBanner {
                 teamStatusBanner
             }
         }
@@ -94,8 +94,14 @@ struct TeamChatView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 VStack(spacing: 2) {
-                    Text(thread.participantName.isEmpty ? L10n.TeamChatTitle : thread.participantName)
-                        .font(.headline)
+                    HStack(spacing: 5) {
+                        Text(thread.participantName.isEmpty ? L10n.TeamChatTitle : thread.participantName)
+                            .font(.headline)
+                            .lineLimit(1)
+                        if thread.requestStatus == "accepted" {
+                            TeamVerifiedBadge(size: 14)
+                        }
+                    }
                     Text(presenceLabel)
                         .font(.caption2)
                         .foregroundStyle(PAXTheme.textSecondary)
@@ -300,10 +306,22 @@ struct TeamChatView: View {
         }
     }
 
+    private var showsTeamStatusBanner: Bool {
+        switch thread.requestStatus {
+        case "pending", "declined", "locked":
+            return true
+        default:
+            return !thread.canSend
+        }
+    }
+
     private var presenceLabel: String {
         if thread.remoteTyping { return L10n.TeamPresenceTyping }
         if thread.requestStatus == "pending" {
-            return thread.canRespond ? L10n.TeamPresenceRequestPending : thread.requestStatusLabel
+            return thread.canRespond ? L10n.TeamPresenceRequestPending : L10n.TeamWaitingApproval
+        }
+        if thread.requestStatus == "declined" || thread.requestStatus == "locked" {
+            return L10n.TeamLockedConversation
         }
         if thread.otherPresence == "online" { return L10n.TeamPresenceOnline }
         if thread.otherPresence == "away" { return L10n.TeamPresenceAway }

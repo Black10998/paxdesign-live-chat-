@@ -1321,6 +1321,15 @@ final class LiveChatAPI {
         let body = try JSONSerialization.data(withJSONObject: ["spoken_languages": languages])
         return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "profile-spoken-languages", as: AdminProfile.self)
     }
+
+    func updateGender(_ gender: UserGender?) async throws -> AdminProfile {
+        guard let url = liveAdminURL(path: "profile") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        let payload: [String: Any] = ["gender": gender?.rawValue ?? ""]
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        return try await perform(authRequest(url: url, method: "POST", body: body), endpoint: "profile-gender", as: AdminProfile.self)
+    }
 }
 
 private struct WPErrorResponse: Codable {

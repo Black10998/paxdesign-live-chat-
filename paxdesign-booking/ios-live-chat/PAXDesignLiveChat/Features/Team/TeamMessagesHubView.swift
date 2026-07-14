@@ -108,7 +108,8 @@ struct TeamMessagesHubView: View {
         TeamHubProfileCard(
             displayName: auth.profile?.displayName ?? L10n.CommonAdministrator,
             roleLabel: auth.roleLabel,
-            email: auth.profile?.email.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            email: auth.profile?.email.trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
+            genderLabel: auth.profile?.localizedGender
         )
     }
 

@@ -198,6 +198,9 @@ class PAXdesign_Team_Registry {
             ),
             'profile_phone'    => (string) get_user_meta($uid, 'pax_live_profile_phone', true),
             'profile_notes'    => (string) get_user_meta($uid, 'pax_live_profile_notes', true),
+            'gender'           => PAXdesign_Live_Chat_Mobile_API::normalize_gender(
+                get_user_meta($uid, 'pax_live_gender', true)
+            ),
             'avatar_url'       => get_avatar_url($uid, array('size' => 256)),
             'protected'        => !empty($record['protected']) || self::is_executive_director($uid),
             'presence_status'  => $presence['status'],

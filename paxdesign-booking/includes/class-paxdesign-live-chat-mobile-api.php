@@ -831,6 +831,17 @@ class PAXdesign_Live_Chat_Mobile_API {
     }
 
     /**
+     * @param mixed $value
+     */
+    public static function normalize_gender($value) {
+        $gender = strtolower(trim((string) $value));
+        if ($gender === 'male' || $gender === 'female') {
+            return $gender;
+        }
+        return '';
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private static function profile_payload($user) {
@@ -876,6 +887,7 @@ class PAXdesign_Live_Chat_Mobile_API {
             'spoken_languages' => class_exists('PAXdesign_Language_Routing')
                 ? PAXdesign_Language_Routing::get_user_spoken_languages($user_id)
                 : array('de', 'en'),
+            'gender' => self::normalize_gender(get_user_meta($user_id, 'pax_live_gender', true)),
         );
     }
 
@@ -911,6 +923,15 @@ class PAXdesign_Live_Chat_Mobile_API {
         if (array_key_exists('spoken_languages', $params) && class_exists('PAXdesign_Language_Routing')) {
             $langs = is_array($params['spoken_languages']) ? $params['spoken_languages'] : array($params['spoken_languages']);
             PAXdesign_Language_Routing::save_user_spoken_languages($user_id, $langs);
+        }
+
+        if (array_key_exists('gender', $params)) {
+            $gender = self::normalize_gender($params['gender'] ?? '');
+            if ($gender === '') {
+                delete_user_meta($user_id, 'pax_live_gender');
+            } else {
+                update_user_meta($user_id, 'pax_live_gender', $gender);
+            }
         }
 
         return self::respond(self::profile_payload(wp_get_current_user()));

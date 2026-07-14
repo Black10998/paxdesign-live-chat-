@@ -6,6 +6,7 @@ struct TeamHubProfileCard: View {
     let displayName: String
     let roleLabel: String
     let email: String
+    var genderLabel: String?
 
     var body: some View {
         HStack(spacing: 16) {
@@ -18,6 +19,11 @@ struct TeamHubProfileCard: View {
                 Text(roleLabel)
                     .font(.subheadline)
                     .foregroundStyle(PAXTheme.textSecondary)
+                if let genderLabel, !genderLabel.isEmpty {
+                    Text(genderLabel)
+                        .font(.caption)
+                        .foregroundStyle(PAXTheme.textTertiary)
+                }
                 if !email.isEmpty {
                     Text(email)
                         .font(.caption)

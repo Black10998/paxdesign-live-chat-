@@ -7063,6 +7063,41 @@
         }
       }
     },
+    "profile.gender": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Gender" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Geschlecht" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "الجنس" } }
+      }
+    },
+    "profile.gender_unset": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Not set" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Nicht festgelegt" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "غير محدد" } }
+      }
+    },
+    "gender.male": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Male" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Männlich" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "ذكر" } }
+      }
+    },
+    "gender.female": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Female" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Weiblich" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "أنثى" } }
+      }
+    },
+    "team.verified_conversation": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Verified conversation" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Verifizierte Unterhaltung" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "محادثة موثقة" } }
+      }
+    },
     "profile.permissions": {
       "localizations": {
         "en": {

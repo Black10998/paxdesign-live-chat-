@@ -827,6 +827,7 @@ struct AdminProfile: Codable {
     let termsAcceptedAt: Int
     let permissionStatus: OnboardingPermissionStatus?
     let spokenLanguages: [String]
+    let gender: String?
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -843,6 +844,7 @@ struct AdminProfile: Codable {
         case termsAcceptedAt = "terms_accepted_at"
         case permissionStatus = "permission_status"
         case spokenLanguages = "spoken_languages"
+        case gender
     }
 
     init(from decoder: Decoder) throws {
@@ -863,6 +865,12 @@ struct AdminProfile: Codable {
         termsAcceptedAt = LiveChatDecode.int(container, CodingKeys.termsAcceptedAt)
         permissionStatus = try container.decodeIfPresent(OnboardingPermissionStatus.self, forKey: .permissionStatus)
         spokenLanguages = (try? container.decode([String].self, forKey: .spokenLanguages)) ?? ["de", "en"]
+        let rawGender = LiveChatDecode.string(container, CodingKeys.gender)
+        gender = rawGender.isEmpty ? nil : rawGender
+    }
+
+    var localizedGender: String? {
+        UserGender(rawValue: gender ?? "")?.localizedLabel
     }
 
     func updating(modulePermissions: ModulePermissions) -> AdminProfile {
@@ -882,7 +890,8 @@ struct AdminProfile: Codable {
             termsAccepted: termsAccepted,
             termsAcceptedAt: termsAcceptedAt,
             permissionStatus: permissionStatus,
-            spokenLanguages: spokenLanguages
+            spokenLanguages: spokenLanguages,
+            gender: gender
         )
     }
 
@@ -902,7 +911,8 @@ struct AdminProfile: Codable {
         termsAccepted: Bool,
         termsAcceptedAt: Int,
         permissionStatus: OnboardingPermissionStatus?,
-        spokenLanguages: [String]
+        spokenLanguages: [String],
+        gender: String?
     ) {
         self.userId = userId
         self.name = name
@@ -920,6 +930,7 @@ struct AdminProfile: Codable {
         self.termsAcceptedAt = termsAcceptedAt
         self.permissionStatus = permissionStatus
         self.spokenLanguages = spokenLanguages
+        self.gender = gender
     }
 
     var displayEmail: String {
@@ -950,6 +961,20 @@ extension AdminProfile {
     var perms: AdminPermissions { permissions }
 }
 
+enum UserGender: String, CaseIterable, Identifiable, Codable {
+    case male
+    case female
+
+    var id: String { rawValue }
+
+    var localizedLabel: String {
+        switch self {
+        case .male: return L10n.GenderMale
+        case .female: return L10n.GenderFemale
+        }
+    }
+}
+
 struct StaffMember: Codable, Identifiable {
     var id: Int { userId }
     let userId: Int
@@ -974,6 +999,7 @@ struct StaffMember: Codable, Identifiable {
     let requiresEdRequest: Bool
     let requiresContactRequest: Bool
     let canMessageEdDirectly: Bool
+    let gender: String?
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"
@@ -982,6 +1008,7 @@ struct StaffMember: Codable, Identifiable {
         case profileTitle = "profile_title"
         case profilePhone = "profile_phone"
         case profileNotes = "profile_notes"
+        case gender
         case onboardingCompleted = "onboarding_completed"
         case enabled, permissions
         case roleLabel = "role_label"
@@ -1028,6 +1055,12 @@ struct StaffMember: Codable, Identifiable {
         requiresEdRequest = (try? c.decode(Bool.self, forKey: .requiresEdRequest)) ?? false
         requiresContactRequest = (try? c.decode(Bool.self, forKey: .requiresContactRequest)) ?? false
         canMessageEdDirectly = (try? c.decode(Bool.self, forKey: .canMessageEdDirectly)) ?? false
+        let rawGender = LiveChatDecode.string(c, CodingKeys.gender)
+        gender = rawGender.isEmpty ? nil : rawGender
+    }
+
+    var localizedGender: String? {
+        UserGender(rawValue: gender ?? "")?.localizedLabel
     }
 
     var displayRoleLabel: String {
@@ -1095,17 +1128,23 @@ struct StaffMember: Codable, Identifiable {
     }
 
     var publicDisplaySubtitle: String {
-        if isExecutive { return L10n.RoleExecutiveDirector }
-        if let profileTitle, !profileTitle.isEmpty {
-            let trimmed = profileTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty, !Self.isPlaceholderProfileTitle(trimmed) {
-                return Self.localizedRoleLabel(trimmed)
+        let role: String = {
+            if isExecutive { return L10n.RoleExecutiveDirector }
+            if let profileTitle, !profileTitle.isEmpty {
+                let trimmed = profileTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty, !Self.isPlaceholderProfileTitle(trimmed) {
+                    return Self.localizedRoleLabel(trimmed)
+                }
             }
+            if let roleLabel, !roleLabel.isEmpty, !Self.isPlaceholderProfileTitle(roleLabel) {
+                return Self.localizedRoleLabel(roleLabel)
+            }
+            return displayRoleLabel
+        }()
+        if let gender = localizedGender {
+            return "\(role) · \(gender)"
         }
-        if let roleLabel, !roleLabel.isEmpty, !Self.isPlaceholderProfileTitle(roleLabel) {
-            return Self.localizedRoleLabel(roleLabel)
-        }
-        return displayRoleLabel
+        return role
     }
 
     private static func localizedRoleLabel(_ value: String) -> String {

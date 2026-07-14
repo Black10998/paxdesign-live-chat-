@@ -414,6 +414,11 @@ enum L10n {
     static var LoadingAdministration: String { t("loading.administration") }
     static var ProfileTitle: String { t("profile.title") }
     static var ProfileAccountInfo: String { t("profile.account_info") }
+    static var ProfileGender: String { t("profile.gender") }
+    static var ProfileGenderUnset: String { t("profile.gender_unset") }
+    static var GenderMale: String { t("gender.male") }
+    static var GenderFemale: String { t("gender.female") }
+    static var TeamVerifiedConversation: String { t("team.verified_conversation") }
     static var ProfilePermissions: String { t("profile.permissions") }
     static var ProfileRoleManager: String { t("profile.role.manager") }
     static var ProfileRoleStaff: String { t("profile.role.staff") }

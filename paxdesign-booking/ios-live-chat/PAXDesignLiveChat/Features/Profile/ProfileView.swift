@@ -5,6 +5,9 @@ struct ProfileView: View {
     @State private var hubDisplayName = ""
     @State private var isSavingHubName = false
     @State private var hubNameError: String?
+    @State private var selectedGender: UserGender?
+    @State private var isSavingGender = false
+    @State private var genderError: String?
 
     private var profile: AdminProfile? { auth.profile }
     private var permissions: AdminPermissions { profile?.permissions ?? .full }
@@ -31,6 +34,18 @@ struct ProfileView: View {
                 if let username = profile?.displayUsernameIfDistinct {
                     LabeledContent(L10n.LoginUsername, value: username)
                         .font(.subheadline)
+                }
+                Picker(L10n.ProfileGender, selection: $selectedGender) {
+                    Text(L10n.ProfileGenderUnset).tag(Optional<UserGender>.none)
+                    ForEach(UserGender.allCases) { gender in
+                        Text(gender.localizedLabel).tag(Optional(gender))
+                    }
+                }
+                .disabled(isSavingGender)
+                if let genderError, !genderError.isEmpty {
+                    Text(genderError)
+                        .font(.caption)
+                        .foregroundStyle(PAXTheme.danger)
                 }
                 LabeledContent(L10n.CommonPlugin, value: profile?.pluginVer ?? "—")
                     .font(.subheadline)
@@ -113,6 +128,12 @@ struct ProfileView: View {
             if hubDisplayName.isEmpty {
                 hubDisplayName = profile?.displayName ?? ""
             }
+            if selectedGender == nil {
+                selectedGender = UserGender(rawValue: profile?.gender ?? "")
+            }
+        }
+        .onChange(of: selectedGender) { _ in
+            Task { await saveGender() }
         }
     }
 
@@ -145,6 +166,24 @@ struct ProfileView: View {
                         .overlay(Capsule().fill(PAXTheme.surface.opacity(0.75)))
                         .overlay(Capsule().stroke(PAXTheme.border.opacity(0.42), lineWidth: 1))
                 )
+        }
+    }
+
+    private func saveGender() async {
+        guard let api = auth.api else { return }
+        let current = UserGender(rawValue: profile?.gender ?? "")
+        guard selectedGender != current else { return }
+        isSavingGender = true
+        defer { isSavingGender = false }
+        do {
+            let updated = try await api.updateGender(selectedGender)
+            auth.applyProfileUpdate(updated)
+            genderError = nil
+            PAXHaptics.light()
+        } catch {
+            genderError = error.localizedDescription
+            selectedGender = current
+            PAXHaptics.warning()
         }
     }
 

@@ -369,6 +369,9 @@ class PAXdesign_Live_Chat_Permissions {
                 ),
                 'profile_phone' => (string) get_user_meta($uid, 'pax_live_profile_phone', true),
                 'profile_notes' => (string) get_user_meta($uid, 'pax_live_profile_notes', true),
+                'gender'        => PAXdesign_Live_Chat_Mobile_API::normalize_gender(
+                    get_user_meta($uid, 'pax_live_gender', true)
+                ),
                 'onboarding_completed' => (bool) get_user_meta($uid, 'pax_live_onboarding_completed', true),
                 'enabled'     => !empty($record['enabled']),
                 'team_role'   => !empty($record['team_role']) ? (string) $record['team_role'] : '',
@@ -648,6 +651,9 @@ class PAXdesign_Live_Chat_Permissions {
                 ),
                 'profile_phone' => (string) get_user_meta($uid, 'pax_live_profile_phone', true),
                 'profile_notes' => (string) get_user_meta($uid, 'pax_live_profile_notes', true),
+                'gender'        => PAXdesign_Live_Chat_Mobile_API::normalize_gender(
+                    get_user_meta($uid, 'pax_live_gender', true)
+                ),
                 'onboarding_completed' => (bool) get_user_meta($uid, 'pax_live_onboarding_completed', true),
                 'enabled'     => true,
                 'permissions' => self::get_effective_permissions($uid),
@@ -674,6 +680,9 @@ class PAXdesign_Live_Chat_Permissions {
                 'profile_title' => (string) get_user_meta($euid, 'pax_live_profile_title', true),
                 'profile_phone' => (string) get_user_meta($euid, 'pax_live_profile_phone', true),
                 'profile_notes' => (string) get_user_meta($euid, 'pax_live_profile_notes', true),
+                'gender'        => PAXdesign_Live_Chat_Mobile_API::normalize_gender(
+                    get_user_meta($euid, 'pax_live_gender', true)
+                ),
                 'onboarding_completed' => (bool) get_user_meta($euid, 'pax_live_onboarding_completed', true),
                 'enabled'     => true,
                 'permissions' => self::get_effective_permissions($euid),

@@ -363,43 +363,34 @@ struct TeamImageBubbleView: View {
     }
 
     private var caption: String {
-        let text = message.content.trimmingCharacters(in: .whitespacesAndNewlines)
-        return text
+        message.content.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var maxImageWidth: CGFloat {
+        min(280, UIScreen.main.bounds.width * 0.72)
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: caption.isEmpty ? 0 : 6) {
             if isPending {
-                pendingImageCard
+                pendingImagePlaceholder
             } else if let imageUrl = message.imageUrl,
                       let url = URL(string: imageUrl) {
-                CachedChatImage(url: url) {
-                    onImageTap(url)
-                }
+                TeamChatImageView(url: url, maxWidth: maxImageWidth, onTap: { onImageTap(url) })
             }
 
             if !caption.isEmpty {
                 Text(caption)
                     .font(.subheadline)
                     .foregroundStyle(PAXTheme.textPrimary)
-                    .padding(.horizontal, 4)
             }
         }
-        .padding(8)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(.secondarySystemGroupedBackground))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(Color(.separator).opacity(0.35), lineWidth: 0.5)
-                )
-        )
     }
 
-    private var pendingImageCard: some View {
-        RoundedRectangle(cornerRadius: PAXMessageStyle.imageCornerRadius, style: .continuous)
+    private var pendingImagePlaceholder: some View {
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
             .fill(Color(.tertiarySystemFill))
-            .frame(width: 180, height: 120)
+            .frame(width: maxImageWidth, height: 120)
             .overlay {
                 VStack(spacing: 8) {
                     PAXInlineLoader(size: 24)
@@ -408,5 +399,55 @@ struct TeamImageBubbleView: View {
                         .foregroundStyle(PAXTheme.textSecondary)
                 }
             }
+    }
+}
+
+/// Team chat image: full aspect ratio, no bubble or background container.
+struct TeamChatImageView: View {
+    let url: URL
+    let maxWidth: CGFloat
+    let onTap: () -> Void
+
+    @State private var image: UIImage?
+    @State private var failed = false
+
+    var body: some View {
+        Button(action: onTap) {
+            Group {
+                if let image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: maxWidth, height: fittedHeight(for: image))
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                } else if failed {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color(.tertiarySystemFill))
+                        .frame(width: maxWidth, height: 120)
+                        .overlay {
+                            PAXIcon("photo", size: .card, emphasis: .tertiary)
+                        }
+                } else {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(Color(.tertiarySystemFill))
+                        .frame(width: maxWidth, height: 120)
+                        .overlay {
+                            PAXInlineLoader(size: 24)
+                        }
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .task(id: url) {
+            image = await ChatImageCache.cachedImage(for: url)
+            failed = image == nil
+        }
+    }
+
+    private func fittedHeight(for image: UIImage) -> CGFloat {
+        guard image.size.width > 0 else { return 120 }
+        let ratio = image.size.height / image.size.width
+        let natural = maxWidth * ratio
+        return min(natural, UIScreen.main.bounds.height * 0.55)
     }
 }
