@@ -20,6 +20,7 @@ struct AdaptiveShellView: View {
     @State private var syncTask: Task<Void, Never>?
     @State private var loadedTabs: Set<Int> = [0]
     @State private var routingSessionId: String?
+    @StateObject private var menuScrollState = UiverseMenuScrollState()
 
     private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
@@ -150,6 +151,7 @@ struct AdaptiveShellView: View {
                     selection: $selectedTab,
                     reduceMotion: reduceMotion
                 )
+                .scaleEffect(menuScrollState.barScale, anchor: .bottom)
                 .padding(.bottom, PAXShellLayout.bottomSafeArea)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
@@ -157,6 +159,12 @@ struct AdaptiveShellView: View {
         .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.9), value: shouldShowBottomTabBar)
         .environment(\.shellTabBarVisible, shouldShowBottomTabBar)
         .environment(\.shellTabBarScrollInset, shouldShowBottomTabBar ? PAXShellLayout.uiverseMenuScrollInset : 0)
+        .environment(\.shellMenuScrollState, shouldShowBottomTabBar ? menuScrollState : nil)
+        .onChange(of: shouldShowBottomTabBar) { isVisible in
+            if !isVisible {
+                menuScrollState.reset(reduceMotion: reduceMotion)
+            }
+        }
         .tint(PAXTheme.accent)
         .sheet(isPresented: $showGlobalSearch) {
             NavigationStack { GlobalSearchView() }

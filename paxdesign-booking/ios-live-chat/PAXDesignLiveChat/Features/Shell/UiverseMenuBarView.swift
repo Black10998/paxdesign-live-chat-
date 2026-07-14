@@ -5,8 +5,8 @@ import SwiftUI
 enum UiverseMenuMetrics {
     static let horizontalMargin: CGFloat = 10
     static let maxWidth: CGFloat = 520
-    /// Small gap above the home indicator (native iOS tab bar feel).
-    static let bottomOffset: CGFloat = 4
+    /// Flush with safe-area padding for a native iOS tab bar feel.
+    static let bottomOffset: CGFloat = 0
     static let menuPadding: CGFloat = 8
     static let itemGap: CGFloat = 8
     static let itemPaddingVertical: CGFloat = 10
@@ -15,6 +15,7 @@ enum UiverseMenuMetrics {
     static let labelFontSize: CGFloat = 12.8
     static let labelMarginTop: CGFloat = 4
     static let pillRadius: CGFloat = 9_999
+    static let scrollCompressedScale: CGFloat = 0.94
 
     static var itemContentHeight: CGFloat {
         iconSize + labelMarginTop + labelFontSize
@@ -33,49 +34,110 @@ enum UiverseMenuMetrics {
     }
 }
 
-/// Adaptive glass palette — same Apple glass style, colors follow system appearance.
+// MARK: - Native scroll shrink state
+
+@MainActor
+final class UiverseMenuScrollState: ObservableObject {
+    @Published private(set) var barScale: CGFloat = 1
+
+    private var lastOffset: CGFloat = 0
+
+    func ingestScrollOffset(_ offset: CGFloat, reduceMotion: Bool) {
+        let delta = offset - lastOffset
+        lastOffset = offset
+
+        let target: CGFloat
+        if offset <= 8 {
+            target = 1
+        } else if delta > 1.5 {
+            target = UiverseMenuMetrics.scrollCompressedScale
+        } else if delta < -1.5 {
+            target = 1
+        } else {
+            return
+        }
+        applyScale(target, reduceMotion: reduceMotion)
+    }
+
+    func reset(reduceMotion: Bool) {
+        lastOffset = 0
+        applyScale(1, reduceMotion: reduceMotion)
+    }
+
+    private func applyScale(_ scale: CGFloat, reduceMotion: Bool) {
+        guard abs(barScale - scale) > 0.001 else { return }
+        if reduceMotion {
+            barScale = scale
+        } else {
+            withAnimation(.spring(response: 0.38, dampingFraction: 0.84)) {
+                barScale = scale
+            }
+        }
+    }
+}
+
+/// Adaptive glass palette — distinct Light and Dark appearances, same structure.
 private struct UiverseMenuPalette {
     let colorScheme: ColorScheme
 
     var menuBackground: Color {
-        Color(red: 0, green: 122 / 255, blue: 1, opacity: colorScheme == .dark ? 0.34 : 0.404)
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.04, green: 0.22, blue: 0.42, alpha: 0.72)
+                : UIColor(red: 0, green: 0.478, blue: 1, alpha: 0.404)
+        })
     }
 
     var inactiveColor: Color {
-        colorScheme == .dark
-            ? Color.white.opacity(0.88)
-            : Color.white.opacity(0.9)
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(white: 1, alpha: 0.74)
+                : UIColor(white: 1, alpha: 0.9)
+        })
     }
 
     var activeColor: Color {
-        Color(red: 0, green: 122 / 255, blue: 1, opacity: colorScheme == .dark ? 0.95 : 0.9)
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(red: 0.45, green: 0.78, blue: 1, alpha: 0.96)
+                : UIColor(red: 0, green: 0.478, blue: 1, alpha: 0.9)
+        })
     }
 
     var activeBackground: Color {
-        colorScheme == .dark
-            ? Color.white.opacity(0.16)
-            : Color(red: 237 / 255, green: 237 / 255, blue: 237 / 255, opacity: 0.6)
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(white: 1, alpha: 0.14)
+                : UIColor(red: 237 / 255, green: 237 / 255, blue: 237 / 255, alpha: 0.6)
+        })
     }
 
     var glassBorder: Color {
-        colorScheme == .dark
-            ? Color.white.opacity(0.2)
-            : Color.white.opacity(0.35)
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(white: 1, alpha: 0.12)
+                : UIColor(white: 1, alpha: 0.35)
+        })
     }
 
     var menuShadow: Color {
-        colorScheme == .dark
-            ? Color.black.opacity(0.28)
-            : Color.black.opacity(0.06)
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(white: 0, alpha: 0.42)
+                : UIColor(white: 0, alpha: 0.06)
+        })
     }
 
     var insetHighlight: Color {
-        colorScheme == .dark
-            ? Color.white.opacity(0.22)
-            : Color.white.opacity(0.4)
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark
+                ? UIColor(white: 1, alpha: 0.1)
+                : UIColor(white: 1, alpha: 0.4)
+        })
     }
 
     static let springAnimation = Animation.timingCurve(0.34, 1.56, 0.64, 1, duration: 0.18)
+    static let scrollScaleAnimation = Animation.spring(response: 0.38, dampingFraction: 0.84)
 }
 
 struct UiverseMenuBarItem: Identifiable {
@@ -166,30 +228,14 @@ struct UiverseMenuBarView: View {
 
 private struct UiverseMenuGlassBackground: View {
     let palette: UiverseMenuPalette
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         ZStack {
-            UiverseMenuBackdropBlur()
+            Rectangle()
+                .fill(colorScheme == .dark ? .ultraThinMaterial : .thinMaterial)
             palette.menuBackground
         }
-    }
-}
-
-private struct UiverseMenuBackdropBlur: UIViewRepresentable {
-    @Environment(\.colorScheme) private var colorScheme
-
-    func makeUIView(context: Context) -> UIVisualEffectView {
-        let view = UIVisualEffectView(effect: blurEffect)
-        view.backgroundColor = .clear
-        return view
-    }
-
-    func updateUIView(_ uiView: UIVisualEffectView, context: Context) {
-        uiView.effect = blurEffect
-    }
-
-    private var blurEffect: UIBlurEffect {
-        UIBlurEffect(style: colorScheme == .dark ? .systemUltraThinMaterialDark : .systemUltraThinMaterialLight)
     }
 }
 

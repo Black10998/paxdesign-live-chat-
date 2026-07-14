@@ -518,16 +518,27 @@ private struct ShellTabBarVisibleKey: EnvironmentKey {
     static let defaultValue = false
 }
 
+private struct ShellMenuScrollStateKey: EnvironmentKey {
+    static let defaultValue: UiverseMenuScrollState? = nil
+}
+
 extension EnvironmentValues {
     var shellTabBarVisible: Bool {
         get { self[ShellTabBarVisibleKey.self] }
         set { self[ShellTabBarVisibleKey.self] = newValue }
+    }
+
+    var shellMenuScrollState: UiverseMenuScrollState? {
+        get { self[ShellMenuScrollStateKey.self] }
+        set { self[ShellMenuScrollStateKey.self] = newValue }
     }
 }
 
 private struct ShellScrollClearanceModifier: ViewModifier {
     @Environment(\.shellTabBarVisible) private var tabBarVisible
     @Environment(\.shellTabBarScrollInset) private var tabBarScrollInset
+    @Environment(\.shellMenuScrollState) private var menuScrollState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         let padding: CGFloat = {
@@ -539,6 +550,14 @@ private struct ShellScrollClearanceModifier: ViewModifier {
                 Color.clear
                     .frame(height: padding)
                     .accessibilityHidden(true)
+            }
+            .background {
+                if let menuScrollState {
+                    PAXShellScrollOffsetTracker(
+                        scrollState: menuScrollState,
+                        reduceMotion: reduceMotion
+                    )
+                }
             }
         } else {
             content
@@ -686,5 +705,76 @@ private enum PAXRefreshControlCustomizer {
             if let scroll = findScrollView(in: subview) { return scroll }
         }
         return nil
+    }
+}
+
+// MARK: - Bottom menu scroll shrink tracking
+
+private struct PAXShellScrollOffsetTracker: UIViewRepresentable {
+    @ObservedObject var scrollState: UiverseMenuScrollState
+    let reduceMotion: Bool
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(scrollState: scrollState, reduceMotion: reduceMotion)
+    }
+
+    func makeUIView(context: Context) -> PAXShellScrollTrackerAnchorView {
+        let view = PAXShellScrollTrackerAnchorView()
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = .clear
+        view.onHierarchyChange = { [weak view] in
+            guard let view else { return }
+            context.coordinator.attach(to: view)
+        }
+        return view
+    }
+
+    func updateUIView(_ uiView: PAXShellScrollTrackerAnchorView, context: Context) {
+        context.coordinator.reduceMotion = reduceMotion
+        context.coordinator.attach(to: uiView)
+    }
+
+    final class Coordinator: NSObject {
+        let scrollState: UiverseMenuScrollState
+        var reduceMotion: Bool
+        private weak var observedScrollView: UIScrollView?
+        private var offsetObservation: NSKeyValueObservation?
+
+        init(scrollState: UiverseMenuScrollState, reduceMotion: Bool) {
+            self.scrollState = scrollState
+            self.reduceMotion = reduceMotion
+        }
+
+        func attach(to anchor: UIView) {
+            guard let scrollView = PAXRefreshControlCustomizer.nearestScrollView(from: anchor),
+                  scrollView !== observedScrollView else { return }
+            offsetObservation?.invalidate()
+            observedScrollView = scrollView
+            offsetObservation = scrollView.observe(\.contentOffset, options: [.new]) { [weak self] scrollView, _ in
+                guard let self else { return }
+                let offset = max(0, scrollView.contentOffset.y + scrollView.adjustedContentInset.top)
+                Task { @MainActor in
+                    self.scrollState.ingestScrollOffset(offset, reduceMotion: self.reduceMotion)
+                }
+            }
+        }
+
+        deinit {
+            offsetObservation?.invalidate()
+        }
+    }
+}
+
+private final class PAXShellScrollTrackerAnchorView: UIView {
+    var onHierarchyChange: (() -> Void)?
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        onHierarchyChange?()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        onHierarchyChange?()
     }
 }
