@@ -20,7 +20,7 @@ enum SCBottomBarIcons {
 
 // MARK: - Exact FA SVG assets
 
-private enum SCBottomBarSVGAsset {
+private struct SCBottomBarSVGAsset {
     let viewBox: CGSize
     let pathData: String
 
