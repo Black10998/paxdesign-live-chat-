@@ -15,6 +15,14 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[2]
 METADATA_PATH = ROOT / "docs" / "app-store" / "metadata.json"
 
+REQUIRED_DIMENSIONS: dict[str, tuple[int, int]] = {
+    "APP_IPHONE_67": (1290, 2796),
+    "APP_IPHONE_65": (1284, 2778),
+    "APP_IPHONE_61": (1170, 2532),
+    "APP_IPHONE_58": (1170, 2532),
+    "APP_IPHONE_55": (1242, 2208),
+}
+
 _SPEC = importlib.util.spec_from_file_location(
     "asc_version",
     Path(__file__).resolve().parent / "asc_version.py",
@@ -39,6 +47,37 @@ warn = _SETUP.warn
 find_app = _SETUP.find_app
 make_client = _SETUP.make_client
 load_config = _SETUP.load_config
+
+
+def png_dimensions(path: Path) -> tuple[int, int] | None:
+    try:
+        data = path.read_bytes()
+        if len(data) < 24 or data[:8] != b"\x89PNG\r\n\x1a\n":
+            return None
+        return int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")
+    except OSError:
+        return None
+
+
+def validate_local_screenshots(screenshot_dir: Path, display_type: str) -> list[Path]:
+    required = REQUIRED_DIMENSIONS.get(display_type)
+    if not required:
+        warn(f"No dimension table for {display_type}; skipping local validation")
+
+    files = sorted(p for p in screenshot_dir.glob("*.png") if p.is_file())
+    if not files:
+        fail(f"No PNG screenshots in {screenshot_dir}")
+
+    for path in files:
+        dims = png_dimensions(path)
+        if dims is None:
+            fail(f"Invalid PNG: {path.name}")
+        if required and dims != required:
+            fail(
+                f"{path.name} is {dims[0]}x{dims[1]} but {display_type} requires "
+                f"{required[0]}x{required[1]}"
+            )
+    return files
 
 
 def load_metadata() -> dict[str, Any]:
@@ -157,7 +196,7 @@ def upload_binary(client: ASCClient, screenshot_id: str, path: Path) -> None:
         except urllib.error.HTTPError as exc:
             fail(f"Screenshot upload failed for {path.name} ({exc.code}): {exc.read().decode()}")
 
-    for attempt in range(1, 13):
+    for attempt in range(1, 25):
         payload = client.get(f"/appScreenshots/{screenshot_id}")
         state = ((payload.get("data") or {}).get("attributes") or {}).get("assetDeliveryState", {}).get("state")
         if state == "COMPLETE":
@@ -166,7 +205,7 @@ def upload_binary(client: ASCClient, screenshot_id: str, path: Path) -> None:
         if state in {"FAILED", "REJECTED"}:
             fail(f"Screenshot processing failed for {path.name}: {state}")
         time.sleep(5)
-    warn(f"Screenshot {path.name} still processing after upload")
+    fail(f"Screenshot {path.name} did not reach COMPLETE (last state={state})")
 
 
 def delete_screenshot(client: ASCClient, screenshot_id: str) -> None:
@@ -203,9 +242,7 @@ def upload_locale_screenshots(
             print(f"Screenshots already present for {locale} ({len(existing)}); skipping upload")
             return
 
-    files = sorted(p for p in screenshot_dir.glob("*.png") if p.is_file())
-    if not files:
-        fail(f"No PNG screenshots in {screenshot_dir}")
+    files = validate_local_screenshots(screenshot_dir, display_type)
 
     for index, path in enumerate(files):
         reserved = reserve_screenshot(client, set_id, path.name, path.stat().st_size)
