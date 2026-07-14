@@ -102,7 +102,12 @@ private struct UiverseMenuSVGAsset {
 
 private struct UiverseMenuSVGPath {
     let d: String
-    var fillRule: FillRule = .nonZero
+    var fillRule: UiverseSVGFillRule = .nonZero
+}
+
+private enum UiverseSVGFillRule {
+    case nonZero
+    case evenOdd
 }
 
 private struct UiverseMenuIconView: View {
