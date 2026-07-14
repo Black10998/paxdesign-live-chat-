@@ -2418,6 +2418,15 @@ class PAXdesign_Chat_Live {
             if (!empty($msg['attachment_type'])) {
                 $entry['attachment_type'] = sanitize_text_field((string) $msg['attachment_type']);
             }
+            if (!empty($msg['audio_url'])) {
+                $entry['audio_url'] = esc_url_raw((string) $msg['audio_url']);
+            }
+            if (isset($msg['audio_duration'])) {
+                $entry['audio_duration'] = (float) $msg['audio_duration'];
+            }
+            if (!empty($msg['audio_waveform']) && is_array($msg['audio_waveform'])) {
+                $entry['audio_waveform'] = array_map('floatval', array_values($msg['audio_waveform']));
+            }
             if (!empty($msg['link_url'])) {
                 $entry['link_url'] = esc_url_raw((string) $msg['link_url']);
             }
