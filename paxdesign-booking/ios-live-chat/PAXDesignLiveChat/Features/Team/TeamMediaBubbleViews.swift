@@ -271,6 +271,8 @@ struct TeamFileBubbleView: View {
     let message: LiveMessage
     let isOutgoing: Bool
 
+    @State private var showPreview = false
+
     private var isPending: Bool {
         (message.fileUrl ?? "").hasPrefix("pending://")
     }
@@ -324,12 +326,23 @@ struct TeamFileBubbleView: View {
         }
         .buttonStyle(.plain)
         .disabled(isPending)
+        .sheet(isPresented: $showPreview) {
+            if let urlString = message.fileUrl,
+               !urlString.hasPrefix("pending://"),
+               let url = URL(string: urlString) {
+                FilePreviewSheet(
+                    url: url,
+                    fileName: displayName,
+                    mimeType: message.fileMime
+                )
+            }
+        }
     }
 
     private func openFile() {
         guard let urlString = message.fileUrl,
               !urlString.hasPrefix("pending://"),
               let url = URL(string: urlString) else { return }
-        UIApplication.shared.open(url)
+        showPreview = true
     }
 }

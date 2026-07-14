@@ -702,7 +702,23 @@ class PAXdesign_Live_Chat_Permissions {
             return strcasecmp((string) $a['name'], (string) $b['name']);
         });
 
-        return $out;
+        $seen_names = array();
+        $deduped    = array();
+        foreach ($out as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $name = strtolower(trim((string) (isset($item['name']) ? $item['name'] : '')));
+            if ($name !== '' && isset($seen_names[$name])) {
+                continue;
+            }
+            if ($name !== '') {
+                $seen_names[$name] = true;
+            }
+            $deduped[] = $item;
+        }
+
+        return $deduped;
     }
 
     /**

@@ -10,6 +10,7 @@ struct SessionListView: View {
     @State private var displayedSessions: [LiveSession] = []
     @State private var recomputeTask: Task<Void, Never>?
     @State private var showChatSettings = false
+    @State private var showArchived = false
     @FocusState private var isSearchFocused: Bool
     var onOpenSession: (String) -> Void = { _ in }
 
@@ -32,6 +33,10 @@ struct SessionListView: View {
 
         let sessions = coordinator.sessions
         let readIds = settings.readSessionIds
+        let readSeq = settings.readUpToSeq
+        let forcedUnread = settings.forcedUnreadSessionIds
+        let archivedIds = settings.archivedSessionIds
+        let pinnedIds = settings.pinnedSessionIds
         let activeFilter = filter
         let trimmedSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
 
@@ -45,7 +50,11 @@ struct SessionListView: View {
                 sessions: sessions,
                 filter: activeFilter,
                 searchText: trimmedSearch,
-                readSessionIds: readIds
+                readSessionIds: readIds,
+                readUpToSeq: readSeq,
+                forcedUnreadSessionIds: forcedUnread,
+                archivedSessionIds: archivedIds,
+                pinnedSessionIds: pinnedIds
             )
 
             guard !Task.isCancelled else { return }
@@ -61,11 +70,20 @@ struct SessionListView: View {
         sessions: [LiveSession],
         filter: SessionFilter,
         searchText: String,
-        readSessionIds: Set<String>
+        readSessionIds: Set<String>,
+        readUpToSeq: [String: Int],
+        forcedUnreadSessionIds: Set<String>,
+        archivedSessionIds: Set<String>,
+        pinnedSessionIds: Set<String>
     ) -> [LiveSession] {
         var items = sessions
-            .filter { !$0.isTeamDM }
-            .sorted { $0.updatedAt > $1.updatedAt }
+            .filter { !$0.isTeamDM && !archivedSessionIds.contains($0.sessionId) }
+            .sorted { lhs, rhs in
+                let lp = pinnedSessionIds.contains(lhs.sessionId)
+                let rp = pinnedSessionIds.contains(rhs.sessionId)
+                if lp != rp { return lp && !rp }
+                return lhs.updatedAt > rhs.updatedAt
+            }
 
         if !searchText.isEmpty {
             items = items.filter {
@@ -81,7 +99,14 @@ struct SessionListView: View {
         case .live:
             items = items.filter(\.isLiveRequest)
         case .unread:
-            items = items.filter { $0.needsReply && !readSessionIds.contains($0.sessionId) }
+            items = items.filter {
+                isSessionUnread(
+                    $0,
+                    readSessionIds: readSessionIds,
+                    readUpToSeq: readUpToSeq,
+                    forcedUnreadSessionIds: forcedUnreadSessionIds
+                )
+            }
         case .active:
             items = items.filter { $0.isAdmin || $0.isLiveRequest }
         case .closed:
@@ -89,6 +114,30 @@ struct SessionListView: View {
         }
 
         return items
+    }
+
+    private static func isSessionUnread(
+        _ session: LiveSession,
+        readSessionIds: Set<String>,
+        readUpToSeq: [String: Int],
+        forcedUnreadSessionIds: Set<String>
+    ) -> Bool {
+        if forcedUnreadSessionIds.contains(session.sessionId) { return true }
+        guard !session.isClosed else { return false }
+        let readSeq: Int
+        if let seq = readUpToSeq[session.sessionId] {
+            readSeq = seq
+        } else if readSessionIds.contains(session.sessionId) {
+            readSeq = session.seq
+        } else {
+            readSeq = 0
+        }
+        guard session.seq > readSeq else { return false }
+        if session.isTeamDM {
+            return session.lastRole == "user" ? session.seq - readSeq > 0 : false
+        }
+        guard session.needsReply || session.lastRole == "user" else { return false }
+        return session.seq - readSeq > 0
     }
 
     private var canViewChats: Bool { auth.canViewChats }
@@ -108,17 +157,34 @@ struct SessionListView: View {
         .navigationTitle(L10n.SessionTitle)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
-            if canAccessChatSettings {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        PAXHaptics.light()
-                        showChatSettings = true
-                    } label: {
-                        PAXIcon("gearshape", size: .row)
+            ToolbarItem(placement: .topBarTrailing) {
+                HStack(spacing: 12) {
+                    if !settings.archivedSessionIds.isEmpty {
+                        Button {
+                            PAXHaptics.light()
+                            showArchived = true
+                        } label: {
+                            PAXIcon("archivebox", size: .row)
+                        }
+                        .accessibilityLabel(L10n.SessionArchivedTitle)
                     }
-                    .accessibilityLabel(L10n.SettingsSectionLiveChat)
+                    if canAccessChatSettings {
+                        Button {
+                            PAXHaptics.light()
+                            showChatSettings = true
+                        } label: {
+                            PAXIcon("gearshape", size: .row)
+                        }
+                        .accessibilityLabel(L10n.SettingsSectionLiveChat)
+                    }
                 }
             }
+        }
+        .navigationDestination(isPresented: $showArchived) {
+            ArchivedSessionsView(onOpenSession: onOpenSession)
+                .environmentObject(auth)
+                .environmentObject(coordinator)
+                .environmentObject(settings)
         }
         .sheet(isPresented: $showChatSettings) {
             NavigationStack {
@@ -143,6 +209,10 @@ struct SessionListView: View {
         .onChange(of: searchText) { _ in scheduleDisplayedSessionsRecompute(immediate: false) }
         .onChange(of: filter) { _ in scheduleDisplayedSessionsRecompute(immediate: true) }
         .onChange(of: settings.readSessionIds) { _ in scheduleDisplayedSessionsRecompute(immediate: true) }
+        .onChange(of: settings.readUpToSeq) { _ in scheduleDisplayedSessionsRecompute(immediate: true) }
+        .onChange(of: settings.forcedUnreadSessionIds) { _ in scheduleDisplayedSessionsRecompute(immediate: true) }
+        .onChange(of: settings.archivedSessionIds) { _ in scheduleDisplayedSessionsRecompute(immediate: true) }
+        .onChange(of: settings.pinnedSessionIds) { _ in scheduleDisplayedSessionsRecompute(immediate: true) }
     }
 
     private var sessionListContent: some View {
@@ -187,7 +257,9 @@ struct SessionListView: View {
             } else {
                 Section {
                     ForEach(displayedSessions) { session in
-                        let isUnread = session.needsReply && !settings.readSessionIds.contains(session.sessionId)
+                        let isUnread = settings.isSessionUnread(session)
+                        let isPinned = settings.isSessionPinned(session.sessionId)
+                        let isMuted = settings.isSessionMuted(session.sessionId)
 
                         Button {
                             isSearchFocused = false
@@ -198,6 +270,8 @@ struct SessionListView: View {
                             SessionRow(
                                 session: session,
                                 isUnread: isUnread,
+                                isPinned: isPinned,
+                                isMuted: isMuted,
                                 showRating: canViewRatings,
                                 showTimestamp: settings.showListTimestamps,
                                 compact: settings.compactListMode
@@ -239,6 +313,36 @@ struct SessionListView: View {
                                 }
                             }
                             if canReplyChats {
+                                if isPinned {
+                                    Button {
+                                        settings.setSessionPinned(session.sessionId, pinned: false)
+                                        PAXHaptics.light()
+                                    } label: {
+                                        Label { Text(L10n.CommonUnpin) } icon: { PAXIcon("pin.slash") }
+                                    }
+                                } else {
+                                    Button {
+                                        settings.setSessionPinned(session.sessionId, pinned: true)
+                                        PAXHaptics.light()
+                                    } label: {
+                                        Label { Text(L10n.CommonPin) } icon: { PAXIcon("pin") }
+                                    }
+                                }
+                                if isMuted {
+                                    Button {
+                                        settings.setSessionMuted(session.sessionId, muted: false)
+                                        PAXHaptics.light()
+                                    } label: {
+                                        Label { Text(L10n.CommonUnmute) } icon: { PAXIcon("bell") }
+                                    }
+                                } else {
+                                    Button {
+                                        settings.setSessionMuted(session.sessionId, muted: true)
+                                        PAXHaptics.light()
+                                    } label: {
+                                        Label { Text(L10n.CommonMute) } icon: { PAXIcon("bell.slash") }
+                                    }
+                                }
                                 Button {
                                     PAXHaptics.light()
                                     Task { await coordinator.archiveSession(auth: auth, session: session) }
@@ -287,6 +391,30 @@ struct SessionListView: View {
                                     Label { Text(L10n.CommonArchive) } icon: { PAXIcon("archivebox") }
                                 }
                                 .tint(.orange)
+
+                                Button {
+                                    settings.setSessionMuted(session.sessionId, muted: !isMuted)
+                                    PAXHaptics.light()
+                                } label: {
+                                    Label {
+                                        Text(isMuted ? L10n.CommonUnmute : L10n.CommonMute)
+                                    } icon: {
+                                        PAXIcon(isMuted ? "bell" : "bell.slash")
+                                    }
+                                }
+                                .tint(.indigo)
+
+                                Button {
+                                    settings.setSessionPinned(session.sessionId, pinned: !isPinned)
+                                    PAXHaptics.light()
+                                } label: {
+                                    Label {
+                                        Text(isPinned ? L10n.CommonUnpin : L10n.CommonPin)
+                                    } icon: {
+                                        PAXIcon(isPinned ? "pin.slash" : "pin")
+                                    }
+                                }
+                                .tint(.yellow)
                             }
                         }
                     }
@@ -434,6 +562,8 @@ struct SessionListView: View {
 private struct SessionRow: View {
     let session: LiveSession
     var isUnread: Bool = false
+    var isPinned: Bool = false
+    var isMuted: Bool = false
     var showRating: Bool = true
     var showTimestamp: Bool = true
     var compact: Bool = false
@@ -485,6 +615,12 @@ private struct SessionRow: View {
 
                         Spacer(minLength: 0)
 
+                        if isMuted {
+                            PAXIcon("bell.slash", size: .inline, emphasis: .tertiary)
+                        }
+                        if isPinned {
+                            PAXIcon("pin.fill", size: .inline, emphasis: .tertiary)
+                        }
                         if isUnread {
                             Circle()
                                 .fill(PAXBrand.accent)

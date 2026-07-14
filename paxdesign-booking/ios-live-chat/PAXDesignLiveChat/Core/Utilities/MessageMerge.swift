@@ -43,6 +43,25 @@ enum MessageMerge {
         return "id:\(message.id)"
     }
 
+    /// Chronological ordering — optimistic (negative id) messages sort by timestamp, not id.
+    static func chronologicalOrder(_ lhs: LiveMessage, _ rhs: LiveMessage) -> Bool {
+        let lKey = sortOrdinal(for: lhs)
+        let rKey = sortOrdinal(for: rhs)
+        if lKey != rKey { return lKey < rKey }
+        if lhs.id != rhs.id { return lhs.id < rhs.id }
+        return (lhs.clientMsgId ?? "") < (rhs.clientMsgId ?? "")
+    }
+
+    private static func sortOrdinal(for message: LiveMessage) -> Int {
+        if let ts = message.ts, ts > 0 { return ts }
+        if message.id > 0 { return message.id }
+        return Int.max / 2 + abs(message.id % 1_000_000)
+    }
+
+    private static func sortMessages(_ messages: [LiveMessage]) -> [LiveMessage] {
+        dedupeByMergeKey(messages.sorted(by: chronologicalOrder))
+    }
+
     /// Append-only merge for sorted message lists — avoids full re-sort on every poll tick.
     static func mergeSorted(
         existing: [LiveMessage],
@@ -56,7 +75,7 @@ enum MessageMerge {
         guard !incoming.isEmpty else { return (existing, false) }
 
         if existing.isEmpty {
-            let sorted = dedupeByMergeKey(incoming.sorted { $0.id < $1.id })
+            let sorted = sortMessages(incoming)
             return (sorted, true)
         }
 
@@ -108,7 +127,7 @@ enum MessageMerge {
 
         guard changed else { return (existing, false) }
 
-        return (dedupeByMergeKey(map.values.sorted { $0.id < $1.id }), true)
+        return (sortMessages(map.values), true)
     }
 
     private static func dedupeByMergeKey(_ messages: [LiveMessage]) -> [LiveMessage] {
@@ -125,7 +144,7 @@ enum MessageMerge {
 
     /// Establish authoritative server history while preserving in-flight optimistic sends.
     static func baseline(server: [LiveMessage], preservingOptimistic optimistic: [LiveMessage]) -> [LiveMessage] {
-        let sorted = dedupeByMergeKey(server.sorted { $0.id < $1.id })
+        let sorted = sortMessages(server)
         let acknowledgedClientIds = Set(sorted.compactMap(\.clientMsgId))
         let pending = optimistic.filter {
             $0.id < 0 && ($0.clientMsgId.map { !acknowledgedClientIds.contains($0) } ?? true)
@@ -159,6 +178,6 @@ enum MessageMerge {
         }
 
         guard changed else { return (messages, false) }
-        return (map.values.sorted { $0.id < $1.id }, true)
+        return (map.values.sorted(by: chronologicalOrder), true)
     }
 }

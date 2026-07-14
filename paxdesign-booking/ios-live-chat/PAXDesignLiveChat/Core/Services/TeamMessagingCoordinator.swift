@@ -1189,6 +1189,12 @@ struct TeamSendResponse: Codable {
     let seq: Int
 }
 
+struct TeamBroadcastResponse: Codable {
+    let ok: Bool
+    let sent: Int
+    let skipped: [Int]?
+}
+
 struct TeamReadResponse: Codable {
     let ok: Bool
     let lastReadSeq: Int

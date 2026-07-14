@@ -1521,51 +1521,156 @@
     },
     "settings.notifications_status": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Permission status" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Berechtigungsstatus" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "حالة الإذن" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permission status"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berechtigungsstatus"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حالة الإذن"
+          }
+        }
       }
     },
     "settings.notifications_enable": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Enable iOS notifications" } },
-        "de": { "stringUnit": { "state": "translated", "value": "iOS-Benachrichtigungen aktivieren" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تفعيل إشعارات iOS" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enable iOS notifications"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS-Benachrichtigungen aktivieren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تفعيل إشعارات iOS"
+          }
+        }
       }
     },
     "settings.notifications_status.authorized": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Allowed" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Erlaubt" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "مسموح" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allowed"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erlaubt"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مسموح"
+          }
+        }
       }
     },
     "settings.notifications_status.denied": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Denied" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Abgelehnt" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "مرفوض" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Denied"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abgelehnt"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مرفوض"
+          }
+        }
       }
     },
     "settings.notifications_status.provisional": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Provisional" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Vorläufig" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "مؤقت" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Provisional"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorläufig"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مؤقت"
+          }
+        }
       }
     },
     "settings.notifications_status.not_determined": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Not requested" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Nicht angefragt" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "لم يُطلب" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not requested"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht angefragt"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لم يُطلب"
+          }
+        }
       }
     },
     "settings.notifications_status.unknown": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Unknown" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Unbekannt" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "غير معروف" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unknown"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unbekannt"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "غير معروف"
+          }
+        }
       }
     },
     "settings.sound": {
@@ -2362,135 +2467,420 @@
     },
     "chat.link_scan.checking": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Scanning..." } },
-        "de": { "stringUnit": { "state": "translated", "value": "Wird geprüft …" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "جارٍ الفحص…" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scanning..."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird geprüft …"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ الفحص…"
+          }
+        }
       }
     },
     "chat.link_scan.analyzing": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Analyzing security…" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Sicherheit wird analysiert …" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "جارٍ تحليل الأمان…" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyzing security…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sicherheit wird analysiert …"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ تحليل الأمان…"
+          }
+        }
       }
     },
     "chat.link_scan.safe": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Safe Link" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Sicherer Link" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "رابط آمن" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Safe Link"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sicherer Link"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رابط آمن"
+          }
+        }
       }
     },
     "chat.link_scan.suspicious": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Suspicious Link" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Verdächtiger Link" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "رابط مشبوه" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suspicious Link"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verdächtiger Link"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رابط مشبوه"
+          }
+        }
       }
     },
     "chat.link_scan.dangerous": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Dangerous Link" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Gefährlicher Link" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "رابط خطير" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dangerous Link"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gefährlicher Link"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رابط خطير"
+          }
+        }
       }
     },
     "chat.link_scan.incomplete": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Scan not completed." } },
-        "de": { "stringUnit": { "state": "translated", "value": "Scan nicht abgeschlossen." } },
-        "ar": { "stringUnit": { "state": "translated", "value": "لم يكتمل الفحص." } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan not completed."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan nicht abgeschlossen."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لم يكتمل الفحص."
+          }
+        }
       }
     },
     "chat.link_scan.review_title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Review scan result" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Scan-Ergebnis prüfen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "مراجعة نتيجة الفحص" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review scan result"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan-Ergebnis prüfen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مراجعة نتيجة الفحص"
+          }
+        }
       }
     },
     "chat.link_scan.mark_safe": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Mark as Safe" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Als sicher markieren" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "وضع علامة آمن" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark as Safe"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als sicher markieren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وضع علامة آمن"
+          }
+        }
       }
     },
     "chat.link_scan.mark_unsafe": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Mark as Unsafe" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Als unsicher markieren" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "وضع علامة غير آمن" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mark as Unsafe"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Als unsicher markieren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وضع علامة غير آمن"
+          }
+        }
       }
     },
     "chat.link_scan.delete_warn": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Delete and Warn" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Löschen und warnen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "حذف وتحذير" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete and Warn"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Löschen und warnen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف وتحذير"
+          }
+        }
       }
     },
     "chat.link_scan.delete_warn_tombstone": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "This message contained an unsafe link and was removed to protect you." } },
-        "de": { "stringUnit": { "state": "translated", "value": "Diese Nachricht enthielt einen unsicheren Link und wurde zu Ihrem Schutz entfernt." } },
-        "ar": { "stringUnit": { "state": "translated", "value": "احتوت هذه الرسالة على رابط غير آمن وتمت إزالتها لحمايتك." } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This message contained an unsafe link and was removed to protect you."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Nachricht enthielt einen unsicheren Link und wurde zu Ihrem Schutz entfernt."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "احتوت هذه الرسالة على رابط غير آمن وتمت إزالتها لحمايتك."
+          }
+        }
       }
     },
     "chat.message_deleted_by_employee": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "This message was deleted by an employee." } },
-        "de": { "stringUnit": { "state": "translated", "value": "Diese Nachricht wurde von einem Mitarbeiter gelöscht." } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تم حذف هذه الرسالة بواسطة موظف." } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This message was deleted by an employee."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Nachricht wurde von einem Mitarbeiter gelöscht."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم حذف هذه الرسالة بواسطة موظف."
+          }
+        }
       }
     },
     "chat.delete_message": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Delete Message" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Nachricht löschen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "حذف الرسالة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete Message"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nachricht löschen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حذف الرسالة"
+          }
+        }
       }
     },
     "chat.delete_message_confirm": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "This message will be permanently removed for everyone in the conversation." } },
-        "de": { "stringUnit": { "state": "translated", "value": "Diese Nachricht wird für alle Teilnehmer endgültig entfernt." } },
-        "ar": { "stringUnit": { "state": "translated", "value": "سيتم حذف هذه الرسالة نهائياً لجميع المشاركين في المحادثة." } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This message will be permanently removed for everyone in the conversation."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Nachricht wird für alle Teilnehmer endgültig entfernt."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سيتم حذف هذه الرسالة نهائياً لجميع المشاركين في المحادثة."
+          }
+        }
       }
     },
     "chat.dangerous_link_warning": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "This link was flagged as potentially dangerous and cannot be opened." } },
-        "de": { "stringUnit": { "state": "translated", "value": "Dieser Link wurde als potenziell gefährlich eingestuft und kann nicht geöffnet werden." } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تم تصنيف هذا الرابط على أنه خطير ولا يمكن فتحه." } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This link was flagged as potentially dangerous and cannot be opened."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Link wurde als potenziell gefährlich eingestuft und kann nicht geöffnet werden."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم تصنيف هذا الرابط على أنه خطير ولا يمكن فتحه."
+          }
+        }
       }
     },
     "chat.quick_links.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Website Links" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Website-Links" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "روابط الموقع" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Website Links"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Website-Links"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "روابط الموقع"
+          }
+        }
       }
     },
     "chat.quick_links.empty_title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "No links configured" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Keine Links konfiguriert" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "لا توجد روابط مُعدّة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No links configured"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine Links konfiguriert"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد روابط مُعدّة"
+          }
+        }
       }
     },
     "chat.quick_links.empty_body": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Add quick website links in Settings → Live Chat." } },
-        "de": { "stringUnit": { "state": "translated", "value": "Bitte unter Einstellungen → Live-Chat verwalten." } },
-        "ar": { "stringUnit": { "state": "translated", "value": "أضِف روابط الموقع السريعة من الإعدادات → الدردشة المباشرة." } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add quick website links in Settings → Live Chat."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bitte unter Einstellungen → Live-Chat verwalten."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أضِف روابط الموقع السريعة من الإعدادات → الدردشة المباشرة."
+          }
+        }
       }
     },
     "chat.quick_links.default_label": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Link" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Link" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "رابط" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رابط"
+          }
+        }
       }
     },
     "chat.customer_typing": {
@@ -4365,79 +4755,244 @@
     },
     "settings.quick_links.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Website Links" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Website-Links" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "روابط الموقع" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Website Links"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Website-Links"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "روابط الموقع"
+          }
+        }
       }
     },
     "settings.quick_links.subtitle": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Add, edit, reorder" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Hinzufügen, bearbeiten, sortieren" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "إضافة وتعديل وإعادة ترتيب" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add, edit, reorder"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hinzufügen, bearbeiten, sortieren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة وتعديل وإعادة ترتيب"
+          }
+        }
       }
     },
     "settings.quick_links.hint": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "These links sync with your WordPress backend and appear in the chat + menu for staff." } },
-        "de": { "stringUnit": { "state": "translated", "value": "Diese Links werden mit dem WordPress-Backend synchronisiert und erscheinen im Chat-Menü für Mitarbeiter." } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تتزامن هذه الروابط مع ووردبريس وتظهر في قائمة الدردشة للموظفين." } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These links sync with your WordPress backend and appear in the chat + menu for staff."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diese Links werden mit dem WordPress-Backend synchronisiert und erscheinen im Chat-Menü für Mitarbeiter."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تتزامن هذه الروابط مع ووردبريس وتظهر في قائمة الدردشة للموظفين."
+          }
+        }
       }
     },
     "settings.quick_links.section": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Configured links" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Konfigurierte Links" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الروابط المُعدّة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configured links"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Konfigurierte Links"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الروابط المُعدّة"
+          }
+        }
       }
     },
     "settings.quick_links.add": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Add link" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Link hinzufügen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "إضافة رابط" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add link"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link hinzufügen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إضافة رابط"
+          }
+        }
       }
     },
     "settings.quick_links.edit": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Edit link" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Link bearbeiten" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تعديل الرابط" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit link"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link bearbeiten"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعديل الرابط"
+          }
+        }
       }
     },
     "settings.quick_links.empty_body": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Tap Add link to create your first quick website link." } },
-        "de": { "stringUnit": { "state": "translated", "value": "Tippen Sie auf „Link hinzufügen“, um den ersten Schnelllink anzulegen." } },
-        "ar": { "stringUnit": { "state": "translated", "value": "اضغط على إضافة رابط لإنشاء أول رابط سريع." } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap Add link to create your first quick website link."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippen Sie auf „Link hinzufügen“, um den ersten Schnelllink anzulegen."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اضغط على إضافة رابط لإنشاء أول رابط سريع."
+          }
+        }
       }
     },
     "settings.quick_links.editor_details": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Link details" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Link-Details" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تفاصيل الرابط" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link details"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link-Details"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تفاصيل الرابط"
+          }
+        }
       }
     },
     "settings.quick_links.field_label": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Button title" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Button-Titel" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "عنوان الزر" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Button title"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Button-Titel"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عنوان الزر"
+          }
+        }
       }
     },
     "settings.quick_links.field_url": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "URL" } },
-        "de": { "stringUnit": { "state": "translated", "value": "URL" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الرابط" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "URL"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "URL"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الرابط"
+          }
+        }
       }
     },
     "settings.quick_links.field_icon": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Icon" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Symbol" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الأيقونة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Icon"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Symbol"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الأيقونة"
+          }
+        }
       }
     },
     "settings.privacy_subtitle": {
@@ -5168,128 +5723,398 @@
     },
     "team.send_photo": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Send Photo" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Foto senden" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "إرسال صورة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send Photo"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Foto senden"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إرسال صورة"
+          }
+        }
       }
     },
     "team.record_voice": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Record Voice Message" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Sprachnachricht aufnehmen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تسجيل رسالة صوتية" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record Voice Message"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprachnachricht aufnehmen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تسجيل رسالة صوتية"
+          }
+        }
       }
     },
     "team.send_voice": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Send" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Senden" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "إرسال" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senden"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إرسال"
+          }
+        }
       }
     },
     "team.voice_listening": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Listening" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Aufnahme läuft" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "جاري الاستماع" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listening"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufnahme läuft"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جاري الاستماع"
+          }
+        }
       }
     },
     "team.voice_playing": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Playing" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Wiedergabe" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "قيد التشغيل" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playing"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiedergabe"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قيد التشغيل"
+          }
+        }
       }
     },
     "team.voice_paused": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Paused" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Pausiert" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "متوقف مؤقتًا" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paused"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pausiert"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "متوقف مؤقتًا"
+          }
+        }
       }
     },
     "team.voice_play": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Play" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Abspielen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تشغيل" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abspielen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تشغيل"
+          }
+        }
       }
     },
     "team.voice_pause": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Pause" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Pause" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "إيقاف مؤقت" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إيقاف مؤقت"
+          }
+        }
       }
     },
     "team.voice_message": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Voice message" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Sprachnachricht" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "رسالة صوتية" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voice message"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprachnachricht"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رسالة صوتية"
+          }
+        }
       }
     },
     "team.voice_sending": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Sending…" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Wird gesendet…" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "جارٍ الإرسال…" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sending…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wird gesendet…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ الإرسال…"
+          }
+        }
       }
     },
     "team.share_location": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Share Location" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Standort teilen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "مشاركة الموقع" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share Location"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standort teilen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مشاركة الموقع"
+          }
+        }
       }
     },
     "team.shared_location": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Shared location" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Geteilter Standort" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "موقع مشترك" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared location"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geteilter Standort"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "موقع مشترك"
+          }
+        }
       }
     },
     "team.open_in_maps": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Open in Maps" } },
-        "de": { "stringUnit": { "state": "translated", "value": "In Karten öffnen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "فتح في الخرائط" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in Maps"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Karten öffnen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح في الخرائط"
+          }
+        }
       }
     },
     "team.microphone_denied": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Microphone access is required to record voice messages." } },
-        "de": { "stringUnit": { "state": "translated", "value": "Mikrofonzugriff ist für Sprachnachrichten erforderlich." } },
-        "ar": { "stringUnit": { "state": "translated", "value": "يلزم الوصول إلى الميكrofon لتسجيل الرسائل الصوتية." } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Microphone access is required to record voice messages."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mikrofonzugriff ist für Sprachnachrichten erforderlich."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يلزم الوصول إلى الميكrofon لتسجيل الرسائل الصوتية."
+          }
+        }
       }
     },
     "team.location_denied": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Location access is required to share your current position." } },
-        "de": { "stringUnit": { "state": "translated", "value": "Standortzugriff ist erforderlich, um Ihre Position zu teilen." } },
-        "ar": { "stringUnit": { "state": "translated", "value": "يلزم الوصول إلى الموقع لمشاركة موقعك الحالي." } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location access is required to share your current position."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standortzugriff ist erforderlich, um Ihre Position zu teilen."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "يلزم الوصول إلى الموقع لمشاركة موقعك الحالي."
+          }
+        }
       }
     },
     "team.media_error.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Could Not Send Attachment" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Anhang konnte nicht gesendet werden" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تعذر إرسال المرفق" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could Not Send Attachment"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anhang konnte nicht gesendet werden"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تعذر إرسال المرفق"
+          }
+        }
       }
     },
     "team.send_error.title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Message Not Sent" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Nachricht nicht gesendet" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "لم يتم إرسال الرسالة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message Not Sent"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nachricht nicht gesendet"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لم يتم إرسال الرسالة"
+          }
+        }
       }
     },
     "team.recording_voice": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Recording… %d s" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Aufnahme… %d s" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "جارٍ التسجيل… %d ث" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording… %d s"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aufnahme… %d s"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ التسجيل… %d ث"
+          }
+        }
       }
     },
     "team.compose.title": {
@@ -10046,37 +10871,112 @@
     },
     "chat.ai_suggestions_title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "AI Suggestions" } },
-        "de": { "stringUnit": { "state": "translated", "value": "KI-Vorschläge" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "اقتراحات الذكاء الاصطناعي" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI Suggestions"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "KI-Vorschläge"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اقتراحات الذكاء الاصطناعي"
+          }
+        }
       }
     },
     "chat.quick_replies_title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Quick replies" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Schnellantworten" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "ردود سريعة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quick replies"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Schnellantworten"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ردود سريعة"
+          }
+        }
       }
     },
     "chat.ai_tap_to_insert": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Tap to insert" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Tippen zum Einfügen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "اضغط للإدراج" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap to insert"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tippen zum Einfügen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اضغط للإدراج"
+          }
+        }
       }
     },
     "chat.analyze_message": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Analyze message" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Nachricht analysieren" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تحليل الرسالة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyze message"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nachricht analysieren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تحليل الرسالة"
+          }
+        }
       }
     },
     "chat.analyze_latest_message": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Analyze latest customer message" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Letzte Kundennachricht analysieren" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تحليل آخر رسالة من العميل" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyze latest customer message"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzte Kundennachricht analysieren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تحليل آخر رسالة من العميل"
+          }
+        }
       }
     },
     "common.ok": {
@@ -11907,9 +12807,24 @@
     },
     "loading.quick_links": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Loading website links" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Website-Links werden geladen" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "جارٍ تحميل روابط الموقع" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading website links"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Website-Links werden geladen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ تحميل روابط الموقع"
+          }
+        }
       }
     },
     "loading.team_management": {
@@ -13366,261 +14281,816 @@
     },
     "device.chip_push_on": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Push on" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Push aktiv" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الإشعارات مفعّلة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push on"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push aktiv"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإشعارات مفعّلة"
+          }
+        }
       }
     },
     "device.chip_push_off": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Push off" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Push inaktiv" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الإشعارات معطّلة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push off"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push inaktiv"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإشعارات معطّلة"
+          }
+        }
       }
     },
     "device.chip_sandbox": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Sandbox" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Sandbox" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "Sandbox" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sandbox"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sandbox"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sandbox"
+          }
+        }
       }
     },
     "device.chip_production": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Production" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Produktion" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الإنتاج" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Production"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Produktion"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإنتاج"
+          }
+        }
       }
     },
     "device.meta_token": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Token" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Token" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الرمز" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الرمز"
+          }
+        }
       }
     },
     "common.yes": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Yes" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Ja" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "نعم" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ja"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نعم"
+          }
+        }
       }
     },
     "common.no": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "No" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Nein" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "لا" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nein"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا"
+          }
+        }
       }
     },
     "push.diag_title": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Push Diagnostics" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Push-Diagnose" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تشخيص الإشعارات" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push Diagnostics"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push-Diagnose"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تشخيص الإشعارات"
+          }
+        }
       }
     },
     "push.diag_section_local": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Device" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Gerät" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الجهاز" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gerät"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الجهاز"
+          }
+        }
       }
     },
     "push.diag_section_server": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Server Registration" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Server-Registrierung" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تسجيل الخادم" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server Registration"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server-Registrierung"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تسجيل الخادم"
+          }
+        }
       }
     },
     "push.diag_section_last_test": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Last Test Push" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Letzter Test-Push" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "آخر إشعار تجريبي" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last Test Push"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzter Test-Push"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "آخر إشعار تجريبي"
+          }
+        }
       }
     },
     "push.diag_permission": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Permission" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Berechtigung" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الإذن" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permission"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Berechtigung"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإذن"
+          }
+        }
       }
     },
     "push.diag_token": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Device Token" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Geräte-Token" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "رمز الجهاز" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device Token"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geräte-Token"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رمز الجهاز"
+          }
+        }
       }
     },
     "push.diag_environment": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "APNs Environment" } },
-        "de": { "stringUnit": { "state": "translated", "value": "APNs-Umgebung" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "بيئة APNs" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "APNs Environment"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "APNs-Umgebung"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بيئة APNs"
+          }
+        }
       }
     },
     "push.diag_device_id": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Device ID" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Geräte-ID" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "معرّف الجهاز" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device ID"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geräte-ID"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "معرّف الجهاز"
+          }
+        }
       }
     },
     "push.diag_server_status": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Status" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Status" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الحالة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الحالة"
+          }
+        }
       }
     },
     "push.diag_server_at": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Registered At" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Registriert am" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تاريخ التسجيل" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registered At"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registriert am"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تاريخ التسجيل"
+          }
+        }
       }
     },
     "push.diag_test_sent": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "APNs Accepted" } },
-        "de": { "stringUnit": { "state": "translated", "value": "APNs akzeptiert" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "قبول APNs" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "APNs Accepted"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "APNs akzeptiert"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قبول APNs"
+          }
+        }
       }
     },
     "push.diag_test_type": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Push Type" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Push-Typ" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "نوع الإشعار" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push Type"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push-Typ"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "نوع الإشعار"
+          }
+        }
       }
     },
     "push.diag_test_status": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "HTTP Status" } },
-        "de": { "stringUnit": { "state": "translated", "value": "HTTP-Status" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "حالة HTTP" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTP Status"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTP-Status"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حالة HTTP"
+          }
+        }
       }
     },
     "push.diag_apple_response": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Apple Response" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Apple-Antwort" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "استجابة Apple" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Response"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple-Antwort"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "استجابة Apple"
+          }
+        }
       }
     },
     "push.diag_test_at": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Tested At" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Getestet am" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "وقت الاختبار" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tested At"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Getestet am"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وقت الاختبار"
+          }
+        }
       }
     },
     "push.diag_refresh": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Refresh Status" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Status aktualisieren" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تحديث الحالة" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh Status"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status aktualisieren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تحديث الحالة"
+          }
+        }
       }
     },
     "push.diag_repair": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Repair APNs Registration" } },
-        "de": { "stringUnit": { "state": "translated", "value": "APNs-Registrierung reparieren" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "إصلاح تسجيل APNs" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repair APNs Registration"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "APNs-Registrierung reparieren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إصلاح تسجيل APNs"
+          }
+        }
       }
     },
     "push.diag_token_prefix": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Token Prefix" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Token-Präfix" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "بادئة الرمز" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token Prefix"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token-Präfix"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بادئة الرمز"
+          }
+        }
       }
     },
     "push.diag_token_suffix": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Token Suffix" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Token-Suffix" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "لاحقة الرمز" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token Suffix"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token-Suffix"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لاحقة الرمز"
+          }
+        }
       }
     },
     "push.diag_token_at": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Token Received At" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Token erhalten um" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "وقت استلام الرمز" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token Received At"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token erhalten um"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "وقت استلام الرمز"
+          }
+        }
       }
     },
     "push.diag_aps_entitlement": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "APS Entitlement" } },
-        "de": { "stringUnit": { "state": "translated", "value": "APS-Berechtigung" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "صلاحية APS" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "APS Entitlement"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "APS-Berechtigung"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "صلاحية APS"
+          }
+        }
       }
     },
     "push.diag_registration_requested": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Registration Requested" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Registrierung angefordert" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "تم طلب التسجيل" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registration Requested"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrierung angefordert"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم طلب التسجيل"
+          }
+        }
       }
     },
     "push.diag_registration_count": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Registration Attempts" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Registrierungsversuche" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "محاولات التسجيل" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registration Attempts"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registrierungsversuche"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "محاولات التسجيل"
+          }
+        }
       }
     },
     "push.diag_registration_at": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Last Registration Request" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Letzte Registrierungsanfrage" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "آخر طلب تسجيل" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last Registration Request"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Letzte Registrierungsanfrage"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "آخر طلب تسجيل"
+          }
+        }
       }
     },
     "push.diag_apns_responded": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "APNs Responded" } },
-        "de": { "stringUnit": { "state": "translated", "value": "APNs hat geantwortet" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "استجاب APNs" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "APNs Responded"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "APNs hat geantwortet"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "استجاب APNs"
+          }
+        }
       }
     },
     "push.diag_ios_status": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "iOS Registration Status" } },
-        "de": { "stringUnit": { "state": "translated", "value": "iOS-Registrierungsstatus" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "حالة التسجيل في iOS" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS Registration Status"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS-Registrierungsstatus"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "حالة التسجيل في iOS"
+          }
+        }
       }
     },
     "push.diag_server_upload": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Uploaded to Server" } },
-        "de": { "stringUnit": { "state": "translated", "value": "An Server gesendet" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "أُرسل للخادم" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uploaded to Server"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An Server gesendet"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أُرسل للخادم"
+          }
+        }
       }
     },
     "push.diag_server_accepted": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Server Accepted" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Server akzeptiert" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "قبله الخادم" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server Accepted"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server akzeptiert"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قبله الخادم"
+          }
+        }
       }
     },
     "push.diag_server_push_enabled": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Push Enabled on Server" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Push auf Server aktiv" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "الإشعارات مفعّلة على الخادم" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push Enabled on Server"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push auf Server aktiv"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الإشعارات مفعّلة على الخادم"
+          }
+        }
       }
     },
     "push.diag_send_test": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Send Test Alert Push" } },
-        "de": { "stringUnit": { "state": "translated", "value": "Test-Alert-Push senden" } },
-        "ar": { "stringUnit": { "state": "translated", "value": "إرسال إشعار تجريبي" } }
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send Test Alert Push"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test-Alert-Push senden"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إرسال إشعار تجريبي"
+          }
+        }
       }
     },
     "device.default_employee": {
@@ -18415,6 +19885,578 @@
           "stringUnit": {
             "state": "translated",
             "value": "سيتم حذف هذا الحدث نهائياً."
+          }
+        }
+      }
+    },
+    "team.presence_away": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Away"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abwesend"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "بعيد"
+          }
+        }
+      }
+    },
+    "team.metric.active": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active conversations"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktive Gespräche"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "محادثات نشطة"
+          }
+        }
+      }
+    },
+    "team.metric.alerts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New alerts"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neue Hinweise"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تنبيهات جديدة"
+          }
+        }
+      }
+    },
+    "team.metric.waiting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for reply"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warten auf Antwort"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "في انتظار الرد"
+          }
+        }
+      }
+    },
+    "team.start_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start live support instantly"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live-Support sofort starten"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ابدأ الدعم المباشر فورًا"
+          }
+        }
+      }
+    },
+    "team.message_team": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message team"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Team benachrichtigen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مراسلة الفريق"
+          }
+        }
+      }
+    },
+    "team.message_team_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send a message to the whole team"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nachricht an das gesamte Team senden"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أرسل رسالة إلى الفريق بأكمله"
+          }
+        }
+      }
+    },
+    "team.live_alerts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live alerts"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live-Hinweise"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تنبيهات مباشرة"
+          }
+        }
+      }
+    },
+    "team.show_all": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show all"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Alle anzeigen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عرض الكل"
+          }
+        }
+      }
+    },
+    "team.alert.pending": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pending request"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausstehende Anfrage"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "طلب قيد الانتظار"
+          }
+        }
+      }
+    },
+    "team.alert.unread": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unread message"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ungelesene Nachricht"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رسالة غير مقروءة"
+          }
+        }
+      }
+    },
+    "team.broadcast.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your message will be delivered to each team member."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihre Nachricht wird an jedes Teammitglied zugestellt."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "سيتم تسليم رسالتك إلى كل عضو في الفريق."
+          }
+        }
+      }
+    },
+    "team.broadcast.message": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Message"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nachricht"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "رسالة"
+          }
+        }
+      }
+    },
+    "team.broadcast.recipients": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d recipients"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d Empfänger"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%d مستلمين"
+          }
+        }
+      }
+    },
+    "team.broadcast.progress": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sending %d of %d…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sende %d von %d…"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "جارٍ الإرسال %d من %d…"
+          }
+        }
+      }
+    },
+    "team.broadcast.done": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent to %d team members"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An %d Teammitglieder gesendet"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم الإرسال إلى %d أعضاء الفريق"
+          }
+        }
+      }
+    },
+    "team.send_file": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send file"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei senden"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إرسال ملف"
+          }
+        }
+      }
+    },
+    "team.open_file": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open file"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei öffnen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح الملف"
+          }
+        }
+      }
+    },
+    "common.pin": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pin"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anheften"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تثبيت"
+          }
+        }
+      }
+    },
+    "common.unpin": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unpin"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lösen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إلغاء التثبيت"
+          }
+        }
+      }
+    },
+    "common.mute": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mute"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stummschalten"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "كتم"
+          }
+        }
+      }
+    },
+    "common.unmute": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unmute"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ton aktivieren"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "إلغاء الكتم"
+          }
+        }
+      }
+    },
+    "session.archived_title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archived chats"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archivierte Chats"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "المحادثات المؤرشفة"
+          }
+        }
+      }
+    },
+    "session.archived_empty": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No archived chats"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine archivierten Chats"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "لا توجد محادثات مؤرشفة"
+          }
+        }
+      }
+    },
+    "session.archived_empty_hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swipe left on a chat and tap Archive to move it here."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wischen Sie nach links und tippen Sie auf Archivieren."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "اسحب لليسار على محادثة واضغط أرشفة لنقلها هنا."
+          }
+        }
+      }
+    },
+    "session.restore": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wiederherstellen"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "استعادة"
           }
         }
       }

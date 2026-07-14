@@ -185,6 +185,19 @@ final class AppSettingsStore: ObservableObject {
             scheduleReadSeqPersist()
         }
     }
+    /// User explicitly marked unread — survives admin-last-reply and read-session state.
+    @Published var forcedUnreadSessionIds: Set<String> {
+        didSet { scheduleForcedUnreadPersist() }
+    }
+    @Published var archivedSessionIds: Set<String> {
+        didSet { scheduleArchivedPersist() }
+    }
+    @Published var pinnedSessionIds: Set<String> {
+        didSet { schedulePinnedPersist() }
+    }
+    @Published var mutedSessionIds: Set<String> {
+        didSet { scheduleMutedPersist() }
+    }
     @Published var compactListMode: Bool {
         didSet { DeferredUserDefaults.set(compactListMode, forKey: Keys.compactList) }
     }
@@ -248,9 +261,52 @@ final class AppSettingsStore: ObservableObject {
 
     private var readPersistTask: Task<Void, Never>?
     private var readSeqPersistTask: Task<Void, Never>?
+    private var forcedUnreadPersistTask: Task<Void, Never>?
+    private var archivedPersistTask: Task<Void, Never>?
+    private var pinnedPersistTask: Task<Void, Never>?
+    private var mutedPersistTask: Task<Void, Never>?
 
     func isSessionUnread(_ session: LiveSession) -> Bool {
-        unreadMessageCount(for: session) > 0
+        if forcedUnreadSessionIds.contains(session.sessionId) {
+            return true
+        }
+        return unreadMessageCount(for: session) > 0
+    }
+
+    func isSessionArchived(_ sessionId: String) -> Bool {
+        archivedSessionIds.contains(sessionId)
+    }
+
+    func isSessionPinned(_ sessionId: String) -> Bool {
+        pinnedSessionIds.contains(sessionId)
+    }
+
+    func isSessionMuted(_ sessionId: String) -> Bool {
+        mutedSessionIds.contains(sessionId)
+    }
+
+    func archiveSession(_ sessionId: String) {
+        archivedSessionIds.insert(sessionId)
+    }
+
+    func unarchiveSession(_ sessionId: String) {
+        archivedSessionIds.remove(sessionId)
+    }
+
+    func setSessionPinned(_ sessionId: String, pinned: Bool) {
+        if pinned {
+            pinnedSessionIds.insert(sessionId)
+        } else {
+            pinnedSessionIds.remove(sessionId)
+        }
+    }
+
+    func setSessionMuted(_ sessionId: String, muted: Bool) {
+        if muted {
+            mutedSessionIds.insert(sessionId)
+        } else {
+            mutedSessionIds.remove(sessionId)
+        }
     }
 
     /// Number of unread incoming messages in a session (not just conversation count).
@@ -278,18 +334,20 @@ final class AppSettingsStore: ObservableObject {
     }
 
     func markSessionRead(_ sessionId: String, seq: Int? = nil) {
+        forcedUnreadSessionIds.remove(sessionId)
         if let seq {
             let current = readUpToSeq[sessionId] ?? 0
             if seq > current {
                 readUpToSeq[sessionId] = seq
             }
         }
-        guard readSessionIds.insert(sessionId).inserted else { return }
+        readSessionIds.insert(sessionId)
     }
 
     func markSessionUnread(_ sessionId: String) {
         readUpToSeq.removeValue(forKey: sessionId)
-        guard readSessionIds.remove(sessionId) != nil else { return }
+        readSessionIds.remove(sessionId)
+        forcedUnreadSessionIds.insert(sessionId)
     }
 
     private func scheduleReadSessionPersist() {
@@ -310,6 +368,42 @@ final class AppSettingsStore: ObservableObject {
         }
     }
 
+    private func scheduleForcedUnreadPersist() {
+        forcedUnreadPersistTask?.cancel()
+        forcedUnreadPersistTask = Task { [forcedUnreadSessionIds] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+            DeferredUserDefaults.set(Array(forcedUnreadSessionIds), forKey: Keys.forcedUnreadSessions, delayNanoseconds: 0)
+        }
+    }
+
+    private func scheduleArchivedPersist() {
+        archivedPersistTask?.cancel()
+        archivedPersistTask = Task { [archivedSessionIds] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+            DeferredUserDefaults.set(Array(archivedSessionIds), forKey: Keys.archivedSessions, delayNanoseconds: 0)
+        }
+    }
+
+    private func schedulePinnedPersist() {
+        pinnedPersistTask?.cancel()
+        pinnedPersistTask = Task { [pinnedSessionIds] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+            DeferredUserDefaults.set(Array(pinnedSessionIds), forKey: Keys.pinnedSessions, delayNanoseconds: 0)
+        }
+    }
+
+    private func scheduleMutedPersist() {
+        mutedPersistTask?.cancel()
+        mutedPersistTask = Task { [mutedSessionIds] in
+            try? await Task.sleep(nanoseconds: 400_000_000)
+            guard !Task.isCancelled else { return }
+            DeferredUserDefaults.set(Array(mutedSessionIds), forKey: Keys.mutedSessions, delayNanoseconds: 0)
+        }
+    }
+
     private enum Keys {
         static let appearance = "pax.settings.appearance"
         static let language = "pax.settings.language"
@@ -322,6 +416,10 @@ final class AppSettingsStore: ObservableObject {
         static let sendSound = "pax.settings.sendSound"
         static let readSessions = "pax.settings.readSessions"
         static let readUpToSeq = "pax.settings.readUpToSeq"
+        static let forcedUnreadSessions = "pax.settings.forcedUnreadSessions"
+        static let archivedSessions = "pax.settings.archivedSessions"
+        static let pinnedSessions = "pax.settings.pinnedSessions"
+        static let mutedSessions = "pax.settings.mutedSessions"
         static let compactList = "pax.settings.compactList"
         static let showTimestamps = "pax.settings.showTimestamps"
         static let privacyBanner = "pax.settings.privacyBanner"
@@ -401,6 +499,26 @@ final class AppSettingsStore: ObservableObject {
             readUpToSeq = seqMap.mapValues { $0.intValue }
         } else {
             readUpToSeq = [:]
+        }
+        if let forced = defaults.array(forKey: Keys.forcedUnreadSessions) as? [String] {
+            forcedUnreadSessionIds = Set(forced)
+        } else {
+            forcedUnreadSessionIds = []
+        }
+        if let archived = defaults.array(forKey: Keys.archivedSessions) as? [String] {
+            archivedSessionIds = Set(archived)
+        } else {
+            archivedSessionIds = []
+        }
+        if let pinned = defaults.array(forKey: Keys.pinnedSessions) as? [String] {
+            pinnedSessionIds = Set(pinned)
+        } else {
+            pinnedSessionIds = []
+        }
+        if let muted = defaults.array(forKey: Keys.mutedSessions) as? [String] {
+            mutedSessionIds = Set(muted)
+        } else {
+            mutedSessionIds = []
         }
         compactListMode = defaults.object(forKey: Keys.compactList) as? Bool ?? false
         showListTimestamps = defaults.object(forKey: Keys.showTimestamps) as? Bool ?? true
