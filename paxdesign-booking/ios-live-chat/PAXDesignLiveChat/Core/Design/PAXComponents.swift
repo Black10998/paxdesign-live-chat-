@@ -481,13 +481,13 @@ enum PAXShellLayout {
             .safeAreaInsets.bottom ?? 0
     }
 
-    static var scBottomBarScrollInset: CGFloat {
-        SCBarMetrics.scrollInset + bottomSafeArea
+    static var uiverseMenuScrollInset: CGFloat {
+        UiverseMenuMetrics.scrollInset + bottomSafeArea
     }
 
     /// Full obstruction from the bottom edge: tab bar chrome + home indicator + breathing room.
     static var tabBarScrollInset: CGFloat {
-        scBottomBarScrollInset
+        uiverseMenuScrollInset
     }
 
     static var tabBarReservedHeight: CGFloat {

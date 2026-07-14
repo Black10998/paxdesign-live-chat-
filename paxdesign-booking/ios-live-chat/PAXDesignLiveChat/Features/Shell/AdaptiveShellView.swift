@@ -68,13 +68,12 @@ struct AdaptiveShellView: View {
         !isPad && !isShellDetailActive
     }
 
-    private var scBottomBarItems: [SCBottomBarItem] {
+    private var uiverseMenuItems: [UiverseMenuBarItem] {
         iPhoneTabItems.map { item in
-            SCBottomBarItem(
+            UiverseMenuBarItem(
                 tag: item.tag,
                 glyph: item.glyph,
-                title: item.title,
-                badgeCount: item.badgeCount
+                title: item.title
             )
         }
     }
@@ -85,7 +84,7 @@ struct AdaptiveShellView: View {
             .init(
                 tag: tags.dashboard,
                 title: L10n.TabDashboard,
-                glyph: .list
+                glyph: .home
             )
         ]
 
@@ -94,8 +93,7 @@ struct AdaptiveShellView: View {
                 .init(
                     tag: chatsTag,
                     title: L10n.TabChats,
-                    glyph: .comments,
-                    badgeCount: unreadChatCount
+                    glyph: .chatBubble
                 )
             )
         }
@@ -105,8 +103,7 @@ struct AdaptiveShellView: View {
                 .init(
                     tag: teamTag,
                     title: L10n.TabTeam,
-                    glyph: .users,
-                    badgeCount: unreadTeamCount
+                    glyph: .users
                 )
             )
         }
@@ -115,15 +112,14 @@ struct AdaptiveShellView: View {
             .init(
                 tag: tags.live,
                 title: L10n.TabLive,
-                glyph: .bell,
-                badgeCount: coordinator.liveCount
+                glyph: .bell
             )
         )
         items.append(
             .init(
                 tag: tags.platform,
                 title: L10n.TabPlatform,
-                glyph: .calendarAlt
+                glyph: .calendar
             )
         )
         return items
@@ -149,8 +145,8 @@ struct AdaptiveShellView: View {
         }
         .overlay(alignment: .bottom) {
             if shouldShowBottomTabBar {
-                SCBottomBarView(
-                    items: scBottomBarItems,
+                UiverseMenuBarView(
+                    items: uiverseMenuItems,
                     selection: $selectedTab,
                     reduceMotion: reduceMotion
                 )
@@ -160,7 +156,7 @@ struct AdaptiveShellView: View {
         }
         .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.9), value: shouldShowBottomTabBar)
         .environment(\.shellTabBarVisible, shouldShowBottomTabBar)
-        .environment(\.shellTabBarScrollInset, shouldShowBottomTabBar ? PAXShellLayout.scBottomBarScrollInset : 0)
+        .environment(\.shellTabBarScrollInset, shouldShowBottomTabBar ? PAXShellLayout.uiverseMenuScrollInset : 0)
         .tint(PAXTheme.accent)
         .sheet(isPresented: $showGlobalSearch) {
             NavigationStack { GlobalSearchView() }
@@ -462,8 +458,7 @@ struct AdaptiveShellView: View {
 private struct ShellTabItem: Identifiable {
     let tag: Int
     let title: String
-    let glyph: SCBottomBarIcons.Glyph
-    var badgeCount: Int = 0
+    let glyph: UiverseMenuIcons.Glyph
 
     var id: Int { tag }
 }
