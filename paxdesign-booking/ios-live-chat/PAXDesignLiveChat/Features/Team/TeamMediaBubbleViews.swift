@@ -342,7 +342,7 @@ struct TeamFileBubbleView: View {
     private func openFile() {
         guard let urlString = message.fileUrl,
               !urlString.hasPrefix("pending://"),
-              let url = URL(string: urlString) else { return }
+              URL(string: urlString) != nil else { return }
         showPreview = true
     }
 }

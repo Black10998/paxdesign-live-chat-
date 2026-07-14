@@ -127,7 +127,7 @@ enum MessageMerge {
 
         guard changed else { return (existing, false) }
 
-        return (sortMessages(map.values), true)
+        return (sortMessages(Array(map.values)), true)
     }
 
     private static func dedupeByMergeKey(_ messages: [LiveMessage]) -> [LiveMessage] {
