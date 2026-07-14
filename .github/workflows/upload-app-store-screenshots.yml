@@ -26,11 +26,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate App Store Connect credentials
-        run: python3 scripts/appstore-connect/verify-asc-credentials.py
-
       - name: Install dependencies
         run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
+
+      - name: Validate App Store Connect credentials
+        run: python3 scripts/appstore-connect/verify-asc-credentials.py
 
       - name: Upload App Store screenshots (no review submission)
         run: python3 scripts/appstore-connect/upload_app_store_screenshots.py
