@@ -97,9 +97,9 @@ struct TeamIAChatComposer: View {
 
     private var attachmentStrip: some View {
         HStack(spacing: 2) {
-            attachmentButton { TeamComposerSVGIcons.location(color: iconMuted) } action: onPickLocation
-            attachmentButton { TeamComposerSVGIcons.photo(color: iconMuted) } action: onPickPhoto
-            attachmentButton { TeamComposerSVGIcons.file(color: iconMuted) } action: onPickFile
+            attachmentButton(icon: { TeamComposerSVGIcons.location(color: iconMuted) }, action: onPickLocation)
+            attachmentButton(icon: { TeamComposerSVGIcons.photo(color: iconMuted) }, action: onPickPhoto)
+            attachmentButton(icon: { TeamComposerSVGIcons.file(color: iconMuted) }, action: onPickFile)
         }
         .padding(.leading, 2)
     }
