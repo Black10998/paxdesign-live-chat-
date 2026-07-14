@@ -34,3 +34,6 @@ jobs:
 
       - name: Upload App Store screenshots (no review submission)
         run: python3 scripts/appstore-connect/upload_app_store_screenshots.py
+
+      - name: Verify screenshots reached COMPLETE in App Store Connect
+        run: python3 scripts/appstore-connect/verify_app_store_screenshots.py
