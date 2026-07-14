@@ -60,7 +60,8 @@ struct SCBottomBarView: View {
             }
             .padding(.horizontal, SCBarMetrics.horizontalPadding)
             .padding(.vertical, SCBarMetrics.verticalPadding)
-            .frame(maxWidth: .infinity, height: SCBarMetrics.barHeight, alignment: .bottom)
+            .frame(maxWidth: .infinity)
+            .frame(height: SCBarMetrics.barHeight, alignment: .bottom)
         }
         .frame(maxWidth: .infinity)
         .frame(height: SCBarMetrics.totalHeight, alignment: .bottom)
