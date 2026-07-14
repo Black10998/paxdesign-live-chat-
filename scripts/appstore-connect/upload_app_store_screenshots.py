@@ -169,12 +169,24 @@ def upload_binary(client: ASCClient, screenshot_id: str, path: Path) -> None:
     warn(f"Screenshot {path.name} still processing after upload")
 
 
+def delete_screenshot(client: ASCClient, screenshot_id: str) -> None:
+    status, payload = client.request(
+        "DELETE",
+        f"/appScreenshots/{screenshot_id}",
+        allow_error=True,
+    )
+    if status not in {200, 204, 404}:
+        warn(f"Could not delete screenshot {screenshot_id}: {json.dumps(payload)}")
+
+
 def upload_locale_screenshots(
     client: ASCClient,
     version_id: str,
     locale: str,
     display_type: str,
     screenshot_dir: Path,
+    *,
+    replace_existing: bool,
 ) -> None:
     loc = ensure_localization(client, version_id, locale)
     loc_id = loc["id"]
@@ -183,8 +195,13 @@ def upload_locale_screenshots(
 
     existing = list_screenshots(client, set_id)
     if existing:
-        print(f"Screenshots already present for {locale} ({len(existing)}); skipping upload")
-        return
+        if replace_existing:
+            print(f"Removing {len(existing)} existing screenshot(s) for {locale}")
+            for item in existing:
+                delete_screenshot(client, item["id"])
+        else:
+            print(f"Screenshots already present for {locale} ({len(existing)}); skipping upload")
+            return
 
     files = sorted(p for p in screenshot_dir.glob("*.png") if p.is_file())
     if not files:
@@ -210,8 +227,16 @@ def main() -> None:
     display_type = metadata.get("screenshotDisplayType", "APP_IPHONE_67")
     screenshot_dir = ROOT / metadata.get("screenshotDir", "docs/app-store/screenshots/6.7-inch")
     primary_locale = metadata.get("primaryLocale", "de-DE")
+    replace_existing = os.environ.get("REPLACE_SCREENSHOTS", "1").strip().lower() in {"1", "true", "yes"}
 
-    upload_locale_screenshots(client, version_id, primary_locale, display_type, screenshot_dir)
+    upload_locale_screenshots(
+        client,
+        version_id,
+        primary_locale,
+        display_type,
+        screenshot_dir,
+        replace_existing=replace_existing,
+    )
     print("Screenshot upload complete")
 
 

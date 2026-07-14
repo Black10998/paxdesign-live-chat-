@@ -1,0 +1,36 @@
+name: Upload App Store Screenshots
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/app-store-screenshots-upload'
+
+permissions:
+  contents: read
+
+jobs:
+  upload-screenshots:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    env:
+      APP_BUNDLE_ID: at.paxdesign.livechat
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+      REPLACE_SCREENSHOTS: "1"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate App Store Connect credentials
+        run: python3 scripts/appstore-connect/verify-asc-credentials.py
+
+      - name: Install dependencies
+        run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
+
+      - name: Upload App Store screenshots (no review submission)
+        run: python3 scripts/appstore-connect/upload_app_store_screenshots.py

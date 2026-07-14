@@ -3,8 +3,8 @@
   "sku": "paxdesign-livechat",
   "primaryLocale": "de-DE",
   "locales": ["de-DE", "en-US"],
-  "versionString": "2.0.0",
-  "buildNumber": "113",
+  "versionString": "2.0.5",
+  "buildNumber": "127",
   "wordpressVersion": "3.124.0",
   "appInfo": {
     "name": "PAXDesign Live Chat",
