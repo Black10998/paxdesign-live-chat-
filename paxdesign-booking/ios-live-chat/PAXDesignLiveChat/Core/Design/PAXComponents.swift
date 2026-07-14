@@ -687,7 +687,7 @@ private enum PAXRefreshControlCustomizer {
         }
     }
 
-    private static func nearestScrollView(from view: UIView) -> UIScrollView? {
+    fileprivate static func nearestScrollView(from view: UIView) -> UIScrollView? {
         var current: UIView? = view
         while let node = current {
             if let scroll = node as? UIScrollView { return scroll }
@@ -750,7 +750,7 @@ private struct PAXShellScrollOffsetTracker: UIViewRepresentable {
                   scrollView !== observedScrollView else { return }
             offsetObservation?.invalidate()
             observedScrollView = scrollView
-            offsetObservation = scrollView.observe(\.contentOffset, options: [.new]) { [weak self] scrollView, _ in
+            offsetObservation = scrollView.observe(\.contentOffset, options: [.new]) { [weak self] (scrollView: UIScrollView, _: NSKeyValueObservedChange<CGPoint>) in
                 guard let self else { return }
                 let offset = max(0, scrollView.contentOffset.y + scrollView.adjustedContentInset.top)
                 Task { @MainActor in
