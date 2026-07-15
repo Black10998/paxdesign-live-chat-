@@ -1,0 +1,68 @@
+name: Deploy and verify plugin 3.132.0
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/triggers/wordpress-deploy-3132'
+      - 'scripts/verify-apns-registration-e2e.sh'
+      - 'paxdesign-booking/**'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy plugin via rsync
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          rsync -az --delete -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/ "${WP_SSH_USER}@${WP_SSH_HOST}:${TARGET}/"
+          ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
+            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp plugin activate paxdesign-booking && wp cache flush || true)"
+
+      - name: Verify APNs registration E2E
+        env:
+          PAX_SITE: https://paxdesign.at
+          PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
+          PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/verify-apns-registration-e2e.sh
+          ./scripts/verify-apns-registration-e2e.sh | tee verify-apns-e2e.log
+
+      - name: Upload verification log
+        uses: actions/upload-artifact@v4
+        with:
+          name: verify-apns-e2e-3132
+          path: verify-apns-e2e.log

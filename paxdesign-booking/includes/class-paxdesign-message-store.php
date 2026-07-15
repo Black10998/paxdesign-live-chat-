@@ -20,6 +20,9 @@ class PAXdesign_Message_Store {
     /** @var array<int, array<string, mixed>> */
     private static $deferred_asset_purges = array();
 
+    /** @var array<string, true> */
+    private static $legacy_migration_done = array();
+
     private static $shutdown_deferred_registered = false;
 
     public static function init() {
@@ -928,19 +931,67 @@ class PAXdesign_Message_Store {
         if ($channel !== 'customer' || !class_exists('PAXdesign_Chat_Live') || !class_exists('PAXdesign_Chat_Log')) {
             return;
         }
+        $session_id = sanitize_text_field((string) $session_id);
+        if ($session_id === '') {
+            return;
+        }
+        if (isset(self::$legacy_migration_done[$session_id])) {
+            return;
+        }
+
         global $wpdb;
         $row = $wpdb->get_row($wpdb->prepare(
             'SELECT messages FROM ' . PAXdesign_Chat_Log::table_name() . ' WHERE session_id = %s LIMIT 1',
             $session_id
         ));
-        if ($row && isset($row->messages)) {
-            $messages = json_decode($row->messages, true);
-            if ($already_locked) {
-                self::import_legacy_rows($session_id, is_array($messages) ? $messages : array(), 'customer');
-            } else {
-                self::migrate_legacy($session_id, $messages, 'customer');
-            }
+        if (!$row || !isset($row->messages)) {
+            self::$legacy_migration_done[$session_id] = true;
+            return;
         }
+
+        $raw_json = (string) $row->messages;
+        if ($raw_json === '' || $raw_json === '[]') {
+            self::$legacy_migration_done[$session_id] = true;
+            return;
+        }
+
+        $messages = json_decode($raw_json, true);
+        if (!is_array($messages) || empty($messages)) {
+            self::$legacy_migration_done[$session_id] = true;
+            return;
+        }
+
+        if (self::legacy_json_fully_migrated($session_id, $messages)) {
+            self::$legacy_migration_done[$session_id] = true;
+            return;
+        }
+
+        if ($already_locked) {
+            self::import_legacy_rows($session_id, $messages, 'customer');
+        } else {
+            self::migrate_legacy($session_id, $messages, 'customer');
+        }
+        self::$legacy_migration_done[$session_id] = true;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $messages
+     */
+    private static function legacy_json_fully_migrated($session_id, array $messages) {
+        $durable_count = self::raw_message_count($session_id);
+        if ($durable_count <= 0) {
+            return false;
+        }
+        return $durable_count >= count($messages);
+    }
+
+    private static function raw_message_count($session_id) {
+        global $wpdb;
+        $table = self::messages_table();
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table WHERE session_id = %s",
+            sanitize_text_field($session_id)
+        ));
     }
 
     private static function update_customer_projection($session_id, $message, $channel) {
@@ -948,21 +999,21 @@ class PAXdesign_Message_Store {
             return;
         }
         global $wpdb;
-        $messages = self::fetch_all_rows($session_id);
         $preview = !empty($message['content']) ? wp_html_excerpt($message['content'], 120, '…') : '';
-        $wpdb->update(
-            PAXdesign_Chat_Log::table_name(),
-            array(
-                'messages'      => wp_json_encode($messages),
-                'message_seq'   => (int) $message['id'],
-                'message_count' => count($messages),
-                'last_preview'  => $preview,
-                'updated_at'    => current_time('mysql'),
-            ),
-            array('session_id' => $session_id),
-            array('%s', '%d', '%d', '%s', '%s'),
-            array('%s')
-        );
+        $table = PAXdesign_Chat_Log::table_name();
+        $wpdb->query($wpdb->prepare(
+            "UPDATE $table
+             SET message_seq = %d,
+                 message_count = message_count + 1,
+                 last_preview = %s,
+                 updated_at = %s
+             WHERE session_id = %s",
+            (int) $message['id'],
+            $preview,
+            current_time('mysql'),
+            sanitize_text_field($session_id)
+        ));
+        self::defer_customer_projection_rebuild($session_id, $channel);
     }
 
     private static function sanitize_meta($extra) {

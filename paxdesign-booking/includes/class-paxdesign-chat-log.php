@@ -243,7 +243,7 @@ class PAXdesign_Chat_Log {
             );
             $already_started = $existing_row && !empty($existing_row->consultation_started);
             if (!$already_started && class_exists('PAXdesign_Message_Store')) {
-                $already_started = (bool) PAXdesign_Message_Store::get_by_client_id($session_id, 'sys:session_started');
+                $already_started = (bool) PAXdesign_Message_Store::find_by_client_id($session_id, 'sys:session_started');
             }
             if (!$already_started) {
                 $sanitized = array(
