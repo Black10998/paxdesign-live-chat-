@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/triggers/verify-deployments'
       - 'scripts/verify-debug-log-post-deploy.sh'
+      - 'scripts/verify-3132-post-deploy.sh'
       - 'scripts/trace-ios-http-profile.sh'
 
 permissions:

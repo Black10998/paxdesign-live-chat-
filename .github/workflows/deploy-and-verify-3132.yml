@@ -61,8 +61,32 @@ jobs:
           chmod +x scripts/verify-apns-registration-e2e.sh
           ./scripts/verify-apns-registration-e2e.sh | tee verify-apns-e2e.log
 
+      - name: Verify debug.log regression (3.132.0)
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+          PAX_SITE: https://paxdesign.at
+          PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
+          PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          chmod +x scripts/verify-3132-post-deploy.sh
+          ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
+            "WP_PATH=$(printf '%q' "$WP_PATH") PAX_SITE=$(printf '%q' "$PAX_SITE") PAX_ADMIN_USER=$(printf '%q' "$PAX_ADMIN_USER") PAX_ADMIN_APP_PASSWORD=$(printf '%q' "$PAX_ADMIN_APP_PASSWORD") bash -s" \
+            < scripts/verify-3132-post-deploy.sh | tee verify-3132.log
+
       - name: Upload verification log
         uses: actions/upload-artifact@v4
         with:
           name: verify-apns-e2e-3132
-          path: verify-apns-e2e.log
+          path: |
+            verify-apns-e2e.log
+            verify-3132.log
