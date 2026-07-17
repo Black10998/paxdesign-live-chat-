@@ -2,7 +2,7 @@ name: PAXCustomerPortal
 options:
   bundleIdPrefix: at.paxdesign
   deploymentTarget:
-    iOS: "16.0"
+    iOS: "17.0"
   xcodeVersion: "16.0"
 settings:
   base:
