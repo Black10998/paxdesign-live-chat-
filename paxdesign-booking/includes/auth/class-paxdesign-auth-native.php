@@ -53,7 +53,10 @@ class PAXdesign_Auth_Native {
 		if ( ! $user_id ) {
 			return false;
 		}
-		return user_can( $user_id, 'manage_options' );
+		if ( (int) $user_id === get_current_user_id() ) {
+			return current_user_can( 'manage_options' );
+		}
+		return user_can( (int) $user_id, 'manage_options' );
 	}
 
 	/** Role slug used for newly registered PaxDesign customers. */
