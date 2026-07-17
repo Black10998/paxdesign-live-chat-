@@ -95,10 +95,30 @@ def main() -> None:
         for app in listing.get("data") or []:
             app_id = app.get("id", "")
             name = (app.get("attributes") or {}).get("name", app_id)
-            bundle_payload = api_get(token, f"/apps/{app_id}/bundleId", None)
-            bundle_data = bundle_payload.get("data") or {}
-            identifier = (bundle_data.get("attributes") or {}).get("identifier", "?")
-            print(f"  - apple_id={app_id} bundleId={identifier!r} name={name!r}", file=sys.stderr)
+            sku = (app.get("attributes") or {}).get("sku", "?")
+            identifier = "?"
+            try:
+                rel_payload = api_get(token, f"/apps/{app_id}/relationships/bundleId", None)
+                rel_id = (rel_payload.get("data") or {}).get("id")
+                if rel_id:
+                    bundle_payload = api_get(token, f"/bundleIds/{rel_id}", None)
+                    bundle_data = bundle_payload.get("data") or {}
+                    identifier = (bundle_data.get("attributes") or {}).get("identifier", "?")
+            except SystemExit:
+                identifier = "?"
+            print(f"  - apple_id={app_id} bundleId={identifier!r} sku={sku!r} name={name!r}", file=sys.stderr)
+        bundle_lookup = api_get(
+            token,
+            "/bundleIds",
+            {"filter[identifier]": BUNDLE_ID, "limit": "1"},
+        )
+        bundle_rows = bundle_lookup.get("data") or []
+        if bundle_rows:
+            print(
+                f"NOTE: Developer bundle id {BUNDLE_ID!r} exists (id={bundle_rows[0].get('id')}) "
+                "but no App Store Connect app is linked for this API key.",
+                file=sys.stderr,
+            )
         fail(f"No App Store Connect app found for bundle id {BUNDLE_ID}")
 
     app_name = (apps[0].get("attributes") or {}).get("name", BUNDLE_ID)

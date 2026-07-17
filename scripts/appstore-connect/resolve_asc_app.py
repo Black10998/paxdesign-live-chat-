@@ -28,9 +28,20 @@ GITHUB_OUTPUT = os.environ.get("GITHUB_OUTPUT", "")
 
 
 def app_bundle_identifier(client: ASCClient, app_id: str) -> str:
-    payload = client.get(f"/apps/{app_id}/bundleId")
-    data = payload.get("data") or {}
-    return (data.get("attributes") or {}).get("identifier", "?")
+    status, payload = client.request(
+        "GET",
+        f"/apps/{app_id}/relationships/bundleId",
+        allow_error=True,
+    )
+    if status == 200:
+        rel = (payload.get("data") or {}).get("id")
+        if rel:
+            bundle_payload = client.get(f"/bundleIds/{rel}")
+            bundle_data = bundle_payload.get("data") or {}
+            identifier = (bundle_data.get("attributes") or {}).get("identifier")
+            if identifier:
+                return identifier
+    return "?"
 
 
 def list_apps_with_bundle_ids(client: ASCClient) -> list[tuple[str, str, str]]:
@@ -85,6 +96,17 @@ def main() -> None:
         print("Apps visible to APP_STORE_CONNECT_API_KEY_ID / ISSUER_ID:", file=sys.stderr)
         for apple_id, name, identifier in list_apps_with_bundle_ids(client):
             print(f"  - apple_id={apple_id} bundleId={identifier!r} name={name!r}", file=sys.stderr)
+        bundle_payload = client.get(
+            "/bundleIds",
+            **{"filter[identifier]": BUNDLE_ID, "limit": "1"},
+        )
+        bundle_rows = bundle_payload.get("data") or []
+        if bundle_rows:
+            print(
+                f"NOTE: Developer bundle id {BUNDLE_ID!r} exists (id={bundle_rows[0].get('id')}) "
+                "but no App Store Connect app record is linked for this API key.",
+                file=sys.stderr,
+            )
         fail(
             f"App Store Connect API key cannot see an app for bundle id {BUNDLE_ID}. "
             "If the app exists in the ASC web UI, confirm the API key belongs to the same provider team "
