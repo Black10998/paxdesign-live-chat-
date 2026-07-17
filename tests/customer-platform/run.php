@@ -22,6 +22,8 @@ foreach ($files as $file) {
 
 $rest = file_get_contents($customer_dir . '/class-paxdesign-customer-rest.php');
 cx_assert_true(strpos($rest, '/content/homepage') !== false, 'Missing /content/homepage route');
+cx_assert_true(strpos($rest, '/content/about') !== false, 'Missing /content/about route');
+cx_assert_true(strpos($rest, '/content/contact') !== false, 'Missing /content/contact route');
 cx_assert_true(strpos($rest, '/content/site-menu') !== false, 'Missing /content/site-menu route');
 cx_assert_true(strpos($rest, '/content/services-catalog') !== false, 'Missing /content/services-catalog route');
 cx_assert_true(strpos($rest, '/customer/news/') !== false, 'Missing /customer/news/{slug} route');
@@ -61,6 +63,8 @@ cx_assert_true(strpos($db, 'service_categories') !== false && strpos($db, 'servi
 
 $ios_api = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios-live-chat/PAXDesignLiveChat/Features/CustomerPortal/Core/CustomerAPIClient.swift');
 cx_assert_true(strpos($ios_api, '/content/homepage') !== false, 'iOS client must call homepage endpoint');
+cx_assert_true(strpos($ios_api, '/content/about') !== false, 'iOS client must call about endpoint');
+cx_assert_true(strpos($ios_api, '/content/contact') !== false, 'iOS client must call contact endpoint');
 cx_assert_true(strpos($ios_api, '/content/services-catalog') !== false, 'iOS client must call services catalog endpoint');
 cx_assert_true(strpos($ios_api, '/customer/chat/stream') !== false, 'iOS client must call customer chat stream endpoint');
 cx_assert_true(strpos($ios_api, '/auth/register') !== false, 'iOS client must support auth registration');

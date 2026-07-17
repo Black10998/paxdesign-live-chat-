@@ -99,6 +99,8 @@ class PAXdesign_Customer_Platform {
         require_once $base . 'class-paxdesign-customer-services.php';
         require_once $base . 'class-paxdesign-customer-services-catalog.php';
         require_once $base . 'class-paxdesign-customer-homepage.php';
+        require_once $base . 'class-paxdesign-customer-about.php';
+        require_once $base . 'class-paxdesign-customer-contact.php';
         require_once $base . 'class-paxdesign-customer-site-menu.php';
         require_once $base . 'class-paxdesign-customer-projects.php';
         require_once $base . 'class-paxdesign-customer-orders.php';
