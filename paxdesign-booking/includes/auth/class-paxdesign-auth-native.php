@@ -53,7 +53,7 @@ class PAXdesign_Auth_Native {
 		if ( ! $user_id ) {
 			return false;
 		}
-		return user_can( $user_id, manage_options );
+		return user_can( $user_id, 'manage_options' );
 	}
 
 	/** Role slug used for newly registered PaxDesign customers. */
@@ -120,7 +120,7 @@ class PAXdesign_Auth_Native {
 	 */
 	public static function customer_login_redirect( $redirect_to, $requested, $user ): string {
 		unset( $requested );
-		if ( $user instanceof WP_User && ! user_can( $user, manage_options ) ) {
+		if ( $user instanceof WP_User && ! user_can( $user, 'manage_options' ) ) {
 			return add_query_arg( 'pdx_account', '1', home_url( '/' ) );
 		}
 		return (string) $redirect_to;
@@ -160,7 +160,7 @@ class PAXdesign_Auth_Native {
 		if ( ! $user_id ) {
 			return false;
 		}
-		if ( user_can( $user_id, manage_options ) ) {
+		if ( user_can( $user_id, 'manage_options' ) ) {
 			return true;
 		}
 		return (bool) get_user_meta( $user_id, self::META_VERIFIED, true );
@@ -186,7 +186,7 @@ class PAXdesign_Auth_Native {
 			'display_name' => $user->display_name,
 			'email'        => $user->user_email,
 			'verified'     => self::is_email_verified( $user_id ),
-			'is_admin'     => user_can( $user_id, manage_options ),
+			'is_admin'     => user_can( $user_id, 'manage_options' ),
 		];
 	}
 
@@ -834,7 +834,7 @@ class PAXdesign_Auth_Native {
 		if ( is_wp_error( $user ) || ! $user instanceof WP_User ) {
 			return $user;
 		}
-		if ( user_can( $user, manage_options ) ) {
+		if ( user_can( $user, 'manage_options' ) ) {
 			return $user;
 		}
 		return $user;

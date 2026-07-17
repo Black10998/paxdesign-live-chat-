@@ -31,14 +31,14 @@ staff_code="$(curl -sS -o /dev/null -w '%{http_code}' "$SITE/wp-json/paxdesign/v
 [ "$staff_code" = "401" ] || [ "$staff_code" = "403" ] || fail "Staff live-admin route missing (HTTP $staff_code)"
 pass "Staff live-admin namespace reachable"
 
-echo "==> Verify toolbar auth namespace"
+echo "==> Verify booking auth namespace"
 auth_code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$SITE/wp-json/pdx/v1/auth/login" -H 'Content-Type: application/json' -d '{}')"
-[ "$auth_code" != "404" ] || fail "Toolbar /auth/login route missing"
+[ "$auth_code" != "404" ] || fail "Booking /auth/login route missing"
 register_get="$(curl -sS -o /dev/null -w '%{http_code}' "$SITE/wp-json/pdx/v1/auth/register")"
 [ "$register_get" = "404" ] || fail "GET /auth/register should return 404 (POST-only route)"
 register_post="$(curl -sS -o /tmp/cx-register.json -w '%{http_code}' -X POST "$SITE/wp-json/pdx/v1/auth/register" -H 'Content-Type: application/json' -d '{"name":"Verify","email":"verify-'$(date +%s)'@example.com","password":"TestPass123!"}')"
 [ "$register_post" = "201" ] || [ "$register_post" = "400" ] || fail "POST /auth/register returned HTTP $register_post (expected 201 or 400 validation)"
-pass "Toolbar auth namespace reachable (register POST works)"
+pass "Booking auth namespace reachable (register POST works)"
 
 if [ -z "$ADMIN_USER" ] || [ -z "$ADMIN_PASS" ]; then
   skip "Authenticated customer chat/stream verification (missing PAX_ADMIN_USER or PAX_ADMIN_APP_PASSWORD)"
