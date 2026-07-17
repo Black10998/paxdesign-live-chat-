@@ -1,6 +1,6 @@
 <?php
 /**
- * Customer portal REST API — extends pdx/v1 namespace (shared with paxdesign-toolbar auth).
+ * Customer portal REST API — pdx/v1 namespace (booking-native auth + content).
  */
 
 if (!defined('ABSPATH')) {

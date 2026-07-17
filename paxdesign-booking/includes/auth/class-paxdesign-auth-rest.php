@@ -1,6 +1,6 @@
 <?php
 /**
- * Auth REST routes — registered when paxdesign-toolbar is not providing /auth/*.
+ * Auth REST routes — booking-native /auth/* endpoints.
  */
 
 if (!defined('ABSPATH')) {

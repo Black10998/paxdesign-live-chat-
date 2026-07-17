@@ -32,7 +32,7 @@ jobs:
       - name: PHP syntax validation
         run: |
           set -euo pipefail
-          rg --files -g '*.php' paxdesign-booking/includes/customer paxdesign-toolbar/includes | xargs -n1 php -l
+          rg --files -g '*.php' paxdesign-booking/includes/customer paxdesign-booking/includes/auth | xargs -n1 php -l
           php -l paxdesign-booking/includes/class-paxdesign-chat.php
 
       - name: Customer platform static tests
@@ -86,7 +86,7 @@ jobs:
           ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
             "WP_PATH=$(printf '%q' "$WP_PATH") bash -s" < scripts/backup-wp-production.sh | tee backup.log
 
-      - name: Deploy paxdesign-booking and paxdesign-toolbar
+      - name: Deploy paxdesign-booking (toolbar-independent)
         env:
           WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
           WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
@@ -101,11 +101,9 @@ jobs:
           printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
           ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
           BOOKING_TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
-          TOOLBAR_TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-toolbar"
           rsync -az --delete -e "ssh ${SSH_OPTS[*]}" paxdesign-booking/ "${WP_SSH_USER}@${WP_SSH_HOST}:${BOOKING_TARGET}/"
-          rsync -az --delete -e "ssh ${SSH_OPTS[*]}" paxdesign-toolbar/ "${WP_SSH_USER}@${WP_SSH_HOST}:${TOOLBAR_TARGET}/"
           ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
-            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp plugin activate paxdesign-booking paxdesign-toolbar && wp cache flush || true)"
+            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp plugin deactivate paxdesign-toolbar --quiet 2>/dev/null || true) && (command -v wp >/dev/null && wp plugin activate paxdesign-booking && wp cache flush || true)"
 
       - name: Run customer database migrations
         env:

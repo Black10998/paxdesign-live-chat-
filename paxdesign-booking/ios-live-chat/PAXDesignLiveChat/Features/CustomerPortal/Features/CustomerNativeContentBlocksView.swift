@@ -1,5 +1,37 @@
 import SwiftUI
 
+struct CustomerHTMLTextView: View {
+    let html: String
+    let plainFallback: String?
+
+    var body: some View {
+        if let attributed = Self.attributedString(from: html) {
+            Text(attributed)
+                .font(.body)
+                .foregroundStyle(PAXTheme.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else if let plainFallback, !plainFallback.isEmpty {
+            Text(plainFallback)
+                .font(.body)
+                .foregroundStyle(PAXTheme.textPrimary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private static func attributedString(from html: String) -> AttributedString? {
+        guard let data = html.data(using: .utf8) else { return nil }
+        let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
+            .documentType: NSAttributedString.DocumentType.html,
+            .characterEncoding: String.Encoding.utf8.rawValue,
+        ]
+        guard let ns = try? NSAttributedString(data: data, options: options, documentAttributes: nil),
+              !ns.string.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+        return AttributedString(ns)
+    }
+}
+
 struct CustomerNativeContentBlocksView: View {
     let blocks: [CustomerContentBlock]
 
@@ -21,7 +53,9 @@ struct CustomerNativeContentBlocksView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
         case "text":
-            if let text = block.text, !text.isEmpty {
+            if let html = block.html, !html.isEmpty {
+                CustomerHTMLTextView(html: html, plainFallback: block.text)
+            } else if let text = block.text, !text.isEmpty {
                 Text(text)
                     .font(.body)
                     .foregroundStyle(PAXTheme.textPrimary)
@@ -79,6 +113,18 @@ struct CustomerNativeContentBlocksView: View {
         case "feature":
             CustomerPortalCard {
                 VStack(alignment: .leading, spacing: 8) {
+                    if let urlString = block.url, let url = URL(string: urlString) {
+                        AsyncImage(url: url) { phase in
+                            if case .success(let image) = phase {
+                                image.resizable().scaledToFill()
+                            } else {
+                                Rectangle().fill(PAXTheme.accentSoft)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 160)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
                     if let title = block.title, !title.isEmpty {
                         Label(title, systemImage: "sparkles")
                             .font(.headline)
@@ -134,10 +180,38 @@ struct CustomerNativeContentBlocksView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .tinted))
+            } else if block.action == "external", let urlString = block.url, let url = URL(string: urlString) {
+                Link(destination: url) {
+                    Text(block.text ?? urlString)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .tinted))
+            }
+
+        case "video":
+            if let urlString = block.url, let url = URL(string: urlString) {
+                CustomerPortalCard {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if let title = block.title, !title.isEmpty {
+                            Text(title).font(.headline)
+                        }
+                        Link(destination: url) {
+                            Label(String(localized: "Watch video"), systemImage: "play.circle.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .tinted))
+                    }
+                }
             }
 
         default:
-            EmptyView()
+            if let text = block.text, !text.isEmpty {
+                Text(text)
+                    .font(.body)
+                    .foregroundStyle(PAXTheme.textSecondary)
+            } else {
+                EmptyView()
+            }
         }
     }
 

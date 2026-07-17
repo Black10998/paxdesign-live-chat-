@@ -33,7 +33,7 @@ cx_assert_true(strpos($staff, 'require_staff') !== false, 'Staff routes must use
 
 $auth = file_get_contents($customer_dir . '/class-paxdesign-customer-auth.php');
 cx_assert_true(strpos($auth, 'pax_customer') === false, 'Legacy pax_customer role must not remain');
-cx_assert_true(strpos($auth, 'PDX_Auth') !== false, 'Customer auth must delegate to PDX_Auth');
+cx_assert_true(strpos($auth, 'PAXdesign_Auth') !== false, 'Customer auth must delegate to PAXdesign_Auth');
 
 $forbidden_patterns = array(
     '/register_rest_route\s*\([^)]*(paypal|billing|checkout|commerce)/i',
@@ -70,7 +70,10 @@ cx_assert_true(strpos($ios_push, 'registerForRemoteNotifications') !== false, 'i
 $platform = file_get_contents($customer_dir . '/class-paxdesign-customer-platform.php');
 cx_assert_true(strpos($platform, 'paxdesign_customer_require_login_for_chat') !== false, 'Login-required chat option must be configured');
 
-$toolbar_auth = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-toolbar/includes/class-pdx-auth.php');
-cx_assert_true(strpos($toolbar_auth, 'pdx_user_logged_in') !== false, 'Toolbar login must fire pdx_user_logged_in');
+$booking_auth = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-auth-native.php');
+cx_assert_true(strpos($booking_auth, 'pdx_user_logged_in') !== false, 'Booking auth must fire pdx_user_logged_in');
+
+$auth_frontend = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-auth-frontend.php');
+cx_assert_true(strpos($auth_frontend, 'PAX_AUTH_CONFIG') !== false, 'Booking auth frontend must localize PAX_AUTH_CONFIG');
 
 echo "OK: customer platform static verification passed (" . count($files) . " modules)\n";

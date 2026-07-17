@@ -728,7 +728,7 @@ struct CustomerFilesView: View {
     }
 
     private func download(_ file: CustomerFileLibraryItem) async {
-        downloadingId = file.recordId
+        downloadingId = file.id
         defer { downloadingId = nil }
         do {
             switch file.source {

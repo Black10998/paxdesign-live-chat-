@@ -80,7 +80,15 @@ class PAXdesign_Customer_Elementor {
             if ($widget !== '') {
                 $block = self::widget_block($widget, $settings);
                 if ($block !== null) {
-                    $blocks[] = $block;
+                    if (isset($block['type'])) {
+                        $blocks[] = $block;
+                    } else {
+                        foreach ($block as $nested) {
+                            if (is_array($nested) && isset($nested['type'])) {
+                                $blocks[] = $nested;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -219,11 +227,117 @@ class PAXdesign_Customer_Elementor {
                     'text'   => $text,
                     'slug'   => $link['slug'],
                     'action' => $link['action'],
+                    'url'    => $link['url'],
+                );
+
+            case 'html':
+                $html = (string) ($settings['html'] ?? '');
+                if (trim(wp_strip_all_tags($html)) === '') {
+                    return null;
+                }
+                return array(
+                    'type' => 'text',
+                    'html' => wp_kses_post($html),
+                    'text' => wp_trim_words(wp_strip_all_tags($html), 200, '…'),
+                );
+
+            case 'image-box':
+                $title = wp_strip_all_tags((string) ($settings['title_text'] ?? ''));
+                $text  = wp_strip_all_tags((string) ($settings['description_text'] ?? ''));
+                $url   = self::resolve_image_url($settings);
+                if ($title === '' && $text === '' && $url === '') {
+                    return null;
+                }
+                $block = array(
+                    'type'  => 'feature',
+                    'title' => $title,
+                    'text'  => $text,
+                );
+                if ($url !== '') {
+                    $block['url'] = $url;
+                }
+                return $block;
+
+            case 'call-to-action':
+                $title = wp_strip_all_tags((string) ($settings['title'] ?? ''));
+                $text  = wp_strip_all_tags((string) ($settings['description'] ?? ''));
+                $btn   = wp_strip_all_tags((string) ($settings['button'] ?? ''));
+                $link  = self::resolve_link($settings['link'] ?? array());
+                $blocks = array();
+                if ($title !== '' || $text !== '') {
+                    $blocks[] = array(
+                        'type'  => 'feature',
+                        'title' => $title,
+                        'text'  => $text,
+                    );
+                }
+                if ($btn !== '') {
+                    $blocks[] = array(
+                        'type'   => 'button',
+                        'text'   => $btn,
+                        'slug'   => $link['slug'],
+                        'action' => $link['action'],
+                        'url'    => $link['url'],
+                    );
+                }
+                return !empty($blocks) ? $blocks : null;
+
+            case 'testimonial':
+                $text = wp_trim_words(wp_strip_all_tags((string) ($settings['testimonial_content'] ?? '')), 120, '…');
+                $name = wp_strip_all_tags((string) ($settings['testimonial_name'] ?? ''));
+                if ($text === '' && $name === '') {
+                    return null;
+                }
+                return array(
+                    'type'  => 'feature',
+                    'title' => $name,
+                    'text'  => $text,
+                );
+
+            case 'slides':
+            case 'media-carousel':
+            case 'image-carousel':
+                $images = self::resolve_gallery_urls($settings);
+                if (empty($images) && !empty($settings['slides']) && is_array($settings['slides'])) {
+                    foreach ($settings['slides'] as $slide) {
+                        if (!is_array($slide)) {
+                            continue;
+                        }
+                        $slide_url = self::resolve_image_url($slide);
+                        if ($slide_url !== '') {
+                            $images[] = $slide_url;
+                        }
+                    }
+                    $images = array_values(array_unique(array_filter($images)));
+                }
+                if (empty($images)) {
+                    return null;
+                }
+                return array(
+                    'type'   => 'gallery',
+                    'images' => $images,
                 );
 
             default:
-                return null;
+                return self::fallback_widget_block($widget, $settings);
         }
+    }
+
+    /**
+     * @param array<string, mixed> $settings
+     * @return array<string, mixed>|array<int, array<string, mixed>>|null
+     */
+    private static function fallback_widget_block($widget, array $settings) {
+        $title = wp_strip_all_tags((string) ($settings['title'] ?? $settings['title_text'] ?? ''));
+        $text  = wp_strip_all_tags((string) ($settings['editor'] ?? $settings['description'] ?? $settings['description_text'] ?? $settings['content'] ?? ''));
+        if ($title === '' && $text === '') {
+            return null;
+        }
+        return array(
+            'type'  => 'feature',
+            'title' => $title,
+            'text'  => wp_trim_words($text, 120, '…'),
+        );
     }
 
     /**
@@ -283,23 +397,23 @@ class PAXdesign_Customer_Elementor {
 
     /**
      * @param array<string, mixed> $link
-     * @return array{slug:string,action:string}
+     * @return array{slug:string,action:string,url:string}
      */
     private static function resolve_link($link) {
         if (!is_array($link)) {
-            return array('slug' => '', 'action' => 'none');
+            return array('slug' => '', 'action' => 'none', 'url' => '');
         }
         $url = esc_url_raw((string) ($link['url'] ?? ''));
         if ($url === '') {
-            return array('slug' => '', 'action' => 'none');
+            return array('slug' => '', 'action' => 'none', 'url' => '');
         }
         $home = home_url('/');
         if (strpos($url, $home) === 0 || strpos($url, '/') === 0) {
             $path = wp_parse_url($url, PHP_URL_PATH);
             $slug = is_string($path) ? sanitize_title(basename(untrailingslashit($path))) : '';
-            return array('slug' => $slug, 'action' => $slug !== '' ? 'page' : 'none');
+            return array('slug' => $slug, 'action' => $slug !== '' ? 'page' : 'none', 'url' => $url);
         }
-        return array('slug' => '', 'action' => 'external');
+        return array('slug' => '', 'action' => 'external', 'url' => $url);
     }
 
     /**

@@ -76,7 +76,17 @@ if ! export_database "$TARGET_DIR/database.sql"; then
 fi
 
 echo "==> Archiving wp-content"
+set +e
 tar -czf "$TARGET_DIR/wp-content.tgz" -C "$WP_PATH" wp-content
+TAR_EXIT=$?
+set -e
+if [[ "$TAR_EXIT" -ne 0 && "$TAR_EXIT" -ne 1 ]]; then
+  echo "ERROR: wp-content archive failed (tar exit $TAR_EXIT)" >&2
+  exit 1
+fi
+if [[ "$TAR_EXIT" -eq 1 ]]; then
+  echo "WARN: wp-content changed during archive (tar exit 1) — backup file kept"
+fi
 
 if [ -f "$TARGET_DIR/database.sql" ]; then
   gzip -f "$TARGET_DIR/database.sql"
