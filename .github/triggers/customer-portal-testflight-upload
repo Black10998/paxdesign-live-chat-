@@ -1,7 +1,2 @@
-<<<<<<< Updated upstream
-# Customer Portal TestFlight upload after successful App Store build 4.
-2026-07-17T12:50:00Z
-=======
-# Customer Portal TestFlight upload using shared upload-ipa.sh.
-2026-07-17T12:55:00Z
->>>>>>> Stashed changes
+# Customer Portal TestFlight upload with ASC apple-id resolution.
+2026-07-17T12:25:00Z

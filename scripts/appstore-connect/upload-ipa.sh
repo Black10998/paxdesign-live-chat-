@@ -11,6 +11,8 @@ fi
 
 ISSUER_ID="${APP_STORE_CONNECT_ISSUER_ID:-${APPSTORE_ISSUER_ID:-}}"
 KEY_ID="${APP_STORE_CONNECT_API_KEY_ID:-${APPSTORE_API_KEY_ID:-}}"
+ASC_APP_APPLE_ID="${ASC_APP_APPLE_ID:-${APP_STORE_CONNECT_APP_APPLE_ID:-}}"
+ALTOOL_EXTRA_ARGS="${ALTOOL_EXTRA_ARGS:-}"
 KEY_DIR="${HOME}/.appstoreconnect/private_keys"
 KEY_FILE="$KEY_DIR/AuthKey_${KEY_ID}.p8"
 
@@ -48,10 +50,27 @@ else
 fi
 
 echo "Uploading IPA to App Store Connect: $(basename "$IPA_PATH")"
-xcrun altool --upload-app \
-  -f "$IPA_PATH" \
-  -t ios \
-  --apiKey "$KEY_ID" \
+if [[ -n "$ASC_APP_APPLE_ID" ]]; then
+  echo "Using explicit App Store Connect apple_id=$ASC_APP_APPLE_ID"
+fi
+
+# shellcheck disable=SC2206
+ALTOOL_ARGS=(
+  --upload-app
+  -f "$IPA_PATH"
+  -t ios
+  --apiKey "$KEY_ID"
   --apiIssuer "$ISSUER_ID"
+)
+if [[ -n "$ASC_APP_APPLE_ID" ]]; then
+  ALTOOL_ARGS+=(--apple-id "$ASC_APP_APPLE_ID")
+fi
+if [[ -n "$ALTOOL_EXTRA_ARGS" ]]; then
+  # shellcheck disable=SC2206
+  EXTRA=( $ALTOOL_EXTRA_ARGS )
+  ALTOOL_ARGS+=("${EXTRA[@]}")
+fi
+
+xcrun altool "${ALTOOL_ARGS[@]}"
 
 echo "Upload submitted to App Store Connect"

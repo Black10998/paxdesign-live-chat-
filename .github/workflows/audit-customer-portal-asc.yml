@@ -1,0 +1,28 @@
+name: Audit Customer Portal App Store Connect
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/audit-customer-portal-asc'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    env:
+      APP_BUNDLE_ID: at.paxdesign.customerportal
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
+      - run: python3 scripts/appstore-connect/prepare-asc-key.py
+      - run: python3 scripts/appstore-connect/verify-asc-credentials.py
+      - run: python3 scripts/appstore-connect/resolve_asc_app.py
