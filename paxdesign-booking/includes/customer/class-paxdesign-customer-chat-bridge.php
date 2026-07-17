@@ -55,6 +55,7 @@ class PAXdesign_Customer_Chat_Bridge {
         $session_id = self::generate_session_id($user_id);
         self::link_session($user_id, $session_id, 'primary', '', true);
         self::sync_chat_log_user($session_id, $user_id);
+        PAXdesign_Chat_Live::get_instance()->ensure_session($session_id);
         return $session_id;
     }
 
