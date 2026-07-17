@@ -363,6 +363,8 @@ struct CustomerContactView: View {
 }
 
 private struct HomepageContactPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.marketingTheme) private var theme
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)
@@ -375,6 +377,8 @@ private struct HomepageContactPrimaryButtonStyle: ButtonStyle {
 }
 
 private struct HomepageContactSecondaryButtonStyle: ButtonStyle {
+    @Environment(\.marketingTheme) private var theme
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)

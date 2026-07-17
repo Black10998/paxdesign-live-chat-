@@ -278,6 +278,7 @@ struct CustomerServicesCatalogScreen: View {
 }
 
 private struct ServiceCatalogCardView: View {
+    @Environment(\.marketingTheme) private var theme
     let card: CustomerServicesCatalogResponse.Card
     let catalog: CustomerServicesCatalogResponse
     let isExpanded: Bool
