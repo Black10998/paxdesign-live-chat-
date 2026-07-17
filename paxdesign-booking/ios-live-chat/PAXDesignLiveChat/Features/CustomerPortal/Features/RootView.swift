@@ -34,8 +34,8 @@ struct CustomerTabView: View {
             CustomerDashboardView()
                 .tabItem { Label(String(localized: "Home"), systemImage: "house.fill") }
                 .tag(CustomerPortalTab.home)
-            CustomerDiscoverView()
-                .tabItem { Label(String(localized: "Discover"), systemImage: "square.grid.2x2.fill") }
+            CustomerServicesCatalogScreen()
+                .tabItem { Label(String(localized: "Services"), systemImage: "square.grid.2x2.fill") }
                 .tag(CustomerPortalTab.services)
             CustomerChatView(initialSessionID: navigation.chatSessionID)
                 .tabItem { Label(String(localized: "Chat"), systemImage: "message.fill") }

@@ -21,7 +21,7 @@ foreach ($files as $file) {
 }
 
 $rest = file_get_contents($customer_dir . '/class-paxdesign-customer-rest.php');
-cx_assert_true(strpos($rest, '/customer/chat/stream') !== false, 'Missing /customer/chat/stream route');
+cx_assert_true(strpos($rest, '/content/services-catalog') !== false, 'Missing /content/services-catalog route');
 cx_assert_true(strpos($rest, '/customer/news/') !== false, 'Missing /customer/news/{slug} route');
 cx_assert_true(strpos($rest, '/customer/chat/messages/image') !== false, 'Missing customer chat image route');
 cx_assert_true(strpos($rest, '/customer/projects/') !== false && strpos($rest, '/download') !== false, 'Missing project file download route');
@@ -58,6 +58,7 @@ cx_assert_true(strpos($db, 'schema_complete') !== false, 'Customer DB must verif
 cx_assert_true(strpos($db, 'service_categories') !== false && strpos($db, 'services') !== false, 'Customer DB must define services tables');
 
 $ios_api = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios-live-chat/PAXDesignLiveChat/Features/CustomerPortal/Core/CustomerAPIClient.swift');
+cx_assert_true(strpos($ios_api, '/content/services-catalog') !== false, 'iOS client must call services catalog endpoint');
 cx_assert_true(strpos($ios_api, '/customer/chat/stream') !== false, 'iOS client must call customer chat stream endpoint');
 cx_assert_true(strpos($ios_api, '/auth/register') !== false, 'iOS client must support auth registration');
 cx_assert_true(strpos($ios_api, 'endpointURL') !== false, 'iOS client must build REST URLs with endpointURL()');

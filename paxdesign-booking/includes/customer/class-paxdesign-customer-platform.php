@@ -97,6 +97,7 @@ class PAXdesign_Customer_Platform {
         require_once $base . 'class-paxdesign-customer-auth.php';
         require_once $base . 'class-paxdesign-customer-chat-bridge.php';
         require_once $base . 'class-paxdesign-customer-services.php';
+        require_once $base . 'class-paxdesign-customer-services-catalog.php';
         require_once $base . 'class-paxdesign-customer-projects.php';
         require_once $base . 'class-paxdesign-customer-orders.php';
         require_once $base . 'class-paxdesign-customer-notifications.php';

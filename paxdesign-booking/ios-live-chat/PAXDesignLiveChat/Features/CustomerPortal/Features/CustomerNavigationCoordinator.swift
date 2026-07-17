@@ -32,6 +32,7 @@ final class CustomerNavigationCoordinator: ObservableObject {
     @Published var accountPath: [CustomerPortalDestination] = []
     @Published var chatSessionID: String?
     @Published var pendingChatFocus = false
+    @Published var pendingServiceCardID: String?
     @Published private(set) var workspaceRefreshToken = UUID()
 
     func refreshWorkspace() {
@@ -99,6 +100,9 @@ final class CustomerNavigationCoordinator: ObservableObject {
             accountPath = [CustomerPortalDestination(kind: .settings)]
         case "services", "service":
             selectedTab = .services
+            if parts.count > 1 {
+                pendingServiceCardID = parts[1]
+            }
         default:
             selectedTab = .home
         }

@@ -123,6 +123,12 @@ class PAXdesign_Customer_REST {
             'permission_callback' => '__return_true',
         ));
 
+        register_rest_route(self::NS, '/content/services-catalog', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'services_catalog'),
+            'permission_callback' => '__return_true',
+        ));
+
         register_rest_route(self::NS, '/content/pages/(?P<slug>[a-z0-9\-_\/]+)', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'content_page'),
@@ -416,6 +422,11 @@ class PAXdesign_Customer_REST {
 
     public static function content_navigation(WP_REST_Request $request) {
         return rest_ensure_response(PAXdesign_Customer_Content::navigation($request));
+    }
+
+    public static function services_catalog(WP_REST_Request $request) {
+        $lang = PAXdesign_Customer_Services_Catalog::normalize_language((string) $request->get_param('lang'));
+        return rest_ensure_response(PAXdesign_Customer_Services_Catalog::payload($lang));
     }
 
     public static function content_page(WP_REST_Request $request) {

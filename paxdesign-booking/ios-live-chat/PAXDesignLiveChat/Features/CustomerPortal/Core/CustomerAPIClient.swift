@@ -220,6 +220,11 @@ final class CustomerAPIClient: ObservableObject {
         return try await get("/content/navigation?lang=\(lang)", as: CustomerContentNavigation.self)
     }
 
+    func fetchServicesCatalog(lang: String) async throws -> CustomerServicesCatalogResponse {
+        let normalized = lang.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? lang
+        return try await get("/content/services-catalog?lang=\(normalized)", as: CustomerServicesCatalogResponse.self)
+    }
+
     func fetchContentPage(slug: String) async throws -> CustomerContentPage {
         let lang = Locale.current.language.languageCode?.identifier ?? "en"
         let encoded = slug.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? slug
