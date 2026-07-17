@@ -38,6 +38,19 @@ jobs:
           done
           xcodebuild -version
 
+      - name: Validate Customer Portal signing secrets
+        run: |
+          set -euo pipefail
+          if [[ -z "${APPLE_PROVISIONING_PROFILE_CUSTOMER_BASE64:-}" ]]; then
+            echo "ERROR: APPLE_PROVISIONING_PROFILE_CUSTOMER_BASE64 secret is missing." >&2
+            echo "Create an App Store provisioning profile for at.paxdesign.customerportal and add it to GitHub Secrets." >&2
+            echo "The Live Chat profile (at.paxdesign.livechat) cannot be used for the Customer Portal app." >&2
+            exit 1
+          fi
+          for key in APPLE_TEAM_ID KEYCHAIN_PASSWORD APPLE_CERTIFICATE_P12_BASE64 APPLE_CERTIFICATE_PASSWORD; do
+            [ -n "${!key:-}" ] || { echo "Missing secret: $key" >&2; exit 1; }
+          done
+
       - name: Build signed Customer Portal IPA
         run: |
           set +x

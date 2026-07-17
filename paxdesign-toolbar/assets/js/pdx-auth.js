@@ -1103,6 +1103,94 @@
   }
 
   var portalOverlay = null;
+  var portalState = { tab: 'overview', dashboard: null, detail: null };
+
+  var GUEST_SESSION_KEY = 'paxdesign-chat-session';
+  var GUEST_DEVICE_TOKEN_KEY = 'paxdesign-chat-device-token';
+
+  function readGuestChatStorage(key) {
+    try {
+      return localStorage.getItem(key) || sessionStorage.getItem(key) || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function claimGuestSessionIfNeeded() {
+    var guestSession = readGuestChatStorage(GUEST_SESSION_KEY);
+    var deviceToken = readGuestChatStorage(GUEST_DEVICE_TOKEN_KEY);
+    if (!guestSession || !deviceToken) {
+      return Promise.resolve(false);
+    }
+    return customerApiFetch('POST', '/customer/chat/claim', {
+      session_id: guestSession,
+      device_token: deviceToken,
+    }).then(function (data) {
+      if (data && data.success) {
+        try {
+          localStorage.removeItem(GUEST_SESSION_KEY);
+        } catch (e) {}
+      }
+      return !!(data && data.success);
+    }).catch(function () {
+      return false;
+    });
+  }
+
+  function customerApiFormData(path, formData) {
+    var base = (C.restUrl || '/wp-json/pdx/v1').replace(/\/$/, '');
+    return fetch(base + path, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'X-WP-Nonce': C.nonce || '' },
+      body: formData,
+    }).then(function (r) {
+      return r.json().then(function (data) {
+        data._status = r.status;
+        data._ok = r.ok;
+        return data;
+      });
+    });
+  }
+
+  function portalNavBtn(id, label, iconName) {
+    var active = portalState.tab === id ? ' is-active' : '';
+    return '<button type="button" class="pdx-portal-nav-btn' + active + '" data-portal-tab="' + id + '">' +
+      cxIcon(iconName || 'dashboard', 14) + escHtml(label) + '</button>';
+  }
+
+  function renderPortalNav() {
+    return '<nav class="pdx-portal-nav" id="pdx-portal-nav">' +
+      portalNavBtn('overview', 'Overview', 'dashboard') +
+      portalNavBtn('chat', 'Chat', 'message') +
+      portalNavBtn('projects', 'Projects', 'folder') +
+      portalNavBtn('orders', 'Requests', 'receipt') +
+      portalNavBtn('services', 'Services', 'package') +
+      portalNavBtn('news', 'News', 'news') +
+      portalNavBtn('notifications', 'Alerts', 'bell') +
+    '</nav>';
+  }
+
+  function portalBackBtn(label) {
+    return '<button type="button" class="pdx-portal-back" data-portal-back="1">&larr; ' + escHtml(label || 'Back') + '</button>';
+  }
+
+  function bindPortalNav(container) {
+    container.querySelectorAll('[data-portal-tab]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        portalState.tab = btn.dataset.portalTab;
+        portalState.detail = null;
+        renderCustomerPortalDashboard(container, portalState.dashboard);
+      });
+    });
+    var back = container.querySelector('[data-portal-back]');
+    if (back) {
+      back.addEventListener('click', function () {
+        portalState.detail = null;
+        renderCustomerPortalDashboard(container, portalState.dashboard);
+      });
+    }
+  }
 
   function openCustomerPortal() {
     if (!user.logged_in) {
@@ -1122,7 +1210,7 @@
       portalOverlay.setAttribute('aria-modal', 'true');
       portalOverlay.setAttribute('aria-label', 'Customer Portal');
       portalOverlay.innerHTML =
-        '<div class="pdx-customer-portal-card">' +
+        '<div class="pdx-customer-portal-card pdx-customer-portal-card--full">' +
           '<button type="button" class="pdx-auth-close" aria-label="Close">&times;</button>' +
           '<div class="pdx-customer-portal-head">' + cxIcon('dashboard', 20) + '<span>Customer Portal</span></div>' +
           '<div class="pdx-customer-portal-body">' + cxLoading('Loading your workspace…') + '</div>' +
@@ -1135,20 +1223,26 @@
     }
     portalOverlay.classList.add('is-open');
     document.body.classList.add('pdx-no-scroll');
+    portalState.tab = 'overview';
+    portalState.detail = null;
+    portalState.dashboard = null;
     var body = portalOverlay.querySelector('.pdx-customer-portal-body');
     body.innerHTML = cxLoading('Loading your workspace…');
-    customerApiFetch('GET', '/customer/dashboard').then(function (data) {
-      if (!data || data._status === 401) {
-        body.innerHTML = '<p class="pdx-auth-error">Please sign in to continue.</p>';
-        return;
-      }
-      if (data.code === 'pdx_email_unverified') {
-        body.innerHTML = '<p class="pdx-auth-error">Verify your email to access your portal.</p>';
-        return;
-      }
-      renderCustomerPortalDashboard(body, data);
-    }).catch(function () {
-      body.innerHTML = '<p class="pdx-auth-error">Unable to load your portal. Please try again.</p>';
+    claimGuestSessionIfNeeded().finally(function () {
+      customerApiFetch('GET', '/customer/dashboard').then(function (data) {
+        if (!data || data._status === 401) {
+          body.innerHTML = '<p class="pdx-auth-error">Please sign in to continue.</p>';
+          return;
+        }
+        if (data.code === 'pdx_email_unverified') {
+          body.innerHTML = '<p class="pdx-auth-error">Verify your email to access your portal.</p>';
+          return;
+        }
+        portalState.dashboard = data;
+        renderCustomerPortalDashboard(body, data);
+      }).catch(function () {
+        body.innerHTML = '<p class="pdx-auth-error">Unable to load your portal. Please try again.</p>';
+      });
     });
   }
 
@@ -1202,47 +1296,445 @@
   }
 
   function renderCustomerPortalDashboard(container, data) {
+    portalState.dashboard = data;
+    var html = renderPortalNav() + '<div class="pdx-portal-content">';
+    if (portalState.detail) {
+      html += renderPortalDetailView(portalState.detail);
+    } else {
+      switch (portalState.tab) {
+        case 'chat':
+          html += renderPortalChatSection(data);
+          break;
+        case 'projects':
+          html += renderPortalProjectsSection(data);
+          break;
+        case 'orders':
+          html += renderPortalOrdersSection(data);
+          break;
+        case 'services':
+          html += renderPortalServicesSection();
+          break;
+        case 'news':
+          html += renderPortalNewsSection(data);
+          break;
+        case 'notifications':
+          html += renderPortalNotificationsSection();
+          break;
+        default:
+          html += renderPortalOverviewSection(data);
+      }
+    }
+    html += '</div>';
+    container.innerHTML = html;
+    bindPortalNav(container);
+    if (portalState.tab === 'chat' && !portalState.detail) {
+      initCustomerPortalChat(container, (data.chat || {}).session_id || '');
+    }
+    if (portalState.tab === 'services' && !portalState.detail) {
+      bindPortalServicesSection(container);
+    }
+    if (portalState.tab === 'notifications' && !portalState.detail) {
+      bindPortalNotificationsSection(container);
+    }
+    container.querySelectorAll('[data-portal-open]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        openPortalDetail(container, el.dataset.portalOpen, el.dataset.portalId || el.dataset.portalSlug || '');
+      });
+    });
+  }
+
+  function openPortalDetail(container, kind, id) {
+    portalState.detail = { kind: kind, id: id };
+    var body = container;
+    if (kind === 'project') {
+      body.innerHTML = renderPortalNav() + '<div class="pdx-portal-content">' + cxLoading('Loading project…') + '</div>';
+      customerApiFetch('GET', '/customer/projects/' + encodeURIComponent(id)).then(function (project) {
+        if (!project || !project._ok) {
+          portalState.detail = null;
+          renderCustomerPortalDashboard(container, portalState.dashboard);
+          notify('Project could not be loaded.', 'warn');
+          return;
+        }
+        portalState.detail.data = project;
+        renderCustomerPortalDashboard(container, portalState.dashboard);
+      });
+      return;
+    }
+    if (kind === 'order') {
+      body.innerHTML = renderPortalNav() + '<div class="pdx-portal-content">' + cxLoading('Loading request…') + '</div>';
+      customerApiFetch('GET', '/customer/orders/' + encodeURIComponent(id)).then(function (order) {
+        if (!order || !order._ok) {
+          portalState.detail = null;
+          renderCustomerPortalDashboard(container, portalState.dashboard);
+          notify('Request could not be loaded.', 'warn');
+          return;
+        }
+        portalState.detail.data = order;
+        renderCustomerPortalDashboard(container, portalState.dashboard);
+      });
+      return;
+    }
+    if (kind === 'news') {
+      body.innerHTML = renderPortalNav() + '<div class="pdx-portal-content">' + cxLoading('Loading article…') + '</div>';
+      customerApiFetch('GET', '/customer/news/' + encodeURIComponent(id)).then(function (item) {
+        if (!item || !item._ok) {
+          portalState.detail = null;
+          renderCustomerPortalDashboard(container, portalState.dashboard);
+          notify('Article could not be loaded.', 'warn');
+          return;
+        }
+        portalState.detail.data = item;
+        renderCustomerPortalDashboard(container, portalState.dashboard);
+      });
+      return;
+    }
+    if (kind === 'service') {
+      body.innerHTML = renderPortalNav() + '<div class="pdx-portal-content">' + cxLoading('Loading service…') + '</div>';
+      customerApiFetch('GET', '/customer/services/' + encodeURIComponent(id)).then(function (service) {
+        if (!service || !service._ok) {
+          portalState.detail = null;
+          renderCustomerPortalDashboard(container, portalState.dashboard);
+          notify('Service could not be loaded.', 'warn');
+          return;
+        }
+        portalState.detail.data = service;
+        renderCustomerPortalDashboard(container, portalState.dashboard);
+      });
+    }
+  }
+
+  function renderPortalDetailView(detail) {
+    if (!detail.data) {
+      return cxLoading('Loading…');
+    }
+    if (detail.kind === 'project') {
+      return renderPortalProjectDetail(detail.data);
+    }
+    if (detail.kind === 'order') {
+      return renderPortalOrderDetail(detail.data);
+    }
+    if (detail.kind === 'news') {
+      return renderPortalNewsDetail(detail.data);
+    }
+    if (detail.kind === 'service') {
+      return renderPortalServiceDetail(detail.data);
+    }
+    return '';
+  }
+
+  function renderPortalOverviewSection(data) {
     var projects = data.projects_active || [];
     var orders = data.orders_recent || [];
     var news = data.news || [];
+    var unread = data.unread_count || 0;
     var chat = data.chat || {};
-    var sessionId = chat.session_id || '';
-    var html = '<div class="pdx-portal-grid">';
-    html += '<section class="pdx-portal-section pdx-portal-chat"><h3>' + cxIcon('message', 16) + 'Conversation</h3>';
-    html += '<div class="pdx-portal-chat-log" id="pdx-portal-chat-log">' + cxLoading('Loading messages…') + '</div>';
-    html += '<form class="pdx-portal-chat-form" id="pdx-portal-chat-form">';
-    html += '<textarea rows="2" placeholder="Write a message…" aria-label="Message"></textarea>';
-    html += pearlBtn('Send', { type: 'submit', small: true, inline: true, icon: 'send' });
-    html += '</form></section>';
-    html += '<section class="pdx-portal-section"><h3>' + cxIcon('folder', 16) + 'Projects</h3>';
+    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('dashboard', 16) + 'Welcome</h3>';
+    html += '<p class="pdx-portal-lead">Your projects, requests, and conversations in one place.</p>';
+    html += '<div class="pdx-portal-stats">';
+    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="projects"><span>' + projects.length + '</span>Active projects</button>';
+    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="orders"><span>' + orders.length + '</span>Recent requests</button>';
+    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="notifications"><span>' + unread + '</span>Unread alerts</button>';
+    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="chat"><span>' + escHtml(chat.handler || 'ai') + '</span>Chat mode</button>';
+    html += '</div></section>';
+    html += '<section class="pdx-portal-section"><h3>' + cxIcon('folder', 16) + 'Active projects</h3>';
     if (projects.length) {
-      projects.slice(0, 3).forEach(function (p) {
-        html += '<div class="pdx-portal-row"><strong>' + escHtml(p.title) + '</strong><span>' + escHtml(String(p.progress || 0)) + '%</span></div>';
+      projects.slice(0, 4).forEach(function (p) {
+        html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="project" data-portal-id="' + escHtml(String(p.id)) + '">' +
+          '<strong>' + escHtml(p.title) + '</strong><span>' + escHtml(String(p.progress || 0)) + '% · ' + escHtml(p.status) + '</span></button>';
       });
     } else {
-      html += '<p class="pdx-portal-empty">No active projects yet. Request a service to begin.</p>';
+      html += '<p class="pdx-portal-empty">No active projects yet. Browse services to request work.</p>';
     }
     html += '</section>';
-    html += '<section class="pdx-portal-section"><h3>' + cxIcon('receipt', 16) + 'Requests</h3>';
-    if (orders.length) {
-      orders.slice(0, 3).forEach(function (o) {
-        html += '<div class="pdx-portal-row"><strong>' + escHtml(o.service_label || o.ref) + '</strong><span>' + escHtml(o.status) + '</span></div>';
-      });
-    } else {
-      html += '<p class="pdx-portal-empty">No service requests yet.</p>';
-    }
-    html += '</section>';
-    html += '<section class="pdx-portal-section"><h3>' + cxIcon('news', 16) + 'News</h3>';
+    html += '<section class="pdx-portal-section"><h3>' + cxIcon('news', 16) + 'Latest news</h3>';
     if (news.length) {
-      news.forEach(function (n) {
-        html += '<div class="pdx-portal-row"><strong>' + escHtml(n.title) + '</strong></div>';
+      news.slice(0, 3).forEach(function (n) {
+        html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="news" data-portal-slug="' + escHtml(n.slug || '') + '">' +
+          '<strong>' + escHtml(n.title) + '</strong></button>';
       });
     } else {
       html += '<p class="pdx-portal-empty">No announcements right now.</p>';
     }
-    html += '</section></div>';
-    container.innerHTML = html;
-    initCustomerPortalChat(container, sessionId);
+    html += '</section>';
+    setTimeout(function () {
+      document.querySelectorAll('[data-portal-tab-jump]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          portalState.tab = btn.dataset.portalTabJump;
+          portalState.detail = null;
+          var body = portalOverlay && portalOverlay.querySelector('.pdx-customer-portal-body');
+          if (body) renderCustomerPortalDashboard(body, portalState.dashboard);
+        });
+      });
+    }, 0);
+    return html;
+  }
+
+  function renderPortalChatSection(data) {
+    var sessionId = (data.chat || {}).session_id || '';
+    return '<section class="pdx-portal-section pdx-portal-chat">' +
+      '<h3>' + cxIcon('message', 16) + 'Conversation</h3>' +
+      '<div class="pdx-portal-chat-log" id="pdx-portal-chat-log">' + cxLoading('Loading messages…') + '</div>' +
+      '<div class="pdx-portal-chat-tools">' +
+        '<label class="pdx-portal-tool" title="Attach image"><input type="file" accept="image/*" id="pdx-portal-image-input" hidden />' + cxIcon('image', 16) + '</label>' +
+        '<label class="pdx-portal-tool" title="Attach file"><input type="file" id="pdx-portal-file-input" hidden />' + cxIcon('file', 16) + '</label>' +
+        '<button type="button" class="pdx-portal-tool" id="pdx-portal-voice-btn" title="Voice message">' + cxIcon('mic', 16) + '</button>' +
+        '<button type="button" class="pdx-portal-tool" id="pdx-portal-location-btn" title="Share location">' + cxIcon('location', 16) + '</button>' +
+      '</div>' +
+      '<form class="pdx-portal-chat-form" id="pdx-portal-chat-form">' +
+        '<textarea rows="2" placeholder="Write a message…" aria-label="Message"></textarea>' +
+        pearlBtn('Send', { type: 'submit', small: true, inline: true, icon: 'send' }) +
+      '</form></section>';
+  }
+
+  function renderPortalProjectsSection(data) {
+    var projects = data.projects_active || [];
+    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('folder', 16) + 'Your projects</h3>';
+    if (projects.length) {
+      projects.forEach(function (p) {
+        html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="project" data-portal-id="' + escHtml(String(p.id)) + '">' +
+          '<strong>' + escHtml(p.title) + '</strong><span>' + escHtml(String(p.progress || 0)) + '% · ' + escHtml(p.status) + '</span></button>';
+      });
+    } else {
+      html += '<p class="pdx-portal-empty">No active projects yet. Request a service to begin.</p>';
+    }
+    return html + '</section>';
+  }
+
+  function renderPortalProjectDetail(project) {
+    var html = portalBackBtn('All projects');
+    html += '<article class="pdx-portal-detail"><h3>' + escHtml(project.title) + '</h3>';
+    html += '<p class="pdx-portal-meta">' + escHtml(project.ref) + ' · ' + escHtml(project.status) + ' · ' + escHtml(String(project.progress || 0)) + '%</p>';
+    if (project.description) {
+      html += '<div class="pdx-portal-body-text">' + escHtml(project.description) + '</div>';
+    }
+    if ((project.milestones || []).length) {
+      html += '<h4>Milestones</h4><ul class="pdx-portal-list">';
+      project.milestones.forEach(function (m) {
+        html += '<li><strong>' + escHtml(m.title) + '</strong> — ' + escHtml(m.status) +
+          (m.due_date ? ' · due ' + escHtml(formatDate(m.due_date)) : '') + '</li>';
+      });
+      html += '</ul>';
+    }
+    if ((project.notes || []).length) {
+      html += '<h4>Updates</h4><ul class="pdx-portal-list">';
+      project.notes.forEach(function (n) {
+        html += '<li>' + escHtml(n.body) + '</li>';
+      });
+      html += '</ul>';
+    }
+    if ((project.files || []).length) {
+      html += '<h4>Files</h4><ul class="pdx-portal-list">';
+      project.files.forEach(function (f) {
+        var dl = '/customer/projects/' + project.id + '/files/' + f.id + '/download';
+        html += '<li><a href="' + escHtml((C.restUrl || '/wp-json/pdx/v1').replace(/\/$/, '') + dl) + '" target="_blank" rel="noopener">' + escHtml(f.file_name) + '</a></li>';
+      });
+      html += '</ul>';
+    }
+    if ((project.assignees || []).length) {
+      html += '<h4>Your team</h4><ul class="pdx-portal-list">';
+      project.assignees.forEach(function (a) {
+        html += '<li>' + escHtml(a.display_name || ('Staff #' + a.user_id)) + ' — ' + escHtml(a.role_label || 'Staff') + '</li>';
+      });
+      html += '</ul>';
+    }
+    return html + '</article>';
+  }
+
+  function renderPortalOrdersSection(data) {
+    var orders = data.orders_recent || [];
+    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('receipt', 16) + 'Service requests</h3>';
+    if (orders.length) {
+      orders.forEach(function (o) {
+        html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="order" data-portal-id="' + escHtml(String(o.id)) + '">' +
+          '<strong>' + escHtml(o.service_label || o.ref) + '</strong><span>' + escHtml(o.status) + '</span></button>';
+      });
+    } else {
+      html += '<p class="pdx-portal-empty">No service requests yet.</p>';
+    }
+    return html + '</section>';
+  }
+
+  function renderPortalOrderDetail(order) {
+    var html = portalBackBtn('All requests');
+    html += '<article class="pdx-portal-detail"><h3>' + escHtml(order.service_label || order.ref) + '</h3>';
+    html += '<p class="pdx-portal-meta">' + escHtml(order.ref) + ' · ' + escHtml(order.status) + '</p>';
+    if (order.message) {
+      html += '<div class="pdx-portal-body-text">' + escHtml(order.message) + '</div>';
+    }
+    if (order.notes && order.notes.length) {
+      html += '<h4>Notes</h4><ul class="pdx-portal-list">';
+      order.notes.forEach(function (n) {
+        html += '<li>' + escHtml(n.body) + '</li>';
+      });
+      html += '</ul>';
+    }
+    return html + '</article>';
+  }
+
+  function renderPortalServicesSection() {
+    return '<section class="pdx-portal-section" id="pdx-portal-services">' + cxLoading('Loading services…') + '</section>';
+  }
+
+  function bindPortalServicesSection(container) {
+    var section = container.querySelector('#pdx-portal-services');
+    if (!section) return;
+    customerApiFetch('GET', '/customer/services').then(function (data) {
+      if (!data || !data._ok) {
+        section.innerHTML = '<p class="pdx-auth-error">Services could not be loaded.</p>';
+        return;
+      }
+      var html = '<h3>' + cxIcon('package', 16) + 'Services catalog</h3>';
+      (data.services || []).forEach(function (s) {
+        html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="service" data-portal-slug="' + escHtml(s.slug) + '">' +
+          '<strong>' + escHtml(s.name) + '</strong><span>' + escHtml(s.category || '') + '</span></button>';
+      });
+      if (!(data.services || []).length) {
+        html += '<p class="pdx-portal-empty">No services available yet.</p>';
+      }
+      section.innerHTML = html;
+      section.querySelectorAll('[data-portal-open]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          openPortalDetail(container, 'service', el.dataset.portalSlug);
+        });
+      });
+    });
+  }
+
+  function renderPortalServiceDetail(service) {
+    var html = portalBackBtn('All services');
+    html += '<article class="pdx-portal-detail"><h3>' + escHtml(service.name) + '</h3>';
+    if (service.description) {
+      html += '<div class="pdx-portal-body-text">' + escHtml(service.description) + '</div>';
+    }
+    html += '<form class="pdx-portal-request-form" id="pdx-portal-request-form">' +
+      '<textarea rows="3" placeholder="Describe your request…" aria-label="Request message" required></textarea>' +
+      pearlBtn('Submit request', { type: 'submit', small: true, inline: true, icon: 'send' }) +
+      '</form></article>';
+    setTimeout(function () {
+      var form = document.getElementById('pdx-portal-request-form');
+      if (!form) return;
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var message = (form.querySelector('textarea').value || '').trim();
+        if (!message) return;
+        customerApiFetch('POST', '/customer/orders', {
+          service_slug: service.slug,
+          message: message,
+        }).then(function (res) {
+          notify(res.message || (res._ok ? 'Request submitted.' : 'Request failed.'), res._ok ? 'info' : 'error');
+          if (res._ok) {
+            portalState.tab = 'orders';
+            portalState.detail = null;
+            customerApiFetch('GET', '/customer/dashboard').then(function (dash) {
+              portalState.dashboard = dash;
+              var body = portalOverlay && portalOverlay.querySelector('.pdx-customer-portal-body');
+              if (body) renderCustomerPortalDashboard(body, dash);
+            });
+          }
+        });
+      });
+    }, 0);
+    return html;
+  }
+
+  function renderPortalNewsSection(data) {
+    var news = data.news || [];
+    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('news', 16) + 'News & announcements</h3>';
+    if (news.length) {
+      news.forEach(function (n) {
+        html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="news" data-portal-slug="' + escHtml(n.slug || '') + '">' +
+          '<strong>' + escHtml(n.title) + '</strong><span>' + escHtml(formatDate(n.published_at)) + '</span></button>';
+      });
+    } else {
+      html += '<p class="pdx-portal-empty">No announcements right now.</p>';
+    }
+    return html + '</section>';
+  }
+
+  function renderPortalNewsDetail(item) {
+    var html = portalBackBtn('All news');
+    html += '<article class="pdx-portal-detail"><h3>' + escHtml(item.title) + '</h3>';
+    html += '<p class="pdx-portal-meta">' + escHtml(formatDate(item.published_at)) + '</p>';
+    if (item.excerpt) {
+      html += '<p class="pdx-portal-lead">' + escHtml(item.excerpt) + '</p>';
+    }
+    html += '<div class="pdx-portal-body-text">' + (item.body_html || escHtml(item.body || '')) + '</div></article>';
+    return html;
+  }
+
+  function renderPortalNotificationsSection() {
+    return '<section class="pdx-portal-section" id="pdx-portal-notifications">' + cxLoading('Loading notifications…') + '</section>';
+  }
+
+  function bindPortalNotificationsSection(container) {
+    var section = container.querySelector('#pdx-portal-notifications');
+    if (!section) return;
+    customerApiFetch('GET', '/customer/notifications?limit=50').then(function (data) {
+      if (!data || !data._ok) {
+        section.innerHTML = '<p class="pdx-auth-error">Notifications could not be loaded.</p>';
+        return;
+      }
+      var html = '<h3>' + cxIcon('bell', 16) + 'Notifications';
+      if (data.unread_count) {
+        html += ' <span class="pdx-portal-badge">' + escHtml(String(data.unread_count)) + '</span>';
+      }
+      html += '</h3>';
+      if ((data.items || []).length) {
+        html += '<div class="pdx-portal-notify-list">';
+        data.items.forEach(function (n) {
+          var unread = n.read_at ? '' : ' pdx-portal-notify--unread';
+          html += '<div class="pdx-portal-notify' + unread + '" data-notify-id="' + escHtml(String(n.id)) + '">' +
+            '<strong>' + escHtml(n.title) + '</strong><p>' + escHtml(n.body) + '</p>' +
+            '<span class="pdx-portal-meta">' + escHtml(formatDate(n.created_at)) + '</span></div>';
+        });
+        html += '</div>';
+        if (data.unread_count) {
+          html += '<button type="button" class="pdx-cx-btn pdx-cx-btn--ghost" id="pdx-portal-mark-read">Mark all read</button>';
+        }
+      } else {
+        html += '<p class="pdx-portal-empty">No notifications yet.</p>';
+      }
+      section.innerHTML = html;
+      section.querySelectorAll('.pdx-portal-notify--unread').forEach(function (el) {
+        el.addEventListener('click', function () {
+          var id = el.dataset.notifyId;
+          customerApiFetch('POST', '/customer/notifications', { ids: [parseInt(id, 10)] }).then(function () {
+            el.classList.remove('pdx-portal-notify--unread');
+          });
+        });
+      });
+      var markAll = section.querySelector('#pdx-portal-mark-read');
+      if (markAll) {
+        markAll.addEventListener('click', function () {
+          var ids = (data.items || []).filter(function (n) { return !n.read_at; }).map(function (n) { return n.id; });
+          customerApiFetch('POST', '/customer/notifications', { ids: ids }).then(function () {
+            bindPortalNotificationsSection(container);
+          });
+        });
+      }
+    });
+  }
+
+  function formatPortalMessage(m) {
+    if (m.image_url) {
+      return '<img class="pdx-portal-msg-image" src="' + escHtml(m.image_url) + '" alt="" />' +
+        (m.content ? '<div>' + escHtml(m.content) + '</div>' : '');
+    }
+    if (m.attachment_type === 'voice' && m.audio_url) {
+      return '<audio controls preload="none" src="' + escHtml(m.audio_url) + '"></audio>';
+    }
+    if (m.attachment_type === 'file' && m.file_url) {
+      return '<a href="' + escHtml(m.file_url) + '" target="_blank" rel="noopener">' + escHtml(m.file_name || 'Download file') + '</a>';
+    }
+    if (m.attachment_type === 'location') {
+      var lat = m.lat || m.latitude;
+      var lng = m.lng || m.longitude;
+      if (lat && lng) {
+        return '<a href="https://maps.google.com/?q=' + encodeURIComponent(lat + ',' + lng) + '" target="_blank" rel="noopener">' +
+          escHtml(m.label || 'Shared location') + '</a>';
+      }
+    }
+    return escHtml(m.content || '');
   }
 
   function initCustomerPortalChat(container, sessionId) {
@@ -1250,7 +1742,7 @@
     var form = container.querySelector('#pdx-portal-chat-form');
     if (!logEl || !form) return;
 
-    var state = { sessionId: sessionId, handler: 'ai', messages: [], sending: false };
+    var state = { sessionId: sessionId, handler: 'ai', messages: [], sending: false, recording: null };
 
     function renderMessages() {
       if (!state.messages.length) {
@@ -1259,7 +1751,7 @@
       }
       logEl.innerHTML = state.messages.map(function (m) {
         var cls = m.role === 'user' ? 'pdx-portal-msg pdx-portal-msg--user' : 'pdx-portal-msg pdx-portal-msg--assistant';
-        return '<div class="' + cls + '">' + escHtml(m.content || '') + '</div>';
+        return '<div class="' + cls + '">' + formatPortalMessage(m) + '</div>';
       }).join('');
       logEl.scrollTop = logEl.scrollHeight;
     }
@@ -1275,7 +1767,18 @@
         state.sessionId = data.session_id || state.sessionId;
         state.handler = data.handler || 'ai';
         state.messages = (data.messages || []).map(function (m) {
-          return { role: m.role, content: m.content || '' };
+          return {
+            role: m.role,
+            content: m.content || '',
+            image_url: m.image_url,
+            attachment_type: m.attachment_type,
+            audio_url: m.audio_url,
+            file_url: m.file_url,
+            file_name: m.file_name,
+            lat: m.lat,
+            lng: m.lng,
+            label: m.label,
+          };
         });
         renderMessages();
       }).catch(function () {
@@ -1322,23 +1825,126 @@
       }).then(loadMessages);
     }
 
+    function sendText(text) {
+      state.sending = true;
+      var sendPromise = (state.handler === 'admin' || state.handler === 'live_request')
+        ? sendHumanMessage(text)
+        : sendAiStream(text);
+      return sendPromise.catch(function (err) {
+        notify((err && err.message) || 'Message could not be sent.', 'error');
+      }).finally(function () {
+        state.sending = false;
+      });
+    }
+
+    function uploadMedia(path, field, file, extra) {
+      if (state.sending || !file) return;
+      state.sending = true;
+      var fd = new FormData();
+      fd.append(field, file);
+      fd.append('session_id', state.sessionId);
+      if (extra) {
+        Object.keys(extra).forEach(function (k) { fd.append(k, extra[k]); });
+      }
+      customerApiFormData(path, fd).then(function (data) {
+        if (!data || !data._ok) {
+          notify((data && data.message) || 'Upload failed.', 'error');
+          return;
+        }
+        loadMessages();
+      }).catch(function () {
+        notify('Upload failed.', 'error');
+      }).finally(function () {
+        state.sending = false;
+      });
+    }
+
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       if (state.sending) return;
       var input = form.querySelector('textarea');
       var text = (input && input.value || '').trim();
       if (!text) return;
-      state.sending = true;
-      var sendPromise = (state.handler === 'admin' || state.handler === 'live_request')
-        ? sendHumanMessage(text)
-        : sendAiStream(text);
-      sendPromise.catch(function (err) {
-        notify((err && err.message) || 'Message could not be sent.', 'error');
-      }).finally(function () {
-        state.sending = false;
+      sendText(text).finally(function () {
         if (input) input.value = '';
       });
     });
+
+    var imageInput = container.querySelector('#pdx-portal-image-input');
+    if (imageInput) {
+      imageInput.addEventListener('change', function () {
+        if (imageInput.files && imageInput.files[0]) {
+          uploadMedia('/customer/chat/messages/image', 'image', imageInput.files[0]);
+          imageInput.value = '';
+        }
+      });
+    }
+
+    var fileInput = container.querySelector('#pdx-portal-file-input');
+    if (fileInput) {
+      fileInput.addEventListener('change', function () {
+        if (fileInput.files && fileInput.files[0]) {
+          uploadMedia('/customer/chat/messages/file', 'file', fileInput.files[0]);
+          fileInput.value = '';
+        }
+      });
+    }
+
+    var voiceBtn = container.querySelector('#pdx-portal-voice-btn');
+    if (voiceBtn && navigator.mediaDevices && typeof MediaRecorder !== 'undefined') {
+      voiceBtn.addEventListener('click', function () {
+        if (state.recording) {
+          state.recording.stop();
+          return;
+        }
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
+          var recorder = new MediaRecorder(stream);
+          var chunks = [];
+          state.recording = recorder;
+          voiceBtn.classList.add('is-recording');
+          recorder.ondataavailable = function (ev) { if (ev.data.size) chunks.push(ev.data); };
+          recorder.onstop = function () {
+            voiceBtn.classList.remove('is-recording');
+            state.recording = null;
+            stream.getTracks().forEach(function (t) { t.stop(); });
+            var blob = new Blob(chunks, { type: 'audio/webm' });
+            var file = new File([blob], 'voice-message.webm', { type: 'audio/webm' });
+            uploadMedia('/customer/chat/messages/voice', 'audio', file, { duration: 0 });
+          };
+          recorder.start();
+          setTimeout(function () { if (state.recording) state.recording.stop(); }, 60000);
+        }).catch(function () {
+          notify('Microphone access is required for voice messages.', 'warn');
+        });
+      });
+    }
+
+    var locationBtn = container.querySelector('#pdx-portal-location-btn');
+    if (locationBtn && navigator.geolocation) {
+      locationBtn.addEventListener('click', function () {
+        if (state.sending) return;
+        locationBtn.disabled = true;
+        navigator.geolocation.getCurrentPosition(function (pos) {
+          locationBtn.disabled = false;
+          state.sending = true;
+          customerApiFetch('POST', '/customer/chat/messages/location', {
+            session_id: state.sessionId,
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            label: 'My location',
+          }).then(function (data) {
+            if (!data || !data._ok) {
+              notify((data && data.message) || 'Location could not be shared.', 'error');
+              return;
+            }
+            loadMessages();
+          }).finally(function () { state.sending = false; });
+        }, function () {
+          locationBtn.disabled = false;
+          notify('Location permission denied.', 'warn');
+        });
+      });
+    }
 
     loadMessages();
   }

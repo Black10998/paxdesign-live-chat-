@@ -18,6 +18,13 @@ class PAXdesign_Customer_Admin {
         add_action('admin_post_paxdesign_customer_publish_news', array(__CLASS__, 'handle_publish_news'));
         add_action('admin_post_paxdesign_customer_save_project', array(__CLASS__, 'handle_save_project'));
         add_action('admin_post_paxdesign_customer_sync_services', array(__CLASS__, 'handle_sync_services'));
+        add_action('admin_post_paxdesign_customer_update_project', array(__CLASS__, 'handle_update_project'));
+        add_action('admin_post_paxdesign_customer_add_milestone', array(__CLASS__, 'handle_add_milestone'));
+        add_action('admin_post_paxdesign_customer_add_note', array(__CLASS__, 'handle_add_note'));
+        add_action('admin_post_paxdesign_customer_assign_user', array(__CLASS__, 'handle_assign_user'));
+        add_action('admin_post_paxdesign_customer_upload_file', array(__CLASS__, 'handle_upload_file'));
+        add_action('admin_post_paxdesign_customer_update_order', array(__CLASS__, 'handle_update_order'));
+        add_action('admin_post_paxdesign_customer_send_notification', array(__CLASS__, 'handle_send_notification'));
     }
 
     public static function register_menu() {
@@ -43,8 +50,9 @@ class PAXdesign_Customer_Admin {
             'overview'  => __('Overview', 'paxdesign-booking'),
             'projects'  => __('Projects', 'paxdesign-booking'),
             'orders'    => __('Orders', 'paxdesign-booking'),
-            'news'      => __('News', 'paxdesign-booking'),
-            'services'  => __('Services', 'paxdesign-booking'),
+            'news'          => __('News', 'paxdesign-booking'),
+            'services'      => __('Services', 'paxdesign-booking'),
+            'notifications' => __('Notifications', 'paxdesign-booking'),
         ) as $slug => $label) {
             $class = $tab === $slug ? ' nav-tab nav-tab-active' : ' nav-tab';
             echo '<a class="' . esc_attr(trim($class)) . '" href="' . esc_url(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=' . $slug)) . '">' . esc_html($label) . '</a>';
@@ -71,6 +79,9 @@ class PAXdesign_Customer_Admin {
             case 'services':
                 self::render_services_tab();
                 break;
+            case 'notifications':
+                self::render_notifications_tab();
+                break;
             default:
                 self::render_overview_tab();
         }
@@ -95,13 +106,20 @@ class PAXdesign_Customer_Admin {
     }
 
     private static function render_projects_tab() {
+        $project_id = absint($_GET['project_id'] ?? 0);
+        if ($project_id > 0) {
+            self::render_project_detail($project_id);
+            return;
+        }
+
         global $wpdb;
         $rows = $wpdb->get_results('SELECT p.*, u.display_name AS customer_name FROM ' . PAXdesign_Customer_DB::table('projects') . ' p LEFT JOIN ' . $wpdb->users . ' u ON u.ID = p.customer_user_id ORDER BY p.updated_at DESC LIMIT 50', ARRAY_A);
         echo '<h2>' . esc_html__('Projects', 'paxdesign-booking') . '</h2>';
         echo '<table class="widefat striped"><thead><tr><th>' . esc_html__('Ref', 'paxdesign-booking') . '</th><th>' . esc_html__('Title', 'paxdesign-booking') . '</th><th>' . esc_html__('Customer', 'paxdesign-booking') . '</th><th>' . esc_html__('Status', 'paxdesign-booking') . '</th><th>' . esc_html__('Progress', 'paxdesign-booking') . '</th></tr></thead><tbody>';
         foreach ($rows ?: array() as $row) {
+            $detail_url = admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=projects&project_id=' . (int) $row['id']);
             echo '<tr>';
-            echo '<td>' . esc_html($row['project_ref']) . '</td>';
+            echo '<td><a href="' . esc_url($detail_url) . '">' . esc_html($row['project_ref']) . '</a></td>';
             echo '<td>' . esc_html($row['title']) . '</td>';
             echo '<td>' . esc_html($row['customer_name'] ?: ('#' . $row['customer_user_id'])) . '</td>';
             echo '<td>' . esc_html($row['status']) . '</td>';
@@ -134,12 +152,28 @@ class PAXdesign_Customer_Admin {
             ARRAY_A
         );
         echo '<h2>' . esc_html__('Service requests', 'paxdesign-booking') . '</h2>';
-        echo '<table class="widefat striped"><thead><tr><th>' . esc_html__('Ref', 'paxdesign-booking') . '</th><th>' . esc_html__('Customer', 'paxdesign-booking') . '</th><th>' . esc_html__('Service', 'paxdesign-booking') . '</th><th>' . esc_html__('Status', 'paxdesign-booking') . '</th></tr></thead><tbody>';
+        echo '<table class="widefat striped"><thead><tr><th>' . esc_html__('Ref', 'paxdesign-booking') . '</th><th>' . esc_html__('Customer', 'paxdesign-booking') . '</th><th>' . esc_html__('Service', 'paxdesign-booking') . '</th><th>' . esc_html__('Status', 'paxdesign-booking') . '</th><th></th></tr></thead><tbody>';
         foreach ($rows ?: array() as $row) {
-            echo '<tr><td>' . esc_html($row['order_ref']) . '</td><td>' . esc_html($row['customer_name'] ?: ('#' . $row['customer_user_id'])) . '</td><td>' . esc_html($row['service_label']) . '</td><td>' . esc_html($row['status']) . '</td></tr>';
+            echo '<tr>';
+            echo '<td>' . esc_html($row['order_ref']) . '</td>';
+            echo '<td>' . esc_html($row['customer_name'] ?: ('#' . $row['customer_user_id'])) . '</td>';
+            echo '<td>' . esc_html($row['service_label']) . '</td>';
+            echo '<td>' . esc_html($row['status']) . '</td>';
+            echo '<td><form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="display:flex;gap:6px;align-items:center">';
+            wp_nonce_field('paxdesign_customer_update_order');
+            echo '<input type="hidden" name="action" value="paxdesign_customer_update_order" />';
+            echo '<input type="hidden" name="order_id" value="' . esc_attr((string) $row['id']) . '" />';
+            echo '<select name="status">';
+            foreach (array('received', 'reviewing', 'quoted', 'approved', 'in_progress', 'completed', 'cancelled') as $status) {
+                printf('<option value="%s"%s>%s</option>', esc_attr($status), selected($row['status'], $status, false), esc_html($status));
+            }
+            echo '</select> ';
+            submit_button(__('Update', 'paxdesign-booking'), 'secondary', 'submit', false);
+            echo '</form></td>';
+            echo '</tr>';
         }
         if (empty($rows)) {
-            echo '<tr><td colspan="4">' . esc_html__('No service requests yet.', 'paxdesign-booking') . '</td></tr>';
+            echo '<tr><td colspan="5">' . esc_html__('No service requests yet.', 'paxdesign-booking') . '</td></tr>';
         }
         echo '</tbody></table>';
     }
@@ -245,6 +279,207 @@ class PAXdesign_Customer_Admin {
         self::verify_admin('paxdesign_customer_sync_services');
         PAXdesign_Customer_Services::sync_from_booking_catalog();
         wp_safe_redirect(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=services&synced=1'));
+        exit;
+    }
+
+    private static function render_project_detail($project_id) {
+        global $wpdb;
+        $row = $wpdb->get_row($wpdb->prepare(
+            'SELECT p.*, u.display_name AS customer_name FROM ' . PAXdesign_Customer_DB::table('projects') . ' p LEFT JOIN ' . $wpdb->users . ' u ON u.ID = p.customer_user_id WHERE p.id = %d LIMIT 1',
+            $project_id
+        ), ARRAY_A);
+        if (!$row) {
+            echo '<p>' . esc_html__('Project not found.', 'paxdesign-booking') . '</p>';
+            return;
+        }
+
+        $back_url = admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=projects');
+        echo '<p><a href="' . esc_url($back_url) . '">&larr; ' . esc_html__('All projects', 'paxdesign-booking') . '</a></p>';
+        echo '<h2>' . esc_html($row['title']) . ' <small>(' . esc_html($row['project_ref']) . ')</small></h2>';
+        echo '<p>' . esc_html($row['description']) . '</p>';
+
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="margin-bottom:1.5em">';
+        wp_nonce_field('paxdesign_customer_update_project');
+        echo '<input type="hidden" name="action" value="paxdesign_customer_update_project" />';
+        echo '<input type="hidden" name="project_id" value="' . esc_attr((string) $project_id) . '" />';
+        echo '<table class="form-table"><tbody>';
+        echo '<tr><th><label for="status">' . esc_html__('Status', 'paxdesign-booking') . '</label></th><td><select name="status" id="status">';
+        foreach (array('planning', 'in_progress', 'review', 'completed', 'on_hold') as $status) {
+            printf('<option value="%s"%s>%s</option>', esc_attr($status), selected($row['status'], $status, false), esc_html($status));
+        }
+        echo '</select></td></tr>';
+        echo '<tr><th><label for="progress">' . esc_html__('Progress %', 'paxdesign-booking') . '</label></th><td><input type="number" min="0" max="100" name="progress" id="progress" value="' . esc_attr((string) $row['progress']) . '" /></td></tr>';
+        echo '</tbody></table>';
+        submit_button(__('Update project', 'paxdesign-booking'));
+        echo '</form>';
+
+        $milestones = PAXdesign_Customer_Projects::milestones($project_id, 'admin');
+        echo '<h3>' . esc_html__('Milestones', 'paxdesign-booking') . '</h3><ul>';
+        foreach ($milestones ?: array() as $m) {
+            printf('<li><strong>%s</strong> — %s (%s)</li>', esc_html($m['title']), esc_html($m['status']), esc_html($m['due_date'] ?: '—'));
+        }
+        if (empty($milestones)) {
+            echo '<li>' . esc_html__('No milestones yet.', 'paxdesign-booking') . '</li>';
+        }
+        echo '</ul>';
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+        wp_nonce_field('paxdesign_customer_add_milestone');
+        echo '<input type="hidden" name="action" value="paxdesign_customer_add_milestone" /><input type="hidden" name="project_id" value="' . esc_attr((string) $project_id) . '" />';
+        echo '<p><input type="text" name="title" placeholder="' . esc_attr__('Milestone title', 'paxdesign-booking') . '" class="regular-text" required /> ';
+        echo '<input type="date" name="due_date" /> ';
+        submit_button(__('Add milestone', 'paxdesign-booking'), 'secondary', 'submit', false);
+        echo '</p></form>';
+
+        $notes = PAXdesign_Customer_Projects::notes($project_id, 'admin');
+        echo '<h3>' . esc_html__('Notes', 'paxdesign-booking') . '</h3><ul>';
+        foreach ($notes ?: array() as $n) {
+            echo '<li>' . esc_html($n['body']) . '</li>';
+        }
+        if (empty($notes)) {
+            echo '<li>' . esc_html__('No notes yet.', 'paxdesign-booking') . '</li>';
+        }
+        echo '</ul>';
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+        wp_nonce_field('paxdesign_customer_add_note');
+        echo '<input type="hidden" name="action" value="paxdesign_customer_add_note" /><input type="hidden" name="project_id" value="' . esc_attr((string) $project_id) . '" />';
+        echo '<textarea name="body" rows="3" class="large-text" placeholder="' . esc_attr__('Internal note for customer', 'paxdesign-booking') . '" required></textarea><br />';
+        submit_button(__('Add note', 'paxdesign-booking'), 'secondary');
+        echo '</form>';
+
+        $assignees = PAXdesign_Customer_Projects::assignees($project_id);
+        echo '<h3>' . esc_html__('Assignees', 'paxdesign-booking') . '</h3><ul>';
+        foreach ($assignees ?: array() as $a) {
+            echo '<li>' . esc_html($a['display_name'] ?: ('#' . $a['user_id'])) . ' — ' . esc_html($a['role_label']) . '</li>';
+        }
+        if (empty($assignees)) {
+            echo '<li>' . esc_html__('No assignees yet.', 'paxdesign-booking') . '</li>';
+        }
+        echo '</ul>';
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+        wp_nonce_field('paxdesign_customer_assign_user');
+        echo '<input type="hidden" name="action" value="paxdesign_customer_assign_user" /><input type="hidden" name="project_id" value="' . esc_attr((string) $project_id) . '" />';
+        echo '<p><input type="number" name="user_id" placeholder="' . esc_attr__('Staff user ID', 'paxdesign-booking') . '" class="small-text" required /> ';
+        echo '<input type="text" name="role_label" placeholder="' . esc_attr__('Role label', 'paxdesign-booking') . '" class="regular-text" value="Project lead" /> ';
+        submit_button(__('Assign staff', 'paxdesign-booking'), 'secondary', 'submit', false);
+        echo '</p></form>';
+
+        $files = PAXdesign_Customer_Projects::files($project_id, 'admin');
+        echo '<h3>' . esc_html__('Files', 'paxdesign-booking') . '</h3><ul>';
+        foreach ($files ?: array() as $f) {
+            echo '<li>' . esc_html($f['file_name']) . ' <em>(' . esc_html($f['visibility']) . ')</em></li>';
+        }
+        if (empty($files)) {
+            echo '<li>' . esc_html__('No files yet.', 'paxdesign-booking') . '</li>';
+        }
+        echo '</ul>';
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" enctype="multipart/form-data">';
+        wp_nonce_field('paxdesign_customer_upload_file');
+        echo '<input type="hidden" name="action" value="paxdesign_customer_upload_file" /><input type="hidden" name="project_id" value="' . esc_attr((string) $project_id) . '" />';
+        echo '<input type="file" name="file" required /> ';
+        echo '<label><input type="checkbox" name="customer_visible" value="1" checked /> ' . esc_html__('Visible to customer', 'paxdesign-booking') . '</label> ';
+        submit_button(__('Upload file', 'paxdesign-booking'), 'secondary', 'submit', false);
+        echo '</form>';
+    }
+
+    private static function render_notifications_tab() {
+        echo '<h2>' . esc_html__('Customer notifications', 'paxdesign-booking') . '</h2>';
+        echo '<p>' . esc_html__('Send a notification to a specific customer. Push delivery requires a registered device token.', 'paxdesign-booking') . '</p>';
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+        wp_nonce_field('paxdesign_customer_send_notification');
+        echo '<input type="hidden" name="action" value="paxdesign_customer_send_notification" />';
+        echo '<table class="form-table"><tbody>';
+        echo '<tr><th><label for="notify_user_id">' . esc_html__('Customer user ID', 'paxdesign-booking') . '</label></th><td><input type="number" name="user_id" id="notify_user_id" class="regular-text" required /></td></tr>';
+        echo '<tr><th><label for="notify_title">' . esc_html__('Title', 'paxdesign-booking') . '</label></th><td><input type="text" name="title" id="notify_title" class="regular-text" required /></td></tr>';
+        echo '<tr><th><label for="notify_body">' . esc_html__('Message', 'paxdesign-booking') . '</label></th><td><textarea name="body" id="notify_body" class="large-text" rows="4" required></textarea></td></tr>';
+        echo '<tr><th><label for="notify_category">' . esc_html__('Category', 'paxdesign-booking') . '</label></th><td><select name="category" id="notify_category"><option value="general">general</option><option value="project">project</option><option value="order">order</option><option value="news">news</option></select></td></tr>';
+        echo '</tbody></table>';
+        submit_button(__('Send notification', 'paxdesign-booking'));
+        echo '</form>';
+    }
+
+    public static function handle_update_project() {
+        self::verify_admin('paxdesign_customer_update_project');
+        $project_id = absint($_POST['project_id'] ?? 0);
+        $result = PAXdesign_Customer_Projects::update($project_id, array(
+            'status'   => sanitize_key($_POST['status'] ?? ''),
+            'progress' => absint($_POST['progress'] ?? 0),
+        ), get_current_user_id());
+        if (is_wp_error($result)) {
+            wp_die(esc_html($result->get_error_message()));
+        }
+        wp_safe_redirect(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=projects&project_id=' . $project_id . '&saved=1'));
+        exit;
+    }
+
+    public static function handle_add_milestone() {
+        self::verify_admin('paxdesign_customer_add_milestone');
+        $project_id = absint($_POST['project_id'] ?? 0);
+        PAXdesign_Customer_Projects::add_milestone($project_id, array(
+            'title'    => sanitize_text_field(wp_unslash($_POST['title'] ?? '')),
+            'due_date' => sanitize_text_field($_POST['due_date'] ?? ''),
+            'status'   => 'pending',
+        ), get_current_user_id());
+        wp_safe_redirect(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=projects&project_id=' . $project_id . '&saved=1'));
+        exit;
+    }
+
+    public static function handle_add_note() {
+        self::verify_admin('paxdesign_customer_add_note');
+        $project_id = absint($_POST['project_id'] ?? 0);
+        PAXdesign_Customer_Projects::add_note($project_id, array(
+            'body'       => sanitize_textarea_field(wp_unslash($_POST['body'] ?? '')),
+            'visibility' => 'customer',
+        ), get_current_user_id());
+        wp_safe_redirect(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=projects&project_id=' . $project_id . '&saved=1'));
+        exit;
+    }
+
+    public static function handle_assign_user() {
+        self::verify_admin('paxdesign_customer_assign_user');
+        $project_id = absint($_POST['project_id'] ?? 0);
+        PAXdesign_Customer_Projects::assign_user($project_id, array(
+            'user_id'    => absint($_POST['user_id'] ?? 0),
+            'role_label' => sanitize_text_field(wp_unslash($_POST['role_label'] ?? 'Staff')),
+        ), get_current_user_id());
+        wp_safe_redirect(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=projects&project_id=' . $project_id . '&saved=1'));
+        exit;
+    }
+
+    public static function handle_upload_file() {
+        self::verify_admin('paxdesign_customer_upload_file');
+        $project_id = absint($_POST['project_id'] ?? 0);
+        if (empty($_FILES['file'])) {
+            wp_die(esc_html__('No file uploaded.', 'paxdesign-booking'));
+        }
+        $result = PAXdesign_Customer_Projects::add_file($project_id, $_FILES['file'], array(
+            'visibility' => !empty($_POST['customer_visible']) ? 'customer' : 'internal',
+        ), get_current_user_id());
+        if (is_wp_error($result)) {
+            wp_die(esc_html($result->get_error_message()));
+        }
+        wp_safe_redirect(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=projects&project_id=' . $project_id . '&saved=1'));
+        exit;
+    }
+
+    public static function handle_update_order() {
+        self::verify_admin('paxdesign_customer_update_order');
+        $order_id = absint($_POST['order_id'] ?? 0);
+        PAXdesign_Customer_Orders::staff_update($order_id, array(
+            'status' => sanitize_key($_POST['status'] ?? ''),
+        ), get_current_user_id());
+        wp_safe_redirect(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=orders&saved=1'));
+        exit;
+    }
+
+    public static function handle_send_notification() {
+        self::verify_admin('paxdesign_customer_send_notification');
+        PAXdesign_Customer_Notifications::notify_user(
+            absint($_POST['user_id'] ?? 0),
+            sanitize_key($_POST['category'] ?? 'general'),
+            sanitize_text_field(wp_unslash($_POST['title'] ?? '')),
+            sanitize_textarea_field(wp_unslash($_POST['body'] ?? ''))
+        );
+        wp_safe_redirect(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=notifications&saved=1'));
         exit;
     }
 
