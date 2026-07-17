@@ -90,7 +90,7 @@ enum CustomerPrimaryButtonStyle {
     case filled, tinted
 }
 
-private struct CustomerPrimaryButtonStyleModifier: ButtonStyle {
+struct CustomerPrimaryButtonStyleModifier: ButtonStyle {
     let style: CustomerPrimaryButtonStyle
 
     func makeBody(configuration: Configuration) -> some View {

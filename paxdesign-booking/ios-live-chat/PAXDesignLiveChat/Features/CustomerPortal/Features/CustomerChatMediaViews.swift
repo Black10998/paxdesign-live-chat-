@@ -1,4 +1,8 @@
 import SwiftUI
+import PhotosUI
+import AVFoundation
+import CoreLocation
+import UIKit
 
 struct CustomerChatBubble: View {
     let message: CustomerChatPoll.ChatMessage
@@ -13,9 +17,7 @@ struct CustomerChatBubble: View {
             if isOutgoing { Spacer(minLength: 24) }
             if !isOutgoing { participantAvatar }
             VStack(alignment: isOutgoing ? .trailing : .leading, spacing: 4) {
-                if let header = participantHeader {
-                    header
-                }
+                participantHeader
                 messageContent
                     .padding(10)
                     .background(bubbleBackground)

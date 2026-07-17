@@ -67,10 +67,9 @@ jobs:
               --repo "${{ github.repository }}" \
               --workflow release-appstore.yml \
               --commit "$SHA" \
-              --status in_progress \
-              --limit 1 \
-              --json databaseId \
-              --jq '.[0].databaseId // empty')"
+              --json databaseId,status \
+              --limit 5 \
+              --jq '[.[] | select(.status == "in_progress" or .status == "queued") | .databaseId] | first // empty')"
             if [[ -n "$IN_PROGRESS" ]]; then
               echo "Waiting for App Store build run $IN_PROGRESS on commit $SHA..."
               sleep 30
@@ -83,17 +82,20 @@ jobs:
           RUN_ID="$(gh run list \
             --repo "${{ github.repository }}" \
             --workflow release-appstore.yml \
-            --branch main \
+            --commit "$SHA" \
             --status success \
             --limit 1 \
             --json databaseId \
             --jq '.[0].databaseId // empty')"
-          if [[ -z "$RUN_ID" ]]; then
-            echo "No successful App Store IPA workflow run found" >&2
-            exit 1
+          if [[ -n "$RUN_ID" ]]; then
+            echo "Using App Store IPA from commit $SHA (run $RUN_ID)"
+            echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
-          echo "Using latest successful App Store IPA run $RUN_ID (commit may differ from $SHA)"
-          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+          echo "ERROR: No successful App Store IPA for commit $SHA after waiting." >&2
+          echo "Re-run this workflow after the App Store build completes." >&2
+          exit 1
 
       - name: Download signed App Store IPA artifact
         uses: actions/download-artifact@v4
