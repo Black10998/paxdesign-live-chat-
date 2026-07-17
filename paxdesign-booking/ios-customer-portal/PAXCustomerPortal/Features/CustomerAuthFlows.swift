@@ -56,7 +56,7 @@ struct CustomerRegisterView: View {
                 SecureField(String(localized: "Password"), text: $password)
             }
             if let message {
-                Section { Text(message).foregroundStyle(message.contains("check") ? .secondary : .red) }
+                Section { Text(message).foregroundStyle(message.contains("check") ? Color.secondary : Color.red) }
             }
             Section {
                 Button(isLoading ? String(localized: "Creating…") : String(localized: "Register")) {
