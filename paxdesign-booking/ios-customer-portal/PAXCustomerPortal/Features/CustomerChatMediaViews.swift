@@ -41,7 +41,7 @@ struct CustomerChatBubble: View {
                 Label(message.location_label ?? String(localized: "Shared location"), systemImage: "mappin.and.ellipse")
             }
         } else if let fileURL = message.file_url, let url = URL(string: fileURL) {
-            Link(message.file_name ?? fileURL.lastPathComponent, destination: url)
+            Link(message.file_name ?? URL(string: fileURL)?.lastPathComponent ?? fileURL, destination: url)
         } else if !message.content.isEmpty {
             Text(message.content)
         }
