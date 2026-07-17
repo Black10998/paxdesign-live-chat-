@@ -42,6 +42,18 @@ class PAXdesign_Customer_News {
         return $row ? self::format($row, true) : null;
     }
 
+    public static function get_published_for_user($slug, $user_id) {
+        global $wpdb;
+        $row = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM " . PAXdesign_Customer_DB::table('news') . " WHERE slug = %s AND status = 'published' LIMIT 1",
+            sanitize_title($slug)
+        ), ARRAY_A);
+        if (!$row || !self::matches_audience($row, $user_id)) {
+            return null;
+        }
+        return self::format($row, true);
+    }
+
     private static function matches_audience($row, $user_id) {
         $audience = $row['audience'] ?? 'all_customers';
         if ($audience === 'all_customers') {

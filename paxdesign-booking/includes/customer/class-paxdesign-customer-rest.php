@@ -105,6 +105,12 @@ class PAXdesign_Customer_REST {
             'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
         ));
 
+        register_rest_route(self::NS, '/customer/news/(?P<slug>[a-z0-9\-_]+)', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'get_news'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
         register_rest_route(self::NS, '/customer/notifications', array(
             array(
                 'methods'             => WP_REST_Server::READABLE,
@@ -303,6 +309,15 @@ class PAXdesign_Customer_REST {
     public static function list_news() {
         $uid = PAXdesign_Customer_Auth::current_user_id();
         return rest_ensure_response(array('items' => PAXdesign_Customer_News::list_for_user($uid)));
+    }
+
+    public static function get_news(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $item = PAXdesign_Customer_News::get_published_for_user($request['slug'], $uid);
+        if (!$item) {
+            return new WP_Error('not_found', __('News item not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        return rest_ensure_response($item);
     }
 
     public static function list_notifications(WP_REST_Request $request) {

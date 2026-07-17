@@ -24,6 +24,91 @@ final class CustomerAPIClient: ObservableObject {
         return try await get(path, as: CustomerServicesResponse.self)
     }
 
+    func fetchService(slug: String) async throws -> CustomerServiceDetail {
+        try await get("/customer/services/\(slug)", as: CustomerServiceDetail.self)
+    }
+
+    func fetchProjects(status: String? = nil) async throws -> CustomerProjectsResponse {
+        var path = "/customer/projects"
+        if let status, !status.isEmpty {
+            path += "?status=\(status.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? status)"
+        }
+        return try await get(path, as: CustomerProjectsResponse.self)
+    }
+
+    func fetchProject(id: Int) async throws -> CustomerProjectDetail {
+        try await get("/customer/projects/\(id)", as: CustomerProjectDetail.self)
+    }
+
+    func fetchOrders(status: String? = nil) async throws -> CustomerOrdersResponse {
+        var path = "/customer/orders"
+        if let status, !status.isEmpty {
+            path += "?status=\(status.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? status)"
+        }
+        return try await get(path, as: CustomerOrdersResponse.self)
+    }
+
+    func fetchOrder(id: Int) async throws -> CustomerOrderDetail {
+        try await get("/customer/orders/\(id)", as: CustomerOrderDetail.self)
+    }
+
+    func createOrder(serviceSlug: String, description: String, projectId: Int? = nil) async throws -> CustomerOrderDetail {
+        var body: [String: String] = [
+            "service_slug": serviceSlug,
+            "description": description,
+        ]
+        if let projectId { body["project_id"] = String(projectId) }
+        return try await post("/customer/orders", body: body, as: CustomerOrderDetail.self)
+    }
+
+    func fetchNews() async throws -> CustomerNewsResponse {
+        try await get("/customer/news", as: CustomerNewsResponse.self)
+    }
+
+    func fetchNewsItem(slug: String) async throws -> CustomerNewsItem {
+        try await get("/customer/news/\(slug)", as: CustomerNewsItem.self)
+    }
+
+    func fetchNotifications(unreadOnly: Bool = false) async throws -> CustomerNotificationsResponse {
+        var path = "/customer/notifications"
+        if unreadOnly { path += "?unread=1" }
+        return try await get(path, as: CustomerNotificationsResponse.self)
+    }
+
+    func markNotificationsRead(ids: [Int]) async throws {
+        _ = try await requestJSON(path: "/customer/notifications", method: "PATCH", json: ["ids": ids], as: EmptyResponse.self)
+    }
+
+    func fetchSettings() async throws -> CustomerSettingsResponse {
+        try await get("/customer/settings", as: CustomerSettingsResponse.self)
+    }
+
+    func updateSettings(_ prefs: CustomerSettingsResponse.NotificationPrefs) async throws -> CustomerSettingsResponse {
+        let payload: [String: Any] = [
+            "notifications": [
+                "chat": prefs.chat,
+                "project": prefs.project,
+                "order": prefs.order,
+                "news": prefs.news,
+                "security": prefs.security,
+                "push_enabled": prefs.push_enabled,
+            ],
+        ]
+        return try await requestJSON(path: "/customer/settings", method: "PATCH", json: payload, as: CustomerSettingsResponse.self)
+    }
+
+    func updateProfile(displayName: String) async throws -> CustomerProfileResponse {
+        try await requestJSON(path: "/customer/profile", method: "PATCH", json: ["display_name": displayName], as: CustomerProfileResponse.self)
+    }
+
+    func deleteAccount(password: String) async throws {
+        _ = try await post("/customer/account/delete", body: ["password": password], as: EmptyResponse.self)
+    }
+
+    func fetchProfile() async throws -> CustomerProfileResponse {
+        try await get("/customer/profile", as: CustomerProfileResponse.self)
+    }
+
     func fetchChatMessages(sessionID: String? = nil, since: Int = 0, full: Bool = true) async throws -> CustomerChatPoll {
         var path = "/customer/chat/messages?since=\(since)"
         if full { path += "&full=1" }
@@ -87,6 +172,26 @@ final class CustomerAPIClient: ObservableObject {
 
     func post<T: Decodable>(_ path: String, body: [String: String], as type: T.Type) async throws -> T {
         try await request(path, method: "POST", body: body, as: type)
+    }
+
+    func patch<T: Decodable>(_ path: String, body: [String: String], as type: T.Type) async throws -> T {
+        try await request(path, method: "PATCH", body: body, as: type)
+    }
+
+    private func requestJSON<T: Decodable>(path: String, method: String, json: [String: Any], as type: T.Type) async throws -> T {
+        guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
+        guard let url = URL(string: path, relativeTo: baseURL) else { throw CustomerAPIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.setValue(header, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: json)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw CustomerAPIError.http((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return try JSONDecoder().decode(T.self, from: data)
     }
 
     private func request<T: Decodable>(_ path: String, method: String, body: [String: String]?, as type: T.Type) async throws -> T {
@@ -217,3 +322,5 @@ struct CustomerStreamEvent: Decodable {
     let text: String?
     let message: CustomerChatPoll.ChatMessage?
 }
+
+struct EmptyResponse: Decodable {}

@@ -70,10 +70,14 @@ struct CustomerDashboardView: View {
                         Section(String(localized: "Active Projects")) {
                             if let projects = dashboard.projects_active, !projects.isEmpty {
                                 ForEach(projects, id: \.id) { project in
-                                    HStack {
-                                        Text(project.title)
-                                        Spacer()
-                                        Text("\(project.progress)%").foregroundStyle(.secondary)
+                                    NavigationLink {
+                                        CustomerProjectDetailView(projectId: project.id)
+                                    } label: {
+                                        HStack {
+                                            Text(project.title)
+                                            Spacer()
+                                            Text("\(project.progress)%").foregroundStyle(.secondary)
+                                        }
                                     }
                                 }
                             } else {
@@ -83,23 +87,40 @@ struct CustomerDashboardView: View {
                         Section(String(localized: "Recent Requests")) {
                             if let orders = dashboard.orders_recent, !orders.isEmpty {
                                 ForEach(orders, id: \.id) { order in
-                                    HStack {
-                                        Text(order.service_label)
-                                        Spacer()
-                                        Text(order.status).foregroundStyle(.secondary)
+                                    NavigationLink {
+                                        CustomerOrderDetailView(orderId: order.id)
+                                    } label: {
+                                        HStack {
+                                            Text(order.service_label)
+                                            Spacer()
+                                            Text(order.status).foregroundStyle(.secondary)
+                                        }
                                     }
                                 }
                             } else {
                                 Text(String(localized: "No service requests yet.")).foregroundStyle(.secondary)
                             }
                         }
+                        if let unread = dashboard.unread_count, unread > 0 {
+                            Section(String(localized: "Notifications")) {
+                                NavigationLink {
+                                    CustomerNotificationsView()
+                                } label: {
+                                    Text(String(localized: "\(unread) unread notifications"))
+                                }
+                            }
+                        }
                         if let news = dashboard.news, !news.isEmpty {
                             Section(String(localized: "News")) {
                                 ForEach(news, id: \.slug) { item in
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(item.title).font(.headline)
-                                        if let excerpt = item.excerpt, !excerpt.isEmpty {
-                                            Text(excerpt).font(.subheadline).foregroundStyle(.secondary)
+                                    NavigationLink {
+                                        CustomerNewsDetailView(slug: item.slug)
+                                    } label: {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(item.title).font(.headline)
+                                            if let excerpt = item.excerpt, !excerpt.isEmpty {
+                                                Text(excerpt).font(.subheadline).foregroundStyle(.secondary)
+                                            }
                                         }
                                     }
                                 }
@@ -259,11 +280,15 @@ struct CustomerServicesView: View {
             Group {
                 if let response {
                     List(response.services) { service in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(service.name).font(.headline)
-                            Text(service.description).font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
+                        NavigationLink {
+                            CustomerServiceDetailView(slug: service.slug)
+                        } label: {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(service.name).font(.headline)
+                                Text(service.description).font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
+                            }
+                            .padding(.vertical, 4)
                         }
-                        .padding(.vertical, 4)
                     }
                 } else if let error {
                     ContentUnavailableView(String(localized: "Services unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
@@ -282,6 +307,40 @@ struct CustomerServicesView: View {
             response = try await api.fetchServices(search: search)
         } catch {
             self.error = error.localizedDescription
+        }
+    }
+}
+
+struct CustomerServiceDetailView: View {
+    @EnvironmentObject private var api: CustomerAPIClient
+    let slug: String
+    @State private var service: CustomerServiceDetail?
+
+    var body: some View {
+        Group {
+            if let service {
+                List {
+                    Section {
+                        Text(service.description)
+                    }
+                    if let features = service.features, !features.isEmpty {
+                        Section(String(localized: "Features")) {
+                            ForEach(features, id: \.self) { f in Text(f) }
+                        }
+                    }
+                    Section {
+                        NavigationLink(String(localized: "Request this service")) {
+                            CustomerCreateOrderView(preselectedSlug: slug)
+                        }
+                    }
+                }
+            } else {
+                ProgressView()
+            }
+        }
+        .navigationTitle(service?.name ?? String(localized: "Service"))
+        .task {
+            service = try? await api.fetchService(slug: slug)
         }
     }
 }

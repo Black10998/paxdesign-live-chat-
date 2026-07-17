@@ -42,6 +42,7 @@ class PAXdesign_Customer_Admin {
         foreach (array(
             'overview'  => __('Overview', 'paxdesign-booking'),
             'projects'  => __('Projects', 'paxdesign-booking'),
+            'orders'    => __('Orders', 'paxdesign-booking'),
             'news'      => __('News', 'paxdesign-booking'),
             'services'  => __('Services', 'paxdesign-booking'),
         ) as $slug => $label) {
@@ -60,6 +61,9 @@ class PAXdesign_Customer_Admin {
         switch ($tab) {
             case 'projects':
                 self::render_projects_tab();
+                break;
+            case 'orders':
+                self::render_orders_tab();
                 break;
             case 'news':
                 self::render_news_tab();
@@ -121,6 +125,23 @@ class PAXdesign_Customer_Admin {
         echo '</tbody></table>';
         submit_button(__('Create project', 'paxdesign-booking'));
         echo '</form>';
+    }
+
+    private static function render_orders_tab() {
+        global $wpdb;
+        $rows = $wpdb->get_results(
+            'SELECT o.*, u.display_name AS customer_name FROM ' . PAXdesign_Customer_DB::table('orders') . ' o LEFT JOIN ' . $wpdb->users . ' u ON u.ID = o.customer_user_id ORDER BY o.updated_at DESC LIMIT 50',
+            ARRAY_A
+        );
+        echo '<h2>' . esc_html__('Service requests', 'paxdesign-booking') . '</h2>';
+        echo '<table class="widefat striped"><thead><tr><th>' . esc_html__('Ref', 'paxdesign-booking') . '</th><th>' . esc_html__('Customer', 'paxdesign-booking') . '</th><th>' . esc_html__('Service', 'paxdesign-booking') . '</th><th>' . esc_html__('Status', 'paxdesign-booking') . '</th></tr></thead><tbody>';
+        foreach ($rows ?: array() as $row) {
+            echo '<tr><td>' . esc_html($row['order_ref']) . '</td><td>' . esc_html($row['customer_name'] ?: ('#' . $row['customer_user_id'])) . '</td><td>' . esc_html($row['service_label']) . '</td><td>' . esc_html($row['status']) . '</td></tr>';
+        }
+        if (empty($rows)) {
+            echo '<tr><td colspan="4">' . esc_html__('No service requests yet.', 'paxdesign-booking') . '</td></tr>';
+        }
+        echo '</tbody></table>';
     }
 
     private static function render_news_tab() {

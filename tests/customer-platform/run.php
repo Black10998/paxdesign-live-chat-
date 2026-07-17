@@ -22,6 +22,7 @@ foreach ($files as $file) {
 
 $rest = file_get_contents($customer_dir . '/class-paxdesign-customer-rest.php');
 cx_assert_true(strpos($rest, '/customer/chat/stream') !== false, 'Missing /customer/chat/stream route');
+cx_assert_true(strpos($rest, '/customer/news/') !== false, 'Missing /customer/news/{slug} route');
 cx_assert_true(strpos($rest, 'chat_stream') !== false, 'Missing chat_stream handler');
 
 $auth = file_get_contents($customer_dir . '/class-paxdesign-customer-auth.php');
