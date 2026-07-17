@@ -12,7 +12,6 @@ class PDX_Frontend {
 		private PDX_Module_Registry $modules
 	) {
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue' ] );
-		add_action( 'wp_body_open',       [ $this, 'render_account_topbar' ], 5 );
 		add_action( 'wp_footer',          [ $this, 'render' ], 100 );
 	}
 
@@ -119,13 +118,6 @@ class PDX_Frontend {
 			PDX_URL . 'assets/css/pdx-auth.css',
 			[ 'pdx-unified-ui', 'pdx-verified-badge', 'pdx-customer-ui' ],
 			$this->asset_version( 'assets/css/pdx-auth.css' )
-		);
-
-		wp_add_inline_style(
-			'pdx-auth',
-			':root{--pdx-account-topbar-h:40px;}'
-			. '#pdx-account-topbar{min-height:var(--pdx-account-topbar-h);box-sizing:border-box;}'
-			. '@media(max-width:768px){#pdx-account-topbar{min-height:0;height:0;}}'
 		);
 
 		// Use defer strategy (WP 6.3+) so the script always runs after the DOM is ready.
@@ -282,18 +274,6 @@ class PDX_Frontend {
 			'userEmail'        => is_user_logged_in() ? wp_get_current_user()->user_email : '',
 			'publicModules'    => PDX_Auth::public_modules(),
 		];
-	}
-
-	/**
-	 * Reserve account top bar space server-side to avoid header overlap / CLS.
-	 */
-	public function render_account_topbar(): void {
-		if ( ! $this->settings->should_render() ) {
-			return;
-		}
-		echo '<div id="pdx-account-topbar" class="pdx-account-topbar pdx-cx-shell" aria-label="Account">';
-		echo '<div class="pdx-account-topbar-inner"></div>';
-		echo '</div>';
 	}
 
 	public function render(): void {

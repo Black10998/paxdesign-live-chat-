@@ -151,30 +151,44 @@
   var authBtn = null;
   var authMenu = null;
 
-  function ensureAccountTopbar() {
-    var topbar = document.getElementById('pdx-account-topbar');
-    if (!topbar) {
-      topbar = document.createElement('div');
-      topbar.id = 'pdx-account-topbar';
-      topbar.className = 'pdx-account-topbar pdx-cx-shell';
-      topbar.setAttribute('aria-label', 'Account');
-      topbar.innerHTML = '<div class="pdx-account-topbar-inner"></div>';
-      var insertBefore = document.getElementById('masthead') || document.querySelector('header') || document.body.firstChild;
-      if (insertBefore && insertBefore.parentNode) {
-        insertBefore.parentNode.insertBefore(topbar, insertBefore);
-      } else {
-        document.body.insertBefore(topbar, document.body.firstChild);
-      }
+  function removeLegacyTopbar() {
+    var legacy = document.getElementById('pdx-account-topbar');
+    if (legacy && legacy.parentNode) {
+      legacy.parentNode.removeChild(legacy);
     }
-    return topbar.querySelector('.pdx-account-topbar-inner') || topbar;
+    document.body.classList.remove('pdx-has-account-topbar');
+  }
+
+  function findHeaderMount() {
+    var selectors = [
+      'header .inside-header',
+      '#masthead .inside-header',
+      'header .header-inner',
+      'header .site-header-main',
+      'header .elementor-container',
+      '#masthead',
+      'header',
+      '.site-header'
+    ];
+    for (var i = 0; i < selectors.length; i++) {
+      var el = document.querySelector(selectors[i]);
+      if (el) return el;
+    }
+    return null;
   }
 
   function mountAuthBar() {
-    var mount = ensureAccountTopbar();
-    authBar.classList.remove('pdx-auth-bar--header');
-    authBar.classList.add('pdx-auth-bar--topbar');
-    mount.appendChild(authBar);
-    document.body.classList.add('pdx-has-account-topbar');
+    removeLegacyTopbar();
+    authBar.classList.remove('pdx-auth-bar--topbar');
+    var mount = findHeaderMount();
+    if (mount) {
+      mount.classList.add('pdx-header-has-auth');
+      authBar.classList.add('pdx-auth-bar--header');
+      mount.appendChild(authBar);
+      return;
+    }
+    authBar.classList.add('pdx-auth-bar--header');
+    document.body.appendChild(authBar);
   }
 
   function createAuthBar() {
