@@ -6,7 +6,10 @@ on:
       - "paxdesign-booking/includes/**"
       - "paxdesign-booking/assets/js/**"
       - "paxdesign-booking/ios-live-chat/**"
+      - "paxdesign-booking/ios-customer-portal/**"
+      - "paxdesign-toolbar/**"
       - "tests/messaging/**"
+      - "tests/customer-platform/**"
       - ".github/workflows/messaging-reliability.yml"
   push:
     branches: [main]

@@ -17,7 +17,25 @@ class PAXdesign_Customer_Platform {
         PAXdesign_Customer_Services::init();
         PAXdesign_Customer_REST::init();
         PAXdesign_Customer_Admin::init();
+        add_action('wp_ajax_nopriv_paxdesign_chat_log', array(__CLASS__, 'maybe_block_guest_chat'), 0);
+        add_action('wp_ajax_nopriv_paxdesign_chat', array(__CLASS__, 'maybe_block_guest_chat'), 0);
         do_action('paxdesign_customer_platform_ready');
+    }
+
+    /**
+     * Optional gate: require toolbar login before anonymous chat persistence.
+     */
+    public static function maybe_block_guest_chat() {
+        if (get_option('paxdesign_customer_require_login_for_chat', '') !== '1') {
+            return;
+        }
+        if (is_user_logged_in()) {
+            return;
+        }
+        wp_send_json_error(array(
+            'message' => __('Please sign in to continue chatting.', 'paxdesign-booking'),
+            'code'    => 'login_required',
+        ), 401);
     }
 
     private static function load_dependencies() {

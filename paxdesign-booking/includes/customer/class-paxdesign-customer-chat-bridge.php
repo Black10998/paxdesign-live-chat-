@@ -221,6 +221,14 @@ class PAXdesign_Customer_Chat_Bridge {
             return new WP_Error('chat_closed', __('This conversation is closed.', 'paxdesign-booking'), array('status' => 409));
         }
 
+        if (!$live->is_human_queue($session_id)) {
+            return new WP_Error(
+                'use_ai_stream',
+                __('Use the authenticated AI stream endpoint for this conversation.', 'paxdesign-booking'),
+                array('status' => 409, 'stream_route' => '/pdx/v1/customer/chat/stream')
+            );
+        }
+
         $live->ensure_session($session_id);
         self::sync_chat_log_user($session_id, $user_id);
 

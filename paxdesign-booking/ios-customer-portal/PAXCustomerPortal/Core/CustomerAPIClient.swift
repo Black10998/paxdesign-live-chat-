@@ -24,8 +24,9 @@ final class CustomerAPIClient: ObservableObject {
         return try await get(path, as: CustomerServicesResponse.self)
     }
 
-    func fetchChatMessages(sessionID: String? = nil, since: Int = 0) async throws -> CustomerChatPoll {
+    func fetchChatMessages(sessionID: String? = nil, since: Int = 0, full: Bool = true) async throws -> CustomerChatPoll {
         var path = "/customer/chat/messages?since=\(since)"
+        if full { path += "&full=1" }
         if let sessionID, !sessionID.isEmpty {
             path += "&session_id=\(sessionID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? sessionID)"
         }
@@ -38,6 +39,46 @@ final class CustomerAPIClient: ObservableObject {
             body["session_id"] = sessionID
         }
         return try await post("/customer/chat/messages", body: body, as: CustomerSendResponse.self)
+    }
+
+    func streamChatMessage(
+        _ message: String,
+        sessionID: String?,
+        onEvent: @escaping (CustomerStreamEvent) -> Void
+    ) async throws {
+        guard let auth, let header = auth.basicAuthHeader else {
+            throw CustomerAPIError.unauthorized
+        }
+        guard let url = URL(string: "/customer/chat/stream", relativeTo: baseURL) else {
+            throw CustomerAPIError.invalidURL
+        }
+        var body: [String: String] = ["message": message]
+        if let sessionID, !sessionID.isEmpty {
+            body["session_id"] = sessionID
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(header, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw CustomerAPIError.http((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+
+        var buffer = ""
+        for try await line in bytes.lines {
+            if line.hasPrefix("data: ") {
+                let payload = String(line.dropFirst(6))
+                if payload == "[DONE]" { break }
+                if let data = payload.data(using: .utf8),
+                   let event = try? JSONDecoder().decode(CustomerStreamEvent.self, from: data) {
+                    onEvent(event)
+                }
+            }
+        }
     }
 
     func get<T: Decodable>(_ path: String, as type: T.Type) async throws -> T {
@@ -169,4 +210,10 @@ struct CustomerChatPoll: Decodable {
 struct CustomerSendResponse: Decodable {
     let session_id: String
     let handler: String?
+}
+
+struct CustomerStreamEvent: Decodable {
+    let type: String
+    let text: String?
+    let message: CustomerChatPoll.ChatMessage?
 }

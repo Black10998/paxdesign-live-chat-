@@ -149,6 +149,12 @@ class PAXdesign_Customer_REST {
             ),
         ));
 
+        register_rest_route(self::NS, '/customer/chat/stream', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'chat_stream'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
         register_rest_route(self::NS, '/customer/push/register', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'register_push'),
@@ -357,6 +363,10 @@ class PAXdesign_Customer_REST {
         $full = !empty($request['full']);
         $live = PAXdesign_Chat_Live::get_instance();
         $data = $live->get_poll_data($session_id, $since, $full);
+        if (is_wp_error($data)) {
+            return $data;
+        }
+        $data['session_id'] = $session_id;
         return rest_ensure_response($data);
     }
 
@@ -380,6 +390,31 @@ class PAXdesign_Customer_REST {
             return $result;
         }
         return rest_ensure_response($result);
+    }
+
+    public static function chat_stream(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $params = $request->get_json_params() ?: $request->get_params();
+        $session_id = sanitize_text_field($params['session_id'] ?? '');
+        if ($session_id === '') {
+            $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
+        }
+        if (!PAXdesign_Customer_Chat_Bridge::user_owns_session($uid, $session_id)) {
+            return new WP_Error('forbidden', __('You do not have access to this conversation.', 'paxdesign-booking'), array('status' => 403));
+        }
+
+        PAXdesign_Customer_Chat_Bridge::sync_chat_log_user($session_id, $uid);
+
+        $result = PAXdesign_Chat::get_instance()->stream_authenticated_customer_chat(
+            $session_id,
+            (string) ($params['message'] ?? ''),
+            (string) ($params['client_msg_id'] ?? ''),
+            (string) ($params['assistant_client_msg_id'] ?? '')
+        );
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        return rest_ensure_response(array('success' => true));
     }
 
     public static function register_push(WP_REST_Request $request) {

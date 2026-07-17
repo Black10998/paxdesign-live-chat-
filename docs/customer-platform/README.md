@@ -49,6 +49,7 @@ Chat logs gain `wp_user_id` for account-linked conversations.
 | GET | `/customer/chat/conversations` |
 | POST | `/customer/chat/claim` |
 | GET/POST | `/customer/chat/messages` |
+| POST | `/customer/chat/stream` (SSE AI responses) |
 | POST | `/customer/push/register` |
 
 ## WordPress admin

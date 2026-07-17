@@ -5,7 +5,7 @@ Native SwiftUI customer portal for PAXDesign. This is **not** the staff Live Cha
 ## Requirements
 
 - iOS 16+
-- WordPress plugin **paxdesign-booking v3.133.0+**
+- WordPress plugin **paxdesign-booking v3.135.0+**
 - WordPress account (same registration as https://paxdesign.at)
 - Application Password for API access (Users → Profile → Application Passwords)
 

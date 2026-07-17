@@ -1158,19 +1158,62 @@
     document.body.classList.remove('pdx-no-scroll');
   }
 
+  function customerApiStream(path, body, onEvent) {
+    var base = (C.restUrl || '/wp-json/pdx/v1').replace(/\/$/, '');
+    return fetch(base + path, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+        'X-WP-Nonce': C.nonce || '',
+      },
+      body: JSON.stringify(body || {}),
+    }).then(function (response) {
+      if (!response.ok || !response.body) {
+        return response.text().then(function (text) {
+          var err = { code: 'stream_failed', message: 'Unable to stream AI response.' };
+          try { err = JSON.parse(text); } catch (e) {}
+          throw err;
+        });
+      }
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      function pump() {
+        return reader.read().then(function (chunk) {
+          if (chunk.done) return;
+          buffer += decoder.decode(chunk.value, { stream: true });
+          var parts = buffer.split('\n\n');
+          buffer = parts.pop() || '';
+          parts.forEach(function (block) {
+            block.split('\n').forEach(function (line) {
+              if (line.indexOf('data: ') !== 0) return;
+              var payload = line.slice(6).trim();
+              if (!payload || payload === '[DONE]') return;
+              try { onEvent(JSON.parse(payload)); } catch (e) {}
+            });
+          });
+          return pump();
+        });
+      }
+      return pump();
+    });
+  }
+
   function renderCustomerPortalDashboard(container, data) {
     var projects = data.projects_active || [];
     var orders = data.orders_recent || [];
     var news = data.news || [];
     var chat = data.chat || {};
+    var sessionId = chat.session_id || '';
     var html = '<div class="pdx-portal-grid">';
-    html += '<section class="pdx-portal-section"><h3>' + cxIcon('message', 16) + 'Conversations</h3>';
-    if (chat.last_preview) {
-      html += '<p class="pdx-portal-copy">' + escHtml(chat.last_preview) + '</p>';
-    } else {
-      html += '<p class="pdx-portal-empty">No messages yet. Start a conversation with PAXDesign.</p>';
-    }
-    html += '</section>';
+    html += '<section class="pdx-portal-section pdx-portal-chat"><h3>' + cxIcon('message', 16) + 'Conversation</h3>';
+    html += '<div class="pdx-portal-chat-log" id="pdx-portal-chat-log">' + cxLoading('Loading messages…') + '</div>';
+    html += '<form class="pdx-portal-chat-form" id="pdx-portal-chat-form">';
+    html += '<textarea rows="2" placeholder="Write a message…" aria-label="Message"></textarea>';
+    html += pearlBtn('Send', { type: 'submit', small: true, inline: true, icon: 'send' });
+    html += '</form></section>';
     html += '<section class="pdx-portal-section"><h3>' + cxIcon('folder', 16) + 'Projects</h3>';
     if (projects.length) {
       projects.slice(0, 3).forEach(function (p) {
@@ -1199,6 +1242,105 @@
     }
     html += '</section></div>';
     container.innerHTML = html;
+    initCustomerPortalChat(container, sessionId);
+  }
+
+  function initCustomerPortalChat(container, sessionId) {
+    var logEl = container.querySelector('#pdx-portal-chat-log');
+    var form = container.querySelector('#pdx-portal-chat-form');
+    if (!logEl || !form) return;
+
+    var state = { sessionId: sessionId, handler: 'ai', messages: [], sending: false };
+
+    function renderMessages() {
+      if (!state.messages.length) {
+        logEl.innerHTML = '<p class="pdx-portal-empty">No messages yet. Start a conversation with PAXDesign.</p>';
+        return;
+      }
+      logEl.innerHTML = state.messages.map(function (m) {
+        var cls = m.role === 'user' ? 'pdx-portal-msg pdx-portal-msg--user' : 'pdx-portal-msg pdx-portal-msg--assistant';
+        return '<div class="' + cls + '">' + escHtml(m.content || '') + '</div>';
+      }).join('');
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function loadMessages() {
+      var path = '/customer/chat/messages?full=1';
+      if (state.sessionId) path += '&session_id=' + encodeURIComponent(state.sessionId);
+      customerApiFetch('GET', path).then(function (data) {
+        if (!data || !data._ok) {
+          logEl.innerHTML = '<p class="pdx-auth-error">Unable to load conversation.</p>';
+          return;
+        }
+        state.sessionId = data.session_id || state.sessionId;
+        state.handler = data.handler || 'ai';
+        state.messages = (data.messages || []).map(function (m) {
+          return { role: m.role, content: m.content || '' };
+        });
+        renderMessages();
+      }).catch(function () {
+        logEl.innerHTML = '<p class="pdx-auth-error">Unable to load conversation.</p>';
+      });
+    }
+
+    function appendLocal(role, content) {
+      state.messages.push({ role: role, content: content });
+      renderMessages();
+    }
+
+    function sendHumanMessage(text) {
+      return customerApiFetch('POST', '/customer/chat/messages', {
+        session_id: state.sessionId,
+        message: text,
+      }).then(function (data) {
+        if (!data || !data._ok) throw data || {};
+        if (data.message) appendLocal('user', text);
+        return loadMessages();
+      });
+    }
+
+    function sendAiStream(text) {
+      appendLocal('user', text);
+      var assistantIdx = state.messages.length;
+      state.messages.push({ role: 'assistant', content: '' });
+      renderMessages();
+      return customerApiStream('/customer/chat/stream', {
+        session_id: state.sessionId,
+        message: text,
+      }, function (evt) {
+        if (evt.type === 'text' && evt.text) {
+          state.messages[assistantIdx].content += evt.text;
+          renderMessages();
+        }
+        if (evt.type === 'done' && evt.message && evt.message.content) {
+          state.messages[assistantIdx].content = evt.message.content;
+          renderMessages();
+        }
+        if (evt.type === 'error' && evt.message) {
+          notify(evt.message, 'error');
+        }
+      }).then(loadMessages);
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (state.sending) return;
+      var input = form.querySelector('textarea');
+      var text = (input && input.value || '').trim();
+      if (!text) return;
+      state.sending = true;
+      var sendPromise = (state.handler === 'admin' || state.handler === 'live_request')
+        ? sendHumanMessage(text)
+        : sendAiStream(text);
+      sendPromise.catch(function (err) {
+        notify((err && err.message) || 'Message could not be sent.', 'error');
+      }).finally(function () {
+        state.sending = false;
+        if (input) input.value = '';
+      });
+    });
+
+    loadMessages();
   }
 
   window.PDXAuth = {
@@ -1217,6 +1359,7 @@
     openCustomerPortal: openCustomerPortal,
     closeCustomerPortal: closeCustomerPortal,
     customerApiFetch: customerApiFetch,
+    customerApiStream: customerApiStream,
     refreshUser: refreshUser,
     refreshSessionNonce: refreshSessionNonce,
     applySession: applySession,

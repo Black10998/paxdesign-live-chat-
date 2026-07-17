@@ -132,6 +132,12 @@ struct CustomerChatView: View {
     @State private var draft = ""
     @State private var error: String?
     @State private var isSending = false
+    @State private var streamingAssistant = ""
+
+    private var isHumanQueue: Bool {
+        guard let handler = poll?.handler else { return false }
+        return handler == "admin" || handler == "live_request"
+    }
 
     var body: some View {
         NavigationStack {
@@ -139,7 +145,7 @@ struct CustomerChatView: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 12) {
-                            ForEach(poll?.messages ?? [], id: \.id) { message in
+                            ForEach(displayMessages, id: \.id) { message in
                                 VStack(alignment: message.role == "user" ? .trailing : .leading, spacing: 4) {
                                     if let name = message.sender_name, !name.isEmpty, message.role != "user" {
                                         Text(name).font(.caption).foregroundStyle(.secondary)
@@ -152,13 +158,19 @@ struct CustomerChatView: View {
                                 .frame(maxWidth: .infinity, alignment: message.role == "user" ? .trailing : .leading)
                                 .id(message.id)
                             }
+                            if !streamingAssistant.isEmpty {
+                                Text(streamingAssistant)
+                                    .padding(10)
+                                    .background(Color(.secondarySystemBackground))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .id("streaming")
+                            }
                         }
                         .padding()
                     }
-                    .onChange(of: poll?.messages?.count ?? 0) { _, _ in
-                        if let last = poll?.messages?.last?.id {
-                            withAnimation { proxy.scrollTo(last, anchor: .bottom) }
-                        }
+                    .onChange(of: displayMessages.count) { _, _ in
+                        scrollToBottom(proxy: proxy)
                     }
                 }
                 Divider()
@@ -186,9 +198,21 @@ struct CustomerChatView: View {
         }
     }
 
+    private var displayMessages: [CustomerChatPoll.ChatMessage] {
+        poll?.messages ?? []
+    }
+
+    private func scrollToBottom(proxy: ScrollViewProxy) {
+        if !streamingAssistant.isEmpty {
+            withAnimation { proxy.scrollTo("streaming", anchor: .bottom) }
+        } else if let last = displayMessages.last?.id {
+            withAnimation { proxy.scrollTo(last, anchor: .bottom) }
+        }
+    }
+
     private func refresh() async {
         do {
-            poll = try await api.fetchChatMessages(sessionID: poll?.session_id, since: 0)
+            poll = try await api.fetchChatMessages(sessionID: poll?.session_id, since: 0, full: true)
             error = nil
         } catch {
             self.error = error.localizedDescription
@@ -199,11 +223,24 @@ struct CustomerChatView: View {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         isSending = true
+        streamingAssistant = ""
         defer { isSending = false }
         do {
-            _ = try await api.sendChatMessage(text, sessionID: poll?.session_id)
+            if isHumanQueue {
+                _ = try await api.sendChatMessage(text, sessionID: poll?.session_id)
+            } else {
+                try await api.streamChatMessage(text, sessionID: poll?.session_id) { event in
+                    if event.type == "text", let chunk = event.text {
+                        streamingAssistant += chunk
+                    }
+                    if event.type == "done", let message = event.message {
+                        streamingAssistant = message.content
+                    }
+                }
+                streamingAssistant = ""
+            }
             draft = ""
-            poll = try await api.fetchChatMessages(sessionID: poll?.session_id, since: 0)
+            await refresh()
             error = nil
         } catch {
             self.error = error.localizedDescription

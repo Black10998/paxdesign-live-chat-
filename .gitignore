@@ -1,7 +1,9 @@
-.DS_Store
 dist/
+.DS_Store
+paxdesign-booking/ios-live-chat/.build/
 paxdesign-booking/ios-live-chat/build/
 paxdesign-booking/ios-live-chat/DerivedData/
-paxdesign-booking/ios-live-chat/.build/
 paxdesign-booking/ios-live-chat/PAXDesignLiveChat.xcodeproj/
+paxdesign-toolbar-extract/
 *.pyc
+*.zip
