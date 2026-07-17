@@ -18,10 +18,12 @@ grep -qi 'paypal\|billing\|checkout' /tmp/cx-services.json && fail "Services pay
 pass "Public services route healthy"
 
 echo "==> Verify customer routes reject unauthenticated access"
-for path in dashboard profile chat/messages chat/stream notifications orders projects news; do
+for path in dashboard profile chat/messages notifications orders projects news; do
   code="$(curl -sS -o /dev/null -w '%{http_code}' "$SITE/wp-json/pdx/v1/customer/$path")"
   [ "$code" = "401" ] || [ "$code" = "403" ] || fail "Unauthenticated /customer/$path returned HTTP $code (expected 401/403)"
 done
+stream_code="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$SITE/wp-json/pdx/v1/customer/chat/stream" -H 'Content-Type: application/json' -d '{}')"
+[ "$stream_code" = "401" ] || [ "$stream_code" = "403" ] || fail "Unauthenticated POST /customer/chat/stream returned HTTP $stream_code (expected 401/403)"
 pass "Customer routes require authentication"
 
 echo "==> Verify staff live-admin routes still exist"
