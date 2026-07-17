@@ -76,4 +76,70 @@ class PAXdesign_Customer_News {
         }
         return $item;
     }
+
+    public static function list_admin($status = '') {
+        global $wpdb;
+        $table = PAXdesign_Customer_DB::table('news');
+        $sql = "SELECT * FROM $table";
+        $params = array();
+        if ($status !== '') {
+            $sql .= " WHERE status = %s";
+            $params[] = sanitize_key($status);
+        }
+        $sql .= " ORDER BY updated_at DESC LIMIT 100";
+        $rows = $params ? $wpdb->get_results($wpdb->prepare($sql, $params), ARRAY_A) : $wpdb->get_results($sql, ARRAY_A);
+        return $rows ?: array();
+    }
+
+    public static function save($data, $actor_id, $news_id = 0) {
+        global $wpdb;
+        $table = PAXdesign_Customer_DB::table('news');
+        $title = sanitize_text_field($data['title'] ?? '');
+        if ($title === '') {
+            return new WP_Error('invalid_news', __('Title is required.', 'paxdesign-booking'), array('status' => 400));
+        }
+        $slug = sanitize_title($data['slug'] ?? $title);
+        $now = current_time('mysql', true);
+        $row = array(
+            'slug'                => $slug,
+            'title'               => $title,
+            'excerpt'             => sanitize_textarea_field($data['excerpt'] ?? ''),
+            'body'                => wp_kses_post($data['body'] ?? ''),
+            'status'              => sanitize_key($data['status'] ?? 'draft'),
+            'priority'            => sanitize_key($data['priority'] ?? 'normal'),
+            'audience'            => sanitize_key($data['audience'] ?? 'all_customers'),
+            'audience_meta'       => wp_json_encode($data['audience_meta'] ?? array()),
+            'push_on_publish'     => !empty($data['push_on_publish']) ? 1 : 0,
+            'updated_at'          => $now,
+            'author_user_id'      => absint($actor_id),
+        );
+        if ($news_id > 0) {
+            $wpdb->update($table, $row, array('id' => absint($news_id)));
+            return (int) $news_id;
+        }
+        $row['created_at'] = $now;
+        $wpdb->insert($table, $row);
+        return (int) $wpdb->insert_id;
+    }
+
+    public static function publish($news_id, $actor_id) {
+        global $wpdb;
+        $table = PAXdesign_Customer_DB::table('news');
+        $news_id = absint($news_id);
+        $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d LIMIT 1", $news_id), ARRAY_A);
+        if (!$row) {
+            return new WP_Error('not_found', __('News item not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        $now = current_time('mysql', true);
+        $wpdb->update($table, array(
+            'status'       => 'published',
+            'published_at' => $now,
+            'updated_at'   => $now,
+            'author_user_id' => absint($actor_id),
+        ), array('id' => $news_id));
+        if (!empty($row['push_on_publish'])) {
+            PAXdesign_Customer_Notifications::broadcast_news($news_id, $row['title'], $row['excerpt']);
+        }
+        return true;
+    }
 }

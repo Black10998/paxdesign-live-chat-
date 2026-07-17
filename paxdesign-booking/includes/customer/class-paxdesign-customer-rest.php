@@ -137,9 +137,16 @@ class PAXdesign_Customer_REST {
         ));
 
         register_rest_route(self::NS, '/customer/chat/messages', array(
-            'methods'             => WP_REST_Server::READABLE,
-            'callback'            => array(__CLASS__, 'chat_messages'),
-            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array(__CLASS__, 'chat_messages'),
+                'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+            ),
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array(__CLASS__, 'chat_send_message'),
+                'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+            ),
         ));
 
         register_rest_route(self::NS, '/customer/push/register', array(
@@ -351,6 +358,28 @@ class PAXdesign_Customer_REST {
         $live = PAXdesign_Chat_Live::get_instance();
         $data = $live->get_poll_data($session_id, $since, $full);
         return rest_ensure_response($data);
+    }
+
+    public static function chat_send_message(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $params = $request->get_json_params() ?: $request->get_params();
+        $session_id = sanitize_text_field($params['session_id'] ?? '');
+        if ($session_id === '') {
+            $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
+        }
+        $result = PAXdesign_Customer_Chat_Bridge::send_user_message(
+            $uid,
+            $session_id,
+            (string) ($params['message'] ?? ''),
+            array(
+                'reply_to'      => $params['reply_to'] ?? 0,
+                'client_msg_id' => $params['client_msg_id'] ?? '',
+            )
+        );
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        return rest_ensure_response($result);
     }
 
     public static function register_push(WP_REST_Request $request) {

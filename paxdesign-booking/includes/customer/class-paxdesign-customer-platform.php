@@ -16,6 +16,7 @@ class PAXdesign_Customer_Platform {
         PAXdesign_Customer_Chat_Bridge::init();
         PAXdesign_Customer_Services::init();
         PAXdesign_Customer_REST::init();
+        PAXdesign_Customer_Admin::init();
         do_action('paxdesign_customer_platform_ready');
     }
 
@@ -30,5 +31,6 @@ class PAXdesign_Customer_Platform {
         require_once $base . 'class-paxdesign-customer-notifications.php';
         require_once $base . 'class-paxdesign-customer-news.php';
         require_once $base . 'class-paxdesign-customer-rest.php';
+        require_once $base . 'class-paxdesign-customer-admin.php';
     }
 }

@@ -1,12 +1,18 @@
 # PAXDesign Customer Platform
 
-Implementation lives primarily in `paxdesign-booking/includes/customer/` and extends the existing `pdx/v1` REST namespace used by `paxdesign-toolbar`.
+Implementation lives in `paxdesign-booking/includes/customer/` and extends the existing `pdx/v1` REST namespace shared with `paxdesign-toolbar`.
 
 ## Authentication
 
-- **Website:** WordPress cookie session + `X-WP-Nonce` via existing `paxdesign-toolbar` `/auth/*` routes.
+- **Website:** WordPress cookie session + `X-WP-Nonce` via `paxdesign-toolbar` `/auth/*` routes (`PDX_Auth`).
 - **Mobile:** WordPress Application Password (HTTP Basic Auth) on `/pdx/v1/customer/*` — same `wp_users` records, no parallel auth store.
-- **Toolbar delegation:** When toolbar helpers exist (`pdx_auth_*`), customer auth delegates to them.
+- **Role:** `pdx_customer` (from toolbar `PDX_Auth::CUSTOMER_ROLE`), not a separate `pax_customer` role.
+- **Account status:** Suspended/pending accounts blocked via `PDX_Customers::is_login_allowed()`.
+- **Rate limiting:** `PDX_RateLimit` when toolbar is active.
+
+## Toolbar integration
+
+The full `paxdesign-toolbar` plugin (v9.1.0+) is included in this repository. Customer platform auth delegates to `PDX_Auth` and fires `pdx_user_logged_in` on toolbar login for chat session linking.
 
 ## Guest chat migration
 
@@ -42,14 +48,19 @@ Chat logs gain `wp_user_id` for account-linked conversations.
 | GET | `/customer/chat/session` |
 | GET | `/customer/chat/conversations` |
 | POST | `/customer/chat/claim` |
-| GET | `/customer/chat/messages` |
+| GET/POST | `/customer/chat/messages` |
 | POST | `/customer/push/register` |
+
+## WordPress admin
+
+**Booking System → Customer Portal** — manage projects, news, and sync the services catalog.
 
 ## No purchases
 
 Customer portal endpoints and the iOS customer app exclude PayPal, billing checkout, and In-App Purchases.
 
-## Blockers
+## Deploy notes
 
-- Full `paxdesign-toolbar` PHP source is required in this repository for deeper auth hook integration and admin publishing UI for news/services.
-- WordPress admin/SSH access is needed for production backup before migration deploy.
+- Deploy both `paxdesign-toolbar` and `paxdesign-booking` (v3.134.0+).
+- Run DB migration on activation or first load (`PAXdesign_Customer_DB::install()`).
+- Back up production database before first deploy.

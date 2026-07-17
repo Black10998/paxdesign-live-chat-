@@ -21,6 +21,11 @@ class PAXdesign_Customer_Services {
         update_option('paxdesign_customer_services_seeded', '1', false);
     }
 
+    public static function sync_from_booking_catalog() {
+        self::seed_from_booking_catalog();
+        update_option('paxdesign_customer_services_seeded', '1', false);
+    }
+
     public static function seed_from_booking_catalog() {
         global $wpdb;
         if (!class_exists('PAXdesign_Booking')) {

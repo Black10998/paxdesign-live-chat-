@@ -1,0 +1,217 @@
+/* Intelligence activity — unified monochrome atmosphere (v8.7) */
+
+.pdx-mod-icon {
+  width: 1.15em;
+  height: 1.15em;
+  flex-shrink: 0;
+  vertical-align: -0.15em;
+}
+
+#pdx-panel .pdx-mod-icon--trust,
+#pdx-panel .pdx-mod-icon--osint,
+#pdx-panel .pdx-mod-icon--threat,
+#pdx-panel .pdx-mod-icon--personas,
+#pdx-panel .pdx-mod-icon--builder,
+#pdx-panel .pdx-mod-icon--pipeline,
+#pdx-panel .pdx-mod-icon--automation,
+#pdx-panel .pdx-mod-icon--timeline,
+#pdx-panel .pdx-mod-icon--investigation,
+#pdx-panel .pdx-mod-icon--graph,
+#pdx-panel .pdx-mod-icon--memory,
+#pdx-panel .pdx-mod-icon--team,
+#pdx-panel .pdx-mod-icon--connectors,
+#pdx-panel .pdx-mod-icon--create,
+#pdx-panel .pdx-mod-icon--workspace,
+.pdx-intel-activity .pdx-mod-icon--trust,
+.pdx-intel-activity .pdx-mod-icon--osint,
+.pdx-intel-activity .pdx-mod-icon--threat,
+.pdx-intel-activity .pdx-mod-icon--personas,
+.pdx-intel-activity .pdx-mod-icon--builder,
+.pdx-intel-activity .pdx-mod-icon--pipeline,
+.pdx-intel-activity .pdx-mod-icon--automation,
+.pdx-intel-activity .pdx-mod-icon--timeline,
+.pdx-intel-activity .pdx-mod-icon--investigation,
+.pdx-intel-activity .pdx-mod-icon--graph,
+.pdx-intel-activity .pdx-mod-icon--memory,
+.pdx-intel-activity .pdx-mod-icon--team,
+.pdx-intel-activity .pdx-mod-icon--connectors,
+.pdx-intel-activity .pdx-mod-icon--create,
+.pdx-intel-activity .pdx-mod-icon--workspace {
+  color: var(--pdx-accent, #ffffff);
+  filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.35));
+}
+
+.pdx-intel-activity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.5rem 1.25rem;
+  margin-bottom: 0.85rem;
+  border-radius: var(--pdx-radius-lg);
+  background: var(--pdx-bg-elev);
+  border: 1.5px solid var(--pdx-border);
+  box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.02);
+  position: relative;
+  overflow: hidden;
+  animation: pdx-intel-breathe 2.4s ease-in-out infinite;
+}
+
+@keyframes pdx-intel-breathe {
+  0%, 100% { box-shadow: inset 0 0 32px rgba(255, 255, 255, 0.02); }
+  50% { box-shadow: inset 0 0 48px rgba(255, 255, 255, 0.06); }
+}
+
+.pdx-intel-activity::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.04), transparent 65%);
+  pointer-events: none;
+}
+
+.pdx-intel-activity__viz {
+  position: relative;
+  width: 148px;
+  height: 148px;
+}
+
+.pdx-intel-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  border-radius: 50%;
+  background: var(--pdx-accent, #ffffff);
+  box-shadow: 0 0 18px rgba(255, 255, 255, 0.45);
+  animation: pdx-intel-pulse 1.4s ease-in-out infinite;
+}
+
+.pdx-intel-node {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: var(--pdx-bg);
+  animation: pdx-intel-orbit 2.8s linear infinite;
+}
+
+.pdx-intel-node--a { left: 8px; top: 50%; animation-delay: 0s; }
+.pdx-intel-node--b { right: 10px; top: 22px; animation-delay: -0.9s; }
+.pdx-intel-node--c { right: 18px; bottom: 12px; animation-delay: -1.8s; }
+
+.pdx-intel-signal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 42px;
+  margin-left: -1px;
+  transform-origin: center bottom;
+  background: linear-gradient(to top, transparent, rgba(255, 255, 255, 0.45));
+  opacity: 0.5;
+  animation: pdx-intel-sweep 2.2s ease-in-out infinite;
+}
+
+.pdx-intel-signal--1 { transform: rotate(0deg); }
+.pdx-intel-signal--2 { transform: rotate(120deg); animation-delay: 0.4s; }
+.pdx-intel-signal--3 { transform: rotate(240deg); animation-delay: 0.8s; }
+
+.pdx-intel-activity__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  z-index: 1;
+}
+
+.pdx-intel-activity__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.pdx-intel-activity__title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--pdx-text, #ffffff);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pdx-intel-activity__status {
+  font-size: 0.7rem;
+  color: var(--pdx-text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pdx-intel-activity--osint .pdx-intel-core,
+.pdx-intel-activity--threat .pdx-intel-core,
+.pdx-intel-activity--builder .pdx-intel-core,
+.pdx-intel-activity--pipeline .pdx-intel-core,
+.pdx-intel-activity--automation .pdx-intel-core,
+.pdx-intel-activity--graph .pdx-intel-core,
+.pdx-intel-activity--timeline .pdx-intel-core {
+  background: var(--pdx-accent, #ffffff);
+  box-shadow: 0 0 16px rgba(255, 255, 255, 0.4);
+}
+
+.pdx-intel-activity--osint .pdx-intel-signal,
+.pdx-intel-activity--threat .pdx-intel-signal,
+.pdx-intel-activity--builder .pdx-intel-signal,
+.pdx-intel-activity--pipeline .pdx-intel-signal,
+.pdx-intel-activity--automation .pdx-intel-signal,
+.pdx-intel-activity--graph .pdx-intel-signal,
+.pdx-intel-activity--timeline .pdx-intel-signal {
+  background: linear-gradient(to top, transparent, rgba(255, 255, 255, 0.4));
+}
+
+.pdx-deep-pipeline.pdx-dp--running .pdx-dp-header-left .pdx-dp-pulse-ring {
+  display: none;
+}
+
+.pdx-deep-pipeline.pdx-dp--running .pdx-dp-header {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pdx-dp-intel-slot {
+  width: 100%;
+  margin-bottom: 0.35rem;
+}
+
+.pdx-dp-intel-slot .pdx-intel-activity {
+  margin-bottom: 0;
+  padding: 0.65rem;
+}
+
+.pdx-dp-intel-slot .pdx-intel-activity__viz {
+  width: 72px;
+  height: 72px;
+}
+
+@keyframes pdx-intel-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.85; }
+}
+
+@keyframes pdx-intel-orbit {
+  0% { transform: rotate(0deg) translateX(38px) rotate(0deg); }
+  100% { transform: rotate(360deg) translateX(38px) rotate(-360deg); }
+}
+
+@keyframes pdx-intel-sweep {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pdx-intel-core,
+  .pdx-intel-node,
+  .pdx-intel-signal {
+    animation: none !important;
+  }
+}

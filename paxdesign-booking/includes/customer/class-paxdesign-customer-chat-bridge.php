@@ -197,4 +197,62 @@ class PAXdesign_Customer_Chat_Bridge {
         }
         self::create_primary_session($user_id);
     }
+
+    /**
+     * Send a customer message on an owned session (human queue or AI transcript).
+     *
+     * @return array|WP_Error
+     */
+    public static function send_user_message($user_id, $session_id, $content, $extra = array()) {
+        $user_id = absint($user_id);
+        $session_id = self::sanitize_session_id($session_id);
+        $content = sanitize_textarea_field($content);
+
+        if ($user_id <= 0 || $session_id === '' || $content === '') {
+            return new WP_Error('invalid_payload', __('Message and session are required.', 'paxdesign-booking'), array('status' => 400));
+        }
+        if (!self::user_owns_session($user_id, $session_id)) {
+            return new WP_Error('forbidden', __('You do not have access to this conversation.', 'paxdesign-booking'), array('status' => 403));
+        }
+
+        $live = PAXdesign_Chat_Live::get_instance();
+        $handler = $live->get_handler($session_id);
+        if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED) {
+            return new WP_Error('chat_closed', __('This conversation is closed.', 'paxdesign-booking'), array('status' => 409));
+        }
+
+        $live->ensure_session($session_id);
+        self::sync_chat_log_user($session_id, $user_id);
+
+        $message_extra = array();
+        if (!empty($extra['reply_to'])) {
+            $message_extra['reply_to'] = absint($extra['reply_to']);
+        }
+        if (!empty($extra['client_msg_id'])) {
+            $message_extra['client_msg_id'] = sanitize_text_field($extra['client_msg_id']);
+        }
+        if (class_exists('PAXdesign_Link_Scanner')) {
+            $message_extra = PAXdesign_Link_Scanner::attach_scan_meta($content, 'user', $message_extra);
+        }
+
+        $entry = $live->append_message($session_id, 'user', $content, $message_extra);
+        if (is_wp_error($entry)) {
+            return $entry;
+        }
+        if (!$entry) {
+            return new WP_Error('send_failed', __('Could not send message.', 'paxdesign-booking'), array('status' => 500));
+        }
+
+        $live->clear_typing($session_id, 'user');
+
+        if (empty($entry['_deduplicated']) && $live->is_human_queue($session_id) && class_exists('PAXdesign_Live_Chat_PWA')) {
+            PAXdesign_Live_Chat_PWA::notify_new_customer_message($session_id, $content);
+        }
+
+        return array(
+            'message' => $entry,
+            'handler' => $handler,
+            'session_id' => $session_id,
+        );
+    }
 }

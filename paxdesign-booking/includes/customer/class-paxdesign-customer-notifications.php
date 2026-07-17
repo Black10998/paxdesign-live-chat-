@@ -153,4 +153,16 @@ class PAXdesign_Customer_Notifications {
             'read_at'     => $row['read_at'],
         );
     }
+
+    public static function broadcast_news($news_id, $title, $excerpt) {
+        $role = class_exists('PDX_Auth') ? PDX_Auth::customer_role() : 'pdx_customer';
+        $users = get_users(array(
+            'role'   => $role,
+            'fields' => array('ID'),
+            'number' => 500,
+        ));
+        foreach ($users as $user) {
+            self::notify_user((int) $user->ID, 'news', $title, $excerpt, 'news', (string) absint($news_id), '/news/' . absint($news_id));
+        }
+    }
 }

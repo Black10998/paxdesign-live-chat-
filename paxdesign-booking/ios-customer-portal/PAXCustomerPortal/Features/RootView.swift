@@ -20,6 +20,8 @@ struct CustomerTabView: View {
         TabView {
             CustomerDashboardView()
                 .tabItem { Label(String(localized: "Home"), systemImage: "house.fill") }
+            CustomerChatView()
+                .tabItem { Label(String(localized: "Chat"), systemImage: "message.fill") }
             CustomerServicesView()
                 .tabItem { Label(String(localized: "Services"), systemImage: "square.grid.2x2.fill") }
             CustomerProfileView()

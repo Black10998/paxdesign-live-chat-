@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CustomerLoginView: View {
     @EnvironmentObject private var auth: CustomerAuthStore
+    @EnvironmentObject private var api: CustomerAPIClient
     @State private var isLoading = false
 
     var body: some View {
@@ -27,7 +28,7 @@ struct CustomerLoginView: View {
                     Button(isLoading ? String(localized: "Signing in…") : String(localized: "Sign In")) {
                         Task {
                             isLoading = true
-                            await auth.login()
+                            await auth.login(api: api)
                             isLoading = false
                         }
                     }
@@ -92,6 +93,18 @@ struct CustomerDashboardView: View {
                                 Text(String(localized: "No service requests yet.")).foregroundStyle(.secondary)
                             }
                         }
+                        if let news = dashboard.news, !news.isEmpty {
+                            Section(String(localized: "News")) {
+                                ForEach(news, id: \.slug) { item in
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(item.title).font(.headline)
+                                        if let excerpt = item.excerpt, !excerpt.isEmpty {
+                                            Text(excerpt).font(.subheadline).foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -110,6 +123,91 @@ struct CustomerDashboardView: View {
             self.error = error.localizedDescription
         }
         isLoading = false
+    }
+}
+
+struct CustomerChatView: View {
+    @EnvironmentObject private var api: CustomerAPIClient
+    @State private var poll: CustomerChatPoll?
+    @State private var draft = ""
+    @State private var error: String?
+    @State private var isSending = false
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 12) {
+                            ForEach(poll?.messages ?? [], id: \.id) { message in
+                                VStack(alignment: message.role == "user" ? .trailing : .leading, spacing: 4) {
+                                    if let name = message.sender_name, !name.isEmpty, message.role != "user" {
+                                        Text(name).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                    Text(message.content)
+                                        .padding(10)
+                                        .background(message.role == "user" ? Color.accentColor.opacity(0.15) : Color(.secondarySystemBackground))
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                                .frame(maxWidth: .infinity, alignment: message.role == "user" ? .trailing : .leading)
+                                .id(message.id)
+                            }
+                        }
+                        .padding()
+                    }
+                    .onChange(of: poll?.messages?.count ?? 0) { _, _ in
+                        if let last = poll?.messages?.last?.id {
+                            withAnimation { proxy.scrollTo(last, anchor: .bottom) }
+                        }
+                    }
+                }
+                Divider()
+                HStack {
+                    TextField(String(localized: "Message"), text: $draft, axis: .vertical)
+                        .textFieldStyle(.roundedBorder)
+                        .lineLimit(1...4)
+                    Button {
+                        Task { await send() }
+                    } label: {
+                        Image(systemName: isSending ? "hourglass" : "paperplane.fill")
+                    }
+                    .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending)
+                }
+                .padding()
+            }
+            .navigationTitle(String(localized: "Chat"))
+            .overlay(alignment: .top) {
+                if let error {
+                    Text(error).font(.footnote).foregroundStyle(.red).padding(8)
+                }
+            }
+            .task { await refresh() }
+            .refreshable { await refresh() }
+        }
+    }
+
+    private func refresh() async {
+        do {
+            poll = try await api.fetchChatMessages(sessionID: poll?.session_id, since: 0)
+            error = nil
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    private func send() async {
+        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        isSending = true
+        defer { isSending = false }
+        do {
+            _ = try await api.sendChatMessage(text, sessionID: poll?.session_id)
+            draft = ""
+            poll = try await api.fetchChatMessages(sessionID: poll?.session_id, since: 0)
+            error = nil
+        } catch {
+            self.error = error.localizedDescription
+        }
     }
 }
 
@@ -157,6 +255,13 @@ struct CustomerProfileView: View {
     var body: some View {
         NavigationStack {
             List {
+                if let profile = auth.profile {
+                    Section(String(localized: "Profile")) {
+                        LabeledContent(String(localized: "Name"), value: profile.display_name)
+                        LabeledContent(String(localized: "Email"), value: profile.email)
+                        LabeledContent(String(localized: "Verified"), value: profile.verified ? String(localized: "Yes") : String(localized: "No"))
+                    }
+                }
                 Section {
                     Button(String(localized: "Sign Out"), role: .destructive) {
                         auth.logout()

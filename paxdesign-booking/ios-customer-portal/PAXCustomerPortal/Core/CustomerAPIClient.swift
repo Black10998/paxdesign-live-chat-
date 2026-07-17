@@ -24,7 +24,31 @@ final class CustomerAPIClient: ObservableObject {
         return try await get(path, as: CustomerServicesResponse.self)
     }
 
-    private func get<T: Decodable>(_ path: String, as type: T.Type) async throws -> T {
+    func fetchChatMessages(sessionID: String? = nil, since: Int = 0) async throws -> CustomerChatPoll {
+        var path = "/customer/chat/messages?since=\(since)"
+        if let sessionID, !sessionID.isEmpty {
+            path += "&session_id=\(sessionID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? sessionID)"
+        }
+        return try await get(path, as: CustomerChatPoll.self)
+    }
+
+    func sendChatMessage(_ message: String, sessionID: String? = nil) async throws -> CustomerSendResponse {
+        var body: [String: String] = ["message": message]
+        if let sessionID, !sessionID.isEmpty {
+            body["session_id"] = sessionID
+        }
+        return try await post("/customer/chat/messages", body: body, as: CustomerSendResponse.self)
+    }
+
+    func get<T: Decodable>(_ path: String, as type: T.Type) async throws -> T {
+        try await request(path, method: "GET", body: nil, as: type)
+    }
+
+    func post<T: Decodable>(_ path: String, body: [String: String], as type: T.Type) async throws -> T {
+        try await request(path, method: "POST", body: body, as: type)
+    }
+
+    private func request<T: Decodable>(_ path: String, method: String, body: [String: String]?, as type: T.Type) async throws -> T {
         guard let auth, let header = auth.basicAuthHeader else {
             throw CustomerAPIError.unauthorized
         }
@@ -32,12 +56,19 @@ final class CustomerAPIClient: ObservableObject {
             throw CustomerAPIError.invalidURL
         }
         var request = URLRequest(url: url)
-        request.httpMethod = "GET"
+        request.httpMethod = method
         request.setValue(header, forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if let body {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        }
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw CustomerAPIError.network }
         guard (200..<300).contains(http.statusCode) else {
+            if let apiError = try? JSONDecoder().decode(CustomerAPIErrorPayload.self, from: data) {
+                throw CustomerAPIError.server(apiError.message ?? apiError.code ?? "HTTP \(http.statusCode)")
+            }
             throw CustomerAPIError.http(http.statusCode)
         }
         return try JSONDecoder().decode(T.self, from: data)
@@ -47,6 +78,7 @@ final class CustomerAPIClient: ObservableObject {
 enum CustomerAPIError: LocalizedError {
     case unauthorized, invalidURL, network
     case http(Int)
+    case server(String)
 
     var errorDescription: String? {
         switch self {
@@ -54,8 +86,14 @@ enum CustomerAPIError: LocalizedError {
         case .invalidURL: return String(localized: "Invalid server URL.")
         case .network: return String(localized: "Network error.")
         case .http(let code): return String(localized: "Server responded with status \(code).")
+        case .server(let message): return message
         }
     }
+}
+
+private struct CustomerAPIErrorPayload: Decodable {
+    let code: String?
+    let message: String?
 }
 
 private extension String {
@@ -111,4 +149,24 @@ struct CustomerServicesResponse: Decodable {
     }
     let categories: [Category]
     let services: [Service]
+}
+
+struct CustomerChatPoll: Decodable {
+    struct ChatMessage: Decodable, Identifiable {
+        var id: Int { seq }
+        let seq: Int
+        let role: String
+        let content: String
+        let sender_name: String?
+    }
+    let session_id: String?
+    let handler: String?
+    let messages: [ChatMessage]?
+    let message_count: Int?
+    let last_preview: String?
+}
+
+struct CustomerSendResponse: Decodable {
+    let session_id: String
+    let handler: String?
 }

@@ -1,9 +1,9 @@
 <?php
 /**
- * Customer auth bridge — delegates to paxdesign-toolbar when present.
+ * Customer auth bridge — extends paxdesign-toolbar PDX_Auth (no parallel auth store).
  *
- * Web: WordPress cookie session + REST nonce (same as pdx-auth.js).
- * Mobile: WordPress Application Password (same user identity, no parallel auth store).
+ * Web: WordPress cookie session + REST nonce (same as pdx-auth.js / /auth/*).
+ * Mobile: WordPress Application Password (HTTP Basic) on /pdx/v1/customer/*.
  */
 
 if (!defined('ABSPATH')) {
@@ -13,11 +13,8 @@ if (!defined('ABSPATH')) {
 class PAXdesign_Customer_Auth {
 
     const REST_NAMESPACE = 'pdx/v1';
-    const CUSTOMER_ROLE  = 'pax_customer';
-    const RATE_LIMIT_OPTION = 'paxdesign_customer_rate_limits';
 
     public static function init() {
-        add_action('init', array(__CLASS__, 'register_customer_role'), 9);
         add_action('init', array(__CLASS__, 'bootstrap_basic_auth'), 1);
         add_filter('determine_current_user', array(__CLASS__, 'resolve_customer_app_password'), 20);
     }
@@ -45,16 +42,6 @@ class PAXdesign_Customer_Auth {
         list($user, $pass) = explode(':', $decoded, 2);
         $_SERVER['PHP_AUTH_USER'] = $user;
         $_SERVER['PHP_AUTH_PW']   = $pass;
-    }
-
-    public static function register_customer_role() {
-        if (get_role(self::CUSTOMER_ROLE)) {
-            return;
-        }
-        add_role(self::CUSTOMER_ROLE, __('PAXDesign Customer', 'paxdesign-booking'), array(
-            'read'                   => true,
-            'pax_customer_portal'    => true,
-        ));
     }
 
     /**
@@ -99,23 +86,11 @@ class PAXdesign_Customer_Auth {
         return false;
     }
 
-    /**
-     * Resolve current user via toolbar helpers when available.
-     */
     public static function current_user_id() {
-        if (function_exists('pdx_auth_current_user_id')) {
-            $uid = (int) pdx_auth_current_user_id();
-            if ($uid > 0) {
-                return $uid;
-            }
-        }
         return (int) get_current_user_id();
     }
 
     public static function is_logged_in() {
-        if (function_exists('pdx_auth_is_logged_in')) {
-            return (bool) pdx_auth_is_logged_in();
-        }
         return is_user_logged_in();
     }
 
@@ -124,8 +99,8 @@ class PAXdesign_Customer_Auth {
         if ($user_id <= 0) {
             return false;
         }
-        if (function_exists('pdx_auth_is_verified')) {
-            return (bool) pdx_auth_is_verified($user_id);
+        if (class_exists('PDX_Auth')) {
+            return PDX_Auth::is_email_verified($user_id);
         }
         if (user_can($user_id, 'manage_options')) {
             return true;
@@ -133,10 +108,21 @@ class PAXdesign_Customer_Auth {
         return (bool) get_user_meta($user_id, 'pdx_email_verified', true);
     }
 
+    public static function is_login_allowed($user_id = 0) {
+        $user_id = $user_id > 0 ? (int) $user_id : self::current_user_id();
+        if ($user_id <= 0) {
+            return false;
+        }
+        if (class_exists('PDX_Customers')) {
+            return PDX_Customers::is_login_allowed($user_id);
+        }
+        return true;
+    }
+
     public static function user_payload($user_id = 0) {
         $user_id = $user_id > 0 ? (int) $user_id : self::current_user_id();
         if ($user_id <= 0) {
-            return array(
+            $guest = array(
                 'logged_in'    => false,
                 'verified'     => false,
                 'id'           => 0,
@@ -145,7 +131,23 @@ class PAXdesign_Customer_Auth {
                 'role'         => 'guest',
                 'nonce'        => wp_create_nonce('wp_rest'),
             );
+            if (class_exists('PDX_Auth')) {
+                return array_merge(PDX_Auth::user_payload(0), $guest);
+            }
+            return $guest;
         }
+
+        if (class_exists('PDX_Auth')) {
+            $payload = PDX_Auth::user_payload($user_id);
+            $user = get_user_by('id', $user_id);
+            if ($user instanceof WP_User) {
+                $payload['role'] = self::resolve_portal_role($user);
+                $payload['is_staff'] = PAXdesign_Live_Chat_Permissions::has_live_chat_access($user_id);
+            }
+            $payload['nonce'] = wp_create_nonce('wp_rest');
+            return $payload;
+        }
+
         $user = get_user_by('id', $user_id);
         if (!$user instanceof WP_User) {
             return array('logged_in' => false, 'verified' => false, 'id' => 0);
@@ -170,6 +172,9 @@ class PAXdesign_Customer_Auth {
         if (PAXdesign_Live_Chat_Permissions::has_live_chat_access($user->ID)) {
             return 'employee';
         }
+        if (class_exists('PDX_Auth') && in_array(PDX_Auth::customer_role(), (array) $user->roles, true)) {
+            return 'customer';
+        }
         return 'customer';
     }
 
@@ -183,6 +188,9 @@ class PAXdesign_Customer_Auth {
         $user_id = self::current_user_id();
         if ($user_id <= 0) {
             return new WP_Error('rest_forbidden', __('Authentication required.', 'paxdesign-booking'), array('status' => 401));
+        }
+        if (!self::is_login_allowed($user_id)) {
+            return new WP_Error('pdx_account_suspended', __('Your account has been suspended.', 'paxdesign-booking'), array('status' => 403));
         }
         if (!self::is_email_verified($user_id) && !user_can($user_id, 'manage_options')) {
             return new WP_Error('pdx_email_unverified', __('Please verify your email address.', 'paxdesign-booking'), array('status' => 403));
@@ -217,18 +225,29 @@ class PAXdesign_Customer_Auth {
         return true;
     }
 
-    /**
-     * Simple per-user rate limit for sensitive customer endpoints.
-     */
     public static function check_rate_limit($user_id, WP_REST_Request $request, $max_per_minute = 120) {
         $route = $request->get_route();
+        $key = 'customer:' . $user_id . ':' . $route;
+
+        if (class_exists('PDX_RateLimit')) {
+            $result = PDX_RateLimit::check($key, (float) $max_per_minute, $max_per_minute / 60.0, 1.0);
+            if (empty($result['allowed'])) {
+                return new WP_Error(
+                    'rate_limited',
+                    __('Too many requests. Please try again shortly.', 'paxdesign-booking'),
+                    array('status' => 429, 'retry_after' => (int) ($result['retry_after'] ?? 60))
+                );
+            }
+            return true;
+        }
+
         $bucket = md5($user_id . '|' . $route . '|' . gmdate('Y-m-d-H-i'));
-        $key = 'pax_cust_rl_' . $bucket;
-        $count = (int) get_transient($key);
+        $transient_key = 'pax_cust_rl_' . $bucket;
+        $count = (int) get_transient($transient_key);
         if ($count >= $max_per_minute) {
             return new WP_Error('rate_limited', __('Too many requests. Please try again shortly.', 'paxdesign-booking'), array('status' => 429));
         }
-        set_transient($key, $count + 1, MINUTE_IN_SECONDS);
+        set_transient($transient_key, $count + 1, MINUTE_IN_SECONDS);
         return true;
     }
 

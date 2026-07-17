@@ -17,13 +17,39 @@ final class CustomerAuthStore: ObservableObject {
         let role: String
     }
 
-    func login() async {
+    private struct ProfileResponse: Decodable {
+        struct Profile: Decodable {
+            let id: Int
+            let display_name: String
+            let email: String
+            let verified: Bool
+            let role: String
+        }
+        let profile: Profile
+    }
+
+    func login(api: CustomerAPIClient) async {
         errorMessage = nil
         guard !username.isEmpty, !appPassword.isEmpty else {
             errorMessage = String(localized: "Enter your email and application password.")
             return
         }
-        isAuthenticated = true
+        api.configure(baseURL: siteURL, auth: self)
+        do {
+            let response: ProfileResponse = try await api.get("/customer/profile", as: ProfileResponse.self)
+            profile = CustomerProfile(
+                id: response.profile.id,
+                display_name: response.profile.display_name,
+                email: response.profile.email,
+                verified: response.profile.verified,
+                role: response.profile.role
+            )
+            isAuthenticated = true
+        } catch {
+            profile = nil
+            isAuthenticated = false
+            errorMessage = error.localizedDescription
+        }
     }
 
     func logout() {
@@ -31,6 +57,7 @@ final class CustomerAuthStore: ObservableObject {
         appPassword = ""
         profile = nil
         isAuthenticated = false
+        errorMessage = nil
     }
 
     var basicAuthHeader: String? {
