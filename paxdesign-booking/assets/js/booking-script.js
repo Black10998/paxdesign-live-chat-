@@ -494,6 +494,12 @@
             e.stopPropagation();
             closeDialog();
         });
+
+        $(document).on('keydown.paxdesignBooking', function(e) {
+            if (e.key === 'Escape' && root().hasClass('paxdesign-widget-open')) {
+                closeDialog();
+            }
+        });
         
         // Team selection
         $container.on('click', '.paxdesign-booking-team-card', function(e) {
@@ -796,7 +802,8 @@
 
     window.PAXdesignBooking = {
         openFromChat: openBookingFromChat,
-        switchMode: switchWidgetMode
+        switchMode: switchWidgetMode,
+        close: closeDialog
     };
 
     function openWidget() {

@@ -966,7 +966,8 @@ class PAXdesign_Live_Chat_Mobile_API {
         return self::respond(self::live()->get_poll_data(
             $request['id'],
             (int) $request->get_param('since'),
-            $full
+            $full,
+            'admin'
         ));
     }
 

@@ -101,6 +101,7 @@ class PAXdesign_Customer_Platform {
         require_once $base . 'class-paxdesign-customer-orders.php';
         require_once $base . 'class-paxdesign-customer-notifications.php';
         require_once $base . 'class-paxdesign-customer-news.php';
+        require_once $base . 'class-paxdesign-customer-portfolio.php';
         require_once $base . 'class-paxdesign-customer-media.php';
         require_once $base . 'class-paxdesign-customer-rest.php';
         require_once $base . 'class-paxdesign-customer-staff-rest.php';

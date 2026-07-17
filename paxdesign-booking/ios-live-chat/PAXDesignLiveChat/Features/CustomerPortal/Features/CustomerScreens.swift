@@ -164,9 +164,53 @@ struct CustomerDashboardView: View {
 
                         CustomerPortalCard {
                             VStack(alignment: .leading, spacing: 12) {
+                                CustomerPortalSectionHeader(title: String(localized: "Portfolio"))
+                                if let portfolio = dashboard.portfolio, !portfolio.isEmpty {
+                                    ForEach(portfolio) { item in
+                                        NavigationLink {
+                                            CustomerPortfolioDetailView(slug: item.slug)
+                                        } label: {
+                                            HStack(spacing: 12) {
+                                                if let imageURL = item.image_url, let url = URL(string: imageURL) {
+                                                    AsyncImage(url: url) { phase in
+                                                        if case .success(let image) = phase {
+                                                            image.resizable().scaledToFill()
+                                                        } else {
+                                                            Color.gray.opacity(0.15)
+                                                        }
+                                                    }
+                                                    .frame(width: 56, height: 56)
+                                                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                                }
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    Text(item.title).font(.headline)
+                                                    if let excerpt = item.excerpt, !excerpt.isEmpty {
+                                                        Text(excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                } else {
+                                    Text(String(localized: "Explore our latest work.")).foregroundStyle(PAXTheme.textSecondary)
+                                }
+                                NavigationLink(String(localized: "View Portfolio")) { CustomerPortfolioListView() }
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                        }
+
+                        CustomerPortalCard {
+                            VStack(alignment: .leading, spacing: 12) {
                                 CustomerPortalSectionHeader(title: String(localized: "Files & Invoices"))
-                                Text(String(localized: "Download shared documents, quotes, and invoices."))
-                                    .foregroundStyle(PAXTheme.textSecondary)
+                                if let count = dashboard.files_count, count > 0 {
+                                    Text(String(localized: "\(count) files available"))
+                                        .font(.subheadline)
+                                        .foregroundStyle(PAXTheme.textSecondary)
+                                } else {
+                                    Text(String(localized: "Download shared documents, quotes, and invoices."))
+                                        .foregroundStyle(PAXTheme.textSecondary)
+                                }
                                 Button(String(localized: "Open Files")) {
                                     navigation.selectedTab = .account
                                     navigation.accountPath = [CustomerPortalDestination(kind: .files)]
@@ -252,6 +296,8 @@ struct CustomerChatView: View {
     @State private var isRecordingVoice = false
     @State private var voiceRecorder = CustomerVoiceRecorder()
     @State private var showLocationSheet = false
+    @State private var typingTask: Task<Void, Never>?
+    @State private var lastTypingSent = false
 
     private var isHumanQueue: Bool {
         guard let handler = poll?.handler else { return false }
@@ -289,7 +335,11 @@ struct CustomerChatView: View {
                             } else {
                                 LazyVStack(alignment: .leading, spacing: 12) {
                                     ForEach(displayMessages, id: \.id) { message in
-                                        CustomerChatBubble(message: message).id(message.id)
+                                        CustomerChatBubble(
+                                            message: message,
+                                            otherReadSeq: poll?.other_read_seq ?? 0,
+                                            showReadReceipts: isHumanQueue
+                                        ).id(message.id)
                                     }
                                     if poll?.admin_typing == true, isHumanQueue {
                                         CustomerChatTypingIndicator(label: String(localized: "Support is typing…"))
@@ -310,6 +360,13 @@ struct CustomerChatView: View {
             }
             .navigationTitle(String(localized: "Chat"))
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if isHumanQueue, poll?.handler != "closed" {
+                        Button(String(localized: "End chat")) {
+                            Task { await closeConversation() }
+                        }
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     NavigationLink(String(localized: "History")) { CustomerConversationsView() }
                 }
@@ -342,7 +399,11 @@ struct CustomerChatView: View {
                 await refresh(full: true)
                 startPolling()
             }
-            .onDisappear { pollTask?.cancel() }
+            .onDisappear {
+                pollTask?.cancel()
+                typingTask?.cancel()
+                Task { try? await api.sendChatTyping(sessionID: poll?.session_id, stop: true) }
+            }
             .onChange(of: scenePhase) { phase in
                 if phase == .active {
                     Task { await refresh(full: false) }
@@ -376,6 +437,7 @@ struct CustomerChatView: View {
                     .background(PAXTheme.surfaceElevated)
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .focused($isInputFocused)
+                    .onChange(of: draft) { _ in scheduleTypingPing() }
                 Button { Task { await send() } } label: {
                     Image(systemName: isSending ? "hourglass" : "arrow.up.circle.fill")
                         .font(.system(size: 30))
@@ -425,7 +487,8 @@ struct CustomerChatView: View {
                     message_count: next.message_count,
                     last_preview: next.last_preview,
                     admin_typing: next.admin_typing ?? poll?.admin_typing,
-                    user_typing: next.user_typing ?? poll?.user_typing
+                    user_typing: next.user_typing ?? poll?.user_typing,
+                    other_read_seq: next.other_read_seq ?? poll?.other_read_seq
                 )
             } else if let current = poll {
                 poll = CustomerChatPoll(
@@ -435,7 +498,8 @@ struct CustomerChatView: View {
                     message_count: current.message_count,
                     last_preview: current.last_preview,
                     admin_typing: next.admin_typing ?? current.admin_typing,
-                    user_typing: next.user_typing ?? current.user_typing
+                    user_typing: next.user_typing ?? current.user_typing,
+                    other_read_seq: next.other_read_seq ?? current.other_read_seq
                 )
             }
             if let maxSeq = poll?.messages?.map(\.seq).max() { lastSeq = max(lastSeq, maxSeq) }
@@ -521,7 +585,8 @@ struct CustomerChatView: View {
                     message_count: poll?.message_count,
                     last_preview: poll?.last_preview,
                     admin_typing: poll?.admin_typing,
-                    user_typing: poll?.user_typing
+                    user_typing: poll?.user_typing,
+                    other_read_seq: poll?.other_read_seq
                 )
             }
             if let noticeText = response.notice, !noticeText.isEmpty {
@@ -534,12 +599,41 @@ struct CustomerChatView: View {
             PAXHaptics.warning()
         }
     }
+
+    private func scheduleTypingPing() {
+        guard isHumanQueue, poll?.handler != "closed" else { return }
+        let typing = !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard typing != lastTypingSent else { return }
+        lastTypingSent = typing
+        typingTask?.cancel()
+        typingTask = Task {
+            try? await api.sendChatTyping(sessionID: poll?.session_id, stop: !typing)
+            if typing {
+                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                if !Task.isCancelled, draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    lastTypingSent = false
+                    try? await api.sendChatTyping(sessionID: poll?.session_id, stop: true)
+                }
+            }
+        }
+    }
+
+    private func closeConversation() async {
+        do {
+            _ = try await api.closeChatSession(sessionID: poll?.session_id)
+            notice = String(localized: "This conversation has ended. You can start a new one anytime.")
+            await refresh(full: true)
+        } catch {
+            self.error = friendlyChatError(error)
+        }
+    }
 }
 
 struct CustomerServicesView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     @State private var response: CustomerServicesResponse?
     @State private var search = ""
+    @State private var selectedCategory = ""
     @State private var error: String?
     @State private var isLoading = true
 
@@ -556,13 +650,9 @@ struct CustomerServicesView: View {
                             if !response.categories.isEmpty {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     HStack(spacing: 10) {
+                                        categoryChip("", title: String(localized: "All"))
                                         ForEach(response.categories) { category in
-                                            Text(category.name)
-                                                .font(.subheadline.weight(.medium))
-                                                .padding(.horizontal, 14)
-                                                .padding(.vertical, 8)
-                                                .background(PAXTheme.accentSoft)
-                                                .clipShape(Capsule())
+                                            categoryChip(category.slug, title: category.name)
                                         }
                                     }
                                     .padding(.horizontal)
@@ -585,14 +675,28 @@ struct CustomerServicesView: View {
             .navigationTitle(String(localized: "Services"))
             .searchable(text: $search, prompt: String(localized: "Search services"))
             .refreshable { await load(force: true) }
-            .task(id: search) { await load(force: false) }
+            .task(id: "\(search)|\(selectedCategory)") { await load(force: false) }
         }
     }
 
+    private func categoryChip(_ slug: String, title: String) -> some View {
+        Button(title) { selectedCategory = slug }
+            .font(.subheadline.weight(.medium))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(selectedCategory == slug ? PAXTheme.accent : PAXTheme.accentSoft)
+            .foregroundStyle(selectedCategory == slug ? Color.white : PAXTheme.textPrimary)
+            .clipShape(Capsule())
+    }
+
     private func filteredServices(_ services: [CustomerServicesResponse.Service]) -> [CustomerServicesResponse.Service] {
+        var list = services
+        if !selectedCategory.isEmpty {
+            list = list.filter { $0.category == selectedCategory }
+        }
         let query = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !query.isEmpty else { return services }
-        return services.filter {
+        guard !query.isEmpty else { return list }
+        return list.filter {
             $0.name.lowercased().contains(query) || $0.description.lowercased().contains(query)
         }
     }
@@ -601,7 +705,10 @@ struct CustomerServicesView: View {
         if response == nil || force { isLoading = true }
         error = nil
         do {
-            response = try await api.fetchServices(search: search.isEmpty ? nil : search)
+            response = try await api.fetchServices(
+                search: search.isEmpty ? nil : search,
+                category: selectedCategory.isEmpty ? nil : selectedCategory
+            )
         } catch {
             self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
         }

@@ -1267,6 +1267,11 @@
 
   function closeCustomerPortal() {
     if (!portalOverlay) return;
+    var body = portalOverlay.querySelector('.pdx-customer-portal-body');
+    if (body && typeof body._pdxChatCleanup === 'function') {
+      body._pdxChatCleanup();
+      body._pdxChatCleanup = null;
+    }
     portalOverlay.classList.remove('is-open');
     document.body.classList.remove('pdx-no-scroll');
   }
@@ -1316,6 +1321,10 @@
 
   function renderCustomerPortalDashboard(container, data) {
     portalState.dashboard = data;
+    if (typeof container._pdxChatCleanup === 'function') {
+      container._pdxChatCleanup();
+      container._pdxChatCleanup = null;
+    }
     var html = renderPortalNav() + '<div class="pdx-portal-content">';
     if (portalState.detail) {
       html += renderPortalDetailView(portalState.detail);
@@ -1491,7 +1500,10 @@
   function renderPortalChatSection(data) {
     var sessionId = (data.chat || {}).session_id || '';
     return '<section class="pdx-portal-section pdx-portal-chat">' +
-      '<h3>' + cxIcon('message', 16) + 'Conversation</h3>' +
+      '<div class="pdx-portal-chat-head">' +
+        '<h3>' + cxIcon('message', 16) + 'Conversation</h3>' +
+        '<button type="button" class="pdx-portal-chat-end" id="pdx-portal-chat-end" hidden aria-label="End chat">End chat</button>' +
+      '</div>' +
       '<div class="pdx-portal-chat-log" id="pdx-portal-chat-log">' + cxLoading('Loading messages…') + '</div>' +
       '<div class="pdx-portal-chat-tools">' +
         '<label class="pdx-portal-tool" title="Attach image"><input type="file" accept="image/*" id="pdx-portal-image-input" hidden />' + cxIcon('image', 16) + '</label>' +
@@ -1761,30 +1773,48 @@
     var form = container.querySelector('#pdx-portal-chat-form');
     if (!logEl || !form) return;
 
-    var state = { sessionId: sessionId, handler: 'ai', messages: [], sending: false, recording: null };
+    var state = { sessionId: sessionId, handler: 'ai', messages: [], sending: false, recording: null, pollTimer: null, typingTimer: null };
+
+    function isHumanHandler() {
+      return state.handler === 'admin' || state.handler === 'live_request';
+    }
+
+    function updateChatChrome() {
+      var endBtn = container.querySelector('#pdx-portal-chat-end');
+      if (endBtn) {
+        endBtn.hidden = !isHumanHandler() || state.handler === 'closed';
+      }
+    }
 
     function renderMessages() {
       if (!state.messages.length) {
         logEl.innerHTML = '<p class="pdx-portal-empty">No messages yet. Start a conversation with PAXDesign.</p>';
         return;
       }
-      logEl.innerHTML = state.messages.map(function (m) {
+      var html = state.messages.map(function (m) {
         var cls = m.role === 'user' ? 'pdx-portal-msg pdx-portal-msg--user' : 'pdx-portal-msg pdx-portal-msg--assistant';
         return '<div class="' + cls + '">' + formatPortalMessage(m) + '</div>';
       }).join('');
+      if (state.adminTyping && isHumanHandler()) {
+        html += '<div class="pdx-portal-msg pdx-portal-msg--assistant pdx-portal-msg--typing">' +
+          '<span class="pdx-portal-typing"><span></span><span></span><span></span></span>' +
+          '<span>Support is typing…</span></div>';
+      }
+      logEl.innerHTML = html;
       logEl.scrollTop = logEl.scrollHeight;
     }
 
-    function loadMessages() {
-      var path = '/customer/chat/messages?full=1';
+    function loadMessages(full) {
+      var path = '/customer/chat/messages?full=' + (full ? '1' : '0');
       if (state.sessionId) path += '&session_id=' + encodeURIComponent(state.sessionId);
-      customerApiFetch('GET', path).then(function (data) {
+      return customerApiFetch('GET', path).then(function (data) {
         if (!data || !data._ok) {
           logEl.innerHTML = '<p class="pdx-auth-error">Unable to load conversation.</p>';
           return;
         }
         state.sessionId = data.session_id || state.sessionId;
         state.handler = data.handler || 'ai';
+        state.adminTyping = !!data.admin_typing;
         state.messages = (data.messages || []).map(function (m) {
           return {
             role: m.role,
@@ -1799,9 +1829,51 @@
             label: m.label,
           };
         });
+        updateChatChrome();
         renderMessages();
       }).catch(function () {
         logEl.innerHTML = '<p class="pdx-auth-error">Unable to load conversation.</p>';
+      });
+    }
+
+    function startPolling() {
+      if (state.pollTimer) clearInterval(state.pollTimer);
+      state.pollTimer = window.setInterval(function () {
+        loadMessages(false);
+      }, 2000);
+    }
+
+    function stopPolling() {
+      if (state.pollTimer) {
+        clearInterval(state.pollTimer);
+        state.pollTimer = null;
+      }
+    }
+
+    function sendTypingPing(stop) {
+      if (!isHumanHandler()) return;
+      customerApiFetch('POST', '/customer/chat/typing', {
+        session_id: state.sessionId,
+        stop: stop ? 1 : 0,
+      });
+    }
+
+    function endConversation() {
+      if (!state.sessionId || state.sending) return;
+      state.sending = true;
+      customerApiFetch('POST', '/customer/chat/close', {
+        session_id: state.sessionId,
+      }).then(function (data) {
+        if (!data || !data._ok) {
+          notify((data && data.message) || 'Unable to end conversation.', 'error');
+          return;
+        }
+        state.handler = 'closed';
+        updateChatChrome();
+        notify('Conversation ended. You can start a new one anytime.', 'info');
+        loadMessages(true);
+      }).finally(function () {
+        state.sending = false;
       });
     }
 
@@ -1817,7 +1889,7 @@
       }).then(function (data) {
         if (!data || !data._ok) throw data || {};
         if (data.message) appendLocal('user', text);
-        return loadMessages();
+        return loadMessages(true);
       });
     }
 
@@ -1841,7 +1913,7 @@
         if (evt.type === 'error' && evt.message) {
           notify(evt.message, 'error');
         }
-      }).then(loadMessages);
+      }).then(loadMessages.bind(null, true));
     }
 
     function sendText(text) {
@@ -1870,7 +1942,7 @@
           notify((data && data.message) || 'Upload failed.', 'error');
           return;
         }
-        loadMessages();
+        loadMessages(true);
       }).catch(function () {
         notify('Upload failed.', 'error');
       }).finally(function () {
@@ -1886,8 +1958,28 @@
       if (!text) return;
       sendText(text).finally(function () {
         if (input) input.value = '';
+        sendTypingPing(true);
       });
     });
+
+    var chatInput = form.querySelector('textarea');
+    if (chatInput) {
+      chatInput.addEventListener('input', function () {
+        if (state.typingTimer) clearTimeout(state.typingTimer);
+        var typing = !!(chatInput.value || '').trim();
+        sendTypingPing(!typing);
+        if (typing) {
+          state.typingTimer = window.setTimeout(function () {
+            sendTypingPing(true);
+          }, 2500);
+        }
+      });
+    }
+
+    var endBtn = container.querySelector('#pdx-portal-chat-end');
+    if (endBtn) {
+      endBtn.addEventListener('click', endConversation);
+    }
 
     var imageInput = container.querySelector('#pdx-portal-image-input');
     if (imageInput) {
@@ -1956,7 +2048,7 @@
               notify((data && data.message) || 'Location could not be shared.', 'error');
               return;
             }
-            loadMessages();
+            loadMessages(true);
           }).finally(function () { state.sending = false; });
         }, function () {
           locationBtn.disabled = false;
@@ -1965,7 +2057,11 @@
       });
     }
 
-    loadMessages();
+    loadMessages(true).then(startPolling);
+    container._pdxChatCleanup = function () {
+      stopPolling();
+      sendTypingPing(true);
+    };
   }
 
   window.PDXAuth = {

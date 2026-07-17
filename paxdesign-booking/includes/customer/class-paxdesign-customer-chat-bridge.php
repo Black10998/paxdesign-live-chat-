@@ -343,4 +343,32 @@ class PAXdesign_Customer_Chat_Bridge {
             'session_id' => $session_id,
         );
     }
+
+    /**
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function set_typing($user_id, $session_id, $stop = false) {
+        $user_id = absint($user_id);
+        $session_id = self::sanitize_session_id($session_id);
+        if ($user_id <= 0 || $session_id === '' || !self::user_owns_session($user_id, $session_id)) {
+            return new WP_Error('forbidden', __('Invalid session.', 'paxdesign-booking'), array('status' => 403));
+        }
+        $live = PAXdesign_Chat_Live::get_instance();
+        if (!$live->is_human_queue($session_id)) {
+            return array('ok' => false);
+        }
+        return $live->rest_customer_typing($session_id, (bool) $stop);
+    }
+
+    /**
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function close_session($user_id, $session_id) {
+        $user_id = absint($user_id);
+        $session_id = self::sanitize_session_id($session_id);
+        if ($user_id <= 0 || $session_id === '' || !self::user_owns_session($user_id, $session_id)) {
+            return new WP_Error('forbidden', __('Invalid session.', 'paxdesign-booking'), array('status' => 403));
+        }
+        return PAXdesign_Chat_Live::get_instance()->rest_customer_close($session_id);
+    }
 }

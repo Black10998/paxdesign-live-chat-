@@ -16,6 +16,7 @@ struct CustomerPortalDestination: Equatable, Hashable {
         case notifications
         case files
         case chat(sessionID: String?)
+        case portfolio
         case settings
         case profile
     }
@@ -70,6 +71,9 @@ final class CustomerNavigationCoordinator: ObservableObject {
         case "files", "documents", "invoices":
             selectedTab = .account
             accountPath = [CustomerPortalDestination(kind: .files)]
+        case "portfolio":
+            selectedTab = .account
+            accountPath = [CustomerPortalDestination(kind: .portfolio)]
         case "profile", "account":
             selectedTab = .account
             accountPath = [CustomerPortalDestination(kind: .profile)]

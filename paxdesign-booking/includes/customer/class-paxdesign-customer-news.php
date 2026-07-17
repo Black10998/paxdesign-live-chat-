@@ -80,11 +80,11 @@ class PAXdesign_Customer_News {
             'priority'     => $row['priority'],
             'published_at' => $row['published_at'],
         );
+        if (!empty($row['image_attachment_id'])) {
+            $item['image_url'] = wp_get_attachment_url((int) $row['image_attachment_id']);
+        }
         if ($full) {
             $item['body'] = $row['body'];
-            if (!empty($row['image_attachment_id'])) {
-                $item['image_url'] = wp_get_attachment_url((int) $row['image_attachment_id']);
-            }
         }
         return $item;
     }

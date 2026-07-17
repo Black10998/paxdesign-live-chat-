@@ -57,6 +57,7 @@ struct CustomerMoreView: View {
         NavigationStack(path: $navigation.accountPath) {
             List {
                 Section(String(localized: "Workspace")) {
+                    NavigationLink(String(localized: "Portfolio")) { CustomerPortfolioListView() }
                     NavigationLink(String(localized: "Requests")) {
                         CustomerOrdersListView()
                     }
@@ -99,6 +100,8 @@ struct CustomerMoreView: View {
                     CustomerNotificationsView()
                 case .files:
                     CustomerFilesView()
+                case .portfolio:
+                    CustomerPortfolioListView()
                 case .chat(let sessionID):
                     CustomerChatView(initialSessionID: sessionID)
                 case .settings:

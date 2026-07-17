@@ -1054,6 +1054,64 @@
   margin-bottom: 8px;
 }
 
+.pdx-portal-chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.pdx-portal-chat-head h3 {
+  margin: 0;
+}
+
+.pdx-portal-chat-end {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--pdx-cx-border-muted);
+  background: transparent;
+  color: var(--pdx-cx-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pdx-portal-chat-end:hover {
+  border-color: var(--pdx-cx-text-secondary);
+  color: var(--pdx-cx-text);
+}
+
+.pdx-portal-msg--typing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--pdx-cx-text-secondary);
+  font-size: 12px;
+}
+
+.pdx-portal-typing {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.pdx-portal-typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--pdx-cx-text-secondary);
+  animation: pdx-portal-typing 1.2s ease-in-out infinite;
+}
+
+.pdx-portal-typing span:nth-child(2) { animation-delay: 0.15s; }
+.pdx-portal-typing span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes pdx-portal-typing {
+  0%, 80%, 100% { opacity: 0.35; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+
 .pdx-portal-msg {
   max-width: 85%;
   margin-bottom: 8px;

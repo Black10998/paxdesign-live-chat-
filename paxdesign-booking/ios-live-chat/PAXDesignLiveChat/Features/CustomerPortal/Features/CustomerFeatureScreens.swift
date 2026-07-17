@@ -380,22 +380,38 @@ struct CustomerNewsListView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     @State private var items: [CustomerNewsItem] = []
     @State private var error: String?
+    @State private var isLoading = true
 
     var body: some View {
         NavigationStack {
             Group {
-                if items.isEmpty && error == nil {
-                    ProgressView()
+                if isLoading && items.isEmpty {
+                    ProgressView(String(localized: "Loading news…"))
                 } else if let error {
                     PAXContentUnavailableView(String(localized: "News unavailable"), systemImage: "newspaper", description: Text(error))
+                } else if items.isEmpty {
+                    PAXContentUnavailableView(
+                        String(localized: "No announcements yet"),
+                        systemImage: "newspaper",
+                        description: Text(String(localized: "Updates from PAXDesign will appear here."))
+                    )
                 } else {
-                    List(items) { item in
-                        NavigationLink(item.title) {
-                            CustomerNewsDetailView(slug: item.slug)
+                    ScrollView {
+                        LazyVStack(spacing: CustomerPortalDesign.sectionSpacing) {
+                            ForEach(items) { item in
+                                NavigationLink {
+                                    CustomerNewsDetailView(slug: item.slug)
+                                } label: {
+                                    CustomerNewsCard(item: item)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
+                        .padding()
                     }
                 }
             }
+            .background(PAXBackground())
             .navigationTitle(String(localized: "News"))
             .task { await load() }
             .refreshable { await load() }
@@ -403,8 +419,51 @@ struct CustomerNewsListView: View {
     }
 
     private func load() async {
-        do { items = try await api.fetchNews().items }
-        catch { self.error = error.localizedDescription }
+        isLoading = items.isEmpty
+        error = nil
+        do {
+            items = try await api.fetchNews().items
+        } catch {
+            self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
+        }
+        isLoading = false
+    }
+}
+
+private struct CustomerNewsCard: View {
+    let item: CustomerNewsItem
+
+    var body: some View {
+        CustomerPortalCard {
+            VStack(alignment: .leading, spacing: 10) {
+                if let imageURL = item.image_url, let url = URL(string: imageURL) {
+                    AsyncImage(url: url) { phase in
+                        if case .success(let image) = phase {
+                            image.resizable().scaledToFill()
+                        } else {
+                            Rectangle().fill(PAXTheme.accentSoft)
+                        }
+                    }
+                    .frame(height: 140)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                Text(item.title)
+                    .font(.headline)
+                    .foregroundStyle(PAXTheme.textPrimary)
+                    .multilineTextAlignment(.leading)
+                if let excerpt = item.excerpt, !excerpt.isEmpty {
+                    Text(excerpt)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(3)
+                }
+                if let date = item.published_at, !date.isEmpty {
+                    Text(CustomerPortalFormatting.relativeDate(date))
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
     }
 }
 
@@ -412,21 +471,52 @@ struct CustomerNewsDetailView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     let slug: String
     @State private var item: CustomerNewsItem?
+    @State private var error: String?
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if let item {
-                    Text(item.title).font(.title2.bold())
-                    if let body = item.body { Text(body) }
-                } else {
-                    ProgressView()
+            if let item {
+                VStack(alignment: .leading, spacing: 16) {
+                    if let imageURL = item.image_url, let url = URL(string: imageURL) {
+                        AsyncImage(url: url) { phase in
+                            if case .success(let image) = phase {
+                                image.resizable().scaledToFill()
+                            } else {
+                                ProgressView()
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    Text(item.title).font(.title.bold())
+                    if let date = item.published_at, !date.isEmpty {
+                        Text(CustomerPortalFormatting.relativeDate(date))
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    if let body = item.body, !body.isEmpty {
+                        Text(body.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression))
+                            .font(.body)
+                    }
                 }
-            }.padding()
+                .padding()
+            } else if let error {
+                PAXContentUnavailableView(String(localized: "Unable to load"), systemImage: "exclamationmark.triangle", description: Text(error))
+            } else {
+                ProgressView().padding(.top, 48)
+            }
         }
+        .background(PAXBackground())
         .navigationTitle(String(localized: "Announcement"))
-        .task {
-            item = try? await api.fetchNewsItem(slug: slug)
+        .task { await load() }
+    }
+
+    private func load() async {
+        do {
+            item = try await api.fetchNewsItem(slug: slug)
+        } catch {
+            self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
         }
     }
 }

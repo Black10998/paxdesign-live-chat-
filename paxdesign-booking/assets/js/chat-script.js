@@ -73,6 +73,7 @@
   var authGateEl         = null;
   var authGateSignInBtn  = null;
   var authGateRegisterBtn = null;
+  var authGateCloseBtn   = null;
   var authGateVerifyEl   = null;
   var authGateBound      = false;
 
@@ -281,6 +282,7 @@
     authGateEl = root.querySelector('#paxdesignChatAuthGate');
     authGateSignInBtn = root.querySelector('#paxdesignChatAuthSignIn');
     authGateRegisterBtn = root.querySelector('#paxdesignChatAuthRegister');
+    authGateCloseBtn = root.querySelector('#paxdesignChatAuthClose');
     authGateVerifyEl = root.querySelector('#paxdesignChatAuthGateVerify');
     if (config && config.authGate) {
       var titleEl = root.querySelector('#paxdesignChatAuthGateTitle');
@@ -303,6 +305,15 @@
       authGateRegisterBtn.addEventListener('click', function (e) {
         e.preventDefault();
         openAuthOverlay('register');
+      });
+    }
+    if (authGateCloseBtn) {
+      authGateCloseBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        hideAuthGate();
+        if (window.PAXdesignBooking && typeof window.PAXdesignBooking.close === 'function') {
+          window.PAXdesignBooking.close();
+        }
       });
     }
     if (!window.__paxChatAuthSessionBound) {

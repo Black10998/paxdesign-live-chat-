@@ -195,4 +195,18 @@ enum CustomerPortalFormatting {
         formatter.countStyle = .file
         return formatter.string(fromByteCount: Int64(bytes))
     }
+
+    static func relativeDate(_ iso: String) -> String {
+        let parsers: [ISO8601DateFormatter] = {
+            let full = ISO8601DateFormatter()
+            full.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            let basic = ISO8601DateFormatter()
+            basic.formatOptions = [.withInternetDateTime]
+            return [full, basic]
+        }()
+        guard let date = parsers.compactMap({ $0.date(from: iso) }).first else { return iso }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .abbreviated
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
 }

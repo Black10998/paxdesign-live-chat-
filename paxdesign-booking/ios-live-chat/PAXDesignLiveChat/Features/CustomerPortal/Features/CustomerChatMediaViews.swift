@@ -2,8 +2,11 @@ import SwiftUI
 
 struct CustomerChatBubble: View {
     let message: CustomerChatPoll.ChatMessage
+    var otherReadSeq: Int = 0
+    var showReadReceipts: Bool = false
 
     private var isOutgoing: Bool { message.role == "user" }
+    private var isRead: Bool { showReadReceipts && isOutgoing && message.seq > 0 && otherReadSeq >= message.seq }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
@@ -17,6 +20,16 @@ struct CustomerChatBubble: View {
                     .padding(10)
                     .background(bubbleBackground)
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                if isOutgoing, showReadReceipts {
+                    HStack(spacing: 3) {
+                        Image(systemName: isRead ? "checkmark.circle.fill" : "checkmark.circle")
+                            .font(.caption2)
+                            .foregroundStyle(isRead ? PAXTheme.accent : .secondary)
+                        Text(isRead ? String(localized: "Read") : String(localized: "Sent"))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
             if isOutgoing { participantAvatar }
             if !isOutgoing { Spacer(minLength: 24) }

@@ -142,6 +142,30 @@ final class CustomerAPIClient: ObservableObject {
         try await get("/customer/files?limit=\(limit)", as: CustomerFilesResponse.self)
     }
 
+    func fetchPortfolio(category: String? = nil, limit: Int = 24) async throws -> CustomerPortfolioResponse {
+        var path = "/customer/portfolio?limit=\(limit)"
+        if let category, !category.isEmpty {
+            path += "&category=\(category.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? category)"
+        }
+        return try await get(path, as: CustomerPortfolioResponse.self)
+    }
+
+    func fetchPortfolioItem(slug: String) async throws -> CustomerPortfolioDetail {
+        try await get("/customer/portfolio/\(slug)", as: CustomerPortfolioDetail.self)
+    }
+
+    func sendChatTyping(sessionID: String?, stop: Bool = false) async throws {
+        var body: [String: String] = ["stop": stop ? "1" : "0"]
+        if let sessionID, !sessionID.isEmpty { body["session_id"] = sessionID }
+        _ = try await post("/customer/chat/typing", body: body, as: CustomerEmptyResponse.self)
+    }
+
+    func closeChatSession(sessionID: String?) async throws {
+        var body: [String: String] = [:]
+        if let sessionID, !sessionID.isEmpty { body["session_id"] = sessionID }
+        _ = try await post("/customer/chat/close", body: body, as: CustomerEmptyResponse.self)
+    }
+
     func uploadChatImage(sessionID: String, imageData: Data, filename: String, caption: String = "", clientMsgID: String = UUID().uuidString) async throws -> CustomerSendResponse {
         try await uploadMultipart(path: "/customer/chat/messages/image", field: "image", filename: filename, mime: "image/jpeg", data: imageData, fields: [
             "session_id": sessionID,
@@ -172,10 +196,17 @@ final class CustomerAPIClient: ObservableObject {
         try await get("/customer/dashboard", as: CustomerDashboard.self)
     }
 
-    func fetchServices(search: String? = nil) async throws -> CustomerServicesResponse {
+    func fetchServices(search: String? = nil, category: String? = nil) async throws -> CustomerServicesResponse {
         var path = "/customer/services"
+        var query: [String] = []
         if let search, !search.isEmpty {
-            path += "?search=\(search.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? search)"
+            query.append("search=\(search.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? search)")
+        }
+        if let category, !category.isEmpty {
+            query.append("category=\(category.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? category)")
+        }
+        if !query.isEmpty {
+            path += "?" + query.joined(separator: "&")
         }
         return try await get(path, as: CustomerServicesResponse.self)
     }
@@ -534,10 +565,22 @@ struct CustomerDashboard: Decodable {
         let slug: String
         let title: String
         let excerpt: String?
+        let image_url: String?
+        let published_at: String?
+    }
+    struct PortfolioPreview: Decodable, Identifiable {
+        var id: String { slug }
+        let slug: String
+        let title: String
+        let excerpt: String?
+        let image_url: String?
     }
     let projects_active: [ProjectSummary]?
     let orders_recent: [OrderSummary]?
     let news: [NewsItem]?
+    let portfolio: [PortfolioPreview]?
+    let files_count: Int?
+    let services_featured: [CustomerServicesResponse.Service]?
     let unread_count: Int?
     let chat: ChatSummary?
 }
@@ -667,10 +710,11 @@ struct CustomerChatPoll: Decodable {
     let last_preview: String?
     let admin_typing: Bool?
     let user_typing: Bool?
+    let other_read_seq: Int?
 
     enum CodingKeys: String, CodingKey {
         case session_id, handler, messages, message_count, last_preview
-        case admin_typing, user_typing
+        case admin_typing, user_typing, other_read_seq, admin_read_seq
     }
 
     init(
@@ -680,7 +724,8 @@ struct CustomerChatPoll: Decodable {
         message_count: Int?,
         last_preview: String?,
         admin_typing: Bool? = nil,
-        user_typing: Bool? = nil
+        user_typing: Bool? = nil,
+        other_read_seq: Int? = nil
     ) {
         self.session_id = session_id
         self.handler = handler
@@ -689,6 +734,7 @@ struct CustomerChatPoll: Decodable {
         self.last_preview = last_preview
         self.admin_typing = admin_typing
         self.user_typing = user_typing
+        self.other_read_seq = other_read_seq
     }
 
     init(from decoder: Decoder) throws {
@@ -700,6 +746,11 @@ struct CustomerChatPoll: Decodable {
         last_preview = try? container.decodeIfPresent(String.self, forKey: .last_preview)
         admin_typing = CustomerPortalDecode.optionalBool(container, .admin_typing)
         user_typing = CustomerPortalDecode.optionalBool(container, .user_typing)
+        if let other = CustomerPortalDecode.optionalInt(container, .other_read_seq), other > 0 {
+            other_read_seq = other
+        } else {
+            other_read_seq = CustomerPortalDecode.optionalInt(container, .admin_read_seq)
+        }
     }
 }
 

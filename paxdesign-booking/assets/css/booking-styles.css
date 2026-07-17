@@ -758,28 +758,43 @@ body.paxdesign-agent-profile-open {
 }
 
 #paxdesign-booking-root .paxdesign-booking-close {
-  width: 30px;
-  height: 30px;
-  background: transparent;
-  border: none;
+  min-width: 30px;
+  height: 34px;
+  padding: 0 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: var(--pax-radius-sm);
   cursor: pointer;
-  padding: 0;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 6px;
   flex-shrink: 0;
-  color: var(--pax-icon-faint);
+  color: rgba(255, 255, 255, 0.92);
   transition: all var(--pax-transition);
+}
+
+#paxdesign-booking-root .paxdesign-booking-close-label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
 #paxdesign-booking-root .paxdesign-booking-close:hover {
   color: var(--pax-white);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.28);
 }
 
 #paxdesign-booking-root .paxdesign-booking-close svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-auth-gate-btn--ghost {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.16);
 }
 
 #paxdesign-booking-root .paxdesign-booking-header-actions {

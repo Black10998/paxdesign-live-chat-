@@ -457,6 +457,68 @@ class PAXdesign_Chat_Live {
         }
     }
 
+    /**
+     * REST/mobile customer typing indicator.
+     *
+     * @return array<string, mixed>|WP_Error
+     */
+    public function rest_customer_typing($session_id, $stop = false) {
+        $session_id = $this->sanitize_session_id($session_id);
+        if ($session_id === '' || !$this->is_human_queue($session_id)) {
+            return array('ok' => false);
+        }
+        if ($stop) {
+            $this->clear_typing($session_id, 'user');
+        } else {
+            $this->mark_typing($session_id, 'user');
+        }
+        return array('ok' => true);
+    }
+
+    /**
+     * REST/mobile customer-initiated conversation close.
+     *
+     * @return array<string, mixed>|WP_Error
+     */
+    public function rest_customer_close($session_id) {
+        self::upgrade_schema();
+        $session_id = $this->sanitize_session_id($session_id);
+        if ($session_id === '') {
+            return new WP_Error('invalid_session', __('Invalid session.', 'paxdesign-booking'), array('status' => 400));
+        }
+        $row = $this->get_session_row($session_id);
+        if (!$row) {
+            return new WP_Error('not_found', __('Session not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        if ($this->get_handler($session_id) === self::HANDLER_CLOSED) {
+            return array(
+                'handler'        => self::HANDLER_CLOSED,
+                'session_id'     => $session_id,
+                'session_rating' => isset($row->session_rating) ? (int) $row->session_rating : 0,
+            );
+        }
+        global $wpdb;
+        $wpdb->update(
+            PAXdesign_Chat_Log::table_name(),
+            array(
+                'handler'       => self::HANDLER_CLOSED,
+                'admin_user_id' => 0,
+                'admin_name'    => '',
+                'updated_at'    => current_time('mysql'),
+            ),
+            array('id' => (int) $row->id),
+            array('%s', '%d', '%s', '%s'),
+            array('%d')
+        );
+        $this->append_message($session_id, 'system', __('The customer ended this conversation.', 'paxdesign-booking'));
+        $this->persist_session_last_preview($session_id);
+        return array(
+            'handler'        => self::HANDLER_CLOSED,
+            'session_id'     => $session_id,
+            'session_rating' => isset($row->session_rating) ? (int) $row->session_rating : 0,
+        );
+    }
+
     public static function upgrade_schema() {
         global $wpdb;
         $table = PAXdesign_Chat_Log::table_name();
@@ -471,11 +533,52 @@ class PAXdesign_Chat_Live {
             array('device_token_hash', "varchar(64) NOT NULL DEFAULT ''", 'session_rating'),
             array('last_preview', "varchar(160) NOT NULL DEFAULT ''", 'device_token_hash'),
             array('customer_language', "varchar(8) NOT NULL DEFAULT ''", 'last_preview'),
+            array('user_read_seq', 'int(10) unsigned NOT NULL DEFAULT 0', 'customer_language'),
+            array('admin_read_seq', 'int(10) unsigned NOT NULL DEFAULT 0', 'user_read_seq'),
         );
 
         foreach ($columns as $col) {
             paxdesign_booking_add_column_if_missing($table, $col[0], $col[1], $col[2]);
         }
+    }
+
+    /**
+     * @return array{user:int,admin:int}
+     */
+    private function get_read_seqs($row) {
+        return array(
+            'user'  => isset($row->user_read_seq) ? (int) $row->user_read_seq : 0,
+            'admin' => isset($row->admin_read_seq) ? (int) $row->admin_read_seq : 0,
+        );
+    }
+
+    /**
+     * @param 'user'|'admin' $who
+     */
+    private function mark_read_seq($session_id, $who, $seq) {
+        $session_id = $this->sanitize_session_id($session_id);
+        $seq = max(0, (int) $seq);
+        if ($session_id === '' || $seq <= 0) {
+            return;
+        }
+        $row = $this->get_session_row($session_id);
+        if (!$row) {
+            return;
+        }
+        $reads = $this->get_read_seqs($row);
+        $column = $who === 'admin' ? 'admin_read_seq' : 'user_read_seq';
+        $current = $who === 'admin' ? $reads['admin'] : $reads['user'];
+        if ($seq <= $current) {
+            return;
+        }
+        global $wpdb;
+        $wpdb->update(
+            PAXdesign_Chat_Log::table_name(),
+            array($column => $seq),
+            array('id' => (int) $row->id),
+            array('%d'),
+            array('%d')
+        );
     }
 
     /**
@@ -1018,7 +1121,7 @@ class PAXdesign_Chat_Live {
 
         $since = isset($_POST['since']) ? (int) $_POST['since'] : 0;
         $full  = isset($_POST['full']) && wp_unslash($_POST['full']) === '1';
-        $data  = $this->get_poll_data($session_id, $since, $full);
+        $data  = $this->get_poll_data($session_id, $since, $full, 'user');
         if (is_wp_error($data)) {
             $status = 400;
             $error_data = $data->get_error_data();
@@ -2646,7 +2749,9 @@ class PAXdesign_Chat_Live {
             'updated_at'       => PAXdesign_API_Time::format(isset($row->updated_at) ? (string) $row->updated_at : '', false),
             'seq'              => $authoritative_seq,
             'message_count'    => count($all_messages),
-            'last_read_seq'    => 0,
+            'last_read_seq'    => $this->get_read_seqs($row)['user'],
+            'admin_read_seq'   => $this->get_read_seqs($row)['admin'],
+            'other_read_seq'   => $this->get_read_seqs($row)['user'],
             'messages'         => $all_messages,
             'admin_typing'     => $this->is_typing($session_id, 'admin'),
             'user_typing'      => $this->is_typing($session_id, 'user'),
@@ -2660,7 +2765,7 @@ class PAXdesign_Chat_Live {
     /**
      * @return array<string, mixed>|WP_Error
      */
-    public function get_poll_data($session_id, $since = 0, $full = false) {
+    public function get_poll_data($session_id, $since = 0, $full = false, $mark_read = '') {
         $session_id = $this->sanitize_session_id($session_id);
         if ($session_id === '') {
             return new WP_Error('invalid_session', 'Invalid session', array('status' => 400));
@@ -2698,6 +2803,15 @@ class PAXdesign_Chat_Live {
         }
 
         $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
+        $reads = $this->get_read_seqs($row);
+        if ($mark_read === 'user') {
+            $this->mark_read_seq($session_id, 'user', $message_seq);
+            $reads['user'] = max($reads['user'], $message_seq);
+        } elseif ($mark_read === 'admin') {
+            $this->mark_read_seq($session_id, 'admin', $message_seq);
+            $reads['admin'] = max($reads['admin'], $message_seq);
+        }
+        $other_read = $mark_read === 'admin' ? $reads['user'] : $reads['admin'];
 
         return array(
             'handler'          => $handler,
@@ -2711,6 +2825,9 @@ class PAXdesign_Chat_Live {
             'updated_at'       => PAXdesign_API_Time::format(isset($row->updated_at) ? (string) $row->updated_at : '', false),
             'seq'              => $message_seq,
             'message_count'    => count($all),
+            'last_read_seq'    => $reads['user'],
+            'admin_read_seq'   => $reads['admin'],
+            'other_read_seq'   => $other_read,
             'messages'         => $new,
             'admin_typing'     => $this->is_typing($session_id, 'admin'),
             'user_typing'      => $this->is_typing($session_id, 'user'),

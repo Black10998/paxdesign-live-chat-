@@ -74,7 +74,8 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
               </span>
             </button>
             <?php endif; ?>
-            <button type="button" class="paxdesign-booking-close" aria-label="Schließen">
+            <button type="button" class="paxdesign-booking-close" aria-label="<?php echo esc_attr__('Close chat', 'paxdesign-booking'); ?>">
+              <span class="paxdesign-booking-close-label"><?php echo esc_html__('Close', 'paxdesign-booking'); ?></span>
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <line x1="18" y1="6" x2="6" y2="18"/>
                 <line x1="6" y1="6" x2="18" y2="18"/>
@@ -342,6 +343,7 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
               <div class="paxdesign-booking-chat-auth-gate-actions">
                 <button type="button" class="paxdesign-booking-chat-auth-gate-btn paxdesign-booking-chat-auth-gate-btn--primary" id="paxdesignChatAuthSignIn"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></button>
                 <button type="button" class="paxdesign-booking-chat-auth-gate-btn paxdesign-booking-chat-auth-gate-btn--secondary" id="paxdesignChatAuthRegister"><?php echo esc_html__('Create Account', 'paxdesign-booking'); ?></button>
+                <button type="button" class="paxdesign-booking-chat-auth-gate-btn paxdesign-booking-chat-auth-gate-btn--ghost" id="paxdesignChatAuthClose"><?php echo esc_html__('Close', 'paxdesign-booking'); ?></button>
               </div>
             </div>
           </div>

@@ -184,6 +184,40 @@ struct CustomerFilesResponse: Decodable {
     let files: [CustomerFileLibraryItem]
 }
 
+struct CustomerPortfolioItem: Decodable, Identifiable {
+    var id: String { slug }
+    let slug: String
+    let title: String
+    let excerpt: String?
+    let image_url: String?
+    let client: String?
+    let project_url: String?
+    let published_at: String?
+}
+
+struct CustomerPortfolioDetail: Decodable {
+    let slug: String
+    let title: String
+    let excerpt: String?
+    let image_url: String?
+    let client: String?
+    let project_url: String?
+    let published_at: String?
+    let body: String?
+    let gallery: [String]?
+    let categories: [String]?
+}
+
+struct CustomerPortfolioResponse: Decodable {
+    struct Category: Decodable {
+        let slug: String
+        let name: String
+        let count: Int?
+    }
+    let categories: [Category]?
+    let items: [CustomerPortfolioItem]
+}
+
 struct CustomerServiceDetail: Decodable {
     let slug: String
     let name: String

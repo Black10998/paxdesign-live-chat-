@@ -117,6 +117,18 @@ class PAXdesign_Customer_REST {
             'permission_callback' => '__return_true',
         ));
 
+        register_rest_route(self::NS, '/customer/portfolio', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'list_portfolio'),
+            'permission_callback' => '__return_true',
+        ));
+
+        register_rest_route(self::NS, '/customer/portfolio/(?P<slug>[a-z0-9\-_]+)', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'get_portfolio_item'),
+            'permission_callback' => '__return_true',
+        ));
+
         register_rest_route(self::NS, '/customer/news', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'list_news'),
@@ -203,6 +215,18 @@ class PAXdesign_Customer_REST {
             'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
         ));
 
+        register_rest_route(self::NS, '/customer/chat/typing', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'chat_typing'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
+        register_rest_route(self::NS, '/customer/chat/close', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'chat_close'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
         register_rest_route(self::NS, '/customer/push/register', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'register_push'),
@@ -226,6 +250,11 @@ class PAXdesign_Customer_REST {
             'notifications'   => PAXdesign_Customer_Notifications::list_for_user($uid, true, 10),
             'unread_count'    => PAXdesign_Customer_Notifications::unread_count($uid),
             'news'            => PAXdesign_Customer_News::list_for_user($uid, 5),
+            'portfolio'       => array_slice(PAXdesign_Customer_Portfolio::list_items(6), 0, 6),
+            'files_count'     => count(PAXdesign_Customer_Orders::library_for_user($uid, 100)),
+            'services_featured' => array_values(array_filter(PAXdesign_Customer_Services::list_services(), function ($s) {
+                return !empty($s['featured']);
+            })),
             'chat'            => array(
                 'session_id'     => $session_id,
                 'last_preview'   => isset($poll['last_preview']) ? $poll['last_preview'] : '',
@@ -348,6 +377,25 @@ class PAXdesign_Customer_REST {
         return rest_ensure_response($service);
     }
 
+    public static function list_portfolio(WP_REST_Request $request) {
+        $limit = absint($request->get_param('limit'));
+        if ($limit <= 0) {
+            $limit = 24;
+        }
+        return rest_ensure_response(array(
+            'categories' => PAXdesign_Customer_Portfolio::categories(),
+            'items'      => PAXdesign_Customer_Portfolio::list_items($limit, (string) $request->get_param('category')),
+        ));
+    }
+
+    public static function get_portfolio_item(WP_REST_Request $request) {
+        $item = PAXdesign_Customer_Portfolio::get_item($request['slug']);
+        if (!$item) {
+            return new WP_Error('not_found', __('Portfolio item not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        return rest_ensure_response($item);
+    }
+
     public static function list_news() {
         $uid = PAXdesign_Customer_Auth::current_user_id();
         return rest_ensure_response(array('items' => PAXdesign_Customer_News::list_for_user($uid)));
@@ -419,11 +467,14 @@ class PAXdesign_Customer_REST {
         $since = max(0, (int) $request->get_param('since'));
         $full = !empty($request['full']);
         $live = PAXdesign_Chat_Live::get_instance();
-        $data = $live->get_poll_data($session_id, $since, $full);
+        $data = $live->get_poll_data($session_id, $since, $full, 'user');
         if (is_wp_error($data)) {
             return $data;
         }
         $data['session_id'] = $session_id;
+        if (!isset($data['other_read_seq']) && isset($data['admin_read_seq'])) {
+            $data['other_read_seq'] = (int) $data['admin_read_seq'];
+        }
         return rest_ensure_response($data);
     }
 
@@ -472,6 +523,35 @@ class PAXdesign_Customer_REST {
             return $result;
         }
         return rest_ensure_response(array('success' => true));
+    }
+
+    public static function chat_typing(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $params = $request->get_json_params() ?: $request->get_params();
+        $session_id = sanitize_text_field($params['session_id'] ?? '');
+        if ($session_id === '') {
+            $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
+        }
+        $stop = !empty($params['stop']);
+        $result = PAXdesign_Customer_Chat_Bridge::set_typing($uid, $session_id, $stop);
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        return rest_ensure_response($result);
+    }
+
+    public static function chat_close(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $params = $request->get_json_params() ?: $request->get_params();
+        $session_id = sanitize_text_field($params['session_id'] ?? '');
+        if ($session_id === '') {
+            $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
+        }
+        $result = PAXdesign_Customer_Chat_Bridge::close_session($uid, $session_id);
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        return rest_ensure_response($result);
     }
 
     public static function register_push(WP_REST_Request $request) {
