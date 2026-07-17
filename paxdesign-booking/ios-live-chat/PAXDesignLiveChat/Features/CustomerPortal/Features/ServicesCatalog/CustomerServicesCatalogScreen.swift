@@ -300,13 +300,13 @@ private struct ServiceCatalogCardView: View {
                                     if catalog.isRTL {
                                         Text(feature)
                                             .font(.subheadline)
-                                            .foregroundStyle(Color(red: 0.91, green: 0.91, blue: 0.91))
+                                            .foregroundStyle(theme.textSecondary)
                                         ServicesRotatingDisc()
                                     } else {
                                         ServicesRotatingDisc()
                                         Text(feature)
                                             .font(.subheadline)
-                                            .foregroundStyle(Color(red: 0.91, green: 0.91, blue: 0.91))
+                                            .foregroundStyle(theme.textSecondary)
                                     }
                                 }
                             }
@@ -347,7 +347,7 @@ private struct ServiceCatalogCardView: View {
                                             }
                                             Text(item)
                                                 .font(.footnote)
-                                                .foregroundStyle(Color(red: 0.82, green: 0.82, blue: 0.82))
+                                                .foregroundStyle(theme.textSecondary)
                                             if catalog.isRTL {
                                                 Text(String(localized: "–"))
                                                     .foregroundStyle(theme.accent)

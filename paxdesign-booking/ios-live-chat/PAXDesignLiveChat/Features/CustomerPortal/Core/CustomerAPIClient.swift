@@ -99,6 +99,7 @@ final class CustomerAPIClient: ObservableObject {
             "token": token,
             "device_id": deviceID,
             "platform": "ios",
+            "sandbox": PAXAPNsEnvironment.isSandbox ? "1" : "0",
         ], as: CustomerEmptyResponse.self)
     }
 

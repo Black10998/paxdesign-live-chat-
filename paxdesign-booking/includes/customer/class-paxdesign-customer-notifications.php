@@ -34,13 +34,13 @@ class PAXdesign_Customer_Notifications {
             'created_at'  => current_time('mysql', true),
         ));
         $id = (int) $wpdb->insert_id;
-        self::maybe_push($user_id, $title, $body, array(
+        self::maybe_push($user_id, $title, $body, self::build_apns_data(array(
             'notification_id' => $id,
             'category'        => $category,
             'entity_type'     => $entity_type,
             'entity_id'       => $entity_id,
             'deep_link'       => $deep_link,
-        ));
+        )));
         return $id;
     }
 
@@ -117,6 +117,27 @@ class PAXdesign_Customer_Notifications {
         );
         $key = isset($map[$category]) ? $map[$category] : 'news';
         return !empty($prefs[$key]);
+    }
+
+    /**
+     * @param array<string, mixed> $data
+     * @return array<string, mixed>
+     */
+    private static function build_apns_data(array $data) {
+        $category = sanitize_key((string) ($data['category'] ?? 'news'));
+        $type_map = array(
+            'chat'     => 'message',
+            'order'    => 'order_update',
+            'project'  => 'project_update',
+            'news'     => 'news',
+            'security' => 'security_alert',
+        );
+        $data['type'] = isset($type_map[$category]) ? $type_map[$category] : 'message';
+        $data['event'] = 'customer_' . $category;
+        if (($data['entity_type'] ?? '') === 'chat' && !empty($data['entity_id'])) {
+            $data['session_id'] = (string) $data['entity_id'];
+        }
+        return $data;
     }
 
     private static function maybe_push($user_id, $title, $body, $data) {

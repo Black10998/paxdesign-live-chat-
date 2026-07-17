@@ -13,12 +13,16 @@ struct CustomerCalmTagRow: View {
     @Environment(\.marketingTheme) private var theme
     let tags: [String]
 
+    private func displayTag(_ tag: String) -> String {
+        tag.range(of: #"[\p{Arabic}]"#, options: .regularExpression) != nil ? tag : tag.uppercased()
+    }
+
     var body: some View {
         HStack(spacing: 8) {
             ForEach(tags, id: \.self) { tag in
-                Text(tag.uppercased())
+                Text(displayTag(tag))
                     .font(.system(size: 11, weight: .semibold))
-                    .tracking(0.8)
+                    .tracking(tag.range(of: #"[\p{Arabic}]"#, options: .regularExpression) != nil ? 0 : 0.8)
                     .foregroundStyle(theme.textSecondary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)

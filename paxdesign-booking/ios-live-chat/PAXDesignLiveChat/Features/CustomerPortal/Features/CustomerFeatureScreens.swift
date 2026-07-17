@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Projects
 
@@ -901,6 +902,16 @@ struct CustomerSettingsView: View {
                 Toggle(String(localized: "News"), isOn: $newsPref)
                 Toggle(String(localized: "Security"), isOn: $securityPref)
                 Toggle(String(localized: "Push notifications"), isOn: $pushPref)
+                if CustomerPushService.shared.authorizationStatus == .denied {
+                    Button(String(localized: "Open notification settings")) {
+                        guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+                        UIApplication.shared.open(url)
+                    }
+                } else if CustomerPushService.shared.authorizationStatus == .notDetermined {
+                    Button(String(localized: "Enable notifications")) {
+                        Task { await CustomerPushService.shared.requestAuthorizationAndRegister() }
+                    }
+                }
                 Button(String(localized: "Save settings")) {
                     Task {
                         let prefs = CustomerSettingsResponse.NotificationPrefs(
@@ -932,6 +943,7 @@ struct CustomerSettingsView: View {
         }
         .navigationTitle(String(localized: "Settings"))
         .task {
+            await CustomerPushService.shared.prepareNotificationRegistration()
             await auth.refreshProfile(api: api)
             if let profile = auth.profile {
                 displayName = profile.display_name

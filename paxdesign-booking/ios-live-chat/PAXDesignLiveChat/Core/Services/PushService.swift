@@ -496,6 +496,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
     ) {
         Task { @MainActor in
+            if AuthStore.shared.isCustomerSession {
+                if let link = CustomerPushService.shared.handleNotification(userInfo: userInfo) {
+                    CustomerDeepLinkRouter.shared.pending = link
+                }
+                completionHandler(.newData)
+                return
+            }
             if let payload = PushService.shared.parseNotification(userInfo: userInfo) {
                 NotificationCenter.default.post(
                     name: .paxPushReceived,
@@ -511,6 +518,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification
     ) async -> UNNotificationPresentationOptions {
+        if AuthStore.shared.isCustomerSession {
+            return CustomerPushService.shared.willPresentOptions(for: notification)
+        }
+
         let payload = PushService.shared.parseNotification(userInfo: notification.request.content.userInfo)
         if let payload {
             NotificationCenter.default.post(
@@ -551,10 +562,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         didReceive response: UNNotificationResponse
     ) async {
         let info = response.notification.request.content.userInfo
-        if AuthStore.shared.isCustomerSession,
-           let link = CustomerPushService.shared.handleNotification(userInfo: info) {
-            await MainActor.run {
-                CustomerDeepLinkRouter.shared.pending = link
+        if AuthStore.shared.isCustomerSession {
+            CustomerPushService.shared.handleForegroundNotification(response.notification)
+            if let link = CustomerPushService.shared.handleNotification(userInfo: info) {
+                await MainActor.run {
+                    CustomerDeepLinkRouter.shared.pending = link
+                }
             }
             return
         }

@@ -67,7 +67,8 @@ class PAXdesign_Customer_Platform {
     }
 
     public static function maybe_notify_customer_chat_reply($session_id, $payload) {
-        if (($payload['last_role'] ?? '') !== 'admin') {
+        $last_role = (string) ($payload['last_role'] ?? '');
+        if (!in_array($last_role, array('admin', 'assistant'), true)) {
             return;
         }
         global $wpdb;
@@ -80,10 +81,13 @@ class PAXdesign_Customer_Platform {
             return;
         }
         $preview = sanitize_text_field($payload['preview'] ?? __('New message from support', 'paxdesign-booking'));
+        $title = $last_role === 'assistant'
+            ? __('Assistant replied', 'paxdesign-booking')
+            : __('Support replied', 'paxdesign-booking');
         PAXdesign_Customer_Notifications::notify_user(
             $user_id,
             'chat',
-            __('Support replied', 'paxdesign-booking'),
+            $title,
             $preview,
             'chat',
             (string) $session_id,
