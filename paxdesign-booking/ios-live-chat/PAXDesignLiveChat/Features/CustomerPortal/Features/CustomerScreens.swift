@@ -574,8 +574,8 @@ struct CustomerChatView: View {
             await refresh(full: true)
             startPolling()
             isInputFocused = true
-        } catch {
-            error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
+        } catch let renewError {
+            self.error = (renewError as? CustomerAPIError)?.localizedDescription ?? renewError.localizedDescription
         }
     }
 

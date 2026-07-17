@@ -23486,7 +23486,7 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Services"
+            "value": "Leistungen"
           }
         },
         "ar": {
@@ -25664,13 +25664,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Book appointment"
+            "value": "Termin buchen"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "Book appointment"
+            "value": "احجز موعداً"
           }
         }
       }
@@ -25686,13 +25686,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Company"
+            "value": "Unternehmen"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "Company"
+            "value": "الشركة"
           }
         }
       }
@@ -25708,13 +25708,13 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Contact"
+            "value": "Kontakt"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "Contact"
+            "value": "اتصل بنا"
           }
         }
       }
@@ -25928,13 +25928,277 @@
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "What clients say"
+            "value": "Das sagen unsere Kunden"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "What clients say"
+            "value": "ماذا يقول عملاؤنا"
+          }
+        }
+      }
+    },
+    "Legal": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "RECHTLICHES"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LEGAL"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قانوني"
+          }
+        }
+      }
+    },
+    "Your projects, requests, and conversations — all in one place.": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ihre Projekte, Anfragen und Gespräche — alles an einem Ort."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your projects, requests, and conversations — all in one place."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مشاريعك وطلباتك ومحادثاتك — كلها في مكان واحد."
+          }
+        }
+      }
+    },
+    "Active projects": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktive Projekte"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active projects"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "مشاريع نشطة"
+          }
+        }
+      }
+    },
+    "Latest messages": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Neueste Nachrichten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latest messages"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أحدث الرسائل"
+          }
+        }
+      }
+    },
+    "Open chat": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat öffnen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open chat"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح المحادثة"
+          }
+        }
+      }
+    },
+    "Recent requests": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuelle Anfragen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recent requests"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "طلبات حديثة"
+          }
+        }
+      }
+    },
+    "Files & invoices": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dateien & Rechnungen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files & invoices"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "الملفات والفواتير"
+          }
+        }
+      }
+    },
+    "Open files": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dateien öffnen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open files"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "فتح الملفات"
+          }
+        }
+      }
+    },
+    "View notifications": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benachrichtigungen anzeigen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View notifications"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "عرض الإشعارات"
+          }
+        }
+      }
+    },
+    "Recommended services": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empfohlene Leistungen"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recommended services"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "خدمات موصى بها"
+          }
+        }
+      }
+    },
+    "Featured work": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgewählte Arbeiten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Featured work"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "أعمال مميزة"
+          }
+        }
+      }
+    },
+    "Latest news": {
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aktuelle News"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latest news"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "آخر الأخبار"
           }
         }
       }

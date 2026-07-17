@@ -204,12 +204,16 @@ private struct HeroCombinedCTA: View {
     @State private var pulsePhase = false
     @State private var arrowRotation: Double = 0
 
+    private func isArabicScript(_ text: String) -> Bool {
+        text.unicodeScalars.contains { (0x0600...0x06FF).contains($0.value) }
+    }
+
     var body: some View {
         HStack(spacing: 10) {
             Button(action: onPrimary) {
-                Text(primaryTitle.uppercased())
+                Text(isArabicScript(primaryTitle) ? primaryTitle : primaryTitle.uppercased())
                     .font(.system(size: metrics.ctaTextFontSize, weight: .semibold))
-                    .tracking(0.04 * metrics.ctaTextFontSize)
+                    .tracking(isArabicScript(primaryTitle) ? 0 : 0.04 * metrics.ctaTextFontSize)
                     .foregroundStyle(Color.white.opacity(0.58))
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)

@@ -22,7 +22,7 @@
         "مراجع"
       ],
       "title": "المشاريع والمراجع",
-      "intro": "اكتشف مشاريعنا المنفذة بنجاح: الهوية التجارية والمواقع والحلول الرقمية للشركات في فيenna والنمسا."
+      "intro": "اكتشف مشاريعنا المنفذة بنجاح: الهوية التجارية والمواقع والحلول الرقمية للشركات في فيienna والنمسا."
     }
   },
   "cta": {
@@ -65,13 +65,13 @@
       },
       "title": {
         "de": "TechFlow – B2B Digitalstrategie",
-        "en": "TechFlow – B2B Digitalstrategie",
-        "ar": "TechFlow – B2B Digitalstrategie"
+        "en": "TechFlow – B2B Digital Strategy",
+        "ar": "TechFlow – استراتيجية B2B رقمية"
       },
       "description": {
         "de": "Von der digitalen Unsichtbarkeit zum B2B-Marktführer: Wie wir einen Industriegiganten ins digitale Zeitalter katapultiert haben.",
-        "en": "Von der digitalen Unsichtbarkeit zum B2B-Marktführer: Wie wir einen Industriegiganten ins digitale Zeitalter katapultiert haben.",
-        "ar": "Von der digitalen Unsichtbarkeit zum B2B-Marktführer: Wie wir einen Industriegiganten ins digitale Zeitalter katapultiert haben."
+        "en": "From digital invisibility to B2B market leader: how we propelled an industrial giant into the digital age.",
+        "ar": "من الإخفاء الرقمي إلى الريادة في سوق B2B: كيف قادنا عملاقاً صناعياً إلى العصر الرقمي."
       },
       "image_url": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&q=80",
       "stats": [
@@ -80,7 +80,7 @@
           "label": {
             "de": "Qualifizierte Leads",
             "en": "Qualified Leads",
-            "ar": "Qualified Leads"
+            "ar": "عملاء محتملون مؤهلون"
           }
         },
         {
@@ -88,7 +88,7 @@
           "label": {
             "de": "Organischer Traffic",
             "en": "Organic Traffic",
-            "ar": "Organic Traffic"
+            "ar": "زيارات عضوية"
           }
         }
       ]
@@ -103,13 +103,13 @@
       },
       "title": {
         "de": "LogiTrade – Digitale Marktpräsenz",
-        "en": "LogiTrade – Digitale Marktpräsenz",
-        "ar": "LogiTrade – Digitale Marktpräsenz"
+        "en": "LogiTrade – Digital Market Presence",
+        "ar": "LogiTrade – حضور رقمي في السوق"
       },
       "description": {
         "de": "Vom lokalen Geheimtipp zum regionalen Marktführer: Wie strategisches Webdesign und lokales SEO ein traditionsreiches Handelsunternehmen in die digitale Champions League befördert haben.",
-        "en": "Vom lokalen Geheimtipp zum regionalen Marktführer: Wie strategisches Webdesign und lokales SEO ein traditionsreiches Handelsunternehmen in die digitale Champions League befördert haben.",
-        "ar": "Vom lokalen Geheimtipp zum regionalen Marktführer: Wie strategisches Webdesign und lokales SEO ein traditionsreiches Handelsunternehmen in die digitale Champions League befördert haben."
+        "en": "From local secret to regional leader: how strategic web design and local SEO elevated a traditional trading company.",
+        "ar": "من سر محلي إلى قائد إقليمي: كيف رفع التصميم الاستراتيجي للموقع وSEO المحلي شركة تجارية تقليدية."
       },
       "image_url": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&q=80",
       "stats": [
@@ -118,7 +118,7 @@
           "label": {
             "de": "Website-Anfragen",
             "en": "Website Inquiries",
-            "ar": "Website Inquiries"
+            "ar": "استفسارات الموقع"
           }
         },
         {
@@ -126,7 +126,7 @@
           "label": {
             "de": "Lokale Google Rankings",
             "en": "Local Google Rankings",
-            "ar": "Local Google Rankings"
+            "ar": "ترتيب Google المحلي"
           }
         }
       ]
@@ -141,13 +141,13 @@
       },
       "title": {
         "de": "NovaBrand – Marken-Relaunch",
-        "en": "NovaBrand – Marken-Relaunch",
-        "ar": "NovaBrand – Marken-Relaunch"
+        "en": "NovaBrand – Brand Relaunch",
+        "ar": "NovaBrand – إعادة إطلاق العلامة"
       },
       "description": {
         "de": "Wenn eine Marke in die Jahre kommt: Wie wir NovaBrand mit einem mutigen Rebranding vom verstaubten Ladenhüter zur begehrten Lifestyle-Brand transformiert haben.",
-        "en": "Wenn eine Marke in die Jahre kommt: Wie wir NovaBrand mit einem mutigen Rebranding vom verstaubten Ladenhüter zur begehrten Lifestyle-Brand transformiert haben.",
-        "ar": "Wenn eine Marke in die Jahre kommt: Wie wir NovaBrand mit einem mutigen Rebranding vom verstaubten Ladenhüter zur begehrten Lifestyle-Brand transformiert haben."
+        "en": "When a brand shows its age: how bold rebranding transformed NovaBrand from outdated to a sought-after lifestyle brand.",
+        "ar": "عندما تتقادم العلامة: كيف حوّلنا NovaBrand بإعادة هوية جريئة من علامة قديمة إلى علامة lifestyle مرغوبة."
       },
       "image_url": "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=1200&q=80",
       "stats": [
@@ -156,7 +156,7 @@
           "label": {
             "de": "Brand Awareness",
             "en": "Brand Awareness",
-            "ar": "Brand Awareness"
+            "ar": "الوعي بالعلامة"
           }
         },
         {
@@ -164,7 +164,7 @@
           "label": {
             "de": "Social Media Engagement",
             "en": "Social Media Engagement",
-            "ar": "Social Media Engagement"
+            "ar": "تفاعل وسائل التواصل"
           }
         }
       ]
@@ -175,17 +175,17 @@
       "category": {
         "de": "Software-Entwicklung",
         "en": "Software Development",
-        "ar": "Software Development"
+        "ar": "تطوير البرمجيات"
       },
       "title": {
         "de": "StyleHub – E-Commerce Erfolgsgeschichte",
-        "en": "StyleHub – E-Commerce Erfolgsgeschichte",
-        "ar": "StyleHub – E-Commerce Erfolgsgeschichte"
+        "en": "StyleHub – E-Commerce Success Story",
+        "ar": "StyleHub – قصة نجاح تجارة إلكترونية"
       },
       "description": {
         "de": "Vom Marketplace-Gefangenen zum E-Commerce-Unternehmer: Wie wir StyleHub einen Webshop bauten, der nicht nur gut aussieht, sondern auch verkauft.",
-        "en": "Vom Marketplace-Gefangenen zum E-Commerce-Unternehmer: Wie wir StyleHub einen Webshop bauten, der nicht nur gut aussieht, sondern auch verkauft.",
-        "ar": "Vom Marketplace-Gefangenen zum E-Commerce-Unternehmer: Wie wir StyleHub einen Webshop bauten, der nicht nur gut aussieht, sondern auch verkauft."
+        "en": "From marketplace dependency to e-commerce ownership: how we built a web shop for StyleHub that looks great and sells.",
+        "ar": "من الاعتماد على الأسواق إلى ملكية التجارة الإلكترونية: كيف أنشأنا متجر StyleHub الذي يبيع ويُبهر."
       },
       "image_url": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&q=80",
       "stats": [
@@ -194,7 +194,7 @@
           "label": {
             "de": "Online-Umsatz",
             "en": "Online Revenue",
-            "ar": "Online Revenue"
+            "ar": "إيرادات عبر الإنترنت"
           }
         },
         {
@@ -202,7 +202,7 @@
           "label": {
             "de": "Conversion Rate",
             "en": "Conversion Rate",
-            "ar": "Conversion Rate"
+            "ar": "معدل التحويل"
           }
         }
       ]
@@ -218,12 +218,12 @@
       "title": {
         "de": "Velocity – Corporate Identity",
         "en": "Velocity – Corporate Identity",
-        "ar": "Velocity – Corporate Identity"
+        "ar": "Velocity – الهوية المؤسسية"
       },
       "description": {
         "de": "Wie gibt man einer Digital-Agentur eine Identität, die kreativ und professionell zugleich ist? Mit einem Corporate Design, das im Pitch-Meeting überzeugt.",
-        "en": "Wie gibt man einer Digital-Agentur eine Identität, die kreativ und professionell zugleich ist? Mit einem Corporate Design, das im Pitch-Meeting überzeugt.",
-        "ar": "Wie gibt man einer Digital-Agentur eine Identität, die kreativ und professionell zugleich ist? Mit einem Corporate Design, das im Pitch-Meeting überzeugt."
+        "en": "Giving a digital agency an identity that is both creative and professional — with corporate design that wins in the pitch room.",
+        "ar": "منح وكالة رقمية هوية تجمع بين الإبداع والاحتراف — بهوية مؤسسية تفوز في العروض."
       },
       "image_url": "https://images.unsplash.com/photo-1626785774573-4b799315345d?w=1200&q=80",
       "stats": [
@@ -232,7 +232,7 @@
           "label": {
             "de": "Unique Brand Identity",
             "en": "Unique Brand Identity",
-            "ar": "Unique Brand Identity"
+            "ar": "هوية علامة فريدة"
           }
         },
         {
@@ -240,7 +240,7 @@
           "label": {
             "de": "Pitch Success Rate",
             "en": "Pitch Success Rate",
-            "ar": "Pitch Success Rate"
+            "ar": "معدل نجاح العروض"
           }
         }
       ]
@@ -251,17 +251,17 @@
       "category": {
         "de": "Content & Visuals",
         "en": "Content & Visuals",
-        "ar": "Content & Visuals"
+        "ar": "المحتوى والمرئيات"
       },
       "title": {
         "de": "TalentBridge – Recruiting-Kampagne",
-        "en": "TalentBridge – Recruiting-Kampagne",
-        "ar": "TalentBridge – Recruiting-Kampagne"
+        "en": "TalentBridge – Recruiting Campaign",
+        "ar": "TalentBridge – حملة توظيف"
       },
       "description": {
         "de": "Fachkräftemangel meets digitales Recruiting: Wie wir mit emotionalem Storytelling eine Brücke zwischen internationalen Talenten und österreichischen Unternehmen gebaut haben.",
-        "en": "Fachkräftemangel meets digitales Recruiting: Wie wir mit emotionalem Storytelling eine Brücke zwischen internationalen Talenten und österreichischen Unternehmen gebaut haben.",
-        "ar": "Fachkräftemangel meets digitales Recruiting: Wie wir mit emotionalem Storytelling eine Brücke zwischen internationalen Talenten und österreichischen Unternehmen gebaut haben."
+        "en": "Skills shortage meets digital recruiting: emotional storytelling that connects international talent with Austrian companies.",
+        "ar": "نقص المهارات يلتقي التوظيف الرقمي: سرد عاطفي يربط المواهب الدولية بالشركات النمساوية."
       },
       "image_url": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&q=80",
       "stats": [
@@ -270,7 +270,7 @@
           "label": {
             "de": "Qualifizierte Bewerbungen",
             "en": "Qualified Applications",
-            "ar": "Qualified Applications"
+            "ar": "طلبات مؤهلة"
           }
         },
         {
@@ -278,7 +278,7 @@
           "label": {
             "de": "Erfolgreiche Vermittlungen",
             "en": "Successful Placements",
-            "ar": "Successful Placements"
+            "ar": "توظيفات ناجحة"
           }
         }
       ]
@@ -293,13 +293,13 @@
       },
       "title": {
         "de": "FinanceFirst – Vertrauen in Pixeln",
-        "en": "FinanceFirst – Vertrauen in Pixeln",
-        "ar": "FinanceFirst – Vertrauen in Pixeln"
+        "en": "FinanceFirst – Trust in Pixels",
+        "ar": "FinanceFirst – الثقة بالبكسل"
       },
       "description": {
         "de": "Wie baut man digitales Vertrauen für eine Branche, der viele misstrauen? Mit einer Website, die Kompetenz ausstrahlt, ohne arrogant zu wirken.",
-        "en": "Wie baut man digitales Vertrauen für eine Branche, der viele misstrauen? Mit einer Website, die Kompetenz ausstrahlt, ohne arrogant zu wirken.",
-        "ar": "Wie baut man digitales Vertrauen für eine Branche, der viele misstrauen? Mit einer Website, die Kompetenz ausstrahlt, ohne arrogant zu wirken."
+        "en": "Building digital trust for a sceptical industry — with a website that conveys competence without arrogance.",
+        "ar": "بناء ثقة رقمية لقطاع يُنظر إليه بريبة — بموقع يُظهر الكفاءة دون تكلف."
       },
       "image_url": "https://images.unsplash.com/photo-1551434678-e076c223a692?w=1200&q=80",
       "stats": [
@@ -308,7 +308,7 @@
           "label": {
             "de": "Kontaktanfragen",
             "en": "Contact Inquiries",
-            "ar": "Contact Inquiries"
+            "ar": "استفسارات التواصل"
           }
         },
         {
@@ -316,7 +316,7 @@
           "label": {
             "de": "Durchschn. Verweildauer",
             "en": "Avg. Session Duration",
-            "ar": "Avg. Session Duration"
+            "ar": "متوسط مدة الجلسة"
           }
         }
       ]
@@ -327,17 +327,17 @@
       "category": {
         "de": "Software-Entwicklung",
         "en": "Software Development",
-        "ar": "Software Development"
+        "ar": "تطوير البرمجيات"
       },
       "title": {
         "de": "SignConnect – Technologie für Inklusion",
-        "en": "SignConnect – Technologie für Inklusion",
-        "ar": "SignConnect – Technologie für Inklusion"
+        "en": "SignConnect – Technology for Inclusion",
+        "ar": "SignConnect – تقنية للشمول"
       },
       "description": {
         "de": "Wenn Innovation auf Inklusion trifft: Wie wir einer bahnbrechenden Gebärdensprach-Technologie den Weg in Millionen von Apps geebnet haben.",
-        "en": "Wenn Innovation auf Inklusion trifft: Wie wir einer bahnbrechenden Gebärdensprach-Technologie den Weg in Millionen von Apps geebnet haben.",
-        "ar": "Wenn Innovation auf Inklusion trifft: Wie wir einer bahnbrechenden Gebärdensprach-Technologie den Weg in Millionen von Apps geebnet haben."
+        "en": "When innovation meets inclusion: paving the way for groundbreaking sign-language technology into millions of apps.",
+        "ar": "حين يلتقي الابتكار بالشمول: تمهيد طريق تقنية لغة الإشارة الثورية إلى ملايين التطبيقات."
       },
       "image_url": "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&q=80",
       "stats": [
@@ -346,7 +346,7 @@
           "label": {
             "de": "App-Integrationen",
             "en": "App Integrations",
-            "ar": "App Integrations"
+            "ar": "تكاملات التطبيقات"
           }
         },
         {
@@ -354,7 +354,7 @@
           "label": {
             "de": "Erreichte Endnutzer",
             "en": "End Users Reached",
-            "ar": "End Users Reached"
+            "ar": "مستخدمون نهائيون"
           }
         }
       ]
@@ -369,13 +369,13 @@
       },
       "title": {
         "de": "GreenScape – Natur trifft Digital",
-        "en": "GreenScape – Natur trifft Digital",
-        "ar": "GreenScape – Natur trifft Digital"
+        "en": "GreenScape – Nature Meets Digital",
+        "ar": "GreenScape – الطبيعة تلتقي الرقمي"
       },
       "description": {
         "de": "Vom Gärtner zum Gartenarchitekten: Wie ein traditionelles Handwerksunternehmen mit authentischem Branding die Premium-Kundschaft erobert hat.",
-        "en": "Vom Gärtner zum Gartenarchitekten: Wie ein traditionelles Handwerksunternehmen mit authentischem Branding die Premium-Kundschaft erobert hat.",
-        "ar": "Vom Gärtner zum Gartenarchitekten: Wie ein traditionelles Handwerksunternehmen mit authentischem Branding die Premium-Kundschaft erobert hat."
+        "en": "From gardener to landscape architect: authentic branding that won premium clients for a traditional crafts business.",
+        "ar": "من البستاني إلى مهندس المناظر: هوية أصيلة جذبت عملاء premium لحرفة تقليدية."
       },
       "image_url": "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=1200&q=80",
       "stats": [
@@ -384,7 +384,7 @@
           "label": {
             "de": "Anfragen",
             "en": "Inquiries",
-            "ar": "Inquiries"
+            "ar": "استفسارات"
           }
         },
         {
@@ -392,7 +392,7 @@
           "label": {
             "de": "Durchschn. Projektgröße",
             "en": "Avg. Project Size",
-            "ar": "Avg. Project Size"
+            "ar": "متوسط حجم المشروع"
           }
         }
       ]
@@ -408,12 +408,12 @@
       "title": {
         "de": "Synergy – Brand Guidelines",
         "en": "Synergy – Brand Guidelines",
-        "ar": "Synergy – Brand Guidelines"
+        "ar": "Synergy – إرشادات العلامة"
       },
       "description": {
         "de": "Wenn jeder macht, was er will: Wie ein 80-seitiges Brand Manual das kreative Chaos beendet und einer Unternehmensgruppe erstmals einen einheitlichen Auftritt gegeben hat.",
-        "en": "Wenn jeder macht, was er will: Wie ein 80-seitiges Brand Manual das kreative Chaos beendet und einer Unternehmensgruppe erstmals einen einheitlichen Auftritt gegeben hat.",
-        "ar": "Wenn jeder macht, was er will: Wie ein 80-seitiges Brand Manual das kreative Chaos beendet und einer Unternehmensgruppe erstmals einen einheitlichen Auftritt gegeben hat."
+        "en": "When everyone did their own thing: an 80-page brand manual that ended creative chaos and unified a corporate group.",
+        "ar": "عندما عمل الجميع بأنفسهم: دليل علامة من 80 صفحة أنهى الفوضى الإبداعية ووحّد مجموعة شركات."
       },
       "image_url": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200&q=80",
       "stats": [
@@ -422,7 +422,7 @@
           "label": {
             "de": "Brand Consistency",
             "en": "Brand Consistency",
-            "ar": "Brand Consistency"
+            "ar": "اتساق العلامة"
           }
         },
         {
@@ -430,7 +430,7 @@
           "label": {
             "de": "Design-Abstimmungszeit",
             "en": "Design Alignment Time",
-            "ar": "Design Alignment Time"
+            "ar": "وقت تنسيق التصميم"
           }
         }
       ]
@@ -445,13 +445,13 @@
       },
       "title": {
         "de": "MoveEasy – Marke auf Rädern",
-        "en": "MoveEasy – Marke auf Rädern",
-        "ar": "MoveEasy – Marke auf Rädern"
+        "en": "MoveEasy – Brand on Wheels",
+        "ar": "MoveEasy – علامة على عجلات"
       },
       "description": {
         "de": "Von der weißen Lieferwagen-Flotte zur fahrenden Werbetafel: Wie durchdachtes Branding ein Logistikunternehmen unübersehbar gemacht hat.",
-        "en": "Von der weißen Lieferwagen-Flotte zur fahrenden Werbetafel: Wie durchdachtes Branding ein Logistikunternehmen unübersehbar gemacht hat.",
-        "ar": "Von der weißen Lieferwagen-Flotte zur fahrenden Werbetafel: Wie durchdachtes Branding ein Logistikunternehmen unübersehbar gemacht hat."
+        "en": "From a fleet of white vans to rolling billboards: thoughtful branding made a logistics company impossible to miss.",
+        "ar": "من أسطول شاحنات بيضاء إلى لوحات متحركة: هوية مدروسة جعلت شركة لوجistics لا تُغفل."
       },
       "image_url": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=1200&q=80",
       "stats": [
@@ -460,7 +460,7 @@
           "label": {
             "de": "Brand Recognition",
             "en": "Brand Recognition",
-            "ar": "Brand Recognition"
+            "ar": "التعرف على العلامة"
           }
         },
         {
@@ -468,7 +468,7 @@
           "label": {
             "de": "Weiterempfehlungen",
             "en": "Referrals",
-            "ar": "Referrals"
+            "ar": "إحالات"
           }
         }
       ]
@@ -483,13 +483,13 @@
       },
       "title": {
         "de": "EcoVerde – Grüne Markenidentität",
-        "en": "EcoVerde – Grüne Markenidentität",
-        "ar": "EcoVerde – Grüne Markenidentität"
+        "en": "EcoVerde – Green Brand Identity",
+        "ar": "EcoVerde – هوية خضراء"
       },
       "description": {
         "de": "Wenn Nachhaltigkeit keine leere Phrase sein soll: Wie wir für einen Lifestyle-Shop eine Marke schufen, die Umweltbewusstsein lebt.",
-        "en": "Wenn Nachhaltigkeit keine leere Phrase sein soll: Wie wir für einen Lifestyle-Shop eine Marke schufen, die Umweltbewusstsein lebt.",
-        "ar": "Wenn Nachhaltigkeit keine leere Phrase sein soll: Wie wir für einen Lifestyle-Shop eine Marke schufen, die Umweltbewusstsein lebt."
+        "en": "When sustainability must be more than a slogan: a lifestyle shop brand that truly lives environmental awareness.",
+        "ar": "حين يجب أن تكون الاستدامة أكثر من شعار: علامة متجر lifestyle تعيش الوعي البيئي فعلاً."
       },
       "image_url": "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?w=1200&q=80",
       "stats": [
@@ -498,7 +498,7 @@
           "label": {
             "de": "Authentic Brand Identity",
             "en": "Authentic Brand Identity",
-            "ar": "Authentic Brand Identity"
+            "ar": "هوية علامة أصيلة"
           }
         },
         {
@@ -506,7 +506,7 @@
           "label": {
             "de": "Social Media Growth",
             "en": "Social Media Growth",
-            "ar": "Social Media Growth"
+            "ar": "نمو وسائل التواصل"
           }
         }
       ]
@@ -521,13 +521,13 @@
       },
       "title": {
         "de": "LegalPro – Juristische Sichtbarkeit",
-        "en": "LegalPro – Juristische Sichtbarkeit",
-        "ar": "LegalPro – Juristische Sichtbarkeit"
+        "en": "LegalPro – Legal Visibility",
+        "ar": "LegalPro – ظهور قانوني"
       },
       "description": {
         "de": "Von der Google-Wüste auf Seite 1: Wie Content-Marketing und SEO einer Spezialkanzlei zu digitaler Sichtbarkeit verholfen haben.",
-        "en": "Von der Google-Wüste auf Seite 1: Wie Content-Marketing und SEO einer Spezialkanzlei zu digitaler Sichtbarkeit verholfen haben.",
-        "ar": "Von der Google-Wüste auf Seite 1: Wie Content-Marketing und SEO einer Spezialkanzlei zu digitaler Sichtbarkeit verholfen haben."
+        "en": "From Google desert to page one: content marketing and SEO that gave a specialist law firm digital visibility.",
+        "ar": "من صحراء Google إلى الصفحة الأولى: تسويق محتوى وSEO منحا مكتب محاماة متخصص ظهوراً رقمياً."
       },
       "image_url": "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=1200&q=80",
       "stats": [
@@ -536,7 +536,7 @@
           "label": {
             "de": "Organischer Traffic",
             "en": "Organic Traffic",
-            "ar": "Organic Traffic"
+            "ar": "زيارات عضوية"
           }
         },
         {
@@ -544,7 +544,7 @@
           "label": {
             "de": "Rankings für Kernkeywords",
             "en": "Core Keyword Rankings",
-            "ar": "Core Keyword Rankings"
+            "ar": "ترتيب الكلمات الأساسية"
           }
         }
       ]
@@ -560,12 +560,12 @@
       "title": {
         "de": "SmartAI – Website Redesign",
         "en": "SmartAI – Website Redesign",
-        "ar": "SmartAI – Website Redesign"
+        "ar": "SmartAI – إعادة تصميم الموقع"
       },
       "description": {
         "de": "AI-Website Redesign mit Fokus auf bessere Orientierung, klarere Botschaften und reduzierte Komplexität für unterschiedliche Zielgruppen.",
-        "en": "AI-Website Redesign mit Fokus auf bessere Orientierung, klarere Botschaften und reduzierte Komplexität für unterschiedliche Zielgruppen.",
-        "ar": "AI-Website Redesign mit Fokus auf bessere Orientierung, klarere Botschaften und reduzierte Komplexität für unterschiedliche Zielgruppen."
+        "en": "AI website redesign focused on clearer navigation, sharper messaging and reduced complexity for diverse audiences.",
+        "ar": "إعادة تصميم موقع AI تركز على تنقل أوضح ورسائل أدق وتعقيد أقل لجماهير متنوعة."
       },
       "image_url": "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&q=80",
       "stats": [
@@ -574,7 +574,7 @@
           "label": {
             "de": "User Engagement",
             "en": "User Engagement",
-            "ar": "User Engagement"
+            "ar": "تفاعل المستخدمين"
           }
         },
         {
@@ -582,7 +582,7 @@
           "label": {
             "de": "Bounce Rate",
             "en": "Bounce Rate",
-            "ar": "Bounce Rate"
+            "ar": "معدل الارتداد"
           }
         }
       ]
@@ -598,12 +598,12 @@
       "title": {
         "de": "GlobalRetail – Digital Promotions",
         "en": "GlobalRetail – Digital Promotions",
-        "ar": "GlobalRetail – Digital Promotions"
+        "ar": "GlobalRetail – عروض رقمية"
       },
       "description": {
         "de": "Digitale Promotion-Lösungen im Retail-Umfeld mit Fokus auf Skalierbarkeit, Automatisierung und sauberes Tracking.",
-        "en": "Digitale Promotion-Lösungen im Retail-Umfeld mit Fokus auf Skalierbarkeit, Automatisierung und sauberes Tracking.",
-        "ar": "Digitale Promotion-Lösungen im Retail-Umfeld mit Fokus auf Skalierbarkeit, Automatisierung und sauberes Tracking."
+        "en": "Digital promotion solutions for retail with scalability, automation and clean tracking at the core.",
+        "ar": "حلول عروض رقمية للتجزئة مع قابلية التوسع والأتمتة وتتبع دقيق في جوهرها."
       },
       "image_url": "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=1200&q=80",
       "stats": [
@@ -612,7 +612,7 @@
           "label": {
             "de": "Campaign Reach",
             "en": "Campaign Reach",
-            "ar": "Campaign Reach"
+            "ar": "وصول الحملة"
           }
         },
         {
@@ -620,7 +620,7 @@
           "label": {
             "de": "Tracking Accuracy",
             "en": "Tracking Accuracy",
-            "ar": "Tracking Accuracy"
+            "ar": "دقة التتبع"
           }
         }
       ]
@@ -631,17 +631,17 @@
       "category": {
         "de": "Software-Entwicklung",
         "en": "Software Development",
-        "ar": "Software Development"
+        "ar": "تطوير البرمجيات"
       },
       "title": {
         "de": "StreamPro – Streaming Platform",
         "en": "StreamPro – Streaming Platform",
-        "ar": "StreamPro – Streaming Platform"
+        "ar": "StreamPro – منصة بث"
       },
       "description": {
         "de": "Entwicklung einer skalierbaren Streaming-Architektur inklusive Smart-TV-App und Performance-Optimierungen.",
-        "en": "Entwicklung einer skalierbaren Streaming-Architektur inklusive Smart-TV-App und Performance-Optimierungen.",
-        "ar": "Entwicklung einer skalierbaren Streaming-Architektur inklusive Smart-TV-App und Performance-Optimierungen."
+        "en": "Scalable streaming architecture including a smart-TV app and performance optimisations.",
+        "ar": "بنية بث قابلة للتوسع تشمل تطبيق smart-TV وتحسينات الأداء."
       },
       "image_url": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=1200&q=80",
       "stats": [
@@ -650,7 +650,7 @@
           "label": {
             "de": "Active Users",
             "en": "Active Users",
-            "ar": "Active Users"
+            "ar": "مستخدمون نشطون"
           }
         },
         {
@@ -658,7 +658,7 @@
           "label": {
             "de": "Uptime",
             "en": "Uptime",
-            "ar": "Uptime"
+            "ar": "وقت التشغيل"
           }
         }
       ]
@@ -669,17 +669,17 @@
       "category": {
         "de": "Software-Entwicklung",
         "en": "Software Development",
-        "ar": "Software Development"
+        "ar": "تطوير البرمجيات"
       },
       "title": {
         "de": "MediTrack – Datenvisualisierung",
-        "en": "MediTrack – Datenvisualisierung",
-        "ar": "MediTrack – Datenvisualisierung"
+        "en": "MediTrack – Data Visualisation",
+        "ar": "MediTrack – تصور البيانات"
       },
       "description": {
         "de": "Entwicklung einer medizinischen Anwendung zur Verarbeitung und Visualisierung von Messwerten, mit Fokus auf Stabilität und Datenschutz.",
-        "en": "Entwicklung einer medizinischen Anwendung zur Verarbeitung und Visualisierung von Messwerten, mit Fokus auf Stabilität und Datenschutz.",
-        "ar": "Entwicklung einer medizinischen Anwendung zur Verarbeitung und Visualisierung von Messwerten, mit Fokus auf Stabilität und Datenschutz."
+        "en": "Medical application for processing and visualising measurements — stability and data protection first.",
+        "ar": "تطبيق طبي لمعالجة وتصور القياسات — الاستقرار وحماية البيانات أولاً."
       },
       "image_url": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200&q=80",
       "stats": [
@@ -688,7 +688,7 @@
           "label": {
             "de": "Compliant",
             "en": "Compliant",
-            "ar": "Compliant"
+            "ar": "متوافق"
           }
         },
         {
@@ -696,7 +696,7 @@
           "label": {
             "de": "Daily Users",
             "en": "Daily Users",
-            "ar": "Daily Users"
+            "ar": "مستخدمون يوميون"
           }
         }
       ]
@@ -707,17 +707,17 @@
       "category": {
         "de": "Software-Entwicklung",
         "en": "Software Development",
-        "ar": "Software Development"
+        "ar": "تطوير البرمجيات"
       },
       "title": {
         "de": "SecureNet – VPN & Billing Integration",
         "en": "SecureNet – VPN & Billing Integration",
-        "ar": "SecureNet – VPN & Billing Integration"
+        "ar": "SecureNet – VPN وتكامل الفوترة"
       },
       "description": {
         "de": "Sicheres, globales Setup zur Verbindung von VPN- und Abrechnungssystemen mit klaren Rollen- und Logging-Konzepten.",
-        "en": "Sicheres, globales Setup zur Verbindung von VPN- und Abrechnungssystemen mit klaren Rollen- und Logging-Konzepten.",
-        "ar": "Sicheres, globales Setup zur Verbindung von VPN- und Abrechnungssystemen mit klaren Rollen- und Logging-Konzepten."
+        "en": "Secure global setup connecting VPN and billing systems with clear roles and logging concepts.",
+        "ar": "إعداد عالمي آمن يربط VPN وأنظمة الفوترة بأدوار وتسجيل واضحين."
       },
       "image_url": "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&q=80",
       "stats": [
@@ -726,7 +726,7 @@
           "label": {
             "de": "Global Servers",
             "en": "Global Servers",
-            "ar": "Global Servers"
+            "ar": "خوادم عالمية"
           }
         },
         {
@@ -734,7 +734,7 @@
           "label": {
             "de": "Secure",
             "en": "Secure",
-            "ar": "Secure"
+            "ar": "آمن"
           }
         }
       ]
@@ -745,17 +745,17 @@
       "category": {
         "de": "Software-Entwicklung",
         "en": "Software Development",
-        "ar": "Software Development"
+        "ar": "تطوير البرمجيات"
       },
       "title": {
         "de": "FinTech – Finanz-Integration",
-        "en": "FinTech – Finanz-Integration",
-        "ar": "FinTech – Finanz-Integration"
+        "en": "FinTech – Financial Integration",
+        "ar": "FinTech – تكامل مالي"
       },
       "description": {
         "de": "Integration komplexer Analyse-Systeme im Finanzumfeld mit hohen Anforderungen an Compliance und Stabilität.",
-        "en": "Integration komplexer Analyse-Systeme im Finanzumfeld mit hohen Anforderungen an Compliance und Stabilität.",
-        "ar": "Integration komplexer Analyse-Systeme im Finanzumfeld mit hohen Anforderungen an Compliance und Stabilität."
+        "en": "Integrating complex analytics systems in finance with high compliance and stability requirements.",
+        "ar": "دمج أنظمة تحليل معقدة في قطاع المالية بمتطلبات امتثال واستقرار عالية."
       },
       "image_url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&q=80",
       "stats": [
@@ -764,7 +764,7 @@
           "label": {
             "de": "Compliance",
             "en": "Compliance",
-            "ar": "Compliance"
+            "ar": "امتثال"
           }
         },
         {
@@ -772,7 +772,7 @@
           "label": {
             "de": "Monitoring",
             "en": "Monitoring",
-            "ar": "Monitoring"
+            "ar": "مراقبة"
           }
         }
       ]
@@ -783,17 +783,17 @@
       "category": {
         "de": "Software-Entwicklung",
         "en": "Software Development",
-        "ar": "Software Development"
+        "ar": "تطوير البرمجيات"
       },
       "title": {
         "de": "CloudOps – Infrastruktur",
-        "en": "CloudOps – Infrastruktur",
-        "ar": "CloudOps – Infrastruktur"
+        "en": "CloudOps – Infrastructure",
+        "ar": "CloudOps – البنية التحتية"
       },
       "description": {
         "de": "Mehrere Projekte mit Fokus auf Automatisierung, Monitoring, Kostensteuerung und Wiederherstellungsstrategien.",
-        "en": "Mehrere Projekte mit Fokus auf Automatisierung, Monitoring, Kostensteuerung und Wiederherstellungsstrategien.",
-        "ar": "Mehrere Projekte mit Fokus auf Automatisierung, Monitoring, Kostensteuerung und Wiederherstellungsstrategien."
+        "en": "Multiple projects focused on automation, monitoring, cost control and recovery strategies.",
+        "ar": "مشاريع متعددة تركز على الأتمتة والمراقبة وضبط التكاليف واستراتيجيات الاستعادة."
       },
       "image_url": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&q=80",
       "stats": [
@@ -802,7 +802,7 @@
           "label": {
             "de": "Infrastructure Costs",
             "en": "Infrastructure Costs",
-            "ar": "Infrastructure Costs"
+            "ar": "تكاليف البنية التحتية"
           }
         },
         {
@@ -810,7 +810,7 @@
           "label": {
             "de": "Availability",
             "en": "Availability",
-            "ar": "Availability"
+            "ar": "التوفر"
           }
         }
       ]
@@ -821,17 +821,17 @@
       "category": {
         "de": "Software-Entwicklung",
         "en": "Software Development",
-        "ar": "Software Development"
+        "ar": "تطوير البرمجيات"
       },
       "title": {
         "de": "AutoFlow – KI-Prozessautomatisierung",
-        "en": "AutoFlow – KI-Prozessautomatisierung",
-        "ar": "AutoFlow – KI-Prozessautomatisierung"
+        "en": "AutoFlow – AI Process Automation",
+        "ar": "AutoFlow – أتمتة عمليات بالذكاء الاصطناعي"
       },
       "description": {
         "de": "Prozessautomatisierung mit KI – Web-Anwendung mit klarer Nutzerführung, integrierten Datenflüssen und verständlicher Darstellung komplexer Funktionen.",
-        "en": "Prozessautomatisierung mit KI – Web-Anwendung mit klarer Nutzerführung, integrierten Datenflüssen und verständlicher Darstellung komplexer Funktionen.",
-        "ar": "Prozessautomatisierung mit KI – Web-Anwendung mit klarer Nutzerführung, integrierten Datenflüssen und verständlicher Darstellung komplexer Funktionen."
+        "en": "AI process automation — a web app with clear UX, integrated data flows and understandable presentation of complex features.",
+        "ar": "أتمتة عمليات بالذكاء الاصطناعي — تطبيق ويب بتجربة واضحة وتدفقات بيانات متكاملة وعرض مفهوم للميزات المعقدة."
       },
       "image_url": "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1200&q=80",
       "stats": [
@@ -840,7 +840,7 @@
           "label": {
             "de": "Process Time",
             "en": "Process Time",
-            "ar": "Process Time"
+            "ar": "وقت العملية"
           }
         },
         {
@@ -848,7 +848,7 @@
           "label": {
             "de": "Powered",
             "en": "Powered",
-            "ar": "Powered"
+            "ar": "مدعوم"
           }
         }
       ]

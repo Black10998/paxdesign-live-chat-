@@ -243,9 +243,9 @@ struct CustomerPortfolioShowcaseCard: View {
                 portfolioImage
                 VStack(alignment: .leading, spacing: 12) {
                     if let client = item.client, !client.isEmpty {
-                        Text(client.uppercased())
+                        Text(portfolioClientLabel(client))
                             .font(.system(size: 11, weight: .semibold))
-                            .tracking(1.1)
+                            .tracking(clientHasArabicScript(client) ? 0 : 1.1)
                             .foregroundStyle(theme.textSecondary)
                     }
                     Text(item.displayTitle)
@@ -450,7 +450,7 @@ struct CustomerPortfolioDetailView: View {
     private func detailHeader(_ item: CustomerPortfolioDetail) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             if let client = item.client, !client.isEmpty {
-                CustomerResponsiveCaption(text: client.uppercased(), color: theme.textSecondary)
+                CustomerResponsiveCaption(text: portfolioClientLabel(client), color: theme.textSecondary)
             } else if let categories = item.categories, !categories.isEmpty {
                 CustomerResponsiveCaption(text: categories.joined(separator: " · "), color: theme.textSecondary)
             }
@@ -829,4 +829,12 @@ struct CustomerFlowLayout: Layout {
 
         return (CGSize(width: maxWidth, height: y + rowHeight), frames)
     }
+}
+
+private func clientHasArabicScript(_ text: String) -> Bool {
+    text.unicodeScalars.contains { (0x0600...0x06FF).contains($0.value) }
+}
+
+private func portfolioClientLabel(_ client: String) -> String {
+    clientHasArabicScript(client) ? client : client.uppercased()
 }

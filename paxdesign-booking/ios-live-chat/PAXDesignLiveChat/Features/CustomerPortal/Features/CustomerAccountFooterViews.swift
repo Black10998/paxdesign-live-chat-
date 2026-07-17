@@ -179,7 +179,7 @@ struct CustomerAccountLegalTerminalView: View {
                     Circle().fill(Color(red: 0.157, green: 0.784, blue: 0.251)).frame(width: 12, height: 12)
                 }
                 Spacer()
-                Text("LEGAL")
+                Text(String(localized: "Legal"))
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
                     .foregroundStyle(Color.white.opacity(0.7))
                     .padding(.horizontal, 10)
