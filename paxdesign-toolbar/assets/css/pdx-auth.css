@@ -1,5 +1,16 @@
 /* PaxDesign Auth — login/register forms (exact provided design) + account dashboard */
 
+/* Legacy top bar removed — hide if cached HTML still renders it */
+#pdx-account-topbar {
+  display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
 /* ─── Auth bar inside theme header (flex, no overlap) ─────── */
 #pdx-auth-bar {
   display: flex;
@@ -109,8 +120,6 @@
 
   #pdx-auth-bar.pdx-auth-bar--header {
     flex: 0 0 auto;
-    margin-inline-start: auto;
-    order: 99;
   }
 
   /* Customer Portal via account menu on desktop — avoids crowding */
