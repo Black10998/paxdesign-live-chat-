@@ -245,11 +245,20 @@ struct CustomerServiceDetail: Decodable {
 
 struct CustomerContentNavigation: Decodable {
     let locale: String?
-    let sections: [Section]
+    let home_url: String?
+    let sections: [Section]?
+    let menus: [RegisteredMenu]?
 
     struct Section: Decodable, Identifiable {
         var id: String { key }
         let key: String
+        let title: String
+        let items: [MenuItem]
+    }
+
+    struct RegisteredMenu: Decodable, Identifiable {
+        var id: String { location }
+        let location: String
         let title: String
         let items: [MenuItem]
     }

@@ -1,0 +1,24 @@
+/**
+ * Styles when the site is viewed inside the PAXDesign iOS app (WKWebView).
+ * User-Agent contains PAXDesign-iOS — full Elementor layout is preserved.
+ */
+html.pdx-ios-app,
+body.pdx-ios-app {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body.pdx-ios-app {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Keep Elementor sections full width inside the app webview */
+body.pdx-ios-app .elementor-section.elementor-section-boxed > .elementor-container {
+  max-width: 100%;
+}
+
+body.pdx-ios-app .pdx-auth-bar {
+  position: sticky;
+  top: 0;
+  z-index: 9999;
+}

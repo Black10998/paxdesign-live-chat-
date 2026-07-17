@@ -31,29 +31,35 @@ struct CustomerTabView: View {
 
     var body: some View {
         TabView(selection: $navigation.selectedTab) {
-            CustomerDashboardView()
-                .tabItem { Label(String(localized: "Home"), systemImage: "house.fill") }
-                .tag(CustomerPortalTab.home)
-            CustomerDiscoverView()
-                .tabItem { Label(String(localized: "Discover"), systemImage: "square.grid.2x2.fill") }
-                .tag(CustomerPortalTab.services)
+            CustomerWebsiteTabView()
+                .tabItem { Label(String(localized: "Website"), systemImage: "globe") }
+                .tag(CustomerPortalTab.website)
             CustomerChatView(initialSessionID: navigation.chatSessionID)
                 .tabItem { Label(String(localized: "Chat"), systemImage: "message.fill") }
                 .tag(CustomerPortalTab.chat)
-            CustomerProjectsListView(useSplitLayout: horizontalSizeClass == .regular)
-                .tabItem { Label(String(localized: "Projects"), systemImage: "folder.fill") }
-                .tag(CustomerPortalTab.projects)
+            CustomerWorkspaceTabView()
+                .tabItem { Label(String(localized: "My work"), systemImage: "folder.fill") }
+                .tag(CustomerPortalTab.workspace)
             CustomerMoreView()
                 .tabItem { Label(String(localized: "Account"), systemImage: "person.crop.circle.fill") }
                 .tag(CustomerPortalTab.account)
         }
         .onChange(of: navigation.selectedTab) { tab in
             switch tab {
-            case .home, .projects, .account:
+            case .workspace, .account:
                 navigation.refreshWorkspace()
             default:
                 break
             }
+        }
+    }
+}
+
+/// Native workspace: dashboard, projects, requests (authenticated backend — not a website substitute).
+struct CustomerWorkspaceTabView: View {
+    var body: some View {
+        NavigationStack {
+            CustomerDashboardView()
         }
     }
 }

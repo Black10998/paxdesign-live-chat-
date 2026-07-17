@@ -199,13 +199,25 @@ struct CustomerContentDestinationView: View {
         Group {
             switch item.type {
             case "service":
-                CustomerServiceDetailView(slug: item.slug)
+                CustomerSitePageWebView(
+                    path: servicePath(for: item.slug),
+                    title: item.title
+                )
             case "portfolio":
-                CustomerPortfolioDetailView(slug: item.slug)
+                CustomerSitePageWebView(path: item.slug, title: item.title)
             default:
-                CustomerNativePageView(slug: item.slug, title: item.title)
+                if let url = item.url, !url.isEmpty, let parsed = URL(string: url),
+                   parsed.host?.contains("paxdesign") == true {
+                    CustomerSitePageWebView(path: parsed.path, title: item.title)
+                } else {
+                    CustomerSitePageWebView(path: item.slug, title: item.title)
+                }
             }
         }
+    }
+
+    private func servicePath(for slug: String) -> String {
+        slug.isEmpty ? "leistungen" : slug
     }
 }
 

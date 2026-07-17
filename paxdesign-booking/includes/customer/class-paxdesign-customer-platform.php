@@ -25,7 +25,29 @@ class PAXdesign_Customer_Platform {
         foreach (self::guest_chat_ajax_actions() as $action) {
             add_action('wp_ajax_nopriv_' . $action, array(__CLASS__, 'maybe_block_guest_chat'), 0);
         }
+        add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_ios_app_assets'), 30);
         do_action('paxdesign_customer_platform_ready');
+    }
+
+    /**
+     * When loaded inside the native iOS app WebView, add safe-area tweaks (Elementor unchanged).
+     */
+    public static function enqueue_ios_app_assets() {
+        $ua = isset($_SERVER['HTTP_USER_AGENT']) ? (string) $_SERVER['HTTP_USER_AGENT'] : '';
+        if ($ua === '' || stripos($ua, 'PAXDesign-iOS') === false) {
+            return;
+        }
+        wp_enqueue_style(
+            'pdx-ios-app',
+            PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/css/pdx-ios-app.css',
+            array(),
+            PAXDESIGN_BOOKING_VERSION
+        );
+        wp_add_inline_script(
+            'jquery',
+            "document.documentElement.classList.add('pdx-ios-app');document.body&&document.body.classList.add('pdx-ios-app');",
+            'after'
+        );
     }
 
     /**

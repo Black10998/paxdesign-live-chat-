@@ -76,8 +76,42 @@ class PAXdesign_Customer_Content {
         }
         return array(
             'locale'   => $lang,
+            'home_url' => home_url('/'),
             'sections' => $sections,
+            'menus'    => self::all_registered_menus(),
         );
+    }
+
+    /**
+     * Export every registered WordPress nav menu location for native app drawers.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function all_registered_menus() {
+        $locations = get_nav_menu_locations();
+        if (!is_array($locations) || empty($locations)) {
+            return array();
+        }
+        $out = array();
+        foreach ($locations as $location => $menu_id) {
+            if (!$menu_id) {
+                continue;
+            }
+            $items = wp_get_nav_menu_items((int) $menu_id);
+            if (empty($items)) {
+                continue;
+            }
+            $tree = self::build_menu_tree($items);
+            if (empty($tree)) {
+                continue;
+            }
+            $out[] = array(
+                'location' => sanitize_key((string) $location),
+                'title'    => ucwords(str_replace(array('-', '_'), ' ', (string) $location)),
+                'items'    => $tree,
+            );
+        }
+        return $out;
     }
 
     /**

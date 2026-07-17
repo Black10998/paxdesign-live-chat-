@@ -1,11 +1,10 @@
 import SwiftUI
 
 enum CustomerPortalTab: Int, CaseIterable {
-    case home = 0
-    case services = 1
-    case chat = 2
-    case projects = 3
-    case account = 4
+    case website = 0
+    case chat = 1
+    case workspace = 2
+    case account = 3
 }
 
 struct CustomerPortalDestination: Equatable, Hashable {
@@ -28,7 +27,7 @@ struct CustomerPortalDestination: Equatable, Hashable {
 final class CustomerNavigationCoordinator: ObservableObject {
     static let shared = CustomerNavigationCoordinator()
 
-    @Published var selectedTab: CustomerPortalTab = .home
+    @Published var selectedTab: CustomerPortalTab = .website
     @Published var accountPath: [CustomerPortalDestination] = []
     @Published var chatSessionID: String?
     @Published var pendingChatFocus = false
@@ -55,7 +54,8 @@ final class CustomerNavigationCoordinator: ObservableObject {
         let parts = normalized.split(separator: "/").map(String.init)
 
         guard let head = parts.first?.lowercased() else {
-            selectedTab = .home
+            selectedTab = .website
+            CustomerWebsiteController.shared.loadHome()
             return
         }
 
@@ -66,16 +66,14 @@ final class CustomerNavigationCoordinator: ObservableObject {
             chatSessionID = session
             pendingChatFocus = true
         case "projects", "project":
-            selectedTab = .projects
+            selectedTab = .workspace
             if parts.count > 1, let id = Int(parts[1]) {
                 accountPath = [CustomerPortalDestination(kind: .project(id))]
             }
         case "orders", "order", "requests", "request":
-            selectedTab = .account
+            selectedTab = .workspace
             if parts.count > 1, let id = Int(parts[1]) {
                 accountPath = [CustomerPortalDestination(kind: .order(id))]
-            } else {
-                accountPath = []
             }
         case "news":
             selectedTab = .account
@@ -89,28 +87,34 @@ final class CustomerNavigationCoordinator: ObservableObject {
             selectedTab = .account
             accountPath = [CustomerPortalDestination(kind: .files)]
         case "portfolio":
-            selectedTab = .account
-            accountPath = [CustomerPortalDestination(kind: .portfolio)]
+            selectedTab = .website
+            CustomerWebsiteController.shared.load(path: "referenzen")
         case "profile", "account":
             selectedTab = .account
             accountPath = [CustomerPortalDestination(kind: .profile)]
         case "settings":
             selectedTab = .account
             accountPath = [CustomerPortalDestination(kind: .settings)]
-        case "services", "service":
-            selectedTab = .services
+        case "services", "service", "leistungen":
+            selectedTab = .website
+            if parts.count > 1 {
+                CustomerWebsiteController.shared.load(path: parts.joined(separator: "/"))
+            } else {
+                CustomerWebsiteController.shared.load(path: "leistungen")
+            }
         default:
-            selectedTab = .home
+            selectedTab = .website
+            CustomerWebsiteController.shared.load(path: normalized)
         }
     }
 
     func openProject(_ id: Int) {
-        selectedTab = .projects
+        selectedTab = .workspace
         accountPath = [CustomerPortalDestination(kind: .project(id))]
     }
 
     func openOrder(_ id: Int) {
-        selectedTab = .account
+        selectedTab = .workspace
         accountPath = [CustomerPortalDestination(kind: .order(id))]
     }
 
