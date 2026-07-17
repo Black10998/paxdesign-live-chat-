@@ -20,6 +20,7 @@ on:
       - '.github/triggers/deploy-customer-platform-3147'
       - '.github/triggers/deploy-customer-platform-3148'
       - '.github/triggers/deploy-customer-platform-3149'
+      - '.github/triggers/deploy-customer-platform-3150'
 
 permissions:
   contents: read
