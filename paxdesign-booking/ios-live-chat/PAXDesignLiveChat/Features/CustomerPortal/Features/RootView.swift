@@ -15,7 +15,7 @@ struct CustomerPortalShellView: View {
                 CustomerPushService.shared.configure(api: customerSession.api)
                 await CustomerPushService.shared.requestAuthorizationAndRegister()
             }
-            .onChange(of: deepLinks.pending) { _, link in
+            .onChange(of: deepLinks.pending) { link in
                 guard let link else { return }
                 deepLinks.pending = nil
                 _ = link.path
@@ -57,6 +57,10 @@ struct CustomerMoreView: View {
                 NavigationLink(String(localized: "Conversations")) { CustomerConversationsView() }
                 NavigationLink(String(localized: "Account")) { CustomerProfileView() }
                 NavigationLink(String(localized: "Settings")) { CustomerSettingsView() }
+                Section(String(localized: "About")) {
+                    LabeledContent(String(localized: "Version"), value: PAXAppInfo.fullVersion)
+                    NavigationLink(String(localized: "About this app")) { AboutView() }
+                }
             }
             .navigationTitle(String(localized: "More"))
         }

@@ -207,7 +207,7 @@ struct CustomerChatView: View {
                         }
                         .padding()
                     }
-                    .onChange(of: displayMessages.count) { _, _ in scrollToBottom(proxy: proxy) }
+                    .onChange(of: displayMessages.count) { _ in scrollToBottom(proxy: proxy) }
                 }
                 Divider()
                 HStack {

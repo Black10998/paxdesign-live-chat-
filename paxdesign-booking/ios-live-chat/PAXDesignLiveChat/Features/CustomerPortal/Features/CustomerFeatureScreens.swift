@@ -381,6 +381,7 @@ struct CustomerNotificationsView: View {
 struct CustomerSettingsView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     @EnvironmentObject private var auth: CustomerAuthStore
+    @EnvironmentObject private var appAuth: AuthStore
     @State private var chatPref = true
     @State private var projectPref = true
     @State private var orderPref = true
@@ -425,7 +426,7 @@ struct CustomerSettingsView: View {
                     Task {
                         do {
                             try await api.deleteAccount(password: deletePassword)
-                            auth.logout()
+                            appAuth.logout()
                         } catch {
                             message = error.localizedDescription
                         }
