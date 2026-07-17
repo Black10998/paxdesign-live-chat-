@@ -353,7 +353,7 @@ class PAXdesign_Chat {
         }
 
         if (empty($validated)) {
-            return new WP_Error('empty', 'Keine gültige Nachricht.');
+            return new WP_Error('empty', 'Keine gültige Nachricht.', array('status' => 400));
         }
 
         return $validated;
@@ -739,7 +739,12 @@ class PAXdesign_Chat {
         $messages = $this->build_openai_messages_from_session($session_id);
         $validated = $this->validate_messages($messages);
         if (is_wp_error($validated)) {
-            return $validated;
+            $validated = $this->validate_messages(array(
+                array('role' => 'user', 'content' => $user_message),
+            ));
+            if (is_wp_error($validated)) {
+                return $validated;
+            }
         }
 
         $worker_url = trim(get_option('paxdesign_chat_worker_url', ''));

@@ -1,4 +1,4 @@
-name: Deploy customer platform 3.136.3
+name: Deploy customer platform 3.136.4
 
 on:
   workflow_dispatch:
@@ -124,7 +124,7 @@ jobs:
       - name: Post-deploy customer platform verification
         env:
           PAX_SITE: https://paxdesign.at
-          PAX_EXPECTED_BOOKING: "3.136.3"
+          PAX_EXPECTED_BOOKING: "3.136.4"
           PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
           PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
         run: |
