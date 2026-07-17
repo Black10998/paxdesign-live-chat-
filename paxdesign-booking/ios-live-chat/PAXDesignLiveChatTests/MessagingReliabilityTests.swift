@@ -275,14 +275,18 @@ final class MessagingReliabilityTests: XCTestCase {
 
     func testCoalescedReadsAllowParallelInflight() async {
         await NetworkCircuitBreaker.shared.reset()
-        XCTAssertNoThrow(try await NetworkCircuitBreaker.shared.recordRequestStart(
-            endpoint: "team-contacts",
-            method: "GET"
-        ))
-        XCTAssertNoThrow(try await NetworkCircuitBreaker.shared.recordRequestStart(
-            endpoint: "team-contacts",
-            method: "GET"
-        ))
+        do {
+            try await NetworkCircuitBreaker.shared.recordRequestStart(
+                endpoint: "team-contacts",
+                method: "GET"
+            )
+            try await NetworkCircuitBreaker.shared.recordRequestStart(
+                endpoint: "team-contacts",
+                method: "GET"
+            )
+        } catch {
+            XCTFail("Unexpected throw: \(error)")
+        }
         await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "team-contacts")
         await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "team-contacts")
     }
