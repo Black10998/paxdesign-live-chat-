@@ -27,8 +27,10 @@ BUNDLE_ID = os.environ.get("APP_BUNDLE_ID", "at.paxdesign.customerportal").strip
 GITHUB_OUTPUT = os.environ.get("GITHUB_OUTPUT", "")
 
 
-def bundle_identifier(bundle: dict[str, Any]) -> str:
-    return (bundle.get("attributes") or {}).get("identifier", "")
+def app_bundle_identifier(client: ASCClient, app_id: str) -> str:
+    payload = client.get(f"/apps/{app_id}/bundleId")
+    data = payload.get("data") or {}
+    return (data.get("attributes") or {}).get("identifier", "?")
 
 
 def list_apps_with_bundle_ids(client: ASCClient) -> list[tuple[str, str, str]]:
@@ -36,22 +38,14 @@ def list_apps_with_bundle_ids(client: ASCClient) -> list[tuple[str, str, str]]:
     rows: list[tuple[str, str, str]] = []
     cursor = ""
     while True:
-        params: dict[str, str] = {"limit": "200", "include": "bundleId"}
+        params: dict[str, str] = {"limit": "200"}
         if cursor:
             params["cursor"] = cursor
         payload = client.get("/apps", **params)
-        apps = payload.get("data") or []
-        included = {
-            item["id"]: item
-            for item in (payload.get("included") or [])
-            if item.get("type") == "bundleIds"
-        }
-        for app in apps:
+        for app in payload.get("data") or []:
             app_id = app.get("id", "")
             name = (app.get("attributes") or {}).get("name", app_id)
-            rel = (app.get("relationships") or {}).get("bundleId", {}).get("data") or {}
-            bundle = included.get(rel.get("id", ""), {})
-            identifier = bundle_identifier(bundle) if bundle else "?"
+            identifier = app_bundle_identifier(client, app_id)
             rows.append((app_id, name, identifier))
         cursor = (payload.get("meta") or {}).get("paging", {}).get("nextCursor") or ""
         if not cursor:
@@ -60,12 +54,11 @@ def list_apps_with_bundle_ids(client: ASCClient) -> list[tuple[str, str, str]]:
 
 
 def find_app_by_bundle(client: ASCClient, bundle_id: str) -> dict[str, Any] | None:
-    payload = client.get("/apps", **{"filter[bundleId]": bundle_id, "limit": "1", "include": "bundleId"})
+    payload = client.get("/apps", **{"filter[bundleId]": bundle_id, "limit": "1"})
     data = payload.get("data") or []
     if data:
         return data[0]
 
-    # Fallback: scan visible apps (handles ASC filter edge cases and prefix collisions).
     for apple_id, _name, identifier in list_apps_with_bundle_ids(client):
         if identifier == bundle_id:
             return {"id": apple_id, "attributes": {"name": _name}}
