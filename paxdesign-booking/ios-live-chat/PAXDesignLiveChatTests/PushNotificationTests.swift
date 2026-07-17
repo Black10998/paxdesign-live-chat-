@@ -1,6 +1,7 @@
 import XCTest
 @testable import PAXDesignLiveChat
 
+@MainActor
 final class PushNotificationTests: XCTestCase {
     func testParseNotificationPayload() {
         let payload: [AnyHashable: Any] = [
