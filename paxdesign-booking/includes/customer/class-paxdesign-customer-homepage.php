@@ -67,10 +67,12 @@ class PAXdesign_Customer_Homepage {
         if (class_exists('PAXdesign_Customer_Portfolio')) {
             foreach (PAXdesign_Customer_Portfolio::list_items(8) as $item) {
                 $portfolio_items[] = array(
-                    'slug'      => (string) ($item['slug'] ?? ''),
-                    'title'     => (string) ($item['title'] ?? ''),
-                    'excerpt'   => (string) ($item['excerpt'] ?? ''),
-                    'image_url' => (string) ($item['image_url'] ?? ''),
+                    'slug'            => (string) ($item['slug'] ?? ''),
+                    'title'           => (string) ($item['title'] ?? ''),
+                    'excerpt'         => (string) ($item['excerpt'] ?? ''),
+                    'image_url'       => (string) ($item['image_url'] ?? ''),
+                    'category_slugs'  => isset($item['category_slugs']) && is_array($item['category_slugs']) ? array_values($item['category_slugs']) : array(),
+                    'category_names'  => isset($item['category_names']) && is_array($item['category_names']) ? array_values($item['category_names']) : array(),
                 );
             }
         }

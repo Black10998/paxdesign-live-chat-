@@ -28,13 +28,14 @@ struct CustomerAboutView: View {
                 PAXContentUnavailableView(String(localized: "Unable to load"), systemImage: "exclamationmark.triangle", description: Text(error))
                     .padding(.top, 40)
             } else if isLoading {
-                ProgressView().padding(.top, 48)
+                CustomerAboutSkeleton()
+                    .padding(.top, 8)
             }
         }
-        .background(ServicesCatalogTheme.background.ignoresSafeArea())
+        .background(theme.background.ignoresSafeArea())
         .navigationTitle(about?.hero.title ?? String(localized: "About"))
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(ServicesCatalogTheme.background, for: .navigationBar)
+        .toolbarBackground(theme.background, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .refreshable { await load(force: true) }
         .task(id: language.rawValue) { await load(force: false) }
@@ -46,12 +47,12 @@ struct CustomerAboutView: View {
         VStack(spacing: 10) {
             Text(hero.title)
                 .font(.title2.weight(.bold))
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
                 .multilineTextAlignment(.center)
             if !hero.subtitle.isEmpty {
                 Text(hero.subtitle)
                     .font(.body)
-                    .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                    .foregroundStyle(theme.textSecondary)
                     .multilineTextAlignment(.center)
             }
         }
@@ -62,29 +63,29 @@ struct CustomerAboutView: View {
         VStack(spacing: 12) {
             Text(intro.heading)
                 .font(.title3.weight(.semibold))
-                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
             Text(intro.brand)
                 .font(.system(size: 32, weight: .heavy))
                 .multilineTextAlignment(.center)
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
             HStack(spacing: 8) {
                 Text(intro.since_label)
-                    .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                    .foregroundStyle(theme.textSecondary)
                 Text(intro.since)
-                    .foregroundStyle(ServicesCatalogTheme.accent)
+                    .foregroundStyle(theme.accent)
                     .fontWeight(.bold)
             }
             Text(intro.about_label)
                 .font(.headline)
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
             Text(intro.about_text)
                 .font(.body)
-                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
                 .multilineTextAlignment(.center)
         }
         .padding(24)
         .frame(maxWidth: .infinity)
-        .background(ServicesCatalogTheme.panel)
+        .background(theme.panel)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .padding(.horizontal, 20)
     }
@@ -93,22 +94,22 @@ struct CustomerAboutView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text(values.title)
                 .font(.title3.weight(.bold))
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
                 .padding(.horizontal, 20)
 
             ForEach(values.items) { item in
                 VStack(alignment: .leading, spacing: 8) {
                     Text(item.title)
                         .font(.headline)
-                        .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                        .foregroundStyle(theme.textPrimary)
                     Text(item.text)
                         .font(.subheadline)
-                        .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                        .foregroundStyle(theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(ServicesCatalogTheme.cardBackground)
+                .background(theme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .padding(.horizontal, 20)
             }
@@ -121,15 +122,15 @@ struct CustomerAboutView: View {
                 VStack(spacing: 6) {
                     Text("\(stat.value)\(stat.suffix)")
                         .font(.title.weight(.heavy))
-                        .foregroundStyle(ServicesCatalogTheme.accent)
+                        .foregroundStyle(theme.accent)
                     Text(stat.label)
                         .font(.caption)
-                        .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                        .foregroundStyle(theme.textSecondary)
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
-                .background(ServicesCatalogTheme.cardBackground)
+                .background(theme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
         }
@@ -140,22 +141,22 @@ struct CustomerAboutView: View {
         VStack(spacing: 16) {
             Text(awards.title)
                 .font(.title3.weight(.bold))
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
                 .multilineTextAlignment(.center)
             Text(awards.text)
                 .font(.body)
-                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
                 .multilineTextAlignment(.center)
             Text("★★★★★")
                 .font(.title3)
-                .foregroundStyle(ServicesCatalogTheme.accent)
+                .foregroundStyle(theme.accent)
             Text(awards.rating_label)
                 .font(.headline)
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
         }
         .padding(24)
         .frame(maxWidth: .infinity)
-        .background(ServicesCatalogTheme.panel)
+        .background(theme.panel)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .padding(.horizontal, 20)
     }
@@ -164,7 +165,7 @@ struct CustomerAboutView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(String(localized: "Gallery"))
                 .font(.title3.weight(.bold))
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
                 .padding(.horizontal, 20)
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -226,13 +227,14 @@ struct CustomerContactView: View {
                 PAXContentUnavailableView(String(localized: "Unable to load"), systemImage: "exclamationmark.triangle", description: Text(error))
                     .padding(.top, 40)
             } else if isLoading {
-                ProgressView().padding(.top, 48)
+                CustomerContactSkeleton()
+                    .padding(.top, 8)
             }
         }
-        .background(ServicesCatalogTheme.background.ignoresSafeArea())
+        .background(theme.background.ignoresSafeArea())
         .navigationTitle(String(localized: "Contact"))
         .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(ServicesCatalogTheme.background, for: .navigationBar)
+        .toolbarBackground(theme.background, for: .navigationBar)
         .toolbarColorScheme(.dark, for: .navigationBar)
         .refreshable { await load(force: true) }
         .task(id: language.rawValue) { await load(force: false) }
@@ -250,14 +252,14 @@ struct CustomerContactView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text(hero.title)
                 .font(.title2.weight(.bold))
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
             Text(hero.subtitle)
                 .font(.body)
-                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ServicesCatalogTheme.panel)
+        .background(theme.panel)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .padding(.horizontal)
     }
@@ -289,15 +291,15 @@ struct CustomerContactView: View {
             HStack(alignment: .top, spacing: 14) {
                 Image(systemName: icon)
                     .font(.title3)
-                    .foregroundStyle(ServicesCatalogTheme.accent)
+                    .foregroundStyle(theme.accent)
                     .frame(width: 28)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                        .foregroundStyle(theme.textSecondary)
                     Text(value)
                         .font(.body)
-                        .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                        .foregroundStyle(theme.textPrimary)
                         .multilineTextAlignment(.leading)
                 }
                 Spacer()
@@ -306,7 +308,7 @@ struct CustomerContactView: View {
                     .foregroundStyle(.tertiary)
             }
             .padding(16)
-            .background(ServicesCatalogTheme.cardBackground)
+            .background(theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .buttonStyle(.plain)
@@ -316,22 +318,22 @@ struct CustomerContactView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("FAQ")
                 .font(.title3.weight(.bold))
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
                 .padding(.horizontal)
 
             ForEach(items) { item in
                 DisclosureGroup {
                     Text(item.answer)
                         .font(.subheadline)
-                        .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                        .foregroundStyle(theme.textSecondary)
                         .padding(.top, 8)
                 } label: {
                     Text(item.question)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                        .foregroundStyle(theme.textPrimary)
                 }
                 .padding(16)
-                .background(ServicesCatalogTheme.cardBackground)
+                .background(theme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .padding(.horizontal)
             }
@@ -368,7 +370,7 @@ private struct HomepageContactPrimaryButtonStyle: ButtonStyle {
             .foregroundStyle(.black)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(ServicesCatalogTheme.accent.opacity(configuration.isPressed ? 0.85 : 1))
+            .background(theme.accent.opacity(configuration.isPressed ? 0.85 : 1))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }
@@ -377,10 +379,10 @@ private struct HomepageContactSecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.headline)
-            .foregroundStyle(ServicesCatalogTheme.textPrimary)
+            .foregroundStyle(theme.textPrimary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(ServicesCatalogTheme.cardBackground)
+            .background(theme.cardBackground)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

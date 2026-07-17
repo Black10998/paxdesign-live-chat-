@@ -117,7 +117,7 @@ struct CustomerChatBubble: View {
                 switch phase {
                 case .success(let image): image.resizable().scaledToFit()
                 case .failure: Image(systemName: "photo").foregroundStyle(.secondary)
-                default: ProgressView()
+                default: SkeletonBlock(height: 120, cornerRadius: 12).frame(maxWidth: 220)
                 }
             }
             .frame(maxWidth: 220)

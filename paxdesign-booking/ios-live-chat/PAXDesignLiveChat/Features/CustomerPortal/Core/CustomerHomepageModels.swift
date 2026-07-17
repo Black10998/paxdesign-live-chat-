@@ -62,6 +62,8 @@ struct CustomerHomepageResponse: Decodable {
         let title: String
         let excerpt: String?
         let image_url: String?
+        let category_slugs: [String]?
+        let category_names: [String]?
     }
 
     struct AboutTeaser: Decodable {

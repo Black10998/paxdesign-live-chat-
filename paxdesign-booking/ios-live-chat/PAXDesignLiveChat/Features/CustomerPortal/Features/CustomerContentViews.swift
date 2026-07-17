@@ -13,8 +13,8 @@ struct CustomerDiscoverView: View {
         NavigationStack {
             ScrollView {
                 if isLoading && navigation == nil {
-                    ProgressView(String(localized: "Loading…"))
-                        .padding(.top, 48)
+                    CustomerNativePageSkeleton()
+                        .padding(.top, 8)
                 } else if let error {
                     PAXContentUnavailableView(
                         String(localized: "Content unavailable"),
@@ -285,7 +285,8 @@ struct CustomerNativePageView: View {
                 PAXContentUnavailableView(String(localized: "Unable to load"), systemImage: "exclamationmark.triangle", description: Text(error))
                     .padding(.top, 40)
             } else {
-                ProgressView().padding(.top, 48)
+                CustomerNativePageSkeleton()
+                    .padding(.top, 8)
             }
         }
         .background(PAXBackground())
@@ -316,7 +317,7 @@ struct CustomerServicesCatalogView: View {
     var body: some View {
         Group {
             if isLoading && response == nil {
-                ProgressView(String(localized: "Loading services…"))
+                CustomerServicesCatalogSkeleton()
             } else if let error {
                 PAXContentUnavailableView(String(localized: "Services unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
             } else if let response {

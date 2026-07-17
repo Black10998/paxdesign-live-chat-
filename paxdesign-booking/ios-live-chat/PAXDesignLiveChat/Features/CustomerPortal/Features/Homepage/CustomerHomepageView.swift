@@ -3,6 +3,7 @@ import SwiftUI
 struct CustomerHomepageView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
+    @Environment(\.marketingTheme) private var theme
     @StateObject private var network = CustomerNetworkMonitor.shared
 
     @State private var homepage: CustomerHomepageResponse?
@@ -20,8 +21,7 @@ struct CustomerHomepageView: View {
         NavigationStack {
             Group {
                 if isLoading && homepage == nil {
-                    ProgressView(String(localized: "Loading…"))
-                        .tint(ServicesCatalogTheme.accent)
+                    CustomerHomepageSkeleton()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error, homepage == nil {
                     homepageError(error)
@@ -29,10 +29,9 @@ struct CustomerHomepageView: View {
                     homepageScroll(homepage)
                 }
             }
-            .background(ServicesCatalogTheme.background.ignoresSafeArea())
+            .background(theme.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(ServicesCatalogTheme.background, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .refreshable { await load(force: true) }
             .task(id: language.rawValue) { await load(force: false) }
             .sheet(isPresented: $showRequestSheet) {
@@ -42,7 +41,26 @@ struct CustomerHomepageView: View {
                 }
             }
         }
-        .preferredColorScheme(.dark)
+    }
+
+    private var heroHeight: CGFloat {
+        min(max(UIScreen.main.bounds.width * 0.88, 340), 440)
+    }
+
+    private func filteredPortfolioItems(_ data: CustomerHomepageResponse) -> [CustomerHomepageResponse.PortfolioItem] {
+        if selectedPortfolioCategory == "All" || selectedPortfolioCategory.isEmpty {
+            return data.portfolio_items
+        }
+        let needle = selectedPortfolioCategory.lowercased()
+        return data.portfolio_items.filter { item in
+            if item.category_names?.contains(where: { $0.lowercased() == needle || $0.lowercased().contains(needle) }) == true {
+                return true
+            }
+            if item.category_slugs?.contains(where: { $0.lowercased() == needle || $0.lowercased().contains(needle) }) == true {
+                return true
+            }
+            return false
+        }
     }
 
     @ViewBuilder
@@ -69,57 +87,67 @@ struct CustomerHomepageView: View {
 
     private func heroSection(_ hero: CustomerHomepageResponse.Hero) -> some View {
         ZStack(alignment: .bottom) {
-            if let urlString = hero.image_url, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
-                    if case .success(let image) = phase {
-                        image.resizable().scaledToFill()
-                    } else {
-                        ServicesCatalogTheme.background
-                    }
-                }
-                .frame(height: 420)
-                .clipped()
-                .overlay(
-                    LinearGradient(
-                        colors: [.black.opacity(0.2), .black.opacity(0.75)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-            } else {
-                ServicesCatalogTheme.background.frame(height: 420)
-            }
-
-            VStack(spacing: 18) {
-                HStack(spacing: 12) {
-                    ForEach(Array(hero.tags.enumerated()), id: \.offset) { index, tag in
-                        if index > 0 {
-                            Text("·").foregroundStyle(ServicesCatalogTheme.accent.opacity(0.72))
+            Group {
+                if let urlString = hero.image_url, let url = URL(string: urlString) {
+                    AsyncImage(url: url) { phase in
+                        if case .success(let image) = phase {
+                            image.resizable().scaledToFill()
+                        } else {
+                            theme.background
                         }
+                    }
+                } else {
+                    theme.background
+                }
+            }
+            .frame(height: heroHeight)
+            .frame(maxWidth: .infinity)
+            .clipped()
+            .overlay(
+                LinearGradient(
+                    colors: [theme.heroGradientTop, theme.heroGradientBottom],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+
+            VStack(spacing: 12) {
+                FlowLayout(spacing: 8) {
+                    ForEach(Array(hero.tags.enumerated()), id: \.offset) { _, tag in
                         Text(tag.uppercased())
-                            .font(.system(size: 11, weight: .semibold))
-                            .tracking(1.4)
-                            .foregroundStyle(Color.white.opacity(0.72))
+                            .font(.system(size: 10, weight: .semibold))
+                            .tracking(1.2)
+                            .foregroundStyle(theme.heroTagColor)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.black.opacity(0.28))
+                            .clipShape(Capsule())
                     }
                 }
-                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.horizontal, 20)
 
                 Text(hero.lead)
-                    .font(.system(size: 34, weight: .bold))
+                    .font(.system(size: 28, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.white)
+                    .minimumScaleFactor(0.75)
+                    .lineLimit(4)
                     .padding(.horizontal, 20)
 
                 Text(hero.mid)
-                    .font(.body)
+                    .font(.subheadline)
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(Color.white.opacity(0.82))
+                    .foregroundStyle(Color.white.opacity(0.86))
+                    .lineLimit(5)
+                    .minimumScaleFactor(0.85)
                     .padding(.horizontal, 24)
 
                 Text(hero.sub)
-                    .font(.subheadline)
+                    .font(.footnote)
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(Color.white.opacity(0.62))
+                    .foregroundStyle(Color.white.opacity(0.68))
+                    .lineLimit(3)
                     .padding(.horizontal, 28)
 
                 HStack(spacing: 10) {
@@ -133,11 +161,13 @@ struct CustomerHomepageView: View {
                     }
                     .buttonStyle(HomepageSecondaryButtonStyle())
                 }
-                .padding(.top, 8)
+                .padding(.top, 4)
             }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 36)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 28)
+            .padding(.top, 8)
         }
+        .frame(height: heroHeight)
     }
 
     private func serviceCarouselSection(_ cards: [CustomerHomepageResponse.ServiceCard]) -> some View {
@@ -162,12 +192,12 @@ struct CustomerHomepageView: View {
             VStack(spacing: 8) {
                 Text(section.title)
                     .font(.system(size: 28, weight: .heavy))
-                    .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                    .foregroundStyle(theme.textPrimary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
                 Text(section.subtitle)
                     .font(.body)
-                    .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                    .foregroundStyle(theme.textSecondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
             }
@@ -177,20 +207,20 @@ struct CustomerHomepageView: View {
                 HStack(alignment: .top, spacing: 16) {
                     Text("\(item.number)")
                         .font(.title2.weight(.bold))
-                        .foregroundStyle(ServicesCatalogTheme.accent)
+                        .foregroundStyle(theme.accent)
                         .frame(width: 36)
                     VStack(alignment: .leading, spacing: 6) {
                         Text(item.title)
                             .font(.headline)
-                            .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                            .foregroundStyle(theme.textPrimary)
                         Text(item.text)
                             .font(.subheadline)
-                            .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                            .foregroundStyle(theme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .padding(20)
-                .background(ServicesCatalogTheme.cardBackground)
+                .background(theme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .padding(.horizontal, 20)
             }
@@ -203,11 +233,11 @@ struct CustomerHomepageView: View {
             VStack(spacing: 8) {
                 Text(data.portfolio_section.title)
                     .font(.system(size: 24, weight: .heavy))
-                    .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                    .foregroundStyle(theme.textPrimary)
                     .frame(maxWidth: .infinity)
                 Text(data.portfolio_section.subtitle)
                     .font(.body)
-                    .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                    .foregroundStyle(theme.textSecondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
             }
@@ -220,8 +250,8 @@ struct CustomerHomepageView: View {
                             .font(.caption.weight(.semibold))
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
-                            .background(selectedPortfolioCategory == category ? ServicesCatalogTheme.accent : ServicesCatalogTheme.panel)
-                            .foregroundStyle(selectedPortfolioCategory == category ? Color.black : ServicesCatalogTheme.textPrimary)
+                            .background(selectedPortfolioCategory == category ? theme.accent : theme.panel)
+                            .foregroundStyle(selectedPortfolioCategory == category ? Color.black : theme.textPrimary)
                             .clipShape(Capsule())
                     }
                 }
@@ -230,7 +260,7 @@ struct CustomerHomepageView: View {
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 16) {
-                    ForEach(data.portfolio_items) { item in
+                    ForEach(filteredPortfolioItems(data)) { item in
                         NavigationLink {
                             CustomerPortfolioDetailView(slug: item.slug)
                         } label: {
@@ -255,40 +285,40 @@ struct CustomerHomepageView: View {
         VStack(spacing: 20) {
             Text(about.title)
                 .font(.title2.weight(.bold))
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
                 .multilineTextAlignment(.center)
             Text(about.subtitle)
                 .font(.body)
-                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 20)
 
             VStack(spacing: 12) {
                 Text(about.heading)
                     .font(.title3.weight(.semibold))
-                    .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                    .foregroundStyle(theme.textSecondary)
                 Text(about.brand.replacingOccurrences(of: "\n", with: "\n"))
                     .font(.system(size: 32, weight: .heavy))
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                    .foregroundStyle(theme.textPrimary)
                 HStack(spacing: 8) {
                     Text(about.since_label)
-                        .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                        .foregroundStyle(theme.textSecondary)
                     Text(about.since)
-                        .foregroundStyle(ServicesCatalogTheme.accent)
+                        .foregroundStyle(theme.accent)
                         .fontWeight(.bold)
                 }
                 Text(about.about_label)
                     .font(.headline)
-                    .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                    .foregroundStyle(theme.textPrimary)
                 Text(about.about_text)
                     .font(.body)
-                    .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                    .foregroundStyle(theme.textSecondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
             }
             .padding(24)
-            .background(ServicesCatalogTheme.panel)
+            .background(theme.panel)
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .padding(.horizontal, 20)
 
@@ -307,15 +337,15 @@ struct CustomerHomepageView: View {
                 VStack(spacing: 6) {
                     Text("\(stat.value)\(stat.suffix)")
                         .font(.title.weight(.heavy))
-                        .foregroundStyle(ServicesCatalogTheme.accent)
+                        .foregroundStyle(theme.accent)
                     Text(stat.label)
                         .font(.caption)
-                        .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                        .foregroundStyle(theme.textSecondary)
                         .multilineTextAlignment(.center)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
-                .background(ServicesCatalogTheme.cardBackground)
+                .background(theme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
         }
@@ -327,23 +357,23 @@ struct CustomerHomepageView: View {
         VStack(spacing: 16) {
             Text(awards.title)
                 .font(.title2.weight(.bold))
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
                 .multilineTextAlignment(.center)
             Text(awards.text)
                 .font(.body)
-                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
             Text("★★★★★")
                 .font(.title3)
-                .foregroundStyle(ServicesCatalogTheme.accent)
+                .foregroundStyle(theme.accent)
             Text(awards.rating_label)
                 .font(.headline)
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
         }
         .padding(24)
         .frame(maxWidth: .infinity)
-        .background(ServicesCatalogTheme.panel)
+        .background(theme.panel)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .padding(.horizontal, 20)
         .padding(.vertical, 32)
@@ -353,7 +383,7 @@ struct CustomerHomepageView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text(String(localized: "What clients say"))
                 .font(.title2.weight(.bold))
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
                 .padding(.horizontal, 20)
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -361,23 +391,23 @@ struct CustomerHomepageView: View {
                     ForEach(items) { item in
                         VStack(alignment: .leading, spacing: 12) {
                             Text(String(repeating: "★", count: max(0, min(item.stars, 5))))
-                                .foregroundStyle(ServicesCatalogTheme.accent)
+                                .foregroundStyle(theme.accent)
                             Text(item.quote)
                                 .font(.subheadline)
-                                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                                .foregroundStyle(theme.textSecondary)
                                 .fixedSize(horizontal: false, vertical: true)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.name)
                                     .font(.headline)
-                                    .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                                    .foregroundStyle(theme.textPrimary)
                                 Text(item.role)
                                     .font(.caption)
-                                    .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                                    .foregroundStyle(theme.textSecondary)
                             }
                         }
                         .padding(20)
                         .frame(width: 280, alignment: .leading)
-                        .background(ServicesCatalogTheme.cardBackground)
+                        .background(theme.cardBackground)
                         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
                 }
@@ -393,17 +423,17 @@ struct CustomerHomepageView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(feature.command)
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundStyle(ServicesCatalogTheme.accent)
+                        .foregroundStyle(theme.accent)
                     Text(feature.title)
                         .font(.subheadline.weight(.bold))
-                        .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                        .foregroundStyle(theme.textPrimary)
                     Text(feature.text)
                         .font(.caption)
-                        .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                        .foregroundStyle(theme.textSecondary)
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(ServicesCatalogTheme.cardBackground)
+                .background(theme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
         }
@@ -415,10 +445,10 @@ struct CustomerHomepageView: View {
         VStack(spacing: 24) {
             Text(process.title)
                 .font(.system(size: 24, weight: .heavy))
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
             Text(process.subtitle)
                 .font(.body)
-                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 20)
 
@@ -429,15 +459,15 @@ struct CustomerHomepageView: View {
                             .font(.caption.weight(.bold))
                             .foregroundStyle(Color.black)
                             .padding(8)
-                            .background(ServicesCatalogTheme.accent)
+                            .background(theme.accent)
                             .clipShape(Circle())
                         Text(step.title)
                             .font(.headline)
-                            .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                            .foregroundStyle(theme.textPrimary)
                     }
                     Text(step.text)
                         .font(.subheadline)
-                        .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                        .foregroundStyle(theme.textSecondary)
                     if let tags = step.tags {
                         FlowLayout(spacing: 8) {
                             ForEach(tags, id: \.self) { tag in
@@ -445,7 +475,7 @@ struct CustomerHomepageView: View {
                                     .font(.caption2.weight(.semibold))
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 5)
-                                    .background(ServicesCatalogTheme.panel)
+                                    .background(theme.panel)
                                     .clipShape(Capsule())
                             }
                         }
@@ -453,7 +483,7 @@ struct CustomerHomepageView: View {
                 }
                 .padding(20)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(ServicesCatalogTheme.cardBackground)
+                .background(theme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .padding(.horizontal, 20)
             }
@@ -465,10 +495,10 @@ struct CustomerHomepageView: View {
         VStack(spacing: 16) {
             Text(section.title)
                 .font(.system(size: 24, weight: .heavy))
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
             Text(section.subtitle)
                 .font(.body)
-                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 20)
             NavigationLink(section.cta) {
@@ -485,13 +515,13 @@ struct CustomerHomepageView: View {
         VStack(spacing: 16) {
             Image(systemName: network.isConnected ? "exclamationmark.triangle" : "wifi.slash")
                 .font(.largeTitle)
-                .foregroundStyle(ServicesCatalogTheme.accent)
+                .foregroundStyle(theme.accent)
             Text(message)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
             Button(String(localized: "Try again")) { Task { await load(force: true) } }
                 .buttonStyle(.borderedProminent)
-                .tint(ServicesCatalogTheme.accent)
+                .tint(theme.accent)
         }
         .padding(32)
     }
@@ -509,6 +539,7 @@ struct CustomerHomepageView: View {
 }
 
 private struct HomepageServiceCarouselCard: View {
+    @Environment(\.marketingTheme) private var theme
     let card: CustomerHomepageResponse.ServiceCard
     let onBook: () -> Void
 
@@ -520,7 +551,7 @@ private struct HomepageServiceCarouselCard: View {
                         .font(.caption2.weight(.heavy))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
-                        .background(ServicesCatalogTheme.accent)
+                        .background(theme.accent)
                         .foregroundStyle(.black)
                         .clipShape(Capsule())
                 }
@@ -528,23 +559,24 @@ private struct HomepageServiceCarouselCard: View {
             }
             Text(card.title)
                 .font(.title3.weight(.bold))
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
             Text(card.description)
                 .font(.subheadline)
-                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
                 .lineLimit(3)
             Button(String(localized: "Book appointment"), action: onBook)
                 .font(.caption.weight(.bold))
-                .foregroundStyle(ServicesCatalogTheme.accent)
+                .foregroundStyle(theme.accent)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(ServicesCatalogTheme.cardBackground)
+        .background(theme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 }
 
 private struct HomepagePortfolioCard: View {
+    @Environment(\.marketingTheme) private var theme
     let item: CustomerHomepageResponse.PortfolioItem
 
     var body: some View {
@@ -562,23 +594,25 @@ private struct HomepagePortfolioCard: View {
             }
             Text(item.title)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
                 .padding(12)
                 .frame(width: 260, alignment: .leading)
         }
-        .background(ServicesCatalogTheme.cardBackground)
+        .background(theme.cardBackground)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 }
 
 private struct HomepagePrimaryButtonStyle: ButtonStyle {
+    @Environment(\.marketingTheme) private var theme
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.subheadline.weight(.bold))
-            .foregroundStyle(.black)
+            .foregroundStyle(theme.accentOnAccent)
             .padding(.horizontal, 20)
             .padding(.vertical, 12)
-            .background(ServicesCatalogTheme.accent.opacity(configuration.isPressed ? 0.85 : 1))
+            .background(theme.accent.opacity(configuration.isPressed ? 0.85 : 1))
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 }

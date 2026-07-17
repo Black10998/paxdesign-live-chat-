@@ -15,7 +15,7 @@ struct CustomerPortfolioListView: View {
     var body: some View {
         Group {
             if isLoading && response == nil {
-                ProgressView(String(localized: "Loading portfolio…"))
+                CustomerPortfolioListSkeleton()
             } else if let error {
                 PAXContentUnavailableView(String(localized: "Portfolio unavailable"), systemImage: "photo.on.rectangle", description: Text(error))
             } else if filteredItems.isEmpty {
@@ -241,7 +241,8 @@ struct CustomerPortfolioDetailView: View {
                 PAXContentUnavailableView(String(localized: "Unable to load project"), systemImage: "exclamationmark.triangle", description: Text(error))
                     .padding(.top, 40)
             } else {
-                ProgressView().padding(.top, 48)
+                CustomerPortfolioDetailSkeleton()
+                    .padding(.top, 8)
             }
         }
         .background(PAXBackground())

@@ -9,7 +9,7 @@ struct CustomerConversationsView: View {
     var body: some View {
         Group {
             if isLoading && conversations.isEmpty && error == nil {
-                ProgressView(String(localized: "Loading conversations…"))
+                CustomerConversationsSkeleton()
             } else if let error {
                 PAXContentUnavailableView(String(localized: "Conversations unavailable"), systemImage: "message", description: Text(error))
             } else if conversations.isEmpty {

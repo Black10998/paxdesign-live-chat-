@@ -61,8 +61,8 @@ struct CustomerDashboardView: View {
         NavigationStack {
             ScrollView {
                 if isLoading && dashboard == nil {
-                    ProgressView(String(localized: "Loading dashboard…"))
-                        .padding(.top, 48)
+                    CustomerDashboardSkeleton()
+                        .padding(.top, 8)
                 } else if let error {
                     PAXContentUnavailableView(String(localized: "Unable to load"), systemImage: "wifi.exclamationmark", description: Text(error))
                         .padding(.top, 32)
@@ -329,9 +329,8 @@ struct CustomerChatView: View {
                     ScrollViewReader { proxy in
                         ScrollView {
                             if isLoading && displayMessages.isEmpty {
-                                ProgressView(String(localized: "Loading chat…"))
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.top, 48)
+                                CustomerChatSkeleton()
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                             } else if displayMessages.isEmpty && error == nil {
                                 CustomerChatEmptyState(isAI: !isHumanQueue)
                                     .padding(.top, 32)
@@ -704,7 +703,8 @@ struct CustomerServiceDetailView: View {
                 PAXContentUnavailableView(String(localized: "Service unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
                     .padding(.top, 40)
             } else {
-                ProgressView().padding(.top, 40)
+                CustomerDetailScrollSkeleton()
+                    .padding(.top, 8)
             }
         }
         .background(PAXBackground())

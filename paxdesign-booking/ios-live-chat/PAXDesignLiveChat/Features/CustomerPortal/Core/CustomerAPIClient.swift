@@ -245,6 +245,29 @@ final class CustomerAPIClient: ObservableObject {
         return try await get("/content/contact?lang=\(normalized)", as: CustomerContactResponse.self)
     }
 
+    func fetchLegalPage(slug: String, lang: String) async throws -> CustomerLegalPageResponse {
+        let encoded = slug.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? slug
+        let normalized = lang.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? lang
+        return try await get("/content/legal/\(encoded)?lang=\(normalized)", as: CustomerLegalPageResponse.self)
+    }
+
+    func uploadProfileAvatar(imageData: Data, filename: String = "avatar.jpg", mime: String = "image/jpeg") async throws -> CustomerProfileResponse {
+        struct AvatarUploadResponse: Decodable {
+            let success: Bool?
+            let profile: CustomerProfileResponse.Profile
+        }
+        let response = try await uploadMultipart(
+            path: "/customer/profile/avatar",
+            field: "avatar",
+            filename: filename,
+            mime: mime,
+            data: imageData,
+            fields: [:],
+            as: AvatarUploadResponse.self
+        )
+        return CustomerProfileResponse(profile: response.profile)
+    }
+
     func fetchContentPage(slug: String) async throws -> CustomerContentPage {
         let lang = Locale.current.language.languageCode?.identifier ?? "en"
         let encoded = slug.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? slug
@@ -548,7 +571,7 @@ enum CustomerAPIError: LocalizedError {
         case 401: return String(localized: "Please sign in again to continue.")
         case 403: return String(localized: "You don't have access to this content.")
         case 404: return String(localized: "This item is no longer available.")
-        case 409: return String(localized: "Your conversation was updated. Please try again.")
+        case 409: return String(localized: "This conversation is closed.")
         case 429: return String(localized: "Too many requests. Please wait a moment.")
         case 500...599: return String(localized: "The server is temporarily unavailable. Please try again.")
         default: return String(localized: "Something went wrong. Please try again.")

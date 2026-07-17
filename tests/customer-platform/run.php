@@ -66,6 +66,10 @@ cx_assert_true(strpos($ios_api, '/content/homepage') !== false, 'iOS client must
 cx_assert_true(strpos($ios_api, '/content/about') !== false, 'iOS client must call about endpoint');
 cx_assert_true(strpos($ios_api, '/content/contact') !== false, 'iOS client must call contact endpoint');
 cx_assert_true(strpos($ios_api, '/content/services-catalog') !== false, 'iOS client must call services catalog endpoint');
+
+$ios_skeleton = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios-live-chat/PAXDesignLiveChat/Features/CustomerPortal/Features/CustomerSkeletonLoading.swift');
+cx_assert_true(strpos($ios_skeleton, 'CustomerHomepageSkeleton') !== false, 'iOS must ship skeleton loading placeholders');
+cx_assert_true(strpos($ios_skeleton, 'skeletonShimmer') !== false, 'Skeleton shimmer modifier must exist');
 cx_assert_true(strpos($ios_api, '/customer/chat/stream') !== false, 'iOS client must call customer chat stream endpoint');
 cx_assert_true(strpos($ios_api, '/auth/register') !== false, 'iOS client must support auth registration');
 cx_assert_true(strpos($ios_api, 'endpointURL') !== false, 'iOS client must build REST URLs with endpointURL()');

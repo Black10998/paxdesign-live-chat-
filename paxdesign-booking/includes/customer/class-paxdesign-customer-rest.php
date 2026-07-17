@@ -37,6 +37,12 @@ class PAXdesign_Customer_REST {
             ),
         ));
 
+        register_rest_route(self::NS, '/customer/profile/avatar', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'upload_profile_avatar'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
         register_rest_route(self::NS, '/customer/settings', array(
             array(
                 'methods'             => WP_REST_Server::READABLE,
@@ -150,6 +156,12 @@ class PAXdesign_Customer_REST {
         register_rest_route(self::NS, '/content/contact', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'contact_page'),
+            'permission_callback' => '__return_true',
+        ));
+
+        register_rest_route(self::NS, '/content/legal/(?P<slug>[a-z0-9\-_]+)', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'legal_page'),
             'permission_callback' => '__return_true',
         ));
 
@@ -322,7 +334,27 @@ class PAXdesign_Customer_REST {
                 'email'        => $user->user_email,
                 'verified'     => PAXdesign_Customer_Auth::is_email_verified($uid),
                 'role'         => PAXdesign_Customer_Auth::resolve_portal_role($user),
+                'avatar_url'   => class_exists('PAXdesign_Customer_Avatar') ? PAXdesign_Customer_Avatar::url_for_user($uid) : '',
             ),
+        ));
+    }
+
+    public static function upload_profile_avatar(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $files = $request->get_file_params();
+        $file = isset($files['avatar']) ? $files['avatar'] : (isset($files['file']) ? $files['file'] : null);
+        if (!is_array($file)) {
+            return new WP_Error('missing_file', __('Avatar image is required.', 'paxdesign-booking'), array('status' => 400));
+        }
+        $result = PAXdesign_Customer_Avatar::upload_for_user($uid, $file);
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        $profile_response = self::get_profile();
+        $profile_data = $profile_response->get_data();
+        return rest_ensure_response(array(
+            'success' => true,
+            'profile' => isset($profile_data['profile']) ? $profile_data['profile'] : array(),
         ));
     }
 
@@ -471,6 +503,15 @@ class PAXdesign_Customer_REST {
     public static function contact_page(WP_REST_Request $request) {
         $lang = PAXdesign_Customer_Contact::normalize_language((string) $request->get_param('lang'));
         return rest_ensure_response(PAXdesign_Customer_Contact::payload($lang));
+    }
+
+    public static function legal_page(WP_REST_Request $request) {
+        $lang = PAXdesign_Customer_Legal::normalize_language((string) $request->get_param('lang'));
+        $payload = PAXdesign_Customer_Legal::payload((string) $request['slug'], $lang);
+        if (!$payload) {
+            return new WP_Error('not_found', __('Legal page not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        return rest_ensure_response($payload);
     }
 
     public static function content_page(WP_REST_Request $request) {

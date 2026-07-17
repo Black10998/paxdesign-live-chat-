@@ -3,6 +3,7 @@ import SwiftUI
 struct CustomerServicesCatalogScreen: View {
     @EnvironmentObject private var api: CustomerAPIClient
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
+    @Environment(\.marketingTheme) private var theme
     @StateObject private var network = CustomerNetworkMonitor.shared
 
     @State private var catalog: CustomerServicesCatalogResponse?
@@ -16,13 +17,14 @@ struct CustomerServicesCatalogScreen: View {
     @State private var isLoading = true
     @State private var showRequestSheet = false
     @State private var requestSlug = ""
+    @State private var requestTitle = ""
+    @State private var requestDescription = ""
 
     var body: some View {
         NavigationStack {
             Group {
                 if isLoading && catalog == nil {
-                    ProgressView(String(localized: "Loading services…"))
-                        .tint(ServicesCatalogTheme.accent)
+                    CustomerServicesCatalogSkeleton()
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let error, catalog == nil {
                     servicesErrorView(error)
@@ -30,27 +32,35 @@ struct CustomerServicesCatalogScreen: View {
                     catalogScroll(catalog)
                 }
             }
-            .background(ServicesCatalogTheme.background.ignoresSafeArea())
+            .background(theme.background.ignoresSafeArea())
             .navigationTitle(catalog?.title ?? String(localized: "Services"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(ServicesCatalogTheme.background, for: .navigationBar)
-            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(theme.background, for: .navigationBar)
             .refreshable { await load(force: true) }
             .task(id: language.rawValue) { await load(force: false) }
             .sheet(isPresented: $showRequestSheet) {
                 NavigationStack {
-                    CustomerCreateOrderView(preselectedSlug: requestSlug)
-                        .environmentObject(api)
+                    CustomerCreateOrderView(
+                        preselectedSlug: requestSlug,
+                        prefilledTitle: requestTitle,
+                        prefilledDescription: requestDescription
+                    )
+                    .environmentObject(api)
                 }
             }
             .onChange(of: navigation.pendingOrderSlug) { slug in
                 guard let slug, !slug.isEmpty else { return }
-                requestSlug = slug
-                showRequestSheet = true
+                if let card = catalog?.cards.first(where: { $0.order_slug == slug || $0.id == slug }) {
+                    openRequest(for: card)
+                } else {
+                    requestSlug = slug
+                    requestTitle = ""
+                    requestDescription = CustomerCreateOrderView.templateDescription(title: slug, features: [])
+                    showRequestSheet = true
+                }
                 navigation.pendingOrderSlug = nil
             }
         }
-        .preferredColorScheme(.dark)
     }
 
     @ViewBuilder
@@ -93,11 +103,11 @@ struct CustomerServicesCatalogScreen: View {
             Text(catalog.title)
                 .font(.system(size: 32, weight: .heavy))
                 .tracking(-0.5)
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
                 .multilineTextAlignment(.center)
             Text(catalog.subtitle)
                 .font(.title3)
-                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -109,12 +119,12 @@ struct CustomerServicesCatalogScreen: View {
         Text(catalog.statement)
             .font(.body)
             .lineSpacing(4)
-            .foregroundStyle(ServicesCatalogTheme.textPrimary)
+            .foregroundStyle(theme.textPrimary)
             .multilineTextAlignment(.center)
             .padding(24)
             .frame(maxWidth: 820)
-            .background(ServicesCatalogTheme.panel)
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(ServicesCatalogTheme.border))
+            .background(theme.panel)
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(theme.border))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .padding(.horizontal, 20)
             .padding(.bottom, 50)
@@ -144,16 +154,16 @@ struct CustomerServicesCatalogScreen: View {
 
     private func securityBreakSection(_ catalog: CustomerServicesCatalogResponse) -> some View {
         VStack(spacing: 12) {
-            Divider().overlay(ServicesCatalogTheme.border)
+            Divider().overlay(theme.border)
                 .padding(.top, 48)
             Text(catalog.security_section.title)
                 .font(.system(size: 28, weight: .heavy))
                 .tracking(-0.5)
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
                 .multilineTextAlignment(.center)
             Text(catalog.security_section.subtitle)
                 .font(.body)
-                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 820)
         }
@@ -162,11 +172,11 @@ struct CustomerServicesCatalogScreen: View {
 
     private func processSection(_ catalog: CustomerServicesCatalogResponse) -> some View {
         VStack(spacing: 50) {
-            Divider().overlay(ServicesCatalogTheme.border)
+            Divider().overlay(theme.border)
             Text(catalog.process_title)
                 .font(.system(size: 28, weight: .heavy))
                 .tracking(-0.5)
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 20)
 
@@ -187,39 +197,39 @@ struct CustomerServicesCatalogScreen: View {
                 .font(.system(size: 24, weight: .heavy))
                 .foregroundStyle(Color.black)
                 .frame(width: 50, height: 50)
-                .background(ServicesCatalogTheme.accent)
+                .background(theme.accent)
                 .clipShape(Circle())
-                .shadow(color: ServicesCatalogTheme.accent.opacity(0.25), radius: 6)
+                .shadow(color: theme.accent.opacity(0.25), radius: 6)
             Text(step.title)
                 .font(.title3.weight(.bold))
-                .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
                 .multilineTextAlignment(.center)
             Text(step.text)
                 .font(.subheadline)
-                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
                 .multilineTextAlignment(.center)
         }
         .padding(.vertical, 30)
         .padding(.horizontal, 20)
         .frame(maxWidth: .infinity)
-        .background(ServicesCatalogTheme.cardBackground)
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(ServicesCatalogTheme.border))
+        .background(theme.cardBackground)
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(theme.border))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: ServicesCatalogTheme.shadowDark, radius: 8, x: 8, y: 8)
-        .shadow(color: ServicesCatalogTheme.shadowLight, radius: 8, x: -8, y: -8)
+        .shadow(color: theme.shadowDark, radius: 8, x: 8, y: 8)
+        .shadow(color: theme.shadowLight, radius: 8, x: -8, y: -8)
     }
 
     private func servicesErrorView(_ message: String) -> some View {
         VStack(spacing: 16) {
             Image(systemName: network.isConnected ? "exclamationmark.triangle" : "wifi.slash")
                 .font(.largeTitle)
-                .foregroundStyle(ServicesCatalogTheme.accent)
+                .foregroundStyle(theme.accent)
             Text(message)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
             Button(String(localized: "Try again")) { Task { await load(force: true) } }
                 .buttonStyle(.borderedProminent)
-                .tint(ServicesCatalogTheme.accent)
+                .tint(theme.accent)
         }
         .padding(32)
     }
@@ -236,6 +246,8 @@ struct CustomerServicesCatalogScreen: View {
 
     private func openRequest(for card: CustomerServicesCatalogResponse.Card) {
         requestSlug = card.order_slug
+        requestTitle = card.title
+        requestDescription = CustomerCreateOrderView.templateDescription(title: card.title, features: card.features)
         showRequestSheet = true
     }
 
@@ -280,12 +292,12 @@ private struct ServiceCatalogCardView: View {
                     VStack(alignment: catalog.isRTL ? .trailing : .leading, spacing: 18) {
                         Text(card.title)
                             .font(.system(size: 23, weight: .bold))
-                            .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                            .foregroundStyle(theme.textPrimary)
                             .padding(catalog.isRTL ? .leading : .trailing, badgePadding)
 
                         Text(card.description)
                             .font(.subheadline)
-                            .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                            .foregroundStyle(theme.textSecondary)
                             .lineSpacing(4)
                             .multilineTextAlignment(catalog.isRTL ? .trailing : .leading)
 
@@ -313,7 +325,7 @@ private struct ServiceCatalogCardView: View {
                             Text(isExpanded ? catalog.less_label : catalog.more_label)
                                 .font(.subheadline)
                                 .underline()
-                                .foregroundStyle(ServicesCatalogTheme.linkBlue)
+                                .foregroundStyle(theme.linkBlue)
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(.plain)
@@ -322,30 +334,30 @@ private struct ServiceCatalogCardView: View {
 
                     if isExpanded, !card.details.isEmpty {
                         VStack(alignment: catalog.isRTL ? .trailing : .leading, spacing: 16) {
-                            Divider().overlay(ServicesCatalogTheme.border)
+                            Divider().overlay(theme.border)
                             ForEach(card.details) { block in
                                 VStack(alignment: catalog.isRTL ? .trailing : .leading, spacing: 8) {
                                     Text(block.heading)
                                         .font(.subheadline.weight(.bold))
-                                        .foregroundStyle(ServicesCatalogTheme.textPrimary)
+                                        .foregroundStyle(theme.textPrimary)
                                     if let paragraph = block.paragraph, !paragraph.isEmpty {
                                         Text(paragraph)
                                             .font(.footnote)
-                                            .foregroundStyle(ServicesCatalogTheme.textSecondary)
+                                            .foregroundStyle(theme.textSecondary)
                                             .lineSpacing(3)
                                     }
                                     ForEach(block.bulletItems, id: \.self) { item in
                                         HStack(alignment: .top, spacing: 8) {
                                             if !catalog.isRTL {
                                                 Text("–")
-                                                    .foregroundStyle(ServicesCatalogTheme.accent)
+                                                    .foregroundStyle(theme.accent)
                                             }
                                             Text(item)
                                                 .font(.footnote)
                                                 .foregroundStyle(Color(red: 0.82, green: 0.82, blue: 0.82))
                                             if catalog.isRTL {
                                                 Text("–")
-                                                    .foregroundStyle(ServicesCatalogTheme.accent)
+                                                    .foregroundStyle(theme.accent)
                                             }
                                         }
                                     }
@@ -368,7 +380,7 @@ private struct ServiceCatalogCardView: View {
                     .tracking(0.5)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
-                    .background(ServicesCatalogTheme.accent)
+                    .background(theme.accent)
                     .foregroundStyle(Color.black)
                     .clipShape(Capsule())
                     .padding(16)

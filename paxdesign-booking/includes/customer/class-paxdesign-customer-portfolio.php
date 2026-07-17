@@ -119,9 +119,17 @@ class PAXdesign_Customer_Portfolio {
             'project_url'=> (string) get_post_meta($post->ID, 'dtr_project_url', true),
             'published_at' => get_the_date('c', $post),
         );
+        $term_slugs = wp_get_post_terms($post->ID, 'portfolio_category', array('fields' => 'slugs'));
+        $term_names = wp_get_post_terms($post->ID, 'portfolio_category', array('fields' => 'names'));
+        $item['category_slugs'] = is_array($term_slugs) ? array_values($term_slugs) : array();
+        $item['category_names'] = is_array($term_names) ? array_values($term_names) : array();
         if ($full) {
             $item['body'] = PAXdesign_Customer_Elementor::render_html($post);
             $item['gallery'] = PAXdesign_Customer_Elementor::images_from_html($item['body']);
+            $gallery_meta = self::gallery_urls($post->ID);
+            if (!empty($gallery_meta)) {
+                $item['gallery'] = array_values(array_unique(array_merge($gallery_meta, $item['gallery'] ?? array())));
+            }
             $blocks = PAXdesign_Customer_Elementor::parse_blocks((int) $post->ID);
             if (!empty($blocks)) {
                 $item['blocks'] = $blocks;
@@ -131,8 +139,54 @@ class PAXdesign_Customer_Portfolio {
             if (!is_array($item['categories'])) {
                 $item['categories'] = array();
             }
+            $item['structured'] = self::structured_detail($post, $item);
         }
         return $item;
+    }
+
+    /**
+     * Native-friendly structured detail payload (no HTML layout).
+     *
+     * @param WP_Post $post
+     * @param array<string, mixed> $item
+     * @return array<string, mixed>
+     */
+    private static function structured_detail($post, array $item) {
+        $body_text = wp_strip_all_tags((string) ($item['body_text'] ?? ''));
+        $paragraphs = array_values(array_filter(array_map('trim', preg_split('/\R{2,}/', $body_text))));
+        if (empty($paragraphs) && !empty($item['excerpt'])) {
+            $paragraphs = array((string) $item['excerpt']);
+        }
+
+        $highlights = array();
+        $client = (string) ($item['client'] ?? '');
+        if ($client !== '') {
+            $highlights[] = array('label' => __('Client', 'paxdesign-booking'), 'value' => $client);
+        }
+        $year = (string) get_post_meta($post->ID, 'dtr_year', true);
+        if ($year !== '') {
+            $highlights[] = array('label' => __('Year', 'paxdesign-booking'), 'value' => $year);
+        }
+        $services = (string) get_post_meta($post->ID, 'dtr_services', true);
+        if ($services !== '') {
+            $highlights[] = array('label' => __('Services', 'paxdesign-booking'), 'value' => $services);
+        }
+        $project_url = (string) ($item['project_url'] ?? '');
+        if ($project_url !== '') {
+            $highlights[] = array(
+                'label' => __('Live project', 'paxdesign-booking'),
+                'value' => $project_url,
+                'link'  => $project_url,
+            );
+        }
+
+        return array(
+            'summary'         => (string) ($item['excerpt'] ?? ''),
+            'paragraphs'      => $paragraphs,
+            'highlights'      => $highlights,
+            'website_url'     => get_permalink($post) ? (string) get_permalink($post) : '',
+            'published_label' => get_the_date('', $post),
+        );
     }
 
     /**

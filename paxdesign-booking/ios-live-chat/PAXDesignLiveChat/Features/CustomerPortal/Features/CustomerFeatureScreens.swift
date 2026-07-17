@@ -41,7 +41,7 @@ struct CustomerProjectsListView: View {
     private var projectList: some View {
         Group {
             if isLoading {
-                ProgressView(String(localized: "Loading projects…"))
+                CustomerListRowsSkeleton(rowCount: 6)
             } else if let error {
                 PAXContentUnavailableView(String(localized: "Projects unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
             } else if projects.isEmpty {
@@ -166,7 +166,7 @@ struct CustomerProjectDetailView: View {
             } else if let error {
                 PAXContentUnavailableView(String(localized: "Unable to load project"), systemImage: "exclamationmark.triangle", description: Text(error))
             } else {
-                ProgressView()
+                CustomerDetailScrollSkeleton()
             }
         }
         .navigationTitle(project?.title ?? String(localized: "Project"))
@@ -245,7 +245,7 @@ struct CustomerOrdersListView: View {
     var body: some View {
         Group {
             if isLoading {
-                ProgressView()
+                CustomerListRowsSkeleton(rowCount: 6)
             } else if let error {
                 PAXContentUnavailableView(String(localized: "Requests unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
             } else if orders.isEmpty {
@@ -334,7 +334,7 @@ struct CustomerOrderDetailView: View {
             } else if let error {
                 PAXContentUnavailableView(String(localized: "Unable to load request"), systemImage: "exclamationmark.triangle", description: Text(error))
             } else {
-                ProgressView()
+                CustomerDetailScrollSkeleton()
             }
         }
         .navigationTitle(order?.service_label ?? String(localized: "Request"))
@@ -369,8 +369,21 @@ struct CustomerCreateOrderView: View {
     @State private var description = ""
     @State private var error: String?
     @State private var isSubmitting = false
+    @State private var isLoadingServices = true
 
     var body: some View {
+        Group {
+            if isLoadingServices && services.isEmpty {
+                CustomerFormSkeleton()
+            } else {
+                orderForm
+            }
+        }
+        .navigationTitle(String(localized: "New request"))
+        .task { await loadServices() }
+    }
+
+    private var orderForm: some View {
         Form {
             Picker(String(localized: "Service"), selection: $selectedSlug) {
                 Text(String(localized: "Select a service")).tag("")
@@ -391,17 +404,19 @@ struct CustomerCreateOrderView: View {
                 }.disabled(isSubmitting || selectedSlug.isEmpty || description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             }
         }
-        .navigationTitle(String(localized: "New request"))
-        .task {
-            if let response = try? await api.fetchServices() {
-                services = response.services
-                if !preselectedSlug.isEmpty {
-                    selectedSlug = preselectedSlug
-                } else if selectedSlug.isEmpty {
-                    selectedSlug = services.first?.slug ?? ""
-                }
+    }
+
+    private func loadServices() async {
+        isLoadingServices = services.isEmpty
+        if let response = try? await api.fetchServices() {
+            services = response.services
+            if !preselectedSlug.isEmpty {
+                selectedSlug = preselectedSlug
+            } else if selectedSlug.isEmpty {
+                selectedSlug = services.first?.slug ?? ""
             }
         }
+        isLoadingServices = false
     }
 
     private func submit() async {
@@ -427,7 +442,7 @@ struct CustomerNewsListView: View {
     var body: some View {
         Group {
                 if isLoading && items.isEmpty {
-                    ProgressView(String(localized: "Loading news…"))
+                    CustomerNewsListSkeleton()
                 } else if let error {
                     PAXContentUnavailableView(String(localized: "News unavailable"), systemImage: "newspaper", description: Text(error))
                 } else if items.isEmpty {
@@ -522,7 +537,7 @@ struct CustomerNewsDetailView: View {
                             if case .success(let image) = phase {
                                 image.resizable().scaledToFill()
                             } else {
-                                ProgressView()
+                                SkeletonBlock(height: 200, cornerRadius: 16)
                             }
                         }
                         .frame(maxWidth: .infinity)
@@ -544,7 +559,8 @@ struct CustomerNewsDetailView: View {
             } else if let error {
                 PAXContentUnavailableView(String(localized: "Unable to load"), systemImage: "exclamationmark.triangle", description: Text(error))
             } else {
-                ProgressView().padding(.top, 48)
+                CustomerDetailScrollSkeleton()
+                    .padding(.top, 8)
             }
         }
         .background(PAXBackground())
@@ -635,7 +651,7 @@ struct CustomerNotificationsView: View {
             } else if let error {
                 PAXContentUnavailableView(String(localized: "Notifications unavailable"), systemImage: "bell.slash", description: Text(error))
             } else {
-                ProgressView()
+                CustomerNotificationsSkeleton()
             }
         }
         .task { await load() }
@@ -685,7 +701,7 @@ struct CustomerFilesView: View {
     var body: some View {
         Group {
             if isLoading && files.isEmpty {
-                ProgressView(String(localized: "Loading files…"))
+                CustomerFilesSkeleton()
             } else if let error {
                 PAXContentUnavailableView(String(localized: "Files unavailable"), systemImage: "doc", description: Text(error))
             } else if files.isEmpty {

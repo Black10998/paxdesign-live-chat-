@@ -48,9 +48,36 @@ class PAXdesign_Customer_Chat_Bridge {
             ? (string) $row->session_id
             : self::create_primary_session($user_id);
         if ($session_id !== '') {
-            PAXdesign_Chat_Live::get_instance()->ensure_session($session_id);
+            $live = PAXdesign_Chat_Live::get_instance();
+            $live->ensure_session($session_id);
+            if ($live->get_handler($session_id) === PAXdesign_Chat_Live::HANDLER_CLOSED) {
+                $session_id = self::rotate_primary_session($user_id, $session_id);
+            }
         }
         return $session_id;
+    }
+
+    /**
+     * Replace a closed primary session with a fresh open conversation.
+     */
+    private static function rotate_primary_session($user_id, $closed_session_id) {
+        global $wpdb;
+        $user_id = absint($user_id);
+        $closed_session_id = self::sanitize_session_id($closed_session_id);
+        if ($user_id <= 0) {
+            return self::create_primary_session($user_id);
+        }
+        $table = self::sessions_table();
+        if ($closed_session_id !== '') {
+            $wpdb->update(
+                $table,
+                array('is_primary' => 0),
+                array('user_id' => $user_id, 'session_id' => $closed_session_id),
+                array('%d'),
+                array('%d', '%s')
+            );
+        }
+        return self::create_primary_session($user_id);
     }
 
     public static function create_primary_session($user_id) {

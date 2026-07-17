@@ -7,6 +7,7 @@ struct CustomerProfileResponse: Decodable {
         let email: String
         let verified: Bool
         let role: String
+        let avatar_url: String?
     }
     let profile: Profile
 }
@@ -214,6 +215,7 @@ struct CustomerPortfolioDetail: Decodable {
     let gallery: [String]?
     let categories: [String]?
     let blocks: [CustomerContentBlock]?
+    let structured: CustomerPortfolioStructuredDetail?
 }
 
 struct CustomerPortfolioResponse: Decodable {
