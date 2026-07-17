@@ -41,6 +41,65 @@ class PAXdesign_Language_Routing {
     }
 
     /**
+     * Detect when a customer wants a human agent (DE / EN / AR).
+     */
+    public static function is_live_agent_intent($text) {
+        $text = trim((string) $text);
+        if ($text === '') {
+            return false;
+        }
+
+        $patterns = array(
+            // German (website widget parity)
+            '/(?:mit\s+(?:einem\s+)?(?:mitarbeiter|menschen|echten|support|agent|berater)|live\s*(?:agent|chat|support)|(?:kann|möchte|will)\s+ich\s+(?:mit\s+)?(?:einem\s+)?(?:menschen|mitarbeiter|support|agent|berater)|(?:kann|darf)\s+ich\s+mit|sprechen\s+(?:sie\s+)?mit|echter?\s+mensch|menschlichen?\s+support|echte\s+person)/iu',
+            // English
+            '/(?:speak\s+(?:to|with)\s+(?:a\s+)?(?:human|person|agent|representative|support)|talk\s+to\s+(?:a\s+)?(?:human|person|agent|someone|support)|real\s+(?:person|human|agent)|human\s+(?:support|agent)|live\s+(?:agent|support|chat)|connect\s+me\s+(?:to|with)\s+(?:a\s+)?(?:human|agent|support))/iu',
+            // Arabic
+            '/(?:موظف|موظف(?:اً|ا)?|شخص\s+حقيقي|دعم\s+بشري|تحدث\s+مع|تكلم\s+مع|أريد\s+(?:موظف|شخص|إنسان)|اريد\s+(?:موظف|شخص|إنسان)|وكيل\s+حقيقي|مساعد\s+بشري|خدمة\s+عملاء|ممثل\s+حقيقي)/u',
+        );
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $text)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Localized thanks message after live-agent handoff.
+     *
+     * @param string $lang de|en|ar
+     */
+    public static function live_handoff_thanks_message($lang) {
+        switch (sanitize_key($lang)) {
+            case 'en':
+                return 'Thank you. I am connecting you with a PAXDesign team member now.';
+            case 'ar':
+                return 'شكراً لك. أقوم الآن بتحويلك إلى أحد موظفي PAXDesign.';
+            default:
+                return 'Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter.';
+        }
+    }
+
+    /**
+     * Localized system notice after live-agent handoff.
+     *
+     * @param string $lang de|en|ar
+     */
+    public static function live_handoff_notice_message($lang) {
+        switch (sanitize_key($lang)) {
+            case 'en':
+                return 'A PAXDesign team member has been notified. Please stay in the chat for a moment.';
+            case 'ar':
+                return 'تم إبلاغ أحد موظفي PAXDesign. يرجى البقاء في الدردشة لحظة.';
+            default:
+                return 'Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.';
+        }
+    }
+
+    /**
      * @param array<int, array<string, mixed>> $messages
      * @return string
      */

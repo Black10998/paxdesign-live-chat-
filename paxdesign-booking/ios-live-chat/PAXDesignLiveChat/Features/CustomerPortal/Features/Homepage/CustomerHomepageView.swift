@@ -31,7 +31,9 @@ struct CustomerHomepageView: View {
             }
             .background(theme.background.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarBackground(theme.background, for: .navigationBar)
+            .customerPortalToolbar()
             .refreshable { await load(force: true) }
             .task(id: language.rawValue) { await load(force: false) }
             .sheet(isPresented: $showRequestSheet) {
@@ -63,7 +65,6 @@ struct CustomerHomepageView: View {
         }
     }
 
-    @ViewBuilder
     private func homepageScroll(_ data: CustomerHomepageResponse) -> some View {
         ScrollView {
             LazyVStack(spacing: 0) {
@@ -118,6 +119,8 @@ struct CustomerHomepageView: View {
                             .font(.system(size: 10, weight: .semibold))
                             .tracking(1.2)
                             .foregroundStyle(theme.heroTagColor)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
                             .background(Color.black.opacity(0.28))
@@ -128,11 +131,12 @@ struct CustomerHomepageView: View {
                 .padding(.horizontal, 20)
 
                 Text(hero.lead)
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.system(.title, design: .default).weight(.bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.white)
                     .minimumScaleFactor(0.75)
                     .lineLimit(4)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 20)
 
                 Text(hero.mid)
@@ -141,6 +145,7 @@ struct CustomerHomepageView: View {
                     .foregroundStyle(Color.white.opacity(0.86))
                     .lineLimit(5)
                     .minimumScaleFactor(0.85)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 24)
 
                 Text(hero.sub)
@@ -148,6 +153,7 @@ struct CustomerHomepageView: View {
                     .multilineTextAlignment(.center)
                     .foregroundStyle(Color.white.opacity(0.68))
                     .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, 28)
 
                 HStack(spacing: 10) {
@@ -165,7 +171,7 @@ struct CustomerHomepageView: View {
             }
             .padding(.horizontal, 16)
             .padding(.bottom, 28)
-            .padding(.top, 8)
+            .padding(.top, 12)
         }
         .frame(height: heroHeight)
     }
@@ -191,14 +197,17 @@ struct CustomerHomepageView: View {
         VStack(alignment: .leading, spacing: 24) {
             VStack(spacing: 8) {
                 Text(section.title)
-                    .font(.system(size: 28, weight: .heavy))
+                    .font(.title.weight(.heavy))
                     .foregroundStyle(theme.textPrimary)
                     .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                    .minimumScaleFactor(0.85)
                     .frame(maxWidth: .infinity)
                 Text(section.subtitle)
                     .font(.body)
                     .foregroundStyle(theme.textSecondary)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity)
             }
             .padding(.horizontal, 20)
@@ -342,6 +351,9 @@ struct CustomerHomepageView: View {
                         .font(.caption)
                         .foregroundStyle(theme.textSecondary)
                         .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 20)
@@ -561,10 +573,14 @@ private struct HomepageServiceCarouselCard: View {
             Text(card.title)
                 .font(.title3.weight(.bold))
                 .foregroundStyle(theme.textPrimary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+                .fixedSize(horizontal: false, vertical: true)
             Text(card.description)
                 .font(.subheadline)
                 .foregroundStyle(theme.textSecondary)
-                .lineLimit(3)
+                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
             Button(String(localized: "Book appointment"), action: onBook)
                 .font(.caption.weight(.bold))
                 .foregroundStyle(theme.accent)
@@ -596,6 +612,10 @@ private struct HomepagePortfolioCard: View {
             Text(item.title)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(theme.textPrimary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.85)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(12)
                 .frame(width: 260, alignment: .leading)
         }

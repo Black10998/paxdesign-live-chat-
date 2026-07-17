@@ -302,6 +302,7 @@ struct CustomerChatView: View {
     @State private var showLocationSheet = false
     @State private var typingTask: Task<Void, Never>?
     @State private var lastTypingSent = false
+    @State private var pendingSendClientID: String?
 
     private var isHumanQueue: Bool {
         guard let handler = poll?.handler else { return false }
@@ -380,7 +381,10 @@ struct CustomerChatView: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    NavigationLink(String(localized: "History")) { CustomerConversationsView() }
+                    HStack(spacing: 10) {
+                        CustomerNavAvatarButton()
+                        NavigationLink(String(localized: "History")) { CustomerConversationsView() }
+                    }
                 }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
@@ -503,6 +507,7 @@ struct CustomerChatView: View {
     }
 
     private func refresh(full: Bool = false) async {
+        if isSending && !full { return }
         if full && poll == nil { isLoading = true }
         defer { isLoading = false }
         do {
@@ -512,8 +517,11 @@ struct CustomerChatView: View {
                 poll = next
             } else if let incoming = next.messages, !incoming.isEmpty {
                 var merged = poll?.messages ?? []
-                let existing = Set(merged.map(\.seq))
-                for msg in incoming where !existing.contains(msg.seq) { merged.append(msg) }
+                var existing = Set(merged.map(\.seq))
+                for msg in incoming where !existing.contains(msg.seq) {
+                    merged.append(msg)
+                    existing.insert(msg.seq)
+                }
                 poll = CustomerChatPoll(
                     session_id: next.session_id ?? poll?.session_id,
                     handler: next.handler ?? poll?.handler,
@@ -558,7 +566,9 @@ struct CustomerChatView: View {
         pollTask = Task {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
-                if network.isConnected { await refresh(full: false) }
+                if network.isConnected, !isSending {
+                    await refresh(full: false)
+                }
             }
         }
     }
@@ -603,26 +613,47 @@ struct CustomerChatView: View {
     private func send() async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !isConversationClosed else { return }
+        let savedDraft = text
+        let clientMsgID = UUID().uuidString
+        let assistantClientMsgID = UUID().uuidString
+        draft = ""
         isSending = true
+        pendingSendClientID = clientMsgID
         error = nil
         notice = nil
-        defer { isSending = false }
+        defer {
+            isSending = false
+            pendingSendClientID = nil
+        }
         do {
-            let response = try await sendMessageWithRenewFallback(text)
-            draft = ""
+            let response = try await sendMessageWithRenewFallback(
+                text,
+                clientMsgID: clientMsgID,
+                assistantClientMsgID: assistantClientMsgID
+            )
             isInputFocused = false
             applySendResponse(response)
-            await refresh(full: true)
+            await refresh(full: false)
             PAXHaptics.light()
         } catch {
+            draft = savedDraft
             self.error = friendlyChatError(error)
             PAXHaptics.warning()
         }
     }
 
-    private func sendMessageWithRenewFallback(_ text: String) async throws -> CustomerSendResponse {
+    private func sendMessageWithRenewFallback(
+        _ text: String,
+        clientMsgID: String,
+        assistantClientMsgID: String
+    ) async throws -> CustomerSendResponse {
         do {
-            return try await api.sendChatMessage(text, sessionID: poll?.session_id)
+            return try await api.sendChatMessage(
+                text,
+                sessionID: poll?.session_id,
+                clientMsgID: clientMsgID,
+                assistantClientMsgID: assistantClientMsgID
+            )
         } catch let apiError as CustomerAPIError {
             if case .serverCode(let code, _) = apiError, code == "chat_closed" {
                 let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id)
@@ -633,7 +664,12 @@ struct CustomerChatView: View {
                     message_count: nil,
                     last_preview: nil
                 )
-                return try await api.sendChatMessage(text, sessionID: renewed.session_id)
+                return try await api.sendChatMessage(
+                    text,
+                    sessionID: renewed.session_id,
+                    clientMsgID: clientMsgID,
+                    assistantClientMsgID: assistantClientMsgID
+                )
             }
             if case .http(409) = apiError {
                 let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id)
@@ -644,29 +680,50 @@ struct CustomerChatView: View {
                     message_count: nil,
                     last_preview: nil
                 )
-                return try await api.sendChatMessage(text, sessionID: renewed.session_id)
+                return try await api.sendChatMessage(
+                    text,
+                    sessionID: renewed.session_id,
+                    clientMsgID: clientMsgID,
+                    assistantClientMsgID: assistantClientMsgID
+                )
             }
             throw apiError
         }
     }
 
     private func applySendResponse(_ response: CustomerSendResponse) {
-        if let handler = response.handler {
-            poll = CustomerChatPoll(
-                session_id: response.session_id,
-                handler: handler,
-                messages: poll?.messages,
-                message_count: poll?.message_count,
-                last_preview: poll?.last_preview,
-                admin_typing: poll?.admin_typing,
-                user_typing: poll?.user_typing,
-                other_read_seq: poll?.other_read_seq
-            )
+        var merged = poll?.messages ?? []
+        var existing = Set(merged.map(\.seq))
+
+        func appendIfNew(_ message: CustomerChatPoll.ChatMessage?) {
+            guard let message, !existing.contains(message.seq) else { return }
+            merged.append(message)
+            existing.insert(message.seq)
+        }
+
+        appendIfNew(response.message)
+        appendIfNew(response.assistant)
+
+        poll = CustomerChatPoll(
+            session_id: response.session_id.isEmpty ? poll?.session_id : response.session_id,
+            handler: response.handler ?? poll?.handler,
+            messages: merged.isEmpty ? poll?.messages : merged.sorted { $0.seq < $1.seq },
+            message_count: poll?.message_count,
+            last_preview: poll?.last_preview,
+            admin_typing: poll?.admin_typing,
+            user_typing: poll?.user_typing,
+            other_read_seq: poll?.other_read_seq
+        )
+        if let maxSeq = merged.map(\.seq).max() {
+            lastSeq = max(lastSeq, maxSeq)
         }
         if let noticeText = response.notice, !noticeText.isEmpty {
             notice = noticeText
         } else if response.renewed == true {
             notice = String(localized: "This conversation was closed. We started a new one for your message.")
+        }
+        if response.handler == "live_request" || response.handler == "admin" {
+            notice = response.notice ?? notice
         }
     }
 
@@ -826,7 +883,7 @@ struct CustomerProfileView: View {
                 if let profile = auth.profile {
                     Section(String(localized: "Profile")) {
                         HStack(spacing: 16) {
-                            profileAvatar(urlString: profile.avatar_url)
+                            CustomerProfileAvatarView(urlString: profile.avatar_url, size: 64)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(profile.display_name).font(.headline)
                                 Text(profile.email).font(.subheadline).foregroundStyle(.secondary)
@@ -871,34 +928,6 @@ struct CustomerProfileView: View {
                 Task { await uploadAvatar(from: item) }
             }
             .task { await auth.refreshProfile(api: api) }
-    }
-
-    @ViewBuilder
-    private func profileAvatar(urlString: String?) -> some View {
-        if let urlString, let url = URL(string: urlString) {
-            AsyncImage(url: url) { phase in
-                if case .success(let image) = phase {
-                    image.resizable().scaledToFill()
-                } else {
-                    defaultAvatar
-                }
-            }
-            .frame(width: 64, height: 64)
-            .clipShape(Circle())
-        } else {
-            defaultAvatar
-        }
-    }
-
-    private var defaultAvatar: some View {
-        Circle()
-            .fill(PAXTheme.accentSoft)
-            .frame(width: 64, height: 64)
-            .overlay {
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 36))
-                    .foregroundStyle(PAXTheme.accent)
-            }
     }
 
     private func uploadAvatar(from item: PhotosPickerItem) async {

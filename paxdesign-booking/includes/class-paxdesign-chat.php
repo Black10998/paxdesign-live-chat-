@@ -194,8 +194,12 @@ class PAXdesign_Chat {
         );
     }
 
-    public function get_system_prompt() {
-        return PAXdesign_Chat_Knowledge::build_system_prompt($this->get_chat_settings_for_prompt());
+    public function get_system_prompt($customer_language = '') {
+        $prompt = PAXdesign_Chat_Knowledge::build_system_prompt($this->get_chat_settings_for_prompt());
+        if ($customer_language !== '') {
+            $prompt = PAXdesign_Chat_Knowledge::apply_customer_language($prompt, $customer_language);
+        }
+        return $prompt;
     }
 
     public function register_rest_routes() {
@@ -843,6 +847,20 @@ class PAXdesign_Chat {
         }
 
         $live->ensure_session($session_id);
+        $customer_language = class_exists('PAXdesign_Language_Routing')
+            ? PAXdesign_Language_Routing::detect_text_language($user_message)
+            : 'de';
+        if ($customer_language !== '' && class_exists('PAXdesign_Language_Routing')) {
+            global $wpdb;
+            $wpdb->update(
+                PAXdesign_Chat_Log::table_name(),
+                array('customer_language' => $customer_language, 'updated_at' => current_time('mysql')),
+                array('session_id' => $session_id),
+                array('%s', '%s'),
+                array('%s')
+            );
+        }
+
         $extra = array('client_msg_id' => sanitize_text_field((string) $client_msg_id));
         if (class_exists('PAXdesign_Link_Scanner')) {
             $extra = PAXdesign_Link_Scanner::attach_scan_meta($user_message, 'user', $extra);
@@ -856,6 +874,50 @@ class PAXdesign_Chat {
             return new WP_Error('send_failed', __('Your message could not be sent. Please try again.', 'paxdesign-booking'), array('status' => 500));
         }
 
+        if (
+            class_exists('PAXdesign_Language_Routing')
+            && PAXdesign_Language_Routing::is_live_agent_intent($user_message)
+        ) {
+            $lang = $customer_language !== '' ? $customer_language : 'de';
+            $escalation = $live->escalate_authenticated_to_live($session_id, $user_id, $lang);
+            if (is_wp_error($escalation)) {
+                return $escalation;
+            }
+            $formatted_user = $live->format_sse_message_payload($entry, 0);
+            if (!empty($formatted_user['role']) && $formatted_user['role'] === 'user') {
+                $row = $live->get_session_row($session_id);
+                $session_context = array(
+                    'wp_user_id'    => ($row && !empty($row->wp_user_id)) ? (int) $row->wp_user_id : $user_id,
+                    'customer_name' => ($row && !empty($row->customer_name)) ? (string) $row->customer_name : '',
+                );
+                $identity = PAXdesign_Chat_Live::resolve_customer_identity($session_context['wp_user_id'], $session_context['customer_name']);
+                $formatted_user['sender_id']     = $identity['id'];
+                $formatted_user['sender_name']   = $identity['name'];
+                $formatted_user['sender_avatar'] = $identity['avatar'];
+                $formatted_user['sender_role']   = $identity['role'];
+            }
+            $formatted_assistant = !empty($escalation['thanks'])
+                ? $live->format_sse_message_payload($escalation['thanks'], 0)
+                : array();
+            if (!empty($formatted_assistant['role']) && $formatted_assistant['role'] === 'assistant') {
+                $ai = PAXdesign_Chat_Live::get_ai_assistant_identity();
+                $formatted_assistant['sender_name']   = $ai['name'];
+                $formatted_assistant['sender_avatar'] = $ai['avatar'];
+                $formatted_assistant['sender_role']   = $ai['role'];
+            }
+            $notice_text = class_exists('PAXdesign_Language_Routing')
+                ? PAXdesign_Language_Routing::live_handoff_notice_message($lang)
+                : '';
+            return array(
+                'session_id' => $session_id,
+                'handler'    => PAXdesign_Chat_Live::HANDLER_LIVE,
+                'message'    => $formatted_user,
+                'assistant'  => $formatted_assistant,
+                'notice'     => $notice_text,
+                'handoff'    => true,
+            );
+        }
+
         $messages = $this->build_openai_messages_from_session($session_id);
         $validated = $this->validate_messages($messages);
         if (is_wp_error($validated)) {
@@ -867,7 +929,7 @@ class PAXdesign_Chat {
             }
         }
 
-        $completion = $this->request_openai_completion($validated);
+        $completion = $this->request_openai_completion($validated, $customer_language);
         if (is_wp_error($completion)) {
             return $completion;
         }
@@ -912,9 +974,10 @@ class PAXdesign_Chat {
 
     /**
      * @param array<int, array{role:string,content:string}> $messages
+     * @param string $customer_language
      * @return array{content:string,model:string}|WP_Error
      */
-    private function request_openai_completion($messages) {
+    private function request_openai_completion($messages, $customer_language = '') {
         $worker_url = trim(get_option('paxdesign_chat_worker_url', ''));
         if ($worker_url !== '') {
             return new WP_Error('worker_only_stream', __('Chat is temporarily unavailable on mobile.', 'paxdesign-booking'), array('status' => 503));
@@ -926,7 +989,7 @@ class PAXdesign_Chat {
         }
 
         $openai_messages = array(
-            array('role' => 'system', 'content' => $this->get_system_prompt()),
+            array('role' => 'system', 'content' => $this->get_system_prompt($customer_language)),
         );
         foreach ($messages as $msg) {
             if ($msg['role'] !== 'system') {

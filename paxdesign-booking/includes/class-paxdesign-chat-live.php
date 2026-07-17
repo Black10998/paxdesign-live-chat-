@@ -2278,6 +2278,112 @@ class PAXdesign_Chat_Live {
     const DEFAULT_WHATSAPP_CALLMEBOT_KEY = '3515631';
 
     /**
+     * Escalate an authenticated mobile/web customer session to the live-agent queue.
+     *
+     * @param string $session_id
+     * @param int    $user_id
+     * @param string $language de|en|ar
+     * @return array{thanks:array|null,notice:array|null}|WP_Error
+     */
+    public function escalate_authenticated_to_live($session_id, $user_id = 0, $language = 'de') {
+        self::upgrade_schema();
+
+        $session_id = $this->sanitize_session_id($session_id);
+        if ($session_id === '') {
+            return new WP_Error('invalid_session', __('Invalid session.', 'paxdesign-booking'), array('status' => 400));
+        }
+
+        $row = $this->ensure_session($session_id);
+        if (!$row) {
+            return new WP_Error('session_failed', __('Session could not be created.', 'paxdesign-booking'), array('status' => 500));
+        }
+
+        $handler = $this->get_handler($session_id);
+        if ($handler === self::HANDLER_ADMIN) {
+            return new WP_Error('admin_active', __('A team member is already active.', 'paxdesign-booking'), array('status' => 409));
+        }
+        if ($handler === self::HANDLER_CLOSED) {
+            return new WP_Error('chat_closed', __('This conversation is closed.', 'paxdesign-booking'), array('status' => 409));
+        }
+        if ($handler === self::HANDLER_LIVE) {
+            return array(
+                'thanks'  => null,
+                'notice'  => null,
+                'handler' => self::HANDLER_LIVE,
+            );
+        }
+
+        $user_id = absint($user_id);
+        $customer_name = '';
+        if ($user_id > 0) {
+            $user = get_userdata($user_id);
+            if ($user) {
+                $customer_name = trim(preg_replace('/\s+/', ' ', (string) $user->display_name));
+                if (strlen($customer_name) < 2) {
+                    $customer_name = (string) $user->user_login;
+                }
+            }
+        }
+        if (strlen($customer_name) < 2) {
+            $customer_name = __('Customer', 'paxdesign-booking');
+        }
+
+        $lang = sanitize_key((string) $language);
+        if ($lang === '') {
+            $lang = 'de';
+        }
+
+        global $wpdb;
+        $update = array(
+            'handler'       => self::HANDLER_LIVE,
+            'updated_at'    => current_time('mysql'),
+            'customer_name' => $customer_name,
+        );
+        if ($user_id > 0) {
+            $update['wp_user_id'] = $user_id;
+        }
+        if (class_exists('PAXdesign_Language_Routing')) {
+            $messages = $this->decode_messages($row->messages);
+            $detected = PAXdesign_Language_Routing::detect_from_messages($messages);
+            if ($detected !== '') {
+                $update['customer_language'] = $detected;
+                $lang = $detected;
+            } else {
+                $update['customer_language'] = $lang;
+            }
+        }
+
+        $updated = $wpdb->update(
+            PAXdesign_Chat_Log::table_name(),
+            $update,
+            array('id' => (int) $row->id)
+        );
+        if ($updated === false) {
+            return new WP_Error('save_failed', __('Could not save live request.', 'paxdesign-booking'), array('status' => 500));
+        }
+
+        $thanks_text = class_exists('PAXdesign_Language_Routing')
+            ? PAXdesign_Language_Routing::live_handoff_thanks_message($lang)
+            : 'Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter.';
+        $notice_text = class_exists('PAXdesign_Language_Routing')
+            ? PAXdesign_Language_Routing::live_handoff_notice_message($lang)
+            : 'Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.';
+
+        $thanks = $this->append_message($session_id, 'assistant', $thanks_text);
+        $notice = $this->append_message($session_id, 'system', $notice_text);
+
+        $row = $this->get_session_row($session_id);
+        $topic = isset($row->detected_service) ? (string) $row->detected_service : '';
+        $this->notify_live_agent_request($session_id, $topic, $row);
+
+        return array(
+            'thanks'  => $thanks,
+            'notice'  => $notice,
+            'handler' => self::HANDLER_LIVE,
+        );
+    }
+
+    /**
      * Email + WhatsApp alerts when a customer requests a live agent.
      */
     private function notify_live_agent_request($session_id, $topic, $row) {

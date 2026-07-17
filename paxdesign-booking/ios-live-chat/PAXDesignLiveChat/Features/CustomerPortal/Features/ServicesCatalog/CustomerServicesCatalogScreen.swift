@@ -36,6 +36,7 @@ struct CustomerServicesCatalogScreen: View {
             .navigationTitle(catalog?.title ?? String(localized: "Services"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(theme.background, for: .navigationBar)
+            .customerPortalToolbar()
             .refreshable { await load(force: true) }
             .task(id: language.rawValue) { await load(force: false) }
             .sheet(isPresented: $showRequestSheet) {

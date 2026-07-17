@@ -22,6 +22,10 @@ struct CustomerPortalDestination: Equatable, Hashable {
         case about
         case contact
         case dashboard
+        case projectsList
+        case ordersList
+        case newsList
+        case conversations
     }
 
     let kind: Kind
@@ -146,6 +150,22 @@ final class CustomerNavigationCoordinator: ObservableObject {
         selectedTab = .chat
         chatSessionID = sessionID
         pendingChatFocus = true
+    }
+
+    func openProjectsList() {
+        openAccountDestination(CustomerPortalDestination(kind: .projectsList))
+    }
+
+    func openOrdersList() {
+        openAccountDestination(CustomerPortalDestination(kind: .ordersList))
+    }
+
+    func openNewsList() {
+        openAccountDestination(CustomerPortalDestination(kind: .newsList))
+    }
+
+    func openConversationsList() {
+        openAccountDestination(CustomerPortalDestination(kind: .conversations))
     }
 }
 

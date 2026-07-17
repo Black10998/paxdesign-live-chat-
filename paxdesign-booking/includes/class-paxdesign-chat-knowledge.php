@@ -401,4 +401,26 @@ class PAXdesign_Chat_Knowledge {
             'Starten Sie komplett neu oder haben Sie bereits eine bestehende Website?',
         ));
     }
+
+    /**
+     * Force the assistant to reply in the customer's language.
+     *
+     * @param string $prompt
+     * @param string $lang de|en|ar
+     * @return string
+     */
+    public static function apply_customer_language($prompt, $lang) {
+        $lang = sanitize_key((string) $lang);
+        if ($lang === '') {
+            $lang = 'de';
+        }
+        switch ($lang) {
+            case 'en':
+                return $prompt . "\n\n## Language\n- Always respond in English.\n- Match the customer's tone and keep answers concise.";
+            case 'ar':
+                return $prompt . "\n\n## اللغة\n- رد دائماً باللغة العربية.\n- استخدم أسلوباً مهنياً وواضحاً وموجزاً.";
+            default:
+                return $prompt . "\n\n## Sprache\n- Antworte IMMER auf Deutsch.\n- Professionell, freundlich und präzise.";
+        }
+    }
 }

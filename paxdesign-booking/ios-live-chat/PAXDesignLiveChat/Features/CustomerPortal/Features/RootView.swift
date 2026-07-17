@@ -5,13 +5,17 @@ struct CustomerPortalShellView: View {
     @ObservedObject private var customerSession = CustomerSessionController.shared
     @ObservedObject private var deepLinks = CustomerDeepLinkRouter.shared
     @ObservedObject private var navigation = CustomerNavigationCoordinator.shared
+    @ObservedObject private var settings = AppSettingsStore.shared
 
     var body: some View {
         CustomerTabView()
             .environmentObject(customerSession.auth)
             .environmentObject(customerSession.api)
             .environmentObject(navigation)
+            .environmentObject(settings)
             .tint(PAXTheme.accent)
+            .preferredColorScheme(settings.appearanceMode.colorScheme)
+            .id(settings.themeRevision)
             .task {
                 customerSession.syncFromAuthStore(auth)
                 CustomerPushService.shared.configure(api: customerSession.api)
@@ -114,6 +118,7 @@ struct CustomerMoreView: View {
                 }
             }
             .navigationTitle(String(localized: "Account"))
+            .customerPortalToolbar(showsAvatar: false)
             .navigationDestination(for: CustomerPortalDestination.self) { destination in
                 switch destination.kind {
                 case .project(let id):
@@ -140,6 +145,14 @@ struct CustomerMoreView: View {
                     CustomerContactView()
                 case .dashboard:
                     CustomerDashboardView()
+                case .projectsList:
+                    CustomerProjectsListView(useSplitLayout: false)
+                case .ordersList:
+                    CustomerOrdersListView()
+                case .newsList:
+                    CustomerNewsListView()
+                case .conversations:
+                    CustomerConversationsView()
                 }
             }
         }

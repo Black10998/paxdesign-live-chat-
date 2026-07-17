@@ -386,8 +386,17 @@ final class CustomerAPIClient: ObservableObject {
         return try await get(path, as: CustomerChatPoll.self)
     }
 
-    func sendChatMessage(_ message: String, sessionID: String? = nil) async throws -> CustomerSendResponse {
-        var body: [String: String] = ["message": message]
+    func sendChatMessage(
+        _ message: String,
+        sessionID: String? = nil,
+        clientMsgID: String = UUID().uuidString,
+        assistantClientMsgID: String = UUID().uuidString
+    ) async throws -> CustomerSendResponse {
+        var body: [String: String] = [
+            "message": message,
+            "client_msg_id": clientMsgID,
+            "assistant_client_msg_id": assistantClientMsgID,
+        ]
         if let sessionID, !sessionID.isEmpty {
             body["session_id"] = sessionID
         }

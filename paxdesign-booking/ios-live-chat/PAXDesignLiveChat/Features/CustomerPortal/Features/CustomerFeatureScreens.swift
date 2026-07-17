@@ -29,10 +29,8 @@ struct CustomerProjectsListView: View {
                     }
                 }
             } else {
-                NavigationStack {
-                    projectList
-                        .navigationTitle(String(localized: "Projects"))
-                }
+                projectList
+                    .navigationTitle(String(localized: "Projects"))
             }
         }
         .task(id: navigation.workspaceRefreshToken) { await load() }
@@ -367,11 +365,38 @@ struct CustomerCreateOrderView: View {
     var prefilledTitle: String = ""
     var prefilledDescription: String = ""
     @State private var services: [CustomerServicesResponse.Service] = []
+    @State private var selectedRequestType = CustomerRequestType.serviceRequest
     @State private var selectedSlug = ""
     @State private var description = ""
     @State private var error: String?
     @State private var isSubmitting = false
     @State private var isLoadingServices = true
+
+    enum CustomerRequestType: String, CaseIterable, Identifiable {
+        case serviceRequest
+        case generalRequest
+        case question
+        case support
+        case consultation
+        case newProject
+        case customWork
+        case other
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .serviceRequest: return String(localized: "Service Request")
+            case .generalRequest: return String(localized: "General Request")
+            case .question: return String(localized: "Question / Inquiry")
+            case .support: return String(localized: "Support")
+            case .consultation: return String(localized: "Consultation")
+            case .newProject: return String(localized: "New Project")
+            case .customWork: return String(localized: "Custom Work")
+            case .other: return String(localized: "Other")
+            }
+        }
+    }
 
     static func templateDescription(title: String, features: [String]) -> String {
         let header = String(localized: "Service request: \(title)")
@@ -396,10 +421,17 @@ struct CustomerCreateOrderView: View {
 
     private var orderForm: some View {
         Form {
-            Picker(String(localized: "Service"), selection: $selectedSlug) {
-                Text(String(localized: "Select a service")).tag("")
-                ForEach(services) { s in
-                    Text(s.name).tag(s.slug)
+            Picker(String(localized: "Request type"), selection: $selectedRequestType) {
+                ForEach(CustomerRequestType.allCases) { type in
+                    Text(type.title).tag(type)
+                }
+            }
+            if selectedRequestType == .serviceRequest {
+                Picker(String(localized: "Service"), selection: $selectedSlug) {
+                    Text(String(localized: "Select a service")).tag("")
+                    ForEach(services) { s in
+                        Text(s.name).tag(s.slug)
+                    }
                 }
             }
             Section(String(localized: "Details")) {
@@ -412,9 +444,17 @@ struct CustomerCreateOrderView: View {
             Section {
                 Button(isSubmitting ? String(localized: "Submitting…") : String(localized: "Submit request")) {
                     Task { await submit() }
-                }.disabled(isSubmitting || selectedSlug.isEmpty || description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }.disabled(isSubmitting || !canSubmit)
             }
         }
+    }
+
+    private var canSubmit: Bool {
+        let hasDescription = !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        if selectedRequestType == .serviceRequest {
+            return !selectedSlug.isEmpty && hasDescription
+        }
+        return hasDescription
     }
 
     private func loadServices() async {
@@ -440,8 +480,11 @@ struct CustomerCreateOrderView: View {
     private func submit() async {
         isSubmitting = true
         defer { isSubmitting = false }
+        let typeLine = selectedRequestType.title
+        let body = "[\(typeLine)]\n\n\(description.trimmingCharacters(in: .whitespacesAndNewlines))"
+        let slug = selectedRequestType == .serviceRequest ? selectedSlug : (services.first?.slug ?? "general")
         do {
-            _ = try await api.createOrder(serviceSlug: selectedSlug, description: description)
+            _ = try await api.createOrder(serviceSlug: slug, description: body)
             dismiss()
         } catch {
             self.error = error.localizedDescription
@@ -820,6 +863,7 @@ struct CustomerSettingsView: View {
     @EnvironmentObject private var auth: CustomerAuthStore
     @EnvironmentObject private var appAuth: AuthStore
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
+    @ObservedObject private var settings = AppSettingsStore.shared
     @State private var chatPref = true
     @State private var projectPref = true
     @State private var orderPref = true
@@ -832,6 +876,14 @@ struct CustomerSettingsView: View {
 
     var body: some View {
         Form {
+            Section(String(localized: "Appearance")) {
+                Picker(String(localized: "Theme"), selection: $settings.appearanceMode) {
+                    ForEach(AppSettingsStore.AppearanceMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
             Section(String(localized: "Profile")) {
                 TextField(String(localized: "Display name"), text: $displayName)
                 Button(String(localized: "Save profile")) {
