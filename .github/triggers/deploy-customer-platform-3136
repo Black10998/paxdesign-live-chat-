@@ -1,2 +1,2 @@
-Fix customer chat JSON decode (id vs seq); plugin 3.136.6.
-2026-07-17T18:05:00Z
+Phase 1 native platform: chat login gate, participant identity; plugin 3.136.7.
+2026-07-17T20:30:00Z
