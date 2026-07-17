@@ -37,16 +37,26 @@ OUTPUT_PATH = os.environ.get(
 GITHUB_ENV = os.environ.get("GITHUB_ENV", "")
 
 
+def resource_data(payload: dict[str, Any], *, label: str) -> dict[str, Any]:
+    data = payload.get("data")
+    if isinstance(data, dict):
+        return data
+    if isinstance(data, list) and data:
+        return data[0]
+    fail(f"{label} returned no resource data: {payload}")
+
+
 def find_bundle_id(client: ASCClient) -> dict[str, Any]:
     payload = client.get("/bundleIds", **{"filter[identifier]": BUNDLE_ID, "limit": "1"})
     data = payload.get("data") or []
     if data:
-        return data[0]
+        return data[0] if isinstance(data, list) else data
 
     print(f"Creating bundle ID {BUNDLE_ID} …")
-    created = client.post(
+    status, created = client.request(
+        "POST",
         "/bundleIds",
-        {
+        body={
             "data": {
                 "type": "bundleIds",
                 "attributes": {
@@ -56,11 +66,16 @@ def find_bundle_id(client: ASCClient) -> dict[str, Any]:
                 },
             }
         },
+        allow_error=True,
     )
-    data = created.get("data") or []
-    if not data:
-        fail(f"Could not create bundle ID {BUNDLE_ID}")
-    return data[0]
+    if status == 409:
+        payload = client.get("/bundleIds", **{"filter[identifier]": BUNDLE_ID, "limit": "1"})
+        data = payload.get("data") or []
+        if data:
+            return data[0] if isinstance(data, list) else data
+    if status != 201:
+        fail(f"Could not create bundle ID {BUNDLE_ID} ({status}): {created}")
+    return resource_data(created, label=f"Bundle ID {BUNDLE_ID}")
 
 
 def ensure_push_notifications(client: ASCClient, bundle_id: dict[str, Any]) -> None:
@@ -153,10 +168,7 @@ def create_profile(
     )
     if status != 201:
         fail(f"Profile creation failed ({status}): {payload}")
-    data = payload.get("data") or []
-    if not data:
-        fail("Profile creation returned no data")
-    return data[0]
+    return resource_data(payload, label=f"Profile {PROFILE_NAME}")
 
 
 def download_profile_content(client: ASCClient, profile_id: str) -> bytes:
@@ -225,10 +237,7 @@ def ensure_app_record(client: ASCClient, bundle_resource_id: str) -> dict[str, A
     )
     if status != 201:
         fail(f"App Store Connect app creation failed ({status}): {created}")
-    data = created.get("data") or []
-    if not data:
-        fail("App Store Connect app creation returned no data")
-    return data[0]
+    return resource_data(created, label=f"App record for {BUNDLE_ID}")
 
 
 def export_for_github_actions(raw: bytes) -> None:
