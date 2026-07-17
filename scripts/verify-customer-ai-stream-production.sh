@@ -34,20 +34,7 @@ ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || tr
 
 REMOTE_LOGIN="$(printf '%q' "$ADMIN_USER")"
 SESSION_ID="$(ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
-  "cd '$(printf '%q' "$WP_PATH")' && PAX_RESET_LOGIN=${REMOTE_LOGIN} wp eval '
-\$login = getenv(\"PAX_RESET_LOGIN\") ?: \"\";
-\$user = \$login ? get_user_by(\"login\", \$login) : false;
-if (!\$user && \$login) { \$user = get_user_by(\"email\", \$login); }
-if (!\$user) { fwrite(STDERR, \"user_not_found\\n\"); exit(1); }
-\$uid = (int) \$user->ID;
-if (!class_exists(\"PAXdesign_Customer_Chat_Bridge\")) { fwrite(STDERR, \"bridge_missing\\n\"); exit(1); }
-\$session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id(\$uid);
-PAXdesign_Chat_Live::get_instance()->ensure_session(\$session_id);
-global \$wpdb;
-\$table = PAXdesign_Chat_Log::table_name();
-\$wpdb->update(\$table, array(\"handler\" => \"ai\"), array(\"session_id\" => \$session_id), array(\"%s\"), array(\"%s\"));
-echo \$session_id;
-'")"
+  "cd '$(printf '%q' "$WP_PATH")' && PAX_RESET_LOGIN=${REMOTE_LOGIN} wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-reset-customer-chat-session.php")"
 
 [ -n "$SESSION_ID" ] || fail "Could not resolve or reset customer chat session"
 echo "Using session: $SESSION_ID"

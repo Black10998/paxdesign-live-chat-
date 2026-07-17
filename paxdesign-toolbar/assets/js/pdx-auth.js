@@ -175,12 +175,11 @@
     authBar.className = 'pdx-cx-shell';
     authBar.innerHTML =
       '<div class="pdx-auth-bar-inner">' +
-        '<button type="button" class="pdx-auth-trigger" aria-haspopup="true" aria-expanded="false">' +
-          '<span class="pdx-auth-trigger-icon">' + cxIcon('user', 18) + '</span>' +
-          '<span class="pdx-auth-trigger-label">Log In</span>' +
+        '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn">Sign Up</button>' +
+        '<button type="button" class="pdx-auth-account-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" aria-haspopup="true" aria-expanded="false" hidden>' +
+          '<span class="pdx-auth-account-label">Account</span>' +
         '</button>' +
-        '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-cx-btn--ghost">Sign Up</button>' +
-        '<button type="button" class="pdx-auth-portal-btn pdx-cx-btn" hidden>Customer Portal</button>' +
+        '<button type="button" class="pdx-auth-portal-btn pdx-cx-btn pdx-auth-header-btn" hidden>Customer Portal</button>' +
         '<div class="pdx-auth-menu" hidden>' +
           '<div class="pdx-auth-menu-head"></div>' +
           '<div class="pdx-auth-menu-actions">' +
@@ -192,13 +191,15 @@
         '</div>' +
       '</div>';
 
-    authBtn = authBar.querySelector('.pdx-auth-trigger');
+    authBtn = authBar.querySelector('.pdx-auth-account-btn');
     authMenu = authBar.querySelector('.pdx-auth-menu');
 
-    authBtn.addEventListener('click', onAuthBarClick);
-    authBtn.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAuthBarClick(); }
-    });
+    if (authBtn) {
+      authBtn.addEventListener('click', onAuthBarClick);
+      authBtn.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onAuthBarClick(); }
+      });
+    }
 
     authMenu.querySelectorAll('.pdx-auth-menu-item').forEach(function (btn) {
       btn.addEventListener('click', function () {
@@ -233,6 +234,7 @@
       if (window.getComputedStyle(mount).position === 'static') {
         mount.style.position = 'relative';
       }
+      mount.classList.add('pdx-header-has-auth');
       authBar.classList.add('pdx-auth-bar--header');
       mount.appendChild(authBar);
     } else {
@@ -248,14 +250,16 @@
   }
 
   function updateAuthBar() {
-    if (!authBtn || !authMenu) return;
-    var labelEl = authBtn.querySelector('.pdx-auth-trigger-label');
+    if (!authMenu) return;
+    var accountBtn = authBar ? authBar.querySelector('.pdx-auth-account-btn') : null;
+    var labelEl = accountBtn ? accountBtn.querySelector('.pdx-auth-account-label') : null;
     var head = authMenu.querySelector('.pdx-auth-menu-head');
     var signupBtn = authBar ? authBar.querySelector('.pdx-auth-signup-btn') : null;
     var portalBtn = authBar ? authBar.querySelector('.pdx-auth-portal-btn') : null;
-    var label = user.logged_in ? (user.display_name || 'Account') : 'Log In';
+    var label = user.logged_in ? (user.display_name || 'Account') : 'Account';
 
     if (signupBtn) signupBtn.hidden = !!user.logged_in;
+    if (accountBtn) accountBtn.hidden = !user.logged_in;
     if (portalBtn) portalBtn.hidden = !user.logged_in;
 
     if (labelEl) {
@@ -265,9 +269,10 @@
         labelEl.textContent = label;
       }
     }
-    authBtn.classList.toggle('pdx-auth-trigger--logged-in', user.logged_in);
-    authBtn.classList.toggle('pdx-auth-trigger--verified', user.logged_in && user.verified);
-    authBtn.setAttribute('aria-label', user.logged_in ? 'Account menu' : 'Log in');
+    if (accountBtn) {
+      accountBtn.classList.toggle('pdx-auth-account-btn--verified', user.logged_in && user.verified);
+      accountBtn.setAttribute('aria-label', user.logged_in ? 'Account menu' : 'Account');
+    }
 
     if (user.logged_in && head) {
       head.innerHTML =
@@ -286,7 +291,7 @@
   }
 
   function openAuthMenu() {
-    if (!user.logged_in || !authMenu) return;
+    if (!user.logged_in || !authMenu || !authBtn) return;
     authMenu.hidden = false;
     authMenu.classList.add('is-open');
     authBtn.setAttribute('aria-expanded', 'true');
@@ -294,19 +299,19 @@
   }
 
   function closeAuthMenu() {
-    if (!authMenu) return;
+    if (!authMenu || !authBtn) return;
     authMenu.classList.remove('is-open');
     authBtn.setAttribute('aria-expanded', 'false');
     authMenuOpen = false;
   }
 
   function onAuthBarClick() {
-    if (user.logged_in) {
-      if (authMenuOpen) closeAuthMenu();
-      else openAuthMenu();
-    } else {
-      openOverlay('login');
+    if (!user.logged_in) {
+      openOverlay('register');
+      return;
     }
+    if (authMenuOpen) closeAuthMenu();
+    else openAuthMenu();
   }
 
   function openAccountPanel() {
@@ -1194,7 +1199,8 @@
 
   function openCustomerPortal() {
     if (!user.logged_in) {
-      openOverlay('login');
+      notify('Please use Sign Up in the header to create an account or sign in.', 'info');
+      openOverlay('register');
       return;
     }
     if (!user.verified && !user.is_admin) {

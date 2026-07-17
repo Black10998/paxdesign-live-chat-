@@ -16,6 +16,30 @@ final class CustomerAPIClient: ObservableObject {
         baseURL
     }
 
+    /// Join REST path segments without treating `/customer/...` as site-root absolute paths.
+    private func endpointURL(_ path: String) -> URL? {
+        let raw = path.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pathPart: String
+        let queryPart: String?
+        if let qIndex = raw.firstIndex(of: "?") {
+            pathPart = String(raw[..<qIndex]).trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            queryPart = String(raw[raw.index(after: qIndex)...])
+        } else {
+            pathPart = raw.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+            queryPart = nil
+        }
+        var url = baseURL
+        if !pathPart.isEmpty {
+            for component in pathPart.split(separator: "/") {
+                url = url.appendingPathComponent(String(component), isDirectory: false)
+            }
+        }
+        guard let queryPart, !queryPart.isEmpty else { return url }
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return url }
+        components.percentEncodedQuery = queryPart
+        return components.url
+    }
+
     func authRegister(name: String, email: String, password: String) async throws -> CustomerAuthMessageResponse {
         try await publicPost("/auth/register", json: ["name": name, "email": email, "password": password], as: CustomerAuthMessageResponse.self)
     }
@@ -48,7 +72,7 @@ final class CustomerAPIClient: ObservableObject {
 
     func downloadProjectFile(projectId: Int, fileId: Int) async throws -> URL {
         guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
-        guard let url = URL(string: "/customer/projects/\(projectId)/files/\(fileId)/download", relativeTo: baseURL) else {
+        guard let url = endpointURL("/customer/projects/\(projectId)/files/\(fileId)/download") else {
             throw CustomerAPIError.invalidURL
         }
         var request = URLRequest(url: url)
@@ -210,7 +234,7 @@ final class CustomerAPIClient: ObservableObject {
         guard let auth, let header = auth.basicAuthHeader else {
             throw CustomerAPIError.unauthorized
         }
-        guard let url = URL(string: "/customer/chat/stream", relativeTo: baseURL) else {
+        guard let url = endpointURL("/customer/chat/stream") else {
             throw CustomerAPIError.invalidURL
         }
         var body: [String: String] = ["message": message]
@@ -252,7 +276,7 @@ final class CustomerAPIClient: ObservableObject {
 
     private func requestJSON<T: Decodable>(path: String, method: String, json: [String: Any], as type: T.Type) async throws -> T {
         guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
-        guard let url = URL(string: path, relativeTo: baseURL) else { throw CustomerAPIError.invalidURL }
+        guard let url = endpointURL(path) else { throw CustomerAPIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue(header, forHTTPHeaderField: "Authorization")
@@ -267,7 +291,7 @@ final class CustomerAPIClient: ObservableObject {
     }
 
     private func publicPost<T: Decodable>(_ path: String, json: [String: String], as type: T.Type) async throws -> T {
-        guard let url = URL(string: path, relativeTo: authBaseURL) else { throw CustomerAPIError.invalidURL }
+        guard let url = endpointURL(path) else { throw CustomerAPIError.invalidURL }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -294,7 +318,7 @@ final class CustomerAPIClient: ObservableObject {
         as type: T.Type
     ) async throws -> T {
         guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
-        guard let url = URL(string: path, relativeTo: baseURL) else { throw CustomerAPIError.invalidURL }
+        guard let url = endpointURL(path) else { throw CustomerAPIError.invalidURL }
         let boundary = "Boundary-\(UUID().uuidString)"
         var body = Data()
         for (key, value) in fields {
@@ -324,7 +348,7 @@ final class CustomerAPIClient: ObservableObject {
         guard let auth, let header = auth.basicAuthHeader else {
             throw CustomerAPIError.unauthorized
         }
-        guard let url = URL(string: path, relativeTo: baseURL) else {
+        guard let url = endpointURL(path) else {
             throw CustomerAPIError.invalidURL
         }
         var request = URLRequest(url: url)

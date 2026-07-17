@@ -2612,6 +2612,7 @@
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) { return res.json(); })
       .then(function (json) {
+        if (handleAuthGateResponse(json)) return json;
         saveSessionSnapshot();
         return json;
       })
@@ -2800,6 +2801,27 @@
     setTimeout(function () { el.remove(); }, 5000);
   }
 
+  function isLoginRequiredResponse(json) {
+    if (!json || json.success) return false;
+    var data = json.data || {};
+    return data.code === 'login_required';
+  }
+
+  function showLoginRequiredNotice() {
+    removeTyping();
+    var el = document.createElement('div');
+    el.className = 'paxdesign-booking-chat-error paxdesign-booking-chat-error--auth';
+    el.textContent = 'Bitte nutzen Sie „Sign Up“ in der Kopfzeile, um ein Konto zu erstellen oder sich anzumelden. Der Live Chat ist nur für Nachrichten.';
+    threadEl.appendChild(el);
+    scrollToBottom();
+  }
+
+  function handleAuthGateResponse(json) {
+    if (!isLoginRequiredResponse(json)) return false;
+    showLoginRequiredNotice();
+    return true;
+  }
+
   function sendHumanModeMessage(text, clientMsgId) {
     var formData = new FormData();
     formData.append('action', 'paxdesign_chat_live_user_send');
@@ -2812,6 +2834,9 @@
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) { return res.json(); })
       .then(function (json) {
+        if (handleAuthGateResponse(json)) {
+          throw new Error('login_required');
+        }
         if (!json || !json.success) {
           throw new Error(json && json.data && json.data.message ? json.data.message : 'Nachricht konnte nicht gesendet werden.');
         }

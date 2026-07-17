@@ -57,13 +57,14 @@ $db = file_get_contents($customer_dir . '/class-paxdesign-customer-db.php');
 cx_assert_true(strpos($db, 'schema_complete') !== false, 'Customer DB must verify schema completeness');
 cx_assert_true(strpos($db, 'service_categories') !== false && strpos($db, 'services') !== false, 'Customer DB must define services tables');
 
-$ios_api = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios-customer-portal/PAXCustomerPortal/Core/CustomerAPIClient.swift');
+$ios_api = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios-live-chat/PAXDesignLiveChat/Features/CustomerPortal/Core/CustomerAPIClient.swift');
 cx_assert_true(strpos($ios_api, '/customer/chat/stream') !== false, 'iOS client must call customer chat stream endpoint');
 cx_assert_true(strpos($ios_api, '/auth/register') !== false, 'iOS client must support auth registration');
+cx_assert_true(strpos($ios_api, 'endpointURL') !== false, 'iOS client must build REST URLs with endpointURL()');
 cx_assert_true(strpos($ios_api, '/customer/push/register') !== false, 'iOS client must register push tokens');
 cx_assert_true(strpos(strtolower($ios_api), 'paypal') === false, 'iOS customer client must not reference PayPal');
 
-$ios_push = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios-customer-portal/PAXCustomerPortal/Core/CustomerPushService.swift');
+$ios_push = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios-live-chat/PAXDesignLiveChat/Features/CustomerPortal/Core/CustomerPushService.swift');
 cx_assert_true(strpos($ios_push, 'registerForRemoteNotifications') !== false, 'iOS push service must register for remote notifications');
 
 $platform = file_get_contents($customer_dir . '/class-paxdesign-customer-platform.php');

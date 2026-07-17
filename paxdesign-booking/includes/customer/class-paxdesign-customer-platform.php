@@ -38,7 +38,7 @@ class PAXdesign_Customer_Platform {
             return;
         }
         wp_send_json_error(array(
-            'message' => __('Please sign in to continue chatting.', 'paxdesign-booking'),
+            'message' => __('Please use Sign Up in the site header to create an account or sign in. Live Chat is for messaging only.', 'paxdesign-booking'),
             'code'    => 'login_required',
         ), 401);
     }

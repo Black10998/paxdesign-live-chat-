@@ -10,12 +10,72 @@
   align-items: center;
 }
 
+.pdx-header-has-auth {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.pdx-header-has-auth > :not(#pdx-auth-bar) {
+  flex: 0 0 auto;
+}
+
 #pdx-auth-bar.pdx-auth-bar--header {
   position: absolute;
   top: 50%;
   right: max(12px, env(safe-area-inset-right, 12px));
   transform: translateY(-50%);
   margin: 0;
+  z-index: 99996;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pdx-auth-header-btn {
+  min-height: 36px;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
+  border: 1px solid rgba(255, 224, 166, 0.45);
+  background: linear-gradient(180deg, rgba(255, 224, 166, 0.22) 0%, rgba(255, 224, 166, 0.08) 100%);
+  color: #ffe0a6;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
+  border-color: rgba(255, 224, 166, 0.75);
+  background: linear-gradient(180deg, rgba(255, 224, 166, 0.32) 0%, rgba(255, 224, 166, 0.12) 100%);
+  outline: none;
+}
+
+.pdx-auth-account-btn {
+  max-width: 160px;
+}
+
+.pdx-auth-account-label {
+  display: inline-block;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.pdx-auth-account-btn--verified .pdx-auth-account-label {
+  max-width: 132px;
 }
 
 body.admin-bar #pdx-auth-bar:not(.pdx-auth-bar--header) {
@@ -174,16 +234,26 @@ body.admin-bar #pdx-auth-bar:not(.pdx-auth-bar--header) {
     top: calc(46px + max(8px, env(safe-area-inset-top, 8px)));
   }
 
-  .pdx-auth-trigger {
-    width: 34px;
-    height: 34px;
-    padding: 0;
-    justify-content: center;
-    border-radius: 50%;
+  .pdx-auth-header-btn {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 12px;
   }
 
-  .pdx-auth-trigger-label {
+  .pdx-auth-account-label {
+    max-width: 88px;
+  }
+}
+
+@media (max-width: 480px) {
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-portal-btn {
     display: none;
+  }
+
+  .pdx-auth-header-btn {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 11px;
   }
 }
 
