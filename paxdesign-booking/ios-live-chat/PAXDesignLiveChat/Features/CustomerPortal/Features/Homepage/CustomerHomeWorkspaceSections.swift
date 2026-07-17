@@ -306,7 +306,7 @@ struct CustomerHomeWorkspaceSections: View {
     private func workspaceCard<Content: View>(
         title: String,
         systemImage: String,
-        @ViewBuilder content: () -> Content
+        @ViewBuilder content: @escaping () -> Content
     ) -> some View {
         CustomerCalmShellCard {
             VStack(alignment: .leading, spacing: 14) {
