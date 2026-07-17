@@ -305,6 +305,12 @@ struct CustomerChatView: View {
     @State private var recovery: CustomerChatSessionRecovery.Action?
     @State private var isRecovering = false
     @State private var pollingSuspended = false
+    @State private var pollIntervalNs: UInt64 = 3_000_000_000
+    @State private var showDocumentPicker = false
+    @State private var showCameraPicker = false
+
+    private let minPollIntervalNs: UInt64 = 3_000_000_000
+    private let maxPollIntervalNs: UInt64 = 30_000_000_000
 
     private var isHumanQueue: Bool {
         guard let handler = poll?.handler else { return false }
@@ -334,15 +340,15 @@ struct CustomerChatView: View {
                             .frame(maxWidth: .infinity)
                             .background(PAXTheme.accentSoft)
                     }
-                    if let recovery, !isConversationClosed {
+                    if let recovery {
                         CustomerChatRecoveryBanner(
                             action: recovery,
                             isRecovering: isRecovering,
-                            onRenew: { Task { await startNewConversation() } },
                             onRetry: { Task { await retryAfterRecovery() } }
                         )
-                    } else if isConversationClosed {
-                        closedConversationBanner
+                    }
+                    if isConversationClosed, recovery == nil {
+                        CustomerChatSystemNotice(text: CustomerChatSessionRecovery.inactivityNotice())
                     }
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -375,9 +381,7 @@ struct CustomerChatView: View {
                     }
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    if !isConversationClosed {
-                        chatComposer
-                    }
+                    chatComposer
                 }
             }
             .navigationTitle(String(localized: "Chat"))
@@ -414,6 +418,12 @@ struct CustomerChatView: View {
             .sheet(isPresented: $showImagePicker) {
                 CustomerPhotoPicker { data in Task { await sendPhoto(data) } }
             }
+            .sheet(isPresented: $showCameraPicker) {
+                CustomerCameraPicker { data in Task { await sendPhoto(data) } }
+            }
+            .sheet(isPresented: $showDocumentPicker) {
+                CustomerDocumentPicker { url in Task { await sendDocument(url) } }
+            }
             .sheet(isPresented: $showLocationSheet) {
                 CustomerLocationShareSheet { lat, lng, label in
                     Task { await sendLocation(lat: lat, lng: lng, label: label) }
@@ -429,7 +439,13 @@ struct CustomerChatView: View {
             .onDisappear {
                 pollTask?.cancel()
                 typingTask?.cancel()
+                if let sessionID = poll?.session_id {
+                    AppRefreshPolicy.setActiveSession(nil)
+                }
                 Task { try? await api.sendChatTyping(sessionID: poll?.session_id, stop: true) }
+            }
+            .onAppear {
+                AppRefreshPolicy.setActiveSession(poll?.session_id)
             }
             .onChange(of: scenePhase) { phase in
                 if phase == .active {
@@ -441,40 +457,38 @@ struct CustomerChatView: View {
     }
 
     private var closedConversationBanner: some View {
-        VStack(spacing: 10) {
-            Text(String(localized: "This conversation has ended."))
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(PAXTheme.textPrimary)
-            Text(String(localized: "Start a new conversation to continue chatting with our team."))
-                .font(.caption)
-                .foregroundStyle(PAXTheme.textSecondary)
-                .multilineTextAlignment(.center)
-            Button(String(localized: "Start new conversation")) {
-                Task { await startNewConversation() }
-            }
-            .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .filled))
-        }
-        .padding(16)
-        .frame(maxWidth: .infinity)
-        .background(PAXTheme.surfaceElevated)
+        EmptyView()
     }
 
     private var chatComposer: some View {
         VStack(spacing: 0) {
             Divider()
             HStack(alignment: .bottom, spacing: 10) {
-                if isHumanQueue {
-                    Menu {
-                        Button(String(localized: "Photo"), systemImage: "photo") { showImagePicker = true }
-                        Button(isRecordingVoice ? String(localized: "Stop recording") : String(localized: "Voice message"), systemImage: "mic") {
-                            Task { await toggleVoice() }
-                        }
-                        Button(String(localized: "Share location"), systemImage: "location") { showLocationSheet = true }
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(PAXTheme.accent)
+                Menu {
+                    Button(String(localized: "Camera"), systemImage: "camera") {
+                        guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
+                        showCameraPicker = true
                     }
+                    Button(String(localized: "Photo Library"), systemImage: "photo.on.rectangle") {
+                        guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
+                        showImagePicker = true
+                    }
+                    Button(String(localized: "Files"), systemImage: "doc") {
+                        guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
+                        showDocumentPicker = true
+                    }
+                    Button(isRecordingVoice ? String(localized: "Stop recording") : String(localized: "Voice message"), systemImage: "mic") {
+                        guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
+                        Task { await toggleVoice() }
+                    }
+                    Button(String(localized: "Location"), systemImage: "location") {
+                        guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
+                        showLocationSheet = true
+                    }
+                } label: {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(PAXTheme.accent)
                 }
                 TextField(String(localized: "Message"), text: $draft, axis: .vertical)
                     .lineLimit(1...5)
@@ -499,8 +513,7 @@ struct CustomerChatView: View {
     }
 
     private var canSend: Bool {
-        !isConversationClosed
-            && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !isSending
             && network.isConnected
     }
@@ -517,34 +530,35 @@ struct CustomerChatView: View {
         }
     }
 
-    private func refresh(full: Bool = false) async {
-        if isSending && !full { return }
-        if pollingSuspended && !full { return }
+    private func refresh(full: Bool = false) async -> Bool {
+        if isSending && !full { return false }
+        if pollingSuspended && !full { return false }
         if full && poll == nil { isLoading = true }
         defer { isLoading = false }
+        let previousCount = poll?.messages?.count ?? 0
         do {
             let since = full ? 0 : lastSeq
             let next = try await api.fetchChatMessages(sessionID: poll?.session_id, since: since, full: full)
             applyPollUpdate(next, full: full)
             let pollNotice = next.notice
-            if let pollNotice, !pollNotice.isEmpty {
-                notice = pollNotice
-            }
             if next.handler == "closed" {
-                recovery = CustomerChatSessionRecovery.analyze(
-                    error: CustomerAPIError.serverCode("chat_closed", pollNotice ?? ""),
-                    handler: "closed",
-                    isConnected: network.isConnected
-                )
-                pollingSuspended = true
-                pollTask?.cancel()
+                notice = pollNotice ?? CustomerChatSessionRecovery.inactivityNotice()
+                recovery = nil
+                pollingSuspended = false
             } else {
+                if let pollNotice, !pollNotice.isEmpty {
+                    notice = pollNotice
+                }
                 recovery = nil
                 pollingSuspended = false
                 error = nil
             }
+            AppRefreshPolicy.setActiveSession(poll?.session_id)
+            let newCount = poll?.messages?.count ?? 0
+            return newCount > previousCount
         } catch {
             await handleChatError(error, savedDraft: nil, duringSend: false)
+            return false
         }
     }
 
@@ -625,17 +639,16 @@ struct CustomerChatView: View {
             poll = CustomerChatPoll(
                 session_id: renewed.session_id,
                 handler: renewed.handler,
-                messages: [],
-                message_count: nil,
-                last_preview: nil
+                messages: poll?.messages,
+                message_count: poll?.message_count,
+                last_preview: poll?.last_preview
             )
-            lastSeq = 0
+            lastSeq = poll?.messages?.map(\.seq).max() ?? 0
             recovery = nil
             pollingSuspended = false
             error = nil
             startPolling()
             await refresh(full: true)
-            notice = CustomerChatSessionRecovery.newConversationNotice()
             if let preserveDraft {
                 draft = preserveDraft
             }
@@ -665,11 +678,17 @@ struct CustomerChatView: View {
     private func startPolling() {
         pollTask?.cancel()
         pollingSuspended = false
+        pollIntervalNs = minPollIntervalNs
         pollTask = Task {
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 1_500_000_000)
-                if network.isConnected, !isSending, !pollingSuspended, !isConversationClosed {
-                    await refresh(full: false)
+                try? await Task.sleep(nanoseconds: pollIntervalNs)
+                guard network.isConnected, !pollingSuspended else { continue }
+                let hadNew = await refresh(full: false)
+                if hadNew {
+                    pollIntervalNs = minPollIntervalNs
+                } else {
+                    let step: UInt64 = isHumanQueue ? 2_000_000_000 : 3_000_000_000
+                    pollIntervalNs = min(pollIntervalNs + step, maxPollIntervalNs)
                 }
             }
         }
@@ -681,6 +700,18 @@ struct CustomerChatView: View {
         defer { isSending = false }
         do {
             _ = try await api.uploadChatImage(sessionID: session, imageData: data, filename: "photo.jpg")
+            await refresh(full: true)
+        } catch { self.error = friendlyChatError(error) }
+    }
+
+    private func sendDocument(_ url: URL) async {
+        guard let session = poll?.session_id else { return }
+        isSending = true
+        defer { isSending = false }
+        do {
+            let data = try Data(contentsOf: url)
+            let filename = url.lastPathComponent.isEmpty ? "document" : url.lastPathComponent
+            _ = try await api.uploadChatFile(sessionID: session, fileData: data, filename: filename)
             await refresh(full: true)
         } catch { self.error = friendlyChatError(error) }
     }
@@ -714,7 +745,7 @@ struct CustomerChatView: View {
 
     private func send() async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, !isConversationClosed else { return }
+        guard !text.isEmpty else { return }
         let savedDraft = text
         let clientMsgID = UUID().uuidString
         let assistantClientMsgID = UUID().uuidString
@@ -818,36 +849,10 @@ struct CustomerChatView: View {
         if let noticeText = response.notice, !noticeText.isEmpty {
             notice = noticeText
         } else if response.renewed == true {
-            notice = String(localized: "This conversation was closed. We started a new one for your message.")
+            notice = CustomerChatSessionRecovery.inactivityNotice()
         }
         if response.handler == "live_request" || response.handler == "admin" {
             notice = response.notice ?? notice
-        }
-    }
-
-    private func startNewConversation() async {
-        guard !isRecovering else { return }
-        isRecovering = true
-        error = nil
-        notice = CustomerChatSessionRecovery.reconnectingNotice()
-        defer { isRecovering = false }
-        do {
-            let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id)
-            poll = CustomerChatPoll(
-                session_id: renewed.session_id,
-                handler: renewed.handler,
-                messages: [],
-                message_count: nil,
-                last_preview: nil
-            )
-            lastSeq = 0
-            recovery = nil
-            pollingSuspended = false
-            startPolling()
-            await refresh(full: true)
-            notice = CustomerChatSessionRecovery.newConversationNotice()
-        } catch {
-            await handleChatError(error, savedDraft: nil, duringSend: false)
         }
     }
 

@@ -69,15 +69,6 @@ struct CustomerServicesCatalogScreen: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: catalog.isRTL ? .trailing : .leading, spacing: 0) {
-                    HStack {
-                        if catalog.isRTL { Spacer(minLength: 0) }
-                        ServicesLanguageSwitcher(language: $language)
-                        if !catalog.isRTL { Spacer(minLength: 0) }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 24)
-                    .environment(\.layoutDirection, catalog.isRTL ? .rightToLeft : .leftToRight)
-
                     headerSection(catalog)
                     statementSection(catalog)
                     cardsSection(catalog, proxy: proxy)

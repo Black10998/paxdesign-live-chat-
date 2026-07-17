@@ -1,1 +1,1 @@
-Build 147 retry 2 — fix workspaceCard @escaping content closure.
+Build 148 — fix chat POST 502, persistent conversation, polling backoff, Arabic header, push education.

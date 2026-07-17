@@ -204,6 +204,24 @@ final class CustomerAPIClient: ObservableObject {
         ], as: CustomerSendResponse.self)
     }
 
+    func uploadChatFile(sessionID: String, fileData: Data, filename: String, clientMsgID: String = UUID().uuidString) async throws -> CustomerSendResponse {
+        let mime = mimeType(for: filename)
+        return try await uploadMultipart(path: "/customer/chat/messages/file", field: "file", filename: filename, mime: mime, data: fileData, fields: [
+            "session_id": sessionID,
+            "client_msg_id": clientMsgID,
+        ], as: CustomerSendResponse.self)
+    }
+
+    private func mimeType(for filename: String) -> String {
+        switch (filename as NSString).pathExtension.lowercased() {
+        case "pdf": return "application/pdf"
+        case "png": return "image/png"
+        case "jpg", "jpeg": return "image/jpeg"
+        case "m4a", "mp4": return "audio/mp4"
+        default: return "application/octet-stream"
+        }
+    }
+
     func sendChatLocation(sessionID: String, lat: Double, lng: Double, label: String) async throws -> CustomerSendResponse {
         try await requestJSON(path: "/customer/chat/messages/location", method: "POST", json: [
             "session_id": sessionID,

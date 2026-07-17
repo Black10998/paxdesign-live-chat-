@@ -628,11 +628,11 @@ class PAXdesign_Chat {
     /**
      * Build OpenAI chat/completions payload for a model.
      */
-    private function build_openai_payload($model, $messages) {
+    private function build_openai_payload($model, $messages, $stream = true) {
         $payload = array(
             'model'                 => $model,
             'messages'              => $messages,
-            'stream'                => true,
+            'stream'                => (bool) $stream,
             'max_completion_tokens' => $this->get_max_completion_tokens($model),
         );
 
@@ -1003,7 +1003,7 @@ class PAXdesign_Chat {
         $last_error = __('No response from the assistant. Please try again.', 'paxdesign-booking');
 
         foreach ($models as $model) {
-            $payload = wp_json_encode($this->build_openai_payload($model, $openai_messages));
+            $payload = wp_json_encode($this->build_openai_payload($model, $openai_messages, false));
             if ($payload === false) {
                 continue;
             }

@@ -290,7 +290,7 @@ class PAXdesign_Customer_Chat_Bridge {
             if ($renewed && is_array($result)) {
                 $result['session_id'] = $session_id;
                 $result['renewed'] = true;
-                $result['notice'] = __('This conversation was closed. We started a new one for your message.', 'paxdesign-booking');
+                $result['notice'] = __('This conversation was closed due to inactivity. Send a new message to continue.', 'paxdesign-booking');
             }
             return $result;
         }
@@ -330,7 +330,7 @@ class PAXdesign_Customer_Chat_Bridge {
         );
         if ($renewed) {
             $payload['renewed'] = true;
-            $payload['notice'] = __('This conversation was closed. We started a new one for your message.', 'paxdesign-booking');
+            $payload['notice'] = __('This conversation was closed due to inactivity. Send a new message to continue.', 'paxdesign-booking');
         }
         return $payload;
     }
@@ -418,7 +418,7 @@ class PAXdesign_Customer_Chat_Bridge {
         );
         if ($renewed) {
             $payload['renewed'] = true;
-            $payload['notice'] = __('This conversation was closed. We started a new one for your message.', 'paxdesign-booking');
+            $payload['notice'] = __('This conversation was closed due to inactivity. Send a new message to continue.', 'paxdesign-booking');
         }
         return $payload;
     }

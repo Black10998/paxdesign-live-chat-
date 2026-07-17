@@ -126,16 +126,24 @@ private struct HeroTagsRow: View {
                         .foregroundStyle(accentDot)
                         .fontWeight(.bold)
                 }
-                Text(tag.uppercased())
+                Text(isArabicScript(tag) ? tag : tag.uppercased())
                     .foregroundStyle(Color.white.opacity(0.72))
             }
         }
         .font(.system(size: metrics.tagFontSize, weight: .semibold))
-        .tracking(metrics.tagTracking)
+        .tracking(usesArabicTags ? 0 : metrics.tagTracking)
         .multilineTextAlignment(.center)
         .frame(maxWidth: metrics.bodyMaxWidth)
         .frame(maxWidth: .infinity, alignment: .center)
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var usesArabicTags: Bool {
+        tags.contains(where: isArabicScript)
+    }
+
+    private func isArabicScript(_ text: String) -> Bool {
+        text.unicodeScalars.contains { (0x0600...0x06FF).contains($0.value) }
     }
 }
 
@@ -146,10 +154,11 @@ private struct HeroTextStack: View {
     let metrics: HeroMetrics
 
     var body: some View {
+        let arabic = isArabicScript(hero.lead) || isArabicScript(hero.mid) || isArabicScript(hero.sub)
         VStack(spacing: metrics.textGap) {
             Text(hero.lead)
                 .font(.system(size: metrics.leadFontSize, weight: .bold))
-                .tracking(-0.02 * metrics.leadFontSize)
+                .tracking(arabic ? 0 : -0.02 * metrics.leadFontSize)
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
@@ -177,6 +186,10 @@ private struct HeroTextStack: View {
         }
         .frame(maxWidth: .infinity)
     }
+
+    private func isArabicScript(_ text: String) -> Bool {
+        text.unicodeScalars.contains { (0x0600...0x06FF).contains($0.value) }
+    }
 }
 
 // MARK: - CTA
@@ -198,7 +211,7 @@ private struct HeroCombinedCTA: View {
                     .font(.system(size: metrics.ctaTextFontSize, weight: .semibold))
                     .tracking(0.04 * metrics.ctaTextFontSize)
                     .foregroundStyle(Color.white.opacity(0.58))
-                    .multilineTextAlignment(.leading)
+                    .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .minimumScaleFactor(0.85)
             }

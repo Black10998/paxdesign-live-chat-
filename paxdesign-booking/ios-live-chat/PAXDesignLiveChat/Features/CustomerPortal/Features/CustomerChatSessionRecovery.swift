@@ -18,6 +18,12 @@ enum CustomerChatSessionRecovery {
         let shouldRenew: Bool
         let shouldStopPolling: Bool
         let preserveDraft: Bool
+        let showManualRenew: Bool
+    }
+
+    /// Inactivity notice shown inline when a conversation is closed but the user can keep typing.
+    static func inactivityNotice() -> String {
+        String(localized: "This conversation was closed due to inactivity. Send a new message to continue.")
     }
 
     static func analyze(error: Error, handler: String?, isConnected: Bool) -> Action? {
@@ -27,18 +33,13 @@ enum CustomerChatSessionRecovery {
                 message: String(localized: "You are offline. Your message will send when you reconnect."),
                 shouldRenew: false,
                 shouldStopPolling: false,
-                preserveDraft: true
+                preserveDraft: true,
+                showManualRenew: false
             )
         }
 
         if handler == "closed" {
-            return Action(
-                issue: .closed,
-                message: String(localized: "This conversation has ended. Start a new conversation to continue."),
-                shouldRenew: false,
-                shouldStopPolling: true,
-                preserveDraft: true
-            )
+            return nil
         }
 
         if let apiError = error as? CustomerAPIError {
@@ -55,7 +56,8 @@ enum CustomerChatSessionRecovery {
                     message: String(localized: "Please sign in again to continue chatting."),
                     shouldRenew: false,
                     shouldStopPolling: true,
-                    preserveDraft: true
+                    preserveDraft: true,
+                    showManualRenew: false
                 )
             default:
                 return nil
@@ -66,11 +68,7 @@ enum CustomerChatSessionRecovery {
     }
 
     static func renewedNotice() -> String {
-        String(localized: "This conversation was closed. We started a new one for your message.")
-    }
-
-    static func newConversationNotice() -> String {
-        String(localized: "New conversation started.")
+        inactivityNotice()
     }
 
     static func reconnectingNotice() -> String {
@@ -82,10 +80,11 @@ enum CustomerChatSessionRecovery {
         case "chat_closed":
             return Action(
                 issue: .closed,
-                message: localizedClosedMessage(fallback: message),
+                message: inactivityNotice(),
                 shouldRenew: true,
-                shouldStopPolling: true,
-                preserveDraft: true
+                shouldStopPolling: false,
+                preserveDraft: true,
+                showManualRenew: false
             )
         case "invalid_session", "not_found":
             return Action(
@@ -93,23 +92,26 @@ enum CustomerChatSessionRecovery {
                 message: String(localized: "Your conversation session expired. Reconnecting…"),
                 shouldRenew: true,
                 shouldStopPolling: false,
-                preserveDraft: true
+                preserveDraft: true,
+                showManualRenew: false
             )
         case "disabled", "worker_only_stream", "not_configured", "openai_failed":
             return Action(
                 issue: .unavailable,
-                message: String(localized: "The assistant is temporarily unavailable. You can retry or start a new conversation."),
+                message: String(localized: "The assistant is temporarily unavailable. Please try again."),
                 shouldRenew: false,
                 shouldStopPolling: false,
-                preserveDraft: true
+                preserveDraft: true,
+                showManualRenew: false
             )
         case "forbidden":
             return Action(
                 issue: .forbidden,
-                message: String(localized: "You no longer have access to this conversation. Starting a new one…"),
+                message: String(localized: "You no longer have access to this conversation. Reconnecting…"),
                 shouldRenew: true,
                 shouldStopPolling: false,
-                preserveDraft: true
+                preserveDraft: true,
+                showManualRenew: false
             )
         default:
             return nil
@@ -121,10 +123,11 @@ enum CustomerChatSessionRecovery {
         case 409:
             return Action(
                 issue: .closed,
-                message: localizedClosedMessage(fallback: ""),
+                message: inactivityNotice(),
                 shouldRenew: true,
-                shouldStopPolling: true,
-                preserveDraft: true
+                shouldStopPolling: false,
+                preserveDraft: true,
+                showManualRenew: false
             )
         case 404:
             return Action(
@@ -132,15 +135,17 @@ enum CustomerChatSessionRecovery {
                 message: String(localized: "Your conversation session expired. Reconnecting…"),
                 shouldRenew: true,
                 shouldStopPolling: false,
-                preserveDraft: true
+                preserveDraft: true,
+                showManualRenew: false
             )
         case 503, 502:
             return Action(
                 issue: .unavailable,
-                message: String(localized: "The assistant is temporarily unavailable. You can retry or start a new conversation."),
+                message: String(localized: "The assistant is temporarily unavailable. Please try again."),
                 shouldRenew: false,
                 shouldStopPolling: false,
-                preserveDraft: true
+                preserveDraft: true,
+                showManualRenew: false
             )
         default:
             return nil
@@ -152,30 +157,24 @@ enum CustomerChatSessionRecovery {
         if lower.contains("closed") || lower.contains("geschlossen") || lower.contains("مغلق") {
             return Action(
                 issue: .closed,
-                message: localizedClosedMessage(fallback: message),
+                message: inactivityNotice(),
                 shouldRenew: true,
-                shouldStopPolling: true,
-                preserveDraft: true
+                shouldStopPolling: false,
+                preserveDraft: true,
+                showManualRenew: false
             )
         }
         if lower.contains("unavailable") || lower.contains("nicht verfügbar") || lower.contains("غير متاح") || lower.contains("temporarily") {
             return Action(
                 issue: .unavailable,
-                message: String(localized: "The assistant is temporarily unavailable. You can retry or start a new conversation."),
+                message: String(localized: "The assistant is temporarily unavailable. Please try again."),
                 shouldRenew: false,
                 shouldStopPolling: false,
-                preserveDraft: true
+                preserveDraft: true,
+                showManualRenew: false
             )
         }
         return nil
-    }
-
-    private static func localizedClosedMessage(fallback: String) -> String {
-        let trimmed = fallback.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty {
-            return String(localized: "This conversation has ended. Start a new conversation to continue.")
-        }
-        return CustomerAPIError.friendlyMessage(forServerText: trimmed)
     }
 }
 
@@ -184,7 +183,6 @@ enum CustomerChatSessionRecovery {
 struct CustomerChatRecoveryBanner: View {
     let action: CustomerChatSessionRecovery.Action
     var isRecovering: Bool
-    var onRenew: () -> Void
     var onRetry: () -> Void
 
     private var icon: String {
@@ -210,19 +208,10 @@ struct CustomerChatRecoveryBanner: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            HStack(spacing: 12) {
-                if action.issue == .unavailable || action.issue == .offline {
-                    Button(String(localized: "Retry")) { onRetry() }
-                        .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .tinted))
-                        .disabled(isRecovering)
-                }
-                if action.issue != .offline {
-                    Button(isRecovering ? String(localized: "Reconnecting…") : String(localized: "Start new conversation")) {
-                        onRenew()
-                    }
-                    .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .filled))
+            if action.issue == .unavailable || action.issue == .offline {
+                Button(String(localized: "Retry")) { onRetry() }
+                    .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .tinted))
                     .disabled(isRecovering)
-                }
             }
         }
         .padding(16)

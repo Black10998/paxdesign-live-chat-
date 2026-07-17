@@ -17,6 +17,7 @@ struct PAXLaunchView: View {
                 PAXAnimatedLogoView(markWidth: markWidth)
                     .opacity(logoOpacity)
                     .id(sequenceID)
+                    .environment(\.layoutDirection, .leftToRight)
             }
         }
         .onAppear { runLaunchSequence() }

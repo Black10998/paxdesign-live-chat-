@@ -31,6 +31,7 @@ struct PAXAnimatedLogoView: View {
             PAXLogoSymbolView(iconIndex: symbolIndex, size: iconSize, isMorphing: isMorphing)
             wordmark
         }
+        .environment(\.layoutDirection, .leftToRight)
         .accessibilityLabel("PAXdesign")
         .onAppear { startAnimations() }
         .onDisappear { symbolTask?.cancel() }

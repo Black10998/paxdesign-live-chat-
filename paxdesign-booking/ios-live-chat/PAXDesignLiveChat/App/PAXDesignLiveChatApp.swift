@@ -115,9 +115,6 @@ struct PAXDesignLiveChatApp: App {
         } else if auth.isLoggedIn, auth.isCustomerSession {
             CustomerSessionController.shared.syncFromAuthStore(auth)
             CustomerPushService.shared.configure(api: CustomerSessionController.shared.api)
-            Task {
-                await CustomerPushService.shared.requestAuthorizationAndRegister()
-            }
         }
 
         LaunchDiagnostics.mark("startup.interactive")

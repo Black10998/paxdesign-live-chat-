@@ -12,7 +12,6 @@ struct CustomerHomeWorkspaceSections: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             welcomeCard
-            quickActionsRow
             if let projects = dashboard.projects_active, !projects.isEmpty {
                 projectsSection(projects)
             }
@@ -58,50 +57,6 @@ struct CustomerHomeWorkspaceSections: View {
             .padding(22)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-    }
-
-    private var quickActionsRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                quickAction(String(localized: "New request"), systemImage: "plus.circle.fill") {
-                    navigation.selectedTab = .services
-                }
-                quickAction(String(localized: "Chat"), systemImage: "message.fill") {
-                    navigation.openChat(sessionID: dashboard.chat?.session_id)
-                }
-                quickAction(String(localized: "Projects"), systemImage: "folder.fill") {
-                    navigation.openProjectsList()
-                }
-                quickAction(String(localized: "Files"), systemImage: "doc.fill") {
-                    navigation.openFiles()
-                }
-            }
-        }
-    }
-
-    private func quickAction(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: systemImage)
-                    .font(.title3)
-                    .foregroundStyle(theme.accent)
-                Text(title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(theme.textPrimary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(width: 88)
-            .padding(.vertical, 14)
-            .background(theme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(theme.border, lineWidth: 0.5)
-            )
-        }
-        .buttonStyle(.plain)
     }
 
     private func projectsSection(_ projects: [CustomerDashboard.ProjectSummary]) -> some View {

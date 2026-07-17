@@ -59,12 +59,6 @@ struct CustomerPortfolioListView: View {
     private var portfolioScroll: some View {
         ScrollView {
             LazyVStack(alignment: isRTL ? .trailing : .leading, spacing: CustomerCalmDesign.sectionSpacing) {
-                HStack {
-                    if isRTL { Spacer(minLength: 0) }
-                    ServicesLanguageSwitcher(language: $language)
-                    if !isRTL { Spacer(minLength: 0) }
-                }
-
                 if let showcase {
                     CustomerCalmSectionIntro(
                         tags: showcase.header.tags,

@@ -282,6 +282,9 @@ class PAXdesign_Message_Store {
             }
 
             $table = self::messages_table();
+            if (method_exists($wpdb, 'flush')) {
+                $wpdb->flush();
+            }
             $wpdb->query('START TRANSACTION');
             $seq = 1 + (int) $wpdb->get_var($wpdb->prepare(
                 "SELECT COALESCE(MAX(msg_seq), 0) FROM $table WHERE session_id = %s",

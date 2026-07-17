@@ -6,13 +6,33 @@ import UserNotifications
 final class CustomerPushService: NSObject, ObservableObject {
     static let shared = CustomerPushService()
 
+    private static let educationSeenKey = "customerNotificationEducationSeen"
+
     @Published private(set) var deviceToken: String?
     @Published private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
+    @Published var shouldShowNotificationEducation = false
 
     private weak var api: CustomerAPIClient?
+    private var lastRegisteredToken: String?
 
     func configure(api: CustomerAPIClient) {
         self.api = api
+    }
+
+    func prepareNotificationRegistration() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        authorizationStatus = settings.authorizationStatus
+        if settings.authorizationStatus == .notDetermined,
+           !UserDefaults.standard.bool(forKey: Self.educationSeenKey) {
+            shouldShowNotificationEducation = true
+            return
+        }
+        await requestAuthorizationAndRegister()
+    }
+
+    func markNotificationEducationSeen() {
+        UserDefaults.standard.set(true, forKey: Self.educationSeenKey)
+        shouldShowNotificationEducation = false
     }
 
     func requestAuthorizationAndRegister() async {
@@ -31,8 +51,20 @@ final class CustomerPushService: NSObject, ObservableObject {
     func didRegister(tokenData: Data) {
         let token = tokenData.map { String(format: "%02x", $0) }.joined()
         deviceToken = token
+        guard token != lastRegisteredToken else { return }
+        lastRegisteredToken = token
         Task {
-            try? await api?.registerPush(token: token, deviceID: UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString)
+            do {
+                try await api?.registerPush(
+                    token: token,
+                    deviceID: UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+                )
+            } catch {
+                lastRegisteredToken = nil
+                #if DEBUG
+                print("Customer push registration failed: \(error.localizedDescription)")
+                #endif
+            }
         }
     }
 
@@ -59,27 +91,6 @@ final class CustomerPushService: NSObject, ObservableObject {
             }
         }
         return nil
-    }
-}
-
-extension CustomerPushService: UNUserNotificationCenterDelegate {
-    nonisolated func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification
-    ) async -> UNNotificationPresentationOptions {
-        [.banner, .sound, .badge]
-    }
-
-    nonisolated func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse
-    ) async {
-        let info = response.notification.request.content.userInfo
-        if let link = await CustomerPushService.shared.handleNotification(userInfo: info) {
-            await MainActor.run {
-                CustomerDeepLinkRouter.shared.pending = link
-            }
-        }
     }
 }
 

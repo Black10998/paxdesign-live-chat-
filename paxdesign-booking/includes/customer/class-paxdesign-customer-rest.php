@@ -652,13 +652,13 @@ class PAXdesign_Customer_REST {
         $live = PAXdesign_Chat_Live::get_instance();
         $handler = $live->get_handler($session_id);
         if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED && $full) {
-            return rest_ensure_response(array(
-                'session_id'     => $session_id,
-                'handler'        => PAXdesign_Chat_Live::HANDLER_CLOSED,
-                'messages'       => array(),
-                'message_count'  => 0,
-                'notice'         => __('This conversation has ended. Start a new conversation to continue.', 'paxdesign-booking'),
-            ));
+            $data = $live->get_poll_data($session_id, $since, $full, 'user');
+            if (is_wp_error($data)) {
+                return $data;
+            }
+            $data['handler'] = PAXdesign_Chat_Live::HANDLER_CLOSED;
+            $data['notice'] = __('This conversation was closed due to inactivity. Send a new message to continue.', 'paxdesign-booking');
+            return rest_ensure_response($data);
         }
         $data = $live->get_poll_data($session_id, $since, $full, 'user');
         if (is_wp_error($data)) {

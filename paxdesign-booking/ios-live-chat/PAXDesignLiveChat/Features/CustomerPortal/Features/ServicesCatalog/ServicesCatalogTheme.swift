@@ -25,7 +25,7 @@ struct CustomerMarketingTheme: Equatable {
     }
 
     var textSecondary: Color {
-        colorScheme == .dark ? Color(red: 0.55, green: 0.55, blue: 0.55) : Color(red: 0.42, green: 0.44, blue: 0.48)
+        colorScheme == .dark ? Color(red: 0.55, green: 0.55, blue: 0.55) : Color(red: 0.28, green: 0.30, blue: 0.34)
     }
 
     var accent: Color { Color(red: 0.76, green: 1.0, blue: 0.0) }

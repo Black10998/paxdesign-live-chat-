@@ -19,7 +19,16 @@ struct CustomerPortalShellView: View {
             .task {
                 customerSession.syncFromAuthStore(auth)
                 CustomerPushService.shared.configure(api: customerSession.api)
-                await CustomerPushService.shared.requestAuthorizationAndRegister()
+                await CustomerPushService.shared.prepareNotificationRegistration()
+            }
+            .sheet(isPresented: Binding(
+                get: { CustomerPushService.shared.shouldShowNotificationEducation },
+                set: { CustomerPushService.shared.shouldShowNotificationEducation = $0 }
+            )) {
+                CustomerNotificationPermissionSheet {
+                    CustomerPushService.shared.markNotificationEducationSeen()
+                    Task { await CustomerPushService.shared.requestAuthorizationAndRegister() }
+                }
             }
             .onChange(of: deepLinks.pending) { link in
                 guard let link else { return }
