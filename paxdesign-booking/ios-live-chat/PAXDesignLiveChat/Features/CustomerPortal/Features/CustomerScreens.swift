@@ -71,7 +71,7 @@ struct CustomerDashboardView: View {
                 if isLoading {
                     ProgressView(String(localized: "Loading dashboard…"))
                 } else if let error {
-                    ContentUnavailableView(String(localized: "Unable to load"), systemImage: "wifi.exclamationmark", description: Text(error))
+                    PAXContentUnavailableView(String(localized: "Unable to load"), systemImage: "wifi.exclamationmark", description: Text(error))
                 } else if let dashboard {
                     List {
                         Section(String(localized: "Conversation")) {
@@ -394,7 +394,7 @@ struct CustomerServicesView: View {
                         }
                     }
                 } else if let error {
-                    ContentUnavailableView(String(localized: "Services unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
+                    PAXContentUnavailableView(String(localized: "Services unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
                 } else {
                     ProgressView()
                 }

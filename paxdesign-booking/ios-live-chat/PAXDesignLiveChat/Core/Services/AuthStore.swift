@@ -139,7 +139,7 @@ final class AuthStore: ObservableObject {
             persistCredentials(mode: .customer)
         } catch CustomerAPIError.unauthorized {
             invalidateStoredSession(keepFormFields: true)
-            throw error
+            throw CustomerAPIError.unauthorized
         } catch CustomerAPIError.http(401), CustomerAPIError.http(403) {
             invalidateStoredSession(keepFormFields: true)
             throw CustomerAPIError.unauthorized

@@ -12,9 +12,9 @@ struct CustomerConversationsView: View {
                 if conversations.isEmpty && error == nil {
                     ProgressView(String(localized: "Loading conversations…"))
                 } else if let error {
-                    ContentUnavailableView(String(localized: "Conversations unavailable"), systemImage: "message", description: Text(error))
+                    PAXContentUnavailableView(String(localized: "Conversations unavailable"), systemImage: "message", description: Text(error))
                 } else if conversations.isEmpty {
-                    ContentUnavailableView(String(localized: "No conversations"), systemImage: "message", description: Text(String(localized: "Start chatting from the Chat tab.")))
+                    PAXContentUnavailableView(String(localized: "No conversations"), systemImage: "message", description: Text(String(localized: "Start chatting from the Chat tab.")))
                 } else {
                     List(conversations) { conv in
                         NavigationLink {

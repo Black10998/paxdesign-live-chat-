@@ -14,9 +14,9 @@ struct CustomerProjectsListView: View {
                 if isLoading {
                     ProgressView(String(localized: "Loading projects…"))
                 } else if let error {
-                    ContentUnavailableView(String(localized: "Projects unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
+                    PAXContentUnavailableView(String(localized: "Projects unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
                 } else if projects.isEmpty {
-                    ContentUnavailableView(String(localized: "No projects yet"), systemImage: "folder", description: Text(String(localized: "Your active work will appear here.")))
+                    PAXContentUnavailableView(String(localized: "No projects yet"), systemImage: "folder", description: Text(String(localized: "Your active work will appear here.")))
                 } else {
                     List(projects) { project in
                         NavigationLink {
@@ -110,7 +110,7 @@ struct CustomerProjectDetailView: View {
                     }
                 }
             } else if let error {
-                ContentUnavailableView(String(localized: "Unable to load project"), systemImage: "exclamationmark.triangle", description: Text(error))
+                PAXContentUnavailableView(String(localized: "Unable to load project"), systemImage: "exclamationmark.triangle", description: Text(error))
             } else {
                 ProgressView()
             }
@@ -142,9 +142,9 @@ struct CustomerOrdersListView: View {
                 if isLoading {
                     ProgressView()
                 } else if let error {
-                    ContentUnavailableView(String(localized: "Requests unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
+                    PAXContentUnavailableView(String(localized: "Requests unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
                 } else if orders.isEmpty {
-                    ContentUnavailableView(String(localized: "No requests yet"), systemImage: "tray", description: Text(String(localized: "Submit a service request from the Services tab.")))
+                    PAXContentUnavailableView(String(localized: "No requests yet"), systemImage: "tray", description: Text(String(localized: "Submit a service request from the Services tab.")))
                 } else {
                     List(orders) { order in
                         NavigationLink {
@@ -212,7 +212,7 @@ struct CustomerOrderDetailView: View {
                     }
                 }
             } else if let error {
-                ContentUnavailableView(String(localized: "Unable to load request"), systemImage: "exclamationmark.triangle", description: Text(error))
+                PAXContentUnavailableView(String(localized: "Unable to load request"), systemImage: "exclamationmark.triangle", description: Text(error))
             } else {
                 ProgressView()
             }
@@ -296,7 +296,7 @@ struct CustomerNewsListView: View {
                 if items.isEmpty && error == nil {
                     ProgressView()
                 } else if let error {
-                    ContentUnavailableView(String(localized: "News unavailable"), systemImage: "newspaper", description: Text(error))
+                    PAXContentUnavailableView(String(localized: "News unavailable"), systemImage: "newspaper", description: Text(error))
                 } else {
                     List(items) { item in
                         NavigationLink(item.title) {
@@ -359,7 +359,7 @@ struct CustomerNotificationsView: View {
                         .opacity(item.is_read ? 0.6 : 1)
                     }
                 } else if let error {
-                    ContentUnavailableView(String(localized: "Notifications unavailable"), systemImage: "bell.slash", description: Text(error))
+                    PAXContentUnavailableView(String(localized: "Notifications unavailable"), systemImage: "bell.slash", description: Text(error))
                 } else {
                     ProgressView()
                 }

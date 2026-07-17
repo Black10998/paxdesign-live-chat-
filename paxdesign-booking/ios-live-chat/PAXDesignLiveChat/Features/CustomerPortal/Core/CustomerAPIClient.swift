@@ -39,7 +39,7 @@ final class CustomerAPIClient: ObservableObject {
             "token": token,
             "device_id": deviceID,
             "platform": "ios",
-        ], as: EmptyResponse.self)
+        ], as: CustomerEmptyResponse.self)
     }
 
     func fetchConversations() async throws -> CustomerConversationsResponse {
@@ -152,7 +152,7 @@ final class CustomerAPIClient: ObservableObject {
     }
 
     func markNotificationsRead(ids: [Int]) async throws {
-        _ = try await requestJSON(path: "/customer/notifications", method: "PATCH", json: ["ids": ids], as: EmptyResponse.self)
+        _ = try await requestJSON(path: "/customer/notifications", method: "PATCH", json: ["ids": ids], as: CustomerEmptyResponse.self)
     }
 
     func fetchSettings() async throws -> CustomerSettingsResponse {
@@ -178,7 +178,7 @@ final class CustomerAPIClient: ObservableObject {
     }
 
     func deleteAccount(password: String) async throws {
-        _ = try await post("/customer/account/delete", body: ["password": password], as: EmptyResponse.self)
+        _ = try await post("/customer/account/delete", body: ["password": password], as: CustomerEmptyResponse.self)
     }
 
     func fetchProfile() async throws -> CustomerProfileResponse {
@@ -457,7 +457,7 @@ struct CustomerStreamEvent: Decodable {
     let message: CustomerChatPoll.ChatMessage?
 }
 
-struct EmptyResponse: Decodable {}
+struct CustomerEmptyResponse: Decodable {}
 
 struct CustomerAuthMessageResponse: Decodable {
     let success: Bool?

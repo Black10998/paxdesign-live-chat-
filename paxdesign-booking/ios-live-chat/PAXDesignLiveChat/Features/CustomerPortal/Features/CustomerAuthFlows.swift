@@ -167,7 +167,7 @@ struct CustomerAccountStatusView: View {
     var onRetry: (() -> Void)?
 
     var body: some View {
-        ContentUnavailableView(title, systemImage: "person.crop.circle.badge.exclamationmark", description: Text(message))
+        PAXContentUnavailableView(title, systemImage: "person.crop.circle.badge.exclamationmark", description: Text(message))
             .toolbar {
                 if let onRetry {
                     ToolbarItem(placement: .primaryAction) {
