@@ -31,8 +31,6 @@ targets:
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
     entitlements:
       path: PAXCustomerPortal/PAXCustomerPortal.entitlements
-      properties:
-        aps-environment: production
     info:
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
