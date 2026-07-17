@@ -133,7 +133,7 @@ struct CustomerDashboardView: View {
                                     }
                                 } else {
                                     Text(String(localized: "No active projects yet.")).foregroundStyle(PAXTheme.textSecondary)
-                                    NavigationLink(String(localized: "Browse Services")) { CustomerServicesView() }
+                                    NavigationLink(String(localized: "Browse Services")) { CustomerServicesCatalogView() }
                                         .font(.subheadline.weight(.semibold))
                                 }
                             }
@@ -156,8 +156,8 @@ struct CustomerDashboardView: View {
                                         .buttonStyle(.plain)
                                     }
                                 } else {
-                                    Text(String(localized: "Request a service on our website to get started."))
-                                        .foregroundStyle(PAXTheme.textSecondary)
+                                    NavigationLink(String(localized: "Start a request")) { CustomerCreateOrderView() }
+                                        .font(.subheadline.weight(.semibold))
                                 }
                             }
                         }
@@ -629,139 +629,6 @@ struct CustomerChatView: View {
     }
 }
 
-struct CustomerServicesView: View {
-    @EnvironmentObject private var api: CustomerAPIClient
-    @State private var response: CustomerServicesResponse?
-    @State private var search = ""
-    @State private var selectedCategory = ""
-    @State private var error: String?
-    @State private var isLoading = true
-
-    var body: some View {
-        NavigationStack {
-            Group {
-                if isLoading && response == nil {
-                    ProgressView(String(localized: "Loading services…"))
-                } else if let error {
-                    PAXContentUnavailableView(String(localized: "Services unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
-                } else if let response {
-                    ScrollView {
-                        LazyVStack(alignment: .leading, spacing: CustomerPortalDesign.sectionSpacing) {
-                            if !response.categories.isEmpty {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 10) {
-                                        categoryChip("", title: String(localized: "All"))
-                                        ForEach(response.categories) { category in
-                                            categoryChip(category.slug, title: category.name)
-                                        }
-                                    }
-                                    .padding(.horizontal)
-                                }
-                            }
-                            ForEach(filteredServices(response.services)) { service in
-                                NavigationLink {
-                                    CustomerServiceDetailView(slug: service.slug)
-                                } label: {
-                                    CustomerServiceCard(service: service)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.vertical)
-                    }
-                }
-            }
-            .background(PAXBackground())
-            .navigationTitle(String(localized: "Services"))
-            .searchable(text: $search, prompt: String(localized: "Search services"))
-            .refreshable { await load(force: true) }
-            .task(id: "\(search)|\(selectedCategory)") { await load(force: false) }
-        }
-    }
-
-    private func categoryChip(_ slug: String, title: String) -> some View {
-        Button(title) { selectedCategory = slug }
-            .font(.subheadline.weight(.medium))
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(selectedCategory == slug ? PAXTheme.accent : PAXTheme.accentSoft)
-            .foregroundStyle(selectedCategory == slug ? Color.white : PAXTheme.textPrimary)
-            .clipShape(Capsule())
-    }
-
-    private func filteredServices(_ services: [CustomerServicesResponse.Service]) -> [CustomerServicesResponse.Service] {
-        var list = services
-        if !selectedCategory.isEmpty {
-            list = list.filter { $0.category == selectedCategory }
-        }
-        let query = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard !query.isEmpty else { return list }
-        return list.filter {
-            $0.name.lowercased().contains(query) || $0.description.lowercased().contains(query)
-        }
-    }
-
-    private func load(force: Bool) async {
-        if response == nil || force { isLoading = true }
-        error = nil
-        do {
-            response = try await api.fetchServices(
-                search: search.isEmpty ? nil : search,
-                category: selectedCategory.isEmpty ? nil : selectedCategory
-            )
-        } catch {
-            self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
-        }
-        isLoading = false
-    }
-}
-
-private struct CustomerServiceCard: View {
-    let service: CustomerServicesResponse.Service
-
-    var body: some View {
-        CustomerPortalCard {
-            HStack(alignment: .top, spacing: 14) {
-                if let imageURL = service.image_url, let url = URL(string: imageURL) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().scaledToFill()
-                        default:
-                            CustomerServiceIconView(iconKey: service.icon_key ?? service.slug)
-                        }
-                    }
-                    .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                } else {
-                    CustomerServiceIconView(iconKey: service.icon_key ?? service.slug, size: 56)
-                }
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack {
-                        Text(service.name)
-                            .font(.headline)
-                            .foregroundStyle(PAXTheme.textPrimary)
-                        if service.featured {
-                            Text(String(localized: "Popular"))
-                                .font(.caption2.weight(.semibold))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(PAXTheme.accentSoft)
-                                .clipShape(Capsule())
-                        }
-                    }
-                    Text(service.description)
-                        .font(.subheadline)
-                        .foregroundStyle(PAXTheme.textSecondary)
-                        .lineLimit(3)
-                        .multilineTextAlignment(.leading)
-                }
-            }
-        }
-        .padding(.horizontal)
-    }
-}
-
 struct CustomerServiceDetailView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     let slug: String
@@ -796,7 +663,7 @@ struct CustomerServiceDetailView: View {
                             Text(service.category.capitalized)
                                 .font(.subheadline)
                                 .foregroundStyle(PAXTheme.textSecondary)
-                            Text(service.description)
+                            Text(service.body_text ?? service.description)
                                 .font(.body)
                                 .foregroundStyle(PAXTheme.textPrimary)
                         }
@@ -815,12 +682,13 @@ struct CustomerServiceDetailView: View {
                         }
                     }
 
-                    if let orderURL = service.order_url.flatMap({ URL(string: $0) }) {
-                        CustomerSafariLink(
-                            title: String(localized: "Request on Website"),
-                            url: orderURL
-                        )
+                    NavigationLink {
+                        CustomerCreateOrderView(preselectedSlug: service.slug)
+                    } label: {
+                        Label(String(localized: "Start order"), systemImage: "plus.circle.fill")
+                            .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .filled))
                 }
                 .padding()
             } else if let error {
@@ -864,10 +732,19 @@ struct CustomerProfileView: View {
                         appAuth.logout()
                     }
                 }
-                Section {
-                    Link(String(localized: "Privacy Policy"), destination: URL(string: "https://paxdesign.at/datenschutz/")!)
-                    Link(String(localized: "Terms"), destination: URL(string: "https://paxdesign.at/agb/")!)
-                    Link(String(localized: "Contact Support"), destination: URL(string: "https://paxdesign.at/kontakt/")!)
+                Section(String(localized: "Legal & Support")) {
+                    NavigationLink(String(localized: "Privacy Policy")) {
+                        CustomerNativePageView(slug: "datenschutz", title: String(localized: "Privacy Policy"))
+                    }
+                    NavigationLink(String(localized: "Terms")) {
+                        CustomerNativePageView(slug: "agb", title: String(localized: "Terms"))
+                    }
+                    NavigationLink(String(localized: "About us")) {
+                        CustomerNativePageView(slug: "ueber-uns", title: String(localized: "About us"))
+                    }
+                    NavigationLink(String(localized: "Contact Support")) {
+                        CustomerNativePageView(slug: "kontakt", title: String(localized: "Contact Support"))
+                    }
                 }
             }
             .navigationTitle(String(localized: "Account"))

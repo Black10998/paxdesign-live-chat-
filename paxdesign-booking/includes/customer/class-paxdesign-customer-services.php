@@ -141,6 +141,8 @@ class PAXdesign_Customer_Services {
             'name'        => $row['name'],
             'category'    => $row['category_slug'],
             'description' => $row['description'],
+            'body_html'   => wp_kses_post($row['description']),
+            'body_text'   => wp_trim_words(wp_strip_all_tags($row['description']), 120),
             'features'    => json_decode($row['features_json'] ?: '[]', true) ?: array(),
             'examples'    => json_decode($row['examples_json'] ?: '[]', true) ?: array(),
             'related'     => json_decode($row['related_slugs_json'] ?: '[]', true) ?: array(),

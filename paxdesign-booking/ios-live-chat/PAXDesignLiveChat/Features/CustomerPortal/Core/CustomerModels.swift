@@ -223,6 +223,8 @@ struct CustomerServiceDetail: Decodable {
     let name: String
     let category: String
     let description: String
+    let body_html: String?
+    let body_text: String?
     let features: [String]?
     let examples: [String]?
     let related: [String]?
@@ -230,4 +232,38 @@ struct CustomerServiceDetail: Decodable {
     let icon_key: String?
     let order_url: String?
     let featured: Bool
+}
+
+struct CustomerContentNavigation: Decodable {
+    let locale: String?
+    let sections: [Section]
+
+    struct Section: Decodable, Identifiable {
+        var id: String { key }
+        let key: String
+        let title: String
+        let items: [MenuItem]
+    }
+
+    struct MenuItem: Decodable, Identifiable {
+        var id: String { "\(slug)-\(title)" }
+        let title: String
+        let slug: String
+        let type: String
+        let url: String?
+        let children: [MenuItem]?
+    }
+}
+
+struct CustomerContentPage: Decodable, Identifiable {
+    var id: String { slug }
+    let slug: String
+    let title: String
+    let excerpt: String?
+    let image_url: String?
+    let type: String?
+    let updated_at: String?
+    let body_html: String?
+    let body_text: String?
+    let gallery: [String]?
 }

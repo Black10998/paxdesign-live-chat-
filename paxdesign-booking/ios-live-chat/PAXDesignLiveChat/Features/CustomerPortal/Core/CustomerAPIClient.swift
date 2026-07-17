@@ -142,7 +142,7 @@ final class CustomerAPIClient: ObservableObject {
         try await get("/customer/files?limit=\(limit)", as: CustomerFilesResponse.self)
     }
 
-    func fetchPortfolio(category: String? = nil, limit: Int = 24) async throws -> CustomerPortfolioResponse {
+    func fetchPortfolio(category: String? = nil, limit: Int = 100) async throws -> CustomerPortfolioResponse {
         var path = "/customer/portfolio?limit=\(limit)"
         if let category, !category.isEmpty {
             path += "&category=\(category.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? category)"
@@ -213,6 +213,17 @@ final class CustomerAPIClient: ObservableObject {
 
     func fetchService(slug: String) async throws -> CustomerServiceDetail {
         try await get("/customer/services/\(slug)", as: CustomerServiceDetail.self)
+    }
+
+    func fetchContentNavigation() async throws -> CustomerContentNavigation {
+        let lang = Locale.current.language.languageCode?.identifier ?? "en"
+        return try await get("/content/navigation?lang=\(lang)", as: CustomerContentNavigation.self)
+    }
+
+    func fetchContentPage(slug: String) async throws -> CustomerContentPage {
+        let lang = Locale.current.language.languageCode?.identifier ?? "en"
+        let encoded = slug.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? slug
+        return try await get("/content/pages/\(encoded)?lang=\(lang)", as: CustomerContentPage.self)
     }
 
     func fetchProjects(status: String? = nil) async throws -> CustomerProjectsResponse {

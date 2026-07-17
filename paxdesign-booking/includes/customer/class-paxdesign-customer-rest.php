@@ -117,6 +117,24 @@ class PAXdesign_Customer_REST {
             'permission_callback' => '__return_true',
         ));
 
+        register_rest_route(self::NS, '/content/navigation', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'content_navigation'),
+            'permission_callback' => '__return_true',
+        ));
+
+        register_rest_route(self::NS, '/content/pages/(?P<slug>[a-z0-9\-_\/]+)', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'content_page'),
+            'permission_callback' => '__return_true',
+        ));
+
+        register_rest_route(self::NS, '/content/pages', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'content_pages'),
+            'permission_callback' => '__return_true',
+        ));
+
         register_rest_route(self::NS, '/customer/portfolio', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'list_portfolio'),
@@ -380,7 +398,7 @@ class PAXdesign_Customer_REST {
     public static function list_portfolio(WP_REST_Request $request) {
         $limit = absint($request->get_param('limit'));
         if ($limit <= 0) {
-            $limit = 24;
+            $limit = 100;
         }
         return rest_ensure_response(array(
             'categories' => PAXdesign_Customer_Portfolio::categories(),
@@ -394,6 +412,31 @@ class PAXdesign_Customer_REST {
             return new WP_Error('not_found', __('Portfolio item not found.', 'paxdesign-booking'), array('status' => 404));
         }
         return rest_ensure_response($item);
+    }
+
+    public static function content_navigation(WP_REST_Request $request) {
+        return rest_ensure_response(PAXdesign_Customer_Content::navigation($request));
+    }
+
+    public static function content_page(WP_REST_Request $request) {
+        $item = PAXdesign_Customer_Content::get_page($request['slug'], $request);
+        if (!$item) {
+            return new WP_Error('not_found', __('Page not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        return rest_ensure_response($item);
+    }
+
+    public static function content_pages(WP_REST_Request $request) {
+        $limit = absint($request->get_param('limit'));
+        if ($limit <= 0) {
+            $limit = 50;
+        }
+        return rest_ensure_response(array(
+            'pages' => PAXdesign_Customer_Content::list_pages(
+                sanitize_title((string) $request->get_param('parent')),
+                $limit
+            ),
+        ));
     }
 
     public static function list_news() {

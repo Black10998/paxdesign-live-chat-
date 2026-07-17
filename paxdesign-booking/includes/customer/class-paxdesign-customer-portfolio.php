@@ -14,8 +14,8 @@ class PAXdesign_Customer_Portfolio {
     /**
      * @return array<int, array<string, mixed>>
      */
-    public static function list_items($limit = 24, $category = '') {
-        $limit = max(1, min(50, (int) $limit));
+    public static function list_items($limit = 100, $category = '') {
+        $limit = max(1, min(200, (int) $limit));
         $items = array();
 
         if (post_type_exists(self::CPT)) {

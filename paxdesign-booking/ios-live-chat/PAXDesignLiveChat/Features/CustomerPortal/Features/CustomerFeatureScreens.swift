@@ -44,7 +44,11 @@ struct CustomerProjectsListView: View {
             } else if let error {
                 PAXContentUnavailableView(String(localized: "Projects unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
             } else if projects.isEmpty {
-                PAXContentUnavailableView(String(localized: "No projects yet"), systemImage: "folder", description: Text(String(localized: "Your active work will appear here.")))
+                ScrollView {
+                    CustomerProjectsEmptyState()
+                        .padding()
+                }
+                .refreshable { await load() }
             } else {
                 List(projects, selection: useSplitLayout ? $selectedProjectId : .constant(nil)) { project in
                     if useSplitLayout {
@@ -186,6 +190,44 @@ struct CustomerProjectDetailView: View {
             shareURL = try await api.downloadProjectFile(projectId: projectId, fileId: file.id)
         } catch {
             self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
+        }
+    }
+}
+
+private struct CustomerProjectsEmptyState: View {
+    var body: some View {
+        CustomerPortalCard {
+            VStack(spacing: 20) {
+                Image(systemName: "folder.badge.plus")
+                    .font(.system(size: 56))
+                    .foregroundStyle(PAXTheme.accent)
+                    .padding(.top, 8)
+
+                Text(String(localized: "No projects yet"))
+                    .font(.title2.weight(.bold))
+
+                Text(String(localized: "Your active projects will appear here once our team assigns work to your account. Explore our portfolio or start a service request."))
+                    .font(.body)
+                    .foregroundStyle(PAXTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+
+                NavigationLink {
+                    CustomerPortfolioListView()
+                } label: {
+                    Label(String(localized: "Browse portfolio"), systemImage: "photo.on.rectangle.angled")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .filled))
+
+                NavigationLink {
+                    CustomerServicesCatalogView()
+                } label: {
+                    Label(String(localized: "Explore services"), systemImage: "square.grid.2x2")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+            }
+            .padding(8)
         }
     }
 }

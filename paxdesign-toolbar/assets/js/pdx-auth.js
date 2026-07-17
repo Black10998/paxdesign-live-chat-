@@ -34,6 +34,50 @@
     return d.innerHTML;
   }
 
+  function stripHtml(s) {
+    if (!s) return '';
+    var d = document.createElement('div');
+    d.innerHTML = String(s);
+    return (d.textContent || d.innerText || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function normalizeRestMessage(data) {
+    if (!data || typeof data !== 'object') {
+      return 'Something went wrong. Please try again.';
+    }
+    var msg = data.message;
+    if (msg && typeof msg === 'object') {
+      msg = msg.raw || msg.rendered || msg.message || '';
+    }
+    msg = stripHtml(msg || '');
+    if (msg && msg.indexOf('<') === -1 && msg.length <= 280) {
+      return msg;
+    }
+    if (msg && msg.length > 280) {
+      return msg.slice(0, 280) + '…';
+    }
+    var code = String(data.code || data.error || '').toLowerCase();
+    var map = {
+      invalid_credentials: 'Invalid email or password.',
+      invalid_email: 'Please enter a valid email address.',
+      locked: 'Too many failed attempts. Please wait a moment and try again.',
+      suspended: 'Your account has been suspended. Please contact support.',
+      rest_cookie_invalid_nonce: 'Session expired. Please reload the page and try again.',
+      rest_invalid_nonce: 'Session expired. Please reload the page and try again.',
+      network: 'Network error. Please check your connection and try again.',
+    };
+    if (map[code]) return map[code];
+    return 'Something went wrong. Please try again.';
+  }
+
+  function friendlyHttpError(status) {
+    if (status === 401) return 'Invalid email or password.';
+    if (status === 403) return 'Access denied. Please reload the page and try again.';
+    if (status === 429) return 'Too many attempts. Please wait a moment and try again.';
+    if (status >= 500) return 'Server error. Please try again in a moment.';
+    return 'Something went wrong. Please try again.';
+  }
+
   /** Server-driven PAXDesign verified badge — only when verified === true from API. */
   function verifiedBadgeHtml(verified, opts) {
     if (window.PDXVerifiedBadge) return window.PDXVerifiedBadge.render(verified, opts);
@@ -111,7 +155,21 @@
     };
     if (body && method !== 'GET') opts.body = JSON.stringify(body);
     return fetch(C.restUrl + path, opts).then(function (r) {
+      var contentType = (r.headers.get('content-type') || '').toLowerCase();
+      if (contentType.indexOf('application/json') === -1) {
+        return r.text().then(function () {
+          return {
+            success: false,
+            _status: r.status,
+            _ok: r.ok,
+            message: friendlyHttpError(r.status),
+          };
+        });
+      }
       return r.json().then(function (data) {
+        if (!data || typeof data !== 'object') {
+          data = { success: false, message: friendlyHttpError(r.status) };
+        }
         data._status = r.status;
         data._ok = r.ok;
         if (!retried && isRestNonceError(data)) {
@@ -121,7 +179,17 @@
             return data;
           });
         }
+        if (!data.success && data.message) {
+          data.message = normalizeRestMessage(data);
+        }
         return data;
+      }).catch(function () {
+        return {
+          success: false,
+          _status: r.status,
+          _ok: false,
+          message: friendlyHttpError(r.status),
+        };
       });
     }).catch(function () {
       return { success: false, error: 'network', message: 'Network error. Please try again.' };
@@ -599,7 +667,8 @@
   function showFormMessage(msg, type) {
     var slot = formEl.querySelector('.pdx-auth-msg-slot');
     if (!slot) return;
-    slot.innerHTML = msg ? '<div class="pdx-auth-message pdx-auth-message--' + type + '">' + escHtml(msg) + '</div>' : '';
+    var safe = msg ? escHtml(stripHtml(String(msg))) : '';
+    slot.innerHTML = safe ? '<div class="pdx-auth-message pdx-auth-message--' + type + '">' + safe + '</div>' : '';
   }
 
   function onAuthSubmit(e) {
@@ -628,7 +697,7 @@
       }).then(function (data) {
         done();
         if (!data.success) {
-          showFormMessage(data.message || 'Login failed.', 'error');
+          showFormMessage(normalizeRestMessage(data), 'error');
           return;
         }
         applySession({ user: data.user || user, nonce: data.nonce });
