@@ -80,10 +80,7 @@ def find_bundle_id(client: ASCClient) -> dict[str, Any]:
 
 def ensure_push_notifications(client: ASCClient, bundle_id: dict[str, Any]) -> None:
     bundle_resource_id = bundle_id["id"]
-    payload = client.get(
-        f"/bundleIds/{bundle_resource_id}/bundleIdCapabilities",
-        **{"limit": "50"},
-    )
+    payload = client.get(f"/bundleIds/{bundle_resource_id}/bundleIdCapabilities")
     caps = payload.get("data") or []
     for cap in caps:
         cap_type = (cap.get("attributes") or {}).get("capabilityType", "")
