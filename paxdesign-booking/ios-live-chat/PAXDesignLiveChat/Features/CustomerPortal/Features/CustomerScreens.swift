@@ -819,7 +819,6 @@ struct CustomerProfileView: View {
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
     @State private var avatarUploadError: String?
     @State private var isUploadingAvatar = false
-    @State private var showAvatarPicker = false
     @State private var selectedAvatarItem: PhotosPickerItem?
 
     var body: some View {

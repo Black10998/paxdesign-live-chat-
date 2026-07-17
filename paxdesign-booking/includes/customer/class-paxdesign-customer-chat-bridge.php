@@ -65,23 +65,6 @@ class PAXdesign_Customer_Chat_Bridge {
     }
 
     /**
-     * @return bool
-     */
-    private static function is_primary_session($user_id, $session_id) {
-        global $wpdb;
-        $user_id = absint($user_id);
-        $session_id = self::sanitize_session_id($session_id);
-        if ($user_id <= 0 || $session_id === '') {
-            return false;
-        }
-        return (int) $wpdb->get_var($wpdb->prepare(
-            "SELECT is_primary FROM " . self::sessions_table() . " WHERE user_id = %d AND session_id = %s LIMIT 1",
-            $user_id,
-            $session_id
-        )) === 1;
-    }
-
-    /**
      * Replace a closed primary session with a fresh open conversation.
      */
     private static function rotate_primary_session($user_id, $closed_session_id) {
