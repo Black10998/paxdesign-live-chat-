@@ -1,6 +1,6 @@
 <?php
 /**
- * Customer auth bridge — extends paxdesign-toolbar PDX_Auth (no parallel auth store).
+ * Customer auth bridge — WordPress cookie session + app passwords via PAXdesign_Auth.
  *
  * Web: WordPress cookie session + REST nonce (same as pdx-auth.js / /auth/*).
  * Mobile: WordPress Application Password (HTTP Basic) on /pdx/v1/customer/*.
