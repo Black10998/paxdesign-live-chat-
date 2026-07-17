@@ -147,7 +147,7 @@ class PAXdesign_Customer_Portfolio_Showcase {
                 'metadata' => self::metadata_for_item($row, $lang, $category),
                 'sections' => array(
                     array(
-                        'title' => __('Overview', 'paxdesign-booking'),
+                        'title' => self::ui_labels($lang)['overview'],
                         'body'  => $description,
                     ),
                 ),
@@ -169,15 +169,29 @@ class PAXdesign_Customer_Portfolio_Showcase {
      * @return array<int, array<string, string>>
      */
     private static function metadata_for_item(array $row, $lang, $category) {
+        $labels = self::ui_labels($lang);
         $meta = array();
         $client = sanitize_text_field((string) ($row['client'] ?? ''));
         if ($client !== '') {
-            $meta[] = array('label' => __('Client', 'paxdesign-booking'), 'value' => $client, 'link' => '');
+            $meta[] = array('label' => $labels['client'], 'value' => $client, 'link' => '');
         }
         if ($category !== '') {
-            $meta[] = array('label' => __('Category', 'paxdesign-booking'), 'value' => $category, 'link' => '');
+            $meta[] = array('label' => $labels['category'], 'value' => $category, 'link' => '');
         }
         return $meta;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function ui_labels($lang) {
+        $lang = self::normalize_language($lang);
+        $map = array(
+            'de' => array('client' => 'Kunde', 'category' => 'Kategorie', 'overview' => 'Überblick'),
+            'en' => array('client' => 'Client', 'category' => 'Category', 'overview' => 'Overview'),
+            'ar' => array('client' => 'العميل', 'category' => 'الفئة', 'overview' => 'نظرة عامة'),
+        );
+        return isset($map[$lang]) ? $map[$lang] : $map['de'];
     }
 
     /**

@@ -1236,6 +1236,13 @@ struct IncomingLiveRequest: Identifiable, Equatable {
     let session: LiveSession
 }
 
+struct PendingCustomerMessageBanner: Identifiable, Equatable {
+    let id: String
+    let sessionId: String
+    let customerName: String
+    let preview: String
+}
+
 enum TeamRoleKey: String, CaseIterable, Identifiable {
     case executiveDirector = "executive_director"
     case administrator = "administrator"

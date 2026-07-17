@@ -135,13 +135,23 @@ struct AdaptiveShellView: View {
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
-            if canReplyChats, let incoming = coordinator.incomingRequest, !coordinator.incomingBannerDismissed {
-                LiveRequestTopBanner(request: incoming) {
-                    coordinator.presentIncomingFullscreen()
-                } onDismiss: {
-                    coordinator.dismissIncomingBanner()
+            VStack(spacing: 8) {
+                if canReplyChats, let incoming = coordinator.incomingRequest, !coordinator.incomingBannerDismissed {
+                    LiveRequestTopBanner(request: incoming) {
+                        Task { await coordinator.openSessionFromBanner(incoming.session.sessionId, auth: auth) }
+                    } onDismiss: {
+                        coordinator.dismissIncomingBanner()
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
                 }
-                .transition(.move(edge: .top).combined(with: .opacity))
+                if canReplyChats, let message = coordinator.pendingCustomerMessage {
+                    StaffCustomerMessageBanner(banner: message) {
+                        Task { await coordinator.openSessionFromBanner(message.sessionId, auth: auth) }
+                    } onDismiss: {
+                        coordinator.dismissCustomerMessageBanner()
+                    }
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
             }
         }
         .overlay(alignment: .bottom) {

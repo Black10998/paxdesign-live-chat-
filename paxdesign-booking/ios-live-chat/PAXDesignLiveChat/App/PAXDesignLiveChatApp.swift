@@ -242,8 +242,7 @@ struct RootView: View {
             }
 
             if coordinator.showIncomingFullscreen, let incoming = coordinator.incomingRequest, auth.canReplyChats, auth.isStaffSession {
-                IncomingLiveRequestView(request: incoming)
-                    .zIndex(10)
+                EmptyView()
             }
 
             if auth.isLoggedIn, appLock.isActive, appLock.isLocked, !appLock.isUnlocked, auth.isStaffSession {

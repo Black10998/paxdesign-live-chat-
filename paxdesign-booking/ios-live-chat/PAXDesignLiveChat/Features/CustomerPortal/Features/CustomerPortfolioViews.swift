@@ -6,16 +6,14 @@ struct CustomerPortfolioListView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
     @Environment(\.marketingTheme) private var theme
+    @Environment(\.locale) private var locale
     @State private var showcase: CustomerPortfolioShowcaseResponse?
     @State private var catalog: CustomerPortfolioResponse?
     @State private var selectedShowcaseCategory = ""
     @State private var selectedCatalogCategory = ""
     @State private var error: String?
     @State private var isLoading = true
-    @State private var language: CustomerServicesCatalogLanguage = {
-        let code = Locale.current.language.languageCode?.identifier ?? "de"
-        return CustomerServicesCatalogLanguage(rawValue: code) ?? .de
-    }()
+    @State private var language: CustomerServicesCatalogLanguage = CustomerPortalLocale.catalogLanguage
 
     private var catalogColumns: [GridItem] {
         [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
@@ -49,6 +47,9 @@ struct CustomerPortfolioListView: View {
         .customerPortalToolbar()
         .task(id: taskKey) { await load() }
         .refreshable { await load(force: true) }
+        .onChange(of: locale.identifier) { _ in
+            language = CustomerPortalLocale.catalogLanguage
+        }
     }
 
     private var taskKey: String {

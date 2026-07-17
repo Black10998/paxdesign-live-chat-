@@ -30,8 +30,15 @@ struct CustomerAccountFooterSection: View {
 
             VStack(alignment: .leading, spacing: 16) {
                 footerLabel(String(localized: "E-Mail"))
-                Link(destination: URL(string: "mailto:info@paxdesign.at")!) {
+                Link(destination: PAXLegalLinks.supportEmail) {
                     Text("info@paxdesign.at")
+                        .font(.body)
+                        .foregroundStyle(theme.textSecondary)
+                }
+
+                footerLabel(String(localized: "Contact"))
+                Link(destination: PAXLegalLinks.contact) {
+                    Text(String(localized: "Visit contact page"))
                         .font(.body)
                         .foregroundStyle(theme.textSecondary)
                 }
@@ -156,11 +163,11 @@ struct CustomerAccountFooterSection: View {
 // MARK: - Legal terminal card
 
 struct CustomerAccountLegalTerminalView: View {
-    private let links: [(slug: String, title: String)] = [
-        ("impressum", "Impressum"),
-        ("datenschutz", "Datenschutz"),
-        ("agb", "AGB"),
-        ("service-dokumentation", "Service-Doku"),
+    private let links: [(slug: String, title: String, url: URL)] = [
+        ("impressum", "Impressum", PAXLegalLinks.impressum),
+        ("datenschutz", "Datenschutz", PAXLegalLinks.privacyPolicy),
+        ("agb", "AGB", PAXLegalLinks.terms),
+        ("service-dokumentation", "Service-Doku", PAXLegalLinks.serviceDocumentation),
     ]
 
     var body: some View {
@@ -190,15 +197,18 @@ struct CustomerAccountLegalTerminalView: View {
 
             VStack(spacing: 14) {
                 ForEach(links, id: \.slug) { link in
-                    NavigationLink {
-                        CustomerLegalPageView(slug: link.slug, title: link.title)
-                    } label: {
+                    Link(destination: link.url) {
                         Text(link.title)
                             .font(.body)
                             .foregroundStyle(Color.white.opacity(0.78))
                             .frame(maxWidth: .infinity)
                     }
-                    .buttonStyle(.plain)
+                }
+                Link(destination: PAXLegalLinks.contact) {
+                    Text(String(localized: "Contact"))
+                        .font(.body)
+                        .foregroundStyle(Color.white.opacity(0.78))
+                        .frame(maxWidth: .infinity)
                 }
             }
             .padding(.horizontal, 24)

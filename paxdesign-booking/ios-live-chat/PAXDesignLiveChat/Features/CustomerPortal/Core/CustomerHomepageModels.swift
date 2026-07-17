@@ -12,6 +12,7 @@ struct CustomerHomepageResponse: Decodable {
     let stats: [Stat]
     let awards: Awards
     let testimonials: [Testimonial]
+    let testimonials_section: SectionTitle?
     let features: [FeatureCard]
     let process: Process
     let news_section: NewsSection
@@ -124,6 +125,10 @@ struct CustomerHomepageResponse: Decodable {
         let title: String
         let subtitle: String
         let cta: String
+    }
+
+    struct SectionTitle: Decodable {
+        let title: String
     }
 
     var isRTL: Bool { dir.lowercased() == "rtl" }

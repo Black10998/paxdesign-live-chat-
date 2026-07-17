@@ -16,14 +16,12 @@ final class ChatCoordinator: ObservableObject {
             if incomingRequest != nil {
                 incomingBannerDismissed = false
                 showIncomingFullscreen = false
-                IncomingCallRingtone.shared.startRinging()
-                scheduleFullscreenPresentation()
             } else {
                 showIncomingFullscreen = false
-                IncomingCallRingtone.shared.stopRinging()
             }
         }
     }
+    @Published var pendingCustomerMessage: PendingCustomerMessageBanner?
     @Published var activeSessionId: String?
     @Published var showIncomingFullscreen = false
     @Published var incomingBannerDismissed = false
@@ -78,6 +76,24 @@ final class ChatCoordinator: ObservableObject {
 
     func dismissIncomingBanner() {
         incomingBannerDismissed = true
+    }
+
+    func dismissCustomerMessageBanner() {
+        pendingCustomerMessage = nil
+    }
+
+    func openSessionFromBanner(_ sessionId: String, auth: AuthStore) async {
+        pendingCustomerMessage = nil
+        incomingBannerDismissed = true
+        acknowledgeIncomingRequest(sessionId)
+        if let session = sessions.first(where: { $0.sessionId == sessionId }) {
+            if session.isLiveRequest {
+                await acceptLiveRequest(auth: auth, session: session)
+            }
+        }
+        activeSessionId = sessionId
+        AppRefreshPolicy.setActiveSession(sessionId)
+        NotificationCenter.default.post(name: .paxPushOpened, object: nil, userInfo: ["session_id": sessionId])
     }
 
     func hydrateFromCache() {
@@ -238,6 +254,7 @@ final class ChatCoordinator: ObservableObject {
         lastSyncAt = nil
         errorMessage = nil
         incomingRequest = nil
+        pendingCustomerMessage = nil
         activeSessionId = nil
         showIncomingFullscreen = false
         incomingBannerDismissed = false
@@ -368,6 +385,12 @@ final class ChatCoordinator: ObservableObject {
             guard previous != preview, !preview.isEmpty else { continue }
             guard activeSessionId != session.sessionId else { continue }
 
+            pendingCustomerMessage = PendingCustomerMessageBanner(
+                id: session.sessionId,
+                sessionId: session.sessionId,
+                customerName: session.displayName,
+                preview: preview
+            )
             InAppNotificationCoordinator.shared.handleNewCustomerMessage(
                 sessionId: session.sessionId,
                 preview: preview,

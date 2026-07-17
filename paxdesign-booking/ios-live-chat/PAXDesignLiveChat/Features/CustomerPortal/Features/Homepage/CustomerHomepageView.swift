@@ -5,15 +5,13 @@ struct CustomerHomepageView: View {
     @EnvironmentObject private var auth: CustomerAuthStore
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
     @Environment(\.marketingTheme) private var theme
+    @Environment(\.locale) private var locale
     @StateObject private var network = CustomerNetworkMonitor.shared
 
     @State private var homepage: CustomerHomepageResponse?
     @State private var workspace: CustomerDashboard?
     @State private var profileName = ""
-    @State private var language: CustomerServicesCatalogLanguage = {
-        let code = Locale.current.language.languageCode?.identifier ?? "de"
-        return CustomerServicesCatalogLanguage(rawValue: code) ?? .de
-    }()
+    @State private var language: CustomerServicesCatalogLanguage = CustomerPortalLocale.catalogLanguage
     @State private var selectedPortfolioCategory = ""
     @State private var error: String?
     @State private var isLoading = true
@@ -40,6 +38,12 @@ struct CustomerHomepageView: View {
             .refreshable { await load(force: true) }
             .task(id: language.rawValue) { await load(force: false) }
             .task(id: navigation.workspaceRefreshToken) { await loadWorkspace() }
+            .onChange(of: locale.identifier) { _ in
+                let next = CustomerPortalLocale.catalogLanguage
+                if next != language {
+                    language = next
+                }
+            }
             .sheet(isPresented: $showRequestSheet) {
                 NavigationStack {
                     CustomerCreateOrderView()
@@ -84,7 +88,7 @@ struct CustomerHomepageView: View {
                 aboutSection(data.about_teaser)
                 statsSection(data.stats)
                 awardsSection(data.awards)
-                testimonialsSection(data.testimonials)
+                testimonialsSection(data.testimonials, title: data.testimonials_section?.title)
                 featuresSection(data.features)
                 processSection(data.process)
                 newsSection(data.news_section)
@@ -309,9 +313,9 @@ struct CustomerHomepageView: View {
         .padding(.vertical, 32)
     }
 
-    private func testimonialsSection(_ items: [CustomerHomepageResponse.Testimonial]) -> some View {
+    private func testimonialsSection(_ items: [CustomerHomepageResponse.Testimonial], title: String?) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(String(localized: "What clients say"))
+            Text(title ?? String(localized: "What clients say"))
                 .font(.title2.weight(.bold))
                 .foregroundStyle(theme.textPrimary)
                 .padding(.horizontal, 20)

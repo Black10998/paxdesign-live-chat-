@@ -32,7 +32,7 @@ class PAXdesign_Customer_Legal {
      * @return string[]
      */
     public static function supported_slugs() {
-        return array('datenschutz', 'agb', 'ueber-uns');
+        return array('datenschutz', 'agb', 'impressum', 'service-dokumentation', 'ueber-uns');
     }
 
     public static function normalize_language($lang) {

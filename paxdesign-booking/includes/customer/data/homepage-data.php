@@ -127,8 +127,13 @@ return array(
       'title' => 'مشاريع مختارة',
       'subtitle' => 'مشاريع تعكس خبرتنا وإبداعنا',
       'cta' => 'عرض جميع المشاريع',
-      'categories' => array('All', 'Branding', 'Product', 'UX/UI'),
+      'categories' => array('الكل', 'الهوية', 'المنتج', 'UX/UI'),
     ),
+  ),
+  'testimonials_section' => array(
+    'de' => array('title' => 'Das sagen unsere Kunden'),
+    'en' => array('title' => 'What clients say'),
+    'ar' => array('title' => 'ماذا يقول عملاؤنا'),
   ),
   'about_teaser' => array(
     'de' => array(

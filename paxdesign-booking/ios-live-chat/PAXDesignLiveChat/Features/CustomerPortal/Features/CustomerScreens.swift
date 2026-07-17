@@ -348,7 +348,7 @@ struct CustomerChatView: View {
                         )
                     }
                     if isConversationClosed, recovery == nil {
-                        CustomerChatSystemNotice(text: CustomerChatSessionRecovery.inactivityNotice())
+                        closedConversationBanner
                     }
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -371,13 +371,18 @@ struct CustomerChatView: View {
                                         CustomerChatTypingIndicator(label: String(localized: "Support is typing…"))
                                             .id("typing")
                                     }
+                                    Color.clear.frame(height: 1).id("chat-bottom")
                                 }
                                 .padding()
                             }
                         }
                         .scrollDismissesKeyboard(.interactively)
-                        .onChange(of: displayMessages.count) { _ in scrollToBottom(proxy: proxy) }
-                        .onChange(of: poll?.admin_typing) { _ in scrollToBottom(proxy: proxy) }
+                        .onChange(of: displayMessages.count) { _ in scrollToBottom(proxy: proxy, animated: true) }
+                        .onChange(of: lastSeq) { _ in scrollToBottom(proxy: proxy, animated: true) }
+                        .onChange(of: poll?.admin_typing) { _ in scrollToBottom(proxy: proxy, animated: true) }
+                        .onChange(of: isInputFocused) { focused in
+                            if focused { scrollToBottom(proxy: proxy, animated: true) }
+                        }
                     }
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -398,10 +403,6 @@ struct CustomerChatView: View {
                         CustomerNavAvatarButton()
                         NavigationLink(String(localized: "History")) { CustomerConversationsView() }
                     }
-                }
-                ToolbarItemGroup(placement: .keyboard) {
-                    Spacer()
-                    Button(String(localized: "Done")) { isInputFocused = false }
                 }
             }
             .overlay(alignment: .top) {
@@ -457,13 +458,24 @@ struct CustomerChatView: View {
     }
 
     private var closedConversationBanner: some View {
-        EmptyView()
+        VStack(alignment: .leading, spacing: 10) {
+            Text(CustomerChatSessionRecovery.inactivityNotice())
+                .font(.subheadline)
+                .foregroundStyle(PAXTheme.textSecondary)
+            Button(String(localized: "Start new conversation")) {
+                Task { await startNewConversation() }
+            }
+            .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .tinted))
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(PAXTheme.accentSoft)
     }
 
     private var chatComposer: some View {
         VStack(spacing: 0) {
             Divider()
-            HStack(alignment: .bottom, spacing: 10) {
+            HStack(alignment: .bottom, spacing: 8) {
                 Menu {
                     Button(String(localized: "Camera"), systemImage: "camera") {
                         guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
@@ -497,16 +509,22 @@ struct CustomerChatView: View {
                     .background(PAXTheme.surfaceElevated)
                     .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                     .focused($isInputFocused)
+                    .submitLabel(.send)
+                    .onSubmit { if canSend { Task { await send() } } }
                     .onChange(of: draft) { _ in scheduleTypingPing() }
+                    .layoutPriority(1)
                 Button { Task { await send() } } label: {
                     Image(systemName: isSending ? "hourglass" : "arrow.up.circle.fill")
-                        .font(.system(size: 30))
+                        .font(.system(size: 32))
                         .symbolRenderingMode(.hierarchical)
                         .foregroundStyle(canSend ? PAXTheme.accent : .secondary)
+                        .frame(width: 44, height: 44)
                 }
                 .disabled(!canSend)
+                .accessibilityLabel(String(localized: "Send"))
             }
-            .padding(.horizontal, 12)
+            .padding(.leading, 12)
+            .padding(.trailing, 8)
             .padding(.vertical, 10)
             .background(.ultraThinMaterial)
         }
@@ -522,11 +540,42 @@ struct CustomerChatView: View {
         poll?.messages ?? []
     }
 
-    private func scrollToBottom(proxy: ScrollViewProxy) {
-        if poll?.admin_typing == true {
-            withAnimation { proxy.scrollTo("typing", anchor: .bottom) }
-        } else if let last = displayMessages.last?.id {
-            withAnimation { proxy.scrollTo(last, anchor: .bottom) }
+    private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool = true) {
+        let scroll = {
+            if poll?.admin_typing == true {
+                proxy.scrollTo("typing", anchor: .bottom)
+            } else {
+                proxy.scrollTo("chat-bottom", anchor: .bottom)
+            }
+        }
+        if animated {
+            withAnimation(.easeOut(duration: 0.25), scroll)
+        } else {
+            scroll()
+        }
+    }
+
+    private func startNewConversation() async {
+        isRecovering = true
+        defer { isRecovering = false }
+        do {
+            let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id)
+            poll = CustomerChatPoll(
+                session_id: renewed.session_id,
+                handler: renewed.handler,
+                messages: [],
+                message_count: 0,
+                last_preview: nil
+            )
+            lastSeq = 0
+            notice = nil
+            recovery = nil
+            pollingSuspended = false
+            await refresh(full: true)
+            startPolling()
+            isInputFocused = true
+        } catch {
+            error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
         }
     }
 
@@ -746,6 +795,12 @@ struct CustomerChatView: View {
     private func send() async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+
+        if isConversationClosed {
+            await startNewConversation()
+            guard poll?.handler != "closed" else { return }
+        }
+
         let savedDraft = text
         let clientMsgID = UUID().uuidString
         let assistantClientMsgID = UUID().uuidString
@@ -851,9 +906,14 @@ struct CustomerChatView: View {
         } else if response.renewed == true {
             notice = CustomerChatSessionRecovery.inactivityNotice()
         }
+        if response.renewed == true {
+            recovery = nil
+            pollingSuspended = false
+        }
         if response.handler == "live_request" || response.handler == "admin" {
             notice = response.notice ?? notice
         }
+        NotificationCenter.default.post(name: .paxChatScrollToBottom, object: nil)
     }
 
     private func scheduleTypingPing() {
@@ -1015,19 +1075,22 @@ struct CustomerProfileView: View {
                     }
                 }
                 Section(String(localized: "Legal & Support")) {
-                    NavigationLink(String(localized: "Impressum")) {
-                        CustomerLegalPageView(slug: "impressum", title: String(localized: "Impressum"))
+                    Link(destination: PAXLegalLinks.impressum) {
+                        Label(String(localized: "Impressum"), systemImage: "safari")
                     }
-                    NavigationLink(String(localized: "Privacy Policy")) {
-                        CustomerLegalPageView(slug: "datenschutz", title: String(localized: "Privacy Policy"))
+                    Link(destination: PAXLegalLinks.privacyPolicy) {
+                        Label(String(localized: "Privacy Policy"), systemImage: "safari")
                     }
-                    NavigationLink(String(localized: "Terms")) {
-                        CustomerLegalPageView(slug: "agb", title: String(localized: "Terms"))
+                    Link(destination: PAXLegalLinks.terms) {
+                        Label(String(localized: "Terms"), systemImage: "safari")
                     }
-                    NavigationLink(String(localized: "Service documentation")) {
-                        CustomerLegalPageView(slug: "service-dokumentation", title: String(localized: "Service documentation"))
+                    Link(destination: PAXLegalLinks.serviceDocumentation) {
+                        Label(String(localized: "Service documentation"), systemImage: "safari")
                     }
-                    Button(String(localized: "Contact Support")) {
+                    Link(destination: PAXLegalLinks.contact) {
+                        Label(String(localized: "Contact"), systemImage: "safari")
+                    }
+                    Button(String(localized: "Chat with support")) {
                         navigation.openChat()
                     }
                 }

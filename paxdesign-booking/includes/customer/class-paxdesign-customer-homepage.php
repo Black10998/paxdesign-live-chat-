@@ -61,11 +61,12 @@ class PAXdesign_Customer_Homepage {
         $testimonials = isset($data['testimonials'][$lang]) ? $data['testimonials'][$lang] : (isset($data['testimonials']['de']) ? $data['testimonials']['de'] : array());
         $features = isset($data['features'][$lang]) ? $data['features'][$lang] : (isset($data['features']['de']) ? $data['features']['de'] : array());
         $process = self::localized_block($data, 'process', $lang);
+        $testimonials_section = self::localized_block($data, 'testimonials_section', $lang);
         $news_section = self::localized_block($data, 'news_section', $lang);
 
         $portfolio_items = array();
         if (class_exists('PAXdesign_Customer_Portfolio')) {
-            foreach (PAXdesign_Customer_Portfolio::list_items(8) as $item) {
+            foreach (PAXdesign_Customer_Portfolio::list_items(8, '', $lang) as $item) {
                 $portfolio_items[] = array(
                     'slug'            => (string) ($item['slug'] ?? ''),
                     'title'           => (string) ($item['title'] ?? ''),
@@ -91,6 +92,7 @@ class PAXdesign_Customer_Homepage {
             'stats'              => is_array($stats) ? array_values($stats) : array(),
             'awards'             => $awards,
             'testimonials'       => is_array($testimonials) ? array_values($testimonials) : array(),
+            'testimonials_section' => $testimonials_section,
             'features'           => is_array($features) ? array_values($features) : array(),
             'process'            => $process,
             'news_section'       => $news_section,
