@@ -43,6 +43,12 @@ struct CustomerServicesCatalogScreen: View {
                         .environmentObject(api)
                 }
             }
+            .onChange(of: navigation.pendingOrderSlug) { slug in
+                guard let slug, !slug.isEmpty else { return }
+                requestSlug = slug
+                showRequestSheet = true
+                navigation.pendingOrderSlug = nil
+            }
         }
         .preferredColorScheme(.dark)
     }

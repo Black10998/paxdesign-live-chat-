@@ -3,8 +3,8 @@ import SwiftUI
 enum CustomerPortalTab: Int, CaseIterable {
     case home = 0
     case services = 1
-    case chat = 2
-    case projects = 3
+    case portfolio = 2
+    case chat = 3
     case account = 4
 }
 
@@ -19,6 +19,9 @@ struct CustomerPortalDestination: Equatable, Hashable {
         case portfolio
         case settings
         case profile
+        case about
+        case contact
+        case dashboard
     }
 
     let kind: Kind
@@ -33,6 +36,7 @@ final class CustomerNavigationCoordinator: ObservableObject {
     @Published var chatSessionID: String?
     @Published var pendingChatFocus = false
     @Published var pendingServiceCardID: String?
+    @Published var pendingOrderSlug: String?
     @Published private(set) var workspaceRefreshToken = UUID()
 
     func refreshWorkspace() {
@@ -67,9 +71,11 @@ final class CustomerNavigationCoordinator: ObservableObject {
             chatSessionID = session
             pendingChatFocus = true
         case "projects", "project":
-            selectedTab = .projects
+            selectedTab = .account
             if parts.count > 1, let id = Int(parts[1]) {
                 accountPath = [CustomerPortalDestination(kind: .project(id))]
+            } else {
+                accountPath = [CustomerPortalDestination(kind: .dashboard)]
             }
         case "orders", "order", "requests", "request":
             selectedTab = .account
@@ -89,9 +95,17 @@ final class CustomerNavigationCoordinator: ObservableObject {
         case "files", "documents", "invoices":
             selectedTab = .account
             accountPath = [CustomerPortalDestination(kind: .files)]
-        case "portfolio":
+        case "portfolio", "referenzen":
+            selectedTab = .portfolio
+        case "about", "ueber-uns":
             selectedTab = .account
-            accountPath = [CustomerPortalDestination(kind: .portfolio)]
+            accountPath = [CustomerPortalDestination(kind: .about)]
+        case "contact", "kontakt":
+            selectedTab = .account
+            accountPath = [CustomerPortalDestination(kind: .contact)]
+        case "portal", "dashboard":
+            selectedTab = .account
+            accountPath = [CustomerPortalDestination(kind: .dashboard)]
         case "profile", "account":
             selectedTab = .account
             accountPath = [CustomerPortalDestination(kind: .profile)]
@@ -108,8 +122,13 @@ final class CustomerNavigationCoordinator: ObservableObject {
         }
     }
 
+    func openServiceRequest(slug: String) {
+        pendingOrderSlug = slug
+        selectedTab = .services
+    }
+
     func openProject(_ id: Int) {
-        selectedTab = .projects
+        selectedTab = .account
         accountPath = [CustomerPortalDestination(kind: .project(id))]
     }
 

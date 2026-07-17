@@ -133,8 +133,10 @@ struct CustomerDashboardView: View {
                                     }
                                 } else {
                                     Text(String(localized: "No active projects yet.")).foregroundStyle(PAXTheme.textSecondary)
-                                    NavigationLink(String(localized: "Browse Services")) { CustomerServicesCatalogView() }
-                                        .font(.subheadline.weight(.semibold))
+                                    Button(String(localized: "Browse Services")) {
+                                        navigation.selectedTab = .services
+                                    }
+                                    .font(.subheadline.weight(.semibold))
                                 }
                             }
                         }

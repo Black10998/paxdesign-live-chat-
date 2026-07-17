@@ -225,6 +225,16 @@ final class CustomerAPIClient: ObservableObject {
         return try await get("/content/services-catalog?lang=\(normalized)", as: CustomerServicesCatalogResponse.self)
     }
 
+    func fetchHomepage(lang: String) async throws -> CustomerHomepageResponse {
+        let normalized = lang.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? lang
+        return try await get("/content/homepage?lang=\(normalized)", as: CustomerHomepageResponse.self)
+    }
+
+    func fetchSiteMenu(lang: String) async throws -> CustomerSiteMenuResponse {
+        let normalized = lang.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? lang
+        return try await get("/content/site-menu?lang=\(normalized)", as: CustomerSiteMenuResponse.self)
+    }
+
     func fetchContentPage(slug: String) async throws -> CustomerContentPage {
         let lang = Locale.current.language.languageCode?.identifier ?? "en"
         let encoded = slug.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? slug

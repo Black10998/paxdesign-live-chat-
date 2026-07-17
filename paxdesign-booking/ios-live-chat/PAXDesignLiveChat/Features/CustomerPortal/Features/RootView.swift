@@ -31,25 +31,27 @@ struct CustomerTabView: View {
 
     var body: some View {
         TabView(selection: $navigation.selectedTab) {
-            CustomerDashboardView()
+            CustomerHomepageView()
                 .tabItem { Label(String(localized: "Home"), systemImage: "house.fill") }
                 .tag(CustomerPortalTab.home)
             CustomerServicesCatalogScreen()
                 .tabItem { Label(String(localized: "Services"), systemImage: "square.grid.2x2.fill") }
                 .tag(CustomerPortalTab.services)
+            NavigationStack {
+                CustomerPortfolioListView()
+            }
+            .tabItem { Label(String(localized: "Portfolio"), systemImage: "photo.on.rectangle.angled") }
+            .tag(CustomerPortalTab.portfolio)
             CustomerChatView(initialSessionID: navigation.chatSessionID)
                 .tabItem { Label(String(localized: "Chat"), systemImage: "message.fill") }
                 .tag(CustomerPortalTab.chat)
-            CustomerProjectsListView(useSplitLayout: horizontalSizeClass == .regular)
-                .tabItem { Label(String(localized: "Projects"), systemImage: "folder.fill") }
-                .tag(CustomerPortalTab.projects)
             CustomerMoreView()
                 .tabItem { Label(String(localized: "Account"), systemImage: "person.crop.circle.fill") }
                 .tag(CustomerPortalTab.account)
         }
         .onChange(of: navigation.selectedTab) { tab in
             switch tab {
-            case .home, .projects, .account:
+            case .account:
                 navigation.refreshWorkspace()
             default:
                 break
@@ -64,8 +66,17 @@ struct CustomerMoreView: View {
     var body: some View {
         NavigationStack(path: $navigation.accountPath) {
             List {
-                Section(String(localized: "Workspace")) {
-                    NavigationLink(String(localized: "Portfolio")) { CustomerPortfolioListView() }
+                Section(String(localized: "Company")) {
+                    NavigationLink(String(localized: "About")) { CustomerAboutView() }
+                    NavigationLink(String(localized: "Contact")) { CustomerContactView() }
+                }
+                Section(String(localized: "Customer Portal")) {
+                    NavigationLink(String(localized: "My workspace")) {
+                        CustomerDashboardView()
+                    }
+                    NavigationLink(String(localized: "Projects")) {
+                        CustomerProjectsListView(useSplitLayout: false)
+                    }
                     NavigationLink(String(localized: "Requests")) {
                         CustomerOrdersListView()
                     }
@@ -90,7 +101,7 @@ struct CustomerMoreView: View {
                         CustomerSettingsView()
                     }
                 }
-                Section(String(localized: "About")) {
+                Section(String(localized: "About this app")) {
                     LabeledContent(String(localized: "Version"), value: PAXAppInfo.fullVersion)
                     NavigationLink(String(localized: "About this app")) { AboutView() }
                 }
@@ -116,6 +127,12 @@ struct CustomerMoreView: View {
                     CustomerSettingsView()
                 case .profile:
                     CustomerProfileView()
+                case .about:
+                    CustomerAboutView()
+                case .contact:
+                    CustomerContactView()
+                case .dashboard:
+                    CustomerDashboardView()
                 }
             }
         }
