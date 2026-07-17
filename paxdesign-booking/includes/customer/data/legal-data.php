@@ -150,6 +150,106 @@ return array(
         'cta' => 'اقرأ الشروط الكاملة على موقعنا',
       ),
     ),
+    'impressum' => array(
+      'de' => array(
+        'title' => 'Impressum',
+        'subtitle' => 'Anbieterkennzeichnung gemäß österreichischem Recht',
+        'website_path' => '/impressum/',
+        'sections' => array(
+          array(
+            'title' => 'Anbieter',
+            'body' => 'PAXdesign, Franzensbrückenstraße 14, 1020 Wien, Österreich. E-Mail: info@paxdesign.at',
+          ),
+          array(
+            'title' => 'Unternehmensgegenstand',
+            'body' => 'Webentwicklung, Softwareentwicklung und digitale Dienstleistungen.',
+          ),
+        ),
+        'cta' => 'Vollständiges Impressum auf der Website lesen',
+      ),
+      'en' => array(
+        'title' => 'Legal Notice',
+        'subtitle' => 'Provider information under Austrian law',
+        'website_path' => '/impressum/',
+        'sections' => array(
+          array(
+            'title' => 'Provider',
+            'body' => 'PAXdesign, Franzensbrückenstraße 14, 1020 Vienna, Austria. Email: info@paxdesign.at',
+          ),
+          array(
+            'title' => 'Business activity',
+            'body' => 'Web development, software development and digital services.',
+          ),
+        ),
+        'cta' => 'Read the full legal notice on our website',
+      ),
+      'ar' => array(
+        'title' => 'بيان قانوني',
+        'subtitle' => 'معلومات المزود وفق القانون النمساوي',
+        'website_path' => '/impressum/',
+        'sections' => array(
+          array(
+            'title' => 'المزود',
+            'body' => 'PAXdesign، Franzensbrückenstraße 14، 1020 فيenna، النمسا. البريد: info@paxdesign.at',
+          ),
+          array(
+            'title' => 'نشاط الشركة',
+            'body' => 'تطوير الويب وتطوير البرمجيات والخدمات الرقمية.',
+          ),
+        ),
+        'cta' => 'اقرأ البيان القانوني الكامل على موقعنا',
+      ),
+    ),
+    'service-dokumentation' => array(
+      'de' => array(
+        'title' => 'Service-Dokumentation',
+        'subtitle' => 'Technische und organisatorische Serviceinformationen',
+        'website_path' => '/service-dokumentation/',
+        'sections' => array(
+          array(
+            'title' => 'Leistungsübersicht',
+            'body' => 'Dokumentation zu unseren Web-, App- und Support-Leistungen für Kunden und Partner.',
+          ),
+          array(
+            'title' => 'Support & Verfügbarkeit',
+            'body' => 'Support über das Kundenportal, E-Mail und Chat. Reaktionszeiten richten sich nach Vereinbarung und Service-Level.',
+          ),
+        ),
+        'cta' => 'Service-Dokumentation auf der Website öffnen',
+      ),
+      'en' => array(
+        'title' => 'Service Documentation',
+        'subtitle' => 'Technical and organizational service information',
+        'website_path' => '/service-dokumentation/',
+        'sections' => array(
+          array(
+            'title' => 'Service overview',
+            'body' => 'Documentation for our web, app and support services for clients and partners.',
+          ),
+          array(
+            'title' => 'Support & availability',
+            'body' => 'Support via the customer portal, email and chat. Response times depend on agreement and service level.',
+          ),
+        ),
+        'cta' => 'Open service documentation on our website',
+      ),
+      'ar' => array(
+        'title' => 'توثيق الخدمة',
+        'subtitle' => 'معلومات الخدمة التقنية والتنظيمية',
+        'website_path' => '/service-dokumentation/',
+        'sections' => array(
+          array(
+            'title' => 'نظرة عامة على الخدمة',
+            'body' => 'توثيق خدمات الويب والتطبيق والدعم للعملاء والشركاء.',
+          ),
+          array(
+            'title' => 'الدعم والتوفر',
+            'body' => 'الدعم عبر بوابة العملاء والبريد الإلكتروني والدردشة. أوقات الاستجابة حسب الاتفاق ومستوى الخدمة.',
+          ),
+        ),
+        'cta' => 'افتح توثيق الخدمة على موقعنا',
+      ),
+    ),
     'ueber-uns' => array(
       'de' => array(
         'title' => 'Über uns',

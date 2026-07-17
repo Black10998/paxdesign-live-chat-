@@ -1015,14 +1015,17 @@ struct CustomerProfileView: View {
                     }
                 }
                 Section(String(localized: "Legal & Support")) {
+                    NavigationLink(String(localized: "Impressum")) {
+                        CustomerLegalPageView(slug: "impressum", title: String(localized: "Impressum"))
+                    }
                     NavigationLink(String(localized: "Privacy Policy")) {
                         CustomerLegalPageView(slug: "datenschutz", title: String(localized: "Privacy Policy"))
                     }
                     NavigationLink(String(localized: "Terms")) {
                         CustomerLegalPageView(slug: "agb", title: String(localized: "Terms"))
                     }
-                    NavigationLink(String(localized: "About us")) {
-                        CustomerLegalPageView(slug: "ueber-uns", title: String(localized: "About us"))
+                    NavigationLink(String(localized: "Service documentation")) {
+                        CustomerLegalPageView(slug: "service-dokumentation", title: String(localized: "Service documentation"))
                     }
                     Button(String(localized: "Contact Support")) {
                         navigation.openChat()

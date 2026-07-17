@@ -125,6 +125,12 @@ struct CustomerMoreView: View {
                     LabeledContent(String(localized: "Version"), value: PAXAppInfo.fullVersion)
                     NavigationLink(String(localized: "About this app")) { AboutView() }
                 }
+                Section {
+                    CustomerAccountFooterSection()
+                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                        .listRowBackground(Color.clear)
+                }
+                .listRowSeparator(.hidden)
             }
             .navigationTitle(String(localized: "Account"))
             .customerPortalToolbar(showsAvatar: false)
