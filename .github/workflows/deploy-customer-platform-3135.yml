@@ -1,0 +1,122 @@
+name: Deploy customer platform 3.136.0
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_backup:
+        description: Skip remote backup (not recommended)
+        required: false
+        default: "false"
+      production:
+        description: Deploy to production after verification
+        required: false
+        default: "true"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PHP extensions
+        run: sudo apt-get update && sudo apt-get install -y php-cli php-mysql ripgrep
+
+      - name: PHP syntax validation
+        run: |
+          set -euo pipefail
+          rg --files -g '*.php' paxdesign-booking/includes/customer paxdesign-toolbar/includes | xargs -n1 php -l
+          php -l paxdesign-booking/includes/class-paxdesign-chat.php
+
+      - name: Customer platform static tests
+        run: php tests/customer-platform/run.php
+
+      - name: Messaging reliability tests
+        run: |
+          sudo apt-get install -y mariadb-client
+          docker run -d --name pax-messaging-db -e MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=1 -e MARIADB_DATABASE=pax_chat_test -p 3306:3306 mariadb:11
+          for i in $(seq 1 30); do
+            mysqladmin ping -h 127.0.0.1 --silent && break
+            sleep 2
+          done
+          PAX_TEST_DSN='mysql:host=127.0.0.1;port=3306;dbname=pax_chat_test;charset=utf8mb4' php tests/messaging/run.php
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate deployment secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing secret: $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Remote backup (database + wp-content)
+        if: inputs.skip_backup != 'true'
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          chmod +x scripts/backup-wp-production.sh
+          ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
+            "WP_PATH=$(printf '%q' "$WP_PATH") bash -s" < scripts/backup-wp-production.sh | tee backup.log
+
+      - name: Deploy paxdesign-booking and paxdesign-toolbar
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          BOOKING_TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          TOOLBAR_TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-toolbar"
+          rsync -az --delete -e "ssh ${SSH_OPTS[*]}" paxdesign-booking/ "${WP_SSH_USER}@${WP_SSH_HOST}:${BOOKING_TARGET}/"
+          rsync -az --delete -e "ssh ${SSH_OPTS[*]}" paxdesign-toolbar/ "${WP_SSH_USER}@${WP_SSH_HOST}:${TOOLBAR_TARGET}/"
+          ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
+            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp plugin activate paxdesign-booking paxdesign-toolbar && wp cache flush || true)"
+
+      - name: Post-deploy customer platform verification
+        env:
+          PAX_SITE: https://paxdesign.at
+          PAX_EXPECTED_BOOKING: "3.136.0"
+          PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
+          PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/verify-customer-platform-3135.sh
+          ./scripts/verify-customer-platform-3135.sh | tee verify-customer-platform.log
+
+      - name: Upload verification artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: customer-platform-deploy-3135
+          path: |
+            backup.log
+            verify-customer-platform.log

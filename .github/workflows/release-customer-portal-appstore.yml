@@ -1,0 +1,53 @@
+name: Customer Portal App Store Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/customer-portal-appstore-build'
+
+permissions:
+  contents: read
+
+jobs:
+  customer-portal-appstore-build:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    env:
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
+      APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+      APPLE_PROVISIONING_PROFILE_CUSTOMER_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_CUSTOMER_BASE64 }}
+      APPLE_PROVISIONING_PROFILE_MAIN_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_MAIN_BASE64 }}
+      MAIN_BUNDLE_ID: at.paxdesign.customerportal
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          for candidate in Xcode_26.5.app Xcode_26.app Xcode_26.0.app Xcode.app; do
+            if [[ -d "/Applications/$candidate" ]]; then
+              sudo xcode-select -s "/Applications/$candidate/Contents/Developer"
+              xcodebuild -version
+              exit 0
+            fi
+          done
+          xcodebuild -version
+
+      - name: Build signed Customer Portal IPA
+        run: |
+          set +x
+          cd paxdesign-booking/ios-customer-portal
+          chmod +x scripts/build-appstore-ipa.sh
+          ./scripts/build-appstore-ipa.sh
+
+      - name: Upload Customer Portal IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PAXCustomerPortal-AppStore-ipa
+          path: paxdesign-booking/ios-customer-portal/build/AppStore/export/PAXCustomerPortal-AppStore.ipa
+          if-no-files-found: error

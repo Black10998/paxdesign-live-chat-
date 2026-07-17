@@ -1,0 +1,48 @@
+name: PAXCustomerPortal
+options:
+  bundleIdPrefix: at.paxdesign
+  deploymentTarget:
+    iOS: "16.0"
+  xcodeVersion: "16.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    TARGETED_DEVICE_FAMILY: "1,2"
+    MARKETING_VERSION: "1.0.1"
+    CURRENT_PROJECT_VERSION: "2"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: $(APPLE_TEAM_ID)
+targets:
+  PAXCustomerPortal:
+    type: application
+    platform: iOS
+    sources:
+      - path: PAXCustomerPortal
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: at.paxdesign.customerportal
+        INFOPLIST_KEY_CFBundleDisplayName: PAXDesign
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_NSUserNotificationsUsageDescription: "Notifications for project updates, messages, and announcements."
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Record voice messages for support chat."
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Attach photos to support conversations."
+        INFOPLIST_KEY_NSCameraUsageDescription: "Take photos to share in support chat."
+        INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Share your location with support when you choose to."
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+    entitlements:
+      path: PAXCustomerPortal/PAXCustomerPortal.entitlements
+      properties:
+        aps-environment: production
+    info:
+      properties:
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CFBundleDisplayName: PAXDesign
+        NSUserNotificationsUsageDescription: "Notifications for project updates, messages, and announcements."
+        NSMicrophoneUsageDescription: "Record voice messages for support chat."
+        NSPhotoLibraryUsageDescription: "Attach photos to support conversations."
+        NSCameraUsageDescription: "Take photos to share in support chat."
+        NSLocationWhenInUseUsageDescription: "Share your location with support when you choose to."
+        ITSAppUsesNonExemptEncryption: false
+        UIBackgroundModes:
+          - remote-notification

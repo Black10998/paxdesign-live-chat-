@@ -6,7 +6,10 @@ on:
       - "paxdesign-booking/includes/**"
       - "paxdesign-booking/assets/js/**"
       - "paxdesign-booking/ios-live-chat/**"
+      - "paxdesign-booking/ios-customer-portal/**"
+      - "paxdesign-toolbar/**"
       - "tests/messaging/**"
+      - "tests/customer-platform/**"
       - ".github/workflows/messaging-reliability.yml"
   push:
     branches: [main]
@@ -46,6 +49,9 @@ jobs:
         run: |
           node --check paxdesign-booking/assets/js/chat-script.js
           node --check paxdesign-booking/assets/js/chat-live-admin.js
+
+      - name: Customer platform static tests
+        run: php tests/customer-platform/run.php
 
       - name: Run durability, concurrency and reconnect tests
         run: php tests/messaging/run.php

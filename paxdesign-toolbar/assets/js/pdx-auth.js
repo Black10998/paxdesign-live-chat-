@@ -179,9 +179,12 @@
           '<span class="pdx-auth-trigger-icon">' + cxIcon('user', 18) + '</span>' +
           '<span class="pdx-auth-trigger-label">Log In</span>' +
         '</button>' +
+        '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-cx-btn--ghost">Sign Up</button>' +
+        '<button type="button" class="pdx-auth-portal-btn pdx-cx-btn" hidden>Customer Portal</button>' +
         '<div class="pdx-auth-menu" hidden>' +
           '<div class="pdx-auth-menu-head"></div>' +
           '<div class="pdx-auth-menu-actions">' +
+            '<button type="button" class="pdx-auth-menu-item" data-action="portal">' + cxIcon('dashboard', 16) + 'Customer Portal</button>' +
             '<button type="button" class="pdx-auth-menu-item" data-action="profile">' + cxIcon('user', 16) + 'My Profile</button>' +
             '<button type="button" class="pdx-auth-menu-item" data-action="account">' + cxIcon('settings', 16) + 'My Account</button>' +
             '<button type="button" class="pdx-auth-menu-item pdx-auth-menu-item--logout" data-action="logout">' + cxIcon('logout', 16) + 'Logout</button>' +
@@ -201,11 +204,21 @@
       btn.addEventListener('click', function () {
         var action = btn.dataset.action;
         closeAuthMenu();
-        if (action === 'profile') openProfileOverlay();
+        if (action === 'portal') openCustomerPortal();
+        else if (action === 'profile') openProfileOverlay();
         else if (action === 'account') openAccountPanel();
         else if (action === 'logout') doLogout();
       });
     });
+
+    var signupBtn = authBar.querySelector('.pdx-auth-signup-btn');
+    var portalBtn = authBar.querySelector('.pdx-auth-portal-btn');
+    if (signupBtn) {
+      signupBtn.addEventListener('click', function () { openOverlay('register'); });
+    }
+    if (portalBtn) {
+      portalBtn.addEventListener('click', function () { openCustomerPortal(); });
+    }
 
     document.addEventListener('click', function (e) {
       if (!authBar || !authMenuOpen) return;
@@ -238,7 +251,12 @@
     if (!authBtn || !authMenu) return;
     var labelEl = authBtn.querySelector('.pdx-auth-trigger-label');
     var head = authMenu.querySelector('.pdx-auth-menu-head');
+    var signupBtn = authBar ? authBar.querySelector('.pdx-auth-signup-btn') : null;
+    var portalBtn = authBar ? authBar.querySelector('.pdx-auth-portal-btn') : null;
     var label = user.logged_in ? (user.display_name || 'Account') : 'Log In';
+
+    if (signupBtn) signupBtn.hidden = !!user.logged_in;
+    if (portalBtn) portalBtn.hidden = !user.logged_in;
 
     if (labelEl) {
       if (user.logged_in) {
@@ -1064,6 +1082,267 @@
   }
 
   /* ─── Public API ───────────────────────────────────────── */
+  function customerApiFetch(method, path, body) {
+    var base = (C.restUrl || '/wp-json/pdx/v1').replace(/\/$/, '');
+    var opts = {
+      method: method,
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-WP-Nonce': C.nonce || '',
+      },
+    };
+    if (body && method !== 'GET') opts.body = JSON.stringify(body);
+    return fetch(base + path, opts).then(function (r) {
+      return r.json().then(function (data) {
+        data._status = r.status;
+        data._ok = r.ok;
+        return data;
+      });
+    });
+  }
+
+  var portalOverlay = null;
+
+  function openCustomerPortal() {
+    if (!user.logged_in) {
+      openOverlay('login');
+      return;
+    }
+    if (!user.verified && !user.is_admin) {
+      notify('Please verify your email to access your customer portal.', 'warn');
+      openOverlay('login');
+      return;
+    }
+    if (!portalOverlay) {
+      portalOverlay = document.createElement('div');
+      portalOverlay.id = 'pdx-customer-portal';
+      portalOverlay.className = 'pdx-cx-shell';
+      portalOverlay.setAttribute('role', 'dialog');
+      portalOverlay.setAttribute('aria-modal', 'true');
+      portalOverlay.setAttribute('aria-label', 'Customer Portal');
+      portalOverlay.innerHTML =
+        '<div class="pdx-customer-portal-card">' +
+          '<button type="button" class="pdx-auth-close" aria-label="Close">&times;</button>' +
+          '<div class="pdx-customer-portal-head">' + cxIcon('dashboard', 20) + '<span>Customer Portal</span></div>' +
+          '<div class="pdx-customer-portal-body">' + cxLoading('Loading your workspace…') + '</div>' +
+        '</div>';
+      document.body.appendChild(portalOverlay);
+      portalOverlay.querySelector('.pdx-auth-close').addEventListener('click', closeCustomerPortal);
+      portalOverlay.addEventListener('click', function (e) {
+        if (e.target === portalOverlay) closeCustomerPortal();
+      });
+    }
+    portalOverlay.classList.add('is-open');
+    document.body.classList.add('pdx-no-scroll');
+    var body = portalOverlay.querySelector('.pdx-customer-portal-body');
+    body.innerHTML = cxLoading('Loading your workspace…');
+    customerApiFetch('GET', '/customer/dashboard').then(function (data) {
+      if (!data || data._status === 401) {
+        body.innerHTML = '<p class="pdx-auth-error">Please sign in to continue.</p>';
+        return;
+      }
+      if (data.code === 'pdx_email_unverified') {
+        body.innerHTML = '<p class="pdx-auth-error">Verify your email to access your portal.</p>';
+        return;
+      }
+      renderCustomerPortalDashboard(body, data);
+    }).catch(function () {
+      body.innerHTML = '<p class="pdx-auth-error">Unable to load your portal. Please try again.</p>';
+    });
+  }
+
+  function closeCustomerPortal() {
+    if (!portalOverlay) return;
+    portalOverlay.classList.remove('is-open');
+    document.body.classList.remove('pdx-no-scroll');
+  }
+
+  function customerApiStream(path, body, onEvent) {
+    var base = (C.restUrl || '/wp-json/pdx/v1').replace(/\/$/, '');
+    return fetch(base + path, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'text/event-stream',
+        'X-WP-Nonce': C.nonce || '',
+      },
+      body: JSON.stringify(body || {}),
+    }).then(function (response) {
+      if (!response.ok || !response.body) {
+        return response.text().then(function (text) {
+          var err = { code: 'stream_failed', message: 'Unable to stream AI response.' };
+          try { err = JSON.parse(text); } catch (e) {}
+          throw err;
+        });
+      }
+      var reader = response.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      function pump() {
+        return reader.read().then(function (chunk) {
+          if (chunk.done) return;
+          buffer += decoder.decode(chunk.value, { stream: true });
+          var parts = buffer.split('\n\n');
+          buffer = parts.pop() || '';
+          parts.forEach(function (block) {
+            block.split('\n').forEach(function (line) {
+              if (line.indexOf('data: ') !== 0) return;
+              var payload = line.slice(6).trim();
+              if (!payload || payload === '[DONE]') return;
+              try { onEvent(JSON.parse(payload)); } catch (e) {}
+            });
+          });
+          return pump();
+        });
+      }
+      return pump();
+    });
+  }
+
+  function renderCustomerPortalDashboard(container, data) {
+    var projects = data.projects_active || [];
+    var orders = data.orders_recent || [];
+    var news = data.news || [];
+    var chat = data.chat || {};
+    var sessionId = chat.session_id || '';
+    var html = '<div class="pdx-portal-grid">';
+    html += '<section class="pdx-portal-section pdx-portal-chat"><h3>' + cxIcon('message', 16) + 'Conversation</h3>';
+    html += '<div class="pdx-portal-chat-log" id="pdx-portal-chat-log">' + cxLoading('Loading messages…') + '</div>';
+    html += '<form class="pdx-portal-chat-form" id="pdx-portal-chat-form">';
+    html += '<textarea rows="2" placeholder="Write a message…" aria-label="Message"></textarea>';
+    html += pearlBtn('Send', { type: 'submit', small: true, inline: true, icon: 'send' });
+    html += '</form></section>';
+    html += '<section class="pdx-portal-section"><h3>' + cxIcon('folder', 16) + 'Projects</h3>';
+    if (projects.length) {
+      projects.slice(0, 3).forEach(function (p) {
+        html += '<div class="pdx-portal-row"><strong>' + escHtml(p.title) + '</strong><span>' + escHtml(String(p.progress || 0)) + '%</span></div>';
+      });
+    } else {
+      html += '<p class="pdx-portal-empty">No active projects yet. Request a service to begin.</p>';
+    }
+    html += '</section>';
+    html += '<section class="pdx-portal-section"><h3>' + cxIcon('receipt', 16) + 'Requests</h3>';
+    if (orders.length) {
+      orders.slice(0, 3).forEach(function (o) {
+        html += '<div class="pdx-portal-row"><strong>' + escHtml(o.service_label || o.ref) + '</strong><span>' + escHtml(o.status) + '</span></div>';
+      });
+    } else {
+      html += '<p class="pdx-portal-empty">No service requests yet.</p>';
+    }
+    html += '</section>';
+    html += '<section class="pdx-portal-section"><h3>' + cxIcon('news', 16) + 'News</h3>';
+    if (news.length) {
+      news.forEach(function (n) {
+        html += '<div class="pdx-portal-row"><strong>' + escHtml(n.title) + '</strong></div>';
+      });
+    } else {
+      html += '<p class="pdx-portal-empty">No announcements right now.</p>';
+    }
+    html += '</section></div>';
+    container.innerHTML = html;
+    initCustomerPortalChat(container, sessionId);
+  }
+
+  function initCustomerPortalChat(container, sessionId) {
+    var logEl = container.querySelector('#pdx-portal-chat-log');
+    var form = container.querySelector('#pdx-portal-chat-form');
+    if (!logEl || !form) return;
+
+    var state = { sessionId: sessionId, handler: 'ai', messages: [], sending: false };
+
+    function renderMessages() {
+      if (!state.messages.length) {
+        logEl.innerHTML = '<p class="pdx-portal-empty">No messages yet. Start a conversation with PAXDesign.</p>';
+        return;
+      }
+      logEl.innerHTML = state.messages.map(function (m) {
+        var cls = m.role === 'user' ? 'pdx-portal-msg pdx-portal-msg--user' : 'pdx-portal-msg pdx-portal-msg--assistant';
+        return '<div class="' + cls + '">' + escHtml(m.content || '') + '</div>';
+      }).join('');
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    function loadMessages() {
+      var path = '/customer/chat/messages?full=1';
+      if (state.sessionId) path += '&session_id=' + encodeURIComponent(state.sessionId);
+      customerApiFetch('GET', path).then(function (data) {
+        if (!data || !data._ok) {
+          logEl.innerHTML = '<p class="pdx-auth-error">Unable to load conversation.</p>';
+          return;
+        }
+        state.sessionId = data.session_id || state.sessionId;
+        state.handler = data.handler || 'ai';
+        state.messages = (data.messages || []).map(function (m) {
+          return { role: m.role, content: m.content || '' };
+        });
+        renderMessages();
+      }).catch(function () {
+        logEl.innerHTML = '<p class="pdx-auth-error">Unable to load conversation.</p>';
+      });
+    }
+
+    function appendLocal(role, content) {
+      state.messages.push({ role: role, content: content });
+      renderMessages();
+    }
+
+    function sendHumanMessage(text) {
+      return customerApiFetch('POST', '/customer/chat/messages', {
+        session_id: state.sessionId,
+        message: text,
+      }).then(function (data) {
+        if (!data || !data._ok) throw data || {};
+        if (data.message) appendLocal('user', text);
+        return loadMessages();
+      });
+    }
+
+    function sendAiStream(text) {
+      appendLocal('user', text);
+      var assistantIdx = state.messages.length;
+      state.messages.push({ role: 'assistant', content: '' });
+      renderMessages();
+      return customerApiStream('/customer/chat/stream', {
+        session_id: state.sessionId,
+        message: text,
+      }, function (evt) {
+        if (evt.type === 'text' && evt.text) {
+          state.messages[assistantIdx].content += evt.text;
+          renderMessages();
+        }
+        if (evt.type === 'done' && evt.message && evt.message.content) {
+          state.messages[assistantIdx].content = evt.message.content;
+          renderMessages();
+        }
+        if (evt.type === 'error' && evt.message) {
+          notify(evt.message, 'error');
+        }
+      }).then(loadMessages);
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (state.sending) return;
+      var input = form.querySelector('textarea');
+      var text = (input && input.value || '').trim();
+      if (!text) return;
+      state.sending = true;
+      var sendPromise = (state.handler === 'admin' || state.handler === 'live_request')
+        ? sendHumanMessage(text)
+        : sendAiStream(text);
+      sendPromise.catch(function (err) {
+        notify((err && err.message) || 'Message could not be sent.', 'error');
+      }).finally(function () {
+        state.sending = false;
+        if (input) input.value = '';
+      });
+    });
+
+    loadMessages();
+  }
+
   window.PDXAuth = {
     init: function () {
       createAuthBar();
@@ -1077,7 +1356,10 @@
     moduleRequiresAuth: moduleRequiresAuth,
     openLogin: function (moduleId) { openOverlay('login', moduleId); },
     renderAuthGate: renderAuthGate,
-    renderAccountDashboard: renderAccountDashboard,
+    openCustomerPortal: openCustomerPortal,
+    closeCustomerPortal: closeCustomerPortal,
+    customerApiFetch: customerApiFetch,
+    customerApiStream: customerApiStream,
     refreshUser: refreshUser,
     refreshSessionNonce: refreshSessionNonce,
     applySession: applySession,
