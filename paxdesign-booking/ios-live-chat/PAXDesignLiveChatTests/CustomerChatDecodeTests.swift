@@ -62,6 +62,32 @@ final class CustomerChatDecodeTests: XCTestCase {
 
         let poll = try JSONDecoder().decode(CustomerChatPoll.self, from: json)
 
+        XCTAssertEqual(poll.messages?.count, 1)
+        XCTAssertEqual(poll.messages?.first?.content, "Valid")
+    }
+
+    func testDecodesConversationsWithStringCounts() throws {
+        let json = """
+        {
+          "conversations": [
+            {
+              "session_id": "pax_u42_abc",
+              "last_preview": "Hello there",
+              "handler": "admin",
+              "message_count": "12",
+              "updated_at": "2026-07-17 12:00:00"
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let response = try JSONDecoder().decode(CustomerConversationsResponse.self, from: json)
+
+        XCTAssertEqual(response.conversations.count, 1)
+        XCTAssertEqual(response.conversations.first?.session_id, "pax_u42_abc")
+        XCTAssertEqual(response.conversations.first?.message_count, 12)
+    }
+
     func testDecodesParticipantIdentityFields() throws {
         let json = """
         {

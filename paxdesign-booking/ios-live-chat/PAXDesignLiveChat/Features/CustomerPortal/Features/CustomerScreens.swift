@@ -212,8 +212,7 @@ struct CustomerDashboardView: View {
                                         .foregroundStyle(PAXTheme.textSecondary)
                                 }
                                 Button(String(localized: "Open Files")) {
-                                    navigation.selectedTab = .account
-                                    navigation.accountPath = [CustomerPortalDestination(kind: .files)]
+                                    navigation.openFiles()
                                 }
                                 .font(.subheadline.weight(.semibold))
                             }
@@ -245,9 +244,11 @@ struct CustomerDashboardView: View {
             }
             .background(PAXBackground())
             .navigationTitle(String(localized: "Home"))
-            .task { await load() }
+            .task(id: navigation.workspaceRefreshToken) { await load() }
             .onChange(of: scenePhase) { phase in
-                if phase == .active { Task { await load() } }
+                if phase == .active {
+                    navigation.refreshWorkspace()
+                }
             }
             .refreshable { await load() }
         }

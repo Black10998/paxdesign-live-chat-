@@ -315,40 +315,48 @@ struct CustomerServicesCatalogView: View {
             } else if let error {
                 PAXContentUnavailableView(String(localized: "Services unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
             } else if let response {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: CustomerPortalDesign.sectionSpacing) {
-                        CustomerPortalCard {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(String(localized: "Services"))
-                                    .font(.title2.weight(.bold))
-                                Text(String(localized: "Every service from our studio — images, details, and native ordering."))
-                                    .font(.subheadline)
-                                    .foregroundStyle(PAXTheme.textSecondary)
-                            }
-                        }
-                        .padding(.horizontal)
-
-                        if !response.categories.isEmpty {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 10) {
-                                    categoryChip("", title: String(localized: "All"))
-                                    ForEach(response.categories) { category in
-                                        categoryChip(category.slug, title: category.name)
-                                    }
+                if filteredServices(response.services).isEmpty {
+                    PAXContentUnavailableView(
+                        String(localized: "No services available"),
+                        systemImage: "square.grid.2x2",
+                        description: Text(String(localized: "Services from our website will appear here automatically once they are published."))
+                    )
+                } else {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: CustomerPortalDesign.sectionSpacing) {
+                            CustomerPortalCard {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(String(localized: "Services"))
+                                        .font(.title2.weight(.bold))
+                                    Text(String(localized: "Every service from our studio — images, details, and native ordering."))
+                                        .font(.subheadline)
+                                        .foregroundStyle(PAXTheme.textSecondary)
                                 }
-                                .padding(.horizontal)
+                            }
+                            .padding(.horizontal)
+
+                            if !response.categories.isEmpty {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 10) {
+                                        categoryChip("", title: String(localized: "All"))
+                                        ForEach(response.categories) { category in
+                                            categoryChip(category.slug, title: category.name)
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                }
+                            }
+                            ForEach(filteredServices(response.services)) { service in
+                                NavigationLink {
+                                    CustomerServiceDetailView(slug: service.slug)
+                                } label: {
+                                    CustomerServiceCard(service: service)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
-                        ForEach(filteredServices(response.services)) { service in
-                            NavigationLink {
-                                CustomerServiceDetailView(slug: service.slug)
-                            } label: {
-                                CustomerServiceCard(service: service)
-                            }
-                            .buttonStyle(.plain)
-                        }
+                        .padding(.vertical)
                     }
-                    .padding(.vertical)
                 }
             }
         }

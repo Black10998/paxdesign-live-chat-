@@ -168,7 +168,7 @@ struct CustomerNotificationsResponse: Decodable {
 }
 
 struct CustomerFileLibraryItem: Decodable, Identifiable {
-    let id: Int
+    let recordId: Int
     let source: String
     let parent_id: Int
     let parent_title: String
@@ -178,6 +178,13 @@ struct CustomerFileLibraryItem: Decodable, Identifiable {
     let kind: String
     let created_at: String
     let download_url: String?
+
+    var id: String { "\(source)-\(parent_id)-\(recordId)" }
+
+    enum CodingKeys: String, CodingKey {
+        case recordId = "id"
+        case source, parent_id, parent_title, file_name, mime_type, file_size, kind, created_at, download_url
+    }
 }
 
 struct CustomerFilesResponse: Decodable {

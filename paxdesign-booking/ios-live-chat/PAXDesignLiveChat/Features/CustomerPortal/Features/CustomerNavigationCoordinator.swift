@@ -32,6 +32,23 @@ final class CustomerNavigationCoordinator: ObservableObject {
     @Published var accountPath: [CustomerPortalDestination] = []
     @Published var chatSessionID: String?
     @Published var pendingChatFocus = false
+    @Published private(set) var workspaceRefreshToken = UUID()
+
+    func refreshWorkspace() {
+        workspaceRefreshToken = UUID()
+    }
+
+    func openAccountDestination(_ destination: CustomerPortalDestination) {
+        selectedTab = .account
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 50_000_000)
+            accountPath = [destination]
+        }
+    }
+
+    func openFiles() {
+        openAccountDestination(CustomerPortalDestination(kind: .files))
+    }
 
     func handle(deepLink: CustomerDeepLink) {
         let normalized = deepLink.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))

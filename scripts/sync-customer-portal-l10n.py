@@ -74,6 +74,10 @@ TR = {
         "Alle Services aus unserem Studio — mit Bildern, Details und nativer Bestellung.",
         "كل خدمة من استوديونا — صور وتفاصيل وطلبات أصلية.",
     ),
+    "Services from our website will appear here automatically once they are published.": (
+        "Services von unserer Website erscheinen hier automatisch nach Veröffentlichung.",
+        "ستظهر خدمات موقعنا هنا تلقائياً بعد نشرها.",
+    ),
     "Selected projects from our studio — fully native, always synced from WordPress.": (
         "Ausgewählte Projekte aus unserem Studio — vollständig nativ, immer aus WordPress synchronisiert.",
         "مشاريع مختارة من استوديونا — أصلية بالكامل ومتزامنة دائماً من WordPress.",

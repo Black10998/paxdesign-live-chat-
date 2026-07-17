@@ -829,4 +829,17 @@ struct CustomerConversation: Decodable, Identifiable {
     let handler: String?
     let message_count: Int?
     let updated_at: String?
+
+    enum CodingKeys: String, CodingKey {
+        case session_id, last_preview, handler, message_count, updated_at
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        session_id = CustomerPortalDecode.string(container, .session_id)
+        last_preview = try container.decodeIfPresent(String.self, forKey: .last_preview)
+        handler = try container.decodeIfPresent(String.self, forKey: .handler)
+        message_count = CustomerPortalDecode.optionalInt(container, .message_count)
+        updated_at = try container.decodeIfPresent(String.self, forKey: .updated_at)
+    }
 }

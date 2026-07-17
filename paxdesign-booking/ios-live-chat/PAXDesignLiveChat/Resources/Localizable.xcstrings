@@ -25014,6 +25014,50 @@
           }
         }
       }
+    },
+    "No services available": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No services available"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No services available"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No services available"
+          }
+        }
+      }
+    },
+    "Services from our website will appear here automatically once they are published.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Services from our website will appear here automatically once they are published."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Services von unserer Website erscheinen hier automatisch nach Veröffentlichung."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ستظهر خدمات موقعنا هنا تلقائياً بعد نشرها."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

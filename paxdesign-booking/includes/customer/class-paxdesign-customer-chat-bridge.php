@@ -175,12 +175,30 @@ class PAXdesign_Customer_Chat_Bridge {
     public static function list_user_sessions($user_id) {
         global $wpdb;
         $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return array();
+        }
         $table = PAXdesign_Chat_Log::table_name();
-        return $wpdb->get_results($wpdb->prepare(
+        $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT session_id, customer_name, updated_at, handler, message_count, last_preview, session_rating
              FROM $table WHERE wp_user_id = %d ORDER BY updated_at DESC LIMIT 50",
             $user_id
         ), ARRAY_A);
+        $items = array();
+        foreach ($rows ?: array() as $row) {
+            $session_id = sanitize_text_field((string) ($row['session_id'] ?? ''));
+            if ($session_id === '') {
+                continue;
+            }
+            $items[] = array(
+                'session_id'     => $session_id,
+                'last_preview'   => sanitize_text_field((string) ($row['last_preview'] ?? '')),
+                'handler'        => sanitize_key((string) ($row['handler'] ?? 'ai')),
+                'message_count'  => (int) ($row['message_count'] ?? 0),
+                'updated_at'     => sanitize_text_field((string) ($row['updated_at'] ?? '')),
+            );
+        }
+        return $items;
     }
 
     private static function sanitize_session_id($session_id) {

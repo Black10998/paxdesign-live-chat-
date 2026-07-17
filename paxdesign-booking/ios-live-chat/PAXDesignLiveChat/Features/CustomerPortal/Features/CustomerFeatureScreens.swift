@@ -4,6 +4,7 @@ import SwiftUI
 
 struct CustomerProjectsListView: View {
     @EnvironmentObject private var api: CustomerAPIClient
+    @EnvironmentObject private var navigation: CustomerNavigationCoordinator
     var useSplitLayout: Bool = false
     @State private var projects: [CustomerProjectSummary] = []
     @State private var error: String?
@@ -34,7 +35,7 @@ struct CustomerProjectsListView: View {
                 }
             }
         }
-        .task { await load() }
+        .task(id: navigation.workspaceRefreshToken) { await load() }
     }
 
     private var projectList: some View {
@@ -236,41 +237,40 @@ private struct CustomerProjectsEmptyState: View {
 
 struct CustomerOrdersListView: View {
     @EnvironmentObject private var api: CustomerAPIClient
+    @EnvironmentObject private var navigation: CustomerNavigationCoordinator
     @State private var orders: [CustomerOrderSummary] = []
     @State private var error: String?
     @State private var isLoading = true
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if isLoading {
-                    ProgressView()
-                } else if let error {
-                    PAXContentUnavailableView(String(localized: "Requests unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
-                } else if orders.isEmpty {
-                    PAXContentUnavailableView(String(localized: "No requests yet"), systemImage: "tray", description: Text(String(localized: "Submit a service request from the Services tab.")))
-                } else {
-                    List(orders) { order in
-                        NavigationLink {
-                            CustomerOrderDetailView(orderId: order.id)
-                        } label: {
-                            VStack(alignment: .leading) {
-                                Text(order.service_label).font(.headline)
-                                Text(order.status).foregroundStyle(.secondary)
-                            }
+        Group {
+            if isLoading {
+                ProgressView()
+            } else if let error {
+                PAXContentUnavailableView(String(localized: "Requests unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
+            } else if orders.isEmpty {
+                PAXContentUnavailableView(String(localized: "No requests yet"), systemImage: "tray", description: Text(String(localized: "Submit a service request from the Services tab.")))
+            } else {
+                List(orders) { order in
+                    NavigationLink {
+                        CustomerOrderDetailView(orderId: order.id)
+                    } label: {
+                        VStack(alignment: .leading) {
+                            Text(order.service_label).font(.headline)
+                            Text(order.status).foregroundStyle(.secondary)
                         }
                     }
                 }
             }
-            .navigationTitle(String(localized: "Requests"))
-            .toolbar {
-                NavigationLink(String(localized: "New request")) {
-                    CustomerCreateOrderView()
-                }
-            }
-            .task { await load() }
-            .refreshable { await load() }
         }
+        .navigationTitle(String(localized: "Requests"))
+        .toolbar {
+            NavigationLink(String(localized: "New request")) {
+                CustomerCreateOrderView()
+            }
+        }
+        .task(id: navigation.workspaceRefreshToken) { await load() }
+        .refreshable { await load() }
     }
 
     private func load() async {
@@ -681,7 +681,7 @@ struct CustomerFilesView: View {
     @State private var files: [CustomerFileLibraryItem] = []
     @State private var error: String?
     @State private var isLoading = true
-    @State private var downloadingId: Int?
+    @State private var downloadingId: String?
     @State private var shareURL: URL?
 
     var body: some View {
@@ -730,14 +730,14 @@ struct CustomerFilesView: View {
     }
 
     private func download(_ file: CustomerFileLibraryItem) async {
-        downloadingId = file.id
+        downloadingId = file.recordId
         defer { downloadingId = nil }
         do {
             switch file.source {
             case "project":
-                shareURL = try await api.downloadProjectFile(projectId: file.parent_id, fileId: file.id)
+                shareURL = try await api.downloadProjectFile(projectId: file.parent_id, fileId: file.recordId)
             default:
-                shareURL = try await api.downloadOrderFile(orderId: file.parent_id, fileId: file.id)
+                shareURL = try await api.downloadOrderFile(orderId: file.parent_id, fileId: file.recordId)
             }
         } catch {
             self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription

@@ -47,6 +47,14 @@ struct CustomerTabView: View {
                 .tabItem { Label(String(localized: "Account"), systemImage: "person.crop.circle.fill") }
                 .tag(CustomerPortalTab.account)
         }
+        .onChange(of: navigation.selectedTab) { tab in
+            switch tab {
+            case .home, .projects, .account:
+                navigation.refreshWorkspace()
+            default:
+                break
+            }
+        }
     }
 }
 

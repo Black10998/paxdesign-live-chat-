@@ -263,17 +263,22 @@ class PAXdesign_Customer_Orders {
             $limit
         ), ARRAY_A);
         foreach ($project_files ?: array() as $row) {
+            $file_id = (int) ($row['id'] ?? 0);
+            $parent_id = (int) ($row['parent_id'] ?? 0);
+            if ($file_id <= 0) {
+                continue;
+            }
             $items[] = array(
-                'id'           => (int) $row->id,
+                'id'           => $file_id,
                 'source'       => 'project',
-                'parent_id'    => (int) $row->parent_id,
-                'parent_title' => (string) $row->parent_title,
-                'file_name'    => (string) $row->file_name,
-                'mime_type'    => (string) $row->mime_type,
-                'file_size'    => (int) $row->file_size,
-                'kind'         => (string) $row->kind,
-                'created_at'   => (string) $row->created_at,
-                'download_url' => rest_url('pdx/v1/customer/projects/' . (int) $row->parent_id . '/files/' . (int) $row->id . '/download'),
+                'parent_id'    => $parent_id,
+                'parent_title' => (string) ($row['parent_title'] ?? ''),
+                'file_name'    => (string) ($row['file_name'] ?? ''),
+                'mime_type'    => (string) ($row['mime_type'] ?? 'application/octet-stream'),
+                'file_size'    => (int) ($row['file_size'] ?? 0),
+                'kind'         => (string) ($row['kind'] ?? 'file'),
+                'created_at'   => (string) ($row['created_at'] ?? ''),
+                'download_url' => rest_url('pdx/v1/customer/projects/' . $parent_id . '/files/' . $file_id . '/download'),
             );
         }
 
@@ -287,17 +292,22 @@ class PAXdesign_Customer_Orders {
             $limit
         ), ARRAY_A);
         foreach ($order_files ?: array() as $row) {
+            $file_id = (int) ($row['id'] ?? 0);
+            $parent_id = (int) ($row['parent_id'] ?? 0);
+            if ($file_id <= 0) {
+                continue;
+            }
             $items[] = array(
-                'id'           => (int) $row->id,
+                'id'           => $file_id,
                 'source'       => 'order',
-                'parent_id'    => (int) $row->parent_id,
-                'parent_title' => (string) $row->parent_title,
-                'file_name'    => (string) $row->file_name,
-                'mime_type'    => (string) $row->mime_type,
-                'file_size'    => (int) $row->file_size,
-                'kind'         => (string) $row->kind,
-                'created_at'   => (string) $row->created_at,
-                'download_url' => rest_url('pdx/v1/customer/orders/' . (int) $row->parent_id . '/files/' . (int) $row->id . '/download'),
+                'parent_id'    => $parent_id,
+                'parent_title' => (string) ($row['parent_title'] ?? ''),
+                'file_name'    => (string) ($row['file_name'] ?? ''),
+                'mime_type'    => (string) ($row['mime_type'] ?? 'application/octet-stream'),
+                'file_size'    => (int) ($row['file_size'] ?? 0),
+                'kind'         => (string) ($row['kind'] ?? 'file'),
+                'created_at'   => (string) ($row['created_at'] ?? ''),
+                'download_url' => rest_url('pdx/v1/customer/orders/' . $parent_id . '/files/' . $file_id . '/download'),
             );
         }
 

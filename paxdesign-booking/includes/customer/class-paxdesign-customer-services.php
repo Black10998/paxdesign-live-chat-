@@ -88,6 +88,7 @@ class PAXdesign_Customer_Services {
     }
 
     public static function list_services($args = array()) {
+        self::maybe_seed_catalog();
         global $wpdb;
         $table = PAXdesign_Customer_DB::table('services');
         $where = array('is_active = 1');
@@ -107,20 +108,129 @@ class PAXdesign_Customer_Services {
             $sql = $wpdb->prepare($sql, $params);
         }
         $rows = $wpdb->get_results($sql, ARRAY_A);
-        return array_map(array(__CLASS__, 'format_service'), $rows ? $rows : array());
+        $services = array_map(array(__CLASS__, 'format_service'), $rows ? $rows : array());
+        $services = self::merge_services($services, self::services_from_wordpress_pages());
+
+        if (!empty($args['category'])) {
+            $category = sanitize_key($args['category']);
+            $services = array_values(array_filter($services, static function ($service) use ($category) {
+                return sanitize_key($service['category'] ?? '') === $category;
+            }));
+        }
+        if (!empty($args['search'])) {
+            $needle = strtolower(sanitize_text_field($args['search']));
+            $services = array_values(array_filter($services, static function ($service) use ($needle) {
+                $haystack = strtolower(($service['name'] ?? '') . ' ' . ($service['description'] ?? ''));
+                return strpos($haystack, $needle) !== false;
+            }));
+        }
+
+        return $services;
     }
 
     public static function get_by_slug($slug) {
         global $wpdb;
+        $slug = sanitize_key($slug);
         $table = PAXdesign_Customer_DB::table('services');
-        $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE slug = %s AND is_active = 1 LIMIT 1", sanitize_key($slug)), ARRAY_A);
-        return $row ? self::format_service($row) : null;
+        $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE slug = %s AND is_active = 1 LIMIT 1", $slug), ARRAY_A);
+        if ($row) {
+            return self::format_service($row);
+        }
+        $page = get_page_by_path($slug, OBJECT, 'page');
+        if ($page instanceof WP_Post && $page->post_status === 'publish') {
+            return self::format_wordpress_page_service($page);
+        }
+        return null;
     }
 
     public static function list_categories() {
         global $wpdb;
         $table = PAXdesign_Customer_DB::table('service_categories');
-        return $wpdb->get_results("SELECT slug, name, description, sort_order FROM $table ORDER BY sort_order ASC", ARRAY_A);
+        $rows = $wpdb->get_results("SELECT slug, name, description, sort_order FROM $table ORDER BY sort_order ASC", ARRAY_A);
+        if (!empty($rows)) {
+            return $rows;
+        }
+        return self::default_categories();
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $primary
+     * @param array<int, array<string, mixed>> $extra
+     * @return array<int, array<string, mixed>>
+     */
+    private static function merge_services(array $primary, array $extra) {
+        $by_slug = array();
+        foreach ($primary as $service) {
+            if (!empty($service['slug'])) {
+                $by_slug[sanitize_key($service['slug'])] = $service;
+            }
+        }
+        foreach ($extra as $service) {
+            $slug = sanitize_key($service['slug'] ?? '');
+            if ($slug !== '' && !isset($by_slug[$slug])) {
+                $by_slug[$slug] = $service;
+            }
+        }
+        return array_values($by_slug);
+    }
+
+    /**
+     * Published WordPress service pages (Services / Leistungen sections).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private static function services_from_wordpress_pages() {
+        $pages = array();
+        foreach (array('services', 'leistungen', 'service') as $root_slug) {
+            $root = get_page_by_path($root_slug, OBJECT, 'page');
+            if (!$root instanceof WP_Post) {
+                continue;
+            }
+            $children = get_pages(array(
+                'post_type'   => 'page',
+                'post_status' => 'publish',
+                'parent'      => (int) $root->ID,
+                'sort_column' => 'menu_order,post_title',
+            ));
+            foreach ($children as $child) {
+                $pages[$child->post_name] = $child;
+            }
+        }
+        $items = array();
+        foreach ($pages as $page) {
+            $items[] = self::format_wordpress_page_service($page);
+        }
+        return $items;
+    }
+
+    /**
+     * @param WP_Post $page
+     * @return array<string, mixed>
+     */
+    private static function format_wordpress_page_service($page) {
+        $slug = sanitize_key($page->post_name);
+        $thumb = get_the_post_thumbnail_url($page, 'medium_large');
+        if (!$thumb) {
+            $thumb = get_the_post_thumbnail_url($page, 'large');
+        }
+        $content = apply_filters('the_content', $page->post_content);
+        $plain = wp_trim_words(wp_strip_all_tags($content), 40, '…');
+        return array(
+            'slug'        => $slug,
+            'name'        => get_the_title($page),
+            'category'    => 'general',
+            'description' => $plain,
+            'body_html'   => wp_kses_post($content),
+            'body_text'   => wp_trim_words(wp_strip_all_tags($content), 120, '…'),
+            'features'    => array(),
+            'examples'    => array(),
+            'related'     => array(),
+            'media'       => array('icon' => $slug),
+            'image_url'   => $thumb ? esc_url_raw((string) $thumb) : '',
+            'icon_key'    => $slug,
+            'order_url'   => self::order_url_for_service($slug, get_the_title($page)),
+            'featured'    => false,
+        );
     }
 
     private static function format_service($row) {
