@@ -106,6 +106,28 @@ final class CustomerAPIClient: ObservableObject {
         try await get("/customer/chat/conversations", as: CustomerConversationsResponse.self)
     }
 
+    func fetchChatSession() async throws -> CustomerChatSessionResponse {
+        try await get("/customer/chat/session", as: CustomerChatSessionResponse.self)
+    }
+
+    func renewChatSession(closedSessionID: String? = nil) async throws -> CustomerChatSessionResponse {
+        var body: [String: String] = [:]
+        if let closedSessionID, !closedSessionID.isEmpty {
+            body["session_id"] = closedSessionID
+        }
+        return try await post("/customer/chat/session", body: body, as: CustomerChatSessionResponse.self)
+    }
+
+    func fetchLegalPage(slug: String, lang: String) async throws -> CustomerLegalPageResponse {
+        let encodedSlug = slug.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? slug
+        let encodedLang = lang.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? lang
+        return try await get("/content/legal/\(encodedSlug)?lang=\(encodedLang)", as: CustomerLegalPageResponse.self)
+    }
+
+    func uploadProfileAvatar(imageData: Data, filename: String = "avatar.jpg") async throws -> CustomerProfileResponse {
+        try await uploadMultipart(path: "/customer/profile/avatar", field: "avatar", filename: filename, mime: "image/jpeg", data: imageData, fields: [:], as: CustomerProfileResponse.self)
+    }
+
     func downloadProjectFile(projectId: Int, fileId: Int) async throws -> URL {
         guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
         guard let url = endpointURL("/customer/projects/\(projectId)/files/\(fileId)/download") else {
@@ -819,6 +841,7 @@ struct CustomerSendResponse: Decodable {
     let message: CustomerChatPoll.ChatMessage?
     let assistant: CustomerChatPoll.ChatMessage?
     let notice: String?
+    let renewed: Bool?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -827,11 +850,18 @@ struct CustomerSendResponse: Decodable {
         message = try? container.decodeIfPresent(CustomerChatPoll.ChatMessage.self, forKey: .message)
         assistant = try? container.decodeIfPresent(CustomerChatPoll.ChatMessage.self, forKey: .assistant)
         notice = try? container.decodeIfPresent(String.self, forKey: .notice)
+        renewed = CustomerPortalDecode.optionalBool(container, .renewed)
     }
 
     enum CodingKeys: String, CodingKey {
-        case session_id, handler, message, assistant, notice
+        case session_id, handler, message, assistant, notice, renewed
     }
+}
+
+struct CustomerChatSessionResponse: Decodable {
+    let session_id: String
+    let handler: String?
+    let renewed: Bool?
 }
 
 struct CustomerStreamEvent: Decodable {
@@ -889,5 +919,20 @@ struct CustomerConversation: Decodable, Identifiable {
         handler = try container.decodeIfPresent(String.self, forKey: .handler)
         message_count = CustomerPortalDecode.optionalInt(container, .message_count)
         updated_at = try container.decodeIfPresent(String.self, forKey: .updated_at)
+    }
+}
+
+extension CustomerConversation {
+    var handlerLabel: String {
+        switch handler?.lowercased() {
+        case "closed":
+            return String(localized: "Closed")
+        case "admin", "live_request":
+            return String(localized: "Support")
+        case "ai", .none, "":
+            return String(localized: "AI Assistant")
+        default:
+            return String(localized: "Conversation")
+        }
     }
 }

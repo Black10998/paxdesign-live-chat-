@@ -176,7 +176,40 @@ struct CustomerPortfolioDetailView: View {
                     CustomerPortalCard {
                         VStack(alignment: .leading, spacing: 10) {
                             Text(item.title).font(.title2.weight(.bold))
-                            if let client = item.client, !client.isEmpty {
+                            if let structured = item.structuredDetail {
+                                if let summary = structured.summary, !summary.isEmpty {
+                                    Text(summary)
+                                        .font(.body)
+                                        .foregroundStyle(PAXTheme.textPrimary)
+                                }
+                                if let paragraphs = structured.paragraphs {
+                                    ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, paragraph in
+                                        Text(paragraph)
+                                            .font(.body)
+                                            .foregroundStyle(PAXTheme.textPrimary)
+                                    }
+                                }
+                                if let highlights = structured.highlights, !highlights.isEmpty {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        ForEach(highlights) { highlight in
+                                            HStack(alignment: .top) {
+                                                Text(highlight.label)
+                                                    .font(.subheadline.weight(.semibold))
+                                                    .foregroundStyle(PAXTheme.textSecondary)
+                                                Spacer(minLength: 8)
+                                                if let link = highlight.link, let url = URL(string: link) {
+                                                    Link(highlight.value, destination: url)
+                                                        .font(.subheadline)
+                                                } else {
+                                                    Text(highlight.value)
+                                                        .font(.subheadline)
+                                                        .foregroundStyle(PAXTheme.textPrimary)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else if let client = item.client, !client.isEmpty {
                                 Label(client, systemImage: "building.2")
                                     .font(.subheadline)
                                     .foregroundStyle(PAXTheme.textSecondary)
@@ -195,7 +228,7 @@ struct CustomerPortfolioDetailView: View {
                                     }
                                 }
                             }
-                            if let body = item.body, !body.isEmpty {
+                            if let body = item.body, !body.isEmpty, item.structuredDetail == nil {
                                 Text(body.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression))
                                     .font(.body)
                                     .foregroundStyle(PAXTheme.textPrimary)
@@ -207,7 +240,7 @@ struct CustomerPortfolioDetailView: View {
                         }
                     }
 
-                    if let blocks = item.blocks, !blocks.isEmpty {
+                    if let blocks = item.blocks, !blocks.isEmpty, item.structuredDetail == nil {
                         CustomerNativeContentBlocksView(blocks: blocks)
                     }
 

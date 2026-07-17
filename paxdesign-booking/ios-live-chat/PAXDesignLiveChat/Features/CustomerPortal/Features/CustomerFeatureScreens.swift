@@ -364,12 +364,23 @@ struct CustomerCreateOrderView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     @Environment(\.dismiss) private var dismiss
     var preselectedSlug: String = ""
+    var prefilledTitle: String = ""
+    var prefilledDescription: String = ""
     @State private var services: [CustomerServicesResponse.Service] = []
     @State private var selectedSlug = ""
     @State private var description = ""
     @State private var error: String?
     @State private var isSubmitting = false
     @State private var isLoadingServices = true
+
+    static func templateDescription(title: String, features: [String]) -> String {
+        let header = String(localized: "Service request: \(title)")
+        if features.isEmpty {
+            return header + "\n\n" + String(localized: "Please describe your requirements below.")
+        }
+        let bullets = features.map { "• \($0)" }.joined(separator: "\n")
+        return header + "\n\n" + bullets + "\n\n" + String(localized: "Please add any additional details.")
+    }
 
     var body: some View {
         Group {
@@ -414,6 +425,13 @@ struct CustomerCreateOrderView: View {
                 selectedSlug = preselectedSlug
             } else if selectedSlug.isEmpty {
                 selectedSlug = services.first?.slug ?? ""
+            }
+            if description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                if !prefilledDescription.isEmpty {
+                    description = prefilledDescription
+                } else if !prefilledTitle.isEmpty {
+                    description = Self.templateDescription(title: prefilledTitle, features: [])
+                }
             }
         }
         isLoadingServices = false
@@ -801,6 +819,7 @@ struct CustomerSettingsView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     @EnvironmentObject private var auth: CustomerAuthStore
     @EnvironmentObject private var appAuth: AuthStore
+    @EnvironmentObject private var navigation: CustomerNavigationCoordinator
     @State private var chatPref = true
     @State private var projectPref = true
     @State private var orderPref = true
@@ -818,6 +837,7 @@ struct CustomerSettingsView: View {
                 Button(String(localized: "Save profile")) {
                     Task {
                         _ = try? await api.updateProfile(displayName: displayName)
+                        await auth.refreshProfile(api: api)
                         message = String(localized: "Profile updated.")
                     }
                 }
@@ -837,6 +857,7 @@ struct CustomerSettingsView: View {
                         )
                         _ = try? await api.updateSettings(prefs)
                         message = String(localized: "Settings saved.")
+                        navigation.refreshWorkspace()
                     }
                 }
             }
@@ -859,7 +880,10 @@ struct CustomerSettingsView: View {
         }
         .navigationTitle(String(localized: "Settings"))
         .task {
-            if let profile = try? await api.fetchProfile() {
+            await auth.refreshProfile(api: api)
+            if let profile = auth.profile {
+                displayName = profile.display_name
+            } else if let profile = try? await api.fetchProfile() {
                 displayName = profile.profile.display_name
             }
             if let settings = try? await api.fetchSettings() {

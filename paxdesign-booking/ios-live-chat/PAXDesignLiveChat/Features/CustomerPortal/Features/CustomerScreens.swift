@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct CustomerLoginView: View {
     @EnvironmentObject private var auth: CustomerAuthStore
@@ -44,7 +45,7 @@ struct CustomerLoginView: View {
                 }
             }
         }
-        .navigationTitle("PAXDesign")
+        .navigationTitle(String(localized: "PAXDesign"))
     }
 }
 
@@ -307,6 +308,10 @@ struct CustomerChatView: View {
         return handler == "admin" || handler == "live_request"
     }
 
+    private var isConversationClosed: Bool {
+        poll?.handler == "closed"
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -325,6 +330,9 @@ struct CustomerChatView: View {
                             .padding(.vertical, 8)
                             .frame(maxWidth: .infinity)
                             .background(PAXTheme.accentSoft)
+                    }
+                    if isConversationClosed {
+                        closedConversationBanner
                     }
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -357,7 +365,9 @@ struct CustomerChatView: View {
                     }
                 }
                 .safeAreaInset(edge: .bottom, spacing: 0) {
-                    chatComposer
+                    if !isConversationClosed {
+                        chatComposer
+                    }
                 }
             }
             .navigationTitle(String(localized: "Chat"))
@@ -415,6 +425,25 @@ struct CustomerChatView: View {
         }
     }
 
+    private var closedConversationBanner: some View {
+        VStack(spacing: 10) {
+            Text(String(localized: "This conversation has ended."))
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PAXTheme.textPrimary)
+            Text(String(localized: "Start a new conversation to continue chatting with our team."))
+                .font(.caption)
+                .foregroundStyle(PAXTheme.textSecondary)
+                .multilineTextAlignment(.center)
+            Button(String(localized: "Start new conversation")) {
+                Task { await startNewConversation() }
+            }
+            .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .filled))
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(PAXTheme.surfaceElevated)
+    }
+
     private var chatComposer: some View {
         VStack(spacing: 0) {
             Divider()
@@ -455,7 +484,10 @@ struct CustomerChatView: View {
     }
 
     private var canSend: Bool {
-        !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSending && network.isConnected
+        !isConversationClosed
+            && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !isSending
+            && network.isConnected
     }
 
     private var displayMessages: [CustomerChatPoll.ChatMessage] {
@@ -570,35 +602,93 @@ struct CustomerChatView: View {
 
     private func send() async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+        guard !text.isEmpty, !isConversationClosed else { return }
         isSending = true
         error = nil
         notice = nil
         defer { isSending = false }
         do {
-            let response = try await api.sendChatMessage(text, sessionID: poll?.session_id)
+            let response = try await sendMessageWithRenewFallback(text)
             draft = ""
             isInputFocused = false
-            if let handler = response.handler {
-                poll = CustomerChatPoll(
-                    session_id: response.session_id,
-                    handler: handler,
-                    messages: poll?.messages,
-                    message_count: poll?.message_count,
-                    last_preview: poll?.last_preview,
-                    admin_typing: poll?.admin_typing,
-                    user_typing: poll?.user_typing,
-                    other_read_seq: poll?.other_read_seq
-                )
-            }
-            if let noticeText = response.notice, !noticeText.isEmpty {
-                notice = noticeText
-            }
+            applySendResponse(response)
             await refresh(full: true)
             PAXHaptics.light()
         } catch {
             self.error = friendlyChatError(error)
             PAXHaptics.warning()
+        }
+    }
+
+    private func sendMessageWithRenewFallback(_ text: String) async throws -> CustomerSendResponse {
+        do {
+            return try await api.sendChatMessage(text, sessionID: poll?.session_id)
+        } catch let apiError as CustomerAPIError {
+            if case .serverCode(let code, _) = apiError, code == "chat_closed" {
+                let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id)
+                poll = CustomerChatPoll(
+                    session_id: renewed.session_id,
+                    handler: renewed.handler,
+                    messages: [],
+                    message_count: nil,
+                    last_preview: nil
+                )
+                return try await api.sendChatMessage(text, sessionID: renewed.session_id)
+            }
+            if case .http(409) = apiError {
+                let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id)
+                poll = CustomerChatPoll(
+                    session_id: renewed.session_id,
+                    handler: renewed.handler,
+                    messages: [],
+                    message_count: nil,
+                    last_preview: nil
+                )
+                return try await api.sendChatMessage(text, sessionID: renewed.session_id)
+            }
+            throw apiError
+        }
+    }
+
+    private func applySendResponse(_ response: CustomerSendResponse) {
+        if let handler = response.handler {
+            poll = CustomerChatPoll(
+                session_id: response.session_id,
+                handler: handler,
+                messages: poll?.messages,
+                message_count: poll?.message_count,
+                last_preview: poll?.last_preview,
+                admin_typing: poll?.admin_typing,
+                user_typing: poll?.user_typing,
+                other_read_seq: poll?.other_read_seq
+            )
+        }
+        if let noticeText = response.notice, !noticeText.isEmpty {
+            notice = noticeText
+        } else if response.renewed == true {
+            notice = String(localized: "This conversation was closed. We started a new one for your message.")
+        }
+    }
+
+    private func startNewConversation() async {
+        error = nil
+        notice = nil
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id)
+            poll = CustomerChatPoll(
+                session_id: renewed.session_id,
+                handler: renewed.handler,
+                messages: [],
+                message_count: nil,
+                last_preview: nil
+            )
+            lastSeq = 0
+            await refresh(full: true)
+            notice = String(localized: "New conversation started.")
+        } catch {
+            self.error = friendlyChatError(error)
         }
     }
 
@@ -725,15 +815,36 @@ struct CustomerServiceDetailView: View {
 struct CustomerProfileView: View {
     @EnvironmentObject private var auth: CustomerAuthStore
     @EnvironmentObject private var appAuth: AuthStore
+    @EnvironmentObject private var api: CustomerAPIClient
+    @EnvironmentObject private var navigation: CustomerNavigationCoordinator
+    @State private var avatarUploadError: String?
+    @State private var isUploadingAvatar = false
+    @State private var showAvatarPicker = false
+    @State private var selectedAvatarItem: PhotosPickerItem?
 
     var body: some View {
         List {
                 if let profile = auth.profile {
                     Section(String(localized: "Profile")) {
-                        LabeledContent(String(localized: "Name"), value: profile.display_name)
-                        LabeledContent(String(localized: "Email"), value: profile.email)
+                        HStack(spacing: 16) {
+                            profileAvatar(urlString: profile.avatar_url)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(profile.display_name).font(.headline)
+                                Text(profile.email).font(.subheadline).foregroundStyle(.secondary)
+                            }
+                        }
+                        PhotosPicker(selection: $selectedAvatarItem, matching: .images) {
+                            Label(
+                                isUploadingAvatar ? String(localized: "Uploading…") : String(localized: "Change profile photo"),
+                                systemImage: "camera.fill"
+                            )
+                        }
+                        .disabled(isUploadingAvatar)
                         LabeledContent(String(localized: "Verified"), value: profile.verified ? String(localized: "Yes") : String(localized: "No"))
                     }
+                }
+                if let avatarUploadError {
+                    Section { Text(avatarUploadError).foregroundStyle(.red) }
                 }
                 Section {
                     Button(String(localized: "Sign Out"), role: .destructive) {
@@ -742,20 +853,72 @@ struct CustomerProfileView: View {
                 }
                 Section(String(localized: "Legal & Support")) {
                     NavigationLink(String(localized: "Privacy Policy")) {
-                        CustomerNativePageView(slug: "datenschutz", title: String(localized: "Privacy Policy"))
+                        CustomerLegalPageView(slug: "datenschutz", title: String(localized: "Privacy Policy"))
                     }
                     NavigationLink(String(localized: "Terms")) {
-                        CustomerNativePageView(slug: "agb", title: String(localized: "Terms"))
+                        CustomerLegalPageView(slug: "agb", title: String(localized: "Terms"))
                     }
                     NavigationLink(String(localized: "About us")) {
-                        CustomerNativePageView(slug: "ueber-uns", title: String(localized: "About us"))
+                        CustomerLegalPageView(slug: "ueber-uns", title: String(localized: "About us"))
                     }
-                    NavigationLink(String(localized: "Contact Support")) {
-                        CustomerNativePageView(slug: "kontakt", title: String(localized: "Contact Support"))
+                    Button(String(localized: "Contact Support")) {
+                        navigation.openChat()
                     }
                 }
             }
             .navigationTitle(String(localized: "Account"))
+            .onChange(of: selectedAvatarItem) { item in
+                guard let item else { return }
+                Task { await uploadAvatar(from: item) }
+            }
+            .task { await auth.refreshProfile(api: api) }
+    }
+
+    @ViewBuilder
+    private func profileAvatar(urlString: String?) -> some View {
+        if let urlString, let url = URL(string: urlString) {
+            AsyncImage(url: url) { phase in
+                if case .success(let image) = phase {
+                    image.resizable().scaledToFill()
+                } else {
+                    defaultAvatar
+                }
+            }
+            .frame(width: 64, height: 64)
+            .clipShape(Circle())
+        } else {
+            defaultAvatar
+        }
+    }
+
+    private var defaultAvatar: some View {
+        Circle()
+            .fill(PAXTheme.accentSoft)
+            .frame(width: 64, height: 64)
+            .overlay {
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 36))
+                    .foregroundStyle(PAXTheme.accent)
+            }
+    }
+
+    private func uploadAvatar(from item: PhotosPickerItem) async {
+        isUploadingAvatar = true
+        avatarUploadError = nil
+        defer {
+            isUploadingAvatar = false
+            selectedAvatarItem = nil
+        }
+        do {
+            guard let data = try await item.loadTransferable(type: Data.self) else {
+                avatarUploadError = String(localized: "Could not load the selected photo.")
+                return
+            }
+            _ = try await api.uploadProfileAvatar(imageData: data)
+            await auth.refreshProfile(api: api)
+        } catch {
+            avatarUploadError = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
+        }
     }
 }
 

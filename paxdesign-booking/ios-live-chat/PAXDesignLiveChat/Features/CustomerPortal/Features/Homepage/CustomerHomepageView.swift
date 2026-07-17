@@ -11,7 +11,7 @@ struct CustomerHomepageView: View {
         let code = Locale.current.language.languageCode?.identifier ?? "de"
         return CustomerServicesCatalogLanguage(rawValue: code) ?? .de
     }()
-    @State private var selectedPortfolioCategory = "All"
+    @State private var selectedPortfolioCategory = ""
     @State private var error: String?
     @State private var isLoading = true
     @State private var showRequestSheet = false
@@ -48,7 +48,7 @@ struct CustomerHomepageView: View {
     }
 
     private func filteredPortfolioItems(_ data: CustomerHomepageResponse) -> [CustomerHomepageResponse.PortfolioItem] {
-        if selectedPortfolioCategory == "All" || selectedPortfolioCategory.isEmpty {
+        if selectedPortfolioCategory.isEmpty {
             return data.portfolio_items
         }
         let needle = selectedPortfolioCategory.lowercased()
@@ -364,9 +364,10 @@ struct CustomerHomepageView: View {
                 .foregroundStyle(theme.textSecondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
-            Text("★★★★★")
+            Text(String(localized: "★★★★★"))
                 .font(.title3)
                 .foregroundStyle(theme.accent)
+                .accessibilityLabel(String(localized: "Five star rating"))
             Text(awards.rating_label)
                 .font(.headline)
                 .foregroundStyle(theme.textPrimary)
@@ -547,7 +548,7 @@ private struct HomepageServiceCarouselCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 if card.is_new {
-                    Text("NEW")
+                    Text(String(localized: "NEW"))
                         .font(.caption2.weight(.heavy))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)

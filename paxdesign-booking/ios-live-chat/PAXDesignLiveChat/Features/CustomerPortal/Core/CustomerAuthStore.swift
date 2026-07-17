@@ -47,6 +47,16 @@ final class CustomerAuthStore: ObservableObject {
         CustomerKeychain.clear()
     }
 
+    func refreshProfile(api: CustomerAPIClient) async {
+        guard isAuthenticated || basicAuthHeader != nil else { return }
+        do {
+            let response = try await api.fetchProfile()
+            profile = response.profile
+        } catch {
+            // Keep cached profile when refresh fails offline.
+        }
+    }
+
     var basicAuthHeader: String? {
         guard !username.isEmpty, !appPassword.isEmpty else { return nil }
         let raw = "\(username):\(appPassword)"

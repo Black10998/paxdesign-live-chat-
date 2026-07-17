@@ -349,14 +349,14 @@ private struct ServiceCatalogCardView: View {
                                     ForEach(block.bulletItems, id: \.self) { item in
                                         HStack(alignment: .top, spacing: 8) {
                                             if !catalog.isRTL {
-                                                Text("–")
+                                                Text(String(localized: "–"))
                                                     .foregroundStyle(theme.accent)
                                             }
                                             Text(item)
                                                 .font(.footnote)
                                                 .foregroundStyle(Color(red: 0.82, green: 0.82, blue: 0.82))
                                             if catalog.isRTL {
-                                                Text("–")
+                                                Text(String(localized: "–"))
                                                     .foregroundStyle(theme.accent)
                                             }
                                         }

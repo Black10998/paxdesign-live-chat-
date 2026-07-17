@@ -22,6 +22,12 @@ struct CustomerPortalShellView: View {
                 navigation.handle(deepLink: link)
                 deepLinks.pending = nil
             }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                Task {
+                    await customerSession.auth.refreshProfile(api: customerSession.api)
+                    navigation.refreshWorkspace()
+                }
+            }
     }
 }
 

@@ -36,11 +36,9 @@ struct CustomerAboutView: View {
         .navigationTitle(about?.hero.title ?? String(localized: "About"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(theme.background, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .refreshable { await load(force: true) }
         .task(id: language.rawValue) { await load(force: false) }
         .environment(\.layoutDirection, about?.isRTL == true ? .rightToLeft : .leftToRight)
-        .preferredColorScheme(.dark)
     }
 
     private func heroSection(_ hero: CustomerAboutResponse.Hero) -> some View {
@@ -147,9 +145,10 @@ struct CustomerAboutView: View {
                 .font(.body)
                 .foregroundStyle(theme.textSecondary)
                 .multilineTextAlignment(.center)
-            Text("★★★★★")
+            Text(String(localized: "★★★★★"))
                 .font(.title3)
                 .foregroundStyle(theme.accent)
+                .accessibilityLabel(String(localized: "Five star rating"))
             Text(awards.rating_label)
                 .font(.headline)
                 .foregroundStyle(theme.textPrimary)
@@ -235,7 +234,6 @@ struct CustomerContactView: View {
         .navigationTitle(String(localized: "Contact"))
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(theme.background, for: .navigationBar)
-        .toolbarColorScheme(.dark, for: .navigationBar)
         .refreshable { await load(force: true) }
         .task(id: language.rawValue) { await load(force: false) }
         .sheet(isPresented: $showRequestSheet) {
@@ -245,7 +243,6 @@ struct CustomerContactView: View {
             }
         }
         .environment(\.layoutDirection, contact?.isRTL == true ? .rightToLeft : .leftToRight)
-        .preferredColorScheme(.dark)
     }
 
     private func contactHero(_ hero: CustomerContactResponse.Hero) -> some View {
@@ -316,7 +313,7 @@ struct CustomerContactView: View {
 
     private func faqSection(_ items: [CustomerContactResponse.FAQItem]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("FAQ")
+            Text(String(localized: "FAQ"))
                 .font(.title3.weight(.bold))
                 .foregroundStyle(theme.textPrimary)
                 .padding(.horizontal)

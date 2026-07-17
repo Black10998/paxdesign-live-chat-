@@ -215,9 +215,16 @@ class PAXdesign_Customer_REST {
         ));
 
         register_rest_route(self::NS, '/customer/chat/session', array(
-            'methods'             => WP_REST_Server::READABLE,
-            'callback'            => array(__CLASS__, 'chat_session'),
-            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array(__CLASS__, 'chat_session'),
+                'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+            ),
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array(__CLASS__, 'chat_renew_session'),
+                'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+            ),
         ));
 
         register_rest_route(self::NS, '/customer/chat/conversations', array(
@@ -572,7 +579,30 @@ class PAXdesign_Customer_REST {
     public static function chat_session() {
         $uid = PAXdesign_Customer_Auth::current_user_id();
         $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
-        return rest_ensure_response(array('session_id' => $session_id));
+        $handler = PAXdesign_Chat_Live::get_instance()->get_handler($session_id);
+        return rest_ensure_response(array(
+            'session_id' => $session_id,
+            'handler'    => $handler,
+        ));
+    }
+
+    public static function chat_renew_session(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $params = $request->get_json_params() ?: $request->get_params();
+        $closed_session_id = sanitize_text_field($params['session_id'] ?? '');
+        if ($closed_session_id === '') {
+            $closed_session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
+        }
+        if (!PAXdesign_Customer_Chat_Bridge::user_owns_session($uid, $closed_session_id)) {
+            return new WP_Error('forbidden', __('You do not have access to this conversation.', 'paxdesign-booking'), array('status' => 403));
+        }
+        $session_id = PAXdesign_Customer_Chat_Bridge::renew_closed_session($uid, $closed_session_id);
+        PAXdesign_Chat_Live::get_instance()->ensure_session($session_id);
+        return rest_ensure_response(array(
+            'session_id' => $session_id,
+            'handler'    => PAXdesign_Chat_Live::get_instance()->get_handler($session_id),
+            'renewed'    => true,
+        ));
     }
 
     public static function chat_conversations() {

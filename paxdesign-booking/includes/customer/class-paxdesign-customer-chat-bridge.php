@@ -58,6 +58,30 @@ class PAXdesign_Customer_Chat_Bridge {
     }
 
     /**
+     * Replace a closed session with a fresh open primary conversation.
+     */
+    public static function renew_closed_session($user_id, $closed_session_id) {
+        return self::rotate_primary_session($user_id, $closed_session_id);
+    }
+
+    /**
+     * @return bool
+     */
+    private static function is_primary_session($user_id, $session_id) {
+        global $wpdb;
+        $user_id = absint($user_id);
+        $session_id = self::sanitize_session_id($session_id);
+        if ($user_id <= 0 || $session_id === '') {
+            return false;
+        }
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT is_primary FROM " . self::sessions_table() . " WHERE user_id = %d AND session_id = %s LIMIT 1",
+            $user_id,
+            $session_id
+        )) === 1;
+    }
+
+    /**
      * Replace a closed primary session with a fresh open conversation.
      */
     private static function rotate_primary_session($user_id, $closed_session_id) {
@@ -262,17 +286,30 @@ class PAXdesign_Customer_Chat_Bridge {
 
         $live = PAXdesign_Chat_Live::get_instance();
         $handler = $live->get_handler($session_id);
+        $renewed = false;
         if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED) {
-            return new WP_Error('chat_closed', __('This conversation is closed.', 'paxdesign-booking'), array('status' => 409));
+            $session_id = self::renew_closed_session($user_id, $session_id);
+            $live->ensure_session($session_id);
+            $handler = $live->get_handler($session_id);
+            $renewed = true;
         }
 
         if (!$live->is_human_queue($session_id)) {
-            return PAXdesign_Chat::get_instance()->complete_authenticated_customer_chat(
+            $result = PAXdesign_Chat::get_instance()->complete_authenticated_customer_chat(
                 $session_id,
                 $content,
                 !empty($extra['client_msg_id']) ? (string) $extra['client_msg_id'] : '',
                 !empty($extra['assistant_client_msg_id']) ? (string) $extra['assistant_client_msg_id'] : ''
             );
+            if (is_wp_error($result)) {
+                return $result;
+            }
+            if ($renewed && is_array($result)) {
+                $result['session_id'] = $session_id;
+                $result['renewed'] = true;
+                $result['notice'] = __('This conversation was closed. We started a new one for your message.', 'paxdesign-booking');
+            }
+            return $result;
         }
 
         $live->ensure_session($session_id);
@@ -303,11 +340,16 @@ class PAXdesign_Customer_Chat_Bridge {
             PAXdesign_Live_Chat_PWA::notify_new_customer_message($session_id, $content);
         }
 
-        return array(
+        $payload = array(
             'message'    => $live->format_sse_message_payload($entry, 0),
             'handler'    => $handler,
             'session_id' => $session_id,
         );
+        if ($renewed) {
+            $payload['renewed'] = true;
+            $payload['notice'] = __('This conversation was closed. We started a new one for your message.', 'paxdesign-booking');
+        }
+        return $payload;
     }
 
     /**
@@ -323,8 +365,12 @@ class PAXdesign_Customer_Chat_Bridge {
 
         $live = PAXdesign_Chat_Live::get_instance();
         $handler = $live->get_handler($session_id);
+        $renewed = false;
         if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED) {
-            return new WP_Error('chat_closed', __('This conversation is closed.', 'paxdesign-booking'), array('status' => 409));
+            $session_id = self::renew_closed_session($user_id, $session_id);
+            $live->ensure_session($session_id);
+            $handler = $live->get_handler($session_id);
+            $renewed = true;
         }
         if (!$live->is_human_queue($session_id)) {
             return new WP_Error('use_ai_stream', __('Attachments are available during human support.', 'paxdesign-booking'), array('status' => 409));
@@ -382,11 +428,16 @@ class PAXdesign_Customer_Chat_Bridge {
         if (empty($entry['_deduplicated']) && class_exists('PAXdesign_Live_Chat_PWA')) {
             PAXdesign_Live_Chat_PWA::notify_new_customer_message($session_id, $caption !== '' ? $caption : '[' . $kind . ']');
         }
-        return array(
+        $payload = array(
             'message'    => $entry,
             'handler'    => $handler,
             'session_id' => $session_id,
         );
+        if ($renewed) {
+            $payload['renewed'] = true;
+            $payload['notice'] = __('This conversation was closed. We started a new one for your message.', 'paxdesign-booking');
+        }
+        return $payload;
     }
 
     /**

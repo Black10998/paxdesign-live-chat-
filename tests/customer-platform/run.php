@@ -61,7 +61,21 @@ $db = file_get_contents($customer_dir . '/class-paxdesign-customer-db.php');
 cx_assert_true(strpos($db, 'schema_complete') !== false, 'Customer DB must verify schema completeness');
 cx_assert_true(strpos($db, 'service_categories') !== false && strpos($db, 'services') !== false, 'Customer DB must define services tables');
 
+cx_assert_true(strpos($rest, '/content/legal/') !== false, 'Missing /content/legal route');
+cx_assert_true(strpos($rest, '/customer/profile/avatar') !== false, 'Missing profile avatar route');
+cx_assert_true(strpos($rest, 'chat_renew_session') !== false, 'Missing chat session renew handler');
+
+$chat_bridge = file_get_contents($customer_dir . '/class-paxdesign-customer-chat-bridge.php');
+cx_assert_true(strpos($chat_bridge, 'renew_closed_session') !== false, 'Chat bridge must renew closed sessions on send');
+
 $ios_api = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios-live-chat/PAXDesignLiveChat/Features/CustomerPortal/Core/CustomerAPIClient.swift');
+cx_assert_true(strpos($ios_api, 'renewChatSession') !== false, 'iOS client must support chat session renew');
+cx_assert_true(strpos($ios_api, 'fetchLegalPage') !== false, 'iOS client must fetch legal pages');
+cx_assert_true(strpos($ios_api, 'uploadProfileAvatar') !== false, 'iOS client must upload profile avatars');
+
+$ios_legal = dirname(__DIR__, 2) . '/paxdesign-booking/ios-live-chat/PAXDesignLiveChat/Features/CustomerPortal/Features/Pages/CustomerLegalPageView.swift';
+cx_assert_true(is_readable($ios_legal), 'CustomerLegalPageView must exist');
+
 cx_assert_true(strpos($ios_api, '/content/homepage') !== false, 'iOS client must call homepage endpoint');
 cx_assert_true(strpos($ios_api, '/content/about') !== false, 'iOS client must call about endpoint');
 cx_assert_true(strpos($ios_api, '/content/contact') !== false, 'iOS client must call contact endpoint');
