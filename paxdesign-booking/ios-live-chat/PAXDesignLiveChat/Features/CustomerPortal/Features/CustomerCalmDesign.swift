@@ -43,15 +43,20 @@ struct CustomerCalmSectionIntro: View {
                 CustomerCalmTagRow(tags: tags)
             }
             Text(title)
-                .font(.system(size: 34, weight: .bold, design: .default))
+                .font(.largeTitle.weight(.bold))
                 .tracking(-0.6)
                 .foregroundStyle(theme.textPrimary)
+                .multilineTextAlignment(.leading)
+                .minimumScaleFactor(0.85)
                 .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
             Text(intro)
                 .font(.title3)
                 .foregroundStyle(theme.textSecondary)
                 .lineSpacing(4)
+                .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
@@ -166,21 +171,28 @@ struct CustomerCalmCategoryChip: View {
 
 struct CustomerCalmStatGrid: View {
     @Environment(\.marketingTheme) private var theme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let stats: [CustomerPortfolioStat]
 
-    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+    private var columns: [GridItem] {
+        CustomerResponsiveLayout.statColumns(for: horizontalSizeClass)
+    }
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: 12) {
             ForEach(stats) { stat in
                 VStack(alignment: .leading, spacing: 4) {
                     Text(stat.value)
-                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .font(.title.weight(.bold))
                         .foregroundStyle(theme.accent)
+                        .minimumScaleFactor(0.85)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     Text(stat.label)
                         .font(.footnote)
                         .foregroundStyle(theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(14)

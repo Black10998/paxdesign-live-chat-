@@ -810,7 +810,14 @@ class PAXdesign_Chat {
 
         $handler = $live->get_handler($session_id);
         if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED) {
-            return new WP_Error('chat_closed', __('This conversation is closed. Start a new chat from the website if you need help.', 'paxdesign-booking'), array('status' => 409));
+            $user_id = get_current_user_id();
+            if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+                $session_id = PAXdesign_Customer_Chat_Bridge::renew_closed_session($user_id, $session_id);
+                $live->ensure_session($session_id);
+                $handler = $live->get_handler($session_id);
+            } else {
+                return new WP_Error('chat_closed', __('This conversation is closed. Start a new chat from the website if you need help.', 'paxdesign-booking'), array('status' => 409));
+            }
         }
 
         if ($live->is_ai_blocked($session_id)) {
@@ -978,11 +985,6 @@ class PAXdesign_Chat {
      * @return array{content:string,model:string}|WP_Error
      */
     private function request_openai_completion($messages, $customer_language = '') {
-        $worker_url = trim(get_option('paxdesign_chat_worker_url', ''));
-        if ($worker_url !== '') {
-            return new WP_Error('worker_only_stream', __('Chat is temporarily unavailable on mobile.', 'paxdesign-booking'), array('status' => 503));
-        }
-
         $api_key = $this->get_openai_api_key();
         if ($api_key === '') {
             return new WP_Error('not_configured', __('Chat is not configured yet. Please contact support.', 'paxdesign-booking'), array('status' => 503));

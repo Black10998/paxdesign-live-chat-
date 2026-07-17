@@ -798,12 +798,13 @@ struct CustomerChatPoll: Decodable {
     let messages: [ChatMessage]?
     let message_count: Int?
     let last_preview: String?
+    let notice: String?
     let admin_typing: Bool?
     let user_typing: Bool?
     let other_read_seq: Int?
 
     enum CodingKeys: String, CodingKey {
-        case session_id, handler, messages, message_count, last_preview
+        case session_id, handler, messages, message_count, last_preview, notice
         case admin_typing, user_typing, other_read_seq, admin_read_seq
     }
 
@@ -813,6 +814,7 @@ struct CustomerChatPoll: Decodable {
         messages: [ChatMessage]?,
         message_count: Int?,
         last_preview: String?,
+        notice: String? = nil,
         admin_typing: Bool? = nil,
         user_typing: Bool? = nil,
         other_read_seq: Int? = nil
@@ -822,6 +824,7 @@ struct CustomerChatPoll: Decodable {
         self.messages = messages
         self.message_count = message_count
         self.last_preview = last_preview
+        self.notice = notice
         self.admin_typing = admin_typing
         self.user_typing = user_typing
         self.other_read_seq = other_read_seq
@@ -834,6 +837,7 @@ struct CustomerChatPoll: Decodable {
         messages = CustomerPortalDecode.decodeChatMessages(from: container, key: .messages)
         message_count = CustomerPortalDecode.optionalInt(container, .message_count)
         last_preview = try? container.decodeIfPresent(String.self, forKey: .last_preview)
+        notice = try? container.decodeIfPresent(String.self, forKey: .notice)
         admin_typing = CustomerPortalDecode.optionalBool(container, .admin_typing)
         user_typing = CustomerPortalDecode.optionalBool(container, .user_typing)
         if let other = CustomerPortalDecode.optionalInt(container, .other_read_seq), other > 0 {

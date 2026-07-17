@@ -302,6 +302,9 @@ struct CustomerChatView: View {
     @State private var showLocationSheet = false
     @State private var typingTask: Task<Void, Never>?
     @State private var lastTypingSent = false
+    @State private var recovery: CustomerChatSessionRecovery.Action?
+    @State private var isRecovering = false
+    @State private var pollingSuspended = false
 
     private var isHumanQueue: Bool {
         guard let handler = poll?.handler else { return false }
@@ -331,7 +334,14 @@ struct CustomerChatView: View {
                             .frame(maxWidth: .infinity)
                             .background(PAXTheme.accentSoft)
                     }
-                    if isConversationClosed {
+                    if let recovery, !isConversationClosed {
+                        CustomerChatRecoveryBanner(
+                            action: recovery,
+                            isRecovering: isRecovering,
+                            onRenew: { Task { await startNewConversation() } },
+                            onRetry: { Task { await retryAfterRecovery() } }
+                        )
+                    } else if isConversationClosed {
                         closedConversationBanner
                     }
                     ScrollViewReader { proxy in
@@ -391,12 +401,14 @@ struct CustomerChatView: View {
                 }
             }
             .overlay(alignment: .top) {
-                if let error {
+                if let error, recovery == nil {
                     Text(error)
                         .font(.footnote)
                         .foregroundStyle(.red)
                         .padding(8)
                         .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity)
                 }
             }
             .sheet(isPresented: $showImagePicker) {
@@ -507,47 +519,136 @@ struct CustomerChatView: View {
 
     private func refresh(full: Bool = false) async {
         if isSending && !full { return }
+        if pollingSuspended && !full { return }
         if full && poll == nil { isLoading = true }
         defer { isLoading = false }
         do {
             let since = full ? 0 : lastSeq
             let next = try await api.fetchChatMessages(sessionID: poll?.session_id, since: since, full: full)
-            if full || poll == nil {
-                poll = next
-            } else if let incoming = next.messages, !incoming.isEmpty {
-                var merged = poll?.messages ?? []
-                var existing = Set(merged.map(\.seq))
-                for msg in incoming where !existing.contains(msg.seq) {
-                    merged.append(msg)
-                    existing.insert(msg.seq)
-                }
-                poll = CustomerChatPoll(
-                    session_id: next.session_id ?? poll?.session_id,
-                    handler: next.handler ?? poll?.handler,
-                    messages: merged.sorted { $0.seq < $1.seq },
-                    message_count: next.message_count,
-                    last_preview: next.last_preview,
-                    admin_typing: next.admin_typing ?? poll?.admin_typing,
-                    user_typing: next.user_typing ?? poll?.user_typing,
-                    other_read_seq: next.other_read_seq ?? poll?.other_read_seq
-                )
-            } else if let current = poll {
-                poll = CustomerChatPoll(
-                    session_id: current.session_id,
-                    handler: next.handler ?? current.handler,
-                    messages: current.messages,
-                    message_count: current.message_count,
-                    last_preview: current.last_preview,
-                    admin_typing: next.admin_typing ?? current.admin_typing,
-                    user_typing: next.user_typing ?? current.user_typing,
-                    other_read_seq: next.other_read_seq ?? current.other_read_seq
-                )
+            applyPollUpdate(next, full: full)
+            if let pollNotice = next.notice, !pollNotice.isEmpty {
+                notice = pollNotice
             }
-            if let maxSeq = poll?.messages?.map(\.seq).max() { lastSeq = max(lastSeq, maxSeq) }
-            error = nil
+            if next.handler == "closed" {
+                recovery = CustomerChatSessionRecovery.analyze(
+                    error: CustomerAPIError.serverCode("chat_closed", pollNotice ?? ""),
+                    handler: "closed",
+                    isConnected: network.isConnected
+                )
+                pollingSuspended = true
+                pollTask?.cancel()
+            } else {
+                recovery = nil
+                pollingSuspended = false
+                error = nil
+            }
         } catch {
-            self.error = friendlyChatError(error)
+            await handleChatError(error, savedDraft: nil, duringSend: false)
         }
+    }
+
+    private func applyPollUpdate(_ next: CustomerChatPoll, full: Bool) {
+        if full || poll == nil {
+            poll = next
+        } else if let incoming = next.messages, !incoming.isEmpty {
+            var merged = poll?.messages ?? []
+            var existing = Set(merged.map(\.seq))
+            for msg in incoming where !existing.contains(msg.seq) {
+                merged.append(msg)
+                existing.insert(msg.seq)
+            }
+            poll = CustomerChatPoll(
+                session_id: next.session_id ?? poll?.session_id,
+                handler: next.handler ?? poll?.handler,
+                messages: merged.sorted { $0.seq < $1.seq },
+                message_count: next.message_count,
+                last_preview: next.last_preview,
+                notice: next.notice ?? poll?.notice,
+                admin_typing: next.admin_typing ?? poll?.admin_typing,
+                user_typing: next.user_typing ?? poll?.user_typing,
+                other_read_seq: next.other_read_seq ?? poll?.other_read_seq
+            )
+        } else if let current = poll {
+            poll = CustomerChatPoll(
+                session_id: next.session_id ?? current.session_id,
+                handler: next.handler ?? current.handler,
+                messages: current.messages,
+                message_count: current.message_count,
+                last_preview: current.last_preview,
+                notice: next.notice ?? current.notice,
+                admin_typing: next.admin_typing ?? current.admin_typing,
+                user_typing: next.user_typing ?? current.user_typing,
+                other_read_seq: next.other_read_seq ?? current.other_read_seq
+            )
+        }
+        if let maxSeq = poll?.messages?.map(\.seq).max() {
+            lastSeq = max(lastSeq, maxSeq)
+        }
+    }
+
+    private func handleChatError(_ error: Error, savedDraft: String?, duringSend: Bool) async {
+        if let action = CustomerChatSessionRecovery.analyze(
+            error: error,
+            handler: poll?.handler,
+            isConnected: network.isConnected
+        ) {
+            recovery = action
+            self.error = nil
+            if action.shouldStopPolling {
+                pollingSuspended = true
+                pollTask?.cancel()
+            }
+            if action.shouldRenew, !isRecovering {
+                await autoRenewSession(preserveDraft: action.preserveDraft ? savedDraft : nil)
+                return
+            }
+            if action.preserveDraft, let savedDraft, duringSend {
+                draft = savedDraft
+            }
+            return
+        }
+        recovery = nil
+        if duringSend, let savedDraft {
+            draft = savedDraft
+        }
+        self.error = friendlyChatError(error)
+    }
+
+    private func autoRenewSession(preserveDraft: String?) async {
+        guard !isRecovering else { return }
+        isRecovering = true
+        notice = CustomerChatSessionRecovery.reconnectingNotice()
+        defer { isRecovering = false }
+        do {
+            let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id)
+            poll = CustomerChatPoll(
+                session_id: renewed.session_id,
+                handler: renewed.handler,
+                messages: [],
+                message_count: nil,
+                last_preview: nil
+            )
+            lastSeq = 0
+            recovery = nil
+            pollingSuspended = false
+            error = nil
+            startPolling()
+            await refresh(full: true)
+            notice = CustomerChatSessionRecovery.newConversationNotice()
+            if let preserveDraft {
+                draft = preserveDraft
+            }
+        } catch {
+            await handleChatError(error, savedDraft: preserveDraft, duringSend: preserveDraft != nil)
+        }
+    }
+
+    private func retryAfterRecovery() async {
+        error = nil
+        recovery = nil
+        pollingSuspended = false
+        startPolling()
+        await refresh(full: true)
     }
 
     private func friendlyChatError(_ error: Error) -> String {
@@ -562,10 +663,11 @@ struct CustomerChatView: View {
 
     private func startPolling() {
         pollTask?.cancel()
+        pollingSuspended = false
         pollTask = Task {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
-                if network.isConnected, !isSending {
+                if network.isConnected, !isSending, !pollingSuspended, !isConversationClosed {
                     await refresh(full: false)
                 }
             }
@@ -633,8 +735,7 @@ struct CustomerChatView: View {
             await refresh(full: false)
             PAXHaptics.light()
         } catch {
-            draft = savedDraft
-            self.error = friendlyChatError(error)
+            await handleChatError(error, savedDraft: savedDraft, duringSend: true)
             PAXHaptics.warning()
         }
     }
@@ -652,31 +753,19 @@ struct CustomerChatView: View {
                 assistantClientMsgID: assistantClientMsgID
             )
         } catch let apiError as CustomerAPIError {
-            if case .serverCode(let code, _) = apiError, code == "chat_closed" {
+            if shouldRenewSession(for: apiError) {
                 let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id)
                 poll = CustomerChatPoll(
                     session_id: renewed.session_id,
                     handler: renewed.handler,
-                    messages: [],
-                    message_count: nil,
-                    last_preview: nil
+                    messages: poll?.messages,
+                    message_count: poll?.message_count,
+                    last_preview: poll?.last_preview
                 )
-                return try await api.sendChatMessage(
-                    text,
-                    sessionID: renewed.session_id,
-                    clientMsgID: clientMsgID,
-                    assistantClientMsgID: assistantClientMsgID
-                )
-            }
-            if case .http(409) = apiError {
-                let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id)
-                poll = CustomerChatPoll(
-                    session_id: renewed.session_id,
-                    handler: renewed.handler,
-                    messages: [],
-                    message_count: nil,
-                    last_preview: nil
-                )
+                lastSeq = 0
+                pollingSuspended = false
+                recovery = nil
+                startPolling()
                 return try await api.sendChatMessage(
                     text,
                     sessionID: renewed.session_id,
@@ -685,6 +774,17 @@ struct CustomerChatView: View {
                 )
             }
             throw apiError
+        }
+    }
+
+    private func shouldRenewSession(for error: CustomerAPIError) -> Bool {
+        switch error {
+        case .serverCode(let code, _):
+            return code == "chat_closed" || code == "invalid_session" || code == "not_found" || code == "forbidden"
+        case .http(let code):
+            return code == 409 || code == 404
+        default:
+            return false
         }
     }
 
@@ -725,10 +825,11 @@ struct CustomerChatView: View {
     }
 
     private func startNewConversation() async {
+        guard !isRecovering else { return }
+        isRecovering = true
         error = nil
-        notice = nil
-        isLoading = true
-        defer { isLoading = false }
+        notice = CustomerChatSessionRecovery.reconnectingNotice()
+        defer { isRecovering = false }
         do {
             let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id)
             poll = CustomerChatPoll(
@@ -739,10 +840,13 @@ struct CustomerChatView: View {
                 last_preview: nil
             )
             lastSeq = 0
+            recovery = nil
+            pollingSuspended = false
+            startPolling()
             await refresh(full: true)
-            notice = String(localized: "New conversation started.")
+            notice = CustomerChatSessionRecovery.newConversationNotice()
         } catch {
-            self.error = friendlyChatError(error)
+            await handleChatError(error, savedDraft: nil, duringSend: false)
         }
     }
 

@@ -650,7 +650,24 @@ class PAXdesign_Customer_REST {
         $since = max(0, (int) $request->get_param('since'));
         $full = !empty($request['full']);
         $live = PAXdesign_Chat_Live::get_instance();
+        $handler = $live->get_handler($session_id);
+        if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED && $full) {
+            return rest_ensure_response(array(
+                'session_id'     => $session_id,
+                'handler'        => PAXdesign_Chat_Live::HANDLER_CLOSED,
+                'messages'       => array(),
+                'message_count'  => 0,
+                'notice'         => __('This conversation has ended. Start a new conversation to continue.', 'paxdesign-booking'),
+            ));
+        }
         $data = $live->get_poll_data($session_id, $since, $full, 'user');
+        if (is_wp_error($data)) {
+            if ($data->get_error_code() === 'not_found') {
+                $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
+                PAXdesign_Chat_Live::get_instance()->ensure_session($session_id);
+                $data = $live->get_poll_data($session_id, $since, $full, 'user');
+            }
+        }
         if (is_wp_error($data)) {
             return $data;
         }
@@ -673,8 +690,9 @@ class PAXdesign_Customer_REST {
             $session_id,
             (string) ($params['message'] ?? ''),
             array(
-                'reply_to'      => $params['reply_to'] ?? 0,
-                'client_msg_id' => $params['client_msg_id'] ?? '',
+                'reply_to'               => $params['reply_to'] ?? 0,
+                'client_msg_id'          => $params['client_msg_id'] ?? '',
+                'assistant_client_msg_id'=> $params['assistant_client_msg_id'] ?? '',
             )
         );
         if (is_wp_error($result)) {

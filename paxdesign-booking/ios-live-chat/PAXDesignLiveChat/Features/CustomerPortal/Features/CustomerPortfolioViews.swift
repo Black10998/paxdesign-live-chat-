@@ -377,6 +377,7 @@ struct CustomerPortfolioClassicCard: View {
 struct CustomerPortfolioDetailView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     @Environment(\.marketingTheme) private var theme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let slug: String
     var language: CustomerServicesCatalogLanguage = {
         let code = Locale.current.language.languageCode?.identifier ?? "de"
@@ -427,69 +428,51 @@ struct CustomerPortfolioDetailView: View {
 
     @ViewBuilder
     private func heroSection(_ item: CustomerPortfolioDetail) -> some View {
-        ZStack(alignment: .bottomLeading) {
+        Group {
             if let imageURL = item.image_url, let url = URL(string: imageURL) {
                 AsyncImage(url: url) { phase in
                     switch phase {
                     case .success(let image):
                         image.resizable().scaledToFill()
                     default:
-                        SkeletonBlock(height: 360, cornerRadius: 0)
+                        SkeletonBlock(height: 240, cornerRadius: 0)
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .frame(height: 360)
+                .frame(height: 240)
                 .clipped()
             } else {
                 Rectangle()
                     .fill(theme.panel)
-                    .frame(height: 280)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 180)
             }
-
-            LinearGradient(
-                colors: [theme.heroGradientTop, theme.heroGradientBottom],
-                startPoint: .center,
-                endPoint: .bottom
-            )
-            .frame(height: 360)
-
-            VStack(alignment: .leading, spacing: 8) {
-                if let client = item.client, !client.isEmpty {
-                    Text(client.uppercased())
-                        .font(.caption.weight(.semibold))
-                        .tracking(1.2)
-                        .foregroundStyle(theme.heroTagColor)
-                } else if let categories = item.categories, !categories.isEmpty {
-                    Text(categories.joined(separator: " · "))
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(theme.heroTagColor)
-                        .textCase(.uppercase)
-                }
-                Text(item.displayTitle)
-                    .font(.system(size: 32, weight: .bold, design: .default))
-                    .tracking(-0.5)
-                    .foregroundStyle(.white)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(4)
-                    .minimumScaleFactor(0.75)
-                    .fixedSize(horizontal: false, vertical: true)
-                if !item.displaySubtitle.isEmpty {
-                    Text(item.displaySubtitle)
-                        .font(.body)
-                        .foregroundStyle(.white.opacity(0.88))
-                        .lineSpacing(4)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(24)
         }
-        .accessibilityElement(children: .combine)
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder
+    private func detailHeader(_ item: CustomerPortfolioDetail) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            if let client = item.client, !client.isEmpty {
+                CustomerResponsiveCaption(text: client.uppercased(), color: theme.textSecondary)
+            } else if let categories = item.categories, !categories.isEmpty {
+                CustomerResponsiveCaption(text: categories.joined(separator: " · "), color: theme.textSecondary)
+            }
+            CustomerResponsiveTitle(text: item.displayTitle, color: theme.textPrimary)
+            if !item.displaySubtitle.isEmpty {
+                CustomerResponsiveBody(text: item.displaySubtitle, color: theme.textSecondary)
+            }
+        }
+        .customerConstrainedContent()
+        .padding(.bottom, 8)
     }
 
     @ViewBuilder
     private func detailContent(_ item: CustomerPortfolioDetail) -> some View {
         VStack(alignment: .leading, spacing: CustomerCalmDesign.sectionSpacing) {
+            detailHeader(item)
+
             if let structured = item.structuredDetail {
                 if let stats = structured.stats, !stats.isEmpty {
                     detailStatsSection(stats)
@@ -501,10 +484,10 @@ struct CustomerPortfolioDetailView: View {
                     narrativeSections(sections)
                 } else if let paragraphs = structured.paragraphs, !paragraphs.isEmpty {
                     ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, paragraph in
-                        Text(CustomerPortfolioTextSanitizer.clean(paragraph))
-                            .font(.body)
-                            .foregroundStyle(theme.textPrimary)
-                            .lineSpacing(6)
+                        CustomerResponsiveBody(
+                            text: CustomerPortfolioTextSanitizer.clean(paragraph),
+                            color: theme.textPrimary
+                        )
                     }
                 }
                 if let services = structured.services, !services.isEmpty {
@@ -523,31 +506,63 @@ struct CustomerPortfolioDetailView: View {
 
             footerActions(item)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, CustomerCalmDesign.contentPadding)
         .padding(.vertical, 28)
     }
 
+    private var metadataColumns: [GridItem] {
+        CustomerResponsiveLayout.metadataColumns(for: horizontalSizeClass)
+    }
+
     private func detailStatsSection(_ stats: [CustomerPortfolioStructuredDetail.Stat]) -> some View {
-        CustomerCalmStatGrid(stats: stats.map {
-            CustomerPortfolioStat(value: $0.value, label: $0.label)
-        })
+        LazyVGrid(columns: CustomerResponsiveLayout.statColumns(for: horizontalSizeClass), spacing: 12) {
+            ForEach(stats) { stat in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(stat.value)
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(theme.accent)
+                        .minimumScaleFactor(0.85)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    CustomerResponsiveCaption(text: stat.label, color: theme.textSecondary)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(14)
+                .background(theme.cardBackground)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(theme.border, lineWidth: 0.5)
+                )
+            }
+        }
     }
 
     private func metadataSection(_ rows: [CustomerPortfolioStructuredDetail.Metadata]) -> some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+        LazyVGrid(columns: metadataColumns, spacing: 12) {
             ForEach(rows) { row in
                 VStack(alignment: .leading, spacing: 6) {
                     Text(row.label)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(theme.textSecondary)
                         .textCase(.uppercase)
+                        .fixedSize(horizontal: false, vertical: true)
                     if let link = row.link, !link.isEmpty, let url = URL(string: link) {
-                        Link(row.value, destination: url)
-                            .font(.subheadline.weight(.medium))
+                        Link(destination: url) {
+                            Text(row.value)
+                                .font(.subheadline.weight(.medium))
+                                .multilineTextAlignment(.leading)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
                     } else {
                         Text(row.value)
                             .font(.subheadline.weight(.medium))
                             .foregroundStyle(theme.textPrimary)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
                 .padding(14)
@@ -566,18 +581,13 @@ struct CustomerPortfolioDetailView: View {
         VStack(alignment: .leading, spacing: 24) {
             ForEach(sections) { section in
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(section.title)
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(theme.textPrimary)
-                    Text(CustomerPortfolioTextSanitizer.clean(section.body))
-                        .font(.body)
-                        .foregroundStyle(theme.textSecondary)
-                        .lineSpacing(6)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
+                    CustomerResponsiveHeadline(text: section.title, color: theme.textPrimary)
+                    CustomerResponsiveBody(
+                        text: CustomerPortfolioTextSanitizer.clean(section.body),
+                        color: theme.textSecondary
+                    )
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .customerConstrainedContent()
             }
         }
     }

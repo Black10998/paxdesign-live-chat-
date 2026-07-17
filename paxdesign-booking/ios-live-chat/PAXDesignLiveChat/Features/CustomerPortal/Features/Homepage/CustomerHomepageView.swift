@@ -2,11 +2,14 @@ import SwiftUI
 
 struct CustomerHomepageView: View {
     @EnvironmentObject private var api: CustomerAPIClient
+    @EnvironmentObject private var auth: CustomerAuthStore
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
     @Environment(\.marketingTheme) private var theme
     @StateObject private var network = CustomerNetworkMonitor.shared
 
     @State private var homepage: CustomerHomepageResponse?
+    @State private var workspace: CustomerDashboard?
+    @State private var profileName = ""
     @State private var language: CustomerServicesCatalogLanguage = {
         let code = Locale.current.language.languageCode?.identifier ?? "de"
         return CustomerServicesCatalogLanguage(rawValue: code) ?? .de
@@ -36,6 +39,7 @@ struct CustomerHomepageView: View {
             .customerPortalToolbar()
             .refreshable { await load(force: true) }
             .task(id: language.rawValue) { await load(force: false) }
+            .task(id: navigation.workspaceRefreshToken) { await loadWorkspace() }
             .sheet(isPresented: $showRequestSheet) {
                 NavigationStack {
                     CustomerCreateOrderView()
@@ -69,6 +73,9 @@ struct CustomerHomepageView: View {
                     onPrimaryAction: { navigation.selectedTab = .services },
                     onSecondaryAction: { showRequestSheet = true }
                 )
+                if auth.isAuthenticated, let workspace {
+                    CustomerHomeWorkspaceSections(dashboard: workspace, profileName: profileName)
+                }
                 if !data.service_carousel.isEmpty {
                     serviceCarouselSection(data.service_carousel)
                 }
@@ -458,6 +465,24 @@ struct CustomerHomepageView: View {
             self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
         }
         isLoading = false
+    }
+
+    private func loadWorkspace() async {
+        guard auth.isAuthenticated else {
+            workspace = nil
+            profileName = ""
+            return
+        }
+        do {
+            async let dashboardTask = api.fetchDashboard()
+            async let profileTask = api.fetchProfile()
+            workspace = try await dashboardTask
+            if let profile = try? await profileTask {
+                profileName = profile.profile.display_name
+            }
+        } catch {
+            workspace = nil
+        }
     }
 }
 
