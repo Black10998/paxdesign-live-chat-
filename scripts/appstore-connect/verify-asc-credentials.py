@@ -85,24 +85,19 @@ def main() -> None:
     os.chmod(key_path, 0o600)
 
     token = make_token(issuer_id, key_id, private_key)
-    payload = api_get(token, "/apps", {"filter[bundleId]": BUNDLE_ID, "limit": "1", "include": "bundleId"})
+    payload = api_get(token, "/apps", {"filter[bundleId]": BUNDLE_ID, "limit": "1"})
     apps = payload.get("data") or []
     if not apps:
         print("ERROR: Authenticated successfully, but filter[bundleId] returned no app.", file=sys.stderr)
         print(f"Target bundle id: {BUNDLE_ID}", file=sys.stderr)
         print("Apps visible to this API key:", file=sys.stderr)
-        listing = api_get(token, "/apps", {"limit": "200", "include": "bundleId"})
-        included = {
-            item["id"]: item
-            for item in (listing.get("included") or [])
-            if item.get("type") == "bundleIds"
-        }
+        listing = api_get(token, "/apps", {"limit": "200"})
         for app in listing.get("data") or []:
             app_id = app.get("id", "")
             name = (app.get("attributes") or {}).get("name", app_id)
-            rel = (app.get("relationships") or {}).get("bundleId", {}).get("data") or {}
-            bundle = included.get(rel.get("id", ""), {})
-            identifier = (bundle.get("attributes") or {}).get("identifier", "?")
+            bundle_payload = api_get(token, f"/apps/{app_id}/bundleId", None)
+            bundle_data = bundle_payload.get("data") or {}
+            identifier = (bundle_data.get("attributes") or {}).get("identifier", "?")
             print(f"  - apple_id={app_id} bundleId={identifier!r} name={name!r}", file=sys.stderr)
         fail(f"No App Store Connect app found for bundle id {BUNDLE_ID}")
 
