@@ -203,7 +203,7 @@ def verify_profile_contents(raw: bytes) -> None:
         Path(tmp_path).unlink(missing_ok=True)
 
 
-def ensure_app_record(client: ASCClient, bundle_resource_id: str) -> dict[str, Any]:
+def ensure_app_record(client: ASCClient, bundle_resource_id: str) -> dict[str, Any] | None:
     payload = client.get("/apps", **{"filter[bundleId]": BUNDLE_ID, "limit": "1"})
     data = payload.get("data") or []
     if data:
@@ -232,9 +232,15 @@ def ensure_app_record(client: ASCClient, bundle_resource_id: str) -> dict[str, A
         },
         allow_error=True,
     )
-    if status != 201:
-        fail(f"App Store Connect app creation failed ({status}): {created}")
-    return resource_data(created, label=f"App record for {BUNDLE_ID}")
+    if status == 201:
+        return resource_data(created, label=f"App record for {BUNDLE_ID}")
+    if status == 403:
+        print(
+            "WARNING: App Store Connect API key cannot CREATE apps; "
+            "continuing with provisioning profile only (create the app manually if needed)"
+        )
+        return None
+    fail(f"App Store Connect app creation failed ({status}): {created}")
 
 
 def export_for_github_actions(raw: bytes) -> None:
