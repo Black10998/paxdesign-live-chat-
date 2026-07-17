@@ -56,6 +56,7 @@ struct CustomerTabView: View {
                 .tag(CustomerPortalTab.account)
         }
         .onChange(of: navigation.selectedTab) { tab in
+            PAXHaptics.light()
             switch tab {
             case .account:
                 navigation.refreshWorkspace()

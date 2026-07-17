@@ -18,22 +18,3 @@ struct CustomerLegalPageResponse: Decodable {
 
     var isRTL: Bool { dir.lowercased() == "rtl" }
 }
-
-struct CustomerPortfolioStructuredDetail: Decodable {
-    let summary: String?
-    let paragraphs: [String]?
-    let highlights: [Highlight]?
-    let website_url: String?
-    let published_label: String?
-
-    struct Highlight: Decodable, Identifiable {
-        var id: String { label }
-        let label: String
-        let value: String
-        let link: String?
-    }
-}
-
-extension CustomerPortfolioDetail {
-    var structuredDetail: CustomerPortfolioStructuredDetail? { structured }
-}
