@@ -117,9 +117,29 @@ final class CustomerAPIClient: ObservableObject {
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw CustomerAPIError.http((response as? HTTPURLResponse)?.statusCode ?? 0)
         }
-        let temp = FileManager.default.temporaryDirectory.appendingPathComponent("pax-file-\(fileId)")
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent("pax-project-\(fileId)-\(UUID().uuidString)")
         try data.write(to: temp)
         return temp
+    }
+
+    func downloadOrderFile(orderId: Int, fileId: Int) async throws -> URL {
+        guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
+        guard let url = endpointURL("/customer/orders/\(orderId)/files/\(fileId)/download") else {
+            throw CustomerAPIError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.setValue(header, forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw CustomerAPIError.http((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent("pax-order-\(fileId)-\(UUID().uuidString)")
+        try data.write(to: temp)
+        return temp
+    }
+
+    func fetchFilesLibrary(limit: Int = 50) async throws -> CustomerFilesResponse {
+        try await get("/customer/files?limit=\(limit)", as: CustomerFilesResponse.self)
     }
 
     func uploadChatImage(sessionID: String, imageData: Data, filename: String, caption: String = "", clientMsgID: String = UUID().uuidString) async throws -> CustomerSendResponse {

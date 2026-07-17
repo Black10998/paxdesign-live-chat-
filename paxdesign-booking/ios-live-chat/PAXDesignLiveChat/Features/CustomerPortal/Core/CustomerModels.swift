@@ -55,6 +55,7 @@ struct CustomerProjectDetail: Decodable {
         let file_size: Int
         let category: String
         let created_at: String
+        let download_url: String?
     }
     struct Assignee: Decodable, Identifiable {
         var id: Int { user_id }
@@ -111,6 +112,15 @@ struct CustomerOrderDetail: Decodable {
         let user_id: Int
         let display_name: String
     }
+    struct FileItem: Decodable, Identifiable {
+        let id: Int
+        let file_name: String
+        let mime_type: String
+        let file_size: Int
+        let kind: String
+        let created_at: String
+        let download_url: String?
+    }
 
     let id: Int
     let ref: String
@@ -120,6 +130,7 @@ struct CustomerOrderDetail: Decodable {
     let notes: [Note]?
     let activity: [Activity]?
     let assigned: Assigned?
+    let files: [FileItem]?
 }
 
 struct CustomerOrdersResponse: Decodable {
@@ -154,6 +165,23 @@ struct CustomerNotificationItem: Decodable, Identifiable {
 struct CustomerNotificationsResponse: Decodable {
     let items: [CustomerNotificationItem]
     let unread_count: Int
+}
+
+struct CustomerFileLibraryItem: Decodable, Identifiable {
+    let id: Int
+    let source: String
+    let parent_id: Int
+    let parent_title: String
+    let file_name: String
+    let mime_type: String
+    let file_size: Int
+    let kind: String
+    let created_at: String
+    let download_url: String?
+}
+
+struct CustomerFilesResponse: Decodable {
+    let files: [CustomerFileLibraryItem]
 }
 
 struct CustomerServiceDetail: Decodable {

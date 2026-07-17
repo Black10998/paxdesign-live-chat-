@@ -134,11 +134,15 @@ class PAXdesign_Customer_Orders {
 
     private static function files($order_id, $visibility) {
         global $wpdb;
-        return $wpdb->get_results($wpdb->prepare(
+        $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT id, file_name, mime_type, file_size, kind, created_at FROM " . PAXdesign_Customer_DB::table('order_files') . " WHERE order_id = %d AND visibility = %s ORDER BY created_at DESC",
             $order_id,
             $visibility
         ), ARRAY_A);
+        foreach ($rows as &$row) {
+            $row['download_url'] = rest_url('pdx/v1/customer/orders/' . $order_id . '/files/' . $row['id'] . '/download');
+        }
+        return $rows;
     }
 
     private static function activity($order_id, $limit) {
@@ -219,5 +223,88 @@ class PAXdesign_Customer_Orders {
             '/orders/' . $order_id
         );
         return self::get_for_user((int) $row['customer_user_id'], $order_id);
+    }
+
+    public static function get_file_for_user($user_id, $order_id, $file_id) {
+        global $wpdb;
+        $order = $wpdb->get_row($wpdb->prepare(
+            "SELECT customer_user_id FROM " . PAXdesign_Customer_DB::table('orders') . " WHERE id = %d AND customer_user_id = %d LIMIT 1",
+            absint($order_id),
+            absint($user_id)
+        ), ARRAY_A);
+        if (!$order) {
+            return null;
+        }
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM " . PAXdesign_Customer_DB::table('order_files') . " WHERE id = %d AND order_id = %d AND visibility = 'customer' LIMIT 1",
+            absint($file_id),
+            absint($order_id)
+        ), ARRAY_A);
+    }
+
+    /**
+     * Aggregated file library for customer portal (projects + orders).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function library_for_user($user_id, $limit = 50) {
+        global $wpdb;
+        $user_id = absint($user_id);
+        $limit = max(1, min(100, (int) $limit));
+        $items = array();
+
+        $project_files = $wpdb->get_results($wpdb->prepare(
+            "SELECT pf.id, pf.file_name, pf.mime_type, pf.file_size, pf.category AS kind, pf.created_at, p.id AS parent_id, p.title AS parent_title
+             FROM " . PAXdesign_Customer_DB::table('project_files') . " pf
+             INNER JOIN " . PAXdesign_Customer_DB::table('projects') . " p ON p.id = pf.project_id
+             WHERE p.customer_user_id = %d AND pf.visibility = 'customer'
+             ORDER BY pf.created_at DESC LIMIT %d",
+            $user_id,
+            $limit
+        ), ARRAY_A);
+        foreach ($project_files ?: array() as $row) {
+            $items[] = array(
+                'id'           => (int) $row->id,
+                'source'       => 'project',
+                'parent_id'    => (int) $row->parent_id,
+                'parent_title' => (string) $row->parent_title,
+                'file_name'    => (string) $row->file_name,
+                'mime_type'    => (string) $row->mime_type,
+                'file_size'    => (int) $row->file_size,
+                'kind'         => (string) $row->kind,
+                'created_at'   => (string) $row->created_at,
+                'download_url' => rest_url('pdx/v1/customer/projects/' . (int) $row->parent_id . '/files/' . (int) $row->id . '/download'),
+            );
+        }
+
+        $order_files = $wpdb->get_results($wpdb->prepare(
+            "SELECT ofl.id, ofl.file_name, ofl.mime_type, ofl.file_size, ofl.kind, ofl.created_at, o.id AS parent_id, o.service_label AS parent_title
+             FROM " . PAXdesign_Customer_DB::table('order_files') . " ofl
+             INNER JOIN " . PAXdesign_Customer_DB::table('orders') . " o ON o.id = ofl.order_id
+             WHERE o.customer_user_id = %d AND ofl.visibility = 'customer'
+             ORDER BY ofl.created_at DESC LIMIT %d",
+            $user_id,
+            $limit
+        ), ARRAY_A);
+        foreach ($order_files ?: array() as $row) {
+            $items[] = array(
+                'id'           => (int) $row->id,
+                'source'       => 'order',
+                'parent_id'    => (int) $row->parent_id,
+                'parent_title' => (string) $row->parent_title,
+                'file_name'    => (string) $row->file_name,
+                'mime_type'    => (string) $row->mime_type,
+                'file_size'    => (int) $row->file_size,
+                'kind'         => (string) $row->kind,
+                'created_at'   => (string) $row->created_at,
+                'download_url' => rest_url('pdx/v1/customer/orders/' . (int) $row->parent_id . '/files/' . (int) $row->id . '/download'),
+            );
+        }
+
+        usort($items, static function ($a, $b) {
+            return strcmp($b['created_at'], $a['created_at']);
+        });
+
+        return array_slice($items, 0, $limit);
     }
 }

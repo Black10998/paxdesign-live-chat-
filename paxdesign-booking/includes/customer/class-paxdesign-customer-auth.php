@@ -99,8 +99,8 @@ class PAXdesign_Customer_Auth {
         if ($user_id <= 0) {
             return false;
         }
-        if (class_exists('PDX_Auth')) {
-            return PDX_Auth::is_email_verified($user_id);
+        if (class_exists('PAXdesign_Auth')) {
+            return PAXdesign_Auth::is_email_verified($user_id);
         }
         if (user_can($user_id, 'manage_options')) {
             return true;
@@ -113,8 +113,8 @@ class PAXdesign_Customer_Auth {
         if ($user_id <= 0) {
             return false;
         }
-        if (class_exists('PDX_Customers')) {
-            return PDX_Customers::is_login_allowed($user_id);
+        if (class_exists('PAXdesign_Customers')) {
+            return PAXdesign_Customers::is_login_allowed($user_id);
         }
         return true;
     }
@@ -131,14 +131,14 @@ class PAXdesign_Customer_Auth {
                 'role'         => 'guest',
                 'nonce'        => wp_create_nonce('wp_rest'),
             );
-            if (class_exists('PDX_Auth')) {
-                return array_merge(PDX_Auth::user_payload(0), $guest);
+            if (class_exists('PAXdesign_Auth')) {
+                return array_merge(PAXdesign_Auth::user_payload(0), $guest);
             }
             return $guest;
         }
 
-        if (class_exists('PDX_Auth')) {
-            $payload = PDX_Auth::user_payload($user_id);
+        if (class_exists('PAXdesign_Auth')) {
+            $payload = PAXdesign_Auth::user_payload($user_id);
             $user = get_user_by('id', $user_id);
             if ($user instanceof WP_User) {
                 $payload['role'] = self::resolve_portal_role($user);
@@ -172,7 +172,7 @@ class PAXdesign_Customer_Auth {
         if (PAXdesign_Live_Chat_Permissions::has_live_chat_access($user->ID)) {
             return 'employee';
         }
-        if (class_exists('PDX_Auth') && in_array(PDX_Auth::customer_role(), (array) $user->roles, true)) {
+        if (class_exists('PAXdesign_Auth') && in_array(PAXdesign_Auth::customer_role(), (array) $user->roles, true)) {
             return 'customer';
         }
         return 'customer';
@@ -240,7 +240,6 @@ class PAXdesign_Customer_Auth {
             }
             return true;
         }
-
         $bucket = md5($user_id . '|' . $route . '|' . gmdate('Y-m-d-H-i'));
         $transient_key = 'pax_cust_rl_' . $bucket;
         $count = (int) get_transient($transient_key);

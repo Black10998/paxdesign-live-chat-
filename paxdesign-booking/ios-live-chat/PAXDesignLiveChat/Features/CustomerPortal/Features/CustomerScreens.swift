@@ -50,8 +50,10 @@ struct CustomerLoginView: View {
 
 struct CustomerDashboardView: View {
     @EnvironmentObject private var api: CustomerAPIClient
+    @EnvironmentObject private var navigation: CustomerNavigationCoordinator
     @Environment(\.scenePhase) private var scenePhase
     @State private var dashboard: CustomerDashboard?
+    @State private var profileName = ""
     @State private var error: String?
     @State private var isLoading = true
 
@@ -66,6 +68,33 @@ struct CustomerDashboardView: View {
                         .padding(.top, 32)
                 } else if let dashboard {
                     LazyVStack(alignment: .leading, spacing: CustomerPortalDesign.sectionSpacing) {
+                        CustomerPortalCard {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(greeting)
+                                    .font(.title2.weight(.semibold))
+                                Text(String(localized: "Everything about your projects, requests, and conversations in one place."))
+                                    .font(.subheadline)
+                                    .foregroundStyle(PAXTheme.textSecondary)
+                            }
+                        }
+
+                        if let unread = dashboard.unread_count, unread > 0 {
+                            CustomerPortalCard {
+                                Button {
+                                    navigation.openNotifications()
+                                } label: {
+                                    HStack {
+                                        Label(String(localized: "\(unread) unread notifications"), systemImage: "bell.badge.fill")
+                                            .font(.headline)
+                                        Spacer()
+                                        Image(systemName: "chevron.right")
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+
                         CustomerPortalCard {
                             VStack(alignment: .leading, spacing: 12) {
                                 CustomerPortalSectionHeader(title: String(localized: "Conversation"))
@@ -133,15 +162,16 @@ struct CustomerDashboardView: View {
                             }
                         }
 
-                        if let unread = dashboard.unread_count, unread > 0 {
-                            CustomerPortalCard {
-                                NavigationLink {
-                                    CustomerNotificationsView()
-                                } label: {
-                                    Label(String(localized: "\(unread) unread notifications"), systemImage: "bell.badge.fill")
-                                        .font(.headline)
+                        CustomerPortalCard {
+                            VStack(alignment: .leading, spacing: 12) {
+                                CustomerPortalSectionHeader(title: String(localized: "Files & Invoices"))
+                                Text(String(localized: "Download shared documents, quotes, and invoices."))
+                                    .foregroundStyle(PAXTheme.textSecondary)
+                                Button(String(localized: "Open Files")) {
+                                    navigation.selectedTab = .account
+                                    navigation.accountPath = [CustomerPortalDestination(kind: .files)]
                                 }
-                                .buttonStyle(.plain)
+                                .font(.subheadline.weight(.semibold))
                             }
                         }
 
@@ -183,11 +213,24 @@ struct CustomerDashboardView: View {
         if dashboard == nil { isLoading = true }
         error = nil
         do {
-            dashboard = try await api.fetchDashboard()
+            async let dashboardTask = api.fetchDashboard()
+            async let profileTask = api.fetchProfile()
+            dashboard = try await dashboardTask
+            if let profile = try? await profileTask {
+                profileName = profile.profile.display_name
+            }
         } catch {
             self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
         }
         isLoading = false
+    }
+
+    private var greeting: String {
+        let name = profileName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.isEmpty {
+            return String(localized: "Welcome back")
+        }
+        return String(localized: "Welcome back, \(name)")
     }
 }
 

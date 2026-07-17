@@ -4,12 +4,14 @@ struct CustomerPortalShellView: View {
     @EnvironmentObject private var auth: AuthStore
     @ObservedObject private var customerSession = CustomerSessionController.shared
     @ObservedObject private var deepLinks = CustomerDeepLinkRouter.shared
+    @ObservedObject private var navigation = CustomerNavigationCoordinator.shared
 
     var body: some View {
         CustomerTabView()
             .environmentObject(customerSession.auth)
             .environmentObject(customerSession.api)
-            .tint(Color(red: 0.21, green: 0.21, blue: 0.21))
+            .environmentObject(navigation)
+            .tint(PAXTheme.accent)
             .task {
                 customerSession.syncFromAuthStore(auth)
                 CustomerPushService.shared.configure(api: customerSession.api)
@@ -17,49 +19,67 @@ struct CustomerPortalShellView: View {
             }
             .onChange(of: deepLinks.pending) { link in
                 guard let link else { return }
+                navigation.handle(deepLink: link)
                 deepLinks.pending = nil
-                _ = link.path
             }
     }
 }
 
 struct CustomerTabView: View {
-    @State private var selectedTab = 0
+    @EnvironmentObject private var navigation: CustomerNavigationCoordinator
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: $navigation.selectedTab) {
             CustomerDashboardView()
                 .tabItem { Label(String(localized: "Home"), systemImage: "house.fill") }
-                .tag(0)
+                .tag(CustomerPortalTab.home)
             CustomerServicesView()
                 .tabItem { Label(String(localized: "Services"), systemImage: "square.grid.2x2.fill") }
-                .tag(1)
-            CustomerChatView()
+                .tag(CustomerPortalTab.services)
+            CustomerChatView(initialSessionID: navigation.chatSessionID)
                 .tabItem { Label(String(localized: "Chat"), systemImage: "message.fill") }
-                .tag(2)
-            CustomerProjectsListView()
+                .tag(CustomerPortalTab.chat)
+            CustomerProjectsListView(useSplitLayout: horizontalSizeClass == .regular)
                 .tabItem { Label(String(localized: "Projects"), systemImage: "folder.fill") }
-                .tag(3)
+                .tag(CustomerPortalTab.projects)
             CustomerMoreView()
                 .tabItem { Label(String(localized: "Account"), systemImage: "person.crop.circle.fill") }
-                .tag(4)
+                .tag(CustomerPortalTab.account)
         }
     }
 }
 
 struct CustomerMoreView: View {
+    @EnvironmentObject private var navigation: CustomerNavigationCoordinator
+
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigation.accountPath) {
             List {
                 Section(String(localized: "Workspace")) {
-                    NavigationLink(String(localized: "Requests")) { CustomerOrdersListView() }
-                    NavigationLink(String(localized: "Notifications")) { CustomerNotificationsView() }
-                    NavigationLink(String(localized: "News")) { CustomerNewsListView() }
-                    NavigationLink(String(localized: "Conversations")) { CustomerConversationsView() }
+                    NavigationLink(String(localized: "Requests")) {
+                        CustomerOrdersListView()
+                    }
+                    NavigationLink(String(localized: "Files & Invoices")) {
+                        CustomerFilesView()
+                    }
+                    NavigationLink(String(localized: "Notifications")) {
+                        CustomerNotificationsView()
+                    }
+                    NavigationLink(String(localized: "News")) {
+                        CustomerNewsListView()
+                    }
+                    NavigationLink(String(localized: "Conversations")) {
+                        CustomerConversationsView()
+                    }
                 }
                 Section(String(localized: "Account")) {
-                    NavigationLink(String(localized: "Profile")) { CustomerProfileView() }
-                    NavigationLink(String(localized: "Settings")) { CustomerSettingsView() }
+                    NavigationLink(String(localized: "Profile")) {
+                        CustomerProfileView()
+                    }
+                    NavigationLink(String(localized: "Settings")) {
+                        CustomerSettingsView()
+                    }
                 }
                 Section(String(localized: "About")) {
                     LabeledContent(String(localized: "Version"), value: PAXAppInfo.fullVersion)
@@ -67,6 +87,26 @@ struct CustomerMoreView: View {
                 }
             }
             .navigationTitle(String(localized: "Account"))
+            .navigationDestination(for: CustomerPortalDestination.self) { destination in
+                switch destination.kind {
+                case .project(let id):
+                    CustomerProjectDetailView(projectId: id)
+                case .order(let id):
+                    CustomerOrderDetailView(orderId: id)
+                case .news(let slug):
+                    CustomerNewsDetailView(slug: slug)
+                case .notifications:
+                    CustomerNotificationsView()
+                case .files:
+                    CustomerFilesView()
+                case .chat(let sessionID):
+                    CustomerChatView(initialSessionID: sessionID)
+                case .settings:
+                    CustomerSettingsView()
+                case .profile:
+                    CustomerProfileView()
+                }
+            }
         }
     }
 }

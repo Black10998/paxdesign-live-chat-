@@ -118,3 +118,81 @@ private struct CustomerPrimaryButtonStyleModifier: ButtonStyle {
         }
     }
 }
+
+struct CustomerNotificationCategoryBadge: View {
+    let category: String
+
+    var body: some View {
+        Label(title, systemImage: icon)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(PAXTheme.accentSoft)
+            .foregroundStyle(PAXTheme.accent)
+            .clipShape(Capsule())
+    }
+
+    private var icon: String {
+        switch category.lowercased() {
+        case "chat": return "message.fill"
+        case "project": return "folder.fill"
+        case "order": return "doc.text.fill"
+        case "news": return "newspaper.fill"
+        case "security", "account": return "lock.shield.fill"
+        default: return "bell.fill"
+        }
+    }
+
+    private var title: String {
+        switch category.lowercased() {
+        case "chat": return String(localized: "Chat")
+        case "project": return String(localized: "Project")
+        case "order": return String(localized: "Request")
+        case "news": return String(localized: "News")
+        case "security": return String(localized: "Security")
+        case "account": return String(localized: "Account")
+        default: return String(localized: "Update")
+        }
+    }
+}
+
+struct CustomerFileRow: View {
+    let name: String
+    let subtitle: String
+    let size: Int
+    var isLoading = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: "doc.fill")
+                    .font(.title3)
+                    .foregroundStyle(PAXTheme.accent)
+                    .frame(width: 36)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(name).font(.headline).foregroundStyle(PAXTheme.textPrimary)
+                    Text(subtitle).font(.caption).foregroundStyle(PAXTheme.textSecondary)
+                }
+                Spacer()
+                if isLoading {
+                    ProgressView().controlSize(.small)
+                } else {
+                    Image(systemName: "arrow.down.circle.fill")
+                        .foregroundStyle(PAXTheme.accent)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+        .disabled(isLoading)
+    }
+}
+
+enum CustomerPortalFormatting {
+    static func fileSize(_ bytes: Int) -> String {
+        let formatter = ByteCountFormatter()
+        formatter.countStyle = .file
+        return formatter.string(fromByteCount: Int64(bytes))
+    }
+}

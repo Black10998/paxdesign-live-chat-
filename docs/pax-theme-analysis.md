@@ -126,9 +126,16 @@ Goal: delete `paxdesign-toolbar` without breaking auth or chat.
 - [x] Chat participant profiles (API + web + iOS)
 - [ ] Deploy WordPress + TestFlight Build 132
 
-### Phase 2
-- Migrate auth from toolbar into booking
-- Remove `class_exists('PDX_*')` fallbacks where possible
+### Phase 2 (Build 134 — in progress)
+- [x] Auth module in `paxdesign-booking/includes/auth/` (facade + native fallback + REST when toolbar absent)
+- [x] Customer auth bridge uses `PAXdesign_Auth` / `PAXdesign_Customers`
+- [x] Files library API (`GET /customer/files`) + order file download
+- [x] iOS deep link routing (`CustomerNavigationCoordinator`)
+- [x] Notifications center: categories, mark-read, navigation
+- [x] Files & Invoices hub + project/order file download UI
+- [x] iPad split layout for Projects tab
+- [ ] Remove paxdesign-toolbar from production deploy (after cutover QA)
+- [ ] Full localization audit (Phase 4)
 
 ### Phase 3
 - Notifications inbox polish + deep link routing audit

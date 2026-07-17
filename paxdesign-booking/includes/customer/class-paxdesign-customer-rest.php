@@ -93,6 +93,18 @@ class PAXdesign_Customer_REST {
             'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
         ));
 
+        register_rest_route(self::NS, '/customer/orders/(?P<id>\d+)/files/(?P<file_id>\d+)/download', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'download_order_file'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
+        register_rest_route(self::NS, '/customer/files', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'list_files'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
         register_rest_route(self::NS, '/customer/services', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'list_services'),
@@ -497,6 +509,32 @@ class PAXdesign_Customer_REST {
         header('Content-Length: ' . (string) filesize($file['file_path']));
         readfile($file['file_path']);
         exit;
+    }
+
+    public static function download_order_file(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $file = PAXdesign_Customer_Orders::get_file_for_user($uid, (int) $request['id'], (int) $request['file_id']);
+        if (!$file || empty($file['file_path']) || !file_exists($file['file_path'])) {
+            return new WP_Error('not_found', __('File not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        $mime = !empty($file['mime_type']) ? $file['mime_type'] : 'application/octet-stream';
+        $name = !empty($file['file_name']) ? $file['file_name'] : basename($file['file_path']);
+        header('Content-Type: ' . $mime);
+        header('Content-Disposition: attachment; filename="' . rawurlencode($name) . '"');
+        header('Content-Length: ' . (string) filesize($file['file_path']));
+        readfile($file['file_path']);
+        exit;
+    }
+
+    public static function list_files(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $limit = absint($request->get_param('limit'));
+        if ($limit <= 0) {
+            $limit = 50;
+        }
+        return rest_ensure_response(array(
+            'files' => PAXdesign_Customer_Orders::library_for_user($uid, $limit),
+        ));
     }
 
     public static function chat_send_image(WP_REST_Request $request) {
