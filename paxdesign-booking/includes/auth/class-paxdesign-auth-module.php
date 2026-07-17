@@ -16,11 +16,7 @@ class PAXdesign_Auth_Module {
         require_once $base . 'class-paxdesign-auth.php';
         require_once $base . 'class-paxdesign-auth-rest.php';
 
-        if (!class_exists('PDX_Auth')) {
-            PAXdesign_Auth_Native::register_hooks();
-        } else {
-            PAXdesign_Auth::register_hooks();
-        }
+        PAXdesign_Auth::register_hooks();
         PAXdesign_Auth_REST::init();
     }
 }

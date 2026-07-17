@@ -1,6 +1,6 @@
 <?php
 /**
- * Auth facade — delegates to toolbar PDX_Auth when present, else booking-native.
+ * Auth facade — booking-native authentication (no toolbar dependency).
  */
 
 if (!defined('ABSPATH')) {
@@ -10,10 +10,6 @@ if (!defined('ABSPATH')) {
 class PAXdesign_Auth {
 
     public static function register_hooks() {
-        if (class_exists('PDX_Auth')) {
-            PDX_Auth::register_hooks();
-            return;
-        }
         PAXdesign_Auth_Native::register_hooks();
     }
 
@@ -82,13 +78,10 @@ class PAXdesign_Auth {
     }
 
     public static function auth_rate_limit($action) {
-        if (class_exists('PDX_Auth') && method_exists('PDX_Auth', 'auth_rate_limit')) {
-            return PDX_Auth::auth_rate_limit($action);
-        }
         return PAXdesign_Auth_Native::auth_rate_limit($action);
     }
 
     private static function engine() {
-        return class_exists('PDX_Auth') ? 'PDX_Auth' : 'PAXdesign_Auth_Native';
+        return 'PAXdesign_Auth_Native';
     }
 }

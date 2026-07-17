@@ -213,15 +213,13 @@ class PAXdesign_Customer_Services {
         if (!$thumb) {
             $thumb = get_the_post_thumbnail_url($page, 'large');
         }
-        $content = apply_filters('the_content', $page->post_content);
-        $plain = wp_trim_words(wp_strip_all_tags($content), 40, '…');
-        return array(
+        $item = array(
             'slug'        => $slug,
             'name'        => get_the_title($page),
             'category'    => 'general',
-            'description' => $plain,
-            'body_html'   => wp_kses_post($content),
-            'body_text'   => wp_trim_words(wp_strip_all_tags($content), 120, '…'),
+            'description' => '',
+            'body_html'   => '',
+            'body_text'   => '',
             'features'    => array(),
             'examples'    => array(),
             'related'     => array(),
@@ -231,6 +229,11 @@ class PAXdesign_Customer_Services {
             'order_url'   => self::order_url_for_service($slug, get_the_title($page)),
             'featured'    => false,
         );
+        PAXdesign_Customer_Elementor::enrich_item($page, $item, true);
+        if ($item['description'] === '' && !empty($item['body_text'])) {
+            $item['description'] = wp_trim_words((string) $item['body_text'], 40, '…');
+        }
+        return $item;
     }
 
     private static function format_service($row) {

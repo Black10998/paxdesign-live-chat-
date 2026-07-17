@@ -207,6 +207,10 @@ struct CustomerPortfolioDetailView: View {
                         }
                     }
 
+                    if let blocks = item.blocks, !blocks.isEmpty {
+                        CustomerNativeContentBlocksView(blocks: blocks)
+                    }
+
                     if let gallery = item.gallery, !gallery.isEmpty {
                         CustomerPortalCard {
                             VStack(alignment: .leading, spacing: 12) {

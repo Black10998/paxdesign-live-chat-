@@ -213,6 +213,7 @@ struct CustomerPortfolioDetail: Decodable {
     let body: String?
     let gallery: [String]?
     let categories: [String]?
+    let blocks: [CustomerContentBlock]?
 }
 
 struct CustomerPortfolioResponse: Decodable {
@@ -239,6 +240,7 @@ struct CustomerServiceDetail: Decodable {
     let icon_key: String?
     let order_url: String?
     let featured: Bool
+    let blocks: [CustomerContentBlock]?
 }
 
 struct CustomerContentNavigation: Decodable {
@@ -273,4 +275,50 @@ struct CustomerContentPage: Decodable, Identifiable {
     let body_html: String?
     let body_text: String?
     let gallery: [String]?
+    let blocks: [CustomerContentBlock]?
+}
+
+struct CustomerContentBlock: Decodable {
+    struct AccordionItem: Decodable {
+        let title: String
+        let text: String
+    }
+
+    let type: String
+    let text: String?
+    let html: String?
+    let title: String?
+    let level: Int?
+    let url: String?
+    let caption: String?
+    let images: [String]?
+    let listItems: [String]?
+    let accordionItems: [AccordionItem]?
+    let slug: String?
+    let action: String?
+
+    enum CodingKeys: String, CodingKey {
+        case type, text, html, title, level, url, caption, images, items, slug, action
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        type = try container.decode(String.self, forKey: .type)
+        text = try container.decodeIfPresent(String.self, forKey: .text)
+        html = try container.decodeIfPresent(String.self, forKey: .html)
+        title = try container.decodeIfPresent(String.self, forKey: .title)
+        level = CustomerPortalDecode.optionalInt(container, .level)
+        url = try container.decodeIfPresent(String.self, forKey: .url)
+        caption = try container.decodeIfPresent(String.self, forKey: .caption)
+        images = try container.decodeIfPresent([String].self, forKey: .images)
+        slug = try container.decodeIfPresent(String.self, forKey: .slug)
+        action = try container.decodeIfPresent(String.self, forKey: .action)
+        if type == "accordion" {
+            accordionItems = try container.decodeIfPresent([AccordionItem].self, forKey: .items)
+            listItems = nil
+        } else {
+            listItems = try container.decodeIfPresent([String].self, forKey: .items)
+            accordionItems = nil
+        }
+    }
 }

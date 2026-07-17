@@ -12,14 +12,10 @@ class PAXdesign_Auth_REST {
     const NS = 'pdx/v1';
 
     public static function init() {
-        add_action('rest_api_init', array(__CLASS__, 'register_routes'), 25);
+        add_action('rest_api_init', array(__CLASS__, 'register_routes'), 99);
     }
 
     public static function register_routes() {
-        if (class_exists('PDX_REST_API')) {
-            return;
-        }
-
         $pub = '__return_true';
 
         register_rest_route(self::NS, '/auth/register', array(

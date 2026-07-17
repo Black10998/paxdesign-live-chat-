@@ -165,7 +165,7 @@ class PAXdesign_Customer_Notifications {
     }
 
     public static function broadcast_news($news_id, $title, $excerpt) {
-        $role = class_exists('PDX_Auth') ? PDX_Auth::customer_role() : 'pdx_customer';
+        $role = PAXdesign_Auth::customer_role();
         $users = get_users(array(
             'role'   => $role,
             'fields' => array('ID'),

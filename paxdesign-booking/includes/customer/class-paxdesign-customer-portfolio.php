@@ -120,8 +120,13 @@ class PAXdesign_Customer_Portfolio {
             'published_at' => get_the_date('c', $post),
         );
         if ($full) {
-            $item['body'] = apply_filters('the_content', $post->post_content);
-            $item['gallery'] = self::gallery_urls($post->ID);
+            $item['body'] = PAXdesign_Customer_Elementor::render_html($post);
+            $item['gallery'] = PAXdesign_Customer_Elementor::images_from_html($item['body']);
+            $blocks = PAXdesign_Customer_Elementor::parse_blocks((int) $post->ID);
+            if (!empty($blocks)) {
+                $item['blocks'] = $blocks;
+            }
+            $item['body_text'] = wp_trim_words(wp_strip_all_tags($item['body']), 800, '…');
             $item['categories'] = wp_get_post_terms($post->ID, 'portfolio_category', array('fields' => 'names'));
             if (!is_array($item['categories'])) {
                 $item['categories'] = array();

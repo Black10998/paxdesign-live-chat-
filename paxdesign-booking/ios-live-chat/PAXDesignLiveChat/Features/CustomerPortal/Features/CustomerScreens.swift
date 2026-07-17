@@ -664,10 +664,16 @@ struct CustomerServiceDetailView: View {
                             Text(service.category.capitalized)
                                 .font(.subheadline)
                                 .foregroundStyle(PAXTheme.textSecondary)
-                            Text(service.body_text ?? service.description)
-                                .font(.body)
-                                .foregroundStyle(PAXTheme.textPrimary)
+                            if service.body_text?.isEmpty == false || service.description.isEmpty == false {
+                                Text(service.body_text ?? service.description)
+                                    .font(.body)
+                                    .foregroundStyle(PAXTheme.textPrimary)
+                            }
                         }
+                    }
+
+                    if let blocks = service.blocks, !blocks.isEmpty {
+                        CustomerNativeContentBlocksView(blocks: blocks)
                     }
 
                     if let features = service.features, !features.isEmpty {
@@ -719,8 +725,7 @@ struct CustomerProfileView: View {
     @EnvironmentObject private var appAuth: AuthStore
 
     var body: some View {
-        NavigationStack {
-            List {
+        List {
                 if let profile = auth.profile {
                     Section(String(localized: "Profile")) {
                         LabeledContent(String(localized: "Name"), value: profile.display_name)
@@ -749,7 +754,6 @@ struct CustomerProfileView: View {
                 }
             }
             .navigationTitle(String(localized: "Account"))
-        }
     }
 }
 

@@ -95,7 +95,7 @@ class PAXdesign_Customer_Admin {
         $orders = (int) $wpdb->get_var('SELECT COUNT(1) FROM ' . PAXdesign_Customer_DB::table('orders'));
         $news = (int) $wpdb->get_var("SELECT COUNT(1) FROM " . PAXdesign_Customer_DB::table('news') . " WHERE status = 'published'");
         $services = (int) $wpdb->get_var('SELECT COUNT(1) FROM ' . PAXdesign_Customer_DB::table('services') . ' WHERE is_active = 1');
-        echo '<p>' . esc_html__('Manage customer-facing projects, news, and the services catalog. Authentication uses paxdesign-toolbar PDX_Auth.', 'paxdesign-booking') . '</p>';
+        echo '<p>' . esc_html__('Manage customer-facing projects, news, and the services catalog. Authentication uses the PAXDesign booking auth module.', 'paxdesign-booking') . '</p>';
         echo '<ul style="list-style:disc;margin-left:1.5em">';
         printf('<li>%s</li>', esc_html(sprintf(__('Active projects: %d', 'paxdesign-booking'), $projects)));
         printf('<li>%s</li>', esc_html(sprintf(__('Service requests: %d', 'paxdesign-booking'), $orders)));

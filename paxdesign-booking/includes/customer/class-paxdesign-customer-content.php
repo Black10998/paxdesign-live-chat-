@@ -434,10 +434,13 @@ class PAXdesign_Customer_Content {
             'updated_at' => get_the_modified_date('c', $post),
         );
         if ($full) {
-            $content = apply_filters('the_content', $post->post_content);
-            $item['body_html'] = wp_kses_post($content);
-            $item['body_text'] = wp_trim_words(wp_strip_all_tags($content), 800);
-            $item['gallery'] = self::inline_image_urls($content);
+            PAXdesign_Customer_Elementor::enrich_item($post, $item, true);
+            if (empty($item['body_html'])) {
+                $content = apply_filters('the_content', $post->post_content);
+                $item['body_html'] = wp_kses_post($content);
+                $item['body_text'] = wp_trim_words(wp_strip_all_tags($content), 800, '…');
+                $item['gallery'] = self::inline_image_urls($content);
+            }
         }
         return $item;
     }

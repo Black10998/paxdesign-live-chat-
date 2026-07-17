@@ -242,11 +242,16 @@ struct CustomerNativePageView: View {
                                     .font(.subheadline)
                                     .foregroundStyle(PAXTheme.textSecondary)
                             }
-                            if let body = page.body_text, !body.isEmpty {
-                                Text(body)
-                                    .font(.body)
-                                    .foregroundStyle(PAXTheme.textPrimary)
-                            }
+                        }
+                    }
+
+                    if let blocks = page.blocks, !blocks.isEmpty {
+                        CustomerNativeContentBlocksView(blocks: blocks)
+                    } else if let body = page.body_text, !body.isEmpty {
+                        CustomerPortalCard {
+                            Text(body)
+                                .font(.body)
+                                .foregroundStyle(PAXTheme.textPrimary)
                         }
                     }
 

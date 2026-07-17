@@ -425,8 +425,7 @@ struct CustomerNewsListView: View {
     @State private var isLoading = true
 
     var body: some View {
-        NavigationStack {
-            Group {
+        Group {
                 if isLoading && items.isEmpty {
                     ProgressView(String(localized: "Loading news…"))
                 } else if let error {
@@ -457,7 +456,6 @@ struct CustomerNewsListView: View {
             .navigationTitle(String(localized: "News"))
             .task { await load() }
             .refreshable { await load() }
-        }
     }
 
     private func load() async {
