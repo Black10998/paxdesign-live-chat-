@@ -1960,6 +1960,9 @@
       createOverlay();
       handleUrlParams();
       refreshUser();
+      window.addEventListener('resize', function () {
+        updateAuthBar();
+      }, { passive: true });
     },
     isLoggedIn: function () { return !!user.logged_in; },
     isVerified: function () { return !!user.verified || !!user.is_admin; },
