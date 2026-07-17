@@ -613,11 +613,6 @@ struct CustomerFilesView: View {
     }
 }
 
-private struct IdentifiableURL: Identifiable {
-    let id = UUID()
-    let url: URL
-}
-
 struct CustomerFileShareSheet: View {
     let url: URL
     @Environment(\.dismiss) private var dismiss
