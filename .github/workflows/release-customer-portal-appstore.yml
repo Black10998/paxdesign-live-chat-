@@ -50,7 +50,7 @@ jobs:
           done
 
       - name: Install App Store Connect API dependencies
-        run: python3 -m pip install --quiet PyJWT cryptography
+        run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
 
       - name: Prepare Customer Portal provisioning profile
         run: |

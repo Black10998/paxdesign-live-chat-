@@ -32,11 +32,12 @@ install -m 600 -D /dev/null ~/.ssh/id_deploy
 printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
 ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
 
+REMOTE_LOGIN="$(printf '%q' "$ADMIN_USER")"
 SESSION_ID="$(ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
   "cd '$(printf '%q' "$WP_PATH")' && wp eval '
-\$login = getenv(\"PAX_RESET_LOGIN\") ?: \"\";
-\$user = \$login ? get_user_by(\"login\", \$login) : false;
-if (!\$user && \$login) { \$user = get_user_by(\"email\", \$login); }
+\$login = ${REMOTE_LOGIN};
+\$user = get_user_by(\"login\", \$login);
+if (!\$user) { \$user = get_user_by(\"email\", \$login); }
 if (!\$user) { fwrite(STDERR, \"user_not_found\\n\"); exit(1); }
 \$uid = (int) \$user->ID;
 if (!class_exists(\"PAXdesign_Customer_Chat_Bridge\")) { fwrite(STDERR, \"bridge_missing\\n\"); exit(1); }
@@ -46,7 +47,7 @@ global \$wpdb;
 \$table = PAXdesign_Chat_Log::table_name();
 \$wpdb->update(\$table, array(\"handler\" => \"ai\"), array(\"session_id\" => \$session_id), array(\"%s\"), array(\"%s\"));
 echo \$session_id;
-'" PAX_RESET_LOGIN="$ADMIN_USER")"
+'")"
 
 [ -n "$SESSION_ID" ] || fail "Could not resolve or reset customer chat session"
 echo "Using session: $SESSION_ID"
