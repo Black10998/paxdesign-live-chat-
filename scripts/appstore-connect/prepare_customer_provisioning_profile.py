@@ -128,18 +128,31 @@ def find_existing_profile(client: ASCClient, bundle_resource_id: str) -> dict[st
         "/profiles",
         **{"filter[profileType]": "IOS_APP_STORE", "limit": "200"},
     )
+    by_bundle: dict[str, Any] | None = None
+    by_name: dict[str, Any] | None = None
     for profile in payload.get("data") or []:
+        attrs = profile.get("attributes") or {}
+        name = attrs.get("name", "")
+        if name == PROFILE_NAME and by_name is None:
+            by_name = profile
         rel = (profile.get("relationships") or {}).get("bundleId", {}).get("data") or {}
-        if rel.get("id") == bundle_resource_id:
-            attrs = profile.get("attributes") or {}
-            print(f"Found existing profile: {attrs.get('name', profile['id'])}")
-            return profile
+        if rel.get("id") == bundle_resource_id and by_bundle is None:
+            by_bundle = profile
+    chosen = by_bundle or by_name
+    if chosen:
+        attrs = chosen.get("attributes") or {}
+        print(f"Found existing profile: {attrs.get('name', chosen['id'])}")
+        return chosen
     return None
 
 
 def create_profile(
     client: ASCClient, bundle_resource_id: str, certificate_id: str
 ) -> dict[str, Any]:
+    existing = find_existing_profile(client, bundle_resource_id)
+    if existing:
+        return existing
+
     print(f"Creating App Store profile {PROFILE_NAME!r} …")
     status, payload = client.request(
         "POST",
@@ -163,6 +176,11 @@ def create_profile(
         },
         allow_error=True,
     )
+    if status == 409:
+        existing = find_existing_profile(client, bundle_resource_id)
+        if existing:
+            print("Profile already exists; reusing existing App Store profile")
+            return existing
     if status != 201:
         fail(f"Profile creation failed ({status}): {payload}")
     return resource_data(payload, label=f"Profile {PROFILE_NAME}")
