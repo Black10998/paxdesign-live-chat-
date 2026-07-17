@@ -222,10 +222,11 @@ class PAXdesign_Customer_Chat_Bridge {
         }
 
         if (!$live->is_human_queue($session_id)) {
-            return new WP_Error(
-                'use_ai_stream',
-                __('Use the authenticated AI stream endpoint for this conversation.', 'paxdesign-booking'),
-                array('status' => 409, 'stream_route' => '/pdx/v1/customer/chat/stream')
+            return PAXdesign_Chat::get_instance()->complete_authenticated_customer_chat(
+                $session_id,
+                $content,
+                !empty($extra['client_msg_id']) ? (string) $extra['client_msg_id'] : '',
+                !empty($extra['assistant_client_msg_id']) ? (string) $extra['assistant_client_msg_id'] : ''
             );
         }
 
@@ -258,8 +259,8 @@ class PAXdesign_Customer_Chat_Bridge {
         }
 
         return array(
-            'message' => $entry,
-            'handler' => $handler,
+            'message'    => $live->format_sse_message_payload($entry, 0),
+            'handler'    => $handler,
             'session_id' => $session_id,
         );
     }

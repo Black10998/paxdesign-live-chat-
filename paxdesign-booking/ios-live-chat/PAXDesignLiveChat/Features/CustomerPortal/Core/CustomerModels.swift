@@ -162,5 +162,10 @@ struct CustomerServiceDetail: Decodable {
     let category: String
     let description: String
     let features: [String]?
+    let examples: [String]?
+    let related: [String]?
+    let image_url: String?
+    let icon_key: String?
+    let order_url: String?
     let featured: Bool
 }

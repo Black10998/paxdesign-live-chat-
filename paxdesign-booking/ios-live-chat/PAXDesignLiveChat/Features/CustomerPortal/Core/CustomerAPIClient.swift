@@ -416,12 +416,20 @@ final class CustomerAPIClient: ObservableObject {
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else { throw CustomerAPIError.network }
         guard (200..<300).contains(http.statusCode) else {
-            if let apiError = try? JSONDecoder().decode(CustomerAPIErrorPayload.self, from: data) {
-                throw CustomerAPIError.server(apiError.message ?? apiError.code ?? "HTTP \(http.statusCode)")
-            }
-            throw CustomerAPIError.http(http.statusCode)
+            throw Self.parseHTTPError(data: data, statusCode: http.statusCode)
         }
         return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    private static func parseHTTPError(data: Data, statusCode: Int) -> CustomerAPIError {
+        if let apiError = try? JSONDecoder().decode(CustomerAPIErrorPayload.self, from: data),
+           let message = apiError.message, !message.isEmpty {
+            if let code = apiError.code, !code.isEmpty {
+                return .serverCode(code, message)
+            }
+            return .server(message)
+        }
+        return .http(statusCode)
     }
 }
 
@@ -429,15 +437,46 @@ enum CustomerAPIError: LocalizedError {
     case unauthorized, invalidURL, network
     case http(Int)
     case server(String)
+    case serverCode(String, String)
 
     var errorDescription: String? {
         switch self {
-        case .unauthorized: return String(localized: "Please sign in.")
-        case .invalidURL: return String(localized: "Invalid server URL.")
-        case .network: return String(localized: "Network error.")
-        case .http(let code): return String(localized: "Server responded with status \(code).")
-        case .server(let message): return message
+        case .unauthorized:
+            return String(localized: "Please sign in to continue.")
+        case .invalidURL:
+            return String(localized: "Unable to reach the server.")
+        case .network:
+            return String(localized: "Network error. Check your connection and try again.")
+        case .http(let code):
+            return CustomerAPIError.friendlyMessage(forHTTP: code)
+        case .server(let message):
+            return CustomerAPIError.friendlyMessage(forServerText: message)
+        case .serverCode(_, let message):
+            return CustomerAPIError.friendlyMessage(forServerText: message)
         }
+    }
+
+    static func friendlyMessage(forHTTP code: Int) -> String {
+        switch code {
+        case 401: return String(localized: "Please sign in again to continue.")
+        case 403: return String(localized: "You don't have access to this content.")
+        case 404: return String(localized: "This item is no longer available.")
+        case 409: return String(localized: "Your conversation was updated. Please try again.")
+        case 429: return String(localized: "Too many requests. Please wait a moment.")
+        case 500...599: return String(localized: "The server is temporarily unavailable. Please try again.")
+        default: return String(localized: "Something went wrong. Please try again.")
+        }
+    }
+
+    static func friendlyMessage(forServerText message: String) -> String {
+        let trimmed = message.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty {
+            return String(localized: "Something went wrong. Please try again.")
+        }
+        if trimmed.lowercased().contains("server responded with status") {
+            return String(localized: "Something went wrong. Please try again.")
+        }
+        return trimmed
     }
 }
 
@@ -491,6 +530,9 @@ struct CustomerServicesResponse: Decodable {
         let category: String
         let description: String
         let featured: Bool
+        let image_url: String?
+        let icon_key: String?
+        let order_url: String?
     }
     struct Category: Decodable, Identifiable {
         var id: String { slug }
@@ -644,15 +686,21 @@ struct CustomerChatPoll: Decodable {
 struct CustomerSendResponse: Decodable {
     let session_id: String
     let handler: String?
+    let message: CustomerChatPoll.ChatMessage?
+    let assistant: CustomerChatPoll.ChatMessage?
+    let notice: String?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         session_id = CustomerPortalDecode.string(container, .session_id)
         handler = try? container.decodeIfPresent(String.self, forKey: .handler)
+        message = try? container.decodeIfPresent(CustomerChatPoll.ChatMessage.self, forKey: .message)
+        assistant = try? container.decodeIfPresent(CustomerChatPoll.ChatMessage.self, forKey: .assistant)
+        notice = try? container.decodeIfPresent(String.self, forKey: .notice)
     }
 
     enum CodingKeys: String, CodingKey {
-        case session_id, handler
+        case session_id, handler, message, assistant, notice
     }
 }
 

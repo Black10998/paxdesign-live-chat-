@@ -124,16 +124,45 @@ class PAXdesign_Customer_Services {
     }
 
     private static function format_service($row) {
+        $slug = isset($row['slug']) ? sanitize_key($row['slug']) : '';
+        $source = !empty($row['source_key']) ? sanitize_key($row['source_key']) : $slug;
+        $media = json_decode($row['media_json'] ?: '{}', true);
+        if (!is_array($media)) {
+            $media = array();
+        }
+        $image_url = '';
+        if (!empty($media['image'])) {
+            $image_url = esc_url_raw((string) $media['image']);
+        } elseif (!empty($media['icon']) && is_string($media['icon']) && preg_match('#^https?://#i', $media['icon'])) {
+            $image_url = esc_url_raw($media['icon']);
+        }
         return array(
-            'slug'        => $row['slug'],
+            'slug'        => $slug,
             'name'        => $row['name'],
             'category'    => $row['category_slug'],
             'description' => $row['description'],
             'features'    => json_decode($row['features_json'] ?: '[]', true) ?: array(),
             'examples'    => json_decode($row['examples_json'] ?: '[]', true) ?: array(),
             'related'     => json_decode($row['related_slugs_json'] ?: '[]', true) ?: array(),
-            'media'       => json_decode($row['media_json'] ?: '{}', true) ?: array(),
+            'media'       => $media,
+            'image_url'   => $image_url,
+            'icon_key'    => !empty($media['icon']) ? sanitize_key((string) $media['icon']) : $source,
+            'order_url'   => self::order_url_for_service($source, $row['name']),
             'featured'    => !empty($row['is_featured']),
         );
+    }
+
+    public static function order_url_for_service($source_key, $service_name = '') {
+        $base = trim(get_option('paxdesign_booking_contact_url', ''));
+        if ($base === '') {
+            $base = home_url('/kontakt/');
+        }
+        $args = array(
+            'pax_service' => sanitize_key($source_key),
+        );
+        if ($service_name !== '') {
+            $args['pax_service_name'] = sanitize_text_field($service_name);
+        }
+        return add_query_arg($args, $base);
     }
 }

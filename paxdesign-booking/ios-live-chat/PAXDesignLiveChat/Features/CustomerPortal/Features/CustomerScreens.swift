@@ -50,101 +50,142 @@ struct CustomerLoginView: View {
 
 struct CustomerDashboardView: View {
     @EnvironmentObject private var api: CustomerAPIClient
+    @Environment(\.scenePhase) private var scenePhase
     @State private var dashboard: CustomerDashboard?
     @State private var error: String?
     @State private var isLoading = true
 
     var body: some View {
         NavigationStack {
-            Group {
-                if isLoading {
+            ScrollView {
+                if isLoading && dashboard == nil {
                     ProgressView(String(localized: "Loading dashboard…"))
+                        .padding(.top, 48)
                 } else if let error {
                     PAXContentUnavailableView(String(localized: "Unable to load"), systemImage: "wifi.exclamationmark", description: Text(error))
+                        .padding(.top, 32)
                 } else if let dashboard {
-                    List {
-                        Section(String(localized: "Conversation")) {
-                            if let preview = dashboard.chat?.last_preview, !preview.isEmpty {
-                                Text(preview)
-                            } else {
-                                Text(String(localized: "No messages yet.")).foregroundStyle(.secondary)
-                            }
-                        }
-                        Section(String(localized: "Active Projects")) {
-                            if let projects = dashboard.projects_active, !projects.isEmpty {
-                                ForEach(projects, id: \.id) { project in
-                                    NavigationLink {
-                                        CustomerProjectDetailView(projectId: project.id)
-                                    } label: {
-                                        HStack {
-                                            Text(project.title)
-                                            Spacer()
-                                            Text("\(project.progress)%").foregroundStyle(.secondary)
-                                        }
-                                    }
+                    LazyVStack(alignment: .leading, spacing: CustomerPortalDesign.sectionSpacing) {
+                        CustomerPortalCard {
+                            VStack(alignment: .leading, spacing: 12) {
+                                CustomerPortalSectionHeader(title: String(localized: "Conversation"))
+                                if let preview = dashboard.chat?.last_preview, !preview.isEmpty {
+                                    Text(preview).font(.body)
+                                } else {
+                                    Text(String(localized: "No messages yet. Open Chat to start talking with our team."))
+                                        .foregroundStyle(PAXTheme.textSecondary)
                                 }
-                            } else {
-                                Text(String(localized: "No active projects.")).foregroundStyle(.secondary)
-                            }
-                        }
-                        Section(String(localized: "Recent Requests")) {
-                            if let orders = dashboard.orders_recent, !orders.isEmpty {
-                                ForEach(orders, id: \.id) { order in
-                                    NavigationLink {
-                                        CustomerOrderDetailView(orderId: order.id)
-                                    } label: {
-                                        HStack {
-                                            Text(order.service_label)
-                                            Spacer()
-                                            Text(order.status).foregroundStyle(.secondary)
-                                        }
-                                    }
+                                NavigationLink(String(localized: "Open Chat")) {
+                                    CustomerChatView(initialSessionID: dashboard.chat?.session_id)
                                 }
-                            } else {
-                                Text(String(localized: "No service requests yet.")).foregroundStyle(.secondary)
+                                .font(.subheadline.weight(.semibold))
                             }
                         }
+
+                        CustomerPortalCard {
+                            VStack(alignment: .leading, spacing: 12) {
+                                CustomerPortalSectionHeader(title: String(localized: "Active Projects"))
+                                if let projects = dashboard.projects_active, !projects.isEmpty {
+                                    ForEach(projects, id: \.id) { project in
+                                        NavigationLink {
+                                            CustomerProjectDetailView(projectId: project.id)
+                                        } label: {
+                                            HStack {
+                                                VStack(alignment: .leading, spacing: 4) {
+                                                    Text(project.title).font(.headline)
+                                                    Text(project.status).font(.caption).foregroundStyle(.secondary)
+                                                }
+                                                Spacer()
+                                                Text("\(project.progress)%").font(.subheadline.weight(.semibold))
+                                            }
+                                        }
+                                        .buttonStyle(.plain)
+                                        if project.id != projects.last?.id { Divider() }
+                                    }
+                                } else {
+                                    Text(String(localized: "No active projects yet.")).foregroundStyle(PAXTheme.textSecondary)
+                                    NavigationLink(String(localized: "Browse Services")) { CustomerServicesView() }
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                            }
+                        }
+
+                        CustomerPortalCard {
+                            VStack(alignment: .leading, spacing: 12) {
+                                CustomerPortalSectionHeader(title: String(localized: "Recent Requests"))
+                                if let orders = dashboard.orders_recent, !orders.isEmpty {
+                                    ForEach(orders, id: \.id) { order in
+                                        NavigationLink {
+                                            CustomerOrderDetailView(orderId: order.id)
+                                        } label: {
+                                            HStack {
+                                                Text(order.service_label)
+                                                Spacer()
+                                                Text(order.status).foregroundStyle(.secondary)
+                                            }
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                } else {
+                                    Text(String(localized: "Request a service on our website to get started."))
+                                        .foregroundStyle(PAXTheme.textSecondary)
+                                }
+                            }
+                        }
+
                         if let unread = dashboard.unread_count, unread > 0 {
-                            Section(String(localized: "Notifications")) {
+                            CustomerPortalCard {
                                 NavigationLink {
                                     CustomerNotificationsView()
                                 } label: {
-                                    Text(String(localized: "\(unread) unread notifications"))
+                                    Label(String(localized: "\(unread) unread notifications"), systemImage: "bell.badge.fill")
+                                        .font(.headline)
                                 }
+                                .buttonStyle(.plain)
                             }
                         }
+
                         if let news = dashboard.news, !news.isEmpty {
-                            Section(String(localized: "News")) {
-                                ForEach(news, id: \.slug) { item in
-                                    NavigationLink {
-                                        CustomerNewsDetailView(slug: item.slug)
-                                    } label: {
-                                        VStack(alignment: .leading, spacing: 4) {
-                                            Text(item.title).font(.headline)
-                                            if let excerpt = item.excerpt, !excerpt.isEmpty {
-                                                Text(excerpt).font(.subheadline).foregroundStyle(.secondary)
+                            CustomerPortalCard {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    CustomerPortalSectionHeader(title: String(localized: "News"))
+                                    ForEach(news, id: \.slug) { item in
+                                        NavigationLink {
+                                            CustomerNewsDetailView(slug: item.slug)
+                                        } label: {
+                                            VStack(alignment: .leading, spacing: 4) {
+                                                Text(item.title).font(.headline)
+                                                if let excerpt = item.excerpt, !excerpt.isEmpty {
+                                                    Text(excerpt).font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
+                                                }
                                             }
                                         }
+                                        .buttonStyle(.plain)
                                     }
                                 }
                             }
                         }
                     }
+                    .padding()
                 }
             }
-            .navigationTitle(String(localized: "Dashboard"))
+            .background(PAXBackground())
+            .navigationTitle(String(localized: "Home"))
             .task { await load() }
+            .onChange(of: scenePhase) { phase in
+                if phase == .active { Task { await load() } }
+            }
             .refreshable { await load() }
         }
     }
 
     private func load() async {
-        isLoading = dashboard == nil
+        if dashboard == nil { isLoading = true }
         error = nil
         do {
             dashboard = try await api.fetchDashboard()
         } catch {
-            self.error = error.localizedDescription
+            self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
         }
         isLoading = false
     }
@@ -152,14 +193,16 @@ struct CustomerDashboardView: View {
 
 struct CustomerChatView: View {
     @EnvironmentObject private var api: CustomerAPIClient
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var network = CustomerNetworkMonitor.shared
+    @FocusState private var isInputFocused: Bool
     var initialSessionID: String? = nil
     @State private var poll: CustomerChatPoll?
     @State private var draft = ""
     @State private var error: String?
+    @State private var notice: String?
     @State private var isLoading = true
     @State private var isSending = false
-    @State private var streamingAssistant = ""
     @State private var lastSeq = 0
     @State private var pollTask: Task<Void, Never>?
     @State private var showImagePicker = false
@@ -174,66 +217,64 @@ struct CustomerChatView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                if !network.isConnected {
-                    Text(String(localized: "Offline — messages will send when you reconnect."))
-                        .font(.caption).foregroundStyle(.orange).padding(8)
-                        .frame(maxWidth: .infinity).background(Color.orange.opacity(0.12))
-                }
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        if isLoading && displayMessages.isEmpty {
-                            ProgressView(String(localized: "Loading chat…"))
-                                .frame(maxWidth: .infinity)
-                                .padding(.top, 48)
-                        } else if displayMessages.isEmpty && error == nil {
-                            CustomerChatEmptyState(isAI: !isHumanQueue)
-                                .padding(.top, 32)
-                        } else {
-                            LazyVStack(alignment: .leading, spacing: 12) {
-                                ForEach(displayMessages, id: \.id) { message in
-                                    CustomerChatBubble(message: message).id(message.id)
+            ZStack {
+                PAXBackground()
+                VStack(spacing: 0) {
+                    if !network.isConnected {
+                        Text(String(localized: "Offline — messages will send when you reconnect."))
+                            .font(.caption).foregroundStyle(.orange).padding(8)
+                            .frame(maxWidth: .infinity).background(Color.orange.opacity(0.12))
+                    }
+                    if let notice, !notice.isEmpty {
+                        Text(notice)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity)
+                            .background(PAXTheme.accentSoft)
+                    }
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            if isLoading && displayMessages.isEmpty {
+                                ProgressView(String(localized: "Loading chat…"))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.top, 48)
+                            } else if displayMessages.isEmpty && error == nil {
+                                CustomerChatEmptyState(isAI: !isHumanQueue)
+                                    .padding(.top, 32)
+                            } else {
+                                LazyVStack(alignment: .leading, spacing: 12) {
+                                    ForEach(displayMessages, id: \.id) { message in
+                                        CustomerChatBubble(message: message).id(message.id)
+                                    }
+                                    if poll?.admin_typing == true, isHumanQueue {
+                                        CustomerChatTypingIndicator(label: String(localized: "Support is typing…"))
+                                            .id("typing")
+                                    }
                                 }
-                                if poll?.admin_typing == true, isHumanQueue {
-                                    CustomerChatTypingIndicator(label: String(localized: "Support is typing…"))
-                                        .id("typing")
-                                }
-                                if !streamingAssistant.isEmpty {
-                                    Text(streamingAssistant)
-                                        .padding(10)
-                                        .background(Color(.secondarySystemBackground))
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .id("streaming")
-                                }
+                                .padding()
                             }
-                            .padding()
                         }
+                        .scrollDismissesKeyboard(.interactively)
+                        .onChange(of: displayMessages.count) { _ in scrollToBottom(proxy: proxy) }
+                        .onChange(of: poll?.admin_typing) { _ in scrollToBottom(proxy: proxy) }
                     }
-                    .onChange(of: displayMessages.count) { _ in scrollToBottom(proxy: proxy) }
                 }
-                Divider()
-                HStack {
-                    if isHumanQueue {
-                        Menu {
-                            Button(String(localized: "Photo"), systemImage: "photo") { showImagePicker = true }
-                            Button(isRecordingVoice ? String(localized: "Stop recording") : String(localized: "Voice message"), systemImage: "mic") {
-                                Task { await toggleVoice() }
-                            }
-                            Button(String(localized: "Share location"), systemImage: "location") { showLocationSheet = true }
-                        } label: { Image(systemName: "plus.circle") }
-                    }
-                    TextField(String(localized: "Message"), text: $draft, axis: .vertical)
-                        .textFieldStyle(.roundedBorder).lineLimit(1...4)
-                    Button { Task { await send() } } label: {
-                        Image(systemName: isSending ? "hourglass" : "paperplane.fill")
-                    }
-                    .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending || !network.isConnected)
+                .safeAreaInset(edge: .bottom, spacing: 0) {
+                    chatComposer
                 }
-                .padding()
             }
             .navigationTitle(String(localized: "Chat"))
-            .toolbar { NavigationLink(String(localized: "History")) { CustomerConversationsView() } }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    NavigationLink(String(localized: "History")) { CustomerConversationsView() }
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button(String(localized: "Done")) { isInputFocused = false }
+                }
+            }
             .overlay(alignment: .top) {
                 if let error {
                     Text(error)
@@ -259,8 +300,55 @@ struct CustomerChatView: View {
                 startPolling()
             }
             .onDisappear { pollTask?.cancel() }
+            .onChange(of: scenePhase) { phase in
+                if phase == .active {
+                    Task { await refresh(full: false) }
+                }
+            }
             .refreshable { await refresh(full: true) }
         }
+    }
+
+    private var chatComposer: some View {
+        VStack(spacing: 0) {
+            Divider()
+            HStack(alignment: .bottom, spacing: 10) {
+                if isHumanQueue {
+                    Menu {
+                        Button(String(localized: "Photo"), systemImage: "photo") { showImagePicker = true }
+                        Button(isRecordingVoice ? String(localized: "Stop recording") : String(localized: "Voice message"), systemImage: "mic") {
+                            Task { await toggleVoice() }
+                        }
+                        Button(String(localized: "Share location"), systemImage: "location") { showLocationSheet = true }
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(PAXTheme.accent)
+                    }
+                }
+                TextField(String(localized: "Message"), text: $draft, axis: .vertical)
+                    .lineLimit(1...5)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(PAXTheme.surfaceElevated)
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .focused($isInputFocused)
+                Button { Task { await send() } } label: {
+                    Image(systemName: isSending ? "hourglass" : "arrow.up.circle.fill")
+                        .font(.system(size: 30))
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(canSend ? PAXTheme.accent : .secondary)
+                }
+                .disabled(!canSend)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(.ultraThinMaterial)
+        }
+    }
+
+    private var canSend: Bool {
+        !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSending && network.isConnected
     }
 
     private var displayMessages: [CustomerChatPoll.ChatMessage] {
@@ -268,8 +356,8 @@ struct CustomerChatView: View {
     }
 
     private func scrollToBottom(proxy: ScrollViewProxy) {
-        if !streamingAssistant.isEmpty {
-            withAnimation { proxy.scrollTo("streaming", anchor: .bottom) }
+        if poll?.admin_typing == true {
+            withAnimation { proxy.scrollTo("typing", anchor: .bottom) }
         } else if let last = displayMessages.last?.id {
             withAnimation { proxy.scrollTo(last, anchor: .bottom) }
         }
@@ -292,7 +380,9 @@ struct CustomerChatView: View {
                     handler: next.handler ?? poll?.handler,
                     messages: merged.sorted { $0.seq < $1.seq },
                     message_count: next.message_count,
-                    last_preview: next.last_preview
+                    last_preview: next.last_preview,
+                    admin_typing: next.admin_typing ?? poll?.admin_typing,
+                    user_typing: next.user_typing ?? poll?.user_typing
                 )
             } else if let current = poll {
                 poll = CustomerChatPoll(
@@ -300,7 +390,9 @@ struct CustomerChatView: View {
                     handler: next.handler ?? current.handler,
                     messages: current.messages,
                     message_count: current.message_count,
-                    last_preview: current.last_preview
+                    last_preview: current.last_preview,
+                    admin_typing: next.admin_typing ?? current.admin_typing,
+                    user_typing: next.user_typing ?? current.user_typing
                 )
             }
             if let maxSeq = poll?.messages?.map(\.seq).max() { lastSeq = max(lastSeq, maxSeq) }
@@ -315,31 +407,16 @@ struct CustomerChatView: View {
             return String(localized: "We couldn't load your messages. Pull down to refresh.")
         }
         if let apiError = error as? CustomerAPIError {
-            switch apiError {
-            case .unauthorized:
-                return String(localized: "Please sign in again to continue.")
-            case .network:
-                return String(localized: "Network error. Check your connection and try again.")
-            case .http(403):
-                return String(localized: "You don't have access to this conversation.")
-            case .http(404):
-                return String(localized: "Conversation not found.")
-            case .server(let message):
-                return message
-            case .http(let code):
-                return String(localized: "Something went wrong (error \(code)).")
-            default:
-                break
-            }
+            return apiError.localizedDescription ?? String(localized: "Something went wrong. Please try again.")
         }
-        return error.localizedDescription
+        return CustomerAPIError.friendlyMessage(forServerText: error.localizedDescription)
     }
 
     private func startPolling() {
         pollTask?.cancel()
         pollTask = Task {
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 4_000_000_000)
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
                 if network.isConnected { await refresh(full: false) }
             }
         }
@@ -352,7 +429,7 @@ struct CustomerChatView: View {
         do {
             _ = try await api.uploadChatImage(sessionID: session, imageData: data, filename: "photo.jpg")
             await refresh(full: true)
-        } catch { self.error = error.localizedDescription }
+        } catch { self.error = friendlyChatError(error) }
     }
 
     private func toggleVoice() async {
@@ -364,11 +441,11 @@ struct CustomerChatView: View {
                 do {
                     _ = try await api.uploadChatVoice(sessionID: session, audioData: result.data, duration: result.duration)
                     await refresh(full: true)
-                } catch { self.error = error.localizedDescription }
+                } catch { self.error = friendlyChatError(error) }
             }
         } else {
             do { try await voiceRecorder.start(); isRecordingVoice = true }
-            catch { self.error = error.localizedDescription }
+            catch { self.error = friendlyChatError(error) }
         }
     }
 
@@ -379,30 +456,39 @@ struct CustomerChatView: View {
         do {
             _ = try await api.sendChatLocation(sessionID: session, lat: lat, lng: lng, label: label)
             await refresh(full: true)
-        } catch { self.error = error.localizedDescription }
+        } catch { self.error = friendlyChatError(error) }
     }
 
     private func send() async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
         isSending = true
-        streamingAssistant = ""
+        error = nil
+        notice = nil
         defer { isSending = false }
         do {
-            if isHumanQueue {
-                _ = try await api.sendChatMessage(text, sessionID: poll?.session_id)
-            } else {
-                try await api.streamChatMessage(text, sessionID: poll?.session_id) { event in
-                    if event.type == "text", let chunk = event.text { streamingAssistant += chunk }
-                    if event.type == "done", let message = event.message { streamingAssistant = message.content }
-                }
-                streamingAssistant = ""
-            }
+            let response = try await api.sendChatMessage(text, sessionID: poll?.session_id)
             draft = ""
+            isInputFocused = false
+            if let handler = response.handler {
+                poll = CustomerChatPoll(
+                    session_id: response.session_id,
+                    handler: handler,
+                    messages: poll?.messages,
+                    message_count: poll?.message_count,
+                    last_preview: poll?.last_preview,
+                    admin_typing: poll?.admin_typing,
+                    user_typing: poll?.user_typing
+                )
+            }
+            if let noticeText = response.notice, !noticeText.isEmpty {
+                notice = noticeText
+            }
             await refresh(full: true)
-            error = nil
+            PAXHaptics.light()
         } catch {
-            self.error = error.localizedDescription
+            self.error = friendlyChatError(error)
+            PAXHaptics.warning()
         }
     }
 }
@@ -412,40 +498,117 @@ struct CustomerServicesView: View {
     @State private var response: CustomerServicesResponse?
     @State private var search = ""
     @State private var error: String?
+    @State private var isLoading = true
 
     var body: some View {
         NavigationStack {
             Group {
-                if let response {
-                    List(response.services) { service in
-                        NavigationLink {
-                            CustomerServiceDetailView(slug: service.slug)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(service.name).font(.headline)
-                                Text(service.description).font(.subheadline).foregroundStyle(.secondary).lineLimit(3)
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    }
+                if isLoading && response == nil {
+                    ProgressView(String(localized: "Loading services…"))
                 } else if let error {
                     PAXContentUnavailableView(String(localized: "Services unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
-                } else {
-                    ProgressView()
+                } else if let response {
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: CustomerPortalDesign.sectionSpacing) {
+                            if !response.categories.isEmpty {
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    HStack(spacing: 10) {
+                                        ForEach(response.categories) { category in
+                                            Text(category.name)
+                                                .font(.subheadline.weight(.medium))
+                                                .padding(.horizontal, 14)
+                                                .padding(.vertical, 8)
+                                                .background(PAXTheme.accentSoft)
+                                                .clipShape(Capsule())
+                                        }
+                                    }
+                                    .padding(.horizontal)
+                                }
+                            }
+                            ForEach(filteredServices(response.services)) { service in
+                                NavigationLink {
+                                    CustomerServiceDetailView(slug: service.slug)
+                                } label: {
+                                    CustomerServiceCard(service: service)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(.vertical)
+                    }
                 }
             }
+            .background(PAXBackground())
             .navigationTitle(String(localized: "Services"))
-            .searchable(text: $search)
-            .task(id: search) { await load() }
+            .searchable(text: $search, prompt: String(localized: "Search services"))
+            .refreshable { await load(force: true) }
+            .task(id: search) { await load(force: false) }
         }
     }
 
-    private func load() async {
-        do {
-            response = try await api.fetchServices(search: search)
-        } catch {
-            self.error = error.localizedDescription
+    private func filteredServices(_ services: [CustomerServicesResponse.Service]) -> [CustomerServicesResponse.Service] {
+        let query = search.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !query.isEmpty else { return services }
+        return services.filter {
+            $0.name.lowercased().contains(query) || $0.description.lowercased().contains(query)
         }
+    }
+
+    private func load(force: Bool) async {
+        if response == nil || force { isLoading = true }
+        error = nil
+        do {
+            response = try await api.fetchServices(search: search.isEmpty ? nil : search)
+        } catch {
+            self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
+        }
+        isLoading = false
+    }
+}
+
+private struct CustomerServiceCard: View {
+    let service: CustomerServicesResponse.Service
+
+    var body: some View {
+        CustomerPortalCard {
+            HStack(alignment: .top, spacing: 14) {
+                if let imageURL = service.image_url, let url = URL(string: imageURL) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().scaledToFill()
+                        default:
+                            CustomerServiceIconView(iconKey: service.icon_key ?? service.slug)
+                        }
+                    }
+                    .frame(width: 56, height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                } else {
+                    CustomerServiceIconView(iconKey: service.icon_key ?? service.slug, size: 56)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(service.name)
+                            .font(.headline)
+                            .foregroundStyle(PAXTheme.textPrimary)
+                        if service.featured {
+                            Text(String(localized: "Popular"))
+                                .font(.caption2.weight(.semibold))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(PAXTheme.accentSoft)
+                                .clipShape(Capsule())
+                        }
+                    }
+                    Text(service.description)
+                        .font(.subheadline)
+                        .foregroundStyle(PAXTheme.textSecondary)
+                        .lineLimit(3)
+                        .multilineTextAlignment(.leading)
+                }
+            }
+        }
+        .padding(.horizontal)
     }
 }
 
@@ -453,32 +616,81 @@ struct CustomerServiceDetailView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     let slug: String
     @State private var service: CustomerServiceDetail?
+    @State private var error: String?
 
     var body: some View {
-        Group {
+        ScrollView {
             if let service {
-                List {
-                    Section {
-                        Text(service.description)
+                VStack(alignment: .leading, spacing: CustomerPortalDesign.sectionSpacing) {
+                    if let imageURL = service.image_url, let url = URL(string: imageURL) {
+                        AsyncImage(url: url) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable().scaledToFill()
+                            default:
+                                CustomerServiceIconView(iconKey: service.icon_key ?? service.slug, size: 72)
+                                    .frame(maxWidth: .infinity)
+                            }
+                        }
+                        .frame(height: 180)
+                        .frame(maxWidth: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: CustomerPortalDesign.cardRadius, style: .continuous))
+                    } else {
+                        CustomerServiceIconView(iconKey: service.icon_key ?? service.slug, size: 72)
+                            .frame(maxWidth: .infinity)
                     }
+
+                    CustomerPortalCard {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(service.name).font(.title2.weight(.bold))
+                            Text(service.category.capitalized)
+                                .font(.subheadline)
+                                .foregroundStyle(PAXTheme.textSecondary)
+                            Text(service.description)
+                                .font(.body)
+                                .foregroundStyle(PAXTheme.textPrimary)
+                        }
+                    }
+
                     if let features = service.features, !features.isEmpty {
-                        Section(String(localized: "Features")) {
-                            ForEach(features, id: \.self) { f in Text(f) }
+                        CustomerPortalCard {
+                            VStack(alignment: .leading, spacing: 10) {
+                                CustomerPortalSectionHeader(title: String(localized: "Features"))
+                                ForEach(features, id: \.self) { feature in
+                                    Label(feature, systemImage: "checkmark.circle.fill")
+                                        .font(.subheadline)
+                                        .foregroundStyle(PAXTheme.textPrimary)
+                                }
+                            }
                         }
                     }
-                    Section {
-                        NavigationLink(String(localized: "Request this service")) {
-                            CustomerCreateOrderView(preselectedSlug: slug)
-                        }
+
+                    if let orderURL = service.order_url.flatMap({ URL(string: $0) }) {
+                        CustomerSafariLink(
+                            title: String(localized: "Request on Website"),
+                            url: orderURL
+                        )
                     }
                 }
+                .padding()
+            } else if let error {
+                PAXContentUnavailableView(String(localized: "Service unavailable"), systemImage: "exclamationmark.triangle", description: Text(error))
+                    .padding(.top, 40)
             } else {
-                ProgressView()
+                ProgressView().padding(.top, 40)
             }
         }
+        .background(PAXBackground())
         .navigationTitle(service?.name ?? String(localized: "Service"))
-        .task {
-            service = try? await api.fetchService(slug: slug)
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await load() }
+    }
+
+    private func load() async {
+        do {
+            service = try await api.fetchService(slug: slug)
+        } catch {
+            self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
         }
     }
 }

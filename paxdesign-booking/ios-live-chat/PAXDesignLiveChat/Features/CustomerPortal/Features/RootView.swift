@@ -31,17 +31,17 @@ struct CustomerTabView: View {
             CustomerDashboardView()
                 .tabItem { Label(String(localized: "Home"), systemImage: "house.fill") }
                 .tag(0)
-            CustomerProjectsListView()
-                .tabItem { Label(String(localized: "Projects"), systemImage: "folder.fill") }
+            CustomerServicesView()
+                .tabItem { Label(String(localized: "Services"), systemImage: "square.grid.2x2.fill") }
                 .tag(1)
-            CustomerOrdersListView()
-                .tabItem { Label(String(localized: "Requests"), systemImage: "doc.text.fill") }
-                .tag(2)
             CustomerChatView()
                 .tabItem { Label(String(localized: "Chat"), systemImage: "message.fill") }
+                .tag(2)
+            CustomerProjectsListView()
+                .tabItem { Label(String(localized: "Projects"), systemImage: "folder.fill") }
                 .tag(3)
             CustomerMoreView()
-                .tabItem { Label(String(localized: "More"), systemImage: "ellipsis.circle.fill") }
+                .tabItem { Label(String(localized: "Account"), systemImage: "person.crop.circle.fill") }
                 .tag(4)
         }
     }
@@ -51,18 +51,22 @@ struct CustomerMoreView: View {
     var body: some View {
         NavigationStack {
             List {
-                NavigationLink(String(localized: "Services")) { CustomerServicesView() }
-                NavigationLink(String(localized: "News")) { CustomerNewsListView() }
-                NavigationLink(String(localized: "Notifications")) { CustomerNotificationsView() }
-                NavigationLink(String(localized: "Conversations")) { CustomerConversationsView() }
-                NavigationLink(String(localized: "Account")) { CustomerProfileView() }
-                NavigationLink(String(localized: "Settings")) { CustomerSettingsView() }
+                Section(String(localized: "Workspace")) {
+                    NavigationLink(String(localized: "Requests")) { CustomerOrdersListView() }
+                    NavigationLink(String(localized: "Notifications")) { CustomerNotificationsView() }
+                    NavigationLink(String(localized: "News")) { CustomerNewsListView() }
+                    NavigationLink(String(localized: "Conversations")) { CustomerConversationsView() }
+                }
+                Section(String(localized: "Account")) {
+                    NavigationLink(String(localized: "Profile")) { CustomerProfileView() }
+                    NavigationLink(String(localized: "Settings")) { CustomerSettingsView() }
+                }
                 Section(String(localized: "About")) {
                     LabeledContent(String(localized: "Version"), value: PAXAppInfo.fullVersion)
                     NavigationLink(String(localized: "About this app")) { AboutView() }
                 }
             }
-            .navigationTitle(String(localized: "More"))
+            .navigationTitle(String(localized: "Account"))
         }
     }
 }

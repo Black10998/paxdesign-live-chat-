@@ -789,6 +789,194 @@ class PAXdesign_Chat {
     }
 
     /**
+     * Non-SSE authenticated customer AI reply (mobile REST).
+     *
+     * @return array|WP_Error
+     */
+    public function complete_authenticated_customer_chat($session_id, $user_message, $client_msg_id = '', $assistant_client_id = '') {
+        if (!$this->is_enabled()) {
+            return new WP_Error('disabled', __('Chat is temporarily unavailable. Please try again shortly.', 'paxdesign-booking'), array('status' => 503));
+        }
+
+        $live = PAXdesign_Chat_Live::get_instance();
+        $session_id = $live->sanitize_session_id($session_id);
+        if ($session_id === '') {
+            return new WP_Error('invalid_session', __('We could not find your conversation. Please reopen chat.', 'paxdesign-booking'), array('status' => 400));
+        }
+
+        $handler = $live->get_handler($session_id);
+        if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED) {
+            return new WP_Error('chat_closed', __('This conversation is closed. Start a new chat from the website if you need help.', 'paxdesign-booking'), array('status' => 409));
+        }
+
+        if ($live->is_ai_blocked($session_id)) {
+            $message = __('A team member is handling your conversation. Please wait for their reply.', 'paxdesign-booking');
+            if ($handler === PAXdesign_Chat_Live::HANDLER_LIVE) {
+                $message = __('Your request was forwarded to our team. A team member will reply here shortly.', 'paxdesign-booking');
+            }
+            $live->ensure_session($session_id);
+            $user_extra = array('client_msg_id' => sanitize_text_field((string) $client_msg_id));
+            if (class_exists('PAXdesign_Link_Scanner')) {
+                $user_extra = PAXdesign_Link_Scanner::attach_scan_meta($user_message, 'user', $user_extra);
+            }
+            $saved = $live->append_message($session_id, 'user', $user_message, $user_extra);
+            if (is_wp_error($saved) || !$saved) {
+                return new WP_Error('ai_blocked', $message, array('status' => 409));
+            }
+            return array(
+                'session_id' => $session_id,
+                'handler'    => $handler,
+                'message'    => $saved,
+                'assistant'  => null,
+                'notice'     => $message,
+            );
+        }
+
+        $user_id = get_current_user_id();
+        if ($user_id <= 0 || !$this->check_rate_limit_for_key('customer:' . $user_id)) {
+            return new WP_Error('rate_limit', __('Too many messages. Please wait a moment and try again.', 'paxdesign-booking'), array('status' => 429));
+        }
+
+        $user_message = sanitize_textarea_field((string) $user_message);
+        if ($user_message === '') {
+            return new WP_Error('empty', __('Please enter a message.', 'paxdesign-booking'), array('status' => 400));
+        }
+
+        $live->ensure_session($session_id);
+        $extra = array('client_msg_id' => sanitize_text_field((string) $client_msg_id));
+        if (class_exists('PAXdesign_Link_Scanner')) {
+            $extra = PAXdesign_Link_Scanner::attach_scan_meta($user_message, 'user', $extra);
+        }
+
+        $entry = $live->append_message($session_id, 'user', $user_message, $extra);
+        if (is_wp_error($entry)) {
+            return $entry;
+        }
+        if (!$entry) {
+            return new WP_Error('send_failed', __('Your message could not be sent. Please try again.', 'paxdesign-booking'), array('status' => 500));
+        }
+
+        $messages = $this->build_openai_messages_from_session($session_id);
+        $validated = $this->validate_messages($messages);
+        if (is_wp_error($validated)) {
+            $validated = $this->validate_messages(array(
+                array('role' => 'user', 'content' => $user_message),
+            ));
+            if (is_wp_error($validated)) {
+                return $validated;
+            }
+        }
+
+        $completion = $this->request_openai_completion($validated);
+        if (is_wp_error($completion)) {
+            return $completion;
+        }
+
+        $assistant_extra = array('client_msg_id' => sanitize_text_field((string) $assistant_client_id));
+        $assistant = $live->append_message($session_id, 'assistant', $completion['content'], $assistant_extra);
+        if (is_wp_error($assistant)) {
+            return $assistant;
+        }
+
+        $row = $live->get_session_row($session_id);
+        $session_context = array(
+            'wp_user_id'    => ($row && !empty($row->wp_user_id)) ? (int) $row->wp_user_id : $user_id,
+            'customer_name' => ($row && !empty($row->customer_name)) ? (string) $row->customer_name : '',
+        );
+        $formatted_user = $live->format_sse_message_payload($entry, 0);
+        $formatted_assistant = is_array($assistant)
+            ? $live->format_sse_message_payload($assistant, 0)
+            : array();
+
+        if (!empty($formatted_user['role']) && $formatted_user['role'] === 'user') {
+            $identity = PAXdesign_Chat_Live::resolve_customer_identity($session_context['wp_user_id'], $session_context['customer_name']);
+            $formatted_user['sender_id']     = $identity['id'];
+            $formatted_user['sender_name']   = $identity['name'];
+            $formatted_user['sender_avatar'] = $identity['avatar'];
+            $formatted_user['sender_role']   = $identity['role'];
+        }
+        if (!empty($formatted_assistant['role']) && $formatted_assistant['role'] === 'assistant') {
+            $ai = PAXdesign_Chat_Live::get_ai_assistant_identity();
+            $formatted_assistant['sender_name']   = $ai['name'];
+            $formatted_assistant['sender_avatar'] = $ai['avatar'];
+            $formatted_assistant['sender_role']   = $ai['role'];
+        }
+
+        return array(
+            'session_id' => $session_id,
+            'handler'    => $live->get_handler($session_id),
+            'message'    => $formatted_user,
+            'assistant'  => $formatted_assistant,
+        );
+    }
+
+    /**
+     * @param array<int, array{role:string,content:string}> $messages
+     * @return array{content:string,model:string}|WP_Error
+     */
+    private function request_openai_completion($messages) {
+        $worker_url = trim(get_option('paxdesign_chat_worker_url', ''));
+        if ($worker_url !== '') {
+            return new WP_Error('worker_only_stream', __('Chat is temporarily unavailable on mobile.', 'paxdesign-booking'), array('status' => 503));
+        }
+
+        $api_key = $this->get_openai_api_key();
+        if ($api_key === '') {
+            return new WP_Error('not_configured', __('Chat is not configured yet. Please contact support.', 'paxdesign-booking'), array('status' => 503));
+        }
+
+        $openai_messages = array(
+            array('role' => 'system', 'content' => $this->get_system_prompt()),
+        );
+        foreach ($messages as $msg) {
+            if ($msg['role'] !== 'system') {
+                $openai_messages[] = $msg;
+            }
+        }
+        $openai_messages = $this->trim_conversation_history($openai_messages);
+        $models = $this->get_model_candidates();
+        $last_error = __('No response from the assistant. Please try again.', 'paxdesign-booking');
+
+        foreach ($models as $model) {
+            $payload = wp_json_encode($this->build_openai_payload($model, $openai_messages));
+            if ($payload === false) {
+                continue;
+            }
+            $response = wp_remote_post('https://api.openai.com/v1/chat/completions', array(
+                'timeout' => 90,
+                'headers' => array(
+                    'Authorization' => 'Bearer ' . $api_key,
+                    'Content-Type'  => 'application/json',
+                ),
+                'body'    => $payload,
+            ));
+            if (is_wp_error($response)) {
+                $last_error = __('Connection error. Please try again.', 'paxdesign-booking');
+                continue;
+            }
+            $code = (int) wp_remote_retrieve_response_code($response);
+            $body = json_decode(wp_remote_retrieve_body($response), true);
+            if ($code >= 200 && $code < 300 && is_array($body)) {
+                $content = isset($body['choices'][0]['message']['content'])
+                    ? trim((string) $body['choices'][0]['message']['content'])
+                    : '';
+                if ($content !== '') {
+                    update_option('paxdesign_chat_last_model', $model, false);
+                    delete_option('paxdesign_chat_last_error');
+                    return array('content' => $content, 'model' => $model);
+                }
+            }
+            $last_error = $this->format_openai_error_message($code, $body, $model);
+            if ($code === 401) {
+                break;
+            }
+        }
+
+        update_option('paxdesign_chat_last_error', $last_error, false);
+        return new WP_Error('openai_failed', $last_error, array('status' => 502));
+    }
+
+    /**
      * @return array<int, array{role:string,content:string}>
      */
     private function build_openai_messages_from_session($session_id) {
