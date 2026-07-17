@@ -70,6 +70,11 @@
   var messageReactions   = {};
   var chatMessageMap     = {};
   var replyToId          = 0;
+  var authGateEl         = null;
+  var authGateSignInBtn  = null;
+  var authGateRegisterBtn = null;
+  var authGateVerifyEl   = null;
+  var authGateBound      = false;
 
   var customerName       = '';
   var pendingLiveTopic   = '';
@@ -225,6 +230,7 @@
 
   function startCustomerStream() {
     if (!pageVisible || !widgetOpen || chatHandler === 'closed' || typeof EventSource === 'undefined') return;
+    if (!canUseChat()) return;
     if (!getSessionId()) return;
     stopCustomerStream();
     try {
@@ -247,6 +253,162 @@
     }
   }
 
+  function isLoginGateEnabled() {
+    return !!(config && config.requireLogin);
+  }
+
+  function isLoggedIn() {
+    if (window.PDXAuth && typeof window.PDXAuth.isLoggedIn === 'function') {
+      return window.PDXAuth.isLoggedIn();
+    }
+    return !!(config && config.auth && config.auth.logged_in);
+  }
+
+  function isVerifiedAccount() {
+    if (window.PDXAuth && typeof window.PDXAuth.isVerified === 'function') {
+      return window.PDXAuth.isVerified();
+    }
+    var auth = config && config.auth ? config.auth : {};
+    return !!auth.verified || !!auth.is_admin;
+  }
+
+  function canUseChat() {
+    if (!isLoginGateEnabled()) return true;
+    return isLoggedIn() && isVerifiedAccount();
+  }
+
+  function initAuthGate() {
+    authGateEl = root.querySelector('#paxdesignChatAuthGate');
+    authGateSignInBtn = root.querySelector('#paxdesignChatAuthSignIn');
+    authGateRegisterBtn = root.querySelector('#paxdesignChatAuthRegister');
+    authGateVerifyEl = root.querySelector('#paxdesignChatAuthGateVerify');
+    if (config && config.authGate) {
+      var titleEl = root.querySelector('#paxdesignChatAuthGateTitle');
+      var subEl = root.querySelector('#paxdesignChatAuthGateSubtitle');
+      if (titleEl && config.authGate.title) titleEl.textContent = config.authGate.title;
+      if (subEl && config.authGate.subtitle) subEl.textContent = config.authGate.subtitle;
+      if (authGateSignInBtn && config.authGate.signIn) authGateSignInBtn.textContent = config.authGate.signIn;
+      if (authGateRegisterBtn && config.authGate.register) authGateRegisterBtn.textContent = config.authGate.register;
+      if (authGateVerifyEl && config.authGate.verifyHint) authGateVerifyEl.textContent = config.authGate.verifyHint;
+    }
+    if (authGateBound) return;
+    authGateBound = true;
+    if (authGateSignInBtn) {
+      authGateSignInBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        openAuthOverlay('login');
+      });
+    }
+    if (authGateRegisterBtn) {
+      authGateRegisterBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        openAuthOverlay('register');
+      });
+    }
+    if (!window.__paxChatAuthSessionBound) {
+      window.__paxChatAuthSessionBound = true;
+      window.addEventListener('pdx-session-updated', function () {
+        if (config && config.auth && window.PDXAuth && typeof window.PDXAuth.getUser === 'function') {
+          config.auth = window.PDXAuth.getUser();
+        }
+        updateAuthGateUi();
+        if (canUseChat()) {
+          hideAuthGate();
+          refreshAuthenticatedChatSession().then(function () {
+            if (widgetOpen) {
+              pollUpdates();
+              scheduleLivePolling();
+              startCustomerStream();
+            }
+          });
+        }
+      });
+    }
+    updateAuthGateUi();
+  }
+
+  function openAuthOverlay(view) {
+    if (window.PDXAuth && typeof window.PDXAuth.openLogin === 'function') {
+      window.PDXAuth.openLogin(view === 'register' ? 'register' : 'login');
+      return;
+    }
+    showLoginRequiredNotice();
+  }
+
+  function updateAuthGateUi() {
+    if (!authGateEl) return;
+    var needsVerify = isLoginGateEnabled() && isLoggedIn() && !isVerifiedAccount();
+    if (authGateVerifyEl) authGateVerifyEl.hidden = !needsVerify;
+    if (needsVerify) {
+      showAuthGate();
+      return;
+    }
+    if (canUseChat()) {
+      hideAuthGate();
+    } else if (widgetOpen) {
+      showAuthGate();
+    }
+  }
+
+  function showAuthGate() {
+    initAuthGate();
+    if (!isLoginGateEnabled()) return;
+    if (authGateEl) authGateEl.hidden = false;
+    root.classList.add('paxdesign-chat-auth-locked');
+    stopCustomerStream();
+    abortStream();
+  }
+
+  function hideAuthGate() {
+    if (authGateEl) authGateEl.hidden = true;
+    root.classList.remove('paxdesign-chat-auth-locked');
+  }
+
+  function adoptSessionId(sessionId) {
+    sessionId = String(sessionId || '').trim();
+    if (!sessionId || sessionId === cachedSessionId) return;
+    cachedSessionId = sessionId;
+    messages = [];
+    domMsgIds = {};
+    domClientMsgIds = {};
+    pollSeq = 0;
+    entryChoice = '';
+    sessionRestored = false;
+    if (threadEl) threadEl.innerHTML = '';
+    root.classList.remove('paxdesign-has-chat-messages');
+    try {
+      localStorage.setItem(SESSION_KEY, sessionId);
+      sessionStorage.setItem(SESSION_KEY, sessionId);
+    } catch (e) {}
+    loadEntryChoice();
+    loadCustomerName();
+    updateEntryUi();
+  }
+
+  function refreshAuthenticatedChatSession() {
+    if (!isLoggedIn()) return Promise.resolve();
+    if (window.PDXAuth && typeof window.PDXAuth.customerApiFetch === 'function') {
+      return window.PDXAuth.customerApiFetch('GET', '/customer/chat/session').then(function (data) {
+        if (data && data.session_id) {
+          adoptSessionId(data.session_id);
+          return fetchSessionFromServer(true);
+        }
+        return null;
+      }).catch(function () {
+        if (config && config.chatSessionId) {
+          adoptSessionId(config.chatSessionId);
+          return fetchSessionFromServer(true);
+        }
+        return null;
+      });
+    }
+    if (config && config.chatSessionId) {
+      adoptSessionId(config.chatSessionId);
+      return fetchSessionFromServer(true);
+    }
+    return Promise.resolve();
+  }
+
   function init() {
     if (initialized) return;
     initialized = true;
@@ -265,6 +427,7 @@
     initRatingUi();
     initSoundToggle();
     initPlusToggle();
+    initAuthGate();
     bindAudioUnlock();
     bindVisibilityResume();
     restoreCustomerSession().then(function () {
@@ -353,6 +516,13 @@
 
   function onWidgetOpen() {
     widgetOpen = true;
+    initAuthGate();
+    if (!canUseChat()) {
+      showAuthGate();
+      notifyLayout();
+      return;
+    }
+    hideAuthGate();
     if (chatHandler === 'closed' && isSessionArchived(getSessionId())) {
       beginFreshSessionSilently();
     }
@@ -1531,6 +1701,7 @@
 
   function pollUpdates() {
     if (!config.ajaxUrl) return;
+    if (!canUseChat()) return;
     var formData = new FormData();
     formData.append('action', 'paxdesign_chat_poll');
     formData.append('nonce', config.nonce);
@@ -1541,6 +1712,7 @@
     fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) { return res.json(); })
       .then(function (json) {
+        if (handleAuthGateResponse(json)) return;
         if (!json || !json.success || !json.data) return;
         var data = json.data;
         applyHandlerState(data.handler || 'ai', data.admin_name || '');
@@ -2126,6 +2298,11 @@
         }
       });
       head.appendChild(img);
+    } else if (agent.name) {
+      var initials = document.createElement('span');
+      initials.className = 'paxdesign-booking-chat-agent-avatar paxdesign-booking-chat-agent-avatar--initials';
+      initials.textContent = initialsFromName(agent.name);
+      head.appendChild(initials);
     }
     var nameWrap = document.createElement('span');
     nameWrap.className = 'paxdesign-booking-chat-agent-ident';
@@ -2142,8 +2319,56 @@
     head.appendChild(nameWrap);
     var time = document.createElement('span');
     time.className = 'paxdesign-booking-chat-agent-time';
-    time.textContent = formatMsgTime(Math.floor(Date.now() / 1000));
+    time.textContent = formatMsgTime(opts.ts || Math.floor(Date.now() / 1000));
     head.appendChild(time);
+    msgEl.insertBefore(head, msgEl.firstChild);
+  }
+
+  function initialsFromName(name) {
+    name = String(name || '').trim();
+    if (!name) return '?';
+    var parts = name.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) return (parts[0].charAt(0) + parts[1].charAt(0)).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  }
+
+  function renderParticipantHeader(msgEl, agent, variant) {
+    agent = agent || {};
+    var name = agent.name || agent.sender_name || '';
+    var role = agent.role || agent.sender_role || '';
+    var avatar = agent.avatar || agent.sender_avatar || '';
+    if (!name) return;
+    var head = document.createElement('div');
+    head.className = 'paxdesign-booking-chat-agent-head paxdesign-booking-chat-agent-head--' + (variant || 'assistant');
+    if (avatar) {
+      var img = document.createElement('img');
+      img.className = 'paxdesign-booking-chat-agent-avatar';
+      img.src = avatar;
+      img.alt = name;
+      img.width = 24;
+      img.height = 24;
+      img.loading = 'lazy';
+      img.decoding = 'async';
+      head.appendChild(img);
+    } else {
+      var initials = document.createElement('span');
+      initials.className = 'paxdesign-booking-chat-agent-avatar paxdesign-booking-chat-agent-avatar--initials';
+      initials.textContent = initialsFromName(name);
+      head.appendChild(initials);
+    }
+    var nameWrap = document.createElement('span');
+    nameWrap.className = 'paxdesign-booking-chat-agent-ident';
+    var nameEl = document.createElement('span');
+    nameEl.className = 'paxdesign-booking-chat-agent-name';
+    nameEl.textContent = name;
+    nameWrap.appendChild(nameEl);
+    if (role) {
+      var roleEl = document.createElement('span');
+      roleEl.className = 'paxdesign-booking-chat-agent-role';
+      roleEl.textContent = role;
+      nameWrap.appendChild(roleEl);
+    }
+    head.appendChild(nameWrap);
     msgEl.insertBefore(head, msgEl.firstChild);
   }
 
@@ -2402,6 +2627,20 @@
 
     if (role === 'admin') {
       renderAdminMessageHeader(msg, opts);
+    } else if (role === 'assistant') {
+      var aiAgent = (config && config.aiAssistant) ? config.aiAssistant : getLiveAgent();
+      renderParticipantHeader(msg, {
+        name: opts.sender_name || aiAgent.name,
+        avatar: opts.sender_avatar || aiAgent.avatar,
+        role: opts.sender_role || aiAgent.role || 'AI Assistant'
+      }, 'assistant');
+    } else if (role === 'user') {
+      var auth = (config && config.auth) ? config.auth : {};
+      renderParticipantHeader(msg, {
+        name: opts.sender_name || auth.display_name || customerName || 'You',
+        avatar: opts.sender_avatar || '',
+        role: opts.sender_role || 'Customer'
+      }, 'customer');
     }
 
     if (opts.reply_to) {
@@ -2596,6 +2835,7 @@
   function syncChatLog(extra) {
     extra = extra || {};
     if (!config.ajaxUrl) return Promise.resolve();
+    if (!canUseChat()) return Promise.resolve();
     var syncMessages = messages.filter(function (m) {
       return m.role === 'user' || m.role === 'assistant';
     });
@@ -2809,16 +3049,12 @@
 
   function showLoginRequiredNotice() {
     removeTyping();
-    var el = document.createElement('div');
-    el.className = 'paxdesign-booking-chat-error paxdesign-booking-chat-error--auth';
-    el.textContent = 'Bitte nutzen Sie „Sign Up“ in der Kopfzeile, um ein Konto zu erstellen oder sich anzumelden. Der Live Chat ist nur für Nachrichten.';
-    threadEl.appendChild(el);
-    scrollToBottom();
+    showAuthGate();
   }
 
   function handleAuthGateResponse(json) {
     if (!isLoginRequiredResponse(json)) return false;
-    showLoginRequiredNotice();
+    showAuthGate();
     return true;
   }
 
@@ -2924,6 +3160,10 @@
 
   function sendMessage(text, opts) {
     opts = opts || {};
+    if (!canUseChat()) {
+      showAuthGate();
+      return;
+    }
     text = (text || input.value).trim();
     if (!text || isStreaming) return;
     if (awaitingName || awaitingLiveConfirm) return;
@@ -3186,6 +3426,16 @@
     onClose: onWidgetClose,
     abort: abortStream,
     sendMessage: sendMessage,
+    canUseChat: canUseChat,
+    ensureAuthGate: function () {
+      initAuthGate();
+      if (!canUseChat()) {
+        showAuthGate();
+        return false;
+      }
+      hideAuthGate();
+      return true;
+    },
   };
 
 })();

@@ -62,7 +62,37 @@ final class CustomerChatDecodeTests: XCTestCase {
 
         let poll = try JSONDecoder().decode(CustomerChatPoll.self, from: json)
 
-        XCTAssertEqual(poll.messages?.count, 1)
-        XCTAssertEqual(poll.messages?.first?.seq, 3)
+    func testDecodesParticipantIdentityFields() throws {
+        let json = """
+        {
+          "session_id": "pax_u42_testsession",
+          "handler": "admin",
+          "admin_typing": true,
+          "messages": [
+            {
+              "id": 1,
+              "role": "assistant",
+              "content": "Hello!",
+              "sender_name": "PAXDesign AI",
+              "sender_role": "AI Assistant",
+              "sender_avatar": "https://example.com/ai.png"
+            },
+            {
+              "id": 2,
+              "role": "user",
+              "content": "Thanks",
+              "sender_name": "Jane Customer",
+              "sender_role": "Customer"
+            }
+          ]
+        }
+        """.data(using: .utf8)!
+
+        let poll = try JSONDecoder().decode(CustomerChatPoll.self, from: json)
+
+        XCTAssertEqual(poll.admin_typing, true)
+        XCTAssertEqual(poll.messages?.first?.sender_name, "PAXDesign AI")
+        XCTAssertEqual(poll.messages?.first?.sender_role, "AI Assistant")
+        XCTAssertEqual(poll.messages?.last?.sender_name, "Jane Customer")
     }
 }

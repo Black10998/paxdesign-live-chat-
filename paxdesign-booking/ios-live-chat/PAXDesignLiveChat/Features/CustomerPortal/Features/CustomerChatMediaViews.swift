@@ -1,24 +1,98 @@
 import SwiftUI
-import PhotosUI
-import AVFoundation
-import CoreLocation
 
 struct CustomerChatBubble: View {
     let message: CustomerChatPoll.ChatMessage
 
+    private var isOutgoing: Bool { message.role == "user" }
+
     var body: some View {
-        VStack(alignment: message.role == "user" ? .trailing : .leading, spacing: 4) {
-            if let name = message.sender_name, !name.isEmpty, message.role != "user" {
-                Text(name).font(.caption).foregroundStyle(.secondary)
+        HStack(alignment: .bottom, spacing: 8) {
+            if isOutgoing { Spacer(minLength: 24) }
+            if !isOutgoing { participantAvatar }
+            VStack(alignment: isOutgoing ? .trailing : .leading, spacing: 4) {
+                if let header = participantHeader {
+                    header
+                }
+                messageContent
+                    .padding(10)
+                    .background(bubbleBackground)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
-            messageContent
-                .padding(10)
-                .background(message.role == "user" ? Color.accentColor.opacity(0.15) : Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+            if isOutgoing { participantAvatar }
+            if !isOutgoing { Spacer(minLength: 24) }
         }
-        .frame(maxWidth: .infinity, alignment: message.role == "user" ? .trailing : .leading)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(message.content.isEmpty ? String(localized: "Attachment") : message.content)
+    }
+
+    @ViewBuilder
+    private var participantAvatar: some View {
+        if isOutgoing || message.role == "admin" || message.role == "assistant" {
+            CustomerChatAvatar(
+                name: displayName,
+                avatarURL: message.sender_avatar,
+                tint: avatarTint
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var participantHeader: some View {
+        let name = displayName
+        if !name.isEmpty {
+            HStack(spacing: 6) {
+                Text(name)
+                    .font(.caption.weight(.semibold))
+                if let role = roleLabel, !role.isEmpty {
+                    Text(role)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color(.tertiarySystemFill))
+                        .clipShape(Capsule())
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: isOutgoing ? .trailing : .leading)
+        }
+    }
+
+    private var displayName: String {
+        if let name = message.sender_name, !name.isEmpty { return name }
+        switch message.role {
+        case "user": return String(localized: "You")
+        case "assistant": return String(localized: "AI Assistant")
+        case "admin": return String(localized: "Support")
+        default: return ""
+        }
+    }
+
+    private var roleLabel: String? {
+        if let role = message.sender_role, !role.isEmpty { return role }
+        switch message.role {
+        case "assistant": return String(localized: "AI Assistant")
+        case "admin": return String(localized: "Support")
+        case "user": return String(localized: "Customer")
+        default: return nil
+        }
+    }
+
+    private var avatarTint: Color {
+        switch message.role {
+        case "user": return .accentColor
+        case "assistant": return .purple
+        case "admin": return .teal
+        default: return .secondary
+        }
+    }
+
+    private var bubbleBackground: Color {
+        if isOutgoing { return Color.accentColor.opacity(0.14) }
+        switch message.role {
+        case "assistant": return Color.purple.opacity(0.10)
+        case "admin": return Color.teal.opacity(0.12)
+        default: return Color(.secondarySystemBackground)
+        }
     }
 
     @ViewBuilder
@@ -45,6 +119,49 @@ struct CustomerChatBubble: View {
         } else if !message.content.isEmpty {
             Text(message.content)
         }
+    }
+}
+
+private struct CustomerChatAvatar: View {
+    let name: String
+    let avatarURL: String?
+    let tint: Color
+
+    var body: some View {
+        Group {
+            if let avatarURL, let url = URL(string: avatarURL), !avatarURL.isEmpty {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    default:
+                        initialsView
+                    }
+                }
+            } else {
+                initialsView
+            }
+        }
+        .frame(width: 28, height: 28)
+        .clipShape(Circle())
+        .overlay(Circle().strokeBorder(Color.primary.opacity(0.08), lineWidth: 0.5))
+    }
+
+    private var initialsView: some View {
+        ZStack {
+            Circle().fill(tint.opacity(0.18))
+            Text(initials)
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(tint)
+        }
+    }
+
+    private var initials: String {
+        let parts = name.split(separator: " ").filter { !$0.isEmpty }
+        if parts.count >= 2 {
+            return String(parts[0].prefix(1) + parts[1].prefix(1)).uppercased()
+        }
+        return String(name.prefix(2)).uppercased()
     }
 }
 

@@ -22,13 +22,36 @@ class PAXdesign_Customer_Platform {
         if (get_option('paxdesign_customer_require_login_for_chat', '') === '') {
             update_option('paxdesign_customer_require_login_for_chat', '1', false);
         }
-        add_action('wp_ajax_nopriv_paxdesign_chat_log', array(__CLASS__, 'maybe_block_guest_chat'), 0);
-        add_action('wp_ajax_nopriv_paxdesign_chat', array(__CLASS__, 'maybe_block_guest_chat'), 0);
+        foreach (self::guest_chat_ajax_actions() as $action) {
+            add_action('wp_ajax_nopriv_' . $action, array(__CLASS__, 'maybe_block_guest_chat'), 0);
+        }
         do_action('paxdesign_customer_platform_ready');
     }
 
     /**
-     * Optional gate: require toolbar login before anonymous chat persistence.
+     * All nopriv chat AJAX actions that must require login when the gate is enabled.
+     *
+     * @return string[]
+     */
+    public static function guest_chat_ajax_actions() {
+        return array(
+            'paxdesign_chat',
+            'paxdesign_chat_log',
+            'paxdesign_chat_poll',
+            'paxdesign_chat_stream',
+            'paxdesign_chat_live_user_send',
+            'paxdesign_chat_live_request',
+            'paxdesign_chat_live_user_typing',
+            'paxdesign_chat_live_reaction',
+            'paxdesign_chat_live_customer_close',
+            'paxdesign_chat_live_rating',
+            'paxdesign_chat_customer_history_list',
+            'paxdesign_chat_customer_history_session',
+        );
+    }
+
+    /**
+     * Require account login before any guest chat interaction.
      */
     public static function maybe_block_guest_chat() {
         if (get_option('paxdesign_customer_require_login_for_chat', '') !== '1') {
@@ -38,7 +61,7 @@ class PAXdesign_Customer_Platform {
             return;
         }
         wp_send_json_error(array(
-            'message' => __('Please use Sign Up in the site header to create an account or sign in. Live Chat is for messaging only.', 'paxdesign-booking'),
+            'message' => __('Sign in or create an account to use Live Chat.', 'paxdesign-booking'),
             'code'    => 'login_required',
         ), 401);
     }

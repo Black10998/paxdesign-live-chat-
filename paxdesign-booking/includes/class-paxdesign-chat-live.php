@@ -61,6 +61,72 @@ class PAXdesign_Chat_Live {
     }
 
     /**
+     * Public AI assistant identity for assistant-role chat messages.
+     *
+     * @return array{id: int, name: string, avatar: string, role: string}
+     */
+    public static function get_ai_assistant_identity() {
+        $name = trim((string) get_option('paxdesign_chat_ai_name', ''));
+        if ($name === '') {
+            $name = __('PAXDesign AI', 'paxdesign-booking');
+        }
+        $avatar = trim((string) get_option('paxdesign_chat_ai_avatar', ''));
+        if ($avatar === '') {
+            $avatar = self::get_agent_avatar_url();
+        }
+        return array(
+            'id'     => 0,
+            'name'   => sanitize_text_field($name),
+            'avatar' => esc_url_raw($avatar),
+            'role'   => __('AI Assistant', 'paxdesign-booking'),
+        );
+    }
+
+    /**
+     * Resolve a customer's public chat identity.
+     *
+     * @param int    $user_id
+     * @param string $fallback_name
+     * @return array{id: int, name: string, avatar: string, role: string}
+     */
+    public static function resolve_customer_identity($user_id, $fallback_name = '') {
+        $user_id = absint($user_id);
+        $fallback_name = trim((string) $fallback_name);
+        if ($user_id <= 0) {
+            $name = $fallback_name !== '' ? $fallback_name : __('Customer', 'paxdesign-booking');
+            return array(
+                'id'     => 0,
+                'name'   => sanitize_text_field($name),
+                'avatar' => '',
+                'role'   => __('Customer', 'paxdesign-booking'),
+            );
+        }
+
+        $user = get_user_by('id', $user_id);
+        if (!$user instanceof WP_User) {
+            $name = $fallback_name !== '' ? $fallback_name : __('Customer', 'paxdesign-booking');
+            return array(
+                'id'     => $user_id,
+                'name'   => sanitize_text_field($name),
+                'avatar' => '',
+                'role'   => __('Customer', 'paxdesign-booking'),
+            );
+        }
+
+        $name = trim($user->display_name);
+        if ($name === '') {
+            $name = $fallback_name !== '' ? $fallback_name : $user->user_login;
+        }
+
+        return array(
+            'id'     => $user_id,
+            'name'   => sanitize_text_field($name),
+            'avatar' => esc_url_raw(get_avatar_url($user_id, array('size' => 256))),
+            'role'   => __('Customer', 'paxdesign-booking'),
+        );
+    }
+
+    /**
      * Resolve the authenticated employee's public identity (hub name, avatar, role).
      *
      * @param int $user_id
@@ -2391,15 +2457,16 @@ class PAXdesign_Chat_Live {
         if (!is_array($msg)) {
             return array();
         }
-        $formatted = $this->format_messages_for_api(array($msg), absint($fallback_agent_id));
+        $formatted = $this->format_messages_for_api(array($msg), absint($fallback_agent_id), array());
         return !empty($formatted) ? $formatted[0] : $msg;
     }
 
     /**
      * @param array<int, array<string, mixed>> $messages
+     * @param array<string, mixed>             $session_context
      * @return array<int, array<string, mixed>>
      */
-    private function format_messages_for_api($messages, $fallback_agent_id = 0) {
+    private function format_messages_for_api($messages, $fallback_agent_id = 0, $session_context = array()) {
         $out = array();
         foreach ($this->sort_messages($messages) as $msg) {
             if (!is_array($msg)) {
@@ -2490,6 +2557,27 @@ class PAXdesign_Chat_Live {
                     }
                 }
             }
+            if ($role === 'assistant') {
+                $ai = self::get_ai_assistant_identity();
+                $entry['sender_id']     = 0;
+                $entry['sender_name']   = $ai['name'];
+                $entry['sender_avatar'] = $ai['avatar'];
+                $entry['sender_role']   = $ai['role'];
+            }
+            if ($role === 'user') {
+                $customer_user_id = !empty($msg['sender_id']) ? absint($msg['sender_id']) : 0;
+                if ($customer_user_id <= 0 && !empty($session_context['wp_user_id'])) {
+                    $customer_user_id = absint($session_context['wp_user_id']);
+                }
+                $customer_name = !empty($session_context['customer_name'])
+                    ? (string) $session_context['customer_name']
+                    : '';
+                $identity = self::resolve_customer_identity($customer_user_id, $customer_name);
+                $entry['sender_id']     = $identity['id'];
+                $entry['sender_name']   = $identity['name'];
+                $entry['sender_avatar'] = $identity['avatar'];
+                $entry['sender_role']   = $identity['role'];
+            }
             $out[] = $entry;
         }
         return $out;
@@ -2537,7 +2625,10 @@ class PAXdesign_Chat_Live {
         $raw_messages = class_exists('PAXdesign_Message_Store')
             ? PAXdesign_Message_Store::all_messages($session_id, 'customer')
             : $this->decode_messages($row->messages);
-        $all_messages = $this->format_messages_for_api($raw_messages, $agent['admin_user_id']);
+        $all_messages = $this->format_messages_for_api($raw_messages, $agent['admin_user_id'], array(
+            'wp_user_id'    => isset($row->wp_user_id) ? (int) $row->wp_user_id : 0,
+            'customer_name' => isset($row->customer_name) ? (string) $row->customer_name : '',
+        ));
         $authoritative_seq = class_exists('PAXdesign_Message_Store')
             ? PAXdesign_Message_Store::latest_seq($session_id, 'customer')
             : (isset($row->message_seq) ? (int) $row->message_seq : 0);
@@ -2583,20 +2674,24 @@ class PAXdesign_Chat_Live {
         }
 
         $agent    = self::session_agent_payload($row);
+        $session_context = array(
+            'wp_user_id'    => isset($row->wp_user_id) ? (int) $row->wp_user_id : 0,
+            'customer_name' => isset($row->customer_name) ? (string) $row->customer_name : '',
+        );
         if (class_exists('PAXdesign_Message_Store')) {
             $all = PAXdesign_Message_Store::all_messages($session_id, 'customer');
             $new = $full ? $all : PAXdesign_Message_Store::messages_since($session_id, $since, 500, 'customer');
             $message_seq = PAXdesign_Message_Store::latest_seq($session_id, 'customer');
         } else {
             $messages = $this->decode_messages($row->messages);
-            $all = $this->format_messages_for_api($messages, $agent['admin_user_id']);
+            $all = $this->format_messages_for_api($messages, $agent['admin_user_id'], $session_context);
             $new = $full ? $all : array_values(array_filter($all, function ($msg) use ($since) {
                 return isset($msg['id']) && (int) $msg['id'] > $since;
             }));
             $message_seq = isset($row->message_seq) ? (int) $row->message_seq : 0;
         }
-        $all = $this->format_messages_for_api($all, $agent['admin_user_id']);
-        $new = $this->format_messages_for_api($new, $agent['admin_user_id']);
+        $all = $this->format_messages_for_api($all, $agent['admin_user_id'], $session_context);
+        $new = $this->format_messages_for_api($new, $agent['admin_user_id'], $session_context);
         if (class_exists('PAXdesign_Message_Store')) {
             $all = PAXdesign_Message_Store::mask_messages_for_customer($all);
             $new = PAXdesign_Message_Store::mask_messages_for_customer($new);

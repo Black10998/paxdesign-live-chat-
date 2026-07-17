@@ -194,6 +194,10 @@ struct CustomerChatView: View {
                                 ForEach(displayMessages, id: \.id) { message in
                                     CustomerChatBubble(message: message).id(message.id)
                                 }
+                                if poll?.admin_typing == true, isHumanQueue {
+                                    CustomerChatTypingIndicator(label: String(localized: "Support is typing…"))
+                                        .id("typing")
+                                }
                                 if !streamingAssistant.isEmpty {
                                     Text(streamingAssistant)
                                         .padding(10)
@@ -523,5 +527,22 @@ private struct CustomerChatEmptyState: View {
             )
         )
         .padding(.horizontal, 24)
+    }
+}
+
+private struct CustomerChatTypingIndicator: View {
+    let label: String
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ProgressView()
+                .controlSize(.small)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            Spacer(minLength: 24)
+        }
+        .padding(.horizontal, 4)
+        .accessibilityLabel(label)
     }
 }

@@ -331,6 +331,21 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
         <!-- AI Chat Mode -->
         <div class="paxdesign-booking-mode-panel paxdesign-is-active" id="paxdesignChatPanel" data-mode="chat" role="tabpanel" aria-hidden="false">
 
+          <div class="paxdesign-booking-chat-auth-gate" id="paxdesignChatAuthGate" hidden>
+            <div class="paxdesign-booking-chat-auth-gate-card" role="dialog" aria-modal="true" aria-labelledby="paxdesignChatAuthGateTitle">
+              <div class="paxdesign-booking-chat-auth-gate-icon" aria-hidden="true">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+              </div>
+              <h3 class="paxdesign-booking-chat-auth-gate-title" id="paxdesignChatAuthGateTitle"><?php echo esc_html__('Continue to Live Chat', 'paxdesign-booking'); ?></h3>
+              <p class="paxdesign-booking-chat-auth-gate-sub" id="paxdesignChatAuthGateSubtitle"><?php echo esc_html__('Sign in or create a free account to message our team. Your conversation stays synced across the website and app.', 'paxdesign-booking'); ?></p>
+              <p class="paxdesign-booking-chat-auth-gate-verify" id="paxdesignChatAuthGateVerify" hidden><?php echo esc_html__('Verify your email to start chatting.', 'paxdesign-booking'); ?></p>
+              <div class="paxdesign-booking-chat-auth-gate-actions">
+                <button type="button" class="paxdesign-booking-chat-auth-gate-btn paxdesign-booking-chat-auth-gate-btn--primary" id="paxdesignChatAuthSignIn"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></button>
+                <button type="button" class="paxdesign-booking-chat-auth-gate-btn paxdesign-booking-chat-auth-gate-btn--secondary" id="paxdesignChatAuthRegister"><?php echo esc_html__('Create Account', 'paxdesign-booking'); ?></button>
+              </div>
+            </div>
+          </div>
+
           <div class="paxdesign-booking-body paxdesign-booking-chat-body">
             <div class="paxdesign-booking-chat-messages" role="log" aria-relevant="additions">
               <div class="paxdesign-booking-chat-entry" id="paxdesignChatEntry" hidden>

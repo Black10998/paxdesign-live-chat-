@@ -34,6 +34,23 @@ enum CustomerPortalDecode {
         return nil
     }
 
+    static func optionalBool<C: CodingKey>(_ container: KeyedDecodingContainer<C>, _ key: C) -> Bool? {
+        if let value = try? container.decodeIfPresent(Bool.self, forKey: key) {
+            return value
+        }
+        if let value = try? container.decodeIfPresent(String.self, forKey: key) {
+            switch value.lowercased() {
+            case "1", "true", "yes": return true
+            case "0", "false", "no": return false
+            default: return nil
+            }
+        }
+        if let value = try? container.decodeIfPresent(Int.self, forKey: key) {
+            return value != 0
+        }
+        return nil
+    }
+
     static func decodeChatMessages<C: CodingKey>(
         from container: KeyedDecodingContainer<C>,
         key: C

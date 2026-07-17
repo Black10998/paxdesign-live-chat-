@@ -51,11 +51,31 @@ class PAXdesign_Chat {
             true
         );
 
+        $auth_payload = class_exists('PAXdesign_Customer_Auth')
+            ? PAXdesign_Customer_Auth::user_payload()
+            : array('logged_in' => is_user_logged_in(), 'verified' => false, 'id' => get_current_user_id());
+        $chat_session_id = '';
+        if (!empty($auth_payload['logged_in']) && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            $chat_session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id((int) $auth_payload['id']);
+        }
+        $ai_identity = PAXdesign_Chat_Live::get_ai_assistant_identity();
+
         wp_localize_script('paxdesign-chat-script', 'paxdesignChat', array(
             'ajaxUrl'          => admin_url('admin-ajax.php'),
             'restUrl'          => rest_url('paxdesign/v1/chat'),
             'nonce'            => wp_create_nonce('paxdesign_chat_nonce'),
             'enabled'          => true,
+            'requireLogin'     => get_option('paxdesign_customer_require_login_for_chat', '1') === '1',
+            'auth'             => $auth_payload,
+            'chatSessionId'    => $chat_session_id,
+            'aiAssistant'      => $ai_identity,
+            'authGate'         => array(
+                'title'       => __('Continue to Live Chat', 'paxdesign-booking'),
+                'subtitle'    => __('Sign in or create a free account to message our team. Your conversation stays synced across the website and app.', 'paxdesign-booking'),
+                'signIn'      => __('Sign In', 'paxdesign-booking'),
+                'register'    => __('Create Account', 'paxdesign-booking'),
+                'verifyHint'  => __('Verify your email to start chatting.', 'paxdesign-booking'),
+            ),
             'quickActions'     => $this->get_quick_actions(),
             'contactUrl'       => get_option('paxdesign_booking_contact_url', home_url('/')),
             'phone'            => $this->get_contact_phone(),

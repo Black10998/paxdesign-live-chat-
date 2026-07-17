@@ -508,6 +508,9 @@ struct CustomerChatPoll: Decodable {
         let role: String
         let content: String
         let sender_name: String?
+        let sender_id: Int?
+        let sender_avatar: String?
+        let sender_role: String?
         let image_url: String?
         let audio_url: String?
         let attachment_type: String?
@@ -519,7 +522,8 @@ struct CustomerChatPoll: Decodable {
 
         enum CodingKeys: String, CodingKey {
             case seq, id, role, content
-            case sender_name, image_url, audio_url, attachment_type
+            case sender_name, sender_id, sender_avatar, sender_role
+            case image_url, audio_url, attachment_type
             case location_lat, location_lng, location_label
             case file_url, file_name
         }
@@ -529,6 +533,9 @@ struct CustomerChatPoll: Decodable {
             role: String,
             content: String,
             sender_name: String? = nil,
+            sender_id: Int? = nil,
+            sender_avatar: String? = nil,
+            sender_role: String? = nil,
             image_url: String? = nil,
             audio_url: String? = nil,
             attachment_type: String? = nil,
@@ -542,6 +549,9 @@ struct CustomerChatPoll: Decodable {
             self.role = role
             self.content = content
             self.sender_name = sender_name
+            self.sender_id = sender_id
+            self.sender_avatar = sender_avatar
+            self.sender_role = sender_role
             self.image_url = image_url
             self.audio_url = audio_url
             self.attachment_type = attachment_type
@@ -560,6 +570,9 @@ struct CustomerChatPoll: Decodable {
             role = CustomerPortalDecode.string(container, .role)
             content = CustomerPortalDecode.string(container, .content)
             sender_name = try? container.decodeIfPresent(String.self, forKey: .sender_name)
+            sender_id = CustomerPortalDecode.optionalInt(container, .sender_id)
+            sender_avatar = try? container.decodeIfPresent(String.self, forKey: .sender_avatar)
+            sender_role = try? container.decodeIfPresent(String.self, forKey: .sender_role)
             image_url = try? container.decodeIfPresent(String.self, forKey: .image_url)
             audio_url = try? container.decodeIfPresent(String.self, forKey: .audio_url)
             attachment_type = try? container.decodeIfPresent(String.self, forKey: .attachment_type)
@@ -590,9 +603,12 @@ struct CustomerChatPoll: Decodable {
     let messages: [ChatMessage]?
     let message_count: Int?
     let last_preview: String?
+    let admin_typing: Bool?
+    let user_typing: Bool?
 
     enum CodingKeys: String, CodingKey {
         case session_id, handler, messages, message_count, last_preview
+        case admin_typing, user_typing
     }
 
     init(
@@ -600,13 +616,17 @@ struct CustomerChatPoll: Decodable {
         handler: String?,
         messages: [ChatMessage]?,
         message_count: Int?,
-        last_preview: String?
+        last_preview: String?,
+        admin_typing: Bool? = nil,
+        user_typing: Bool? = nil
     ) {
         self.session_id = session_id
         self.handler = handler
         self.messages = messages
         self.message_count = message_count
         self.last_preview = last_preview
+        self.admin_typing = admin_typing
+        self.user_typing = user_typing
     }
 
     init(from decoder: Decoder) throws {
@@ -616,6 +636,8 @@ struct CustomerChatPoll: Decodable {
         messages = CustomerPortalDecode.decodeChatMessages(from: container, key: .messages)
         message_count = CustomerPortalDecode.optionalInt(container, .message_count)
         last_preview = try? container.decodeIfPresent(String.self, forKey: .last_preview)
+        admin_typing = CustomerPortalDecode.optionalBool(container, .admin_typing)
+        user_typing = CustomerPortalDecode.optionalBool(container, .user_typing)
     }
 }
 
