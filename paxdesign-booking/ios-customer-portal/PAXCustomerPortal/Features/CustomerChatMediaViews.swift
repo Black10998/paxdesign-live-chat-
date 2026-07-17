@@ -11,37 +11,40 @@ struct CustomerChatBubble: View {
             if let name = message.sender_name, !name.isEmpty, message.role != "user" {
                 Text(name).font(.caption).foregroundStyle(.secondary)
             }
-            Group {
-                if let url = message.image_url, let imageURL = URL(string: url) {
-                    AsyncImage(url: imageURL) { phase in
-                        switch phase {
-                        case .success(let image): image.resizable().scaledToFit()
-                        case .failure: Image(systemName: "photo").foregroundStyle(.secondary)
-                        default: ProgressView()
-                        }
-                    }
-                    .frame(maxWidth: 220)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                } else if message.attachment_type == "voice", let url = message.audio_url, let audioURL = URL(string: url) {
-                    CustomerVoicePlaybackView(url: audioURL)
-                } else if message.attachment_type == "location",
-                          let lat = message.location_lat, let lng = message.location_lng {
-                    Link(destination: URL(string: "http://maps.apple.com/?ll=\(lat),\(lng)")!) {
-                        Label(message.location_label ?? String(localized: "Shared location"), systemImage: "mappin.and.ellipse")
-                    }
-                } else if let fileURL = message.file_url, let url = URL(string: fileURL) {
-                    Link(message.file_name ?? fileURL.lastPathComponent, destination: url)
-                } else if !message.content.isEmpty {
-                    Text(message.content)
-                }
-            }
-            .padding(10)
-            .background(message.role == "user" ? Color.accentColor.opacity(0.15) : Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            messageContent
+                .padding(10)
+                .background(message.role == "user" ? Color.accentColor.opacity(0.15) : Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .frame(maxWidth: .infinity, alignment: message.role == "user" ? .trailing : .leading)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(message.content.isEmpty ? String(localized: "Attachment") : message.content)
+    }
+
+    @ViewBuilder
+    private var messageContent: some View {
+        if let url = message.image_url, let imageURL = URL(string: url) {
+            AsyncImage(url: imageURL) { phase in
+                switch phase {
+                case .success(let image): image.resizable().scaledToFit()
+                case .failure: Image(systemName: "photo").foregroundStyle(.secondary)
+                default: ProgressView()
+                }
+            }
+            .frame(maxWidth: 220)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else if message.attachment_type == "voice", let url = message.audio_url, let audioURL = URL(string: url) {
+            CustomerVoicePlaybackView(url: audioURL)
+        } else if message.attachment_type == "location",
+                  let lat = message.location_lat, let lng = message.location_lng {
+            Link(destination: URL(string: "http://maps.apple.com/?ll=\(lat),\(lng)")!) {
+                Label(message.location_label ?? String(localized: "Shared location"), systemImage: "mappin.and.ellipse")
+            }
+        } else if let fileURL = message.file_url, let url = URL(string: fileURL) {
+            Link(message.file_name ?? fileURL.lastPathComponent, destination: url)
+        } else if !message.content.isEmpty {
+            Text(message.content)
+        }
     }
 }
 
@@ -201,15 +204,5 @@ final class CustomerLocationProvider: NSObject, ObservableObject, CLLocationMana
             default: break
             }
         }
-    }
-}
-
-extension CustomerChatPoll {
-    init(session_id: String?, handler: String?, messages: [ChatMessage]?, message_count: Int?, last_preview: String?) {
-        self.session_id = session_id
-        self.handler = handler
-        self.messages = messages
-        self.message_count = message_count
-        self.last_preview = last_preview
     }
 }
