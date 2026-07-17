@@ -118,16 +118,6 @@ final class CustomerAPIClient: ObservableObject {
         return try await post("/customer/chat/session", body: body, as: CustomerChatSessionResponse.self)
     }
 
-    func fetchLegalPage(slug: String, lang: String) async throws -> CustomerLegalPageResponse {
-        let encodedSlug = slug.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? slug
-        let encodedLang = lang.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? lang
-        return try await get("/content/legal/\(encodedSlug)?lang=\(encodedLang)", as: CustomerLegalPageResponse.self)
-    }
-
-    func uploadProfileAvatar(imageData: Data, filename: String = "avatar.jpg") async throws -> CustomerProfileResponse {
-        try await uploadMultipart(path: "/customer/profile/avatar", field: "avatar", filename: filename, mime: "image/jpeg", data: imageData, fields: [:], as: CustomerProfileResponse.self)
-    }
-
     func downloadProjectFile(projectId: Int, fileId: Int) async throws -> URL {
         guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
         guard let url = endpointURL("/customer/projects/\(projectId)/files/\(fileId)/download") else {

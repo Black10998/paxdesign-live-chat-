@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CustomerAboutView: View {
     @EnvironmentObject private var api: CustomerAPIClient
+    @Environment(\.marketingTheme) private var theme
     @State private var about: CustomerAboutResponse?
     @State private var language: CustomerServicesCatalogLanguage = {
         let code = Locale.current.language.languageCode?.identifier ?? "de"
@@ -203,6 +204,7 @@ struct CustomerAboutView: View {
 struct CustomerContactView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
+    @Environment(\.marketingTheme) private var theme
     @State private var contact: CustomerContactResponse?
     @State private var language: CustomerServicesCatalogLanguage = {
         let code = Locale.current.language.languageCode?.identifier ?? "de"
