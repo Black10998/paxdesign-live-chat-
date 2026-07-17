@@ -516,17 +516,122 @@ struct CustomerChatPoll: Decodable {
         let location_label: String?
         let file_url: String?
         let file_name: String?
+
+        enum CodingKeys: String, CodingKey {
+            case seq, id, role, content
+            case sender_name, image_url, audio_url, attachment_type
+            case location_lat, location_lng, location_label
+            case file_url, file_name
+        }
+
+        init(
+            seq: Int,
+            role: String,
+            content: String,
+            sender_name: String? = nil,
+            image_url: String? = nil,
+            audio_url: String? = nil,
+            attachment_type: String? = nil,
+            location_lat: Double? = nil,
+            location_lng: Double? = nil,
+            location_label: String? = nil,
+            file_url: String? = nil,
+            file_name: String? = nil
+        ) {
+            self.seq = seq
+            self.role = role
+            self.content = content
+            self.sender_name = sender_name
+            self.image_url = image_url
+            self.audio_url = audio_url
+            self.attachment_type = attachment_type
+            self.location_lat = location_lat
+            self.location_lng = location_lng
+            self.location_label = location_label
+            self.file_url = file_url
+            self.file_name = file_name
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            let decodedSeq = CustomerPortalDecode.int(container, .seq)
+            let decodedID = CustomerPortalDecode.int(container, .id)
+            seq = decodedSeq > 0 ? decodedSeq : decodedID
+            role = CustomerPortalDecode.string(container, .role)
+            content = CustomerPortalDecode.string(container, .content)
+            sender_name = try? container.decodeIfPresent(String.self, forKey: .sender_name)
+            image_url = try? container.decodeIfPresent(String.self, forKey: .image_url)
+            audio_url = try? container.decodeIfPresent(String.self, forKey: .audio_url)
+            attachment_type = try? container.decodeIfPresent(String.self, forKey: .attachment_type)
+            location_lat = Self.optionalDouble(container, .location_lat)
+            location_lng = Self.optionalDouble(container, .location_lng)
+            location_label = try? container.decodeIfPresent(String.self, forKey: .location_label)
+            file_url = try? container.decodeIfPresent(String.self, forKey: .file_url)
+            file_name = try? container.decodeIfPresent(String.self, forKey: .file_name)
+        }
+
+        private static func optionalDouble<C: CodingKey>(
+            _ container: KeyedDecodingContainer<C>,
+            _ key: C
+        ) -> Double? {
+            if let value = try? container.decodeIfPresent(Double.self, forKey: key) {
+                return value
+            }
+            if let value = try? container.decodeIfPresent(String.self, forKey: key),
+               let parsed = Double(value) {
+                return parsed
+            }
+            return nil
+        }
     }
+
     let session_id: String?
     let handler: String?
     let messages: [ChatMessage]?
     let message_count: Int?
     let last_preview: String?
+
+    enum CodingKeys: String, CodingKey {
+        case session_id, handler, messages, message_count, last_preview
+    }
+
+    init(
+        session_id: String?,
+        handler: String?,
+        messages: [ChatMessage]?,
+        message_count: Int?,
+        last_preview: String?
+    ) {
+        self.session_id = session_id
+        self.handler = handler
+        self.messages = messages
+        self.message_count = message_count
+        self.last_preview = last_preview
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        session_id = try? container.decodeIfPresent(String.self, forKey: .session_id)
+        handler = try? container.decodeIfPresent(String.self, forKey: .handler)
+        messages = CustomerPortalDecode.decodeChatMessages(from: container, key: .messages)
+        message_count = CustomerPortalDecode.optionalInt(container, .message_count)
+        last_preview = try? container.decodeIfPresent(String.self, forKey: .last_preview)
+    }
 }
 
 struct CustomerSendResponse: Decodable {
     let session_id: String
     let handler: String?
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        session_id = CustomerPortalDecode.string(container, .session_id)
+        handler = try? container.decodeIfPresent(String.self, forKey: .handler)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case session_id, handler
+    }
 }
 
 struct CustomerStreamEvent: Decodable {

@@ -1,2 +1,2 @@
-Unified mobile auth: mobile-login API, OTP verification, auth logging.
-2026-07-17T17:30:00Z
+Fix customer chat JSON decode (id vs seq); plugin 3.136.6.
+2026-07-17T18:05:00Z

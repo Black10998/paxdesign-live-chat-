@@ -1047,6 +1047,7 @@ class PAXdesign_Message_Store {
         }
         $entry = array_merge(array(
             'id'            => (int) $row->msg_seq,
+            'seq'           => (int) $row->msg_seq,
             'client_msg_id' => (string) $row->client_msg_id,
             'role'          => (string) $row->role,
             'content'       => (string) $row->content,

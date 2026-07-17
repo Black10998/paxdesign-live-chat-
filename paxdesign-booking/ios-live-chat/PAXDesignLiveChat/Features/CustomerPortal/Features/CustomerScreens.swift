@@ -157,6 +157,7 @@ struct CustomerChatView: View {
     @State private var poll: CustomerChatPoll?
     @State private var draft = ""
     @State private var error: String?
+    @State private var isLoading = true
     @State private var isSending = false
     @State private var streamingAssistant = ""
     @State private var lastSeq = 0
@@ -181,20 +182,29 @@ struct CustomerChatView: View {
                 }
                 ScrollViewReader { proxy in
                     ScrollView {
-                        LazyVStack(alignment: .leading, spacing: 12) {
-                            ForEach(displayMessages, id: \.id) { message in
-                                CustomerChatBubble(message: message).id(message.id)
+                        if isLoading && displayMessages.isEmpty {
+                            ProgressView(String(localized: "Loading chat…"))
+                                .frame(maxWidth: .infinity)
+                                .padding(.top, 48)
+                        } else if displayMessages.isEmpty && error == nil {
+                            CustomerChatEmptyState(isAI: !isHumanQueue)
+                                .padding(.top, 32)
+                        } else {
+                            LazyVStack(alignment: .leading, spacing: 12) {
+                                ForEach(displayMessages, id: \.id) { message in
+                                    CustomerChatBubble(message: message).id(message.id)
+                                }
+                                if !streamingAssistant.isEmpty {
+                                    Text(streamingAssistant)
+                                        .padding(10)
+                                        .background(Color(.secondarySystemBackground))
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .id("streaming")
+                                }
                             }
-                            if !streamingAssistant.isEmpty {
-                                Text(streamingAssistant)
-                                    .padding(10)
-                                    .background(Color(.secondarySystemBackground))
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .id("streaming")
-                            }
+                            .padding()
                         }
-                        .padding()
                     }
                     .onChange(of: displayMessages.count) { _ in scrollToBottom(proxy: proxy) }
                 }
@@ -221,7 +231,13 @@ struct CustomerChatView: View {
             .navigationTitle(String(localized: "Chat"))
             .toolbar { NavigationLink(String(localized: "History")) { CustomerConversationsView() } }
             .overlay(alignment: .top) {
-                if let error { Text(error).font(.footnote).foregroundStyle(.red).padding(8) }
+                if let error {
+                    Text(error)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .padding(8)
+                        .multilineTextAlignment(.center)
+                }
             }
             .sheet(isPresented: $showImagePicker) {
                 CustomerPhotoPicker { data in Task { await sendPhoto(data) } }
@@ -256,6 +272,8 @@ struct CustomerChatView: View {
     }
 
     private func refresh(full: Bool = false) async {
+        if full && poll == nil { isLoading = true }
+        defer { isLoading = false }
         do {
             let since = full ? 0 : lastSeq
             let next = try await api.fetchChatMessages(sessionID: poll?.session_id, since: since, full: full)
@@ -272,21 +290,45 @@ struct CustomerChatView: View {
                     message_count: next.message_count,
                     last_preview: next.last_preview
                 )
-            } else if var current = poll {
-                current = CustomerChatPoll(
+            } else if let current = poll {
+                poll = CustomerChatPoll(
                     session_id: current.session_id,
                     handler: next.handler ?? current.handler,
                     messages: current.messages,
                     message_count: current.message_count,
                     last_preview: current.last_preview
                 )
-                poll = current
             }
             if let maxSeq = poll?.messages?.map(\.seq).max() { lastSeq = max(lastSeq, maxSeq) }
             error = nil
         } catch {
-            self.error = error.localizedDescription
+            self.error = friendlyChatError(error)
         }
+    }
+
+    private func friendlyChatError(_ error: Error) -> String {
+        if error is DecodingError {
+            return String(localized: "We couldn't load your messages. Pull down to refresh.")
+        }
+        if let apiError = error as? CustomerAPIError {
+            switch apiError {
+            case .unauthorized:
+                return String(localized: "Please sign in again to continue.")
+            case .network:
+                return String(localized: "Network error. Check your connection and try again.")
+            case .http(403):
+                return String(localized: "You don't have access to this conversation.")
+            case .http(404):
+                return String(localized: "Conversation not found.")
+            case .server(let message):
+                return message
+            case .http(let code):
+                return String(localized: "Something went wrong (error \(code)).")
+            default:
+                break
+            }
+        }
+        return error.localizedDescription
     }
 
     private func startPolling() {
@@ -464,5 +506,22 @@ struct CustomerProfileView: View {
             }
             .navigationTitle(String(localized: "Account"))
         }
+    }
+}
+
+private struct CustomerChatEmptyState: View {
+    let isAI: Bool
+
+    var body: some View {
+        PAXContentUnavailableView(
+            String(localized: "Start a conversation"),
+            systemImage: "message.fill",
+            description: Text(
+                isAI
+                    ? String(localized: "Ask a question about your project, order, or service. Our assistant is here to help.")
+                    : String(localized: "Send a message to continue your conversation with our team.")
+            )
+        )
+        .padding(.horizontal, 24)
     }
 }

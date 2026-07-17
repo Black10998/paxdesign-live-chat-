@@ -2406,8 +2406,10 @@ class PAXdesign_Chat_Live {
                 continue;
             }
             $role  = isset($msg['role']) ? sanitize_text_field($msg['role']) : 'assistant';
+            $seq   = isset($msg['seq']) ? (int) $msg['seq'] : (isset($msg['id']) ? (int) $msg['id'] : 0);
             $entry = array(
-                'id'      => isset($msg['id']) ? (int) $msg['id'] : 0,
+                'id'      => $seq,
+                'seq'     => $seq,
                 'role'    => $role,
                 'content' => isset($msg['content']) ? (string) $msg['content'] : '',
             );
