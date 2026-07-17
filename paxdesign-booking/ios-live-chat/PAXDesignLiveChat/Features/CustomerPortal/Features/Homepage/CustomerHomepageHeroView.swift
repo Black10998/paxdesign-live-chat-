@@ -119,27 +119,23 @@ private struct HeroTagsRow: View {
     let accentDot: Color
 
     var body: some View {
-        tagsText
-            .font(.system(size: metrics.tagFontSize, weight: .semibold))
-            .tracking(metrics.tagTracking)
-            .multilineTextAlignment(.center)
-            .frame(maxWidth: metrics.bodyMaxWidth)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-
-    private var tagsText: Text {
-        guard let first = tags.first else { return Text("") }
-        var composed = Text(first.uppercased())
-            .foregroundStyle(Color.white.opacity(0.72))
-        for tag in tags.dropFirst() {
-            composed = composed
-                + Text(" · ")
-                    .foregroundStyle(accentDot)
-                + Text(tag.uppercased())
+        HStack(spacing: 0) {
+            ForEach(Array(tags.enumerated()), id: \.offset) { index, tag in
+                if index > 0 {
+                    Text(" · ")
+                        .foregroundStyle(accentDot)
+                        .fontWeight(.bold)
+                }
+                Text(tag.uppercased())
                     .foregroundStyle(Color.white.opacity(0.72))
+            }
         }
-        return composed
+        .font(.system(size: metrics.tagFontSize, weight: .semibold))
+        .tracking(metrics.tagTracking)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: metrics.bodyMaxWidth)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .fixedSize(horizontal: false, vertical: true)
     }
 }
 

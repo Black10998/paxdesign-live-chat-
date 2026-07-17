@@ -526,7 +526,8 @@ struct CustomerChatView: View {
             let since = full ? 0 : lastSeq
             let next = try await api.fetchChatMessages(sessionID: poll?.session_id, since: since, full: full)
             applyPollUpdate(next, full: full)
-            if let pollNotice = next.notice, !pollNotice.isEmpty {
+            let pollNotice = next.notice
+            if let pollNotice, !pollNotice.isEmpty {
                 notice = pollNotice
             }
             if next.handler == "closed" {
