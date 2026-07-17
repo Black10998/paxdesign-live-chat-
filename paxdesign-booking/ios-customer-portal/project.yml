@@ -32,15 +32,8 @@ targets:
     entitlements:
       path: PAXCustomerPortal/PAXCustomerPortal.entitlements
     info:
+      path: PAXCustomerPortal/Info.plist
       properties:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleDisplayName: PAXDesign
-        NSUserNotificationsUsageDescription: "Notifications for project updates, messages, and announcements."
-        NSMicrophoneUsageDescription: "Record voice messages for support chat."
-        NSPhotoLibraryUsageDescription: "Attach photos to support conversations."
-        NSCameraUsageDescription: "Take photos to share in support chat."
-        NSLocationWhenInUseUsageDescription: "Share your location with support when you choose to."
-        ITSAppUsesNonExemptEncryption: false
-        UIBackgroundModes:
-          - remote-notification
