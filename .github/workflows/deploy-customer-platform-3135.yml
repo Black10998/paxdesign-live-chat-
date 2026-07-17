@@ -15,7 +15,7 @@ on:
     branches:
       - main
     paths:
-      - '.github/triggers/deploy-customer-platform-3138'
+      - '.github/triggers/deploy-customer-platform-3142'
 
 permissions:
   contents: read
