@@ -5,6 +5,12 @@ struct PAXContentUnavailableView: View {
     let systemImage: String
     let description: Text
 
+    init(_ title: String, systemImage: String, description: Text) {
+        self.title = title
+        self.systemImage = systemImage
+        self.description = description
+    }
+
     var body: some View {
         if #available(iOS 17.0, *) {
             ContentUnavailableView(title, systemImage: systemImage, description: description)
