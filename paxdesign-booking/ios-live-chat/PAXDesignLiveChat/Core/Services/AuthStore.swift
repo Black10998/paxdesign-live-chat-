@@ -17,17 +17,25 @@ final class AuthStore: ObservableObject {
     @Published private(set) var isBootstrapping = true
     /// Bumped on every login/logout so SwiftUI rebuilds the shell and drops stale UI state.
     @Published private(set) var sessionEpoch = UUID()
-    @Published var siteURLString = ""
     @Published var username = ""
-    @Published var appPassword = ""
+    @Published var accountPassword = ""
 
     private(set) var api: LiveChatAPI?
+    private var appPassword = ""
+    private var appPasswordUUID = ""
     private var unauthorizedRecoveryTask: Task<Void, Never>?
 
     private let service = "at.paxdesign.livechat.credentials"
 
+    var siteURLString: String { AppServerConfig.siteURL }
     var isCustomerSession: Bool { sessionMode == .customer }
     var isStaffSession: Bool { sessionMode == .staff }
+
+    /// Internal session credentials minted by the server (not shown in UI).
+    func storedAPICredentials() -> (username: String, appPassword: String)? {
+        guard !username.isEmpty, !appPassword.isEmpty else { return nil }
+        return (username, appPassword)
+    }
 
     private init() {
         loadStoredCredentials()
@@ -39,9 +47,9 @@ final class AuthStore: ObservableObject {
             clearFormFields()
             return
         }
-        siteURLString = dict.siteURL
         username = dict.username
         appPassword = dict.appPassword
+        appPasswordUUID = dict.appPasswordUUID ?? ""
         sessionMode = dict.sessionMode
     }
 
@@ -50,13 +58,13 @@ final class AuthStore: ObservableObject {
         defer { finishBootstrap() }
 
         guard !isLoggedIn else { return }
-        guard !username.isEmpty, !appPassword.isEmpty, !siteURLString.isEmpty else { return }
+        guard !username.isEmpty, !appPassword.isEmpty else { return }
 
         do {
             if sessionMode == .customer {
                 try await loginCustomer()
             } else {
-                try await login()
+                try await loginStaff()
             }
         } catch {
             if case LiveChatAPIError.unauthorized = error {
@@ -73,41 +81,60 @@ final class AuthStore: ObservableObject {
         isBootstrapping = false
     }
 
+    /// Unified sign-in: email/username + account password. Server decides staff vs customer.
     func login() async throws {
-        let site = try SecureURLValidator.validateHTTPS(siteURLString)
-        let normalizedSite = LiveChatAPI.normalizeSiteURL(site)
-        let user = LiveChatAPI.normalizeUsername(username)
-        let password = LiveChatAPI.normalizeAppPassword(appPassword)
+        let login = LiveChatAPI.normalizeUsername(username)
+        let password = accountPassword.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        guard !user.isEmpty, !password.isEmpty else {
-            throw LiveChatAPIError.server("Bitte alle Felder ausfüllen.")
+        guard !login.isEmpty, !password.isEmpty else {
+            throw LiveChatAPIError.server(String(localized: "Please enter your email and password."))
         }
 
-        siteURLString = normalizedSite.absoluteString
-        username = user
-        appPassword = password
+        username = login
 
-        let client = LiveChatAPI(siteURL: normalizedSite, username: user, appPassword: password)
-        do {
-            let me = try await client.validateLogin()
-            applyStaffSession(client: client, profile: me)
+        let client = CustomerAPIClient()
+        client.useDefaultServer()
+        let response = try await client.authMobileLogin(login: login, password: password)
+
+        guard response.success == true,
+              let mode = response.session_mode,
+              let userLogin = response.username,
+              let appPass = response.app_password else {
+            throw LiveChatAPIError.server(response.message ?? String(localized: "Sign in failed."))
+        }
+
+        username = userLogin
+        appPassword = LiveChatAPI.normalizeAppPassword(appPass)
+        appPasswordUUID = response.app_password_uuid ?? ""
+
+        if mode == "staff" {
+            try await loginStaff()
             persistCredentials(mode: .staff)
             Task(priority: .utility) {
                 await PlatformSyncService.shared.sync(auth: self)
             }
-        } catch LiveChatAPIError.unauthorized {
+        } else {
             try await loginCustomer()
-        } catch {
-            if case LiveChatAPIError.unauthorized = error {
-                invalidateStoredSession(keepFormFields: true)
-            }
-            throw error
+            persistCredentials(mode: .customer)
         }
     }
 
-    func loginCustomer() async throws {
-        let site = try SecureURLValidator.validateHTTPS(siteURLString)
+    func loginStaff() async throws {
+        let user = LiveChatAPI.normalizeUsername(username)
+        let password = LiveChatAPI.normalizeAppPassword(appPassword)
+
+        guard !user.isEmpty, !password.isEmpty else {
+            throw LiveChatAPIError.server(String(localized: "Please enter your email and password."))
+        }
+
+        let site = try SecureURLValidator.validateHTTPS(AppServerConfig.siteURL)
         let normalizedSite = LiveChatAPI.normalizeSiteURL(site)
+        let client = LiveChatAPI(siteURL: normalizedSite, username: user, appPassword: password)
+        let me = try await client.validateLogin()
+        applyStaffSession(client: client, profile: me)
+    }
+
+    func loginCustomer() async throws {
         let user = LiveChatAPI.normalizeUsername(username)
         let password = LiveChatAPI.normalizeAppPassword(appPassword)
 
@@ -115,14 +142,10 @@ final class AuthStore: ObservableObject {
             throw CustomerAPIError.unauthorized
         }
 
-        siteURLString = normalizedSite.absoluteString
-        username = user
-        appPassword = password
-
         let bridgeAuth = CustomerAuthStore()
         bridgeAuth.siteURL = siteURLString
-        bridgeAuth.username = username
-        bridgeAuth.appPassword = appPassword
+        bridgeAuth.username = user
+        bridgeAuth.appPassword = password
 
         let client = CustomerAPIClient()
         client.configure(baseURL: siteURLString, auth: bridgeAuth)
@@ -132,11 +155,10 @@ final class AuthStore: ObservableObject {
             applyCustomerSession(profile: response.profile)
             CustomerSessionController.shared.activate(
                 siteURL: siteURLString,
-                username: username,
-                appPassword: appPassword,
+                username: user,
+                appPassword: password,
                 profile: response.profile
             )
-            persistCredentials(mode: .customer)
         } catch CustomerAPIError.unauthorized {
             invalidateStoredSession(keepFormFields: true)
             throw CustomerAPIError.unauthorized
@@ -173,6 +195,7 @@ final class AuthStore: ObservableObject {
             siteURL: siteURLString,
             username: username,
             appPassword: appPassword,
+            appPasswordUUID: appPasswordUUID.isEmpty ? nil : appPasswordUUID,
             sessionMode: mode
         )
         if let data = try? JSONEncoder().encode(stored) {
@@ -189,7 +212,7 @@ final class AuthStore: ObservableObject {
         unauthorizedRecoveryTask = Task { @MainActor [weak self] in
             defer { self?.unauthorizedRecoveryTask = nil }
             guard let self else { return }
-            guard !username.isEmpty, !appPassword.isEmpty, !siteURLString.isEmpty else {
+            guard !username.isEmpty, !appPassword.isEmpty else {
                 invalidateStoredSession(keepFormFields: true)
                 return
             }
@@ -197,7 +220,7 @@ final class AuthStore: ObservableObject {
                 if sessionMode == .customer {
                     try await loginCustomer()
                 } else {
-                    try await login()
+                    try await loginStaff()
                 }
             } catch {
                 if case LiveChatAPIError.unauthorized = error {
@@ -216,6 +239,8 @@ final class AuthStore: ObservableObject {
         profile = nil
         customerProfile = nil
         sessionMode = nil
+        appPassword = ""
+        appPasswordUUID = ""
         CustomerSessionController.shared.deactivate()
         isLoggedIn = false
         sessionEpoch = UUID()
@@ -236,13 +261,30 @@ final class AuthStore: ObservableObject {
         unauthorizedRecoveryTask = nil
         let apiClient = api
         let tokenToUnregister = PushService.shared.deviceToken
+        let logoutUUID = appPasswordUUID
+        let logoutUser = username
+        let logoutPass = appPassword
+
         DeviceSessionService.shared.stop()
         PlatformSyncService.shared.reset()
         invalidateStoredSession(keepFormFields: false)
         PushDiagnosticsStore.shared.recordServerRegistration(success: false, tokenPrefix: nil, error: "logged out")
+
         if let apiClient, let token = tokenToUnregister {
             Task {
                 try? await apiClient.unregisterAPNs(token: token)
+            }
+        }
+
+        if !logoutUUID.isEmpty, !logoutUser.isEmpty, !logoutPass.isEmpty {
+            Task {
+                let bridgeAuth = CustomerAuthStore()
+                bridgeAuth.siteURL = AppServerConfig.siteURL
+                bridgeAuth.username = logoutUser
+                bridgeAuth.appPassword = logoutPass
+                let client = CustomerAPIClient()
+                client.configure(baseURL: AppServerConfig.siteURL, auth: bridgeAuth)
+                try? await client.authMobileLogout(appPasswordUUID: logoutUUID)
             }
         }
     }
@@ -260,7 +302,7 @@ final class AuthStore: ObservableObject {
     }
 
     private func restoreOfflineSession() {
-        guard !username.isEmpty, !appPassword.isEmpty, !siteURLString.isEmpty else { return }
+        guard !username.isEmpty, !appPassword.isEmpty else { return }
         guard let site = try? SecureURLValidator.validateHTTPS(siteURLString) else { return }
         let normalizedSite = LiveChatAPI.normalizeSiteURL(site)
         let user = LiveChatAPI.normalizeUsername(username)
@@ -276,9 +318,8 @@ final class AuthStore: ObservableObject {
     }
 
     private func clearFormFields() {
-        siteURLString = ""
         username = ""
-        appPassword = ""
+        accountPassword = ""
     }
 }
 
@@ -286,12 +327,14 @@ private struct StoredCredentials: Codable {
     let siteURL: String
     let username: String
     let appPassword: String
+    let appPasswordUUID: String?
     let sessionMode: SessionMode?
 
-    init(siteURL: String, username: String, appPassword: String, sessionMode: SessionMode? = nil) {
+    init(siteURL: String, username: String, appPassword: String, appPasswordUUID: String? = nil, sessionMode: SessionMode? = nil) {
         self.siteURL = siteURL
         self.username = username
         self.appPassword = appPassword
+        self.appPasswordUUID = appPasswordUUID
         self.sessionMode = sessionMode
     }
 }

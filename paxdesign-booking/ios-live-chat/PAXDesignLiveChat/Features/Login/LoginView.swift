@@ -3,13 +3,13 @@ import SwiftUI
 struct LoginView: View {
     @EnvironmentObject private var auth: AuthStore
     @ObservedObject private var customerSession = CustomerSessionController.shared
-    @State private var siteURL = ""
     @State private var username = ""
     @State private var password = ""
     @State private var isLoading = false
     @State private var error: String?
     @State private var customerAuthMode: CustomerAuthContainerView.AuthMode?
     @State private var showCustomerAuth = false
+    @State private var pendingVerifyEmail = ""
 
     var body: some View {
         NavigationStack {
@@ -27,9 +27,8 @@ struct LoginView: View {
                     .padding(.top, 24)
 
                     VStack(spacing: 14) {
-                        PAXField(title: L10n.LoginWebsite, icon: "globe", text: $siteURL, keyboardType: .URL)
                         PAXField(title: L10n.LoginUsername, icon: "person", text: $username, keyboardType: .emailAddress)
-                        PAXField(title: L10n.LoginAppPassword, icon: "key", text: $password, isSecure: true)
+                        PAXField(title: L10n.LoginPassword, icon: "lock", text: $password, isSecure: true)
                     }
 
                     if let error {
@@ -60,10 +59,6 @@ struct LoginView: View {
                     }
 
                     VStack(spacing: 8) {
-                        Text(L10n.LoginHint)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
                         Link(L10n.LoginPrivacy, destination: PAXLegalLinks.privacyPolicy)
                         Link(L10n.LoginTerms, destination: PAXLegalLinks.impressum)
                     }
@@ -86,15 +81,28 @@ struct LoginView: View {
                         }
                 }
                 .onAppear {
-                    customerSession.auth.siteURL = siteURL.isEmpty ? auth.siteURLString : siteURL
-                    customerSession.api.configure(baseURL: customerSession.auth.siteURL, auth: customerSession.auth)
+                    customerSession.api.useDefaultServer()
+                    customerSession.auth.siteURL = AppServerConfig.siteURL
                 }
             }
             .onAppear {
-                siteURL = auth.siteURLString.isEmpty ? "https://paxdesign.at" : auth.siteURLString
                 username = auth.username
-                password = auth.appPassword
+                password = auth.accountPassword
                 PAXHaptics.prepare()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: .paxEmailVerificationDeepLink)) { note in
+                if note.userInfo?["verified"] as? Bool == true {
+                    error = String(localized: "Email verified. You can sign in now.")
+                    return
+                }
+                if let err = note.userInfo?["error"] as? String {
+                    error = err
+                }
+                if let email = note.userInfo?["email"] as? String {
+                    pendingVerifyEmail = email
+                }
+                customerAuthMode = .verify
+                showCustomerAuth = true
             }
         }
     }
@@ -103,7 +111,8 @@ struct LoginView: View {
     private var customerAuthSheetContent: some View {
         switch customerAuthMode ?? .register {
         case .register:
-            CustomerRegisterView(onDone: {
+            CustomerRegisterView(onDone: { email in
+                pendingVerifyEmail = email
                 customerAuthMode = .verify
             })
         case .forgot:
@@ -111,9 +120,12 @@ struct LoginView: View {
                 showCustomerAuth = false
             })
         case .verify:
-            CustomerVerifyEmailView(onDone: {
-                showCustomerAuth = false
-            })
+            CustomerVerifyEmailView(
+                email: pendingVerifyEmail,
+                onDone: {
+                    showCustomerAuth = false
+                }
+            )
         case .login:
             EmptyView()
         }
@@ -126,9 +138,8 @@ struct LoginView: View {
         error = nil
         PAXHaptics.light()
 
-        auth.siteURLString = siteURL
         auth.username = username
-        auth.appPassword = password
+        auth.accountPassword = password
 
         Task {
             do {
@@ -136,9 +147,18 @@ struct LoginView: View {
                 PAXHaptics.success()
             } catch {
                 self.error = error.localizedDescription
+                if error.localizedDescription.localizedCaseInsensitiveContains("verify") {
+                    pendingVerifyEmail = username
+                    customerAuthMode = .verify
+                    showCustomerAuth = true
+                }
                 PAXHaptics.warning()
             }
             isLoading = false
         }
     }
+}
+
+extension Notification.Name {
+    static let paxEmailVerificationDeepLink = Notification.Name("paxEmailVerificationDeepLink")
 }

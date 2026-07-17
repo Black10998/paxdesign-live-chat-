@@ -789,7 +789,7 @@ class PAXdesign_Live_Chat_Mobile_API {
         if (!is_user_logged_in()) {
             return new WP_Error(
                 'rest_not_logged_in',
-                __('Use your WordPress username (or account email) and a valid Application Password via HTTP Basic Auth.', 'paxdesign-booking'),
+                __('Sign in with your PAXDesign account.', 'paxdesign-booking'),
                 array('status' => 401)
             );
         }

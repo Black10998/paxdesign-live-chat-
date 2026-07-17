@@ -73,6 +73,9 @@ struct PAXDesignLiveChatApp: App {
                 .onReceive(NotificationCenter.default.publisher(for: .paxPushOpened)) { note in
                     handlePushNotification(note, opened: true)
                 }
+                .onOpenURL { url in
+                    _ = AuthDeepLinkHandler.handle(url)
+                }
         }
     }
 

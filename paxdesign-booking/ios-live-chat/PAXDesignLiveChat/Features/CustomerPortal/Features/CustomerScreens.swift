@@ -16,19 +16,13 @@ struct CustomerLoginView: View {
                         .foregroundStyle(.orange)
                 }
             }
-            Section(String(localized: "Website")) {
-                TextField(String(localized: "Site URL"), text: $auth.siteURL)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.URL)
-                    .accessibilityLabel(String(localized: "Site URL"))
-            }
             Section(String(localized: "Account")) {
                 TextField(String(localized: "Email or username"), text: $auth.username)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
                     .accessibilityLabel(String(localized: "Email or username"))
-                SecureField(String(localized: "Application Password"), text: $auth.appPassword)
-                    .accessibilityLabel(String(localized: "Application Password"))
+                SecureField(String(localized: "Password"), text: $auth.appPassword)
+                    .accessibilityLabel(String(localized: "Password"))
             }
             if let error = auth.errorMessage {
                 Section { Text(error).foregroundStyle(.red).accessibilityLabel(error) }
@@ -48,11 +42,6 @@ struct CustomerLoginView: View {
                 if let onForgot {
                     Button(String(localized: "Forgot password?")) { onForgot() }
                 }
-            }
-            Section {
-                Text(String(localized: "Use the same PAXDesign account as the website. Create an Application Password in WordPress under Users → Profile."))
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
             }
         }
         .navigationTitle("PAXDesign")

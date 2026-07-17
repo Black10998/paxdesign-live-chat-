@@ -26,11 +26,12 @@ final class CustomerSessionController: ObservableObject {
     }
 
     func syncFromAuthStore(_ store: AuthStore) {
-        guard let profile = store.customerProfile else { return }
+        guard let profile = store.customerProfile,
+              let creds = store.storedAPICredentials() else { return }
         activate(
             siteURL: store.siteURLString,
-            username: store.username,
-            appPassword: store.appPassword,
+            username: creds.username,
+            appPassword: creds.appPassword,
             profile: profile
         )
     }

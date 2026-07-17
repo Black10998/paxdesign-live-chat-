@@ -364,6 +364,8 @@ class PDX_REST_API {
 		register_rest_route( $ns, '/auth/reset-password',    [ 'methods' => 'POST', 'callback' => [ $this, 'auth_reset_password' ],    'permission_callback' => $pub ] );
 		register_rest_route( $ns, '/auth/resend-verification',[ 'methods' => 'POST', 'callback' => [ $this, 'auth_resend_verification' ], 'permission_callback' => $pub ] );
 		register_rest_route( $ns, '/auth/verify',            [ 'methods' => 'POST', 'callback' => [ $this, 'auth_verify' ],            'permission_callback' => $pub ] );
+		register_rest_route( $ns, '/auth/mobile-login',      [ 'methods' => 'POST', 'callback' => [ $this, 'auth_mobile_login' ],      'permission_callback' => $pub ] );
+		register_rest_route( $ns, '/auth/mobile-logout',     [ 'methods' => 'POST', 'callback' => [ $this, 'auth_mobile_logout' ],     'permission_callback' => [ $this, 'rest_mobile_logout_permission' ] ] );
 		register_rest_route( $ns, '/account/dashboard',      [ 'methods' => 'GET',  'callback' => [ $this, 'account_dashboard' ],      'permission_callback' => $pub ] );
 		register_rest_route( $ns, '/account/profile',        [ 'methods' => 'POST', 'callback' => [ $this, 'account_update_profile' ], 'permission_callback' => $pub ] );
 		register_rest_route( $ns, '/account/api-keys',       [ 'methods' => 'POST', 'callback' => [ $this, 'account_update_api_key' ], 'permission_callback' => $pub ] );
@@ -1896,6 +1898,9 @@ class PDX_REST_API {
 			(string) $req->get_param( 'password' ),
 			sanitize_text_field( (string) $req->get_param( 'name' ) )
 		);
+		if ( ! $result['success'] && class_exists( 'PAXdesign_Auth_Log' ) ) {
+			PAXdesign_Auth_Log::event( 'registration_failed', [ 'error' => $result['error'] ?? 'unknown' ], 'warn' );
+		}
 		return new WP_REST_Response( $result, $result['success'] ? 201 : 400 );
 	}
 
@@ -1941,11 +1946,18 @@ class PDX_REST_API {
 		return new WP_REST_Response( $result, $result['success'] ? 200 : 400 );
 	}
 
-	public function auth_resend_verification(): WP_REST_Response {
+	public function auth_resend_verification( WP_REST_Request $req ): WP_REST_Response {
 		$rl = $this->auth_rate_limit_response( 'resend' );
 		if ( $rl ) {
 			return $rl;
 		}
+
+		$email = sanitize_email( (string) $req->get_param( 'email' ) );
+		if ( $email !== '' ) {
+			$result = PDX_Auth::resend_verification_by_email( $email );
+			return new WP_REST_Response( $result, $result['success'] ? 200 : 400 );
+		}
+
 		$deny = $this->require_logged_in();
 		if ( $deny ) {
 			return $deny;
@@ -1955,11 +1967,81 @@ class PDX_REST_API {
 	}
 
 	public function auth_verify( WP_REST_Request $req ): WP_REST_Response {
-		$result = PDX_Auth::verify_email(
-			(int) $req->get_param( 'uid' ),
-			sanitize_text_field( (string) $req->get_param( 'token' ) )
-		);
+		$email = sanitize_email( (string) $req->get_param( 'email' ) );
+		$code  = sanitize_text_field( (string) $req->get_param( 'code' ) );
+		if ( $email !== '' && $code !== '' ) {
+			$result = PDX_Auth::verify_by_email_and_code( $email, $code );
+			return new WP_REST_Response( $result, $result['success'] ? 200 : 400 );
+		}
+
+		$uid   = (int) $req->get_param( 'uid' );
+		$token = sanitize_text_field( (string) $req->get_param( 'token' ) );
+		$code  = sanitize_text_field( (string) $req->get_param( 'code' ) );
+
+		if ( $uid <= 0 ) {
+			return new WP_REST_Response(
+				[ 'success' => false, 'error' => 'missing_uid', 'message' => 'Invalid verification request.' ],
+				400
+			);
+		}
+
+		if ( $code !== '' ) {
+			$result = PDX_Auth::verify_email( $uid, '', $code );
+		} else {
+			$result = PDX_Auth::verify_email( $uid, $token );
+		}
 		return new WP_REST_Response( $result, $result['success'] ? 200 : 400 );
+	}
+
+	public function auth_mobile_login( WP_REST_Request $req ): WP_REST_Response {
+		$rl = $this->auth_rate_limit_response( 'login' );
+		if ( $rl ) {
+			return $rl;
+		}
+		$login = sanitize_text_field( (string) $req->get_param( 'login' ) );
+		if ( $login === '' ) {
+			$login = sanitize_email( (string) $req->get_param( 'email' ) );
+		}
+		$result = PDX_Auth::mobile_login(
+			$login,
+			(string) $req->get_param( 'password' ),
+			sanitize_text_field( (string) $req->get_param( 'device_label' ) )
+		);
+		$status = 200;
+		if ( ! $result['success'] ) {
+			$error = (string) ( $result['error'] ?? '' );
+			if ( in_array( $error, [ 'invalid_credentials', 'email_unverified', 'suspended' ], true ) ) {
+				$status = 401;
+			} elseif ( $error === 'locked' ) {
+				$status = 429;
+			} else {
+				$status = 400;
+			}
+		}
+		return new WP_REST_Response( $result, $status );
+	}
+
+	public function auth_mobile_logout( WP_REST_Request $req ): WP_REST_Response {
+		$user_id = get_current_user_id();
+		$uuid    = sanitize_text_field( (string) $req->get_param( 'app_password_uuid' ) );
+		$result  = PDX_Auth::mobile_logout( $user_id, $uuid );
+		return new WP_REST_Response( $result, $result['success'] ? 200 : 400 );
+	}
+
+	/**
+	 * Application Password auth for mobile logout.
+	 *
+	 * @return true|WP_Error
+	 */
+	public function rest_mobile_logout_permission() {
+		if ( ! is_user_logged_in() ) {
+			return new WP_Error(
+				'rest_not_logged_in',
+				__( 'Authentication required.', 'paxdesign-toolbar' ),
+				[ 'status' => 401 ]
+			);
+		}
+		return true;
 	}
 
 	public function account_dashboard(): WP_REST_Response {

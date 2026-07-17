@@ -19,7 +19,7 @@ struct CustomerAuthContainerView: View {
                         onForgot: { mode = .forgot }
                     )
                 case .register:
-                    CustomerRegisterView(onDone: { mode = .verify })
+                    CustomerRegisterView(onDone: { _ in mode = .verify })
                 case .forgot:
                     CustomerForgotPasswordView(onDone: { mode = .login })
                 case .verify:
@@ -39,7 +39,7 @@ struct CustomerAuthContainerView: View {
 
 struct CustomerRegisterView: View {
     @EnvironmentObject private var api: CustomerAPIClient
-    var onDone: () -> Void
+    var onDone: (String) -> Void
     @State private var name = ""
     @State private var email = ""
     @State private var password = ""
@@ -73,7 +73,7 @@ struct CustomerRegisterView: View {
         do {
             let response = try await api.authRegister(name: name, email: email, password: password)
             message = response.message ?? String(localized: "Check your email to verify your account.")
-            onDone()
+            onDone(email.trimmingCharacters(in: .whitespacesAndNewlines))
         } catch {
             message = error.localizedDescription
         }
@@ -119,45 +119,92 @@ struct CustomerForgotPasswordView: View {
 
 struct CustomerVerifyEmailView: View {
     @EnvironmentObject private var api: CustomerAPIClient
+    var email: String = ""
     var onDone: () -> Void
-    @State private var token = ""
+    @State private var emailField = ""
+    @State private var code = ""
     @State private var message: String?
+    @State private var isSuccess = false
+    @State private var isLoading = false
+    @State private var isResending = false
+
+    private let codeExpiryHours = 24
 
     var body: some View {
         Form {
             Section(String(localized: "Email verification")) {
-                Text(String(localized: "Open the link in your email, or enter the verification token."))
+                Text(String(localized: "Enter the 6-digit code from your email, or open the verification link."))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
-                TextField(String(localized: "Token"), text: $token)
+                TextField(String(localized: "Email"), text: $emailField)
                     .textInputAutocapitalization(.never)
+                    .keyboardType(.emailAddress)
+                TextField(String(localized: "Verification code"), text: $code)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.numberPad)
+                    .onChange(of: code) { newValue in
+                        let digits = newValue.filter(\.isNumber)
+                        code = String(digits.prefix(6))
+                    }
+                Text(String(localized: "Codes expire after \(codeExpiryHours) hours and can only be used once."))
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            if let message { Section { Text(message) } }
-            Section {
-                Button(String(localized: "Verify email")) {
-                    Task {
-                        do {
-                            _ = try await api.authVerify(token: token)
-                            message = String(localized: "Email verified. You can sign in.")
-                            onDone()
-                        } catch {
-                            message = error.localizedDescription
-                        }
-                    }
-                }.disabled(token.isEmpty)
-                Button(String(localized: "Resend verification email")) {
-                    Task {
-                        do {
-                            let response = try await api.authResendVerification(email: "")
-                            message = response.message
-                        } catch {
-                            message = error.localizedDescription
-                        }
-                    }
+            if let message {
+                Section {
+                    Text(message)
+                        .foregroundStyle(isSuccess ? Color.secondary : Color.red)
                 }
+            }
+            Section {
+                Button(isLoading ? String(localized: "Verifying…") : String(localized: "Verify email")) {
+                    Task { await verify() }
+                }
+                .disabled(isLoading || emailField.isEmpty || code.count != 6)
+
+                Button(isResending ? String(localized: "Sending…") : String(localized: "Resend verification email")) {
+                    Task { await resend() }
+                }
+                .disabled(isResending || emailField.isEmpty)
             }
         }
         .navigationTitle(String(localized: "Verify email"))
+        .onAppear {
+            if emailField.isEmpty, !email.isEmpty {
+                emailField = email
+            }
+        }
+    }
+
+    private func verify() async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            _ = try await api.authVerify(email: emailField.trimmingCharacters(in: .whitespacesAndNewlines), code: code)
+            isSuccess = true
+            message = String(localized: "Email verified. You can sign in now.")
+            onDone()
+        } catch {
+            isSuccess = false
+            message = error.localizedDescription
+        }
+    }
+
+    private func resend() async {
+        isResending = true
+        defer { isResending = false }
+        do {
+            let response = try await api.authResendVerification(email: emailField.trimmingCharacters(in: .whitespacesAndNewlines))
+            isSuccess = true
+            if let hours = response.expires_in_hours {
+                message = response.message ?? String(localized: "Verification email sent. Code valid for \(hours) hours.")
+            } else {
+                message = response.message ?? String(localized: "Verification email sent.")
+            }
+        } catch {
+            isSuccess = false
+            message = error.localizedDescription
+        }
     }
 }
 

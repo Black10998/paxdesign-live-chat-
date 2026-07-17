@@ -11,6 +11,7 @@ class PDX_Auth {
 
 	const META_VERIFIED       = 'pdx_email_verified';
 	const META_VERIFY_TOKEN   = 'pdx_verify_token';
+	const META_VERIFY_CODE    = 'pdx_verify_code';
 	const META_VERIFY_EXPIRES = 'pdx_verify_expires';
 	const META_RESET_TOKEN    = 'pdx_reset_token';
 	const META_RESET_EXPIRES  = 'pdx_reset_expires';
@@ -33,6 +34,8 @@ class PDX_Auth {
 
 	public static function register_hooks(): void {
 		add_action( 'init', [ self::class, 'ensure_customer_role' ], 5 );
+		add_action( 'init', [ self::class, 'bootstrap_mobile_auth_basic' ], 1 );
+		add_filter( 'determine_current_user', [ self::class, 'map_basic_auth_email_to_login' ], 19 );
 		add_action( 'init', [ self::class, 'handle_email_verify_link' ] );
 		add_filter( 'authenticate', [ self::class, 'block_unverified_login' ], 30, 3 );
 		add_action( 'wp_ajax_pdx_rest_nonce', [ self::class, 'ajax_rest_nonce' ] );
@@ -240,6 +243,9 @@ class PDX_Auth {
 		self::send_verification_email( $user_id );
 
 		PDX_Audit::log( 'auth', 'user_registered', [ 'user_id' => $user_id, 'email' => $email ] );
+		if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+			PAXdesign_Auth_Log::event( 'registration_success', [ 'user_id' => $user_id ] );
+		}
 
 		return [
 			'success' => true,
@@ -311,6 +317,9 @@ class PDX_Auth {
 		do_action( 'pdx_user_logged_in', $signed->ID );
 
 		PDX_Audit::log( 'auth', 'user_login', [ 'user_id' => $signed->ID ] );
+		if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+			PAXdesign_Auth_Log::event( 'web_login_success', [ 'user_id' => $signed->ID ] );
+		}
 
 		return array_merge(
 			[
@@ -414,29 +423,391 @@ class PDX_Auth {
 		}
 
 		self::send_verification_email( $user_id );
-		return [ 'success' => true, 'message' => 'Verification email sent.' ];
+		if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+			PAXdesign_Auth_Log::event( 'verification_resent', [ 'user_id' => $user_id ] );
+		}
+		return [
+			'success'          => true,
+			'message'          => 'Verification email sent.',
+			'expires_in_hours' => self::VERIFY_TTL_HOURS,
+		];
 	}
 
-	public static function verify_email( int $user_id, string $token ): array {
+	/**
+	 * Public resend by email (mobile registration flow).
+	 *
+	 * @return array{success:bool,message?:string,error?:string,expires_in_hours?:int}
+	 */
+	public static function resend_verification_by_email( string $email ): array {
+		$email = sanitize_email( $email );
+		if ( ! is_email( $email ) ) {
+			return [
+				'success' => true,
+				'message' => 'If an account exists, a verification email was sent.',
+			];
+		}
+
+		$user = get_user_by( 'email', $email );
+		if ( ! $user ) {
+			return [
+				'success' => true,
+				'message' => 'If an account exists, a verification email was sent.',
+			];
+		}
+		if ( self::is_email_verified( (int) $user->ID ) ) {
+			return [ 'success' => true, 'message' => 'Your email is already verified.' ];
+		}
+
+		self::send_verification_email( (int) $user->ID );
+		PDX_Audit::log( 'auth', 'verification_resent', [ 'user_id' => (int) $user->ID ] );
+		if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+			PAXdesign_Auth_Log::event( 'verification_resent', [ 'user_id' => (int) $user->ID, 'via' => 'email' ] );
+		}
+
+		return [
+			'success'          => true,
+			'message'          => 'Verification email sent.',
+			'expires_in_hours' => self::VERIFY_TTL_HOURS,
+		];
+	}
+
+	public static function verify_email( int $user_id, string $token = '', string $code = '' ): array {
+		if ( $code !== '' ) {
+			return self::verify_email_by_code( $user_id, $code );
+		}
+
 		$stored  = (string) get_user_meta( $user_id, self::META_VERIFY_TOKEN, true );
 		$expires = (int) get_user_meta( $user_id, self::META_VERIFY_EXPIRES, true );
 
 		if ( ! $stored || ! $expires || $expires < time() ) {
-			return [ 'success' => false, 'error' => 'expired', 'message' => 'Verification link has expired.' ];
+			if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+				PAXdesign_Auth_Log::event( 'verification_failed', [ 'user_id' => $user_id, 'reason' => 'expired' ], 'warn' );
+			}
+			return [ 'success' => false, 'error' => 'expired', 'message' => 'Verification link has expired. Request a new code.' ];
 		}
 		if ( ! hash_equals( $stored, hash( 'sha256', $token ) ) ) {
-			return [ 'success' => false, 'error' => 'invalid_token', 'message' => 'Invalid verification link.' ];
+			if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+				PAXdesign_Auth_Log::event( 'verification_failed', [ 'user_id' => $user_id, 'reason' => 'invalid_token' ], 'warn' );
+			}
+			return [ 'success' => false, 'error' => 'invalid_token', 'message' => 'Invalid verification link or code.' ];
 		}
 
+		return self::mark_email_verified( $user_id );
+	}
+
+	/**
+	 * Verify by email + short code (mobile manual entry).
+	 *
+	 * @return array{success:bool,message?:string,error?:string}
+	 */
+	public static function verify_by_email_and_code( string $email, string $code ): array {
+		$email = sanitize_email( $email );
+		if ( ! is_email( $email ) ) {
+			return [ 'success' => false, 'error' => 'invalid_email', 'message' => 'Please enter a valid email address.' ];
+		}
+		$user = get_user_by( 'email', $email );
+		if ( ! $user ) {
+			return [ 'success' => false, 'error' => 'invalid_code', 'message' => 'Invalid verification code.' ];
+		}
+		return self::verify_email_by_code( (int) $user->ID, $code );
+	}
+
+	/**
+	 * Mobile sign-in: validate account password, mint Application Password server-side.
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function mobile_login( string $login, string $password, string $device_label = '' ): array {
+		$login = trim( $login );
+		if ( $login === '' || $password === '' ) {
+			return [ 'success' => false, 'error' => 'missing_credentials', 'message' => 'Please enter your email and password.' ];
+		}
+
+		$user = self::resolve_user_by_login_or_email( $login );
+		if ( ! $user ) {
+			self::record_failed_login( $login );
+			if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+				PAXdesign_Auth_Log::event( 'mobile_login_failed', [ 'reason' => 'invalid_credentials' ], 'warn' );
+			}
+			return [ 'success' => false, 'error' => 'invalid_credentials', 'message' => 'Invalid email or password.' ];
+		}
+
+		$lock = self::check_brute_force( $user->user_email );
+		if ( ! $lock['allowed'] ) {
+			return [
+				'success'     => false,
+				'error'       => 'locked',
+				'message'     => 'Too many failed attempts. Try again in ' . $lock['retry_after'] . ' seconds.',
+				'retry_after' => $lock['retry_after'],
+			];
+		}
+
+		if ( get_user_meta( $user->ID, self::META_LOCKED_UNTIL, true ) > time() ) {
+			$remaining = (int) get_user_meta( $user->ID, self::META_LOCKED_UNTIL, true ) - time();
+			return [
+				'success'     => false,
+				'error'       => 'locked',
+				'message'     => 'Account temporarily locked. Try again in ' . max( 1, $remaining ) . ' seconds.',
+				'retry_after' => max( 1, $remaining ),
+			];
+		}
+
+		if ( class_exists( 'PDX_Customers' ) && ! PDX_Customers::is_login_allowed( $user->ID ) ) {
+			return [
+				'success' => false,
+				'error'   => 'suspended',
+				'message' => 'Your account has been suspended. Please contact support.',
+			];
+		}
+
+		$signed = wp_authenticate( $user->user_login, $password );
+		if ( is_wp_error( $signed ) ) {
+			self::record_failed_login( $user->user_email, (int) $user->ID );
+			if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+				PAXdesign_Auth_Log::event( 'mobile_login_failed', [ 'user_id' => (int) $user->ID, 'reason' => 'invalid_credentials' ], 'warn' );
+			}
+			return [ 'success' => false, 'error' => 'invalid_credentials', 'message' => 'Invalid email or password.' ];
+		}
+
+		$session_mode = self::resolve_mobile_session_mode( (int) $signed->ID );
+		if ( $session_mode === 'customer' && ! self::is_email_verified( (int) $signed->ID ) ) {
+			if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+				PAXdesign_Auth_Log::event( 'mobile_login_failed', [ 'user_id' => (int) $signed->ID, 'reason' => 'email_unverified' ], 'warn' );
+			}
+			return [
+				'success' => false,
+				'error'   => 'email_unverified',
+				'message' => 'Please verify your email before signing in.',
+			];
+		}
+
+		self::clear_failed_logins( $user->user_email, (int) $signed->ID );
+
+		$app = self::create_mobile_application_password( (int) $signed->ID, $device_label );
+		if ( is_wp_error( $app ) ) {
+			if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+				PAXdesign_Auth_Log::event( 'mobile_login_failed', [ 'user_id' => (int) $signed->ID, 'reason' => 'app_password_failed' ], 'error' );
+			}
+			return [
+				'success' => false,
+				'error'   => 'session_failed',
+				'message' => 'Could not start a secure session. Please try again.',
+			];
+		}
+
+		if ( $session_mode === 'customer' && class_exists( 'PDX_Customers' ) ) {
+			PDX_Customers::record_login( (int) $signed->ID );
+		}
+
+		$role = self::resolve_portal_role( (int) $signed->ID );
+		PDX_Audit::log( 'auth', 'mobile_login', [ 'user_id' => (int) $signed->ID, 'session_mode' => $session_mode, 'role' => $role ] );
+		if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+			PAXdesign_Auth_Log::event(
+				'mobile_login_success',
+				[ 'user_id' => (int) $signed->ID, 'session_mode' => $session_mode, 'role' => $role ]
+			);
+		}
+
+		return [
+			'success'           => true,
+			'message'           => 'Signed in successfully.',
+			'session_mode'      => $session_mode,
+			'username'          => $signed->user_login,
+			'app_password'      => $app['password'],
+			'app_password_uuid' => $app['uuid'],
+			'user'              => self::user_payload( (int) $signed->ID ),
+			'role'              => $role,
+		];
+	}
+
+	/**
+	 * Revoke a mobile Application Password (logout).
+	 *
+	 * @return array{success:bool,message?:string}
+	 */
+	public static function mobile_logout( int $user_id, string $uuid ): array {
+		if ( $user_id <= 0 || $uuid === '' ) {
+			return [ 'success' => false, 'message' => 'Invalid session.' ];
+		}
+		if ( ! class_exists( 'WP_Application_Passwords' ) ) {
+			require_once ABSPATH . 'wp-includes/class-wp-application-passwords.php';
+		}
+		$deleted = WP_Application_Passwords::delete_application_password( $user_id, $uuid );
+		PDX_Audit::log( 'auth', 'mobile_logout', [ 'user_id' => $user_id, 'revoked' => (bool) $deleted ] );
+		if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+			PAXdesign_Auth_Log::event( 'mobile_logout', [ 'user_id' => $user_id, 'revoked' => (bool) $deleted ] );
+		}
+		return [ 'success' => true, 'message' => 'Logged out.' ];
+	}
+
+	/** @return 'staff'|'customer' */
+	public static function resolve_mobile_session_mode( int $user_id ): string {
+		if ( class_exists( 'PAXdesign_Live_Chat_Permissions' ) && PAXdesign_Live_Chat_Permissions::has_live_chat_access( $user_id ) ) {
+			return 'staff';
+		}
+		return 'customer';
+	}
+
+	public static function resolve_portal_role( int $user_id ): string {
+		if ( class_exists( 'PAXdesign_Customer_Auth' ) ) {
+			$user = get_user_by( 'id', $user_id );
+			if ( $user instanceof WP_User ) {
+				return PAXdesign_Customer_Auth::resolve_portal_role( $user );
+			}
+		}
+		if ( user_can( $user_id, 'manage_options' ) ) {
+			return 'administrator';
+		}
+		return 'customer';
+	}
+
+	public static function bootstrap_mobile_auth_basic(): void {
+		if ( ! self::is_mobile_auth_rest_request() ) {
+			return;
+		}
+		if ( ! empty( $_SERVER['PHP_AUTH_USER'] ) ) {
+			return;
+		}
+		$header = '';
+		if ( ! empty( $_SERVER['HTTP_AUTHORIZATION'] ) ) {
+			$header = (string) $_SERVER['HTTP_AUTHORIZATION'];
+		} elseif ( ! empty( $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ) ) {
+			$header = (string) $_SERVER['REDIRECT_HTTP_AUTHORIZATION'];
+		}
+		if ( $header === '' || stripos( $header, 'basic ' ) !== 0 ) {
+			return;
+		}
+		$decoded = base64_decode( substr( $header, 6 ), true );
+		if ( $decoded === false || strpos( $decoded, ':' ) === false ) {
+			return;
+		}
+		list( $user, $pass ) = explode( ':', $decoded, 2 );
+		$_SERVER['PHP_AUTH_USER'] = $user;
+		$_SERVER['PHP_AUTH_PW']   = $pass;
+	}
+
+	/**
+	 * Map email → user_login for Application Password Basic Auth.
+	 *
+	 * @param int|false $user_id
+	 * @return int|false
+	 */
+	public static function map_basic_auth_email_to_login( $user_id ) {
+		if ( $user_id || ! self::is_mobile_auth_rest_request() ) {
+			return $user_id;
+		}
+		if ( empty( $_SERVER['PHP_AUTH_USER'] ) ) {
+			return $user_id;
+		}
+		$login = sanitize_text_field( wp_unslash( (string) $_SERVER['PHP_AUTH_USER'] ) );
+		if ( $login === '' || ! is_email( $login ) ) {
+			return $user_id;
+		}
+		$by_email = get_user_by( 'email', $login );
+		if ( $by_email instanceof WP_User ) {
+			$_SERVER['PHP_AUTH_USER'] = $by_email->user_login;
+		}
+		return $user_id;
+	}
+
+	private static function is_mobile_auth_rest_request(): bool {
+		$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : '';
+		if ( $uri !== '' && strpos( $uri, '/wp-json/pdx/v1/auth/mobile-logout' ) !== false ) {
+			return true;
+		}
+		if ( defined( 'REST_REQUEST' ) && REST_REQUEST ) {
+			$route = '';
+			if ( isset( $GLOBALS['wp'] ) && is_object( $GLOBALS['wp'] ) && ! empty( $GLOBALS['wp']->query_vars['rest_route'] ) ) {
+				$route = (string) $GLOBALS['wp']->query_vars['rest_route'];
+			}
+			return $route === '/pdx/v1/auth/mobile-logout';
+		}
+		return false;
+	}
+
+	/**
+	 * @return WP_User|null
+	 */
+	private static function resolve_user_by_login_or_email( string $login ) {
+		$login = sanitize_text_field( $login );
+		if ( $login === '' ) {
+			return null;
+		}
+		if ( is_email( $login ) ) {
+			$user = get_user_by( 'email', sanitize_email( $login ) );
+			return $user instanceof WP_User ? $user : null;
+		}
+		$user = get_user_by( 'login', $login );
+		return $user instanceof WP_User ? $user : null;
+	}
+
+	/**
+	 * @return array{password:string,uuid:string}|WP_Error
+	 */
+	private static function create_mobile_application_password( int $user_id, string $device_label = '' ) {
+		if ( ! class_exists( 'WP_Application_Passwords' ) ) {
+			require_once ABSPATH . 'wp-includes/class-wp-application-passwords.php';
+		}
+		$label = $device_label !== '' ? sanitize_text_field( $device_label ) : 'PAXDesign iOS';
+		$created = WP_Application_Passwords::create_new_application_password(
+			$user_id,
+			[ 'name' => $label ]
+		);
+		if ( is_wp_error( $created ) ) {
+			return $created;
+		}
+		list( $password, $item ) = $created;
+		return [
+			'password' => (string) $password,
+			'uuid'     => isset( $item['uuid'] ) ? (string) $item['uuid'] : '',
+		];
+	}
+
+	/**
+	 * @return array{success:bool,message?:string,error?:string}
+	 */
+	private static function verify_email_by_code( int $user_id, string $code ): array {
+		$code = preg_replace( '/\D/', '', $code );
+		if ( strlen( $code ) !== 6 ) {
+			return [ 'success' => false, 'error' => 'invalid_code', 'message' => 'Enter the 6-digit verification code from your email.' ];
+		}
+
+		$stored  = (string) get_user_meta( $user_id, self::META_VERIFY_CODE, true );
+		$expires = (int) get_user_meta( $user_id, self::META_VERIFY_EXPIRES, true );
+
+		if ( ! $stored || ! $expires || $expires < time() ) {
+			if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+				PAXdesign_Auth_Log::event( 'verification_failed', [ 'user_id' => $user_id, 'reason' => 'expired' ], 'warn' );
+			}
+			return [ 'success' => false, 'error' => 'expired', 'message' => 'Verification code has expired. Request a new one.' ];
+		}
+		if ( ! hash_equals( $stored, hash( 'sha256', $code ) ) ) {
+			if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+				PAXdesign_Auth_Log::event( 'verification_failed', [ 'user_id' => $user_id, 'reason' => 'invalid_code' ], 'warn' );
+			}
+			return [ 'success' => false, 'error' => 'invalid_code', 'message' => 'Invalid verification code.' ];
+		}
+
+		return self::mark_email_verified( $user_id );
+	}
+
+	/**
+	 * @return array{success:bool,message?:string}
+	 */
+	private static function mark_email_verified( int $user_id ): array {
 		update_user_meta( $user_id, self::META_VERIFIED, 1 );
 		delete_user_meta( $user_id, self::META_VERIFY_TOKEN );
+		delete_user_meta( $user_id, self::META_VERIFY_CODE );
 		delete_user_meta( $user_id, self::META_VERIFY_EXPIRES );
 
-		if ( PDX_Customers::STATUS_PENDING === PDX_Customers::account_status( $user_id ) ) {
+		if ( class_exists( 'PDX_Customers' ) && PDX_Customers::STATUS_PENDING === PDX_Customers::account_status( $user_id ) ) {
 			PDX_Customers::set_account_status( $user_id, PDX_Customers::STATUS_ACTIVE );
 		}
 
 		PDX_Audit::log( 'auth', 'email_verified', [ 'user_id' => $user_id ] );
+		if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+			PAXdesign_Auth_Log::event( 'verification_success', [ 'user_id' => $user_id ] );
+		}
 
 		return [ 'success' => true, 'message' => 'Email verified successfully.' ];
 	}
@@ -488,36 +859,59 @@ class PDX_Auth {
 		}
 
 		$token   = bin2hex( random_bytes( 32 ) );
+		$code    = sprintf( '%06d', random_int( 0, 999999 ) );
 		$expires = time() + ( self::VERIFY_TTL_HOURS * HOUR_IN_SECONDS );
 
 		update_user_meta( $user_id, self::META_VERIFY_TOKEN, hash( 'sha256', $token ) );
+		update_user_meta( $user_id, self::META_VERIFY_CODE, hash( 'sha256', $code ) );
 		update_user_meta( $user_id, self::META_VERIFY_EXPIRES, $expires );
 
-		$link = add_query_arg( [
+		$web_link = add_query_arg( [
 			'pdx_verify' => '1',
 			'token'      => $token,
 			'uid'        => $user_id,
 		], home_url( '/' ) );
 
+		$app_link = add_query_arg( [
+			'uid'   => $user_id,
+			'token' => $token,
+		], 'paxlivechat://verify' );
+
 		$subject = sprintf( '[%s] Verify your email', get_bloginfo( 'name' ) );
 		$body    = self::email_template(
 			'Verify your email',
-			'Welcome! Please confirm your email address to unlock full access to PaxDesign.',
-			$link,
-			'Verify Email'
+			'Welcome! Confirm your email to unlock full access to PAXDesign. Your verification code expires in ' . self::VERIFY_TTL_HOURS . ' hours.',
+			$web_link,
+			'Verify Email',
+			$code,
+			$app_link
 		);
 
 		wp_mail( $user->user_email, $subject, $body, [ 'Content-Type: text/html; charset=UTF-8' ] );
+		if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+			PAXdesign_Auth_Log::event( 'verification_email_sent', [ 'user_id' => $user_id ] );
+		}
 	}
 
-	private static function email_template( string $title, string $text, string $link, string $button ): string {
+	private static function email_template( string $title, string $text, string $link, string $button, string $code = '', string $app_link = '' ): string {
 		$site = esc_html( get_bloginfo( 'name' ) );
+		$code_block = '';
+		if ( $code !== '' ) {
+			$code_block = '<tr><td style="color:#ffe0a6;font-size:22px;font-weight:700;letter-spacing:6px;text-align:center;padding:16px 0 8px">Verification Code: ' . esc_html( $code ) . '</td></tr>' .
+				'<tr><td style="color:#888;font-size:12px;text-align:center;padding-bottom:16px">You can copy this code and enter it in the app if the link does not open.</td></tr>';
+		}
+		$app_button = '';
+		if ( $app_link !== '' ) {
+			$app_button = '<tr><td align="center" style="padding-top:12px"><a href="' . esc_url( $app_link ) . '" style="display:inline-block;padding:10px 24px;background:#0a0a0a;border:1px solid #555;color:#ccc;text-decoration:none;font-size:13px">Open in App</a></td></tr>';
+		}
 		return '<!DOCTYPE html><html><body style="margin:0;padding:0;background:#000;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif">' .
 			'<table width="100%" cellpadding="0" cellspacing="0" style="background:#000;padding:40px 20px"><tr><td align="center">' .
 			'<table width="480" cellpadding="0" cellspacing="0" style="border:1px solid #ffe0a6;border-radius:8px;padding:32px;background:#111">' .
 			'<tr><td style="color:#ffe0a6;font-size:20px;font-weight:700;letter-spacing:4px;text-transform:uppercase;text-align:center;padding-bottom:24px">' . esc_html( $title ) . '</td></tr>' .
 			'<tr><td style="color:#aaa;font-size:14px;line-height:1.6;padding-bottom:24px">' . esc_html( $text ) . '</td></tr>' .
 			'<tr><td align="center"><a href="' . esc_url( $link ) . '" style="display:inline-block;padding:14px 32px;background:#1a1a1a;border:1px solid #ffe0a6;color:#ffe0a6;text-decoration:none;font-weight:600">' . esc_html( $button ) . '</a></td></tr>' .
+			$app_button .
+			$code_block .
 			'<tr><td style="color:#555;font-size:11px;padding-top:24px;text-align:center">' . $site . '</td></tr>' .
 			'</table></td></tr></table></body></html>';
 	}

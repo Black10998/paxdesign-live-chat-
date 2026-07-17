@@ -2,14 +2,20 @@ import Foundation
 
 @MainActor
 final class CustomerAPIClient: ObservableObject {
-    private var baseURL = URL(string: "https://paxdesign.at/wp-json/pdx/v1")!
+    private var baseURL = AppServerConfig.customerAPIBaseURL
     private weak var auth: CustomerAuthStore?
 
     func configure(baseURL: String, auth: CustomerAuthStore) {
         if let url = URL(string: baseURL.trimmingCharacters(in: .whitespacesAndNewlines).trimmingSuffix("/") + "/wp-json/pdx/v1") {
             self.baseURL = url
+        } else {
+            self.baseURL = AppServerConfig.customerAPIBaseURL
         }
         self.auth = auth
+    }
+
+    func useDefaultServer() {
+        baseURL = AppServerConfig.customerAPIBaseURL
     }
 
     private var authBaseURL: URL {
@@ -44,12 +50,42 @@ final class CustomerAPIClient: ObservableObject {
         try await publicPost("/auth/register", json: ["name": name, "email": email, "password": password], as: CustomerAuthMessageResponse.self)
     }
 
+    func authMobileLogin(login: String, password: String, deviceLabel: String = "PAXDesign iOS") async throws -> MobileLoginResponse {
+        try await publicPost(
+            "/auth/mobile-login",
+            json: ["login": login, "password": password, "device_label": deviceLabel],
+            as: MobileLoginResponse.self
+        )
+    }
+
+    func authMobileLogout(appPasswordUUID: String) async throws {
+        guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
+        guard let url = endpointURL("/auth/mobile-logout") else { throw CustomerAPIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(header, forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: ["app_password_uuid": appPasswordUUID])
+        let (_, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw CustomerAPIError.http((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+    }
+
     func authForgotPassword(email: String) async throws -> CustomerAuthMessageResponse {
         try await publicPost("/auth/forgot-password", json: ["email": email], as: CustomerAuthMessageResponse.self)
     }
 
-    func authVerify(token: String) async throws -> CustomerAuthMessageResponse {
-        try await publicPost("/auth/verify", json: ["token": token], as: CustomerAuthMessageResponse.self)
+    func authVerify(uid: Int, token: String) async throws -> CustomerAuthMessageResponse {
+        try await publicPost("/auth/verify", json: ["uid": String(uid), "token": token], as: CustomerAuthMessageResponse.self)
+    }
+
+    func authVerify(email: String, code: String) async throws -> CustomerAuthMessageResponse {
+        try await publicPost("/auth/verify", json: ["email": email, "code": code], as: CustomerAuthMessageResponse.self)
+    }
+
+    func authVerify(uid: Int, code: String) async throws -> CustomerAuthMessageResponse {
+        try await publicPost("/auth/verify", json: ["uid": String(uid), "code": code], as: CustomerAuthMessageResponse.self)
     }
 
     func authResendVerification(email: String) async throws -> CustomerAuthMessageResponse {
@@ -308,6 +344,24 @@ final class CustomerAPIClient: ObservableObject {
         return try JSONDecoder().decode(T.self, from: data)
     }
 
+    private func publicPost<T: Decodable>(_ path: String, json: [String: Any], as type: T.Type) async throws -> T {
+        guard let url = endpointURL(path) else { throw CustomerAPIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = try JSONSerialization.data(withJSONObject: json)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw CustomerAPIError.network }
+        guard (200..<300).contains(http.statusCode) else {
+            if let apiError = try? JSONDecoder().decode(CustomerAPIErrorPayload.self, from: data) {
+                throw CustomerAPIError.server(apiError.message ?? apiError.code ?? "HTTP \(http.statusCode)")
+            }
+            throw CustomerAPIError.http(http.statusCode)
+        }
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
     private func uploadMultipart<T: Decodable>(
         path: String,
         field: String,
@@ -486,6 +540,25 @@ struct CustomerEmptyResponse: Decodable {}
 struct CustomerAuthMessageResponse: Decodable {
     let success: Bool?
     let message: String?
+    let expires_in_hours: Int?
+}
+
+struct MobileLoginResponse: Decodable {
+    let success: Bool?
+    let message: String?
+    let session_mode: String?
+    let username: String?
+    let app_password: String?
+    let app_password_uuid: String?
+    let role: String?
+    let user: MobileLoginUser?
+}
+
+struct MobileLoginUser: Decodable {
+    let id: Int?
+    let display_name: String?
+    let email: String?
+    let verified: Bool?
 }
 
 struct CustomerConversationsResponse: Decodable {

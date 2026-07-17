@@ -29,9 +29,10 @@ struct ProfileView: View {
             Section(L10n.ProfileAccountInfo) {
                 LabeledContent(L10n.SettingsProfile, value: profile?.displayName ?? L10n.CommonAdministrator)
                     .font(.subheadline)
-                LabeledContent(L10n.LoginWebsite, value: profile?.siteUrl ?? auth.siteURLString)
-                    .font(.subheadline)
-                if let username = profile?.displayUsernameIfDistinct {
+                if let email = profile?.email, !email.isEmpty {
+                    LabeledContent(L10n.LoginUsername, value: email)
+                        .font(.subheadline)
+                } else if let username = profile?.displayUsernameIfDistinct {
                     LabeledContent(L10n.LoginUsername, value: username)
                         .font(.subheadline)
                 }

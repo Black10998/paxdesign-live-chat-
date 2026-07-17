@@ -930,19 +930,41 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Customer portal and team support"
+            "value": "Sign in with your PAXDesign account"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kundenportal und Team-Support"
+            "value": "Mit Ihrem PAXDesign-Konto anmelden"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "بوابة العملاء ودعم الفريق"
+            "value": "سجّل الدخول بحساب PAXDesign"
+          }
+        }
+      }
+    },
+    "login.password": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Password"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwort"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "كلمة المرور"
           }
         }
       }
@@ -996,19 +1018,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Application Password"
+            "value": "Password"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Application Password"
+            "value": "Passwort"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "كلمة مرور التطبيق"
+            "value": "كلمة المرور"
           }
         }
       }

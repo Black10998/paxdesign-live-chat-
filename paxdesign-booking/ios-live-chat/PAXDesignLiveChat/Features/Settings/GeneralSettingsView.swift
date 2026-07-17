@@ -9,15 +9,11 @@ struct GeneralSettingsView: View {
     @EnvironmentObject private var settings: AppSettingsStore
     @Environment(\.dismiss) private var dismiss
 
-    @State private var appPasswordDraft = ""
-    @State private var statusMessage: String?
     #if SIDELOAD
     @State private var showPhotoLibrary = false
     #else
     @State private var photoItem: PhotosPickerItem?
     #endif
-
-    private var canManageSettings: Bool { auth.canManageSettings }
 
     var body: some View {
         List {
@@ -27,6 +23,11 @@ struct GeneralSettingsView: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(auth.profile?.displayName ?? L10n.CommonAdministrator)
                             .font(.headline)
+                        if let email = auth.profile?.email, !email.isEmpty {
+                            Text(email)
+                                .font(.subheadline)
+                                .foregroundStyle(PAXTheme.textSecondary)
+                        }
                     }
                 }
                 .padding(.vertical, 4)
@@ -63,44 +64,17 @@ struct GeneralSettingsView: View {
                 }
             }
 
-            if canManageSettings {
-                Section {
-                    LabeledContent(L10n.CommonWebsite) {
-                        Text(auth.siteURLString)
-                            .foregroundStyle(PAXTheme.textSecondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-
-                    SecureField(L10n.LoginAppPassword, text: $appPasswordDraft)
-                        .textInputAutocapitalization(.never)
-
-                    Button(L10n.SettingsSaveCredentials) {
-                        Task { await saveCredentials() }
-                    }
-
-                    if let statusMessage {
-                        Text(statusMessage)
-                            .font(.footnote)
-                            .foregroundStyle(PAXTheme.textSecondary)
-                    }
-                } header: {
-                    Text(L10n.SettingsAccount)
-                } footer: {
-                    Text(L10n.SettingsCredentialsFooter)
-                }
-
-                Section {
-                    Button(L10n.SettingsSignOut) {
+            Section {
+                Button(L10n.SettingsSignOut) {
                     PAXDelete.confirm(
                         title: L10n.SettingsSignOut,
                         message: L10n.SettingsSignOutMessage,
                         confirmTitle: L10n.SettingsSignOut
                     ) {
-                            Task {
-                                await push.unregisterTokenFromBackend(auth: auth)
-                                auth.logout()
-                                dismiss()
-                            }
+                        Task {
+                            await push.unregisterTokenFromBackend(auth: auth)
+                            auth.logout()
+                            dismiss()
                         }
                     }
                 }
@@ -119,20 +93,5 @@ struct GeneralSettingsView: View {
             }
         }
         #endif
-        .onAppear {
-            appPasswordDraft = auth.appPassword
-        }
-    }
-
-    private func saveCredentials() async {
-        auth.appPassword = appPasswordDraft
-        do {
-            try await auth.login()
-            statusMessage = L10n.SettingsCredentialsSaved
-            PAXHaptics.success()
-        } catch {
-            statusMessage = error.localizedDescription
-            PAXHaptics.warning()
-        }
     }
 }

@@ -22,7 +22,7 @@ final class CustomerAuthStore: ObservableObject {
     func login(api: CustomerAPIClient, silent: Bool = false) async {
         if !silent { errorMessage = nil }
         guard !username.isEmpty, !appPassword.isEmpty else {
-            if !silent { errorMessage = String(localized: "Enter your email and application password.") }
+            if !silent { errorMessage = String(localized: "Enter your email and password.") }
             return
         }
         api.configure(baseURL: siteURL, auth: self)
