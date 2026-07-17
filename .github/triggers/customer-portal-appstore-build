@@ -1,7 +1,2 @@
-<<<<<<< Updated upstream
-# Customer Portal App Store build + fix xcodegen project.yml entitlements.
-2026-07-17T12:20:00Z
-=======
-# Customer Portal App Store build + reuse existing ASC profile on 409.
-2026-07-17T12:25:00Z
->>>>>>> Stashed changes
+# Customer Portal App Store build + Info.plist path for xcodegen.
+2026-07-17T12:30:00Z
