@@ -161,6 +161,8 @@ enum L10n {
     static var LiveWaitingCount: String { t("live.waiting_count") }
     static var LoginAppPassword: String { t("login.app_password") }
     static var LoginHint: String { t("login.hint") }
+    static var LoginCreateAccount: String { t("login.create_account") }
+    static var LoginForgotPassword: String { t("login.forgot_password") }
     static var LoginPrivacy: String { t("login.privacy") }
     static var LoginSignIn: String { t("login.sign_in") }
     static var LoginSigningIn: String { t("login.signing_in") }

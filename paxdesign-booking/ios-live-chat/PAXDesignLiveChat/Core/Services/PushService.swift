@@ -472,10 +472,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         Task { @MainActor in
             PushService.shared.updateDeviceToken(deviceToken)
             if AuthStore.shared.isLoggedIn {
-                await DeviceSessionService.shared.registerWithPush(
-                    auth: AuthStore.shared,
-                    reason: .tokenReceived
-                )
+                if AuthStore.shared.isCustomerSession {
+                    CustomerPushService.shared.didRegister(tokenData: deviceToken)
+                } else {
+                    await DeviceSessionService.shared.registerWithPush(
+                        auth: AuthStore.shared,
+                        reason: .tokenReceived
+                    )
+                }
             }
         }
     }
@@ -547,6 +551,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         didReceive response: UNNotificationResponse
     ) async {
         let info = response.notification.request.content.userInfo
+        if AuthStore.shared.isCustomerSession,
+           let link = CustomerPushService.shared.handleNotification(userInfo: info) {
+            await MainActor.run {
+                CustomerDeepLinkRouter.shared.pending = link
+            }
+            return
+        }
         guard let payload = PushService.shared.parseNotification(userInfo: info) else { return }
 
         var userInfo = pushUserInfo(from: payload)

@@ -32,7 +32,7 @@ final class LiveActivityManager {
         if let activity = Activity<PAXLiveActivityAttributes>.activities.first {
             Task { await activity.update(using: content) }
         } else {
-            let attributes = PAXLiveActivityAttributes(siteName: "PAXDesign Live Chat")
+            let attributes = PAXLiveActivityAttributes(siteName: "PAXDesign")
             _ = try? Activity.request(attributes: attributes, contentState: content, pushType: nil)
         }
         #endif

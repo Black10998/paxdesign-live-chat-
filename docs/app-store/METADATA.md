@@ -1,4 +1,7 @@
-# App Store Metadata — v2.0.0 (Build 113)
+# App Store Metadata — v2.1.0 (Build 128)
+
+Unified **PAXDesign** customer + team app on existing record `at.paxdesign.livechat` (Apple ID 6790031845).  
+See also [ios-unified-app-plan.md](../ios-unified-app-plan.md).
 
 Use these values in App Store Connect. Machine-readable copy: [metadata.json](metadata.json).
 
@@ -6,9 +9,9 @@ Use these values in App Store Connect. Machine-readable copy: [metadata.json](me
 
 | Field | Value |
 |-------|-------|
-| Name | PAXDesign Live Chat |
-| Subtitle (DE) | Live-Support für Teams |
-| Subtitle (EN) | Live Support for Teams |
+| Name | PAXDesign |
+| Subtitle (DE) | Kundenportal & Team-Support |
+| Subtitle (EN) | Customer Portal & Team Support |
 | Bundle ID | at.paxdesign.livechat |
 | SKU | paxdesign-livechat |
 | Primary Language | German (Austria) — de-DE |

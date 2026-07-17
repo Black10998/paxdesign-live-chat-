@@ -1,37 +1,38 @@
 {
   "bundleId": "at.paxdesign.livechat",
   "sku": "paxdesign-livechat",
+  "appleId": "6790031845",
   "primaryLocale": "de-DE",
   "locales": ["de-DE", "en-US"],
-  "versionString": "2.0.5",
-  "buildNumber": "127",
-  "wordpressVersion": "3.124.0",
+  "versionString": "2.1.0",
+  "buildNumber": "128",
+  "wordpressVersion": "3.136.5",
   "appInfo": {
-    "name": "PAXDesign Live Chat",
+    "name": "PAXDesign",
     "subtitle": {
-      "de-DE": "Live-Support für Teams",
-      "en-US": "Live Support for Teams",
-      "ar": "دعم مباشر للفرق"
+      "de-DE": "Kundenportal & Team-Support",
+      "en-US": "Customer Portal & Team Support",
+      "ar": "بوابة العملاء ودعم الفريق"
     },
     "promotionalText": {
-      "de-DE": "Echtzeit-Kundensupport mit Team-Chat, KI-Antworten, Sprachnachrichten und Push-Benachrichtigungen — nativ für iOS.",
-      "en-US": "Real-time customer support with team chat, AI replies, voice messages, and push alerts — native for iOS.",
-      "ar": "دعم عملاء فوري مع دردشة الفريق والردود الذكية والرسائل الصوتية والتنبيهات — تطبيق iOS أصلي."
+      "de-DE": "Ihre PAXDesign-Plattform: Projekte, Anfragen, Chat mit KI und menschlichem Support, Benachrichtigungen und Dateiaustausch — in einer App.",
+      "en-US": "Your PAXDesign platform: projects, requests, chat with AI and human support, notifications, and file sharing — in one app.",
+      "ar": "منصة PAXDesign: المشاريع والطلبات والدردشة مع الذكاء الاصطناعي والدعم البشري والإشعارات ومشاركة الملفات — في تطبيق واحد."
     },
     "description": {
-      "de-DE": "PAXDesign Live Chat ist die native iOS-App für autorisierte Support-Mitarbeiter von PAXdesign. Bearbeiten Sie Kundenanfragen in Echtzeit — mit Push-Benachrichtigungen, KI-Antwortvorschlägen, Team-Chat und voller Parität zum WordPress-Admin-Panel.\n\nHauptfunktionen:\n• Live Team Chat — koordinieren Sie mit Kollegen in Echtzeit\n• KI-Antwort-Assistent — intelligente Vorschläge für schnellere Antworten\n• Sprachnachrichten — aufnehmen, senden und abspielen\n• Fotos & Standort — Bilder und Position sicher teilen\n• Echtzeit-Kundensupport — Live-Anfragen mit Vollbild-Alarm\n• Push-Benachrichtigungen — verpassen Sie keine neue Anfrage\n• Analytics-Dashboard — Übersicht über aktive und Live-Sessions\n• Mehrsprachig — Deutsch, Englisch und Arabisch\n\nVoraussetzung: WordPress-Administrator-Zugang mit Application Password für paxdesign.at.\n\nKeine In-App-Käufe. Keine Werbung. Kein Tracking.",
-      "en-US": "PAXDesign Live Chat is the native iOS app for authorized PAXdesign support staff. Handle customer requests in real time — with push notifications, AI reply suggestions, team chat, and full parity with the WordPress admin panel.\n\nKey features:\n• Live Team Chat — coordinate with colleagues in real time\n• AI Reply Assistant — smart suggestions for faster responses\n• Voice Messages — record, send, and play audio notes\n• Photos & Location — share images and position securely\n• Real-Time Customer Support — live requests with full-screen alerts\n• Push Notifications — never miss a new request\n• Analytics Dashboard — overview of active and live sessions\n• Multilingual — German, English, and Arabic\n\nRequires WordPress administrator access with Application Password for paxdesign.at.\n\nNo in-app purchases. No ads. No tracking.",
-      "ar": "PAXDesign Live Chat هو تطبيق iOS الأصلي لموظفي دعم PAXdesign المصرح لهم. تعامل مع طلبات العملاء في الوقت الفعلي — مع إشعارات الدفع واقتراحات الرد الذكية ودردشة الفريق وتوافق كامل مع لوحة WordPress.\n\nالميزات الرئيسية:\n• دردشة الفريق المباشرة\n• مساعد الرد الذكي\n• الرسائل الصوتية\n• الصور والموقع\n• دعم العملاء الفوري\n• إشعارات الدفع\n• لوحة التحليلات\n• متعدد اللغات — الألمانية والإنجليزية والعربية\n\nيتطلب حساب WordPress مع Application Password.\n\nلا مشتريات داخل التطبيق. لا إعلانات. لا تتبع."
+      "de-DE": "PAXDesign ist die offizielle iOS-App für PAXdesign-Kunden und autorisierte Support-Mitarbeiter.\n\nFür Kunden:\n• Anmeldung und Registrierung\n• Dashboard mit Projekten, Anfragen und Neuigkeiten\n• Chat mit KI-Assistent und menschlichem Support\n• Datei- und Medienaustausch\n• Benachrichtigungen für Projekte, Bestellungen und Chat\n• Profil- und Kontoverwaltung\n\nFür Support-Teams:\n• Live-Kundensupport mit Push-Alarmen\n• Team-Chat mit Sprachnachrichten\n• KI-Antwort-Assistent\n• Analytics-Dashboard und Session-Verwaltung\n• Mehrsprachig — Deutsch, Englisch und Arabisch\n\nKeine In-App-Käufe. Keine Werbung. Kein Tracking.",
+      "en-US": "PAXDesign is the official iOS app for PAXdesign customers and authorized support staff.\n\nFor customers:\n• Sign in and registration\n• Dashboard with projects, requests, and news\n• Chat with AI assistant and human support\n• File and media sharing\n• Notifications for projects, orders, and chat\n• Profile and account management\n\nFor support teams:\n• Live customer support with push alerts\n• Team chat with voice messages\n• AI reply assistant\n• Analytics dashboard and session management\n• Multilingual — German, English, and Arabic\n\nNo in-app purchases. No ads. No tracking.",
+      "ar": "PAXDesign هو تطبيق iOS الرسمي لعملاء PAXdesign وموظفي الدعم المصرح لهم.\n\nللعملاء:\n• تسجيل الدخول وإنشاء الحساب\n• لوحة تحكم بالمشاريع والطلبات والأخبار\n• دردشة مع مساعد ذكي ودعم بشري\n• مشاركة الملفات والوسائط\n• إشعارات للمشاريع والطلبات والدردشة\n• إدارة الملف الشخصي والحساب\n\nلفرق الدعم:\n• دعم العملاء المباشر مع تنبيهات الدفع\n• دردشة الفريق مع الرسائل الصوتية\n• مساعد الرد الذكي\n• لوحة التحليلات وإدارة الجلسات\n• متعدد اللغات\n\nلا مشتريات داخل التطبيق. لا إعلانات. لا تتبع."
     },
     "keywords": {
-      "de-DE": "live chat,support,kundenservice,team,helpdesk,agent,wordpress,push",
-      "en-US": "live chat,support,customer service,team,helpdesk,agent,wordpress,push",
-      "ar": "دردشة,دعم,عملاء,فريق,مساعد,إشعارات"
+      "de-DE": "paxdesign,kundenportal,projekte,support,chat,anfragen,benachrichtigungen,team",
+      "en-US": "paxdesign,customer portal,projects,support,chat,requests,notifications,team",
+      "ar": "paxdesign,بوابة,مشاريع,دعم,دردشة,طلبات,إشعارات"
     },
     "whatsNew": {
-      "de-DE": "Offizielle App-Store-Veröffentlichung 2.0:\n• Live Team Chat mit Sprachnachrichten\n• KI-Antwort-Assistent für Kunden-Chats\n• Professionelles Analytics-Dashboard\n• App-weite Themes und Akzentfarben\n• Zuverlässige Push-Benachrichtigungen\n• Fotos, Standort und Medienfreigabe\n• Verbesserte Stabilität und Performance",
-      "en-US": "Official App Store release 2.0:\n• Live team chat with voice messages\n• AI reply assistant for customer chats\n• Professional analytics dashboard\n• App-wide themes and accent colors\n• Reliable push notifications\n• Photo, location, and media sharing\n• Improved stability and performance",
-      "ar": "الإصدار الرسمي 2.0:\n• دردشة الفريق مع الرسائل الصوتية\n• مساعد الرد الذكي\n• لوحة تحليلات احترافية\n• سمات وألوان مخصصة\n• إشعارات دفع موثوقة\n• مشاركة الصور والموقع\n• استقرار وأداء محسّنان"
+      "de-DE": "PAXDesign 2.1 — vereinheitlichte Kunden- und Team-App:\n• Customer Portal direkt in der App integriert\n• Projekte, Anfragen, Services, News und Benachrichtigungen\n• Kunden-Chat mit KI und menschlichem Support\n• Bestehende Live-Chat-Funktionen für Support-Teams erhalten\n• Neuer App-Name: PAXDesign",
+      "en-US": "PAXDesign 2.1 — unified customer and team app:\n• Customer Portal integrated directly in the app\n• Projects, requests, services, news, and notifications\n• Customer chat with AI and human support\n• Existing live chat features preserved for support teams\n• New app name: PAXDesign",
+      "ar": "PAXDesign 2.1 — تطبيق موحد للعملاء والفريق:\n• بوابة العملاء مدمجة في التطبيق\n• المشاريع والطلبات والخدمات والأخبار والإشعارات\n• دردشة العملاء مع الذكاء الاصطناعي والدعم البشري\n• ميزات الدردشة المباشرة للفرق محفوظة\n• اسم التطبيق الجديد: PAXDesign"
     },
     "supportUrl": "https://paxdesign.at",
     "marketingUrl": "https://paxdesign.at",
@@ -43,7 +44,7 @@
   },
   "ageRating": "4+",
   "copyright": "© 2026 PAXdesign",
-  "reviewNotes": "Internal employee app for PAXdesign customer support staff. Login requires a WordPress administrator account and Application Password for https://paxdesign.at. Demo credentials are provided in the App Store Connect review notes field. No in-app purchases. No ads. No tracking. Privacy Policy: https://paxdesign.at/datenschutz/",
+  "reviewNotes": "PAXDesign is the unified PAXdesign customer and support app on the existing App Store record (Bundle ID at.paxdesign.livechat, Apple ID 6790031845). Customers sign in with their PAXdesign account (email + Application Password or registered customer account). Support staff sign in with WordPress administrator credentials. The app automatically routes to the customer portal or staff live-chat interface based on account type. Demo credentials for both flows are provided in App Store Connect review notes. No in-app purchases. No ads. No tracking. Privacy Policy: https://paxdesign.at/datenschutz/",
   "screenshotDisplayType": "APP_IPHONE_67",
   "screenshotDir": "docs/app-store/screenshots/6.7-inch"
 }

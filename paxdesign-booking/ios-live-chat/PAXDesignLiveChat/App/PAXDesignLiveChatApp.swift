@@ -32,7 +32,7 @@ struct PAXDesignLiveChatApp: App {
                     await runStartupSequence()
                 }
                 .onChange(of: AuthStore.shared.isLoggedIn) { loggedIn in
-                    if loggedIn {
+                    if loggedIn, AuthStore.shared.isStaffSession {
                         AppServicesController.startLoggedInServices(
                             auth: AuthStore.shared,
                             coordinator: coordinator,
@@ -59,7 +59,7 @@ struct PAXDesignLiveChatApp: App {
                         break
                     }
                     AppLockService.shared.handleScenePhase(phase, isLoggedIn: auth.isLoggedIn)
-                    guard phase == .active, auth.isLoggedIn else { return }
+                    guard phase == .active, auth.isLoggedIn, auth.isStaffSession else { return }
                     ForegroundRefreshCoordinator.schedule(
                         auth: auth,
                         coordinator: coordinator,
@@ -87,7 +87,7 @@ struct PAXDesignLiveChatApp: App {
         launchSplash.markBootstrapFinished()
         LaunchDiagnostics.mark("startup.session-ready")
 
-        if auth.isLoggedIn {
+        if auth.isLoggedIn, auth.isStaffSession {
             AppServicesController.startLoggedInServices(
                 auth: auth,
                 coordinator: coordinator,
@@ -109,6 +109,12 @@ struct PAXDesignLiveChatApp: App {
                     isShellReady: !launchSplash.isVisible
                 )
             }
+        } else if auth.isLoggedIn, auth.isCustomerSession {
+            CustomerSessionController.shared.syncFromAuthStore(auth)
+            CustomerPushService.shared.configure(api: CustomerSessionController.shared.api)
+            Task {
+                await CustomerPushService.shared.requestAuthorizationAndRegister()
+            }
         }
 
         LaunchDiagnostics.mark("startup.interactive")
@@ -116,7 +122,7 @@ struct PAXDesignLiveChatApp: App {
 
     private func handlePushNotification(_ note: Notification, opened: Bool) {
         let auth = AuthStore.shared
-        guard auth.isLoggedIn else {
+        guard auth.isLoggedIn, auth.isStaffSession else {
             if opened {
                 if let userInfo = note.userInfo as? [AnyHashable: Any] {
                     PushDeepLinkRouter.shared.store(
@@ -220,21 +226,27 @@ struct RootView: View {
                 .transition(.opacity)
 
             case .main:
-                AdaptiveShellView()
-                    .id("\(auth.sessionEpoch.uuidString)-\(settings.themeRevision.uuidString)")
-                    .transition(.opacity)
+                if auth.isCustomerSession {
+                    CustomerPortalShellView()
+                        .id("\(auth.sessionEpoch.uuidString)-customer")
+                        .transition(.opacity)
+                } else {
+                    AdaptiveShellView()
+                        .id("\(auth.sessionEpoch.uuidString)-\(settings.themeRevision.uuidString)")
+                        .transition(.opacity)
+                }
 
             case .login:
                 LoginView()
                     .transition(.opacity)
             }
 
-            if coordinator.showIncomingFullscreen, let incoming = coordinator.incomingRequest, auth.canReplyChats {
+            if coordinator.showIncomingFullscreen, let incoming = coordinator.incomingRequest, auth.canReplyChats, auth.isStaffSession {
                 IncomingLiveRequestView(request: incoming)
                     .zIndex(10)
             }
 
-            if auth.isLoggedIn, appLock.isActive, appLock.isLocked, !appLock.isUnlocked {
+            if auth.isLoggedIn, appLock.isActive, appLock.isLocked, !appLock.isUnlocked, auth.isStaffSession {
                 AppLockView()
                     .zIndex(100)
             }
@@ -289,6 +301,10 @@ struct RootView: View {
 
     private func syncPostLoginOnboardingPresentation() {
         guard auth.isLoggedIn else {
+            showPostLoginOnboarding = false
+            return
+        }
+        if auth.isCustomerSession {
             showPostLoginOnboarding = false
             return
         }
