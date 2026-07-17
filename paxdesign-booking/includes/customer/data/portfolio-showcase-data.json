@@ -1,0 +1,857 @@
+{
+  "header": {
+    "de": {
+      "tags": [
+        "PAXdesign",
+        "Referenzen"
+      ],
+      "title": "Projekte & Referenzen",
+      "intro": "Entdecken Sie unsere erfolgreich umgesetzten Projekte: Branding, Websites und digitale Lösungen für Unternehmen in Wien und Österreich."
+    },
+    "en": {
+      "tags": [
+        "PAXdesign",
+        "References"
+      ],
+      "title": "Projects & References",
+      "intro": "Explore our successfully delivered projects: branding, websites, and digital solutions for companies in Vienna and Austria."
+    },
+    "ar": {
+      "tags": [
+        "PAXdesign",
+        "مراجع"
+      ],
+      "title": "المشاريع والمراجع",
+      "intro": "اكتشف مشاريعنا المنفذة بنجاح: الهوية التجارية والمواقع والحلول الرقمية للشركات في فيenna والنمسا."
+    }
+  },
+  "cta": {
+    "de": {
+      "tags": [
+        "Kontakt"
+      ],
+      "title": "Bereit für Ihr Projekt?",
+      "text": "Lassen Sie uns über Ihre Ideen sprechen. Wir entwickeln gemeinsam die perfekte Lösung für Ihr Unternehmen.",
+      "button": "Jetzt Kontakt aufnehmen",
+      "path": "/kontakt"
+    },
+    "en": {
+      "tags": [
+        "Contact"
+      ],
+      "title": "Ready for your project?",
+      "text": "Let's talk about your ideas. Together we'll craft the perfect solution for your business.",
+      "button": "Get in touch",
+      "path": "/kontakt"
+    },
+    "ar": {
+      "tags": [
+        "اتصل"
+      ],
+      "title": "هل أنت مستعد لمشروعك؟",
+      "text": "لنتحدث عن أفكارك. سنطور معاً الحل المثالي لعملك.",
+      "button": "تواصل معنا",
+      "path": "/kontakt"
+    }
+  },
+  "items": [
+    {
+      "slug": "techflow-industries",
+      "client": "TechFlow Industries",
+      "category": {
+        "de": "Digitale Strategie",
+        "en": "Digital Strategy",
+        "ar": "Digital Strategy"
+      },
+      "title": {
+        "de": "TechFlow – B2B Digitalstrategie",
+        "en": "TechFlow – B2B Digitalstrategie",
+        "ar": "TechFlow – B2B Digitalstrategie"
+      },
+      "description": {
+        "de": "Von der digitalen Unsichtbarkeit zum B2B-Marktführer: Wie wir einen Industriegiganten ins digitale Zeitalter katapultiert haben.",
+        "en": "Von der digitalen Unsichtbarkeit zum B2B-Marktführer: Wie wir einen Industriegiganten ins digitale Zeitalter katapultiert haben.",
+        "ar": "Von der digitalen Unsichtbarkeit zum B2B-Marktführer: Wie wir einen Industriegiganten ins digitale Zeitalter katapultiert haben."
+      },
+      "image_url": "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=1200&q=80",
+      "stats": [
+        {
+          "value": "+180%",
+          "label": {
+            "de": "Qualifizierte Leads",
+            "en": "Qualified Leads",
+            "ar": "Qualified Leads"
+          }
+        },
+        {
+          "value": "+95%",
+          "label": {
+            "de": "Organischer Traffic",
+            "en": "Organic Traffic",
+            "ar": "Organic Traffic"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "logitrade-austria",
+      "client": "LogiTrade Austria",
+      "category": {
+        "de": "Webdesign",
+        "en": "Web Design",
+        "ar": "Web Design"
+      },
+      "title": {
+        "de": "LogiTrade – Digitale Marktpräsenz",
+        "en": "LogiTrade – Digitale Marktpräsenz",
+        "ar": "LogiTrade – Digitale Marktpräsenz"
+      },
+      "description": {
+        "de": "Vom lokalen Geheimtipp zum regionalen Marktführer: Wie strategisches Webdesign und lokales SEO ein traditionsreiches Handelsunternehmen in die digitale Champions League befördert haben.",
+        "en": "Vom lokalen Geheimtipp zum regionalen Marktführer: Wie strategisches Webdesign und lokales SEO ein traditionsreiches Handelsunternehmen in die digitale Champions League befördert haben.",
+        "ar": "Vom lokalen Geheimtipp zum regionalen Marktführer: Wie strategisches Webdesign und lokales SEO ein traditionsreiches Handelsunternehmen in die digitale Champions League befördert haben."
+      },
+      "image_url": "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=1200&q=80",
+      "stats": [
+        {
+          "value": "+250%",
+          "label": {
+            "de": "Website-Anfragen",
+            "en": "Website Inquiries",
+            "ar": "Website Inquiries"
+          }
+        },
+        {
+          "value": "Top 3",
+          "label": {
+            "de": "Lokale Google Rankings",
+            "en": "Local Google Rankings",
+            "ar": "Local Google Rankings"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "novabrand-studio",
+      "client": "NovaBrand Studio",
+      "category": {
+        "de": "Branding",
+        "en": "Branding",
+        "ar": "Branding"
+      },
+      "title": {
+        "de": "NovaBrand – Marken-Relaunch",
+        "en": "NovaBrand – Marken-Relaunch",
+        "ar": "NovaBrand – Marken-Relaunch"
+      },
+      "description": {
+        "de": "Wenn eine Marke in die Jahre kommt: Wie wir NovaBrand mit einem mutigen Rebranding vom verstaubten Ladenhüter zur begehrten Lifestyle-Brand transformiert haben.",
+        "en": "Wenn eine Marke in die Jahre kommt: Wie wir NovaBrand mit einem mutigen Rebranding vom verstaubten Ladenhüter zur begehrten Lifestyle-Brand transformiert haben.",
+        "ar": "Wenn eine Marke in die Jahre kommt: Wie wir NovaBrand mit einem mutigen Rebranding vom verstaubten Ladenhüter zur begehrten Lifestyle-Brand transformiert haben."
+      },
+      "image_url": "https://images.unsplash.com/photo-1561070791-2526d30994b5?w=1200&q=80",
+      "stats": [
+        {
+          "value": "+85%",
+          "label": {
+            "de": "Brand Awareness",
+            "en": "Brand Awareness",
+            "ar": "Brand Awareness"
+          }
+        },
+        {
+          "value": "+120%",
+          "label": {
+            "de": "Social Media Engagement",
+            "en": "Social Media Engagement",
+            "ar": "Social Media Engagement"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "stylehub-commerce",
+      "client": "StyleHub Commerce",
+      "category": {
+        "de": "Software-Entwicklung",
+        "en": "Software Development",
+        "ar": "Software Development"
+      },
+      "title": {
+        "de": "StyleHub – E-Commerce Erfolgsgeschichte",
+        "en": "StyleHub – E-Commerce Erfolgsgeschichte",
+        "ar": "StyleHub – E-Commerce Erfolgsgeschichte"
+      },
+      "description": {
+        "de": "Vom Marketplace-Gefangenen zum E-Commerce-Unternehmer: Wie wir StyleHub einen Webshop bauten, der nicht nur gut aussieht, sondern auch verkauft.",
+        "en": "Vom Marketplace-Gefangenen zum E-Commerce-Unternehmer: Wie wir StyleHub einen Webshop bauten, der nicht nur gut aussieht, sondern auch verkauft.",
+        "ar": "Vom Marketplace-Gefangenen zum E-Commerce-Unternehmer: Wie wir StyleHub einen Webshop bauten, der nicht nur gut aussieht, sondern auch verkauft."
+      },
+      "image_url": "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&q=80",
+      "stats": [
+        {
+          "value": "+300%",
+          "label": {
+            "de": "Online-Umsatz",
+            "en": "Online Revenue",
+            "ar": "Online Revenue"
+          }
+        },
+        {
+          "value": "3.2%",
+          "label": {
+            "de": "Conversion Rate",
+            "en": "Conversion Rate",
+            "ar": "Conversion Rate"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "velocity-digital",
+      "client": "Velocity Digital",
+      "category": {
+        "de": "Branding",
+        "en": "Branding",
+        "ar": "Branding"
+      },
+      "title": {
+        "de": "Velocity – Corporate Identity",
+        "en": "Velocity – Corporate Identity",
+        "ar": "Velocity – Corporate Identity"
+      },
+      "description": {
+        "de": "Wie gibt man einer Digital-Agentur eine Identität, die kreativ und professionell zugleich ist? Mit einem Corporate Design, das im Pitch-Meeting überzeugt.",
+        "en": "Wie gibt man einer Digital-Agentur eine Identität, die kreativ und professionell zugleich ist? Mit einem Corporate Design, das im Pitch-Meeting überzeugt.",
+        "ar": "Wie gibt man einer Digital-Agentur eine Identität, die kreativ und professionell zugleich ist? Mit einem Corporate Design, das im Pitch-Meeting überzeugt."
+      },
+      "image_url": "https://images.unsplash.com/photo-1626785774573-4b799315345d?w=1200&q=80",
+      "stats": [
+        {
+          "value": "100%",
+          "label": {
+            "de": "Unique Brand Identity",
+            "en": "Unique Brand Identity",
+            "ar": "Unique Brand Identity"
+          }
+        },
+        {
+          "value": "+60%",
+          "label": {
+            "de": "Pitch Success Rate",
+            "en": "Pitch Success Rate",
+            "ar": "Pitch Success Rate"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "talentbridge",
+      "client": "TalentBridge",
+      "category": {
+        "de": "Content & Visuals",
+        "en": "Content & Visuals",
+        "ar": "Content & Visuals"
+      },
+      "title": {
+        "de": "TalentBridge – Recruiting-Kampagne",
+        "en": "TalentBridge – Recruiting-Kampagne",
+        "ar": "TalentBridge – Recruiting-Kampagne"
+      },
+      "description": {
+        "de": "Fachkräftemangel meets digitales Recruiting: Wie wir mit emotionalem Storytelling eine Brücke zwischen internationalen Talenten und österreichischen Unternehmen gebaut haben.",
+        "en": "Fachkräftemangel meets digitales Recruiting: Wie wir mit emotionalem Storytelling eine Brücke zwischen internationalen Talenten und österreichischen Unternehmen gebaut haben.",
+        "ar": "Fachkräftemangel meets digitales Recruiting: Wie wir mit emotionalem Storytelling eine Brücke zwischen internationalen Talenten und österreichischen Unternehmen gebaut haben."
+      },
+      "image_url": "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=1200&q=80",
+      "stats": [
+        {
+          "value": "500+",
+          "label": {
+            "de": "Qualifizierte Bewerbungen",
+            "en": "Qualified Applications",
+            "ar": "Qualified Applications"
+          }
+        },
+        {
+          "value": "25",
+          "label": {
+            "de": "Erfolgreiche Vermittlungen",
+            "en": "Successful Placements",
+            "ar": "Successful Placements"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "financefirst-consulting",
+      "client": "FinanceFirst Consulting",
+      "category": {
+        "de": "Webdesign",
+        "en": "Web Design",
+        "ar": "Web Design"
+      },
+      "title": {
+        "de": "FinanceFirst – Vertrauen in Pixeln",
+        "en": "FinanceFirst – Vertrauen in Pixeln",
+        "ar": "FinanceFirst – Vertrauen in Pixeln"
+      },
+      "description": {
+        "de": "Wie baut man digitales Vertrauen für eine Branche, der viele misstrauen? Mit einer Website, die Kompetenz ausstrahlt, ohne arrogant zu wirken.",
+        "en": "Wie baut man digitales Vertrauen für eine Branche, der viele misstrauen? Mit einer Website, die Kompetenz ausstrahlt, ohne arrogant zu wirken.",
+        "ar": "Wie baut man digitales Vertrauen für eine Branche, der viele misstrauen? Mit einer Website, die Kompetenz ausstrahlt, ohne arrogant zu wirken."
+      },
+      "image_url": "https://images.unsplash.com/photo-1551434678-e076c223a692?w=1200&q=80",
+      "stats": [
+        {
+          "value": "+150%",
+          "label": {
+            "de": "Kontaktanfragen",
+            "en": "Contact Inquiries",
+            "ar": "Contact Inquiries"
+          }
+        },
+        {
+          "value": "4.5 Min",
+          "label": {
+            "de": "Durchschn. Verweildauer",
+            "en": "Avg. Session Duration",
+            "ar": "Avg. Session Duration"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "signconnect",
+      "client": "SignConnect",
+      "category": {
+        "de": "Software-Entwicklung",
+        "en": "Software Development",
+        "ar": "Software Development"
+      },
+      "title": {
+        "de": "SignConnect – Technologie für Inklusion",
+        "en": "SignConnect – Technologie für Inklusion",
+        "ar": "SignConnect – Technologie für Inklusion"
+      },
+      "description": {
+        "de": "Wenn Innovation auf Inklusion trifft: Wie wir einer bahnbrechenden Gebärdensprach-Technologie den Weg in Millionen von Apps geebnet haben.",
+        "en": "Wenn Innovation auf Inklusion trifft: Wie wir einer bahnbrechenden Gebärdensprach-Technologie den Weg in Millionen von Apps geebnet haben.",
+        "ar": "Wenn Innovation auf Inklusion trifft: Wie wir einer bahnbrechenden Gebärdensprach-Technologie den Weg in Millionen von Apps geebnet haben."
+      },
+      "image_url": "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&q=80",
+      "stats": [
+        {
+          "value": "15+",
+          "label": {
+            "de": "App-Integrationen",
+            "en": "App Integrations",
+            "ar": "App Integrations"
+          }
+        },
+        {
+          "value": "50K+",
+          "label": {
+            "de": "Erreichte Endnutzer",
+            "en": "End Users Reached",
+            "ar": "End Users Reached"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "greenscape-design",
+      "client": "GreenScape Design",
+      "category": {
+        "de": "Branding",
+        "en": "Branding",
+        "ar": "Branding"
+      },
+      "title": {
+        "de": "GreenScape – Natur trifft Digital",
+        "en": "GreenScape – Natur trifft Digital",
+        "ar": "GreenScape – Natur trifft Digital"
+      },
+      "description": {
+        "de": "Vom Gärtner zum Gartenarchitekten: Wie ein traditionelles Handwerksunternehmen mit authentischem Branding die Premium-Kundschaft erobert hat.",
+        "en": "Vom Gärtner zum Gartenarchitekten: Wie ein traditionelles Handwerksunternehmen mit authentischem Branding die Premium-Kundschaft erobert hat.",
+        "ar": "Vom Gärtner zum Gartenarchitekten: Wie ein traditionelles Handwerksunternehmen mit authentischem Branding die Premium-Kundschaft erobert hat."
+      },
+      "image_url": "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=1200&q=80",
+      "stats": [
+        {
+          "value": "+200%",
+          "label": {
+            "de": "Anfragen",
+            "en": "Inquiries",
+            "ar": "Inquiries"
+          }
+        },
+        {
+          "value": "+45%",
+          "label": {
+            "de": "Durchschn. Projektgröße",
+            "en": "Avg. Project Size",
+            "ar": "Avg. Project Size"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "synergy-holdings",
+      "client": "Synergy Holdings",
+      "category": {
+        "de": "Branding",
+        "en": "Branding",
+        "ar": "Branding"
+      },
+      "title": {
+        "de": "Synergy – Brand Guidelines",
+        "en": "Synergy – Brand Guidelines",
+        "ar": "Synergy – Brand Guidelines"
+      },
+      "description": {
+        "de": "Wenn jeder macht, was er will: Wie ein 80-seitiges Brand Manual das kreative Chaos beendet und einer Unternehmensgruppe erstmals einen einheitlichen Auftritt gegeben hat.",
+        "en": "Wenn jeder macht, was er will: Wie ein 80-seitiges Brand Manual das kreative Chaos beendet und einer Unternehmensgruppe erstmals einen einheitlichen Auftritt gegeben hat.",
+        "ar": "Wenn jeder macht, was er will: Wie ein 80-seitiges Brand Manual das kreative Chaos beendet und einer Unternehmensgruppe erstmals einen einheitlichen Auftritt gegeben hat."
+      },
+      "image_url": "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=1200&q=80",
+      "stats": [
+        {
+          "value": "100%",
+          "label": {
+            "de": "Brand Consistency",
+            "en": "Brand Consistency",
+            "ar": "Brand Consistency"
+          }
+        },
+        {
+          "value": "-70%",
+          "label": {
+            "de": "Design-Abstimmungszeit",
+            "en": "Design Alignment Time",
+            "ar": "Design Alignment Time"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "moveeasy-logistics",
+      "client": "MoveEasy Logistics",
+      "category": {
+        "de": "Branding",
+        "en": "Branding",
+        "ar": "Branding"
+      },
+      "title": {
+        "de": "MoveEasy – Marke auf Rädern",
+        "en": "MoveEasy – Marke auf Rädern",
+        "ar": "MoveEasy – Marke auf Rädern"
+      },
+      "description": {
+        "de": "Von der weißen Lieferwagen-Flotte zur fahrenden Werbetafel: Wie durchdachtes Branding ein Logistikunternehmen unübersehbar gemacht hat.",
+        "en": "Von der weißen Lieferwagen-Flotte zur fahrenden Werbetafel: Wie durchdachtes Branding ein Logistikunternehmen unübersehbar gemacht hat.",
+        "ar": "Von der weißen Lieferwagen-Flotte zur fahrenden Werbetafel: Wie durchdachtes Branding ein Logistikunternehmen unübersehbar gemacht hat."
+      },
+      "image_url": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=1200&q=80",
+      "stats": [
+        {
+          "value": "+80%",
+          "label": {
+            "de": "Brand Recognition",
+            "en": "Brand Recognition",
+            "ar": "Brand Recognition"
+          }
+        },
+        {
+          "value": "+35%",
+          "label": {
+            "de": "Weiterempfehlungen",
+            "en": "Referrals",
+            "ar": "Referrals"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "ecoverde-shop",
+      "client": "EcoVerde Shop",
+      "category": {
+        "de": "Branding",
+        "en": "Branding",
+        "ar": "Branding"
+      },
+      "title": {
+        "de": "EcoVerde – Grüne Markenidentität",
+        "en": "EcoVerde – Grüne Markenidentität",
+        "ar": "EcoVerde – Grüne Markenidentität"
+      },
+      "description": {
+        "de": "Wenn Nachhaltigkeit keine leere Phrase sein soll: Wie wir für einen Lifestyle-Shop eine Marke schufen, die Umweltbewusstsein lebt.",
+        "en": "Wenn Nachhaltigkeit keine leere Phrase sein soll: Wie wir für einen Lifestyle-Shop eine Marke schufen, die Umweltbewusstsein lebt.",
+        "ar": "Wenn Nachhaltigkeit keine leere Phrase sein soll: Wie wir für einen Lifestyle-Shop eine Marke schufen, die Umweltbewusstsein lebt."
+      },
+      "image_url": "https://images.unsplash.com/photo-1487058792275-0ad4aaf24ca7?w=1200&q=80",
+      "stats": [
+        {
+          "value": "Unique",
+          "label": {
+            "de": "Authentic Brand Identity",
+            "en": "Authentic Brand Identity",
+            "ar": "Authentic Brand Identity"
+          }
+        },
+        {
+          "value": "+150%",
+          "label": {
+            "de": "Social Media Growth",
+            "en": "Social Media Growth",
+            "ar": "Social Media Growth"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "legalpro-partners",
+      "client": "LegalPro Partners",
+      "category": {
+        "de": "Digitale Strategie",
+        "en": "Digital Strategy",
+        "ar": "Digital Strategy"
+      },
+      "title": {
+        "de": "LegalPro – Juristische Sichtbarkeit",
+        "en": "LegalPro – Juristische Sichtbarkeit",
+        "ar": "LegalPro – Juristische Sichtbarkeit"
+      },
+      "description": {
+        "de": "Von der Google-Wüste auf Seite 1: Wie Content-Marketing und SEO einer Spezialkanzlei zu digitaler Sichtbarkeit verholfen haben.",
+        "en": "Von der Google-Wüste auf Seite 1: Wie Content-Marketing und SEO einer Spezialkanzlei zu digitaler Sichtbarkeit verholfen haben.",
+        "ar": "Von der Google-Wüste auf Seite 1: Wie Content-Marketing und SEO einer Spezialkanzlei zu digitaler Sichtbarkeit verholfen haben."
+      },
+      "image_url": "https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?w=1200&q=80",
+      "stats": [
+        {
+          "value": "+300%",
+          "label": {
+            "de": "Organischer Traffic",
+            "en": "Organic Traffic",
+            "ar": "Organic Traffic"
+          }
+        },
+        {
+          "value": "Top 5",
+          "label": {
+            "de": "Rankings für Kernkeywords",
+            "en": "Core Keyword Rankings",
+            "ar": "Core Keyword Rankings"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "smartai-solutions",
+      "client": "SmartAI Solutions",
+      "category": {
+        "de": "Webdesign",
+        "en": "Web Design",
+        "ar": "Web Design"
+      },
+      "title": {
+        "de": "SmartAI – Website Redesign",
+        "en": "SmartAI – Website Redesign",
+        "ar": "SmartAI – Website Redesign"
+      },
+      "description": {
+        "de": "AI-Website Redesign mit Fokus auf bessere Orientierung, klarere Botschaften und reduzierte Komplexität für unterschiedliche Zielgruppen.",
+        "en": "AI-Website Redesign mit Fokus auf bessere Orientierung, klarere Botschaften und reduzierte Komplexität für unterschiedliche Zielgruppen.",
+        "ar": "AI-Website Redesign mit Fokus auf bessere Orientierung, klarere Botschaften und reduzierte Komplexität für unterschiedliche Zielgruppen."
+      },
+      "image_url": "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=1200&q=80",
+      "stats": [
+        {
+          "value": "+120%",
+          "label": {
+            "de": "User Engagement",
+            "en": "User Engagement",
+            "ar": "User Engagement"
+          }
+        },
+        {
+          "value": "-40%",
+          "label": {
+            "de": "Bounce Rate",
+            "en": "Bounce Rate",
+            "ar": "Bounce Rate"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "globalretail-hub",
+      "client": "GlobalRetail Hub",
+      "category": {
+        "de": "Digitale Strategie",
+        "en": "Digital Strategy",
+        "ar": "Digital Strategy"
+      },
+      "title": {
+        "de": "GlobalRetail – Digital Promotions",
+        "en": "GlobalRetail – Digital Promotions",
+        "ar": "GlobalRetail – Digital Promotions"
+      },
+      "description": {
+        "de": "Digitale Promotion-Lösungen im Retail-Umfeld mit Fokus auf Skalierbarkeit, Automatisierung und sauberes Tracking.",
+        "en": "Digitale Promotion-Lösungen im Retail-Umfeld mit Fokus auf Skalierbarkeit, Automatisierung und sauberes Tracking.",
+        "ar": "Digitale Promotion-Lösungen im Retail-Umfeld mit Fokus auf Skalierbarkeit, Automatisierung und sauberes Tracking."
+      },
+      "image_url": "https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=1200&q=80",
+      "stats": [
+        {
+          "value": "+200%",
+          "label": {
+            "de": "Campaign Reach",
+            "en": "Campaign Reach",
+            "ar": "Campaign Reach"
+          }
+        },
+        {
+          "value": "100%",
+          "label": {
+            "de": "Tracking Accuracy",
+            "en": "Tracking Accuracy",
+            "ar": "Tracking Accuracy"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "streampro-media",
+      "client": "StreamPro Media",
+      "category": {
+        "de": "Software-Entwicklung",
+        "en": "Software Development",
+        "ar": "Software Development"
+      },
+      "title": {
+        "de": "StreamPro – Streaming Platform",
+        "en": "StreamPro – Streaming Platform",
+        "ar": "StreamPro – Streaming Platform"
+      },
+      "description": {
+        "de": "Entwicklung einer skalierbaren Streaming-Architektur inklusive Smart-TV-App und Performance-Optimierungen.",
+        "en": "Entwicklung einer skalierbaren Streaming-Architektur inklusive Smart-TV-App und Performance-Optimierungen.",
+        "ar": "Entwicklung einer skalierbaren Streaming-Architektur inklusive Smart-TV-App und Performance-Optimierungen."
+      },
+      "image_url": "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?w=1200&q=80",
+      "stats": [
+        {
+          "value": "10K+",
+          "label": {
+            "de": "Active Users",
+            "en": "Active Users",
+            "ar": "Active Users"
+          }
+        },
+        {
+          "value": "99.9%",
+          "label": {
+            "de": "Uptime",
+            "en": "Uptime",
+            "ar": "Uptime"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "meditrack-systems",
+      "client": "MediTrack Systems",
+      "category": {
+        "de": "Software-Entwicklung",
+        "en": "Software Development",
+        "ar": "Software Development"
+      },
+      "title": {
+        "de": "MediTrack – Datenvisualisierung",
+        "en": "MediTrack – Datenvisualisierung",
+        "ar": "MediTrack – Datenvisualisierung"
+      },
+      "description": {
+        "de": "Entwicklung einer medizinischen Anwendung zur Verarbeitung und Visualisierung von Messwerten, mit Fokus auf Stabilität und Datenschutz.",
+        "en": "Entwicklung einer medizinischen Anwendung zur Verarbeitung und Visualisierung von Messwerten, mit Fokus auf Stabilität und Datenschutz.",
+        "ar": "Entwicklung einer medizinischen Anwendung zur Verarbeitung und Visualisierung von Messwerten, mit Fokus auf Stabilität und Datenschutz."
+      },
+      "image_url": "https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=1200&q=80",
+      "stats": [
+        {
+          "value": "GDPR",
+          "label": {
+            "de": "Compliant",
+            "en": "Compliant",
+            "ar": "Compliant"
+          }
+        },
+        {
+          "value": "5K+",
+          "label": {
+            "de": "Daily Users",
+            "en": "Daily Users",
+            "ar": "Daily Users"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "securenet-provider",
+      "client": "SecureNet Provider",
+      "category": {
+        "de": "Software-Entwicklung",
+        "en": "Software Development",
+        "ar": "Software Development"
+      },
+      "title": {
+        "de": "SecureNet – VPN & Billing Integration",
+        "en": "SecureNet – VPN & Billing Integration",
+        "ar": "SecureNet – VPN & Billing Integration"
+      },
+      "description": {
+        "de": "Sicheres, globales Setup zur Verbindung von VPN- und Abrechnungssystemen mit klaren Rollen- und Logging-Konzepten.",
+        "en": "Sicheres, globales Setup zur Verbindung von VPN- und Abrechnungssystemen mit klaren Rollen- und Logging-Konzepten.",
+        "ar": "Sicheres, globales Setup zur Verbindung von VPN- und Abrechnungssystemen mit klaren Rollen- und Logging-Konzepten."
+      },
+      "image_url": "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=1200&q=80",
+      "stats": [
+        {
+          "value": "50+",
+          "label": {
+            "de": "Global Servers",
+            "en": "Global Servers",
+            "ar": "Global Servers"
+          }
+        },
+        {
+          "value": "100%",
+          "label": {
+            "de": "Secure",
+            "en": "Secure",
+            "ar": "Secure"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "fintech-analytics",
+      "client": "FinTech Analytics",
+      "category": {
+        "de": "Software-Entwicklung",
+        "en": "Software Development",
+        "ar": "Software Development"
+      },
+      "title": {
+        "de": "FinTech – Finanz-Integration",
+        "en": "FinTech – Finanz-Integration",
+        "ar": "FinTech – Finanz-Integration"
+      },
+      "description": {
+        "de": "Integration komplexer Analyse-Systeme im Finanzumfeld mit hohen Anforderungen an Compliance und Stabilität.",
+        "en": "Integration komplexer Analyse-Systeme im Finanzumfeld mit hohen Anforderungen an Compliance und Stabilität.",
+        "ar": "Integration komplexer Analyse-Systeme im Finanzumfeld mit hohen Anforderungen an Compliance und Stabilität."
+      },
+      "image_url": "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=1200&q=80",
+      "stats": [
+        {
+          "value": "100%",
+          "label": {
+            "de": "Compliance",
+            "en": "Compliance",
+            "ar": "Compliance"
+          }
+        },
+        {
+          "value": "24/7",
+          "label": {
+            "de": "Monitoring",
+            "en": "Monitoring",
+            "ar": "Monitoring"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "cloudops-solutions",
+      "client": "CloudOps Solutions",
+      "category": {
+        "de": "Software-Entwicklung",
+        "en": "Software Development",
+        "ar": "Software Development"
+      },
+      "title": {
+        "de": "CloudOps – Infrastruktur",
+        "en": "CloudOps – Infrastruktur",
+        "ar": "CloudOps – Infrastruktur"
+      },
+      "description": {
+        "de": "Mehrere Projekte mit Fokus auf Automatisierung, Monitoring, Kostensteuerung und Wiederherstellungsstrategien.",
+        "en": "Mehrere Projekte mit Fokus auf Automatisierung, Monitoring, Kostensteuerung und Wiederherstellungsstrategien.",
+        "ar": "Mehrere Projekte mit Fokus auf Automatisierung, Monitoring, Kostensteuerung und Wiederherstellungsstrategien."
+      },
+      "image_url": "https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&q=80",
+      "stats": [
+        {
+          "value": "-60%",
+          "label": {
+            "de": "Infrastructure Costs",
+            "en": "Infrastructure Costs",
+            "ar": "Infrastructure Costs"
+          }
+        },
+        {
+          "value": "99.9%",
+          "label": {
+            "de": "Availability",
+            "en": "Availability",
+            "ar": "Availability"
+          }
+        }
+      ]
+    },
+    {
+      "slug": "autoflow-ai",
+      "client": "AutoFlow AI",
+      "category": {
+        "de": "Software-Entwicklung",
+        "en": "Software Development",
+        "ar": "Software Development"
+      },
+      "title": {
+        "de": "AutoFlow – KI-Prozessautomatisierung",
+        "en": "AutoFlow – KI-Prozessautomatisierung",
+        "ar": "AutoFlow – KI-Prozessautomatisierung"
+      },
+      "description": {
+        "de": "Prozessautomatisierung mit KI – Web-Anwendung mit klarer Nutzerführung, integrierten Datenflüssen und verständlicher Darstellung komplexer Funktionen.",
+        "en": "Prozessautomatisierung mit KI – Web-Anwendung mit klarer Nutzerführung, integrierten Datenflüssen und verständlicher Darstellung komplexer Funktionen.",
+        "ar": "Prozessautomatisierung mit KI – Web-Anwendung mit klarer Nutzerführung, integrierten Datenflüssen und verständlicher Darstellung komplexer Funktionen."
+      },
+      "image_url": "https://images.unsplash.com/photo-1677442136019-21780ecad995?w=1200&q=80",
+      "stats": [
+        {
+          "value": "-75%",
+          "label": {
+            "de": "Process Time",
+            "en": "Process Time",
+            "ar": "Process Time"
+          }
+        },
+        {
+          "value": "AI",
+          "label": {
+            "de": "Powered",
+            "en": "Powered",
+            "ar": "Powered"
+          }
+        }
+      ]
+    }
+  ]
+}

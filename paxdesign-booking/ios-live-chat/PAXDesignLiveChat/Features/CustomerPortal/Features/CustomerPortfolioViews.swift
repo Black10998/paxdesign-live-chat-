@@ -4,21 +4,22 @@ import SwiftUI
 
 struct CustomerPortfolioListView: View {
     @EnvironmentObject private var api: CustomerAPIClient
+    @EnvironmentObject private var navigation: CustomerNavigationCoordinator
     @Environment(\.marketingTheme) private var theme
-    @State private var response: CustomerPortfolioResponse?
+    @State private var showcase: CustomerPortfolioShowcaseResponse?
     @State private var selectedCategory = ""
     @State private var error: String?
     @State private var isLoading = true
-
-    private var columns: [GridItem] {
-        [GridItem(.flexible(), spacing: 16), GridItem(.flexible(), spacing: 16)]
-    }
+    @State private var language: CustomerServicesCatalogLanguage = {
+        let code = Locale.current.language.languageCode?.identifier ?? "de"
+        return CustomerServicesCatalogLanguage(rawValue: code) ?? .de
+    }()
 
     var body: some View {
         Group {
-            if isLoading && response == nil {
+            if isLoading && showcase == nil {
                 CustomerPortfolioListSkeleton()
-            } else if let error {
+            } else if let error, showcase == nil {
                 CustomerPremiumEmptyState(
                     title: String(localized: "Portfolio unavailable"),
                     message: error,
@@ -31,86 +32,136 @@ struct CustomerPortfolioListView: View {
                     message: String(localized: "Our latest work will appear here once published."),
                     systemImage: "photo.on.rectangle.angled"
                 )
-            } else {
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 28) {
-                        portfolioHero
-                        if let categories = response?.categories, !categories.isEmpty {
-                            categoryStrip(categories)
-                        }
-                        LazyVGrid(columns: columns, spacing: 16) {
-                            ForEach(Array(filteredItems.enumerated()), id: \.element.id) { index, item in
-                                NavigationLink {
-                                    CustomerPortfolioDetailView(slug: item.slug)
-                                } label: {
-                                    CustomerPortfolioShowcaseCard(item: item, index: index)
-                                }
-                                .buttonStyle(CustomerPressableCardStyle())
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-                }
+            } else if let showcase {
+                portfolioScroll(showcase)
             }
         }
-        .background(PAXBackground())
-        .navigationTitle(String(localized: "Portfolio"))
+        .background(theme.background.ignoresSafeArea())
+        .navigationTitle(showcase?.header.title ?? String(localized: "Portfolio"))
         .navigationBarTitleDisplayMode(.large)
-        .task(id: selectedCategory) { await load() }
+        .toolbarBackground(theme.background, for: .navigationBar)
+        .task(id: taskKey) { await load() }
         .refreshable { await load(force: true) }
     }
 
-    private var portfolioHero: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(String(localized: "Selected work"))
-                .font(.largeTitle.weight(.bold))
-                .foregroundStyle(PAXTheme.textPrimary)
-            Text(String(localized: "Premium digital products crafted with clarity, performance, and long-term scalability."))
-                .font(.body)
-                .foregroundStyle(PAXTheme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+    private var taskKey: String {
+        "\(language.rawValue)-\(selectedCategory)"
+    }
+
+    @ViewBuilder
+    private func portfolioScroll(_ showcase: CustomerPortfolioShowcaseResponse) -> some View {
+        ScrollView {
+            LazyVStack(alignment: showcase.isRTL ? .trailing : .leading, spacing: CustomerCalmDesign.sectionSpacing) {
+                HStack {
+                    if showcase.isRTL { Spacer(minLength: 0) }
+                    ServicesLanguageSwitcher(language: $language)
+                    if !showcase.isRTL { Spacer(minLength: 0) }
+                }
+
+                CustomerCalmSectionIntro(
+                    tags: showcase.header.tags,
+                    title: showcase.header.title,
+                    intro: showcase.header.intro
+                )
+
+                if let categories = showcase.categories, !categories.isEmpty {
+                    categoryStrip(categories)
+                }
+
+                LazyVStack(spacing: CustomerCalmDesign.cardSpacing) {
+                    ForEach(Array(filteredItems.enumerated()), id: \.element.id) { index, item in
+                        NavigationLink {
+                            CustomerPortfolioDetailView(slug: item.slug, language: language)
+                        } label: {
+                            CustomerPortfolioShowcaseCard(item: item, index: index)
+                        }
+                        .buttonStyle(CustomerPressableCardStyle())
+                    }
+                }
+
+                if let url = URL(string: showcase.cta.url.isEmpty ? "https://paxdesign.at/kontakt" : showcase.cta.url) {
+                    CustomerCalmCTABlock(
+                        tags: showcase.cta.tags,
+                        title: showcase.cta.title,
+                        text: showcase.cta.text,
+                        button: showcase.cta.button,
+                        url: url
+                    ) {
+                        navigation.selectedTab = .account
+                        navigation.accountPath = [CustomerPortalDestination(kind: .contact)]
+                        PAXHaptics.light()
+                    }
+                }
+            }
+            .padding(.horizontal, CustomerCalmDesign.contentPadding)
+            .padding(.vertical, 16)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
+        .environment(\.layoutDirection, showcase.isRTL ? .rightToLeft : .leftToRight)
     }
 
     private func categoryStrip(_ categories: [CustomerPortfolioResponse.Category]) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 10) {
-                categoryChip("", title: String(localized: "All"))
+                CustomerCalmCategoryChip(
+                    title: String(localized: "All"),
+                    isSelected: selectedCategory.isEmpty
+                ) {
+                    withAnimation(PAXTheme.quickSpring) { selectedCategory = "" }
+                    PAXHaptics.light()
+                }
                 ForEach(categories, id: \.slug) { category in
-                    categoryChip(category.slug, title: category.name)
+                    CustomerCalmCategoryChip(
+                        title: category.name,
+                        isSelected: selectedCategory == category.slug
+                    ) {
+                        withAnimation(PAXTheme.quickSpring) { selectedCategory = category.slug }
+                        PAXHaptics.light()
+                    }
                 }
             }
         }
     }
 
-    private func categoryChip(_ slug: String, title: String) -> some View {
-        Button(title) {
-            withAnimation(PAXTheme.quickSpring) { selectedCategory = slug }
-            PAXHaptics.light()
-        }
-        .font(.subheadline.weight(.semibold))
-        .padding(.horizontal, 14)
-        .padding(.vertical, 9)
-        .background(selectedCategory == slug ? PAXTheme.accent : PAXTheme.surfaceElevated)
-        .foregroundStyle(selectedCategory == slug ? Color.white : PAXTheme.textPrimary)
-        .clipShape(Capsule())
-        .accessibilityAddTraits(selectedCategory == slug ? .isSelected : [])
-    }
-
     private var filteredItems: [CustomerPortfolioItem] {
-        response?.items ?? []
+        guard let items = showcase?.items else { return [] }
+        guard !selectedCategory.isEmpty else { return items }
+        return items.filter { item in
+            item.category_slugs?.contains(selectedCategory) == true
+        }
     }
 
     private func load(force: Bool = false) async {
-        if response == nil || force { isLoading = true }
+        if showcase == nil || force { isLoading = true }
         error = nil
         do {
-            response = try await api.fetchPortfolio(category: selectedCategory.isEmpty ? nil : selectedCategory)
+            showcase = try await api.fetchPortfolioShowcase(lang: language.rawValue)
         } catch {
-            self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
+            do {
+                let fallback = try await api.fetchPortfolio(
+                    category: selectedCategory.isEmpty ? nil : selectedCategory,
+                    lang: language.rawValue
+                )
+                showcase = CustomerPortfolioShowcaseResponse(
+                    lang: language.rawValue,
+                    dir: language == .ar ? "rtl" : "ltr",
+                    header: .init(
+                        tags: ["PAXdesign"],
+                        title: String(localized: "Projects & References"),
+                        intro: String(localized: "Premium digital products crafted with clarity, performance, and long-term scalability.")
+                    ),
+                    cta: .init(
+                        tags: [String(localized: "Contact")],
+                        title: String(localized: "Ready for your project?"),
+                        text: String(localized: "Let's talk about your ideas. Together we'll craft the perfect solution for your business."),
+                        button: String(localized: "Get in touch"),
+                        url: ""
+                    ),
+                    categories: fallback.categories,
+                    items: fallback.items
+                )
+            } catch let fallbackError {
+                self.error = (fallbackError as? CustomerAPIError)?.localizedDescription ?? fallbackError.localizedDescription
+            }
         }
         isLoading = false
     }
@@ -119,38 +170,40 @@ struct CustomerPortfolioListView: View {
 // MARK: - Cards
 
 struct CustomerPortfolioShowcaseCard: View {
+    @Environment(\.marketingTheme) private var theme
     let item: CustomerPortfolioItem
     var index: Int = 0
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            portfolioImage
-            VStack(alignment: .leading, spacing: 6) {
-                Text(item.displayTitle)
-                    .font(.headline)
-                    .foregroundStyle(PAXTheme.textPrimary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                if !item.displayExcerpt.isEmpty {
-                    Text(item.displayExcerpt)
-                        .font(.caption)
-                        .foregroundStyle(PAXTheme.textSecondary)
-                        .lineLimit(2)
-                } else if let client = item.client, !client.isEmpty {
-                    Text(client)
-                        .font(.caption)
-                        .foregroundStyle(PAXTheme.textSecondary)
+        CustomerCalmShellCard {
+            VStack(alignment: .leading, spacing: 0) {
+                portfolioImage
+                VStack(alignment: .leading, spacing: 12) {
+                    if let client = item.client, !client.isEmpty {
+                        Text(client.uppercased())
+                            .font(.system(size: 11, weight: .semibold))
+                            .tracking(1.1)
+                            .foregroundStyle(theme.textSecondary)
+                    }
+                    Text(item.displayTitle)
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(theme.textPrimary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if !item.displayExcerpt.isEmpty {
+                        Text(item.displayExcerpt)
+                            .font(.body)
+                            .foregroundStyle(theme.textSecondary)
+                            .lineSpacing(4)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    if let stats = item.stats, !stats.isEmpty {
+                        CustomerCalmStatGrid(stats: stats)
+                    }
                 }
+                .padding(20)
             }
-            .padding(14)
         }
-        .background(PAXTheme.surfaceElevated)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(PAXTheme.border.opacity(0.25), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(item.displayTitle)
         .accessibilityHint(String(localized: "Opens project details"))
@@ -158,26 +211,41 @@ struct CustomerPortfolioShowcaseCard: View {
 
     @ViewBuilder
     private var portfolioImage: some View {
-        if let imageURL = item.image_url, let url = URL(string: imageURL) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image.resizable().scaledToFill()
-                default:
-                    SkeletonBlock(height: 150, cornerRadius: 0)
+        ZStack(alignment: .topLeading) {
+            if let imageURL = item.image_url, let url = URL(string: imageURL) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    default:
+                        SkeletonBlock(height: 220, cornerRadius: 0)
+                    }
                 }
+                .frame(maxWidth: .infinity)
+                .frame(height: 220)
+                .clipped()
+            } else {
+                Rectangle()
+                    .fill(theme.panel)
+                    .frame(height: 220)
+                    .overlay {
+                        Image(systemName: "photo.on.rectangle.angled")
+                            .font(.title2)
+                            .foregroundStyle(theme.accent)
+                    }
             }
-            .frame(height: 150)
-            .clipped()
-        } else {
-            Rectangle()
-                .fill(PAXTheme.accentSoft)
-                .frame(height: 150)
-                .overlay {
-                    Image(systemName: "photo.on.rectangle.angled")
-                        .font(.title2)
-                        .foregroundStyle(PAXTheme.accent)
-                }
+
+            if !item.displayCategory.isEmpty {
+                Text(item.displayCategory)
+                    .font(.system(size: 11, weight: .semibold))
+                    .tracking(0.6)
+                    .foregroundStyle(theme.accentOnAccent)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(theme.accent)
+                    .clipShape(Capsule())
+                    .padding(14)
+            }
         }
     }
 }
@@ -194,11 +262,15 @@ struct CustomerPortfolioCard: View {
 
 struct CustomerPortfolioDetailView: View {
     @EnvironmentObject private var api: CustomerAPIClient
+    @Environment(\.marketingTheme) private var theme
     let slug: String
+    var language: CustomerServicesCatalogLanguage = {
+        let code = Locale.current.language.languageCode?.identifier ?? "de"
+        return CustomerServicesCatalogLanguage(rawValue: code) ?? .de
+    }()
     @State private var item: CustomerPortfolioDetail?
     @State private var error: String?
     @State private var selectedGalleryIndex: Int?
-    @State private var heroVisible = true
 
     var body: some View {
         ScrollView {
@@ -220,10 +292,11 @@ struct CustomerPortfolioDetailView: View {
                     .padding(.top, 8)
             }
         }
-        .background(PAXBackground())
+        .background(theme.background.ignoresSafeArea())
         .navigationTitle(item?.displayTitle ?? String(localized: "Portfolio"))
         .navigationBarTitleDisplayMode(.inline)
-        .task { await load() }
+        .toolbarBackground(theme.background, for: .navigationBar)
+        .task(id: slug) { await load() }
         .refreshable { await load() }
         .sheet(item: Binding(
             get: { selectedGalleryIndex.map { GallerySelection(index: $0) } },
@@ -255,33 +328,40 @@ struct CustomerPortfolioDetailView: View {
                 .clipped()
             } else {
                 Rectangle()
-                    .fill(PAXTheme.accentSoft)
+                    .fill(theme.panel)
                     .frame(height: 280)
             }
 
             LinearGradient(
-                colors: [.clear, .black.opacity(0.75)],
+                colors: [theme.heroGradientTop, theme.heroGradientBottom],
                 startPoint: .center,
                 endPoint: .bottom
             )
             .frame(height: 360)
 
             VStack(alignment: .leading, spacing: 8) {
-                if let categories = item.categories, !categories.isEmpty {
+                if let client = item.client, !client.isEmpty {
+                    Text(client.uppercased())
+                        .font(.caption.weight(.semibold))
+                        .tracking(1.2)
+                        .foregroundStyle(theme.heroTagColor)
+                } else if let categories = item.categories, !categories.isEmpty {
                     Text(categories.joined(separator: " · "))
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(theme.heroTagColor)
                         .textCase(.uppercase)
                 }
                 Text(item.displayTitle)
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .font(.system(size: 32, weight: .bold, design: .default))
+                    .tracking(-0.5)
                     .foregroundStyle(.white)
                     .multilineTextAlignment(.leading)
                 if !item.displaySubtitle.isEmpty {
                     Text(item.displaySubtitle)
-                        .font(.subheadline)
+                        .font(.body)
                         .foregroundStyle(.white.opacity(0.88))
-                        .lineLimit(3)
+                        .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(24)
@@ -291,10 +371,10 @@ struct CustomerPortfolioDetailView: View {
 
     @ViewBuilder
     private func detailContent(_ item: CustomerPortfolioDetail) -> some View {
-        VStack(alignment: .leading, spacing: 28) {
+        VStack(alignment: .leading, spacing: CustomerCalmDesign.sectionSpacing) {
             if let structured = item.structuredDetail {
                 if let stats = structured.stats, !stats.isEmpty {
-                    statsSection(stats)
+                    detailStatsSection(stats)
                 }
                 if let metadata = structured.metadata, !metadata.isEmpty {
                     metadataSection(metadata)
@@ -305,8 +385,8 @@ struct CustomerPortfolioDetailView: View {
                     ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, paragraph in
                         Text(CustomerPortfolioTextSanitizer.clean(paragraph))
                             .font(.body)
-                            .foregroundStyle(PAXTheme.textPrimary)
-                            .lineSpacing(5)
+                            .foregroundStyle(theme.textPrimary)
+                            .lineSpacing(6)
                     }
                 }
                 if let services = structured.services, !services.isEmpty {
@@ -325,30 +405,14 @@ struct CustomerPortfolioDetailView: View {
 
             footerActions(item)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, CustomerCalmDesign.contentPadding)
         .padding(.vertical, 28)
     }
 
-    private func statsSection(_ stats: [CustomerPortfolioStructuredDetail.Stat]) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 14) {
-                ForEach(stats) { stat in
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text(stat.value)
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
-                            .foregroundStyle(PAXTheme.accent)
-                        Text(stat.label)
-                            .font(.footnote)
-                            .foregroundStyle(PAXTheme.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(18)
-                    .frame(width: 220, alignment: .leading)
-                    .background(PAXTheme.surfaceElevated)
-                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-                }
-            }
-        }
+    private func detailStatsSection(_ stats: [CustomerPortfolioStructuredDetail.Stat]) -> some View {
+        CustomerCalmStatGrid(stats: stats.map {
+            CustomerPortfolioStat(value: $0.value, label: $0.label)
+        })
     }
 
     private func metadataSection(_ rows: [CustomerPortfolioStructuredDetail.Metadata]) -> some View {
@@ -357,7 +421,7 @@ struct CustomerPortfolioDetailView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(row.label)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(PAXTheme.textSecondary)
+                        .foregroundStyle(theme.textSecondary)
                         .textCase(.uppercase)
                     if let link = row.link, !link.isEmpty, let url = URL(string: link) {
                         Link(row.value, destination: url)
@@ -365,13 +429,17 @@ struct CustomerPortfolioDetailView: View {
                     } else {
                         Text(row.value)
                             .font(.subheadline.weight(.medium))
-                            .foregroundStyle(PAXTheme.textPrimary)
+                            .foregroundStyle(theme.textPrimary)
                     }
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(PAXTheme.surfaceElevated)
+                .background(theme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(theme.border, lineWidth: 0.5)
+                )
             }
         }
     }
@@ -382,10 +450,10 @@ struct CustomerPortfolioDetailView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(section.title)
                         .font(.title3.weight(.semibold))
-                        .foregroundStyle(PAXTheme.textPrimary)
+                        .foregroundStyle(theme.textPrimary)
                     Text(CustomerPortfolioTextSanitizer.clean(section.body))
                         .font(.body)
-                        .foregroundStyle(PAXTheme.textSecondary)
+                        .foregroundStyle(theme.textSecondary)
                         .lineSpacing(6)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -403,8 +471,8 @@ struct CustomerPortfolioDetailView: View {
                         .font(.subheadline.weight(.medium))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
-                        .background(PAXTheme.accentSoft)
-                        .foregroundStyle(PAXTheme.accent)
+                        .background(theme.accent.opacity(0.14))
+                        .foregroundStyle(theme.accent)
                         .clipShape(Capsule())
                 }
             }
@@ -420,8 +488,8 @@ struct CustomerPortfolioDetailView: View {
                         .font(.caption.weight(.semibold))
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
-                        .background(PAXTheme.surfaceElevated)
-                        .foregroundStyle(PAXTheme.textSecondary)
+                        .background(theme.panel)
+                        .foregroundStyle(theme.textSecondary)
                         .clipShape(Capsule())
                 }
             }
@@ -433,12 +501,12 @@ struct CustomerPortfolioDetailView: View {
         if let client = item.client, !client.isEmpty {
             Label(client, systemImage: "building.2")
                 .font(.subheadline)
-                .foregroundStyle(PAXTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
         }
         if let excerpt = item.excerpt, !item.displaySubtitle.isEmpty {
             Text(item.displaySubtitle)
                 .font(.body)
-                .foregroundStyle(PAXTheme.textPrimary)
+                .foregroundStyle(theme.textPrimary)
                 .lineSpacing(5)
         }
     }
@@ -499,7 +567,7 @@ struct CustomerPortfolioDetailView: View {
 
     private func load() async {
         do {
-            item = try await api.fetchPortfolioItem(slug: slug)
+            item = try await api.fetchPortfolioItem(slug: slug, lang: language.rawValue)
             error = nil
         } catch {
             self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
@@ -558,6 +626,7 @@ struct CustomerPortfolioGalleryViewer: View {
 // MARK: - Shared UX
 
 struct CustomerPremiumEmptyState: View {
+    @Environment(\.marketingTheme) private var theme
     let title: String
     let message: String
     let systemImage: String
@@ -568,16 +637,17 @@ struct CustomerPremiumEmptyState: View {
         VStack(spacing: 16) {
             Image(systemName: systemImage)
                 .font(.system(size: 44))
-                .foregroundStyle(PAXTheme.accent)
+                .foregroundStyle(theme.accent)
             Text(title)
                 .font(.title3.weight(.semibold))
+                .foregroundStyle(theme.textPrimary)
             Text(message)
                 .font(.subheadline)
-                .foregroundStyle(PAXTheme.textSecondary)
+                .foregroundStyle(theme.textSecondary)
                 .multilineTextAlignment(.center)
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
-                    .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .filled))
+                    .buttonStyle(CustomerCalmAccentButtonStyle())
             }
         }
         .padding(32)
@@ -588,7 +658,8 @@ struct CustomerPremiumEmptyState: View {
 struct CustomerPressableCardStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .scaleEffect(configuration.isPressed ? 0.985 : 1)
+            .offset(y: configuration.isPressed ? 0 : 0)
             .animation(PAXTheme.quickSpring, value: configuration.isPressed)
     }
 }

@@ -212,45 +212,52 @@ struct CustomerServicesCatalogSkeleton: View {
 // MARK: - Portfolio
 
 struct CustomerPortfolioListSkeleton: View {
-    private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
+    @Environment(\.marketingTheme) private var theme
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: CustomerPortalDesign.sectionSpacing) {
-                VStack(alignment: .leading, spacing: 8) {
-                    SkeletonLine(width: 120, height: 24)
-                    SkeletonLine(height: 14)
-                    SkeletonLine(width: 260, height: 14)
+            LazyVStack(alignment: .leading, spacing: CustomerCalmDesign.sectionSpacing) {
+                HStack {
+                    SkeletonCapsule(width: 140, height: 36)
+                    Spacer()
                 }
-                .padding(16)
-                .background(PAXTheme.surfaceElevated)
-                .clipShape(RoundedRectangle(cornerRadius: CustomerPortalDesign.cardRadius, style: .continuous))
-                .padding(.horizontal)
+
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 8) {
+                        ForEach(0..<2, id: \.self) { _ in SkeletonCapsule(width: 72, height: 24) }
+                    }
+                    SkeletonLine(width: 260, height: 32)
+                    SkeletonLine(height: 16)
+                    SkeletonLine(width: 300, height: 16)
+                }
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
-                        ForEach(0..<4, id: \.self) { _ in SkeletonCapsule(width: 70, height: 32) }
+                        ForEach(0..<4, id: \.self) { _ in SkeletonCapsule(width: 80, height: 34) }
                     }
-                    .padding(.horizontal)
                 }
 
-                LazyVGrid(columns: columns, spacing: 14) {
-                    ForEach(0..<6, id: \.self) { _ in
-                        VStack(alignment: .leading, spacing: 0) {
-                            SkeletonBlock(height: 132, cornerRadius: 0)
-                            VStack(alignment: .leading, spacing: 6) {
-                                SkeletonLine(height: 14)
-                                SkeletonLine(width: 100, height: 10)
+                ForEach(0..<3, id: \.self) { _ in
+                    VStack(alignment: .leading, spacing: 0) {
+                        SkeletonBlock(height: 220, cornerRadius: 0)
+                        VStack(alignment: .leading, spacing: 10) {
+                            SkeletonLine(width: 120, height: 10)
+                            SkeletonLine(width: 220, height: 18)
+                            SkeletonLine(height: 14)
+                            SkeletonLine(width: 280, height: 14)
+                            HStack(spacing: 12) {
+                                SkeletonBlock(height: 72, cornerRadius: 14)
+                                SkeletonBlock(height: 72, cornerRadius: 14)
                             }
-                            .padding(12)
                         }
-                        .background(PAXTheme.surfaceElevated)
-                        .clipShape(RoundedRectangle(cornerRadius: CustomerPortalDesign.cardRadius, style: .continuous))
+                        .padding(20)
                     }
+                    .background(theme.panel)
+                    .clipShape(RoundedRectangle(cornerRadius: CustomerCalmDesign.cardRadius, style: .continuous))
                 }
-                .padding(.horizontal)
             }
-            .padding(.vertical)
+            .padding(.horizontal, CustomerCalmDesign.contentPadding)
+            .padding(.vertical, 16)
         }
     }
 }

@@ -201,6 +201,19 @@ struct CustomerPortfolioItem: Decodable, Identifiable {
     let client: String?
     let project_url: String?
     let published_at: String?
+    let category_names: [String]?
+    let category_slugs: [String]?
+    let stats: [CustomerPortfolioStat]?
+
+    var displayCategory: String {
+        category_names?.first ?? ""
+    }
+}
+
+struct CustomerPortfolioStat: Decodable, Identifiable {
+    var id: String { value + label }
+    let value: String
+    let label: String
 }
 
 struct CustomerPortfolioDetail: Decodable {
@@ -226,6 +239,32 @@ struct CustomerPortfolioResponse: Decodable {
     }
     let categories: [Category]?
     let items: [CustomerPortfolioItem]
+    let lang: String?
+}
+
+struct CustomerPortfolioShowcaseResponse: Decodable {
+    struct Header: Decodable {
+        let tags: [String]
+        let title: String
+        let intro: String
+    }
+
+    struct CTA: Decodable {
+        let tags: [String]
+        let title: String
+        let text: String
+        let button: String
+        let url: String
+    }
+
+    let lang: String
+    let dir: String
+    let header: Header
+    let cta: CTA
+    let categories: [CustomerPortfolioResponse.Category]?
+    let items: [CustomerPortfolioItem]
+
+    var isRTL: Bool { dir == "rtl" }
 }
 
 struct CustomerServiceDetail: Decodable {

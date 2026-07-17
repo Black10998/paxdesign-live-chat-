@@ -164,16 +164,26 @@ final class CustomerAPIClient: ObservableObject {
         try await get("/customer/files?limit=\(limit)", as: CustomerFilesResponse.self)
     }
 
-    func fetchPortfolio(category: String? = nil, limit: Int = 100) async throws -> CustomerPortfolioResponse {
-        var path = "/customer/portfolio?limit=\(limit)"
+    func fetchPortfolio(category: String? = nil, limit: Int = 100, lang: String? = nil) async throws -> CustomerPortfolioResponse {
+        let language = lang ?? Locale.current.language.languageCode?.identifier ?? "de"
+        let normalized = language.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? language
+        var path = "/customer/portfolio?limit=\(limit)&lang=\(normalized)"
         if let category, !category.isEmpty {
             path += "&category=\(category.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? category)"
         }
         return try await get(path, as: CustomerPortfolioResponse.self)
     }
 
-    func fetchPortfolioItem(slug: String) async throws -> CustomerPortfolioDetail {
-        try await get("/customer/portfolio/\(slug)", as: CustomerPortfolioDetail.self)
+    func fetchPortfolioShowcase(lang: String? = nil) async throws -> CustomerPortfolioShowcaseResponse {
+        let language = lang ?? Locale.current.language.languageCode?.identifier ?? "de"
+        let normalized = language.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? language
+        return try await get("/content/portfolio-showcase?lang=\(normalized)", as: CustomerPortfolioShowcaseResponse.self)
+    }
+
+    func fetchPortfolioItem(slug: String, lang: String? = nil) async throws -> CustomerPortfolioDetail {
+        let language = lang ?? Locale.current.language.languageCode?.identifier ?? "de"
+        let normalized = language.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? language
+        return try await get("/customer/portfolio/\(slug)?lang=\(normalized)", as: CustomerPortfolioDetail.self)
     }
 
     func sendChatTyping(sessionID: String?, stop: Bool = false) async throws {

@@ -14,7 +14,14 @@ class PAXdesign_Customer_Portfolio {
     /**
      * @return array<int, array<string, mixed>>
      */
-    public static function list_items($limit = 100, $category = '') {
+    public static function list_items($limit = 100, $category = '', $lang = 'de') {
+        if (class_exists('PAXdesign_Customer_Portfolio_Showcase')) {
+            $showcase = PAXdesign_Customer_Portfolio_Showcase::list_items($limit, $category, $lang);
+            if (!empty($showcase)) {
+                return $showcase;
+            }
+        }
+
         $limit = max(1, min(200, (int) $limit));
         $items = array();
 
@@ -50,10 +57,17 @@ class PAXdesign_Customer_Portfolio {
     /**
      * @return array<string, mixed>|null
      */
-    public static function get_item($slug) {
+    public static function get_item($slug, $lang = 'de') {
         $slug = sanitize_title($slug);
         if ($slug === '') {
             return null;
+        }
+
+        if (class_exists('PAXdesign_Customer_Portfolio_Showcase')) {
+            $showcase = PAXdesign_Customer_Portfolio_Showcase::get_item($slug, $lang);
+            if ($showcase !== null) {
+                return $showcase;
+            }
         }
 
         if (post_type_exists(self::CPT)) {
@@ -79,7 +93,13 @@ class PAXdesign_Customer_Portfolio {
     /**
      * @return string[]
      */
-    public static function categories() {
+    public static function categories($lang = 'de') {
+        if (class_exists('PAXdesign_Customer_Portfolio_Showcase')) {
+            $payload = PAXdesign_Customer_Portfolio_Showcase::payload($lang);
+            if (!empty($payload['categories'])) {
+                return $payload['categories'];
+            }
+        }
         if (!taxonomy_exists('portfolio_category')) {
             return array();
         }

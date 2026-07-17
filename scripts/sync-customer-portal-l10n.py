@@ -142,6 +142,17 @@ TR = {
     "Play voice message": ("Sprachnachricht abspielen", "تشغيل الرسالة الصوتية"),
     "Portfolio": ("Portfolio", "معرض الأعمال"),
     "Portfolio unavailable": ("Portfolio nicht verfügbar", "المعرض غير متاح"),
+    "Projects & References": ("Projekte & Referenzen", "المشاريع والمراجع"),
+    "Premium digital products crafted with clarity, performance, and long-term scalability.": (
+        "Premium-Digitalprodukte mit Klarheit, Performance und langfristiger Skalierbarkeit.",
+        "منتجات رقمية متميزة تُصمَّم بوضوح وأداء وقابلية توسع طويلة الأمد.",
+    ),
+    "Ready for your project?": ("Bereit für Ihr Projekt?", "هل أنت مستعد لمشروعك؟"),
+    "Let's talk about your ideas. Together we'll craft the perfect solution for your business.": (
+        "Lassen Sie uns über Ihre Ideen sprechen. Gemeinsam entwickeln wir die perfekte Lösung für Ihr Unternehmen.",
+        "لنتحدث عن أفكارك. سنطور معاً الحل المثالي لعملك.",
+    ),
+    "Get in touch": ("Jetzt Kontakt aufnehmen", "تواصل معنا"),
     "Project": ("Projekt", "المشروع"),
     "Projects": ("Projekte", "المشاريع"),
     "Projects unavailable": ("Projekte nicht verfügbar", "المشاريع غير متاحة"),

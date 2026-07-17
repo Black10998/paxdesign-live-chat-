@@ -41,6 +41,7 @@ for slug in datenschutz agb ueber-uns; do
 done
 
 check "portfolio list" "$BASE/customer/portfolio?limit=5"
+check "portfolio showcase" "$BASE/content/portfolio-showcase?lang=de"
 check "services list" "$BASE/customer/services"
 check "site menu" "$BASE/content/site-menu?lang=de"
 

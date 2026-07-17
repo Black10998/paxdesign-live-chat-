@@ -135,6 +135,12 @@ class PAXdesign_Customer_REST {
             'permission_callback' => '__return_true',
         ));
 
+        register_rest_route(self::NS, '/content/portfolio-showcase', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'portfolio_showcase'),
+            'permission_callback' => '__return_true',
+        ));
+
         register_rest_route(self::NS, '/content/homepage', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'homepage'),
@@ -469,18 +475,26 @@ class PAXdesign_Customer_REST {
         if ($limit <= 0) {
             $limit = 100;
         }
+        $lang = PAXdesign_Customer_Portfolio_Showcase::normalize_language((string) $request->get_param('lang'));
         return rest_ensure_response(array(
-            'categories' => PAXdesign_Customer_Portfolio::categories(),
-            'items'      => PAXdesign_Customer_Portfolio::list_items($limit, (string) $request->get_param('category')),
+            'categories' => PAXdesign_Customer_Portfolio::categories($lang),
+            'items'      => PAXdesign_Customer_Portfolio::list_items($limit, (string) $request->get_param('category'), $lang),
+            'lang'       => $lang,
         ));
     }
 
     public static function get_portfolio_item(WP_REST_Request $request) {
-        $item = PAXdesign_Customer_Portfolio::get_item($request['slug']);
+        $lang = PAXdesign_Customer_Portfolio_Showcase::normalize_language((string) $request->get_param('lang'));
+        $item = PAXdesign_Customer_Portfolio::get_item($request['slug'], $lang);
         if (!$item) {
             return new WP_Error('not_found', __('Portfolio item not found.', 'paxdesign-booking'), array('status' => 404));
         }
         return rest_ensure_response($item);
+    }
+
+    public static function portfolio_showcase(WP_REST_Request $request) {
+        $lang = PAXdesign_Customer_Portfolio_Showcase::normalize_language((string) $request->get_param('lang'));
+        return rest_ensure_response(PAXdesign_Customer_Portfolio_Showcase::payload($lang));
     }
 
     public static function content_navigation(WP_REST_Request $request) {
