@@ -302,7 +302,6 @@ struct CustomerChatView: View {
     @State private var showLocationSheet = false
     @State private var typingTask: Task<Void, Never>?
     @State private var lastTypingSent = false
-    @State private var pendingSendClientID: String?
 
     private var isHumanQueue: Bool {
         guard let handler = poll?.handler else { return false }
@@ -618,12 +617,10 @@ struct CustomerChatView: View {
         let assistantClientMsgID = UUID().uuidString
         draft = ""
         isSending = true
-        pendingSendClientID = clientMsgID
         error = nil
         notice = nil
         defer {
             isSending = false
-            pendingSendClientID = nil
         }
         do {
             let response = try await sendMessageWithRenewFallback(
