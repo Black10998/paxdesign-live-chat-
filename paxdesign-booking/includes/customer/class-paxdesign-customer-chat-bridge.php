@@ -44,10 +44,13 @@ class PAXdesign_Customer_Chat_Bridge {
             "SELECT session_id FROM $table WHERE user_id = %d AND is_primary = 1 ORDER BY linked_at DESC LIMIT 1",
             $user_id
         ));
-        if ($row && !empty($row->session_id)) {
-            return (string) $row->session_id;
+        $session_id = ($row && !empty($row->session_id))
+            ? (string) $row->session_id
+            : self::create_primary_session($user_id);
+        if ($session_id !== '') {
+            PAXdesign_Chat_Live::get_instance()->ensure_session($session_id);
         }
-        return self::create_primary_session($user_id);
+        return $session_id;
     }
 
     public static function create_primary_session($user_id) {
