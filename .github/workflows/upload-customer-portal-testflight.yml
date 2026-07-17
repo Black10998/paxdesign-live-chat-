@@ -15,9 +15,10 @@ permissions:
 jobs:
   upload-customer-testflight:
     runs-on: macos-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     env:
       APP_BUNDLE_ID: at.paxdesign.customerportal
+      TESTFLIGHT_INTERNAL_TESTER_EMAIL: awjime29@icloud.com
       APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
       APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
       APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
@@ -80,3 +81,16 @@ jobs:
           ISSUER="${APP_STORE_CONNECT_ISSUER_ID:-${APPSTORE_ISSUER_ID:-}}"
           xcrun altool --upload-app -f "$IPA" -t ios \
             --apiKey "$KEY_ID" --apiIssuer "$ISSUER" --apiKeyPath "$KEY_PATH"
+
+      - name: Install App Store Connect API dependencies
+        run: python3 -m pip install --quiet PyJWT cryptography
+
+      - name: Wait for processing and enable internal TestFlight
+        env:
+          TESTFLIGHT_TARGET_BUILD: ${{ steps.version.outputs.build }}
+        run: python3 scripts/appstore-connect/enable_internal_testflight.py
+
+      - name: Verify internal TestFlight access
+        env:
+          TESTFLIGHT_TARGET_BUILD: ${{ steps.version.outputs.build }}
+        run: python3 scripts/appstore-connect/verify_internal_testflight.py

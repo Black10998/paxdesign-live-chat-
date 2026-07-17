@@ -21,7 +21,11 @@ jobs:
       APPLE_CERTIFICATE_P12_BASE64: ${{ secrets.APPLE_CERTIFICATE_P12_BASE64 }}
       APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
       APPLE_PROVISIONING_PROFILE_CUSTOMER_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_CUSTOMER_BASE64 }}
-      APPLE_PROVISIONING_PROFILE_MAIN_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_MAIN_BASE64 }}
+      APP_BUNDLE_ID: at.paxdesign.customerportal
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
       MAIN_BUNDLE_ID: at.paxdesign.customerportal
     steps:
       - uses: actions/checkout@v4
@@ -38,18 +42,25 @@ jobs:
           done
           xcodebuild -version
 
-      - name: Validate Customer Portal signing secrets
+      - name: Validate signing certificate secrets
         run: |
           set -euo pipefail
-          if [[ -z "${APPLE_PROVISIONING_PROFILE_CUSTOMER_BASE64:-}" ]]; then
-            echo "ERROR: APPLE_PROVISIONING_PROFILE_CUSTOMER_BASE64 secret is missing." >&2
-            echo "Create an App Store provisioning profile for at.paxdesign.customerportal and add it to GitHub Secrets." >&2
-            echo "The Live Chat profile (at.paxdesign.livechat) cannot be used for the Customer Portal app." >&2
-            exit 1
-          fi
           for key in APPLE_TEAM_ID KEYCHAIN_PASSWORD APPLE_CERTIFICATE_P12_BASE64 APPLE_CERTIFICATE_PASSWORD; do
             [ -n "${!key:-}" ] || { echo "Missing secret: $key" >&2; exit 1; }
           done
+
+      - name: Install App Store Connect API dependencies
+        run: python3 -m pip install --quiet PyJWT cryptography
+
+      - name: Prepare Customer Portal provisioning profile
+        run: |
+          set -euo pipefail
+          if [[ -n "${APPLE_PROVISIONING_PROFILE_CUSTOMER_BASE64:-}" ]]; then
+            echo "Using APPLE_PROVISIONING_PROFILE_CUSTOMER_BASE64 from GitHub Secrets"
+            exit 0
+          fi
+          echo "Generating Customer Portal profile via App Store Connect API …"
+          python3 scripts/appstore-connect/prepare_customer_provisioning_profile.py
 
       - name: Build signed Customer Portal IPA
         run: |

@@ -132,6 +132,21 @@ jobs:
           chmod +x scripts/verify-customer-platform-3135.sh
           ./scripts/verify-customer-platform-3135.sh | tee verify-customer-platform.log
 
+      - name: Verify production AI stream (fresh ai handler session)
+        env:
+          PAX_SITE: https://paxdesign.at
+          PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
+          PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/verify-customer-ai-stream-production.sh
+          ./scripts/verify-customer-ai-stream-production.sh | tee verify-customer-ai-stream.log
+
       - name: Upload verification artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -139,3 +154,4 @@ jobs:
           path: |
             backup.log
             verify-customer-platform.log
+            verify-customer-ai-stream.log
