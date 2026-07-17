@@ -1,2 +1,7 @@
+<<<<<<< Updated upstream
 # Customer Portal App Store build + ASC capabilities API fix.
 2026-07-17T12:12:00Z
+=======
+# Customer Portal App Store build + skip app CREATE when API key lacks permission.
+2026-07-17T12:15:00Z
+>>>>>>> Stashed changes
