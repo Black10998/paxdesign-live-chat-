@@ -63,7 +63,7 @@ jobs:
           run-id: ${{ steps.latest_ipa.outputs.run_id }}
           path: artifacts/ipa
 
-      - name: Validate IPA build number
+      - name: Validate IPA metadata
         run: |
           set -euo pipefail
           IPA="artifacts/ipa/PAXCustomerPortal-AppStore.ipa"
@@ -72,9 +72,13 @@ jobs:
           trap 'rm -rf "$WORKDIR"' EXIT
           unzip -q "$IPA" -d "$WORKDIR"
           APP_PATH="$(find "$WORKDIR/Payload" -maxdepth 1 -name '*.app' -type d | head -1)"
+          BUNDLE_ID="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist")"
           BUNDLE_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_PATH/Info.plist")"
           EXPECTED="${{ steps.version.outputs.build }}"
+          EXPECTED_BUNDLE="${APP_BUNDLE_ID}"
+          echo "IPA CFBundleIdentifier=$BUNDLE_ID (expected $EXPECTED_BUNDLE)"
           echo "IPA CFBundleVersion=$BUNDLE_VERSION (expected $EXPECTED)"
+          [[ "$BUNDLE_ID" == "$EXPECTED_BUNDLE" ]] || exit 1
           [[ "$BUNDLE_VERSION" == "$EXPECTED" ]] || exit 1
 
       - name: Validate App Store Connect private key
@@ -83,7 +87,17 @@ jobs:
       - name: Install App Store Connect API dependencies
         run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
 
+      - name: Verify App Store Connect API credentials
+        run: python3 scripts/appstore-connect/verify-asc-credentials.py
+
+      - name: Resolve Customer Portal App Store Connect app
+        id: asc_app
+        run: python3 scripts/appstore-connect/resolve_asc_app.py
+
       - name: Upload IPA to TestFlight
+        env:
+          ASC_APP_APPLE_ID: ${{ steps.asc_app.outputs.asc_app_apple_id }}
+          ALTOOL_EXTRA_ARGS: --use-old-altool
         run: |
           set +x
           chmod +x scripts/appstore-connect/upload-ipa.sh
