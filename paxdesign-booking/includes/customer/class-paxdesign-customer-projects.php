@@ -119,11 +119,16 @@ class PAXdesign_Customer_Projects {
 
     private static function files($project_id, $visibility) {
         global $wpdb;
-        return $wpdb->get_results($wpdb->prepare(
-            "SELECT id, file_name, mime_type, file_size, category, created_at FROM " . PAXdesign_Customer_DB::table('project_files') . " WHERE project_id = %d AND visibility = %s ORDER BY created_at DESC",
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, file_name, mime_type, file_size, category, created_at, file_path FROM " . PAXdesign_Customer_DB::table('project_files') . " WHERE project_id = %d AND visibility = %s ORDER BY created_at DESC",
             $project_id,
             $visibility
         ), ARRAY_A);
+        foreach ($rows as &$row) {
+            unset($row['file_path']);
+            $row['download_url'] = rest_url('pdx/v1/customer/projects/' . $project_id . '/files/' . $row['id'] . '/download');
+        }
+        return $rows;
     }
 
     private static function assignees($project_id) {
@@ -182,5 +187,172 @@ class PAXdesign_Customer_Projects {
         }
         $ts = strtotime((string) $value);
         return $ts ? gmdate('Y-m-d', $ts) : null;
+    }
+
+    public static function get_project_row($project_id) {
+        global $wpdb;
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM " . PAXdesign_Customer_DB::table('projects') . " WHERE id = %d LIMIT 1",
+            absint($project_id)
+        ), ARRAY_A);
+    }
+
+    public static function add_milestone($project_id, $data, $actor_id) {
+        global $wpdb;
+        $row = self::get_project_row($project_id);
+        if (!$row) {
+            return new WP_Error('not_found', __('Project not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        $title = sanitize_text_field($data['title'] ?? '');
+        if ($title === '') {
+            return new WP_Error('invalid_milestone', __('Milestone title is required.', 'paxdesign-booking'), array('status' => 400));
+        }
+        $now = current_time('mysql', true);
+        $wpdb->insert(PAXdesign_Customer_DB::table('project_milestones'), array(
+            'project_id'  => absint($project_id),
+            'title'       => $title,
+            'description' => sanitize_textarea_field($data['description'] ?? ''),
+            'status'      => sanitize_key($data['status'] ?? 'pending'),
+            'sort_order'  => absint($data['sort_order'] ?? 0),
+            'due_date'    => self::nullable_date($data['due_date'] ?? null),
+            'created_at'  => $now,
+            'updated_at'  => $now,
+        ));
+        self::log_activity($project_id, $actor_id, 'milestone_added', $title);
+        PAXdesign_Customer_Notifications::notify_user((int) $row['customer_user_id'], 'project', __('Milestone added', 'paxdesign-booking'), $title, 'project', (string) $project_id, '/projects/' . $project_id);
+        return self::get_for_user((int) $row['customer_user_id'], $project_id);
+    }
+
+    public static function update_milestone($project_id, $milestone_id, $data, $actor_id) {
+        global $wpdb;
+        $row = self::get_project_row($project_id);
+        if (!$row) {
+            return new WP_Error('not_found', __('Project not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        $fields = array('updated_at' => current_time('mysql', true));
+        foreach (array('title', 'description', 'status') as $key) {
+            if (isset($data[$key])) {
+                $fields[$key] = $key === 'description' ? sanitize_textarea_field($data[$key]) : sanitize_text_field($data[$key]);
+            }
+        }
+        if (isset($data['sort_order'])) {
+            $fields['sort_order'] = absint($data['sort_order']);
+        }
+        if (isset($data['due_date'])) {
+            $fields['due_date'] = self::nullable_date($data['due_date']);
+        }
+        if (isset($data['status']) && $data['status'] === 'completed') {
+            $fields['completed_at'] = current_time('mysql', true);
+        }
+        $wpdb->update(
+            PAXdesign_Customer_DB::table('project_milestones'),
+            $fields,
+            array('id' => absint($milestone_id), 'project_id' => absint($project_id))
+        );
+        self::log_activity($project_id, $actor_id, 'milestone_updated', __('Milestone updated', 'paxdesign-booking'));
+        return self::get_for_user((int) $row['customer_user_id'], $project_id);
+    }
+
+    public static function add_note($project_id, $data, $actor_id) {
+        global $wpdb;
+        $row = self::get_project_row($project_id);
+        if (!$row) {
+            return new WP_Error('not_found', __('Project not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        $body = sanitize_textarea_field($data['body'] ?? '');
+        if ($body === '') {
+            return new WP_Error('invalid_note', __('Note body is required.', 'paxdesign-booking'), array('status' => 400));
+        }
+        $visibility = sanitize_key($data['visibility'] ?? 'customer');
+        if (!in_array($visibility, array('customer', 'internal'), true)) {
+            $visibility = 'customer';
+        }
+        $wpdb->insert(PAXdesign_Customer_DB::table('project_notes'), array(
+            'project_id'     => absint($project_id),
+            'author_user_id' => absint($actor_id),
+            'visibility'     => $visibility,
+            'body'           => $body,
+            'created_at'     => current_time('mysql', true),
+            'updated_at'     => current_time('mysql', true),
+        ));
+        if ($visibility === 'customer') {
+            self::log_activity($project_id, $actor_id, 'note_added', wp_html_excerpt($body, 80, '…'));
+            PAXdesign_Customer_Notifications::notify_user((int) $row['customer_user_id'], 'project', __('New project note', 'paxdesign-booking'), wp_html_excerpt($body, 120, '…'), 'project', (string) $project_id, '/projects/' . $project_id);
+        }
+        return self::get_for_user((int) $row['customer_user_id'], $project_id);
+    }
+
+    public static function assign_user($project_id, $data, $actor_id) {
+        global $wpdb;
+        $row = self::get_project_row($project_id);
+        if (!$row) {
+            return new WP_Error('not_found', __('Project not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        $user_id = absint($data['user_id'] ?? 0);
+        if ($user_id <= 0) {
+            return new WP_Error('invalid_assignee', __('Assignee user is required.', 'paxdesign-booking'), array('status' => 400));
+        }
+        $wpdb->replace(PAXdesign_Customer_DB::table('project_assignees'), array(
+            'project_id'  => absint($project_id),
+            'user_id'     => $user_id,
+            'role_label'  => sanitize_text_field($data['role_label'] ?? __('Team member', 'paxdesign-booking')),
+            'assigned_at' => current_time('mysql', true),
+        ), array('%d', '%d', '%s', '%s'));
+        $user = get_user_by('id', $user_id);
+        self::log_activity($project_id, $actor_id, 'assignee_added', $user ? $user->display_name : ('#' . $user_id));
+        return self::get_for_user((int) $row['customer_user_id'], $project_id);
+    }
+
+    /**
+     * @param array<string, mixed> $file
+     * @param array<string, mixed> $data
+     */
+    public static function add_file($project_id, $file, $data, $actor_id) {
+        global $wpdb;
+        $row = self::get_project_row($project_id);
+        if (!$row) {
+            return new WP_Error('not_found', __('Project not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        $upload = PAXdesign_Customer_Media::handle_upload($file, 'file');
+        if (is_wp_error($upload)) {
+            return $upload;
+        }
+        $visibility = sanitize_key($data['visibility'] ?? 'customer');
+        if (!in_array($visibility, array('customer', 'internal'), true)) {
+            $visibility = 'customer';
+        }
+        $wpdb->insert(PAXdesign_Customer_DB::table('project_files'), array(
+            'project_id'   => absint($project_id),
+            'file_name'    => sanitize_file_name($upload['name']),
+            'file_path'    => $upload['file'],
+            'mime_type'    => sanitize_text_field($upload['mime']),
+            'file_size'    => file_exists($upload['file']) ? (int) filesize($upload['file']) : 0,
+            'category'     => sanitize_key($data['category'] ?? 'general'),
+            'visibility'   => $visibility,
+            'uploaded_by'  => absint($actor_id),
+            'created_at'   => current_time('mysql', true),
+        ));
+        if ($visibility === 'customer') {
+            self::log_activity($project_id, $actor_id, 'file_added', sanitize_file_name($upload['name']));
+            PAXdesign_Customer_Notifications::notify_user((int) $row['customer_user_id'], 'project', __('New project file', 'paxdesign-booking'), sanitize_file_name($upload['name']), 'project', (string) $project_id, '/projects/' . $project_id);
+        }
+        return self::get_for_user((int) $row['customer_user_id'], $project_id);
+    }
+
+    public static function get_file_for_user($user_id, $project_id, $file_id) {
+        global $wpdb;
+        $project = $wpdb->get_row($wpdb->prepare(
+            "SELECT customer_user_id FROM " . PAXdesign_Customer_DB::table('projects') . " WHERE id = %d AND customer_user_id = %d LIMIT 1",
+            absint($project_id),
+            absint($user_id)
+        ), ARRAY_A);
+        if (!$project) {
+            return null;
+        }
+        return $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM " . PAXdesign_Customer_DB::table('project_files') . " WHERE id = %d AND project_id = %d AND visibility = 'customer' LIMIT 1",
+            absint($file_id),
+            absint($project_id)
+        ), ARRAY_A);
     }
 }

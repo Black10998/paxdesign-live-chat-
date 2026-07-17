@@ -3,45 +3,59 @@ import SwiftUI
 struct CustomerLoginView: View {
     @EnvironmentObject private var auth: CustomerAuthStore
     @EnvironmentObject private var api: CustomerAPIClient
+    @StateObject private var network = CustomerNetworkMonitor.shared
+    var onRegister: (() -> Void)? = nil
+    var onForgot: (() -> Void)? = nil
     @State private var isLoading = false
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section(String(localized: "Website")) {
-                    TextField(String(localized: "Site URL"), text: $auth.siteURL)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.URL)
-                }
-                Section(String(localized: "Account")) {
-                    TextField(String(localized: "Email or username"), text: $auth.username)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
-                    SecureField(String(localized: "Application Password"), text: $auth.appPassword)
-                }
-                if let error = auth.errorMessage {
-                    Section {
-                        Text(error).foregroundStyle(.red)
-                    }
-                }
+        Form {
+            if !network.isConnected {
                 Section {
-                    Button(isLoading ? String(localized: "Signing in…") : String(localized: "Sign In")) {
-                        Task {
-                            isLoading = true
-                            await auth.login(api: api)
-                            isLoading = false
-                        }
-                    }
-                    .disabled(isLoading)
-                }
-                Section {
-                    Text(String(localized: "Use the same PAXDesign account as the website. Create an Application Password in WordPress under Users → Profile."))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
+                    Label(String(localized: "You are offline. Connect to sign in."), systemImage: "wifi.slash")
+                        .foregroundStyle(.orange)
                 }
             }
-            .navigationTitle("PAXDesign")
+            Section(String(localized: "Website")) {
+                TextField(String(localized: "Site URL"), text: $auth.siteURL)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+                    .accessibilityLabel(String(localized: "Site URL"))
+            }
+            Section(String(localized: "Account")) {
+                TextField(String(localized: "Email or username"), text: $auth.username)
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.emailAddress)
+                    .accessibilityLabel(String(localized: "Email or username"))
+                SecureField(String(localized: "Application Password"), text: $auth.appPassword)
+                    .accessibilityLabel(String(localized: "Application Password"))
+            }
+            if let error = auth.errorMessage {
+                Section { Text(error).foregroundStyle(.red).accessibilityLabel(error) }
+            }
+            Section {
+                Button(isLoading ? String(localized: "Signing in…") : String(localized: "Sign In")) {
+                    Task {
+                        isLoading = true
+                        await auth.login(api: api)
+                        isLoading = false
+                    }
+                }
+                .disabled(isLoading || !network.isConnected)
+                if let onRegister {
+                    Button(String(localized: "Create account")) { onRegister() }
+                }
+                if let onForgot {
+                    Button(String(localized: "Forgot password?")) { onForgot() }
+                }
+            }
+            Section {
+                Text(String(localized: "Use the same PAXDesign account as the website. Create an Application Password in WordPress under Users → Profile."))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
+        .navigationTitle("PAXDesign")
     }
 }
 
@@ -149,11 +163,19 @@ struct CustomerDashboardView: View {
 
 struct CustomerChatView: View {
     @EnvironmentObject private var api: CustomerAPIClient
+    @StateObject private var network = CustomerNetworkMonitor.shared
+    var initialSessionID: String? = nil
     @State private var poll: CustomerChatPoll?
     @State private var draft = ""
     @State private var error: String?
     @State private var isSending = false
     @State private var streamingAssistant = ""
+    @State private var lastSeq = 0
+    @State private var pollTask: Task<Void, Never>?
+    @State private var showImagePicker = false
+    @State private var isRecordingVoice = false
+    @State private var voiceRecorder = CustomerVoiceRecorder()
+    @State private var showLocationSheet = false
 
     private var isHumanQueue: Bool {
         guard let handler = poll?.handler else { return false }
@@ -163,21 +185,16 @@ struct CustomerChatView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                if !network.isConnected {
+                    Text(String(localized: "Offline — messages will send when you reconnect."))
+                        .font(.caption).foregroundStyle(.orange).padding(8)
+                        .frame(maxWidth: .infinity).background(Color.orange.opacity(0.12))
+                }
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 12) {
                             ForEach(displayMessages, id: \.id) { message in
-                                VStack(alignment: message.role == "user" ? .trailing : .leading, spacing: 4) {
-                                    if let name = message.sender_name, !name.isEmpty, message.role != "user" {
-                                        Text(name).font(.caption).foregroundStyle(.secondary)
-                                    }
-                                    Text(message.content)
-                                        .padding(10)
-                                        .background(message.role == "user" ? Color.accentColor.opacity(0.15) : Color(.secondarySystemBackground))
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                }
-                                .frame(maxWidth: .infinity, alignment: message.role == "user" ? .trailing : .leading)
-                                .id(message.id)
+                                CustomerChatBubble(message: message).id(message.id)
                             }
                             if !streamingAssistant.isEmpty {
                                 Text(streamingAssistant)
@@ -190,32 +207,50 @@ struct CustomerChatView: View {
                         }
                         .padding()
                     }
-                    .onChange(of: displayMessages.count) { _, _ in
-                        scrollToBottom(proxy: proxy)
-                    }
+                    .onChange(of: displayMessages.count) { _, _ in scrollToBottom(proxy: proxy) }
                 }
                 Divider()
                 HStack {
+                    if isHumanQueue {
+                        Menu {
+                            Button(String(localized: "Photo"), systemImage: "photo") { showImagePicker = true }
+                            Button(isRecordingVoice ? String(localized: "Stop recording") : String(localized: "Voice message"), systemImage: "mic") {
+                                Task { await toggleVoice() }
+                            }
+                            Button(String(localized: "Share location"), systemImage: "location") { showLocationSheet = true }
+                        } label: { Image(systemName: "plus.circle") }
+                    }
                     TextField(String(localized: "Message"), text: $draft, axis: .vertical)
-                        .textFieldStyle(.roundedBorder)
-                        .lineLimit(1...4)
-                    Button {
-                        Task { await send() }
-                    } label: {
+                        .textFieldStyle(.roundedBorder).lineLimit(1...4)
+                    Button { Task { await send() } } label: {
                         Image(systemName: isSending ? "hourglass" : "paperplane.fill")
                     }
-                    .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending)
+                    .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isSending || !network.isConnected)
                 }
                 .padding()
             }
             .navigationTitle(String(localized: "Chat"))
+            .toolbar { NavigationLink(String(localized: "History")) { CustomerConversationsView() } }
             .overlay(alignment: .top) {
-                if let error {
-                    Text(error).font(.footnote).foregroundStyle(.red).padding(8)
+                if let error { Text(error).font(.footnote).foregroundStyle(.red).padding(8) }
+            }
+            .sheet(isPresented: $showImagePicker) {
+                CustomerPhotoPicker { data in Task { await sendPhoto(data) } }
+            }
+            .sheet(isPresented: $showLocationSheet) {
+                CustomerLocationShareSheet { lat, lng, label in
+                    Task { await sendLocation(lat: lat, lng: lng, label: label) }
                 }
             }
-            .task { await refresh() }
-            .refreshable { await refresh() }
+            .task {
+                if let initialSessionID {
+                    poll = CustomerChatPoll(session_id: initialSessionID, handler: nil, messages: [], message_count: nil, last_preview: nil)
+                }
+                await refresh(full: true)
+                startPolling()
+            }
+            .onDisappear { pollTask?.cancel() }
+            .refreshable { await refresh(full: true) }
         }
     }
 
@@ -231,13 +266,85 @@ struct CustomerChatView: View {
         }
     }
 
-    private func refresh() async {
+    private func refresh(full: Bool = false) async {
         do {
-            poll = try await api.fetchChatMessages(sessionID: poll?.session_id, since: 0, full: true)
+            let since = full ? 0 : lastSeq
+            let next = try await api.fetchChatMessages(sessionID: poll?.session_id, since: since, full: full)
+            if full || poll == nil {
+                poll = next
+            } else if let incoming = next.messages, !incoming.isEmpty {
+                var merged = poll?.messages ?? []
+                let existing = Set(merged.map(\.seq))
+                for msg in incoming where !existing.contains(msg.seq) { merged.append(msg) }
+                poll = CustomerChatPoll(
+                    session_id: next.session_id ?? poll?.session_id,
+                    handler: next.handler ?? poll?.handler,
+                    messages: merged.sorted { $0.seq < $1.seq },
+                    message_count: next.message_count,
+                    last_preview: next.last_preview
+                )
+            } else if var current = poll {
+                current = CustomerChatPoll(
+                    session_id: current.session_id,
+                    handler: next.handler ?? current.handler,
+                    messages: current.messages,
+                    message_count: current.message_count,
+                    last_preview: current.last_preview
+                )
+                poll = current
+            }
+            if let maxSeq = poll?.messages?.map(\.seq).max() { lastSeq = max(lastSeq, maxSeq) }
             error = nil
         } catch {
             self.error = error.localizedDescription
         }
+    }
+
+    private func startPolling() {
+        pollTask?.cancel()
+        pollTask = Task {
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 4_000_000_000)
+                if network.isConnected { await refresh(full: false) }
+            }
+        }
+    }
+
+    private func sendPhoto(_ data: Data) async {
+        guard let session = poll?.session_id else { return }
+        isSending = true
+        defer { isSending = false }
+        do {
+            _ = try await api.uploadChatImage(sessionID: session, imageData: data, filename: "photo.jpg")
+            await refresh(full: true)
+        } catch { self.error = error.localizedDescription }
+    }
+
+    private func toggleVoice() async {
+        if isRecordingVoice {
+            isRecordingVoice = false
+            if let result = voiceRecorder.stop(), let session = poll?.session_id {
+                isSending = true
+                defer { isSending = false }
+                do {
+                    _ = try await api.uploadChatVoice(sessionID: session, audioData: result.data, duration: result.duration)
+                    await refresh(full: true)
+                } catch { self.error = error.localizedDescription }
+            }
+        } else {
+            do { try await voiceRecorder.start(); isRecordingVoice = true }
+            catch { self.error = error.localizedDescription }
+        }
+    }
+
+    private func sendLocation(lat: Double, lng: Double, label: String) async {
+        guard let session = poll?.session_id else { return }
+        isSending = true
+        defer { isSending = false }
+        do {
+            _ = try await api.sendChatLocation(sessionID: session, lat: lat, lng: lng, label: label)
+            await refresh(full: true)
+        } catch { self.error = error.localizedDescription }
     }
 
     private func send() async {
@@ -251,17 +358,13 @@ struct CustomerChatView: View {
                 _ = try await api.sendChatMessage(text, sessionID: poll?.session_id)
             } else {
                 try await api.streamChatMessage(text, sessionID: poll?.session_id) { event in
-                    if event.type == "text", let chunk = event.text {
-                        streamingAssistant += chunk
-                    }
-                    if event.type == "done", let message = event.message {
-                        streamingAssistant = message.content
-                    }
+                    if event.type == "text", let chunk = event.text { streamingAssistant += chunk }
+                    if event.type == "done", let message = event.message { streamingAssistant = message.content }
                 }
                 streamingAssistant = ""
             }
             draft = ""
-            await refresh()
+            await refresh(full: true)
             error = nil
         } catch {
             self.error = error.localizedDescription

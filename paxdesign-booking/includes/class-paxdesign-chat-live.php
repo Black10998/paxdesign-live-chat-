@@ -2064,6 +2064,13 @@ class PAXdesign_Chat_Live {
     /**
      * Resize uploaded chat images so they stay lightweight in the thread.
      */
+    public function optimize_chat_image_public($file_path, $url) {
+        return $this->optimize_chat_image($file_path, $url);
+    }
+
+    /**
+     * Resize uploaded chat images so they stay lightweight in the thread.
+     */
     private function optimize_chat_image($file_path, $url) {
         if (!function_exists('wp_get_image_editor')) {
             return $url;

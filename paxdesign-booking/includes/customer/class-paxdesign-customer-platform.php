@@ -16,7 +16,12 @@ class PAXdesign_Customer_Platform {
         PAXdesign_Customer_Chat_Bridge::init();
         PAXdesign_Customer_Services::init();
         PAXdesign_Customer_REST::init();
+        PAXdesign_Customer_Staff_REST::init();
         PAXdesign_Customer_Admin::init();
+        add_action('paxdesign_session_sync', array(__CLASS__, 'maybe_notify_customer_chat_reply'), 10, 2);
+        if (get_option('paxdesign_customer_require_login_for_chat', '') === '') {
+            update_option('paxdesign_customer_require_login_for_chat', '1', false);
+        }
         add_action('wp_ajax_nopriv_paxdesign_chat_log', array(__CLASS__, 'maybe_block_guest_chat'), 0);
         add_action('wp_ajax_nopriv_paxdesign_chat', array(__CLASS__, 'maybe_block_guest_chat'), 0);
         do_action('paxdesign_customer_platform_ready');
@@ -38,6 +43,31 @@ class PAXdesign_Customer_Platform {
         ), 401);
     }
 
+    public static function maybe_notify_customer_chat_reply($session_id, $payload) {
+        if (($payload['last_role'] ?? '') !== 'admin') {
+            return;
+        }
+        global $wpdb;
+        $table = PAXdesign_Chat_Log::table_name();
+        $user_id = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT wp_user_id FROM $table WHERE session_id = %s LIMIT 1",
+            (string) $session_id
+        ));
+        if ($user_id <= 0) {
+            return;
+        }
+        $preview = sanitize_text_field($payload['preview'] ?? __('New message from support', 'paxdesign-booking'));
+        PAXdesign_Customer_Notifications::notify_user(
+            $user_id,
+            'chat',
+            __('Support replied', 'paxdesign-booking'),
+            $preview,
+            'chat',
+            (string) $session_id,
+            '/chat/' . rawurlencode((string) $session_id)
+        );
+    }
+
     private static function load_dependencies() {
         $base = PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/customer/';
         require_once $base . 'class-paxdesign-customer-db.php';
@@ -48,7 +78,9 @@ class PAXdesign_Customer_Platform {
         require_once $base . 'class-paxdesign-customer-orders.php';
         require_once $base . 'class-paxdesign-customer-notifications.php';
         require_once $base . 'class-paxdesign-customer-news.php';
+        require_once $base . 'class-paxdesign-customer-media.php';
         require_once $base . 'class-paxdesign-customer-rest.php';
+        require_once $base . 'class-paxdesign-customer-staff-rest.php';
         require_once $base . 'class-paxdesign-customer-admin.php';
     }
 }

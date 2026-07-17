@@ -177,4 +177,47 @@ class PAXdesign_Customer_Orders {
             'created_at'        => $row['created_at'],
         );
     }
+
+    public static function staff_update($order_id, $data, $actor_id) {
+        global $wpdb;
+        $order_id = absint($order_id);
+        $table = PAXdesign_Customer_DB::table('orders');
+        $row = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table WHERE id = %d LIMIT 1", $order_id), ARRAY_A);
+        if (!$row) {
+            return new WP_Error('not_found', __('Order not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        $fields = array('updated_at' => current_time('mysql', true));
+        if (isset($data['status'])) {
+            $fields['status'] = sanitize_key($data['status']);
+        }
+        if (isset($data['assigned_user_id'])) {
+            $fields['assigned_user_id'] = absint($data['assigned_user_id']);
+        }
+        if (isset($data['expected_delivery'])) {
+            $fields['expected_delivery'] = empty($data['expected_delivery']) ? null : gmdate('Y-m-d', strtotime((string) $data['expected_delivery']));
+        }
+        if (isset($data['note']) && trim((string) $data['note']) !== '') {
+            $note = sanitize_textarea_field($data['note']);
+            $visibility = sanitize_key($data['note_visibility'] ?? 'customer');
+            $wpdb->insert(PAXdesign_Customer_DB::table('order_notes'), array(
+                'order_id'       => $order_id,
+                'author_user_id' => absint($actor_id),
+                'visibility'     => in_array($visibility, array('customer', 'internal'), true) ? $visibility : 'customer',
+                'body'           => $note,
+                'created_at'     => current_time('mysql', true),
+            ));
+        }
+        $wpdb->update($table, $fields, array('id' => $order_id));
+        self::log_activity($order_id, $actor_id, 'order_updated', __('Request updated', 'paxdesign-booking'));
+        PAXdesign_Customer_Notifications::notify_user(
+            (int) $row['customer_user_id'],
+            'order',
+            __('Request updated', 'paxdesign-booking'),
+            $fields['status'] ?? $row['status'],
+            'order',
+            (string) $order_id,
+            '/orders/' . $order_id
+        );
+        return self::get_for_user((int) $row['customer_user_id'], $order_id);
+    }
 }

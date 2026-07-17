@@ -263,4 +263,83 @@ class PAXdesign_Customer_Chat_Bridge {
             'session_id' => $session_id,
         );
     }
+
+    /**
+     * @param array<string, mixed> $file
+     * @return array|WP_Error
+     */
+    public static function send_user_attachment($user_id, $session_id, $kind, $file, $caption = '', $extra = array()) {
+        $user_id = absint($user_id);
+        $session_id = self::sanitize_session_id($session_id);
+        if ($user_id <= 0 || $session_id === '' || !self::user_owns_session($user_id, $session_id)) {
+            return new WP_Error('forbidden', __('You do not have access to this conversation.', 'paxdesign-booking'), array('status' => 403));
+        }
+
+        $live = PAXdesign_Chat_Live::get_instance();
+        $handler = $live->get_handler($session_id);
+        if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED) {
+            return new WP_Error('chat_closed', __('This conversation is closed.', 'paxdesign-booking'), array('status' => 409));
+        }
+        if (!$live->is_human_queue($session_id)) {
+            return new WP_Error('use_ai_stream', __('Attachments are available during human support.', 'paxdesign-booking'), array('status' => 409));
+        }
+
+        $message_extra = array();
+        if (!empty($extra['client_msg_id'])) {
+            $message_extra['client_msg_id'] = sanitize_text_field($extra['client_msg_id']);
+        }
+
+        if ($kind === 'location') {
+            $lat = isset($extra['lat']) ? (float) $extra['lat'] : 0.0;
+            $lng = isset($extra['lng']) ? (float) $extra['lng'] : 0.0;
+            if ($lat < -90 || $lat > 90 || $lng < -180 || $lng > 180) {
+                return new WP_Error('invalid_location', __('Invalid coordinates.', 'paxdesign-booking'), array('status' => 400));
+            }
+            $label = sanitize_text_field($extra['label'] ?? '');
+            $message_extra['location_lat'] = $lat;
+            $message_extra['location_lng'] = $lng;
+            $message_extra['location_label'] = $label;
+            $message_extra['attachment_type'] = 'location';
+            $caption = $label !== '' ? $label : __('Shared location', 'paxdesign-booking');
+        } else {
+            $upload = PAXdesign_Customer_Media::handle_upload($file, $kind === 'voice' ? 'voice' : ($kind === 'image' ? 'image' : 'file'));
+            if (is_wp_error($upload)) {
+                return $upload;
+            }
+            if ($kind === 'image') {
+                $message_extra['image_url'] = $upload['url'];
+                $message_extra['attachment_type'] = 'image';
+            } elseif ($kind === 'voice') {
+                $message_extra['audio_url'] = $upload['url'];
+                $message_extra['attachment_type'] = 'voice';
+                if (!empty($extra['duration'])) {
+                    $message_extra['audio_duration'] = max(0, (float) $extra['duration']);
+                }
+            } else {
+                $message_extra['file_url'] = $upload['url'];
+                $message_extra['file_name'] = $upload['name'];
+                $message_extra['file_mime'] = $upload['mime'];
+                $message_extra['attachment_type'] = 'file';
+            }
+        }
+
+        $live->ensure_session($session_id);
+        self::sync_chat_log_user($session_id, $user_id);
+        $caption = sanitize_textarea_field($caption);
+        $entry = $live->append_message($session_id, 'user', $caption, $message_extra);
+        if (is_wp_error($entry)) {
+            return $entry;
+        }
+        if (!$entry) {
+            return new WP_Error('send_failed', __('Could not send attachment.', 'paxdesign-booking'), array('status' => 500));
+        }
+        if (empty($entry['_deduplicated']) && class_exists('PAXdesign_Live_Chat_PWA')) {
+            PAXdesign_Live_Chat_PWA::notify_new_customer_message($session_id, $caption !== '' ? $caption : '[' . $kind . ']');
+        }
+        return array(
+            'message'    => $entry,
+            'handler'    => $handler,
+            'session_id' => $session_id,
+        );
+    }
 }

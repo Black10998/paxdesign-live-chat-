@@ -12,6 +12,82 @@ final class CustomerAPIClient: ObservableObject {
         self.auth = auth
     }
 
+    private var authBaseURL: URL {
+        baseURL
+    }
+
+    func authRegister(name: String, email: String, password: String) async throws -> CustomerAuthMessageResponse {
+        try await publicPost("/auth/register", json: ["name": name, "email": email, "password": password], as: CustomerAuthMessageResponse.self)
+    }
+
+    func authForgotPassword(email: String) async throws -> CustomerAuthMessageResponse {
+        try await publicPost("/auth/forgot-password", json: ["email": email], as: CustomerAuthMessageResponse.self)
+    }
+
+    func authVerify(token: String) async throws -> CustomerAuthMessageResponse {
+        try await publicPost("/auth/verify", json: ["token": token], as: CustomerAuthMessageResponse.self)
+    }
+
+    func authResendVerification(email: String) async throws -> CustomerAuthMessageResponse {
+        var body: [String: String] = [:]
+        if !email.isEmpty { body["email"] = email }
+        return try await publicPost("/auth/resend-verification", json: body, as: CustomerAuthMessageResponse.self)
+    }
+
+    func registerPush(token: String, deviceID: String) async throws {
+        _ = try await post("/customer/push/register", body: [
+            "token": token,
+            "device_id": deviceID,
+            "platform": "ios",
+        ], as: EmptyResponse.self)
+    }
+
+    func fetchConversations() async throws -> CustomerConversationsResponse {
+        try await get("/customer/chat/conversations", as: CustomerConversationsResponse.self)
+    }
+
+    func downloadProjectFile(projectId: Int, fileId: Int) async throws -> URL {
+        guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
+        guard let url = URL(string: "/customer/projects/\(projectId)/files/\(fileId)/download", relativeTo: baseURL) else {
+            throw CustomerAPIError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.setValue(header, forHTTPHeaderField: "Authorization")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw CustomerAPIError.http((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        let temp = FileManager.default.temporaryDirectory.appendingPathComponent("pax-file-\(fileId)")
+        try data.write(to: temp)
+        return temp
+    }
+
+    func uploadChatImage(sessionID: String, imageData: Data, filename: String, caption: String = "", clientMsgID: String = UUID().uuidString) async throws -> CustomerSendResponse {
+        try await uploadMultipart(path: "/customer/chat/messages/image", field: "image", filename: filename, mime: "image/jpeg", data: imageData, fields: [
+            "session_id": sessionID,
+            "caption": caption,
+            "client_msg_id": clientMsgID,
+        ], as: CustomerSendResponse.self)
+    }
+
+    func uploadChatVoice(sessionID: String, audioData: Data, duration: Double, clientMsgID: String = UUID().uuidString) async throws -> CustomerSendResponse {
+        try await uploadMultipart(path: "/customer/chat/messages/voice", field: "audio", filename: "voice.m4a", mime: "audio/mp4", data: audioData, fields: [
+            "session_id": sessionID,
+            "duration": String(duration),
+            "client_msg_id": clientMsgID,
+        ], as: CustomerSendResponse.self)
+    }
+
+    func sendChatLocation(sessionID: String, lat: Double, lng: Double, label: String) async throws -> CustomerSendResponse {
+        try await requestJSON(path: "/customer/chat/messages/location", method: "POST", json: [
+            "session_id": sessionID,
+            "lat": lat,
+            "lng": lng,
+            "label": label,
+            "client_msg_id": UUID().uuidString,
+        ], as: CustomerSendResponse.self)
+    }
+
     func fetchDashboard() async throws -> CustomerDashboard {
         try await get("/customer/dashboard", as: CustomerDashboard.self)
     }
@@ -174,10 +250,6 @@ final class CustomerAPIClient: ObservableObject {
         try await request(path, method: "POST", body: body, as: type)
     }
 
-    func patch<T: Decodable>(_ path: String, body: [String: String], as type: T.Type) async throws -> T {
-        try await request(path, method: "PATCH", body: body, as: type)
-    }
-
     private func requestJSON<T: Decodable>(path: String, method: String, json: [String: Any], as type: T.Type) async throws -> T {
         guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
         guard let url = URL(string: path, relativeTo: baseURL) else { throw CustomerAPIError.invalidURL }
@@ -192,6 +264,60 @@ final class CustomerAPIClient: ObservableObject {
             throw CustomerAPIError.http((response as? HTTPURLResponse)?.statusCode ?? 0)
         }
         return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    private func publicPost<T: Decodable>(_ path: String, json: [String: String], as type: T.Type) async throws -> T {
+        guard let url = URL(string: path, relativeTo: authBaseURL) else { throw CustomerAPIError.invalidURL }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.httpBody = try JSONSerialization.data(withJSONObject: json)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw CustomerAPIError.network }
+        guard (200..<300).contains(http.statusCode) else {
+            if let apiError = try? JSONDecoder().decode(CustomerAPIErrorPayload.self, from: data) {
+                throw CustomerAPIError.server(apiError.message ?? apiError.code ?? "HTTP \(http.statusCode)")
+            }
+            throw CustomerAPIError.http(http.statusCode)
+        }
+        return try JSONDecoder().decode(T.self, from: data)
+    }
+
+    private func uploadMultipart<T: Decodable>(
+        path: String,
+        field: String,
+        filename: String,
+        mime: String,
+        data: Data,
+        fields: [String: String],
+        as type: T.Type
+    ) async throws -> T {
+        guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
+        guard let url = URL(string: path, relativeTo: baseURL) else { throw CustomerAPIError.invalidURL }
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var body = Data()
+        for (key, value) in fields {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(value)\r\n".data(using: .utf8)!)
+        }
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"\(field)\"; filename=\"\(filename)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mime)\r\n\r\n".data(using: .utf8)!)
+        body.append(data)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(header, forHTTPHeaderField: "Authorization")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
+        let (responseData, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw CustomerAPIError.http((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        return try JSONDecoder().decode(T.self, from: responseData)
     }
 
     private func request<T: Decodable>(_ path: String, method: String, body: [String: String]?, as type: T.Type) async throws -> T {
@@ -304,6 +430,14 @@ struct CustomerChatPoll: Decodable {
         let role: String
         let content: String
         let sender_name: String?
+        let image_url: String?
+        let audio_url: String?
+        let attachment_type: String?
+        let location_lat: Double?
+        let location_lng: Double?
+        let location_label: String?
+        let file_url: String?
+        let file_name: String?
     }
     let session_id: String?
     let handler: String?
@@ -324,3 +458,21 @@ struct CustomerStreamEvent: Decodable {
 }
 
 struct EmptyResponse: Decodable {}
+
+struct CustomerAuthMessageResponse: Decodable {
+    let success: Bool?
+    let message: String?
+}
+
+struct CustomerConversationsResponse: Decodable {
+    let conversations: [CustomerConversation]
+}
+
+struct CustomerConversation: Decodable, Identifiable {
+    var id: String { session_id }
+    let session_id: String
+    let last_preview: String?
+    let handler: String?
+    let message_count: Int?
+    let updated_at: String?
+}

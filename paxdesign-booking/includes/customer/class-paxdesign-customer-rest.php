@@ -68,6 +68,12 @@ class PAXdesign_Customer_REST {
             'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
         ));
 
+        register_rest_route(self::NS, '/customer/projects/(?P<id>\d+)/files/(?P<file_id>\d+)/download', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'download_project_file'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
         register_rest_route(self::NS, '/customer/orders', array(
             array(
                 'methods'             => WP_REST_Server::READABLE,
@@ -153,6 +159,30 @@ class PAXdesign_Customer_REST {
                 'callback'            => array(__CLASS__, 'chat_send_message'),
                 'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
             ),
+        ));
+
+        register_rest_route(self::NS, '/customer/chat/messages/image', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'chat_send_image'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
+        register_rest_route(self::NS, '/customer/chat/messages/voice', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'chat_send_voice'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
+        register_rest_route(self::NS, '/customer/chat/messages/file', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'chat_send_file'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
+        register_rest_route(self::NS, '/customer/chat/messages/location', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'chat_send_location'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
         ));
 
         register_rest_route(self::NS, '/customer/chat/stream', array(
@@ -452,5 +482,87 @@ class PAXdesign_Customer_REST {
         );
         update_user_meta($uid, PAXdesign_Customer_Notifications::USER_META_DEVICES, $devices);
         return rest_ensure_response(array('success' => true));
+    }
+
+    public static function download_project_file(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $file = PAXdesign_Customer_Projects::get_file_for_user($uid, (int) $request['id'], (int) $request['file_id']);
+        if (!$file || empty($file['file_path']) || !file_exists($file['file_path'])) {
+            return new WP_Error('not_found', __('File not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        $mime = !empty($file['mime_type']) ? $file['mime_type'] : 'application/octet-stream';
+        $name = !empty($file['file_name']) ? $file['file_name'] : basename($file['file_path']);
+        header('Content-Type: ' . $mime);
+        header('Content-Disposition: attachment; filename="' . rawurlencode($name) . '"');
+        header('Content-Length: ' . (string) filesize($file['file_path']));
+        readfile($file['file_path']);
+        exit;
+    }
+
+    public static function chat_send_image(WP_REST_Request $request) {
+        return self::chat_send_media($request, 'image', 'image');
+    }
+
+    public static function chat_send_voice(WP_REST_Request $request) {
+        return self::chat_send_media($request, 'voice', 'audio');
+    }
+
+    public static function chat_send_file(WP_REST_Request $request) {
+        return self::chat_send_media($request, 'file', 'file');
+    }
+
+    public static function chat_send_location(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $params = $request->get_json_params() ?: $request->get_params();
+        $session_id = sanitize_text_field($params['session_id'] ?? '');
+        if ($session_id === '') {
+            $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
+        }
+        $result = PAXdesign_Customer_Chat_Bridge::send_user_attachment(
+            $uid,
+            $session_id,
+            'location',
+            array(),
+            sanitize_text_field($params['label'] ?? ''),
+            array(
+                'lat'           => $params['lat'] ?? 0,
+                'lng'           => $params['lng'] ?? 0,
+                'label'         => $params['label'] ?? '',
+                'client_msg_id' => $params['client_msg_id'] ?? '',
+            )
+        );
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        return rest_ensure_response($result);
+    }
+
+    private static function chat_send_media(WP_REST_Request $request, $kind, $field) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $files = $request->get_file_params();
+        $file = isset($files[$field]) ? $files[$field] : (isset($files['file']) ? $files['file'] : null);
+        if (!$file) {
+            return new WP_Error('missing_file', __('Attachment is required.', 'paxdesign-booking'), array('status' => 400));
+        }
+        $params = $request->get_params();
+        $session_id = sanitize_text_field($params['session_id'] ?? '');
+        if ($session_id === '') {
+            $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
+        }
+        $result = PAXdesign_Customer_Chat_Bridge::send_user_attachment(
+            $uid,
+            $session_id,
+            $kind,
+            $file,
+            sanitize_textarea_field($params['caption'] ?? $params['message'] ?? ''),
+            array(
+                'client_msg_id' => $params['client_msg_id'] ?? '',
+                'duration'      => $params['duration'] ?? 0,
+            )
+        );
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        return rest_ensure_response($result);
     }
 }

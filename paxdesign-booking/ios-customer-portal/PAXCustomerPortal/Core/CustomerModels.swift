@@ -108,7 +108,7 @@ struct CustomerOrderDetail: Decodable {
         let created_at: String
     }
     struct Assigned: Decodable {
-        let id: Int
+        let user_id: Int
         let display_name: String
     }
 

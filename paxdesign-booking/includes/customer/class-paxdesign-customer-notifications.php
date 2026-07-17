@@ -137,6 +137,16 @@ class PAXdesign_Customer_Notifications {
             }
             PAXdesign_APNS::send($device, $title, $body, $data, $user_id, false);
         }
+        if (!empty($data['notification_id'])) {
+            global $wpdb;
+            $wpdb->update(
+                PAXdesign_Customer_DB::table('notifications'),
+                array('push_sent' => 1),
+                array('id' => absint($data['notification_id']), 'user_id' => absint($user_id)),
+                array('%d'),
+                array('%d', '%d')
+            );
+        }
     }
 
     private static function format($row) {
