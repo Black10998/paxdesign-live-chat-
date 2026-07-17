@@ -45,10 +45,6 @@ struct CustomerHomepageView: View {
         }
     }
 
-    private var heroHeight: CGFloat {
-        min(max(UIScreen.main.bounds.width * 0.88, 340), 440)
-    }
-
     private func filteredPortfolioItems(_ data: CustomerHomepageResponse) -> [CustomerHomepageResponse.PortfolioItem] {
         if selectedPortfolioCategory.isEmpty {
             return data.portfolio_items
@@ -68,7 +64,11 @@ struct CustomerHomepageView: View {
     private func homepageScroll(_ data: CustomerHomepageResponse) -> some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                heroSection(data.hero)
+                CustomerHomepageHeroView(
+                    hero: data.hero,
+                    onPrimaryAction: { navigation.selectedTab = .services },
+                    onSecondaryAction: { showRequestSheet = true }
+                )
                 if !data.service_carousel.isEmpty {
                     serviceCarouselSection(data.service_carousel)
                 }
@@ -84,96 +84,6 @@ struct CustomerHomepageView: View {
             }
         }
         .environment(\.layoutDirection, data.isRTL ? .rightToLeft : .leftToRight)
-    }
-
-    private func heroSection(_ hero: CustomerHomepageResponse.Hero) -> some View {
-        ZStack(alignment: .bottom) {
-            Group {
-                if let urlString = hero.image_url, let url = URL(string: urlString) {
-                    AsyncImage(url: url) { phase in
-                        if case .success(let image) = phase {
-                            image.resizable().scaledToFill()
-                        } else {
-                            theme.background
-                        }
-                    }
-                } else {
-                    theme.background
-                }
-            }
-            .frame(height: heroHeight)
-            .frame(maxWidth: .infinity)
-            .clipped()
-            .overlay(
-                LinearGradient(
-                    colors: [theme.heroGradientTop, theme.heroGradientBottom],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-            )
-
-            VStack(spacing: 12) {
-                FlowLayout(spacing: 8) {
-                    ForEach(Array(hero.tags.enumerated()), id: \.offset) { _, tag in
-                        Text(tag.uppercased())
-                            .font(.system(size: 10, weight: .semibold))
-                            .tracking(1.2)
-                            .foregroundStyle(theme.heroTagColor)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color.black.opacity(0.28))
-                            .clipShape(Capsule())
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding(.horizontal, 20)
-
-                Text(hero.lead)
-                    .font(.system(.title, design: .default).weight(.bold))
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.white)
-                    .minimumScaleFactor(0.75)
-                    .lineLimit(4)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 20)
-
-                Text(hero.mid)
-                    .font(.subheadline)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(Color.white.opacity(0.86))
-                    .lineLimit(5)
-                    .minimumScaleFactor(0.85)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 24)
-
-                Text(hero.sub)
-                    .font(.footnote)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(Color.white.opacity(0.68))
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 28)
-
-                HStack(spacing: 10) {
-                    Button(hero.cta_primary) {
-                        navigation.selectedTab = .services
-                    }
-                    .buttonStyle(HomepagePrimaryButtonStyle())
-
-                    Button(hero.cta_secondary) {
-                        showRequestSheet = true
-                    }
-                    .buttonStyle(HomepageSecondaryButtonStyle())
-                }
-                .padding(.top, 4)
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 28)
-            .padding(.top, 12)
-        }
-        .frame(height: heroHeight)
     }
 
     private func serviceCarouselSection(_ cards: [CustomerHomepageResponse.ServiceCard]) -> some View {
