@@ -1,6 +1,7 @@
 import XCTest
 @testable import PAXDesignLiveChat
 
+@MainActor
 final class MessagingReliabilityTests: XCTestCase {
     func testServerAcknowledgementRemovesMatchingOptimisticMessage() {
         let clientId = UUID().uuidString.lowercased()
