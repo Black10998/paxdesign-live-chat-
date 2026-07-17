@@ -597,7 +597,11 @@ class PAXdesign_Chat_Live {
         }
     }
 
-    private function sanitize_session_id($session_id) {
+    /**
+     * Canonical session ID validation for all chat subsystems.
+     * Public so PAXdesign_Chat and customer bridge can validate before calling live APIs.
+     */
+    public function sanitize_session_id($session_id) {
         $session_id = sanitize_text_field($session_id);
         if ($session_id === '' || !preg_match('/^pax_[a-z0-9_]+$/i', $session_id)) {
             return '';

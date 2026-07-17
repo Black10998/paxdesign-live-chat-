@@ -184,11 +184,7 @@ class PAXdesign_Customer_Chat_Bridge {
     }
 
     private static function sanitize_session_id($session_id) {
-        $session_id = sanitize_text_field($session_id);
-        if ($session_id === '' || !preg_match('/^pax_[a-z0-9_]+$/i', $session_id)) {
-            return '';
-        }
-        return $session_id;
+        return PAXdesign_Chat_Live::get_instance()->sanitize_session_id($session_id);
     }
 
     private static function hash_device_token($token) {

@@ -1,4 +1,4 @@
-name: Deploy customer platform 3.136.4
+name: Deploy customer platform 3.136.5
 
 on:
   workflow_dispatch:
@@ -119,12 +119,12 @@ jobs:
           PORT="${WP_SSH_PORT:-22}"
           SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
           ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
-            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp eval 'if (class_exists(\"PAXdesign_Customer_DB\")) { PAXdesign_Customer_DB::maybe_upgrade(); echo \"customer_db_ok\\n\"; }' || echo 'wp-cli unavailable — migrations run on next request')"
+            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp eval 'if (class_exists(\"PAXdesign_Customer_DB\")) { PAXdesign_Customer_DB::maybe_upgrade(); if (!PAXdesign_Customer_DB::schema_complete()) { fwrite(STDERR, \"customer schema incomplete\\n\"); exit(1); } echo \"customer_db_ok\\n\"; }' || echo 'wp-cli unavailable — migrations run on next request')"
 
       - name: Post-deploy customer platform verification
         env:
           PAX_SITE: https://paxdesign.at
-          PAX_EXPECTED_BOOKING: "3.136.4"
+          PAX_EXPECTED_BOOKING: "3.136.5"
           PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
           PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
         run: |

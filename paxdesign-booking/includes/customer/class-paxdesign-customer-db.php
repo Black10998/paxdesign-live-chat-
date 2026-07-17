@@ -18,11 +18,49 @@ class PAXdesign_Customer_DB {
 
     public static function maybe_upgrade() {
         $current = get_option(self::OPTION_VERSION, '');
-        if ($current === self::SCHEMA_VERSION) {
+        if ($current === self::SCHEMA_VERSION && self::schema_complete()) {
             return;
         }
         self::install();
         update_option(self::OPTION_VERSION, self::SCHEMA_VERSION, false);
+    }
+
+    /**
+     * Verify all customer platform tables exist (handles partial/failed prior installs).
+     */
+    public static function schema_complete() {
+        global $wpdb;
+        foreach (self::required_tables() as $suffix) {
+            $table = self::table($suffix);
+            if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) !== $table) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * @return string[]
+     */
+    private static function required_tables() {
+        return array(
+            'projects',
+            'project_assignees',
+            'project_milestones',
+            'project_notes',
+            'project_files',
+            'project_activity',
+            'orders',
+            'order_notes',
+            'order_files',
+            'order_activity',
+            'notifications',
+            'news',
+            'service_categories',
+            'services',
+            'chat_sessions',
+            'guest_claims',
+        );
     }
 
     public static function table($suffix) {

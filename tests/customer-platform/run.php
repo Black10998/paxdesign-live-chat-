@@ -50,6 +50,13 @@ foreach ($files as $file) {
 $chat = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/class-paxdesign-chat.php');
 cx_assert_true(strpos($chat, 'stream_authenticated_customer_chat') !== false, 'Missing authenticated customer AI stream method');
 
+$live = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/class-paxdesign-chat-live.php');
+cx_assert_true(strpos($live, 'public function sanitize_session_id') !== false, 'PAXdesign_Chat_Live::sanitize_session_id must be public for cross-class use');
+
+$db = file_get_contents($customer_dir . '/class-paxdesign-customer-db.php');
+cx_assert_true(strpos($db, 'schema_complete') !== false, 'Customer DB must verify schema completeness');
+cx_assert_true(strpos($db, 'service_categories') !== false && strpos($db, 'services') !== false, 'Customer DB must define services tables');
+
 $ios_api = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios-customer-portal/PAXCustomerPortal/Core/CustomerAPIClient.swift');
 cx_assert_true(strpos($ios_api, '/customer/chat/stream') !== false, 'iOS client must call customer chat stream endpoint');
 cx_assert_true(strpos($ios_api, '/auth/register') !== false, 'iOS client must support auth registration');

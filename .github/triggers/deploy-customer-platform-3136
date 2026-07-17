@@ -1,2 +1,2 @@
-# Re-run verification with stream 500 tolerance for upstream AI errors.
-2026-07-17T11:15:00Z
+# Deploy customer platform 3.136.5 — fix stream sanitize_session_id fatal error.
+2026-07-17T11:40:00Z

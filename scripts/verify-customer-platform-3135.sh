@@ -56,13 +56,13 @@ pass "Authenticated chat poll accessible"
 
 echo "==> Verify customer stream route responds for authenticated user"
 stream_code="$(curl -sS -o /tmp/cx-stream.txt -w '%{http_code}' -H "$AUTH_HEADER" -H 'Accept: text/event-stream' -H 'Content-Type: application/json' -X POST "$SITE/wp-json/pdx/v1/customer/chat/stream" -d '{"message":"Customer platform verification ping"}')"
-if [ "$stream_code" = "200" ] || [ "$stream_code" = "409" ] || [ "$stream_code" = "503" ]; then
+if [ "$stream_code" = "200" ]; then
+  grep -q '^data:' /tmp/cx-stream.txt || fail "Customer stream HTTP 200 but response is not SSE (missing data: lines)"
+  pass "Customer AI stream route returned SSE (HTTP 200)"
+elif [ "$stream_code" = "409" ] || [ "$stream_code" = "503" ]; then
   pass "Customer AI stream route reachable (HTTP $stream_code)"
-elif [ "$stream_code" = "500" ]; then
-  echo "WARN: Customer stream returned HTTP 500 — route is authenticated but upstream AI handler failed"
-  head -c 400 /tmp/cx-stream.txt >&2 || true
-  pass "Customer AI stream route reachable with upstream error (HTTP 500)"
 else
+  head -c 400 /tmp/cx-stream.txt >&2 || true
   fail "Customer stream returned unexpected HTTP $stream_code"
 fi
 
