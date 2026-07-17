@@ -261,8 +261,11 @@ class PAXdesign_APNS {
         if ($type === 'ai_attention' || ($type === 'session_sync' && $handler === 'ai')) {
             return 'pax-ai-alert.wav';
         }
-        if ($type === 'message' || $type === 'new_chat') {
+        if ($type === 'message' || $type === 'new_chat' || $type === 'order_update' || $type === 'project_update' || $type === 'news') {
             return 'pax-message.wav';
+        }
+        if ($type === 'security_alert') {
+            return 'pax-ai-alert.wav';
         }
         return 'pax-message.wav';
     }
@@ -625,6 +628,19 @@ class PAXdesign_APNS {
         );
     }
 
+    /**
+     * @param array<string, mixed> $data
+     */
+    private static function resolve_badge_count($user_id, $data) {
+        if ($user_id > 0 && !empty($data['notification_id']) && class_exists('PAXdesign_Customer_Notifications')) {
+            return PAXdesign_Customer_Notifications::unread_count($user_id);
+        }
+        if ($user_id > 0) {
+            return self::count_user_badge($user_id);
+        }
+        return self::count_pending_badge();
+    }
+
     public static function count_user_badge($user_id) {
         $user_id = absint($user_id);
         if ($user_id <= 0) {
@@ -764,9 +780,12 @@ class PAXdesign_APNS {
         $handler  = isset($data['handler']) ? (string) $data['handler'] : '';
         $sound    = self::sound_for_type($type, $handler, $event);
         $category = ($type === 'live_request') ? 'PAX_LIVE_REQUEST' : 'PAX_MESSAGE';
+        if (!empty($data['notification_id']) || !empty($data['category'])) {
+            $category = ($type === 'security_alert') ? 'PAX_CUSTOMER_ALERT' : 'PAX_CUSTOMER_MESSAGE';
+        }
 
         $aps = array(
-            'badge' => $user_id > 0 ? self::count_user_badge($user_id) : self::count_pending_badge(),
+            'badge' => self::resolve_badge_count($user_id, $data),
         );
 
         if ($silent) {

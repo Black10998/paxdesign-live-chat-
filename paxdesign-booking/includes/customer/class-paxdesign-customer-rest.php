@@ -770,6 +770,7 @@ class PAXdesign_Customer_REST {
             'device_id'   => $device_id,
             'token'       => $token,
             'platform'    => sanitize_text_field($request->get_param('platform') ?? 'ios'),
+            'sandbox'     => rest_sanitize_boolean($request->get_param('sandbox')),
             'updated_at'  => gmdate('c'),
             'revoked'     => false,
         );
