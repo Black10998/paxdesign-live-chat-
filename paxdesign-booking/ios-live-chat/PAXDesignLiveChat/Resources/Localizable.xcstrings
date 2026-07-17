@@ -908,19 +908,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "PAXDesign Live Chat"
+            "value": "PAXDesign"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "PAXDesign Live Chat"
+            "value": "PAXDesign"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "PAXDesign Live Chat"
+            "value": "PAXDesign"
           }
         }
       }
@@ -930,19 +930,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Official Administrator App"
+            "value": "Customer portal and team support"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Offizielle Administrator-App"
+            "value": "Kundenportal und Team-Support"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "تطبيق المسؤول الرسمي"
+            "value": "بوابة العملاء ودعم الفريق"
           }
         }
       }
@@ -1062,21 +1062,35 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Copy the Application Password from WordPress (spaces are removed automatically)."
+            "value": "Sign in with your PAXDesign account. Staff use an Application Password; customers can register below."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Application Password aus WordPress kopieren (Leerzeichen werden automatisch entfernt)."
+            "value": "Mit Ihrem PAXDesign-Konto anmelden. Mitarbeiter nutzen ein Application Password; Kunden können sich registrieren."
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "انسخ كلمة مرور التطبيق من ووردبريس (تُزال المسافات تلقائياً)."
+            "value": "سجّل الدخول بحساب PAXDesign. يستخدم الموظفون Application Password؛ يمكن للعملاء التسجيل أدناه."
           }
         }
+      }
+    },
+    "login.create_account": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Create account" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Konto erstellen" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "إنشاء حساب" } }
+      }
+    },
+    "login.forgot_password": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Forgot password?" } },
+        "de": { "stringUnit": { "state": "translated", "value": "Passwort vergessen?" } },
+        "ar": { "stringUnit": { "state": "translated", "value": "نسيت كلمة المرور؟" } }
       }
     },
     "login.privacy": {
@@ -18125,19 +18139,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "PAXDesign Live Chat"
+            "value": "PAXDesign"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "PAXDesign Live Chat"
+            "value": "PAXDesign"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "PAXDesign Live Chat"
+            "value": "PAXDesign"
           }
         }
       }

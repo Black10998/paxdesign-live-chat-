@@ -2,11 +2,14 @@ import SwiftUI
 
 struct LoginView: View {
     @EnvironmentObject private var auth: AuthStore
+    @ObservedObject private var customerSession = CustomerSessionController.shared
     @State private var siteURL = ""
     @State private var username = ""
     @State private var password = ""
     @State private var isLoading = false
     @State private var error: String?
+    @State private var customerAuthMode: CustomerAuthContainerView.AuthMode?
+    @State private var showCustomerAuth = false
 
     var body: some View {
         NavigationStack {
@@ -41,6 +44,21 @@ struct LoginView: View {
                         signIn()
                     }
 
+                    VStack(spacing: 10) {
+                        Button(L10n.LoginCreateAccount) {
+                            customerAuthMode = .register
+                            showCustomerAuth = true
+                        }
+                        .font(.subheadline)
+
+                        Button(L10n.LoginForgotPassword) {
+                            customerAuthMode = .forgot
+                            showCustomerAuth = true
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    }
+
                     VStack(spacing: 8) {
                         Text(L10n.LoginHint)
                             .font(.caption)
@@ -56,12 +74,48 @@ struct LoginView: View {
             .scrollDismissesKeyboard(.interactively)
             .paxScreenBackground()
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $showCustomerAuth) {
+                NavigationStack {
+                    customerAuthSheetContent
+                        .environmentObject(customerSession.auth)
+                        .environmentObject(customerSession.api)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button(L10n.CommonCancel) { showCustomerAuth = false }
+                            }
+                        }
+                }
+                .onAppear {
+                    customerSession.auth.siteURL = siteURL.isEmpty ? auth.siteURLString : siteURL
+                    customerSession.api.configure(baseURL: customerSession.auth.siteURL, auth: customerSession.auth)
+                }
+            }
             .onAppear {
-                siteURL = auth.siteURLString
+                siteURL = auth.siteURLString.isEmpty ? "https://paxdesign.at" : auth.siteURLString
                 username = auth.username
                 password = auth.appPassword
                 PAXHaptics.prepare()
             }
+        }
+    }
+
+    @ViewBuilder
+    private var customerAuthSheetContent: some View {
+        switch customerAuthMode ?? .register {
+        case .register:
+            CustomerRegisterView(onDone: {
+                customerAuthMode = .verify
+            })
+        case .forgot:
+            CustomerForgotPasswordView(onDone: {
+                showCustomerAuth = false
+            })
+        case .verify:
+            CustomerVerifyEmailView(onDone: {
+                showCustomerAuth = false
+            })
+        case .login:
+            EmptyView()
         }
     }
 

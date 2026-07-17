@@ -1,12 +1,19 @@
 import Foundation
 import Security
 
+enum SessionMode: String, Codable {
+    case staff
+    case customer
+}
+
 @MainActor
 final class AuthStore: ObservableObject {
     static let shared = AuthStore()
 
     @Published private(set) var isLoggedIn = false
     @Published private(set) var profile: AdminProfile?
+    @Published private(set) var customerProfile: CustomerProfileResponse.Profile?
+    @Published private(set) var sessionMode: SessionMode?
     @Published private(set) var isBootstrapping = true
     /// Bumped on every login/logout so SwiftUI rebuilds the shell and drops stale UI state.
     @Published private(set) var sessionEpoch = UUID()
@@ -18,6 +25,9 @@ final class AuthStore: ObservableObject {
     private var unauthorizedRecoveryTask: Task<Void, Never>?
 
     private let service = "at.paxdesign.livechat.credentials"
+
+    var isCustomerSession: Bool { sessionMode == .customer }
+    var isStaffSession: Bool { sessionMode == .staff }
 
     private init() {
         loadStoredCredentials()
@@ -32,6 +42,7 @@ final class AuthStore: ObservableObject {
         siteURLString = dict.siteURL
         username = dict.username
         appPassword = dict.appPassword
+        sessionMode = dict.sessionMode
     }
 
     func bootstrapSession() async {
@@ -42,9 +53,15 @@ final class AuthStore: ObservableObject {
         guard !username.isEmpty, !appPassword.isEmpty, !siteURLString.isEmpty else { return }
 
         do {
-            try await login()
+            if sessionMode == .customer {
+                try await loginCustomer()
+            } else {
+                try await login()
+            }
         } catch {
             if case LiveChatAPIError.unauthorized = error {
+                invalidateStoredSession(keepFormFields: true)
+            } else if case CustomerAPIError.unauthorized = error {
                 invalidateStoredSession(keepFormFields: true)
             } else {
                 restoreOfflineSession()
@@ -73,27 +90,96 @@ final class AuthStore: ObservableObject {
         let client = LiveChatAPI(siteURL: normalizedSite, username: user, appPassword: password)
         do {
             let me = try await client.validateLogin()
-            api = client
-            profile = me
-            isLoggedIn = true
-            sessionEpoch = UUID()
-            AppSettingsStore.shared.onboardingCompleted = me.onboardingCompleted
-
-            let stored = StoredCredentials(siteURL: siteURLString, username: username, appPassword: appPassword)
-            if let data = try? JSONEncoder().encode(stored) {
-                let service = self.service
-                Task.detached(priority: .utility) {
-                    KeychainHelper.save(data, service: service)
-                }
-            }
+            applyStaffSession(client: client, profile: me)
+            persistCredentials(mode: .staff)
             Task(priority: .utility) {
                 await PlatformSyncService.shared.sync(auth: self)
             }
+        } catch LiveChatAPIError.unauthorized {
+            try await loginCustomer()
         } catch {
             if case LiveChatAPIError.unauthorized = error {
                 invalidateStoredSession(keepFormFields: true)
             }
             throw error
+        }
+    }
+
+    func loginCustomer() async throws {
+        let site = try SecureURLValidator.validateHTTPS(siteURLString)
+        let normalizedSite = LiveChatAPI.normalizeSiteURL(site)
+        let user = LiveChatAPI.normalizeUsername(username)
+        let password = LiveChatAPI.normalizeAppPassword(appPassword)
+
+        guard !user.isEmpty, !password.isEmpty else {
+            throw CustomerAPIError.unauthorized
+        }
+
+        siteURLString = normalizedSite.absoluteString
+        username = user
+        appPassword = password
+
+        let bridgeAuth = CustomerAuthStore()
+        bridgeAuth.siteURL = siteURLString
+        bridgeAuth.username = username
+        bridgeAuth.appPassword = appPassword
+
+        let client = CustomerAPIClient()
+        client.configure(baseURL: siteURLString, auth: bridgeAuth)
+
+        do {
+            let response = try await client.fetchProfile()
+            applyCustomerSession(profile: response.profile)
+            CustomerSessionController.shared.activate(
+                siteURL: siteURLString,
+                username: username,
+                appPassword: appPassword,
+                profile: response.profile
+            )
+            persistCredentials(mode: .customer)
+        } catch CustomerAPIError.unauthorized {
+            invalidateStoredSession(keepFormFields: true)
+            throw CustomerAPIError.unauthorized
+        } catch CustomerAPIError.http(401), CustomerAPIError.http(403) {
+            invalidateStoredSession(keepFormFields: true)
+            throw CustomerAPIError.unauthorized
+        } catch {
+            throw error
+        }
+    }
+
+    private func applyStaffSession(client: LiveChatAPI, profile me: AdminProfile) {
+        api = client
+        profile = me
+        customerProfile = nil
+        sessionMode = .staff
+        isLoggedIn = true
+        sessionEpoch = UUID()
+        AppSettingsStore.shared.onboardingCompleted = me.onboardingCompleted
+        CustomerSessionController.shared.deactivate()
+    }
+
+    private func applyCustomerSession(profile: CustomerProfileResponse.Profile) {
+        api = nil
+        self.profile = nil
+        customerProfile = profile
+        sessionMode = .customer
+        isLoggedIn = true
+        sessionEpoch = UUID()
+    }
+
+    private func persistCredentials(mode: SessionMode) {
+        let stored = StoredCredentials(
+            siteURL: siteURLString,
+            username: username,
+            appPassword: appPassword,
+            sessionMode: mode
+        )
+        if let data = try? JSONEncoder().encode(stored) {
+            let service = self.service
+            Task.detached(priority: .utility) {
+                KeychainHelper.save(data, service: service)
+            }
         }
     }
 
@@ -108,7 +194,11 @@ final class AuthStore: ObservableObject {
                 return
             }
             do {
-                try await login()
+                if sessionMode == .customer {
+                    try await loginCustomer()
+                } else {
+                    try await login()
+                }
             } catch {
                 if case LiveChatAPIError.unauthorized = error {
                     invalidateStoredSession(keepFormFields: true)
@@ -124,6 +214,9 @@ final class AuthStore: ObservableObject {
         unauthorizedRecoveryTask = nil
         api = nil
         profile = nil
+        customerProfile = nil
+        sessionMode = nil
+        CustomerSessionController.shared.deactivate()
         isLoggedIn = false
         sessionEpoch = UUID()
         let service = self.service
@@ -173,7 +266,12 @@ final class AuthStore: ObservableObject {
         let user = LiveChatAPI.normalizeUsername(username)
         let password = LiveChatAPI.normalizeAppPassword(appPassword)
         guard !user.isEmpty, !password.isEmpty else { return }
+        if sessionMode == .customer {
+            isLoggedIn = true
+            return
+        }
         api = LiveChatAPI(siteURL: normalizedSite, username: user, appPassword: password)
+        sessionMode = .staff
         isLoggedIn = true
     }
 
@@ -188,6 +286,14 @@ private struct StoredCredentials: Codable {
     let siteURL: String
     let username: String
     let appPassword: String
+    let sessionMode: SessionMode?
+
+    init(siteURL: String, username: String, appPassword: String, sessionMode: SessionMode? = nil) {
+        self.siteURL = siteURL
+        self.username = username
+        self.appPassword = appPassword
+        self.sessionMode = sessionMode
+    }
 }
 
 enum KeychainHelper {

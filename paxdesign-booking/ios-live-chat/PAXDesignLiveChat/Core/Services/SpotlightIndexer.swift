@@ -20,7 +20,7 @@ enum SpotlightIndexer {
                 id: "module.\(module.rawValue)",
                 title: module.title,
                 description: module.subtitle,
-                keywords: [module.title, module.rawValue, "PAXDesign", "Live Chat"]
+                keywords: [module.title, module.rawValue, "PAXDesign"]
             ))
         }
 

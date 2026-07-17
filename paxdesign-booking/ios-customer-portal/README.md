@@ -1,36 +1,17 @@
-# PAXDesign Customer Portal — iOS
+# ios-customer-portal (reference only)
 
-Native SwiftUI customer portal for PAXDesign. This is **not** the staff Live Chat admin app.
+**This directory is no longer a separate shipping target.**
 
-## Requirements
+Customer Portal functionality has been merged into the unified **PAXDesign** iOS app:
 
-- iOS 16+
-- WordPress plugin **paxdesign-booking v3.135.0+**
-- WordPress account (same registration as https://paxdesign.at)
-- Application Password for API access (Users → Profile → Application Passwords)
+- Target: `paxdesign-booking/ios-live-chat/`
+- Bundle ID: `at.paxdesign.livechat`
+- App Store Connect Apple ID: `6790031845`
 
-## No purchases
+Sources were copied to:
 
-This app does **not** include In-App Purchases, PayPal, billing checkout, or module purchases. It is a communication and project portal only.
+`ios-live-chat/PAXDesignLiveChat/Features/CustomerPortal/`
 
-## API
+Do **not** build or upload `at.paxdesign.customerportal` for App Store releases unless explicitly approved.
 
-Base URL: `https://paxdesign.at/wp-json/pdx/v1/customer`
-
-Authentication: WordPress Application Password (HTTP Basic Auth) — same user identity as the website.
-
-## Build
-
-```bash
-cd ios-customer-portal
-# Open in Xcode when project is generated
-```
-
-## Features (initial shell)
-
-- Dashboard
-- Account-linked live chat
-- Projects and service requests
-- Service center (REST-driven, no WebView)
-- News and notifications
-- Profile and settings
+See `docs/ios-unified-app-plan.md` for the full implementation plan.
