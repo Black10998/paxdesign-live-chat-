@@ -1,41 +1,38 @@
 import SwiftUI
 
-/// Branded launch screen that matches the static iOS launch screen.
+/// Branded launch screen — pure black background with the original PAXdesign logo animation.
 struct PAXLaunchView: View {
     var onFinished: (() -> Void)?
 
-    @State private var contentOpacity: Double = 1
+    @State private var logoOpacity: Double = 1
+    @State private var sequenceID = UUID()
 
     var body: some View {
-        ZStack {
-            PAXBrand.launchBackground
-                .ignoresSafeArea()
+        GeometryReader { proxy in
+            let markWidth = min(max(proxy.size.width * 0.44, 118), 168)
 
-            VStack(spacing: 14) {
-                Image("AppMark")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 56, height: 56)
-                    .accessibilityHidden(true)
+            ZStack {
+                Color.black.ignoresSafeArea()
 
-                Text(L10n.AppName)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                PAXInlineLoader(size: 18)
-                    .padding(.top, 4)
+                PAXAnimatedLogoView(markWidth: markWidth)
+                    .opacity(logoOpacity)
+                    .id(sequenceID)
             }
-            .opacity(contentOpacity)
         }
         .onAppear { runLaunchSequence() }
     }
 
     private func runLaunchSequence() {
+        sequenceID = UUID()
+        logoOpacity = 1
+
         DispatchQueue.main.asyncAfter(deadline: .now() + PAXBrand.launchDuration) {
-            withAnimation(.easeOut(duration: 0.22)) {
-                contentOpacity = 0.92
+            withAnimation(.easeOut(duration: 0.28)) {
+                logoOpacity = 0
             }
-            onFinished?()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+                onFinished?()
+            }
         }
     }
 }

@@ -7,6 +7,7 @@ final class LaunchSplashController: ObservableObject {
 
     private var animationFinished = false
     private var bootstrapFinished = false
+    private var interactiveLoginPending = false
 
     func markAnimationFinished() {
         animationFinished = true
@@ -18,10 +19,25 @@ final class LaunchSplashController: ObservableObject {
         dismissIfReady()
     }
 
+    /// Replay the splash after an interactive login (black background + logo animation).
+    func replayAfterLogin() {
+        guard !interactiveLoginPending else { return }
+        interactiveLoginPending = true
+        animationFinished = false
+        isVisible = true
+    }
+
+    func clearInteractiveLoginReplay() {
+        interactiveLoginPending = false
+    }
+
     private func dismissIfReady() {
         guard animationFinished, bootstrapFinished, isVisible else { return }
-        withAnimation(.easeOut(duration: 0.24)) {
+        withAnimation(.easeOut(duration: 0.28)) {
             isVisible = false
+        }
+        if interactiveLoginPending {
+            interactiveLoginPending = false
         }
     }
 }

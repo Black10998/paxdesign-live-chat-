@@ -117,6 +117,10 @@ final class AuthStore: ObservableObject {
             try await loginCustomer()
             persistCredentials(mode: .customer)
         }
+
+        if !isBootstrapping {
+            NotificationCenter.default.post(name: .paxInteractiveLoginSucceeded, object: nil)
+        }
     }
 
     func loginStaff() async throws {

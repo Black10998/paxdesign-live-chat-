@@ -3790,19 +3790,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Unlock PAXDesign Live Chat"
+            "value": "Unlock PAXDesign"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "PAXDesign Live Chat entsperren"
+            "value": "PAXDesign entsperren"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "فتح PAXDesign Live Chat"
+            "value": "فتح PAXDesign"
           }
         }
       }
@@ -16088,19 +16088,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Welcome to PAXDesign Live Chat"
+            "value": "Welcome to PAXDesign"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Willkommen bei PAXDesign Live Chat"
+            "value": "Willkommen bei PAXDesign"
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "مرحباً بك في PAXDesign Live Chat"
+            "value": "مرحباً بك في PAXDesign"
           }
         }
       }
@@ -19586,19 +19586,19 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "PAXDesign Live Chat is the official iOS app for authorized staff. It connects securely via HTTPS to your WordPress backend and mirrors the browser live admin panel — optimized for mobile with push notifications."
+            "value": "PAXDesign is the official iOS app for authorized staff. It connects securely via HTTPS to your WordPress backend and mirrors the browser live admin panel — optimized for mobile with push notifications."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "PAXDesign Live Chat ist die offizielle iOS-App für autorisierte Mitarbeiter. Sie verbindet sich sicher per HTTPS mit Ihrem WordPress-Backend und spiegelt die Funktionen des Browser-Live-Admin-Panels — optimiert für unterwegs und mit Push-Benachrichtigungen."
+            "value": "PAXDesign ist die offizielle iOS-App für autorisierte Mitarbeiter. Sie verbindet sich sicher per HTTPS mit Ihrem WordPress-Backend und spiegelt die Funktionen des Browser-Live-Admin-Panels — optimiert für unterwegs und mit Push-Benachrichtigungen."
           }
         },
         "ar": {
           "stringUnit": {
             "state": "translated",
-            "value": "PAXDesign Live Chat هو تطبيق iOS الرسمي للموظفين المصرح لهم. يتصل بأمان عبر HTTPS بخادم WordPress ويعكس لوحة الإدارة المباشرة في المتصفح — محسّن للجوال مع إشعارات الدفع."
+            "value": "PAXDesign هو تطبيق iOS الرسمي للموظفين المصرح لهم. يتصل بأمان عبر HTTPS بخادم WordPress ويعكس لوحة الإدارة المباشرة في المتصفح — محسّن للجوال مع إشعارات الدفع."
           }
         }
       }

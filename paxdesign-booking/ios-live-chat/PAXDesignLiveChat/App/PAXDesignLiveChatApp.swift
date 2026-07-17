@@ -291,6 +291,9 @@ struct RootView: View {
         .onAppear {
             syncPostLoginOnboardingPresentation()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .paxInteractiveLoginSucceeded)) { _ in
+            launchSplash.replayAfterLogin()
+        }
     }
 
     private var phaseIdentifier: String {

@@ -66,8 +66,8 @@ done
 /usr/libexec/PlistBuddy -c "Delete :UIBackgroundModes" "$APP_PATH/Info.plist" 2>/dev/null || true
 
 # Ensure privacy usage descriptions are present in the shipped bundle.
-/usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string 'PAXDesign Live Chat'" "$APP_PATH/Info.plist" 2>/dev/null \
-  || /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 'PAXDesign Live Chat'" "$APP_PATH/Info.plist"
+/usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string 'PAXDesign'" "$APP_PATH/Info.plist" 2>/dev/null \
+  || /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName 'PAXDesign'" "$APP_PATH/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :NSFaceIDUsageDescription string 'Face ID is used to unlock the app after inactivity.'" "$APP_PATH/Info.plist" 2>/dev/null \
   || /usr/libexec/PlistBuddy -c "Set :NSFaceIDUsageDescription 'Face ID is used to unlock the app after inactivity.'" "$APP_PATH/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :NSCameraUsageDescription string 'Take photos to send in live chat conversations.'" "$APP_PATH/Info.plist" 2>/dev/null \

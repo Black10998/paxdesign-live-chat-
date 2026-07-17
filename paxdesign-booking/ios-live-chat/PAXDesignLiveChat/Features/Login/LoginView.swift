@@ -161,4 +161,5 @@ struct LoginView: View {
 
 extension Notification.Name {
     static let paxEmailVerificationDeepLink = Notification.Name("paxEmailVerificationDeepLink")
+    static let paxInteractiveLoginSucceeded = Notification.Name("paxInteractiveLoginSucceeded")
 }
