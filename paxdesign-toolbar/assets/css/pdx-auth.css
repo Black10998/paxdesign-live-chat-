@@ -1,90 +1,172 @@
 /* PaxDesign Auth — login/register forms (exact provided design) + account dashboard */
 
-/* ─── Auth bar (header login / account) ─────────────────── */
-#pdx-auth-bar {
-  position: fixed;
-  top: max(10px, env(safe-area-inset-top, 10px));
-  right: max(12px, env(safe-area-inset-right, 12px));
-  z-index: 99995;
-  display: flex;
-  align-items: center;
+/* ─── Account top bar (desktop) / floating auth (mobile) ─── */
+:root {
+  --pdx-account-topbar-h: 40px;
 }
 
-.pdx-header-has-auth {
+#pdx-account-topbar {
+  position: relative;
+  z-index: 99990;
+  width: 100%;
+  min-height: var(--pdx-account-topbar-h);
+  box-sizing: border-box;
+  background: rgba(8, 8, 10, 0.94);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  contain: layout style;
+}
+
+.pdx-account-topbar-inner {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: min(1320px, 100%);
+  margin: 0 auto;
+  padding: 6px max(16px, env(safe-area-inset-right, 16px)) 6px max(16px, env(safe-area-inset-left, 16px));
+  min-height: var(--pdx-account-topbar-h);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: nowrap;
+}
+
+#pdx-auth-bar {
+  position: static;
+  top: auto;
+  right: auto;
+  transform: none;
+  margin: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#pdx-auth-bar.pdx-auth-bar--topbar .pdx-auth-bar-inner {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: flex-end;
   flex-wrap: nowrap;
-  gap: 8px;
-}
-
-.pdx-header-has-auth > :not(#pdx-auth-bar) {
-  flex: 0 0 auto;
-}
-
-#pdx-auth-bar.pdx-auth-bar--header {
-  position: absolute;
-  top: 50%;
-  right: max(12px, env(safe-area-inset-right, 12px));
-  transform: translateY(-50%);
-  margin: 0;
-  z-index: 99996;
-}
-
-#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-bar-inner {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 10px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .pdx-auth-header-btn {
-  min-height: 36px;
+  flex: 0 0 auto;
+  min-height: 32px;
   padding: 0 14px;
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.02em;
   border-radius: 999px;
   white-space: nowrap;
+  max-width: min(220px, 42vw);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
+#pdx-auth-bar.pdx-auth-bar--topbar .pdx-auth-signup-btn {
   border: 1px solid rgba(255, 224, 166, 0.45);
   background: linear-gradient(180deg, rgba(255, 224, 166, 0.22) 0%, rgba(255, 224, 166, 0.08) 100%);
   color: #ffe0a6;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
-#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
-#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
+#pdx-auth-bar.pdx-auth-bar--topbar .pdx-auth-signup-btn:hover,
+#pdx-auth-bar.pdx-auth-bar--topbar .pdx-auth-signup-btn:focus {
   border-color: rgba(255, 224, 166, 0.75);
   background: linear-gradient(180deg, rgba(255, 224, 166, 0.32) 0%, rgba(255, 224, 166, 0.12) 100%);
   outline: none;
 }
 
 .pdx-auth-account-btn {
-  max-width: 160px;
+  max-width: min(200px, 38vw);
 }
 
 .pdx-auth-account-label {
   display: inline-block;
-  max-width: 120px;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: middle;
 }
 
-.pdx-auth-account-btn--verified .pdx-auth-account-label {
-  max-width: 132px;
-}
-
-body.admin-bar #pdx-auth-bar:not(.pdx-auth-bar--header) {
-  top: calc(32px + max(10px, env(safe-area-inset-top, 10px)));
+body.admin-bar #pdx-account-topbar {
+  scroll-margin-top: 32px;
 }
 
 @media screen and (max-width: 782px) {
-  body.admin-bar #pdx-auth-bar:not(.pdx-auth-bar--header) {
+  body.admin-bar #pdx-account-topbar {
+    scroll-margin-top: 46px;
+  }
+}
+
+/* Desktop: portal via account menu only — prevents top-bar button crowding */
+@media (min-width: 769px) {
+  #pdx-auth-bar .pdx-auth-portal-btn {
+    display: none !important;
+  }
+}
+
+/* Mobile: zero-height top bar shell; auth floats beside menu toggle */
+@media (max-width: 768px) {
+  #pdx-account-topbar {
+    position: absolute;
+    width: 0;
+    height: 0;
+    min-height: 0;
+    overflow: visible;
+    border: none;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    pointer-events: none;
+  }
+
+  .pdx-account-topbar-inner {
+    position: static;
+    min-height: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  #pdx-auth-bar.pdx-auth-bar--topbar {
+    position: fixed;
+    top: max(10px, env(safe-area-inset-top, 10px));
+    right: max(56px, calc(env(safe-area-inset-right, 12px) + 44px));
+    pointer-events: auto;
+    z-index: 99996;
+  }
+
+  body.admin-bar #pdx-auth-bar.pdx-auth-bar--topbar {
     top: calc(46px + max(8px, env(safe-area-inset-top, 8px)));
+  }
+
+  .pdx-auth-header-btn {
+    min-height: 34px;
+    padding: 0 12px;
+    font-size: 12px;
+    max-width: min(160px, 36vw);
+  }
+
+  #pdx-auth-bar.pdx-auth-bar--topbar .pdx-auth-portal-btn {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .pdx-auth-header-btn {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 11px;
+    max-width: min(120px, 34vw);
   }
 }
 
@@ -222,43 +304,8 @@ body.admin-bar #pdx-auth-bar:not(.pdx-auth-bar--header) {
   color: #aaa;
 }
 
-@media (max-width: 768px) {
-  #pdx-auth-bar.pdx-auth-bar--header {
-    position: fixed;
-    top: max(10px, env(safe-area-inset-top, 10px));
-    right: max(56px, calc(env(safe-area-inset-right, 12px) + 44px));
-    transform: none;
-  }
-
-  body.admin-bar #pdx-auth-bar.pdx-auth-bar--header {
-    top: calc(46px + max(8px, env(safe-area-inset-top, 8px)));
-  }
-
-  .pdx-auth-header-btn {
-    min-height: 34px;
-    padding: 0 12px;
-    font-size: 12px;
-  }
-
-  .pdx-auth-account-label {
-    max-width: 88px;
-  }
-}
-
-@media (max-width: 480px) {
-  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-portal-btn {
-    display: none;
-  }
-
-  .pdx-auth-header-btn {
-    min-height: 32px;
-    padding: 0 10px;
-    font-size: 11px;
-  }
-}
-
 @media (min-width: 769px) {
-  #pdx-auth-bar:not(.pdx-auth-bar--header) .pdx-auth-trigger-label {
+  #pdx-auth-bar:not(.pdx-auth-bar--topbar) .pdx-auth-trigger-label {
     display: inline;
   }
 }

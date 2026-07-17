@@ -151,22 +151,30 @@
   var authBtn = null;
   var authMenu = null;
 
-  function findHeaderMount() {
-    var selectors = [
-      'header .header-inner',
-      'header .inside-header',
-      'header .site-header-main',
-      'header .elementor-container',
-      '#masthead .inside-header',
-      '#masthead',
-      'header',
-      '.site-header'
-    ];
-    for (var i = 0; i < selectors.length; i++) {
-      var el = document.querySelector(selectors[i]);
-      if (el) return el;
+  function ensureAccountTopbar() {
+    var topbar = document.getElementById('pdx-account-topbar');
+    if (!topbar) {
+      topbar = document.createElement('div');
+      topbar.id = 'pdx-account-topbar';
+      topbar.className = 'pdx-account-topbar pdx-cx-shell';
+      topbar.setAttribute('aria-label', 'Account');
+      topbar.innerHTML = '<div class="pdx-account-topbar-inner"></div>';
+      var insertBefore = document.getElementById('masthead') || document.querySelector('header') || document.body.firstChild;
+      if (insertBefore && insertBefore.parentNode) {
+        insertBefore.parentNode.insertBefore(topbar, insertBefore);
+      } else {
+        document.body.insertBefore(topbar, document.body.firstChild);
+      }
     }
-    return null;
+    return topbar.querySelector('.pdx-account-topbar-inner') || topbar;
+  }
+
+  function mountAuthBar() {
+    var mount = ensureAccountTopbar();
+    authBar.classList.remove('pdx-auth-bar--header');
+    authBar.classList.add('pdx-auth-bar--topbar');
+    mount.appendChild(authBar);
+    document.body.classList.add('pdx-has-account-topbar');
   }
 
   function createAuthBar() {
@@ -229,17 +237,7 @@
       if (e.key === 'Escape') closeAuthMenu();
     });
 
-    var mount = findHeaderMount();
-    if (mount) {
-      if (window.getComputedStyle(mount).position === 'static') {
-        mount.style.position = 'relative';
-      }
-      mount.classList.add('pdx-header-has-auth');
-      authBar.classList.add('pdx-auth-bar--header');
-      mount.appendChild(authBar);
-    } else {
-      document.body.appendChild(authBar);
-    }
+    mountAuthBar();
     updateAuthBar();
   }
 
@@ -260,7 +258,8 @@
 
     if (signupBtn) signupBtn.hidden = !!user.logged_in;
     if (accountBtn) accountBtn.hidden = !user.logged_in;
-    if (portalBtn) portalBtn.hidden = !user.logged_in;
+    /* Portal is in the account dropdown on desktop; standalone btn is mobile-only. */
+    if (portalBtn) portalBtn.hidden = !user.logged_in || !window.matchMedia('(max-width: 768px)').matches;
 
     if (labelEl) {
       if (user.logged_in) {
