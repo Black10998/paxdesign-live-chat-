@@ -135,10 +135,9 @@ private struct HeroTagsRow: View {
         for tag in tags.dropFirst() {
             composed = composed
                 + Text(" · ")
-                .foregroundStyle(accentDot)
-                .fontWeight(.bold)
+                    .foregroundStyle(accentDot)
                 + Text(tag.uppercased())
-                .foregroundStyle(Color.white.opacity(0.72))
+                    .foregroundStyle(Color.white.opacity(0.72))
         }
         return composed
     }

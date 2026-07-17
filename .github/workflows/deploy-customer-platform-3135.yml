@@ -17,6 +17,7 @@ on:
     paths:
       - '.github/triggers/deploy-customer-platform-3144'
       - '.github/triggers/deploy-customer-platform-3145'
+      - '.github/triggers/deploy-customer-platform-3147'
 
 permissions:
   contents: read
@@ -123,7 +124,7 @@ jobs:
       - name: Post-deploy customer platform verification
         env:
           PAX_SITE: https://paxdesign.at
-          PAX_EXPECTED_BOOKING: "3.141.0"
+          PAX_EXPECTED_BOOKING: "3.147.0"
           PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
           PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
         run: |
