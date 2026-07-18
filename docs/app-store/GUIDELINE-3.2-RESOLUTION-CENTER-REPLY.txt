@@ -1,0 +1,26 @@
+Dear App Review Team,
+
+Thank you for your review of our previous submission (v2.0.5, Build 127). We have substantially redesigned and expanded the application and respectfully request re-evaluation of PAXDesign v2.1.0 (Build 159) under Guideline 3.2.
+
+Since Build 127, PAXDesign has evolved from a staff-oriented live-chat console into a public customer platform. The primary App Store experience is now a native customer portal that any individual or business can use—without being a PAXdesign employee.
+
+Key public-facing additions:
+• Self-service account registration with email verification and password recovery
+• Five-tab customer portal: Home, Services, Portfolio, Chat, and Account
+• Browse services and portfolio; submit and track project requests/orders
+• Personalized dashboard with projects, files, news, and notifications
+• Chat with an AI assistant and seamless handoff to human support
+• File and media sharing; push and in-app notifications
+• Profile, settings, device management, and account deletion
+• Legal pages (Privacy Policy, Terms, Impressum) accessible in-app
+
+Staff live-chat and team tools remain available only to accounts with server-validated staff permission. These open in a separate interface and are not the default experience. Customer and staff areas use separate APIs and are enforced server-side.
+
+We have attached a detailed document describing all changes since Build 127, including architecture, security, and the full feature set.
+
+Please sign in with the customer demo account provided in App Review Information to experience the public customer portal. Build 159 is the version intended for App Store release.
+
+We would appreciate your re-evaluation based on the current submission.
+
+Kind regards,
+PAXdesign Team
