@@ -611,6 +611,7 @@ class PAXdesign_Customer_REST {
     public static function chat_session() {
         $uid = PAXdesign_Customer_Auth::current_user_id();
         $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
+        $session_id = PAXdesign_Customer_Chat_Bridge::ensure_persistent_session_open($session_id, $uid);
         $handler = PAXdesign_Chat_Live::get_instance()->get_handler($session_id);
         return rest_ensure_response(array(
             'session_id' => $session_id,
@@ -670,16 +671,7 @@ class PAXdesign_Customer_REST {
         $since = max(0, (int) $request->get_param('since'));
         $full = !empty($request['full']);
         $live = PAXdesign_Chat_Live::get_instance();
-        $handler = $live->get_handler($session_id);
-        if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED && $full) {
-            $data = $live->get_poll_data($session_id, $since, $full, 'user');
-            if (is_wp_error($data)) {
-                return $data;
-            }
-            $data['handler'] = PAXdesign_Chat_Live::HANDLER_CLOSED;
-            $data['notice'] = __('This conversation was closed due to inactivity. Send a new message to continue.', 'paxdesign-booking');
-            return rest_ensure_response($data);
-        }
+        $session_id = PAXdesign_Customer_Chat_Bridge::ensure_persistent_session_open($session_id, $uid);
         $data = $live->get_poll_data($session_id, $since, $full, 'user');
         if (is_wp_error($data)) {
             if ($data->get_error_code() === 'not_found') {
@@ -690,6 +682,9 @@ class PAXdesign_Customer_REST {
         }
         if (is_wp_error($data)) {
             return $data;
+        }
+        if (isset($data['messages']) && is_array($data['messages'])) {
+            $data['messages'] = PAXdesign_Customer_Chat_Bridge::filter_customer_lifecycle_messages($data['messages']);
         }
         $data['session_id'] = $session_id;
         if (!isset($data['other_read_seq']) && isset($data['admin_read_seq'])) {

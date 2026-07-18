@@ -21,9 +21,23 @@ enum CustomerChatSessionRecovery {
         let showManualRenew: Bool
     }
 
-    /// Inactivity notice shown inline when a conversation is closed but the user can keep typing.
-    static func inactivityNotice() -> String {
-        String(localized: "This conversation was closed due to inactivity. Send a new message to continue.")
+    /// Friendly waiting copy when human support is pending (never "session closed").
+    static func waitingForTeamNotice() -> String {
+        String(localized: "Our team will reply here when available. Feel free to send another message anytime.")
+    }
+
+    /// Hide session lifecycle system messages from the customer transcript.
+    static func visibleMessages(_ messages: [CustomerChatPoll.ChatMessage]) -> [CustomerChatPoll.ChatMessage] {
+        messages.filter { message in
+            guard message.role == "system" else { return true }
+            let lower = message.content.lowercased()
+            let blocked = [
+                "closed", "geschlossen", "beendet", "ended", "conversation ended",
+                "session closed", "neues gespräch", "new chat", "new conversation",
+                "start a new", "inactivity", "inaktivität", "مغلق", "انتهت",
+            ]
+            return !blocked.contains(where: { lower.contains($0) })
+        }
     }
 
     static func analyze(error: Error, handler: String?, isConnected: Bool) -> Action? {
@@ -39,7 +53,14 @@ enum CustomerChatSessionRecovery {
         }
 
         if handler == "closed" {
-            return nil
+            return Action(
+                issue: .closed,
+                message: waitingForTeamNotice(),
+                shouldRenew: true,
+                shouldStopPolling: false,
+                preserveDraft: true,
+                showManualRenew: false
+            )
         }
 
         if let apiError = error as? CustomerAPIError {
@@ -68,7 +89,7 @@ enum CustomerChatSessionRecovery {
     }
 
     static func renewedNotice() -> String {
-        inactivityNotice()
+        waitingForTeamNotice()
     }
 
     static func reconnectingNotice() -> String {
@@ -80,7 +101,7 @@ enum CustomerChatSessionRecovery {
         case "chat_closed":
             return Action(
                 issue: .closed,
-                message: inactivityNotice(),
+                message: waitingForTeamNotice(),
                 shouldRenew: true,
                 shouldStopPolling: false,
                 preserveDraft: true,
@@ -123,7 +144,7 @@ enum CustomerChatSessionRecovery {
         case 409:
             return Action(
                 issue: .closed,
-                message: inactivityNotice(),
+                message: waitingForTeamNotice(),
                 shouldRenew: true,
                 shouldStopPolling: false,
                 preserveDraft: true,
@@ -157,7 +178,7 @@ enum CustomerChatSessionRecovery {
         if lower.contains("closed") || lower.contains("geschlossen") || lower.contains("مغلق") {
             return Action(
                 issue: .closed,
-                message: inactivityNotice(),
+                message: waitingForTeamNotice(),
                 shouldRenew: true,
                 shouldStopPolling: false,
                 preserveDraft: true,
@@ -217,9 +238,6 @@ struct CustomerChatRecoveryBanner: View {
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(bannerTint.opacity(0.12))
-        .overlay(alignment: .bottom) {
-            Divider()
-        }
         .accessibilityElement(children: .contain)
     }
 

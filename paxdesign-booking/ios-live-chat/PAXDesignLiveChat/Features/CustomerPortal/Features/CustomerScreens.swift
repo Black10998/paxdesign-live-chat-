@@ -317,10 +317,6 @@ struct CustomerChatView: View {
         return handler == "admin" || handler == "live_request"
     }
 
-    private var isConversationClosed: Bool {
-        poll?.handler == "closed"
-    }
-
     var body: some View {
         NavigationStack {
             ZStack {
@@ -340,15 +336,12 @@ struct CustomerChatView: View {
                             .frame(maxWidth: .infinity)
                             .background(PAXTheme.accentSoft)
                     }
-                    if let recovery {
+                    if let recovery, recovery.issue != .closed {
                         CustomerChatRecoveryBanner(
                             action: recovery,
                             isRecovering: isRecovering,
                             onRetry: { Task { await retryAfterRecovery() } }
                         )
-                    }
-                    if isConversationClosed, recovery == nil {
-                        closedConversationBanner
                     }
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -391,13 +384,6 @@ struct CustomerChatView: View {
             }
             .navigationTitle(String(localized: "Chat"))
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    if isHumanQueue, poll?.handler != "closed" {
-                        Button(String(localized: "End chat")) {
-                            Task { await closeConversation() }
-                        }
-                    }
-                }
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 10) {
                         CustomerNavAvatarButton()
@@ -465,24 +451,8 @@ struct CustomerChatView: View {
         }
     }
 
-    private var closedConversationBanner: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(CustomerChatSessionRecovery.inactivityNotice())
-                .font(.subheadline)
-                .foregroundStyle(PAXTheme.textSecondary)
-            Button(String(localized: "Start new conversation")) {
-                Task { await startNewConversation() }
-            }
-            .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .tinted))
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(PAXTheme.accentSoft)
-    }
-
     private var chatComposer: some View {
         VStack(spacing: 0) {
-            Divider()
             HStack(alignment: .bottom, spacing: 8) {
                 Menu {
                     Button(String(localized: "Camera"), systemImage: "camera") {
@@ -545,7 +515,7 @@ struct CustomerChatView: View {
     }
 
     private var displayMessages: [CustomerChatPoll.ChatMessage] {
-        poll?.messages ?? []
+        CustomerChatSessionRecovery.visibleMessages(poll?.messages ?? [])
     }
 
     private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool = true) {
@@ -563,30 +533,6 @@ struct CustomerChatView: View {
         }
     }
 
-    private func startNewConversation() async {
-        isRecovering = true
-        defer { isRecovering = false }
-        do {
-            let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id, newConversation: true)
-            poll = CustomerChatPoll(
-                session_id: renewed.session_id,
-                handler: renewed.handler,
-                messages: [],
-                message_count: 0,
-                last_preview: nil
-            )
-            lastSeq = 0
-            notice = nil
-            recovery = nil
-            pollingSuspended = false
-            await refresh(full: true)
-            startPolling()
-            isInputFocused = true
-        } catch let renewError {
-            self.error = (renewError as? CustomerAPIError)?.localizedDescription ?? renewError.localizedDescription
-        }
-    }
-
     private func refresh(full: Bool = false) async -> Bool {
         if isSending && !full { return false }
         if pollingSuspended && !full { return false }
@@ -594,21 +540,26 @@ struct CustomerChatView: View {
         defer { isLoading = false }
         let previousCount = poll?.messages?.count ?? 0
         do {
+            if poll?.handler == "closed" {
+                await autoRenewSession(preserveDraft: nil)
+            }
             let since = full ? 0 : lastSeq
             let next = try await api.fetchChatMessages(sessionID: poll?.session_id, since: since, full: full)
             applyPollUpdate(next, full: full)
-            let pollNotice = next.notice
             if next.handler == "closed" {
-                notice = pollNotice ?? CustomerChatSessionRecovery.inactivityNotice()
-                recovery = nil
-                pollingSuspended = false
-            } else {
-                if let pollNotice, !pollNotice.isEmpty {
-                    notice = pollNotice
+                await autoRenewSession(preserveDraft: nil)
+                if let reopened = try? await api.fetchChatMessages(sessionID: poll?.session_id, since: 0, full: full) {
+                    applyPollUpdate(reopened, full: full)
                 }
+            } else {
                 recovery = nil
                 pollingSuspended = false
                 error = nil
+            }
+            if let pollNotice = next.notice, !pollNotice.isEmpty, next.handler != "closed" {
+                notice = pollNotice
+            } else if next.handler != "closed" {
+                notice = nil
             }
             AppRefreshPolicy.setActiveSession(poll?.session_id)
             let newCount = poll?.messages?.count ?? 0
@@ -904,10 +855,10 @@ struct CustomerChatView: View {
         if let maxSeq = merged.map(\.seq).max() {
             lastSeq = max(lastSeq, maxSeq)
         }
-        if let noticeText = response.notice, !noticeText.isEmpty {
+        if let noticeText = response.notice, !noticeText.isEmpty, response.handler != "closed" {
             notice = noticeText
-        } else if response.renewed == true {
-            notice = CustomerChatSessionRecovery.inactivityNotice()
+        } else if response.renewed != true {
+            notice = nil
         }
         if response.renewed == true {
             recovery = nil
@@ -920,7 +871,7 @@ struct CustomerChatView: View {
     }
 
     private func scheduleTypingPing() {
-        guard isHumanQueue, poll?.handler != "closed" else { return }
+        guard isHumanQueue else { return }
         let typing = !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         guard typing != lastTypingSent else { return }
         lastTypingSent = typing
@@ -934,16 +885,6 @@ struct CustomerChatView: View {
                     try? await api.sendChatTyping(sessionID: poll?.session_id, stop: true)
                 }
             }
-        }
-    }
-
-    private func closeConversation() async {
-        do {
-            _ = try await api.closeChatSession(sessionID: poll?.session_id)
-            notice = String(localized: "This conversation has ended. You can start a new one anytime.")
-            await refresh(full: true)
-        } catch {
-            self.error = friendlyChatError(error)
         }
     }
 }

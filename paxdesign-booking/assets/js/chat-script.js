@@ -420,6 +420,28 @@
     return Promise.resolve();
   }
 
+  function isPersistentAccountChat() {
+    return isLoggedIn() && isVerifiedAccount();
+  }
+
+  function reopenAuthenticatedSessionIfNeeded() {
+    if (!isPersistentAccountChat()) return Promise.resolve();
+    if (window.PDXAuth && typeof window.PDXAuth.customerApiFetch === 'function') {
+      return window.PDXAuth.customerApiFetch('POST', '/customer/chat/session', {
+        session_id: getSessionId(),
+        new_conversation: false,
+      }).then(function (data) {
+        if (data && data.session_id) {
+          adoptSessionId(data.session_id);
+          if (data.handler) applyHandlerState(data.handler, adminName);
+        }
+      }).catch(function () {
+        return refreshAuthenticatedChatSession();
+      });
+    }
+    return Promise.resolve();
+  }
+
   function init() {
     if (initialized) return;
     initialized = true;
@@ -441,7 +463,12 @@
     initAuthGate();
     bindAudioUnlock();
     bindVisibilityResume();
-    restoreCustomerSession().then(function () {
+    var boot = isPersistentAccountChat()
+      ? refreshAuthenticatedChatSession().then(function () {
+          return restoreCustomerSession();
+        })
+      : restoreCustomerSession();
+    boot.then(function () {
       if (!sessionRestored) updateEntryUi();
       logConsultationStarted();
       startLivePolling();
@@ -534,7 +561,7 @@
       return;
     }
     hideAuthGate();
-    if (chatHandler === 'closed' && isSessionArchived(getSessionId())) {
+    if (chatHandler === 'closed' && isSessionArchived(getSessionId()) && !isPersistentAccountChat()) {
       beginFreshSessionSilently();
     }
     updateEntryUi();
@@ -878,6 +905,20 @@
   function restoreCustomerSession() {
     var sid = getSessionId();
     consultationLogged = loadConsultationLogged(sid);
+    if (isPersistentAccountChat()) {
+      if (config && config.chatSessionId) {
+        adoptSessionId(config.chatSessionId);
+      }
+      return fetchSessionFromServer(true).then(function (restored) {
+        if (chatHandler === 'closed') {
+          return reopenAuthenticatedSessionIfNeeded().then(function () {
+            return fetchSessionFromServer(true);
+          });
+        }
+        if (restored) sessionRestored = true;
+        updateEntryUi();
+      });
+    }
     if (isSessionArchived(sid)) {
       beginFreshSessionSilently();
       return Promise.resolve();
@@ -1581,6 +1622,12 @@
     if (handler === 'closed') {
       abortStream();
       removeTyping();
+      if (isPersistentAccountChat()) {
+        reopenAuthenticatedSessionIfNeeded().then(function () {
+          fetchSessionFromServer(true);
+        });
+        return;
+      }
       if (transitioningToClosed) {
         playChatEndedSoundOnce();
         showRatingUi();
@@ -1602,7 +1649,7 @@
   }
 
   function updateInputState() {
-    var closed = chatHandler === 'closed';
+    var closed = chatHandler === 'closed' && !isPersistentAccountChat();
     var showForm = !closed && !awaitingName && !awaitingLiveConfirm;
     input.disabled = closed || awaitingName || awaitingLiveConfirm;
     if (sendBtn) {

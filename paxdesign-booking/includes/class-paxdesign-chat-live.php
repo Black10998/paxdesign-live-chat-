@@ -1119,6 +1119,13 @@ class PAXdesign_Chat_Live {
             $this->bind_session_to_device($session_id, $device_token);
         }
 
+        if (class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            $user_id = get_current_user_id();
+            if ($user_id > 0 && PAXdesign_Customer_Chat_Bridge::user_owns_session($user_id, $session_id)) {
+                $session_id = PAXdesign_Customer_Chat_Bridge::ensure_persistent_session_open($session_id, $user_id);
+            }
+        }
+
         $since = isset($_POST['since']) ? (int) $_POST['since'] : 0;
         $full  = isset($_POST['full']) && wp_unslash($_POST['full']) === '1';
         $data  = $this->get_poll_data($session_id, $since, $full, 'user');
@@ -2303,7 +2310,13 @@ class PAXdesign_Chat_Live {
             return new WP_Error('admin_active', __('A team member is already active.', 'paxdesign-booking'), array('status' => 409));
         }
         if ($handler === self::HANDLER_CLOSED) {
-            return new WP_Error('chat_closed', __('This conversation is closed.', 'paxdesign-booking'), array('status' => 409));
+            if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+                $session_id = PAXdesign_Customer_Chat_Bridge::reopen_closed_session($session_id);
+                $this->ensure_session($session_id);
+                $handler = $this->get_handler($session_id);
+            } else {
+                return new WP_Error('chat_closed', __('This conversation is closed.', 'paxdesign-booking'), array('status' => 409));
+            }
         }
         if ($handler === self::HANDLER_LIVE) {
             return array(
@@ -2884,6 +2897,15 @@ class PAXdesign_Chat_Live {
             return new WP_Error('not_found', 'Session not found', array('status' => 404));
         }
 
+        $wp_user_id = isset($row->wp_user_id) ? (int) $row->wp_user_id : 0;
+        if ($wp_user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            $session_id = PAXdesign_Customer_Chat_Bridge::ensure_persistent_session_open($session_id, $wp_user_id);
+            $row = $this->get_session_row($session_id);
+            if (!$row) {
+                return new WP_Error('not_found', 'Session not found', array('status' => 404));
+            }
+        }
+
         $agent    = self::session_agent_payload($row);
         $session_context = array(
             'wp_user_id'    => isset($row->wp_user_id) ? (int) $row->wp_user_id : 0,
@@ -2906,6 +2928,10 @@ class PAXdesign_Chat_Live {
         if (class_exists('PAXdesign_Message_Store')) {
             $all = PAXdesign_Message_Store::mask_messages_for_customer($all);
             $new = PAXdesign_Message_Store::mask_messages_for_customer($new);
+        }
+        if ($wp_user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            $all = PAXdesign_Customer_Chat_Bridge::filter_customer_lifecycle_messages($all);
+            $new = PAXdesign_Customer_Chat_Bridge::filter_customer_lifecycle_messages($new);
         }
 
         $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
@@ -3019,6 +3045,7 @@ class PAXdesign_Chat_Live {
             return new WP_Error('not_found', 'Session nicht gefunden.', array('status' => 404));
         }
         $was_live_request = isset($row->handler) && (string) $row->handler === self::HANDLER_LIVE;
+        $wp_user_id = isset($row->wp_user_id) ? (int) $row->wp_user_id : 0;
 
         $handler = isset($row->handler) ? $row->handler : self::HANDLER_AI;
         if ($handler === self::HANDLER_CLOSED) {
@@ -3029,6 +3056,31 @@ class PAXdesign_Chat_Live {
         }
 
         global $wpdb;
+        if ($wp_user_id > 0) {
+            $wpdb->update(
+                PAXdesign_Chat_Log::table_name(),
+                array(
+                    'handler'       => self::HANDLER_AI,
+                    'admin_user_id' => 0,
+                    'admin_name'    => '',
+                    'updated_at'    => current_time('mysql'),
+                ),
+                array('id' => (int) $row->id),
+                array('%s', '%d', '%s', '%s'),
+                array('%d')
+            );
+            $entry = $this->append_message(
+                $session_id,
+                'system',
+                __('Our team will reply here when available. You can keep messaging anytime.', 'paxdesign-booking')
+            );
+            $this->persist_session_last_preview($session_id);
+            return array(
+                'handler' => self::HANDLER_AI,
+                'message' => $entry,
+            );
+        }
+
         $wpdb->update(
             PAXdesign_Chat_Log::table_name(),
             array(

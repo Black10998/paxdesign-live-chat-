@@ -128,7 +128,7 @@ private struct CustomerHomeInsightHeader: View {
                     .textCase(.uppercase)
                     .tracking(0.6)
             }
-            Text(greeting)
+            Text(CustomerHomeGreeting.text(forName: profileName))
                 .font(.system(size: 28, weight: .bold, design: .rounded))
                 .foregroundStyle(theme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -139,19 +139,6 @@ private struct CustomerHomeInsightHeader: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var greeting: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        let salutation: String
-        switch hour {
-        case 5..<12: salutation = String(localized: "Good morning")
-        case 12..<17: salutation = String(localized: "Good afternoon")
-        case 17..<22: salutation = String(localized: "Good evening")
-        default: salutation = String(localized: "Welcome back")
-        }
-        let name = profileName.trimmingCharacters(in: .whitespacesAndNewlines)
-        return name.isEmpty ? salutation : "\(salutation), \(name)"
     }
 }
 
@@ -283,19 +270,9 @@ private struct CustomerHomeQuickActionsGrid: View {
             PAXHaptics.light()
             action()
         } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(style == .accent ? theme.accent.opacity(0.18) : theme.panel)
-                        .frame(width: 44, height: 44)
-                    PAXIcon(
-                        icon,
-                        size: .card,
-                        emphasis: style == .accent ? .primary : .secondary,
-                        tint: style == .accent ? theme.accent : nil
-                    )
-                }
-                VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 16) {
+                PAXIcon(icon, size: .display, emphasis: .primary)
+                VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.subheadline.weight(.semibold))
                         .foregroundStyle(theme.textPrimary)
@@ -303,16 +280,19 @@ private struct CustomerHomeQuickActionsGrid: View {
                         .font(.caption)
                         .foregroundStyle(theme.textSecondary)
                         .lineLimit(2)
+                        .multilineTextAlignment(.leading)
                 }
-                Spacer(minLength: 0)
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(style == .accent ? theme.accent.opacity(0.08) : theme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .padding(20)
+            .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(theme.cardBackground)
+                    .shadow(color: theme.shadowDark.opacity(style == .accent ? 0.14 : 0.08), radius: style == .accent ? 14 : 10, y: style == .accent ? 6 : 4)
+            )
             .overlay(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .stroke(style == .accent ? theme.accent.opacity(0.35) : theme.border.opacity(0.3), lineWidth: 0.5)
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(theme.border.opacity(style == .accent ? 0.45 : 0.28), lineWidth: 0.5)
             )
         }
         .buttonStyle(PremiumHomePressStyle())
@@ -337,15 +317,6 @@ private struct CustomerHomeConversationSpotlight: View {
                     .font(.headline)
                     .foregroundStyle(theme.textPrimary)
                 Spacer()
-                if handler == "closed" {
-                    Text(String(localized: "Paused"))
-                        .font(.caption2.weight(.semibold))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.orange.opacity(0.15))
-                        .foregroundStyle(.orange)
-                        .clipShape(Capsule())
-                }
             }
             Text(preview)
                 .font(.body)
@@ -511,9 +482,6 @@ private struct CustomerHomeRequestsPanel: View {
                         .padding(.horizontal, 16)
                     }
                     .buttonStyle(.plain)
-                    if index < min(orders.count, 4) - 1 {
-                        Divider().padding(.leading, 66)
-                    }
                 }
             }
             .background(theme.panel)

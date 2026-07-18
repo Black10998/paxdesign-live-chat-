@@ -1570,7 +1570,6 @@
     return '<section class="pdx-portal-section pdx-portal-chat">' +
       '<div class="pdx-portal-chat-head">' +
         '<h3>' + cxIcon('message', 16) + 'Conversation</h3>' +
-        '<button type="button" class="pdx-portal-chat-end" id="pdx-portal-chat-end" hidden aria-label="End chat">End chat</button>' +
       '</div>' +
       '<div class="pdx-portal-chat-log" id="pdx-portal-chat-log">' + cxLoading('Loading messages…') + '</div>' +
       '<div class="pdx-portal-chat-tools">' +
@@ -1847,19 +1846,25 @@
       return state.handler === 'admin' || state.handler === 'live_request';
     }
 
+    function isLifecycleNoise(content) {
+      var lower = String(content || '').toLowerCase();
+      var blocked = ['closed', 'geschlossen', 'beendet', 'ended', 'conversation ended', 'session closed', 'neues gespräch', 'new chat', 'new conversation', 'start a new', 'inactivity', 'inaktivität', 'مغلق', 'انتهت'];
+      return blocked.some(function (needle) { return lower.indexOf(needle) !== -1; });
+    }
+
     function updateChatChrome() {
-      var endBtn = container.querySelector('#pdx-portal-chat-end');
-      if (endBtn) {
-        endBtn.hidden = !isHumanHandler() || state.handler === 'closed';
-      }
+      /* Persistent conversation — no end-chat control for signed-in customers. */
     }
 
     function renderMessages() {
-      if (!state.messages.length) {
+      var visible = state.messages.filter(function (m) {
+        return !(m.role === 'system' && isLifecycleNoise(m.content));
+      });
+      if (!visible.length) {
         logEl.innerHTML = '<p class="pdx-portal-empty">No messages yet. Start a conversation with PAXDesign.</p>';
         return;
       }
-      var html = state.messages.map(function (m) {
+      var html = visible.map(function (m) {
         var cls = m.role === 'user' ? 'pdx-portal-msg pdx-portal-msg--user' : 'pdx-portal-msg pdx-portal-msg--assistant';
         return '<div class="' + cls + '">' + formatPortalMessage(m) + '</div>';
       }).join('');
@@ -1882,6 +1887,16 @@
         }
         state.sessionId = data.session_id || state.sessionId;
         state.handler = data.handler || 'ai';
+        if (state.handler === 'closed') {
+          return customerApiFetch('POST', '/customer/chat/session', {
+            session_id: state.sessionId,
+            new_conversation: false,
+          }).then(function (renewed) {
+            if (renewed && renewed.session_id) state.sessionId = renewed.session_id;
+            if (renewed && renewed.handler) state.handler = renewed.handler;
+            return loadMessages(full);
+          });
+        }
         state.adminTyping = !!data.admin_typing;
         state.messages = (data.messages || []).map(function (m) {
           return {
@@ -1926,26 +1941,7 @@
       });
     }
 
-    function endConversation() {
-      if (!state.sessionId || state.sending) return;
-      state.sending = true;
-      customerApiFetch('POST', '/customer/chat/close', {
-        session_id: state.sessionId,
-      }).then(function (data) {
-        if (!data || !data._ok) {
-          notify((data && data.message) || 'Unable to end conversation.', 'error');
-          return;
-        }
-        state.handler = 'closed';
-        updateChatChrome();
-        notify('Conversation ended. You can start a new one anytime.', 'info');
-        loadMessages(true);
-      }).finally(function () {
-        state.sending = false;
-      });
-    }
-
-    function appendLocal(role, content) {
+    function sendTypingPing(stop) {
       state.messages.push({ role: role, content: content });
       renderMessages();
     }
@@ -2042,11 +2038,6 @@
           }, 2500);
         }
       });
-    }
-
-    var endBtn = container.querySelector('#pdx-portal-chat-end');
-    if (endBtn) {
-      endBtn.addEventListener('click', endConversation);
     }
 
     var imageInput = container.querySelector('#pdx-portal-image-input');

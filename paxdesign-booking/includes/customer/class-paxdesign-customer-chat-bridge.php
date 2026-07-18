@@ -52,8 +52,64 @@ class PAXdesign_Customer_Chat_Bridge {
         if ($session_id !== '') {
             $live = PAXdesign_Chat_Live::get_instance();
             $live->ensure_session($session_id);
+            $session_id = self::ensure_persistent_session_open($session_id);
         }
         return $session_id;
+    }
+
+    /**
+     * Keep authenticated customer conversations open — never expose a closed state.
+     */
+    public static function ensure_persistent_session_open($session_id, $user_id = 0) {
+        $live = PAXdesign_Chat_Live::get_instance();
+        $session_id = self::sanitize_session_id($session_id);
+        if ($session_id === '') {
+            return '';
+        }
+        if ($user_id <= 0) {
+            global $wpdb;
+            $logs = PAXdesign_Chat_Log::table_name();
+            $user_id = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT wp_user_id FROM $logs WHERE session_id = %s LIMIT 1",
+                $session_id
+            ));
+        }
+        if ($user_id <= 0) {
+            return $session_id;
+        }
+        if ($live->get_handler($session_id) === PAXdesign_Chat_Live::HANDLER_CLOSED) {
+            return self::reopen_closed_session($session_id);
+        }
+        return $session_id;
+    }
+
+    /**
+     * Hide lifecycle noise from persistent customer transcripts.
+     *
+     * @param array<int, array<string, mixed>> $messages
+     * @return array<int, array<string, mixed>>
+     */
+    public static function filter_customer_lifecycle_messages($messages) {
+        if (!is_array($messages)) {
+            return array();
+        }
+        return array_values(array_filter($messages, function ($msg) {
+            if (!is_array($msg) || ($msg['role'] ?? '') !== 'system') {
+                return true;
+            }
+            $content = strtolower((string) ($msg['content'] ?? ''));
+            $blocked = array(
+                'closed', 'geschlossen', 'beendet', 'ended', 'conversation ended',
+                'session closed', 'neues gespräch', 'new chat', 'new conversation',
+                'start a new', 'inactivity', 'inaktivität', 'مغلق', 'انتهت',
+            );
+            foreach ($blocked as $needle) {
+                if (strpos($content, $needle) !== false) {
+                    return false;
+                }
+            }
+            return true;
+        }));
     }
 
     /**
@@ -345,7 +401,6 @@ class PAXdesign_Customer_Chat_Bridge {
             if ($renewed && is_array($result)) {
                 $result['session_id'] = $session_id;
                 $result['renewed'] = true;
-                $result['notice'] = __('This conversation was closed due to inactivity. Send a new message to continue.', 'paxdesign-booking');
             }
             return $result;
         }
@@ -385,14 +440,12 @@ class PAXdesign_Customer_Chat_Bridge {
         );
         if ($renewed) {
             $payload['renewed'] = true;
-            $payload['notice'] = __('This conversation was closed due to inactivity. Send a new message to continue.', 'paxdesign-booking');
         }
         return $payload;
     }
 
     /**
-     * @param array<string, mixed> $file
-     * @return array|WP_Error
+     * @return array<string, mixed>|WP_Error
      */
     public static function send_user_attachment($user_id, $session_id, $kind, $file, $caption = '', $extra = array()) {
         $user_id = absint($user_id);
@@ -473,7 +526,6 @@ class PAXdesign_Customer_Chat_Bridge {
         );
         if ($renewed) {
             $payload['renewed'] = true;
-            $payload['notice'] = __('This conversation was closed due to inactivity. Send a new message to continue.', 'paxdesign-booking');
         }
         return $payload;
     }
@@ -503,6 +555,12 @@ class PAXdesign_Customer_Chat_Bridge {
         if ($user_id <= 0 || $session_id === '' || !self::user_owns_session($user_id, $session_id)) {
             return new WP_Error('forbidden', __('Invalid session.', 'paxdesign-booking'), array('status' => 403));
         }
-        return PAXdesign_Chat_Live::get_instance()->rest_customer_close($session_id);
+        $session_id = self::ensure_persistent_session_open($session_id, $user_id);
+        $live = PAXdesign_Chat_Live::get_instance();
+        return array(
+            'handler'    => $live->get_handler($session_id),
+            'session_id' => $session_id,
+            'ok'         => true,
+        );
     }
 }
