@@ -418,7 +418,7 @@ final class CustomerAPIClient: ObservableObject {
     }
 
     func fetchProfile() async throws -> CustomerProfileResponse {
-        try await get("/customer/profile", as: CustomerProfileResponse.self)
+        try await request("/customer/profile", method: "GET", body: nil, as: CustomerProfileResponse.self, allowPreSession: true)
     }
 
     func fetchChatMessages(sessionID: String? = nil, since: Int = 0, full: Bool = true) async throws -> CustomerChatPoll {
@@ -435,6 +435,7 @@ final class CustomerAPIClient: ObservableObject {
         since: Int,
         onEvent: @escaping @MainActor (ChatStreamEvent) async -> Void
     ) async throws {
+        try await requireReadySession()
         guard let auth, let header = auth.basicAuthHeader else {
             throw CustomerAPIError.unauthorized
         }
@@ -488,6 +489,7 @@ final class CustomerAPIClient: ObservableObject {
         sessionID: String?,
         onEvent: @escaping (CustomerStreamEvent) -> Void
     ) async throws {
+        try await requireReadySession()
         guard let auth, let header = auth.basicAuthHeader else {
             throw CustomerAPIError.unauthorized
         }
@@ -531,7 +533,21 @@ final class CustomerAPIClient: ObservableObject {
         try await request(path, method: "POST", body: body, as: type)
     }
 
-    private func requestJSON<T: Decodable>(path: String, method: String, json: [String: Any], as type: T.Type) async throws -> T {
+    private func requireReadySession(allowPreSession: Bool = false) async throws {
+        guard auth?.basicAuthHeader != nil else {
+            throw CustomerAPIError.unauthorized
+        }
+        let store = AuthStore.shared
+        if store.isBootstrapping || allowPreSession {
+            return
+        }
+        guard store.isLoggedIn, store.isCustomerSession else {
+            throw CustomerAPIError.unauthorized
+        }
+    }
+
+    private func requestJSON<T: Decodable>(path: String, method: String, json: [String: Any], as type: T.Type, allowPreSession: Bool = false) async throws -> T {
+        try await requireReadySession(allowPreSession: allowPreSession)
         guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
         guard let url = endpointURL(path) else { throw CustomerAPIError.invalidURL }
         var request = URLRequest(url: url)
@@ -592,6 +608,7 @@ final class CustomerAPIClient: ObservableObject {
         fields: [String: String],
         as type: T.Type
     ) async throws -> T {
+        try await requireReadySession()
         guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
         guard let url = endpointURL(path) else { throw CustomerAPIError.invalidURL }
         let boundary = "Boundary-\(UUID().uuidString)"
@@ -619,7 +636,8 @@ final class CustomerAPIClient: ObservableObject {
         return try JSONDecoder().decode(T.self, from: responseData)
     }
 
-    private func request<T: Decodable>(_ path: String, method: String, body: [String: String]?, as type: T.Type) async throws -> T {
+    private func request<T: Decodable>(_ path: String, method: String, body: [String: String]?, as type: T.Type, allowPreSession: Bool = false) async throws -> T {
+        try await requireReadySession(allowPreSession: allowPreSession)
         guard let auth, let header = auth.basicAuthHeader else {
             throw CustomerAPIError.unauthorized
         }

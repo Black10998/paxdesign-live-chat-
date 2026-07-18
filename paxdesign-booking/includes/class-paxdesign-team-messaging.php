@@ -49,9 +49,9 @@ class PAXdesign_Team_Messaging {
         // must use the same lock. Per-conversation locks still lose updates
         // when two conversations rewrite the shared option concurrently.
         $lock_name = 'pax_team_msg_global';
-        $acquired = (int) $wpdb->get_var(
-            $wpdb->prepare("SELECT GET_LOCK(%s, 5)", $lock_name)
-        );
+        $acquired = class_exists('PAXdesign_DB')
+            ? PAXdesign_DB::acquire_named_lock($lock_name, 5)
+            : (int) $wpdb->get_var($wpdb->prepare("SELECT GET_LOCK(%s, 5)", $lock_name));
         if ($acquired !== 1) {
             return new WP_Error(
                 'pax_team_lock_timeout',
@@ -63,7 +63,11 @@ class PAXdesign_Team_Messaging {
         try {
             return $callback();
         } finally {
-            $wpdb->get_var($wpdb->prepare("SELECT RELEASE_LOCK(%s)", $lock_name));
+            if (class_exists('PAXdesign_DB')) {
+                PAXdesign_DB::release_named_lock($lock_name);
+            } else {
+                $wpdb->get_var($wpdb->prepare("SELECT RELEASE_LOCK(%s)", $lock_name));
+            }
         }
     }
 

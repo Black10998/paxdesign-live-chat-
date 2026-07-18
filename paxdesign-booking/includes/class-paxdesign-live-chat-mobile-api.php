@@ -142,8 +142,9 @@ class PAXdesign_Live_Chat_Mobile_API {
      * True only when wp-config enables real debug.log output (not WP_DEBUG alone).
      */
     private static function is_debug_logging_enabled() {
-        return defined('WP_DEBUG') && WP_DEBUG
-            && defined('WP_DEBUG_LOG') && WP_DEBUG_LOG;
+        return defined('WP_DEBUG_LOG') && WP_DEBUG_LOG
+            && class_exists('PAXdesign_Auth_Log')
+            && PAXdesign_Auth_Log::verbose_api_logging_enabled();
     }
 
     /**

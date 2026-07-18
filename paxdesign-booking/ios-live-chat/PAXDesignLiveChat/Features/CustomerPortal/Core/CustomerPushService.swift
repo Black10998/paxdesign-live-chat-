@@ -97,18 +97,7 @@ final class CustomerPushService: NSObject, ObservableObject {
         guard token != lastRegisteredToken else { return }
         lastRegisteredToken = token
         Task {
-            do {
-                try await api?.registerPush(
-                    token: token,
-                    deviceID: PAXDeviceInfo.deviceId,
-                    metadata: PAXDeviceInfo.registrationPayload
-                )
-            } catch {
-                lastRegisteredToken = nil
-                #if DEBUG
-                print("Customer push registration failed: \(error.localizedDescription)")
-                #endif
-            }
+            await CustomerDeviceSessionService.shared.registerIfNeeded(force: true)
         }
     }
 

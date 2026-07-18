@@ -17,9 +17,7 @@ struct CustomerPortalShellView: View {
             .preferredColorScheme(settings.appearanceMode.colorScheme)
             .id(settings.themeRevision)
             .task {
-                customerSession.syncFromAuthStore(auth)
                 CustomerPushService.shared.configure(api: customerSession.api)
-                await CustomerPushService.shared.prepareNotificationRegistration()
             }
             .sheet(isPresented: Binding(
                 get: { CustomerPushService.shared.shouldShowNotificationEducation },
@@ -36,6 +34,7 @@ struct CustomerPortalShellView: View {
                 deepLinks.pending = nil
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
+                guard auth.isLoggedIn, auth.isCustomerSession, !auth.isBootstrapping else { return }
                 Task {
                     await customerSession.auth.refreshProfile(api: customerSession.api)
                     navigation.refreshWorkspace()

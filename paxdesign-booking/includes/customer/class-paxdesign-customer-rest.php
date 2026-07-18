@@ -783,6 +783,9 @@ class PAXdesign_Customer_REST {
         if (class_exists('PAXdesign_Chat_Event_Bus')) {
             PAXdesign_Chat_Event_Bus::stream_sse('session:' . $session_id, $since);
         }
+        if (class_exists('PAXdesign_DB')) {
+            PAXdesign_DB::drain_connection();
+        }
         exit;
     }
 

@@ -2170,7 +2170,9 @@ class PAXdesign_Chat_Live {
         }
         global $wpdb;
         $lock_name = 'pax_msg_' . md5($session_id);
-        $locked = (int) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 10)', $lock_name));
+        $locked = class_exists('PAXdesign_DB')
+            ? PAXdesign_DB::acquire_named_lock($lock_name, 10)
+            : (int) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 10)', $lock_name));
         if ($locked !== 1) {
             return new WP_Error('pax_message_busy', 'Chat ist beschäftigt. Bitte erneut versuchen.', array('status' => 503));
         }
@@ -2237,7 +2239,11 @@ class PAXdesign_Chat_Live {
 
         return array('message' => $entry);
         } finally {
-            $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock_name));
+            if (class_exists('PAXdesign_DB')) {
+                PAXdesign_DB::release_named_lock($lock_name);
+            } else {
+                $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock_name));
+            }
         }
     }
 

@@ -39,7 +39,7 @@ struct PAXDesignLiveChatApp: App {
                             teamCoordinator: TeamMessagingCoordinator.shared
                         )
                     } else if loggedIn, AuthStore.shared.isCustomerSession {
-                        CustomerSessionController.shared.syncFromAuthStore(AuthStore.shared)
+                        CustomerPushService.shared.configure(api: CustomerSessionController.shared.api)
                     } else {
                         AppServicesController.stopLoggedInServices(
                             coordinator: coordinator,
@@ -119,7 +119,6 @@ struct PAXDesignLiveChatApp: App {
                 )
             }
         } else if auth.isLoggedIn, auth.isCustomerSession {
-            CustomerSessionController.shared.syncFromAuthStore(auth)
             CustomerPushService.shared.configure(api: CustomerSessionController.shared.api)
             if let profile = auth.customerProfile {
                 AppLockService.shared.bindAccount(scope: "customer-\(profile.id)")

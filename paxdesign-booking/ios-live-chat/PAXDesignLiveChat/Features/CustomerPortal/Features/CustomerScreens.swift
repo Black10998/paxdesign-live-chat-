@@ -308,6 +308,7 @@ struct CustomerChatView: View {
     @State private var isRecovering = false
     @State private var pollingSuspended = false
     @State private var pollIntervalNs: UInt64 = 700_000_000
+    @State private var eventStreamActive = false
     @State private var showDocumentPicker = false
     @State private var showCameraPicker = false
 
@@ -695,7 +696,8 @@ struct CustomerChatView: View {
         pollIntervalNs = minPollIntervalNs
         pollTask = Task {
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: pollIntervalNs)
+                let interval = eventStreamActive ? max(pollIntervalNs, 5_000_000_000) : pollIntervalNs
+                try? await Task.sleep(nanoseconds: interval)
                 guard network.isConnected, !pollingSuspended else { continue }
                 let hadNew = await refresh(full: false)
                 if hadNew {
@@ -712,6 +714,8 @@ struct CustomerChatView: View {
         streamTask?.cancel()
         guard poll?.session_id != nil else { return }
         streamTask = Task { @MainActor in
+            eventStreamActive = true
+            defer { eventStreamActive = false }
             while !Task.isCancelled {
                 guard network.isConnected, !pollingSuspended else {
                     try? await Task.sleep(nanoseconds: 1_000_000_000)

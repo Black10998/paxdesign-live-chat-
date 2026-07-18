@@ -34,7 +34,7 @@ class PAXdesign_Link_Scan_Service {
 
     public static function init() {
         add_action(self::CRON_HOOK, array(__CLASS__, 'run_message_scan'), 10, 2);
-        add_action('shutdown', array(__CLASS__, 'flush_dispatch_queue'), 9999);
+        add_action('shutdown', array(__CLASS__, 'flush_dispatch_queue'), 1);
     }
 
     public static function scans_table() {
@@ -173,6 +173,9 @@ class PAXdesign_Link_Scan_Service {
         if (empty(self::$dispatch_queue)) {
             return;
         }
+        if (class_exists('PAXdesign_DB')) {
+            PAXdesign_DB::drain_connection();
+        }
         if (function_exists('fastcgi_finish_request')) {
             @fastcgi_finish_request();
         }
@@ -183,6 +186,9 @@ class PAXdesign_Link_Scan_Service {
                 continue;
             }
             self::run_message_scan($item[0], $item[1]);
+        }
+        if (class_exists('PAXdesign_DB')) {
+            PAXdesign_DB::drain_connection();
         }
     }
 

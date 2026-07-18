@@ -86,7 +86,8 @@ struct CustomerNotificationBellButton: View {
                 ? String(localized: "\(badgeStore.unreadCount) unread notifications")
                 : String(localized: "Notifications")
         )
-        .task {
+        .task(id: AuthStore.shared.sessionEpoch) {
+            guard AuthStore.shared.isLoggedIn, AuthStore.shared.isCustomerSession else { return }
             badgeStore.scheduleRefresh(api: api)
         }
     }

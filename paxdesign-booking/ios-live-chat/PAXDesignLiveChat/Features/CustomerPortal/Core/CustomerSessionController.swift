@@ -7,6 +7,8 @@ final class CustomerSessionController: ObservableObject {
     let auth = CustomerAuthStore()
     let api = CustomerAPIClient()
 
+    private var activeSessionKey: String?
+
     private init() {}
 
     func activate(
@@ -15,6 +17,12 @@ final class CustomerSessionController: ObservableObject {
         appPassword: String,
         profile: CustomerProfileResponse.Profile
     ) {
+        let sessionKey = Self.sessionKey(siteURL: siteURL, username: username, profileId: profile.id)
+        if activeSessionKey == sessionKey {
+            return
+        }
+        activeSessionKey = sessionKey
+
         auth.siteURL = siteURL
         auth.username = username
         auth.appPassword = appPassword
@@ -28,12 +36,12 @@ final class CustomerSessionController: ObservableObject {
         CustomerPushService.shared.configure(api: api)
         Task {
             await CustomerPushService.shared.prepareNotificationRegistration()
-            await CustomerDeviceSessionService.shared.start(api: api)
-            await CustomerDeviceSessionService.shared.registerIfNeeded(force: true)
+            CustomerDeviceSessionService.shared.start(api: api)
         }
     }
 
     func syncFromAuthStore(_ store: AuthStore) {
+        guard store.isLoggedIn, store.isCustomerSession else { return }
         guard let profile = store.customerProfile,
               let creds = store.storedAPICredentials() else { return }
         activate(
@@ -45,7 +53,12 @@ final class CustomerSessionController: ObservableObject {
     }
 
     func deactivate() {
+        activeSessionKey = nil
         CustomerDeviceSessionService.shared.stop()
         auth.logout()
+    }
+
+    private static func sessionKey(siteURL: String, username: String, profileId: Int) -> String {
+        "\(siteURL.lowercased())|\(username.lowercased())|\(profileId)"
     }
 }

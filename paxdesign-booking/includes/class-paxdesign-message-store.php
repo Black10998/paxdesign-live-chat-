@@ -177,14 +177,14 @@ class PAXdesign_Message_Store {
         }
         self::maybe_upgrade();
         $lock_name = 'pax_msg_' . md5($session_id);
-        $locked = (int) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 10)', $lock_name));
+        $locked = PAXdesign_DB::acquire_named_lock($lock_name, 10);
         if ($locked !== 1) {
             return;
         }
         try {
             self::import_legacy_rows($session_id, $messages, $channel);
         } finally {
-            $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock_name));
+            PAXdesign_DB::release_named_lock($lock_name);
         }
     }
 
@@ -264,7 +264,7 @@ class PAXdesign_Message_Store {
         $lock_name = 'pax_msg_' . md5($session_id);
         $owns_lock = empty($extra['lock_already_held']);
         $locked = $owns_lock
-            ? (int) $wpdb->get_var($wpdb->prepare('SELECT GET_LOCK(%s, 10)', $lock_name))
+            ? PAXdesign_DB::acquire_named_lock($lock_name, 10)
             : 1;
         if ($locked !== 1) {
             return new WP_Error('pax_message_busy', 'Conversation is busy. Retry with the same client_msg_id.', array('status' => 503));
@@ -282,9 +282,7 @@ class PAXdesign_Message_Store {
             }
 
             $table = self::messages_table();
-            if (method_exists($wpdb, 'flush')) {
-                $wpdb->flush();
-            }
+            PAXdesign_DB::prepare_for_write();
             $wpdb->query('START TRANSACTION');
             $seq = 1 + (int) $wpdb->get_var($wpdb->prepare(
                 "SELECT COALESCE(MAX(msg_seq), 0) FROM $table WHERE session_id = %s",
@@ -354,7 +352,7 @@ class PAXdesign_Message_Store {
             return $message;
         } finally {
             if ($owns_lock) {
-                $wpdb->get_var($wpdb->prepare('SELECT RELEASE_LOCK(%s)', $lock_name));
+                PAXdesign_DB::release_named_lock($lock_name);
             }
         }
     }
@@ -726,10 +724,11 @@ class PAXdesign_Message_Store {
             return;
         }
         self::$shutdown_deferred_registered = true;
-        add_action('shutdown', array(__CLASS__, 'flush_deferred_work'), 9998);
+        add_action('shutdown', array(__CLASS__, 'flush_deferred_work'), 1);
     }
 
     public static function flush_deferred_work() {
+        PAXdesign_DB::drain_connection();
         foreach (self::$deferred_asset_purges as $message) {
             self::purge_message_assets($message);
         }
@@ -739,6 +738,7 @@ class PAXdesign_Message_Store {
             self::rebuild_customer_projection($session_id, $channel);
         }
         self::$deferred_projection_sessions = array();
+        PAXdesign_DB::drain_connection();
     }
 
     private static function defer_customer_projection_rebuild($session_id, $channel = 'customer') {
