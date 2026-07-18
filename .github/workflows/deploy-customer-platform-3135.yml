@@ -30,6 +30,7 @@ on:
       - '.github/triggers/deploy-customer-platform-3157'
       - '.github/triggers/deploy-customer-platform-3158'
       - '.github/triggers/deploy-customer-platform-3159'
+      - '.github/triggers/deploy-customer-platform-3160'
 
 permissions:
   contents: read
