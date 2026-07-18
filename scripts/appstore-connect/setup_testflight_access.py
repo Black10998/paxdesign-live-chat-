@@ -135,15 +135,26 @@ class ASCClient:
         body: dict[str, Any] | None = None,
         allow_error: bool = False,
     ) -> tuple[int, dict[str, Any]]:
-        self._refresh_token_if_needed()
-        status, payload = self._request_once(
-            method, path, params=params, body=body, allow_error=allow_error
-        )
-        if status == 401 and self.issuer_id and self.key_id and self.private_key:
-            self.refresh_token()
+        max_attempts = 4 if method == "GET" else 2
+        for attempt in range(1, max_attempts + 1):
+            self._refresh_token_if_needed()
             status, payload = self._request_once(
-                method, path, params=params, body=body, allow_error=allow_error
+                method, path, params=params, body=body, allow_error=True
             )
+            if status == 401 and self.issuer_id and self.key_id and self.private_key:
+                self.refresh_token()
+                status, payload = self._request_once(
+                    method, path, params=params, body=body, allow_error=True
+                )
+            if status < 500 or allow_error or attempt == max_attempts:
+                if status >= 400 and not allow_error:
+                    fail(f"{method} {path} failed ({status}): {json.dumps(payload)}")
+                return status, payload
+            warn(
+                f"{method} {path} returned {status}; retrying ({attempt}/{max_attempts}): "
+                f"{json.dumps(payload)}"
+            )
+            time.sleep(5 * attempt)
         return status, payload
 
     def _request_once(
