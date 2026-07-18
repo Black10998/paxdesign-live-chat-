@@ -137,7 +137,6 @@ private struct CustomerPortalToolbarModifier: ViewModifier {
                     }
                 }
             }
-        }
     }
 }
 
