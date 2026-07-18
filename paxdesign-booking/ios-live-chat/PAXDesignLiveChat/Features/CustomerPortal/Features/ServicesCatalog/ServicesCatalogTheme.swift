@@ -10,7 +10,7 @@ struct CustomerMarketingTheme: Equatable {
         self.accent = accent
     }
 
-    static let defaultAccent = Color(red: 0.83, green: 1, blue: 0.2)
+    static let defaultAccent = PAXBrand.accent
 
     static func resolvedAccentColor() -> Color {
         guard let raw = UserDefaults.standard.string(forKey: "pax.settings.accentPreset"),
@@ -42,7 +42,7 @@ struct CustomerMarketingTheme: Equatable {
     }
 
     var textSecondary: Color {
-        colorScheme == .dark ? Color(red: 0.55, green: 0.55, blue: 0.55) : Color(red: 0.28, green: 0.30, blue: 0.34)
+        colorScheme == .dark ? Color(red: 0.72, green: 0.72, blue: 0.72) : Color(red: 0.24, green: 0.26, blue: 0.30)
     }
 
     var accentOnAccent: Color { Color.black }
@@ -207,7 +207,7 @@ struct ServicesCornerRibbon: View {
                 .background(
                     LinearGradient(
                         colors: [
-                            Color(red: 0.83, green: 1, blue: 0.2),
+                            PAXBrand.accent,
                             theme.accent,
                             Color(red: 0.66, green: 0.9, blue: 0)
                         ],

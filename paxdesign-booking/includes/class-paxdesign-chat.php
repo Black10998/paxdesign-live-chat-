@@ -58,6 +58,16 @@ class PAXdesign_Chat {
         if (!empty($auth_payload['logged_in']) && class_exists('PAXdesign_Customer_Chat_Bridge')) {
             $chat_session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id((int) $auth_payload['id']);
         }
+        $chat_message_count = 0;
+        if ($chat_session_id !== '' && class_exists('PAXdesign_Chat_Log')) {
+            global $wpdb;
+            PAXdesign_Chat_Log::create_table();
+            $table = PAXdesign_Chat_Log::table_name();
+            $chat_message_count = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT message_count FROM $table WHERE session_id = %s LIMIT 1",
+                $chat_session_id
+            ));
+        }
         $ai_identity = PAXdesign_Chat_Live::get_ai_assistant_identity();
 
         wp_localize_script('paxdesign-chat-script', 'paxdesignChat', array(
@@ -68,6 +78,8 @@ class PAXdesign_Chat {
             'requireLogin'     => get_option('paxdesign_customer_require_login_for_chat', '1') === '1',
             'auth'             => $auth_payload,
             'chatSessionId'    => $chat_session_id,
+            'chatSessionHasMessages' => $chat_message_count > 0,
+            'chatMessageCount' => $chat_message_count,
             'aiAssistant'      => $ai_identity,
             'authGate'         => array(
                 'title'       => __('Continue to Live Chat', 'paxdesign-booking'),

@@ -336,28 +336,51 @@ class PAXdesign_Customer_Orders {
         if (isset($data['expected_delivery'])) {
             $fields['expected_delivery'] = empty($data['expected_delivery']) ? null : gmdate('Y-m-d', strtotime((string) $data['expected_delivery']));
         }
+        $customer_note = '';
+        $note_visibility = 'customer';
         if (isset($data['note']) && trim((string) $data['note']) !== '') {
             $note = sanitize_textarea_field($data['note']);
-            $visibility = sanitize_key($data['note_visibility'] ?? 'customer');
+            $note_visibility = sanitize_key($data['note_visibility'] ?? 'customer');
+            $note_visibility = in_array($note_visibility, array('customer', 'internal'), true) ? $note_visibility : 'customer';
             $wpdb->insert(PAXdesign_Customer_DB::table('order_notes'), array(
                 'order_id'       => $order_id,
                 'author_user_id' => absint($actor_id),
-                'visibility'     => in_array($visibility, array('customer', 'internal'), true) ? $visibility : 'customer',
+                'visibility'     => $note_visibility,
                 'body'           => $note,
                 'created_at'     => current_time('mysql', true),
             ));
+            if ($note_visibility === 'customer') {
+                $customer_note = $note;
+            }
         }
         $wpdb->update($table, $fields, array('id' => $order_id));
         self::log_activity($order_id, $actor_id, 'order_updated', __('Request updated', 'paxdesign-booking'));
-        PAXdesign_Customer_Notifications::notify_user(
-            (int) $row['customer_user_id'],
-            'order',
-            __('Request updated', 'paxdesign-booking'),
-            $fields['status'] ?? $row['status'],
-            'order',
-            (string) $order_id,
-            '/orders/' . $order_id
-        );
+        $notify_title = '';
+        $notify_body = '';
+        if (isset($fields['status']) && $fields['status'] !== $row['status']) {
+            $notify_title = __('Request status updated', 'paxdesign-booking');
+            $notify_body = (string) $fields['status'];
+        } elseif ($customer_note !== '') {
+            $notify_title = __('New note on your request', 'paxdesign-booking');
+            $notify_body = wp_html_excerpt($customer_note, 120, '…');
+        } elseif (!empty($fields['assigned_user_id']) && (int) ($fields['assigned_user_id'] ?? 0) !== (int) ($row['assigned_user_id'] ?? 0)) {
+            $notify_title = __('Request assigned', 'paxdesign-booking');
+            $notify_body = __('Your request has been assigned to our team.', 'paxdesign-booking');
+        } elseif (isset($fields['expected_delivery']) && $fields['expected_delivery'] !== ($row['expected_delivery'] ?? null)) {
+            $notify_title = __('Delivery date updated', 'paxdesign-booking');
+            $notify_body = (string) $fields['expected_delivery'];
+        }
+        if ($notify_title !== '') {
+            PAXdesign_Customer_Notifications::notify_user(
+                (int) $row['customer_user_id'],
+                'order',
+                $notify_title,
+                $notify_body,
+                'order',
+                (string) $order_id,
+                '/orders/' . $order_id
+            );
+        }
         return self::get_for_user((int) $row['customer_user_id'], $order_id);
     }
 

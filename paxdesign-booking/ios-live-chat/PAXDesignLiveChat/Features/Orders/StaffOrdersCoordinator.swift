@@ -84,11 +84,26 @@ final class StaffOrdersCoordinator: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published var pendingOrderId: Int?
 
+    private static let readOrderIdsKey = "pax.staff.readOrderIds"
+    @Published private(set) var readOrderIds: Set<Int> = []
+
     var unreadCount: Int {
-        orders.filter { $0.status == "received" || $0.status == "pending" }.count
+        orders.filter {
+            ($0.status == "received" || $0.status == "pending") && !readOrderIds.contains($0.id)
+        }.count
     }
 
-    private init() {}
+    private init() {
+        if let stored = UserDefaults.standard.array(forKey: Self.readOrderIdsKey) as? [Int] {
+            readOrderIds = Set(stored)
+        }
+    }
+
+    func markOrderRead(_ orderId: Int) {
+        guard orderId > 0 else { return }
+        readOrderIds.insert(orderId)
+        UserDefaults.standard.set(Array(readOrderIds), forKey: Self.readOrderIdsKey)
+    }
 
     func refresh(auth: AuthStore) async {
         guard let api = auth.api else { return }

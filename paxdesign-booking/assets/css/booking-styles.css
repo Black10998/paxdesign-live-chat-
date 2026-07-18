@@ -29,26 +29,26 @@
    * Theme shield — overwrite inherited WP/Elementor/Astra tokens with fixed PAX grays.
    * Plugin CSS never reads these vars; they only neutralize leaked theme rules.
    */
-  --accent: #363636;
+  --accent: #C2FF00;
   --primary: #ffffff;
   --secondary: #7e7e7e;
   --global--color-primary: #ffffff;
   --global--color-secondary: #7e7e7e;
-  --global--color-accent: #363636;
+  --global--color-accent: #C2FF00;
   --wp--preset--color--primary: #ffffff;
   --wp--preset--color--secondary: #7e7e7e;
-  --wp--preset--color--accent: #363636;
+  --wp--preset--color--accent: #C2FF00;
   --e-global-color-primary: #ffffff;
   --e-global-color-secondary: #7e7e7e;
   --e-global-color-text: #ffffff;
-  --e-global-color-accent: #363636;
-  --theme-color: #363636;
+  --e-global-color-accent: #C2FF00;
+  --theme-color: #C2FF00;
   --link-color: #f3f6fd;
   --button-bg: #292929;
   --button-color: #f3f6fd;
 
   /* Design tokens (scoped — never on :root) */
-  --pax-gray-light:     #7e7e7e;
+  --pax-brand-accent:     #C2FF00;
   --pax-gray-mid:       #555555;
   --pax-gray-dark:      #363636;
   --pax-gray-darker:    #292929;

@@ -352,7 +352,9 @@ final class ChatCoordinator: ObservableObject {
             settings: settings,
             coordinatorSessions: sessions
         )
-        PAXApplicationBadge.sync(total: unreadChatCount + unreadTeamCount)
+        PAXApplicationBadge.sync(
+            total: unreadChatCount + unreadTeamCount + liveCount + StaffOrdersCoordinator.shared.unreadCount
+        )
     }
 
     private func detectNewSessions(_ items: [LiveSession]) {

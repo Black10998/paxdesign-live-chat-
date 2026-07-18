@@ -246,6 +246,9 @@ struct StaffOrderDetailView: View {
         }
         .navigationTitle(order?.service_label ?? String(localized: "Order"))
         .task { await load() }
+        .onAppear {
+            StaffOrdersCoordinator.shared.markOrderRead(orderId)
+        }
     }
 
     private func load() async {

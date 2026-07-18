@@ -27,7 +27,7 @@ enum AccentColorPreset: String, CaseIterable, Identifiable {
 
     var color: Color? {
         switch self {
-        case .themeDefault: return nil
+        case .themeDefault: return PAXBrand.accent
         case .orange: return Color(red: 1.0, green: 0.55, blue: 0.0)
         case .blue: return Color(red: 0.12, green: 0.45, blue: 0.95)
         case .purple: return Color(red: 0.55, green: 0.35, blue: 0.98)

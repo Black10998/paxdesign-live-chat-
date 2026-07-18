@@ -34,7 +34,7 @@ struct PAXThemePalette: Equatable {
     static func palette(for theme: AppSettingsStore.VisualTheme) -> PAXThemePalette {
         switch theme {
         case .classic:
-            let accent = Color(red: 1.0, green: 0.55, blue: 0.0)
+            let accent = PAXBrand.accent
             return PAXThemePalette(
                 accent: accent,
                 accentSecondary: Color(red: 0.12, green: 0.45, blue: 0.95),

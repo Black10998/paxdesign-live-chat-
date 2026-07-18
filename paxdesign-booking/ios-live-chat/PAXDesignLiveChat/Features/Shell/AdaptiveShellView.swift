@@ -136,6 +136,13 @@ struct AdaptiveShellView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 8) {
+                HStack {
+                    Spacer()
+                    if auth.isLoggedIn {
+                        StaffShellNotificationBell()
+                            .padding(.trailing, 4)
+                    }
+                }
                 if canReplyChats, let incoming = coordinator.incomingRequest, !coordinator.incomingBannerDismissed {
                     LiveRequestTopBanner(request: incoming) {
                         Task { await coordinator.openSessionFromBanner(incoming.session.sessionId, auth: auth) }

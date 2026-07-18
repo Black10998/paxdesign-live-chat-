@@ -22,9 +22,9 @@
   --pdx-ease: 0.3s ease;
   --pdx-ease-fast: 0.15s ease;
   --pdx-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-  --pdx-accent: #ffffff;
-  --pdx-accent-dim: rgba(255, 255, 255, 0.1);
-  --pdx-accent-border: rgba(255, 255, 255, 0.3);
+  --pdx-accent: #C2FF00;
+  --pdx-accent-dim: rgba(194, 255, 0, 0.12);
+  --pdx-accent-border: rgba(194, 255, 0, 0.35);
   --pdx-on-accent: #1b1b1b;
   --pdx-gradient-border: linear-gradient(to bottom right, #7e7e7e, #363636, #363636, #363636, #363636);
   --pdx-gradient-btn: linear-gradient(to top, #292929, #555555, #292929);

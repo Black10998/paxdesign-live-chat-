@@ -613,9 +613,21 @@ class PAXdesign_Customer_REST {
         $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
         $session_id = PAXdesign_Customer_Chat_Bridge::ensure_persistent_session_open($session_id, $uid);
         $handler = PAXdesign_Chat_Live::get_instance()->get_handler($session_id);
+        $message_count = 0;
+        if ($session_id !== '' && class_exists('PAXdesign_Chat_Log')) {
+            global $wpdb;
+            PAXdesign_Chat_Log::create_table();
+            $table = PAXdesign_Chat_Log::table_name();
+            $message_count = (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT message_count FROM $table WHERE session_id = %s LIMIT 1",
+                $session_id
+            ));
+        }
         return rest_ensure_response(array(
-            'session_id' => $session_id,
-            'handler'    => $handler,
+            'session_id'     => $session_id,
+            'handler'        => $handler,
+            'message_count'  => $message_count,
+            'has_messages'   => $message_count > 0,
         ));
     }
 

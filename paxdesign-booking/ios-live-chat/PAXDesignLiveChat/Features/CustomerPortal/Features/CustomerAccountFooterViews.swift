@@ -11,7 +11,6 @@ struct CustomerAccountFooterSection: View {
             CustomerAccountLegalTerminalView()
             contactSection
             socialSection
-            tiktokSection
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 28)
@@ -52,7 +51,7 @@ struct CustomerAccountFooterSection: View {
                             .font(.title2)
                         Image(systemName: "lock.fill")
                             .font(.caption2)
-                            .foregroundStyle(Color(red: 0.84, green: 1, blue: 0))
+                            .foregroundStyle(PAXBrand.accent)
                         Text(String(localized: "Private"))
                             .font(.subheadline.weight(.semibold))
                     }
@@ -74,68 +73,16 @@ struct CustomerAccountFooterSection: View {
                 .font(.title3.weight(.bold))
                 .foregroundStyle(theme.textPrimary)
 
-            HStack(spacing: 16) {
-                socialButton(
-                    url: "https://www.instagram.com/paxdes_webdesign",
-                    label: "Instagram",
-                    color: Color(red: 0.84, green: 0.16, blue: 0.46),
-                    systemImage: "camera.fill"
-                )
-                socialButton(
-                    url: "https://www.facebook.com/share/1JuWezscEk/",
-                    label: "Facebook",
-                    color: Color(red: 0.09, green: 0.47, blue: 0.95),
-                    systemImage: "f.circle.fill"
-                )
-                socialButton(
-                    url: "https://www.linkedin.com/in/ahmad-al-khalaf-26265435a",
-                    label: "LinkedIn",
-                    color: Color(red: 0, green: 0.45, blue: 0.69),
-                    systemImage: "link.circle.fill"
-                )
-                socialButton(
-                    url: "https://wa.me/4368120543638",
-                    label: "WhatsApp",
-                    color: Color(red: 0.07, green: 0.55, blue: 0.49),
-                    systemImage: "phone.circle.fill"
-                )
-            }
-        }
-    }
-
-    private var tiktokSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("TikTok")
-                .font(.title3.weight(.bold))
-                .foregroundStyle(theme.textPrimary)
-
-            Link(destination: URL(string: "https://www.tiktok.com/@paxdesignaustria")!) {
-                HStack(spacing: 0) {
-                    ZStack {
-                        Circle()
-                            .fill(Color.black)
-                            .frame(width: 33, height: 33)
-                        Image(systemName: "music.note")
-                            .foregroundStyle(.white)
-                            .font(.caption.weight(.bold))
+            HStack(spacing: 14) {
+                ForEach(PAXSocialBrand.allCases, id: \.rawValue) { brand in
+                    Link(destination: brand.url) {
+                        PAXSocialBrandIcon(brand: brand, size: 24)
+                            .frame(width: 52, height: 52)
+                            .background(Color(red: 0.17, green: 0.17, blue: 0.17))
+                            .clipShape(Circle())
                     }
-                    Text(String(localized: "Follow me"))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.black)
-                        .padding(.leading, 8)
-                    Spacer(minLength: 8)
-                    Text("1,2k")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white)
-                        .padding(.trailing, 12)
+                    .accessibilityLabel(brand.label)
                 }
-                .frame(width: 130, height: 35)
-                .background(Color.white)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .stroke(Color.black, lineWidth: 1)
-                )
-                .clipShape(Capsule())
             }
         }
     }
@@ -144,19 +91,7 @@ struct CustomerAccountFooterSection: View {
         Text(text.uppercased())
             .font(.caption2.weight(.semibold))
             .tracking(1)
-            .foregroundStyle(theme.textSecondary.opacity(0.8))
-    }
-
-    private func socialButton(url: String, label: String, color: Color, systemImage: String) -> some View {
-        Link(destination: URL(string: url)!) {
-            Image(systemName: systemImage)
-                .font(.body)
-                .foregroundStyle(.white)
-                .frame(width: 52, height: 52)
-                .background(Color(red: 0.17, green: 0.17, blue: 0.17))
-                .clipShape(Circle())
-        }
-        .accessibilityLabel(label)
+            .foregroundStyle(theme.textSecondary)
     }
 }
 
@@ -181,14 +116,14 @@ struct CustomerAccountLegalTerminalView: View {
                 Spacer()
                 Text(String(localized: "Legal"))
                     .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(Color.white.opacity(0.7))
+                    .foregroundStyle(Color.white.opacity(0.82))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(Color(red: 0.84, green: 1, blue: 0).opacity(0.08))
+                    .background(PAXBrand.accent.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(Color(red: 0.84, green: 1, blue: 0).opacity(0.15), lineWidth: 1)
+                            .stroke(PAXBrand.accent.opacity(0.22), lineWidth: 1)
                     )
             }
             .padding(.horizontal, 20)
@@ -200,14 +135,14 @@ struct CustomerAccountLegalTerminalView: View {
                     Link(destination: link.url) {
                         Text(link.title)
                             .font(.body)
-                            .foregroundStyle(Color.white.opacity(0.78))
+                            .foregroundStyle(Color.white.opacity(0.9))
                             .frame(maxWidth: .infinity)
                     }
                 }
                 Link(destination: PAXLegalLinks.contact) {
                     Text(String(localized: "Contact"))
                         .font(.body)
-                        .foregroundStyle(Color.white.opacity(0.78))
+                        .foregroundStyle(Color.white.opacity(0.9))
                         .frame(maxWidth: .infinity)
                 }
             }
@@ -253,7 +188,7 @@ struct CustomerGitHubPrivateSheet: View {
                             .font(.caption)
                             .foregroundStyle(Color(red: 0.11, green: 0.11, blue: 0.11))
                             .padding(6)
-                            .background(Color(red: 0.84, green: 1, blue: 0))
+                            .background(PAXBrand.accent)
                             .clipShape(Circle())
                             .offset(x: 6, y: 6)
                     }
@@ -261,10 +196,10 @@ struct CustomerGitHubPrivateSheet: View {
 
                     Text(String(localized: "Private Repository"))
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(Color(red: 0.84, green: 1, blue: 0))
+                        .foregroundStyle(PAXBrand.accent)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(Color(red: 0.84, green: 1, blue: 0).opacity(0.12))
+                        .background(PAXBrand.accent.opacity(0.12))
                         .clipShape(Capsule())
 
                     Text(String(localized: "Powered by GitHub — Not Open Source"))
@@ -282,7 +217,7 @@ struct CustomerGitHubPrivateSheet: View {
 
                     HStack(alignment: .top, spacing: 10) {
                         Image(systemName: "info.circle.fill")
-                            .foregroundStyle(Color(red: 0.84, green: 1, blue: 0))
+                            .foregroundStyle(PAXBrand.accent)
                         Text(String(localized: "For business inquiries, please contact us directly via email."))
                             .font(.footnote)
                             .foregroundStyle(.secondary)

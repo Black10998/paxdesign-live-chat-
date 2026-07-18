@@ -53,7 +53,9 @@ struct PAXDesignLiveChatApp: App {
                     switch phase {
                     case .active:
                         AppRefreshPolicy.update(scenePhase: .active)
-                        PAXApplicationBadge.sync(total: coordinator.unreadChatCount + coordinator.unreadTeamCount)
+                        PAXApplicationBadge.sync(
+                            total: coordinator.unreadChatCount + coordinator.unreadTeamCount + coordinator.liveCount + StaffOrdersCoordinator.shared.unreadCount
+                        )
                     case .inactive:
                         AppRefreshPolicy.update(scenePhase: .inactive)
                     case .background:

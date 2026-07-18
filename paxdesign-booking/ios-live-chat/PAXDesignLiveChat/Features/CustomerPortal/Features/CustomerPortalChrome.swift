@@ -124,6 +124,7 @@ private struct CustomerPortalToolbarModifier: ViewModifier {
                     ToolbarItem(placement: .topBarTrailing) {
                         HStack(spacing: 8) {
                             PAXAppearanceQuickSwitch()
+                            CustomerNotificationBellButton()
                             CustomerNavAvatarButton()
                             CustomerPortalQuickMenu()
                         }
@@ -132,6 +133,7 @@ private struct CustomerPortalToolbarModifier: ViewModifier {
                     ToolbarItem(placement: .topBarTrailing) {
                         HStack(spacing: 8) {
                             PAXAppearanceQuickSwitch()
+                            CustomerNotificationBellButton()
                             CustomerPortalQuickMenu()
                         }
                     }

@@ -193,6 +193,7 @@ final class CustomerPushService: NSObject, ObservableObject {
     func handleForegroundNotification(_ notification: UNNotification) {
         guard let payload = parseNotification(userInfo: notification.request.content.userInfo) else { return }
         playForegroundSound(for: payload)
+        CustomerNotificationsBadgeStore.shared.incrementUnread()
         if let link = deepLink(from: payload) {
             CustomerDeepLinkRouter.shared.pending = link
         }

@@ -1,8 +1,8 @@
 import SwiftUI
 
 enum PAXBrand {
-    /// PAXDesign brand accent — lime green (#CCFF00 family).
-    static let accent = Color(red: 204 / 255, green: 1, blue: 0)
+    /// Official PAXDesign brand accent (#C2FF00).
+    static let accent = Color(red: 194 / 255, green: 1, blue: 0)
     /// Splash screen background — pure black per brand spec.
     static let launchBackground = Color.black
 

@@ -39,6 +39,7 @@ struct CustomerPortalShellView: View {
                 Task {
                     await customerSession.auth.refreshProfile(api: customerSession.api)
                     navigation.refreshWorkspace()
+                    CustomerNotificationsBadgeStore.shared.scheduleRefresh(api: customerSession.api)
                 }
             }
     }

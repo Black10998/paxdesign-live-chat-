@@ -664,15 +664,26 @@ struct CustomerPortfolioDetailView: View {
 
     @ViewBuilder
     private func footerActions(_ item: CustomerPortfolioDetail) -> some View {
-        VStack(spacing: 12) {
-            if let urlString = item.structuredDetail?.website_url ?? item.project_url,
-               !urlString.isEmpty, let url = URL(string: urlString) {
-                CustomerSafariLink(
-                    title: String(localized: "View on website"),
-                    url: url,
-                    style: .filled
-                )
+        let fallbackURL = URL(string: "https://paxdesign.at/projekte-referenzen/")!
+        let websiteURL: URL = {
+            let candidates = [
+                item.structuredDetail?.website_url,
+                item.project_url,
+            ].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            for candidate in candidates {
+                if let url = URL(string: candidate), let host = url.host, !host.isEmpty {
+                    return url
+                }
             }
+            return fallbackURL
+        }()
+
+        VStack(spacing: 12) {
+            CustomerSafariLink(
+                title: String(localized: "View on website"),
+                url: websiteURL,
+                style: .filled
+            )
             NavigationLink {
                 CustomerCreateOrderView(
                     prefilledTitle: item.displayTitle,
