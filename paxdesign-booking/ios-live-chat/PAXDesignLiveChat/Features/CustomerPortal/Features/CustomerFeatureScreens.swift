@@ -312,10 +312,10 @@ struct CustomerOrderDetailView: View {
                                 Spacer()
                                 Text(order.status.capitalized)
                                     .font(.caption.weight(.semibold))
-                                    .foregroundStyle(PAXBrand.accent)
+                                    .foregroundStyle(PAXTheme.accent)
                                     .padding(.horizontal, 10)
                                     .padding(.vertical, 4)
-                                    .background(PAXBrand.accent.opacity(0.12))
+                                    .background(PAXTheme.accent.opacity(0.12))
                                     .clipShape(Capsule())
                             }
                             Text(order.service_label)
@@ -366,7 +366,7 @@ struct CustomerOrderDetailView: View {
                                 ForEach(activity) { item in
                                     HStack(alignment: .top, spacing: 10) {
                                         Circle()
-                                            .fill(PAXBrand.accent)
+                                            .fill(PAXTheme.accent)
                                             .frame(width: 8, height: 8)
                                             .padding(.top, 6)
                                         VStack(alignment: .leading, spacing: 2) {

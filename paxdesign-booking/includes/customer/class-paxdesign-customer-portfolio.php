@@ -231,7 +231,7 @@ class PAXdesign_Customer_Portfolio {
             'summary'         => $summary,
             'paragraphs'      => array_values(array_filter(array_map(array(__CLASS__, 'clean_text'), $parsed['paragraphs']))),
             'highlights'      => $highlights,
-            'website_url'     => get_permalink($post) ? (string) get_permalink($post) : '',
+            'website_url'     => 'https://paxdesign.at/projekte-referenzen/',
             'published_label' => get_the_date('', $post),
         );
     }

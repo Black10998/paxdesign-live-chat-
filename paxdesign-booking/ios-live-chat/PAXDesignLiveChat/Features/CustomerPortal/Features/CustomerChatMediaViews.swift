@@ -27,7 +27,7 @@ struct CustomerChatBubble: View {
                     HStack(spacing: 3) {
                         Image(systemName: isRead ? "checkmark.circle.fill" : "checkmark.circle")
                             .font(.caption2)
-                            .foregroundStyle(isRead ? PAXTheme.accent : .secondary)
+                            .foregroundStyle(isRead ? PAXTheme.accent : PAXTheme.textTertiary)
                         Text(isRead ? String(localized: "Read") : String(localized: "Sent"))
                             .font(.caption2)
                             .foregroundStyle(PAXTheme.textSecondary)
@@ -98,7 +98,7 @@ struct CustomerChatBubble: View {
         case "user": return .accentColor
         case "assistant": return .purple
         case "admin": return .teal
-        default: return .secondary
+        default: return PAXTheme.textTertiary
         }
     }
 

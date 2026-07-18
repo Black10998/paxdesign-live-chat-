@@ -692,7 +692,7 @@ private struct CustomerHomeUtilityRow: View {
             action()
         } label: {
             HStack(spacing: 10) {
-                PAXIcon(icon, size: .row, emphasis: .secondary)
+                PAXIcon(icon, size: .row, emphasis: .primary, tint: theme.textSecondary)
                 Text(title)
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(theme.textPrimary)

@@ -1,24 +1,17 @@
 import SwiftUI
 
-/// Adaptive marketing palette — follows system Light/Dark while keeping PAXdesign brand accent.
+/// Adaptive marketing palette — follows system Light/Dark with appearance-aware accent.
 struct CustomerMarketingTheme: Equatable {
     let colorScheme: ColorScheme
     let accent: Color
 
-    init(colorScheme: ColorScheme, accent: Color = CustomerMarketingTheme.defaultAccent) {
+    init(colorScheme: ColorScheme, accent: Color? = nil) {
         self.colorScheme = colorScheme
-        self.accent = accent
+        self.accent = accent ?? Self.resolvedAccentColor(for: colorScheme)
     }
 
-    static let defaultAccent = PAXBrand.accent
-
-    static func resolvedAccentColor() -> Color {
-        guard let raw = UserDefaults.standard.string(forKey: "pax.settings.accentPreset"),
-              let preset = AccentColorPreset(rawValue: raw),
-              let color = preset.color else {
-            return defaultAccent
-        }
-        return color
+    static func resolvedAccentColor(for colorScheme: ColorScheme) -> Color {
+        PAXBrand.appearanceAccent(isDark: colorScheme == .dark)
     }
 
     var background: Color {
@@ -34,22 +27,24 @@ struct CustomerMarketingTheme: Equatable {
     }
 
     var border: Color {
-        colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.08)
+        colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.12)
     }
 
     var textPrimary: Color {
-        colorScheme == .dark ? Color.white : Color(red: 0.08, green: 0.08, blue: 0.1)
+        colorScheme == .dark ? Color.white : Color(red: 0.06, green: 0.06, blue: 0.08)
     }
 
     var textSecondary: Color {
-        colorScheme == .dark ? Color(red: 0.72, green: 0.72, blue: 0.72) : Color(red: 0.20, green: 0.22, blue: 0.26)
+        colorScheme == .dark ? Color(red: 0.78, green: 0.78, blue: 0.78) : Color(red: 0.16, green: 0.18, blue: 0.22)
     }
 
     var textTertiary: Color {
-        colorScheme == .dark ? Color(red: 0.58, green: 0.58, blue: 0.58) : Color(red: 0.34, green: 0.36, blue: 0.40)
+        colorScheme == .dark ? Color(red: 0.62, green: 0.62, blue: 0.62) : Color(red: 0.28, green: 0.30, blue: 0.34)
     }
 
-    var accentOnAccent: Color { Color.black }
+    var accentOnAccent: Color {
+        PAXBrand.accentLabelColor(isDark: colorScheme == .dark)
+    }
 
     var shadowLight: Color {
         colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.12) : Color.white
@@ -85,10 +80,7 @@ private struct CustomerMarketingThemeKey: EnvironmentKey {
 
 extension EnvironmentValues {
     var marketingTheme: CustomerMarketingTheme {
-        CustomerMarketingTheme(
-            colorScheme: colorScheme,
-            accent: CustomerMarketingTheme.resolvedAccentColor()
-        )
+        CustomerMarketingTheme(colorScheme: colorScheme)
     }
 }
 
@@ -211,9 +203,9 @@ struct ServicesCornerRibbon: View {
                 .background(
                     LinearGradient(
                         colors: [
-                            PAXBrand.accent,
                             theme.accent,
-                            Color(red: 0.66, green: 0.9, blue: 0)
+                            theme.accent,
+                            theme.colorScheme == .dark ? Color(red: 0.66, green: 0.9, blue: 0) : PAXBrand.lightModeAccent.opacity(0.85)
                         ],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing

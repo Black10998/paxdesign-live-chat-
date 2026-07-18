@@ -28,6 +28,7 @@ on:
       - '.github/triggers/deploy-customer-platform-3155'
       - '.github/triggers/deploy-customer-platform-3156'
       - '.github/triggers/deploy-customer-platform-3157'
+      - '.github/triggers/deploy-customer-platform-3158'
 
 permissions:
   contents: read

@@ -156,7 +156,7 @@ class PAXdesign_Customer_Portfolio_Showcase {
                 'gallery'  => self::gallery_for_item($row),
                 'cta'      => null,
                 'summary'  => $description,
-                'website_url' => home_url('/portfolio/' . $slug . '/'),
+                'website_url' => 'https://paxdesign.at/projekte-referenzen/',
                 'published_label' => '',
             );
         }

@@ -499,7 +499,7 @@ struct CustomerChatView: View {
                     Image(systemName: isSending ? "hourglass" : "arrow.up.circle.fill")
                         .font(.system(size: 32))
                         .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(canSend ? PAXTheme.accent : .secondary)
+                        .foregroundStyle(canSend ? PAXTheme.accent : PAXTheme.textTertiary)
                         .frame(width: 44, height: 44)
                 }
                 .disabled(!canSend)

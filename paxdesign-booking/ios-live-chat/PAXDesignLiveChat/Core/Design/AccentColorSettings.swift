@@ -27,7 +27,7 @@ enum AccentColorPreset: String, CaseIterable, Identifiable {
 
     var color: Color? {
         switch self {
-        case .themeDefault: return PAXBrand.accent
+        case .themeDefault: return nil
         case .orange: return Color(red: 1.0, green: 0.55, blue: 0.0)
         case .blue: return Color(red: 0.12, green: 0.45, blue: 0.95)
         case .purple: return Color(red: 0.55, green: 0.35, blue: 0.98)
@@ -47,8 +47,14 @@ extension AppSettingsStore {
 
     var effectivePalette: PAXThemePalette {
         let base = basePalette
-        guard let override = accentColorPreset.color else { return base }
-        return base.withAccent(override)
+        let isDark: Bool
+        switch appearanceMode {
+        case .dark: isDark = true
+        case .light: isDark = false
+        case .system:
+            isDark = UITraitCollection.current.userInterfaceStyle == .dark
+        }
+        return base.withAccent(PAXBrand.appearanceAccent(isDark: isDark))
     }
 }
 

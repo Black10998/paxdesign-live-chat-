@@ -662,26 +662,14 @@ struct CustomerPortfolioDetailView: View {
         }
     }
 
+    private static let portfolioWebsiteURL = URL(string: "https://paxdesign.at/projekte-referenzen/")!
+
     @ViewBuilder
     private func footerActions(_ item: CustomerPortfolioDetail) -> some View {
-        let fallbackURL = URL(string: "https://paxdesign.at/projekte-referenzen/")!
-        let websiteURL: URL = {
-            let candidates = [
-                item.structuredDetail?.website_url,
-                item.project_url,
-            ].compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-            for candidate in candidates {
-                if let url = URL(string: candidate), let host = url.host, !host.isEmpty {
-                    return url
-                }
-            }
-            return fallbackURL
-        }()
-
         VStack(spacing: 12) {
             CustomerSafariLink(
                 title: String(localized: "View on website"),
-                url: websiteURL,
+                url: Self.portfolioWebsiteURL,
                 style: .filled
             )
             NavigationLink {

@@ -10,7 +10,7 @@ enum PAXTheme {
         cachedIsDark = isDark
     }
 
-    static var accent: Color { cachedPalette.accent }
+    static var accent: Color { PAXBrand.appearanceAccent(isDark: cachedIsDark) }
     static var accentSecondary: Color { cachedPalette.accentSecondary }
     static var success: Color { cachedPalette.success }
     static var danger: Color { cachedPalette.danger }
@@ -19,10 +19,10 @@ enum PAXTheme {
     static var border: Color { Color(.separator) }
     static var textPrimary: Color { .primary }
     static var textSecondary: Color {
-        cachedIsDark ? Color(UIColor.secondaryLabel) : Color(red: 0.22, green: 0.24, blue: 0.28)
+        cachedIsDark ? Color(UIColor.secondaryLabel) : Color(red: 0.16, green: 0.18, blue: 0.22)
     }
     static var textTertiary: Color {
-        cachedIsDark ? Color(UIColor.tertiaryLabel) : Color(red: 0.36, green: 0.38, blue: 0.42)
+        cachedIsDark ? Color(UIColor.tertiaryLabel) : Color(red: 0.28, green: 0.30, blue: 0.34)
     }
     static var icon: Color { .primary }
     static var iconSecondary: Color { textSecondary }
@@ -155,12 +155,40 @@ extension View {
 
 struct PAXAppearanceObserver: ViewModifier {
     @ObservedObject var settings: AppSettingsStore
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var resolvedIsDark: Bool {
+        settings.resolvedIsDark(for: colorScheme)
+    }
+
+    private var resolvedPalette: PAXThemePalette {
+        settings.basePalette.withAccent(PAXBrand.appearanceAccent(isDark: resolvedIsDark))
+    }
 
     func body(content: Content) -> some View {
         content
-            .environment(\.paxPalette, settings.palette)
-            .tint(settings.palette.accent)
+            .environment(\.paxPalette, resolvedPalette)
+            .tint(PAXBrand.appearanceAccent(isDark: resolvedIsDark))
             .preferredColorScheme(settings.appearanceMode.colorScheme)
+            .onAppear {
+                syncTheme()
+            }
+            .onChange(of: colorScheme) { _ in
+                syncTheme()
+            }
+            .onChange(of: settings.appearanceMode) { _ in
+                syncTheme()
+            }
+            .onChange(of: settings.visualTheme) { _ in
+                syncTheme()
+            }
+            .onChange(of: settings.themeRevision) { _ in
+                syncTheme()
+            }
+    }
+
+    private func syncTheme() {
+        PAXTheme.applyPalette(resolvedPalette, isDark: resolvedIsDark)
     }
 }
 

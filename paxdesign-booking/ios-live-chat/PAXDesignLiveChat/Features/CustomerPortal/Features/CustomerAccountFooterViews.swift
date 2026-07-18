@@ -50,7 +50,7 @@ struct CustomerAccountFooterSection: View {
                             .font(.title2)
                         Image(systemName: "lock.fill")
                             .font(.caption2)
-                            .foregroundStyle(PAXBrand.accent)
+                            .foregroundStyle(theme.accent)
                         Text(String(localized: "Private"))
                             .font(.subheadline.weight(.semibold))
                     }
@@ -98,11 +98,11 @@ struct CustomerAccountLegalTerminalView: View {
                     .foregroundStyle(Color.white.opacity(0.82))
                     .padding(.horizontal, 10)
                     .padding(.vertical, 4)
-                    .background(PAXBrand.accent.opacity(0.12))
+                    .background(PAXTheme.accent.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                     .overlay(
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(PAXBrand.accent.opacity(0.22), lineWidth: 1)
+                            .stroke(PAXTheme.accent.opacity(0.22), lineWidth: 1)
                     )
             }
             .padding(.horizontal, 20)
@@ -167,7 +167,7 @@ struct CustomerGitHubPrivateSheet: View {
                             .font(.caption)
                             .foregroundStyle(Color(red: 0.11, green: 0.11, blue: 0.11))
                             .padding(6)
-                            .background(PAXBrand.accent)
+                            .background(PAXTheme.accent)
                             .clipShape(Circle())
                             .offset(x: 6, y: 6)
                     }
@@ -175,10 +175,10 @@ struct CustomerGitHubPrivateSheet: View {
 
                     Text(String(localized: "Private Repository"))
                         .font(.caption.weight(.bold))
-                        .foregroundStyle(PAXBrand.accent)
+                        .foregroundStyle(PAXTheme.accent)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 6)
-                        .background(PAXBrand.accent.opacity(0.12))
+                        .background(PAXTheme.accent.opacity(0.12))
                         .clipShape(Capsule())
 
                     Text(String(localized: "Powered by GitHub — Not Open Source"))
@@ -196,7 +196,7 @@ struct CustomerGitHubPrivateSheet: View {
 
                     HStack(alignment: .top, spacing: 10) {
                         Image(systemName: "info.circle.fill")
-                            .foregroundStyle(PAXBrand.accent)
+                            .foregroundStyle(theme.accent)
                         Text(String(localized: "For business inquiries, please contact us directly via email."))
                             .font(.footnote)
                             .foregroundStyle(PAXTheme.textSecondary)
