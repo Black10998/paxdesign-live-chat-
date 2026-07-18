@@ -1,0 +1,25 @@
+---
+title: "PAXDesign — Evolution Since Build 127"
+subtitle: "Supporting Document for App Review (Guideline 3.2)"
+author: "PAXdesign"
+date: "July 2026"
+toc: true
+toc-title: "Table of Contents"
+numbersections: false
+geometry: "margin=2.5cm"
+fontsize: 11pt
+documentclass: article
+colorlinks: false
+header-includes:
+  - \usepackage{fancyhdr}
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{hyperref}
+  - \pagestyle{fancy}
+  - \fancyhead[L]{\small PAXDesign — Build 159}
+  - \fancyhead[R]{\small Guideline 3.2}
+  - \fancyfoot[C]{\thepage}
+  - \renewcommand{\headrulewidth}{0.4pt}
+  - \renewcommand{\footrulewidth}{0pt}
+---
