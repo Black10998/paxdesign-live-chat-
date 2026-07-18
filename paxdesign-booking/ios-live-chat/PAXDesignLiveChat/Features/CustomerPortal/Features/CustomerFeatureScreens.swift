@@ -691,7 +691,7 @@ struct CustomerNewsDetailView: View {
                             .foregroundStyle(PAXTheme.textSecondary)
                     }
                     if let body = item.body, !body.isEmpty {
-                        Text(htmlPlainText(body))
+                        Text(CustomerPortalFormatting.htmlPlainText(body))
                             .font(.body)
                             .foregroundStyle(PAXTheme.textPrimary)
                             .lineSpacing(5)
