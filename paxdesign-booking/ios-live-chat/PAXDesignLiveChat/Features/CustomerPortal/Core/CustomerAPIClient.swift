@@ -133,10 +133,13 @@ final class CustomerAPIClient: ObservableObject {
         try await get("/customer/chat/session", as: CustomerChatSessionResponse.self)
     }
 
-    func renewChatSession(closedSessionID: String? = nil) async throws -> CustomerChatSessionResponse {
+    func renewChatSession(closedSessionID: String? = nil, newConversation: Bool = false) async throws -> CustomerChatSessionResponse {
         var body: [String: String] = [:]
         if let closedSessionID, !closedSessionID.isEmpty {
             body["session_id"] = closedSessionID
+        }
+        if newConversation {
+            body["new_conversation"] = "1"
         }
         return try await post("/customer/chat/session", body: body, as: CustomerChatSessionResponse.self)
     }

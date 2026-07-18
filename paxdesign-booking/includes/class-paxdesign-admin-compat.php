@@ -11,22 +11,17 @@ class PAXdesign_Admin_Compat {
 
     public static function init() {
         add_action('admin_enqueue_scripts', array(__CLASS__, 'guard_block_widgets_editor'), 1);
+        add_action('customize_controls_enqueue_scripts', array(__CLASS__, 'dequeue_legacy_editor_assets'), 9999);
+        add_action('widgets_admin_page', array(__CLASS__, 'dequeue_legacy_editor_assets'), 0);
     }
 
-    /**
-     * Prevent legacy editor assets from loading on the block-based Widgets screen.
-     * WordPress 6.4+ warns when wp-editor is enqueued alongside the block widgets editor.
-     */
     public static function guard_block_widgets_editor($hook) {
-        if (!function_exists('wp_use_widgets_block_editor') || !wp_use_widgets_block_editor()) {
-            return;
-        }
-
-        if (!in_array($hook, array('widgets.php', 'customize.php', 'site-editor.php'), true)) {
+        if (!self::is_block_widgets_screen($hook)) {
             return;
         }
 
         add_action('admin_enqueue_scripts', array(__CLASS__, 'dequeue_legacy_editor_assets'), 9999);
+        add_action('admin_print_scripts', array(__CLASS__, 'dequeue_legacy_editor_assets'), 0);
     }
 
     public static function dequeue_legacy_editor_assets() {

@@ -153,11 +153,12 @@ class PAXdesign_Customer_Orders {
 
     private static function notes($order_id, $visibility) {
         global $wpdb;
-        return $wpdb->get_results($wpdb->prepare(
+        $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT id, body, created_at FROM " . PAXdesign_Customer_DB::table('order_notes') . " WHERE order_id = %d AND visibility = %s ORDER BY created_at DESC",
             $order_id,
             $visibility
         ), ARRAY_A);
+        return self::normalize_int_ids($rows ?: array());
     }
 
     private static function files($order_id, $visibility) {
@@ -167,19 +168,37 @@ class PAXdesign_Customer_Orders {
             $order_id,
             $visibility
         ), ARRAY_A);
-        foreach ($rows as &$row) {
+        foreach ($rows ?: array() as &$row) {
+            $row['id'] = (int) $row['id'];
+            $row['file_size'] = (int) ($row['file_size'] ?? 0);
             $row['download_url'] = rest_url('pdx/v1/customer/orders/' . $order_id . '/files/' . $row['id'] . '/download');
         }
-        return $rows;
+        unset($row);
+        return $rows ?: array();
     }
 
     private static function activity($order_id, $limit) {
         global $wpdb;
-        return $wpdb->get_results($wpdb->prepare(
+        $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT id, event_type, summary, created_at FROM " . PAXdesign_Customer_DB::table('order_activity') . " WHERE order_id = %d ORDER BY created_at DESC LIMIT %d",
             $order_id,
             $limit
         ), ARRAY_A);
+        return self::normalize_int_ids($rows ?: array());
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private static function normalize_int_ids($rows) {
+        foreach ($rows as &$row) {
+            if (isset($row['id'])) {
+                $row['id'] = (int) $row['id'];
+            }
+        }
+        unset($row);
+        return $rows;
     }
 
     /**

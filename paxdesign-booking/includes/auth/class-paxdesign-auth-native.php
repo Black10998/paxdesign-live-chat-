@@ -600,6 +600,7 @@ class PAXdesign_Auth_Native {
 
 		if ( $session_mode === 'customer' ) {
 			PAXdesign_Customers::record_login( (int) $signed->ID );
+			do_action( 'pdx_user_logged_in', (int) $signed->ID );
 		}
 
 		$role = self::resolve_portal_role( (int) $signed->ID );

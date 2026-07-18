@@ -133,7 +133,7 @@ struct CustomerOrderDetail: Decodable {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             let bodyValue = try c.decode(String.self, forKey: .body)
             let created = try c.decodeIfPresent(String.self, forKey: .created_at) ?? ""
-            id = try c.decodeIfPresent(Int.self, forKey: .id) ?? abs("\(created)-\(bodyValue)".hashValue)
+            id = CustomerPortalDecode.int(c, .id)
             body = bodyValue
             created_at = created
         }
@@ -152,7 +152,8 @@ struct CustomerOrderDetail: Decodable {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             let summaryValue = try c.decode(String.self, forKey: .summary)
             let created = try c.decodeIfPresent(String.self, forKey: .created_at) ?? ""
-            id = try c.decodeIfPresent(Int.self, forKey: .id) ?? abs("\(created)-\(summaryValue)".hashValue)
+            let decodedID = CustomerPortalDecode.int(c, .id)
+            id = decodedID != 0 ? decodedID : abs("\(created)-\(summaryValue)".hashValue)
             summary = summaryValue
             event_type = try c.decodeIfPresent(String.self, forKey: .event_type) ?? ""
             created_at = created
@@ -165,6 +166,16 @@ struct CustomerOrderDetail: Decodable {
     struct Assigned: Decodable {
         let user_id: Int
         let display_name: String?
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            user_id = CustomerPortalDecode.int(c, .user_id)
+            display_name = try c.decodeIfPresent(String.self, forKey: .display_name)
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case user_id, display_name
+        }
 
         var label: String {
             let name = display_name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -179,6 +190,21 @@ struct CustomerOrderDetail: Decodable {
         let kind: String
         let created_at: String
         let download_url: String?
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = CustomerPortalDecode.int(c, .id)
+            file_name = CustomerPortalDecode.string(c, .file_name)
+            mime_type = CustomerPortalDecode.string(c, .mime_type)
+            file_size = CustomerPortalDecode.int(c, .file_size)
+            kind = CustomerPortalDecode.string(c, .kind)
+            created_at = CustomerPortalDecode.string(c, .created_at)
+            download_url = try c.decodeIfPresent(String.self, forKey: .download_url)
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case id, file_name, mime_type, file_size, kind, created_at, download_url
+        }
     }
 
     let id: Int

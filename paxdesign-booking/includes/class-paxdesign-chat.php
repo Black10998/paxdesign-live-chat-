@@ -812,7 +812,7 @@ class PAXdesign_Chat {
         if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED) {
             $user_id = get_current_user_id();
             if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
-                $session_id = PAXdesign_Customer_Chat_Bridge::renew_closed_session($user_id, $session_id);
+                $session_id = PAXdesign_Customer_Chat_Bridge::reopen_closed_session($session_id);
                 $live->ensure_session($session_id);
                 $handler = $live->get_handler($session_id);
             } else {

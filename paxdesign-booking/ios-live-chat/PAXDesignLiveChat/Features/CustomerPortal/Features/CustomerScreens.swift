@@ -433,6 +433,14 @@ struct CustomerChatView: View {
             .task {
                 if let initialSessionID {
                     poll = CustomerChatPoll(session_id: initialSessionID, handler: nil, messages: [], message_count: nil, last_preview: nil)
+                } else if let session = try? await api.fetchChatSession() {
+                    poll = CustomerChatPoll(
+                        session_id: session.session_id,
+                        handler: session.handler,
+                        messages: [],
+                        message_count: nil,
+                        last_preview: nil
+                    )
                 }
                 await refresh(full: true)
                 startPolling()
@@ -559,7 +567,7 @@ struct CustomerChatView: View {
         isRecovering = true
         defer { isRecovering = false }
         do {
-            let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id)
+            let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id, newConversation: true)
             poll = CustomerChatPoll(
                 session_id: renewed.session_id,
                 handler: renewed.handler,
@@ -684,7 +692,7 @@ struct CustomerChatView: View {
         notice = CustomerChatSessionRecovery.reconnectingNotice()
         defer { isRecovering = false }
         do {
-            let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id)
+            let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id, newConversation: false)
             poll = CustomerChatPoll(
                 session_id: renewed.session_id,
                 handler: renewed.handler,
@@ -796,11 +804,6 @@ struct CustomerChatView: View {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
 
-        if isConversationClosed {
-            await startNewConversation()
-            guard poll?.handler != "closed" else { return }
-        }
-
         let savedDraft = text
         let clientMsgID = UUID().uuidString
         let assistantClientMsgID = UUID().uuidString
@@ -841,7 +844,7 @@ struct CustomerChatView: View {
             )
         } catch let apiError as CustomerAPIError {
             if shouldRenewSession(for: apiError) {
-                let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id)
+                let renewed = try await api.renewChatSession(closedSessionID: poll?.session_id, newConversation: false)
                 poll = CustomerChatPoll(
                     session_id: renewed.session_id,
                     handler: renewed.handler,

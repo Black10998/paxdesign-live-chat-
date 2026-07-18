@@ -628,12 +628,14 @@ class PAXdesign_Customer_REST {
         if (!PAXdesign_Customer_Chat_Bridge::user_owns_session($uid, $closed_session_id)) {
             return new WP_Error('forbidden', __('You do not have access to this conversation.', 'paxdesign-booking'), array('status' => 403));
         }
-        $session_id = PAXdesign_Customer_Chat_Bridge::renew_closed_session($uid, $closed_session_id);
+        $force_new = rest_sanitize_boolean($params['new_conversation'] ?? false);
+        $session_id = PAXdesign_Customer_Chat_Bridge::renew_closed_session($uid, $closed_session_id, $force_new);
         PAXdesign_Chat_Live::get_instance()->ensure_session($session_id);
         return rest_ensure_response(array(
             'session_id' => $session_id,
             'handler'    => PAXdesign_Chat_Live::get_instance()->get_handler($session_id),
             'renewed'    => true,
+            'reopened'   => !$force_new,
         ));
     }
 

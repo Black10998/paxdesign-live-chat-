@@ -44,24 +44,57 @@ class PAXdesign_Customer_Chat_Bridge {
             "SELECT session_id FROM $table WHERE user_id = %d AND is_primary = 1 ORDER BY linked_at DESC LIMIT 1",
             $user_id
         ));
-        $session_id = ($row && !empty($row->session_id))
-            ? (string) $row->session_id
-            : self::create_primary_session($user_id);
+        if ($row && !empty($row->session_id)) {
+            $session_id = (string) $row->session_id;
+        } else {
+            $session_id = self::resolve_or_create_primary_session($user_id);
+        }
         if ($session_id !== '') {
             $live = PAXdesign_Chat_Live::get_instance();
             $live->ensure_session($session_id);
-            if ($live->get_handler($session_id) === PAXdesign_Chat_Live::HANDLER_CLOSED) {
-                $session_id = self::rotate_primary_session($user_id, $session_id);
-            }
         }
         return $session_id;
     }
 
     /**
-     * Replace a closed session with a fresh open primary conversation.
+     * Re-open a closed conversation without creating a new session id.
      */
-    public static function renew_closed_session($user_id, $closed_session_id) {
-        return self::rotate_primary_session($user_id, $closed_session_id);
+    public static function reopen_closed_session($session_id) {
+        global $wpdb;
+        $live = PAXdesign_Chat_Live::get_instance();
+        $session_id = self::sanitize_session_id($session_id);
+        if ($session_id === '') {
+            return '';
+        }
+        if ($live->get_handler($session_id) !== PAXdesign_Chat_Live::HANDLER_CLOSED) {
+            return $session_id;
+        }
+        $wpdb->update(
+            PAXdesign_Chat_Log::table_name(),
+            array(
+                'handler'    => PAXdesign_Chat_Live::HANDLER_AI,
+                'updated_at' => current_time('mysql'),
+            ),
+            array('session_id' => $session_id),
+            array('%s', '%s'),
+            array('%s')
+        );
+        $live->ensure_session($session_id);
+        return $session_id;
+    }
+
+    /**
+     * Re-open the same conversation by default; rotate only when explicitly requested.
+     */
+    public static function renew_closed_session($user_id, $closed_session_id, $force_new = false) {
+        $closed_session_id = self::sanitize_session_id($closed_session_id);
+        if ($force_new) {
+            return self::rotate_primary_session($user_id, $closed_session_id);
+        }
+        if ($closed_session_id !== '') {
+            return self::reopen_closed_session($closed_session_id);
+        }
+        return self::primary_session_id($user_id);
     }
 
     /**
@@ -244,10 +277,32 @@ class PAXdesign_Customer_Chat_Bridge {
     }
 
     private static function ensure_primary_session($user_id) {
-        if (self::primary_session_id($user_id) !== '') {
-            return;
+        self::primary_session_id($user_id);
+    }
+
+    private static function resolve_or_create_primary_session($user_id) {
+        $existing = self::resolve_existing_session_from_logs($user_id);
+        if ($existing !== '') {
+            self::link_session($user_id, $existing, 'history', '', true);
+            self::sync_chat_log_user($existing, $user_id);
+            PAXdesign_Chat_Live::get_instance()->ensure_session($existing);
+            return $existing;
         }
-        self::create_primary_session($user_id);
+        return self::create_primary_session($user_id);
+    }
+
+    private static function resolve_existing_session_from_logs($user_id) {
+        global $wpdb;
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return '';
+        }
+        $table = PAXdesign_Chat_Log::table_name();
+        $session_id = $wpdb->get_var($wpdb->prepare(
+            "SELECT session_id FROM $table WHERE wp_user_id = %d ORDER BY updated_at DESC LIMIT 1",
+            $user_id
+        ));
+        return $session_id ? self::sanitize_session_id((string) $session_id) : '';
     }
 
     /**
@@ -271,7 +326,7 @@ class PAXdesign_Customer_Chat_Bridge {
         $handler = $live->get_handler($session_id);
         $renewed = false;
         if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED) {
-            $session_id = self::renew_closed_session($user_id, $session_id);
+            $session_id = self::reopen_closed_session($session_id);
             $live->ensure_session($session_id);
             $handler = $live->get_handler($session_id);
             $renewed = true;
@@ -350,7 +405,7 @@ class PAXdesign_Customer_Chat_Bridge {
         $handler = $live->get_handler($session_id);
         $renewed = false;
         if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED) {
-            $session_id = self::renew_closed_session($user_id, $session_id);
+            $session_id = self::reopen_closed_session($session_id);
             $live->ensure_session($session_id);
             $handler = $live->get_handler($session_id);
             $renewed = true;

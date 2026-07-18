@@ -274,12 +274,20 @@ struct CustomerOrdersListView: View {
 
     private func load() async {
         isLoading = orders.isEmpty
+        error = nil
         do {
             orders = try await api.fetchOrders().orders
         } catch {
-            self.error = error.localizedDescription
+            self.error = friendlyOrderError(error)
         }
         isLoading = false
+    }
+
+    private func friendlyOrderError(_ error: Error) -> String {
+        if error is DecodingError {
+            return String(localized: "We couldn't load your requests. Pull down to refresh.")
+        }
+        return (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
     }
 }
 
@@ -406,8 +414,16 @@ struct CustomerOrderDetailView: View {
     }
 
     private func load() async {
+        error = nil
         do { order = try await api.fetchOrder(id: orderId) }
-        catch { self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription }
+        catch { self.error = friendlyOrderError(error) }
+    }
+
+    private func friendlyOrderError(_ error: Error) -> String {
+        if error is DecodingError {
+            return String(localized: "We couldn't load this request. Pull down to refresh.")
+        }
+        return (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
     }
 
     private func downloadOrderFile(_ file: CustomerOrderDetail.FileItem) async {
