@@ -33,17 +33,19 @@ struct PAXIcon: View {
     let systemName: String
     var size: PAXIconSize = .row
     var emphasis: PAXIconEmphasis = .primary
+    var tint: Color?
 
-    init(_ systemName: String, size: PAXIconSize = .row, emphasis: PAXIconEmphasis = .primary) {
+    init(_ systemName: String, size: PAXIconSize = .row, emphasis: PAXIconEmphasis = .primary, tint: Color? = nil) {
         self.systemName = systemName
         self.size = size
         self.emphasis = emphasis
+        self.tint = tint
     }
 
     var body: some View {
         PAXVectorIconShape(name: PAXIconCatalog.glyph(for: systemName))
             .stroke(
-                emphasis.color,
+                tint ?? emphasis.color,
                 style: StrokeStyle(lineWidth: size.strokeWidth, lineCap: .round, lineJoin: .round)
             )
             .frame(width: size.length, height: size.length)

@@ -45,28 +45,48 @@ struct CustomerServiceIconView: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(PAXTheme.accentSoft)
-            Image(systemName: systemIcon)
-                .font(.system(size: size * 0.42, weight: .semibold))
-                .foregroundStyle(PAXTheme.accent)
+            RoundedRectangle(cornerRadius: size * 0.27, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [PAXTheme.accent.opacity(0.18), PAXTheme.accent.opacity(0.08)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            PAXIcon(
+                vectorIcon,
+                size: paxSize,
+                emphasis: .primary,
+                tint: PAXTheme.accent
+            )
         }
         .frame(width: size, height: size)
+        .overlay(
+            RoundedRectangle(cornerRadius: size * 0.27, style: .continuous)
+                .stroke(PAXTheme.accent.opacity(0.2), lineWidth: 0.5)
+        )
     }
 
-    private var systemIcon: String {
+    private var paxSize: PAXIconSize {
+        if size >= 64 { return .display }
+        if size >= 48 { return .action }
+        if size >= 36 { return .card }
+        return .row
+    }
+
+    private var vectorIcon: String {
         switch iconKey.lowercased() {
         case "website", "webapp", "pwa": return "globe"
-        case "ios", "android", "crossplatform": return "apps.iphone"
+        case "ios", "android", "crossplatform": return "iphone"
         case "security", "gdpr", "secintegrity", "sectamper", "secflash", "seclayers", "secruntime", "secobfusc", "sectoken", "seclicense": return "lock.shield"
-        case "aichatbot", "aiautomation": return "brain.head.profile"
+        case "aichatbot", "aiautomation": return "sparkles"
         case "bookingsystem": return "calendar"
-        case "ecommerce": return "cart"
+        case "ecommerce": return "briefcase"
         case "uiux", "branding": return "paintbrush"
-        case "maintenance", "devops", "backend": return "server.rack"
-        case "pagespeed", "analytics": return "chart.line.uptrend.xyaxis"
+        case "maintenance", "devops", "backend": return "gear"
+        case "pagespeed", "analytics": return "chart.line"
         case "crm": return "person.2"
-        case "enterprise": return "building.2"
+        case "enterprise": return "briefcase"
         default: return "sparkles"
         }
     }

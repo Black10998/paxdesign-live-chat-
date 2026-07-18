@@ -77,8 +77,14 @@ struct CustomerHomepageView: View {
                     onPrimaryAction: { navigation.selectedTab = .services },
                     onSecondaryAction: { showRequestSheet = true }
                 )
-                if auth.isAuthenticated, let workspace {
-                    CustomerHomeWorkspaceSections(dashboard: workspace, profileName: profileName)
+                if auth.isAuthenticated {
+                    if let workspace {
+                        CustomerPremiumHomeExperience(dashboard: workspace, profileName: profileName)
+                    } else {
+                        CustomerHomeWorkspaceLoadingStrip()
+                    }
+                } else {
+                    CustomerHomeGuestPremiumStrip()
                 }
                 if !data.service_carousel.isEmpty {
                     serviceCarouselSection(data.service_carousel)
@@ -135,10 +141,14 @@ struct CustomerHomepageView: View {
 
             ForEach(section.items) { item in
                 HStack(alignment: .top, spacing: 16) {
-                    Text("\(item.number)")
-                        .font(.title2.weight(.bold))
-                        .foregroundStyle(theme.accent)
-                        .frame(width: 36)
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(theme.accent.opacity(0.14))
+                            .frame(width: 44, height: 44)
+                        Text("\(item.number)")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(theme.accent)
+                    }
                     VStack(alignment: .leading, spacing: 6) {
                         Text(item.title)
                             .font(.headline)
@@ -152,6 +162,10 @@ struct CustomerHomepageView: View {
                 .padding(20)
                 .background(theme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(theme.border.opacity(0.25), lineWidth: 0.5)
+                )
                 .padding(.horizontal, 20)
             }
         }
@@ -263,8 +277,9 @@ struct CustomerHomepageView: View {
 
     private func statsSection(_ stats: [CustomerHomepageResponse.Stat]) -> some View {
         HStack(spacing: 12) {
-            ForEach(stats) { stat in
-                VStack(spacing: 6) {
+            ForEach(Array(stats.enumerated()), id: \.element.id) { index, stat in
+                VStack(spacing: 8) {
+                    PAXIcon(statIcon(for: index), size: .card, emphasis: .primary, tint: theme.accent)
                     Text("\(stat.value)\(stat.suffix)")
                         .font(.title.weight(.heavy))
                         .foregroundStyle(theme.accent)
@@ -280,10 +295,22 @@ struct CustomerHomepageView: View {
                 .padding(.vertical, 20)
                 .background(theme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(theme.border.opacity(0.25), lineWidth: 0.5)
+                )
             }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 24)
+    }
+
+    private func statIcon(for index: Int) -> String {
+        switch index % 3 {
+        case 0: return "checkmark.circle.fill"
+        case 1: return "star.fill"
+        default: return "sparkles"
+        }
     }
 
     private func awardsSection(_ awards: CustomerHomepageResponse.Awards) -> some View {
@@ -353,11 +380,14 @@ struct CustomerHomepageView: View {
 
     private func featuresSection(_ features: [CustomerHomepageResponse.FeatureCard]) -> some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-            ForEach(features) { feature in
+            ForEach(Array(features.enumerated()), id: \.element.id) { index, feature in
                 VStack(alignment: .leading, spacing: 10) {
-                    Text(feature.command)
-                        .font(.system(size: 11, weight: .medium, design: .monospaced))
-                        .foregroundStyle(theme.accent)
+                    HStack(spacing: 8) {
+                        PAXIcon(featureIcon(for: index), size: .card, emphasis: .primary, tint: theme.accent)
+                        Text(feature.command)
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                            .foregroundStyle(theme.accent)
+                    }
                     Text(feature.title)
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(theme.textPrimary)
@@ -369,10 +399,23 @@ struct CustomerHomepageView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(theme.cardBackground)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .stroke(theme.border.opacity(0.25), lineWidth: 0.5)
+                )
             }
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 32)
+    }
+
+    private func featureIcon(for index: Int) -> String {
+        switch index % 4 {
+        case 0: return "sparkles"
+        case 1: return "shield.lefthalf.filled"
+        case 2: return "chart.line"
+        default: return "gear"
+        }
     }
 
     private func processSection(_ process: CustomerHomepageResponse.Process) -> some View {
@@ -447,9 +490,12 @@ struct CustomerHomepageView: View {
 
     private func homepageError(_ message: String) -> some View {
         VStack(spacing: 16) {
-            Image(systemName: network.isConnected ? "exclamationmark.triangle" : "wifi.slash")
-                .font(.largeTitle)
-                .foregroundStyle(theme.accent)
+            PAXIcon(
+                network.isConnected ? "exclamationmark.triangle.fill" : "iphone.slash",
+                size: .display,
+                emphasis: .primary,
+                tint: theme.accent
+            )
             Text(message)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(theme.textSecondary)
@@ -508,6 +554,7 @@ private struct HomepageServiceCarouselCard: View {
                         .clipShape(Capsule())
                 }
                 Spacer()
+                PAXIcon("sparkles", size: .card, emphasis: .primary, tint: theme.accent)
             }
             Text(card.title)
                 .font(.title3.weight(.bold))
@@ -526,8 +573,18 @@ private struct HomepageServiceCarouselCard: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(theme.cardBackground)
+        .background(
+            LinearGradient(
+                colors: [theme.cardBackground, theme.accent.opacity(0.06)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .stroke(theme.border.opacity(0.3), lineWidth: 0.5)
+        )
     }
 }
 

@@ -280,9 +280,8 @@ private struct HeroArrowButtonIcon: View {
                 .fill(Color(red: 15 / 255, green: 15 / 255, blue: 15 / 255))
                 .padding(4)
 
-            Image(systemName: "paperplane.fill")
-                .font(.system(size: size * 0.42, weight: .semibold))
-                .foregroundStyle(Color(red: 139 / 255, green: 139 / 255, blue: 139 / 255))
+            PAXIcon("paperplane.fill", size: .card, emphasis: .secondary)
+                .scaleEffect(size / 28)
                 .rotationEffect(.degrees(rotation))
         }
         .frame(width: size, height: size)

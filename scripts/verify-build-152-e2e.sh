@@ -5,7 +5,7 @@ set -euo pipefail
 BASE="${CUSTOMER_API_BASE:-https://paxdesign.at/wp-json/pdx/v1}"
 STAFF_BASE="${STAFF_API_BASE:-https://paxdesign.at/wp-json/paxdesign/v1}"
 SITE="${PAX_SITE:-https://paxdesign.at}"
-EXPECTED_PLUGIN="${PAX_EXPECTED_PLUGIN:-3.152.1}"
+EXPECTED_PLUGIN="${PAX_EXPECTED_PLUGIN:-3.152.2}"
 CUSTOMER_USER="${PAX_CUSTOMER_USER:-}"
 CUSTOMER_PASS="${PAX_CUSTOMER_APP_PASSWORD:-}"
 STAFF_USER="${PAX_ADMIN_USER:-}"
