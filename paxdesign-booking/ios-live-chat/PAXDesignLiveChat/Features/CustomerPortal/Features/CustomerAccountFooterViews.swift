@@ -196,7 +196,7 @@ struct CustomerGitHubPrivateSheet: View {
 
                     HStack(alignment: .top, spacing: 10) {
                         Image(systemName: "info.circle.fill")
-                            .foregroundStyle(theme.accent)
+                            .foregroundStyle(PAXTheme.accent)
                         Text(String(localized: "For business inquiries, please contact us directly via email."))
                             .font(.footnote)
                             .foregroundStyle(PAXTheme.textSecondary)
