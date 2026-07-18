@@ -3,11 +3,8 @@ import SwiftUI
 struct StaffOrdersListView: View {
     @EnvironmentObject private var auth: AuthStore
     @ObservedObject private var coordinator = StaffOrdersCoordinator.shared
-    @State private var deepLinkOrder: StaffOrderNavigationTarget?
-
-    private struct StaffOrderNavigationTarget: Identifiable, Hashable {
-        let id: Int
-    }
+    @State private var deepLinkOrderId = 0
+    @State private var showDeepLinkOrder = false
 
     var body: some View {
         Group {
@@ -67,14 +64,32 @@ struct StaffOrdersListView: View {
         }
         .refreshable { await coordinator.refresh(auth: auth) }
         .task { await coordinator.refresh(auth: auth) }
+        .onAppear { presentPendingDeepLinkIfNeeded() }
         .onReceive(NotificationCenter.default.publisher(for: .paxOpenStaffOrder)) { note in
             if let orderId = note.userInfo?["order_id"] as? Int {
-                deepLinkOrder = StaffOrderNavigationTarget(id: orderId)
+                presentDeepLink(orderId: orderId)
             }
         }
-        .navigationDestination(item: $deepLinkOrder) { target in
-            StaffOrderDetailView(orderId: target.id)
+        .background {
+            NavigationLink(
+                destination: StaffOrderDetailView(orderId: deepLinkOrderId),
+                isActive: $showDeepLinkOrder
+            ) {
+                EmptyView()
+            }
+            .hidden()
         }
+    }
+
+    private func presentPendingDeepLinkIfNeeded() {
+        if let orderId = coordinator.consumePendingOrderId() {
+            presentDeepLink(orderId: orderId)
+        }
+    }
+
+    private func presentDeepLink(orderId: Int) {
+        deepLinkOrderId = orderId
+        showDeepLinkOrder = true
     }
 }
 
