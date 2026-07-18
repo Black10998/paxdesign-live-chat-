@@ -73,6 +73,11 @@ final class AppLockService: ObservableObject {
     }
 
     private init() {
+        lockEnabled = false
+        biometricEnabled = true
+        pinEnabled = false
+        lockOnLaunch = true
+        autoLockInterval = .fiveMinutes
         reloadFromStorage()
     }
 
