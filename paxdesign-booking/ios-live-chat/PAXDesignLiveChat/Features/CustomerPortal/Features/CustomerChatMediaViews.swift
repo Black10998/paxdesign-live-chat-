@@ -30,7 +30,7 @@ struct CustomerChatBubble: View {
                             .foregroundStyle(isRead ? PAXTheme.accent : .secondary)
                         Text(isRead ? String(localized: "Read") : String(localized: "Sent"))
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(PAXTheme.textSecondary)
                     }
                 }
             }
@@ -62,7 +62,7 @@ struct CustomerChatBubble: View {
                 if let role = roleLabel, !role.isEmpty {
                     Text(role)
                         .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(PAXTheme.textSecondary)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(Color(.tertiarySystemFill))
@@ -117,7 +117,7 @@ struct CustomerChatBubble: View {
             AsyncImage(url: imageURL) { phase in
                 switch phase {
                 case .success(let image): image.resizable().scaledToFit()
-                case .failure: Image(systemName: "photo").foregroundStyle(.secondary)
+                case .failure: Image(systemName: "photo").foregroundStyle(PAXTheme.textSecondary)
                 default: SkeletonBlock(height: 120, cornerRadius: 12).frame(maxWidth: 220)
                 }
             }
@@ -187,10 +187,10 @@ struct CustomerChatSystemNotice: View {
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "info.circle")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(PAXTheme.textSecondary)
             Text(text)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(PAXTheme.textSecondary)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }

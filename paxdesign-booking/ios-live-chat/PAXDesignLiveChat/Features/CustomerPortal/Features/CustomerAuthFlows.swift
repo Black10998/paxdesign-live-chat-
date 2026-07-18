@@ -135,7 +135,7 @@ struct CustomerVerifyEmailView: View {
             Section(String(localized: "Email verification")) {
                 Text(String(localized: "Enter the 6-digit code from your email, or open the verification link."))
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(PAXTheme.textSecondary)
                 TextField(String(localized: "Email"), text: $emailField)
                     .textInputAutocapitalization(.never)
                     .keyboardType(.emailAddress)
@@ -148,7 +148,7 @@ struct CustomerVerifyEmailView: View {
                     }
                 Text(String(localized: "Codes expire after \(codeExpiryHours) hours and can only be used once."))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(PAXTheme.textSecondary)
             }
             if let message {
                 Section {

@@ -12,7 +12,7 @@ struct CustomerNotificationPermissionSheet: View {
                     Text(String(localized: "Stay updated"))
                         .font(.title2.weight(.bold))
                     Text(String(localized: "Notifications help you respond quickly when our team replies, when projects move forward, or when files and orders change."))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(PAXTheme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
 
                     VStack(alignment: .leading, spacing: 14) {

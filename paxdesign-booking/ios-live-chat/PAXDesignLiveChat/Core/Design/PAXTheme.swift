@@ -18,11 +18,15 @@ enum PAXTheme {
 
     static var border: Color { Color(.separator) }
     static var textPrimary: Color { .primary }
-    static var textSecondary: Color { .secondary }
-    static var textTertiary: Color { Color(.tertiaryLabel) }
+    static var textSecondary: Color {
+        cachedIsDark ? Color(UIColor.secondaryLabel) : Color(red: 0.22, green: 0.24, blue: 0.28)
+    }
+    static var textTertiary: Color {
+        cachedIsDark ? Color(UIColor.tertiaryLabel) : Color(red: 0.36, green: 0.38, blue: 0.42)
+    }
     static var icon: Color { .primary }
-    static var iconSecondary: Color { .secondary }
-    static var iconTertiary: Color { Color(.tertiaryLabel) }
+    static var iconSecondary: Color { textSecondary }
+    static var iconTertiary: Color { textTertiary }
     static var iconOnFill: Color { .white }
     static var userBubble: Color { Color(.systemGray5) }
 

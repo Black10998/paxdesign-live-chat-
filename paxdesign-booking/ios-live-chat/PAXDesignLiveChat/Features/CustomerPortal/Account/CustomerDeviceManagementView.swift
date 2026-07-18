@@ -112,7 +112,7 @@ struct CustomerDeviceManagementView: View {
                         .font(.subheadline.weight(.semibold))
                     Text(PAXDeviceModelMapper.friendlyName(for: device.device_model))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(PAXTheme.textSecondary)
                 }
                 Spacer()
                 if device.is_current {
@@ -157,7 +157,7 @@ struct CustomerDeviceManagementView: View {
         HStack {
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(PAXTheme.textSecondary)
             Spacer()
             Text(value.isEmpty ? "—" : value)
                 .font(.caption)

@@ -153,8 +153,8 @@
     'Einen kleinen Moment bitte …',
   ];
   var LIVE_QUALIFY_TEXT   = 'Gerne. Damit ich Sie richtig weiterleiten kann: Worum geht es kurz — Website, AI Chatbot, Booking, Support oder ein anderes Thema?';
-  var POLL_INTERVAL_MS    = 1000;
-  var POLL_INTERVAL_OPEN_MS = 350;
+  var POLL_INTERVAL_MS    = 1200;
+  var POLL_INTERVAL_OPEN_MS = 450;
   var widgetOpen          = false;
   var pageVisible         = !document.hidden;
   var streamSource        = null;
@@ -199,6 +199,7 @@
     if (data.type === 'message' && Array.isArray(payload.message ? [payload.message] : payload.messages)) {
       var msgs = payload.message ? [payload.message] : payload.messages;
       applyIncomingMessages(msgs);
+      pollUpdates();
     }
     if (data.type === 'link_scan_updated' && payload.message) {
       if (!isMessagePermanentlyDeleted(payload.message.id)) {

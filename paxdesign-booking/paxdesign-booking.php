@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.152.4
+Version: 3.152.5
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.152.4');
+define('PAXDESIGN_BOOKING_VERSION', '3.152.5');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -975,9 +975,6 @@ class PAXdesign_Booking {
         register_setting('paxdesign_booking_settings', 'paxdesign_booking_services_url');
         register_setting('paxdesign_booking_settings', 'paxdesign_booking_contact_url');
         register_setting('paxdesign_booking_settings', 'paxdesign_booking_phone');
-        register_setting('paxdesign_booking_settings', 'paxdesign_booking_social_instagram');
-        register_setting('paxdesign_booking_settings', 'paxdesign_booking_social_linkedin');
-        register_setting('paxdesign_booking_settings', 'paxdesign_booking_social_facebook');
         // SMTP
         register_setting('paxdesign_booking_settings', 'paxdesign_smtp_enabled');
         register_setting('paxdesign_booking_settings', 'paxdesign_smtp_host');

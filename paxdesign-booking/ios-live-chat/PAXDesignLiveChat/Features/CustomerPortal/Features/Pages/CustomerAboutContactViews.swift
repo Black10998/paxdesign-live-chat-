@@ -304,7 +304,7 @@ struct CustomerContactView: View {
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(PAXTheme.textTertiary)
             }
             .padding(16)
             .background(theme.cardBackground)

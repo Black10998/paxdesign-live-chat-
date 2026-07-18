@@ -23,10 +23,10 @@ struct CustomerConversationsView: View {
                             Text(conv.last_preview?.isEmpty == false ? conv.last_preview! : String(localized: "Conversation"))
                                 .lineLimit(2)
                             HStack {
-                                Text(conv.handlerLabel).font(.caption).foregroundStyle(.secondary)
+                                Text(conv.handlerLabel).font(.caption).foregroundStyle(PAXTheme.textSecondary)
                                 Spacer()
                                 if let count = conv.message_count, count > 0 {
-                                    Text("\(count)").font(.caption2).foregroundStyle(.secondary)
+                                    Text("\(count)").font(.caption2).foregroundStyle(PAXTheme.textSecondary)
                                 }
                             }
                         }

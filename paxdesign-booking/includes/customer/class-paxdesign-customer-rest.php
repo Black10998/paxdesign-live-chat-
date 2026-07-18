@@ -288,6 +288,23 @@ class PAXdesign_Customer_REST {
             'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
         ));
 
+        register_rest_route(self::NS, '/customer/chat/events', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'chat_events'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+            'args'                => array(
+                'session_id' => array(
+                    'required' => false,
+                    'type'     => 'string',
+                ),
+                'since'      => array(
+                    'required' => false,
+                    'type'     => 'integer',
+                    'default'  => 0,
+                ),
+            ),
+        ));
+
         register_rest_route(self::NS, '/customer/chat/typing', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'chat_typing'),
@@ -751,6 +768,22 @@ class PAXdesign_Customer_REST {
             return $result;
         }
         return rest_ensure_response(array('success' => true));
+    }
+
+    public static function chat_events(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $session_id = sanitize_text_field($request->get_param('session_id') ?? '');
+        if ($session_id === '') {
+            $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
+        }
+        if (!PAXdesign_Customer_Chat_Bridge::user_owns_session($uid, $session_id)) {
+            return new WP_Error('forbidden', __('You do not have access to this conversation.', 'paxdesign-booking'), array('status' => 403));
+        }
+        $since = max(0, (int) $request->get_param('since'));
+        if (class_exists('PAXdesign_Chat_Event_Bus')) {
+            PAXdesign_Chat_Event_Bus::stream_sse('session:' . $session_id, $since);
+        }
+        exit;
     }
 
     public static function chat_typing(WP_REST_Request $request) {

@@ -10,7 +10,6 @@ struct CustomerAccountFooterSection: View {
         VStack(alignment: .leading, spacing: 32) {
             CustomerAccountLegalTerminalView()
             contactSection
-            socialSection
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 28)
@@ -63,26 +62,6 @@ struct CustomerAccountFooterSection: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(String(localized: "GitHub Private Repository"))
-            }
-        }
-    }
-
-    private var socialSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(String(localized: "Social Media"))
-                .font(.title3.weight(.bold))
-                .foregroundStyle(theme.textPrimary)
-
-            HStack(spacing: 14) {
-                ForEach(PAXSocialBrand.allCases, id: \.rawValue) { brand in
-                    Link(destination: brand.url) {
-                        PAXSocialBrandIcon(brand: brand, size: 24)
-                            .frame(width: 52, height: 52)
-                            .background(Color(red: 0.17, green: 0.17, blue: 0.17))
-                            .clipShape(Circle())
-                    }
-                    .accessibilityLabel(brand.label)
-                }
             }
         }
     }
@@ -208,7 +187,7 @@ struct CustomerGitHubPrivateSheet: View {
 
                     Text(String(localized: "PAXDesign uses GitHub as part of its professional development and deployment infrastructure. Our source code is proprietary, securely maintained, and intentionally not publicly available."))
                         .font(.body)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(PAXTheme.textSecondary)
                         .multilineTextAlignment(.center)
 
                     Text(String(localized: "This project is not open source. Access is restricted to authorized PAXDesign team members only."))
@@ -220,7 +199,7 @@ struct CustomerGitHubPrivateSheet: View {
                             .foregroundStyle(PAXBrand.accent)
                         Text(String(localized: "For business inquiries, please contact us directly via email."))
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(PAXTheme.textSecondary)
                     }
                     .padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)

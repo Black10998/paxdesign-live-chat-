@@ -71,7 +71,7 @@ struct CustomerProjectsListView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(project.title).font(.headline)
             HStack {
-                Text(project.status).foregroundStyle(.secondary)
+                Text(project.status).foregroundStyle(PAXTheme.textSecondary)
                 Spacer()
                 ProgressView(value: Double(project.progress), total: 100)
                     .frame(width: 72)
@@ -120,7 +120,7 @@ struct CustomerProjectDetailView: View {
                             ForEach(milestones) { m in
                                 VStack(alignment: .leading) {
                                     Text(m.title).font(.headline)
-                                    Text(m.status).font(.caption).foregroundStyle(.secondary)
+                                    Text(m.status).font(.caption).foregroundStyle(PAXTheme.textSecondary)
                                 }
                             }
                         }
@@ -156,7 +156,7 @@ struct CustomerProjectDetailView: View {
                             ForEach(activity) { a in
                                 VStack(alignment: .leading) {
                                     Text(a.summary)
-                                    Text(a.created_at).font(.caption).foregroundStyle(.secondary)
+                                    Text(a.created_at).font(.caption).foregroundStyle(PAXTheme.textSecondary)
                                 }
                             }
                         }
@@ -256,7 +256,7 @@ struct CustomerOrdersListView: View {
                     } label: {
                         VStack(alignment: .leading) {
                             Text(order.service_label).font(.headline)
-                            Text(order.status).foregroundStyle(.secondary)
+                            Text(order.status).foregroundStyle(PAXTheme.textSecondary)
                         }
                     }
                 }
@@ -308,7 +308,7 @@ struct CustomerOrderDetailView: View {
                             HStack {
                                 Text(order.ref)
                                     .font(.caption.monospaced())
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(PAXTheme.textSecondary)
                                 Spacer()
                                 Text(order.status.capitalized)
                                     .font(.caption.weight(.semibold))
@@ -323,7 +323,7 @@ struct CustomerOrderDetailView: View {
                             if let description = order.description, !description.isEmpty {
                                 Text(description)
                                     .font(.body)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(PAXTheme.textSecondary)
                             }
                         }
                         .padding(20)
@@ -375,7 +375,7 @@ struct CustomerOrderDetailView: View {
                                             if !item.created_at.isEmpty {
                                                 Text(item.created_at)
                                                     .font(.caption)
-                                                    .foregroundStyle(.secondary)
+                                                    .foregroundStyle(PAXTheme.textSecondary)
                                             }
                                         }
                                         Spacer(minLength: 0)
@@ -649,13 +649,13 @@ private struct CustomerNewsCard: View {
                 if let excerpt = item.excerpt, !excerpt.isEmpty {
                     Text(excerpt)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(PAXTheme.textSecondary)
                         .lineLimit(3)
                 }
                 if let date = item.published_at, !date.isEmpty {
                     Text(CustomerPortalFormatting.relativeDate(date))
                         .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(PAXTheme.textTertiary)
                 }
             }
         }
@@ -688,11 +688,14 @@ struct CustomerNewsDetailView: View {
                     if let date = item.published_at, !date.isEmpty {
                         Text(CustomerPortalFormatting.relativeDate(date))
                             .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(PAXTheme.textSecondary)
                     }
                     if let body = item.body, !body.isEmpty {
-                        Text(body.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression))
+                        Text(htmlPlainText(body))
                             .font(.body)
+                            .foregroundStyle(PAXTheme.textPrimary)
+                            .lineSpacing(5)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .padding()
@@ -766,9 +769,9 @@ struct CustomerNotificationsView: View {
                                     }
                                     Text(item.title).font(.headline).foregroundStyle(PAXTheme.textPrimary)
                                     if let body = item.body, !body.isEmpty {
-                                        Text(body).font(.subheadline).foregroundStyle(.secondary)
+                                        Text(body).font(.subheadline).foregroundStyle(PAXTheme.textSecondary)
                                     }
-                                    Text(item.created_at).font(.caption2).foregroundStyle(.tertiary)
+                                    Text(item.created_at).font(.caption2).foregroundStyle(PAXTheme.textTertiary)
                                 }
                                 .padding(.vertical, 4)
                                 .opacity(item.is_read ? 0.72 : 1)

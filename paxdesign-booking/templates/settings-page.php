@@ -35,9 +35,6 @@ $logo_url           = get_option('paxdesign_booking_logo_url', '');
 $services_url       = get_option('paxdesign_booking_services_url', home_url('/'));
 $contact_url        = get_option('paxdesign_booking_contact_url', home_url('/'));
 $phone              = get_option('paxdesign_booking_phone', '+43 681 20543638');
-$social_instagram   = get_option('paxdesign_booking_social_instagram', '');
-$social_linkedin    = get_option('paxdesign_booking_social_linkedin', '');
-$social_facebook    = get_option('paxdesign_booking_social_facebook', '');
 $resolved_logo      = PAXdesign_Email_Templates::get_logo_url();
 $smtp_ok            = $smtp_enabled && !empty($smtp_host);
 $chat_enabled       = (bool) get_option('paxdesign_chat_enabled', true);
@@ -383,31 +380,6 @@ $chat_quick_links   = class_exists('PAXdesign_Chat_Quick_Links') ? PAXdesign_Cha
               </div>
             </div>
 
-            <div class="ps-divider"><span>Social Media (optional)</span></div>
-
-            <div class="ps-grid-2">
-              <div class="ps-field">
-                <label class="ps-label" for="paxdesign_booking_social_instagram">Instagram</label>
-                <div class="ps-input-wrap">
-                  <input type="url" id="paxdesign_booking_social_instagram" name="paxdesign_booking_social_instagram"
-                         value="<?php echo esc_attr($social_instagram); ?>" placeholder="https://instagram.com/...">
-                </div>
-              </div>
-              <div class="ps-field">
-                <label class="ps-label" for="paxdesign_booking_social_linkedin">LinkedIn</label>
-                <div class="ps-input-wrap">
-                  <input type="url" id="paxdesign_booking_social_linkedin" name="paxdesign_booking_social_linkedin"
-                         value="<?php echo esc_attr($social_linkedin); ?>" placeholder="https://linkedin.com/...">
-                </div>
-              </div>
-            </div>
-            <div class="ps-field">
-              <label class="ps-label" for="paxdesign_booking_social_facebook">Facebook</label>
-              <div class="ps-input-wrap">
-                <input type="url" id="paxdesign_booking_social_facebook" name="paxdesign_booking_social_facebook"
-                       value="<?php echo esc_attr($social_facebook); ?>" placeholder="https://facebook.com/...">
-              </div>
-            </div>
           </div>
         </section>
 

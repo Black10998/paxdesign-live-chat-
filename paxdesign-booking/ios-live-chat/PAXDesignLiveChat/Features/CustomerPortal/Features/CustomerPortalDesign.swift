@@ -229,4 +229,15 @@ enum CustomerPortalFormatting {
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: date, relativeTo: Date())
     }
+
+    static func htmlPlainText(_ html: String) -> String {
+        html
+            .replacingOccurrences(of: "<br\\s*/?>", with: "\n", options: .regularExpression)
+            .replacingOccurrences(of: "</p>", with: "\n\n", options: .caseInsensitive)
+            .replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 }

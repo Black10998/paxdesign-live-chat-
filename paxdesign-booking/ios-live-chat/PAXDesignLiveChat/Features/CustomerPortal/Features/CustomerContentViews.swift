@@ -75,7 +75,7 @@ struct CustomerDiscoverView: View {
                                     }
                                     Spacer()
                                     Image(systemName: "chevron.right")
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(PAXTheme.textSecondary)
                                 }
                             }
                         }
@@ -168,7 +168,7 @@ private struct CustomerDiscoverMenuRow: View {
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(PAXTheme.textTertiary)
                 }
                 .padding(.leading, CGFloat(depth) * 12)
             }

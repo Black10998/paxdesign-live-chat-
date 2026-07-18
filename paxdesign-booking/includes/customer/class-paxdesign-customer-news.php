@@ -82,6 +82,11 @@ class PAXdesign_Customer_News {
         );
         if (!empty($row['image_attachment_id'])) {
             $item['image_url'] = wp_get_attachment_url((int) $row['image_attachment_id']);
+        } elseif (!empty($row['audience_meta'])) {
+            $meta = json_decode((string) $row['audience_meta'], true);
+            if (is_array($meta) && !empty($meta['featured_image_url'])) {
+                $item['image_url'] = esc_url_raw((string) $meta['featured_image_url']);
+            }
         }
         if ($full) {
             $item['body'] = $row['body'];
@@ -130,6 +135,11 @@ class PAXdesign_Customer_News {
             return (int) $news_id;
         }
         $row['created_at'] = $now;
+        if (!isset($data['published_at']) && ($row['status'] ?? '') === 'published') {
+            $row['published_at'] = $now;
+        } elseif (!empty($data['published_at'])) {
+            $row['published_at'] = gmdate('Y-m-d H:i:s', strtotime((string) $data['published_at']));
+        }
         $wpdb->insert($table, $row);
         return (int) $wpdb->insert_id;
     }

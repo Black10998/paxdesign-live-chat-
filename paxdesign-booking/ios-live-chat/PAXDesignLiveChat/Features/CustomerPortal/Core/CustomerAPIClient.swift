@@ -430,6 +430,42 @@ final class CustomerAPIClient: ObservableObject {
         return try await get(path, as: CustomerChatPoll.self)
     }
 
+    func consumeCustomerChatEventStream(
+        sessionID: String?,
+        since: Int,
+        onEvent: @escaping @MainActor (ChatStreamEvent) async -> Void
+    ) async throws {
+        guard let auth, let header = auth.basicAuthHeader else {
+            throw CustomerAPIError.unauthorized
+        }
+        var path = "/customer/chat/events?since=\(since)"
+        if let sessionID, !sessionID.isEmpty {
+            let encoded = sessionID.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? sessionID
+            path += "&session_id=\(encoded)"
+        }
+        guard let url = endpointURL(path) else {
+            throw CustomerAPIError.invalidURL
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.setValue(header, forHTTPHeaderField: "Authorization")
+        request.setValue("text/event-stream", forHTTPHeaderField: "Accept")
+        request.timeoutInterval = 30
+
+        let (bytes, response) = try await URLSession.shared.bytes(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw CustomerAPIError.http((response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+
+        var dataBuffer = ""
+        for try await line in bytes.lines {
+            if Task.isCancelled { break }
+            if let event = ChatEventStreamParser.parseLine(line, dataBuffer: &dataBuffer) {
+                await onEvent(event)
+            }
+        }
+    }
+
     func sendChatMessage(
         _ message: String,
         sessionID: String? = nil,

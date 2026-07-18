@@ -42,7 +42,11 @@ struct CustomerMarketingTheme: Equatable {
     }
 
     var textSecondary: Color {
-        colorScheme == .dark ? Color(red: 0.72, green: 0.72, blue: 0.72) : Color(red: 0.24, green: 0.26, blue: 0.30)
+        colorScheme == .dark ? Color(red: 0.72, green: 0.72, blue: 0.72) : Color(red: 0.20, green: 0.22, blue: 0.26)
+    }
+
+    var textTertiary: Color {
+        colorScheme == .dark ? Color(red: 0.58, green: 0.58, blue: 0.58) : Color(red: 0.34, green: 0.36, blue: 0.40)
     }
 
     var accentOnAccent: Color { Color.black }

@@ -89,7 +89,7 @@ struct CustomerDashboardView: View {
                                             .font(.headline)
                                         Spacer()
                                         Image(systemName: "chevron.right")
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(PAXTheme.textSecondary)
                                     }
                                 }
                                 .buttonStyle(.plain)
@@ -123,7 +123,7 @@ struct CustomerDashboardView: View {
                                             HStack {
                                                 VStack(alignment: .leading, spacing: 4) {
                                                     Text(project.title).font(.headline)
-                                                    Text(project.status).font(.caption).foregroundStyle(.secondary)
+                                                    Text(project.status).font(.caption).foregroundStyle(PAXTheme.textSecondary)
                                                 }
                                                 Spacer()
                                                 Text("\(project.progress)%").font(.subheadline.weight(.semibold))
@@ -153,7 +153,7 @@ struct CustomerDashboardView: View {
                                             HStack {
                                                 Text(order.service_label)
                                                 Spacer()
-                                                Text(order.status).foregroundStyle(.secondary)
+                                                Text(order.status).foregroundStyle(PAXTheme.textSecondary)
                                             }
                                         }
                                         .buttonStyle(.plain)
@@ -188,7 +188,7 @@ struct CustomerDashboardView: View {
                                                 VStack(alignment: .leading, spacing: 4) {
                                                     Text(item.title).font(.headline)
                                                     if let excerpt = item.excerpt, !excerpt.isEmpty {
-                                                        Text(excerpt).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                                                        Text(excerpt).font(.caption).foregroundStyle(PAXTheme.textSecondary).lineLimit(2)
                                                     }
                                                 }
                                             }
@@ -232,7 +232,7 @@ struct CustomerDashboardView: View {
                                             VStack(alignment: .leading, spacing: 4) {
                                                 Text(item.title).font(.headline)
                                                 if let excerpt = item.excerpt, !excerpt.isEmpty {
-                                                    Text(excerpt).font(.subheadline).foregroundStyle(.secondary).lineLimit(2)
+                                                    Text(excerpt).font(.subheadline).foregroundStyle(PAXTheme.textSecondary).lineLimit(2)
                                                 }
                                             }
                                         }
@@ -296,6 +296,8 @@ struct CustomerChatView: View {
     @State private var isSending = false
     @State private var lastSeq = 0
     @State private var pollTask: Task<Void, Never>?
+    @State private var streamTask: Task<Void, Never>?
+    @State private var streamSince = 0
     @State private var showImagePicker = false
     @State private var isRecordingVoice = false
     @State private var voiceRecorder = CustomerVoiceRecorder()
@@ -305,12 +307,12 @@ struct CustomerChatView: View {
     @State private var recovery: CustomerChatSessionRecovery.Action?
     @State private var isRecovering = false
     @State private var pollingSuspended = false
-    @State private var pollIntervalNs: UInt64 = 3_000_000_000
+    @State private var pollIntervalNs: UInt64 = 700_000_000
     @State private var showDocumentPicker = false
     @State private var showCameraPicker = false
 
-    private let minPollIntervalNs: UInt64 = 3_000_000_000
-    private let maxPollIntervalNs: UInt64 = 30_000_000_000
+    private let minPollIntervalNs: UInt64 = 700_000_000
+    private let maxPollIntervalNs: UInt64 = 8_000_000_000
 
     private var isHumanQueue: Bool {
         guard let handler = poll?.handler else { return false }
@@ -330,7 +332,7 @@ struct CustomerChatView: View {
                     if let notice, !notice.isEmpty {
                         Text(notice)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(PAXTheme.textSecondary)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
                             .frame(maxWidth: .infinity)
@@ -430,9 +432,11 @@ struct CustomerChatView: View {
                 }
                 await refresh(full: true)
                 startPolling()
+                startEventStream()
             }
             .onDisappear {
                 pollTask?.cancel()
+                streamTask?.cancel()
                 typingTask?.cancel()
                 if let sessionID = poll?.session_id {
                     AppRefreshPolicy.setActiveSession(nil)
@@ -656,6 +660,7 @@ struct CustomerChatView: View {
             pollingSuspended = false
             error = nil
             startPolling()
+            startEventStream()
             await refresh(full: true)
             if let preserveDraft {
                 draft = preserveDraft
@@ -670,6 +675,7 @@ struct CustomerChatView: View {
         recovery = nil
         pollingSuspended = false
         startPolling()
+        startEventStream()
         await refresh(full: true)
     }
 
@@ -695,8 +701,67 @@ struct CustomerChatView: View {
                 if hadNew {
                     pollIntervalNs = minPollIntervalNs
                 } else {
-                    let step: UInt64 = isHumanQueue ? 2_000_000_000 : 3_000_000_000
+                    let step: UInt64 = isHumanQueue ? 500_000_000 : 800_000_000
                     pollIntervalNs = min(pollIntervalNs + step, maxPollIntervalNs)
+                }
+            }
+        }
+    }
+
+    private func startEventStream() {
+        streamTask?.cancel()
+        guard poll?.session_id != nil else { return }
+        streamTask = Task {
+            while !Task.isCancelled {
+                guard network.isConnected, !pollingSuspended else {
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    continue
+                }
+                let sessionID = poll?.session_id
+                let since = streamSince
+                do {
+                    try await api.consumeCustomerChatEventStream(sessionID: sessionID, since: since) { event in
+                        if event.id > 0 {
+                            streamSince = max(streamSince, event.id)
+                        }
+                        switch event.type {
+                        case "message", "message_deleted", "link_scan_updated", "handler":
+                            pollIntervalNs = minPollIntervalNs
+                            await refresh(full: false)
+                        case "typing":
+                            if let active = event.payload["active"] as? Bool, active,
+                               let who = event.payload["who"] as? String, who == "admin" {
+                                poll = CustomerChatPoll(
+                                    session_id: poll?.session_id,
+                                    handler: poll?.handler,
+                                    messages: poll?.messages,
+                                    message_count: poll?.message_count,
+                                    last_preview: poll?.last_preview,
+                                    notice: poll?.notice,
+                                    admin_typing: true,
+                                    user_typing: poll?.user_typing,
+                                    other_read_seq: poll?.other_read_seq
+                                )
+                            } else if event.payload["who"] as? String == "admin" {
+                                poll = CustomerChatPoll(
+                                    session_id: poll?.session_id,
+                                    handler: poll?.handler,
+                                    messages: poll?.messages,
+                                    message_count: poll?.message_count,
+                                    last_preview: poll?.last_preview,
+                                    notice: poll?.notice,
+                                    admin_typing: false,
+                                    user_typing: poll?.user_typing,
+                                    other_read_seq: poll?.other_read_seq
+                                )
+                            }
+                        default:
+                            break
+                        }
+                    }
+                } catch {
+                    if Task.isCancelled { break }
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
                 }
             }
         }
@@ -807,6 +872,7 @@ struct CustomerChatView: View {
                 pollingSuspended = false
                 recovery = nil
                 startPolling()
+                startEventStream()
                 return try await api.sendChatMessage(
                     text,
                     sessionID: renewed.session_id,
@@ -998,7 +1064,7 @@ struct CustomerProfileView: View {
                             CustomerProfileAvatarView(urlString: profile.avatar_url, size: 64)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(profile.display_name).font(.headline)
-                                Text(profile.email).font(.subheadline).foregroundStyle(.secondary)
+                                Text(profile.email).font(.subheadline).foregroundStyle(PAXTheme.textSecondary)
                                 Text(String(localized: "Signed in"))
                                     .font(.caption.weight(.semibold))
                                     .foregroundStyle(.green)
@@ -1126,7 +1192,7 @@ private struct CustomerChatTypingIndicator: View {
                 .controlSize(.small)
             Text(label)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(PAXTheme.textSecondary)
             Spacer(minLength: 24)
         }
         .padding(.horizontal, 4)
