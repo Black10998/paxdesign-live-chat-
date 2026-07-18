@@ -81,6 +81,23 @@ jobs:
               --jq '[.[] | select(.status == "in_progress" or .status == "queued") | .databaseId] | first // empty'
           }
 
+          find_latest_successful_main() {
+            gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow release-appstore.yml \
+              --branch main \
+              --status success \
+              --limit 15 \
+              --json databaseId \
+              --jq '.[0].databaseId // empty'
+          }
+
+          if [[ -n "${TESTFLIGHT_IPA_RUN_ID:-}" ]]; then
+            echo "Using pinned App Store IPA run $TESTFLIGHT_IPA_RUN_ID"
+            echo "run_id=$TESTFLIGHT_IPA_RUN_ID" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           while [[ $(date +%s) -lt $DEADLINE ]]; do
             RUN_ID="$(find_successful_run "$SHA")"
             if [[ -n "$RUN_ID" ]]; then
@@ -106,6 +123,13 @@ jobs:
           RUN_ID="$(find_successful_run "$SHA")"
           if [[ -n "$RUN_ID" ]]; then
             echo "Using App Store IPA from commit $SHA (run $RUN_ID)"
+            echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          RUN_ID="$(find_latest_successful_main)"
+          if [[ -n "$RUN_ID" ]]; then
+            echo "Fallback: using latest successful App Store build on main (run $RUN_ID); IPA build number is validated next."
             echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -150,10 +174,24 @@ jobs:
         run: python3 scripts/appstore-connect/verify-asc-credentials.py
 
       - name: Upload IPA to TestFlight
+        id: upload
         shell: bash
         run: |
           set +x
           chmod +x scripts/appstore-connect/upload-ipa.sh
+          ./scripts/appstore-connect/upload-ipa.sh artifacts/ipa/PAXDesignLiveChat-AppStore.ipa
+
+      - name: Clean up obsolete TestFlight builds before retry
+        if: failure() && steps.upload.outcome == 'failure'
+        env:
+          TESTFLIGHT_KEEP_BUILD: "158"
+        run: python3 scripts/appstore-connect/cleanup_testflight_builds.py
+
+      - name: Retry Upload IPA to TestFlight
+        if: failure() && steps.upload.outcome == 'failure'
+        shell: bash
+        run: |
+          set +x
           ./scripts/appstore-connect/upload-ipa.sh artifacts/ipa/PAXDesignLiveChat-AppStore.ipa
 
       - name: Enable internal TestFlight testing
