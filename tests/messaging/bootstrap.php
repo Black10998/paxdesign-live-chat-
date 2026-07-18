@@ -122,8 +122,17 @@ class Test_WPDB {
         }
         return $this->pdo->exec("DELETE FROM $table WHERE " . implode(' AND ', $conditions));
     }
+
+    public function flush() {
+        // No-op for PDO test harness.
+    }
+
+    public function check_connection() {
+        // No-op for PDO test harness.
+    }
 }
 
 $GLOBALS['wpdb'] = new Test_WPDB();
+require_once dirname(__DIR__, 2) . '/paxdesign-booking/includes/class-paxdesign-db.php';
 require_once dirname(__DIR__, 2) . '/paxdesign-booking/includes/class-paxdesign-message-store.php';
 require_once dirname(__DIR__, 2) . '/paxdesign-booking/includes/class-paxdesign-chat-event-bus.php';
