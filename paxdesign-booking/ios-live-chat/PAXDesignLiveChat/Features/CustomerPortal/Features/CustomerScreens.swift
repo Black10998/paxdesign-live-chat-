@@ -711,7 +711,7 @@ struct CustomerChatView: View {
     private func startEventStream() {
         streamTask?.cancel()
         guard poll?.session_id != nil else { return }
-        streamTask = Task {
+        streamTask = Task { @MainActor in
             while !Task.isCancelled {
                 guard network.isConnected, !pollingSuspended else {
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
@@ -725,36 +725,9 @@ struct CustomerChatView: View {
                             streamSince = max(streamSince, event.id)
                         }
                         switch event.type {
-                        case "message", "message_deleted", "link_scan_updated", "handler":
+                        case "message", "message_deleted", "link_scan_updated", "handler", "typing":
                             pollIntervalNs = minPollIntervalNs
-                            await refresh(full: false)
-                        case "typing":
-                            if let active = event.payload["active"] as? Bool, active,
-                               let who = event.payload["who"] as? String, who == "admin" {
-                                poll = CustomerChatPoll(
-                                    session_id: poll?.session_id,
-                                    handler: poll?.handler,
-                                    messages: poll?.messages,
-                                    message_count: poll?.message_count,
-                                    last_preview: poll?.last_preview,
-                                    notice: poll?.notice,
-                                    admin_typing: true,
-                                    user_typing: poll?.user_typing,
-                                    other_read_seq: poll?.other_read_seq
-                                )
-                            } else if event.payload["who"] as? String == "admin" {
-                                poll = CustomerChatPoll(
-                                    session_id: poll?.session_id,
-                                    handler: poll?.handler,
-                                    messages: poll?.messages,
-                                    message_count: poll?.message_count,
-                                    last_preview: poll?.last_preview,
-                                    notice: poll?.notice,
-                                    admin_typing: false,
-                                    user_typing: poll?.user_typing,
-                                    other_read_seq: poll?.other_read_seq
-                                )
-                            }
+                            await refresh(full: event.type == "message" || event.type == "handler")
                         default:
                             break
                         }
