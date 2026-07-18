@@ -18,6 +18,7 @@ jobs:
     timeout-minutes: 90
     env:
       APP_BUNDLE_ID: at.paxdesign.livechat
+      TESTFLIGHT_IPA_RUN_ID: "29647255324"
       TESTFLIGHT_INTERNAL_TESTER_EMAIL: awjime29@icloud.com
       APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
       APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
@@ -45,6 +46,7 @@ jobs:
           set -euo pipefail
           EXPECTED="${{ steps.version.outputs.build }}"
           SHA="${{ github.sha }}"
+          SHORT_WAIT=$(( $(date +%s) + 120 ))
           DEADLINE=$(( $(date +%s) + 1800 ))
           RUN_ID=""
 
@@ -175,6 +177,7 @@ jobs:
 
       - name: Upload IPA to TestFlight
         id: upload
+        continue-on-error: true
         shell: bash
         run: |
           set +x
@@ -182,19 +185,27 @@ jobs:
           ./scripts/appstore-connect/upload-ipa.sh artifacts/ipa/PAXDesignLiveChat-AppStore.ipa
 
       - name: Clean up obsolete TestFlight builds before retry
-        if: failure() && steps.upload.outcome == 'failure'
+        if: steps.upload.outcome == 'failure'
         env:
           TESTFLIGHT_KEEP_BUILD: "158"
         run: python3 scripts/appstore-connect/cleanup_testflight_builds.py
 
       - name: Retry Upload IPA to TestFlight
-        if: failure() && steps.upload.outcome == 'failure'
+        id: upload_retry
+        if: steps.upload.outcome == 'failure'
         shell: bash
         run: |
           set +x
           ./scripts/appstore-connect/upload-ipa.sh artifacts/ipa/PAXDesignLiveChat-AppStore.ipa
 
+      - name: Require successful upload
+        if: steps.upload.outcome == 'failure' && steps.upload_retry.outcome != 'success'
+        run: |
+          echo "TestFlight upload failed on both attempts." >&2
+          exit 1
+
       - name: Enable internal TestFlight testing
+        if: steps.upload.outcome == 'success' || steps.upload_retry.outcome == 'success'
         env:
           TESTFLIGHT_TARGET_BUILD: ${{ steps.version.outputs.build }}
           TESTFLIGHT_POLL_SECONDS: "30"
