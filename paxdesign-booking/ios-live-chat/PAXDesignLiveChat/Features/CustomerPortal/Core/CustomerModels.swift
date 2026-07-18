@@ -44,10 +44,22 @@ struct CustomerProjectDetail: Decodable {
         let completed_at: String?
     }
     struct Note: Decodable, Identifiable {
-        var id: Int { abs(body.hashValue) }
+        let id: Int
         let body: String
         let created_at: String
         let author_user_id: Int
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = try c.decodeIfPresent(Int.self, forKey: .id) ?? abs((try c.decode(String.self, forKey: .body)).hashValue)
+            body = try c.decode(String.self, forKey: .body)
+            created_at = try c.decodeIfPresent(String.self, forKey: .created_at) ?? ""
+            author_user_id = try c.decodeIfPresent(Int.self, forKey: .author_user_id) ?? 0
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case id, body, created_at, author_user_id
+        }
     }
     struct FileItem: Decodable, Identifiable {
         let id: Int
@@ -65,10 +77,24 @@ struct CustomerProjectDetail: Decodable {
         let display_name: String?
     }
     struct Activity: Decodable, Identifiable {
-        var id: Int { abs(summary.hashValue) }
+        let id: Int
         let event_type: String
         let summary: String
         let created_at: String
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            let summaryValue = try c.decode(String.self, forKey: .summary)
+            let created = try c.decodeIfPresent(String.self, forKey: .created_at) ?? ""
+            id = try c.decodeIfPresent(Int.self, forKey: .id) ?? abs("\(created)-\(summaryValue)".hashValue)
+            event_type = try c.decodeIfPresent(String.self, forKey: .event_type) ?? ""
+            summary = summaryValue
+            created_at = created
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case id, event_type, summary, created_at
+        }
     }
 
     let id: Int
@@ -99,19 +125,51 @@ struct CustomerOrderSummary: Decodable, Identifiable {
 
 struct CustomerOrderDetail: Decodable {
     struct Note: Decodable, Identifiable {
-        var id: Int { abs(body.hashValue) }
+        let id: Int
         let body: String
         let created_at: String
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            let bodyValue = try c.decode(String.self, forKey: .body)
+            let created = try c.decodeIfPresent(String.self, forKey: .created_at) ?? ""
+            id = try c.decodeIfPresent(Int.self, forKey: .id) ?? abs("\(created)-\(bodyValue)".hashValue)
+            body = bodyValue
+            created_at = created
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case id, body, created_at
+        }
     }
     struct Activity: Decodable, Identifiable {
-        var id: Int { abs(summary.hashValue) }
+        let id: Int
         let summary: String
         let event_type: String
         let created_at: String
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            let summaryValue = try c.decode(String.self, forKey: .summary)
+            let created = try c.decodeIfPresent(String.self, forKey: .created_at) ?? ""
+            id = try c.decodeIfPresent(Int.self, forKey: .id) ?? abs("\(created)-\(summaryValue)".hashValue)
+            summary = summaryValue
+            event_type = try c.decodeIfPresent(String.self, forKey: .event_type) ?? ""
+            created_at = created
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case id, summary, event_type, created_at
+        }
     }
     struct Assigned: Decodable {
         let user_id: Int
-        let display_name: String
+        let display_name: String?
+
+        var label: String {
+            let name = display_name?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return name.isEmpty ? String(localized: "Unassigned") : name
+        }
     }
     struct FileItem: Decodable, Identifiable {
         let id: Int

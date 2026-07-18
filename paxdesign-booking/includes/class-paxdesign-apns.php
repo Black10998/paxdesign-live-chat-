@@ -337,6 +337,10 @@ class PAXdesign_APNS {
     }
 
     public static function on_new_chat_session($session_id, $service, $preview) {
+        $preview = trim((string) $preview);
+        if ($preview === '' || self::is_system_session_preview($preview)) {
+            return;
+        }
         self::send_to_admins(
             'Neuer Chat gestartet',
             ($service !== '' ? $service . ' — ' : '') . ($preview !== '' ? $preview : 'Neues Kundengespräch'),
@@ -351,6 +355,47 @@ class PAXdesign_APNS {
         );
     }
 
+    public static function notify_new_customer_order($order_id, $order_ref, $customer_name, $service_label, $body) {
+        $order_id = absint($order_id);
+        if ($order_id <= 0) {
+            return;
+        }
+        $title = sprintf(__('New request from %s', 'paxdesign-booking'), $customer_name !== '' ? $customer_name : __('Customer', 'paxdesign-booking'));
+        self::send_to_admins(
+            $title,
+            $body !== '' ? $body : $service_label,
+            array(
+                'type'          => 'customer_order',
+                'event'         => 'new_customer_order',
+                'order_id'      => (string) $order_id,
+                'order_ref'     => (string) $order_ref,
+                'customer_name' => (string) $customer_name,
+                'service'       => (string) $service_label,
+                'preview'       => (string) $body,
+            ),
+            false
+        );
+    }
+
+    private static function is_system_session_preview($preview) {
+        $preview = trim((string) $preview);
+        if ($preview === '') {
+            return true;
+        }
+        $needles = array(
+            'Chat-Session gestartet',
+            'Session started',
+            'Chat session started',
+            'تم بدء',
+        );
+        foreach ($needles as $needle) {
+            if (stripos($preview, $needle) !== false) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * @param array<string, mixed> $meta
      */
@@ -360,17 +405,26 @@ class PAXdesign_APNS {
         }
 
         $preview = isset($meta['preview']) ? (string) $meta['preview'] : '';
+        if (self::is_system_session_preview($preview)) {
+            return;
+        }
+
+        $is_new = !empty($meta['is_new']);
+        if ($is_new) {
+            // New sessions are announced via paxdesign_new_chat_session only.
+            return;
+        }
+
         $service = isset($meta['service']) ? (string) $meta['service'] : '';
         $handler = isset($meta['handler']) ? (string) $meta['handler'] : 'ai';
         $seq     = isset($meta['seq']) ? (int) $meta['seq'] : 0;
-        $is_new  = !empty($meta['is_new']);
 
         $body = ($service !== '' ? $service . ' — ' : '') . ($preview !== '' ? $preview : 'Chat aktualisiert');
 
         $last_role = isset($meta['last_role']) ? (string) $meta['last_role'] : '';
         $needs_ai_attention = ($handler === 'ai' && $last_role === 'user' && $preview !== '');
-        $type = $is_new ? 'new_chat' : ($needs_ai_attention ? 'ai_attention' : 'session_sync');
-        $event = $is_new ? 'new_chat_started' : 'assigned_chat_updated';
+        $type = $needs_ai_attention ? 'ai_attention' : 'session_sync';
+        $event = 'assigned_chat_updated';
         if ($handler === 'live_request') {
             $type = 'live_request';
             $event = 'customer_waiting';
@@ -390,7 +444,7 @@ class PAXdesign_APNS {
             'team_request_update',
             'link_scan_attention',
         );
-        $silent = !in_array($event, $visible_events, true) && !$is_new && !$needs_ai_attention;
+        $silent = !in_array($event, $visible_events, true) && !$needs_ai_attention;
         if ($last_role === 'admin' && $event !== 'customer_waiting') {
             $silent = true;
         }
@@ -406,7 +460,7 @@ class PAXdesign_APNS {
         self::send_to_admins(
             $event === 'customer_waiting'
                 ? 'Kunde wartet'
-                : ($event === 'new_lead_contact' ? 'Neuer Lead/Kontakt' : ($is_new ? 'Neuer Chat gestartet' : 'Zugewiesener Chat aktualisiert')),
+                : ($event === 'new_lead_contact' ? 'Neuer Lead/Kontakt' : 'Zugewiesener Chat aktualisiert'),
             $body,
             array(
                 'type'       => $type,

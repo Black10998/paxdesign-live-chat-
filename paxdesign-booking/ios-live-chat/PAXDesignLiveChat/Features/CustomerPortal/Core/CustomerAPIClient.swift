@@ -94,13 +94,35 @@ final class CustomerAPIClient: ObservableObject {
         return try await publicPost("/auth/resend-verification", json: body, as: CustomerAuthMessageResponse.self)
     }
 
-    func registerPush(token: String, deviceID: String) async throws {
-        _ = try await post("/customer/push/register", body: [
+    func registerPush(token: String, deviceID: String, metadata: [String: Any] = [:]) async throws {
+        var body: [String: Any] = [
             "token": token,
             "device_id": deviceID,
             "platform": "ios",
-            "sandbox": PAXAPNsEnvironment.isSandbox ? "1" : "0",
-        ], as: CustomerEmptyResponse.self)
+            "sandbox": PAXAPNsEnvironment.isSandbox,
+        ]
+        for (key, value) in metadata where key != "device_id" {
+            body[key] = value
+        }
+        _ = try await requestJSON(path: "/customer/push/register", method: "POST", json: body, as: CustomerEmptyResponse.self)
+    }
+
+    func fetchDevices() async throws -> CustomerDevicesResponse {
+        let deviceId = PAXDeviceInfo.deviceId.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? PAXDeviceInfo.deviceId
+        return try await get("/customer/devices?current_device_id=\(deviceId)", as: CustomerDevicesResponse.self)
+    }
+
+    func revokeDevice(deviceId: String) async throws {
+        _ = try await requestJSON(path: "/customer/devices/\(deviceId)", method: "DELETE", json: [:], as: CustomerEmptyResponse.self)
+    }
+
+    func revokeOtherDevices() async throws {
+        _ = try await requestJSON(
+            path: "/customer/devices/revoke-others",
+            method: "POST",
+            json: ["current_device_id": PAXDeviceInfo.deviceId],
+            as: CustomerEmptyResponse.self
+        )
     }
 
     func fetchConversations() async throws -> CustomerConversationsResponse {

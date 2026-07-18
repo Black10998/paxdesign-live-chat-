@@ -305,6 +305,24 @@ class PAXdesign_Customer_REST {
             'callback'            => array(__CLASS__, 'register_push'),
             'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
         ));
+
+        register_rest_route(self::NS, '/customer/devices', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'list_devices'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
+        register_rest_route(self::NS, '/customer/devices/revoke-others', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'revoke_other_devices'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
+        register_rest_route(self::NS, '/customer/devices/(?P<device_id>[a-zA-Z0-9\-]+)', array(
+            'methods'             => WP_REST_Server::DELETABLE,
+            'callback'            => array(__CLASS__, 'revoke_device'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
     }
 
     public static function dashboard(WP_REST_Request $request) {
@@ -762,20 +780,151 @@ class PAXdesign_Customer_REST {
         if ($token === '' || $device_id === '') {
             return new WP_Error('invalid_device', __('Device token and device ID are required.', 'paxdesign-booking'), array('status' => 400));
         }
-        $devices = get_user_meta($uid, PAXdesign_Customer_Notifications::USER_META_DEVICES, true);
-        if (!is_array($devices)) {
-            $devices = array();
-        }
-        $devices['did_' . $device_id] = array(
-            'device_id'   => $device_id,
-            'token'       => $token,
-            'platform'    => sanitize_text_field($request->get_param('platform') ?? 'ios'),
-            'sandbox'     => rest_sanitize_boolean($request->get_param('sandbox')),
-            'updated_at'  => gmdate('c'),
-            'revoked'     => false,
+        $devices = self::customer_devices_meta($uid);
+        $key = 'did_' . $device_id;
+        $existing = isset($devices[$key]) && is_array($devices[$key]) ? $devices[$key] : array();
+        $is_new_device = empty($existing['device_id']);
+        $now = time();
+        $record = array(
+            'device_id'       => $device_id,
+            'token'           => $token,
+            'platform'        => sanitize_text_field($request->get_param('platform') ?? 'ios'),
+            'sandbox'         => rest_sanitize_boolean($request->get_param('sandbox')),
+            'device_name'     => sanitize_text_field($request->get_param('device_name') ?? ($existing['device_name'] ?? '')),
+            'device_model'    => sanitize_text_field($request->get_param('device_model') ?? ($existing['device_model'] ?? '')),
+            'os_version'      => sanitize_text_field($request->get_param('os_version') ?? ($existing['os_version'] ?? '')),
+            'app_version'     => sanitize_text_field($request->get_param('app_version') ?? ($existing['app_version'] ?? '')),
+            'first_login_at'  => !empty($existing['first_login_at']) ? (int) $existing['first_login_at'] : $now,
+            'last_active_at'  => $now,
+            'updated_at'      => gmdate('c'),
+            'revoked'         => false,
+            'trusted'         => !empty($existing['trusted']) || $is_new_device,
+            'push_registered' => true,
         );
+        if (class_exists('PAXdesign_Device_Sessions')) {
+            $record = PAXdesign_Device_Sessions::merge_device_meta($record, array(
+                'device_id'    => $device_id,
+                'device_name'  => $record['device_name'],
+                'device_model' => $record['device_model'],
+                'os_version'   => $record['os_version'],
+                'app_version'  => $record['app_version'],
+            ), $now);
+        }
+        $devices[$key] = $record;
         update_user_meta($uid, PAXdesign_Customer_Notifications::USER_META_DEVICES, $devices);
-        return rest_ensure_response(array('success' => true));
+        if ($is_new_device) {
+            $device_label = $record['device_name'] !== '' ? $record['device_name'] : __('New device', 'paxdesign-booking');
+            PAXdesign_Customer_Notifications::notify_user(
+                $uid,
+                'security',
+                __('New sign-in detected', 'paxdesign-booking'),
+                sprintf(__('Your account was accessed from %s.', 'paxdesign-booking'), $device_label),
+                'device',
+                $device_id,
+                '/account/devices'
+            );
+        }
+        return rest_ensure_response(array('success' => true, 'device_id' => $device_id));
+    }
+
+    public static function list_devices(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $current_device_id = sanitize_text_field($request->get_param('current_device_id') ?? '');
+        $rows = self::format_customer_device_rows($uid, $current_device_id);
+        return rest_ensure_response(array('devices' => $rows));
+    }
+
+    public static function revoke_device(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $device_id = sanitize_text_field($request['device_id'] ?? '');
+        if ($device_id === '') {
+            return new WP_Error('invalid_device', __('Device ID is required.', 'paxdesign-booking'), array('status' => 400));
+        }
+        $devices = self::customer_devices_meta($uid);
+        $key = 'did_' . $device_id;
+        if (!isset($devices[$key]) || !is_array($devices[$key])) {
+            return new WP_Error('not_found', __('Device not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        $devices[$key]['revoked'] = true;
+        $devices[$key]['revoked_at'] = time();
+        $devices[$key]['token'] = '';
+        $devices[$key]['push_registered'] = false;
+        update_user_meta($uid, PAXdesign_Customer_Notifications::USER_META_DEVICES, $devices);
+        return rest_ensure_response(array('success' => true, 'device_id' => $device_id));
+    }
+
+    public static function revoke_other_devices(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $current_device_id = sanitize_text_field($request->get_param('current_device_id') ?? '');
+        if ($current_device_id === '') {
+            return new WP_Error('invalid_device', __('Current device ID is required.', 'paxdesign-booking'), array('status' => 400));
+        }
+        $devices = self::customer_devices_meta($uid);
+        $revoked = 0;
+        foreach ($devices as $key => $device) {
+            if (!is_array($device)) {
+                continue;
+            }
+            $device_id = (string) ($device['device_id'] ?? '');
+            if ($device_id === '' || $device_id === $current_device_id) {
+                continue;
+            }
+            $devices[$key]['revoked'] = true;
+            $devices[$key]['revoked_at'] = time();
+            $devices[$key]['token'] = '';
+            $devices[$key]['push_registered'] = false;
+            $revoked++;
+        }
+        update_user_meta($uid, PAXdesign_Customer_Notifications::USER_META_DEVICES, $devices);
+        return rest_ensure_response(array('success' => true, 'revoked_count' => $revoked));
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private static function customer_devices_meta($user_id) {
+        $devices = get_user_meta(absint($user_id), PAXdesign_Customer_Notifications::USER_META_DEVICES, true);
+        return is_array($devices) ? $devices : array();
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private static function format_customer_device_rows($user_id, $current_device_id = '') {
+        $devices = self::customer_devices_meta($user_id);
+        $rows = array();
+        foreach ($devices as $device) {
+            if (!is_array($device) || !empty($device['revoked'])) {
+                continue;
+            }
+            $device_id = (string) ($device['device_id'] ?? '');
+            if ($device_id === '') {
+                continue;
+            }
+            $last_active = (int) ($device['last_active_at'] ?? $device['updated_at'] ?? 0);
+            if (is_string($last_active) && !is_numeric($last_active)) {
+                $last_active = strtotime($last_active) ?: 0;
+            }
+            $online_window = class_exists('PAXdesign_Device_Sessions') ? PAXdesign_Device_Sessions::ONLINE_WINDOW_SECONDS : 180;
+            $rows[] = array(
+                'device_id'        => $device_id,
+                'device_name'      => (string) ($device['device_name'] ?? __('Unknown device', 'paxdesign-booking')),
+                'device_model'     => (string) ($device['device_model'] ?? ''),
+                'os_version'       => (string) ($device['os_version'] ?? ''),
+                'app_version'      => (string) ($device['app_version'] ?? ''),
+                'first_login_at'   => (int) ($device['first_login_at'] ?? 0),
+                'last_active_at'   => $last_active,
+                'is_current'       => $current_device_id !== '' && $current_device_id === $device_id,
+                'trusted'          => !empty($device['trusted']),
+                'push_registered'  => !empty($device['token']) && !empty($device['push_registered']),
+                'push_environment' => !empty($device['sandbox']) ? 'sandbox' : 'production',
+                'online'           => $last_active > 0 && (time() - $last_active) <= $online_window,
+            );
+        }
+        usort($rows, function ($a, $b) {
+            return (int) ($b['last_active_at'] ?? 0) <=> (int) ($a['last_active_at'] ?? 0);
+        });
+        return $rows;
     }
 
     public static function download_project_file(WP_REST_Request $request) {

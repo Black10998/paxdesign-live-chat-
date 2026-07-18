@@ -25,6 +25,9 @@ enum AppServicesController {
 
         coordinator.start(auth: auth)
         teamCoordinator.start(auth: auth)
+        if let userId = auth.profile?.userId {
+            AppLockService.shared.bindAccount(scope: "staff-\(userId)")
+        }
         AppLockService.shared.prepareForLogin()
 
         #if !SIDELOAD

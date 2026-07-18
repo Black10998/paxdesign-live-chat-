@@ -23,6 +23,14 @@ final class CustomerSessionController: ObservableObject {
         auth.errorMessage = nil
         api.configure(baseURL: siteURL, auth: auth)
         CustomerKeychain.save(siteURL: siteURL, username: username, appPassword: appPassword)
+        AppLockService.shared.bindAccount(scope: "customer-\(profile.id)")
+        AppLockService.shared.prepareForLogin()
+        CustomerPushService.shared.configure(api: api)
+        Task {
+            await CustomerPushService.shared.prepareNotificationRegistration()
+            await CustomerDeviceSessionService.shared.start(api: api)
+            await CustomerDeviceSessionService.shared.registerIfNeeded(force: true)
+        }
     }
 
     func syncFromAuthStore(_ store: AuthStore) {
@@ -37,6 +45,7 @@ final class CustomerSessionController: ObservableObject {
     }
 
     func deactivate() {
+        CustomerDeviceSessionService.shared.stop()
         auth.logout()
     }
 }

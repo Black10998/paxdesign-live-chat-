@@ -57,9 +57,28 @@ class PAXdesign_Customer_Staff_REST {
             'permission_callback' => array('PAXdesign_Customer_Auth', 'require_staff'),
         ));
 
+        register_rest_route(self::NS, '/customer/staff/orders', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'list_orders'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_staff'),
+        ));
+
         register_rest_route(self::NS, '/customer/staff/orders/(?P<id>\d+)', array(
-            'methods'             => WP_REST_Server::EDITABLE,
-            'callback'            => array(__CLASS__, 'update_order'),
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array(__CLASS__, 'get_order'),
+                'permission_callback' => array('PAXdesign_Customer_Auth', 'require_staff'),
+            ),
+            array(
+                'methods'             => WP_REST_Server::EDITABLE,
+                'callback'            => array(__CLASS__, 'update_order'),
+                'permission_callback' => array('PAXdesign_Customer_Auth', 'require_staff'),
+            ),
+        ));
+
+        register_rest_route(self::NS, '/customer/staff/orders/(?P<id>\d+)/files/(?P<file_id>\d+)/download', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'download_order_file'),
             'permission_callback' => array('PAXdesign_Customer_Auth', 'require_staff'),
         ));
 
@@ -125,6 +144,43 @@ class PAXdesign_Customer_Staff_REST {
             return $result;
         }
         return rest_ensure_response($result);
+    }
+
+    public static function list_orders(WP_REST_Request $request) {
+        $status = sanitize_key((string) ($request->get_param('status') ?? ''));
+        $limit = absint($request->get_param('limit') ?? 100);
+        return rest_ensure_response(array(
+            'orders' => PAXdesign_Customer_Orders::list_for_staff($status, $limit),
+        ));
+    }
+
+    public static function get_order(WP_REST_Request $request) {
+        $order = PAXdesign_Customer_Orders::get_for_staff((int) $request['id']);
+        if (!$order) {
+            return new WP_Error('not_found', __('Order not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        return rest_ensure_response($order);
+    }
+
+    public static function download_order_file(WP_REST_Request $request) {
+        global $wpdb;
+        $order_id = absint($request['id']);
+        $file_id = absint($request['file_id']);
+        $file = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM " . PAXdesign_Customer_DB::table('order_files') . " WHERE id = %d AND order_id = %d LIMIT 1",
+            $file_id,
+            $order_id
+        ), ARRAY_A);
+        if (!$file || empty($file['file_path']) || !file_exists($file['file_path'])) {
+            return new WP_Error('not_found', __('File not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        $mime = !empty($file['mime_type']) ? $file['mime_type'] : 'application/octet-stream';
+        $name = !empty($file['file_name']) ? $file['file_name'] : basename($file['file_path']);
+        header('Content-Type: ' . $mime);
+        header('Content-Disposition: attachment; filename="' . rawurlencode($name) . '"');
+        header('Content-Length: ' . (string) filesize($file['file_path']));
+        readfile($file['file_path']);
+        exit;
     }
 
     public static function update_order(WP_REST_Request $request) {

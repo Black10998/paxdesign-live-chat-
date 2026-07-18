@@ -1044,16 +1044,20 @@ struct CustomerProfileView: View {
     @State private var avatarUploadError: String?
     @State private var isUploadingAvatar = false
     @State private var selectedAvatarItem: PhotosPickerItem?
+    @State private var showSignOutConfirm = false
 
     var body: some View {
         List {
                 if let profile = auth.profile {
-                    Section(String(localized: "Profile")) {
+                    Section(String(localized: "Account")) {
                         HStack(spacing: 16) {
                             CustomerProfileAvatarView(urlString: profile.avatar_url, size: 64)
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(profile.display_name).font(.headline)
                                 Text(profile.email).font(.subheadline).foregroundStyle(.secondary)
+                                Text(String(localized: "Signed in"))
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(.green)
                             }
                         }
                         PhotosPicker(selection: $selectedAvatarItem, matching: .images) {
@@ -1069,9 +1073,26 @@ struct CustomerProfileView: View {
                 if let avatarUploadError {
                     Section { Text(avatarUploadError).foregroundStyle(.red) }
                 }
+                Section(String(localized: "Security & settings")) {
+                    NavigationLink {
+                        CustomerSettingsView()
+                    } label: {
+                        Label(String(localized: "Settings"), systemImage: "gearshape.fill")
+                    }
+                    NavigationLink {
+                        AppLockSettingsView()
+                    } label: {
+                        Label(String(localized: "App lock"), systemImage: "lock.shield")
+                    }
+                    NavigationLink {
+                        CustomerDeviceManagementView()
+                    } label: {
+                        Label(String(localized: "Devices"), systemImage: "iphone.and.arrow.forward")
+                    }
+                }
                 Section {
                     Button(String(localized: "Sign Out"), role: .destructive) {
-                        appAuth.logout()
+                        showSignOutConfirm = true
                     }
                 }
                 Section(String(localized: "Legal & Support")) {
@@ -1096,6 +1117,18 @@ struct CustomerProfileView: View {
                 }
             }
             .navigationTitle(String(localized: "Account"))
+            .confirmationDialog(
+                String(localized: "Sign out?"),
+                isPresented: $showSignOutConfirm,
+                titleVisibility: .visible
+            ) {
+                Button(String(localized: "Sign Out"), role: .destructive) {
+                    appAuth.logout()
+                }
+                Button(String(localized: "Cancel"), role: .cancel) {}
+            } message: {
+                Text(String(localized: "You will need to sign in again to access your projects, orders, and messages."))
+            }
             .onChange(of: selectedAvatarItem) { item in
                 guard let item else { return }
                 Task { await uploadAvatar(from: item) }

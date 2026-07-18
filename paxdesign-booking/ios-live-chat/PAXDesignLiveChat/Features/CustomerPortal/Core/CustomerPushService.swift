@@ -100,7 +100,8 @@ final class CustomerPushService: NSObject, ObservableObject {
             do {
                 try await api?.registerPush(
                     token: token,
-                    deviceID: UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
+                    deviceID: PAXDeviceInfo.deviceId,
+                    metadata: PAXDeviceInfo.registrationPayload
                 )
             } catch {
                 lastRegisteredToken = nil

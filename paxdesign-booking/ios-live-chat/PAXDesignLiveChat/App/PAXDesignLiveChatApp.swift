@@ -38,11 +38,14 @@ struct PAXDesignLiveChatApp: App {
                             coordinator: coordinator,
                             teamCoordinator: TeamMessagingCoordinator.shared
                         )
+                    } else if loggedIn, AuthStore.shared.isCustomerSession {
+                        CustomerSessionController.shared.syncFromAuthStore(AuthStore.shared)
                     } else {
                         AppServicesController.stopLoggedInServices(
                             coordinator: coordinator,
                             teamCoordinator: TeamMessagingCoordinator.shared
                         )
+                        CustomerDeviceSessionService.shared.stop()
                     }
                 }
                 .onChange(of: scenePhase) { phase in
@@ -60,6 +63,7 @@ struct PAXDesignLiveChatApp: App {
                     }
                     AppLockService.shared.handleScenePhase(phase, isLoggedIn: auth.isLoggedIn)
                     guard phase == .active, auth.isLoggedIn, auth.isStaffSession else { return }
+                    Task { await StaffOrdersCoordinator.shared.refresh(auth: auth) }
                     ForegroundRefreshCoordinator.schedule(
                         auth: auth,
                         coordinator: coordinator,
@@ -115,6 +119,10 @@ struct PAXDesignLiveChatApp: App {
         } else if auth.isLoggedIn, auth.isCustomerSession {
             CustomerSessionController.shared.syncFromAuthStore(auth)
             CustomerPushService.shared.configure(api: CustomerSessionController.shared.api)
+            if let profile = auth.customerProfile {
+                AppLockService.shared.bindAccount(scope: "customer-\(profile.id)")
+                AppLockService.shared.prepareForLogin()
+            }
         }
 
         LaunchDiagnostics.mark("startup.interactive")
@@ -122,17 +130,36 @@ struct PAXDesignLiveChatApp: App {
 
     private func handlePushNotification(_ note: Notification, opened: Bool) {
         let auth = AuthStore.shared
-        guard auth.isLoggedIn, auth.isStaffSession else {
-            if opened {
-                if let userInfo = note.userInfo as? [AnyHashable: Any] {
-                    PushDeepLinkRouter.shared.store(
-                        userInfo: userInfo,
-                        action: note.userInfo?["action"] as? String
-                    )
+        guard auth.isLoggedIn else { return }
+
+        if auth.isStaffSession {
+            let type = note.userInfo?["type"] as? String ?? ""
+            if type == "customer_order", let orderIdRaw = note.userInfo?["order_id"] as? String, let orderId = Int(orderIdRaw) {
+                Task { @MainActor in
+                    await StaffOrdersCoordinator.shared.refresh(auth: auth)
+                    if opened {
+                        StaffOrdersCoordinator.shared.openOrder(orderId)
+                    } else {
+                        InAppNotificationCoordinator.shared.handleCustomerOrder(
+                            orderId: orderId,
+                            customerName: note.userInfo?["customer_name"] as? String ?? "",
+                            preview: note.userInfo?["preview"] as? String ?? ""
+                        )
+                    }
                 }
+                return
+            }
+        } else if opened {
+            if let userInfo = note.userInfo as? [AnyHashable: Any] {
+                PushDeepLinkRouter.shared.store(
+                    userInfo: userInfo,
+                    action: note.userInfo?["action"] as? String
+                )
             }
             return
         }
+
+        guard auth.isStaffSession else { return }
         guard let sessionId = note.userInfo?["session_id"] as? String,
               let type = note.userInfo?["type"] as? String else { return }
         let event = (note.userInfo?["event"] as? String) ?? type
@@ -241,7 +268,7 @@ struct RootView: View {
                     .transition(.opacity)
             }
 
-            if auth.isLoggedIn, appLock.isActive, appLock.isLocked, !appLock.isUnlocked, auth.isStaffSession {
+            if auth.isLoggedIn, appLock.isActive, appLock.isLocked, !appLock.isUnlocked {
                 AppLockView()
                     .zIndex(100)
             }

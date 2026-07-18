@@ -66,6 +66,28 @@ final class InAppNotificationCoordinator {
         )
     }
 
+    func handleCustomerOrder(orderId: Int, customerName: String, preview: String) {
+        guard AppSettingsStore.shared.notificationsEnabled else { return }
+        let key = "order:\(orderId)"
+        guard shouldDeliver(sessionId: key, type: "customer_order") else { return }
+        guard shouldPlay(since: &lastMessageSoundAt) else { return }
+
+        PAXHaptics.medium()
+        let content = UNMutableNotificationContent()
+        content.title = customerName.isEmpty ? String(localized: "New customer request") : customerName
+        content.body = preview.isEmpty ? String(localized: "A customer submitted a new order.") : preview
+        content.sound = .default
+        content.userInfo = [
+            "type": "customer_order",
+            "event": "new_customer_order",
+            "order_id": String(orderId),
+            "customer_name": customerName,
+            "preview": preview,
+        ]
+        let request = UNNotificationRequest(identifier: "order-\(orderId)-\(UUID().uuidString)", content: content, trigger: nil)
+        UNUserNotificationCenter.current().add(request)
+    }
+
     func handleTeamRequest(sessionId: String, preview: String) {
         guard AppSettingsStore.shared.messageSoundEnabled else { return }
         guard shouldDeliver(sessionId: sessionId, type: "team_request") else { return }

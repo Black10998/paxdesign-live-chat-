@@ -7,6 +7,7 @@ func platformDestination(for module: PlatformModule) -> some View {
     case .calendar: CalendarModuleView()
     case .tasks: TasksModuleView()
     case .files: FilesModuleView()
+    case .orders: StaffOrdersListView()
     case .notifications: NotificationsCenterView()
     case .reports: ReportsAnalyticsView()
     case .activityLog: ActivityLogView()

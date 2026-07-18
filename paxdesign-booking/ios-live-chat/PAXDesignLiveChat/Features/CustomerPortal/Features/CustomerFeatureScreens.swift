@@ -300,9 +300,9 @@ struct CustomerOrderDetailView: View {
                         LabeledContent(String(localized: "Status"), value: order.status)
                         Text(order.description ?? "")
                     }
-                    if let assigned = order.assigned {
+                    if let assigned = order.assigned, assigned.user_id > 0 {
                         Section(String(localized: "Assigned")) {
-                            Text(assigned.display_name)
+                            Text(assigned.label)
                         }
                     }
                     if let files = order.files, !files.isEmpty {
@@ -884,6 +884,24 @@ struct CustomerSettingsView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                NavigationLink {
+                    AccentColorSettingsView()
+                        .environmentObject(settings)
+                } label: {
+                    Label(String(localized: "Accent color"), systemImage: "paintpalette.fill")
+                }
+            }
+            Section(String(localized: "Security")) {
+                NavigationLink {
+                    AppLockSettingsView()
+                } label: {
+                    Label(String(localized: "App lock"), systemImage: "lock.shield")
+                }
+                NavigationLink {
+                    CustomerDeviceManagementView()
+                } label: {
+                    Label(String(localized: "Devices"), systemImage: "iphone.and.arrow.forward")
+                }
             }
             Section(String(localized: "Profile")) {
                 TextField(String(localized: "Display name"), text: $displayName)

@@ -5,6 +5,7 @@ enum PlatformModule: String, CaseIterable, Identifiable, Hashable {
     case calendar
     case tasks
     case files
+    case orders
     case chats
     case team
     case live
@@ -27,6 +28,7 @@ enum PlatformModule: String, CaseIterable, Identifiable, Hashable {
         case .calendar: return L10n.ModuleCalendar
         case .tasks: return L10n.ModuleTasks
         case .files: return L10n.ModuleFiles
+        case .orders: return String(localized: "Orders & Requests")
         case .chats: return L10n.TabChats
         case .team: return L10n.TabTeam
         case .live: return L10n.TabLive
@@ -49,6 +51,7 @@ enum PlatformModule: String, CaseIterable, Identifiable, Hashable {
         case .calendar: return L10n.ModuleCalendarSubtitle
         case .tasks: return L10n.ModuleTasksSubtitle
         case .files: return L10n.ModuleFilesSubtitle
+        case .orders: return String(localized: "Customer service requests and order tracking")
         case .chats: return L10n.SessionNoChatsHint
         case .team: return L10n.TeamHubSubtitle
         case .live: return L10n.LiveEmptyHint
@@ -71,6 +74,7 @@ enum PlatformModule: String, CaseIterable, Identifiable, Hashable {
         case .calendar: return "calendar"
         case .tasks: return "checklist"
         case .files: return "folder.fill"
+        case .orders: return "doc.text.fill"
         case .chats: return "bubble.left.and.bubble.right.fill"
         case .team: return "person.3.sequence.fill"
         case .live: return "bell.and.waves.left.and.right.fill"
@@ -93,6 +97,7 @@ enum PlatformModule: String, CaseIterable, Identifiable, Hashable {
         case .calendar: return .red
         case .tasks: return .green
         case .files: return .indigo
+        case .orders: return .cyan
         case .chats: return PAXTheme.accent
         case .team: return PAXBrand.accent
         case .live: return .orange
@@ -112,7 +117,7 @@ enum PlatformModule: String, CaseIterable, Identifiable, Hashable {
     var category: PlatformModuleCategory {
         switch self {
         case .dashboard, .reports, .activityLog: return .insights
-        case .calendar, .tasks, .files: return .workspace
+        case .calendar, .tasks, .files, .orders: return .workspace
         case .chats, .team, .live, .notifications: return .communication
         case .employee, .administration, .devices: return .management
         case .settings, .profile, .help, .about: return .system
@@ -120,7 +125,7 @@ enum PlatformModule: String, CaseIterable, Identifiable, Hashable {
     }
 
     static var hubModules: [PlatformModule] {
-        [.dashboard, .calendar, .tasks, .files, .notifications, .reports, .activityLog, .employee, .settings]
+        [.dashboard, .calendar, .tasks, .files, .orders, .notifications, .reports, .activityLog, .employee, .settings]
     }
 
     static var adminModules: [PlatformModule] {
@@ -133,6 +138,7 @@ enum PlatformModule: String, CaseIterable, Identifiable, Hashable {
         case .calendar: return L10n.ModuleCalendarSubtitle
         case .tasks: return L10n.ModuleTasksSubtitle
         case .files: return L10n.ModuleFilesSubtitle
+        case .orders: return String(localized: "Customer service requests and order tracking")
         case .chats: return L10n.SessionNoChatsHint
         case .team: return L10n.TeamHubSubtitle
         case .live: return L10n.LiveEmptyHint
@@ -208,6 +214,7 @@ enum PlatformModuleAccess {
         case .calendar: return auth.canViewCalendar
         case .tasks: return auth.canViewTasks
         case .files: return auth.canViewFiles
+        case .orders: return auth.canViewChats || auth.canManageUsers
         case .chats: return auth.canViewChats
         case .team: return auth.canViewChats
         case .live: return true

@@ -68,6 +68,29 @@ final class LiveChatAPI {
             .appendingPathComponent("live-admin", isDirectory: true)
     }
 
+    private var pdxCustomerBase: URL {
+        siteURL
+            .appendingPathComponent("wp-json", isDirectory: true)
+            .appendingPathComponent("pdx", isDirectory: true)
+            .appendingPathComponent("v1", isDirectory: true)
+            .appendingPathComponent("customer", isDirectory: true)
+    }
+
+    private func pdxCustomerURL(path: String, query: [URLQueryItem] = []) -> URL? {
+        let trimmed = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        var url = pdxCustomerBase
+        if !trimmed.isEmpty {
+            for component in trimmed.split(separator: "/") {
+                url = url.appendingPathComponent(String(component), isDirectory: false)
+            }
+        }
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        var items = query
+        items.append(URLQueryItem(name: "_", value: String(Int(Date().timeIntervalSince1970 * 1000))))
+        components.queryItems = items
+        return components.url
+    }
+
     private func liveAdminURL(path: String, query: [URLQueryItem] = []) -> URL? {
         let trimmed = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         var url = restBase
@@ -1510,5 +1533,37 @@ struct DeviceListResponse: Codable {
     enum CodingKeys: String, CodingKey {
         case devices
         case canManage = "can_manage"
+    }
+}
+
+extension LiveChatAPI {
+    func fetchStaffOrders(status: String? = nil) async throws -> StaffOrdersListResponse {
+        var query: [URLQueryItem] = []
+        if let status, !status.isEmpty {
+            query.append(URLQueryItem(name: "status", value: status))
+        }
+        guard let url = pdxCustomerURL(path: "staff/orders", query: query) else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "staff-orders", as: StaffOrdersListResponse.self)
+    }
+
+    func fetchStaffOrder(id: Int) async throws -> StaffOrderDetail {
+        guard let url = pdxCustomerURL(path: "staff/orders/\(id)") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        return try await perform(authRequest(url: url), endpoint: "staff-order-detail", as: StaffOrderDetail.self)
+    }
+
+    func updateStaffOrder(id: Int, status: String?, note: String?, assignedUserId: Int? = nil) async throws -> StaffOrderDetail {
+        guard let url = pdxCustomerURL(path: "staff/orders/\(id)") else {
+            throw LiveChatAPIError.invalidURL
+        }
+        var payload: [String: Any] = [:]
+        if let status { payload["status"] = status }
+        if let note { payload["note"] = note }
+        if let assignedUserId { payload["assigned_user_id"] = assignedUserId }
+        let body = try JSONSerialization.data(withJSONObject: payload)
+        return try await perform(authRequest(url: url, method: "PATCH", body: body), endpoint: "staff-order-update", as: StaffOrderDetail.self)
     }
 }

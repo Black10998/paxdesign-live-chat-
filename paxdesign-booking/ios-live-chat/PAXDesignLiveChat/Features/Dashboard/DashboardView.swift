@@ -152,13 +152,16 @@ struct DashboardView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showSearch = true
-                        PAXHaptics.light()
-                    } label: {
-                        PAXIcon("magnifyingglass")
+                    HStack(spacing: 4) {
+                        PAXAppearanceQuickSwitch()
+                        Button {
+                            showSearch = true
+                            PAXHaptics.light()
+                        } label: {
+                            PAXIcon("magnifyingglass")
+                        }
+                        .accessibilityLabel(L10n.GlobalSearchTitle)
                     }
-                    .accessibilityLabel(L10n.GlobalSearchTitle)
                 }
             }
             .sheet(isPresented: $showSearch) {

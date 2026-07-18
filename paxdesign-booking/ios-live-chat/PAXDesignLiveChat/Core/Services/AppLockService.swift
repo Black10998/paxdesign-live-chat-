@@ -24,7 +24,7 @@ final class AppLockService: ObservableObject {
         didSet { persistBool(Keys.lockOnLaunch, lockOnLaunch) }
     }
     @Published var autoLockInterval: AutoLockInterval {
-        didSet { UserDefaults.standard.set(autoLockInterval.rawValue, forKey: Keys.autoLock) }
+        didSet { UserDefaults.standard.set(autoLockInterval.rawValue, forKey: scoped(Keys.autoLock)) }
     }
 
     private var lastUnlockedAt = Date()
@@ -32,8 +32,12 @@ final class AppLockService: ObservableObject {
     private var isAuthenticating = false
     private var autoLockSuppressedUntil: Date?
     private var biometricPromptIssuedForEpoch: Int?
-    private let pinService = "at.paxdesign.livechat.applock.pin"
-    private let saltService = "at.paxdesign.livechat.applock.salt"
+    private var accountScope = "global"
+    private let pinServiceBase = "at.paxdesign.livechat.applock.pin"
+    private let saltServiceBase = "at.paxdesign.livechat.applock.salt"
+
+    private var pinService: String { "\(pinServiceBase).\(accountScope)" }
+    private var saltService: String { "\(saltServiceBase).\(accountScope)" }
 
     private let autoLockSuppressInterval: TimeInterval = 3.0
     private let postUnlockGraceInterval: TimeInterval = 2.0
@@ -69,13 +73,34 @@ final class AppLockService: ObservableObject {
     }
 
     private init() {
+        reloadFromStorage()
+    }
+
+    /// Load app-lock preferences for the signed-in account (staff or customer).
+    func bindAccount(scope: String) {
+        let normalized = scope.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !normalized.isEmpty else { return }
+        guard normalized != accountScope else { return }
+        accountScope = normalized
+        isLocked = false
+        isUnlockedThisSession = false
+        isAuthenticating = false
+        biometricPromptIssuedForEpoch = nil
+        reloadFromStorage()
+    }
+
+    private func reloadFromStorage() {
         let defaults = UserDefaults.standard
-        lockEnabled = defaults.bool(forKey: Keys.enabled)
-        biometricEnabled = defaults.object(forKey: Keys.biometric) as? Bool ?? true
-        pinEnabled = defaults.bool(forKey: Keys.pinEnabled)
-        lockOnLaunch = defaults.object(forKey: Keys.lockOnLaunch) as? Bool ?? true
-        let raw = defaults.integer(forKey: Keys.autoLock)
+        lockEnabled = defaults.bool(forKey: scoped(Keys.enabled))
+        biometricEnabled = defaults.object(forKey: scoped(Keys.biometric)) as? Bool ?? true
+        pinEnabled = defaults.bool(forKey: scoped(Keys.pinEnabled))
+        lockOnLaunch = defaults.object(forKey: scoped(Keys.lockOnLaunch)) as? Bool ?? true
+        let raw = defaults.integer(forKey: scoped(Keys.autoLock))
         autoLockInterval = AutoLockInterval(rawValue: raw) ?? .fiveMinutes
+    }
+
+    private func scoped(_ key: String) -> String {
+        "\(key).\(accountScope)"
     }
 
     var isActive: Bool {
@@ -320,7 +345,7 @@ final class AppLockService: ObservableObject {
     }
 
     private func persistBool(_ key: String, _ value: Bool) {
-        UserDefaults.standard.set(value, forKey: key)
+        UserDefaults.standard.set(value, forKey: scoped(key))
     }
 }
 

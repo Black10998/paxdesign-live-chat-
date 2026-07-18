@@ -122,17 +122,22 @@ private struct CustomerPortalToolbarModifier: ViewModifier {
             .toolbar {
                 if showsAvatar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        HStack(spacing: 10) {
+                        HStack(spacing: 8) {
+                            PAXAppearanceQuickSwitch()
                             CustomerNavAvatarButton()
                             CustomerPortalQuickMenu()
                         }
                     }
                 } else {
                     ToolbarItem(placement: .topBarTrailing) {
-                        CustomerPortalQuickMenu()
+                        HStack(spacing: 8) {
+                            PAXAppearanceQuickSwitch()
+                            CustomerPortalQuickMenu()
+                        }
                     }
                 }
             }
+        }
     }
 }
 

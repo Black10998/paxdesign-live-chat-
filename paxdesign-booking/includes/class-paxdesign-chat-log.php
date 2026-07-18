@@ -443,13 +443,20 @@ class PAXdesign_Chat_Log {
             }
             if ($preview === '') {
                 foreach ($sanitized as $msg) {
-                    if (is_array($msg) && !empty($msg['content'])) {
-                        $preview = wp_html_excerpt((string) $msg['content'], 120, '…');
-                        break;
+                    if (!is_array($msg) || empty($msg['content'])) {
+                        continue;
                     }
+                    $role = isset($msg['role']) ? (string) $msg['role'] : '';
+                    if ($role === 'system') {
+                        continue;
+                    }
+                    $preview = wp_html_excerpt((string) $msg['content'], 120, '…');
+                    break;
                 }
             }
-            do_action('paxdesign_new_chat_session', $session_id, $service, $preview);
+            if ($preview !== '') {
+                do_action('paxdesign_new_chat_session', $session_id, $service, $preview);
+            }
             self::broadcast_session_sync($session_id, $sanitized, null, true);
             if (class_exists('PAXdesign_Message_Store')) {
                 PAXdesign_Message_Store::migrate_legacy($session_id, $sanitized, 'customer');

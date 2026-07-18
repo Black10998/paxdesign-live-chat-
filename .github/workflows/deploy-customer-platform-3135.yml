@@ -22,6 +22,7 @@ on:
       - '.github/triggers/deploy-customer-platform-3149'
       - '.github/triggers/deploy-customer-platform-3150'
       - '.github/triggers/deploy-customer-platform-3151'
+      - '.github/triggers/deploy-customer-platform-3152'
 
 permissions:
   contents: read

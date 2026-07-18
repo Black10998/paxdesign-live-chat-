@@ -442,7 +442,7 @@ final class AppSettingsStore: ObservableObject {
            let mode = AppearanceMode(rawValue: raw) {
             appearanceMode = mode
         } else {
-            appearanceMode = .system
+            appearanceMode = .light
         }
         if let raw = defaults.string(forKey: Keys.language),
            let mode = LanguageMode(rawValue: raw) {

@@ -94,6 +94,7 @@ struct PlatformHubView: View {
     private func badge(for module: PlatformModule) -> Int {
         switch module {
         case .notifications: return unreadCount + coordinator.liveCount
+        case .orders: return StaffOrdersCoordinator.shared.unreadCount
         case .tasks: return TaskStore.shared.openCount
         default: return 0
         }
