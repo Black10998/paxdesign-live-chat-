@@ -3,6 +3,23 @@ import SwiftUI
 /// Adaptive marketing palette — follows system Light/Dark while keeping PAXdesign brand accent.
 struct CustomerMarketingTheme: Equatable {
     let colorScheme: ColorScheme
+    let accent: Color
+
+    init(colorScheme: ColorScheme, accent: Color = CustomerMarketingTheme.defaultAccent) {
+        self.colorScheme = colorScheme
+        self.accent = accent
+    }
+
+    static let defaultAccent = Color(red: 0.83, green: 1, blue: 0.2)
+
+    static func resolvedAccentColor() -> Color {
+        guard let raw = UserDefaults.standard.string(forKey: "pax.settings.accentPreset"),
+              let preset = AccentColorPreset(rawValue: raw),
+              let color = preset.color else {
+            return defaultAccent
+        }
+        return color
+    }
 
     var background: Color {
         colorScheme == .dark ? Color.black : Color(red: 0.96, green: 0.96, blue: 0.97)
@@ -26,10 +43,6 @@ struct CustomerMarketingTheme: Equatable {
 
     var textSecondary: Color {
         colorScheme == .dark ? Color(red: 0.55, green: 0.55, blue: 0.55) : Color(red: 0.28, green: 0.30, blue: 0.34)
-    }
-
-    var accent: Color {
-        AppSettingsStore.shared.effectivePalette.accent
     }
 
     var accentOnAccent: Color { Color.black }
@@ -68,7 +81,10 @@ private struct CustomerMarketingThemeKey: EnvironmentKey {
 
 extension EnvironmentValues {
     var marketingTheme: CustomerMarketingTheme {
-        CustomerMarketingTheme(colorScheme: colorScheme)
+        CustomerMarketingTheme(
+            colorScheme: colorScheme,
+            accent: CustomerMarketingTheme.resolvedAccentColor()
+        )
     }
 }
 

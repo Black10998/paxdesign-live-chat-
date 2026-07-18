@@ -48,47 +48,62 @@ jobs:
           DEADLINE=$(( $(date +%s) + 1800 ))
           RUN_ID=""
 
-          while [[ $(date +%s) -lt $DEADLINE ]]; do
-            RUN_ID="$(gh run list \
+          find_successful_run() {
+            local commit_sha="$1"
+            gh run list \
               --repo "${{ github.repository }}" \
               --workflow release-appstore.yml \
-              --commit "$SHA" \
+              --commit "$commit_sha" \
               --status success \
               --limit 1 \
               --json databaseId \
-              --jq '.[0].databaseId // empty')"
+              --jq '.[0].databaseId // empty'
+          }
+
+          find_in_progress_run() {
+            local commit_sha="$1"
+            gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow release-appstore.yml \
+              --commit "$commit_sha" \
+              --json databaseId,status \
+              --limit 5 \
+              --jq '[.[] | select(.status == "in_progress" or .status == "queued") | .databaseId] | first // empty'
+          }
+
+          find_main_in_progress_run() {
+            gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow release-appstore.yml \
+              --branch main \
+              --json databaseId,status \
+              --limit 10 \
+              --jq '[.[] | select(.status == "in_progress" or .status == "queued") | .databaseId] | first // empty'
+          }
+
+          while [[ $(date +%s) -lt $DEADLINE ]]; do
+            RUN_ID="$(find_successful_run "$SHA")"
             if [[ -n "$RUN_ID" ]]; then
               echo "Using App Store IPA from commit $SHA (run $RUN_ID)"
               echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
               exit 0
             fi
 
-            IN_PROGRESS="$(gh run list \
-              --repo "${{ github.repository }}" \
-              --workflow release-appstore.yml \
-              --commit "$SHA" \
-              --json databaseId,status \
-              --limit 5 \
-              --jq '[.[] | select(.status == "in_progress" or .status == "queued") | .databaseId] | first // empty')"
+            IN_PROGRESS="$(find_in_progress_run "$SHA")"
+            if [[ -z "$IN_PROGRESS" ]]; then
+              IN_PROGRESS="$(find_main_in_progress_run)"
+            fi
             if [[ -n "$IN_PROGRESS" ]]; then
-              echo "Waiting for App Store build run $IN_PROGRESS on commit $SHA..."
+              echo "Waiting for App Store build run $IN_PROGRESS (expected build $EXPECTED)..."
               sleep 30
               continue
             fi
 
-            echo "No App Store build found for commit $SHA — dispatching release-appstore.yml"
-            gh workflow run release-appstore.yml --repo "${{ github.repository }}" --ref "$SHA"
-            sleep 45
+            echo "Waiting for App Store build workflow on commit $SHA (expected build $EXPECTED)..."
+            sleep 30
           done
 
-          RUN_ID="$(gh run list \
-            --repo "${{ github.repository }}" \
-            --workflow release-appstore.yml \
-            --commit "$SHA" \
-            --status success \
-            --limit 1 \
-            --json databaseId \
-            --jq '.[0].databaseId // empty')"
+          RUN_ID="$(find_successful_run "$SHA")"
           if [[ -n "$RUN_ID" ]]; then
             echo "Using App Store IPA from commit $SHA (run $RUN_ID)"
             echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
@@ -96,7 +111,7 @@ jobs:
           fi
 
           echo "ERROR: No successful App Store IPA for commit $SHA after waiting." >&2
-          echo "Re-run this workflow after the App Store build completes." >&2
+          echo "Ensure release-appstore.yml completed successfully, then rerun upload." >&2
           exit 1
 
       - name: Download signed App Store IPA artifact

@@ -15,14 +15,16 @@ struct StaffOrdersListView: View {
                 PAXScreenLoadingStack(status: String(localized: "Loading orders…"), rowCount: 4, preset: .list)
                     .padding(.horizontal, 16)
             } else if let error = coordinator.errorMessage, coordinator.orders.isEmpty {
-                PAXContentUnavailableView(
-                    String(localized: "Unable to load orders"),
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(error)
-                ) {
+                VStack(spacing: 16) {
+                    PAXContentUnavailableView(
+                        String(localized: "Unable to load orders"),
+                        systemImage: "exclamationmark.triangle",
+                        description: Text(error)
+                    )
                     Button(String(localized: "Try again")) {
                         Task { await coordinator.refresh(auth: auth) }
                     }
+                    .buttonStyle(.borderedProminent)
                 }
             } else if coordinator.orders.isEmpty {
                 PAXContentUnavailableView(
