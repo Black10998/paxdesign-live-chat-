@@ -28,8 +28,13 @@ load_config = _SETUP.load_config
 
 
 def list_app_builds(client: ASCClient, app_id: str) -> list[dict]:
-    payload = client.get(f"/apps/{app_id}/builds", **{"limit": "200", "sort": "-uploadedDate"})
-    return payload.get("data") or []
+    payload = client.get(f"/apps/{app_id}/builds", **{"limit": "200"})
+    builds = payload.get("data") or []
+    builds.sort(
+        key=lambda item: int((item.get("attributes") or {}).get("version") or "0"),
+        reverse=True,
+    )
+    return builds
 
 
 def list_group_build_ids(client: ASCClient, group_id: str) -> list[str]:
