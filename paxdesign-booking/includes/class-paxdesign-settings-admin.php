@@ -94,6 +94,9 @@ class PAXdesign_Settings_Admin {
      * @param string $hook Admin page hook suffix.
      */
     public static function enqueue_assets($hook = '') {
+        if (PAXdesign_Admin_Compat::is_block_widgets_screen($hook)) {
+            return;
+        }
         if (!self::is_screen($hook)) {
             return;
         }

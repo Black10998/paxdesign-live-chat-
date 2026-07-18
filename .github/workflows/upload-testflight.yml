@@ -76,7 +76,9 @@ jobs:
               continue
             fi
 
-            break
+            echo "No App Store build found for commit $SHA — dispatching release-appstore.yml"
+            gh workflow run release-appstore.yml --repo "${{ github.repository }}" --ref "$SHA"
+            sleep 45
           done
 
           RUN_ID="$(gh run list \
@@ -145,3 +147,8 @@ jobs:
           TESTFLIGHT_POLL_SECONDS: "30"
           TESTFLIGHT_POLL_TIMEOUT: "3600"
         run: python3 scripts/appstore-connect/enable_testflight_build.py
+
+      - name: Clean up older TestFlight builds
+        env:
+          TESTFLIGHT_KEEP_BUILD: ${{ steps.version.outputs.build }}
+        run: python3 scripts/appstore-connect/cleanup_testflight_builds.py

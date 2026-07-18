@@ -294,41 +294,90 @@ struct CustomerOrderDetailView: View {
     var body: some View {
         Group {
             if let order {
-                List {
-                    Section {
-                        LabeledContent(String(localized: "Reference"), value: order.ref)
-                        LabeledContent(String(localized: "Status"), value: order.status)
-                        Text(order.description ?? "")
-                    }
-                    if let assigned = order.assigned, assigned.user_id > 0 {
-                        Section(String(localized: "Assigned")) {
-                            Text(assigned.label)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 10) {
+                            HStack {
+                                Text(order.ref)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Text(order.status.capitalized)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(PAXBrand.accent)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 4)
+                                    .background(PAXBrand.accent.opacity(0.12))
+                                    .clipShape(Capsule())
+                            }
+                            Text(order.service_label)
+                                .font(.title2.weight(.bold))
+                            if let description = order.description, !description.isEmpty {
+                                Text(description)
+                                    .font(.body)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                    }
-                    if let files = order.files, !files.isEmpty {
-                        Section(String(localized: "Files & Invoices")) {
-                            ForEach(files) { file in
-                                CustomerFileRow(
-                                    name: file.file_name,
-                                    subtitle: file.kind.capitalized + " · " + CustomerPortalFormatting.fileSize(file.file_size),
-                                    size: file.file_size,
-                                    isLoading: downloadingFileId == file.id
-                                ) {
-                                    Task { await downloadOrderFile(file) }
+                        .padding(20)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.primary.opacity(0.04))
+                        .clipShape(RoundedRectangle(cornerRadius: CustomerCalmDesign.cardRadius, style: .continuous))
+
+                        if let assigned = order.assigned, assigned.user_id > 0 {
+                            detailSection(String(localized: "Assigned contact")) {
+                                Label(assigned.label, systemImage: "person.crop.circle.fill")
+                            }
+                        }
+
+                        if let files = order.files, !files.isEmpty {
+                            detailSection(String(localized: "Files & Invoices")) {
+                                ForEach(files) { file in
+                                    CustomerFileRow(
+                                        name: file.file_name,
+                                        subtitle: file.kind.capitalized + " · " + CustomerPortalFormatting.fileSize(file.file_size),
+                                        size: file.file_size,
+                                        isLoading: downloadingFileId == file.id
+                                    ) {
+                                        Task { await downloadOrderFile(file) }
+                                    }
+                                }
+                            }
+                        }
+
+                        if let notes = order.notes, !notes.isEmpty {
+                            detailSection(String(localized: "Notes")) {
+                                ForEach(notes) { n in
+                                    Text(n.body)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                            }
+                        }
+
+                        if let activity = order.activity, !activity.isEmpty {
+                            detailSection(String(localized: "Timeline")) {
+                                ForEach(activity) { item in
+                                    HStack(alignment: .top, spacing: 10) {
+                                        Circle()
+                                            .fill(PAXBrand.accent)
+                                            .frame(width: 8, height: 8)
+                                            .padding(.top, 6)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(item.summary)
+                                                .font(.subheadline)
+                                            if !item.created_at.isEmpty {
+                                                Text(item.created_at)
+                                                    .font(.caption)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                        Spacer(minLength: 0)
+                                    }
                                 }
                             }
                         }
                     }
-                    if let notes = order.notes, !notes.isEmpty {
-                        Section(String(localized: "Notes")) {
-                            ForEach(notes) { n in Text(n.body) }
-                        }
-                    }
-                    if let activity = order.activity, !activity.isEmpty {
-                        Section(String(localized: "Activity")) {
-                            ForEach(activity) { a in Text(a.summary) }
-                        }
-                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
             } else if let error {
                 PAXContentUnavailableView(String(localized: "Unable to load request"), systemImage: "exclamationmark.triangle", description: Text(error))
@@ -341,6 +390,19 @@ struct CustomerOrderDetailView: View {
         .sheet(item: $shareURL) { url in
             CustomerFileShareSheet(url: url)
         }
+    }
+
+    @ViewBuilder
+    private func detailSection<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title)
+                .font(.headline)
+            content()
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.primary.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: CustomerCalmDesign.cardRadius, style: .continuous))
     }
 
     private func load() async {

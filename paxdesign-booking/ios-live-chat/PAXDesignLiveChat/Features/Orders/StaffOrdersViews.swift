@@ -12,8 +12,8 @@ struct StaffOrdersListView: View {
     var body: some View {
         Group {
             if coordinator.isLoading && coordinator.orders.isEmpty {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                PAXScreenLoadingStack(status: String(localized: "Loading orders…"), rowCount: 4, preset: .list)
+                    .padding(.horizontal, 16)
             } else if let error = coordinator.errorMessage, coordinator.orders.isEmpty {
                 PAXContentUnavailableView(
                     String(localized: "Unable to load orders"),
@@ -31,13 +31,21 @@ struct StaffOrdersListView: View {
                     description: Text(String(localized: "New service requests from customers will appear here."))
                 )
             } else {
-                List(coordinator.orders) { order in
-                    NavigationLink(value: order.id) {
-                        StaffOrderRow(order: order)
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(coordinator.orders) { order in
+                            NavigationLink(value: order.id) {
+                                StaffOrderCard(order: order)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
                 }
             }
         }
+        .paxScreenBackground()
         .navigationTitle(String(localized: "Orders & Requests"))
         .navigationDestination(for: Int.self) { orderId in
             StaffOrderDetailView(orderId: orderId)
@@ -65,6 +73,58 @@ struct StaffOrdersListView: View {
         .navigationDestination(item: $deepLinkOrder) { target in
             StaffOrderDetailView(orderId: target.id)
         }
+    }
+}
+
+private struct StaffOrderCard: View {
+    let order: StaffOrderSummary
+
+    private var isUnread: Bool {
+        order.status == "received" || order.status == "pending"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(PAXTheme.accent.opacity(0.14))
+                        .frame(width: 44, height: 44)
+                    PAXIcon("doc.text.fill", size: .row, emphasis: .primary)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(order.service_label)
+                        .font(.headline)
+                        .foregroundStyle(PAXTheme.textPrimary)
+                    Text(order.customer_name.isEmpty ? order.customer_email : order.customer_name)
+                        .font(.subheadline)
+                        .foregroundStyle(PAXTheme.textSecondary)
+                }
+                Spacer(minLength: 8)
+                if isUnread {
+                    Circle()
+                        .fill(Color.red)
+                        .frame(width: 10, height: 10)
+                        .accessibilityLabel(String(localized: "Unread"))
+                }
+            }
+
+            HStack {
+                Text(order.ref)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(PAXTheme.textTertiary)
+                Spacer()
+                Text(order.status.capitalized)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(PAXTheme.accent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(PAXTheme.accent.opacity(0.12))
+                    .clipShape(Capsule())
+            }
+        }
+        .padding(16)
+        .paxCard(.list, tint: isUnread ? PAXTheme.accent : PAXTheme.textSecondary)
     }
 }
 

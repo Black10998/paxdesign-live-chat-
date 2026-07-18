@@ -27,6 +27,7 @@ define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
 
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-litespeed-compat.php';
+require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-admin-compat.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-update-checker.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-email-templates.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-service-icons.php';
@@ -68,6 +69,7 @@ add_filter('upload_mimes', function ($mimes) {
 });
 
 PAXdesign_Settings_Admin::init();
+PAXdesign_Admin_Compat::init();
 PAXdesign_Chat_Log::get_instance();
 PAXdesign_Chat_Live::get_instance();
 PAXdesign_Chat_Quick_Links::init();
@@ -206,6 +208,10 @@ class PAXdesign_Booking {
     }
     
     public function enqueue_assets() {
+        if (is_admin()) {
+            return;
+        }
+
         wp_enqueue_style(
             'paxdesign-booking-styles',
             PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/css/booking-styles.css',
@@ -247,6 +253,9 @@ class PAXdesign_Booking {
     }
 
     public function enqueue_chat_assets() {
+        if (is_admin()) {
+            return;
+        }
         PAXdesign_Chat::get_instance()->enqueue_assets();
     }
     
@@ -1055,6 +1064,10 @@ class PAXdesign_Booking {
     }
     
     public function enqueue_admin_assets($hook) {
+        if (PAXdesign_Admin_Compat::is_block_widgets_screen($hook)) {
+            return;
+        }
+
         // Settings page assets are handled by PAXdesign_Settings_Admin.
         if (PAXdesign_Settings_Admin::is_screen($hook)) {
             return;
