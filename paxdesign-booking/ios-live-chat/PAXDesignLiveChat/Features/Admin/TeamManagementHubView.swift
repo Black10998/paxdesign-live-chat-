@@ -304,6 +304,7 @@ struct TeamManagementHubView: View {
                 Section(L10n.AdminSectionPermissions) {
                     PermissionToggle(L10n.PermissionViewChats, keyPath: \.viewChats, permissions: $editPermissions)
                     PermissionToggle(L10n.PermissionReplyChats, keyPath: \.replyChats, permissions: $editPermissions)
+                    PermissionToggle(L10n.CommonTakeover, keyPath: \.takeoverChats, permissions: $editPermissions)
                     PermissionToggle(L10n.PermissionAIAssistant, keyPath: \.useAI, permissions: $editPermissions)
                     PermissionToggle(L10n.PermissionSendImages, keyPath: \.sendImages, permissions: $editPermissions)
                     PermissionToggle(L10n.PermissionSettings, keyPath: \.manageSettings, permissions: $editPermissions)

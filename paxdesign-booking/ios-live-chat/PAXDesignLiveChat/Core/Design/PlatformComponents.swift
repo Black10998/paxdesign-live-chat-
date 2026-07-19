@@ -65,6 +65,7 @@ enum PermissionLabels {
         [
             PermissionLabelItem(id: "view_chats", title: L10n.StaffPermissionViewChats, enabled: permissions.viewChats),
             PermissionLabelItem(id: "reply_chats", title: L10n.StaffPermissionReplyChats, enabled: permissions.replyChats),
+            PermissionLabelItem(id: "takeover_chats", title: L10n.CommonTakeover, enabled: permissions.takeoverChats),
             PermissionLabelItem(id: "use_ai", title: L10n.SettingsSectionAI, enabled: permissions.useAI),
             PermissionLabelItem(id: "send_images", title: L10n.ChatImage, enabled: permissions.sendImages),
             PermissionLabelItem(id: "manage_settings", title: L10n.StaffPermissionManageSettings, enabled: permissions.manageSettings),

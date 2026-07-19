@@ -132,6 +132,7 @@ struct AdminPermissions: Codable, Equatable {
             CodingKeys.manageCustomerProfiles.rawValue: manageCustomerProfiles,
             CodingKeys.assignTeamTasks.rawValue: assignTeamTasks,
             CodingKeys.customizeHubProfile.rawValue: customizeHubProfile,
+            CodingKeys.takeoverChats.rawValue: takeoverChats,
         ]
     }
 }
