@@ -269,6 +269,17 @@ final class ChatCoordinator: ObservableObject {
         lastSessionRefreshAt = nil
     }
 
+    private func deduplicatedSessions(_ items: [LiveSession]) -> [LiveSession] {
+        var seen = Set<String>()
+        var unique: [LiveSession] = []
+        unique.reserveCapacity(items.count)
+        for session in items {
+            guard seen.insert(session.sessionId).inserted else { continue }
+            unique.append(session)
+        }
+        return unique
+    }
+
     func refreshSessions(auth: AuthStore, mode: SessionRefreshMode = .lightweight) async {
         switch mode {
         case .full:
@@ -299,16 +310,16 @@ final class ChatCoordinator: ObservableObject {
             ConversationLocalSync.shared.apply(response)
             teamCoordinator.applyTeamSessions(response.teamSessions)
 
-            sessions = response.sessions
+            sessions = deduplicatedSessions(response.sessions)
             liveCount = response.liveCount
-            noteSessionSeqs(from: response.sessions)
-            detectNewSessions(response.sessions)
+            noteSessionSeqs(from: sessions)
+            detectNewSessions(sessions)
             lastSyncAt = Date()
             lastSessionRefreshAt = lastSyncAt
             updateUnreadCounts()
             AppRefreshPolicy.update(liveCount: response.liveCount, openChat: activeSessionId != nil)
             errorMessage = nil
-            detectIncomingLiveRequests(response.sessions)
+            detectIncomingLiveRequests(sessions)
             persistSessionListCache()
         } catch {
             if case LiveChatAPIError.unauthorized = error {
@@ -326,15 +337,15 @@ final class ChatCoordinator: ObservableObject {
         defer { sessionRefreshGuard.leave("sessions-lightweight") }
         do {
             let response = try await api.fetchSessions()
-            sessions = response.sessions
+            sessions = deduplicatedSessions(response.sessions)
             liveCount = response.liveCount
-            noteSessionSeqs(from: response.sessions)
-            detectNewSessions(response.sessions)
+            noteSessionSeqs(from: sessions)
+            detectNewSessions(sessions)
             lastSessionRefreshAt = Date()
             updateUnreadCounts()
             AppRefreshPolicy.update(liveCount: response.liveCount, openChat: activeSessionId != nil)
             errorMessage = nil
-            detectIncomingLiveRequests(response.sessions)
+            detectIncomingLiveRequests(sessions)
             persistSessionListCache()
         } catch {
             if case LiveChatAPIError.unauthorized = error {
