@@ -25,6 +25,9 @@
 | 12 | Customer chat iOS | Navigation passed stale `initialSessionID` without server verify | Always `fetchChatSession()` first; reset `streamSince` on renew |
 | 13 | Deep link `/account/devices` | No routing case | Added `.devices` destination → `CustomerDeviceManagementView` |
 | 14 | SF Symbol placeholders | Direct `Image(systemName:)` in staff banners/badges | Replaced with `PAXIcon` SVG; `PAXContentUnavailableView` uses SVG |
+| 15 | App Store build 162 | `CustomerPushService.handleForegroundNotification` passed optional `api` to non-optional `scheduleRefresh(api:)` | Added `guard let api else { return }` before badge refresh |
+| 16 | CI TestFlight deadlock | Shared macOS concurrency group let TestFlight hold lock while waiting for App Store | Removed shared concurrency; TestFlight falls back to latest main IPA after 3m with build validation |
+| 17 | CI App Store log noise | Verbose xcodebuild output caused early runner termination on some attempts | `-quiet`, log tee, 3-attempt retry with DerivedData cleanup |
 
 ---
 
@@ -121,11 +124,15 @@ WordPress production deploy: **confirmed** via workflow run **29704900345** (`De
 
 | Workflow | Run ID | Status | Notes |
 |----------|--------|--------|-------|
-| Deploy customer platform 3.153.0 | 29704900345 | success | Production at 3.153.0 |
-| App Store iOS Build (attempt 1) | 29704900342 | failure | CI runner killed xcodebuild mid-compile (~51s); no Swift errors in log |
-| Upload TestFlight Build (attempt 1) | 29704900376 | failure | Fallback IPA was build 161; validation rejected (expected 162) |
-| App Store iOS Build (attempt 2) | pending | — | Re-triggered after deploy verification |
-| Upload TestFlight Build (attempt 2) | pending | — | Re-triggered after App Store build 162 |
+| Deploy customer platform 3.153.0 | **29704900345** | success | Production at 3.153.0 |
+| Validate Release Contract | 29704900369 | success | Pre-deploy gate |
+| Messaging Reliability | 29704900354 | success | Chat reliability tests |
+| App Store iOS Build (compile fix) | **29705658251** | **success** | Build **162** IPA archived and exported |
+| App Store iOS Build (earlier attempts) | 29704900342, 29705001536, 29705546001 | failure | Runner flake / compile error (fixed in d3d9d2e) |
+| Upload TestFlight Build | **29705750836** | in_progress | Waiting for same-commit IPA resolution (trigger-only commit) |
+| Upload TestFlight Build (retry) | 8510bd8 push | pending | Uses fallback to run 29705658251 after 3m |
+
+**Final iOS build number:** 162 (CFBundleVersion verified in App Store run 29705658251)
 
 ---
 
