@@ -72,7 +72,6 @@ struct NotificationPermissionPromptView: View {
                 .padding(24)
             }
         }
-        .scrollBounceBehavior(.basedOnSize)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(.ultraThinMaterial)

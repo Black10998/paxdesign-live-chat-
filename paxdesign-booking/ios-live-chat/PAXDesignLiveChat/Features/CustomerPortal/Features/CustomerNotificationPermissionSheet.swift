@@ -52,7 +52,7 @@ struct CustomerNotificationPermissionSheet: View {
                         Button {
                             onSkip()
                         } label: {
-                            Text(String(localized: "Not now"))
+                            Text(L10n.PermissionsNotNow)
                                 .font(.subheadline.weight(.medium))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)

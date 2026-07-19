@@ -187,7 +187,10 @@ struct AdaptiveShellView: View {
         .sheet(isPresented: $showGlobalSearch) {
             NavigationStack { GlobalSearchView() }
         }
-        .sheet(isPresented: $permissions.showNotificationPrompt) {
+        .sheet(
+            isPresented: $permissions.showNotificationPrompt,
+            onDismiss: { permissions.completeNotificationPrompt() }
+        ) {
             NotificationPermissionPromptView()
                 .environmentObject(PushService.shared)
                 .presentationDetents([.medium, .large])

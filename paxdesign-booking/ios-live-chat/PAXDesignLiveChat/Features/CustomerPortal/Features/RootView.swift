@@ -20,7 +20,10 @@ struct CustomerPortalShellView: View {
             .task {
                 CustomerPushService.shared.configure(api: customerSession.api)
             }
-            .sheet(isPresented: $customerPush.shouldShowNotificationEducation) {
+            .sheet(
+                isPresented: $customerPush.shouldShowNotificationEducation,
+                onDismiss: { CustomerPushService.shared.markNotificationEducationSeen() }
+            ) {
                 CustomerNotificationPermissionSheet(
                     onEnable: { CustomerPushService.shared.enableNotificationsAfterEducation() },
                     onSkip: { CustomerPushService.shared.skipNotificationEducation() }
