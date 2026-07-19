@@ -1,0 +1,20 @@
+Hello App Review Team,
+
+Thank you for the report. We identified and fixed the issue where the notification permission screen could block access to the app.
+
+What we fixed in Build 160:
+- The "Enable Notifications" and "Not Now" buttons now respond immediately on the notification education sheet.
+- "Not Now" dismisses the sheet and continues into the app without requiring notification permission.
+- "Enable Notifications" presents the standard iOS permission dialog; the app continues whether the user allows or denies notifications.
+- Notification permission is optional throughout onboarding.
+- We removed UI issues that could prevent taps (sheet binding, dismiss timing, and layout).
+
+How to verify:
+1. Delete the app completely from the device (fresh install).
+2. Sign in with the demo account provided in App Store Connect.
+3. On the notification screen, tap "Not Now" — the app should open immediately.
+4. Repeat with a fresh install and tap "Enable Notifications", then choose Allow or Don't Allow — the app should open in both cases.
+
+Build 160 is available in TestFlight and submitted for review.
+
+Thank you.
