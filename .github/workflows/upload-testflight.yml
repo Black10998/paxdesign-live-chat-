@@ -12,20 +12,17 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: testflight-upload
+  cancel-in-progress: true
+
 jobs:
-  upload-testflight:
-    runs-on: macos-latest
-    timeout-minutes: 90
-    env:
-      APP_BUNDLE_ID: at.paxdesign.livechat
-      TESTFLIGHT_INTERNAL_TESTER_EMAIL: awjime29@icloud.com
-      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
-      APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-      APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
-      APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
-      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+  resolve-ipa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      build: ${{ steps.version.outputs.build }}
+      run_id: ${{ steps.latest_ipa.outputs.run_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,8 +42,8 @@ jobs:
           set -euo pipefail
           EXPECTED="${{ steps.version.outputs.build }}"
           SHA="${{ github.sha }}"
-          FALLBACK_AFTER=$(( $(date +%s) + 180 ))
-          DEADLINE=$(( $(date +%s) + 3600 ))
+          FALLBACK_AFTER=$(( $(date +%s) + 60 ))
+          DEADLINE=$(( $(date +%s) + 900 ))
           RUN_ID=""
 
           if [[ -f .github/triggers/testflight-upload ]]; then
@@ -122,21 +119,21 @@ jobs:
             fi
             if [[ -n "$IN_PROGRESS" ]]; then
               echo "Waiting for App Store build run $IN_PROGRESS (expected build $EXPECTED)..."
-              sleep 30
+              sleep 20
               continue
             fi
 
             if [[ $(date +%s) -ge $FALLBACK_AFTER ]]; then
               RUN_ID="$(find_latest_successful_main)"
               if [[ -n "$RUN_ID" ]]; then
-                echo "No App Store build on commit $SHA; using latest successful main run $RUN_ID (CFBundleVersion validated next)."
+                echo "Using latest successful main App Store run $RUN_ID (CFBundleVersion validated next)."
                 echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
                 exit 0
               fi
             fi
 
             echo "Waiting for App Store build workflow on commit $SHA (expected build $EXPECTED)..."
-            sleep 30
+            sleep 20
           done
 
           RUN_ID="$(find_successful_run "$SHA")"
@@ -147,7 +144,6 @@ jobs:
           fi
 
           echo "ERROR: No successful App Store IPA for commit $SHA after waiting." >&2
-          echo "Ensure release-appstore.yml completed successfully, then rerun upload." >&2
           exit 1
 
       - name: Download signed App Store IPA artifact
@@ -165,16 +161,47 @@ jobs:
           [[ -f "$IPA" ]] || { echo "IPA missing: $IPA" >&2; exit 1; }
           WORKDIR="$(mktemp -d)"
           trap 'rm -rf "$WORKDIR"' EXIT
+          sudo apt-get update -qq && sudo apt-get install -y -qq libplist-utils unzip
           unzip -q "$IPA" -d "$WORKDIR"
           APP_PATH="$(find "$WORKDIR/Payload" -maxdepth 1 -name '*.app' -type d | head -1)"
-          BUNDLE_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' "$APP_PATH/Info.plist")"
+          BUNDLE_VERSION="$(plistutil -i "$APP_PATH/Info.plist" 2>/dev/null | grep -A1 CFBundleVersion | tail -1 | sed 's/.*<string>\(.*\)<\/string>.*/\1/' || plutil -extract CFBundleVersion raw "$APP_PATH/Info.plist")"
           EXPECTED="${{ steps.version.outputs.build }}"
           echo "IPA CFBundleVersion=$BUNDLE_VERSION (expected $EXPECTED)"
           if [[ "$BUNDLE_VERSION" != "$EXPECTED" ]]; then
             echo "ERROR: IPA build number $BUNDLE_VERSION does not match project.yml ($EXPECTED)." >&2
-            echo "Wait for the App Store build workflow on this commit, then rerun upload." >&2
             exit 1
           fi
+
+      - name: Upload validated IPA for macOS job
+        uses: actions/upload-artifact@v4
+        with:
+          name: testflight-ipa
+          path: artifacts/ipa/PAXDesignLiveChat-AppStore.ipa
+          if-no-files-found: error
+
+  upload-testflight:
+    needs: resolve-ipa
+    runs-on: macos-latest
+    timeout-minutes: 45
+    env:
+      APP_BUNDLE_ID: at.paxdesign.livechat
+      TESTFLIGHT_INTERNAL_TESTER_EMAIL: awjime29@icloud.com
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+      APPSTORE_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
+      APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+      APPSTORE_API_PRIVATE_KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download validated IPA
+        uses: actions/download-artifact@v4
+        with:
+          name: testflight-ipa
+          path: artifacts/ipa
 
       - name: Validate App Store Connect private key
         run: python3 scripts/appstore-connect/prepare-asc-key.py
@@ -217,12 +244,12 @@ jobs:
       - name: Enable internal TestFlight testing
         if: steps.upload.outcome == 'success' || steps.upload_retry.outcome == 'success'
         env:
-          TESTFLIGHT_TARGET_BUILD: ${{ steps.version.outputs.build }}
+          TESTFLIGHT_TARGET_BUILD: ${{ needs.resolve-ipa.outputs.build }}
           TESTFLIGHT_POLL_SECONDS: "30"
           TESTFLIGHT_POLL_TIMEOUT: "3600"
         run: python3 scripts/appstore-connect/enable_testflight_build.py
 
       - name: Clean up older TestFlight builds
         env:
-          TESTFLIGHT_KEEP_BUILD: ${{ steps.version.outputs.build }}
+          TESTFLIGHT_KEEP_BUILD: ${{ needs.resolve-ipa.outputs.build }}
         run: python3 scripts/appstore-connect/cleanup_testflight_builds.py
