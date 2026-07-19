@@ -747,6 +747,21 @@ class PAXdesign_Chat_Live {
         return false;
     }
 
+    /**
+     * Map website AJAX session IDs to the authenticated customer's primary conversation.
+     */
+    private function resolve_customer_ajax_session($session_id) {
+        $session_id = $this->sanitize_session_id($session_id);
+        if (!class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            return $session_id;
+        }
+        $user_id = get_current_user_id();
+        if ($user_id <= 0) {
+            return $session_id;
+        }
+        return PAXdesign_Customer_Chat_Bridge::resolve_ajax_session($user_id, $session_id);
+    }
+
     private function verify_admin_stream_access() {
         $nonce = isset($_GET['nonce']) ? sanitize_text_field(wp_unslash($_GET['nonce'])) : '';
         if (!$nonce || !wp_verify_nonce($nonce, 'paxdesign_admin_nonce')) {
@@ -1110,19 +1125,18 @@ class PAXdesign_Chat_Live {
         $session_id = $this->sanitize_session_id(
             isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
         );
+        $user_id = get_current_user_id();
+        if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            $session_id = $this->resolve_customer_ajax_session($session_id);
+        }
         if ($session_id === '') {
             wp_send_json_error(array('message' => 'Invalid session'), 400);
         }
 
-        $device_token = $this->device_token_from_request();
-        if ($device_token !== '') {
-            $this->bind_session_to_device($session_id, $device_token);
-        }
-
-        if (class_exists('PAXdesign_Customer_Chat_Bridge')) {
-            $user_id = get_current_user_id();
-            if ($user_id > 0 && PAXdesign_Customer_Chat_Bridge::user_owns_session($user_id, $session_id)) {
-                $session_id = PAXdesign_Customer_Chat_Bridge::ensure_persistent_session_open($session_id, $user_id);
+        if ($user_id <= 0) {
+            $device_token = $this->device_token_from_request();
+            if ($device_token !== '') {
+                $this->bind_session_to_device($session_id, $device_token);
             }
         }
 
@@ -1138,6 +1152,7 @@ class PAXdesign_Chat_Live {
             wp_send_json_error(array('message' => $data->get_error_message()), $status);
         }
 
+        $data['session_id'] = $session_id;
         wp_send_json_success($data);
     }
 
@@ -1150,6 +1165,9 @@ class PAXdesign_Chat_Live {
         $session_id = $this->sanitize_session_id(
             isset($_GET['session_id']) ? wp_unslash($_GET['session_id']) : ''
         );
+        if (get_current_user_id() > 0) {
+            $session_id = $this->resolve_customer_ajax_session($session_id);
+        }
         if ($session_id === '') {
             status_header(400);
             exit;
@@ -1307,6 +1325,7 @@ class PAXdesign_Chat_Live {
         $session_id = $this->sanitize_session_id(
             isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
         );
+        $session_id = $this->resolve_customer_ajax_session($session_id);
         if ($session_id === '' || !$this->is_human_queue($session_id)) {
             wp_send_json_success(array('ok' => false));
         }
@@ -1330,8 +1349,31 @@ class PAXdesign_Chat_Live {
         $session_id = $this->sanitize_session_id(
             isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
         );
+        $session_id = $this->resolve_customer_ajax_session($session_id);
         if ($session_id === '') {
             wp_send_json_error(array('message' => 'Invalid session'), 400);
+        }
+
+        $user_id = get_current_user_id();
+        if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            $lang = isset($_POST['language']) ? sanitize_key(wp_unslash($_POST['language'])) : 'de';
+            $result = $this->escalate_authenticated_to_live($session_id, $user_id, $lang);
+            if (is_wp_error($result)) {
+                $status = 500;
+                $error_data = $result->get_error_data();
+                if (is_array($error_data) && !empty($error_data['status'])) {
+                    $status = (int) $error_data['status'];
+                }
+                wp_send_json_error(array('message' => $result->get_error_message()), $status);
+            }
+            wp_send_json_success(array(
+                'handler'    => self::HANDLER_LIVE,
+                'session_id' => $session_id,
+                'messages'   => array_values(array_filter(array(
+                    !empty($result['thanks']) ? $result['thanks'] : null,
+                    !empty($result['notice']) ? $result['notice'] : null,
+                ))),
+            ));
         }
 
         $messages_raw = isset($_POST['messages']) ? wp_unslash($_POST['messages']) : '';
@@ -1428,9 +1470,32 @@ class PAXdesign_Chat_Live {
             isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
         );
         $content = isset($_POST['message']) ? sanitize_textarea_field(wp_unslash($_POST['message'])) : '';
+        $session_id = $this->resolve_customer_ajax_session($session_id);
 
         if ($session_id === '' || $content === '') {
             wp_send_json_error(array('message' => 'Invalid payload'), 400);
+        }
+
+        $user_id = get_current_user_id();
+        if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            $result = PAXdesign_Customer_Chat_Bridge::send_user_message(
+                $user_id,
+                $session_id,
+                $content,
+                array(
+                    'reply_to'      => isset($_POST['reply_to']) ? (int) $_POST['reply_to'] : 0,
+                    'client_msg_id' => isset($_POST['client_msg_id']) ? sanitize_text_field(wp_unslash($_POST['client_msg_id'])) : '',
+                )
+            );
+            if (is_wp_error($result)) {
+                $status = 500;
+                $error_data = $result->get_error_data();
+                if (is_array($error_data) && !empty($error_data['status'])) {
+                    $status = (int) $error_data['status'];
+                }
+                wp_send_json_error(array('message' => $result->get_error_message()), $status);
+            }
+            wp_send_json_success($result);
         }
 
         $handler = $this->get_handler($session_id);
@@ -2929,6 +2994,7 @@ class PAXdesign_Chat_Live {
         $other_read = $mark_read === 'admin' ? $reads['user'] : $reads['admin'];
 
         return array(
+            'session_id'       => $session_id,
             'handler'          => $handler,
             'handler_label'    => self::handler_label($handler, $agent['admin_name']),
             'admin_user_id'    => $agent['admin_user_id'],

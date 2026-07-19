@@ -34,9 +34,9 @@ struct LiveTabView: View {
                             canTakeOver: canTakeOver,
                             canOpenChat: canViewChats
                         ) {
-                            if canViewChats { onOpenSession(session.sessionId) }
                             Task {
                                 await coordinator.acceptLiveRequest(auth: auth, session: session)
+                                if canViewChats { onOpenSession(session.sessionId) }
                             }
                         } onDecline: {
                             PAXDelete.confirm(

@@ -259,6 +259,40 @@ class PAXdesign_Chat {
         }
 
         $session_id = isset($_POST['session_id']) ? sanitize_text_field(wp_unslash($_POST['session_id'])) : '';
+        if (get_current_user_id() > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            $live = PAXdesign_Chat_Live::get_instance();
+            $session_id = PAXdesign_Customer_Chat_Bridge::resolve_ajax_session(get_current_user_id(), $session_id);
+            $last_user = '';
+            for ($i = count($messages) - 1; $i >= 0; $i--) {
+                if (is_array($messages[$i]) && ($messages[$i]['role'] ?? '') === 'user') {
+                    $last_user = sanitize_textarea_field((string) ($messages[$i]['content'] ?? ''));
+                    break;
+                }
+            }
+            if ($last_user !== '') {
+                $assistant_client_id = isset($_POST['assistant_client_msg_id'])
+                    ? sanitize_text_field(wp_unslash($_POST['assistant_client_msg_id']))
+                    : '';
+                $client_msg_id = isset($_POST['client_msg_id'])
+                    ? sanitize_text_field(wp_unslash($_POST['client_msg_id']))
+                    : '';
+                $result = PAXdesign_Chat::get_instance()->complete_authenticated_customer_chat(
+                    $session_id,
+                    $last_user,
+                    $client_msg_id,
+                    $assistant_client_id
+                );
+                if (is_wp_error($result)) {
+                    $status = 500;
+                    $error_data = $result->get_error_data();
+                    if (is_array($error_data) && !empty($error_data['status'])) {
+                        $status = (int) $error_data['status'];
+                    }
+                    wp_send_json_error(array('message' => $result->get_error_message()), $status);
+                }
+                wp_send_json_success($result);
+            }
+        }
         if ($session_id !== '' && preg_match('/^pax_[a-z0-9_]+$/i', $session_id)) {
             $live = PAXdesign_Chat_Live::get_instance();
             if ($live->is_ai_blocked($session_id)) {

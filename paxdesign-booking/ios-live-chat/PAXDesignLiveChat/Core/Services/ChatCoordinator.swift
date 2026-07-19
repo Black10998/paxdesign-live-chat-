@@ -178,8 +178,10 @@ final class ChatCoordinator: ObservableObject {
                             }
                         }
                     }
-                    if event.type == "message" || event.type == "handler" || event.type == "typing" {
-                        self.postSessionSync(sessionId: sid, inlineMessage: event.payload["message"])
+                    if event.type == "message" || event.type == "handler" {
+                        if self.activeSessionId != sid || event.type == "handler" {
+                            self.postSessionSync(sessionId: sid, inlineMessage: event.payload["message"])
+                        }
                     }
                 }
                 if self.inboxEventNeedsListRefresh(event) {

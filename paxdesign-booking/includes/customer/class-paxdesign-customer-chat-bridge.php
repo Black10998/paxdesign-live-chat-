@@ -269,6 +269,29 @@ class PAXdesign_Customer_Chat_Bridge {
         );
     }
 
+    /**
+     * Rewrite website AJAX session IDs to the logged-in customer's primary conversation.
+     */
+    public static function resolve_ajax_session($user_id, $session_id) {
+        $user_id = absint($user_id);
+        $session_id = self::sanitize_session_id($session_id);
+        if ($user_id <= 0) {
+            return $session_id;
+        }
+
+        $primary = self::primary_session_id($user_id);
+        if ($primary === '') {
+            return $session_id;
+        }
+
+        if ($session_id === '' || ($session_id !== $primary && !self::user_owns_session($user_id, $session_id))) {
+            $session_id = $primary;
+        }
+
+        self::sync_chat_log_user($session_id, $user_id);
+        return self::ensure_persistent_session_open($session_id, $user_id);
+    }
+
     public static function user_owns_session($user_id, $session_id) {
         global $wpdb;
         $user_id = absint($user_id);
