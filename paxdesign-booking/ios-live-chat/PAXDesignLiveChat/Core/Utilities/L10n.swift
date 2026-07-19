@@ -172,6 +172,7 @@ enum L10n {
     static var LoginUsername: String { t("login.username") }
     static var LoginWebsite: String { t("login.website") }
     static var PermissionsEnable: String { t("permissions.enable") }
+    static var PermissionsNotNow: String { t("permissions.not_now") }
     static var PermissionsNotificationsBody: String { t("permissions.notifications_body") }
     static var PermissionsNotificationsTitle: String { t("permissions.notifications_title") }
     static var PermissionsRequesting: String { t("permissions.requesting") }

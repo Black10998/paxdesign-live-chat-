@@ -1,9 +1,12 @@
 import SwiftUI
 
 /// Pre-permission education before the native iOS notification prompt.
+/// Notification permission is optional — both actions must always dismiss this screen.
 struct CustomerNotificationPermissionSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    var onContinue: () -> Void
+    var onEnable: () -> Void
+    var onSkip: () -> Void
+
+    @State private var isRequesting = false
 
     var body: some View {
         NavigationStack {
@@ -23,21 +26,49 @@ struct CustomerNotificationPermissionSheet: View {
                         permissionRow(String(localized: "Service updates"), icon: "sparkles")
                     }
 
-                    Button(String(localized: "Enable notifications")) {
-                        dismiss()
-                        onContinue()
-                    }
-                    .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .filled))
-                    .padding(.top, 8)
+                    VStack(spacing: 12) {
+                        Button {
+                            guard !isRequesting else { return }
+                            isRequesting = true
+                            onEnable()
+                            isRequesting = false
+                        } label: {
+                            HStack(spacing: 8) {
+                                if isRequesting {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                        .tint(.white)
+                                }
+                                Text(String(localized: "Enable notifications"))
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .filled))
+                        .disabled(isRequesting)
 
-                    Button(String(localized: "Not now")) { dismiss() }
-                        .frame(maxWidth: .infinity)
+                        Button {
+                            onSkip()
+                        } label: {
+                            Text(String(localized: "Not now"))
+                                .font(.subheadline.weight(.medium))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(PAXTheme.textSecondary)
+                    }
+                    .padding(.top, 8)
                 }
                 .padding(24)
             }
             .navigationTitle(String(localized: "Notifications"))
             .navigationBarTitleDisplayMode(.inline)
         }
+        .interactiveDismissDisabled(false)
     }
 
     private func permissionRow(_ title: String, icon: String) -> some View {

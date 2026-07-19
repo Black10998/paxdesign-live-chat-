@@ -456,6 +456,7 @@ struct OnboardingFlowView: View {
     private var postLoginSkipTitle: String {
         switch postLoginStep {
         case .biometrics: return L10n.OnboardingSkipBiometric
+        case .notifications: return L10n.PermissionsNotNow
         default: return L10n.CommonSkip
         }
     }
@@ -493,6 +494,7 @@ struct OnboardingFlowView: View {
             advancePostLoginStep()
         case .notifications:
             await presentNativeNotificationPermission()
+            permissions.completeNotificationPrompt()
             advancePostLoginStep()
         case .location:
             await presentNativeLocationPermission()
@@ -518,7 +520,10 @@ struct OnboardingFlowView: View {
         defer { isProcessingStep = false }
 
         switch postLoginStep {
-        case .notifications, .location:
+        case .notifications:
+            permissions.skipNotificationOnboarding()
+            advancePostLoginStep()
+        case .location:
             advancePostLoginStep()
         case .biometrics:
             enableBiometricProtection = false

@@ -3,6 +3,7 @@ import SwiftUI
 struct CustomerPortalShellView: View {
     @EnvironmentObject private var auth: AuthStore
     @ObservedObject private var customerSession = CustomerSessionController.shared
+    @ObservedObject private var customerPush = CustomerPushService.shared
     @ObservedObject private var deepLinks = CustomerDeepLinkRouter.shared
     @ObservedObject private var navigation = CustomerNavigationCoordinator.shared
     @ObservedObject private var settings = AppSettingsStore.shared
@@ -19,14 +20,13 @@ struct CustomerPortalShellView: View {
             .task {
                 CustomerPushService.shared.configure(api: customerSession.api)
             }
-            .sheet(isPresented: Binding(
-                get: { CustomerPushService.shared.shouldShowNotificationEducation },
-                set: { CustomerPushService.shared.shouldShowNotificationEducation = $0 }
-            )) {
-                CustomerNotificationPermissionSheet {
-                    CustomerPushService.shared.markNotificationEducationSeen()
-                    Task { await CustomerPushService.shared.requestAuthorizationAndRegister() }
-                }
+            .sheet(isPresented: $customerPush.shouldShowNotificationEducation) {
+                CustomerNotificationPermissionSheet(
+                    onEnable: { CustomerPushService.shared.enableNotificationsAfterEducation() },
+                    onSkip: { CustomerPushService.shared.skipNotificationEducation() }
+                )
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
             }
             .onChange(of: deepLinks.pending) { link in
                 guard let link else { return }

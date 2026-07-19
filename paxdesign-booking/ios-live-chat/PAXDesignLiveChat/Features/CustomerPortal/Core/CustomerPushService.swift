@@ -77,6 +77,19 @@ final class CustomerPushService: NSObject, ObservableObject {
         shouldShowNotificationEducation = false
     }
 
+    /// User chose "Not now" — continue into the app without requesting permission.
+    func skipNotificationEducation() {
+        markNotificationEducationSeen()
+    }
+
+    /// User chose "Enable notifications" — dismiss education, then show the system prompt.
+    func enableNotificationsAfterEducation() {
+        markNotificationEducationSeen()
+        Task {
+            await requestAuthorizationAndRegister()
+        }
+    }
+
     func requestAuthorizationAndRegister() async {
         configureNotificationCategories()
         let center = UNUserNotificationCenter.current()

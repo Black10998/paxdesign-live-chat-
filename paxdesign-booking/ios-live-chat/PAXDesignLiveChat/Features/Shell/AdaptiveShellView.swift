@@ -189,7 +189,8 @@ struct AdaptiveShellView: View {
         }
         .sheet(isPresented: $permissions.showNotificationPrompt) {
             NotificationPermissionPromptView()
-                .presentationDetents([.medium])
+                .environmentObject(PushService.shared)
+                .presentationDetents([.medium, .large])
                 .presentationDragIndicator(.visible)
         }
         .onAppear {

@@ -3939,6 +3939,28 @@
         }
       }
     },
+    "permissions.not_now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not Now"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht jetzt"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ليس الآن"
+          }
+        }
+      }
+    },
     "legal.security": {
       "localizations": {
         "en": {

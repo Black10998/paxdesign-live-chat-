@@ -35,8 +35,12 @@ final class PermissionCoordinator: ObservableObject {
     }
 
     func presentNotificationPromptIfNeeded(isLoggedIn: Bool) {
-        guard shouldShowNotificationOnboarding(isLoggedIn: isLoggedIn) else { return }
-        showNotificationPrompt = true
+        guard isLoggedIn else { return }
+        Task {
+            await refreshStatuses()
+            guard shouldShowNotificationOnboarding(isLoggedIn: isLoggedIn) else { return }
+            showNotificationPrompt = true
+        }
     }
 
     var notificationStatusLabel: String {
@@ -59,11 +63,9 @@ final class PermissionCoordinator: ObservableObject {
     }
 
     func requestNotifications(push: PushService) async -> Bool {
+        defer { completeNotificationPrompt() }
         let granted = await push.requestAuthorization()
         await refreshStatuses()
-        hasCompletedOnboarding = true
-        UserDefaults.standard.set(true, forKey: Keys.onboardingDone)
-        showNotificationPrompt = false
         if granted || notificationStatus == .authorized || notificationStatus == .provisional || notificationStatus == .ephemeral {
             if AuthStore.shared.isLoggedIn {
                 await push.registerTokenWithBackend(auth: AuthStore.shared, reason: .userAction)
@@ -73,6 +75,10 @@ final class PermissionCoordinator: ObservableObject {
     }
 
     func skipNotificationOnboarding() {
+        completeNotificationPrompt()
+    }
+
+    func completeNotificationPrompt() {
         hasCompletedOnboarding = true
         UserDefaults.standard.set(true, forKey: Keys.onboardingDone)
         showNotificationPrompt = false

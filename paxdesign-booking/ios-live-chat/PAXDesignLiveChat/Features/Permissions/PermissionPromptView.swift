@@ -6,54 +6,73 @@ struct NotificationPermissionPromptView: View {
     @State private var isRequesting = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            Capsule()
-                .fill(PAXTheme.textTertiary.opacity(0.5))
-                .frame(width: 36, height: 5)
-                .padding(.top, 10)
+        ScrollView {
+            VStack(spacing: 0) {
+                Capsule()
+                    .fill(PAXTheme.textTertiary.opacity(0.5))
+                    .frame(width: 36, height: 5)
+                    .padding(.top, 10)
 
-            VStack(spacing: 22) {
-                ZStack {
-                    Circle()
-                        .fill(PAXTheme.accentSoft)
-                        .frame(width: 72, height: 72)
-                    PAXIcon("bell.badge.fill", size: .hero)
-                }
+                VStack(spacing: 22) {
+                    ZStack {
+                        Circle()
+                            .fill(PAXTheme.accentSoft)
+                            .frame(width: 72, height: 72)
+                        PAXIcon("bell.badge.fill", size: .hero)
+                    }
 
-                VStack(spacing: 8) {
-                    Text(L10n.PermissionsNotificationsTitle)
-                        .font(.title3.weight(.semibold))
-                    Text(L10n.PermissionsNotificationsBody)
-                        .font(.subheadline)
-                        .foregroundStyle(PAXTheme.textSecondary)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                    VStack(spacing: 8) {
+                        Text(L10n.PermissionsNotificationsTitle)
+                            .font(.title3.weight(.semibold))
+                        Text(L10n.PermissionsNotificationsBody)
+                            .font(.subheadline)
+                            .foregroundStyle(PAXTheme.textSecondary)
+                            .multilineTextAlignment(.center)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
-                VStack(spacing: 10) {
-                    PAXPrimaryButton(
-                        title: isRequesting ? L10n.PermissionsRequesting : L10n.PermissionsEnable,
-                        isLoading: isRequesting
-                    ) {
-                        Task {
+                    VStack(spacing: 12) {
+                        Button {
+                            guard !isRequesting else { return }
                             isRequesting = true
-                            defer { isRequesting = false }
-                            let granted = await permissions.requestNotifications(push: push)
-                            if granted {
-                                await push.registerTokenWithBackend(auth: AuthStore.shared, reason: .userAction)
+                            Task {
+                                defer { isRequesting = false }
+                                _ = await permissions.requestNotifications(push: push)
                             }
+                        } label: {
+                            HStack(spacing: 8) {
+                                if isRequesting {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                }
+                                Text(isRequesting ? L10n.PermissionsRequesting : L10n.PermissionsEnable)
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .contentShape(Rectangle())
                         }
-                    }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.large)
+                        .disabled(isRequesting)
 
-                    Button(L10n.CommonLater) {
-                        permissions.skipNotificationOnboarding()
+                        Button {
+                            permissions.skipNotificationOnboarding()
+                        } label: {
+                            Text(L10n.PermissionsNotNow)
+                                .font(.subheadline.weight(.medium))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(PAXTheme.textSecondary)
                     }
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(PAXTheme.textSecondary)
                 }
+                .padding(24)
             }
-            .padding(24)
         }
+        .scrollBounceBehavior(.basedOnSize)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
                 .fill(.ultraThinMaterial)
@@ -67,35 +86,6 @@ struct NotificationPermissionPromptView: View {
                 )
         )
         .padding(.horizontal, 12)
-    }
-}
-
-struct PAXLoadingOverlay: View {
-    let message: String
-
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.35).ignoresSafeArea()
-            VStack(spacing: 14) {
-                PAXTimelineLoaderCard(status: message)
-                    .frame(maxWidth: 280)
-                Text(message)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(PAXTheme.textSecondary)
-            }
-            .padding(28)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(.ultraThinMaterial)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .fill(PAXTheme.surface.opacity(0.82))
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 20, style: .continuous)
-                            .stroke(PAXTheme.border.opacity(0.42), lineWidth: 1)
-                    )
-            )
-        }
+        .interactiveDismissDisabled(false)
     }
 }
