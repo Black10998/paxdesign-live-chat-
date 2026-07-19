@@ -394,13 +394,19 @@ echo "==> Archiving $SCHEME ($CONFIGURATION)"
 rm -rf "$DERIVED_DATA" "$ARCHIVE_PATH" "$EXPORT_DIR"
 mkdir -p "$DERIVED_DATA" "$EXPORT_DIR"
 
+ARCHIVE_LOG="$ROOT/build/AppStore/archive.log"
+rm -f "$ARCHIVE_LOG"
+
+set +e
 xcodebuild archive \
+  -quiet \
   -project "$ROOT/PAXDesignLiveChat.xcodeproj" \
   -scheme "$SCHEME" \
   -configuration "$CONFIGURATION" \
   -destination 'generic/platform=iOS' \
   -archivePath "$ARCHIVE_PATH" \
   -derivedDataPath "$DERIVED_DATA" \
+  -IDEBuildOperationMaxNumberOfConcurrentCompileTasks=2 \
   CODE_SIGN_STYLE=Manual \
   DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
   CODE_SIGN_IDENTITY="Apple Distribution" \
@@ -417,7 +423,15 @@ xcodebuild archive \
   "PAXDesignLiveChat_CODE_SIGN_ENTITLEMENTS=PAXDesignLiveChat/PAXDesignLiveChat.entitlements" \
   "PAXWidgets_CODE_SIGN_ENTITLEMENTS=PAXWidgets/PAXWidgets.entitlements" \
   "PAXDesignLiveChatTests_CODE_SIGNING_ALLOWED=NO" \
-  OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH"
+  OTHER_CODE_SIGN_FLAGS="--keychain $KEYCHAIN_PATH" \
+  2>&1 | tee "$ARCHIVE_LOG"
+ARCHIVE_STATUS=${PIPESTATUS[0]}
+set -e
+if [[ "$ARCHIVE_STATUS" -ne 0 ]]; then
+  echo "ERROR: xcodebuild archive failed (exit $ARCHIVE_STATUS). Last 80 log lines:" >&2
+  tail -80 "$ARCHIVE_LOG" >&2 || true
+  fail "xcodebuild archive failed"
+fi
 
 [[ -x "$VALIDATE_ARCHIVE_SCRIPT" ]] || fail "Missing validator: $VALIDATE_ARCHIVE_SCRIPT"
 

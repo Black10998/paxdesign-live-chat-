@@ -11,9 +11,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: macos-ios-release
+  cancel-in-progress: false
+
 jobs:
   appstore-build:
     runs-on: macos-latest
+    timeout-minutes: 45
     env:
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
@@ -52,7 +57,17 @@ jobs:
           chmod +x scripts/build-appstore-ipa.sh \
             scripts/validate-appstore-archive.sh \
             scripts/validate-appstore-ipa.sh
-          ./scripts/build-appstore-ipa.sh
+          for attempt in 1 2 3; do
+            echo "==> App Store archive attempt $attempt/3"
+            if ./scripts/build-appstore-ipa.sh; then
+              exit 0
+            fi
+            echo "WARN: App Store build attempt $attempt failed; cleaning DerivedData before retry." >&2
+            rm -rf build/AppStore/DerivedData build/AppStore/PAXDesignLiveChat.xcarchive
+            sleep $((attempt * 20))
+          done
+          echo "ERROR: App Store build failed after 3 attempts." >&2
+          exit 1
 
       - name: Upload App Store IPA artifact
         uses: actions/upload-artifact@v4
