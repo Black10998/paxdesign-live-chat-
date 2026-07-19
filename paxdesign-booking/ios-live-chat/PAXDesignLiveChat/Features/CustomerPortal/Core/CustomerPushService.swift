@@ -195,6 +195,7 @@ final class CustomerPushService: NSObject, ObservableObject {
     func handleForegroundNotification(_ notification: UNNotification) {
         guard let payload = parseNotification(userInfo: notification.request.content.userInfo) else { return }
         playForegroundSound(for: payload)
+        guard let api else { return }
         CustomerNotificationsBadgeStore.shared.scheduleRefresh(api: api)
     }
 
