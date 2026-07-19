@@ -1472,7 +1472,7 @@ final class ChatThreadModel: ObservableObject {
             draft = text
             return
         }
-        if handler != "admin" {
+        if handler != "admin", auth.canTakeOverChats {
             do {
                 try await api.takeover(sessionId)
                 handler = "admin"

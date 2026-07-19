@@ -953,6 +953,7 @@ struct CustomerSendResponse: Decodable {
     let assistant: CustomerChatPoll.ChatMessage?
     let notice: String?
     let renewed: Bool?
+    let handoff: Bool?
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -962,10 +963,11 @@ struct CustomerSendResponse: Decodable {
         assistant = try? container.decodeIfPresent(CustomerChatPoll.ChatMessage.self, forKey: .assistant)
         notice = try? container.decodeIfPresent(String.self, forKey: .notice)
         renewed = CustomerPortalDecode.optionalBool(container, .renewed)
+        handoff = CustomerPortalDecode.optionalBool(container, .handoff)
     }
 
     enum CodingKeys: String, CodingKey {
-        case session_id, handler, message, assistant, notice, renewed
+        case session_id, handler, message, assistant, notice, renewed, handoff
     }
 }
 

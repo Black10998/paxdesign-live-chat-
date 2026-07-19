@@ -1285,6 +1285,24 @@
 
   function getSessionId() {
     if (cachedSessionId) return cachedSessionId;
+    if (isPersistentAccountChat()) {
+      if (config && config.chatSessionId) {
+        cachedSessionId = config.chatSessionId;
+        try {
+          localStorage.setItem(SESSION_KEY, config.chatSessionId);
+          sessionStorage.setItem(SESSION_KEY, config.chatSessionId);
+        } catch (e) {}
+        return cachedSessionId;
+      }
+      try {
+        var stored = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
+        if (stored) {
+          cachedSessionId = stored;
+          return stored;
+        }
+      } catch (e) {}
+      return config && config.chatSessionId ? config.chatSessionId : '';
+    }
     try {
       var id = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
       if (!id) {
@@ -1814,6 +1832,23 @@
   }
 
   function startNewConversation() {
+    if (isPersistentAccountChat()) {
+      if (!window.PDXAuth || typeof window.PDXAuth.customerApiFetch !== 'function') {
+        return;
+      }
+      if (!window.confirm('Neues Gespräch starten? Ihr bisheriger Chat bleibt gespeichert — es beginnt eine neue Session.')) {
+        return;
+      }
+      window.PDXAuth.customerApiFetch('POST', '/customer/chat/session', { new_conversation: true }).then(function (data) {
+        if (data && data.session_id) {
+          adoptSessionId(data.session_id, { fromServer: true, preserveUi: false });
+          resetSessionState();
+          fetchSessionFromServer(true);
+          startLivePolling();
+        }
+      });
+      return;
+    }
     if (!window.confirm('Neues Gespräch starten? Ihr bisheriger Chat bleibt gespeichert — es beginnt eine neue Session.')) {
       return;
     }

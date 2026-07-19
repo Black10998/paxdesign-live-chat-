@@ -422,6 +422,10 @@ class PAXdesign_APNS {
         $body = ($service !== '' ? $service . ' — ' : '') . ($preview !== '' ? $preview : 'Chat aktualisiert');
 
         $last_role = isset($meta['last_role']) ? (string) $meta['last_role'] : '';
+        // Customer messages in the human queue also trigger notify_new_customer_message — skip duplicate alert.
+        if ($last_role === 'user' && $handler === 'admin' && $preview !== '') {
+            return;
+        }
         $needs_ai_attention = ($handler === 'ai' && $last_role === 'user' && $preview !== '');
         $type = $needs_ai_attention ? 'ai_attention' : 'session_sync';
         $event = 'assigned_chat_updated';
@@ -1079,6 +1083,44 @@ class PAXdesign_APNS {
      * @return array{status:int,body:string}|WP_Error
      */
     private static function apns_post($url, $headers, $body) {
+        if (!function_exists('curl_init')) {
+            return new WP_Error('apns_curl_missing', 'cURL is required for Apple Push Notifications.');
+        }
+
+        if (!defined('CURL_HTTP_VERSION_2_0')) {
+            return new WP_Error(
+                'apns_http2_unavailable',
+                'HTTP/2 cURL support is required for Apple Push Notifications on this server.'
+            );
+        }
+
+        $attempt = 0;
+        $max_attempts = 3;
+        $last_response = null;
+
+        while ($attempt < $max_attempts) {
+            $attempt++;
+            $last_response = self::apns_post_once($url, $headers, $body);
+            if (is_wp_error($last_response)) {
+                return $last_response;
+            }
+            $status = (int) ($last_response['status'] ?? 0);
+            if ($status !== 429 || $attempt >= $max_attempts) {
+                return $last_response;
+            }
+            usleep(250000 * $attempt);
+        }
+
+        return $last_response;
+    }
+
+    /**
+     * @param string $url
+     * @param array<string, string> $headers
+     * @param string $body
+     * @return array{status:int,body:string}|WP_Error
+     */
+    private static function apns_post_once($url, $headers, $body) {
         if (!function_exists('curl_init')) {
             return new WP_Error('apns_curl_missing', 'cURL is required for Apple Push Notifications.');
         }

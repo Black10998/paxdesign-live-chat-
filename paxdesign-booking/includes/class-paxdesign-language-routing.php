@@ -51,9 +51,9 @@ class PAXdesign_Language_Routing {
 
         $patterns = array(
             // German (website widget parity)
-            '/(?:mit\s+(?:einem\s+)?(?:mitarbeiter|menschen|echten|support|agent|berater)|live\s*(?:agent|chat|support)|(?:kann|möchte|will)\s+ich\s+(?:mit\s+)?(?:einem\s+)?(?:menschen|mitarbeiter|support|agent|berater)|(?:kann|darf)\s+ich\s+mit|sprechen\s+(?:sie\s+)?mit|echter?\s+mensch|menschlichen?\s+support|echte\s+person)/iu',
+            '/(?:mit\s+(?:einem\s+)?(?:mitarbeiter|menschen|echten|support|agent|berater|person)|live\s*(?:agent|chat|support)|(?:kann|möchte|will|darf)\s+ich\s+(?:mit\s+)?(?:einem\s+)?(?:menschen|mitarbeiter|support|agent|berater|person)|(?:kann|darf)\s+ich\s+mit|sprechen\s+(?:sie\s+)?mit|echter?\s+mensch|menschlichen?\s+support|echte\s+person|weiterleiten|übergeben|uebergeben|mitarbeiter\s+sprechen)/iu',
             // English
-            '/(?:speak\s+(?:to|with)\s+(?:a\s+)?(?:human|person|agent|representative|support)|talk\s+to\s+(?:a\s+)?(?:human|person|agent|someone|support)|real\s+(?:person|human|agent)|human\s+(?:support|agent)|live\s+(?:agent|support|chat)|connect\s+me\s+(?:to|with)\s+(?:a\s+)?(?:human|agent|support))/iu',
+            '/(?:speak\s+(?:to|with)\s+(?:a\s+)?(?:human|person|agent|representative|support|employee|someone)|talk\s+to\s+(?:a\s+)?(?:human|person|agent|someone|support|employee)|real\s+(?:person|human|agent|employee)|human\s+(?:support|agent)|live\s+(?:agent|support|chat)|connect\s+me\s+(?:to|with)\s+(?:a\s+)?(?:human|agent|support|person|employee)|transfer\s+(?:me\s+)?(?:to\s+)?(?:a\s+)?(?:human|agent|person|representative|support)|(?:need|want)\s+(?:a\s+)?(?:human|person|agent|representative))/iu',
             // Arabic
             '/(?:موظف|موظف(?:اً|ا)?|شخص\s+حقيقي|دعم\s+بشري|تحدث\s+مع|تكلم\s+مع|أريد\s+(?:موظف|شخص|إنسان)|اريد\s+(?:موظف|شخص|إنسان)|وكيل\s+حقيقي|مساعد\s+بشري|خدمة\s+عملاء|ممثل\s+حقيقي)/u',
         );

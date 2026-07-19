@@ -301,7 +301,7 @@ struct ChatView: View {
                 .disabled(thread.suggestionsLoading)
                 .accessibilityLabel(L10n.ChatAnalyzeLatestMessage)
             }
-            if thread.handler == "live_request", canReply {
+            if thread.handler == "live_request", canTakeOverChats {
                 Button(L10n.CommonTakeover) {
                     PAXHaptics.medium()
                     Task {
@@ -463,6 +463,7 @@ struct ChatView: View {
     }
 
     private var canReply: Bool { auth.canReplyChats }
+    private var canTakeOverChats: Bool { auth.canTakeOverChats }
     private var canUseAI: Bool { auth.canUseAI }
     private var canSendImages: Bool { auth.canSendImages }
     private var canViewRatings: Bool { auth.canViewRatings }

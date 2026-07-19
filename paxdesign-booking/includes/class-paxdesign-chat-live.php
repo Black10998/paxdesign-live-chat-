@@ -1760,7 +1760,10 @@ class PAXdesign_Chat_Live {
     }
 
     public function handle_takeover() {
-        $this->verify_admin_nonce();
+        check_ajax_referer('paxdesign_admin_nonce', 'nonce');
+        if (!class_exists('PAXdesign_Live_Chat_Permissions') || !PAXdesign_Live_Chat_Permissions::can_takeover_chats()) {
+            wp_send_json_error(array('message' => __('Keine Berechtigung.', 'paxdesign-booking')), 403);
+        }
 
         $session_id = $this->sanitize_session_id(
             isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
@@ -1769,43 +1772,17 @@ class PAXdesign_Chat_Live {
             wp_send_json_error(array('message' => 'Ungültige Session.'), 400);
         }
 
-        $row = $this->get_session_row($session_id);
-        if (!$row) {
-            wp_send_json_error(array('message' => 'Session nicht gefunden.'), 404);
+        $result = $this->admin_takeover($session_id);
+        if (is_wp_error($result)) {
+            $status = 500;
+            $error_data = $result->get_error_data();
+            if (is_array($error_data) && !empty($error_data['status'])) {
+                $status = (int) $error_data['status'];
+            }
+            wp_send_json_error(array('message' => $result->get_error_message()), $status);
         }
 
-        if ($this->get_handler($session_id) === self::HANDLER_CLOSED) {
-            wp_send_json_error(array('message' => 'Chat ist geschlossen.'), 409);
-        }
-
-        $user       = wp_get_current_user();
-        $identity   = self::resolve_employee_identity((int) $user->ID);
-        $admin_name = $identity ? $identity['name'] : $user->display_name;
-
-        global $wpdb;
-        $wpdb->update(
-            PAXdesign_Chat_Log::table_name(),
-            array(
-                'handler'       => self::HANDLER_ADMIN,
-                'admin_user_id' => (int) $user->ID,
-                'admin_name'    => sanitize_text_field($admin_name),
-                'updated_at'    => current_time('mysql'),
-            ),
-            array('id' => (int) $row->id),
-            array('%s', '%d', '%s', '%s'),
-            array('%d')
-        );
-
-        $notice = sprintf('%s ist dem Chat beigetreten.', $admin_name);
-        $entry  = $this->append_message($session_id, 'system', $notice);
-
-        wp_send_json_success(array(
-            'handler'        => self::HANDLER_ADMIN,
-            'admin_user_id'  => (int) $user->ID,
-            'admin_name'     => $admin_name,
-            'assigned_agent' => $identity,
-            'message'        => $entry,
-        ));
+        wp_send_json_success($result);
     }
 
     public function handle_release() {
@@ -2980,6 +2957,14 @@ class PAXdesign_Chat_Live {
      * @return array<string, mixed>|WP_Error
      */
     public function admin_takeover($session_id) {
+        if (class_exists('PAXdesign_Live_Chat_Permissions') && !PAXdesign_Live_Chat_Permissions::can_takeover_chats()) {
+            return new WP_Error(
+                'forbidden',
+                __('You do not have permission to take over this conversation.', 'paxdesign-booking'),
+                array('status' => 403)
+            );
+        }
+
         $session_id = $this->sanitize_session_id($session_id);
         if ($session_id === '') {
             return new WP_Error('invalid_session', 'Ungültige Session.', array('status' => 400));

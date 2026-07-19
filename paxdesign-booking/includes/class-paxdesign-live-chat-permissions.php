@@ -100,6 +100,7 @@ class PAXdesign_Live_Chat_Permissions {
     const PERM_MANAGE_CUSTOMER_PROFILES = 'manage_customer_profiles';
     const PERM_ASSIGN_TEAM_TASKS = 'assign_team_tasks';
     const PERM_CUSTOMIZE_HUB_PROFILE = 'customize_hub_profile';
+    const PERM_TAKEOVER_CHATS = 'takeover_chats';
 
     /**
      * @return array<string, string>
@@ -108,6 +109,7 @@ class PAXdesign_Live_Chat_Permissions {
         return array(
             self::PERM_VIEW_CHATS      => __('Chats ansehen', 'paxdesign-booking'),
             self::PERM_REPLY_CHATS     => __('Antworten & Chat führen', 'paxdesign-booking'),
+            self::PERM_TAKEOVER_CHATS  => __('Chats übernehmen (Take Over)', 'paxdesign-booking'),
             self::PERM_USE_AI          => __('KI-Assistent nutzen', 'paxdesign-booking'),
             self::PERM_SEND_IMAGES     => __('Bilder senden', 'paxdesign-booking'),
             self::PERM_MANAGE_SETTINGS => __('Einstellungen verwalten', 'paxdesign-booking'),
@@ -177,6 +179,7 @@ class PAXdesign_Live_Chat_Permissions {
             $out[self::PERM_MANAGE_CUSTOMER_PROFILES] = true;
             $out[self::PERM_ASSIGN_TEAM_TASKS] = true;
             $out[self::PERM_CUSTOMIZE_HUB_PROFILE] = true;
+            $out[self::PERM_TAKEOVER_CHATS] = true;
         }
 
         if (!empty($out[self::PERM_MANAGE_SETTINGS])) {
@@ -237,6 +240,22 @@ class PAXdesign_Live_Chat_Permissions {
         }
 
         return true;
+    }
+
+    /**
+     * Whether the user may take over customer conversations (executive/admin or dedicated permission).
+     *
+     * @param WP_User|int|null $user
+     */
+    public static function can_takeover_chats($user = null) {
+        $user = self::resolve_user($user);
+        if (!$user) {
+            return false;
+        }
+        if (self::is_super_admin($user) || user_can($user, 'manage_options')) {
+            return true;
+        }
+        return self::can($user, self::PERM_TAKEOVER_CHATS);
     }
 
     /**

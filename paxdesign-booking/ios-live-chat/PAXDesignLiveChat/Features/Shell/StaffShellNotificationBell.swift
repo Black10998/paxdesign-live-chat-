@@ -7,7 +7,7 @@ struct StaffShellNotificationBell: View {
     @State private var showCenter = false
 
     private var totalUnread: Int {
-        coordinator.unreadChatCount + coordinator.liveCount + orders.unreadCount
+        coordinator.unreadChatCount + coordinator.unreadTeamCount + coordinator.liveCount + orders.unreadCount
     }
 
     var body: some View {

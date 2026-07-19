@@ -54,6 +54,10 @@ class PAXdesign_Customer_News {
         return self::format($row, true);
     }
 
+    public static function user_matches_audience($row, $user_id) {
+        return self::matches_audience($row, $user_id);
+    }
+
     private static function matches_audience($row, $user_id) {
         $audience = $row['audience'] ?? 'all_customers';
         if ($audience === 'all_customers') {

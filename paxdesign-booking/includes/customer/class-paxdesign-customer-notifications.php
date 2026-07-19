@@ -186,6 +186,26 @@ class PAXdesign_Customer_Notifications {
     }
 
     public static function broadcast_news($news_id, $title, $excerpt) {
+        $news_id = absint($news_id);
+        if ($news_id <= 0) {
+            return;
+        }
+
+        global $wpdb;
+        $row = $wpdb->get_row($wpdb->prepare(
+            "SELECT slug, audience FROM " . PAXdesign_Customer_DB::table('news') . " WHERE id = %d AND status = 'published' LIMIT 1",
+            $news_id
+        ), ARRAY_A);
+        if (!$row) {
+            return;
+        }
+
+        $slug = sanitize_title((string) ($row['slug'] ?? ''));
+        if ($slug === '') {
+            $slug = (string) $news_id;
+        }
+        $deep_link = '/news/' . $slug;
+
         $role = PAXdesign_Auth::customer_role();
         $users = get_users(array(
             'role'   => $role,
@@ -193,7 +213,11 @@ class PAXdesign_Customer_Notifications {
             'number' => 500,
         ));
         foreach ($users as $user) {
-            self::notify_user((int) $user->ID, 'news', $title, $excerpt, 'news', (string) absint($news_id), '/news/' . absint($news_id));
+            $uid = (int) $user->ID;
+            if (class_exists('PAXdesign_Customer_News') && !PAXdesign_Customer_News::user_matches_audience($row, $uid)) {
+                continue;
+            }
+            self::notify_user($uid, 'news', $title, $excerpt, 'news', $slug, $deep_link);
         }
     }
 }

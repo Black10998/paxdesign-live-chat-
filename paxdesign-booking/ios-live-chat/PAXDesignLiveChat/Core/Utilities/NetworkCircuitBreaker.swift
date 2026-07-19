@@ -55,7 +55,7 @@ final class NetworkCircuitBreaker {
     }
 
     func recordRequestStart(endpoint: String, method: String = "GET") throws {
-        if endpoint.hasPrefix("device-") || endpoint == "devices-list" {
+        if endpoint.hasPrefix("device-") || endpoint == "devices-list" || endpoint == "push-apns-register" {
             return
         }
         if let until = openUntil, Date() < until {

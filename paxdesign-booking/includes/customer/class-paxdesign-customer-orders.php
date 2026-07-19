@@ -254,10 +254,11 @@ class PAXdesign_Customer_Orders {
 
     private static function staff_notes($order_id) {
         global $wpdb;
-        return $wpdb->get_results($wpdb->prepare(
+        $rows = $wpdb->get_results($wpdb->prepare(
             "SELECT id, body, visibility, created_at FROM " . PAXdesign_Customer_DB::table('order_notes') . " WHERE order_id = %d ORDER BY created_at DESC",
             absint($order_id)
         ), ARRAY_A);
+        return self::normalize_int_ids($rows ?: array());
     }
 
     private static function staff_files($order_id) {
@@ -381,7 +382,7 @@ class PAXdesign_Customer_Orders {
                 '/orders/' . $order_id
             );
         }
-        return self::get_for_user((int) $row['customer_user_id'], $order_id);
+        return self::get_for_staff($order_id);
     }
 
     public static function get_file_for_user($user_id, $order_id, $file_id) {

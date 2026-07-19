@@ -772,6 +772,36 @@ class PAXdesign_Chat {
             return new WP_Error('send_failed', __('Could not save your message.', 'paxdesign-booking'), array('status' => 500));
         }
 
+        if (
+            class_exists('PAXdesign_Language_Routing')
+            && PAXdesign_Language_Routing::is_live_agent_intent($user_message)
+        ) {
+            $user_id = get_current_user_id();
+            $lang = class_exists('PAXdesign_Language_Routing')
+                ? PAXdesign_Language_Routing::detect_text_language($user_message)
+                : 'de';
+            if ($lang === '') {
+                $lang = 'de';
+            }
+            $escalation = $live->escalate_authenticated_to_live($session_id, $user_id, $lang);
+            if (is_wp_error($escalation)) {
+                return $escalation;
+            }
+            $this->send_sse_headers();
+            echo 'data: ' . wp_json_encode(array(
+                'type'     => 'handoff',
+                'handler'  => PAXdesign_Chat_Live::HANDLER_LIVE,
+                'message'  => $entry,
+                'assistant'=> !empty($escalation['thanks']) ? $escalation['thanks'] : null,
+                'notice'   => class_exists('PAXdesign_Language_Routing')
+                    ? PAXdesign_Language_Routing::live_handoff_notice_message($lang)
+                    : '',
+            )) . "\n\n";
+            $this->flush_sse_output();
+            echo "data: [DONE]\n\n";
+            exit;
+        }
+
         $messages = $this->build_openai_messages_from_session($session_id);
         $validated = $this->validate_messages($messages);
         if (is_wp_error($validated)) {

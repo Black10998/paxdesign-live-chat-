@@ -9,6 +9,11 @@ extension AuthStore {
 
     var canViewChats: Bool { hasPermission(\.viewChats) }
     var canReplyChats: Bool { hasPermission(\.replyChats) }
+    var canTakeOverChats: Bool {
+        guard let profile else { return false }
+        if profile.isSuperAdmin { return true }
+        return profile.perms.takeoverChats
+    }
     var canUseAI: Bool { hasPermission(\.useAI) }
     var canSendImages: Bool { hasPermission(\.sendImages) }
     var canManageSettings: Bool { hasPermission(\.manageSettings) }

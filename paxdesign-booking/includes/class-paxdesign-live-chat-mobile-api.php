@@ -973,7 +973,7 @@ class PAXdesign_Live_Chat_Mobile_API {
     }
 
     public static function route_takeover(WP_REST_Request $request) {
-        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_REPLY_CHATS);
+        $check = self::require_perm(PAXdesign_Live_Chat_Permissions::PERM_TAKEOVER_CHATS);
         if (is_wp_error($check)) {
             return $check;
         }

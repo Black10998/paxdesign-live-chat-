@@ -9,7 +9,7 @@ struct LiveTabView: View {
         coordinator.sessions.filter { $0.isLiveRequest }
     }
 
-    private var canReply: Bool { auth.canReplyChats }
+    private var canTakeOver: Bool { auth.canTakeOverChats }
     private var canViewChats: Bool { auth.canViewChats }
 
     var body: some View {
@@ -31,7 +31,7 @@ struct LiveTabView: View {
                     ForEach(liveSessions) { session in
                         LiveRequestCard(
                             session: session,
-                            canReply: canReply,
+                            canTakeOver: canTakeOver,
                             canOpenChat: canViewChats
                         ) {
                             if canViewChats { onOpenSession(session.sessionId) }
@@ -92,7 +92,7 @@ struct LiveTabView: View {
 
 private struct LiveRequestCard: View {
     let session: LiveSession
-    var canReply: Bool = true
+    var canTakeOver: Bool = true
     var canOpenChat: Bool = true
     let onAccept: () -> Void
     let onDecline: () -> Void
@@ -127,7 +127,7 @@ private struct LiveRequestCard: View {
             }
 
             HStack(spacing: 10) {
-                if canReply {
+                if canTakeOver {
                     Button(L10n.CommonDecline, action: onDecline)
                         .buttonStyle(.bordered)
                         .tint(PAXTheme.danger)

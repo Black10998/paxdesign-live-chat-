@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import UserNotifications
 
 /// Foreground notification coordinator — uses system default sounds and deduplicates by session.
@@ -225,6 +226,9 @@ final class InAppNotificationCoordinator {
 
     private func postLocalNotification(title: String, body: String, sessionId: String, type: String) {
         guard AppSettingsStore.shared.notificationsEnabled else { return }
+        if UIApplication.shared.applicationState == .active {
+            return
+        }
 
         let content = UNMutableNotificationContent()
         content.title = title

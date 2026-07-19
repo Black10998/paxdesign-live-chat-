@@ -40,6 +40,7 @@ struct AdminPermissions: Codable, Equatable {
     var manageCustomerProfiles: Bool
     var assignTeamTasks: Bool
     var customizeHubProfile: Bool
+    var takeoverChats: Bool
 
     enum CodingKeys: String, CodingKey {
         case viewChats = "view_chats"
@@ -54,6 +55,7 @@ struct AdminPermissions: Codable, Equatable {
         case manageCustomerProfiles = "manage_customer_profiles"
         case assignTeamTasks = "assign_team_tasks"
         case customizeHubProfile = "customize_hub_profile"
+        case takeoverChats = "takeover_chats"
     }
 
     init(
@@ -68,7 +70,8 @@ struct AdminPermissions: Codable, Equatable {
         manageTeamPermissions: Bool = true,
         manageCustomerProfiles: Bool = true,
         assignTeamTasks: Bool = true,
-        customizeHubProfile: Bool = true
+        customizeHubProfile: Bool = true,
+        takeoverChats: Bool = true
     ) {
         self.viewChats = viewChats
         self.replyChats = replyChats
@@ -82,6 +85,7 @@ struct AdminPermissions: Codable, Equatable {
         self.manageCustomerProfiles = manageCustomerProfiles
         self.assignTeamTasks = assignTeamTasks
         self.customizeHubProfile = customizeHubProfile
+        self.takeoverChats = takeoverChats
     }
 
     init(from decoder: Decoder) throws {
@@ -98,12 +102,14 @@ struct AdminPermissions: Codable, Equatable {
         manageCustomerProfiles = (try? c.decode(Bool.self, forKey: .manageCustomerProfiles)) ?? false
         assignTeamTasks = (try? c.decode(Bool.self, forKey: .assignTeamTasks)) ?? false
         customizeHubProfile = (try? c.decode(Bool.self, forKey: .customizeHubProfile)) ?? false
+        takeoverChats = (try? c.decode(Bool.self, forKey: .takeoverChats)) ?? false
 
         if manageUsers {
             manageTeamPermissions = true
             manageCustomerProfiles = true
             assignTeamTasks = true
             customizeHubProfile = true
+            takeoverChats = true
         }
         if manageSettings {
             customizeHubProfile = true
