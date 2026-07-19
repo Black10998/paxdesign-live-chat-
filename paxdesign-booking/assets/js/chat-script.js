@@ -1872,6 +1872,9 @@
         if (handleAuthGateResponse(json)) return;
         if (!json || !json.success || !json.data) return;
         var data = json.data;
+        if (data.session_id && data.session_id !== getSessionId()) {
+          adoptSessionId(data.session_id, { fromServer: true, preserveUi: true });
+        }
         applyHandlerState(data.handler || 'ai', data.admin_name || '');
         syncSessionMetaFromPoll(data);
 
