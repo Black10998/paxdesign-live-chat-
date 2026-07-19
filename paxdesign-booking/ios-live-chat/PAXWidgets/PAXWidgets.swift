@@ -8,10 +8,7 @@ struct PAXDashboardWidgetEntry: TimelineEntry {
 
 struct PAXDashboardWidgetProvider: TimelineProvider {
     func placeholder(in context: Context) -> PAXDashboardWidgetEntry {
-        PAXDashboardWidgetEntry(
-            date: Date(),
-            snapshot: .preview
-        )
+        PAXDashboardWidgetEntry(date: Date(), snapshot: .preview)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (PAXDashboardWidgetEntry) -> Void) {
@@ -19,8 +16,19 @@ struct PAXDashboardWidgetProvider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<PAXDashboardWidgetEntry>) -> Void) {
-        let entry = PAXDashboardWidgetEntry(date: Date(), snapshot: WidgetSnapshotReader.load())
-        completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(5 * 60))))
+        let snapshot = WidgetSnapshotReader.load()
+        let entry = PAXDashboardWidgetEntry(date: Date(), snapshot: snapshot)
+        let refreshMinutes = snapshot.liveRequests > 0 ? 2.0 : 10.0
+        completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(refreshMinutes * 60))))
+    }
+}
+
+private enum WidgetBrand {
+    static let accent = Color(red: 194 / 255, green: 1, blue: 0)
+    static let accentBlue = Color(red: 0.0, green: 0.48, blue: 1.0)
+
+    static func accent(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark ? accent : accentBlue
     }
 }
 
@@ -31,23 +39,25 @@ private struct WidgetPalette {
     let secondaryText: Color
     let tileFill: Color
     let tileStroke: Color
+    let accent: Color
 
     init(colorScheme: ColorScheme) {
+        accent = WidgetBrand.accent(for: colorScheme)
         switch colorScheme {
         case .dark:
-            backgroundTop = Color(red: 0.11, green: 0.13, blue: 0.17)
-            backgroundBottom = Color(red: 0.06, green: 0.07, blue: 0.10)
+            backgroundTop = Color(red: 0.10, green: 0.12, blue: 0.16)
+            backgroundBottom = Color(red: 0.04, green: 0.05, blue: 0.08)
             primaryText = .white
             secondaryText = Color.white.opacity(0.58)
             tileFill = Color.white.opacity(0.10)
             tileStroke = Color.white.opacity(0.14)
         default:
-            backgroundTop = Color(red: 0.98, green: 0.98, blue: 0.99)
-            backgroundBottom = Color(red: 0.93, green: 0.94, blue: 0.96)
-            primaryText = Color(red: 0.09, green: 0.11, blue: 0.15)
+            backgroundTop = Color(red: 0.98, green: 0.99, blue: 1.0)
+            backgroundBottom = Color(red: 0.92, green: 0.94, blue: 0.97)
+            primaryText = Color(red: 0.08, green: 0.10, blue: 0.14)
             secondaryText = primaryText.opacity(0.52)
-            tileFill = Color.white.opacity(0.92)
-            tileStroke = Color.black.opacity(0.07)
+            tileFill = Color.white.opacity(0.94)
+            tileStroke = Color.black.opacity(0.06)
         }
     }
 }
@@ -58,19 +68,25 @@ struct PAXDashboardWidgetView: View {
     let entry: PAXDashboardWidgetEntry
 
     private var palette: WidgetPalette { WidgetPalette(colorScheme: colorScheme) }
+    private var snapshot: WidgetSnapshotReader.Snapshot { entry.snapshot }
 
     var body: some View {
         Group {
-            switch family {
-            case .systemLarge:
-                largeLayout
-            case .systemMedium:
-                mediumLayout
-            default:
-                smallLayout
+            if !snapshot.isSignedIn {
+                signedOutLayout
+            } else {
+                switch family {
+                case .systemLarge:
+                    largeLayout
+                case .systemMedium:
+                    mediumLayout
+                default:
+                    smallLayout
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .widgetURL(URL(string: "paxlivechat://dashboard"))
         .containerBackground(for: .widget) {
             LinearGradient(
                 colors: [palette.backgroundTop, palette.backgroundBottom],
@@ -83,35 +99,64 @@ struct PAXDashboardWidgetView: View {
     private var header: some View {
         HStack(spacing: 8) {
             brandMark
-            Text("Dashboard")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(palette.primaryText)
-            Spacer(minLength: 4)
-            Text(entry.snapshot.updatedAt, style: .time)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(palette.secondaryText)
-                .monospacedDigit()
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Business pulse")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(palette.primaryText)
+                Text(snapshot.updatedAt, style: .time)
+                    .font(.caption2)
+                    .foregroundStyle(palette.secondaryText)
+                    .monospacedDigit()
+            }
+            Spacer(minLength: 0)
+            if snapshot.liveRequests > 0 {
+                liveBadge
+            }
         }
     }
 
     private var brandMark: some View {
-        RoundedRectangle(cornerRadius: 6, style: .continuous)
-            .fill(Color(red: 0.98, green: 0.78, blue: 0.08))
-            .frame(width: 20, height: 20)
+        RoundedRectangle(cornerRadius: 7, style: .continuous)
+            .fill(palette.accent)
+            .frame(width: 22, height: 22)
             .overlay {
                 Text("P")
-                    .font(.system(size: 11, weight: .black, design: .rounded))
-                    .foregroundStyle(Color.black.opacity(0.82))
+                    .font(.system(size: 12, weight: .black, design: .rounded))
+                    .foregroundStyle(colorScheme == .dark ? Color.black.opacity(0.82) : .white)
             }
             .accessibilityHidden(true)
+    }
+
+    private var liveBadge: some View {
+        Text("LIVE")
+            .font(.system(size: 9, weight: .heavy, design: .rounded))
+            .foregroundStyle(colorScheme == .dark ? .black : .white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Color.orange))
+    }
+
+    private var signedOutLayout: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            brandMark
+            Text("Sign in to PAXDesign")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(palette.primaryText)
+            Text("Open the app to refresh your business dashboard.")
+                .font(.caption)
+                .foregroundStyle(palette.secondaryText)
+        }
+        .padding(14)
     }
 
     private var smallLayout: some View {
         VStack(alignment: .leading, spacing: 10) {
             header
-            HStack(spacing: 8) {
-                metricTile(.chats, value: entry.snapshot.unreadChats)
-                metricTile(.live, value: entry.snapshot.liveRequests)
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) {
+                linkedMetricTile(.chats, value: snapshot.unreadChats, compact: true)
+                linkedMetricTile(.live, value: snapshot.liveRequests, compact: true)
+                linkedMetricTile(.tasks, value: snapshot.openTasks, compact: true)
+                linkedMetricTile(.events, value: snapshot.upcomingEvents, compact: true)
             }
         }
         .padding(12)
@@ -121,10 +166,10 @@ struct PAXDashboardWidgetView: View {
         VStack(alignment: .leading, spacing: 10) {
             header
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                metricTile(.chats, value: entry.snapshot.unreadChats)
-                metricTile(.live, value: entry.snapshot.liveRequests)
-                metricTile(.tasks, value: entry.snapshot.openTasks)
-                metricTile(.events, value: entry.snapshot.upcomingEvents)
+                linkedMetricTile(.chats, value: snapshot.unreadChats)
+                linkedMetricTile(.live, value: snapshot.liveRequests)
+                linkedMetricTile(.tasks, value: snapshot.openTasks)
+                linkedMetricTile(.events, value: snapshot.upcomingEvents)
             }
         }
         .padding(12)
@@ -133,19 +178,23 @@ struct PAXDashboardWidgetView: View {
     private var largeLayout: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
-            Text("Business pulse")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(palette.primaryText)
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                metricTile(.chats, value: entry.snapshot.unreadChats, expanded: true)
-                metricTile(.live, value: entry.snapshot.liveRequests, expanded: true)
-                metricTile(.tasks, value: entry.snapshot.openTasks, expanded: true)
-                metricTile(.events, value: entry.snapshot.upcomingEvents, expanded: true)
+                linkedMetricTile(.chats, value: snapshot.unreadChats, expanded: true)
+                linkedMetricTile(.live, value: snapshot.liveRequests, expanded: true)
+                linkedMetricTile(.tasks, value: snapshot.openTasks, expanded: true)
+                linkedMetricTile(.events, value: snapshot.upcomingEvents, expanded: true)
+            }
+            if !snapshot.liveHighlight.isEmpty || !snapshot.nextEventTitle.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    if !snapshot.liveHighlight.isEmpty {
+                        insightRow(title: "Top live request", value: snapshot.liveHighlight, tint: .orange)
+                    }
+                    if !snapshot.nextEventTitle.isEmpty {
+                        insightRow(title: "Next event", value: snapshot.nextEventTitle, tint: .purple)
+                    }
+                }
             }
             Spacer(minLength: 0)
-            Text("Open the app for full dashboard details.")
-                .font(.caption2)
-                .foregroundStyle(palette.secondaryText)
         }
         .padding(14)
     }
@@ -155,6 +204,15 @@ struct PAXDashboardWidgetView: View {
         case live = "Live"
         case tasks = "Tasks"
         case events = "Events"
+
+        var deepLink: URL? {
+            switch self {
+            case .chats: return URL(string: "paxlivechat://chats")
+            case .live: return URL(string: "paxlivechat://live")
+            case .tasks: return URL(string: "paxlivechat://dashboard")
+            case .events: return URL(string: "paxlivechat://dashboard")
+            }
+        }
 
         var accent: Color {
             switch self {
@@ -166,21 +224,27 @@ struct PAXDashboardWidgetView: View {
         }
     }
 
-    private func metricTile(_ kind: MetricKind, value: Int, expanded: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: expanded ? 6 : 4) {
+    private func linkedMetricTile(_ kind: MetricKind, value: Int, compact: Bool = false, expanded: Bool = false) -> some View {
+        Link(destination: kind.deepLink ?? URL(string: "paxlivechat://dashboard")!) {
+            metricTile(kind, value: value, compact: compact, expanded: expanded)
+        }
+    }
+
+    private func metricTile(_ kind: MetricKind, value: Int, compact: Bool, expanded: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: compact ? 2 : (expanded ? 6 : 4)) {
             Text("\(value)")
-                .font((expanded ? Font.title2 : Font.title3).weight(.bold))
-                .foregroundStyle(palette.primaryText)
+                .font((expanded ? Font.title2 : (compact ? Font.headline : Font.title3)).weight(.bold))
+                .foregroundStyle(value > 0 && kind == .live ? Color.orange : palette.primaryText)
                 .minimumScaleFactor(0.65)
                 .lineLimit(1)
                 .monospacedDigit()
             Text(kind.rawValue)
-                .font(.caption2.weight(.medium))
+                .font(compact ? .system(size: 10, weight: .medium) : .caption2.weight(.medium))
                 .foregroundStyle(palette.secondaryText)
                 .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, minHeight: expanded ? 72 : 56, alignment: .leading)
-        .padding(expanded ? 12 : 10)
+        .frame(maxWidth: .infinity, minHeight: expanded ? 74 : (compact ? 46 : 56), alignment: .leading)
+        .padding(compact ? 8 : (expanded ? 12 : 10))
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill(palette.tileFill)
@@ -191,6 +255,21 @@ struct PAXDashboardWidgetView: View {
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(kind.rawValue), \(value)")
+    }
+
+    private func insightRow(title: String, value: String, tint: Color) -> some View {
+        HStack(spacing: 8) {
+            Circle()
+                .fill(tint.opacity(0.85))
+                .frame(width: 6, height: 6)
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(palette.secondaryText)
+            Text(value)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(palette.primaryText)
+                .lineLimit(1)
+        }
     }
 }
 
@@ -209,7 +288,7 @@ struct PAXDashboardWidget: Widget {
             PAXDashboardWidgetView(entry: entry)
         }
         .configurationDisplayName("Business Dashboard")
-        .description("Unread chats, live requests, tasks, and upcoming events.")
+        .description("Unread chats, live requests, open tasks, and upcoming events with live refresh.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }

@@ -10,26 +10,50 @@ struct CustomerLoginView: View {
     @State private var isLoading = false
 
     var body: some View {
-        Form {
-            if !network.isConnected {
-                Section {
+        ScrollView {
+            VStack(spacing: 20) {
+                PAXAuthHeroView(
+                    style: .animatedLogo,
+                    title: String(localized: "PAXDesign"),
+                    subtitle: String(localized: "Sign in to your customer account."),
+                    markWidth: 120
+                )
+                .padding(.top, 12)
+
+                if !network.isConnected {
                     PAXLabel(String(localized: "You are offline. Connect to sign in."), icon: "wifi.slash")
                         .foregroundStyle(.orange)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-            }
-            Section(String(localized: "Account")) {
-                TextField(String(localized: "Email or username"), text: $auth.username)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                    .accessibilityLabel(String(localized: "Email or username"))
-                SecureField(String(localized: "Password"), text: $auth.appPassword)
-                    .accessibilityLabel(String(localized: "Password"))
-            }
-            if let error = auth.errorMessage {
-                Section { Text(error).foregroundStyle(.red).accessibilityLabel(error) }
-            }
-            Section {
-                Button(isLoading ? String(localized: "Signing in…") : String(localized: "Sign In")) {
+
+                VStack(spacing: 14) {
+                    PAXField(
+                        title: String(localized: "Email or username"),
+                        icon: "person",
+                        text: $auth.username,
+                        keyboardType: .emailAddress
+                    )
+                    PAXField(
+                        title: String(localized: "Password"),
+                        icon: "lock",
+                        text: $auth.appPassword,
+                        isSecure: true
+                    )
+                }
+
+                if let error = auth.errorMessage {
+                    Text(error)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                        .accessibilityLabel(error)
+                }
+
+                PAXPrimaryButton(
+                    title: isLoading ? String(localized: "Signing in…") : String(localized: "Sign In"),
+                    isLoading: isLoading
+                ) {
                     Task {
                         isLoading = true
                         await auth.login(api: api)
@@ -37,15 +61,26 @@ struct CustomerLoginView: View {
                     }
                 }
                 .disabled(isLoading || !network.isConnected)
-                if let onRegister {
-                    Button(String(localized: "Create account")) { onRegister() }
-                }
-                if let onForgot {
-                    Button(String(localized: "Forgot password?")) { onForgot() }
+
+                VStack(spacing: 10) {
+                    if let onRegister {
+                        Button(String(localized: "Create account")) { onRegister() }
+                            .font(.subheadline)
+                    }
+                    if let onForgot {
+                        Button(String(localized: "Forgot password?")) { onForgot() }
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
         }
-        .navigationTitle(String(localized: "PAXDesign"))
+        .scrollDismissesKeyboard(.interactively)
+        .paxScreenBackground()
+        .navigationTitle(String(localized: "Sign in"))
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

@@ -15,16 +15,13 @@ struct LoginView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
-                    VStack(spacing: 12) {
-                        PAXIcon("bubble.left.and.bubble.right.fill", size: .hero)
-                        Text(L10n.LoginTitle)
-                            .font(.title2.weight(.semibold))
-                        Text(L10n.LoginSubtitle)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding(.top, 24)
+                    PAXAuthHeroView(
+                        style: .animatedLogo,
+                        title: L10n.LoginTitle,
+                        subtitle: L10n.LoginSubtitle,
+                        markWidth: 132
+                    )
+                    .padding(.top, 12)
 
                     VStack(spacing: 14) {
                         PAXField(title: L10n.LoginUsername, icon: "person", text: $username, keyboardType: .emailAddress)

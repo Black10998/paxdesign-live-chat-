@@ -524,6 +524,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
                     userInfo: pushUserInfo(from: payload)
                 )
             }
+            WidgetDataStore.shared.reloadWidgetTimelines()
             completionHandler(.newData)
         }
     }
@@ -543,6 +544,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
                 object: nil,
                 userInfo: pushUserInfo(from: payload)
             )
+            WidgetDataStore.shared.reloadWidgetTimelines()
         }
 
         guard AppSettingsStore.shared.notificationsEnabled else { return [] }

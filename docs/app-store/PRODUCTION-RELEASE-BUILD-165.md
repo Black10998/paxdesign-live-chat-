@@ -28,12 +28,21 @@ Build 165 is the consolidated production release merging PR #136 (Team Chat rate
 - **Team Chat rate limit:** `NetworkCircuitBreaker` exempts team polls/sends; transient 429 handling; optimistic messages retained on rate limit.
 - **Notification recovery:** `PermissionCoordinator.syncPushRegistrationIfAuthorized()`; foreground re-register on customer home/chat/settings.
 - **Customer API:** HTML/fatal-error decode guard via `decodeJSON()`.
-- **Home Screen widget (fixed):**
-  - Removed duplicate **PAXDesign** label inside widget (iOS already shows app name below the widget).
-  - Adaptive Light/Dark/System palette with polished spacing and 2×2 grid on medium/large sizes.
-  - Counters now match dashboard semantics: unread **sessions** for Chats, platform/coordinator live count, open tasks, upcoming events.
-  - `WidgetCenter.reloadTimelines` on every app sync; widget refresh after platform task/calendar apply and unread-count changes.
-  - Fixed platform sync ordering so Tasks/Events counters update after server payload is applied.
+- **Home Screen widget (complete redesign):**
+  - Professional adaptive layout for Small, Medium, Large (Light/Dark/System)
+  - No duplicate in-widget **PAXDesign** label; brand mark uses official accent (#C2FF00 / system blue)
+  - All four metrics on every size (2×2 grid on small); LIVE badge when queue active
+  - Large widget: top live request + next event insight rows
+  - Tappable metric tiles deep-link to Live/Chats/Dashboard via `paxlivechat://`
+  - Live refresh: `WidgetCenter.reloadTimelines` on sync, push, unread changes, background flush
+  - Signed-out placeholder state; platform sync ordering fixed for Tasks/Events
+- **Auth & onboarding visuals:**
+  - `PAXAuthHeroView` + `PAXOnboardingIllustration` premium components
+  - Staff login: animated PAXdesign logo hero
+  - Customer register/forgot/verify/login: glass `PAXField` forms with branded icon heroes
+  - Onboarding carousel + post-login setup: accent-ring illustration frames
+  - Login → dashboard: scale/opacity shell transition
+- **Removed fatalError:** `ConversationHistoryStore` / `LiveChatModels` use empty snapshot fallback
 
 ## Automated verification
 
@@ -52,7 +61,9 @@ Build 165 is the consolidated production release merging PR #136 (Team Chat rate
 | TestFlight Build 165 | `.github/triggers/testflight-upload` | Upload + validate CFBundleVersion=165 |
 | Verify Internal TestFlight | `.github/triggers/testflight-verify-internal` | Post-upload checks |
 
-## Physical device QA checklist (user)
+## Visual demos
+
+See [BUILD-165-VISUAL-DEMOS.md](./BUILD-165-VISUAL-DEMOS.md) for widget, auth, and onboarding mockups.
 
 - [ ] Team Chat: open, send, typing, attachments, read receipts, close/reopen
 - [ ] Customer Chat: send/receive, attachments, login gate, permanent session

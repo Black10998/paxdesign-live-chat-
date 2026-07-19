@@ -4,6 +4,10 @@ enum AuthDeepLinkHandler {
     static func handle(_ url: URL) -> Bool {
         guard url.scheme?.lowercased() == "paxlivechat" else { return false }
 
+        if WidgetDeepLinkHandler.handle(url) {
+            return true
+        }
+
         if url.host?.lowercased() == "verify" {
             let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
             let query = components?.queryItems ?? []

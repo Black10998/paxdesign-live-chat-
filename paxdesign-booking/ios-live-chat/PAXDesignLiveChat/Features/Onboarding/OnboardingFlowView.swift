@@ -86,6 +86,16 @@ struct OnboardingFlowView: View {
         ]
     }
 
+    private func onboardingTint(for page: OnboardingPage) -> Color {
+        switch page.systemImage {
+        case "bubble.left.and.bubble.right.fill": return PAXTheme.accent
+        case "list.bullet.rectangle.portrait.fill": return .cyan
+        case "person.3.fill": return .mint
+        case "bell.and.waves.left.and.right.fill": return .orange
+        default: return PAXTheme.accentSecondary
+        }
+    }
+
     private var biometricAvailable: Bool {
         appLock.canUseBiometrics
     }
@@ -167,7 +177,7 @@ struct OnboardingFlowView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            PAXIcon(page.systemImage, size: .hero)
+            PAXOnboardingIllustration(systemImage: page.systemImage, tint: onboardingTint(for: page))
                 .padding(.bottom, 8)
 
             VStack(spacing: 10) {
@@ -267,7 +277,7 @@ struct OnboardingFlowView: View {
 
     private var postLoginStepHeader: some View {
         VStack(spacing: 20) {
-            PAXIcon(postLoginStepIcon, size: .hero)
+            PAXOnboardingIllustration(systemImage: postLoginStepIcon, tint: PAXTheme.accent)
 
             VStack(spacing: 10) {
                 Text(postLoginStepTitle)

@@ -47,24 +47,44 @@ struct CustomerRegisterView: View {
     @State private var isLoading = false
 
     var body: some View {
-        Form {
-            Section(String(localized: "Create account")) {
-                TextField(String(localized: "Name"), text: $name)
-                TextField(String(localized: "Email"), text: $email)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                SecureField(String(localized: "Password"), text: $password)
-            }
-            if let message {
-                Section { Text(message).foregroundStyle(message.contains("check") ? PAXTheme.textSecondary : Color.red) }
-            }
-            Section {
-                Button(isLoading ? String(localized: "Creating…") : String(localized: "Register")) {
+        ScrollView {
+            VStack(spacing: 20) {
+                PAXAuthHeroView(
+                    style: .icon("person.badge.plus"),
+                    title: String(localized: "Create account"),
+                    subtitle: String(localized: "Join PAXDesign to manage projects, chat, and orders.")
+                )
+                .padding(.top, 8)
+
+                VStack(spacing: 14) {
+                    PAXField(title: String(localized: "Name"), icon: "person", text: $name)
+                    PAXField(title: String(localized: "Email"), icon: "envelope", text: $email, keyboardType: .emailAddress)
+                    PAXField(title: String(localized: "Password"), icon: "lock", text: $password, isSecure: true)
+                }
+
+                if let message {
+                    Text(message)
+                        .font(.footnote)
+                        .foregroundStyle(message.contains("check") ? .secondary : .red)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                }
+
+                PAXPrimaryButton(
+                    title: isLoading ? String(localized: "Creating…") : String(localized: "Register"),
+                    isLoading: isLoading
+                ) {
                     Task { await submit() }
-                }.disabled(isLoading || email.isEmpty || password.count < 8)
+                }
+                .disabled(isLoading || email.isEmpty || password.count < 8)
             }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .paxScreenBackground()
         .navigationTitle(String(localized: "Register"))
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private func submit() async {
@@ -88,20 +108,40 @@ struct CustomerForgotPasswordView: View {
     @State private var isLoading = false
 
     var body: some View {
-        Form {
-            Section(String(localized: "Reset password")) {
-                TextField(String(localized: "Email"), text: $email)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-            }
-            if let message { Section { Text(message) } }
-            Section {
-                Button(isLoading ? String(localized: "Sending…") : String(localized: "Send reset link")) {
+        ScrollView {
+            VStack(spacing: 20) {
+                PAXAuthHeroView(
+                    style: .icon("key.fill"),
+                    title: String(localized: "Reset password"),
+                    subtitle: String(localized: "We will email you a secure reset link.")
+                )
+                .padding(.top, 8)
+
+                PAXField(title: String(localized: "Email"), icon: "envelope", text: $email, keyboardType: .emailAddress)
+
+                if let message {
+                    Text(message)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                }
+
+                PAXPrimaryButton(
+                    title: isLoading ? String(localized: "Sending…") : String(localized: "Send reset link"),
+                    isLoading: isLoading
+                ) {
                     Task { await submit() }
-                }.disabled(isLoading || email.isEmpty)
+                }
+                .disabled(isLoading || email.isEmpty)
             }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .paxScreenBackground()
         .navigationTitle(String(localized: "Forgot password"))
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private func submit() async {
@@ -131,33 +171,37 @@ struct CustomerVerifyEmailView: View {
     private let codeExpiryHours = 24
 
     var body: some View {
-        Form {
-            Section(String(localized: "Email verification")) {
-                Text(String(localized: "Enter the 6-digit code from your email, or open the verification link."))
-                    .font(.footnote)
-                    .foregroundStyle(PAXTheme.textSecondary)
-                TextField(String(localized: "Email"), text: $emailField)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.emailAddress)
-                TextField(String(localized: "Verification code"), text: $code)
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.numberPad)
-                    .onChange(of: code) { newValue in
-                        let digits = newValue.filter(\.isNumber)
-                        code = String(digits.prefix(6))
-                    }
+        ScrollView {
+            VStack(spacing: 20) {
+                PAXAuthHeroView(
+                    style: .icon("envelope.badge.fill"),
+                    title: String(localized: "Email verification"),
+                    subtitle: String(localized: "Enter the 6-digit code from your email, or open the verification link.")
+                )
+                .padding(.top, 8)
+
+                VStack(spacing: 14) {
+                    PAXField(title: String(localized: "Email"), icon: "envelope", text: $emailField, keyboardType: .emailAddress)
+                    PAXField(title: String(localized: "Verification code"), icon: "number", text: $code, keyboardType: .numberPad)
+                }
+
                 Text(String(localized: "Codes expire after \(codeExpiryHours) hours and can only be used once."))
                     .font(.caption)
-                    .foregroundStyle(PAXTheme.textSecondary)
-            }
-            if let message {
-                Section {
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if let message {
                     Text(message)
-                        .foregroundStyle(isSuccess ? PAXTheme.textSecondary : Color.red)
+                        .font(.footnote)
+                        .foregroundStyle(isSuccess ? .secondary : .red)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
                 }
-            }
-            Section {
-                Button(isLoading ? String(localized: "Verifying…") : String(localized: "Verify email")) {
+
+                PAXPrimaryButton(
+                    title: isLoading ? String(localized: "Verifying…") : String(localized: "Verify email"),
+                    isLoading: isLoading
+                ) {
                     Task { await verify() }
                 }
                 .disabled(isLoading || emailField.isEmpty || code.count != 6)
@@ -165,14 +209,24 @@ struct CustomerVerifyEmailView: View {
                 Button(isResending ? String(localized: "Sending…") : String(localized: "Resend verification email")) {
                     Task { await resend() }
                 }
+                .font(.subheadline)
                 .disabled(isResending || emailField.isEmpty)
             }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
         }
+        .scrollDismissesKeyboard(.interactively)
+        .paxScreenBackground()
         .navigationTitle(String(localized: "Verify email"))
+        .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if emailField.isEmpty, !email.isEmpty {
                 emailField = email
             }
+        }
+        .onChange(of: code) { newValue in
+            let digits = newValue.filter(\.isNumber)
+            code = String(digits.prefix(6))
         }
     }
 

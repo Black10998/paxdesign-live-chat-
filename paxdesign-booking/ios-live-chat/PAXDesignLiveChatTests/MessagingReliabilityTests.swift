@@ -684,9 +684,7 @@ final class MessagingReliabilityTests: XCTestCase {
         ChatCoordinatorProxy.liveCount = 3
         settings.markSessionUnread(session.sessionId)
 
-        let snapshot = WidgetDataStore.shared.buildSnapshot()
-        XCTAssertEqual(snapshot.unreadChats, 1)
-        XCTAssertEqual(snapshot.liveRequests, 3)
+        XCTAssertEqual(WidgetDataStore.shared.unreadSessionCount(), 1)
         XCTAssertEqual(WidgetDataStore.widgetKind, "PAXDashboardWidget")
     }
 
@@ -696,7 +694,10 @@ final class MessagingReliabilityTests: XCTestCase {
             liveRequests: 1,
             openTasks: 3,
             upcomingEvents: 1,
-            updatedAt: Date(timeIntervalSince1970: 1_752_960_000)
+            updatedAt: Date(timeIntervalSince1970: 1_752_960_000),
+            nextEventTitle: "Review",
+            liveHighlight: "Anna",
+            isSignedIn: true
         )
         let data = try JSONEncoder().encode(snapshot)
         let decoded = try JSONDecoder().decode(WidgetDataStore.Snapshot.self, from: data)

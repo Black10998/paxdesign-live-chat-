@@ -260,16 +260,16 @@ struct RootView: View {
                 if auth.isCustomerSession {
                     CustomerPortalShellView()
                         .id("\(auth.sessionEpoch.uuidString)-customer")
-                        .transition(.opacity)
+                        .transition(.asymmetric(insertion: .scale(scale: 0.98).combined(with: .opacity), removal: .opacity))
                 } else {
                     AdaptiveShellView()
                         .id(auth.sessionEpoch.uuidString)
-                        .transition(.opacity)
+                        .transition(.asymmetric(insertion: .scale(scale: 0.98).combined(with: .opacity), removal: .opacity))
                 }
 
             case .login:
                 LoginView()
-                    .transition(.opacity)
+                    .transition(.asymmetric(insertion: .move(edge: .bottom).combined(with: .opacity), removal: .opacity))
             }
 
             if auth.isLoggedIn, appLock.isActive, appLock.isLocked, !appLock.isUnlocked {

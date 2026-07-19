@@ -92,6 +92,8 @@ enum PAXIconCatalog {
         "person.crop.circle.fill": "profile.user",
         "person.crop.circle": "profile.user",
         "person.badge.key.fill": "employee.badge",
+        "person.badge.plus": "person.badge.key",
+        "key.fill": "lock",
         "shield.lefthalf.filled": "admin.shield",
         "shield.lefthalf.filled.badge.checkmark": "shield.checkered",
         "shield": "admin.shield",

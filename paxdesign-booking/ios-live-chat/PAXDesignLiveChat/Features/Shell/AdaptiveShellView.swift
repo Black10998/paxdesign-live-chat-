@@ -204,6 +204,11 @@ struct AdaptiveShellView: View {
                 )
             }
         }
+        .onChange(of: scenePhase) { phase in
+            if phase == .background {
+                syncPlatformServices()
+            }
+        }
         .onChange(of: settings.readSessionIds) { _ in
             coordinator.updateUnreadCounts()
         }
