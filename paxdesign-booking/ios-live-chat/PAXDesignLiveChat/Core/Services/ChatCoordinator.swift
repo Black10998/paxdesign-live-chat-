@@ -368,6 +368,7 @@ final class ChatCoordinator: ObservableObject {
         PAXApplicationBadge.sync(
             total: unreadChatCount + unreadTeamCount + liveCount + StaffOrdersCoordinator.shared.unreadCount
         )
+        WidgetDataStore.shared.syncFromApp()
     }
 
     private func detectNewSessions(_ items: [LiveSession]) {

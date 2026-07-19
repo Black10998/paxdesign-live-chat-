@@ -26,7 +26,6 @@ final class PlatformSyncService: ObservableObject {
             apply(payload, auth: auth)
             lastSyncDate = Date()
             lastError = nil
-            WidgetDataStore.shared.syncFromApp()
         } catch {
             lastError = error.localizedDescription
         }
@@ -81,6 +80,7 @@ final class PlatformSyncService: ObservableObject {
                 FileLibraryStore.shared.applyServerFiles(payload.files.map(PAXDocumentItem.init(api:)))
                 ActivityLogService.shared.applyServerEntries(payload.activity.map(ActivityLogEntry.init(api:)))
                 PlatformModuleSettingsStore.shared.applyServerSettings(payload.settings)
+                WidgetDataStore.shared.syncFromApp()
             }
         }
     }

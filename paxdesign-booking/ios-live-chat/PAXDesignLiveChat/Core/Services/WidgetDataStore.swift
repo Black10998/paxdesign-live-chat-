@@ -1,14 +1,22 @@
 import Foundation
+import WidgetKit
+
+enum WidgetSharedConstants {
+    static let appGroupID = "group.at.paxdesign.livechat"
+    static let snapshotKey = "pax.widget.snapshot"
+    static let widgetKind = "PAXDashboardWidget"
+}
 
 /// Shared data bridge for widgets and the main app (App Group when available, UserDefaults fallback).
 @MainActor
 final class WidgetDataStore {
     static let shared = WidgetDataStore()
+    static let widgetKind = WidgetSharedConstants.widgetKind
 
-    private let appGroupID = "group.at.paxdesign.livechat"
-    private let snapshotKey = "pax.widget.snapshot"
+    private let appGroupID = WidgetSharedConstants.appGroupID
+    private let snapshotKey = WidgetSharedConstants.snapshotKey
 
-    struct Snapshot: Codable {
+    struct Snapshot: Codable, Equatable {
         var unreadChats: Int
         var liveRequests: Int
         var openTasks: Int
@@ -25,16 +33,10 @@ final class WidgetDataStore {
     }
 
     func syncFromApp() {
-        let snapshot = Snapshot(
-            unreadChats: unreadChatCount(),
-            liveRequests: ChatCoordinatorProxy.liveCount,
-            openTasks: TaskStore.shared.openCount,
-            upcomingEvents: CalendarStore.shared.upcoming().count,
-            updatedAt: Date()
-        )
-        if let data = try? JSONEncoder().encode(snapshot) {
-            defaults.set(data, forKey: snapshotKey)
-        }
+        let snapshot = buildSnapshot()
+        guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        defaults.set(data, forKey: snapshotKey)
+        WidgetCenter.shared.reloadTimelines(ofKind: Self.widgetKind)
     }
 
     func loadSnapshot() -> Snapshot {
@@ -49,13 +51,26 @@ final class WidgetDataStore {
         ChatCoordinatorProxy.liveCount = 0
         ChatCoordinatorProxy.sessions = []
         defaults.removeObject(forKey: snapshotKey)
+        WidgetCenter.shared.reloadTimelines(ofKind: Self.widgetKind)
     }
 
-    private func unreadChatCount() -> Int {
+    func buildSnapshot() -> Snapshot {
+        let platform = PlatformSyncService.shared
+        return Snapshot(
+            unreadChats: unreadSessionCount(),
+            liveRequests: platform.dashboard?.liveCount ?? ChatCoordinatorProxy.liveCount,
+            openTasks: platform.dashboard?.openTasks ?? TaskStore.shared.openCount,
+            upcomingEvents: CalendarStore.shared.upcoming().count,
+            updatedAt: Date()
+        )
+    }
+
+    func unreadSessionCount() -> Int {
         let settings = AppSettingsStore.shared
         return ChatCoordinatorProxy.sessions
             .filter { !$0.isTeamDM }
-            .reduce(0) { $0 + settings.unreadMessageCount(for: $1) }
+            .filter { settings.isSessionUnread($0) }
+            .count
     }
 }
 

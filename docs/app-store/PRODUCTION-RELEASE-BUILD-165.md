@@ -28,8 +28,12 @@ Build 165 is the consolidated production release merging PR #136 (Team Chat rate
 - **Team Chat rate limit:** `NetworkCircuitBreaker` exempts team polls/sends; transient 429 handling; optimistic messages retained on rate limit.
 - **Notification recovery:** `PermissionCoordinator.syncPushRegistrationIfAuthorized()`; foreground re-register on customer home/chat/settings.
 - **Customer API:** HTML/fatal-error decode guard via `decodeJSON()`.
-- **Widgets:** Premium redesign + `.systemLarge` support.
-- **Removed fatalError:** `ConversationHistoryStore` / `LiveChatModels` use empty snapshot fallback.
+- **Home Screen widget (fixed):**
+  - Removed duplicate **PAXDesign** label inside widget (iOS already shows app name below the widget).
+  - Adaptive Light/Dark/System palette with polished spacing and 2×2 grid on medium/large sizes.
+  - Counters now match dashboard semantics: unread **sessions** for Chats, platform/coordinator live count, open tasks, upcoming events.
+  - `WidgetCenter.reloadTimelines` on every app sync; widget refresh after platform task/calendar apply and unread-count changes.
+  - Fixed platform sync ordering so Tasks/Events counters update after server payload is applied.
 
 ## Automated verification
 

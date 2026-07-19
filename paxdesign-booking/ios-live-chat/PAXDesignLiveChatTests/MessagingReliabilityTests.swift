@@ -660,4 +660,46 @@ final class MessagingReliabilityTests: XCTestCase {
         XCTAssertEqual(payload.trends.messagesPct, -4.0)
         XCTAssertEqual(payload.categoryTotals.count, 2)
     }
+
+    @MainActor
+    func testWidgetSnapshotMatchesDashboardUnreadSessions() {
+        let settings = AppSettingsStore.shared
+        let session = LiveSession(
+            sessionId: "widget-unread-test",
+            displayName: "Widget User",
+            handler: "human",
+            status: "active",
+            isTeamDM: false,
+            isLiveRequest: false,
+            isClosed: false,
+            sessionRating: 0,
+            detectedService: "",
+            updatedAt: "2026-07-19T12:00:00Z",
+            messageCount: 2,
+            seq: 2,
+            lastPreview: "Hello",
+            lastRole: "user"
+        )
+        ChatCoordinatorProxy.sessions = [session]
+        ChatCoordinatorProxy.liveCount = 3
+        settings.markSessionUnread(session.sessionId)
+
+        let snapshot = WidgetDataStore.shared.buildSnapshot()
+        XCTAssertEqual(snapshot.unreadChats, 1)
+        XCTAssertEqual(snapshot.liveRequests, 3)
+        XCTAssertEqual(WidgetDataStore.widgetKind, "PAXDashboardWidget")
+    }
+
+    func testWidgetSnapshotPayloadRoundTrip() throws {
+        let snapshot = WidgetDataStore.Snapshot(
+            unreadChats: 2,
+            liveRequests: 1,
+            openTasks: 3,
+            upcomingEvents: 1,
+            updatedAt: Date(timeIntervalSince1970: 1_752_960_000)
+        )
+        let data = try JSONEncoder().encode(snapshot)
+        let decoded = try JSONDecoder().decode(WidgetDataStore.Snapshot.self, from: data)
+        XCTAssertEqual(decoded, snapshot)
+    }
 }
