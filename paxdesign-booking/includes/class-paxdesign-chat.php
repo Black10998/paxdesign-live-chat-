@@ -259,6 +259,12 @@ class PAXdesign_Chat {
         }
 
         $session_id = isset($_POST['session_id']) ? sanitize_text_field(wp_unslash($_POST['session_id'])) : '';
+        if (get_option('paxdesign_customer_require_login_for_chat', '1') === '1' && get_current_user_id() <= 0) {
+            wp_send_json_error(array(
+                'message' => __('Sign in or create an account to use Live Chat.', 'paxdesign-booking'),
+                'code'    => 'login_required',
+            ), 401);
+        }
         if (get_current_user_id() > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
             $live = PAXdesign_Chat_Live::get_instance();
             $session_id = PAXdesign_Customer_Chat_Bridge::resolve_ajax_session(get_current_user_id(), $session_id);

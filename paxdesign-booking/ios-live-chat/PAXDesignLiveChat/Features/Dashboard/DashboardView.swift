@@ -152,7 +152,8 @@ struct DashboardView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 8) {
+                        StaffShellNotificationBell()
                         PAXAppearanceQuickSwitch()
                         Button {
                             showSearch = true

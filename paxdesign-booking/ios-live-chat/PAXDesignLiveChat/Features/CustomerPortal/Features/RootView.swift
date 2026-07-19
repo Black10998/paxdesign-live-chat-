@@ -49,29 +49,60 @@ struct CustomerPortalShellView: View {
 
 struct CustomerTabView: View {
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @StateObject private var menuScrollState = UiverseMenuScrollState()
+    @State private var loadedTabs: Set<Int> = [CustomerPortalTab.home.rawValue]
+
+    private var menuItems: [UiverseMenuBarItem] {
+        [
+            UiverseMenuBarItem(tag: CustomerPortalTab.home.rawValue, glyph: .home, title: String(localized: "Home")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.services.rawValue, glyph: .grid, title: String(localized: "Services")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.portfolio.rawValue, glyph: .photo, title: String(localized: "Portfolio")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.chat.rawValue, glyph: .chatBubble, title: String(localized: "Chat")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.account.rawValue, glyph: .person, title: String(localized: "Account")),
+        ]
+    }
 
     var body: some View {
-        TabView(selection: $navigation.selectedTab) {
-            CustomerHomepageView()
-                .tabItem { Label(String(localized: "Home"), systemImage: "house.fill") }
-                .tag(CustomerPortalTab.home)
-            CustomerServicesCatalogScreen()
-                .tabItem { Label(String(localized: "Services"), systemImage: "square.grid.2x2.fill") }
-                .tag(CustomerPortalTab.services)
-            NavigationStack {
-                CustomerPortfolioListView()
+        ZStack {
+            customerTabPane(.home) {
+                CustomerHomepageView()
             }
-            .tabItem { Label(String(localized: "Portfolio"), systemImage: "photo.on.rectangle.angled") }
-            .tag(CustomerPortalTab.portfolio)
-            CustomerChatView(initialSessionID: navigation.chatSessionID)
-                .tabItem { Label(String(localized: "Chat"), systemImage: "message.fill") }
-                .tag(CustomerPortalTab.chat)
-            CustomerMoreView()
-                .tabItem { Label(String(localized: "Account"), systemImage: "person.crop.circle.fill") }
-                .tag(CustomerPortalTab.account)
+            customerTabPane(.services) {
+                CustomerServicesCatalogScreen()
+            }
+            customerTabPane(.portfolio) {
+                NavigationStack {
+                    CustomerPortfolioListView()
+                }
+            }
+            customerTabPane(.chat) {
+                CustomerChatView(initialSessionID: navigation.chatSessionID)
+            }
+            customerTabPane(.account) {
+                CustomerMoreView()
+            }
         }
+        .overlay(alignment: .bottom) {
+            UiverseMenuBarView(
+                items: menuItems,
+                selection: Binding(
+                    get: { navigation.selectedTab.rawValue },
+                    set: { newValue in
+                        navigation.selectedTab = CustomerPortalTab(rawValue: newValue) ?? .home
+                    }
+                ),
+                reduceMotion: reduceMotion
+            )
+            .scaleEffect(menuScrollState.barScale, anchor: .bottom)
+            .padding(.bottom, UiverseMenuMetrics.homeIndicatorGap)
+            .ignoresSafeArea(edges: .bottom)
+        }
+        .environment(\.shellTabBarVisible, true)
+        .environment(\.shellTabBarScrollInset, PAXShellLayout.uiverseMenuScrollInset)
+        .environment(\.shellMenuScrollState, menuScrollState)
         .onChange(of: navigation.selectedTab) { tab in
+            loadedTabs.insert(tab.rawValue)
             PAXHaptics.light()
             switch tab {
             case .account:
@@ -79,6 +110,17 @@ struct CustomerTabView: View {
             default:
                 break
             }
+        }
+    }
+
+    @ViewBuilder
+    private func customerTabPane<Content: View>(_ tab: CustomerPortalTab, @ViewBuilder content: () -> Content) -> some View {
+        if loadedTabs.contains(tab.rawValue) {
+            content()
+                .opacity(navigation.selectedTab == tab ? 1 : 0)
+                .allowsHitTesting(navigation.selectedTab == tab)
+                .accessibilityHidden(navigation.selectedTab != tab)
+                .zIndex(navigation.selectedTab == tab ? 1 : 0)
         }
     }
 }

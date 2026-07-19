@@ -11,6 +11,9 @@ enum UiverseMenuIcons {
         case chatBubble
         case users
         case bell
+        case grid
+        case photo
+        case person
     }
 
     @ViewBuilder
@@ -87,6 +90,42 @@ private struct UiverseMenuSVGAsset {
         ),
     ])
 
+    static let grid = UiverseMenuSVGAsset(paths: [
+        UiverseMenuSVGPath(
+            d: "M4 4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H4Z",
+            fillRule: .evenOdd
+        ),
+        UiverseMenuSVGPath(
+            d: "M14 4a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-4Z",
+            fillRule: .evenOdd
+        ),
+        UiverseMenuSVGPath(
+            d: "M4 14a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2H4Z",
+            fillRule: .evenOdd
+        ),
+        UiverseMenuSVGPath(
+            d: "M14 14a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-4Z",
+            fillRule: .evenOdd
+        ),
+    ])
+
+    static let photo = UiverseMenuSVGAsset(paths: [
+        UiverseMenuSVGPath(
+            d: "M1.5 6a2.25 2.25 0 0 1 2.25-2.25h16.5A2.25 2.25 0 0 1 22.5 6v12a2.25 2.25 0 0 1-2.25 2.25H3.75A2.25 2.25 0 0 1 1.5 18V6ZM3.75 7.5a.75.75 0 0 0-.75.75v9.75c0 .414.336.75.75.75h16.5a.75.75 0 0 0 .75-.75V8.25a.75.75 0 0 0-.75-.75H3.75Z",
+            fillRule: .evenOdd
+        ),
+        UiverseMenuSVGPath(
+            d: "M6.75 10.5a2.25 2.25 0 1 0 0-4.5 2.25 2.25 0 0 0 0 4.5ZM2.25 18l6.364-6.364a1.125 1.125 0 0 1 1.591 0L15.75 16.5l-2.121-2.121a1.125 1.125 0 0 0-1.591 0L2.25 18Z"
+        ),
+    ])
+
+    static let person = UiverseMenuSVGAsset(paths: [
+        UiverseMenuSVGPath(
+            d: "M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z",
+            fillRule: .evenOdd
+        ),
+    ])
+
     static func asset(for glyph: UiverseMenuIcons.Glyph) -> UiverseMenuSVGAsset {
         switch glyph {
         case .home: .home
@@ -96,6 +135,9 @@ private struct UiverseMenuSVGAsset {
         case .chatBubble: .chatBubble
         case .users: .users
         case .bell: .bell
+        case .grid: .grid
+        case .photo: .photo
+        case .person: .person
         }
     }
 }

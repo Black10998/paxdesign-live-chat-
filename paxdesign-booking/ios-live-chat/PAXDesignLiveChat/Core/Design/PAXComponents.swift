@@ -753,9 +753,7 @@ private struct PAXShellScrollOffsetTracker: UIViewRepresentable {
             offsetObservation = scrollView.observe(\.contentOffset, options: [.new]) { [weak self] (scrollView: UIScrollView, _: NSKeyValueObservedChange<CGPoint>) in
                 guard let self else { return }
                 let offset = max(0, scrollView.contentOffset.y + scrollView.adjustedContentInset.top)
-                Task { @MainActor in
-                    self.scrollState.ingestScrollOffset(offset, reduceMotion: self.reduceMotion)
-                }
+                self.scrollState.ingestScrollOffset(offset, reduceMotion: self.reduceMotion)
             }
         }
 

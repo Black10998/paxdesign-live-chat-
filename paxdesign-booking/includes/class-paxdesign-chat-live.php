@@ -1239,6 +1239,7 @@ class PAXdesign_Chat_Live {
         $session_id = $this->sanitize_session_id(
             isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
         );
+        $session_id = $this->resolve_customer_ajax_session($session_id);
         $message_id = isset($_POST['message_id']) ? (int) $_POST['message_id'] : 0;
         $reaction   = isset($_POST['reaction']) ? sanitize_text_field(wp_unslash($_POST['reaction'])) : '';
 
@@ -1587,6 +1588,12 @@ class PAXdesign_Chat_Live {
 
         self::upgrade_schema();
 
+        $user_id = get_current_user_id();
+        if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            $sessions = PAXdesign_Customer_Chat_Bridge::list_user_sessions($user_id);
+            wp_send_json_success(array('sessions' => $sessions));
+        }
+
         $device_token = $this->device_token_from_request();
         if ($device_token === '') {
             wp_send_json_error(array('message' => 'Invalid device token'), 400);
@@ -1642,6 +1649,31 @@ class PAXdesign_Chat_Live {
         $session_id = $this->sanitize_session_id(
             isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
         );
+        $session_id = $this->resolve_customer_ajax_session($session_id);
+        $user_id = get_current_user_id();
+
+        if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            if ($session_id === '' || !PAXdesign_Customer_Chat_Bridge::user_owns_session($user_id, $session_id)) {
+                wp_send_json_error(array('message' => 'Access denied'), 403);
+            }
+            $row = $this->get_session_row($session_id);
+            if (!$row) {
+                wp_send_json_error(array('message' => 'Not found'), 404);
+            }
+            $messages = $this->sort_messages($this->decode_messages($row->messages));
+            if (class_exists('PAXdesign_Customer_Chat_Bridge')) {
+                $messages = PAXdesign_Customer_Chat_Bridge::filter_customer_lifecycle_messages($messages);
+            }
+            wp_send_json_success(array(
+                'session_id'     => $row->session_id,
+                'customer_name'  => isset($row->customer_name) ? (string) $row->customer_name : '',
+                'updated_at'     => PAXdesign_API_Time::format(isset($row->updated_at) ? (string) $row->updated_at : '', false),
+                'started_at'     => $row->started_at,
+                'session_rating' => isset($row->session_rating) ? (int) $row->session_rating : 0,
+                'messages'       => $messages,
+            ));
+        }
+
         $device_token = $this->device_token_from_request();
 
         if ($session_id === '' || $device_token === '') {
@@ -1677,6 +1709,7 @@ class PAXdesign_Chat_Live {
         $session_id = $this->sanitize_session_id(
             isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
         );
+        $session_id = $this->resolve_customer_ajax_session($session_id);
         if ($session_id === '') {
             wp_send_json_error(array('message' => 'Invalid session'), 400);
         }
@@ -1775,6 +1808,7 @@ class PAXdesign_Chat_Live {
         $session_id = $this->sanitize_session_id(
             isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
         );
+        $session_id = $this->resolve_customer_ajax_session($session_id);
         $feedback = isset($_POST['feedback']) ? sanitize_text_field(wp_unslash($_POST['feedback'])) : '';
         $rating   = isset($_POST['rating']) ? (int) $_POST['rating'] : 0;
 

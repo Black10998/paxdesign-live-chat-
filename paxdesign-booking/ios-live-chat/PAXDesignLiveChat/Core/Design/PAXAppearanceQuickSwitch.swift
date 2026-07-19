@@ -12,9 +12,7 @@ struct PAXAppearanceQuickSwitch: View {
                 }
             }
         } label: {
-            Image(systemName: icon(for: settings.appearanceMode))
-                .font(.body.weight(.semibold))
-                .foregroundStyle(PAXTheme.textPrimary)
+            PAXIcon(iconName(for: settings.appearanceMode), size: .row)
                 .frame(width: 32, height: 32)
         }
         .accessibilityLabel(String(localized: "Appearance"))
@@ -24,6 +22,14 @@ struct PAXAppearanceQuickSwitch: View {
         switch mode {
         case .light: return "sun.max.fill"
         case .dark: return "moon.fill"
+        case .system: return "circle.lefthalf.filled"
+        }
+    }
+
+    private func iconName(for mode: AppSettingsStore.AppearanceMode) -> String {
+        switch mode {
+        case .light: return "sun.max"
+        case .dark: return "moon"
         case .system: return "circle.lefthalf.filled"
         }
     }

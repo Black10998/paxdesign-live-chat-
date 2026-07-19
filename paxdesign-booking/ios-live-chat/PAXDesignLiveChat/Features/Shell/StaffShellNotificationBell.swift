@@ -15,21 +15,19 @@ struct StaffShellNotificationBell: View {
             showCenter = true
             PAXHaptics.light()
         } label: {
-            ZStack(alignment: .topTrailing) {
-                PAXIcon("bell")
-                    .frame(width: 36, height: 36)
-                if totalUnread > 0 {
-                    Text(totalUnread > 99 ? "99+" : "\(totalUnread)")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, totalUnread > 9 ? 5 : 4)
-                        .padding(.vertical, 2)
-                        .background(Color.red)
-                        .clipShape(Capsule())
-                        .offset(x: 8, y: -4)
-                        .accessibilityLabel(L10n.NotificationsCenterTitle)
+            PAXIcon("bell", size: .row)
+                .overlay(alignment: .topTrailing) {
+                    if totalUnread > 0 {
+                        Text(totalUnread > 99 ? "99+" : "\(totalUnread)")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, totalUnread > 9 ? 4 : 3)
+                            .padding(.vertical, 1)
+                            .background(Color.red)
+                            .clipShape(Capsule())
+                            .offset(x: 6, y: -6)
+                    }
                 }
-            }
         }
         .buttonStyle(.plain)
         .accessibilityLabel(

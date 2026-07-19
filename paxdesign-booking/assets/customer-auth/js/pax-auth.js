@@ -468,6 +468,11 @@
   /* ─── Auth overlay ─────────────────────────────────────── */
   var overlay = null;
   var formEl = null;
+  var inlineAuthMount = null;
+
+  function activeAuthRoot() {
+    return (inlineAuthMount && inlineAuthMount.container) || formEl;
+  }
 
   function createOverlay() {
     overlay = document.createElement('div');
@@ -504,7 +509,18 @@
     document.body.classList.remove('pdx-no-scroll');
   }
 
-  function renderAuthForm() {
+  function renderAuthForm(target) {
+    var mount = target || activeAuthRoot();
+    if (!mount) return;
+    if (target) {
+      if (target === formEl) {
+        inlineAuthMount = null;
+      } else {
+        inlineAuthMount = inlineAuthMount || {};
+        inlineAuthMount.container = target;
+      }
+    }
+    var compact = !!(inlineAuthMount && inlineAuthMount.compact);
     var titles = { login: 'Sign In', register: 'Create Account', forgot: 'Forgot Password', reset: 'Reset Password' };
     var subtitles = {
       login: 'Welcome back. Sign in to your PAXDesign account.',
@@ -513,12 +529,14 @@
       reset: 'Choose a strong new password for your account.',
     };
     var headIcons = { login: 'login', register: 'register', forgot: 'mail', reset: 'lock' };
-    var html = '<form class="pdx-auth-form pdx-auth-form--' + currentView + '" novalidate>';
-    html += '<div class="pdx-cx-auth-head">';
-    html += '<div class="pdx-cx-icon-wrap">' + cxIcon(headIcons[currentView] || 'login', 22) + '</div>';
-    html += '<span class="pdx-auth-title">' + escHtml(titles[currentView] || 'Sign In') + '</span>';
-    html += '<p class="pdx-cx-auth-subtitle">' + escHtml(subtitles[currentView] || '') + '</p>';
-    html += '</div>';
+    var html = '<form class="pdx-auth-form pdx-auth-form--' + currentView + (compact ? ' pdx-auth-form--compact' : '') + '" novalidate>';
+    if (!compact) {
+      html += '<div class="pdx-cx-auth-head">';
+      html += '<div class="pdx-cx-icon-wrap">' + cxIcon(headIcons[currentView] || 'login', 22) + '</div>';
+      html += '<span class="pdx-auth-title">' + escHtml(titles[currentView] || 'Sign In') + '</span>';
+      html += '<p class="pdx-cx-auth-subtitle">' + escHtml(subtitles[currentView] || '') + '</p>';
+      html += '</div>';
+    }
     html += '<div class="pdx-auth-msg-slot"></div>';
     html += '<div class="pdx-auth-fields">';
 
@@ -556,16 +574,49 @@
     }
 
     html += '</form>';
-    formEl.innerHTML = html;
+    mount.innerHTML = html;
 
-    var form = formEl.querySelector('.pdx-auth-form');
+    var form = mount.querySelector('.pdx-auth-form');
     form.addEventListener('submit', onAuthSubmit);
-    formEl.querySelectorAll('.pdx-auth-link').forEach(function (btn) {
+    mount.querySelectorAll('.pdx-auth-link').forEach(function (btn) {
       btn.addEventListener('click', function () {
         currentView = btn.dataset.view;
-        renderAuthForm();
+        renderAuthForm(mount);
       });
     });
+  }
+
+  function mountInlineAuth(container, view, options) {
+    if (!container) return;
+    options = options || {};
+    inlineAuthMount = {
+      container: container,
+      compact: !!options.compact,
+      context: options.context || '',
+      onSuccess: typeof options.onSuccess === 'function' ? options.onSuccess : null,
+    };
+    currentView = view || 'login';
+    renderAuthForm(container);
+    var first = container.querySelector('input:not([type=submit])');
+    if (first) setTimeout(function () { first.focus(); }, 80);
+  }
+
+  function unmountInlineAuth(container) {
+    if (!container) return;
+    if (inlineAuthMount && inlineAuthMount.container === container) {
+      inlineAuthMount = null;
+    }
+    container.innerHTML = '';
+  }
+
+  function finishAuthSuccess() {
+    if (inlineAuthMount && inlineAuthMount.container) {
+      if (inlineAuthMount.onSuccess) inlineAuthMount.onSuccess();
+      window.dispatchEvent(new CustomEvent('pdx-session-updated'));
+      return true;
+    }
+    closeOverlay();
+    return false;
   }
 
   function fieldInput(name, type, label, iconName, autocomplete, required) {
@@ -631,11 +682,13 @@
   }
 
   function markFieldError(fieldName) {
-    formEl.querySelectorAll('.pdx-auth-field').forEach(function (el) {
+    var root = activeAuthRoot();
+    if (!root) return;
+    root.querySelectorAll('.pdx-auth-field').forEach(function (el) {
       el.classList.remove('pdx-auth-field--error');
     });
     if (!fieldName) return;
-    var field = formEl.querySelector('.pdx-auth-field[data-field="' + fieldName + '"]');
+    var field = root.querySelector('.pdx-auth-field[data-field="' + fieldName + '"]');
     if (field) {
       field.classList.add('pdx-auth-field--error');
       var input = field.querySelector('input');
@@ -648,7 +701,8 @@
   }
 
   function setFormLoading(loading) {
-    var btn = formEl && formEl.querySelector('.pdx-btn-pearl');
+    var root = activeAuthRoot();
+    var btn = root && root.querySelector('.pdx-btn-pearl');
     if (btn) {
       btn.disabled = !!loading;
       btn.classList.toggle('is-loading', !!loading);
@@ -664,7 +718,8 @@
   }
 
   function showFormMessage(msg, type) {
-    var slot = formEl.querySelector('.pdx-auth-msg-slot');
+    var root = activeAuthRoot();
+    var slot = root && root.querySelector('.pdx-auth-msg-slot');
     if (!slot) return;
     var safe = msg ? escHtml(stripHtml(String(msg))) : '';
     slot.innerHTML = safe ? '<div class="pdx-auth-message pdx-auth-message--' + type + '">' + safe + '</div>' : '';
@@ -700,14 +755,18 @@
           return;
         }
         applySession({ user: data.user || user, nonce: data.nonce });
-        closeOverlay();
-        notify(data.message || 'Logged in.', 'info');
+        var inline = finishAuthSuccess();
+        if (!inline) notify(data.message || 'Logged in.', 'info');
         var mod = returnModule;
         returnModule = null;
         refreshUser().then(function () {
-          if (mod && window.PDXDock && window.PDXDock.openPanel) {
-            window.PDXDock.openPanel(mod);
-          }
+          claimGuestSessionIfNeeded().finally(function () {
+            if (!inline) {
+              if (mod && window.PDXDock && window.PDXDock.openPanel) {
+                window.PDXDock.openPanel(mod);
+              }
+            }
+          });
         });
       }).catch(done);
     } else if (currentView === 'register') {
@@ -722,7 +781,11 @@
           return;
         }
         showFormMessage(data.message, 'success');
-        setTimeout(function () { currentView = 'login'; renderAuthForm(); showFormMessage('Account created. Sign in after verifying your email.', 'success'); }, 2000);
+        setTimeout(function () {
+          currentView = 'login';
+          renderAuthForm(activeAuthRoot());
+          showFormMessage('Account created. Sign in after verifying your email.', 'success');
+        }, 2000);
       }).catch(done);
     } else if (currentView === 'forgot') {
       apiFetch('POST', '/auth/forgot-password', { email: fd.get('email') }).then(function (data) {
@@ -2138,6 +2201,8 @@
     canAccessModule: canAccessModule,
     moduleRequiresAuth: moduleRequiresAuth,
     openLogin: function (moduleId) { openOverlay('login', moduleId); },
+    mountInlineAuth: mountInlineAuth,
+    unmountInlineAuth: unmountInlineAuth,
     renderAuthGate: renderAuthGate,
     openCustomerPortal: openCustomerPortal,
     closeCustomerPortal: closeCustomerPortal,

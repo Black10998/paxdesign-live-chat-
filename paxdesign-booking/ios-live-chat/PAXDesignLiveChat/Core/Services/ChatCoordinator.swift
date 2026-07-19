@@ -557,9 +557,8 @@ final class ChatCoordinator: ObservableObject {
             return
         }
 
-        if let payload {
-            presentIncoming(session: LiveSession.fromPushPayload(sessionId: sessionId, payload: payload))
-        }
+        // Avoid synthetic placeholder sessions — only present verified server rows.
+        incomingRequest = nil
     }
 }
 
@@ -1179,7 +1178,7 @@ final class ChatThreadModel: ObservableObject {
         guard let api = auth.api else { return }
 
         var attempts = 0
-        while needsHistoryRecovery(expectedServerSeq: throughSeq) && attempts < 6 {
+        while needsHistoryRecovery(expectedServerSeq: throughSeq) && attempts < 3 {
             attempts += 1
             do {
                 let since = pollSeq
