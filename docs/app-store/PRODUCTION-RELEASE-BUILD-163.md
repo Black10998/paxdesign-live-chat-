@@ -61,6 +61,7 @@ Staff App SVG migration was already complete in Build 162.
 | App Store Build 162 | 29705658251 | ✅ | Prior successful IPA |
 | App Store Build 163 | 29707109684 | ✅ | Customer SVG + compile fixes |
 | TestFlight Build 163 | 29707109679 | ✅ | IPA validated CFBundleVersion=163, uploaded |
+| Verify Internal TestFlight | 29707695723 | ✅ | BUILD=163, IN_BETA_TESTING, all checks PASS |
 
 ## Root causes — TestFlight failures (Build 162 era)
 
@@ -97,4 +98,24 @@ The agent cannot run on physical devices. Please verify on TestFlight Build 163:
 | WordPress 3.153.0 deploy | ✅ |
 | Automated tests | ✅ |
 | TestFlight Build 163 upload | ✅ Run 29707109679 |
+| Internal TestFlight verified | ✅ Run 29707695723 |
 | Physical device QA | user |
+
+## App Store Connect
+
+- **App:** PAXDesign (Apple ID `6790031845`)
+- **TestFlight URL:** https://appstoreconnect.apple.com/apps/6790031845/testflight/ios
+- **Build 163 ASC ID:** `03bcd61d-5834-4750-bbea-83a163799f90`
+- **Delivery UUID:** `03bcd61d-5834-4750-bbea-83a163799f90`
+- **Internal state:** `IN_BETA_TESTING` (Ready to install via TestFlight app)
+- **Internal tester:** `awjime29@icloud.com` in group "Internal Testing"
+- **Upload confirmation:** `UPLOAD SUCCEEDED with no errors` (altool)
+
+## Non-blocking build warnings (Build 163 archive)
+
+The production archive compiled and signed successfully. Remaining warnings are non-critical:
+- AppIcon asset catalog: unassigned child in icon set
+- Swift unused variable / unused result warnings in CustomerScreens, LiveChatAPI, etc.
+- Deprecated API usage (NavigationLink iOS 16, allowBluetooth)
+
+These do not block TestFlight or App Store submission.
