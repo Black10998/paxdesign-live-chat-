@@ -371,6 +371,45 @@ final class MessagingReliabilityTests: XCTestCase {
         try? await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "suggestions:pax_test:12")
     }
 
+    func testTeamMessagingEndpointsBypassClientRateCap() async {
+        await NetworkCircuitBreaker.shared.reset()
+        await MainActor.run {
+            NetworkCircuitBreaker.shared.maxRequestsPerSecond = 1
+        }
+        try? await NetworkCircuitBreaker.shared.recordRequestStart(endpoint: "sessions", method: "GET")
+        try? await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "sessions")
+        XCTAssertNoThrow(try await NetworkCircuitBreaker.shared.recordRequestStart(
+            endpoint: "team-poll:team_1_2",
+            method: "GET"
+        ))
+        XCTAssertNoThrow(try await NetworkCircuitBreaker.shared.recordRequestStart(
+            endpoint: "team-send",
+            method: "POST"
+        ))
+        try? await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "team-poll:team_1_2")
+        try? await NetworkCircuitBreaker.shared.recordRequestEnd(endpoint: "team-send")
+    }
+
+    func testApplication429DoesNotOpenCircuit() async {
+        await NetworkCircuitBreaker.shared.reset()
+        await NetworkCircuitBreaker.shared.recordHTTPResponse(
+            status: 429,
+            bodySnippet: "{\"code\":\"rate_limit\",\"message\":\"Too many requests.\",\"data\":{\"status\":429}}",
+            endpoint: "team-send",
+            retryAfter: "30"
+        )
+        XCTAssertFalse(await NetworkCircuitBreaker.shared.isOpen)
+    }
+
+    func testLiveChatAPIErrorRateLimitIsTransient() {
+        let err = LiveChatAPIError.rateLimited("Too many requests.")
+        XCTAssertTrue(err.isTransientSendFailure)
+        let rejected = LiveChatAPIError.rejected("Zu viele Anfragen. Bitte warten.")
+        XCTAssertTrue(rejected.isTransientSendFailure)
+        let validation = LiveChatAPIError.rejected("Message cannot be empty")
+        XCTAssertFalse(validation.isTransientSendFailure)
+    }
+
     func testRoleLabelFormatterMapsFeminineExecutiveTitle() {
         XCTAssertEqual(RoleLabelFormatter.localized("Geschäftsführerin"), L10n.RoleExecutiveDirector)
         XCTAssertEqual(RoleLabelFormatter.localized("Executive Director"), L10n.RoleExecutiveDirector)

@@ -9,9 +9,15 @@ enum NetworkCircuitBreakerError: LocalizedError {
         switch self {
         case .open(let until):
             let remaining = max(0, Int(until.timeIntervalSinceNow))
-            return "Netzwerk-Schutz aktiv. Warte \(remaining)s vor neuen Anfragen."
+            return String(
+                localized: "Network protection is active. Please wait \(remaining)s before trying again.",
+                comment: "Shown when edge/WAF blocks requests temporarily"
+            )
         case .rateLimited:
-            return "Zu viele Anfragen pro Sekunde."
+            return String(
+                localized: "Too many requests. Your message will be sent automatically in a moment.",
+                comment: "Client-side burst protection — message stays queued"
+            )
         }
     }
 }
@@ -32,8 +38,8 @@ final class NetworkCircuitBreaker {
     private var inflightCounts: [String: Int] = [:]
     private var consecutiveRateLimitHits = 0
 
-    /// Hard cap: max REST requests per rolling second.
-    var maxRequestsPerSecond = 8
+    /// Hard cap: max counted REST requests per rolling second (reads/coalesced writes exempt).
+    var maxRequestsPerSecond = 15
     /// Minimum pause after first edge 403/429.
     var minOpenDuration: TimeInterval = 300
     var maxOpenDuration: TimeInterval = 600
@@ -65,22 +71,7 @@ final class NetworkCircuitBreaker {
         isOpen = false
         openUntil = nil
 
-        let isCoalescedRead = method.uppercased() == "GET"
-            && (endpoint.hasPrefix("suggestions:")
-                || endpoint.hasPrefix("poll:")
-                || endpoint == "me"
-                || endpoint == "team-contacts"
-                || endpoint == "team-sessions"
-                || endpoint == "conversations-sync"
-                || endpoint == "sessions"
-                || endpoint == "team-management-overview"
-                || endpoint == "team-management-members"
-                || endpoint == "team-management-pending"
-                || endpoint == "team-management-policy"
-                || endpoint == "team-pending-requests"
-                || endpoint.hasPrefix("team-management-"))
-
-        if isCoalescedRead {
+        if isExemptFromRateCap(endpoint: endpoint, method: method) {
             inflightCounts[endpoint, default: 0] += 1
             return
         }
@@ -117,6 +108,11 @@ final class NetworkCircuitBreaker {
             return
         }
 
+        // WordPress REST rate limits are per-endpoint and short-lived — do not pause all traffic.
+        if status == 429 && isApplicationRateLimit(bodySnippet: bodySnippet) {
+            return
+        }
+
         let isEdgeBlock = bodySnippet.localizedCaseInsensitiveContains("Access to this resource on the server is denied")
             || (!bodySnippet.localizedCaseInsensitiveContains("rest_") && status == 403)
 
@@ -145,5 +141,69 @@ final class NetworkCircuitBreaker {
         let delay = sseReconnectDelayNs
         sseReconnectDelayNs = min(sseReconnectDelayNs * 2, 60_000_000_000)
         return delay
+    }
+
+    /// Reads and low-priority housekeeping writes should not compete with user sends.
+    private func isExemptFromRateCap(endpoint: String, method: String) -> Bool {
+        let verb = method.uppercased()
+        if verb == "GET" {
+            return endpoint.hasPrefix("suggestions:")
+                || endpoint.hasPrefix("poll:")
+                || endpoint.hasPrefix("team-poll:")
+                || endpoint == "me"
+                || endpoint == "team-contacts"
+                || endpoint == "team-sessions"
+                || endpoint == "conversations-sync"
+                || endpoint == "sessions"
+                || endpoint == "team-management-overview"
+                || endpoint == "team-management-members"
+                || endpoint == "team-management-pending"
+                || endpoint == "team-management-policy"
+                || endpoint == "team-pending-requests"
+                || endpoint.hasPrefix("team-management-")
+                || endpoint.hasPrefix("platform-")
+                || endpoint == "staff"
+                || endpoint == "quick-replies"
+                || endpoint == "quick-links"
+        }
+        if isUserPriorityWrite(endpoint: endpoint) {
+            return true
+        }
+        return isLowPriorityWrite(endpoint: endpoint)
+    }
+
+    private func isUserPriorityWrite(endpoint: String) -> Bool {
+        endpoint.hasPrefix("send:")
+            || endpoint.hasPrefix("team-send")
+            || endpoint == "send-image"
+            || endpoint == "send-link"
+            || endpoint == "team-broadcast"
+    }
+
+    private func isLowPriorityWrite(endpoint: String) -> Bool {
+        endpoint == "typing"
+            || endpoint == "team-typing"
+            || endpoint == "team-read"
+            || endpoint == "session-read"
+            || endpoint == "team-presence"
+            || endpoint == "events-ack"
+            || endpoint == "team-open"
+            || endpoint == "team-respond"
+            || endpoint == "team-pin"
+            || endpoint == "team-mute"
+            || endpoint == "takeover"
+            || endpoint == "decline"
+            || endpoint == "close"
+            || endpoint == "archive"
+            || endpoint == "reopen"
+            || endpoint == "release"
+    }
+
+    private func isApplicationRateLimit(bodySnippet: String) -> Bool {
+        let trimmed = bodySnippet.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.hasPrefix("{") else { return false }
+        return trimmed.contains("\"code\"")
+            || trimmed.contains("rest_")
+            || trimmed.localizedCaseInsensitiveContains("rate_limit")
     }
 }

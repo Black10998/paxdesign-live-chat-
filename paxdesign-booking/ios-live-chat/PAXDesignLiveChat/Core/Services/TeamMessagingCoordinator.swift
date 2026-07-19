@@ -541,6 +541,10 @@ final class TeamChatThreadModel: ObservableObject {
         } catch {
             if case LiveChatAPIError.unauthorized = error {
                 auth.handleUnauthorized()
+            } else if let apiError = error as? LiveChatAPIError,
+                      apiError.isTransientSendFailure,
+                      !messages.isEmpty {
+                return
             } else {
                 errorMessage = error.localizedDescription
             }
@@ -557,6 +561,10 @@ final class TeamChatThreadModel: ObservableObject {
         } catch {
             if case LiveChatAPIError.unauthorized = error {
                 auth.handleUnauthorized()
+            } else if let apiError = error as? LiveChatAPIError,
+                      apiError.isTransientSendFailure,
+                      !messages.isEmpty {
+                return
             } else {
                 errorMessage = error.localizedDescription
             }
@@ -808,18 +816,12 @@ final class TeamChatThreadModel: ObservableObject {
                 MessageSendSound.shared.playIfEnabled()
                 schedulePostSendTasks(auth: auth, teamCoordinator: teamCoordinator)
             } catch {
-                switch error {
-                case LiveChatAPIError.unauthorized, LiveChatAPIError.rejected(_):
-                    PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
-                    messages.removeAll { $0.id == tempId }
-                    draft = text
-                    errorMessage = error.localizedDescription
-                default:
-                    errorMessage = "Nachricht wird automatisch erneut gesendet."
-                    if let clientMsgId = optimistic.clientMsgId {
-                        failedClientMsgIds.insert(clientMsgId)
-                    }
-                }
+                handleOutboundSendFailure(
+                    error,
+                    clientMsgId: clientMsgId,
+                    tempId: tempId,
+                    restoreDraft: text
+                )
             }
         }
     }
@@ -883,8 +885,7 @@ final class TeamChatThreadModel: ObservableObject {
                 schedulePostSendTasks(auth: auth, teamCoordinator: teamCoordinator)
                 PAXHaptics.light()
             } catch {
-                messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
-                errorMessage = error.localizedDescription
+                handleOutboundSendFailure(error, clientMsgId: clientMsgId, tempId: tempId)
             }
         }
     }
@@ -942,8 +943,7 @@ final class TeamChatThreadModel: ObservableObject {
                 schedulePostSendTasks(auth: auth, teamCoordinator: teamCoordinator)
                 PAXHaptics.light()
             } catch {
-                failedClientMsgIds.insert(clientMsgId)
-                errorMessage = error.localizedDescription
+                handleOutboundSendFailure(error, clientMsgId: clientMsgId, tempId: tempId)
             }
         }
     }
@@ -991,8 +991,7 @@ final class TeamChatThreadModel: ObservableObject {
                 schedulePostSendTasks(auth: auth, teamCoordinator: teamCoordinator)
                 PAXHaptics.light()
             } catch {
-                messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
-                errorMessage = error.localizedDescription
+                handleOutboundSendFailure(error, clientMsgId: clientMsgId, tempId: tempId)
             }
         }
     }
@@ -1039,8 +1038,7 @@ final class TeamChatThreadModel: ObservableObject {
                 schedulePostSendTasks(auth: auth, teamCoordinator: teamCoordinator)
                 PAXHaptics.light()
             } catch {
-                messages.removeAll { $0.id < 0 && $0.clientMsgId == clientMsgId }
-                errorMessage = error.localizedDescription
+                handleOutboundSendFailure(error, clientMsgId: clientMsgId, tempId: tempId)
             }
         }
     }
@@ -1082,6 +1080,32 @@ final class TeamChatThreadModel: ObservableObject {
     private func schedulePostSendTasks(auth: AuthStore, teamCoordinator: TeamMessagingCoordinator) {
         Task { await teamCoordinator.refresh(auth: auth, mode: .lightweight) }
         Task { await markRead(auth: auth) }
+    }
+
+    private func handleOutboundSendFailure(
+        _ error: Error,
+        clientMsgId: String,
+        tempId: Int,
+        restoreDraft: String? = nil
+    ) {
+        if case LiveChatAPIError.unauthorized = error {
+            PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
+            messages.removeAll { $0.id == tempId || ($0.id < 0 && $0.clientMsgId == clientMsgId) }
+            if let restoreDraft { draft = restoreDraft }
+            errorMessage = error.localizedDescription
+            return
+        }
+        if let apiError = error as? LiveChatAPIError,
+           case LiveChatAPIError.rejected = apiError,
+           !apiError.isTransientSendFailure {
+            PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
+            messages.removeAll { $0.id == tempId || ($0.id < 0 && $0.clientMsgId == clientMsgId) }
+            if let restoreDraft { draft = restoreDraft }
+            errorMessage = error.localizedDescription
+            return
+        }
+        errorMessage = error.localizedDescription
+        failedClientMsgIds.insert(clientMsgId)
     }
 
     private func applyTeamMeta(_ response: PollResponse) {

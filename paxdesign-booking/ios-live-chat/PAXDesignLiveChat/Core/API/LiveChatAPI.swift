@@ -4,6 +4,7 @@ enum LiveChatAPIError: LocalizedError {
     case invalidURL
     case unauthorized
     case rejected(String)
+    case rateLimited(String)
     case server(String)
     case decoding(Error)
 
@@ -12,8 +13,24 @@ enum LiveChatAPIError: LocalizedError {
         case .invalidURL: return L10n.ApiErrorInvalidUrl
         case .unauthorized: return L10n.ApiErrorLoginFailed
         case .rejected(let msg): return msg
+        case .rateLimited(let msg): return msg
         case .server(let msg): return msg
         case .decoding(let err): return "Antwort konnte nicht gelesen werden: \(err.localizedDescription)"
+        }
+    }
+
+    /// Failures where the outbox should keep the message and retry automatically.
+    var isTransientSendFailure: Bool {
+        switch self {
+        case .rateLimited, .server, .decoding:
+            return true
+        case .rejected(let msg):
+            let lower = msg.lowercased()
+            return lower.contains("rate") && lower.contains("limit")
+                || lower.contains("zu viele anfragen")
+                || lower.contains("too many")
+        default:
+            return false
         }
     }
 }
@@ -147,11 +164,20 @@ final class LiveChatAPI {
         "\(publicApiBaseURL)|\(username.lowercased())"
     }
 
+    private static let rateLimitFallback = String(
+        localized: "Too many requests. Your message will be sent automatically in a moment.",
+        comment: "Shown when server or client rate-limits a chat send"
+    )
+
     private func perform<T: Decodable>(_ request: URLRequest, endpoint: String, as type: T.Type) async throws -> T {
         let method = request.httpMethod ?? "GET"
-        try await MainActor.run {
-            try NetworkCircuitBreaker.shared.recordRequestStart(endpoint: endpoint, method: method)
-            NetworkRequestTracker.shared.record(endpoint: endpoint)
+        do {
+            try await MainActor.run {
+                try NetworkCircuitBreaker.shared.recordRequestStart(endpoint: endpoint, method: method)
+                NetworkRequestTracker.shared.record(endpoint: endpoint)
+            }
+        } catch let error as NetworkCircuitBreakerError {
+            throw LiveChatAPIError.rateLimited(error.localizedDescription ?? Self.rateLimitFallback)
         }
         defer {
             Task { @MainActor in
@@ -197,6 +223,11 @@ final class LiveChatAPI {
                 throw LiveChatAPIError.server(message)
             }
             throw LiveChatAPIError.unauthorized
+        }
+
+        if http.statusCode == 429 {
+            let message = wpErrorMessage(from: data) ?? Self.rateLimitFallback
+            throw LiveChatAPIError.rateLimited(message)
         }
 
         if http.statusCode >= 400 {

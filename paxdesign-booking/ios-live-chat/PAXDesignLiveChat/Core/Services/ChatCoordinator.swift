@@ -1562,19 +1562,23 @@ final class ChatThreadModel: ObservableObject {
             MessageSendSound.shared.playIfEnabled()
             await poll(auth: auth)
         } catch {
-            switch error {
-            case LiveChatAPIError.unauthorized, LiveChatAPIError.rejected(_):
+            if case LiveChatAPIError.unauthorized = error {
                 PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
                 messages.removeAll { $0.id == tempId }
                 knownMessageIds.remove(tempId)
                 draft = text
-            default:
-                // The request may have reached the server before the connection
-                // failed. Keep one durable outbox item and retry with the same ID.
-                errorMessage = "Nachricht wird automatisch erneut gesendet."
-                return
+                errorMessage = error.localizedDescription
+            } else if let apiError = error as? LiveChatAPIError,
+                      case LiveChatAPIError.rejected = apiError,
+                      !apiError.isTransientSendFailure {
+                PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
+                messages.removeAll { $0.id == tempId }
+                knownMessageIds.remove(tempId)
+                draft = text
+                errorMessage = error.localizedDescription
+            } else {
+                errorMessage = error.localizedDescription
             }
-            errorMessage = error.localizedDescription
         }
     }
 
@@ -1679,14 +1683,20 @@ final class ChatThreadModel: ObservableObject {
             MessageSendSound.shared.playIfEnabled()
             await poll(auth: auth)
         } catch {
-            switch error {
-            case LiveChatAPIError.unauthorized, LiveChatAPIError.rejected(_):
+            if case LiveChatAPIError.unauthorized = error {
                 PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
                 messages.removeAll { $0.id == tempId }
                 knownMessageIds.remove(tempId)
                 errorMessage = error.localizedDescription
-            default:
-                errorMessage = "Bild wird automatisch erneut gesendet."
+            } else if let apiError = error as? LiveChatAPIError,
+                      case LiveChatAPIError.rejected = apiError,
+                      !apiError.isTransientSendFailure {
+                PendingMessageStore.shared.acknowledge(clientMsgId: clientMsgId)
+                messages.removeAll { $0.id == tempId }
+                knownMessageIds.remove(tempId)
+                errorMessage = error.localizedDescription
+            } else {
+                errorMessage = error.localizedDescription
             }
         }
     }

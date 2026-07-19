@@ -14,7 +14,10 @@ if (!defined('ABSPATH')) {
 class PAXdesign_Chat {
 
     const RATE_LIMIT_WINDOW = 60;
-    const RATE_LIMIT_MAX    = 15;
+    /** Anonymous / IP-based AI chat requests per minute. */
+    const RATE_LIMIT_MAX    = 30;
+    /** Authenticated customer chat sends per minute (messages only, not polls). */
+    const RATE_LIMIT_MAX_AUTHENTICATED = 120;
     const MAX_MESSAGE_LEN   = 2000;
     const MAX_MESSAGES      = 30;
 
@@ -364,8 +367,12 @@ class PAXdesign_Chat {
         }
 
         $client_ip = $this->get_client_ip();
-        if (!$this->check_rate_limit($client_ip)) {
-            return new WP_Error('rate_limit', 'Zu viele Anfragen. Bitte warten Sie einen Moment.', array('status' => 429));
+        if (!$this->check_rate_limit($client_ip, self::RATE_LIMIT_MAX)) {
+            return new WP_Error(
+                'rate_limit',
+                __('Too many requests. Please wait a moment and try again.', 'paxdesign-booking'),
+                array('status' => 429, 'retry_after' => self::RATE_LIMIT_WINDOW)
+            );
         }
 
         return array('ok' => true);
@@ -379,9 +386,12 @@ class PAXdesign_Chat {
         }
 
         $client_ip = $this->get_client_ip();
-        if (!$this->check_rate_limit($client_ip)) {
+        if (!$this->check_rate_limit($client_ip, self::RATE_LIMIT_MAX)) {
             status_header(429);
-            wp_send_json_error(array('message' => 'Zu viele Anfragen. Bitte warten Sie einen Moment.'));
+            header('Retry-After: ' . self::RATE_LIMIT_WINDOW);
+            wp_send_json_error(array(
+                'message' => __('Too many requests. Please wait a moment and try again.', 'paxdesign-booking'),
+            ));
         }
 
         $worker_url = trim(get_option('paxdesign_chat_worker_url', ''));
@@ -435,11 +445,12 @@ class PAXdesign_Chat {
         return $validated;
     }
 
-    private function check_rate_limit($ip) {
-        return $this->check_rate_limit_for_key('ip:' . $ip);
+    private function check_rate_limit($ip, $max = null) {
+        return $this->check_rate_limit_for_key('ip:' . $ip, $max ?? self::RATE_LIMIT_MAX);
     }
 
-    private function check_rate_limit_for_key($key) {
+    private function check_rate_limit_for_key($key, $max = null) {
+        $limit = $max ?? self::RATE_LIMIT_MAX;
         $transient_key = 'paxdesign_chat_rl_' . md5($key);
         $data = get_transient($transient_key);
 
@@ -448,7 +459,7 @@ class PAXdesign_Chat {
             return true;
         }
 
-        if ($data['count'] >= self::RATE_LIMIT_MAX) {
+        if ($data['count'] >= $limit) {
             return false;
         }
 
@@ -787,8 +798,12 @@ class PAXdesign_Chat {
         }
 
         $user_id = get_current_user_id();
-        if ($user_id <= 0 || !$this->check_rate_limit_for_key('customer:' . $user_id)) {
-            return new WP_Error('rate_limit', __('Too many requests. Please wait a moment.', 'paxdesign-booking'), array('status' => 429));
+        if ($user_id <= 0 || !$this->check_rate_limit_for_key('customer:' . $user_id, self::RATE_LIMIT_MAX_AUTHENTICATED)) {
+            return new WP_Error(
+                'rate_limit',
+                __('Too many requests. Please wait a moment and try again.', 'paxdesign-booking'),
+                array('status' => 429, 'retry_after' => self::RATE_LIMIT_WINDOW)
+            );
         }
 
         $user_message = sanitize_textarea_field((string) $user_message);
@@ -926,8 +941,12 @@ class PAXdesign_Chat {
         }
 
         $user_id = get_current_user_id();
-        if ($user_id <= 0 || !$this->check_rate_limit_for_key('customer:' . $user_id)) {
-            return new WP_Error('rate_limit', __('Too many messages. Please wait a moment and try again.', 'paxdesign-booking'), array('status' => 429));
+        if ($user_id <= 0 || !$this->check_rate_limit_for_key('customer:' . $user_id, self::RATE_LIMIT_MAX_AUTHENTICATED)) {
+            return new WP_Error(
+                'rate_limit',
+                __('Too many messages. Please wait a moment and try again.', 'paxdesign-booking'),
+                array('status' => 429, 'retry_after' => self::RATE_LIMIT_WINDOW)
+            );
         }
 
         $user_message = sanitize_textarea_field((string) $user_message);

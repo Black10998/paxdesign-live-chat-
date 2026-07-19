@@ -19,6 +19,9 @@ class PAXdesign_Team_Messaging {
     const STATUS_DECLINED = 'declined';
     const STATUS_LOCKED   = 'locked';
     const TYPING_TTL      = 5;
+    /** Outbound team messages per staff user per minute (abuse guard only). */
+    const SEND_RATE_LIMIT_WINDOW = 60;
+    const SEND_RATE_LIMIT_MAX    = 120;
 
     /**
      * @return array<string, array<string, mixed>>
@@ -69,6 +72,39 @@ class PAXdesign_Team_Messaging {
                 $wpdb->get_var($wpdb->prepare("SELECT RELEASE_LOCK(%s)", $lock_name));
             }
         }
+    }
+
+    /**
+     * @param int $user_id
+     * @return bool
+     */
+    private static function check_send_rate_limit($user_id) {
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return true;
+        }
+        $transient_key = 'pax_team_send_rl_' . $user_id;
+        $count         = (int) get_transient($transient_key);
+        if ($count >= self::SEND_RATE_LIMIT_MAX) {
+            return false;
+        }
+        set_transient($transient_key, $count + 1, self::SEND_RATE_LIMIT_WINDOW);
+        return true;
+    }
+
+    /**
+     * @param int $current_user_id
+     * @return WP_Error|null
+     */
+    private static function send_rate_limit_error($current_user_id) {
+        if (self::check_send_rate_limit($current_user_id)) {
+            return null;
+        }
+        return new WP_Error(
+            'rate_limit',
+            __('Too many messages. Please wait a moment and try again.', 'paxdesign-booking'),
+            array('status' => 429, 'retry_after' => self::SEND_RATE_LIMIT_WINDOW)
+        );
     }
 
     /**
@@ -378,6 +414,11 @@ class PAXdesign_Team_Messaging {
 
         if ($content === '') {
             return new WP_Error('pax_team_empty', 'Message cannot be empty', array('status' => 400));
+        }
+
+        $limited = self::send_rate_limit_error($current_user_id);
+        if ($limited instanceof WP_Error) {
+            return $limited;
         }
 
         return self::with_write_lock('send:' . $conv_id, function () use ($conv_id, $current_user_id, $content, $client_msg_id) {
