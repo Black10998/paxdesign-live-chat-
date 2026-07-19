@@ -103,25 +103,36 @@
 
 ## Deployment
 
-WordPress production deploy triggered via `.github/triggers/deploy-customer-platform-3161` on `main`.
+WordPress production deploy: **confirmed** via workflow run **29704900345** (`Deploy customer platform 3.153.0`).
 
-Expected production version after deploy: **3.153.0**
+| Check | Result |
+|-------|--------|
+| Deploy workflow | success (test + deploy jobs) |
+| Production plugin version | **3.153.0** (asset URLs on https://paxdesign.at) |
+| Customer platform verification | ALL CHECKS PASSED |
+| Unauthenticated chat stream | HTTP 401 (auth gate active) |
+| Public services route | HTTP 200 |
 
 ---
 
 ## TestFlight
 
-Final build triggered via `.github/triggers/testflight-upload` on `main` after deploy verification.
+**Expected build number:** 162 (CFBundleVersion in `project.yml`)
 
-**Expected build number:** 162  
-**CI workflow:** Upload TestFlight Build (triggered by push to `main`)
+| Workflow | Run ID | Status | Notes |
+|----------|--------|--------|-------|
+| Deploy customer platform 3.153.0 | 29704900345 | success | Production at 3.153.0 |
+| App Store iOS Build (attempt 1) | 29704900342 | failure | CI runner killed xcodebuild mid-compile (~51s); no Swift errors in log |
+| Upload TestFlight Build (attempt 1) | 29704900376 | failure | Fallback IPA was build 161; validation rejected (expected 162) |
+| App Store iOS Build (attempt 2) | pending | — | Re-triggered after deploy verification |
+| Upload TestFlight Build (attempt 2) | pending | — | Re-triggered after App Store build 162 |
 
 ---
 
 ## Post-release verification
 
 After CI completes, confirm:
-1. Deploy workflow green + verify log shows 3.153.0
-2. App Store Connect shows build 162 processing
-3. Production site chat requires login
-4. Authenticated chat returns same session ID on web + API
+1. Deploy workflow green + verify log shows 3.153.0 — **done**
+2. App Store Connect shows build 162 processing — pending CI
+3. Production site chat requires login — **verified** (401 on unauthenticated stream)
+4. Authenticated chat returns same session ID on web + API — **verified** in deploy job
