@@ -58,9 +58,9 @@ Staff App SVG migration was already complete in Build 162.
 | Workflow | Run ID | Result | Notes |
 |----------|--------|--------|-------|
 | Deploy 3.153.0 | 29704900345 | ✅ | Production backend |
-| App Store Build 162 | 29705658251 | ✅ | Last successful IPA |
-| TestFlight uploads | 29705750836, 29706548974 | ❌ | Runner assignment failures / stuck jobs |
-| App Store Build 163 | TBD | pending | Triggered with this release |
+| App Store Build 162 | 29705658251 | ✅ | Prior successful IPA |
+| App Store Build 163 | 29707109684 | ✅ | Customer SVG + compile fixes |
+| TestFlight Build 163 | 29707109679 | ✅ | IPA validated CFBundleVersion=163, uploaded |
 
 ## Root causes — TestFlight failures (Build 162 era)
 
@@ -96,5 +96,5 @@ The agent cannot run on physical devices. Please verify on TestFlight Build 163:
 | Glass tab bar (code) | ✅ |
 | WordPress 3.153.0 deploy | ✅ |
 | Automated tests | ✅ |
-| TestFlight Build 163 upload | pending CI |
+| TestFlight Build 163 upload | ✅ Run 29707109679 |
 | Physical device QA | user |
