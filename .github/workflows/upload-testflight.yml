@@ -45,6 +45,7 @@ jobs:
           set -euo pipefail
           EXPECTED="${{ steps.version.outputs.build }}"
           SHA="${{ github.sha }}"
+          FALLBACK_AFTER=$(( $(date +%s) + 180 ))
           DEADLINE=$(( $(date +%s) + 3600 ))
           RUN_ID=""
 
@@ -81,6 +82,17 @@ jobs:
               --jq '[.[] | select(.status == "in_progress" or .status == "queued") | .databaseId] | first // empty'
           }
 
+          find_latest_successful_main() {
+            gh run list \
+              --repo "${{ github.repository }}" \
+              --workflow release-appstore.yml \
+              --branch main \
+              --status success \
+              --limit 15 \
+              --json databaseId \
+              --jq '.[0].databaseId // empty'
+          }
+
           if [[ -n "${TESTFLIGHT_IPA_RUN_ID:-}" ]]; then
             echo "Using pinned App Store IPA run $TESTFLIGHT_IPA_RUN_ID"
             echo "run_id=$TESTFLIGHT_IPA_RUN_ID" >> "$GITHUB_OUTPUT"
@@ -103,6 +115,15 @@ jobs:
               echo "Waiting for App Store build run $IN_PROGRESS (expected build $EXPECTED)..."
               sleep 30
               continue
+            fi
+
+            if [[ $(date +%s) -ge $FALLBACK_AFTER ]]; then
+              RUN_ID="$(find_latest_successful_main)"
+              if [[ -n "$RUN_ID" ]]; then
+                echo "No App Store build on commit $SHA; using latest successful main run $RUN_ID (CFBundleVersion validated next)."
+                echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
             fi
 
             echo "Waiting for App Store build workflow on commit $SHA (expected build $EXPECTED)..."
