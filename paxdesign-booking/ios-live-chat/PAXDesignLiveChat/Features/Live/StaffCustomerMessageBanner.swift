@@ -8,12 +8,10 @@ struct StaffCustomerMessageBanner: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                Image(systemName: "message.fill")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(PAXTheme.accent)
+                PAXIcon("message.fill", size: .row, tint: PAXTheme.accent)
                     .frame(width: 36, height: 36)
                     .background(PAXTheme.accentSoft)
-                    .clipShape(Circle())
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(banner.customerName.isEmpty ? L10n.NotifyNewMessageTitle : banner.customerName)

@@ -150,12 +150,10 @@ struct PAXDesignLiveChatApp: App {
                 }
                 return
             }
-        } else if opened {
-            if let userInfo = note.userInfo as? [AnyHashable: Any] {
-                PushDeepLinkRouter.shared.store(
-                    userInfo: userInfo,
-                    action: note.userInfo?["action"] as? String
-                )
+        } else if opened, auth.isCustomerSession {
+            if let userInfo = note.userInfo as? [AnyHashable: Any],
+               let link = CustomerPushService.shared.handleNotification(userInfo: userInfo) {
+                CustomerDeepLinkRouter.shared.pending = link
             }
             return
         }
@@ -206,7 +204,7 @@ struct PAXDesignLiveChatApp: App {
                     activeSessionId: coordinator.activeSessionId
                 )
             }
-            await coordinator.handlePush(sessionId: sessionId, type: type, auth: auth, payload: payload, shouldNavigate: false)
+            await coordinator.handlePush(sessionId: sessionId, type: type, auth: auth, payload: payload, shouldNavigate: opened)
         }
     }
 }

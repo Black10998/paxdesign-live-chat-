@@ -1,4 +1,4 @@
-name: Deploy customer platform 3.138.1
+name: Deploy customer platform 3.153.0
 
 on:
   workflow_dispatch:
@@ -15,22 +15,8 @@ on:
     branches:
       - main
     paths:
-      - '.github/triggers/deploy-customer-platform-3144'
-      - '.github/triggers/deploy-customer-platform-3145'
-      - '.github/triggers/deploy-customer-platform-3147'
-      - '.github/triggers/deploy-customer-platform-3148'
-      - '.github/triggers/deploy-customer-platform-3149'
-      - '.github/triggers/deploy-customer-platform-3150'
-      - '.github/triggers/deploy-customer-platform-3151'
-      - '.github/triggers/deploy-customer-platform-3152'
-      - '.github/triggers/deploy-customer-platform-3153'
-      - '.github/triggers/deploy-customer-platform-3154'
-      - '.github/triggers/deploy-customer-platform-3155'
-      - '.github/triggers/deploy-customer-platform-3156'
-      - '.github/triggers/deploy-customer-platform-3157'
-      - '.github/triggers/deploy-customer-platform-3158'
-      - '.github/triggers/deploy-customer-platform-3159'
-      - '.github/triggers/deploy-customer-platform-3160'
+      - 'paxdesign-booking/**'
+      - '.github/triggers/deploy-customer-platform-*'
 
 permissions:
   contents: read
@@ -137,7 +123,7 @@ jobs:
       - name: Post-deploy customer platform verification
         env:
           PAX_SITE: https://paxdesign.at
-          PAX_EXPECTED_BOOKING: "3.151.0"
+          PAX_EXPECTED_BOOKING: "3.153.0"
           PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
           PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
         run: |

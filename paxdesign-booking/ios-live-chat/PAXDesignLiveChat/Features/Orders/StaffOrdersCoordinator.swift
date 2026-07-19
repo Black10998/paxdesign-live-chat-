@@ -10,9 +10,51 @@ struct StaffOrderSummary: Decodable, Identifiable, Hashable {
     let customer_name: String
     let customer_email: String
     let created_at: String?
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = CustomerPortalDecode.int(c, .id)
+        ref = CustomerPortalDecode.string(c, .ref)
+        service_label = CustomerPortalDecode.string(c, .service_label)
+        status = CustomerPortalDecode.string(c, .status)
+        description = try c.decodeIfPresent(String.self, forKey: .description)
+        customer_name = CustomerPortalDecode.string(c, .customer_name)
+        customer_email = CustomerPortalDecode.string(c, .customer_email)
+        created_at = try c.decodeIfPresent(String.self, forKey: .created_at)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, ref, service_label, status, description, customer_name, customer_email, created_at
+    }
 }
 
 struct StaffOrderDetail: Decodable, Identifiable {
+    struct FileItem: Decodable, Identifiable {
+        let id: Int
+        let file_name: String
+        let mime_type: String
+        let file_size: Int
+        let kind: String
+        let visibility: String?
+        let created_at: String?
+        let download_url: String?
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            id = CustomerPortalDecode.int(c, .id)
+            file_name = CustomerPortalDecode.string(c, .file_name)
+            mime_type = CustomerPortalDecode.string(c, .mime_type)
+            file_size = CustomerPortalDecode.int(c, .file_size)
+            kind = CustomerPortalDecode.string(c, .kind)
+            visibility = try c.decodeIfPresent(String.self, forKey: .visibility)
+            created_at = try c.decodeIfPresent(String.self, forKey: .created_at)
+            download_url = try c.decodeIfPresent(String.self, forKey: .download_url)
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case id, file_name, mime_type, file_size, kind, visibility, created_at, download_url
+        }
+    }
     struct Note: Decodable, Identifiable {
         let id: Int
         let body: String
@@ -22,7 +64,7 @@ struct StaffOrderDetail: Decodable, Identifiable {
         init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             let bodyValue = try c.decode(String.self, forKey: .body)
-            id = try c.decodeIfPresent(Int.self, forKey: .id) ?? abs(bodyValue.hashValue)
+            id = CustomerPortalDecode.int(c, .id)
             body = bodyValue
             visibility = try c.decodeIfPresent(String.self, forKey: .visibility)
             created_at = try c.decodeIfPresent(String.self, forKey: .created_at)
@@ -42,7 +84,8 @@ struct StaffOrderDetail: Decodable, Identifiable {
         init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             let summaryValue = try c.decode(String.self, forKey: .summary)
-            id = try c.decodeIfPresent(Int.self, forKey: .id) ?? abs(summaryValue.hashValue)
+            let decodedID = CustomerPortalDecode.int(c, .id)
+            id = decodedID != 0 ? decodedID : abs(summaryValue.hashValue)
             summary = summaryValue
             event_type = try c.decodeIfPresent(String.self, forKey: .event_type) ?? ""
             created_at = try c.decodeIfPresent(String.self, forKey: .created_at)
@@ -68,7 +111,28 @@ struct StaffOrderDetail: Decodable, Identifiable {
     let notes: [Note]?
     let activity: [Activity]?
     let assigned: Assigned?
+    let files: [FileItem]?
     let created_at: String?
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = CustomerPortalDecode.int(c, .id)
+        ref = CustomerPortalDecode.string(c, .ref)
+        service_label = CustomerPortalDecode.string(c, .service_label)
+        status = CustomerPortalDecode.string(c, .status)
+        description = try c.decodeIfPresent(String.self, forKey: .description)
+        customer_name = CustomerPortalDecode.string(c, .customer_name)
+        customer_email = CustomerPortalDecode.string(c, .customer_email)
+        notes = try c.decodeIfPresent([Note].self, forKey: .notes)
+        activity = try c.decodeIfPresent([Activity].self, forKey: .activity)
+        assigned = try c.decodeIfPresent(Assigned.self, forKey: .assigned)
+        files = try c.decodeIfPresent([FileItem].self, forKey: .files)
+        created_at = try c.decodeIfPresent(String.self, forKey: .created_at)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, ref, service_label, status, description, customer_name, customer_email, notes, activity, assigned, files, created_at
+    }
 }
 
 struct StaffOrdersListResponse: Decodable {

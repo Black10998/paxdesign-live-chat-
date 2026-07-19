@@ -71,8 +71,18 @@ final class PushDeepLinkRouter: ObservableObject {
             type: route.type,
             auth: auth,
             payload: payload,
-            shouldNavigate: false
+            shouldNavigate: route.action == nil || !route.action!.hasPrefix("PAX_")
         )
+
+        if route.action == nil || !route.action!.hasPrefix("PAX_") {
+            coordinator.activeSessionId = route.sessionId
+            AppRefreshPolicy.setActiveSession(route.sessionId)
+            NotificationCenter.default.post(
+                name: .paxPushOpened,
+                object: nil,
+                userInfo: ["session_id": route.sessionId, "type": route.type]
+            )
+        }
 
         if route.type == "team_message" || route.sessionId.hasPrefix("team_") {
             await teamCoordinator.refresh(auth: auth)

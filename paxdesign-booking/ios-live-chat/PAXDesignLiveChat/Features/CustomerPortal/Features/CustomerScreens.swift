@@ -420,9 +420,7 @@ struct CustomerChatView: View {
                 }
             }
             .task {
-                if let initialSessionID {
-                    poll = CustomerChatPoll(session_id: initialSessionID, handler: nil, messages: [], message_count: nil, last_preview: nil)
-                } else if let session = try? await api.fetchChatSession() {
+                if let session = try? await api.fetchChatSession() {
                     poll = CustomerChatPoll(
                         session_id: session.session_id,
                         handler: session.handler,
@@ -430,6 +428,8 @@ struct CustomerChatView: View {
                         message_count: nil,
                         last_preview: nil
                     )
+                } else if let initialSessionID, !initialSessionID.isEmpty {
+                    poll = CustomerChatPoll(session_id: initialSessionID, handler: nil, messages: [], message_count: nil, last_preview: nil)
                 }
                 await refresh(full: true)
                 startPolling()
@@ -657,6 +657,7 @@ struct CustomerChatView: View {
                 last_preview: poll?.last_preview
             )
             lastSeq = poll?.messages?.map(\.seq).max() ?? 0
+            streamSince = 0
             recovery = nil
             pollingSuspended = false
             error = nil

@@ -25,6 +25,7 @@ enum AppServicesController {
 
         coordinator.start(auth: auth)
         teamCoordinator.start(auth: auth)
+        PushService.shared.configureNotificationCategories()
         if let userId = auth.profile?.userId {
             AppLockService.shared.bindAccount(scope: "staff-\(userId)")
         }

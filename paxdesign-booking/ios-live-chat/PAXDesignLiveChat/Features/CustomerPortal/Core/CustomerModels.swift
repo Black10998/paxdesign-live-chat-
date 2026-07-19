@@ -121,6 +121,20 @@ struct CustomerOrderSummary: Decodable, Identifiable {
     let status: String
     let description: String?
     let created_at: String?
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = CustomerPortalDecode.int(c, .id)
+        ref = CustomerPortalDecode.string(c, .ref)
+        service_label = CustomerPortalDecode.string(c, .service_label)
+        status = CustomerPortalDecode.string(c, .status)
+        description = try c.decodeIfPresent(String.self, forKey: .description)
+        created_at = try c.decodeIfPresent(String.self, forKey: .created_at)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, ref, service_label, status, description, created_at
+    }
 }
 
 struct CustomerOrderDetail: Decodable {
@@ -216,6 +230,23 @@ struct CustomerOrderDetail: Decodable {
     let activity: [Activity]?
     let assigned: Assigned?
     let files: [FileItem]?
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = CustomerPortalDecode.int(c, .id)
+        ref = CustomerPortalDecode.string(c, .ref)
+        service_label = CustomerPortalDecode.string(c, .service_label)
+        status = CustomerPortalDecode.string(c, .status)
+        description = try c.decodeIfPresent(String.self, forKey: .description)
+        notes = try c.decodeIfPresent([Note].self, forKey: .notes)
+        activity = try c.decodeIfPresent([Activity].self, forKey: .activity)
+        assigned = try c.decodeIfPresent(Assigned.self, forKey: .assigned)
+        files = try c.decodeIfPresent([FileItem].self, forKey: .files)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, ref, service_label, status, description, notes, activity, assigned, files
+    }
 }
 
 struct CustomerOrdersResponse: Decodable {

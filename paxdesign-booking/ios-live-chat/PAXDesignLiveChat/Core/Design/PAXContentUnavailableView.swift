@@ -12,22 +12,17 @@ struct PAXContentUnavailableView: View {
     }
 
     var body: some View {
-        if #available(iOS 17.0, *) {
-            ContentUnavailableView(title, systemImage: systemImage, description: description)
-        } else {
-            VStack(spacing: 12) {
-                Image(systemName: systemImage)
-                    .font(.largeTitle)
-                    .foregroundStyle(.secondary)
-                Text(title)
-                    .font(.headline)
-                description
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        VStack(spacing: 14) {
+            PAXIcon(systemImage, size: .display, emphasis: .secondary)
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(PAXTheme.textPrimary)
+            description
+                .font(.subheadline)
+                .foregroundStyle(PAXTheme.textSecondary)
+                .multilineTextAlignment(.center)
         }
+        .padding(24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

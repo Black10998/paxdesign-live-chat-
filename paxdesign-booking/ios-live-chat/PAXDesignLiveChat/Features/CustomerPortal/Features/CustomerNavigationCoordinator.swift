@@ -19,6 +19,7 @@ struct CustomerPortalDestination: Equatable, Hashable {
         case portfolio
         case settings
         case profile
+        case devices
         case about
         case contact
         case dashboard
@@ -112,7 +113,11 @@ final class CustomerNavigationCoordinator: ObservableObject {
             accountPath = [CustomerPortalDestination(kind: .dashboard)]
         case "profile", "account":
             selectedTab = .account
-            accountPath = [CustomerPortalDestination(kind: .profile)]
+            if parts.count > 1, parts[1].lowercased() == "devices" {
+                accountPath = [CustomerPortalDestination(kind: .devices)]
+            } else {
+                accountPath = [CustomerPortalDestination(kind: .profile)]
+            }
         case "settings":
             selectedTab = .account
             accountPath = [CustomerPortalDestination(kind: .settings)]

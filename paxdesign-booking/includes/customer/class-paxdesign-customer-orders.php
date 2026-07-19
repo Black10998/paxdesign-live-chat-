@@ -268,8 +268,11 @@ class PAXdesign_Customer_Orders {
             absint($order_id)
         ), ARRAY_A);
         foreach ($rows as &$row) {
+            $row['id'] = (int) ($row['id'] ?? 0);
+            $row['file_size'] = (int) ($row['file_size'] ?? 0);
             $row['download_url'] = rest_url('pdx/v1/customer/staff/orders/' . absint($order_id) . '/files/' . (int) $row['id'] . '/download');
         }
+        unset($row);
         return $rows;
     }
 

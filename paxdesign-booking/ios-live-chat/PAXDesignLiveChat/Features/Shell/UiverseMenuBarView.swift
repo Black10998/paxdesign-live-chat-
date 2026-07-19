@@ -48,7 +48,7 @@ final class UiverseMenuScrollState: ObservableObject {
 
     func ingestScrollOffset(_ offset: CGFloat, reduceMotion: Bool) {
         let scale = Self.scale(forScrollOffset: offset)
-        if abs(barScale - scale) < 0.001 { return }
+        if barScale == scale { return }
         barScale = scale
     }
 

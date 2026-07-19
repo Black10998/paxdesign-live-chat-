@@ -496,6 +496,10 @@ final class ChatCoordinator: ObservableObject {
 
     func handlePush(sessionId: String, type: String, auth: AuthStore, payload: PushService.PushPayload? = nil, shouldNavigate: Bool = false) async {
         let event = payload?.event ?? type
+        if shouldNavigate, !sessionId.isEmpty {
+            activeSessionId = sessionId
+            AppRefreshPolicy.setActiveSession(sessionId)
+        }
         switch event {
         case "customer_waiting", "live_request":
             await presentLiveRequest(sessionId: sessionId, auth: auth, payload: payload)
@@ -648,6 +652,14 @@ final class ChatThreadModel: ObservableObject {
 
         pollTask = Task { @MainActor [weak self] in
             guard let self else { return }
+            let loadingWatchdog = Task {
+                try? await Task.sleep(nanoseconds: 12_000_000_000)
+                await MainActor.run {
+                    guard self.lifecycleGeneration == generation else { return }
+                    self.isLoadingMessages = false
+                }
+            }
+            defer { loadingWatchdog.cancel() }
             self.beginEventStream(auth: auth, generation: generation)
             async let quickReplies: Void = self.loadQuickReplies(auth: auth)
             async let quickLinks: Void = self.loadQuickLinks(auth: auth)

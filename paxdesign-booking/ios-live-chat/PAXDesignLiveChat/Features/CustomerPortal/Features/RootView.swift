@@ -197,6 +197,8 @@ struct CustomerMoreView: View {
                     CustomerChatView(initialSessionID: sessionID)
                 case .settings:
                     CustomerSettingsView()
+                case .devices:
+                    CustomerDeviceManagementView()
                 case .profile:
                     CustomerProfileView()
                 case .about:

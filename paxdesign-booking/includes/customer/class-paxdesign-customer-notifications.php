@@ -61,13 +61,50 @@ class PAXdesign_Customer_Notifications {
 
     public static function mark_read($user_id, $notification_id) {
         global $wpdb;
-        return (bool) $wpdb->update(
+        $updated = (bool) $wpdb->update(
             PAXdesign_Customer_DB::table('notifications'),
             array('is_read' => 1, 'read_at' => current_time('mysql', true)),
             array('id' => absint($notification_id), 'user_id' => absint($user_id)),
             array('%d', '%s'),
             array('%d', '%d')
         );
+        if ($updated) {
+            self::push_badge_sync($user_id);
+        }
+        return $updated;
+    }
+
+    /**
+     * Silent badge refresh for the customer's other devices after read state changes.
+     */
+    public static function push_badge_sync($user_id) {
+        if (!class_exists('PAXdesign_APNS') || !PAXdesign_APNS::is_configured()) {
+            return;
+        }
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return;
+        }
+        $prefs = self::get_prefs($user_id);
+        if (empty($prefs['push_enabled'])) {
+            return;
+        }
+        $devices = get_user_meta($user_id, self::USER_META_DEVICES, true);
+        if (!is_array($devices)) {
+            return;
+        }
+        $data = self::build_apns_data(array(
+            'notification_id' => 1,
+            'category'        => 'news',
+            'type'            => 'badge_sync',
+            'event'           => 'badge_sync',
+        ));
+        foreach ($devices as $device) {
+            if (empty($device['token']) || !empty($device['revoked'])) {
+                continue;
+            }
+            PAXdesign_APNS::send($device, '', '', $data, $user_id, true);
+        }
     }
 
     public static function unread_count($user_id) {

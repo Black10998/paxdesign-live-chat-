@@ -418,6 +418,17 @@ final class PushService: NSObject, ObservableObject {
             preview: (pax["preview"] as? String) ?? ""
         )
     }
+
+    func parseOrderNotification(userInfo: [AnyHashable: Any]) -> (orderId: Int, customerName: String, preview: String)? {
+        let pax = userInfo["pax"] as? [String: Any] ?? [:]
+        let type = (pax["type"] as? String) ?? (userInfo["type"] as? String) ?? ""
+        guard type == "customer_order" else { return nil }
+        let orderRaw = (pax["order_id"] as? String) ?? (pax["order_id"] as? Int).map(String.init) ?? (userInfo["order_id"] as? String) ?? ""
+        guard let orderId = Int(orderRaw), orderId > 0 else { return nil }
+        let customerName = (pax["customer_name"] as? String) ?? (userInfo["customer_name"] as? String) ?? ""
+        let preview = (pax["preview"] as? String) ?? (userInfo["preview"] as? String) ?? ""
+        return (orderId, customerName, preview)
+    }
 }
 
 final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
@@ -431,7 +442,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
             canManageUsers: AuthStore.shared.canManageUsers
         )
         if let remoteNotification = launchOptions?[.remoteNotification] as? [AnyHashable: Any] {
-            PushDeepLinkRouter.shared.store(userInfo: remoteNotification)
+            if AuthStore.shared.isCustomerSession,
+               let link = CustomerPushService.shared.handleNotification(userInfo: remoteNotification) {
+                CustomerDeepLinkRouter.shared.pending = link
+            } else {
+                PushDeepLinkRouter.shared.store(userInfo: remoteNotification)
+            }
         }
         if let shortcut = launchOptions?[.shortcutItem] as? UIApplicationShortcutItem {
             DispatchQueue.main.async {
@@ -497,9 +513,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     ) {
         Task { @MainActor in
             if AuthStore.shared.isCustomerSession {
-                if let link = CustomerPushService.shared.handleNotification(userInfo: userInfo) {
-                    CustomerDeepLinkRouter.shared.pending = link
-                }
+                CustomerNotificationsBadgeStore.shared.scheduleRefresh(api: CustomerSessionController.shared.api)
                 completionHandler(.newData)
                 return
             }
@@ -563,12 +577,22 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     ) async {
         let info = response.notification.request.content.userInfo
         if AuthStore.shared.isCustomerSession {
-            CustomerPushService.shared.handleForegroundNotification(response.notification)
+            CustomerNotificationsBadgeStore.shared.scheduleRefresh(api: CustomerSessionController.shared.api)
             if let link = CustomerPushService.shared.handleNotification(userInfo: info) {
                 await MainActor.run {
                     CustomerDeepLinkRouter.shared.pending = link
                 }
             }
+            return
+        }
+        if let order = PushService.shared.parseOrderNotification(userInfo: info) {
+            var userInfo: [String: Any] = [
+                "type": "customer_order",
+                "order_id": String(order.orderId),
+                "customer_name": order.customerName,
+                "preview": order.preview,
+            ]
+            NotificationCenter.default.post(name: .paxPushOpened, object: nil, userInfo: userInfo)
             return
         }
         guard let payload = PushService.shared.parseNotification(userInfo: info) else { return }
