@@ -143,7 +143,7 @@ struct CustomerNotificationCategoryBadge: View {
     let category: String
 
     var body: some View {
-        Label(title, systemImage: icon)
+        PAXLabel(title, icon: icon)
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -186,9 +186,7 @@ struct CustomerFileRow: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 12) {
-                Image(systemName: "doc.fill")
-                    .font(.title3)
-                    .foregroundStyle(PAXTheme.accent)
+                PAXIcon("doc.fill", size: .hero, tint: PAXTheme.accent)
                     .frame(width: 36)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(name).font(.headline).foregroundStyle(PAXTheme.textPrimary)
@@ -198,8 +196,7 @@ struct CustomerFileRow: View {
                 if isLoading {
                     ProgressView().controlSize(.small)
                 } else {
-                    Image(systemName: "arrow.down.circle.fill")
-                        .foregroundStyle(PAXTheme.accent)
+                    PAXIcon("arrow.down.circle.fill", size: .hero, tint: PAXTheme.accent)
                 }
             }
             .padding(.vertical, 4)

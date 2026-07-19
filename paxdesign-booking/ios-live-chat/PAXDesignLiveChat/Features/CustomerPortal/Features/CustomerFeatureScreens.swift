@@ -198,9 +198,7 @@ private struct CustomerProjectsEmptyState: View {
     var body: some View {
         CustomerPortalCard {
             VStack(spacing: 20) {
-                Image(systemName: "folder.badge.plus")
-                    .font(.system(size: 56))
-                    .foregroundStyle(PAXTheme.accent)
+                PAXIcon("folder.badge.plus", size: .display, tint: PAXTheme.accent)
                     .padding(.top, 8)
 
                 Text(String(localized: "No projects yet"))
@@ -214,7 +212,7 @@ private struct CustomerProjectsEmptyState: View {
                 NavigationLink {
                     CustomerPortfolioListView()
                 } label: {
-                    Label(String(localized: "Browse portfolio"), systemImage: "photo.on.rectangle.angled")
+                    PAXLabel(String(localized: "Browse portfolio"), icon: "photo.on.rectangle.angled")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .filled))
@@ -222,7 +220,7 @@ private struct CustomerProjectsEmptyState: View {
                 NavigationLink {
                     CustomerServicesCatalogView()
                 } label: {
-                    Label(String(localized: "Explore services"), systemImage: "square.grid.2x2")
+                    PAXLabel(String(localized: "Explore services"), icon: "square.grid.2x2")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.bordered)
@@ -333,7 +331,7 @@ struct CustomerOrderDetailView: View {
 
                         if let assigned = order.assigned, assigned.user_id > 0 {
                             detailSection(String(localized: "Assigned contact")) {
-                                Label(assigned.label, systemImage: "person.crop.circle.fill")
+                                PAXLabel(assigned.label, icon: "person.crop.circle.fill")
                             }
                         }
 
@@ -912,9 +910,7 @@ struct CustomerFileShareSheet: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
-                Image(systemName: "doc.fill")
-                    .font(.system(size: 44))
-                    .foregroundStyle(PAXTheme.accent)
+                PAXIcon("doc.fill", size: .display, tint: PAXTheme.accent)
                 Text(url.lastPathComponent)
                     .font(.headline)
                     .multilineTextAlignment(.center)
@@ -972,19 +968,19 @@ struct CustomerSettingsView: View {
                     AccentColorSettingsView()
                         .environmentObject(settings)
                 } label: {
-                    Label(String(localized: "Accent color"), systemImage: "paintpalette.fill")
+                    PAXLabel(String(localized: "Accent color"), icon: "paintpalette.fill")
                 }
             }
             Section(String(localized: "Security")) {
                 NavigationLink {
                     AppLockSettingsView()
                 } label: {
-                    Label(String(localized: "App lock"), systemImage: "lock.shield")
+                    PAXLabel(String(localized: "App lock"), icon: "lock.shield")
                 }
                 NavigationLink {
                     CustomerDeviceManagementView()
                 } label: {
-                    Label(String(localized: "Devices"), systemImage: "iphone.and.arrow.forward")
+                    PAXLabel(String(localized: "Devices"), icon: "iphone.and.arrow.forward")
                 }
             }
             Section(String(localized: "Profile")) {

@@ -288,9 +288,7 @@ struct CustomerContactView: View {
     private func contactRow(icon: String, title: String, value: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(alignment: .top, spacing: 14) {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundStyle(theme.accent)
+                PAXIcon(icon, size: .hero, tint: theme.accent)
                     .frame(width: 28)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
@@ -302,9 +300,7 @@ struct CustomerContactView: View {
                         .multilineTextAlignment(.leading)
                 }
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(PAXTheme.textTertiary)
+                PAXIcon("chevron.right", size: .inline, emphasis: .tertiary)
             }
             .padding(16)
             .background(theme.cardBackground)

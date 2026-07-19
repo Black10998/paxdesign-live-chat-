@@ -74,8 +74,7 @@ struct CustomerDiscoverView: View {
                                             .foregroundStyle(PAXTheme.textSecondary)
                                     }
                                     Spacer()
-                                    Image(systemName: "chevron.right")
-                                        .foregroundStyle(PAXTheme.textSecondary)
+                                    PAXIcon("chevron.right", size: .inline, emphasis: .secondary)
                                 }
                             }
                         }
@@ -92,7 +91,7 @@ struct CustomerDiscoverView: View {
                     NavigationLink {
                         CustomerServicesCatalogView()
                     } label: {
-                        Label(String(localized: "All services"), systemImage: "square.grid.2x2")
+                        PAXLabel(String(localized: "All services"), icon: "square.grid.2x2")
                     }
                 }
             }
@@ -158,17 +157,13 @@ private struct CustomerDiscoverMenuRow: View {
                 CustomerContentDestinationView(item: item)
             } label: {
                 HStack(spacing: 12) {
-                    Image(systemName: iconName)
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(PAXTheme.accent)
+                    PAXIcon(iconName, size: .row, tint: PAXTheme.accent)
                         .frame(width: 28)
                     Text(item.title)
                         .font(depth == 0 ? .headline : .subheadline)
                         .foregroundStyle(PAXTheme.textPrimary)
                     Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(PAXTheme.textTertiary)
+                    PAXIcon("chevron.right", size: .inline, emphasis: .tertiary)
                 }
                 .padding(.leading, CGFloat(depth) * 12)
             }

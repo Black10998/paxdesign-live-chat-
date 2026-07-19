@@ -13,7 +13,9 @@ struct CustomerLoginView: View {
         Form {
             if !network.isConnected {
                 Section {
-                    Label(String(localized: "You are offline. Connect to sign in."), systemImage: "wifi.slash")
+                    Label(String(localized: "You are offline. Connect to sign in.")) {
+                        PAXIcon("wifi.slash", size: .row, tint: .orange)
+                    }
                         .foregroundStyle(.orange)
                 }
             }
@@ -85,11 +87,12 @@ struct CustomerDashboardView: View {
                                     navigation.openNotifications()
                                 } label: {
                                     HStack {
-                                        Label(String(localized: "\(unread) unread notifications"), systemImage: "bell.badge.fill")
+                                        Label(String(localized: "\(unread) unread notifications")) {
+                                            PAXIcon("bell.badge.fill", size: .row)
+                                        }
                                             .font(.headline)
                                         Spacer()
-                                        Image(systemName: "chevron.right")
-                                            .foregroundStyle(PAXTheme.textSecondary)
+                                        PAXIcon("chevron.right", size: .inline, emphasis: .secondary)
                                     }
                                 }
                                 .buttonStyle(.plain)
@@ -460,30 +463,38 @@ struct CustomerChatView: View {
         VStack(spacing: 0) {
             HStack(alignment: .bottom, spacing: 8) {
                 Menu {
-                    Button(String(localized: "Camera"), systemImage: "camera") {
+                    Button {
                         guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
                         showCameraPicker = true
+                    } label: {
+                        PAXLabel(String(localized: "Camera"), icon: "camera")
                     }
-                    Button(String(localized: "Photo Library"), systemImage: "photo.on.rectangle") {
+                    Button {
                         guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
                         showImagePicker = true
+                    } label: {
+                        PAXLabel(String(localized: "Photo Library"), icon: "photo.on.rectangle")
                     }
-                    Button(String(localized: "Files"), systemImage: "doc") {
+                    Button {
                         guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
                         showDocumentPicker = true
+                    } label: {
+                        PAXLabel(String(localized: "Files"), icon: "doc")
                     }
-                    Button(isRecordingVoice ? String(localized: "Stop recording") : String(localized: "Voice message"), systemImage: "mic") {
+                    Button {
                         guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
                         Task { await toggleVoice() }
+                    } label: {
+                        PAXLabel(isRecordingVoice ? String(localized: "Stop recording") : String(localized: "Voice message"), icon: "mic")
                     }
-                    Button(String(localized: "Location"), systemImage: "location") {
+                    Button {
                         guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
                         showLocationSheet = true
+                    } label: {
+                        PAXLabel(String(localized: "Location"), icon: "location")
                     }
                 } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title2)
-                        .foregroundStyle(PAXTheme.accent)
+                    PAXIcon("plus.circle.fill", size: .hero, tint: PAXTheme.accent)
                 }
                 TextField(String(localized: "Message"), text: $draft, axis: .vertical)
                     .lineLimit(1...5)
@@ -497,10 +508,7 @@ struct CustomerChatView: View {
                     .onChange(of: draft) { _ in scheduleTypingPing() }
                     .layoutPriority(1)
                 Button { Task { await send() } } label: {
-                    Image(systemName: isSending ? "hourglass" : "arrow.up.circle.fill")
-                        .font(.system(size: 32))
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(canSend ? PAXTheme.accent : PAXTheme.textTertiary)
+                    PAXIcon(isSending ? "hourglass" : "arrow.up.circle.fill", size: .display, tint: canSend ? PAXTheme.accent : PAXTheme.textTertiary)
                         .frame(width: 44, height: 44)
                 }
                 .disabled(!canSend)
@@ -984,7 +992,7 @@ struct CustomerServiceDetailView: View {
                             VStack(alignment: .leading, spacing: 10) {
                                 CustomerPortalSectionHeader(title: String(localized: "Features"))
                                 ForEach(features, id: \.self) { feature in
-                                    Label(feature, systemImage: "checkmark.circle.fill")
+                                    PAXLabel(feature, icon: "checkmark.circle.fill")
                                         .font(.subheadline)
                                         .foregroundStyle(PAXTheme.textPrimary)
                                 }
@@ -995,7 +1003,7 @@ struct CustomerServiceDetailView: View {
                     NavigationLink {
                         CustomerCreateOrderView(preselectedSlug: service.slug)
                     } label: {
-                        Label(String(localized: "Start order"), systemImage: "plus.circle.fill")
+                        PAXLabel(String(localized: "Start order"), icon: "plus.circle.fill")
                             .frame(maxWidth: .infinity)
                     }
                     .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .filled))
@@ -1049,9 +1057,9 @@ struct CustomerProfileView: View {
                             }
                         }
                         PhotosPicker(selection: $selectedAvatarItem, matching: .images) {
-                            Label(
+                            PAXLabel(
                                 isUploadingAvatar ? String(localized: "Uploading…") : String(localized: "Change profile photo"),
-                                systemImage: "camera.fill"
+                                icon: "camera.fill"
                             )
                         }
                         .disabled(isUploadingAvatar)
@@ -1065,17 +1073,17 @@ struct CustomerProfileView: View {
                     NavigationLink {
                         CustomerSettingsView()
                     } label: {
-                        Label(String(localized: "Settings"), systemImage: "gearshape.fill")
+                        PAXLabel(String(localized: "Settings"), icon: "gearshape.fill")
                     }
                     NavigationLink {
                         AppLockSettingsView()
                     } label: {
-                        Label(String(localized: "App lock"), systemImage: "lock.shield")
+                        PAXLabel(String(localized: "App lock"), icon: "lock.shield")
                     }
                     NavigationLink {
                         CustomerDeviceManagementView()
                     } label: {
-                        Label(String(localized: "Devices"), systemImage: "iphone.and.arrow.forward")
+                        PAXLabel(String(localized: "Devices"), icon: "iphone.and.arrow.forward")
                     }
                 }
                 Section {
@@ -1085,19 +1093,19 @@ struct CustomerProfileView: View {
                 }
                 Section(String(localized: "Legal & Support")) {
                     Link(destination: PAXLegalLinks.impressum) {
-                        Label(String(localized: "Impressum"), systemImage: "safari")
+                        PAXLabel(String(localized: "Impressum"), icon: "safari")
                     }
                     Link(destination: PAXLegalLinks.privacyPolicy) {
-                        Label(String(localized: "Privacy Policy"), systemImage: "safari")
+                        PAXLabel(String(localized: "Privacy Policy"), icon: "safari")
                     }
                     Link(destination: PAXLegalLinks.terms) {
-                        Label(String(localized: "Terms"), systemImage: "safari")
+                        PAXLabel(String(localized: "Terms"), icon: "safari")
                     }
                     Link(destination: PAXLegalLinks.serviceDocumentation) {
-                        Label(String(localized: "Service documentation"), systemImage: "safari")
+                        PAXLabel(String(localized: "Service documentation"), icon: "safari")
                     }
                     Link(destination: PAXLegalLinks.contact) {
-                        Label(String(localized: "Contact"), systemImage: "safari")
+                        PAXLabel(String(localized: "Contact"), icon: "safari")
                     }
                     Button(String(localized: "Chat with support")) {
                         navigation.openChat()

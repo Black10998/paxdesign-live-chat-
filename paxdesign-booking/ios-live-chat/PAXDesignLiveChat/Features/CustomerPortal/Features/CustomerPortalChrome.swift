@@ -52,9 +52,7 @@ struct CustomerProfileAvatarView: View {
         Circle()
             .fill(PAXTheme.accentSoft)
             .overlay {
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: size * 0.62))
-                    .foregroundStyle(PAXTheme.accent)
+                PAXIcon("person.crop.circle.fill", size: size >= 48 ? .display : .card, tint: PAXTheme.accent)
             }
     }
 }
@@ -67,42 +65,40 @@ struct CustomerPortalQuickMenu: View {
             Button {
                 navigation.openAccountDestination(CustomerPortalDestination(kind: .dashboard))
             } label: {
-                Label(String(localized: "My Workflow"), systemImage: "square.grid.2x2")
+                PAXLabel(String(localized: "My Workflow"), icon: "square.grid.2x2")
             }
             Button {
                 navigation.openProjectsList()
             } label: {
-                Label(String(localized: "Projects"), systemImage: "folder")
+                PAXLabel(String(localized: "Projects"), icon: "folder")
             }
             Button {
                 navigation.openOrdersList()
             } label: {
-                Label(String(localized: "Requests"), systemImage: "doc.text")
+                PAXLabel(String(localized: "Requests"), icon: "doc.text")
             }
             Button {
                 navigation.openFiles()
             } label: {
-                Label(String(localized: "Files & Invoices"), systemImage: "doc.on.doc")
+                PAXLabel(String(localized: "Files & Invoices"), icon: "doc.on.doc")
             }
             Button {
                 navigation.openNotifications()
             } label: {
-                Label(String(localized: "Notifications"), systemImage: "bell")
+                PAXLabel(String(localized: "Notifications"), icon: "bell")
             }
             Button {
                 navigation.openNewsList()
             } label: {
-                Label(String(localized: "News"), systemImage: "newspaper")
+                PAXLabel(String(localized: "News"), icon: "newspaper")
             }
             Button {
                 navigation.openConversationsList()
             } label: {
-                Label(String(localized: "Conversations"), systemImage: "bubble.left.and.bubble.right")
+                PAXLabel(String(localized: "Conversations"), icon: "bubble.left.and.bubble.right")
             }
         } label: {
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(PAXTheme.textPrimary)
+            PAXIcon("line.3.horizontal", size: .card, emphasis: .primary)
                 .frame(width: 36, height: 36)
                 .background(.ultraThinMaterial, in: Circle())
                 .overlay(

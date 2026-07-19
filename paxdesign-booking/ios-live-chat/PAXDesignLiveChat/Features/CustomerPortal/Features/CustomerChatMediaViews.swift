@@ -25,9 +25,7 @@ struct CustomerChatBubble: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                 if isOutgoing, showReadReceipts {
                     HStack(spacing: 3) {
-                        Image(systemName: isRead ? "checkmark.circle.fill" : "checkmark.circle")
-                            .font(.caption2)
-                            .foregroundStyle(isRead ? PAXTheme.accent : PAXTheme.textTertiary)
+                        PAXIcon(isRead ? "checkmark.circle.fill" : "checkmark.circle", size: .micro, tint: isRead ? PAXTheme.accent : PAXTheme.textTertiary)
                         Text(isRead ? String(localized: "Read") : String(localized: "Sent"))
                             .font(.caption2)
                             .foregroundStyle(PAXTheme.textSecondary)
@@ -117,7 +115,7 @@ struct CustomerChatBubble: View {
             AsyncImage(url: imageURL) { phase in
                 switch phase {
                 case .success(let image): image.resizable().scaledToFit()
-                case .failure: Image(systemName: "photo").foregroundStyle(PAXTheme.textSecondary)
+                case .failure: PAXIcon("photo", size: .row, emphasis: .secondary)
                 default: SkeletonBlock(height: 120, cornerRadius: 12).frame(maxWidth: 220)
                 }
             }
@@ -128,7 +126,9 @@ struct CustomerChatBubble: View {
         } else if message.attachment_type == "location",
                   let lat = message.location_lat, let lng = message.location_lng {
             Link(destination: URL(string: "http://maps.apple.com/?ll=\(lat),\(lng)")!) {
-                Label(message.location_label ?? String(localized: "Shared location"), systemImage: "mappin.and.ellipse")
+                Label(message.location_label ?? String(localized: "Shared location")) {
+                    PAXIcon("mappin.and.ellipse", size: .row)
+                }
             }
         } else if let fileURL = message.file_url, let url = URL(string: fileURL) {
             Link(message.file_name ?? URL(string: fileURL)?.lastPathComponent ?? fileURL, destination: url)
@@ -186,8 +186,7 @@ struct CustomerChatSystemNotice: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "info.circle")
-                .foregroundStyle(PAXTheme.textSecondary)
+            PAXIcon("about.info", size: .row, emphasis: .secondary)
             Text(text)
                 .font(.caption)
                 .foregroundStyle(PAXTheme.textSecondary)
@@ -331,7 +330,7 @@ struct CustomerVoicePlaybackView: View {
                 player?.play()
             }
         } label: {
-            Label(String(localized: "Play voice message"), systemImage: "play.circle.fill")
+            PAXLabel(String(localized: "Play voice message"), icon: "play.circle.fill")
         }
     }
 }

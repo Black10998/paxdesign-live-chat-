@@ -46,11 +46,8 @@ struct CustomerAccountFooterSection: View {
                     showGitHubModal = true
                 } label: {
                     HStack(spacing: 10) {
-                        Image(systemName: "chevron.left.forwardslash.chevron.right")
-                            .font(.title2)
-                        Image(systemName: "lock.fill")
-                            .font(.caption2)
-                            .foregroundStyle(theme.accent)
+                        PAXIcon("chevron.left.forwardslash.chevron.right", size: .hero)
+                        PAXIcon("lock.fill", size: .micro, tint: theme.accent)
                         Text(String(localized: "Private"))
                             .font(.subheadline.weight(.semibold))
                     }
@@ -160,12 +157,9 @@ struct CustomerGitHubPrivateSheet: View {
                         RoundedRectangle(cornerRadius: 18, style: .continuous)
                             .fill(Color(red: 0.07, green: 0.09, blue: 0.15))
                             .frame(width: 72, height: 72)
-                        Image(systemName: "chevron.left.forwardslash.chevron.right")
-                            .font(.largeTitle)
+                        PAXIcon("chevron.left.forwardslash.chevron.right", size: .display)
                             .foregroundStyle(.white)
-                        Image(systemName: "lock.fill")
-                            .font(.caption)
-                            .foregroundStyle(Color(red: 0.11, green: 0.11, blue: 0.11))
+                        PAXIcon("lock.fill", size: .micro, tint: Color(red: 0.11, green: 0.11, blue: 0.11))
                             .padding(6)
                             .background(PAXTheme.accent)
                             .clipShape(Circle())
@@ -195,8 +189,7 @@ struct CustomerGitHubPrivateSheet: View {
                         .multilineTextAlignment(.center)
 
                     HStack(alignment: .top, spacing: 10) {
-                        Image(systemName: "info.circle.fill")
-                            .foregroundStyle(PAXTheme.accent)
+                        PAXIcon("about.info", size: .row, tint: PAXTheme.accent)
                         Text(String(localized: "For business inquiries, please contact us directly via email."))
                             .font(.footnote)
                             .foregroundStyle(PAXTheme.textSecondary)

@@ -213,9 +213,7 @@ struct CustomerServicesCatalogScreen: View {
 
     private func servicesErrorView(_ message: String) -> some View {
         VStack(spacing: 16) {
-            Image(systemName: network.isConnected ? "exclamationmark.triangle" : "wifi.slash")
-                .font(.largeTitle)
-                .foregroundStyle(theme.accent)
+            PAXIcon(network.isConnected ? "exclamationmark.triangle" : "wifi.slash", size: .display, tint: theme.accent)
             Text(message)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(theme.textSecondary)

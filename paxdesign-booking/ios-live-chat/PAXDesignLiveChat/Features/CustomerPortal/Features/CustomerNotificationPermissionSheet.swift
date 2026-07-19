@@ -73,8 +73,7 @@ struct CustomerNotificationPermissionSheet: View {
 
     private func permissionRow(_ title: String, icon: String) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundStyle(PAXTheme.accent)
+            PAXIcon(icon, size: .action, tint: PAXTheme.accent)
                 .frame(width: 28)
             Text(title)
                 .font(.body)

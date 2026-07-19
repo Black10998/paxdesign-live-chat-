@@ -159,12 +159,17 @@ jobs:
           set -euo pipefail
           IPA="artifacts/ipa/PAXDesignLiveChat-AppStore.ipa"
           [[ -f "$IPA" ]] || { echo "IPA missing: $IPA" >&2; exit 1; }
-          WORKDIR="$(mktemp -d)"
-          trap 'rm -rf "$WORKDIR"' EXIT
-          sudo apt-get update -qq && sudo apt-get install -y -qq libplist-utils unzip
-          unzip -q "$IPA" -d "$WORKDIR"
-          APP_PATH="$(find "$WORKDIR/Payload" -maxdepth 1 -name '*.app' -type d | head -1)"
-          BUNDLE_VERSION="$(plistutil -i "$APP_PATH/Info.plist" 2>/dev/null | grep -A1 CFBundleVersion | tail -1 | sed 's/.*<string>\(.*\)<\/string>.*/\1/' || plutil -extract CFBundleVersion raw "$APP_PATH/Info.plist")"
+          BUNDLE_VERSION="$(python3 - <<'PY'
+          import plistlib, zipfile, tempfile, pathlib
+          ipa = pathlib.Path("artifacts/ipa/PAXDesignLiveChat-AppStore.ipa")
+          with tempfile.TemporaryDirectory() as td:
+              with zipfile.ZipFile(ipa) as zf:
+                  zf.extractall(td)
+              app = next(pathlib.Path(td).glob("Payload/*.app"))
+              with (app / "Info.plist").open("rb") as f:
+                  print(plistlib.load(f)["CFBundleVersion"])
+          PY
+          )"
           EXPECTED="${{ steps.version.outputs.build }}"
           echo "IPA CFBundleVersion=$BUNDLE_VERSION (expected $EXPECTED)"
           if [[ "$BUNDLE_VERSION" != "$EXPECTED" ]]; then

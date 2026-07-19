@@ -265,7 +265,7 @@ struct CustomerHomeWorkspaceSections: View {
     ) -> some View {
         CustomerCalmShellCard {
             VStack(alignment: .leading, spacing: 14) {
-                Label(title, systemImage: systemImage)
+                PAXLabel(title, icon: systemImage)
                     .font(.headline)
                     .foregroundStyle(theme.textPrimary)
                     .frame(maxWidth: .infinity, alignment: .leading)

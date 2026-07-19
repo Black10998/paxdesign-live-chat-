@@ -196,7 +196,43 @@ enum PAXIconCatalog {
         "team.alert": "team.alert",
         "megaphone": "team.broadcast",
         "megaphone.fill": "team.broadcast",
-        "arrow.triangle.turn.up.right.circle.fill": "arrow.up.right.circle"
+        "arrow.triangle.turn.up.right.circle.fill": "arrow.up.right.circle",
+        "wifi.slash": "iphone.slash",
+        "wifi.exclamationmark": "exclamationmark.triangle",
+        "chevron.left.forwardslash.chevron.right": "link.chain",
+        "building.2": "briefcase",
+        "folder.badge.plus": "folder",
+        "photo.on.rectangle.angled": "photo.on.rectangle",
+        "plus.circle.fill": "plus.circle",
+        "paintpalette.fill": "paintpalette",
+        "mappin.and.ellipse": "location",
+        "play.circle.fill": "play",
+        "message": "chat.bubble",
+        "newspaper": "doc.text",
+        "newspaper.fill": "doc.text",
+        "tray": "files.stack",
+        "tray.fill": "files.stack",
+        "doc": "doc.text",
+        "doc.fill": "doc.text",
+        "doc.text.fill": "doc.text",
+        "camera.fill": "camera",
+        "photo.on.rectangle": "photo.on.rectangle",
+        "person.crop.circle.badge.exclamationmark": "person.crop.circle.badge.clock",
+        "sun.max": "sparkles",
+        "sun.max.fill": "sparkles",
+        "moon": "sparkles",
+        "moon.fill": "sparkles",
+        "circle.lefthalf.filled": "sparkles",
+        "exclamationmark.triangle": "exclamationmark.triangle",
+        "antenna.radiowaves.left.and.right": "speaker.wave.2",
+        "paperclip": "link.chain",
+        "location": "location",
+        "arrow.down.circle.fill": "arrow.down",
+        "chevron.forward": "chevron.right",
+        "lock.shield.fill": "lock.shield",
+        "envelope.fill": "envelope",
+        "bell": "live",
+        "doc.text.fill": "doc.text"
     ]
 
     static func glyph(for name: String) -> String {
@@ -241,5 +277,22 @@ private struct PAXVectorIconShape: Shape {
 
     func path(in rect: CGRect) -> Path {
         PAXGlyphPaths.path(for: name, in: rect)
+    }
+}
+
+/// Label with PAX SVG icon (replaces `Label(..., systemImage:)`).
+struct PAXLabel: View {
+    let title: String
+    let icon: String
+    var iconSize: PAXIconSize = .row
+
+    init(_ title: String, icon: String, iconSize: PAXIconSize = .row) {
+        self.title = title
+        self.icon = icon
+        self.iconSize = iconSize
+    }
+
+    var body: some View {
+        Label { Text(title) } icon: { PAXIcon(icon, size: iconSize) }
     }
 }

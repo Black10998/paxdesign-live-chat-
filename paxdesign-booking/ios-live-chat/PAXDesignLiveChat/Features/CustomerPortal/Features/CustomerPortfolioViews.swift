@@ -292,9 +292,7 @@ struct CustomerPortfolioShowcaseCard: View {
                     .fill(theme.panel)
                     .frame(height: 220)
                     .overlay {
-                        Image(systemName: "photo.on.rectangle.angled")
-                            .font(.title2)
-                            .foregroundStyle(theme.accent)
+                        PAXIcon("photo.on.rectangle.angled", size: .hero, tint: theme.accent)
                     }
             }
 
@@ -624,7 +622,7 @@ struct CustomerPortfolioDetailView: View {
     @ViewBuilder
     private func legacyBody(_ item: CustomerPortfolioDetail) -> some View {
         if let client = item.client, !client.isEmpty {
-            Label(client, systemImage: "building.2")
+            PAXLabel(client, icon: "building.2")
                 .font(.subheadline)
                 .foregroundStyle(theme.textSecondary)
         }
@@ -681,7 +679,7 @@ struct CustomerPortfolioDetailView: View {
                     )
                 )
             } label: {
-                Label(String(localized: "Start a similar project"), systemImage: "plus.circle.fill")
+                PAXLabel(String(localized: "Start a similar project"), icon: "plus.circle.fill")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .tinted))
@@ -759,9 +757,7 @@ struct CustomerPremiumEmptyState: View {
 
     var body: some View {
         VStack(spacing: 16) {
-            Image(systemName: systemImage)
-                .font(.system(size: 44))
-                .foregroundStyle(theme.accent)
+            PAXIcon(systemImage, size: .display, tint: theme.accent)
             Text(title)
                 .font(.title3.weight(.semibold))
                 .foregroundStyle(theme.textPrimary)

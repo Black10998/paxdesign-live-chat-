@@ -126,7 +126,7 @@ struct CustomerNativeContentBlocksView: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     }
                     if let title = block.title, !title.isEmpty {
-                        Label(title, systemImage: "sparkles")
+                        PAXLabel(title, icon: "sparkles")
                             .font(.headline)
                     }
                     if let text = block.text, !text.isEmpty {
@@ -142,7 +142,7 @@ struct CustomerNativeContentBlocksView: View {
                 CustomerPortalCard {
                     VStack(alignment: .leading, spacing: 8) {
                         ForEach(items, id: \.self) { item in
-                            Label(item, systemImage: "checkmark.circle.fill")
+                            PAXLabel(item, icon: "checkmark.circle.fill")
                                 .font(.subheadline)
                                 .foregroundStyle(PAXTheme.textPrimary)
                         }
@@ -196,7 +196,7 @@ struct CustomerNativeContentBlocksView: View {
                             Text(title).font(.headline)
                         }
                         Link(destination: url) {
-                            Label(String(localized: "Watch video"), systemImage: "play.circle.fill")
+                            PAXLabel(String(localized: "Watch video"), icon: "play.circle.fill")
                                 .frame(maxWidth: .infinity)
                         }
                         .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .tinted))

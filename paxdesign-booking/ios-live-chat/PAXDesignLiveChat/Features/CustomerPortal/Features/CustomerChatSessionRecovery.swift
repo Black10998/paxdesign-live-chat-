@@ -218,9 +218,7 @@ struct CustomerChatRecoveryBanner: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 10) {
-                Image(systemName: icon)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(bannerTint)
+                PAXIcon(icon, size: .row, tint: bannerTint)
                     .accessibilityHidden(true)
                 Text(action.message)
                     .font(.subheadline)

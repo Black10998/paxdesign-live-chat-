@@ -59,9 +59,7 @@ struct CustomerNotificationBellButton: View {
             PAXHaptics.light()
         } label: {
             ZStack(alignment: .topTrailing) {
-                Image(systemName: badgeStore.unreadCount > 0 ? "bell.badge.fill" : "bell")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(PAXTheme.textPrimary)
+                PAXIcon(badgeStore.unreadCount > 0 ? "bell.badge.fill" : "bell", size: .card, emphasis: .primary)
                     .frame(width: 36, height: 36)
                     .background(.ultraThinMaterial, in: Circle())
                     .overlay(
