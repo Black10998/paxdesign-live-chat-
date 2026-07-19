@@ -129,7 +129,7 @@ class PDX_Browser_Automation {
 	public static function extract_page_data( string $html, string $url, array $fetch = [] ): array {
 		$title = '';
 		if ( preg_match( '/<title[^>]*>([^<]+)<\/title>/i', $html, $m ) ) {
-			$title = trim( html_entity_decode( $m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
+			$title = trim( html_entity_decode( (string) ( $m[1] ?? '' ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
 		}
 
 		$meta = [];

@@ -88,6 +88,19 @@ final class PermissionCoordinator: ObservableObject {
         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
         UIApplication.shared.open(url)
     }
+
+    /// Re-register APNs when the user enabled notifications in iOS Settings.
+    func syncPushRegistrationIfAuthorized(push: PushService) async {
+        await refreshStatuses()
+        switch notificationStatus {
+        case .authorized, .provisional, .ephemeral:
+            break
+        default:
+            return
+        }
+        guard AuthStore.shared.isLoggedIn, AuthStore.shared.isStaffSession else { return }
+        await push.registerTokenWithBackend(auth: AuthStore.shared, reason: .foreground)
+    }
 }
 
 import UIKit

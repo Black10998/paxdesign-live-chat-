@@ -82,6 +82,10 @@ class PAXdesign_DB {
 
     public static function init() {
         add_filter('rest_post_dispatch', array(__CLASS__, 'drain_connection_filter'), 9999, 1);
-        add_action('shutdown', array(__CLASS__, 'drain_connection'), 0);
+        add_action('shutdown', array(__CLASS__, 'drain_connection'), PHP_INT_MAX);
+        if (function_exists('as_enqueue_async_action')) {
+            add_action('action_scheduler_after_execute', array(__CLASS__, 'drain_connection'), 10, 0);
+            add_action('action_scheduler_queue_runner_complete', array(__CLASS__, 'drain_connection'), 10, 0);
+        }
     }
 }

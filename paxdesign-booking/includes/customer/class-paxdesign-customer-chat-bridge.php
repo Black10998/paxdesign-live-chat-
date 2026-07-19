@@ -450,7 +450,7 @@ class PAXdesign_Customer_Chat_Bridge {
             return new WP_Error('send_failed', __('Could not send message.', 'paxdesign-booking'), array('status' => 500));
         }
 
-        $live->clear_typing($session_id, 'user');
+        $live->clear_typing_indicator($session_id, 'user');
 
         if (empty($entry['_deduplicated']) && $live->is_human_queue($session_id) && class_exists('PAXdesign_Live_Chat_PWA')) {
             PAXdesign_Live_Chat_PWA::notify_new_customer_message($session_id, $content);

@@ -56,6 +56,11 @@ struct PAXDesignLiveChatApp: App {
                         PAXApplicationBadge.sync(
                             total: coordinator.unreadChatCount + coordinator.unreadTeamCount + coordinator.liveCount + StaffOrdersCoordinator.shared.unreadCount
                         )
+                        if auth.isLoggedIn, auth.isStaffSession {
+                            Task {
+                                await PermissionCoordinator.shared.syncPushRegistrationIfAuthorized(push: PushService.shared)
+                            }
+                        }
                     case .inactive:
                         AppRefreshPolicy.update(scenePhase: .inactive)
                     case .background:

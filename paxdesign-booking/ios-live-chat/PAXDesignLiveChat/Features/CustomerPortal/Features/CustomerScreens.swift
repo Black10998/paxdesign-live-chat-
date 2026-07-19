@@ -250,6 +250,7 @@ struct CustomerDashboardView: View {
             .onChange(of: scenePhase) { phase in
                 if phase == .active {
                     navigation.refreshWorkspace()
+                    Task { await CustomerPushService.shared.prepareNotificationRegistration() }
                 }
             }
             .refreshable { await load() }

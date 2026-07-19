@@ -46,15 +46,11 @@ class PAXdesign_Team_Messaging {
      * @return mixed
      */
     private static function with_write_lock($scope, $callback) {
-        global $wpdb;
-
         // All conversations share one wp_options row, therefore every mutation
         // must use the same lock. Per-conversation locks still lose updates
         // when two conversations rewrite the shared option concurrently.
         $lock_name = 'pax_team_msg_global';
-        $acquired = class_exists('PAXdesign_DB')
-            ? PAXdesign_DB::acquire_named_lock($lock_name, 5)
-            : (int) $wpdb->get_var($wpdb->prepare("SELECT GET_LOCK(%s, 5)", $lock_name));
+        $acquired = PAXdesign_DB::acquire_named_lock($lock_name, 5);
         if ($acquired !== 1) {
             return new WP_Error(
                 'pax_team_lock_timeout',
@@ -66,11 +62,7 @@ class PAXdesign_Team_Messaging {
         try {
             return $callback();
         } finally {
-            if (class_exists('PAXdesign_DB')) {
-                PAXdesign_DB::release_named_lock($lock_name);
-            } else {
-                $wpdb->get_var($wpdb->prepare("SELECT RELEASE_LOCK(%s)", $lock_name));
-            }
+            PAXdesign_DB::release_named_lock($lock_name);
         }
     }
 

@@ -657,7 +657,21 @@ final class CustomerAPIClient: ObservableObject {
         guard (200..<300).contains(http.statusCode) else {
             throw Self.parseHTTPError(data: data, statusCode: http.statusCode)
         }
-        return try JSONDecoder().decode(T.self, from: data)
+        return try Self.decodeJSON(type, from: data)
+    }
+
+    private static func decodeJSON<T: Decodable>(_ type: T.Type, from data: Data) throws -> T {
+        do {
+            return try JSONDecoder().decode(type, from: data)
+        } catch {
+            if let text = String(data: data, encoding: .utf8),
+               text.localizedCaseInsensitiveContains("<!doctype")
+                || text.localizedCaseInsensitiveContains("<html")
+                || text.localizedCaseInsensitiveContains("kritischen fehler") {
+                throw CustomerAPIError.server(String(localized: "The server returned an unexpected response. Please try again."))
+            }
+            throw error
+        }
     }
 
     private static func parseHTTPError(data: Data, statusCode: Int) -> CustomerAPIError {

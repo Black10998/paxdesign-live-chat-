@@ -722,6 +722,52 @@
     saveSessionSnapshot();
   }
 
+  function resolvedCustomerName() {
+    if (customerName && customerName.trim().length >= 2) return customerName.trim();
+    if (config && config.auth && config.auth.display_name) {
+      var authName = String(config.auth.display_name || '').trim();
+      if (authName.length >= 2) return authName;
+    }
+    if (window.PDXAuth && typeof window.PDXAuth.getUser === 'function') {
+      var user = window.PDXAuth.getUser();
+      if (user && user.display_name) {
+        var displayName = String(user.display_name).trim();
+        if (displayName.length >= 2) return displayName;
+      }
+    }
+    return '';
+  }
+
+  function safeJson(res) {
+    var contentType = (res.headers.get('content-type') || '').toLowerCase();
+    if (contentType.indexOf('application/json') === -1) {
+      return res.text().then(function (body) {
+        var msg = 'Serverfehler. Bitte kurz warten und erneut versuchen.';
+        if (body && (body.indexOf('kritischen Fehler') !== -1 || body.indexOf('<!DOCTYPE') !== -1 || body.indexOf('<html') !== -1)) {
+          msg = 'Ein Serverfehler ist aufgetreten. Bitte Plugin aktualisieren oder den Administrator kontaktieren.';
+        }
+        throw new Error(msg);
+      });
+    }
+    return res.json().catch(function () {
+      throw new Error('Ungültige Server-Antwort.');
+    });
+  }
+
+  function beginLiveAgentRequest(topic) {
+    var resolved = resolvedCustomerName();
+    if (resolved) {
+      customerName = resolved;
+      liveNameConfirmed = true;
+      saveCustomerName();
+      hideNamePrompt();
+      return requestLiveAgent(topic || pendingLiveTopic || inferServiceFromConversation());
+    }
+    pendingLiveTopic = topic || inferServiceFromConversation();
+    showNamePrompt();
+    return Promise.resolve();
+  }
+
 
   function playMp3Sound(kind, options) {
     options = options || {};
@@ -782,8 +828,7 @@
 
   function queueLiveAgentRequest(topic) {
     pendingLiveTopic = topic || inferServiceFromConversation();
-    showNamePrompt();
-    return Promise.resolve();
+    return beginLiveAgentRequest(pendingLiveTopic);
   }
 
   function submitCustomerName() {
@@ -830,7 +875,7 @@
       liveConfirmYesBtn.addEventListener('click', function (e) {
         e.preventDefault();
         hideLiveConfirm();
-        showNamePrompt();
+        beginLiveAgentRequest(inferServiceFromConversation());
       });
     }
     if (liveConfirmNoBtn) {
@@ -867,7 +912,7 @@
     stampChatRequest(formData);
     formData.append('session_id', getSessionId());
     fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return res.json().then(function (json) { return { ok: res.ok, json: json }; }); })
+      .then(function (res) { return safeJson(res).then(function (json) { return { ok: res.ok, json: json }; }); })
       .then(function (result) {
         var json = result.json;
         if (!json || !json.success) {
@@ -1093,7 +1138,7 @@
     formData.append('since', '0');
     if (full) formData.append('full', '1');
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return res.json(); })
+      .then(function (res) { return safeJson(res); })
       .then(function (json) {
         if (!json || !json.success || !json.data) return false;
         var data = json.data;
@@ -1900,7 +1945,7 @@
     formData.append('since', String(pollSeq));
 
     fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return res.json(); })
+      .then(function (res) { return safeJson(res); })
       .then(function (json) {
         if (handleAuthGateResponse(json)) return;
         if (!json || !json.success || !json.data) return;
@@ -2234,7 +2279,7 @@
     formData.append('message_id', String(messageId));
     formData.append('reaction', next);
     fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return res.json(); })
+      .then(function (res) { return safeJson(res); })
       .then(function (json) {
         if (!json || !json.success) {
           if (prev) messageReactions[messageId] = prev;
@@ -3043,7 +3088,7 @@
     formData.append('booking_triggered', extra.booking ? '1' : '0');
     formData.append('consultation_started', consultationLogged ? '1' : '0');
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return res.json(); })
+      .then(function (res) { return safeJson(res); })
       .then(function (json) {
         if (handleAuthGateResponse(json)) return json;
         saveSessionSnapshot();
@@ -3261,7 +3306,7 @@
     formData.append('client_msg_id', clientMsgId);
     if (replyToId) formData.append('reply_to', String(replyToId));
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return res.json(); })
+      .then(function (res) { return safeJson(res); })
       .then(function (json) {
         if (handleAuthGateResponse(json)) {
           throw new Error('login_required');
@@ -3299,7 +3344,7 @@
     formData.append('customer_name', name);
     formData.append('messages', JSON.stringify(syncMessages));
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return res.json(); })
+      .then(function (res) { return safeJson(res); })
       .then(function (json) {
         if (!json || !json.success) {
           throw new Error(json && json.data && json.data.message ? json.data.message : 'Weiterleitung fehlgeschlagen.');
@@ -3432,9 +3477,10 @@
     })
       .then(function (response) {
         if (!response.ok) {
-          return response.json().then(function (data) {
+          return safeJson(response).then(function (data) {
             throw new Error(data.data && data.data.message ? data.data.message : 'Fehler bei der Anfrage.');
-          }).catch(function () {
+          }).catch(function (err) {
+            if (err && err.message) throw err;
             throw new Error('Fehler bei der Anfrage.');
           });
         }

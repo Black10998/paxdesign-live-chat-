@@ -1000,6 +1000,12 @@ struct CustomerSettingsView: View {
                 Toggle(String(localized: "News"), isOn: $newsPref)
                 Toggle(String(localized: "Security"), isOn: $securityPref)
                 Toggle(String(localized: "Push notifications"), isOn: $pushPref)
+                    .onChange(of: pushPref) { enabled in
+                        guard enabled else { return }
+                        Task {
+                            await CustomerPushService.shared.prepareNotificationRegistration()
+                        }
+                    }
                 if CustomerPushService.shared.authorizationStatus == .denied {
                     Button(String(localized: "Open notification settings")) {
                         guard let url = URL(string: UIApplication.openSettingsURLString) else { return }

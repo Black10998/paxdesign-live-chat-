@@ -1,1 +1,2 @@
-Retry deploy 3.152.7 after messaging test bootstrap fix
+Consolidated production release 3.156.0 — PHP fatal fix, DB sync, chat JSON guard, rate limits, widget/login dialog
+Triggered: 2026-07-19T23:45:00Z

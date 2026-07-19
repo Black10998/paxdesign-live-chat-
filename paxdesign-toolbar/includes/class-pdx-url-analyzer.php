@@ -180,7 +180,7 @@ class PDX_Url_Analyzer {
 		$signals = self::empty_signals();
 
 		if ( preg_match( '/<title[^>]*>([^<]*)<\/title>/i', $html, $m ) ) {
-			$signals['title'] = trim( html_entity_decode( $m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
+			$signals['title'] = trim( html_entity_decode( (string) ( $m[1] ?? '' ), ENT_QUOTES | ENT_HTML5, 'UTF-8' ) );
 		}
 
 		$signals['forms']           = preg_match_all( '/<form\b/i', $html ) ?: 0;

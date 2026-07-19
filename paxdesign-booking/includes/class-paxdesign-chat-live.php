@@ -448,6 +448,13 @@ class PAXdesign_Chat_Live {
     }
 
     private function clear_typing($session_id, $who) {
+        $this->clear_typing_indicator($session_id, $who);
+    }
+
+    /**
+     * Clear typing state for a participant (used by REST, bridge, and internal handlers).
+     */
+    public function clear_typing_indicator($session_id, $who) {
         delete_transient($this->typing_transient_key($session_id, $who));
         if (class_exists('PAXdesign_Chat_Event_Bus')) {
             PAXdesign_Chat_Event_Bus::emit_session($session_id, 'typing', array(

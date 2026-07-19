@@ -458,6 +458,9 @@ class PAXdesign_Customer_Portfolio {
     }
 
     private static function clean_text($text) {
+        if ($text === null) {
+            $text = '';
+        }
         $text = html_entity_decode((string) $text, ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $text = wp_strip_all_tags($text);
         $text = str_replace(array('&hellip;', '…'), '…', $text);
