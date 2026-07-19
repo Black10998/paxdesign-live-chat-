@@ -126,9 +126,7 @@ struct CustomerChatBubble: View {
         } else if message.attachment_type == "location",
                   let lat = message.location_lat, let lng = message.location_lng {
             Link(destination: URL(string: "http://maps.apple.com/?ll=\(lat),\(lng)")!) {
-                Label(message.location_label ?? String(localized: "Shared location")) {
-                    PAXIcon("mappin.and.ellipse", size: .row)
-                }
+                PAXLabel(message.location_label ?? String(localized: "Shared location"), icon: "mappin.and.ellipse")
             }
         } else if let fileURL = message.file_url, let url = URL(string: fileURL) {
             Link(message.file_name ?? URL(string: fileURL)?.lastPathComponent ?? fileURL, destination: url)

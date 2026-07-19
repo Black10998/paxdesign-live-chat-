@@ -13,9 +13,7 @@ struct CustomerLoginView: View {
         Form {
             if !network.isConnected {
                 Section {
-                    Label(String(localized: "You are offline. Connect to sign in.")) {
-                        PAXIcon("wifi.slash", size: .row, tint: .orange)
-                    }
+                    PAXLabel(String(localized: "You are offline. Connect to sign in."), icon: "wifi.slash")
                         .foregroundStyle(.orange)
                 }
             }
@@ -87,9 +85,7 @@ struct CustomerDashboardView: View {
                                     navigation.openNotifications()
                                 } label: {
                                     HStack {
-                                        Label(String(localized: "\(unread) unread notifications")) {
-                                            PAXIcon("bell.badge.fill", size: .row)
-                                        }
+                                        PAXLabel(String(localized: "\(unread) unread notifications"), icon: "bell.badge.fill")
                                             .font(.headline)
                                         Spacer()
                                         PAXIcon("chevron.right", size: .inline, emphasis: .secondary)
