@@ -216,7 +216,6 @@ enum PAXIconCatalog {
         "doc.fill": "doc.text",
         "doc.text.fill": "doc.text",
         "camera.fill": "camera",
-        "photo.on.rectangle": "photo.on.rectangle",
         "person.crop.circle.badge.exclamationmark": "person.crop.circle.badge.clock",
         "sun.max": "sparkles",
         "sun.max.fill": "sparkles",
@@ -231,8 +230,7 @@ enum PAXIconCatalog {
         "chevron.forward": "chevron.right",
         "lock.shield.fill": "lock.shield",
         "envelope.fill": "envelope",
-        "bell": "live",
-        "doc.text.fill": "doc.text"
+        "bell": "live"
     ]
 
     static func glyph(for name: String) -> String {
