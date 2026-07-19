@@ -8,12 +8,18 @@ struct PAXAppearanceQuickSwitch: View {
         Menu {
             Picker(String(localized: "Appearance"), selection: $settings.appearanceMode) {
                 ForEach(AppSettingsStore.AppearanceMode.allCases) { mode in
-                    Label(mode.title, systemImage: icon(for: mode)).tag(mode)
+                    Label {
+                        Text(mode.title)
+                    } icon: {
+                        PAXIcon(icon(for: mode), size: .inline)
+                    }
+                    .tag(mode)
                 }
             }
         } label: {
             PAXIcon(iconName(for: settings.appearanceMode), size: .row)
                 .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
         }
         .accessibilityLabel(String(localized: "Appearance"))
     }

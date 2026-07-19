@@ -49,6 +49,15 @@ jobs:
           DEADLINE=$(( $(date +%s) + 3600 ))
           RUN_ID=""
 
+          if [[ -f .github/triggers/testflight-upload ]]; then
+            PIN="$(grep -E '^RUN_ID=[0-9]+$' .github/triggers/testflight-upload | head -1 | cut -d= -f2 || true)"
+            if [[ -n "${PIN:-}" ]]; then
+              echo "Using pinned App Store IPA run $PIN from trigger file"
+              echo "run_id=$PIN" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+
           find_successful_run() {
             local commit_sha="$1"
             gh run list \
