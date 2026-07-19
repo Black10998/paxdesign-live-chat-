@@ -18,7 +18,6 @@ jobs:
     timeout-minutes: 90
     env:
       APP_BUNDLE_ID: at.paxdesign.livechat
-      TESTFLIGHT_IPA_RUN_ID: "29647255324"
       TESTFLIGHT_INTERNAL_TESTER_EMAIL: awjime29@icloud.com
       APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
       APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
