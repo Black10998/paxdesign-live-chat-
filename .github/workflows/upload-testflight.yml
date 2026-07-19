@@ -12,10 +12,6 @@ permissions:
   contents: read
   actions: read
 
-concurrency:
-  group: macos-ios-release
-  cancel-in-progress: false
-
 jobs:
   upload-testflight:
     runs-on: macos-latest
