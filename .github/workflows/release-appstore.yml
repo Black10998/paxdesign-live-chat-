@@ -11,10 +11,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: macos-ios-release
-  cancel-in-progress: false
-
 jobs:
   appstore-build:
     runs-on: macos-latest
