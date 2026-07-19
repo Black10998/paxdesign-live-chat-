@@ -345,9 +345,15 @@ final class TeamChatThreadModel: ObservableObject {
     private var pendingInlineMessages: [LiveMessage] = []
     private var historyBaselined = false
     private var serverMessageCount = 0
+    private var historyIntegrityRecoveryCount = 0
+    private var lastHistoryRecoveryAttemptAt = Date.distantPast
+    private static let maxHistoryIntegrityRecoveries = 3
+    private static let historyRecoveryCooldown: TimeInterval = 3.0
     private var lifecycleGeneration = 0
     private var typingTask: Task<Void, Never>?
+    private var typingNotifyTask: Task<Void, Never>?
     private var lastTypingSent = false
+    private var lastTypingNotifyAt = Date.distantPast
     private let streamStaleThreshold: TimeInterval = 12
 
     init(sessionId: String) {
@@ -392,7 +398,7 @@ final class TeamChatThreadModel: ObservableObject {
                 if self.historyBaselined,
                    self.serverMessageCount > 0,
                    self.persistedMessageCount() < self.serverMessageCount {
-                    await self.reloadFullHistory(auth: auth)
+                    await self.attemptHistoryRecoveryIfNeeded(auth: auth)
                 }
                 let interval = streamFresh
                     ? AppRefreshPolicy.teamThreadIntervalLive
@@ -428,9 +434,45 @@ final class TeamChatThreadModel: ObservableObject {
 
     func handleDraftChange(auth: AuthStore) {
         let typing = !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        guard typing != lastTypingSent, let api = auth.api else { return }
-        lastTypingSent = typing
-        Task { try? await api.setTeamTyping(sessionId, typing: typing) }
+        guard let api = auth.api else { return }
+
+        if !typing {
+            if lastTypingSent {
+                lastTypingSent = false
+                typingNotifyTask?.cancel()
+                Task { try? await api.setTeamTyping(sessionId, typing: false) }
+            }
+            return
+        }
+
+        scheduleTeamTypingNotify(auth: auth, api: api)
+    }
+
+    private func scheduleTeamTypingNotify(auth: AuthStore, api: LiveChatAPI) {
+        let minInterval: TimeInterval = 1.1
+        let now = Date()
+        let elapsed = now.timeIntervalSince(lastTypingNotifyAt)
+
+        if lastTypingSent, elapsed < minInterval {
+            return
+        }
+
+        if elapsed >= minInterval {
+            lastTypingNotifyAt = now
+            lastTypingSent = true
+            Task { try? await api.setTeamTyping(sessionId, typing: true) }
+            return
+        }
+
+        typingNotifyTask?.cancel()
+        let remaining = max(minInterval - elapsed, 0)
+        typingNotifyTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(remaining * 1_000_000_000))
+            guard !Task.isCancelled, let self else { return }
+            self.lastTypingNotifyAt = Date()
+            self.lastTypingSent = true
+            try? await api.setTeamTyping(self.sessionId, typing: true)
+        }
     }
 
     func respondToRequest(accept: Bool, auth: AuthStore, teamCoordinator: TeamMessagingCoordinator) async {
@@ -552,22 +594,61 @@ final class TeamChatThreadModel: ObservableObject {
     }
 
     private func reloadFullHistory(auth: AuthStore) async {
-        guard let api = auth.api else { return }
+        _ = await fetchFullHistorySnapshot(auth: auth)
+    }
+
+    @discardableResult
+    private func fetchFullHistorySnapshot(auth: AuthStore) async -> Bool {
+        guard let api = auth.api else { return false }
         do {
             let response = try await api.pollTeamSession(sessionId, since: 0, full: true)
             applyBaselineSnapshot(response)
-            await verifyHistoryIntegrity(auth: auth)
             errorMessage = nil
+            return true
         } catch {
             if case LiveChatAPIError.unauthorized = error {
                 auth.handleUnauthorized()
             } else if let apiError = error as? LiveChatAPIError,
                       apiError.isTransientSendFailure,
                       !messages.isEmpty {
-                return
-            } else {
+                return false
+            } else if messages.isEmpty {
                 errorMessage = error.localizedDescription
             }
+            return false
+        }
+    }
+
+    private func attemptHistoryRecoveryIfNeeded(auth: AuthStore) async {
+        guard historyBaselined, serverMessageCount > 0, persistedMessageCount() < serverMessageCount else {
+            return
+        }
+        await verifyHistoryIntegrity(auth: auth)
+    }
+
+    private func verifyHistoryIntegrity(auth: AuthStore) async {
+        guard serverMessageCount > 0 else { return }
+        guard persistedMessageCount() < serverMessageCount else {
+            historyIntegrityRecoveryCount = 0
+            return
+        }
+        guard historyIntegrityRecoveryCount < Self.maxHistoryIntegrityRecoveries else { return }
+
+        let now = Date()
+        guard now.timeIntervalSince(lastHistoryRecoveryAttemptAt) >= Self.historyRecoveryCooldown else {
+            return
+        }
+
+        let countBefore = persistedMessageCount()
+        lastHistoryRecoveryAttemptAt = now
+        historyIntegrityRecoveryCount += 1
+
+        guard await fetchFullHistorySnapshot(auth: auth) else { return }
+
+        if persistedMessageCount() <= countBefore {
+            historyIntegrityRecoveryCount = Self.maxHistoryIntegrityRecoveries
+        } else if persistedMessageCount() >= serverMessageCount {
+            historyIntegrityRecoveryCount = 0
         }
     }
 
@@ -600,12 +681,6 @@ final class TeamChatThreadModel: ObservableObject {
 
     private func persistedMessageCount() -> Int {
         messages.filter { $0.id > 0 }.count
-    }
-
-    private func verifyHistoryIntegrity(auth: AuthStore) async {
-        guard serverMessageCount > 0 else { return }
-        guard persistedMessageCount() < serverMessageCount else { return }
-        await reloadFullHistory(auth: auth)
     }
 
     private func recoverMissingHistory(auth: AuthStore, throughSeq: Int) async {

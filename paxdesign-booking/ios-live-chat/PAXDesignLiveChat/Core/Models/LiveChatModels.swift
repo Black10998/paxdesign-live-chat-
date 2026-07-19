@@ -729,6 +729,20 @@ struct PollResponse: Codable {
     }
 }
 
+extension PollResponse {
+    /// Safe empty snapshot for cache rebuild fallbacks — must never crash production builds.
+    static let emptySnapshot: PollResponse = {
+        let json = """
+        {"handler":"ai","handler_label":"","admin_name":"","admin_user_id":0,"customer_name":"","customer_language":"","session_rating":0,"detected_service":"","updated_at":"","seq":0,"message_count":0,"last_read_seq":0,"other_read_seq":0,"messages":[],"admin_typing":false,"user_typing":false,"reactions":{},"other_user_id":0,"request_status":"accepted","request_status_label":"","can_send":true,"can_respond":false,"requested_by":0,"is_pinned":false,"is_muted":false,"assigned_to":0,"other_role_rank":0,"other_role_label":"","other_presence":"","other_last_seen":0}
+        """
+        guard let data = json.data(using: .utf8),
+              let decoded = try? JSONDecoder().decode(PollResponse.self, from: data) else {
+            preconditionFailure("PollResponse.emptySnapshot must decode")
+        }
+        return decoded
+    }()
+}
+
 struct QuickReply: Identifiable, Codable, Hashable {
     let label: String
     let text: String

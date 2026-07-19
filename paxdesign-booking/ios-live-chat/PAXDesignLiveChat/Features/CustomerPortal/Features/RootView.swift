@@ -15,8 +15,6 @@ struct CustomerPortalShellView: View {
             .environmentObject(navigation)
             .environmentObject(settings)
             .tint(PAXTheme.accent)
-            .preferredColorScheme(settings.appearanceMode.colorScheme)
-            .id(settings.themeRevision)
             .task {
                 CustomerPushService.shared.configure(api: customerSession.api)
             }

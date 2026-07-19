@@ -63,14 +63,23 @@ final class ChatThreadRegistry {
     }
 
     private func evictIfNeeded() {
+        let activeSessionId = AppRefreshPolicy.activeSessionId
         while bookingThreads.count + teamThreads.count > maxThreads, let oldest = recentOrder.first {
             recentOrder.removeFirst()
             if oldest.hasPrefix("t:") {
                 let id = String(oldest.dropFirst(2))
+                if id == activeSessionId {
+                    recentOrder.append(oldest)
+                    continue
+                }
                 teamThreads[id]?.suspend()
                 teamThreads.removeValue(forKey: id)
             } else if oldest.hasPrefix("b:") {
                 let id = String(oldest.dropFirst(2))
+                if id == activeSessionId {
+                    recentOrder.append(oldest)
+                    continue
+                }
                 bookingThreads[id]?.suspend()
                 bookingThreads.removeValue(forKey: id)
             }

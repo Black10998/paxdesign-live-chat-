@@ -258,7 +258,7 @@ struct RootView: View {
                         .transition(.opacity)
                 } else {
                     AdaptiveShellView()
-                        .id("\(auth.sessionEpoch.uuidString)-\(settings.themeRevision.uuidString)")
+                        .id(auth.sessionEpoch.uuidString)
                         .transition(.opacity)
                 }
 

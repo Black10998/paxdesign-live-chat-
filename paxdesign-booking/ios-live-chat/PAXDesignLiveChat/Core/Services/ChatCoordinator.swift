@@ -624,6 +624,10 @@ final class ChatThreadModel: ObservableObject {
     private var pendingInlineMessages: [LiveMessage] = []
     private var historyBaselined = false
     private var serverMessageCount = 0
+    private var historyIntegrityRecoveryCount = 0
+    private var lastHistoryRecoveryAttemptAt = Date.distantPast
+    private static let maxHistoryIntegrityRecoveries = 3
+    private static let historyRecoveryCooldown: TimeInterval = 3.0
     private let streamStaleThreshold: TimeInterval = 12
 
     init(sessionId: String) {
@@ -686,7 +690,7 @@ final class ChatThreadModel: ObservableObject {
                 if self.historyBaselined,
                    self.serverMessageCount > 0,
                    self.persistedMessageCount() < self.serverMessageCount {
-                    await self.reloadFullHistory(auth: auth)
+                    await self.attemptHistoryRecoveryIfNeeded(auth: auth)
                 }
                 let interval = streamFresh
                     ? AppRefreshPolicy.chatThreadIntervalLive
@@ -1168,24 +1172,58 @@ final class ChatThreadModel: ObservableObject {
     }
 
     private func reloadFullHistory(auth: AuthStore) async {
-        guard let api = auth.api else { return }
+        _ = await fetchFullHistorySnapshot(auth: auth)
+    }
+
+    @discardableResult
+    private func fetchFullHistorySnapshot(auth: AuthStore) async -> Bool {
+        guard let api = auth.api else { return false }
         do {
             let data = try await api.fetchSession(sessionId)
             applyBaselineSnapshot(data)
-            await verifyHistoryIntegrity(auth: auth)
             errorMessage = nil
+            return true
         } catch {
             if case LiveChatAPIError.unauthorized = error, let auth = self.auth {
                 auth.handleUnauthorized()
+            } else if messages.isEmpty {
+                errorMessage = error.localizedDescription
             }
-            errorMessage = error.localizedDescription
+            return false
         }
+    }
+
+    private func attemptHistoryRecoveryIfNeeded(auth: AuthStore) async {
+        guard historyBaselined, serverMessageCount > 0, persistedMessageCount() < serverMessageCount else {
+            return
+        }
+        await verifyHistoryIntegrity(auth: auth)
     }
 
     private func verifyHistoryIntegrity(auth: AuthStore) async {
         guard serverMessageCount > 0 else { return }
-        guard persistedMessageCount() < serverMessageCount else { return }
-        await reloadFullHistory(auth: auth)
+        guard persistedMessageCount() < serverMessageCount else {
+            historyIntegrityRecoveryCount = 0
+            return
+        }
+        guard historyIntegrityRecoveryCount < Self.maxHistoryIntegrityRecoveries else { return }
+
+        let now = Date()
+        guard now.timeIntervalSince(lastHistoryRecoveryAttemptAt) >= Self.historyRecoveryCooldown else {
+            return
+        }
+
+        let countBefore = persistedMessageCount()
+        lastHistoryRecoveryAttemptAt = now
+        historyIntegrityRecoveryCount += 1
+
+        guard await fetchFullHistorySnapshot(auth: auth) else { return }
+
+        if persistedMessageCount() <= countBefore {
+            historyIntegrityRecoveryCount = Self.maxHistoryIntegrityRecoveries
+        } else if persistedMessageCount() >= serverMessageCount {
+            historyIntegrityRecoveryCount = 0
+        }
     }
 
     private func recoverMissingHistory(auth: AuthStore, throughSeq: Int) async {

@@ -229,7 +229,7 @@ struct CachedPollPayload {
         guard JSONSerialization.isValidJSONObject(payload),
               let data = try? JSONSerialization.data(withJSONObject: payload),
               let decoded = try? JSONDecoder().decode(PollResponse.self, from: data) else {
-            return PollResponse.fallbackEmpty
+            return PollResponse.emptySnapshot
         }
         return decoded
     }
@@ -250,18 +250,5 @@ struct CachedPollPayload {
         if let senderAvatar = message.senderAvatar { dict["sender_avatar"] = senderAvatar }
         if let senderRole = message.senderRole { dict["sender_role"] = senderRole }
         return dict
-    }
-}
-
-private extension PollResponse {
-    static var fallbackEmpty: PollResponse {
-        let json = """
-        {"handler":"ai","handler_label":"","admin_name":"","admin_user_id":0,"customer_name":"","session_rating":0,"detected_service":"","updated_at":"","seq":0,"message_count":0,"last_read_seq":0,"messages":[],"admin_typing":false,"user_typing":false,"reactions":{}}
-        """
-        guard let data = json.data(using: .utf8),
-              let decoded = try? JSONDecoder().decode(PollResponse.self, from: data) else {
-            fatalError("PollResponse fallback decode failed")
-        }
-        return decoded
     }
 }

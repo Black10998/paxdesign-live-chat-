@@ -410,6 +410,27 @@ final class MessagingReliabilityTests: XCTestCase {
         XCTAssertFalse(validation.isTransientSendFailure)
     }
 
+    func testPollResponseEmptySnapshotDecodes() {
+        XCTAssertEqual(PollResponse.emptySnapshot.handler, "ai")
+        XCTAssertTrue(PollResponse.emptySnapshot.messages.isEmpty)
+    }
+
+    func testChatThreadRegistryRetainsActiveSessionDuringEviction() async {
+        AppRefreshPolicy.setActiveSession("team_1_2")
+        defer { AppRefreshPolicy.setActiveSession(nil) }
+
+        let registry = ChatThreadRegistry.shared
+        registry.clearAll()
+        _ = registry.teamThread(sessionId: "team_1_2")
+
+        for index in 0..<305 {
+            _ = registry.teamThread(sessionId: "team_\(index)_999")
+        }
+
+        let active = registry.teamThread(sessionId: "team_1_2")
+        XCTAssertEqual(active.sessionId, "team_1_2")
+    }
+
     func testRoleLabelFormatterMapsFeminineExecutiveTitle() {
         XCTAssertEqual(RoleLabelFormatter.localized("Geschäftsführerin"), L10n.RoleExecutiveDirector)
         XCTAssertEqual(RoleLabelFormatter.localized("Executive Director"), L10n.RoleExecutiveDirector)
