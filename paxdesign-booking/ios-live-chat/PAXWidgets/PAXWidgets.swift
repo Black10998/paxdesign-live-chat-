@@ -87,15 +87,33 @@ struct PAXDashboardWidgetView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .widgetURL(URL(string: "paxlivechat://dashboard"))
-        .containerBackground(for: .widget) {
-            LinearGradient(
-                colors: [palette.backgroundTop, palette.backgroundBottom],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+        .modifier(WidgetSurfaceBackground(palette: palette))
+    }
+}
+
+private struct WidgetSurfaceBackground: ViewModifier {
+    let palette: WidgetPalette
+
+    func body(content: Content) -> some View {
+        if #available(iOSApplicationExtension 17.0, *) {
+            content.containerBackground(for: .widget) {
+                WidgetSurfaceBackground.gradient(for: palette)
+            }
+        } else {
+            content.background(WidgetSurfaceBackground.gradient(for: palette))
         }
     }
 
+    static func gradient(for palette: WidgetPalette) -> LinearGradient {
+        LinearGradient(
+            colors: [palette.backgroundTop, palette.backgroundBottom],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+}
+
+private extension PAXDashboardWidgetView {
     private var header: some View {
         HStack(spacing: 8) {
             brandMark
