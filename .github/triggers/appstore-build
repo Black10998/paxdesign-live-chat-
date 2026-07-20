@@ -1,2 +1,2 @@
-Build 172 App Store — real-time chat sync, staff AI takeover, customer session identity (WP 3.159.0)
-Triggered: 2026-07-20T11:35:00Z
+Build 172 App Store retry — compile fix for CustomerChatView error shadowing
+Triggered: 2026-07-20T11:40:00Z
