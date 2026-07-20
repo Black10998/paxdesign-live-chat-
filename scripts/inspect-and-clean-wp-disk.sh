@@ -10,9 +10,18 @@ BACKUP_ROOT="${BACKUP_ROOT:-${WP_ROOT%/}/../paxdesign-backups}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 AUDIT_BACKUP="${BACKUP_ROOT}/disk-audit-${STAMP}"
 
-exec > >(tee -a "$REPORT") 2>&1
+log() {
+  echo "$*"
+  echo "$*" >> "$REPORT"
+}
 
-section() { echo; echo "=== $* ==="; echo "Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"; }
+section() {
+  log ""
+  log "=== $* ==="
+  log "Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+}
+
+: >"$REPORT"
 
 human_size() {
   local bytes="$1"
@@ -101,7 +110,7 @@ for candidate in \
     lines=$(wc -l <"$candidate" 2>/dev/null || echo 0)
     echo "$(human_size "$bytes") ($lines lines) $candidate"
     echo "  tail patterns:"
-    tail -n 200 "$candidate" 2>/dev/null | grep -oE 'PAXdesign[^[:space:]]*|PHP (Warning|Notice|Fatal|Deprecated)[^[:cn]]*|email_mapped_to_login|WP_DEBUG' | sort | uniq -c | sort -nr | head -15 || true
+    tail -n 200 "$candidate" 2>/dev/null | grep -oE 'PAXdesign[^[:space:]]*|PHP (Warning|Notice|Fatal|Deprecated)[^[:cn]]*|email_mapped_to_login|WP_DEBUG' | sort | uniq -c | sort -nr | head -15 | while read -r line; do log "    $line"; done || true
   fi
 done
 
@@ -260,30 +269,42 @@ fi
 
 section "Pre-cleanup backup"
 mkdir -p "$AUDIT_BACKUP"
+
+section "Free minimum disk space for database backup"
 for logfile in "$WP_ROOT/wp-content/debug.log" "$WP_ROOT/debug.log" "$WP_ROOT/error_log"; do
   if [[ -f "$logfile" ]]; then
     cp -a "$logfile" "$AUDIT_BACKUP/$(basename "$logfile").${STAMP}" 2>/dev/null || true
-  fi
-done
-if wp_cmd db export "$AUDIT_BACKUP/database-pre-cleanup.sql" --add-drop-table --single-transaction --default-character-set=utf8mb4 2>/dev/null; then
-  gzip -f "$AUDIT_BACKUP/database-pre-cleanup.sql" || true
-  echo "Database backup: $AUDIT_BACKUP/database-pre-cleanup.sql.gz"
-else
-  echo "WARN: database backup failed — aborting destructive cleanup"
-  exit 1
-fi
-echo "Backup dir: $AUDIT_BACKUP"
-
-section "Safe filesystem cleanup"
-# Truncate (not delete) active debug logs after backup
-for logfile in "$WP_ROOT/wp-content/debug.log" "$WP_ROOT/debug.log"; do
-  if [[ -f "$logfile" ]]; then
     before=$(file_size_bytes "$logfile")
     : >"$logfile"
-    echo "Truncated $logfile (was $(human_size "$before"))"
+    log "Truncated $logfile (was $(human_size "$before"))"
   fi
 done
+if [[ -d "$BACKUP_ROOT" ]]; then
+  mapfile -t all_backups < <(find "$BACKUP_ROOT" -maxdepth 1 -mindepth 1 -type d -name 'customer-platform-*' | sort -r)
+  kept=0
+  for dir in "${all_backups[@]}"; do
+    kept=$((kept + 1))
+    if [[ $kept -le 2 ]]; then
+      log "Keeping recent backup: $dir"
+      continue
+    fi
+    freed=$(du -sb "$dir" 2>/dev/null | awk '{print $1}' || echo 0)
+    rm -rf "$dir"
+    log "Removed older backup dir: $dir freed $(human_size "$freed")"
+  done
+fi
 
+section "Database backup before DB cleanup"
+if wp_cmd db export "$AUDIT_BACKUP/database-pre-cleanup.sql" --add-drop-table --single-transaction --default-character-set=utf8mb4 2>/dev/null; then
+  gzip -f "$AUDIT_BACKUP/database-pre-cleanup.sql" || true
+  log "Database backup: $AUDIT_BACKUP/database-pre-cleanup.sql.gz"
+else
+  log "WARN: database backup failed — skipping DB row cleanup"
+  SKIP_DB_CLEANUP=1
+fi
+log "Backup dir: $AUDIT_BACKUP"
+
+section "Safe filesystem cleanup"
 # Remove stale backup dirs older than 14 days (keep 3 newest regardless)
 if [[ -d "$BACKUP_ROOT" ]]; then
   mapfile -t all_backups < <(find "$BACKUP_ROOT" -maxdepth 1 -mindepth 1 -type d -name 'customer-platform-*' | sort -r)
@@ -291,14 +312,13 @@ if [[ -d "$BACKUP_ROOT" ]]; then
   for dir in "${all_backups[@]}"; do
     kept=$((kept + 1))
     if [[ $kept -le 3 ]]; then
-      echo "Keeping recent backup: $dir"
       continue
     fi
     age_days=$(( ( $(date +%s) - $(stat -c %Y "$dir" 2>/dev/null || stat -f %m "$dir") ) / 86400 ))
     if [[ $age_days -gt 14 ]]; then
       freed=$(du -sb "$dir" 2>/dev/null | awk '{print $1}' || echo 0)
       rm -rf "$dir"
-      echo "Removed old backup ($age_days d): $dir freed $(human_size "$freed")"
+      log "Removed old backup ($age_days d): $dir freed $(human_size "$freed")"
     fi
   done
 fi
@@ -315,6 +335,9 @@ wp_cmd cache flush 2>/dev/null || true
 wp_cmd transient delete --expired 2>/dev/null || true
 
 section "Safe database cleanup (no table truncates)"
+if [[ "${SKIP_DB_CLEANUP:-0}" == "1" ]]; then
+  log "Skipping DB row cleanup (backup unavailable)"
+else
 # Expired transients
 expired_count=$(mysql_query "SELECT COUNT(*) FROM ${OPTIONS} WHERE option_name LIKE '_transient_timeout_%' AND option_value < UNIX_TIMESTAMP();" | tail -1 || echo 0)
 echo "Expired transient timeouts found: $expired_count"
@@ -351,7 +374,8 @@ INNER JOIN ${POSTS} p ON p.ID = pm.post_id
 WHERE pm.meta_key LIKE '_oembed_%'
   AND p.post_status IN ('inherit', 'auto-draft', 'trash')
   AND p.post_modified < DATE_SUB(NOW(), INTERVAL 90 DAY);
-" 2>/dev/null && echo "Pruned stale oembed postmeta on old revisions/trash" || true
+" 2>/dev/null && log "Pruned stale oembed postmeta on old revisions/trash" || true
+fi
 
 section "Optimize tables (non-destructive)"
 for tbl in "${POSTMETA}" "${POSTS}" "${OPTIONS}"; do
