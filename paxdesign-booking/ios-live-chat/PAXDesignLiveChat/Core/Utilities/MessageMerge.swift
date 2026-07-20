@@ -15,6 +15,8 @@ enum MessageMerge {
             return "sys:chat_closed"
         case "Der Kunde hat das Gespräch beendet.":
             return "sys:customer_closed"
+        case "Der KI-Assistent ist wieder für Sie da. Schreiben Sie jederzeit weiter.":
+            return "sys:customer_released_to_ai"
         case "Der KI-Assistent übernimmt den Chat wieder.":
             return "sys:ai_reclaimed"
         case "Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.":

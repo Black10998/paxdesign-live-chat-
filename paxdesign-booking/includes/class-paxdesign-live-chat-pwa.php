@@ -455,6 +455,13 @@ class PAXdesign_Live_Chat_PWA {
     }
 
     public static function notify_new_customer_message($session_id, $content) {
+        if (class_exists('PAXdesign_Chat_Live')) {
+            $live = PAXdesign_Chat_Live::get_instance();
+            $handler = $live->get_handler($session_id);
+            if ($handler === PAXdesign_Chat_Live::HANDLER_AI) {
+                return;
+            }
+        }
         self::send_push_to_admins(
             'Neue Kundennachricht',
             wp_html_excerpt($content, 120, '…'),

@@ -141,6 +141,10 @@
           showCustomerTyping();
         } else if (payload.who === 'user') {
           hideCustomerTyping();
+        } else if (payload.active && payload.who === 'assistant') {
+          showAssistantTyping();
+        } else if (payload.who === 'assistant') {
+          hideAssistantTyping();
         }
       }
       if (data.type === 'message' || data.type === 'handler' || data.type === 'typing') {
@@ -264,6 +268,7 @@
     var typingTimer = null;
     var adminTypingActive = false;
     var customerTypingEl = null;
+    var assistantTypingEl = null;
     var isAdminContext = $root.hasClass('pax-live-dashboard--admin');
     var isConsoleContext = $root.hasClass('pax-live-console');
     var knownSessions = {};
@@ -853,6 +858,35 @@
       if (customerTypingEl) {
         customerTypingEl.remove();
         customerTypingEl = null;
+      }
+    }
+
+    function showAssistantTyping() {
+      if (assistantTypingEl) return;
+      var aiName = 'KI-Assistent';
+      assistantTypingEl = $(
+        '<div class="pax-live-dashboard__msg pax-live-dashboard__msg--assistant pax-live-dashboard__msg--incoming pax-live-dashboard__msg--typing">' +
+          '<div class="pax-live-dashboard__msg-row">' +
+            '<div class="pax-live-dashboard__msg-avatar pax-live-dashboard__msg-avatar--ai">🤖</div>' +
+            '<div class="pax-live-dashboard__msg-stack">' +
+              '<span class="pax-live-dashboard__msg-name">' + escapeHtml(aiName) + ' tippt …</span>' +
+              '<div class="pax-live-dashboard__msg-bubble pax-live-dashboard__typing-bubble">' +
+                '<span class="pax-live-dashboard__typing-dot"></span>' +
+                '<span class="pax-live-dashboard__typing-dot"></span>' +
+                '<span class="pax-live-dashboard__typing-dot"></span>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+        '</div>'
+      );
+      $messages.append(assistantTypingEl);
+      $messages.scrollTop($messages[0].scrollHeight);
+    }
+
+    function hideAssistantTyping() {
+      if (assistantTypingEl) {
+        assistantTypingEl.remove();
+        assistantTypingEl = null;
       }
     }
 
@@ -2203,7 +2237,8 @@
               if (msg && msg.role === 'user') newUserMsgId = msg.id;
             });
             renderMessages(res.data.messages, false);
-            if (played && shouldPlayMessageNotification()) {
+            var notifyHandler = res.data.handler || currentHandler || 'ai';
+            if (played && shouldPlayMessageNotification() && (notifyHandler === 'admin' || notifyHandler === 'live_request')) {
               playMessengerSound();
               hideCustomerTyping();
               var lastUserMsg = null;
@@ -2229,6 +2264,11 @@
             showCustomerTyping();
           } else {
             hideCustomerTyping();
+          }
+          if (res.data.assistant_typing) {
+            showAssistantTyping();
+          } else {
+            hideAssistantTyping();
           }
           if (res.data.reactions) {
             Object.keys(res.data.reactions).forEach(function (id) {

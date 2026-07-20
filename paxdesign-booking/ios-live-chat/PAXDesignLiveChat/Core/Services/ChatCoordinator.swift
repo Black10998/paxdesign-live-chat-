@@ -393,7 +393,7 @@ final class ChatCoordinator: ObservableObject {
             presentIncoming(session: session)
         }
 
-        for session in items where !session.isLiveRequest && session.needsReply {
+        for session in items where session.isAdmin && session.needsReply {
             let preview = session.lastPreview
             let previous = lastKnownPreviews[session.sessionId]
             lastKnownPreviews[session.sessionId] = preview

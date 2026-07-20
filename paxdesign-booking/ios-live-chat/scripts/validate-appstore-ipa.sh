@@ -16,6 +16,12 @@ if [[ -z "$IPA_PATH" || ! -f "$IPA_PATH" ]]; then
   fail "IPA not found: ${IPA_PATH:-<empty>}"
 fi
 
+MAX_IPA_BYTES="${MAX_IPA_BYTES:-90000000}"
+IPA_BYTES="$(stat -c%s "$IPA_PATH" 2>/dev/null || stat -f%z "$IPA_PATH")"
+if [[ "${IPA_BYTES:-0}" -gt "$MAX_IPA_BYTES" ]]; then
+  fail "IPA size ${IPA_BYTES} bytes exceeds budget ${MAX_IPA_BYTES} bytes — check for bundled duplicates or unstripped assets"
+fi
+
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 

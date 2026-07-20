@@ -553,6 +553,10 @@ class PAXdesign_Chat {
 
         $this->send_sse_headers();
 
+        if ($session_id !== '' && class_exists('PAXdesign_Chat_Live')) {
+            PAXdesign_Chat_Live::get_instance()->mark_assistant_typing($session_id);
+        }
+
         $models     = $this->get_model_candidates();
         $last_error = 'Keine Antwort vom KI-Backend erhalten.';
 
@@ -614,6 +618,9 @@ class PAXdesign_Chat {
                 if (is_array($stored)) {
                     echo 'data: ' . wp_json_encode(array('type' => 'done', 'message' => $stored)) . "\n\n";
                 }
+                if ($session_id !== '' && class_exists('PAXdesign_Chat_Live')) {
+                    PAXdesign_Chat_Live::get_instance()->clear_assistant_typing($session_id);
+                }
                 echo "data: [DONE]\n\n";
                 exit;
             }
@@ -632,6 +639,9 @@ class PAXdesign_Chat {
         }
 
         update_option('paxdesign_chat_last_error', $last_error, false);
+        if ($session_id !== '' && class_exists('PAXdesign_Chat_Live')) {
+            PAXdesign_Chat_Live::get_instance()->clear_assistant_typing($session_id);
+        }
         echo 'data: ' . wp_json_encode(array('type' => 'error', 'message' => $last_error)) . "\n\n";
         echo "data: [DONE]\n\n";
         exit;
@@ -1037,7 +1047,9 @@ class PAXdesign_Chat {
             }
         }
 
+        $live->mark_assistant_typing($session_id);
         $completion = $this->request_openai_completion($validated, $customer_language);
+        $live->clear_assistant_typing($session_id);
         if (is_wp_error($completion)) {
             return $completion;
         }

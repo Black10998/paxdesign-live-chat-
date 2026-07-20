@@ -631,11 +631,18 @@
     if (threadEl && threadEl.children.length > 0) {
       hasMessages = true;
     }
-    var showEntry = !hasMessages && !entryChoice && chatHandler !== 'closed';
+    var showEntry = false;
     if (isPersistentAccountChat()) {
+      if (!entryChoice && chatHandler !== 'live_request' && chatHandler !== 'admin') {
+        entryChoice = 'ai';
+      }
       if (sessionLoading || sessionRestored || hasExistingConversation()) {
         showEntry = false;
       }
+    } else if (!canUseChat()) {
+      showEntry = false;
+    } else {
+      showEntry = !hasMessages && !entryChoice && chatHandler !== 'closed';
     }
     if (entryEl) entryEl.hidden = !showEntry;
     if (welcomeEl) welcomeEl.hidden = showEntry || hasMessages || entryChoice !== 'ai';
@@ -843,12 +850,15 @@
           return;
         }
         stopCustomerStream();
-        if (json.data && json.data.message) {
+        var nextHandler = (json.data && json.data.handler) ? json.data.handler : 'closed';
+        if (json.data && json.data.message && !isDuplicateMessage(json.data.message)) {
           domMsgIds[json.data.message.id] = true;
           seenMsgId(json.data.message.id);
-          renderMessageDom(json.data.message.role, json.data.message.content, json.data.message.id, { skipPush: true });
+          rememberMessageIdentity(json.data.message);
+          if (nextHandler !== 'ai' || !isPersistentAccountChat()) {
+            renderMessageDom(json.data.message.role, json.data.message.content, json.data.message.id, { skipPush: true });
+          }
         }
-        var nextHandler = (json.data && json.data.handler) ? json.data.handler : 'closed';
         if (nextHandler === 'ai' && isPersistentAccountChat()) {
           applyHandlerState('ai', '');
           customerEndedChat = false;
@@ -1237,6 +1247,7 @@
       'Chat-Session gestartet.': 'sys:session_started',
       'Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten.': 'sys:chat_closed',
       'Der Kunde hat das Gespräch beendet.': 'sys:customer_closed',
+      'Der KI-Assistent ist wieder für Sie da. Schreiben Sie jederzeit weiter.': 'sys:customer_released_to_ai',
       'Der KI-Assistent übernimmt den Chat wieder.': 'sys:ai_reclaimed',
       'Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.': 'sys:live_agent_notified',
       'Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter.': 'sys:live_transfer_thanks'

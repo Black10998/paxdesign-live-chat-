@@ -268,7 +268,10 @@ struct LiveSession: Identifiable, Codable, Hashable {
     var isAdmin: Bool { handler == "admin" }
     var isClosed: Bool { handler == "closed" }
     var isTeamDM: Bool { handler == "team_dm" || sessionId.hasPrefix("team_") }
-    var needsReply: Bool { lastRole == "user" && !isClosed }
+    var needsReply: Bool {
+        guard !isClosed, lastRole == "user" else { return false }
+        return handler == "admin" || handler == "live_request"
+    }
 }
 
 struct EmployeeIdentity: Codable, Hashable {

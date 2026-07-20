@@ -194,45 +194,11 @@ class PAXdesign_Customer_Chat_Bridge {
      * @return true|WP_Error
      */
     public static function claim_guest_session($user_id, $session_id, $device_token) {
-        global $wpdb;
-        $user_id = absint($user_id);
-        $session_id = self::sanitize_session_id($session_id);
-        if ($user_id <= 0 || $session_id === '') {
-            return new WP_Error('invalid_claim', __('Invalid claim request.', 'paxdesign-booking'), array('status' => 400));
-        }
-
-        $live = PAXdesign_Chat_Live::get_instance();
-        $token = $live->sanitize_device_token($device_token);
-        if ($token === '') {
-            return new WP_Error('missing_device_token', __('Device verification required to claim this conversation.', 'paxdesign-booking'), array('status' => 403));
-        }
-
-        if (!$live->verify_session_ownership($session_id, $token)) {
-            return new WP_Error('claim_denied', __('This conversation could not be verified for your account.', 'paxdesign-booking'), array('status' => 403));
-        }
-
-        $logs = PAXdesign_Chat_Log::table_name();
-        $row = $wpdb->get_row($wpdb->prepare("SELECT session_id, wp_user_id FROM $logs WHERE session_id = %s LIMIT 1", $session_id));
-        if (!$row) {
-            return new WP_Error('not_found', __('Conversation not found.', 'paxdesign-booking'), array('status' => 404));
-        }
-        if (!empty($row->wp_user_id) && (int) $row->wp_user_id !== $user_id) {
-            return new WP_Error('already_claimed', __('This conversation belongs to another account.', 'paxdesign-booking'), array('status' => 409));
-        }
-
-        $hash = self::hash_device_token($token);
-        $claims = self::claims_table();
-        $wpdb->replace($claims, array(
-            'user_id'           => $user_id,
-            'session_id'        => $session_id,
-            'device_token_hash' => $hash,
-            'claimed_at'        => current_time('mysql', true),
-        ), array('%d', '%s', '%s', '%s'));
-
-        self::link_session($user_id, $session_id, 'guest_claim', $hash, false);
-        self::sync_chat_log_user($session_id, $user_id);
-        self::promote_richer_session_to_primary($user_id, $session_id);
-        return true;
+        return new WP_Error(
+            'guest_claim_removed',
+            __('Anonymous sessions are no longer supported. Please sign in to continue chatting.', 'paxdesign-booking'),
+            array('status' => 410)
+        );
     }
 
     /**

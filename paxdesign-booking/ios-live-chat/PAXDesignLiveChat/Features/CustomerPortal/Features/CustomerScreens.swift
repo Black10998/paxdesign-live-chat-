@@ -558,14 +558,25 @@ struct CustomerChatView: View {
             #endif
             guard auth.isAuthenticated else { return }
             do {
-                let session = try await api.fetchChatSession()
-                poll = CustomerChatPoll(
-                    session_id: session.session_id,
-                    handler: session.handler,
-                    messages: [],
-                    message_count: nil,
-                    last_preview: nil
-                )
+                let targetID = initialSessionID?.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let targetID, !targetID.isEmpty {
+                    poll = CustomerChatPoll(
+                        session_id: targetID,
+                        handler: "ai",
+                        messages: [],
+                        message_count: nil,
+                        last_preview: nil
+                    )
+                } else {
+                    let session = try await api.fetchChatSession()
+                    poll = CustomerChatPoll(
+                        session_id: session.session_id,
+                        handler: session.handler,
+                        messages: [],
+                        message_count: nil,
+                        last_preview: nil
+                    )
+                }
             } catch {
                 self.error = friendlyChatError(error)
                 return
@@ -766,9 +777,6 @@ struct CustomerChatView: View {
         isInputFocused = false
         do {
             let response = try await api.closeChatSession(sessionID: poll?.session_id)
-            if let message = response.message {
-                applyInlineMessage(message)
-            }
             if let handler = response.handler {
                 applyHandlerUpdate(handler)
             }

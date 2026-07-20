@@ -15,7 +15,7 @@ class PAXdesign_Chat_Live {
     const HANDLER_LIVE   = 'live_request';
     const HANDLER_ADMIN  = 'admin';
     const HANDLER_CLOSED = 'closed';
-    const CHAT_SCHEMA_VERSION = '2.3';
+    const CHAT_SCHEMA_VERSION = '2.4';
 
     /** @var bool */
     private static $list_schema_ready = false;
@@ -469,6 +469,24 @@ class PAXdesign_Chat_Live {
         }
     }
 
+    /** Signal that the AI assistant is composing a reply (visible to staff). */
+    public function mark_assistant_typing($session_id) {
+        $session_id = $this->sanitize_session_id($session_id);
+        if ($session_id === '' || $this->get_handler($session_id) !== self::HANDLER_AI) {
+            return;
+        }
+        $this->mark_typing($session_id, 'assistant');
+    }
+
+    /** Clear AI assistant typing indicator. */
+    public function clear_assistant_typing($session_id) {
+        $session_id = $this->sanitize_session_id($session_id);
+        if ($session_id === '') {
+            return;
+        }
+        $this->clear_typing_indicator($session_id, 'assistant');
+    }
+
     /**
      * REST/mobile customer typing indicator.
      *
@@ -558,6 +576,58 @@ class PAXdesign_Chat_Live {
         }
 
         update_option('paxdesign_chat_live_schema', self::CHAT_SCHEMA_VERSION, false);
+        self::purge_legacy_anonymous_sessions();
+    }
+
+    /**
+     * Permanently remove guest/anonymous chat sessions (registered users only).
+     */
+    public static function purge_legacy_anonymous_sessions() {
+        if ((string) get_option('paxdesign_purged_anonymous_sessions', '') === '1') {
+            return;
+        }
+
+        global $wpdb;
+        $table = PAXdesign_Chat_Log::table_name();
+        PAXdesign_Chat_Log::create_table();
+
+        $anonymous_ids = $wpdb->get_col(
+            "SELECT session_id FROM $table
+             WHERE COALESCE(wp_user_id, 0) = 0
+               AND session_id NOT LIKE 'pax_u%'"
+        );
+
+        if (!empty($anonymous_ids) && class_exists('PAXdesign_Message_Store')) {
+            $msg_table = PAXdesign_Message_Store::table_name();
+            foreach ((array) $anonymous_ids as $sid) {
+                $sid = (string) $sid;
+                if ($sid === '') {
+                    continue;
+                }
+                $wpdb->delete($msg_table, array('session_id' => $sid), array('%s'));
+                $wpdb->delete($table, array('session_id' => $sid), array('%s'));
+            }
+        }
+
+        if (class_exists('PAXdesign_Customer_DB')) {
+            $claims = PAXdesign_Customer_DB::table('guest_claims');
+            $sessions_map = PAXdesign_Customer_DB::table('chat_sessions');
+            $wpdb->query("DELETE FROM $claims");
+            $wpdb->query(
+                "DELETE FROM $sessions_map
+                 WHERE session_id NOT LIKE 'pax_u%'"
+            );
+        }
+
+        update_option('paxdesign_purged_anonymous_sessions', '1', false);
+    }
+
+    /**
+     * @return bool
+     */
+    public static function is_registered_session_id($session_id) {
+        $session_id = (string) $session_id;
+        return $session_id !== '' && strpos($session_id, 'pax_u') === 0;
     }
 
     private static function ensure_list_schema() {
@@ -2831,6 +2901,8 @@ class PAXdesign_Chat_Live {
                     session_rating, detected_service, updated_at, message_count, message_seq,
                     last_preview, customer_language, user_read_seq, admin_read_seq, wp_user_id
              FROM $table
+             WHERE COALESCE(wp_user_id, 0) > 0
+                OR session_id LIKE 'pax_u%'
              ORDER BY
                CASE COALESCE(handler, 'ai')
                  WHEN 'live_request' THEN 0
@@ -3069,6 +3141,7 @@ class PAXdesign_Chat_Live {
             'message_count'    => 0,
             'messages'         => array(),
             'admin_typing'     => false,
+            'assistant_typing' => false,
             'user_typing'      => false,
             'reactions'        => array(),
         );
@@ -3119,6 +3192,7 @@ class PAXdesign_Chat_Live {
             'other_read_seq'   => $this->get_read_seqs($row)['user'],
             'messages'         => $all_messages,
             'admin_typing'     => $this->is_typing($session_id, 'admin'),
+            'assistant_typing' => $this->is_typing($session_id, 'assistant'),
             'user_typing'      => $this->is_typing($session_id, 'user'),
             'reactions'        => $this->extract_message_reactions($raw_messages),
             'customer_language'=> class_exists('PAXdesign_Language_Routing')
@@ -3235,6 +3309,7 @@ class PAXdesign_Chat_Live {
             'unread_staff_count' => $unread_staff,
             'messages'         => $new,
             'admin_typing'     => $this->is_typing($session_id, 'admin'),
+            'assistant_typing' => $this->is_typing($session_id, 'assistant'),
             'user_typing'      => $this->is_typing($session_id, 'user'),
             'reactions'        => $reactions,
             'customer_language'=> class_exists('PAXdesign_Language_Routing')

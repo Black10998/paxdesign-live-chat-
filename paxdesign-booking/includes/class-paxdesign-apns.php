@@ -426,8 +426,8 @@ class PAXdesign_APNS {
         if ($last_role === 'user' && $handler === 'admin' && $preview !== '') {
             return;
         }
-        $needs_ai_attention = ($handler === 'ai' && $last_role === 'user' && $preview !== '');
-        $type = $needs_ai_attention ? 'ai_attention' : 'session_sync';
+        $needs_ai_attention = false;
+        $type = 'session_sync';
         $event = 'assigned_chat_updated';
         if ($handler === 'live_request') {
             $type = 'live_request';
@@ -439,8 +439,6 @@ class PAXdesign_APNS {
         $visible_events = array(
             'customer_waiting',
             'new_lead_contact',
-            'assigned_chat_updated',
-            'new_chat_started',
             'missed_chat',
             'new_customer_message',
             'team_message',
@@ -448,7 +446,7 @@ class PAXdesign_APNS {
             'team_request_update',
             'link_scan_attention',
         );
-        $silent = !in_array($event, $visible_events, true) && !$needs_ai_attention;
+        $silent = !in_array($event, $visible_events, true);
         if ($last_role === 'admin' && $event !== 'customer_waiting') {
             $silent = true;
         }
@@ -482,6 +480,13 @@ class PAXdesign_APNS {
 
     public static function notify_new_customer_message($session_id, $content, $exclude_user_id = 0) {
         $session_id = (string) $session_id;
+        if (class_exists('PAXdesign_Chat_Live')) {
+            $live = PAXdesign_Chat_Live::get_instance();
+            $handler = $live->get_handler($session_id);
+            if ($handler === PAXdesign_Chat_Live::HANDLER_AI) {
+                return;
+            }
+        }
         $customer_name = self::session_customer_name($session_id);
         $title = $customer_name !== '' ? $customer_name : 'Neue Kundennachricht';
         $preview = wp_html_excerpt((string) $content, 120, '…');
