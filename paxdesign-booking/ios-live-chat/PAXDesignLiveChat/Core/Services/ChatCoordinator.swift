@@ -166,6 +166,9 @@ final class ChatCoordinator: ObservableObject {
                                 ConversationHistoryStore.shared.mergeMessage(sessionId: sid, message: inline, seq: messageSeq)
                                 ChatThreadRegistry.shared.bookingThread(sessionId: sid).applyLiveMessage(inline, seq: messageSeq)
                                 self.bumpBookingSession(sessionId: sid, message: inline, seq: messageSeq)
+                                if !self.sessions.contains(where: { $0.sessionId == sid }) {
+                                    self.scheduleInboxListRefresh(auth: auth)
+                                }
                                 if self.activeSessionId != sid, inline.role == "user" {
                                     let sessionName = self.sessions.first(where: { $0.sessionId == sid })?.displayName ?? ""
                                     InAppNotificationCoordinator.shared.handleNewCustomerMessage(
@@ -197,7 +200,8 @@ final class ChatCoordinator: ObservableObject {
             return true
         case "message":
             guard let sessionId = event.payload["session_id"] as? String else { return true }
-            return sessionId.hasPrefix("team_")
+            if sessionId.hasPrefix("team_") { return true }
+            return !sessions.contains(where: { $0.sessionId == sessionId })
         default:
             return false
         }

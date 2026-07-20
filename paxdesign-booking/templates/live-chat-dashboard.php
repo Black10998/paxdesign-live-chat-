@@ -43,6 +43,7 @@ $tour_done     = (bool) get_user_meta(get_current_user_id(), 'pax_live_dashboard
     </div>
     <div class="pax-live-dashboard__stats">
       <span class="pax-live-stat pax-live-stat--live"><span id="paxLiveChatLiveCount">0</span> Live-Anfragen</span>
+      <span class="pax-live-stat pax-live-stat--unread"><span id="paxLiveChatUnreadCount">0</span> Ungelesen</span>
       <span class="pax-live-stat pax-live-stat--active"><span id="paxLiveChatCount">0</span> Chats</span>
     </div>
     <div class="pax-live-dashboard__header-actions">
@@ -81,7 +82,7 @@ $tour_done     = (bool) get_user_meta(get_current_user_id(), 'pax_live_dashboard
     <aside class="pax-live-dashboard__sidebar">
       <div class="pax-live-dashboard__sidebar-top">
         <div class="pax-live-dashboard__sidebar-title">
-          <strong>Chat-Liste</strong>
+          <strong>Chat-Liste <span class="pax-live-dashboard__unread-badge" id="paxLiveChatUnreadBadge" hidden aria-label="Ungelesene Chats">0</span></strong>
           <span class="pax-live-dashboard__hint">Links wählen · Rechts antworten</span>
         </div>
         <div class="pax-live-dashboard__sidebar-search">

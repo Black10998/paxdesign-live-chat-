@@ -10,7 +10,7 @@ struct NotificationsCenterView: View {
 
     private var unreadSessions: [LiveSession] {
         coordinator.sessions.filter {
-            !$0.isTeamDM && $0.needsReply && !settings.readSessionIds.contains($0.sessionId)
+            !$0.isTeamDM && settings.isSessionUnread($0)
         }
     }
 
@@ -166,8 +166,9 @@ struct NotificationsCenterView: View {
 
             HStack(spacing: 10) {
                 Button {
-                    settings.readSessionIds.insert(session.sessionId)
+                    settings.markSessionRead(session.sessionId, seq: session.seq)
                     coordinator.activeSessionId = session.sessionId
+                    coordinator.updateUnreadCounts()
                     PAXHaptics.light()
                 } label: {
                     Label { Text(L10n.CommonMarkRead) } icon: { PAXIcon("envelope.open") }
@@ -191,7 +192,8 @@ struct NotificationsCenterView: View {
         .padding(.vertical, 4)
         .contextMenu {
             Button {
-                settings.readSessionIds.insert(session.sessionId)
+                settings.markSessionRead(session.sessionId, seq: session.seq)
+                coordinator.updateUnreadCounts()
             } label: {
                 Label { Text(L10n.CommonMarkRead) } icon: { PAXIcon("envelope.open") }
             }
@@ -203,7 +205,8 @@ struct NotificationsCenterView: View {
         }
         .swipeActions(edge: .leading, allowsFullSwipe: true) {
             Button {
-                settings.readSessionIds.insert(session.sessionId)
+                settings.markSessionRead(session.sessionId, seq: session.seq)
+                coordinator.updateUnreadCounts()
                 PAXHaptics.success()
             } label: {
                 Label { Text(L10n.CommonMarkRead) } icon: { PAXIcon("envelope.open") }
@@ -214,8 +217,9 @@ struct NotificationsCenterView: View {
 
     private func markAllRead() {
         for session in unreadSessions {
-            settings.readSessionIds.insert(session.sessionId)
+            settings.markSessionRead(session.sessionId, seq: session.seq)
         }
+        coordinator.updateUnreadCounts()
         PAXHaptics.success()
     }
 }

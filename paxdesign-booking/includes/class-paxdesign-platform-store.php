@@ -852,10 +852,12 @@ class PAXdesign_Platform_Store {
             }
             $handler = isset($session['handler']) ? (string) $session['handler'] : '';
             $needs = !empty($session['needs_reply']);
+            $last_role = isset($session['last_role']) ? (string) $session['last_role'] : '';
+            $session_unread = isset($session['unread_count']) ? (int) $session['unread_count'] : 0;
             if ($handler === 'admin' || $needs) {
                 $assigned++;
             }
-            if ($needs) {
+            if ($needs || ($last_role === 'user' && $handler !== 'closed' && $session_unread > 0)) {
                 $unread++;
             }
         }
@@ -968,11 +970,37 @@ class PAXdesign_Platform_Store {
      * @return array<string, mixed>
      */
     public static function notifications_summary() {
+        $live = PAXdesign_Chat_Live::get_instance();
+        $list = $live->get_live_list_data();
+        $unread = 0;
+        $live_count = 0;
+        $open_tasks = 0;
         $dashboard = self::dashboard_payload();
+        $open_tasks = (int) ($dashboard['open_tasks'] ?? 0);
+
+        if (!is_wp_error($list)) {
+            $live_count = (int) ($list['live_count'] ?? 0);
+            foreach ((array) ($list['sessions'] ?? array()) as $session) {
+                $sid = isset($session['session_id']) ? (string) $session['session_id'] : '';
+                if ($sid === '' || strpos($sid, 'team_') === 0) {
+                    continue;
+                }
+                $handler = isset($session['handler']) ? (string) $session['handler'] : '';
+                $last_role = isset($session['last_role']) ? (string) $session['last_role'] : '';
+                $session_unread = isset($session['unread_count']) ? (int) $session['unread_count'] : 0;
+                if ($handler === 'closed') {
+                    continue;
+                }
+                if (!empty($session['needs_reply']) || ($last_role === 'user' && $session_unread > 0)) {
+                    $unread++;
+                }
+            }
+        }
+
         return array(
-            'unread_chats'  => (int) ($dashboard['sessions_total'] ?? 0),
-            'live_requests' => (int) ($dashboard['live_count'] ?? 0),
-            'open_tasks'    => (int) ($dashboard['open_tasks'] ?? 0),
+            'unread_chats'  => $unread,
+            'live_requests' => $live_count,
+            'open_tasks'    => $open_tasks,
             'server_time'   => current_time('mysql'),
         );
     }

@@ -13,7 +13,7 @@ struct EmployeeDashboardView: View {
     }
 
     private var unreadCount: Int {
-        mySessions.filter { $0.needsReply && !settings.readSessionIds.contains($0.sessionId) }.count
+        coordinator.sessions.filter { !$0.isTeamDM && settings.isSessionUnread($0) }.count
     }
 
     var body: some View {

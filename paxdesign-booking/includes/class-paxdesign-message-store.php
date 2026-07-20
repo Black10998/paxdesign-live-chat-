@@ -411,6 +411,26 @@ class PAXdesign_Message_Store {
         ));
     }
 
+    /**
+     * Role of the most recent message in a session (user|admin|assistant).
+     *
+     * @param string $session_id
+     * @param string $channel
+     * @return string
+     */
+    public static function last_message_role($session_id, $channel = 'customer') {
+        global $wpdb;
+        self::maybe_upgrade();
+        self::migrate_customer_session_if_needed($session_id, $channel);
+        $table = self::messages_table();
+        $role = $wpdb->get_var($wpdb->prepare(
+            "SELECT role FROM $table WHERE session_id = %s AND channel = %s ORDER BY msg_seq DESC LIMIT 1",
+            sanitize_text_field($session_id),
+            sanitize_text_field($channel)
+        ));
+        return is_string($role) ? sanitize_text_field($role) : '';
+    }
+
     public static function count($session_id, $channel = 'customer') {
         global $wpdb;
         self::migrate_customer_session_if_needed($session_id, $channel);
