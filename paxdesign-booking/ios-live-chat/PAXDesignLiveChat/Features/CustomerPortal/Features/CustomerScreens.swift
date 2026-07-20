@@ -602,7 +602,7 @@ struct CustomerChatView: View {
                 }
                 TextField(String(localized: "Message"), text: $draft, axis: .vertical)
                     .lineLimit(1...5)
-                    .accessibilityIdentifier("pax.chat.messageField")
+                    .accessibilityIdentifier("pax.chat.composer")
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
                     .background(PAXTheme.surfaceElevated)
@@ -624,7 +624,6 @@ struct CustomerChatView: View {
             .padding(.vertical, 10)
             .background(.ultraThinMaterial)
         }
-        .accessibilityIdentifier("pax.chat.composer")
     }
 
     private var canSend: Bool {

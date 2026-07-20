@@ -8,12 +8,9 @@ final class ShellLayoutUITests: XCTestCase {
 
         app.buttons["Chat"].tap()
 
-        let composer = app.otherElements["pax.chat.composer"]
-        let messageField = app.textFields["pax.chat.messageField"]
-        XCTAssertTrue(composer.waitForExistence(timeout: 10) || messageField.waitForExistence(timeout: 10))
-
-        let composerFrame = composer.exists ? composer.frame : messageField.frame
-        assertFrame(composerFrame, sitsFullyAbove: tabBar.frame)
+        let composer = customerComposer(in: app)
+        XCTAssertTrue(composer.waitForExistence(timeout: 10))
+        assertFrame(composer.frame, sitsFullyAbove: tabBar.frame)
     }
 
     func testCustomerTabsKeepContentAboveTabBar() {
@@ -24,11 +21,9 @@ final class ShellLayoutUITests: XCTestCase {
         for tab in ["Home", "Services", "Portfolio", "Chat", "Account"] {
             app.buttons[tab].tap()
             if tab == "Chat" {
-                let composer = app.otherElements["pax.chat.composer"]
-                let messageField = app.textFields["pax.chat.messageField"]
-                XCTAssertTrue(composer.waitForExistence(timeout: 8) || messageField.waitForExistence(timeout: 8))
-                let composerFrame = composer.exists ? composer.frame : messageField.frame
-                assertFrame(composerFrame, sitsFullyAbove: tabBar.frame)
+                let composer = customerComposer(in: app)
+                XCTAssertTrue(composer.waitForExistence(timeout: 8))
+                assertFrame(composer.frame, sitsFullyAbove: tabBar.frame)
             }
             scrollContentToEnd(in: app)
             assertPrimaryContentEndsAboveTabBar(in: app, tabBar: tabBar)
@@ -59,6 +54,14 @@ final class ShellLayoutUITests: XCTestCase {
         return app
     }
 
+    private func customerComposer(in app: XCUIApplication) -> XCUIElement {
+        let textField = app.textFields["pax.chat.composer"]
+        if textField.exists { return textField }
+        let textView = app.textViews["pax.chat.composer"]
+        if textView.exists { return textView }
+        return app.descendants(matching: .any)["pax.chat.composer"]
+    }
+
     private func assertFrame(_ upper: CGRect, sitsFullyAbove lower: CGRect, tolerance: CGFloat = 2) {
         XCTAssertLessThanOrEqual(
             upper.maxY,
@@ -86,18 +89,18 @@ final class ShellLayoutUITests: XCTestCase {
     }
 
     private func assertPrimaryContentEndsAboveTabBar(in app: XCUIApplication, tabBar: XCUIElement) {
-        if app.scrollViews.firstMatch.exists {
-            assertView(app.scrollViews.firstMatch, sitsFullyAbove: tabBar, tolerance: 4)
-            return
-        }
-        if app.tables.firstMatch.exists {
-            assertView(app.tables.firstMatch, sitsFullyAbove: tabBar, tolerance: 4)
+        let content = app.otherElements["pax.shell.content"]
+        if content.waitForExistence(timeout: 3) {
+            assertView(content, sitsFullyAbove: tabBar, tolerance: 4)
             return
         }
         if app.otherElements["pax.chat.composer"].exists {
             assertView(app.otherElements["pax.chat.composer"], sitsFullyAbove: tabBar)
-        } else if app.textFields["pax.chat.messageField"].exists {
-            assertView(app.textFields["pax.chat.messageField"], sitsFullyAbove: tabBar)
+            return
+        }
+        let composer = customerComposer(in: app)
+        if composer.exists {
+            assertView(composer, sitsFullyAbove: tabBar)
         }
     }
 }

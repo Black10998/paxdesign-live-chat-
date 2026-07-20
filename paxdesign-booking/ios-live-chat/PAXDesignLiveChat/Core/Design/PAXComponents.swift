@@ -506,6 +506,7 @@ private struct PAXShellBottomTabBarModifier: ViewModifier {
         VStack(spacing: 0) {
             content
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .accessibilityIdentifier("pax.shell.content")
                 .background {
                     if isVisible {
                         PAXShellScrollOffsetTracker(
