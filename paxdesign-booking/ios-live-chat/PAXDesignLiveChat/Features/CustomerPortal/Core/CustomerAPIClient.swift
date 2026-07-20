@@ -903,6 +903,15 @@ struct CustomerChatPoll: Decodable {
             }
             return nil
         }
+
+        static func fromStreamPayload(_ value: Any?) -> ChatMessage? {
+            guard let dict = value as? [String: Any],
+                  JSONSerialization.isValidJSONObject(dict),
+                  let data = try? JSONSerialization.data(withJSONObject: dict) else {
+                return nil
+            }
+            return try? JSONDecoder().decode(ChatMessage.self, from: data)
+        }
     }
 
     let session_id: String?

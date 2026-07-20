@@ -310,6 +310,7 @@
         updateAuthGateUi();
         if (canUseChat()) {
           hideAuthGate();
+          purgeGuestChatStorage();
           refreshAuthenticatedChatSession().then(function () {
             updateEntryUi();
             if (widgetOpen) {

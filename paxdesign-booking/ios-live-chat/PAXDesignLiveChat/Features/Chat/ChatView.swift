@@ -301,14 +301,24 @@ struct ChatView: View {
                 .disabled(thread.suggestionsLoading)
                 .accessibilityLabel(L10n.ChatAnalyzeLatestMessage)
             }
-            if thread.handler == "live_request", canTakeOverChats {
+            if (thread.handler == "live_request" || thread.handler == "ai"), canTakeOverChats {
                 Button(L10n.CommonTakeover) {
                     PAXHaptics.medium()
                     Task {
-                        if let session = coordinator.sessions.first(where: { $0.sessionId == thread.sessionId }) {
+                        if thread.handler == "live_request",
+                           let session = coordinator.sessions.first(where: { $0.sessionId == thread.sessionId }) {
                             await coordinator.acceptLiveRequest(auth: auth, session: session)
                             await thread.reloadAfterTakeover(auth: auth)
                             PAXHaptics.success()
+                        } else {
+                            do {
+                                try await auth.api?.takeover(thread.sessionId)
+                                await thread.reloadAfterTakeover(auth: auth)
+                                await coordinator.refreshSessions(auth: auth)
+                                PAXHaptics.success()
+                            } catch {
+                                thread.errorMessage = error.localizedDescription
+                            }
                         }
                     }
                 }
@@ -510,7 +520,7 @@ struct ChatView: View {
                 .padding(.vertical, 9)
                 .frame(minHeight: 36)
                 .paxGlassCardStyle(cornerRadius: 20, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.08)
-                .disabled(thread.handler != "admin" || !canReply)
+                .disabled(!canComposeInThread || !canReply)
                 .onChange(of: thread.draft) { _ in
                     thread.handleDraftChange(auth: auth)
                 }
@@ -528,8 +538,13 @@ struct ChatView: View {
         .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.8, borderOpacity: 0.4, shadowOpacity: 0.14)
     }
 
-    private var canSend: Bool {
+    private var canComposeInThread: Bool {
         thread.handler == "admin"
+            || (canTakeOverChats && (thread.handler == "ai" || thread.handler == "live_request"))
+    }
+
+    private var canSend: Bool {
+        canComposeInThread
             && canReply
             && !thread.draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !thread.isSending

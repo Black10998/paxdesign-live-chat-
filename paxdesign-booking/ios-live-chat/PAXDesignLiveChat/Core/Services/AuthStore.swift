@@ -79,6 +79,9 @@ final class AuthStore: ObservableObject {
 
     func finishBootstrap() {
         isBootstrapping = false
+        if isLoggedIn, isCustomerSession {
+            CustomerSessionController.shared.syncFromAuthStore(self)
+        }
     }
 
     /// Unified sign-in: email/username + account password. Server decides staff vs customer.
@@ -314,6 +317,7 @@ final class AuthStore: ObservableObject {
         guard !user.isEmpty, !password.isEmpty else { return }
         if sessionMode == .customer {
             isLoggedIn = true
+            CustomerSessionController.shared.syncFromAuthStore(self)
             return
         }
         api = LiveChatAPI(siteURL: normalizedSite, username: user, appPassword: password)

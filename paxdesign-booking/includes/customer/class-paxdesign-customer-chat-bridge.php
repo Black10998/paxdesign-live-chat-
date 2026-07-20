@@ -232,7 +232,63 @@ class PAXdesign_Customer_Chat_Bridge {
 
         self::link_session($user_id, $session_id, 'guest_claim', $hash, false);
         self::sync_chat_log_user($session_id, $user_id);
+        self::promote_richer_session_to_primary($user_id, $session_id);
         return true;
+    }
+
+    /**
+     * When a guest conversation has more history than the empty primary, promote it.
+     */
+    private static function promote_richer_session_to_primary($user_id, $candidate_session_id) {
+        global $wpdb;
+        $user_id = absint($user_id);
+        $candidate_session_id = self::sanitize_session_id($candidate_session_id);
+        if ($user_id <= 0 || $candidate_session_id === '') {
+            return;
+        }
+
+        $sessions = self::sessions_table();
+        $logs = PAXdesign_Chat_Log::table_name();
+        $primary_row = $wpdb->get_row($wpdb->prepare(
+            "SELECT session_id FROM $sessions WHERE user_id = %d AND is_primary = 1 ORDER BY linked_at DESC LIMIT 1",
+            $user_id
+        ));
+        $primary_id = $primary_row ? self::sanitize_session_id((string) $primary_row->session_id) : '';
+        if ($primary_id === $candidate_session_id) {
+            return;
+        }
+
+        $candidate_count = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT message_count FROM $logs WHERE session_id = %s LIMIT 1",
+            $candidate_session_id
+        ));
+        $primary_count = $primary_id !== ''
+            ? (int) $wpdb->get_var($wpdb->prepare(
+                "SELECT message_count FROM $logs WHERE session_id = %s LIMIT 1",
+                $primary_id
+            ))
+            : 0;
+
+        if ($candidate_count <= $primary_count) {
+            return;
+        }
+
+        if ($primary_id !== '') {
+            $wpdb->update(
+                $sessions,
+                array('is_primary' => 0),
+                array('user_id' => $user_id, 'session_id' => $primary_id),
+                array('%d'),
+                array('%d', '%s')
+            );
+        }
+        $wpdb->update(
+            $sessions,
+            array('is_primary' => 1),
+            array('user_id' => $user_id, 'session_id' => $candidate_session_id),
+            array('%d'),
+            array('%d', '%s')
+        );
     }
 
     public static function link_session($user_id, $session_id, $method = 'login', $device_hash = '', $is_primary = false) {
@@ -284,7 +340,7 @@ class PAXdesign_Customer_Chat_Bridge {
             return $session_id;
         }
 
-        if ($session_id === '' || ($session_id !== $primary && !self::user_owns_session($user_id, $session_id))) {
+        if ($session_id === '' || $session_id !== $primary) {
             $session_id = $primary;
         }
 

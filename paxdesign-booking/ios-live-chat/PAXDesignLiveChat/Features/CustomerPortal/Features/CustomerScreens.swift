@@ -527,7 +527,8 @@ struct CustomerChatView: View {
             }
             #endif
             guard auth.isAuthenticated else { return }
-            if let session = try? await api.fetchChatSession() {
+            do {
+                let session = try await api.fetchChatSession()
                 poll = CustomerChatPoll(
                     session_id: session.session_id,
                     handler: session.handler,
@@ -535,8 +536,9 @@ struct CustomerChatView: View {
                     message_count: nil,
                     last_preview: nil
                 )
-            } else if let initialSessionID, !initialSessionID.isEmpty {
-                poll = CustomerChatPoll(session_id: initialSessionID, handler: nil, messages: [], message_count: nil, last_preview: nil)
+            } catch {
+                error = friendlyChatError(error)
+                return
             }
             await refresh(full: true)
             startPolling()
@@ -688,6 +690,55 @@ struct CustomerChatView: View {
         }
     }
 
+    private func applyInlineMessage(_ message: CustomerChatPoll.ChatMessage) {
+        var merged = poll?.messages ?? []
+        guard !merged.contains(where: { $0.seq == message.seq }) else { return }
+        merged.append(message)
+        poll = CustomerChatPoll(
+            session_id: poll?.session_id,
+            handler: poll?.handler,
+            messages: merged.sorted { $0.seq < $1.seq },
+            message_count: poll?.message_count,
+            last_preview: poll?.last_preview,
+            notice: poll?.notice,
+            admin_typing: poll?.admin_typing,
+            user_typing: poll?.user_typing,
+            other_read_seq: poll?.other_read_seq
+        )
+        lastSeq = max(lastSeq, message.seq)
+        NotificationCenter.default.post(name: .paxChatScrollToBottom, object: nil)
+    }
+
+    private func applyHandlerUpdate(_ handler: String) {
+        poll = CustomerChatPoll(
+            session_id: poll?.session_id,
+            handler: handler,
+            messages: poll?.messages,
+            message_count: poll?.message_count,
+            last_preview: poll?.last_preview,
+            notice: poll?.notice,
+            admin_typing: poll?.admin_typing,
+            user_typing: poll?.user_typing,
+            other_read_seq: poll?.other_read_seq
+        )
+    }
+
+    private func applyTypingUpdate(_ payload: [String: Any]) {
+        let adminTyping = StreamPayload.bool(payload["admin_typing"])
+        let userTyping = StreamPayload.bool(payload["user_typing"])
+        poll = CustomerChatPoll(
+            session_id: poll?.session_id,
+            handler: poll?.handler,
+            messages: poll?.messages,
+            message_count: poll?.message_count,
+            last_preview: poll?.last_preview,
+            notice: poll?.notice,
+            admin_typing: adminTyping,
+            user_typing: userTyping,
+            other_read_seq: poll?.other_read_seq
+        )
+    }
+
     private func applyPollUpdate(_ next: CustomerChatPoll, full: Bool) {
         if full || poll == nil {
             poll = next
@@ -810,7 +861,7 @@ struct CustomerChatView: View {
         pollIntervalNs = minPollIntervalNs
         pollTask = Task {
             while !Task.isCancelled {
-                let interval = eventStreamActive ? max(pollIntervalNs, 5_000_000_000) : pollIntervalNs
+                let interval = eventStreamActive ? min(pollIntervalNs, 1_200_000_000) : pollIntervalNs
                 try? await Task.sleep(nanoseconds: interval)
                 guard network.isConnected, !pollingSuspended else { continue }
                 let hadNew = await refresh(full: false)
@@ -843,9 +894,29 @@ struct CustomerChatView: View {
                             streamSince = max(streamSince, event.id)
                         }
                         switch event.type {
-                        case "message", "message_deleted", "link_scan_updated", "handler", "typing":
+                        case "message":
                             pollIntervalNs = minPollIntervalNs
-                            await refresh(full: event.type == "message" || event.type == "handler")
+                            if let message = CustomerChatPoll.ChatMessage.fromStreamPayload(event.payload["message"]) {
+                                applyInlineMessage(message)
+                                if message.role == "admin" || message.role == "assistant" {
+                                    CustomerNotificationsBadgeStore.shared.scheduleRefresh(api: api)
+                                    PAXHaptics.light()
+                                }
+                            } else {
+                                await refresh(full: true)
+                            }
+                        case "message_deleted", "link_scan_updated":
+                            pollIntervalNs = minPollIntervalNs
+                            await refresh(full: true)
+                        case "handler":
+                            pollIntervalNs = minPollIntervalNs
+                            let handler = StreamPayload.string(event.payload["handler"])
+                            if !handler.isEmpty {
+                                applyHandlerUpdate(handler)
+                            }
+                            await refresh(full: true)
+                        case "typing":
+                            applyTypingUpdate(event.payload)
                         default:
                             break
                         }

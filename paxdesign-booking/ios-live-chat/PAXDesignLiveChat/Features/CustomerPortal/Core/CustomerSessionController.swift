@@ -41,15 +41,34 @@ final class CustomerSessionController: ObservableObject {
     }
 
     func syncFromAuthStore(_ store: AuthStore) {
-        guard store.isLoggedIn, store.isCustomerSession else { return }
-        guard let profile = store.customerProfile,
+        guard store.isLoggedIn, store.isCustomerSession,
               let creds = store.storedAPICredentials() else { return }
-        activate(
-            siteURL: store.siteURLString,
-            username: creds.username,
-            appPassword: creds.appPassword,
-            profile: profile
-        )
+
+        auth.siteURL = store.siteURLString
+        auth.username = creds.username
+        auth.appPassword = creds.appPassword
+        api.configure(baseURL: store.siteURLString, auth: auth)
+        auth.isAuthenticated = true
+
+        if let profile = store.customerProfile {
+            activate(
+                siteURL: store.siteURLString,
+                username: creds.username,
+                appPassword: creds.appPassword,
+                profile: profile
+            )
+            return
+        }
+
+        Task {
+            guard let response = try? await api.fetchProfile() else { return }
+            activate(
+                siteURL: store.siteURLString,
+                username: creds.username,
+                appPassword: creds.appPassword,
+                profile: response.profile
+            )
+        }
     }
 
     func deactivate() {

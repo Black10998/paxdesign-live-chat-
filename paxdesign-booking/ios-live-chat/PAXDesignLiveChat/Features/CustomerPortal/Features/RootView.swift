@@ -15,7 +15,15 @@ struct CustomerPortalShellView: View {
             .environmentObject(navigation)
             .environmentObject(settings)
             .tint(PAXTheme.accent)
+            .onAppear {
+                if auth.isLoggedIn, auth.isCustomerSession {
+                    CustomerSessionController.shared.syncFromAuthStore(auth)
+                }
+            }
             .task {
+                if auth.isLoggedIn, auth.isCustomerSession {
+                    CustomerSessionController.shared.syncFromAuthStore(auth)
+                }
                 CustomerPushService.shared.configure(api: customerSession.api)
             }
             .sheet(
