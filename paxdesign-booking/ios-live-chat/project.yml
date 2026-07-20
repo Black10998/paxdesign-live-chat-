@@ -139,3 +139,11 @@ schemes:
         - PAXDesignLiveChatTests
         - PAXDesignLiveChatUITests
       gatherCoverageData: false
+  PAXDesignLiveChatLayoutVerify:
+    build:
+      targets:
+        PAXDesignLiveChat: all
+    test:
+      targets:
+        - PAXDesignLiveChatUITests
+      gatherCoverageData: false

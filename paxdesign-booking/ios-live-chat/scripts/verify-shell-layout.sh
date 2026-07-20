@@ -5,7 +5,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-SCHEME="PAXDesignLiveChat"
+SCHEME="${LAYOUT_VERIFY_SCHEME:-PAXDesignLiveChatLayoutVerify}"
 PROJECT_SPEC="${PROJECT_SPEC:-$ROOT/project.yml}"
 DERIVED_DATA="${DERIVED_DATA:-$ROOT/build/LayoutVerifyDerivedData}"
 SIMULATOR_NAME="${SIMULATOR_NAME:-iPhone 16}"
