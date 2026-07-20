@@ -241,20 +241,20 @@ class PAXdesign_Chat_Log {
             $existing_row = $wpdb->get_row(
                 $wpdb->prepare("SELECT consultation_started FROM $table WHERE session_id = %s LIMIT 1", $session_id)
             );
-            $already_started = $existing_row && !empty($existing_row->consultation_started);
-            if (!$already_started && class_exists('PAXdesign_Message_Store')) {
-                $already_started = (bool) PAXdesign_Message_Store::find_by_client_id($session_id, 'sys:session_started');
-            }
-            if (!$already_started) {
-                $sanitized = array(
-                    array(
-                        'role'          => 'system',
-                        'content'       => 'Chat-Session gestartet.',
-                        'client_msg_id' => 'sys:session_started',
-                        'id'            => 1,
-                        'ts'            => time(),
-                    ),
-                );
+            if ($existing_row) {
+                if (empty($existing_row->consultation_started)) {
+                    $wpdb->update(
+                        $table,
+                        array(
+                            'consultation_started' => 1,
+                            'updated_at'           => current_time('mysql'),
+                        ),
+                        array('id' => (int) $existing_row->id),
+                        array('%d', '%s'),
+                        array('%d')
+                    );
+                }
+                return (int) $existing_row->id;
             }
         }
         if (empty($sanitized)) {

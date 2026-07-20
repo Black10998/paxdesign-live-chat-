@@ -355,7 +355,7 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
 
           <div class="paxdesign-booking-body paxdesign-booking-chat-body">
             <div class="paxdesign-booking-chat-messages" role="log" aria-relevant="additions">
-              <div class="paxdesign-booking-chat-entry" id="paxdesignChatEntry" hidden>
+              <div class="paxdesign-booking-chat-entry" id="paxdesignChatEntry" hidden aria-hidden="true">
                 <p class="paxdesign-booking-chat-entry-kicker">PAXdesign Support</p>
                 <p class="paxdesign-booking-chat-entry-title"><?php echo esc_html__('Möchten Sie mit einem Live-Agent chatten?', 'paxdesign-booking'); ?></p>
                 <p class="paxdesign-booking-chat-entry-sub"><?php echo esc_html__('Wählen Sie, wie wir Ihnen helfen — Live Chat oder KI-Assistent.', 'paxdesign-booking'); ?></p>
@@ -378,7 +378,7 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
             </div>
           </div>
 
-          <div class="paxdesign-booking-chat-quick-actions" aria-label="Schnellaktionen"></div>
+          <div class="paxdesign-booking-chat-quick-actions" aria-label="Schnellaktionen" hidden></div>
 
           <div class="paxdesign-booking-chat-input-area">
             <div class="paxdesign-booking-chat-end-wrap" id="paxdesignChatEndWrap" hidden>

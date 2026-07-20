@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
 class PAXdesign_Customer_Chat_Bridge {
 
     public static function init() {
-        add_action('pdx_user_logged_in', array(__CLASS__, 'on_user_login'), 10, 1);
+        // Sessions are allocated lazily on first chat message — never on login or page load.
     }
 
     public static function sessions_table() {
@@ -22,17 +22,9 @@ class PAXdesign_Customer_Chat_Bridge {
     }
 
     /**
-     * @param int $user_id
+     * Resolve the durable session id for a customer without creating a chat log row.
      */
-    public static function on_user_login($user_id, $user = null) {
-        $user_id = absint($user_id);
-        if ($user_id <= 0) {
-            return;
-        }
-        self::ensure_primary_session($user_id);
-    }
-
-    public static function primary_session_id($user_id) {
+    public static function lookup_primary_session_id($user_id) {
         global $wpdb;
         $user_id = absint($user_id);
         if ($user_id <= 0) {
@@ -44,16 +36,32 @@ class PAXdesign_Customer_Chat_Bridge {
             $user_id
         ));
         if ($row && !empty($row->session_id)) {
-            $session_id = (string) $row->session_id;
-        } else {
-            $session_id = self::resolve_or_create_primary_session($user_id);
+            return self::sanitize_session_id((string) $row->session_id);
         }
-        if ($session_id !== '') {
-            $live = PAXdesign_Chat_Live::get_instance();
-            $live->ensure_session($session_id);
-            $session_id = self::ensure_persistent_session_open($session_id);
+        return self::resolve_or_create_primary_session($user_id);
+    }
+
+    /**
+     * Backward-compatible alias — lookup only, no chat log materialization.
+     */
+    public static function primary_session_id($user_id) {
+        return self::lookup_primary_session_id($user_id);
+    }
+
+    /**
+     * Create the chat log row on first write (message, attachment, or live handoff).
+     */
+    public static function materialize_session($session_id, $user_id = 0) {
+        $session_id = self::sanitize_session_id($session_id);
+        $user_id = absint($user_id);
+        if ($session_id === '') {
+            return '';
         }
-        return $session_id;
+        if ($user_id > 0) {
+            self::sync_chat_log_user($session_id, $user_id);
+        }
+        PAXdesign_Chat_Live::get_instance()->ensure_session($session_id);
+        return self::ensure_persistent_session_open($session_id, $user_id);
     }
 
     /**
@@ -97,10 +105,15 @@ class PAXdesign_Customer_Chat_Bridge {
                 return true;
             }
             $content = strtolower((string) ($msg['content'] ?? ''));
+            $client_id = (string) ($msg['client_msg_id'] ?? '');
+            if ($client_id === 'sys:session_started') {
+                return false;
+            }
             $blocked = array(
                 'closed', 'geschlossen', 'beendet', 'ended', 'conversation ended',
                 'session closed', 'neues gespräch', 'new chat', 'new conversation',
                 'start a new', 'inactivity', 'inaktivität', 'مغلق', 'انتهت',
+                'chat-session gestartet', 'session started', 'started session',
             );
             foreach ($blocked as $needle) {
                 if (strpos($content, $needle) !== false) {
@@ -134,7 +147,7 @@ class PAXdesign_Customer_Chat_Bridge {
             array('%s', '%s'),
             array('%s')
         );
-        $live->ensure_session($session_id);
+        self::materialize_session($session_id, $user_id);
         return $session_id;
     }
 
@@ -179,8 +192,6 @@ class PAXdesign_Customer_Chat_Bridge {
         $user_id = absint($user_id);
         $session_id = self::generate_session_id($user_id);
         self::link_session($user_id, $session_id, 'primary', '', true);
-        self::sync_chat_log_user($session_id, $user_id);
-        PAXdesign_Chat_Live::get_instance()->ensure_session($session_id);
         return $session_id;
     }
 
@@ -376,19 +387,45 @@ class PAXdesign_Customer_Chat_Bridge {
         return hash_hmac('sha256', $token, wp_salt('auth'));
     }
 
-    private static function ensure_primary_session($user_id) {
-        self::primary_session_id($user_id);
-    }
-
     private static function resolve_or_create_primary_session($user_id) {
         $existing = self::resolve_existing_session_from_logs($user_id);
         if ($existing !== '') {
             self::link_session($user_id, $existing, 'history', '', true);
-            self::sync_chat_log_user($existing, $user_id);
-            PAXdesign_Chat_Live::get_instance()->ensure_session($existing);
             return $existing;
         }
         return self::create_primary_session($user_id);
+    }
+
+    /**
+     * Empty poll payload for sessions that exist in chat_sessions but have no chat log yet.
+     *
+     * @return array<string, mixed>
+     */
+    public static function empty_poll_payload($session_id) {
+        return array(
+            'session_id'         => self::sanitize_session_id($session_id),
+            'handler'            => PAXdesign_Chat_Live::HANDLER_AI,
+            'handler_label'      => PAXdesign_Chat_Live::handler_label(PAXdesign_Chat_Live::HANDLER_AI, ''),
+            'admin_user_id'      => 0,
+            'admin_name'         => '',
+            'assigned_agent'     => null,
+            'customer_name'      => '',
+            'session_rating'     => 0,
+            'detected_service'   => '',
+            'updated_at'         => '',
+            'seq'                => 0,
+            'message_count'      => 0,
+            'last_read_seq'      => 0,
+            'admin_read_seq'     => 0,
+            'other_read_seq'     => 0,
+            'unread_staff_count' => 0,
+            'messages'           => array(),
+            'admin_typing'       => false,
+            'assistant_typing'   => false,
+            'user_typing'        => false,
+            'reactions'          => array(),
+            'customer_language'  => '',
+        );
     }
 
     private static function resolve_existing_session_from_logs($user_id) {
@@ -427,9 +464,12 @@ class PAXdesign_Customer_Chat_Bridge {
         $renewed = false;
         if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED) {
             $session_id = self::reopen_closed_session($session_id);
-            $live->ensure_session($session_id);
+            self::materialize_session($session_id, $user_id);
             $handler = $live->get_handler($session_id);
             $renewed = true;
+        } elseif (!$live->get_session_row($session_id)) {
+            $session_id = self::materialize_session($session_id, $user_id);
+            $handler = $live->get_handler($session_id);
         }
 
         if (!$live->is_human_queue($session_id)) {
@@ -449,8 +489,7 @@ class PAXdesign_Customer_Chat_Bridge {
             return $result;
         }
 
-        $live->ensure_session($session_id);
-        self::sync_chat_log_user($session_id, $user_id);
+        self::materialize_session($session_id, $user_id);
 
         $message_extra = array();
         if (!empty($extra['reply_to'])) {
@@ -503,9 +542,12 @@ class PAXdesign_Customer_Chat_Bridge {
         $renewed = false;
         if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED) {
             $session_id = self::reopen_closed_session($session_id);
-            $live->ensure_session($session_id);
+            self::materialize_session($session_id, $user_id);
             $handler = $live->get_handler($session_id);
             $renewed = true;
+        } elseif (!$live->get_session_row($session_id)) {
+            self::materialize_session($session_id, $user_id);
+            $handler = $live->get_handler($session_id);
         }
         if (!$live->is_human_queue($session_id)) {
             return new WP_Error('use_ai_stream', __('Attachments are available during human support.', 'paxdesign-booking'), array('status' => 409));
@@ -550,8 +592,7 @@ class PAXdesign_Customer_Chat_Bridge {
             }
         }
 
-        $live->ensure_session($session_id);
-        self::sync_chat_log_user($session_id, $user_id);
+        self::materialize_session($session_id, $user_id);
         $caption = sanitize_textarea_field($caption);
         $entry = $live->append_message($session_id, 'user', $caption, $message_extra);
         if (is_wp_error($entry)) {

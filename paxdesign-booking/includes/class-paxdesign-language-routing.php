@@ -75,11 +75,11 @@ class PAXdesign_Language_Routing {
     public static function live_handoff_thanks_message($lang) {
         switch (sanitize_key($lang)) {
             case 'en':
-                return 'Thank you. I am connecting you with a PAXDesign team member now.';
+                return 'Connecting you to a Live Agent...';
             case 'ar':
-                return 'شكراً لك. أقوم الآن بتحويلك إلى أحد موظفي PAXDesign.';
+                return 'جاري توصيلك بوكيل مباشر...';
             default:
-                return 'Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter.';
+                return 'Ich verbinde Sie mit einem Live-Agent...';
         }
     }
 

@@ -953,6 +953,7 @@ struct CustomerChatPoll: Decodable {
     let last_preview: String?
     let notice: String?
     let admin_typing: Bool?
+    let assistant_typing: Bool?
     let user_typing: Bool?
     let other_read_seq: Int?
     let last_read_seq: Int?
@@ -960,7 +961,7 @@ struct CustomerChatPoll: Decodable {
 
     enum CodingKeys: String, CodingKey {
         case session_id, handler, messages, message_count, last_preview, notice
-        case admin_typing, user_typing, other_read_seq, admin_read_seq
+        case admin_typing, assistant_typing, user_typing, other_read_seq, admin_read_seq
         case last_read_seq, unread_staff_count
     }
 
@@ -972,6 +973,7 @@ struct CustomerChatPoll: Decodable {
         last_preview: String?,
         notice: String? = nil,
         admin_typing: Bool? = nil,
+        assistant_typing: Bool? = nil,
         user_typing: Bool? = nil,
         other_read_seq: Int? = nil,
         last_read_seq: Int? = nil,
@@ -984,6 +986,7 @@ struct CustomerChatPoll: Decodable {
         self.last_preview = last_preview
         self.notice = notice
         self.admin_typing = admin_typing
+        self.assistant_typing = assistant_typing
         self.user_typing = user_typing
         self.other_read_seq = other_read_seq
         self.last_read_seq = last_read_seq
@@ -999,6 +1002,7 @@ struct CustomerChatPoll: Decodable {
         last_preview = try? container.decodeIfPresent(String.self, forKey: .last_preview)
         notice = try? container.decodeIfPresent(String.self, forKey: .notice)
         admin_typing = CustomerPortalDecode.optionalBool(container, .admin_typing)
+        assistant_typing = CustomerPortalDecode.optionalBool(container, .assistant_typing)
         user_typing = CustomerPortalDecode.optionalBool(container, .user_typing)
         if let other = CustomerPortalDecode.optionalInt(container, .other_read_seq), other > 0 {
             other_read_seq = other
@@ -1052,6 +1056,8 @@ struct CustomerStreamEvent: Decodable {
     let type: String
     let text: String?
     let message: CustomerChatPoll.ChatMessage?
+    let handler: String?
+    let notice: String?
 }
 
 struct CustomerEmptyResponse: Decodable {}

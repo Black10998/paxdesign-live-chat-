@@ -345,9 +345,14 @@ class PAXdesign_Customer_REST {
     public static function dashboard(WP_REST_Request $request) {
         $uid = PAXdesign_Customer_Auth::current_user_id();
         PAXdesign_Customer_Orders::link_bookings_for_user($uid);
-        $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
+        $session_id = PAXdesign_Customer_Chat_Bridge::lookup_primary_session_id($uid);
         $live = PAXdesign_Chat_Live::get_instance();
-        $poll = $live->get_poll_data($session_id, 0, true);
+        $poll = $live->get_session_row($session_id)
+            ? $live->get_poll_data($session_id, 0, true)
+            : PAXdesign_Customer_Chat_Bridge::empty_poll_payload($session_id);
+        if (is_wp_error($poll)) {
+            $poll = PAXdesign_Customer_Chat_Bridge::empty_poll_payload($session_id);
+        }
         return rest_ensure_response(array(
             'user'            => PAXdesign_Customer_Auth::user_payload($uid),
             'projects_active' => array_values(array_filter(PAXdesign_Customer_Projects::list_for_user($uid), function ($p) {
@@ -628,11 +633,12 @@ class PAXdesign_Customer_REST {
 
     public static function chat_session() {
         $uid = PAXdesign_Customer_Auth::current_user_id();
-        $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
-        $session_id = PAXdesign_Customer_Chat_Bridge::ensure_persistent_session_open($session_id, $uid);
-        $handler = PAXdesign_Chat_Live::get_instance()->get_handler($session_id);
+        $session_id = PAXdesign_Customer_Chat_Bridge::lookup_primary_session_id($uid);
+        $live = PAXdesign_Chat_Live::get_instance();
+        $row = $live->get_session_row($session_id);
+        $handler = $row ? $live->get_handler($session_id) : PAXdesign_Chat_Live::HANDLER_AI;
         $message_count = 0;
-        if ($session_id !== '' && class_exists('PAXdesign_Chat_Log')) {
+        if ($row && class_exists('PAXdesign_Chat_Log')) {
             global $wpdb;
             PAXdesign_Chat_Log::create_table();
             $table = PAXdesign_Chat_Log::table_name();
@@ -661,7 +667,9 @@ class PAXdesign_Customer_REST {
         }
         $force_new = rest_sanitize_boolean($params['new_conversation'] ?? false);
         $session_id = PAXdesign_Customer_Chat_Bridge::renew_closed_session($uid, $closed_session_id, $force_new);
-        PAXdesign_Chat_Live::get_instance()->ensure_session($session_id);
+        if ($force_new) {
+            PAXdesign_Customer_Chat_Bridge::materialize_session($session_id, $uid);
+        }
         return rest_ensure_response(array(
             'session_id' => $session_id,
             'handler'    => PAXdesign_Chat_Live::get_instance()->get_handler($session_id),
@@ -693,7 +701,7 @@ class PAXdesign_Customer_REST {
         $uid = PAXdesign_Customer_Auth::current_user_id();
         $session_id = sanitize_text_field($request->get_param('session_id') ?? '');
         if ($session_id === '') {
-            $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
+            $session_id = PAXdesign_Customer_Chat_Bridge::lookup_primary_session_id($uid);
         }
         if (!PAXdesign_Customer_Chat_Bridge::user_owns_session($uid, $session_id)) {
             return new WP_Error('forbidden', __('You do not have access to this conversation.', 'paxdesign-booking'), array('status' => 403));
@@ -701,17 +709,19 @@ class PAXdesign_Customer_REST {
         $since = max(0, (int) $request->get_param('since'));
         $full = !empty($request['full']);
         $live = PAXdesign_Chat_Live::get_instance();
+        if (!$live->get_session_row($session_id)) {
+            $data = PAXdesign_Customer_Chat_Bridge::empty_poll_payload($session_id);
+            $data['session_id'] = $session_id;
+            return rest_ensure_response($data);
+        }
         $session_id = PAXdesign_Customer_Chat_Bridge::ensure_persistent_session_open($session_id, $uid);
         $data = $live->get_poll_data($session_id, $since, $full, 'user');
         if (is_wp_error($data)) {
             if ($data->get_error_code() === 'not_found') {
-                $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
-                PAXdesign_Chat_Live::get_instance()->ensure_session($session_id);
-                $data = $live->get_poll_data($session_id, $since, $full, 'user');
+                $data = PAXdesign_Customer_Chat_Bridge::empty_poll_payload($session_id);
+            } else {
+                return $data;
             }
-        }
-        if (is_wp_error($data)) {
-            return $data;
         }
         if (isset($data['messages']) && is_array($data['messages'])) {
             $data['messages'] = PAXdesign_Customer_Chat_Bridge::filter_customer_lifecycle_messages($data['messages']);
@@ -751,13 +761,12 @@ class PAXdesign_Customer_REST {
         $params = $request->get_json_params() ?: $request->get_params();
         $session_id = sanitize_text_field($params['session_id'] ?? '');
         if ($session_id === '') {
-            $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
+            $session_id = PAXdesign_Customer_Chat_Bridge::lookup_primary_session_id($uid);
         }
         if (!PAXdesign_Customer_Chat_Bridge::user_owns_session($uid, $session_id)) {
             return new WP_Error('forbidden', __('You do not have access to this conversation.', 'paxdesign-booking'), array('status' => 403));
         }
-
-        PAXdesign_Customer_Chat_Bridge::sync_chat_log_user($session_id, $uid);
+        PAXdesign_Customer_Chat_Bridge::materialize_session($session_id, $uid);
 
         $result = PAXdesign_Chat::get_instance()->stream_authenticated_customer_chat(
             $session_id,

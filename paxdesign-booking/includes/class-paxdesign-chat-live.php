@@ -1068,15 +1068,33 @@ class PAXdesign_Chat_Live {
         }
 
         if (empty($messages)) {
-            $messages = array(
-                array(
-                    'id'            => 1,
-                    'role'          => 'system',
-                    'content'       => 'Chat-Session gestartet.',
-                    'client_msg_id' => 'sys:session_started',
-                    'ts'            => time(),
-                ),
-            );
+            global $wpdb;
+            PAXdesign_Chat_Log::create_table();
+            self::upgrade_schema();
+            $table = PAXdesign_Chat_Log::table_name();
+            $existing = $wpdb->get_row($wpdb->prepare(
+                "SELECT id FROM $table WHERE session_id = %s LIMIT 1",
+                $session_id
+            ));
+            if (!$existing) {
+                $now = current_time('mysql');
+                $wpdb->insert(
+                    $table,
+                    array(
+                        'session_id'           => $session_id,
+                        'started_at'           => $now,
+                        'updated_at'           => $now,
+                        'messages'             => '[]',
+                        'handler'              => self::HANDLER_AI,
+                        'detected_service'     => '',
+                        'booking_triggered'    => 0,
+                        'consultation_started' => 0,
+                        'message_count'        => 0,
+                    ),
+                    array('%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d')
+                );
+            }
+            return $this->get_session_row($session_id);
         }
 
         PAXdesign_Chat_Log::get_instance()->save_session(array(
@@ -1084,7 +1102,7 @@ class PAXdesign_Chat_Live {
             'messages'             => $messages,
             'detected_service'     => '',
             'booking_triggered'    => false,
-            'consultation_started' => true,
+            'consultation_started' => false,
         ));
 
         return $this->get_session_row($session_id);
@@ -2658,6 +2676,8 @@ class PAXdesign_Chat_Live {
         global $wpdb;
         $update = array(
             'handler'       => self::HANDLER_LIVE,
+            'admin_user_id' => 0,
+            'admin_name'    => '',
             'updated_at'    => current_time('mysql'),
             'customer_name' => $customer_name,
         );

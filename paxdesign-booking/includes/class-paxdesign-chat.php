@@ -59,7 +59,7 @@ class PAXdesign_Chat {
             : array('logged_in' => is_user_logged_in(), 'verified' => false, 'id' => get_current_user_id());
         $chat_session_id = '';
         if (!empty($auth_payload['logged_in']) && class_exists('PAXdesign_Customer_Chat_Bridge')) {
-            $chat_session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id((int) $auth_payload['id']);
+            $chat_session_id = PAXdesign_Customer_Chat_Bridge::lookup_primary_session_id((int) $auth_payload['id']);
         }
         $chat_message_count = 0;
         if ($chat_session_id !== '' && class_exists('PAXdesign_Chat_Log')) {
@@ -91,7 +91,7 @@ class PAXdesign_Chat {
                 'register'    => __('Create Account', 'paxdesign-booking'),
                 'verifyHint'  => __('Verify your email to start chatting.', 'paxdesign-booking'),
             ),
-            'quickActions'     => $this->get_quick_actions(),
+            'quickActions'     => array(),
             'contactUrl'       => get_option('paxdesign_booking_contact_url', home_url('/')),
             'phone'            => $this->get_contact_phone(),
             'email'            => $this->get_contact_email(),
@@ -107,56 +107,16 @@ class PAXdesign_Chat {
             'customerAgentLabel' => 'Live Chat',
             'liveEntryPrompt'    => 'Möchten Sie mit einem Live-Agent chatten?',
             'sounds'             => array(
-                'typing'    => 'https://paxdesign.at/wp-content/uploads/2026/06/freesound_community-writing-a-text-message-41141.mp3',
-                'openClose' => 'https://paxdesign.at/wp-content/uploads/2026/06/u_8e8ungop1x-intro_cinematic-270840.mp3',
-                'incoming'  => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-incoming.wav',
+                'typing'    => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-typing.wav',
+                'openClose' => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-live-request.wav',
+                'incoming'  => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-message.wav',
+                'send'      => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-send.wav',
             ),
         ));
     }
 
     public function get_quick_actions() {
-        $cta = $this->get_cta_text();
-        return array(
-            array(
-                'label'   => 'Live Chat',
-                'message' => 'Ich möchte mit einem Live-Agent sprechen.',
-                'intent'  => 'live',
-            ),
-            array(
-                'label'   => 'Website erstellen',
-                'message' => 'Ich möchte eine Website erstellen lassen.',
-            ),
-            array(
-                'label'   => 'AI Chatbot',
-                'message' => 'Ich interessiere mich für einen AI Chatbot.',
-            ),
-            array(
-                'label'   => 'Termin vereinbaren',
-                'message' => 'Ich möchte einen Termin zur kostenlosen Erstberatung vereinbaren.',
-                'intent'  => 'booking',
-            ),
-            array(
-                'label'   => 'Leistungen',
-                'message' => 'Welche Leistungen bietet PAXDesign an?',
-            ),
-            array(
-                'label'   => 'Website beschleunigen',
-                'message' => 'Meine Website ist langsam. Was kann PAXDesign tun?',
-            ),
-            array(
-                'label'   => 'IT-Sicherheit',
-                'message' => 'Ich möchte die IT-Sicherheit verbessern.',
-            ),
-            array(
-                'label'   => 'App entwickeln',
-                'message' => 'Ich möchte eine mobile App entwickeln lassen.',
-            ),
-            array(
-                'label'   => $cta,
-                'message' => 'Ich möchte ' . strtolower($cta) . '.',
-                'intent'  => 'booking',
-            ),
-        );
+        return array();
     }
 
     public function get_greeting() {

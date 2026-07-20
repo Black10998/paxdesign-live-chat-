@@ -212,8 +212,12 @@
       if (payload.active && payload.who === 'admin' && chatHandler === 'admin') {
         if (!adminTypingEl) showAdminTypingIndicator();
         syncTypingSound(true);
+      } else if (payload.active && payload.who === 'assistant' && chatHandler === 'ai' && !isStreaming) {
+        if (!typingEl) showTyping();
       } else if (payload.who === 'admin') {
         stopAdminTypingFeedback();
+      } else if (payload.who === 'assistant' && !isStreaming) {
+        removeTyping();
       }
     }
     if (data.type === 'handler' && payload.handler) {
@@ -540,7 +544,15 @@
     initCustomerClose();
     initRatingUi();
     initSoundToggle();
-    initPlusToggle();
+    if (!isPersistentAccountChat()) {
+      initPlusToggle();
+    } else {
+      root.classList.add('paxdesign-chat-direct-mode');
+      if (entryEl) entryEl.hidden = true;
+      if (quickActions) quickActions.hidden = true;
+      var plusWrap = root.querySelector('.paxdesign-booking-chat-plus-wrap');
+      if (plusWrap) plusWrap.hidden = true;
+    }
     initAuthGate();
     purgeGuestChatStorage();
     bindAudioUnlock();
@@ -557,7 +569,6 @@
     }
     boot.then(function () {
       if (!sessionRestored) updateEntryUi();
-      logConsultationStarted();
       updateInputState();
     });
   }
@@ -627,19 +638,24 @@
 
   function updateEntryUi() {
     inferEntryChoiceFromHandler();
+    if (isPersistentAccountChat()) {
+      if (!entryChoice && chatHandler !== 'live_request' && chatHandler !== 'admin') {
+        entryChoice = 'ai';
+      }
+      if (entryEl) entryEl.hidden = true;
+      if (welcomeEl) welcomeEl.hidden = true;
+      if (quickActions) quickActions.hidden = true;
+      root.classList.add('paxdesign-chat-direct-mode');
+      root.classList.remove('paxdesign-chat-entry-active');
+      if (form) form.classList.remove('paxdesign-is-organizer-mode');
+      return;
+    }
     var hasMessages = messages.length > 0 || root.classList.contains('paxdesign-has-chat-messages');
     if (threadEl && threadEl.children.length > 0) {
       hasMessages = true;
     }
     var showEntry = false;
-    if (isPersistentAccountChat()) {
-      if (!entryChoice && chatHandler !== 'live_request' && chatHandler !== 'admin') {
-        entryChoice = 'ai';
-      }
-      if (sessionLoading || sessionRestored || hasExistingConversation()) {
-        showEntry = false;
-      }
-    } else if (!canUseChat()) {
+    if (!canUseChat()) {
       showEntry = false;
     } else {
       showEntry = !hasMessages && !entryChoice && chatHandler !== 'closed';
@@ -1905,6 +1921,10 @@
         } else if (data.admin_typing && chatHandler === 'admin') {
           if (!adminTypingEl) showAdminTypingIndicator();
           syncTypingSound(true);
+        } else if (data.assistant_typing && chatHandler === 'ai' && !isStreaming) {
+          if (!typingEl) showTyping();
+        } else if (!data.assistant_typing && chatHandler === 'ai' && !isStreaming) {
+          removeTyping();
         } else {
           stopAdminTypingFeedback();
         }
@@ -2882,8 +2902,12 @@
   }
 
   function initQuickActions() {
-    if (!config.quickActions || !quickActions) return;
+    if (!quickActions) return;
     quickActions.innerHTML = '';
+    if (!config.quickActions || !config.quickActions.length) {
+      quickActions.hidden = true;
+      return;
+    }
     config.quickActions.forEach(function (action) {
       var btn = document.createElement('button');
       btn.type = 'button';

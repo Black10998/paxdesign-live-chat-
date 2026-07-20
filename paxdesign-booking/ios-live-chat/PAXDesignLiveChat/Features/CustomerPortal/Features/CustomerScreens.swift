@@ -353,6 +353,8 @@ struct CustomerChatView: View {
     @State private var showAuth = false
     @State private var authMode: CustomerChatAuthMode = .login
     @State private var isEndingLiveChat = false
+    @State private var streamingAssistant = ""
+    @State private var isStreamingAI = false
 
     private enum CustomerChatAuthMode {
         case login, register
@@ -501,6 +503,26 @@ struct CustomerChatView: View {
                                     showReadReceipts: isHumanQueue
                                 ).id(message.id)
                             }
+                            if poll?.assistant_typing == true || (isStreamingAI && streamingAssistant.isEmpty), !isHumanQueue {
+                                CustomerChatTypingIndicator(label: String(localized: "Assistant is typing…"))
+                                    .id("ai-typing")
+                            }
+                            if !streamingAssistant.isEmpty {
+                                CustomerChatBubble(
+                                    message: CustomerChatPoll.ChatMessage(
+                                        seq: -1,
+                                        role: "assistant",
+                                        content: streamingAssistant,
+                                        sender_name: nil,
+                                        sender_id: nil,
+                                        sender_avatar: nil,
+                                        sender_role: "assistant"
+                                    ),
+                                    otherReadSeq: 0,
+                                    showReadReceipts: false
+                                )
+                                .id("streaming")
+                            }
                             if poll?.admin_typing == true, isHumanQueue {
                                 CustomerChatTypingIndicator(label: String(localized: "Support is typing…"))
                                     .id("typing")
@@ -514,6 +536,8 @@ struct CustomerChatView: View {
                 .onChange(of: displayMessages.count) { _ in scrollToBottom(proxy: proxy, animated: true) }
                 .onChange(of: lastSeq) { _ in scrollToBottom(proxy: proxy, animated: true) }
                 .onChange(of: poll?.admin_typing) { _ in scrollToBottom(proxy: proxy, animated: true) }
+                .onChange(of: poll?.assistant_typing) { _ in scrollToBottom(proxy: proxy, animated: true) }
+                .onChange(of: streamingAssistant) { _ in scrollToBottom(proxy: proxy, animated: true) }
                 .onChange(of: isInputFocused) { focused in
                     if focused { scrollToBottom(proxy: proxy, animated: true) }
                 }
@@ -687,7 +711,11 @@ struct CustomerChatView: View {
 
     private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool = true) {
         let scroll = {
-            if poll?.admin_typing == true {
+            if !streamingAssistant.isEmpty {
+                proxy.scrollTo("streaming", anchor: .bottom)
+            } else if poll?.assistant_typing == true || (isStreamingAI && streamingAssistant.isEmpty) {
+                proxy.scrollTo("ai-typing", anchor: .bottom)
+            } else if poll?.admin_typing == true {
                 proxy.scrollTo("typing", anchor: .bottom)
             } else {
                 proxy.scrollTo("chat-bottom", anchor: .bottom)
@@ -1115,18 +1143,44 @@ struct CustomerChatView: View {
         notice = nil
         defer {
             isSending = false
+            isStreamingAI = false
         }
         do {
-            let response = try await sendMessageWithRenewFallback(
-                text,
-                clientMsgID: clientMsgID,
-                assistantClientMsgID: assistantClientMsgID
-            )
-            isInputFocused = false
-            applySendResponse(response)
-            await refresh(full: false)
+            if isHumanQueue {
+                let response = try await sendMessageWithRenewFallback(
+                    text,
+                    clientMsgID: clientMsgID,
+                    assistantClientMsgID: assistantClientMsgID
+                )
+                isInputFocused = false
+                applySendResponse(response)
+                await refresh(full: false)
+            } else {
+                isStreamingAI = true
+                streamingAssistant = ""
+                try await api.streamChatMessage(text, sessionID: poll?.session_id) { event in
+                    if event.type == "text", let chunk = event.text {
+                        streamingAssistant += chunk
+                    }
+                    if event.type == "done", let message = event.message {
+                        streamingAssistant = message.content
+                    }
+                    if event.type == "handoff" {
+                        if let handler = event.handler {
+                            applyHandlerUpdate(handler)
+                        }
+                        if let noticeText = event.notice, !noticeText.isEmpty {
+                            notice = noticeText
+                        }
+                    }
+                }
+                streamingAssistant = ""
+                isInputFocused = false
+                await refresh(full: true)
+            }
             PAXHaptics.light()
         } catch {
+            streamingAssistant = ""
             await handleChatError(error, savedDraft: savedDraft, duringSend: true)
             PAXHaptics.warning()
         }
