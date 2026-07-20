@@ -510,13 +510,45 @@ final class ChatCoordinator: ObservableObject {
         isLoading = true
         defer { isLoading = false }
         do {
-            try await api.takeover(session.sessionId)
+            let response = try await api.takeover(session.sessionId)
             acknowledgeIncomingRequest(session.sessionId)
+            applyHandlerTransition(response, sessionId: session.sessionId, auth: auth)
             await refreshSessions(auth: auth)
             PAXHaptics.success()
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func applyHandlerTransition(_ response: HandlerTransitionResponse, sessionId: String, auth: AuthStore) {
+        let thread = ChatThreadRegistry.shared.bookingThread(sessionId: sessionId)
+        thread.applyHandlerTransition(response, auth: auth)
+        patchBookingSessionHandlerFromTransition(sessionId: sessionId, response: response)
+    }
+
+    private func patchBookingSessionHandlerFromTransition(sessionId: String, response: HandlerTransitionResponse) {
+        guard let index = sessions.firstIndex(where: { $0.sessionId == sessionId }) else { return }
+        let label = localizedHandlerLabel(
+            response.handler,
+            adminName: response.adminName ?? "",
+            fallback: sessions[index].handlerLabel
+        )
+        let updated = LiveSessionPatch.patched(
+            sessions[index],
+            handler: response.handler,
+            handlerLabel: label,
+            adminName: response.adminName,
+            message: response.message,
+            seq: response.message?.id ?? 0
+        )
+        sessions.remove(at: index)
+        sessions.insert(updated, at: 0)
+        if let message = response.message, message.id > 0 {
+            noteSessionSeq(sessionId, seq: message.id)
+        }
+        updateUnreadCounts()
+        persistSessionListCache()
+        postSessionSync(sessionId: sessionId, inlineMessage: response.message)
     }
 
     func declineLiveRequest(auth: AuthStore, session: LiveSession) async {
@@ -930,6 +962,20 @@ final class ChatThreadModel: ObservableObject {
             if !incomingAdmin.isEmpty {
                 adminName = incomingAdmin
             }
+            let inlineMessages = StreamPayload.messages(from: event.payload)
+            if let inline = inlineMessages.first {
+                insertIncomingMessages([inline], source: "handler-sse")
+            }
+            await poll(auth: auth)
+            var userInfo: [String: Any] = ["session_id": sessionId]
+            if let inline = event.payload["message"] {
+                userInfo["inline_message"] = inline
+            }
+            NotificationCenter.default.post(
+                name: .paxSessionSync,
+                object: nil,
+                userInfo: userInfo
+            )
         case "link_scan_updated":
             if let updated = StreamPayload.messages(from: event.payload).first {
                 applyLinkScanUpdate(updated)
@@ -1601,11 +1647,8 @@ final class ChatThreadModel: ObservableObject {
         }
         if handler != "admin", auth.canTakeOverChats {
             do {
-                try await api.takeover(sessionId)
-                handler = "admin"
-                if adminName.isEmpty {
-                    adminName = auth.profile?.displayName ?? L10n.ChatAgent
-                }
+                let response = try await api.takeover(sessionId)
+                applyHandlerTransition(response, auth: auth)
             } catch {
                 errorMessage = error.localizedDescription
                 draft = text
@@ -1849,6 +1892,24 @@ final class ChatThreadModel: ObservableObject {
         await reloadFullHistory(auth: auth)
         if handler == "admin" {
             await loadQuickReplies(auth: auth)
+        } else {
+            clearSuggestions()
+        }
+    }
+
+    func applyHandlerTransition(_ response: HandlerTransitionResponse, auth: AuthStore) {
+        if !response.handler.isEmpty {
+            handler = response.handler
+        }
+        if let name = response.adminName, !name.isEmpty {
+            adminName = name
+        }
+        if let message = response.message {
+            insertIncomingMessages([message], source: "takeover-response")
+            pollSeq = max(pollSeq, message.id)
+        }
+        if handler == "admin" {
+            Task { await loadQuickReplies(auth: auth) }
         } else {
             clearSuggestions()
         }

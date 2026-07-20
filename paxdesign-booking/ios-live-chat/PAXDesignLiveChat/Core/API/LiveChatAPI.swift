@@ -308,11 +308,11 @@ final class LiveChatAPI {
         return try await perform(authRequest(url: url), endpoint: "poll:\(sessionId)", as: PollResponse.self)
     }
 
-    func takeover(_ sessionId: String) async throws {
+    func takeover(_ sessionId: String) async throws -> HandlerTransitionResponse {
         guard let url = liveAdminURL(path: "sessions/\(sessionId)/takeover") else {
             throw LiveChatAPIError.invalidURL
         }
-        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "takeover", as: EmptyResponse.self)
+        return try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "takeover", as: HandlerTransitionResponse.self)
     }
 
     func decline(_ sessionId: String) async throws {
@@ -351,11 +351,11 @@ final class LiveChatAPI {
         _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "reopen", as: EmptyResponse.self)
     }
 
-    func release(_ sessionId: String) async throws {
+    func release(_ sessionId: String) async throws -> HandlerTransitionResponse {
         guard let url = liveAdminURL(path: "sessions/\(sessionId)/release") else {
             throw LiveChatAPIError.invalidURL
         }
-        _ = try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "release", as: EmptyResponse.self)
+        return try await perform(authRequest(url: url, method: "POST", body: Data()), endpoint: "release", as: HandlerTransitionResponse.self)
     }
 
     func sendMessage(
@@ -1398,11 +1398,6 @@ final class LiveChatAPI {
 private struct WPErrorResponse: Codable {
     let code: String
     let message: String
-}
-
-private struct HandlerTransitionResponse: Codable {
-    let handler: String
-    let message: LiveMessage?
 }
 
 private struct EmptyResponse: Codable {}

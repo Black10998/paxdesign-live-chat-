@@ -146,6 +146,7 @@
   var LIVE_QUALIFY_TEXT   = 'Gerne. Damit ich Sie richtig weiterleiten kann: Worum geht es kurz — Website, AI Chatbot, Booking, Support oder ein anderes Thema?';
   var POLL_INTERVAL_MS    = 1200;
   var POLL_INTERVAL_OPEN_MS = 450;
+  var POLL_INTERVAL_HUMAN_MS = 250;
   var POLL_INTERVAL_BACKGROUND_MS = 2000;
   var STREAM_RESTART_MS   = 120;
   var widgetOpen          = false;
@@ -237,6 +238,7 @@
   function onRealtimeHandlerChange(handler, name) {
     applyHandlerState(handler, name || '');
     pollUpdates();
+    scheduleLivePolling();
     scheduleCustomerStreamRestart(STREAM_RESTART_MS);
   }
 
@@ -1452,6 +1454,23 @@
     return 'Das Gespräch wurde an den KI-Assistenten zurückgegeben.';
   }
 
+  function staffTakeoverNoticeText() {
+    if (config && config.i18n && config.i18n.staffTakeover) {
+      return String(config.i18n.staffTakeover);
+    }
+    return 'Ein Mitarbeiter hat den Live-Chat übernommen.';
+  }
+
+  function injectStaffTakeoverNotice() {
+    var notice = staffTakeoverNoticeText();
+    var dedupKey = 'sys:staff_takeover';
+    if (domClientMsgIds[dedupKey]) return;
+    var tempId = nextLocalId();
+    renderMessageDom('system', notice, tempId, { skipPush: true });
+    rememberMessageIdentity({ id: tempId, role: 'system', content: notice, client_msg_id: dedupKey });
+    messages.push({ role: 'system', content: notice, id: tempId, client_msg_id: dedupKey });
+  }
+
   function injectStaffReturnedToAiNotice() {
     var notice = staffReturnedToAiNoticeText();
     var dedupKey = 'sys:staff_returned_to_ai';
@@ -1471,6 +1490,7 @@
       'Der KI-Assistent übernimmt den Chat wieder.': 'sys:ai_reclaimed',
       'The conversation has been returned to the KI Assistant.': 'sys:staff_returned_to_ai',
       'Das Gespräch wurde an den KI-Assistenten zurückgegeben.': 'sys:staff_returned_to_ai',
+      'Ein Mitarbeiter hat den Live-Chat übernommen.': 'sys:staff_takeover',
       'Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.': 'sys:live_agent_notified',
       'Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter.': 'sys:live_transfer_thanks'
     };
@@ -1910,7 +1930,12 @@
       pollTimer = null;
       return;
     }
-    var interval = widgetOpen ? POLL_INTERVAL_OPEN_MS : POLL_INTERVAL_BACKGROUND_MS;
+    var interval = POLL_INTERVAL_BACKGROUND_MS;
+    if (widgetOpen) {
+      interval = (chatHandler === 'admin' || chatHandler === 'live_request')
+        ? POLL_INTERVAL_HUMAN_MS
+        : POLL_INTERVAL_OPEN_MS;
+    }
     pollUpdates();
     pollTimer = window.setInterval(pollUpdates, interval);
   }
@@ -1945,7 +1970,14 @@
     if (handler === 'admin') {
       abortStream();
       removeTyping();
-      if (transitioningToAdmin) playAgentJoinedSoundOnce();
+      if (transitioningToAdmin) {
+        playAgentJoinedSoundOnce();
+        injectStaffTakeoverNotice();
+      }
+      if (previousHandler === 'live_request') {
+        liveAgentPhase = 2;
+        saveLiveAgentPhase();
+      }
     }
     if (handler === 'ai') {
       resetLiveAgentPhase();
@@ -1977,6 +2009,7 @@
     updateHandlerUi();
     updateInputState();
     updateEndButtonUi();
+    scheduleLivePolling();
     scheduleCustomerStreamRestart(STREAM_RESTART_MS);
   }
 

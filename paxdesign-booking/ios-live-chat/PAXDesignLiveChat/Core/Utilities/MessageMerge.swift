@@ -23,6 +23,8 @@ enum MessageMerge {
             return "sys:staff_returned_to_ai"
         case "Das Gespräch wurde an den KI-Assistenten zurückgegeben.":
             return "sys:staff_returned_to_ai"
+        case "Ein Mitarbeiter hat den Live-Chat übernommen.":
+            return "sys:staff_takeover"
         case "Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.":
             return "sys:live_agent_notified"
         case "Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter.":

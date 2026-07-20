@@ -159,6 +159,7 @@ class PAXdesign_Message_Store {
                 'Der KI-Assistent übernimmt den Chat wieder.' => 'sys:ai_reclaimed',
                 'The conversation has been returned to the KI Assistant.' => 'sys:staff_returned_to_ai',
                 'Das Gespräch wurde an den KI-Assistenten zurückgegeben.' => 'sys:staff_returned_to_ai',
+                'Ein Mitarbeiter hat den Live-Chat übernommen.' => 'sys:staff_takeover',
                 'Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.' => 'sys:live_agent_notified',
                 'Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter.' => 'sys:live_transfer_thanks',
             );

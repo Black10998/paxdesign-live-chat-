@@ -3506,10 +3506,18 @@ class PAXdesign_Chat_Live {
             array('%d')
         );
 
-        $notice = sprintf('%s ist dem Chat beigetreten.', $admin_name);
-        $entry  = $this->append_message($session_id, 'system', $notice);
+        $notice = 'Ein Mitarbeiter hat den Live-Chat übernommen.';
+        $entry  = $this->append_message(
+            $session_id,
+            'system',
+            $notice,
+            array('client_msg_id' => 'sys:staff_takeover')
+        );
 
-        $this->emit_handler_event($session_id, self::HANDLER_ADMIN, array(
+        $this->clear_typing($session_id, 'user');
+        $this->clear_typing($session_id, 'admin');
+        $this->persist_session_last_preview($session_id);
+        $this->emit_handler_event_with_message($session_id, self::HANDLER_ADMIN, $entry, array(
             'admin_name'    => $admin_name,
             'admin_user_id' => (int) $user->ID,
         ));
