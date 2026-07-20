@@ -100,6 +100,102 @@ class PAXdesign_Language_Routing {
     }
 
     /**
+     * Resolve the customer's language for a live-chat session row.
+     *
+     * @param object|null $row
+     * @return string de|en|ar
+     */
+    public static function session_customer_language($row) {
+        $lang = self::session_language_from_row($row);
+        if ($lang !== '' && in_array($lang, self::SUPPORTED, true)) {
+            return $lang;
+        }
+        return 'de';
+    }
+
+    /**
+     * Localized customer-facing system notice (takeover, release, close, reopen, …).
+     *
+     * @param string               $key    staff_takeover|staff_returned_to_ai|chat_closed|chat_reopened|…
+     * @param string               $lang   de|en|ar
+     * @param array<string, mixed> $params Optional placeholders (e.g. admin_name).
+     */
+    public static function system_notice($key, $lang, $params = array()) {
+        $key  = sanitize_key((string) $key);
+        $lang = sanitize_key((string) $lang);
+        if ($lang === '' || !in_array($lang, self::SUPPORTED, true)) {
+            $lang = 'de';
+        }
+
+        switch ($key) {
+            case 'staff_takeover':
+                switch ($lang) {
+                    case 'en':
+                        return 'A team member has taken over the live chat.';
+                    case 'ar':
+                        return 'قام أحد موظفينا بتولي الدردشة المباشرة.';
+                    default:
+                        return 'Ein Mitarbeiter hat den Live-Chat übernommen.';
+                }
+            case 'staff_returned_to_ai':
+                switch ($lang) {
+                    case 'en':
+                        return 'The conversation has been returned to the KI Assistant.';
+                    case 'ar':
+                        return 'تم إرجاع المحادثة إلى مساعد KI.';
+                    default:
+                        return 'Das Gespräch wurde an den KI-Assistenten zurückgegeben.';
+                }
+            case 'chat_closed':
+                switch ($lang) {
+                    case 'en':
+                        return 'This chat has been closed. You can start a new conversation anytime.';
+                    case 'ar':
+                        return 'تم إغلاق هذه الدردشة. يمكنك بدء محادثة جديدة في أي وقت.';
+                    default:
+                        return 'Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten.';
+                }
+            case 'chat_reopened':
+                $admin_name = isset($params['admin_name']) ? sanitize_text_field((string) $params['admin_name']) : '';
+                switch ($lang) {
+                    case 'en':
+                        return 'The chat has been reopened. ' . $admin_name . ' is here for you.';
+                    case 'ar':
+                        return 'تم إعادة فتح الدردشة. ' . $admin_name . ' متاح لمساعدتك.';
+                    default:
+                        return 'Der Chat wurde wieder geöffnet. ' . $admin_name . ' ist wieder für Sie da.';
+                }
+            case 'customer_released_to_ai':
+                switch ($lang) {
+                    case 'en':
+                        return 'The KI Assistant is back for you. Feel free to keep messaging anytime.';
+                    case 'ar':
+                        return 'مساعد KI متاح لك مجدداً. يمكنك متابعة المراسلة في أي وقت.';
+                    default:
+                        return 'Der KI-Assistent ist wieder für Sie da. Schreiben Sie jederzeit weiter.';
+                }
+            default:
+                return '';
+        }
+    }
+
+    /**
+     * All localized variants for a system notice key (dedup / client-side matching).
+     *
+     * @return string[]
+     */
+    public static function system_notice_variants($key) {
+        $variants = array();
+        foreach (self::SUPPORTED as $lang) {
+            $text = self::system_notice($key, $lang, array('admin_name' => ''));
+            if ($text !== '') {
+                $variants[] = $text;
+            }
+        }
+        return $variants;
+    }
+
+    /**
      * @param array<int, array<string, mixed>> $messages
      * @return string
      */

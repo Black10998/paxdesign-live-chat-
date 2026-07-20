@@ -106,6 +106,7 @@ class PAXdesign_Chat {
             'liveAgent'        => PAXdesign_Chat_Live::get_agent_public_config(),
             'customerAgentLabel' => 'Live Chat',
             'liveEntryPrompt'    => 'Möchten Sie mit einem Live-Agent chatten?',
+            'i18n'               => self::chat_widget_i18n(),
             'sounds'             => array(
                 'typing'    => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-typing.wav',
                 'openClose' => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-live-request.wav',
@@ -154,6 +155,28 @@ class PAXdesign_Chat {
 
     public function is_auto_booking_enabled() {
         return (bool) get_option('paxdesign_chat_auto_booking', true);
+    }
+
+    /**
+     * Localized strings for the website chat widget (de / en / ar).
+     *
+     * @return array<string, array<string, string>>
+     */
+    private static function chat_widget_i18n() {
+        if (!class_exists('PAXdesign_Language_Routing')) {
+            return array();
+        }
+        $keys = array('staff_takeover', 'staff_returned_to_ai', 'chat_closed');
+        $out  = array();
+        foreach ($keys as $key) {
+            $camel = lcfirst(str_replace('_', '', ucwords($key, '_')));
+            $out[$camel] = array(
+                'de' => PAXdesign_Language_Routing::system_notice($key, 'de'),
+                'en' => PAXdesign_Language_Routing::system_notice($key, 'en'),
+                'ar' => PAXdesign_Language_Routing::system_notice($key, 'ar'),
+            );
+        }
+        return $out;
     }
 
     public function get_chat_settings_for_prompt() {

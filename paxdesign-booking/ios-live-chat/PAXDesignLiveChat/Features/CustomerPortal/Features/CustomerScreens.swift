@@ -649,6 +649,7 @@ struct CustomerChatView: View {
         }
         .onDisappear {
             isInputFocused = false
+            CustomerChatBadgeStore.shared.isChatForeground = false
             pollTask?.cancel()
             streamTask?.cancel()
             typingTask?.cancel()
@@ -660,6 +661,7 @@ struct CustomerChatView: View {
         }
         .onAppear {
             AppRefreshPolicy.setActiveSession(poll?.session_id)
+            CustomerChatBadgeStore.shared.isChatForeground = true
             CustomerChatBadgeStore.shared.clear()
         }
         .onChange(of: scenePhase) { phase in
@@ -896,11 +898,11 @@ struct CustomerChatView: View {
     }
 
     private func staffTakeoverNotice(adminName: String?) -> String {
-        String(localized: "Ein Mitarbeiter hat den Live-Chat übernommen.")
+        String(localized: "customer.chat.staff_takeover", defaultValue: "A team member has taken over the live chat.")
     }
 
     private func staffReturnedToAiNotice() -> String {
-        String(localized: "Das Gespräch wurde an den KI-Assistenten zurückgegeben.")
+        String(localized: "customer.chat.staff_returned_to_ai", defaultValue: "The conversation has been returned to the KI Assistant.")
     }
 
     private func applyTypingUpdate(_ payload: [String: Any]) {
@@ -1109,7 +1111,7 @@ struct CustomerChatView: View {
                                 applyInlineMessage(message)
                                 if message.role == "admin" || message.role == "assistant" {
                                     if navigation.selectedTab != .chat {
-                                        CustomerChatBadgeStore.shared.noteIncomingStaffMessage()
+                                        CustomerChatBadgeStore.shared.noteIncomingStaffMessage(seq: message.seq, role: message.role)
                                     } else {
                                         CustomerChatBadgeStore.shared.clear()
                                     }

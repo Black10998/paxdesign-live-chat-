@@ -13,17 +13,27 @@ enum MessageMerge {
             return "sys:session_started"
         case "Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten.":
             return "sys:chat_closed"
+        case "This chat has been closed. You can start a new conversation anytime.":
+            return "sys:chat_closed"
+        case "تم إغلاق هذه الدردشة. يمكنك بدء محادثة جديدة في أي وقت.":
+            return "sys:chat_closed"
         case "Der Kunde hat das Gespräch beendet.":
             return "sys:customer_closed"
         case "Der KI-Assistent ist wieder für Sie da. Schreiben Sie jederzeit weiter.":
             return "sys:customer_released_to_ai"
-        case "Der KI-Assistent übernimmt den Chat wieder.":
-            return "sys:ai_reclaimed"
+        case "The KI Assistant is back for you. Feel free to keep messaging anytime.":
+            return "sys:customer_released_to_ai"
         case "The conversation has been returned to the KI Assistant.":
             return "sys:staff_returned_to_ai"
         case "Das Gespräch wurde an den KI-Assistenten zurückgegeben.":
             return "sys:staff_returned_to_ai"
+        case "تم إرجاع المحادثة إلى مساعد KI.":
+            return "sys:staff_returned_to_ai"
         case "Ein Mitarbeiter hat den Live-Chat übernommen.":
+            return "sys:staff_takeover"
+        case "A team member has taken over the live chat.":
+            return "sys:staff_takeover"
+        case "قام أحد موظفينا بتولي الدردشة المباشرة.":
             return "sys:staff_takeover"
         case "Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.":
             return "sys:live_agent_notified"

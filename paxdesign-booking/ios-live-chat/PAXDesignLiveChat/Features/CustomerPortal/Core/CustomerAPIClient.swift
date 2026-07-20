@@ -14,6 +14,11 @@ final class CustomerAPIClient: ObservableObject {
         self.auth = auth
     }
 
+    var hasConfiguredSession: Bool {
+        guard let auth else { return false }
+        return auth.isAuthenticated && auth.basicAuthHeader != nil
+    }
+
     func useDefaultServer() {
         baseURL = AppServerConfig.customerAPIBaseURL
     }

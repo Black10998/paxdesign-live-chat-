@@ -3506,7 +3506,12 @@ class PAXdesign_Chat_Live {
             array('%d')
         );
 
-        $notice = 'Ein Mitarbeiter hat den Live-Chat übernommen.';
+        $lang   = class_exists('PAXdesign_Language_Routing')
+            ? PAXdesign_Language_Routing::session_customer_language($row)
+            : 'de';
+        $notice = class_exists('PAXdesign_Language_Routing')
+            ? PAXdesign_Language_Routing::system_notice('staff_takeover', $lang)
+            : 'Ein Mitarbeiter hat den Live-Chat übernommen.';
         $entry  = $this->append_message(
             $session_id,
             'system',
@@ -3608,10 +3613,17 @@ class PAXdesign_Chat_Live {
             array('%d')
         );
 
+        $lang   = class_exists('PAXdesign_Language_Routing')
+            ? PAXdesign_Language_Routing::session_customer_language($row)
+            : 'de';
+        $closed = class_exists('PAXdesign_Language_Routing')
+            ? PAXdesign_Language_Routing::system_notice('chat_closed', $lang)
+            : 'Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten.';
         $entry = $this->append_message(
             $session_id,
             'system',
-            'Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten.'
+            $closed,
+            array('client_msg_id' => 'sys:chat_closed')
         );
 
         $this->persist_session_last_preview($session_id);
@@ -3673,7 +3685,12 @@ class PAXdesign_Chat_Live {
             array('%d')
         );
 
-        $notice = 'Das Gespräch wurde an den KI-Assistenten zurückgegeben.';
+        $lang   = class_exists('PAXdesign_Language_Routing')
+            ? PAXdesign_Language_Routing::session_customer_language($row)
+            : 'de';
+        $notice = class_exists('PAXdesign_Language_Routing')
+            ? PAXdesign_Language_Routing::system_notice('staff_returned_to_ai', $lang)
+            : 'Das Gespräch wurde an den KI-Assistenten zurückgegeben.';
         $entry  = $this->append_message(
             $session_id,
             'system',
@@ -3728,13 +3745,20 @@ class PAXdesign_Chat_Live {
             array('%d')
         );
 
+        $lang   = class_exists('PAXdesign_Language_Routing')
+            ? PAXdesign_Language_Routing::session_customer_language($row)
+            : 'de';
+        $reopened = class_exists('PAXdesign_Language_Routing')
+            ? PAXdesign_Language_Routing::system_notice('chat_reopened', $lang, array('admin_name' => $admin_name))
+            : 'Der Chat wurde wieder geöffnet. ' . $admin_name . ' ist wieder für Sie da.';
         $entry = $this->append_message(
             $session_id,
             'system',
-            'Der Chat wurde wieder geöffnet. ' . $admin_name . ' ist wieder für Sie da.'
+            $reopened,
+            array('client_msg_id' => 'sys:chat_reopened:' . substr(md5($admin_name), 0, 12))
         );
 
-        $this->emit_handler_event($session_id, self::HANDLER_ADMIN, array(
+        $this->emit_handler_event_with_message($session_id, self::HANDLER_ADMIN, $entry, array(
             'admin_name'    => $admin_name,
             'admin_user_id' => (int) $user->ID,
         ));
