@@ -617,6 +617,7 @@ struct CustomerChatView: View {
             .padding(.vertical, 10)
             .background(.ultraThinMaterial)
         }
+        .accessibilityIdentifier("pax.chat.composer")
     }
 
     private var canSend: Bool {

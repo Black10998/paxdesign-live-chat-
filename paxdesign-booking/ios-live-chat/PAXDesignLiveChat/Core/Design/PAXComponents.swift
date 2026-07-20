@@ -523,6 +523,7 @@ private struct PAXShellBottomTabBarModifier: ViewModifier {
                 )
                 .scaleEffect(scrollState.barScale, anchor: .bottom)
                 .padding(.horizontal, UiverseMenuMetrics.horizontalMargin)
+                .accessibilityIdentifier("pax.shell.tabBar")
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }

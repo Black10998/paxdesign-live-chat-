@@ -1,0 +1,46 @@
+name: Verify iOS Shell Layout
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'paxdesign-booking/ios-live-chat/**'
+      - '.github/workflows/verify-ios-shell-layout.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-ios-shell-layout
+  cancel-in-progress: true
+
+jobs:
+  shell-layout:
+    runs-on: macos-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 26 SDK
+        run: |
+          set -euo pipefail
+          for candidate in Xcode_26.5.app Xcode_26.app Xcode_26.0.app; do
+            if [[ -d "/Applications/$candidate" ]]; then
+              sudo xcode-select -s "/Applications/$candidate/Contents/Developer"
+              xcodebuild -version
+              exit 0
+            fi
+          done
+          echo "ERROR: Xcode 26 not found on runner" >&2
+          exit 1
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Run shell layout UI tests on iOS Simulator
+        run: |
+          cd paxdesign-booking/ios-live-chat
+          chmod +x scripts/verify-shell-layout.sh
+          ./scripts/verify-shell-layout.sh

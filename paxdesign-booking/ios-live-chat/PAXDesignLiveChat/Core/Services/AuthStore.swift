@@ -325,6 +325,38 @@ final class AuthStore: ObservableObject {
         username = ""
         accountPassword = ""
     }
+
+    #if DEBUG
+    func configureLayoutVerification(mode: PAXLayoutVerification.Mode) {
+        isBootstrapping = false
+        isLoggedIn = true
+        sessionEpoch = UUID()
+        switch mode {
+        case .customer:
+            sessionMode = .customer
+            profile = nil
+            customerProfile = CustomerProfileResponse.Profile(
+                id: 1,
+                display_name: "Layout Verify",
+                email: "verify@paxdesign.test",
+                verified: true,
+                role: "customer",
+                avatar_url: nil
+            )
+        case .staff:
+            sessionMode = .staff
+            customerProfile = nil
+            profile = AdminProfile.layoutVerificationStub
+            username = "layout-verify"
+            appPassword = "layout-verify"
+            api = LiveChatAPI(
+                siteURL: AppServerConfig.siteURL,
+                username: "layout-verify",
+                appPassword: "layout-verify"
+            )
+        }
+    }
+    #endif
 }
 
 private struct StoredCredentials: Codable {

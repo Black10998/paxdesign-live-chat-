@@ -95,6 +95,13 @@ struct PAXDesignLiveChatApp: App {
         let auth = AuthStore.shared
         let permissions = PermissionCoordinator.shared
 
+        #if DEBUG
+        if PAXLayoutVerification.isActive {
+            PAXLayoutVerification.configureForLaunch(auth: auth, launchSplash: launchSplash)
+            return
+        }
+        #endif
+
         await permissions.refreshStatuses()
 
         await auth.bootstrapSession()
@@ -240,6 +247,67 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
+            #if DEBUG
+            if PAXLayoutVerification.isActive {
+                switch PAXLayoutVerification.mode {
+                case .customer:
+                    PAXLayoutVerification.customerShell
+                        .transition(.opacity)
+                case .staff:
+                    AdaptiveShellView()
+                        .transition(.opacity)
+                case .none:
+                    EmptyView()
+                }
+            } else {
+                shellContent
+            }
+            #else
+            shellContent
+            #endif
+        }
+        .animation(.easeInOut(duration: 0.28), value: phaseIdentifier)
+        .fullScreenCover(isPresented: $showPostLoginOnboarding) {
+            OnboardingFlowView(mode: .postLogin) {
+                withAnimation(.easeInOut(duration: 0.3)) {
+                    showPostLoginOnboarding = false
+                }
+            }
+        }
+        .onChange(of: launchSplash.isVisible) { visible in
+            guard !visible else { return }
+            if !settings.firstLaunchOnboardingCompleted {
+                showFirstRunOnboarding = true
+            }
+            Task {
+                await PushDeepLinkRouter.shared.consumeIfReady(
+                    auth: auth,
+                    coordinator: coordinator,
+                    teamCoordinator: TeamMessagingCoordinator.shared,
+                    isShellReady: auth.isLoggedIn
+                )
+            }
+        }
+        .onChange(of: auth.isLoggedIn) { loggedIn in
+            if loggedIn, auth.profile?.onboardingCompleted == true {
+                settings.onboardingCompleted = true
+            }
+            syncPostLoginOnboardingPresentation()
+        }
+        .onChange(of: auth.profile?.onboardingCompleted) { _ in
+            syncPostLoginOnboardingPresentation()
+        }
+        .onAppear {
+            syncPostLoginOnboardingPresentation()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .paxInteractiveLoginSucceeded)) { _ in
+            launchSplash.replayAfterLogin()
+        }
+    }
+
+    @ViewBuilder
+    private var shellContent: some View {
+        ZStack {
             switch phase {
             case .splash:
                 PAXLaunchView {
@@ -279,43 +347,6 @@ struct RootView: View {
 
             PAXDeleteOverlay()
                 .zIndex(300)
-        }
-        .animation(.easeInOut(duration: 0.28), value: phaseIdentifier)
-        .fullScreenCover(isPresented: $showPostLoginOnboarding) {
-            OnboardingFlowView(mode: .postLogin) {
-                withAnimation(.easeInOut(duration: 0.3)) {
-                    showPostLoginOnboarding = false
-                }
-            }
-        }
-        .onChange(of: launchSplash.isVisible) { visible in
-            guard !visible else { return }
-            if !settings.firstLaunchOnboardingCompleted {
-                showFirstRunOnboarding = true
-            }
-            Task {
-                await PushDeepLinkRouter.shared.consumeIfReady(
-                    auth: auth,
-                    coordinator: coordinator,
-                    teamCoordinator: TeamMessagingCoordinator.shared,
-                    isShellReady: auth.isLoggedIn
-                )
-            }
-        }
-        .onChange(of: auth.isLoggedIn) { loggedIn in
-            if loggedIn, auth.profile?.onboardingCompleted == true {
-                settings.onboardingCompleted = true
-            }
-            syncPostLoginOnboardingPresentation()
-        }
-        .onChange(of: auth.profile?.onboardingCompleted) { _ in
-            syncPostLoginOnboardingPresentation()
-        }
-        .onAppear {
-            syncPostLoginOnboardingPresentation()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .paxInteractiveLoginSucceeded)) { _ in
-            launchSplash.replayAfterLogin()
         }
     }
 
