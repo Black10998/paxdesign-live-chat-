@@ -429,72 +429,72 @@ struct CustomerChatView: View {
                 }
             }
         }
-        .paxShellScrollClearance()
+        // Chat owns its bottom composer; do not add shell tab-bar clearance here.
+        // Nested bottom safeAreaInset would fight the customer tab bar and hide the composer.
     }
 
     private var chatContent: some View {
-        ZStack {
-            VStack(spacing: 0) {
-                    if !network.isConnected {
-                        Text(String(localized: "Offline — messages will send when you reconnect."))
-                            .font(.caption).foregroundStyle(.orange).padding(8)
-                            .frame(maxWidth: .infinity).background(Color.orange.opacity(0.12))
-                    }
-                    if let notice, !notice.isEmpty {
-                        Text(notice)
-                            .font(.caption)
-                            .foregroundStyle(PAXTheme.textSecondary)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .frame(maxWidth: .infinity)
-                            .background(PAXTheme.accentSoft)
-                    }
-                    if let recovery, recovery.issue != .closed {
-                        CustomerChatRecoveryBanner(
-                            action: recovery,
-                            isRecovering: isRecovering,
-                            onRetry: { Task { await retryAfterRecovery() } }
-                        )
-                    }
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            if isLoading && displayMessages.isEmpty {
-                                CustomerChatSkeleton()
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            } else if displayMessages.isEmpty && error == nil {
-                                CustomerChatEmptyState(isAI: !isHumanQueue)
-                                    .padding(.top, 32)
-                            } else {
-                                LazyVStack(alignment: .leading, spacing: 12) {
-                                    ForEach(displayMessages, id: \.id) { message in
-                                        CustomerChatBubble(
-                                            message: message,
-                                            otherReadSeq: poll?.other_read_seq ?? 0,
-                                            showReadReceipts: isHumanQueue
-                                        ).id(message.id)
-                                    }
-                                    if poll?.admin_typing == true, isHumanQueue {
-                                        CustomerChatTypingIndicator(label: String(localized: "Support is typing…"))
-                                            .id("typing")
-                                    }
-                                    Color.clear.frame(height: 1).id("chat-bottom")
-                                }
-                                .padding()
+        VStack(spacing: 0) {
+            if !network.isConnected {
+                Text(String(localized: "Offline — messages will send when you reconnect."))
+                    .font(.caption).foregroundStyle(.orange).padding(8)
+                    .frame(maxWidth: .infinity).background(Color.orange.opacity(0.12))
+            }
+            if let notice, !notice.isEmpty {
+                Text(notice)
+                    .font(.caption)
+                    .foregroundStyle(PAXTheme.textSecondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity)
+                    .background(PAXTheme.accentSoft)
+            }
+            if let recovery, recovery.issue != .closed {
+                CustomerChatRecoveryBanner(
+                    action: recovery,
+                    isRecovering: isRecovering,
+                    onRetry: { Task { await retryAfterRecovery() } }
+                )
+            }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    if isLoading && displayMessages.isEmpty {
+                        CustomerChatSkeleton()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if displayMessages.isEmpty && error == nil {
+                        CustomerChatEmptyState(isAI: !isHumanQueue)
+                            .padding(.top, 32)
+                    } else {
+                        LazyVStack(alignment: .leading, spacing: 12) {
+                            ForEach(displayMessages, id: \.id) { message in
+                                CustomerChatBubble(
+                                    message: message,
+                                    otherReadSeq: poll?.other_read_seq ?? 0,
+                                    showReadReceipts: isHumanQueue
+                                ).id(message.id)
                             }
+                            if poll?.admin_typing == true, isHumanQueue {
+                                CustomerChatTypingIndicator(label: String(localized: "Support is typing…"))
+                                    .id("typing")
+                            }
+                            Color.clear.frame(height: 1).id("chat-bottom")
                         }
-                        .scrollDismissesKeyboard(.interactively)
-                        .onChange(of: displayMessages.count) { _ in scrollToBottom(proxy: proxy, animated: true) }
-                        .onChange(of: lastSeq) { _ in scrollToBottom(proxy: proxy, animated: true) }
-                        .onChange(of: poll?.admin_typing) { _ in scrollToBottom(proxy: proxy, animated: true) }
-                        .onChange(of: isInputFocused) { focused in
-                            if focused { scrollToBottom(proxy: proxy, animated: true) }
-                        }
+                        .padding()
                     }
                 }
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    chatComposer
+                .scrollDismissesKeyboard(.interactively)
+                .onChange(of: displayMessages.count) { _ in scrollToBottom(proxy: proxy, animated: true) }
+                .onChange(of: lastSeq) { _ in scrollToBottom(proxy: proxy, animated: true) }
+                .onChange(of: poll?.admin_typing) { _ in scrollToBottom(proxy: proxy, animated: true) }
+                .onChange(of: isInputFocused) { focused in
+                    if focused { scrollToBottom(proxy: proxy, animated: true) }
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            // Sit in the layout above the shell tab-bar safe area (not a nested bottom inset).
+            chatComposer
+        }
             .overlay(alignment: .top) {
                 if let error, recovery == nil {
                     Text(error)
@@ -559,6 +559,7 @@ struct CustomerChatView: View {
 
     private var chatComposer: some View {
         VStack(spacing: 0) {
+            Divider().opacity(0.35)
             HStack(alignment: .bottom, spacing: 8) {
                 Menu {
                     Button {

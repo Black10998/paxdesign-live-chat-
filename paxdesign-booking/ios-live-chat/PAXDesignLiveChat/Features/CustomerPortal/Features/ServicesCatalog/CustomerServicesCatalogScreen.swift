@@ -1,12 +1,15 @@
 import SwiftUI
 
+/// Apple-quality Services experience — clean black-and-white presentation
+/// with premium typography, large imagery, and restrained PAX accent on CTAs only.
 struct CustomerServicesCatalogScreen: View {
     @EnvironmentObject private var api: CustomerAPIClient
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
-    @Environment(\.marketingTheme) private var theme
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var network = CustomerNetworkMonitor.shared
 
     @State private var catalog: CustomerServicesCatalogResponse?
+    @State private var mediaBySlug: [String: CustomerServicesResponse.Service] = [:]
     @State private var language: CustomerServicesCatalogLanguage = {
         let code = Locale.current.language.languageCode?.identifier ?? "de"
         return CustomerServicesCatalogLanguage(rawValue: code) ?? .de
@@ -20,6 +23,26 @@ struct CustomerServicesCatalogScreen: View {
     @State private var requestTitle = ""
     @State private var requestDescription = ""
 
+    private var canvas: Color {
+        colorScheme == .dark ? .black : .white
+    }
+
+    private var ink: Color {
+        colorScheme == .dark ? .white : .black
+    }
+
+    private var inkSecondary: Color {
+        colorScheme == .dark ? Color.white.opacity(0.62) : Color.black.opacity(0.55)
+    }
+
+    private var hairline: Color {
+        colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.08)
+    }
+
+    private var panel: Color {
+        colorScheme == .dark ? Color(white: 0.07) : Color(white: 0.97)
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -32,10 +55,15 @@ struct CustomerServicesCatalogScreen: View {
                     catalogScroll(catalog)
                 }
             }
-            .background(theme.background.ignoresSafeArea())
+            .background(canvas.ignoresSafeArea())
             .navigationTitle(catalog?.title ?? String(localized: "Services"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(theme.background, for: .navigationBar)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(canvas, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    ServicesLanguageSwitcher(language: $language)
+                }
+            }
             .customerPortalToolbar()
             .refreshable { await load(force: true) }
             .task(id: language.rawValue) { await load(force: false) }
@@ -68,13 +96,15 @@ struct CustomerServicesCatalogScreen: View {
     private func catalogScroll(_ catalog: CustomerServicesCatalogResponse) -> some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(alignment: catalog.isRTL ? .trailing : .leading, spacing: 0) {
-                    headerSection(catalog)
-                    statementSection(catalog)
-                    cardsSection(catalog, proxy: proxy)
-                    processSection(catalog)
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    heroHeader(catalog)
+                    statementBand(catalog)
+                    servicesList(catalog)
+                    if !catalog.process_steps.isEmpty {
+                        processSection(catalog)
+                    }
                 }
-                .padding(.vertical, 20)
+                .padding(.bottom, 36)
             }
             .onAppear {
                 if let id = navigation.pendingServiceCardID {
@@ -90,147 +120,170 @@ struct CustomerServicesCatalogScreen: View {
         .environment(\.layoutDirection, catalog.isRTL ? .rightToLeft : .leftToRight)
     }
 
-    private func headerSection(_ catalog: CustomerServicesCatalogResponse) -> some View {
-        VStack(spacing: 12) {
-            Text(catalog.title)
-                .font(.system(size: 32, weight: .heavy))
-                .tracking(-0.5)
-                .foregroundStyle(theme.textPrimary)
-                .multilineTextAlignment(.center)
+    private func heroHeader(_ catalog: CustomerServicesCatalogResponse) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
             Text(catalog.subtitle)
-                .font(.title3)
-                .foregroundStyle(theme.textSecondary)
-                .multilineTextAlignment(.center)
+                .font(.system(.title3, design: .default).weight(.regular))
+                .foregroundStyle(inkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 20)
-        .padding(.bottom, 30)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 22)
+        .padding(.top, 8)
+        .padding(.bottom, 28)
     }
 
-    private func statementSection(_ catalog: CustomerServicesCatalogResponse) -> some View {
-        Text(catalog.statement)
-            .font(.body)
-            .lineSpacing(4)
-            .foregroundStyle(theme.textPrimary)
-            .multilineTextAlignment(.center)
-            .padding(24)
-            .frame(maxWidth: 820)
-            .background(theme.panel)
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(theme.border))
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .padding(.horizontal, 20)
-            .padding(.bottom, 50)
+    private func statementBand(_ catalog: CustomerServicesCatalogResponse) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Rectangle()
+                .fill(hairline)
+                .frame(height: 1)
+            Text(catalog.statement)
+                .font(.system(.body, design: .default))
+                .foregroundStyle(ink)
+                .lineSpacing(5)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 22)
+                .padding(.vertical, 28)
+            Rectangle()
+                .fill(hairline)
+                .frame(height: 1)
+        }
+        .padding(.bottom, 8)
     }
 
-    private func cardsSection(_ catalog: CustomerServicesCatalogResponse, proxy: ScrollViewProxy) -> some View {
-        LazyVStack(spacing: 32) {
-            ForEach(catalog.cards) { card in
-                ServiceCatalogCardView(
+    private func servicesList(_ catalog: CustomerServicesCatalogResponse) -> some View {
+        LazyVStack(spacing: 0) {
+            ForEach(Array(catalog.cards.enumerated()), id: \.element.id) { index, card in
+                PremiumServiceRow(
                     card: card,
                     catalog: catalog,
+                    media: media(for: card),
                     isExpanded: expandedCardIDs.contains(card.id),
                     isSpotlight: spotlightCardID == card.id,
+                    ink: ink,
+                    inkSecondary: inkSecondary,
+                    hairline: hairline,
+                    panel: panel,
                     onToggleDetails: { toggleExpanded(card.id) },
                     onBook: { openRequest(for: card) }
                 )
                 .id(card.id)
+                .padding(.horizontal, 22)
+                .padding(.vertical, 28)
+
+                if index < catalog.cards.count - 1
+                    || card.id == catalog.security_section.after_card_id {
+                    Rectangle()
+                        .fill(hairline)
+                        .frame(height: 1)
+                        .padding(.horizontal, 22)
+                }
 
                 if card.id == catalog.security_section.after_card_id {
-                    securityBreakSection(catalog)
+                    securityBreak(catalog)
+                    Rectangle()
+                        .fill(hairline)
+                        .frame(height: 1)
+                        .padding(.horizontal, 22)
                 }
             }
         }
-        .padding(.horizontal, 20)
-        .padding(.bottom, 80)
+        .padding(.top, 12)
     }
 
-    private func securityBreakSection(_ catalog: CustomerServicesCatalogResponse) -> some View {
-        VStack(spacing: 12) {
-            Divider().overlay(theme.border)
-                .padding(.top, 48)
+    private func securityBreak(_ catalog: CustomerServicesCatalogResponse) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
             Text(catalog.security_section.title)
-                .font(.system(size: 28, weight: .heavy))
-                .tracking(-0.5)
-                .foregroundStyle(theme.textPrimary)
-                .multilineTextAlignment(.center)
+                .font(.system(.title2, design: .default).weight(.semibold))
+                .foregroundStyle(ink)
             Text(catalog.security_section.subtitle)
-                .font(.body)
-                .foregroundStyle(theme.textSecondary)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: 820)
+                .font(.system(.body, design: .default))
+                .foregroundStyle(inkSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 22)
+        .padding(.vertical, 36)
+        .background(panel)
     }
 
     private func processSection(_ catalog: CustomerServicesCatalogResponse) -> some View {
-        VStack(spacing: 50) {
-            Divider().overlay(theme.border)
+        VStack(alignment: .leading, spacing: 28) {
             Text(catalog.process_title)
-                .font(.system(size: 28, weight: .heavy))
-                .tracking(-0.5)
-                .foregroundStyle(theme.textPrimary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 20)
+                .font(.system(.title2, design: .default).weight(.semibold))
+                .foregroundStyle(ink)
+                .padding(.horizontal, 22)
+                .padding(.top, 40)
 
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 24)], spacing: 24) {
+            VStack(spacing: 0) {
                 ForEach(Array(catalog.process_steps.enumerated()), id: \.offset) { index, step in
-                    processCard(number: index + 1, step: step)
+                    HStack(alignment: .top, spacing: 18) {
+                        Text(String(format: "%02d", index + 1))
+                            .font(.system(.footnote, design: .monospaced).weight(.semibold))
+                            .foregroundStyle(inkSecondary)
+                            .frame(width: 28, alignment: .leading)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(step.title)
+                                .font(.system(.headline, design: .default).weight(.semibold))
+                                .foregroundStyle(ink)
+                            Text(step.text)
+                                .font(.system(.subheadline, design: .default))
+                                .foregroundStyle(inkSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 22)
+                    .padding(.vertical, 18)
+
+                    if index < catalog.process_steps.count - 1 {
+                        Rectangle()
+                            .fill(hairline)
+                            .frame(height: 1)
+                            .padding(.leading, 68)
+                    }
                 }
             }
-            .padding(.horizontal, 20)
         }
-        .padding(.top, 60)
-        .padding(.bottom, 40)
-    }
-
-    private func processCard(number: Int, step: CustomerServicesCatalogResponse.ProcessStep) -> some View {
-        VStack(spacing: 20) {
-            Text("\(number)")
-                .font(.system(size: 24, weight: .heavy))
-                .foregroundStyle(Color.black)
-                .frame(width: 50, height: 50)
-                .background(theme.accent)
-                .clipShape(Circle())
-                .shadow(color: theme.accent.opacity(0.25), radius: 6)
-            Text(step.title)
-                .font(.title3.weight(.bold))
-                .foregroundStyle(theme.textPrimary)
-                .multilineTextAlignment(.center)
-            Text(step.text)
-                .font(.subheadline)
-                .foregroundStyle(theme.textSecondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding(.vertical, 30)
-        .padding(.horizontal, 20)
-        .frame(maxWidth: .infinity)
-        .background(theme.cardBackground)
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(theme.border))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: theme.shadowDark, radius: 8, x: 8, y: 8)
-        .shadow(color: theme.shadowLight, radius: 8, x: -8, y: -8)
     }
 
     private func servicesErrorView(_ message: String) -> some View {
-        VStack(spacing: 16) {
-            PAXIcon(network.isConnected ? "exclamationmark.triangle" : "wifi.slash", size: .display, tint: theme.accent)
+        VStack(spacing: 18) {
+            PAXIcon(
+                network.isConnected ? "exclamationmark.triangle" : "wifi.slash",
+                size: .display,
+                tint: ink
+            )
             Text(message)
                 .multilineTextAlignment(.center)
-                .foregroundStyle(theme.textSecondary)
-            Button(String(localized: "Try again")) { Task { await load(force: true) } }
-                .buttonStyle(.borderedProminent)
-                .tint(theme.accent)
+                .foregroundStyle(inkSecondary)
+                .font(.system(.body, design: .default))
+            Button(String(localized: "Try again")) {
+                Task { await load(force: true) }
+            }
+            .font(.system(.body, design: .default).weight(.semibold))
+            .foregroundStyle(canvas)
+            .padding(.horizontal, 22)
+            .padding(.vertical, 12)
+            .background(ink)
+            .clipShape(Capsule())
+            .buttonStyle(.plain)
         }
         .padding(32)
     }
 
+    private func media(for card: CustomerServicesCatalogResponse.Card) -> CustomerServicesResponse.Service? {
+        mediaBySlug[card.order_slug]
+            ?? mediaBySlug[card.id]
+            ?? mediaBySlug.first(where: { $0.key.localizedCaseInsensitiveContains(card.order_slug) })?.value
+    }
+
     private func toggleExpanded(_ id: String) {
-        withAnimation(.easeInOut(duration: 0.35)) {
-            if expandedCardIDs.contains(id) {
-                expandedCardIDs.remove(id)
-            } else {
-                expandedCardIDs.insert(id)
-            }
+        if expandedCardIDs.contains(id) {
+            expandedCardIDs.remove(id)
+        } else {
+            expandedCardIDs.insert(id)
         }
     }
 
@@ -244,13 +297,13 @@ struct CustomerServicesCatalogScreen: View {
     private func scrollToCard(_ id: String, proxy: ScrollViewProxy, animated: Bool) {
         spotlightCardID = id
         if animated {
-            withAnimation(.easeInOut(duration: 0.5)) {
+            withAnimation(.easeInOut(duration: 0.45)) {
                 proxy.scrollTo(id, anchor: .center)
             }
         } else {
             proxy.scrollTo(id, anchor: .center)
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             if spotlightCardID == id { spotlightCardID = nil }
         }
     }
@@ -259,7 +312,20 @@ struct CustomerServicesCatalogScreen: View {
         if catalog == nil || force { isLoading = true }
         error = nil
         do {
-            catalog = try await api.fetchServicesCatalog(lang: language.rawValue)
+            async let catalogTask = api.fetchServicesCatalog(lang: language.rawValue)
+            async let mediaTask = api.fetchServices()
+            let loadedCatalog = try await catalogTask
+            catalog = loadedCatalog
+            if let media = try? await mediaTask {
+                var map: [String: CustomerServicesResponse.Service] = [:]
+                for service in media.services {
+                    map[service.slug] = service
+                    if let key = service.icon_key, !key.isEmpty {
+                        map[key] = service
+                    }
+                }
+                mediaBySlug = map
+            }
         } catch {
             self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
         }
@@ -267,119 +333,180 @@ struct CustomerServicesCatalogScreen: View {
     }
 }
 
-private struct ServiceCatalogCardView: View {
-    @Environment(\.marketingTheme) private var theme
+// MARK: - Premium service row
+
+private struct PremiumServiceRow: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     let card: CustomerServicesCatalogResponse.Card
     let catalog: CustomerServicesCatalogResponse
+    let media: CustomerServicesResponse.Service?
     let isExpanded: Bool
     let isSpotlight: Bool
+    let ink: Color
+    let inkSecondary: Color
+    let hairline: Color
+    let panel: Color
     let onToggleDetails: () -> Void
     let onBook: () -> Void
 
     var body: some View {
-        ZStack(alignment: catalog.isRTL ? .topLeading : .topTrailing) {
-            ServicesNeumorphicCard(highlighted: card.highlighted || isSpotlight) {
-                VStack(alignment: catalog.isRTL ? .trailing : .leading, spacing: 0) {
-                    VStack(alignment: catalog.isRTL ? .trailing : .leading, spacing: 18) {
-                        Text(card.title)
-                            .font(.system(size: 23, weight: .bold))
-                            .foregroundStyle(theme.textPrimary)
-                            .padding(catalog.isRTL ? .leading : .trailing, badgePadding)
+        VStack(alignment: .leading, spacing: 20) {
+            mediaHero
 
-                        Text(card.description)
-                            .font(.subheadline)
-                            .foregroundStyle(theme.textSecondary)
-                            .lineSpacing(4)
-                            .multilineTextAlignment(catalog.isRTL ? .trailing : .leading)
+            VStack(alignment: .leading, spacing: 10) {
+                if let badge = badgeLabel {
+                    Text(badge)
+                        .font(.system(.caption2, design: .default).weight(.semibold))
+                        .tracking(1.2)
+                        .textCase(.uppercase)
+                        .foregroundStyle(inkSecondary)
+                }
 
-                        VStack(alignment: catalog.isRTL ? .trailing : .leading, spacing: 12) {
-                            ForEach(card.features, id: \.self) { feature in
-                                HStack(spacing: 12) {
-                                    if catalog.isRTL {
-                                        Text(feature)
-                                            .font(.subheadline)
-                                            .foregroundStyle(theme.textSecondary)
-                                        ServicesRotatingDisc()
-                                    } else {
-                                        ServicesRotatingDisc()
-                                        Text(feature)
-                                            .font(.subheadline)
-                                            .foregroundStyle(theme.textSecondary)
-                                    }
-                                }
-                            }
+                Text(card.title)
+                    .font(.system(.title2, design: .default).weight(.semibold))
+                    .foregroundStyle(ink)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(card.description)
+                    .font(.system(.body, design: .default))
+                    .foregroundStyle(inkSecondary)
+                    .lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if !card.features.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(card.features, id: \.self) { feature in
+                        HStack(alignment: .top, spacing: 10) {
+                            Circle()
+                                .fill(ink)
+                                .frame(width: 4, height: 4)
+                                .padding(.top, 7)
+                            Text(feature)
+                                .font(.system(.subheadline, design: .default))
+                                .foregroundStyle(ink)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-
-                        ServicesInsetButton(title: catalog.book_label, action: onBook)
-
-                        Button(action: onToggleDetails) {
-                            Text(isExpanded ? catalog.less_label : catalog.more_label)
-                                .font(.subheadline)
-                                .underline()
-                                .foregroundStyle(theme.linkBlue)
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.plain)
                     }
-                    .padding(24)
+                }
+                .padding(.top, 2)
+            }
 
-                    if isExpanded, !card.details.isEmpty {
-                        VStack(alignment: catalog.isRTL ? .trailing : .leading, spacing: 16) {
-                            Divider().overlay(theme.border)
-                            ForEach(card.details) { block in
-                                VStack(alignment: catalog.isRTL ? .trailing : .leading, spacing: 8) {
-                                    Text(block.heading)
-                                        .font(.subheadline.weight(.bold))
-                                        .foregroundStyle(theme.textPrimary)
-                                    if let paragraph = block.paragraph, !paragraph.isEmpty {
-                                        Text(paragraph)
-                                            .font(.footnote)
-                                            .foregroundStyle(theme.textSecondary)
-                                            .lineSpacing(3)
-                                    }
-                                    ForEach(block.bulletItems, id: \.self) { item in
-                                        HStack(alignment: .top, spacing: 8) {
-                                            if !catalog.isRTL {
-                                                Text(String(localized: "–"))
-                                                    .foregroundStyle(theme.accent)
-                                            }
-                                            Text(item)
-                                                .font(.footnote)
-                                                .foregroundStyle(theme.textSecondary)
-                                            if catalog.isRTL {
-                                                Text(String(localized: "–"))
-                                                    .foregroundStyle(theme.accent)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 24)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
+            HStack(spacing: 14) {
+                Button(action: onBook) {
+                    Text(catalog.book_label)
+                        .font(.system(.body, design: .default).weight(.semibold))
+                        .foregroundStyle(colorScheme == .dark ? .black : .white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(ink)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                .buttonStyle(.plain)
+
+                if !card.details.isEmpty {
+                    Button(action: onToggleDetails) {
+                        Text(isExpanded ? catalog.less_label : catalog.more_label)
+                            .font(.system(.body, design: .default).weight(.medium))
+                            .foregroundStyle(ink)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(panel)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(hairline, lineWidth: 1)
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                     }
+                    .buttonStyle(.plain)
                 }
             }
 
-            if card.is_new {
-                ServicesCornerRibbon(label: catalog.badges.new, isRTL: catalog.isRTL)
-            } else if card.badgeKind == .popular || card.badgeKind == .premium {
-                Text(card.badgeKind == .popular ? catalog.badges.popular : catalog.badges.premium)
-                    .font(.system(size: 11, weight: .heavy))
-                    .textCase(.uppercase)
-                    .tracking(0.5)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(theme.accent)
-                    .foregroundStyle(Color.black)
-                    .clipShape(Capsule())
-                    .padding(16)
+            if isExpanded, !card.details.isEmpty {
+                VStack(alignment: .leading, spacing: 18) {
+                    Rectangle()
+                        .fill(hairline)
+                        .frame(height: 1)
+                    ForEach(card.details) { block in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(block.heading)
+                                .font(.system(.subheadline, design: .default).weight(.semibold))
+                                .foregroundStyle(ink)
+                            if let paragraph = block.paragraph, !paragraph.isEmpty {
+                                Text(paragraph)
+                                    .font(.system(.footnote, design: .default))
+                                    .foregroundStyle(inkSecondary)
+                                    .lineSpacing(3)
+                            }
+                            ForEach(block.bulletItems, id: \.self) { item in
+                                HStack(alignment: .top, spacing: 8) {
+                                    Text("–")
+                                        .foregroundStyle(inkSecondary)
+                                    Text(item)
+                                        .font(.system(.footnote, design: .default))
+                                        .foregroundStyle(inkSecondary)
+                                }
+                            }
+                        }
+                    }
+                }
             }
+        }
+        .padding(isSpotlight ? 16 : 0)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(isSpotlight ? panel : Color.clear)
+        )
+    }
+
+    @ViewBuilder
+    private var mediaHero: some View {
+        Group {
+            if let urlString = media?.image_url, let url = URL(string: urlString) {
+                AsyncImage(url: url) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    case .failure:
+                        iconFallback
+                    default:
+                        panel
+                    }
+                }
+            } else {
+                iconFallback
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 210)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(hairline, lineWidth: 1)
+        )
+        .accessibilityHidden(true)
+    }
+
+    private var iconFallback: some View {
+        ZStack {
+            panel
+            CustomerServiceIconView(
+                iconKey: media?.icon_key ?? card.order_slug,
+                size: 72
+            )
         }
     }
 
-    private var badgePadding: CGFloat {
-        card.is_new || card.badgeKind != .none ? 72 : 0
+    private var badgeLabel: String? {
+        if card.is_new { return catalog.badges.new }
+        switch card.badgeKind {
+        case .popular: return catalog.badges.popular
+        case .premium: return catalog.badges.premium
+        case .new: return catalog.badges.new
+        case .none: return nil
+        }
     }
 }

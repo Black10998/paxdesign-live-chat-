@@ -113,12 +113,19 @@ struct CustomerTabView: View {
     @ViewBuilder
     private func customerTabPane<Content: View>(_ tab: CustomerPortalTab, @ViewBuilder content: () -> Content) -> some View {
         if loadedTabs.contains(tab.rawValue) {
-            content()
-                .paxShellScrollClearance()
-                .opacity(navigation.selectedTab == tab ? 1 : 0)
-                .allowsHitTesting(navigation.selectedTab == tab)
-                .accessibilityHidden(navigation.selectedTab != tab)
-                .zIndex(navigation.selectedTab == tab ? 1 : 0)
+            Group {
+                // Chat manages its own bottom composer above the tab bar; extra clearance
+                // would only pad scroll content and can fight the composer layout.
+                if tab == .chat {
+                    content()
+                } else {
+                    content().paxShellScrollClearance()
+                }
+            }
+            .opacity(navigation.selectedTab == tab ? 1 : 0)
+            .allowsHitTesting(navigation.selectedTab == tab)
+            .accessibilityHidden(navigation.selectedTab != tab)
+            .zIndex(navigation.selectedTab == tab ? 1 : 0)
         }
     }
 }

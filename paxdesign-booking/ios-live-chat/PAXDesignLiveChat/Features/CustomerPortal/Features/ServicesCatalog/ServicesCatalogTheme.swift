@@ -133,32 +133,37 @@ struct ServicesRotatingDisc: View {
 }
 
 struct ServicesLanguageSwitcher: View {
-    @Environment(\.marketingTheme) private var theme
+    @Environment(\.colorScheme) private var colorScheme
     @Binding var language: CustomerServicesCatalogLanguage
 
+    private var ink: Color { colorScheme == .dark ? .white : .black }
+    private var muted: Color { colorScheme == .dark ? Color.white.opacity(0.55) : Color.black.opacity(0.45) }
+    private var fill: Color { colorScheme == .dark ? Color(white: 0.12) : Color(white: 0.94) }
+    private var stroke: Color { colorScheme == .dark ? Color.white.opacity(0.14) : Color.black.opacity(0.1) }
+
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 2) {
             ForEach(CustomerServicesCatalogLanguage.allCases) { lang in
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { language = lang }
+                    language = lang
                 } label: {
                     Text(lang.label)
                         .font(.system(size: 12, weight: .semibold))
-                        .tracking(0.5)
-                        .frame(minWidth: 44)
-                        .padding(.vertical, 8)
-                        .padding(.horizontal, 14)
-                        .background(language == lang ? theme.cardBackground : Color.clear)
-                        .foregroundStyle(language == lang ? theme.textPrimary : theme.textSecondary)
+                        .tracking(0.4)
+                        .frame(minWidth: 36)
+                        .padding(.vertical, 7)
+                        .padding(.horizontal, 10)
+                        .background(language == lang ? ink : Color.clear)
+                        .foregroundStyle(language == lang ? (colorScheme == .dark ? Color.black : Color.white) : muted)
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(language == lang ? .isSelected : [])
             }
         }
-        .padding(4)
-        .background(theme.panel)
-        .overlay(Capsule().stroke(theme.border, lineWidth: 1))
+        .padding(3)
+        .background(fill)
+        .overlay(Capsule().stroke(stroke, lineWidth: 1))
         .clipShape(Capsule())
     }
 }

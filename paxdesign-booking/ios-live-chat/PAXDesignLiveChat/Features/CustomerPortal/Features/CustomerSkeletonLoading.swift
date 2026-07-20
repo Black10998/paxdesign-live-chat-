@@ -173,39 +173,40 @@ struct CustomerHomepageSkeleton: View {
 // MARK: - Services catalog
 
 struct CustomerServicesCatalogSkeleton: View {
-    @Environment(\.marketingTheme) private var theme
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var canvas: Color { colorScheme == .dark ? .black : .white }
 
     var body: some View {
         ScrollView {
-            LazyVStack(spacing: 24) {
-                HStack {
-                    SkeletonCapsule(width: 140, height: 36)
-                    Spacer()
-                }
-                .padding(.horizontal, 20)
-
+            LazyVStack(alignment: .leading, spacing: 28) {
                 VStack(alignment: .leading, spacing: 10) {
-                    SkeletonLine(width: 200, height: 26)
-                    SkeletonLine(height: 14)
+                    SkeletonLine(width: 220, height: 18)
                     SkeletonLine(width: 280, height: 14)
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, 22)
 
-                ForEach(0..<5, id: \.self) { _ in
-                    VStack(alignment: .leading, spacing: 12) {
-                        SkeletonLine(width: 180, height: 18)
-                        SkeletonLine(height: 12)
-                        SkeletonLine(width: 240, height: 12)
-                        SkeletonBlock(height: 40, cornerRadius: 12)
+                SkeletonBlock(height: 1, cornerRadius: 0)
+                    .padding(.horizontal, 22)
+
+                ForEach(0..<4, id: \.self) { _ in
+                    VStack(alignment: .leading, spacing: 16) {
+                        SkeletonBlock(height: 210, cornerRadius: 22)
+                        SkeletonLine(width: 72, height: 10)
+                        SkeletonLine(width: 200, height: 22)
+                        SkeletonLine(height: 14)
+                        SkeletonLine(width: 260, height: 14)
+                        HStack(spacing: 14) {
+                            SkeletonBlock(height: 48, cornerRadius: 14)
+                            SkeletonBlock(height: 48, cornerRadius: 14)
+                        }
                     }
-                    .padding(20)
-                    .background(theme.cardBackground)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-                    .padding(.horizontal, 20)
+                    .padding(.horizontal, 22)
                 }
             }
-            .padding(.vertical, 20)
+            .padding(.vertical, 24)
         }
+        .background(canvas.ignoresSafeArea())
     }
 }
 
