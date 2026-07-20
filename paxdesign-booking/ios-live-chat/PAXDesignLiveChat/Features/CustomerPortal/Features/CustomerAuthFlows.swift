@@ -65,7 +65,7 @@ struct CustomerRegisterView: View {
                 if let message {
                     Text(message)
                         .font(.footnote)
-                        .foregroundStyle(message.contains("check") ? .secondary : .red)
+                        .foregroundStyle(message.contains("check") ? Color.secondary : Color.red)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
                 }
@@ -193,7 +193,7 @@ struct CustomerVerifyEmailView: View {
                 if let message {
                     Text(message)
                         .font(.footnote)
-                        .foregroundStyle(isSuccess ? .secondary : .red)
+                        .foregroundStyle(isSuccess ? Color.secondary : Color.red)
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
                 }

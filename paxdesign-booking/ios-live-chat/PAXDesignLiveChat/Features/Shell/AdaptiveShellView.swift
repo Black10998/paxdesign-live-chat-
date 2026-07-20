@@ -9,6 +9,7 @@ struct AdaptiveShellView: View {
     @EnvironmentObject private var permissions: PermissionCoordinator
     @EnvironmentObject private var push: PushService
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @State private var chatsPath = NavigationPath()
     @State private var teamPath = NavigationPath()
     @State private var livePath = NavigationPath()
