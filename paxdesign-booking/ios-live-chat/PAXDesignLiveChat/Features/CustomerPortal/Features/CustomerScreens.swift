@@ -537,7 +537,7 @@ struct CustomerChatView: View {
                     last_preview: nil
                 )
             } catch {
-                error = friendlyChatError(error)
+                self.error = friendlyChatError(error)
                 return
             }
             await refresh(full: true)
