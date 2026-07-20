@@ -1,6 +1,7 @@
 import SwiftUI
 
 #if DEBUG
+@MainActor
 enum PAXLayoutVerification {
     enum Mode: String {
         case customer

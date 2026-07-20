@@ -60,7 +60,7 @@ set -e
 
 if [[ "$STATUS" -ne 0 ]]; then
   echo "ERROR: Shell layout UI tests failed" >&2
-  rg "error:|XCTAssert|failed" "$RESULTS" | tail -40 >&2 || true
+  rg "error:|XCTAssert|failed" "$RESULTS" | tail -40 >&2 || grep -E "error:|XCTAssert|failed" "$RESULTS" | tail -40 >&2 || true
   exit "$STATUS"
 fi
 
