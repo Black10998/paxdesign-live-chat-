@@ -71,29 +71,10 @@ struct PAXOnboardingIllustration: View {
     let systemImage: String
     var tint: Color = PAXTheme.accent
 
-    @Environment(\.colorScheme) private var colorScheme
-
     var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            tint.opacity(colorScheme == .dark ? 0.22 : 0.14),
-                            tint.opacity(colorScheme == .dark ? 0.08 : 0.05),
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
-                .frame(width: 156, height: 156)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 28, style: .continuous)
-                        .stroke(tint.opacity(0.28), lineWidth: 1)
-                )
-            PAXIcon(systemImage, size: .display)
-                .foregroundStyle(tint)
-        }
-        .shadow(color: tint.opacity(colorScheme == .dark ? 0.18 : 0.08), radius: 18, y: 8)
+        PAXIcon(systemImage, size: .display)
+            .foregroundStyle(tint)
+            .frame(width: 72, height: 72)
+            .accessibilityHidden(true)
     }
 }

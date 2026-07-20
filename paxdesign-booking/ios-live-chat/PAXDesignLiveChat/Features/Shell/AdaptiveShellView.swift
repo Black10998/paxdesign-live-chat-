@@ -74,7 +74,7 @@ struct AdaptiveShellView: View {
         iPhoneTabItems.map { item in
             UiverseMenuBarItem(
                 tag: item.tag,
-                glyph: item.glyph,
+                icon: item.icon,
                 title: item.title
             )
         }
@@ -86,7 +86,7 @@ struct AdaptiveShellView: View {
             .init(
                 tag: tags.dashboard,
                 title: L10n.TabDashboard,
-                glyph: .home
+                icon: "dashboard.fill"
             )
         ]
 
@@ -95,7 +95,7 @@ struct AdaptiveShellView: View {
                 .init(
                     tag: chatsTag,
                     title: L10n.TabChats,
-                    glyph: .chatBubble
+                    icon: "chats.fill"
                 )
             )
         }
@@ -105,7 +105,7 @@ struct AdaptiveShellView: View {
                 .init(
                     tag: teamTag,
                     title: L10n.TabTeam,
-                    glyph: .users
+                    icon: "team.fill"
                 )
             )
         }
@@ -114,14 +114,14 @@ struct AdaptiveShellView: View {
             .init(
                 tag: tags.live,
                 title: L10n.TabLive,
-                glyph: .bell
+                icon: "live.fill"
             )
         )
         items.append(
             .init(
                 tag: tags.platform,
                 title: L10n.TabPlatform,
-                glyph: .calendar
+                icon: "platform.fill"
             )
         )
         return items
@@ -487,7 +487,7 @@ struct AdaptiveShellView: View {
 private struct ShellTabItem: Identifiable {
     let tag: Int
     let title: String
-    let glyph: UiverseMenuIcons.Glyph
+    let icon: String
 
     var id: Int { tag }
 }

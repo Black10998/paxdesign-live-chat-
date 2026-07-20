@@ -5,14 +5,13 @@ enum PAXIconSize: CGFloat {
     case inline = 14
     case row = 18
     case card = 20
-    case hero = 22
     case tab = 19
+    case hero = 22
+    case menuBar = 22.4
     case action = 24
     case display = 28
 
     var length: CGFloat { rawValue }
-    static let strokeWidth: CGFloat = 1.55
-    var strokeWidth: CGFloat { Self.strokeWidth }
 }
 
 enum PAXIconEmphasis {
@@ -28,7 +27,7 @@ enum PAXIconEmphasis {
     }
 }
 
-/// Fixed-size monochrome vector icon. Do not apply `.font()` — use `size:` instead.
+/// Premium SVG asset icon from the PAXIcons catalog. Do not apply `.font()` — use `size:` instead.
 struct PAXIcon: View {
     let systemName: String
     var size: PAXIconSize = .row
@@ -42,13 +41,17 @@ struct PAXIcon: View {
         self.tint = tint
     }
 
+    private var assetName: String {
+        PAXIconCatalog.glyph(for: systemName)
+    }
+
     var body: some View {
-        PAXVectorIconShape(name: PAXIconCatalog.glyph(for: systemName))
-            .stroke(
-                tint ?? emphasis.color,
-                style: StrokeStyle(lineWidth: size.strokeWidth, lineCap: .round, lineJoin: .round)
-            )
+        Image(assetName)
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
             .frame(width: size.length, height: size.length)
+            .foregroundStyle(tint ?? emphasis.color)
             .fixedSize()
             .accessibilityHidden(true)
     }
@@ -181,6 +184,7 @@ enum PAXIconCatalog {
         "dollarsign.circle": "dollarsign.circle",
         "list.bullet.rectangle": "checklist",
         "list.bullet.rectangle.portrait": "files.stack",
+        "list.bullet.rectangle.portrait.fill": "files.stack",
         "circle": "plus.circle",
         "iphone.slash": "iphone.slash",
         "hourglass": "clock.history",
@@ -269,14 +273,6 @@ enum PAXIconCatalog {
             if lower.contains("portfolio") { return "briefcase" }
             return "link.chain"
         }
-    }
-}
-
-private struct PAXVectorIconShape: Shape {
-    let name: String
-
-    func path(in rect: CGRect) -> Path {
-        PAXGlyphPaths.path(for: name, in: rect)
     }
 }
 

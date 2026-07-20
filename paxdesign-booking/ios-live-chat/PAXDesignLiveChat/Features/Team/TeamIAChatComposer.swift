@@ -97,19 +97,19 @@ struct TeamIAChatComposer: View {
 
     private var attachmentStrip: some View {
         HStack(spacing: 2) {
-            attachmentButton(icon: { TeamComposerSVGIcons.location(color: iconMuted) }, action: onPickLocation)
-            attachmentButton(icon: { TeamComposerSVGIcons.photo(color: iconMuted) }, action: onPickPhoto)
-            attachmentButton(icon: { TeamComposerSVGIcons.file(color: iconMuted) }, action: onPickFile)
+            attachmentButton(icon: "location.fill", action: onPickLocation)
+            attachmentButton(icon: "photo", action: onPickPhoto)
+            attachmentButton(icon: "doc.text", action: onPickFile)
         }
         .padding(.leading, 2)
     }
 
-    private func attachmentButton<Icon: View>(
-        @ViewBuilder icon: () -> Icon,
+    private func attachmentButton(
+        icon: String,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            icon()
+            PAXIcon(icon, size: .action, tint: iconMuted)
                 .frame(width: 24, height: 24)
                 .padding(2)
                 .frame(width: 28, height: 28)
@@ -139,7 +139,7 @@ struct TeamIAChatComposer: View {
 
     private var leadingPlusButton: some View {
         Button(action: onPickFile) {
-            TeamComposerSVGIcons.plus(color: iconMuted)
+            PAXIcon("plus", size: .action, tint: iconMuted)
                 .frame(width: 24, height: 24)
                 .frame(width: 32, height: 32)
                 .background(
@@ -164,7 +164,7 @@ struct TeamIAChatComposer: View {
 
     private var voiceButton: some View {
         Button(action: onBeginVoice) {
-            TeamComposerSVGIcons.voiceWaveform(color: iconMuted)
+            PAXIcon("waveform", size: .action, tint: iconMuted)
                 .frame(width: 24, height: 24)
                 .frame(width: trailingButtonSize, height: trailingButtonSize)
         }
@@ -174,7 +174,7 @@ struct TeamIAChatComposer: View {
 
     private var sendButton: some View {
         Button(action: onSendText) {
-            TeamComposerSVGIcons.sendArrow(color: Color(.systemBackground))
+            PAXIcon("paperplane", size: .action, emphasis: .onFill)
                 .frame(width: 24, height: 24)
                 .frame(width: trailingButtonSize, height: trailingButtonSize)
                 .background(
@@ -229,7 +229,7 @@ struct TeamIAChatComposer: View {
         .buttonStyle(.plain)
         .overlay(alignment: .bottomTrailing) {
             Button(action: onFinishVoice) {
-                TeamComposerSVGIcons.sendArrow(color: Color(.systemBackground))
+                PAXIcon("paperplane", size: .action, emphasis: .onFill)
                     .frame(width: 24, height: 24)
                     .frame(width: 40, height: 40)
                     .background(Circle().fill(Color(.label)))

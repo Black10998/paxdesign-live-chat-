@@ -150,7 +150,7 @@ private struct UiverseMenuPalette {
 
 struct UiverseMenuBarItem: Identifiable {
     let tag: Int
-    let glyph: UiverseMenuIcons.Glyph
+    let icon: String
     let title: String
 
     var id: Int { tag }
@@ -204,10 +204,10 @@ struct UiverseMenuBarView: View {
             PAXHaptics.light()
         } label: {
             VStack(spacing: UiverseMenuMetrics.labelMarginTop) {
-                UiverseMenuIcons.icon(
-                    item.glyph,
-                    color: isActive ? palette.activeColor : palette.inactiveColor,
-                    size: UiverseMenuMetrics.iconSize
+                PAXIcon(
+                    item.icon,
+                    size: .menuBar,
+                    tint: isActive ? palette.activeColor : palette.inactiveColor
                 )
                 Text(item.title)
                     .font(.system(size: UiverseMenuMetrics.labelFontSize, weight: .semibold))
