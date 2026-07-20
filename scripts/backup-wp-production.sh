@@ -103,3 +103,20 @@ echo "==> Backup manifest"
 cat "$TARGET_DIR/manifest.txt"
 
 echo "PASS: backup completed at $TARGET_DIR"
+
+# Retain only the 3 most recent customer-platform backups to prevent disk exhaustion.
+KEEP_BACKUPS="${KEEP_BACKUPS:-3}"
+if [[ -d "$BACKUP_ROOT" ]]; then
+  old_dirs=()
+  while IFS= read -r dir; do
+    [[ -n "$dir" ]] && old_dirs+=("$dir")
+  done <<< "$(find "$BACKUP_ROOT" -maxdepth 1 -mindepth 1 -type d -name 'customer-platform-*' 2>/dev/null | sort -r)"
+  idx=0
+  for dir in "${old_dirs[@]}"; do
+    idx=$((idx + 1))
+    if [[ $idx -gt $KEEP_BACKUPS ]]; then
+      echo "Pruning old backup: $dir"
+      rm -rf "$dir"
+    fi
+  done
+fi

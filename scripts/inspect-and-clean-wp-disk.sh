@@ -223,7 +223,7 @@ LIMIT 25;
 section "wp_postmeta total bytes by meta_key (top 30)"
 mysql_query "
 SELECT meta_key,
-       COUNT(*) AS rows,
+       COUNT(*) AS row_count,
        SUM(LENGTH(meta_value)) AS total_bytes,
        ROUND(SUM(LENGTH(meta_value))/1024/1024, 2) AS total_mb,
        MAX(LENGTH(meta_value)) AS max_row_bytes
@@ -244,7 +244,7 @@ SELECT CASE
          WHEN meta_key LIKE 'pax%' OR meta_key LIKE '_pax%' THEN 'paxdesign*'
          ELSE LEFT(meta_key, 40)
        END AS key_group,
-       COUNT(*) AS rows,
+       COUNT(*) AS row_count,
        ROUND(SUM(LENGTH(meta_value))/1024/1024, 2) AS total_mb
 FROM ${POSTMETA}
 GROUP BY key_group
@@ -270,7 +270,7 @@ section "wp_posts size by post_type"
 mysql_query "
 SELECT post_type,
        post_status,
-       COUNT(*) AS rows,
+       COUNT(*) AS row_count,
        ROUND(SUM(LENGTH(post_content))/1024/1024, 2) AS content_mb
 FROM ${POSTS}
 GROUP BY post_type, post_status
@@ -340,7 +340,24 @@ section "Database backup before DB cleanup"
 if wp_cmd db export "$AUDIT_BACKUP/database-pre-cleanup.sql" --add-drop-table --single-transaction --default-character-set=utf8mb4 2>/dev/null; then
   gzip -f "$AUDIT_BACKUP/database-pre-cleanup.sql" || true
   log "Database backup: $AUDIT_BACKUP/database-pre-cleanup.sql.gz"
-else
+elif command -v mysqldump >/dev/null 2>&1; then
+  db_name="$(read_wp_config_value DB_NAME)"
+  db_user="$(read_wp_config_value DB_USER)"
+  db_pass="$(read_wp_config_value DB_PASSWORD)"
+  db_host="$(read_wp_config_value DB_HOST)"
+  db_port="3306"
+  if [[ "$db_host" == *:* ]]; then
+    db_port="${db_host#*:}"
+    db_host="${db_host%%:*}"
+  fi
+  if [[ -n "$db_name" && -n "$db_user" && -n "$db_host" ]]; then
+    MYSQL_PWD="$db_pass" mysqldump --host="$db_host" --port="$db_port" --user="$db_user" \
+      --single-transaction --quick --default-character-set=utf8mb4 "$db_name" \
+      > "$AUDIT_BACKUP/database-pre-cleanup.sql" && gzip -f "$AUDIT_BACKUP/database-pre-cleanup.sql" \
+      && log "Database backup via mysqldump: $AUDIT_BACKUP/database-pre-cleanup.sql.gz" || true
+  fi
+fi
+if [[ ! -f "$AUDIT_BACKUP/database-pre-cleanup.sql.gz" ]]; then
   log "WARN: database backup failed — skipping DB row cleanup"
   SKIP_DB_CLEANUP=1
 fi
