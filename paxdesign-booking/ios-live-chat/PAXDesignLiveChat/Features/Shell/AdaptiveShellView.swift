@@ -155,7 +155,7 @@ struct AdaptiveShellView: View {
                 }
             }
         }
-        .overlay(alignment: .bottom) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             if shouldShowBottomTabBar {
                 UiverseMenuBarView(
                     items: uiverseMenuItems,
@@ -163,14 +163,13 @@ struct AdaptiveShellView: View {
                     reduceMotion: reduceMotion
                 )
                 .scaleEffect(menuScrollState.barScale, anchor: .bottom)
-                .padding(.bottom, UiverseMenuMetrics.homeIndicatorGap)
-                .ignoresSafeArea(edges: .bottom)
+                .padding(.horizontal, UiverseMenuMetrics.horizontalMargin)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.9), value: shouldShowBottomTabBar)
         .environment(\.shellTabBarVisible, shouldShowBottomTabBar)
-        .environment(\.shellTabBarScrollInset, shouldShowBottomTabBar ? PAXShellLayout.uiverseMenuScrollInset : 0)
+        .environment(\.shellTabBarScrollInset, 0)
         .environment(\.shellMenuScrollState, shouldShowBottomTabBar ? menuScrollState : nil)
         .onChange(of: shouldShowBottomTabBar) { isVisible in
             if !isVisible {

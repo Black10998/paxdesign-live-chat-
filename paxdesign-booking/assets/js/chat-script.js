@@ -77,8 +77,6 @@
 
   var customerName       = '';
   var pendingLiveTopic   = '';
-  var awaitingName       = false;
-  var awaitingLiveConfirm = false;
   var liveNameConfirmed  = false;
   var sessionRating      = 0;
   var ratingSubmitted    = false;
@@ -91,12 +89,6 @@
     incoming: ''
   };
 
-  var namePromptEl       = root.querySelector('#paxdesignChatNamePrompt');
-  var nameInputEl        = root.querySelector('#paxdesignChatNameInput');
-  var nameSubmitBtn      = root.querySelector('#paxdesignChatNameSubmit');
-  var liveConfirmEl      = root.querySelector('#paxdesignChatLiveConfirm');
-  var liveConfirmYesBtn  = root.querySelector('#paxdesignChatLiveConfirmYes');
-  var liveConfirmNoBtn   = root.querySelector('#paxdesignChatLiveConfirmNo');
   var endWrapEl          = root.querySelector('#paxdesignChatEndWrap');
   var endBtnEl           = root.querySelector('#paxdesignChatEndBtn');
   var ratingEl           = root.querySelector('#paxdesignChatRating');
@@ -291,6 +283,15 @@
     }
     if (authGateBound) return;
     authGateBound = true;
+    var authActionsEl = root.querySelector('#paxdesignChatAuthActions');
+    if (authActionsEl) {
+      authActionsEl.addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-auth-view]');
+        if (!btn) return;
+        e.preventDefault();
+        mountInlineAuthForm(btn.getAttribute('data-auth-view'));
+      });
+    }
     if (authGateCloseBtn) {
       authGateCloseBtn.addEventListener('click', function (e) {
         e.preventDefault();
@@ -343,12 +344,25 @@
   function mountInlineAuthForm(view) {
     var inlineEl = root.querySelector('#paxdesignChatAuthInline');
     if (!inlineEl || !window.PDXAuth || typeof window.PDXAuth.mountInlineAuth !== 'function') return;
-    if (inlineEl.dataset.mounted === '1') return;
+    if (inlineEl.dataset.mounted === '1' && inlineEl.dataset.authView === (view || 'login')) return;
+    clearInlineAuthForm();
     window.PDXAuth.mountInlineAuth(inlineEl, view || 'login', {
       compact: true,
       context: 'chat',
     });
     inlineEl.dataset.mounted = '1';
+    inlineEl.dataset.authView = view || 'login';
+    updateChatAuthActionState(view || 'login');
+  }
+
+  function updateChatAuthActionState(activeView) {
+    var actionsEl = root.querySelector('#paxdesignChatAuthActions');
+    if (!actionsEl) return;
+    actionsEl.querySelectorAll('[data-auth-view]').forEach(function (btn) {
+      var isActive = btn.getAttribute('data-auth-view') === activeView;
+      btn.classList.toggle('paxdesign-is-active', isActive);
+      btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
   }
 
   function clearInlineAuthForm() {
@@ -357,6 +371,7 @@
       window.PDXAuth.unmountInlineAuth(inlineEl);
     }
     if (inlineEl) inlineEl.dataset.mounted = '';
+    if (inlineEl) inlineEl.dataset.authView = '';
   }
 
   function purgeGuestChatStorage() {
@@ -518,8 +533,6 @@
     applyGreeting();
     initQuickActions();
     initEntryChooser();
-    initNamePrompt();
-    initLiveConfirm();
     initAgentProfile();
     initCustomerClose();
     initRatingUi();
@@ -738,6 +751,14 @@
     return '';
   }
 
+  function anonymousGuestName() {
+    var resolved = resolvedCustomerName();
+    if (resolved && resolved.length >= 2) return resolved;
+    var sid = getSessionId();
+    if (sid && sid.length >= 4) return 'Guest ' + sid.slice(-4);
+    return 'Guest';
+  }
+
   function safeJson(res) {
     var contentType = (res.headers.get('content-type') || '').toLowerCase();
     if (contentType.indexOf('application/json') === -1) {
@@ -755,17 +776,12 @@
   }
 
   function beginLiveAgentRequest(topic) {
-    var resolved = resolvedCustomerName();
-    if (resolved) {
-      customerName = resolved;
-      liveNameConfirmed = true;
-      saveCustomerName();
-      hideNamePrompt();
-      return requestLiveAgent(topic || pendingLiveTopic || inferServiceFromConversation());
-    }
+    var name = anonymousGuestName();
+    customerName = name;
+    liveNameConfirmed = true;
+    saveCustomerName();
     pendingLiveTopic = topic || inferServiceFromConversation();
-    showNamePrompt();
-    return Promise.resolve();
+    return requestLiveAgent(pendingLiveTopic, name);
   }
 
 
@@ -787,108 +803,9 @@
   }
 
 
-  function showLiveConfirm() {
-    awaitingLiveConfirm = true;
-    awaitingName = false;
-    if (liveConfirmEl) liveConfirmEl.hidden = false;
-    if (namePromptEl) namePromptEl.hidden = true;
-    if (form) form.hidden = true;
-    if (endWrapEl) endWrapEl.hidden = true;
-    notifyLayout();
-  }
-
-  function hideLiveConfirm() {
-    awaitingLiveConfirm = false;
-    if (liveConfirmEl) liveConfirmEl.hidden = true;
-    updateInputState();
-    notifyLayout();
-  }
-
-  function showNamePrompt() {
-    awaitingName = true;
-    awaitingLiveConfirm = false;
-    if (liveConfirmEl) liveConfirmEl.hidden = true;
-    if (namePromptEl) namePromptEl.hidden = false;
-    if (form) form.hidden = true;
-    if (endWrapEl) endWrapEl.hidden = true;
-    if (nameInputEl) {
-      nameInputEl.value = '';
-      nameInputEl.removeAttribute('readonly');
-      setTimeout(function () { nameInputEl.focus(); }, 80);
-    }
-    notifyLayout();
-  }
-
-  function hideNamePrompt() {
-    awaitingName = false;
-    if (namePromptEl) namePromptEl.hidden = true;
-    updateInputState();
-    notifyLayout();
-  }
-
   function queueLiveAgentRequest(topic) {
     pendingLiveTopic = topic || inferServiceFromConversation();
     return beginLiveAgentRequest(pendingLiveTopic);
-  }
-
-  function submitCustomerName() {
-    var name = nameInputEl ? (nameInputEl.value || '').trim() : '';
-    if (name.length < 2) {
-      showError('Bitte geben Sie Ihren Namen ein (mindestens 2 Zeichen).');
-      return;
-    }
-    customerName = name;
-    liveNameConfirmed = true;
-    saveCustomerName();
-    hideNamePrompt();
-    var topic = pendingLiveTopic || inferServiceFromConversation();
-    isStreaming = true;
-    updateSendButton();
-    requestLiveAgent(topic, customerName)
-      .catch(function (err) { showError(err.message || 'Weiterleitung fehlgeschlagen.'); })
-      .finally(function () {
-        isStreaming = false;
-        updateSendButton();
-        saveSessionSnapshot();
-      });
-  }
-
-  function initNamePrompt() {
-    if (nameSubmitBtn) {
-      nameSubmitBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        submitCustomerName();
-      });
-    }
-    if (nameInputEl) {
-      nameInputEl.addEventListener('keydown', function (e) {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          submitCustomerName();
-        }
-      });
-    }
-  }
-
-  function initLiveConfirm() {
-    if (liveConfirmYesBtn) {
-      liveConfirmYesBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        hideLiveConfirm();
-        beginLiveAgentRequest(inferServiceFromConversation());
-      });
-    }
-    if (liveConfirmNoBtn) {
-      liveConfirmNoBtn.addEventListener('click', function (e) {
-        e.preventDefault();
-        hideLiveConfirm();
-        setEntryChoice('ai');
-        liveAgentPhase = 0;
-        saveLiveAgentPhase();
-        if (config.greeting) appendLocalAssistant(config.greeting);
-        saveSessionSnapshot();
-      });
-    }
   }
 
   function canCustomerEndChat() {
@@ -899,7 +816,7 @@
 
   function updateEndButtonUi() {
     if (!endWrapEl) return;
-    var show = canCustomerEndChat() && !awaitingName && !awaitingLiveConfirm && chatHandler !== 'closed';
+    var show = canCustomerEndChat() && chatHandler !== 'closed';
     endWrapEl.hidden = !show;
   }
 
@@ -1013,10 +930,9 @@
       var choice = btn.getAttribute('data-entry');
       setEntryChoice(choice);
       if (choice === 'live') {
-        appendLocalAssistant('Gerne — ich verbinde Sie mit unserem Live Chat.');
         liveAgentPhase = 1;
         saveLiveAgentPhase();
-        showLiveConfirm();
+        beginLiveAgentRequest(inferServiceFromConversation());
       } else if (choice === 'ai' && config.greeting) {
         appendLocalAssistant(config.greeting);
       }
@@ -1810,11 +1726,11 @@
 
   function updateInputState() {
     var closed = chatHandler === 'closed' && !isPersistentAccountChat();
-    var showForm = !closed && !awaitingName && !awaitingLiveConfirm;
-    input.disabled = closed || awaitingName || awaitingLiveConfirm;
+    var showForm = !closed;
+    input.disabled = closed;
     if (sendBtn) {
-      sendBtn.classList.toggle('paxdesign-is-disabled', closed || awaitingName || awaitingLiveConfirm || (!input.value.trim() && !isStreaming));
-      sendBtn.setAttribute('aria-disabled', (closed || awaitingName || awaitingLiveConfirm) ? 'true' : sendBtn.getAttribute('aria-disabled'));
+      sendBtn.classList.toggle('paxdesign-is-disabled', closed || (!input.value.trim() && !isStreaming));
+      sendBtn.setAttribute('aria-disabled', closed ? 'true' : sendBtn.getAttribute('aria-disabled'));
     }
     if (closedBar) {
       closedBar.hidden = !closed;
@@ -1822,17 +1738,9 @@
     if (form) {
       form.hidden = !showForm;
     }
-    if (namePromptEl) {
-      namePromptEl.hidden = !awaitingName;
-    }
-    if (liveConfirmEl) {
-      liveConfirmEl.hidden = !awaitingLiveConfirm;
-    }
     updateEndButtonUi();
     if (closed) {
       input.placeholder = 'Chat geschlossen';
-    } else if (awaitingName || awaitingLiveConfirm) {
-      input.placeholder = '';
     } else if (isHumanMode()) {
       input.placeholder = 'Nachricht an Live Chat …';
     } else {
@@ -1863,8 +1771,6 @@
     customerName = '';
     customerEndedChat = false;
     pendingLiveTopic = '';
-    awaitingName = false;
-    awaitingLiveConfirm = false;
     liveNameConfirmed = false;
     sessionRating = 0;
     ratingSubmitted = false;
@@ -3327,11 +3233,8 @@
   }
 
   function requestLiveAgent(topic, name) {
-    name = (name || '').trim();
-    if (name.length < 2) {
-      showNamePrompt();
-      return Promise.reject(new Error('Bitte geben Sie Ihren Namen ein (mindestens 2 Zeichen).'));
-    }
+    name = (name || anonymousGuestName()).trim();
+    if (name.length < 2) name = anonymousGuestName();
     var syncMessages = messages.filter(function (m) {
       return m.role === 'user' || m.role === 'assistant';
     });
@@ -3374,7 +3277,7 @@
       pendingLiveTopic = text || inferServiceFromConversation();
       liveAgentPhase = 1;
       saveLiveAgentPhase();
-      showLiveConfirm();
+      beginLiveAgentRequest(pendingLiveTopic);
       return true;
     }
 
@@ -3383,13 +3286,13 @@
       pendingLiveTopic = text || inferServiceFromConversation();
       liveAgentPhase = 1;
       saveLiveAgentPhase();
-      showLiveConfirm();
+      beginLiveAgentRequest(pendingLiveTopic);
       return true;
     }
 
     if (liveAgentPhase === 1 && !liveNameConfirmed && chatHandler === 'ai') {
       pendingLiveTopic = text || pendingLiveTopic || inferServiceFromConversation();
-      showLiveConfirm();
+      beginLiveAgentRequest(pendingLiveTopic);
       return true;
     }
 
@@ -3404,7 +3307,6 @@
     }
     text = (text || input.value).trim();
     if (!text || isStreaming) return;
-    if (awaitingName || awaitingLiveConfirm) return;
     if (chatHandler === 'closed') {
       showError('Dieser Chat wurde geschlossen.');
       return;

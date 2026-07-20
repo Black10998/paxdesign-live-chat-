@@ -3,22 +3,22 @@ import SwiftUI
 // MARK: - Reference CSS tokens (Uiverse.io by mymiamo)
 
 enum UiverseMenuMetrics {
-    static let horizontalMargin: CGFloat = 10
+    static let horizontalMargin: CGFloat = 8
     static let maxWidth: CGFloat = 520
-    /// ~1 mm above the Home Indicator (≈3 pt @ 326 ppi).
-    static let homeIndicatorGap: CGFloat = 3
-    static let menuPadding: CGFloat = 8
-    static let itemGap: CGFloat = 8
-    static let itemPaddingVertical: CGFloat = 10
-    static let itemPaddingHorizontal: CGFloat = 6
-    static let iconSize: CGFloat = 22.4
-    static let labelFontSize: CGFloat = 12.8
-    static let labelMarginTop: CGFloat = 4
+    /// Flush with home indicator region; parent uses safeAreaInset.
+    static let homeIndicatorGap: CGFloat = 0
+    static let menuPadding: CGFloat = 4
+    static let itemGap: CGFloat = 3
+    static let itemPaddingVertical: CGFloat = 5
+    static let itemPaddingHorizontal: CGFloat = 3
+    static let iconSize: CGFloat = 19
+    static let labelFontSize: CGFloat = 10
+    static let labelMarginTop: CGFloat = 2
     static let pillRadius: CGFloat = 9_999
 
     static let scrollScaleFull: CGFloat = 1.0
-    static let scrollScaleStage2: CGFloat = 0.90
-    static let scrollScaleStage3: CGFloat = 0.82
+    static let scrollScaleStage2: CGFloat = 0.92
+    static let scrollScaleStage3: CGFloat = 0.86
     static let scrollCompressionStart: CGFloat = 8
     static let scrollStage1Distance: CGFloat = 50
     static let scrollStage2Distance: CGFloat = 80
@@ -35,8 +35,9 @@ enum UiverseMenuMetrics {
         menuPadding * 2 + itemHeight
     }
 
+    /// Extra scroll breathing room above the tab bar when using overlay fallback.
     static var scrollInset: CGFloat {
-        menuHeight + homeIndicatorGap + 12
+        menuHeight + 10
     }
 }
 
@@ -192,7 +193,7 @@ struct UiverseMenuBarView: View {
             Capsule()
                 .strokeBorder(palette.glassBorder, lineWidth: 1)
         }
-        .shadow(color: palette.menuShadow, radius: 30, x: 0, y: 10)
+        .shadow(color: palette.menuShadow, radius: 16, x: 0, y: 6)
         .animation(reduceMotion ? nil : UiverseMenuPalette.springAnimation, value: colorScheme)
     }
 
@@ -206,7 +207,7 @@ struct UiverseMenuBarView: View {
             VStack(spacing: UiverseMenuMetrics.labelMarginTop) {
                 PAXIcon(
                     item.icon,
-                    size: .menuBar,
+                    size: .tab,
                     tint: isActive ? palette.activeColor : palette.inactiveColor
                 )
                 Text(item.title)
