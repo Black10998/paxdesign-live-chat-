@@ -48,6 +48,18 @@ struct CustomerPortalShellView: View {
                     await customerSession.auth.refreshProfile(api: customerSession.api)
                     navigation.refreshWorkspace()
                     CustomerNotificationsBadgeStore.shared.scheduleRefresh(api: customerSession.api)
+                    CustomerChatBadgeStore.shared.scheduleRefresh(api: customerSession.api)
+                }
+            }
+            .task {
+                guard auth.isLoggedIn, auth.isCustomerSession else { return }
+                CustomerChatBadgeStore.shared.scheduleRefresh(api: customerSession.api)
+                while !Task.isCancelled {
+                    if navigation.selectedTab != .chat {
+                        await CustomerChatBadgeStore.shared.refresh(api: customerSession.api)
+                    }
+                    let interval: UInt64 = navigation.selectedTab == .chat ? 15_000_000_000 : 6_000_000_000
+                    try? await Task.sleep(nanoseconds: interval)
                 }
             }
     }
@@ -55,7 +67,10 @@ struct CustomerPortalShellView: View {
 
 struct CustomerTabView: View {
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
+    @EnvironmentObject private var auth: CustomerAuthStore
+    @EnvironmentObject private var api: CustomerAPIClient
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ObservedObject private var chatBadge = CustomerChatBadgeStore.shared
     @StateObject private var menuScrollState = UiverseMenuScrollState()
     @State private var loadedTabs: Set<Int> = CustomerTabView.initialLoadedTabs()
 
@@ -77,7 +92,7 @@ struct CustomerTabView: View {
             UiverseMenuBarItem(tag: CustomerPortalTab.home.rawValue, icon: "dashboard.fill", title: String(localized: "Home")),
             UiverseMenuBarItem(tag: CustomerPortalTab.services.rawValue, icon: "platform.fill", title: String(localized: "Services")),
             UiverseMenuBarItem(tag: CustomerPortalTab.portfolio.rawValue, icon: "photo", title: String(localized: "Portfolio")),
-            UiverseMenuBarItem(tag: CustomerPortalTab.chat.rawValue, icon: "chats.fill", title: String(localized: "Chat")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.chat.rawValue, icon: "chats.fill", title: String(localized: "Chat"), badge: chatBadge.unreadCount),
             UiverseMenuBarItem(tag: CustomerPortalTab.account.rawValue, icon: "profile.user", title: String(localized: "Account")),
         ]
     }
@@ -130,6 +145,11 @@ struct CustomerTabView: View {
         .onChange(of: navigation.selectedTab) { tab in
             loadedTabs.insert(tab.rawValue)
             PAXHaptics.light()
+            if tab == .chat {
+                chatBadge.clear()
+            } else if auth.isAuthenticated {
+                chatBadge.scheduleRefresh(api: api)
+            }
             switch tab {
             case .account:
                 navigation.refreshWorkspace()

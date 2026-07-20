@@ -261,6 +261,9 @@ class PAXdesign_Customer_Auth {
         if ($method === 'GET' && preg_match('#/customer/chat/(messages|events|session|conversations)$#', $route)) {
             return array('bucket' => 'chat:sync', 'max' => 480);
         }
+        if ($method === 'POST' && preg_match('#/customer/chat/typing$#', $route)) {
+            return array('bucket' => 'chat:typing', 'max' => 360);
+        }
         if ($method === 'GET' && preg_match('#/customer/notifications$#', $route)) {
             return array('bucket' => 'notifications', 'max' => 240);
         }

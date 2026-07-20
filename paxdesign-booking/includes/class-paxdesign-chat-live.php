@@ -359,6 +359,7 @@ class PAXdesign_Chat_Live {
         add_action('wp_ajax_paxdesign_chat_live_list', array($this, 'handle_live_list'));
         add_action('wp_ajax_paxdesign_chat_live_session', array($this, 'handle_live_session'));
         add_action('wp_ajax_paxdesign_chat_live_takeover', array($this, 'handle_takeover'));
+        add_action('wp_ajax_paxdesign_chat_live_decline', array($this, 'handle_decline'));
         add_action('wp_ajax_paxdesign_chat_live_release', array($this, 'handle_release'));
         add_action('wp_ajax_paxdesign_chat_live_close', array($this, 'handle_close'));
         add_action('wp_ajax_paxdesign_chat_live_reopen', array($this, 'handle_reopen'));
@@ -833,6 +834,13 @@ class PAXdesign_Chat_Live {
         if ($handler === self::HANDLER_CLOSED) {
             return new WP_Error('closed', 'Chat ist geschlossen.', array('status' => 409));
         }
+        if ($handler === self::HANDLER_LIVE) {
+            return new WP_Error(
+                'live_request_pending',
+                __('Please accept the live request before replying.', 'paxdesign-booking'),
+                array('status' => 409)
+            );
+        }
         if (!$auto_takeover) {
             return new WP_Error('not_admin', 'Chat nicht übernommen.', array('status' => 409));
         }
@@ -1122,6 +1130,88 @@ class PAXdesign_Chat_Live {
         }
 
         return $entry;
+    }
+
+    /**
+     * Customer ends an active human chat and returns to the AI assistant.
+     *
+     * @return array<string, mixed>|WP_Error
+     */
+    public function customer_release_to_ai($session_id, $user_id = 0) {
+        self::upgrade_schema();
+
+        $session_id = $this->sanitize_session_id($session_id);
+        if ($session_id === '') {
+            return new WP_Error('invalid_session', __('Invalid session.', 'paxdesign-booking'), array('status' => 400));
+        }
+
+        $row = $this->get_session_row($session_id);
+        if (!$row) {
+            return new WP_Error('not_found', __('Session not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+
+        $user_id = absint($user_id);
+        $handler = $this->get_handler($session_id);
+
+        if ($handler === self::HANDLER_AI) {
+            return array(
+                'handler'    => self::HANDLER_AI,
+                'session_id' => $session_id,
+                'message'    => null,
+            );
+        }
+
+        if ($handler === self::HANDLER_CLOSED) {
+            if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+                $session_id = PAXdesign_Customer_Chat_Bridge::reopen_closed_session($session_id);
+            }
+            return array(
+                'handler'    => self::HANDLER_AI,
+                'session_id' => $session_id,
+                'message'    => null,
+            );
+        }
+
+        if (!in_array($handler, array(self::HANDLER_ADMIN, self::HANDLER_LIVE), true)) {
+            return array(
+                'handler'    => $handler,
+                'session_id' => $session_id,
+                'message'    => null,
+            );
+        }
+
+        global $wpdb;
+        $wpdb->update(
+            PAXdesign_Chat_Log::table_name(),
+            array(
+                'handler'       => self::HANDLER_AI,
+                'admin_user_id' => 0,
+                'admin_name'    => '',
+                'updated_at'    => current_time('mysql'),
+            ),
+            array('id' => (int) $row->id),
+            array('%s', '%d', '%s', '%s'),
+            array('%d')
+        );
+
+        $notice = 'Der KI-Assistent ist wieder für Sie da. Schreiben Sie jederzeit weiter.';
+        $entry = $this->append_message(
+            $session_id,
+            'system',
+            $notice,
+            array('client_msg_id' => 'sys:customer_released_to_ai')
+        );
+
+        $this->clear_typing($session_id, 'user');
+        $this->clear_typing($session_id, 'admin');
+        $this->persist_session_last_preview($session_id);
+        $this->emit_handler_event($session_id, self::HANDLER_AI);
+
+        return array(
+            'handler'    => self::HANDLER_AI,
+            'session_id' => $session_id,
+            'message'    => $entry,
+        );
     }
 
     public function handle_poll() {
@@ -1748,6 +1838,19 @@ class PAXdesign_Chat_Live {
             ));
         }
 
+        $wp_user_id = isset($row->wp_user_id) ? (int) $row->wp_user_id : 0;
+        if ($wp_user_id > 0) {
+            $result = $this->customer_release_to_ai($session_id, $wp_user_id);
+            if (is_wp_error($result)) {
+                wp_send_json_error(array('message' => $result->get_error_message()), 400);
+            }
+            wp_send_json_success(array(
+                'handler'        => $result['handler'],
+                'session_rating' => isset($row->session_rating) ? (int) $row->session_rating : 0,
+                'message'        => $result['message'],
+            ));
+        }
+
         $existing_messages = $this->sort_messages($this->decode_messages($row->messages));
         foreach (array_reverse($existing_messages) as $msg) {
             if (!is_array($msg) || ($msg['role'] ?? '') !== 'system') {
@@ -1793,10 +1896,12 @@ class PAXdesign_Chat_Live {
         $entry = $this->append_message(
             $session_id,
             'system',
-            'Der Kunde hat das Gespräch beendet.'
+            'Der Kunde hat das Gespräch beendet.',
+            array('client_msg_id' => 'sys:customer_closed')
         );
 
         $this->persist_session_last_preview($session_id);
+        $this->emit_handler_event($session_id, self::HANDLER_CLOSED);
 
         wp_send_json_success(array(
             'handler'        => self::HANDLER_CLOSED,
@@ -1891,6 +1996,29 @@ class PAXdesign_Chat_Live {
         wp_send_json_success($result);
     }
 
+    public function handle_decline() {
+        $this->verify_admin_nonce();
+
+        $session_id = $this->sanitize_session_id(
+            isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
+        );
+        if ($session_id === '') {
+            wp_send_json_error(array('message' => 'Ungültige Session.'), 400);
+        }
+
+        $result = $this->admin_decline_live_request($session_id);
+        if (is_wp_error($result)) {
+            $status = 409;
+            $error_data = $result->get_error_data();
+            if (is_array($error_data) && !empty($error_data['status'])) {
+                $status = (int) $error_data['status'];
+            }
+            wp_send_json_error(array('message' => $result->get_error_message()), $status);
+        }
+
+        wp_send_json_success($result);
+    }
+
     public function handle_release() {
         $this->verify_admin_nonce();
 
@@ -1925,6 +2053,8 @@ class PAXdesign_Chat_Live {
             'system',
             'Der KI-Assistent übernimmt den Chat wieder.'
         );
+
+        $this->emit_handler_event($session_id, self::HANDLER_AI);
 
         wp_send_json_success(array(
             'handler' => self::HANDLER_AI,
@@ -2477,6 +2607,7 @@ class PAXdesign_Chat_Live {
         $row = $this->get_session_row($session_id);
         $topic = isset($row->detected_service) ? (string) $row->detected_service : '';
         $this->notify_live_agent_request($session_id, $topic, $row);
+        $this->emit_handler_event($session_id, self::HANDLER_LIVE);
 
         return array(
             'thanks'  => $thanks,
@@ -3033,6 +3164,9 @@ class PAXdesign_Chat_Live {
             $reads['admin'] = max($reads['admin'], $message_seq);
         }
         $other_read = $mark_read === 'admin' ? $reads['user'] : $reads['admin'];
+        $unread_staff = class_exists('PAXdesign_Message_Store')
+            ? PAXdesign_Message_Store::count_unread_staff_messages($session_id, $reads['user'])
+            : 0;
 
         return array(
             'session_id'       => $session_id,
@@ -3050,6 +3184,7 @@ class PAXdesign_Chat_Live {
             'last_read_seq'    => $reads['user'],
             'admin_read_seq'   => $reads['admin'],
             'other_read_seq'   => $other_read,
+            'unread_staff_count' => $unread_staff,
             'messages'         => $new,
             'admin_typing'     => $this->is_typing($session_id, 'admin'),
             'user_typing'      => $this->is_typing($session_id, 'user'),
@@ -3106,6 +3241,11 @@ class PAXdesign_Chat_Live {
 
         $notice = sprintf('%s ist dem Chat beigetreten.', $admin_name);
         $entry  = $this->append_message($session_id, 'system', $notice);
+
+        $this->emit_handler_event($session_id, self::HANDLER_ADMIN, array(
+            'admin_name'    => $admin_name,
+            'admin_user_id' => (int) $user->ID,
+        ));
 
         return array(
             'handler'        => self::HANDLER_ADMIN,
@@ -3173,6 +3313,7 @@ class PAXdesign_Chat_Live {
                 __('Our team will reply here when available. You can keep messaging anytime.', 'paxdesign-booking')
             );
             $this->persist_session_last_preview($session_id);
+            $this->emit_handler_event($session_id, self::HANDLER_AI);
             return array(
                 'handler' => self::HANDLER_AI,
                 'message' => $entry,

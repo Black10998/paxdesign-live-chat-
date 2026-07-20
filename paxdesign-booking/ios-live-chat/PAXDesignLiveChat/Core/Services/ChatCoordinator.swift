@@ -1535,6 +1535,11 @@ final class ChatThreadModel: ObservableObject {
             draft = text
             return
         }
+        if handler == "live_request" {
+            errorMessage = String(localized: "Please accept the live request before replying.")
+            draft = text
+            return
+        }
         if handler != "admin", auth.canTakeOverChats {
             do {
                 try await api.takeover(sessionId)

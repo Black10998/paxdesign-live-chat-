@@ -44,6 +44,7 @@
     var $updated = $('#paxLiveChatUpdated');
     var $handlerBadge = $('#paxLiveChatHandlerBadge');
     var $takeover = $('#paxLiveChatTakeover');
+    var $decline = $('#paxLiveChatDecline');
     var $release = $('#paxLiveChatRelease');
     var $reopen = $('#paxLiveChatReopen');
     var $close = $('#paxLiveChatClose');
@@ -1509,6 +1510,7 @@
         .addClass(badgeClass(currentHandler))
         .text(handlerLabel(currentHandler, adminName));
       $takeover.prop('hidden', isAdmin || isClosed);
+      if ($decline.length) $decline.prop('hidden', currentHandler !== 'live_request' || isClosed);
       $release.prop('hidden', !isAdmin);
       $reopen.prop('hidden', !isClosed);
       $close.prop('hidden', isClosed);
@@ -2293,6 +2295,26 @@
         loadList();
       });
     });
+
+    if ($decline.length) {
+      $decline.on('click', function () {
+        if (!selectedSession) return;
+        if (!window.confirm('Live-Anfrage ablehnen? Der Kunde kehrt zum KI-Assistenten zurück.')) return;
+        ajax('paxdesign_chat_live_decline', { session_id: selectedSession }).done(function (res) {
+          if (!res.success) {
+            alert(res.data && res.data.message ? res.data.message : 'Ablehnen fehlgeschlagen.');
+            return;
+          }
+          seenLiveRequests[selectedSession] = Date.now();
+          persistSeenLiveRequests();
+          stopLiveRequestAlarm();
+          hideLiveAlertBar();
+          updateHandlerUi(res.data.handler || 'ai', '');
+          if (res.data.message) renderMessages([res.data.message], false);
+          loadList();
+        });
+      });
+    }
 
     $release.on('click', function () {
       if (!selectedSession) return;

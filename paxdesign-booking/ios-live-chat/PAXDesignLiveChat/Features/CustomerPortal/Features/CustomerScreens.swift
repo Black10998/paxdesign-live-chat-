@@ -352,6 +352,7 @@ struct CustomerChatView: View {
     @State private var showCameraPicker = false
     @State private var showAuth = false
     @State private var authMode: CustomerChatAuthMode = .login
+    @State private var isEndingLiveChat = false
 
     private enum CustomerChatAuthMode {
         case login, register
@@ -392,6 +393,7 @@ struct CustomerChatView: View {
                 ToolbarItem(placement: .topBarLeading) {
                     if isDedicatedChatScreen {
                         Button {
+                            isInputFocused = false
                             navigation.dismissChat()
                         } label: {
                             HStack(spacing: 4) {
@@ -405,6 +407,15 @@ struct CustomerChatView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     if auth.isAuthenticated {
                         HStack(spacing: 10) {
+                            if isHumanQueue {
+                                Button {
+                                    Task { await endLiveChat() }
+                                } label: {
+                                    Text(String(localized: "End Live Chat"))
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                .disabled(isEndingLiveChat)
+                            }
                             CustomerNavAvatarButton()
                             NavigationLink(String(localized: "History")) { CustomerConversationsView() }
                         }
@@ -564,6 +575,7 @@ struct CustomerChatView: View {
             startEventStream()
         }
         .onDisappear {
+            isInputFocused = false
             pollTask?.cancel()
             streamTask?.cancel()
             typingTask?.cancel()
@@ -574,6 +586,7 @@ struct CustomerChatView: View {
         }
         .onAppear {
             AppRefreshPolicy.setActiveSession(poll?.session_id)
+            CustomerChatBadgeStore.shared.clear()
         }
         .onChange(of: scenePhase) { phase in
             if phase == .active, auth.isAuthenticated {
@@ -706,6 +719,7 @@ struct CustomerChatView: View {
                 notice = nil
             }
             AppRefreshPolicy.setActiveSession(poll?.session_id)
+            syncChatBadge(from: poll)
             let newCount = poll?.messages?.count ?? 0
             return newCount > previousCount
         } catch {
@@ -735,6 +749,35 @@ struct CustomerChatView: View {
             }
         }
         return true
+    }
+
+    private func syncChatBadge(from poll: CustomerChatPoll?) {
+        if navigation.selectedTab == .chat {
+            CustomerChatBadgeStore.shared.clear()
+        } else {
+            CustomerChatBadgeStore.shared.update(from: poll)
+        }
+    }
+
+    private func endLiveChat() async {
+        guard isHumanQueue, !isEndingLiveChat else { return }
+        isEndingLiveChat = true
+        defer { isEndingLiveChat = false }
+        isInputFocused = false
+        do {
+            let response = try await api.closeChatSession(sessionID: poll?.session_id)
+            if let message = response.message {
+                applyInlineMessage(message)
+            }
+            if let handler = response.handler {
+                applyHandlerUpdate(handler)
+            }
+            notice = nil
+            error = nil
+            await refresh(full: true)
+        } catch {
+            self.error = friendlyChatError(error)
+        }
     }
 
     private func applyInlineMessage(_ message: CustomerChatPoll.ChatMessage) {
@@ -796,6 +839,7 @@ struct CustomerChatView: View {
                 merged.append(msg)
                 existing.insert(msg.seq)
             }
+            let reads = pollReadFields(from: next, current: poll)
             poll = CustomerChatPoll(
                 session_id: next.session_id ?? poll?.session_id,
                 handler: next.handler ?? poll?.handler,
@@ -805,9 +849,12 @@ struct CustomerChatView: View {
                 notice: next.notice ?? poll?.notice,
                 admin_typing: next.admin_typing ?? poll?.admin_typing,
                 user_typing: next.user_typing ?? poll?.user_typing,
-                other_read_seq: next.other_read_seq ?? poll?.other_read_seq
+                other_read_seq: next.other_read_seq ?? poll?.other_read_seq,
+                last_read_seq: reads.last_read_seq,
+                unread_staff_count: reads.unread_staff_count
             )
         } else if let current = poll {
+            let reads = pollReadFields(from: next, current: current)
             poll = CustomerChatPoll(
                 session_id: next.session_id ?? current.session_id,
                 handler: next.handler ?? current.handler,
@@ -817,12 +864,19 @@ struct CustomerChatView: View {
                 notice: next.notice ?? current.notice,
                 admin_typing: next.admin_typing ?? current.admin_typing,
                 user_typing: next.user_typing ?? current.user_typing,
-                other_read_seq: next.other_read_seq ?? current.other_read_seq
+                other_read_seq: next.other_read_seq ?? current.other_read_seq,
+                last_read_seq: reads.last_read_seq,
+                unread_staff_count: reads.unread_staff_count
             )
         }
         if let maxSeq = poll?.messages?.map(\.seq).max() {
             lastSeq = max(lastSeq, maxSeq)
         }
+        syncChatBadge(from: poll)
+    }
+
+    private func pollReadFields(from next: CustomerChatPoll, current: CustomerChatPoll?) -> (last_read_seq: Int?, unread_staff_count: Int?) {
+        (next.last_read_seq ?? current?.last_read_seq, next.unread_staff_count ?? current?.unread_staff_count)
     }
 
     private func handleChatError(_ error: Error, savedDraft: String?, duringSend: Bool) async {
@@ -958,6 +1012,11 @@ struct CustomerChatView: View {
                             if let message = CustomerChatPoll.ChatMessage.fromStreamPayload(event.payload["message"]) {
                                 applyInlineMessage(message)
                                 if message.role == "admin" || message.role == "assistant" {
+                                    if navigation.selectedTab != .chat {
+                                        CustomerChatBadgeStore.shared.noteIncomingStaffMessage()
+                                    } else {
+                                        CustomerChatBadgeStore.shared.clear()
+                                    }
                                     CustomerNotificationsBadgeStore.shared.scheduleRefresh(api: api)
                                     PAXHaptics.light()
                                 }
@@ -968,12 +1027,10 @@ struct CustomerChatView: View {
                             pollIntervalNs = minPollIntervalNs
                             await refresh(full: true)
                         case "handler":
-                            pollIntervalNs = minPollIntervalNs
                             let handler = StreamPayload.string(event.payload["handler"])
                             if !handler.isEmpty {
                                 applyHandlerUpdate(handler)
                             }
-                            await refresh(full: true)
                         case "typing":
                             applyTypingUpdate(event.payload)
                         default:

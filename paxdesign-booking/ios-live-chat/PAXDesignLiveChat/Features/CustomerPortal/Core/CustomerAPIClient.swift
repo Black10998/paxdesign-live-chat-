@@ -208,10 +208,10 @@ final class CustomerAPIClient: ObservableObject {
         _ = try await post("/customer/chat/typing", body: body, as: CustomerEmptyResponse.self)
     }
 
-    func closeChatSession(sessionID: String?) async throws {
+    func closeChatSession(sessionID: String?) async throws -> CustomerChatCloseResponse {
         var body: [String: String] = [:]
         if let sessionID, !sessionID.isEmpty { body["session_id"] = sessionID }
-        _ = try await post("/customer/chat/close", body: body, as: CustomerEmptyResponse.self)
+        return try await post("/customer/chat/close", body: body, as: CustomerChatCloseResponse.self)
     }
 
     func uploadChatImage(sessionID: String, imageData: Data, filename: String, caption: String = "", clientMsgID: String = UUID().uuidString) async throws -> CustomerSendResponse {
@@ -955,10 +955,13 @@ struct CustomerChatPoll: Decodable {
     let admin_typing: Bool?
     let user_typing: Bool?
     let other_read_seq: Int?
+    let last_read_seq: Int?
+    let unread_staff_count: Int?
 
     enum CodingKeys: String, CodingKey {
         case session_id, handler, messages, message_count, last_preview, notice
         case admin_typing, user_typing, other_read_seq, admin_read_seq
+        case last_read_seq, unread_staff_count
     }
 
     init(
@@ -970,7 +973,9 @@ struct CustomerChatPoll: Decodable {
         notice: String? = nil,
         admin_typing: Bool? = nil,
         user_typing: Bool? = nil,
-        other_read_seq: Int? = nil
+        other_read_seq: Int? = nil,
+        last_read_seq: Int? = nil,
+        unread_staff_count: Int? = nil
     ) {
         self.session_id = session_id
         self.handler = handler
@@ -981,6 +986,8 @@ struct CustomerChatPoll: Decodable {
         self.admin_typing = admin_typing
         self.user_typing = user_typing
         self.other_read_seq = other_read_seq
+        self.last_read_seq = last_read_seq
+        self.unread_staff_count = unread_staff_count
     }
 
     init(from decoder: Decoder) throws {
@@ -998,7 +1005,16 @@ struct CustomerChatPoll: Decodable {
         } else {
             other_read_seq = CustomerPortalDecode.optionalInt(container, .admin_read_seq)
         }
+        last_read_seq = CustomerPortalDecode.optionalInt(container, .last_read_seq)
+        unread_staff_count = CustomerPortalDecode.optionalInt(container, .unread_staff_count)
     }
+}
+
+struct CustomerChatCloseResponse: Decodable {
+    let ok: Bool?
+    let handler: String?
+    let session_id: String?
+    let message: CustomerChatPoll.ChatMessage?
 }
 
 struct CustomerSendResponse: Decodable {

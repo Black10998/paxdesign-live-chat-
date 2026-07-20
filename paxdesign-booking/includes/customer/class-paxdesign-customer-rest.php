@@ -368,6 +368,7 @@ class PAXdesign_Customer_REST {
                 'last_preview'   => isset($poll['last_preview']) ? $poll['last_preview'] : '',
                 'handler'        => isset($poll['handler']) ? $poll['handler'] : 'ai',
                 'message_count'  => isset($poll['message_count']) ? (int) $poll['message_count'] : 0,
+                'unread_count'   => isset($poll['unread_staff_count']) ? (int) $poll['unread_staff_count'] : 0,
             ),
         ));
     }

@@ -94,6 +94,7 @@ if (!defined('ABSPATH')) {
         <div class="pax-live-console__chat-foot pax-live-app__composer-wrap">
           <div class="pax-live-console__toolbar pax-live-app__actions">
             <button type="button" class="pax-live-console__btn pax-live-console__btn--primary pax-live-app__action" id="paxLiveChatTakeover">Übernehmen</button>
+            <button type="button" class="pax-live-console__btn pax-live-console__btn--ghost pax-live-app__action" id="paxLiveChatDecline" hidden>Ablehnen</button>
             <button type="button" class="pax-live-console__btn pax-live-console__btn--ghost pax-live-app__action" id="paxLiveChatRelease" hidden>KI</button>
             <button type="button" class="pax-live-console__btn pax-live-console__btn--primary pax-live-app__action" id="paxLiveChatReopen" hidden>Öffnen</button>
             <button type="button" class="pax-live-console__btn pax-live-console__btn--danger pax-live-app__action" id="paxLiveChatClose">Schließen</button>
