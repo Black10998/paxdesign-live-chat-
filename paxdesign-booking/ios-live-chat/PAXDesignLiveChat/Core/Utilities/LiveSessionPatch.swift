@@ -54,4 +54,44 @@ enum LiveSessionPatch {
             otherLastSeen: session.otherLastSeen
         )
     }
+
+    static func patched(
+        _ session: LiveSession,
+        handler: String? = nil,
+        handlerLabel: String? = nil,
+        adminName: String? = nil,
+        message: LiveMessage? = nil,
+        seq: Int = 0
+    ) -> LiveSession {
+        let base = message.map { bumped(session, message: $0, seq: seq) } ?? session
+        return LiveSession(
+            id: base.id,
+            sessionId: base.sessionId,
+            handler: handler ?? base.handler,
+            handlerLabel: handlerLabel ?? base.handlerLabel,
+            adminName: adminName ?? base.adminName,
+            customerName: base.customerName,
+            sessionRating: base.sessionRating,
+            detectedService: base.detectedService,
+            updatedAt: base.updatedAt,
+            messageCount: base.messageCount,
+            seq: base.seq,
+            lastPreview: base.lastPreview,
+            lastRole: base.lastRole,
+            customerLanguage: base.customerLanguage,
+            otherUserId: base.otherUserId,
+            requestStatus: base.requestStatus,
+            requestStatusLabel: base.requestStatusLabel,
+            canSend: base.canSend,
+            canRespond: base.canRespond,
+            requestedBy: base.requestedBy,
+            isPinned: base.isPinned,
+            isMuted: base.isMuted,
+            assignedTo: base.assignedTo,
+            otherRoleRank: base.otherRoleRank,
+            otherRoleLabel: base.otherRoleLabel,
+            otherPresence: base.otherPresence,
+            otherLastSeen: base.otherLastSeen
+        )
+    }
 }

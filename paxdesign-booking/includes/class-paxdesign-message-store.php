@@ -157,6 +157,8 @@ class PAXdesign_Message_Store {
                 'Der Kunde hat das Gespräch beendet.' => 'sys:customer_closed',
                 'Der KI-Assistent ist wieder für Sie da. Schreiben Sie jederzeit weiter.' => 'sys:customer_released_to_ai',
                 'Der KI-Assistent übernimmt den Chat wieder.' => 'sys:ai_reclaimed',
+                'The conversation has been returned to the KI Assistant.' => 'sys:staff_returned_to_ai',
+                'Das Gespräch wurde an den KI-Assistenten zurückgegeben.' => 'sys:staff_returned_to_ai',
                 'Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.' => 'sys:live_agent_notified',
                 'Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter.' => 'sys:live_transfer_thanks',
             );

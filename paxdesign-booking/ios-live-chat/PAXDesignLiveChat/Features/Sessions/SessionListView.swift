@@ -602,9 +602,9 @@ private struct SessionRow: View {
                     }
 
                     HStack(alignment: .center, spacing: 8) {
-                        if session.isLiveRequest {
-                            liveIndicator
-                        } else if session.isTeamDM {
+                        handlerStatusBadge
+
+                        if session.isTeamDM {
                             teamBadge
                         } else if showRating, let rating = SessionRatingBadge(rating: session.sessionRating) {
                             rating
@@ -614,7 +614,7 @@ private struct SessionRow: View {
                             .font(.subheadline)
                             .fontWeight(isUnread ? .medium : .regular)
                             .foregroundStyle(isUnread ? PAXTheme.textPrimary : PAXTheme.textSecondary)
-                            .lineLimit(1)
+                            .lineLimit(isUnread ? 2 : 1)
 
                         Spacer(minLength: 0)
 
@@ -639,10 +639,35 @@ private struct SessionRow: View {
     }
 
     private var previewText: String {
+        if isUnread, !session.lastPreview.isEmpty {
+            return session.lastPreview
+        }
         if !session.lastPreview.isEmpty { return session.lastPreview }
         if session.isTeamDM { return L10n.TeamChatPlaceholder }
         if !session.detectedService.isEmpty { return session.detectedService }
         return "—"
+    }
+
+    @ViewBuilder
+    private var handlerStatusBadge: some View {
+        if session.isClosed {
+            statusBadge(L10n.ChatHandlerClosed, foreground: PAXTheme.textTertiary, background: PAXTheme.textTertiary.opacity(0.14))
+        } else if session.isLiveRequest {
+            liveIndicator
+        } else if session.isAdmin {
+            statusBadge(L10n.ChatHandlerLiveAgent, foreground: PAXBrand.accent, background: PAXBrand.accent.opacity(0.15))
+        } else if session.handler == "ai" {
+            statusBadge(L10n.ChatHandlerAi, foreground: PAXTheme.textSecondary, background: PAXTheme.textSecondary.opacity(0.12))
+        }
+    }
+
+    private func statusBadge(_ title: String, foreground: Color, background: Color) -> some View {
+        Text(title)
+            .font(.caption2.weight(.bold))
+            .foregroundStyle(foreground)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(background))
     }
 
     private var liveIndicator: some View {
