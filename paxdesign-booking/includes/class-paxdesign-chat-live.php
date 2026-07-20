@@ -1440,7 +1440,11 @@ class PAXdesign_Chat_Live {
 
         $since = isset($_GET['since']) ? absint($_GET['since']) : 0;
         if (class_exists('PAXdesign_Chat_Event_Bus')) {
-            PAXdesign_Chat_Event_Bus::stream_sse('session:' . $session_id, $since);
+            PAXdesign_Chat_Event_Bus::stream_sse(
+                'session:' . $session_id,
+                $since,
+                PAXdesign_Chat_Event_Bus::STREAM_CHAIN
+            );
         }
         exit;
     }
@@ -2197,37 +2201,17 @@ class PAXdesign_Chat_Live {
             wp_send_json_error(array('message' => 'Ungültige Session.'), 400);
         }
 
-        $row = $this->get_session_row($session_id);
-        if (!$row) {
-            wp_send_json_error(array('message' => 'Session nicht gefunden.'), 404);
+        $result = $this->admin_release($session_id);
+        if (is_wp_error($result)) {
+            $status = 500;
+            $error_data = $result->get_error_data();
+            if (is_array($error_data) && !empty($error_data['status'])) {
+                $status = (int) $error_data['status'];
+            }
+            wp_send_json_error(array('message' => $result->get_error_message()), $status);
         }
 
-        global $wpdb;
-        $wpdb->update(
-            PAXdesign_Chat_Log::table_name(),
-            array(
-                'handler'       => self::HANDLER_AI,
-                'admin_user_id' => 0,
-                'admin_name'    => '',
-                'updated_at'    => current_time('mysql'),
-            ),
-            array('id' => (int) $row->id),
-            array('%s', '%d', '%s', '%s'),
-            array('%d')
-        );
-
-        $entry = $this->append_message(
-            $session_id,
-            'system',
-            'Der KI-Assistent übernimmt den Chat wieder.'
-        );
-
-        $this->emit_handler_event($session_id, self::HANDLER_AI);
-
-        wp_send_json_success(array(
-            'handler' => self::HANDLER_AI,
-            'message' => $entry,
-        ));
+        wp_send_json_success($result);
     }
 
     public function handle_close() {
@@ -2240,41 +2224,17 @@ class PAXdesign_Chat_Live {
             wp_send_json_error(array('message' => 'Ungültige Session.'), 400);
         }
 
-        $row = $this->get_session_row($session_id);
-        if (!$row) {
-            wp_send_json_error(array('message' => 'Session nicht gefunden.'), 404);
-        }
-        $was_live_request = isset($row->handler) && (string) $row->handler === self::HANDLER_LIVE;
-
-        global $wpdb;
-        $wpdb->update(
-            PAXdesign_Chat_Log::table_name(),
-            array(
-                'handler'       => self::HANDLER_CLOSED,
-                'admin_user_id' => 0,
-                'admin_name'    => '',
-                'updated_at'    => current_time('mysql'),
-            ),
-            array('id' => (int) $row->id),
-            array('%s', '%d', '%s', '%s'),
-            array('%d')
-        );
-
-        $entry = $this->append_message(
-            $session_id,
-            'system',
-            'Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten.'
-        );
-
-        $this->persist_session_last_preview($session_id);
-        if ($was_live_request) {
-            $this->dispatch_missed_chat_event($session_id, $row, 'Live-Anfrage geschlossen');
+        $result = $this->admin_close($session_id);
+        if (is_wp_error($result)) {
+            $status = 500;
+            $error_data = $result->get_error_data();
+            if (is_array($error_data) && !empty($error_data['status'])) {
+                $status = (int) $error_data['status'];
+            }
+            wp_send_json_error(array('message' => $result->get_error_message()), $status);
         }
 
-        wp_send_json_success(array(
-            'handler' => self::HANDLER_CLOSED,
-            'message' => $entry,
-        ));
+        wp_send_json_success($result);
     }
 
     public function handle_reopen() {
@@ -3636,6 +3596,7 @@ class PAXdesign_Chat_Live {
         if ($was_live_request) {
             $this->dispatch_missed_chat_event($session_id, $row, 'Live-Anfrage geschlossen');
         }
+        $this->emit_handler_event($session_id, self::HANDLER_CLOSED);
 
         return array(
             'handler' => self::HANDLER_CLOSED,
@@ -3696,6 +3657,11 @@ class PAXdesign_Chat_Live {
             'Der KI-Assistent übernimmt den Chat wieder.'
         );
 
+        $this->clear_typing($session_id, 'user');
+        $this->clear_typing($session_id, 'admin');
+        $this->persist_session_last_preview($session_id);
+        $this->emit_handler_event($session_id, self::HANDLER_AI);
+
         return array(
             'handler' => self::HANDLER_AI,
             'message' => $entry,
@@ -3743,6 +3709,11 @@ class PAXdesign_Chat_Live {
             'system',
             'Der Chat wurde wieder geöffnet. ' . $admin_name . ' ist wieder für Sie da.'
         );
+
+        $this->emit_handler_event($session_id, self::HANDLER_ADMIN, array(
+            'admin_name'    => $admin_name,
+            'admin_user_id' => (int) $user->ID,
+        ));
 
         return array(
             'handler'        => self::HANDLER_ADMIN,

@@ -11,6 +11,7 @@ class PAXdesign_Chat_Event_Bus {
 
     const MAX_EVENTS   = 500;
     const STREAM_WAIT  = 25;
+    const STREAM_CHAIN = 55;
     const GLOBAL_KEY   = 'pax_evt_global_seq';
 
     /**
@@ -161,7 +162,7 @@ class PAXdesign_Chat_Event_Bus {
     public static function stream_sse($channel, $since = 0, $timeout = 0) {
         self::send_sse_headers();
         $since   = absint($since);
-        $timeout = $timeout > 0 ? min(30, $timeout) : self::STREAM_WAIT;
+        $timeout = $timeout > 0 ? min(60, $timeout) : self::STREAM_WAIT;
         $deadline = microtime(true) + $timeout;
         $last_id  = $since;
 
@@ -203,7 +204,7 @@ class PAXdesign_Chat_Event_Bus {
             $channels[] = array('channel' => 'session:' . sanitize_text_field($session_id), 'since' => absint($since_session));
         }
 
-        $deadline = microtime(true) + self::STREAM_WAIT;
+        $deadline = microtime(true) + self::STREAM_CHAIN;
         $last_ids = array();
         foreach ($channels as $c) {
             $last_ids[$c['channel']] = (int) $c['since'];

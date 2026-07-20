@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.39.0
+ * Version: 3.40.0
  */
 (function () {
   'use strict';
@@ -146,6 +146,8 @@
   var LIVE_QUALIFY_TEXT   = 'Gerne. Damit ich Sie richtig weiterleiten kann: Worum geht es kurz — Website, AI Chatbot, Booking, Support oder ein anderes Thema?';
   var POLL_INTERVAL_MS    = 1200;
   var POLL_INTERVAL_OPEN_MS = 450;
+  var POLL_INTERVAL_BACKGROUND_MS = 2000;
+  var STREAM_RESTART_MS   = 120;
   var widgetOpen          = false;
   var pageVisible         = !document.hidden;
   var streamSource        = null;
@@ -222,17 +224,25 @@
       }
     }
     if (data.type === 'handler' && payload.handler) {
-      applyHandlerState(payload.handler, payload.admin_name || '');
+      onRealtimeHandlerChange(payload.handler, payload.admin_name || '');
     }
     if ((data.type === 'typing' || data.type === 'handler') && !customerStreamConnected()) {
       pollUpdates();
     }
   }
 
+  function onRealtimeHandlerChange(handler, name) {
+    applyHandlerState(handler, name || '');
+    pollUpdates();
+    scheduleCustomerStreamRestart(STREAM_RESTART_MS);
+  }
+
   function startCustomerStream() {
-    if (!pageVisible || !widgetOpen || chatHandler === 'closed' || typeof EventSource === 'undefined') return;
+    if (!pageVisible || typeof EventSource === 'undefined') return;
     if (!canUseChat()) return;
     if (!getSessionId()) return;
+    if (!widgetOpen && !isPersistentAccountChat()) return;
+    if (!isPersistentAccountChat() && chatHandler === 'closed') return;
     stopCustomerStream();
     try {
       streamSource = new EventSource(customerStreamUrl());
@@ -241,12 +251,20 @@
           handleCustomerStreamPayload(JSON.parse(event.data));
         } catch (e) {}
       });
-      streamSource.addEventListener('ping', function () {
-        // Keep the existing EventSource connection alive; do not reconnect on heartbeat.
+      streamSource.addEventListener('ping', function (event) {
+        try {
+          var ping = JSON.parse(event.data);
+          if (ping && typeof ping.since === 'number') {
+            streamEventSince = Math.max(streamEventSince, ping.since);
+          }
+        } catch (e) {}
       });
       streamSource.onerror = function () {
-        stopCustomerStream();
-        scheduleCustomerStreamRestart(900);
+        if (streamSource) {
+          streamSource.close();
+          streamSource = null;
+        }
+        scheduleCustomerStreamRestart(STREAM_RESTART_MS);
       };
     } catch (e) {
       scheduleCustomerStreamRestart(1200);
@@ -381,11 +399,8 @@
       hideAuthGate();
       refreshAuthenticatedChatSession().then(function () {
         updateEntryUi();
-        if (widgetOpen) {
-          pollUpdates();
-          scheduleLivePolling();
-          startCustomerStream();
-        }
+        scheduleLivePolling();
+        if (widgetOpen) startCustomerStream();
       });
       return;
     }
@@ -397,11 +412,8 @@
       purgeGuestChatStorage();
       refreshAuthenticatedChatSession().then(function () {
         updateEntryUi();
-        if (widgetOpen) {
-          pollUpdates();
-          scheduleLivePolling();
-          startCustomerStream();
-        }
+        scheduleLivePolling();
+        if (widgetOpen) startCustomerStream();
       });
     }
   }
@@ -462,6 +474,10 @@
       window.addEventListener('pdx-session-updated', function () {
         if (config && window.PDXAuth && typeof window.PDXAuth.getUser === 'function') {
           config.auth = window.PDXAuth.getUser();
+        }
+        if (window.PDXAuth && typeof window.PDXAuth.getNonce === 'function') {
+          var freshNonce = window.PDXAuth.getNonce();
+          if (freshNonce) config.nonce = freshNonce;
         }
         handleAuthSessionChange();
       });
@@ -587,6 +603,9 @@
       localStorage.setItem(getSessionStorageKey(), sessionId);
       sessionStorage.setItem(SESSION_KEY, sessionId);
     } catch (e) {}
+    if (opts.fromServer) {
+      scheduleCustomerStreamRestart(STREAM_RESTART_MS);
+    }
     loadEntryChoice();
     loadCustomerName();
     if (!preserveUi) updateEntryUi();
@@ -710,6 +729,9 @@
     boot.then(function () {
       if (!sessionRestored) updateEntryUi();
       updateInputState();
+      if (canUseChat()) {
+        scheduleLivePolling();
+      }
     });
   }
 
@@ -1862,20 +1884,21 @@
 
   function scheduleLivePolling() {
     if (pollTimer) clearInterval(pollTimer);
-    if (!pageVisible || !widgetOpen) {
+    if (!pageVisible || !canUseChat()) {
       pollTimer = null;
       return;
     }
-    var interval = POLL_INTERVAL_OPEN_MS;
+    var interval = widgetOpen ? POLL_INTERVAL_OPEN_MS : POLL_INTERVAL_BACKGROUND_MS;
+    pollUpdates();
     pollTimer = window.setInterval(pollUpdates, interval);
   }
 
   document.addEventListener('visibilitychange', function () {
     pageVisible = !document.hidden;
-    if (pageVisible && widgetOpen && getSessionId()) {
+    if (pageVisible && canUseChat()) {
       pollUpdates();
       scheduleLivePolling();
-      startCustomerStream();
+      if (widgetOpen || isPersistentAccountChat()) startCustomerStream();
     } else if (pollTimer) {
       clearInterval(pollTimer);
       pollTimer = null;
@@ -1884,26 +1907,34 @@
   });
 
   function applyHandlerState(handler, name) {
-    if (!handler || handler === chatHandler) {
-      if (name) adminName = name;
-      updateHandlerUi();
+    if (!handler) return;
+    if (handler === chatHandler) {
+      if (name && name !== adminName) {
+        adminName = name;
+        updateHandlerUi();
+      }
       updateEndButtonUi();
       return;
     }
     var previousHandler = chatHandler;
     var transitioningToAdmin = handler === 'admin' && previousHandler !== 'admin';
     var transitioningToClosed = handler === 'closed' && previousHandler !== 'closed';
+    var returningToAi = handler === 'ai' && (previousHandler === 'admin' || previousHandler === 'live_request');
     if (handler === 'admin') {
       abortStream();
       removeTyping();
+      if (transitioningToAdmin) playAgentJoinedSoundOnce();
     }
     if (handler === 'ai') {
       resetLiveAgentPhase();
+      if (returningToAi) stopAdminTypingFeedback();
     }
     if (handler === 'closed') {
       abortStream();
       removeTyping();
       if (isPersistentAccountChat()) {
+        prevChatHandler = chatHandler;
+        chatHandler = handler;
         reopenAuthenticatedSessionIfNeeded().then(function () {
           fetchSessionFromServer(true);
         });
@@ -1921,6 +1952,7 @@
     updateHandlerUi();
     updateInputState();
     updateEndButtonUi();
+    scheduleCustomerStreamRestart(STREAM_RESTART_MS);
   }
 
   function updateHandlerUi() {
