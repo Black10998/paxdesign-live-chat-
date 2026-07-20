@@ -65,7 +65,7 @@ jobs:
             < scripts/inspect-and-clean-wp-disk.sh | tee remote-disk-audit.log
 
           REMOTE_REPORT=$(ssh "${SSH_OPTS[@]}" "$REMOTE" \
-            "ls -t ${WP_PATH_QUOTED}/wp-content/pax-disk-audit-*.txt 2>/dev/null | head -1 | tr -d '\r'")
+            "ls -t /tmp/pax-disk-audit-*.txt ${WP_PATH_QUOTED}/wp-content/pax-disk-audit-*.txt 2>/dev/null | head -1 | tr -d '\r'")
           echo "remote_report=$REMOTE_REPORT" >> "$GITHUB_OUTPUT"
           if [[ -n "$REMOTE_REPORT" ]]; then
             REMOTE_REPORT_QUOTED=$(printf '%q' "$REMOTE_REPORT")
@@ -88,6 +88,7 @@ jobs:
 
       - name: Retrigger WordPress deploy after cleanup
         if: github.event.inputs.mode != 'inspect'
+        continue-on-error: true
         env:
           WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
           WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}

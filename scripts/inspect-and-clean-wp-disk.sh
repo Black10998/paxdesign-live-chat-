@@ -22,6 +22,19 @@ section() {
   log "Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 }
 
+human_size() {
+  local bytes="$1"
+  if command -v numfmt >/dev/null 2>&1; then
+    numfmt --to=iec-i --suffix=B "$bytes" 2>/dev/null || echo "${bytes}B"
+  else
+    echo "${bytes}B"
+  fi
+}
+
+file_size_bytes() {
+  stat -c%s "$1" 2>/dev/null || stat -f%z "$1" 2>/dev/null || wc -c <"$1" 2>/dev/null || echo 0
+}
+
 emergency_free_disk() {
   echo "EMERGENCY: freeing disk before audit (quota may be full)"
   for logfile in \
@@ -54,19 +67,6 @@ emergency_free_disk() {
       echo "Cleared $cache_dir"
     fi
   done
-}
-
-human_size() {
-  local bytes="$1"
-  if command -v numfmt >/dev/null 2>&1; then
-    numfmt --to=iec-i --suffix=B "$bytes" 2>/dev/null || echo "${bytes}B"
-  else
-    echo "${bytes}B"
-  fi
-}
-
-file_size_bytes() {
-  stat -c%s "$1" 2>/dev/null || stat -f%z "$1" 2>/dev/null || wc -c <"$1" 2>/dev/null || echo 0
 }
 
 emergency_free_disk
