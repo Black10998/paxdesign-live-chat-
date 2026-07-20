@@ -1,2 +1,2 @@
-Build 170 App Store — safeAreaInset shell tab bar layout fix + notification badge persistence
-Triggered: 2026-07-20T04:10:00Z
+Build 171 App Store — VStack shell layout fix (PR #144) verified on iOS Simulator
+Triggered: 2026-07-20T05:05:00Z
