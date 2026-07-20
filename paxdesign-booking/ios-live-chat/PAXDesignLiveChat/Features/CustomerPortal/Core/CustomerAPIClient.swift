@@ -686,7 +686,7 @@ final class CustomerAPIClient: ObservableObject {
             return .server(message)
         }
         if statusCode == 429 {
-            return .rateLimited(retryAfter: 30, message: friendlyMessage(forHTTP: 429))
+            return .rateLimited(retryAfter: 30, message: CustomerAPIError.friendlyMessage(forHTTP: 429))
         }
         return .http(statusCode)
     }
