@@ -5,14 +5,15 @@ set -euo pipefail
 
 WP_ROOT="${WP_PATH:?WP_PATH is required}"
 MODE="${MODE:-full}"  # inspect | cleanup | full
-REPORT="${REPORT_PATH:-${WP_ROOT}/wp-content/pax-disk-audit-$(date -u +%Y%m%dT%H%M%SZ).txt}"
-BACKUP_ROOT="${BACKUP_ROOT:-${WP_ROOT%/}/../paxdesign-backups}"
+SKIP_DB_CLEANUP=0
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+BACKUP_ROOT="${BACKUP_ROOT:-${WP_ROOT%/}/../paxdesign-backups}"
 AUDIT_BACKUP="${BACKUP_ROOT}/disk-audit-${STAMP}"
+REPORT="${REPORT_PATH:-/tmp/pax-disk-audit-${STAMP}.txt}"
 
 log() {
   echo "$*"
-  echo "$*" >> "$REPORT"
+  echo "$*" >> "$REPORT" 2>/dev/null || true
 }
 
 section() {
@@ -21,7 +22,39 @@ section() {
   log "Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 }
 
-: >"$REPORT"
+emergency_free_disk() {
+  echo "EMERGENCY: freeing disk before audit (quota may be full)"
+  for logfile in \
+    "$WP_ROOT/wp-content/debug.log" \
+    "$WP_ROOT/debug.log" \
+    "$WP_ROOT/error_log" \
+    "$WP_ROOT/wp-content/error_log"; do
+    if [[ -f "$logfile" ]]; then
+      bytes=$(file_size_bytes "$logfile")
+      : >"$logfile" 2>/dev/null || true
+      echo "Truncated $logfile (was $(human_size "$bytes"))"
+    fi
+  done
+  if [[ -d "$BACKUP_ROOT" ]]; then
+    mapfile -t old_backups < <(find "$BACKUP_ROOT" -maxdepth 1 -mindepth 1 -type d | sort)
+    total=${#old_backups[@]}
+    idx=0
+    for dir in "${old_backups[@]}"; do
+      idx=$((idx + 1))
+      if [[ $idx -le $((total - 2)) ]]; then
+        freed=$(du -sb "$dir" 2>/dev/null | awk '{print $1}' || echo 0)
+        rm -rf "$dir" 2>/dev/null || true
+        echo "Removed backup dir: $dir freed $(human_size "$freed")"
+      fi
+    done
+  fi
+  for cache_dir in "$WP_ROOT/wp-content/cache" "$WP_ROOT/wp-content/litespeed/css" "$WP_ROOT/wp-content/litespeed/js"; do
+    if [[ -d "$cache_dir" ]]; then
+      find "$cache_dir" -mindepth 1 -delete 2>/dev/null || true
+      echo "Cleared $cache_dir"
+    fi
+  done
+}
 
 human_size() {
   local bytes="$1"
@@ -35,6 +68,9 @@ human_size() {
 file_size_bytes() {
   stat -c%s "$1" 2>/dev/null || stat -f%z "$1" 2>/dev/null || wc -c <"$1" 2>/dev/null || echo 0
 }
+
+emergency_free_disk
+: >"$REPORT" 2>/dev/null || REPORT="/tmp/pax-disk-audit-${STAMP}.log"
 
 wp_cmd() {
   if command -v wp >/dev/null 2>&1; then
