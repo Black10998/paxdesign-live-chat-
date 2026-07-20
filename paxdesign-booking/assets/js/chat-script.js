@@ -3248,9 +3248,10 @@
 
   function showError(text) {
     removeTyping();
+    var message = messageText(text) || (typeof text === 'string' ? text : '') || 'Ein Fehler ist aufgetreten.';
     var el = document.createElement('div');
     el.className = 'paxdesign-booking-chat-error';
-    el.textContent = text;
+    el.textContent = message;
     threadEl.appendChild(el);
     scrollToBottom();
     setTimeout(function () { el.remove(); }, 5000);
