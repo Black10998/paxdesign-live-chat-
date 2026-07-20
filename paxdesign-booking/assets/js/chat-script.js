@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.40.0
+ * Version: 3.172.1
  */
 (function () {
   'use strict';
@@ -158,6 +158,16 @@
   var READINESS_STREAM_WAIT_MS = 15000;
   var READINESS_AUTO_RETRY_MAX = 2;
   var READINESS_AUTO_RETRY_DELAY_MS = 2500;
+  var READINESS_STEPS = {
+    authentication: 'authentication',
+    session: 'session',
+    history: 'history',
+    liveAgent: 'live_agent',
+    sync: 'sync',
+    sse: 'sse',
+    finalSync: 'final_sync',
+    timeout: 'timeout',
+  };
   var chatPanelEl = null;
   var readinessEl = null;
   var readinessLoadingEl = null;
@@ -300,6 +310,59 @@
     return fallback || '';
   }
 
+  function isReadinessDebugEnabled() {
+    return !!(config && config.readinessDebug);
+  }
+
+  function logReadiness(step, status, detail) {
+    if (!isReadinessDebugEnabled()) return;
+    var prefix = '[PAX Chat Readiness]';
+    if (detail !== undefined && detail !== null) {
+      console.log(prefix, step + ':', status, detail);
+    } else {
+      console.log(prefix, step + ':', status);
+    }
+  }
+
+  function readinessFailure(step, code, messageKey, detail) {
+    var err = { step: step, code: code, messageKey: messageKey };
+    if (detail) err.detail = detail;
+    logReadiness(step, 'FAILED', err);
+    return err;
+  }
+
+  function readinessReject(step, code, messageKey, detail) {
+    return Promise.reject(readinessFailure(step, code, messageKey, detail));
+  }
+
+  function classifyChatAjaxFailure(step, json, res, fallbackCode) {
+    var err = { step: step, code: fallbackCode || 'backend', messageKey: 'readinessNetworkFailed' };
+    if (json && json.data && json.data.code === 'login_required') {
+      err.code = 'auth';
+      err.messageKey = 'readinessAuthFailed';
+    }
+    if (json && json.data && json.data.message) {
+      err.detail = String(json.data.message);
+    } else if (json && json.message) {
+      err.detail = String(json.message);
+    }
+    if (res && typeof res.status === 'number') {
+      err.httpStatus = res.status;
+    }
+    logReadiness(step, 'FAILED', err);
+    return err;
+  }
+
+  function logReadinessStart(options) {
+    logReadiness('start', 'BEGIN', {
+      reuseSession: !!(options && options.reuseSession),
+      sessionId: getSessionId() || '',
+      handler: chatHandler,
+      loggedIn: isLoggedIn(),
+      persistent: isPersistentAccountChat(),
+    });
+  }
+
   function initChatReadinessUi() {
     chatPanelEl = root.querySelector('#paxdesignChatPanel');
     readinessEl = root.querySelector('#paxdesignChatReadiness');
@@ -395,6 +458,9 @@
     if (!err) {
       return localizedReadiness('readinessGenericFailed', 'Chat could not be loaded.');
     }
+    if (isReadinessDebugEnabled() && err.step) {
+      console.warn('[PAX Chat Readiness] User-facing error for step "' + err.step + '" (code: ' + (err.code || 'unknown') + ')', err.detail || err);
+    }
     if (err.message && typeof err.message === 'string' && err.message.indexOf('readiness') !== 0) {
       return err.message;
     }
@@ -444,7 +510,10 @@
   function withReadinessTimeout(promise, generation) {
     return new Promise(function (resolve, reject) {
       var timer = window.setTimeout(function () {
-        reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+        reject(readinessFailure(READINESS_STEPS.timeout, 'network', 'readinessNetworkFailed', {
+          reason: 'overall_timeout',
+          timeoutMs: READINESS_TIMEOUT_MS,
+        }));
       }, READINESS_TIMEOUT_MS);
       promise.then(function (value) {
         window.clearTimeout(timer);
@@ -470,11 +539,16 @@
           return;
         }
         if (customerStreamConnected()) {
+          logReadiness(READINESS_STEPS.sse, 'OK', { readyState: streamSource.readyState });
           resolve(true);
           return;
         }
         if (Date.now() - startedAt >= timeoutMs) {
-          reject({ code: 'sse', messageKey: 'readinessStreamFailed' });
+          reject(readinessFailure(READINESS_STEPS.sse, 'sse', 'readinessStreamFailed', {
+            reason: 'stream_open_timeout',
+            timeoutMs: timeoutMs,
+            readyState: streamSource ? streamSource.readyState : null,
+          }));
           return;
         }
         window.setTimeout(tick, 100);
@@ -486,11 +560,18 @@
   function verifyLiveAgentStateFromServer(expectedHandlers) {
     expectedHandlers = expectedHandlers || ['live_request', 'admin'];
     if (expectedHandlers.indexOf(chatHandler) === -1) {
-      return Promise.reject({ code: 'live', messageKey: 'readinessLiveFailed' });
+      return readinessReject(READINESS_STEPS.liveAgent, 'live', 'readinessLiveFailed', {
+        reason: 'unexpected_handler',
+        handler: chatHandler,
+      });
     }
     if (chatHandler === 'admin' && !adminName && !(assignedAgent && assignedAgent.name)) {
-      return Promise.reject({ code: 'live', messageKey: 'readinessLiveFailed' });
+      return readinessReject(READINESS_STEPS.liveAgent, 'live', 'readinessLiveFailed', {
+        reason: 'missing_admin_identity',
+        handler: chatHandler,
+      });
     }
+    logReadiness(READINESS_STEPS.liveAgent, 'OK', { handler: chatHandler });
     return Promise.resolve(true);
   }
 
@@ -515,22 +596,31 @@
     options = options || {};
     var generation = readinessGeneration;
     var skipSessionBootstrap = !!options.reuseSession && !!getSessionId() && sessionRestored;
+    logReadinessStart(options);
 
     return withReadinessTimeout(Promise.resolve()
       .then(function () {
         abortIfReadinessStale(generation);
         setReadinessPhase('readinessAuthenticating', 'Verifying your sign-in…');
         if (!canUseChat()) {
-          return Promise.reject({ code: 'auth', messageKey: 'readinessAuthFailed' });
+          return readinessReject(READINESS_STEPS.authentication, 'auth', 'readinessAuthFailed', {
+            reason: 'login_or_verification_required',
+            loggedIn: isLoggedIn(),
+            verified: isVerifiedAccount(),
+          });
         }
         if (!config || config.enabled === false) {
-          return Promise.reject({ code: 'ai', messageKey: 'readinessAiFailed' });
+          return readinessReject(READINESS_STEPS.authentication, 'ai', 'readinessAiFailed', {
+            reason: 'chat_disabled',
+          });
         }
+        logReadiness(READINESS_STEPS.authentication, 'OK');
       })
       .then(function () {
         abortIfReadinessStale(generation);
         setReadinessPhase('readinessSession', 'Preparing your chat session…');
         if (skipSessionBootstrap) {
+          logReadiness(READINESS_STEPS.session, 'OK', { reused: true, sessionId: getSessionId() });
           return getSessionId();
         }
         if (isPersistentAccountChat()) {
@@ -550,13 +640,17 @@
       .then(function (sessionId) {
         abortIfReadinessStale(generation);
         if (!sessionId) {
-          return Promise.reject({ code: 'session', messageKey: 'readinessSessionFailed' });
+          return readinessReject(READINESS_STEPS.session, 'session', 'readinessSessionFailed', {
+            reason: 'missing_session_id',
+          });
         }
+        logReadiness(READINESS_STEPS.session, 'OK', { sessionId: sessionId });
         setReadinessPhase('readinessHistory', 'Loading conversation history…');
         return fetchSessionFromServer(true, true);
       })
       .then(function () {
         abortIfReadinessStale(generation);
+        logReadiness(READINESS_STEPS.history, 'OK');
         if (chatHandler === 'closed' && isPersistentAccountChat()) {
           return reopenAuthenticatedSessionIfNeeded().then(function () {
             abortIfReadinessStale(generation);
@@ -570,6 +664,7 @@
         if (chatHandler === 'live_request' || chatHandler === 'admin') {
           return verifyLiveAgentStateFromServer(['live_request', 'admin']);
         }
+        logReadiness(READINESS_STEPS.liveAgent, 'OK', { skipped: true, handler: chatHandler });
         return true;
       })
       .then(function () {
@@ -579,12 +674,18 @@
       })
       .then(function () {
         abortIfReadinessStale(generation);
+        logReadiness(READINESS_STEPS.sync, 'OK');
         setReadinessPhase('readinessRealtime', 'Establishing real-time connection…');
         return waitForCustomerStreamOpen(READINESS_STREAM_WAIT_MS, generation);
       })
       .then(function () {
         abortIfReadinessStale(generation);
+        logReadiness(READINESS_STEPS.sse, 'OK');
         return pollUpdatesOnce(false);
+      })
+      .then(function () {
+        logReadiness(READINESS_STEPS.finalSync, 'OK');
+        logReadiness('complete', 'SUCCESS');
       }), generation);
   }
 
@@ -1588,8 +1689,9 @@
   }
 
   function fetchSessionFromServer(full, strict) {
+    var step = READINESS_STEPS.history;
     if (!config.ajaxUrl) {
-      if (strict) return Promise.reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+      if (strict) return readinessReject(step, 'network', 'readinessNetworkFailed', { reason: 'missing_ajax_url' });
       return Promise.resolve(false);
     }
     if (full && isPersistentAccountChat()) {
@@ -1608,10 +1710,15 @@
     formData.append('since', '0');
     if (full) formData.append('full', '1');
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return safeJson(res); })
-      .then(function (json) {
+      .then(function (res) { return safeJson(res).then(function (json) { return { res: res, json: json }; }); })
+      .then(function (result) {
+        var json = result.json;
+        if (handleAuthGateResponse(json)) {
+          if (strict) return readinessReject(step, 'auth', 'readinessAuthFailed', { reason: 'login_required' });
+          return false;
+        }
         if (!json || !json.success || !json.data) {
-          if (strict) return Promise.reject({ code: 'backend', messageKey: 'readinessNetworkFailed' });
+          if (strict) return Promise.reject(classifyChatAjaxFailure(step, json, result.res, 'backend'));
           return false;
         }
         var data = json.data;
@@ -1619,7 +1726,7 @@
           clearAllChatStorage();
           resetChatForAuthChange(true);
           refreshAuthenticatedChatSession();
-          if (strict) return Promise.reject({ code: 'auth', messageKey: 'readinessAuthFailed' });
+          if (strict) return readinessReject(step, 'auth', 'readinessAuthFailed', { reason: 'auth_user_mismatch' });
           return false;
         }
         if (data.session_id) {
@@ -1649,8 +1756,14 @@
         lastReadinessPollAt = Date.now();
         return true;
       })
-      .catch(function () {
-        if (strict) return Promise.reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+      .catch(function (err) {
+        if (strict) {
+          if (err && err.step) return Promise.reject(err);
+          return Promise.reject(readinessFailure(step, 'network', 'readinessNetworkFailed', {
+            reason: 'fetch_failed',
+            message: err && err.message ? String(err.message) : 'unknown',
+          }));
+        }
         return false;
       });
   }
@@ -2568,8 +2681,9 @@
   }
 
   function pollUpdatesOnce(strict) {
+    var step = strict ? READINESS_STEPS.sync : READINESS_STEPS.finalSync;
     if (!config.ajaxUrl || !canUseChat()) {
-      if (strict) return Promise.reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+      if (strict) return readinessReject(step, 'network', 'readinessNetworkFailed', { reason: 'poll_unavailable' });
       return Promise.resolve(null);
     }
     var formData = new FormData();
@@ -2580,21 +2694,28 @@
     formData.append('since', String(pollSeq));
 
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return safeJson(res); })
-      .then(function (json) {
+      .then(function (res) { return safeJson(res).then(function (json) { return { res: res, json: json }; }); })
+      .then(function (result) {
+        var json = result.json;
         if (handleAuthGateResponse(json)) {
-          if (strict) return Promise.reject({ code: 'auth', messageKey: 'readinessAuthFailed' });
+          if (strict) return readinessReject(step, 'auth', 'readinessAuthFailed', { reason: 'login_required' });
           return null;
         }
         if (!json || !json.success || !json.data) {
-          if (strict) return Promise.reject({ code: 'backend', messageKey: 'readinessNetworkFailed' });
+          if (strict) return Promise.reject(classifyChatAjaxFailure(step, json, result.res, 'backend'));
           return null;
         }
         applyPollPayload(json.data);
         return json.data;
       })
       .catch(function (err) {
-        if (strict) return Promise.reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+        if (strict) {
+          if (err && err.step) return Promise.reject(err);
+          return Promise.reject(readinessFailure(step, 'network', 'readinessNetworkFailed', {
+            reason: 'poll_fetch_failed',
+            message: err && err.message ? String(err.message) : 'unknown',
+          }));
+        }
         return null;
       });
   }

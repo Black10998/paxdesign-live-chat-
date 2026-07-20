@@ -1378,12 +1378,18 @@ class PAXdesign_Chat_Live {
         }
         $data  = $this->get_poll_data($session_id, $since, $full, 'user');
         if (is_wp_error($data)) {
-            $status = 400;
-            $error_data = $data->get_error_data();
-            if (is_array($error_data) && !empty($error_data['status'])) {
-                $status = (int) $error_data['status'];
+            if ($data->get_error_code() === 'not_found' && $this->can_serve_unmaterialized_poll($session_id, $user_id)) {
+                $data = class_exists('PAXdesign_Customer_Chat_Bridge')
+                    ? PAXdesign_Customer_Chat_Bridge::empty_poll_payload($session_id)
+                    : $this->empty_poll_payload();
+            } else {
+                $status = 400;
+                $error_data = $data->get_error_data();
+                if (is_array($error_data) && !empty($error_data['status'])) {
+                    $status = (int) $error_data['status'];
+                }
+                wp_send_json_error(array('message' => $data->get_error_message()), $status);
             }
-            wp_send_json_error(array('message' => $data->get_error_message()), $status);
         }
 
         $data['session_id'] = $session_id;
@@ -1391,6 +1397,24 @@ class PAXdesign_Chat_Live {
             $data['auth_user_id'] = $user_id;
         }
         wp_send_json_success($data);
+    }
+
+    /**
+     * Allow poll/readiness for sessions registered to the client but not yet written to chat logs.
+     */
+    private function can_serve_unmaterialized_poll($session_id, $user_id = 0) {
+        $session_id = $this->sanitize_session_id($session_id);
+        if ($session_id === '') {
+            return false;
+        }
+        $user_id = absint($user_id);
+        if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            if (PAXdesign_Customer_Chat_Bridge::user_owns_session($user_id, $session_id)) {
+                return true;
+            }
+            return $session_id === PAXdesign_Customer_Chat_Bridge::lookup_primary_session_id($user_id);
+        }
+        return $user_id <= 0;
     }
 
     public function handle_disconnect() {
@@ -3224,7 +3248,7 @@ class PAXdesign_Chat_Live {
     /**
      * @return array<string, mixed>
      */
-    private function empty_poll_payload() {
+    public function empty_poll_payload() {
         return array(
             'handler'          => self::HANDLER_AI,
             'handler_label'    => self::handler_label(self::HANDLER_AI),

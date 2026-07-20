@@ -113,6 +113,8 @@ class PAXdesign_Chat {
                 'incoming'  => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-message.wav',
                 'send'      => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-send.wav',
             ),
+            'readinessDebug'     => (defined('WP_DEBUG') && WP_DEBUG)
+                || (isset($_GET['pax_chat_debug']) && sanitize_text_field(wp_unslash($_GET['pax_chat_debug'])) === '1'),
         ));
     }
 
