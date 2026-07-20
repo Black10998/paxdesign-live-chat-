@@ -15357,6 +15357,50 @@
         }
       }
     },
+    "customer.chat.staff_takeover": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A team member has taken over the live chat."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Mitarbeiter hat den Live-Chat übernommen."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "قام أحد موظفينا بتولي الدردشة المباشرة."
+          }
+        }
+      }
+    },
+    "customer.chat.staff_returned_to_ai": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The conversation has been returned to the KI Assistant."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Gespräch wurde an den KI-Assistenten zurückgegeben."
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "تم إرجاع المحادثة إلى مساعد KI."
+          }
+        }
+      }
+    },
     "customer.management_hint": {
       "localizations": {
         "en": {

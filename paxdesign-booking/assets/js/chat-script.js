@@ -1447,7 +1447,28 @@
     return 'web-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
   }
 
+  function detectChatLanguage() {
+    var htmlLang = (document.documentElement.lang || '').toLowerCase();
+    if (htmlLang.indexOf('ar') === 0) { return 'ar'; }
+    if (htmlLang.indexOf('en') === 0) { return 'en'; }
+    var nav = (navigator.language || navigator.userLanguage || 'de').toLowerCase();
+    if (nav.indexOf('ar') === 0) { return 'ar'; }
+    if (nav.indexOf('en') === 0) { return 'en'; }
+    return 'de';
+  }
+
+  function localizedI18n(key) {
+    if (!config || !config.i18n || !config.i18n[key]) { return ''; }
+    var bucket = config.i18n[key];
+    var lang = detectChatLanguage();
+    if (bucket[lang]) { return String(bucket[lang]); }
+    if (bucket.de) { return String(bucket.de); }
+    return '';
+  }
+
   function staffReturnedToAiNoticeText() {
+    var localized = localizedI18n('staffReturnedToAi');
+    if (localized) { return localized; }
     if (config && config.i18n && config.i18n.staffReturnedToAi) {
       return String(config.i18n.staffReturnedToAi);
     }
@@ -1455,6 +1476,8 @@
   }
 
   function staffTakeoverNoticeText() {
+    var localized = localizedI18n('staffTakeover');
+    if (localized) { return localized; }
     if (config && config.i18n && config.i18n.staffTakeover) {
       return String(config.i18n.staffTakeover);
     }
@@ -1485,12 +1508,18 @@
     var known = {
       'Chat-Session gestartet.': 'sys:session_started',
       'Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten.': 'sys:chat_closed',
+      'This chat has been closed. You can start a new conversation anytime.': 'sys:chat_closed',
+      'تم إغلاق هذه الدردشة. يمكنك بدء محادثة جديدة في أي وقت.': 'sys:chat_closed',
       'Der Kunde hat das Gespräch beendet.': 'sys:customer_closed',
       'Der KI-Assistent ist wieder für Sie da. Schreiben Sie jederzeit weiter.': 'sys:customer_released_to_ai',
+      'The KI Assistant is back for you. Feel free to keep messaging anytime.': 'sys:customer_released_to_ai',
       'Der KI-Assistent übernimmt den Chat wieder.': 'sys:ai_reclaimed',
       'The conversation has been returned to the KI Assistant.': 'sys:staff_returned_to_ai',
       'Das Gespräch wurde an den KI-Assistenten zurückgegeben.': 'sys:staff_returned_to_ai',
+      'تم إرجاع المحادثة إلى مساعد KI.': 'sys:staff_returned_to_ai',
       'Ein Mitarbeiter hat den Live-Chat übernommen.': 'sys:staff_takeover',
+      'A team member has taken over the live chat.': 'sys:staff_takeover',
+      'قام أحد موظفينا بتولي الدردشة المباشرة.': 'sys:staff_takeover',
       'Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.': 'sys:live_agent_notified',
       'Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter.': 'sys:live_transfer_thanks'
     };

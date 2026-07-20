@@ -29,6 +29,7 @@ struct ChatMessageListView: View {
 
     @State private var lastTrackedMessageId: Int?
     @State private var animatedRowIds = Set<String>()
+    @State private var selectedRowId: String?
 
     private static let bottomAnchorId = "chat-bottom-anchor"
 
@@ -70,9 +71,21 @@ struct ChatMessageListView: View {
                             agentDisplayName: agentDisplayName,
                             customerDisplayName: customerDisplayName,
                             isOutgoing: isOutgoingMessage(row.message),
+                            isSelected: selectedRowId == row.id,
                             animatedRowIds: $animatedRowIds,
-                            onReply: { onReply(row.message) },
-                            onCopy: { onCopy(row.message) },
+                            onSelect: {
+                                withAnimation(PAXTheme.quickSpring) {
+                                    selectedRowId = selectedRowId == row.id ? nil : row.id
+                                }
+                            },
+                            onReply: {
+                                selectedRowId = nil
+                                onReply(row.message)
+                            },
+                            onCopy: {
+                                selectedRowId = nil
+                                onCopy(row.message)
+                            },
                             onDelete: { onDelete(row.message) },
                             onAnalyze: onAnalyze.map { handler in
                                 { handler(row.message) }
@@ -105,6 +118,7 @@ struct ChatMessageListView: View {
             }
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: messagesRevision) { _ in
+                selectedRowId = nil
                 trackAndScroll(proxy: proxy)
             }
             .onChange(of: messages.count) { _ in
@@ -204,7 +218,9 @@ private struct AnimatedChatMessageRow: View {
     let agentDisplayName: String
     let customerDisplayName: String
     let isOutgoing: Bool
+    var isSelected = false
     @Binding var animatedRowIds: Set<String>
+    let onSelect: () -> Void
     let onReply: () -> Void
     let onCopy: () -> Void
     let onDelete: () -> Void
@@ -228,6 +244,8 @@ private struct AnimatedChatMessageRow: View {
             handler: handler,
             agentDisplayName: agentDisplayName,
             customerDisplayName: customerDisplayName,
+            isSelected: isSelected,
+            onSelect: onSelect,
             onReply: onReply,
             onCopy: onCopy,
             onDelete: onDelete,
@@ -272,6 +290,8 @@ private struct ChatMessageRow: View {
     let handler: String
     let agentDisplayName: String
     let customerDisplayName: String
+    var isSelected = false
+    let onSelect: () -> Void
     let onReply: () -> Void
     let onCopy: () -> Void
     let onDelete: () -> Void
@@ -285,6 +305,14 @@ private struct ChatMessageRow: View {
     var canDeleteTeamMessages = false
     var siteBaseURL: String?
     var deletingMessageIds: Set<Int> = []
+
+    private var canShowQuickActions: Bool {
+        row.message.role != "system" && (!row.message.content.isEmpty || row.message.imageUrl != nil)
+    }
+
+    private var showQuickActions: Bool {
+        isSelected && canShowQuickActions
+    }
 
     private var showSenderLabel: Bool {
         row.message.role != "system" && (
@@ -326,31 +354,57 @@ private struct ChatMessageRow: View {
             if row.message.role == "system" {
                 SystemMessageView(text: row.message.content)
             } else {
-                MessageBubbleView(
-                    message: row.message,
-                    quotedMessage: row.quotedMessage,
-                    canReply: handler == "admin" && canReply && row.message.role != "system",
-                    canDelete: (handler == "admin" && canReply && row.message.role != "system" && row.message.id > 0)
-                        || (handler == "team" && canDeleteTeamMessages && row.message.id > 0),
-                    canAnalyze: handler == "admin" && row.message.role == "user" && onAnalyze != nil,
-                    showTimestamp: MessageTimeFormatter.shouldShowTimestamp(current: row.message, next: row.next),
-                    senderLabel: showSenderLabel ? senderLabel(for: row.message) : nil,
-                    agentDisplayName: agentDisplayName,
-                    customerDisplayName: customerDisplayName,
-                    siteBaseURL: siteBaseURL,
-                    onReply: onReply,
-                    onCopy: onCopy,
-                    onDelete: onDelete,
-                    onAnalyze: onAnalyze,
-                    onLinkReview: onLinkReview,
-                    isLinkReviewSubmitting: linkReviewSubmittingIds.contains(row.message.id),
-                    isTeamChat: handler == "team",
-                    onImageTap: { onImageTap($0) }
-                )
-                .opacity(deletingMessageIds.contains(row.message.id) ? 0 : 1)
-                .scaleEffect(deletingMessageIds.contains(row.message.id) ? 0.9 : 1, anchor: .center)
-                .blur(radius: deletingMessageIds.contains(row.message.id) ? 4 : 0)
-                .animation(.easeOut(duration: 0.22), value: deletingMessageIds.contains(row.message.id))
+                VStack(alignment: row.message.role == "admin" || row.message.role == "assistant" ? .trailing : .leading, spacing: 4) {
+                    MessageBubbleView(
+                        message: row.message,
+                        quotedMessage: row.quotedMessage,
+                        canReply: handler == "admin" && canReply && row.message.role != "system",
+                        canDelete: (handler == "admin" && canReply && row.message.role != "system" && row.message.id > 0)
+                            || (handler == "team" && canDeleteTeamMessages && row.message.id > 0),
+                        canAnalyze: handler == "admin" && row.message.role == "user" && onAnalyze != nil,
+                        showTimestamp: MessageTimeFormatter.shouldShowTimestamp(current: row.message, next: row.next),
+                        senderLabel: showSenderLabel ? senderLabel(for: row.message) : nil,
+                        agentDisplayName: agentDisplayName,
+                        customerDisplayName: customerDisplayName,
+                        siteBaseURL: siteBaseURL,
+                        onReply: onReply,
+                        onCopy: onCopy,
+                        onDelete: onDelete,
+                        onAnalyze: onAnalyze,
+                        onLinkReview: onLinkReview,
+                        isLinkReviewSubmitting: linkReviewSubmittingIds.contains(row.message.id),
+                        isTeamChat: handler == "team",
+                        onImageTap: { onImageTap($0) }
+                    )
+                    .opacity(deletingMessageIds.contains(row.message.id) ? 0 : 1)
+                    .scaleEffect(deletingMessageIds.contains(row.message.id) ? 0.9 : 1, anchor: .center)
+                    .blur(radius: deletingMessageIds.contains(row.message.id) ? 4 : 0)
+                    .animation(.easeOut(duration: 0.22), value: deletingMessageIds.contains(row.message.id))
+                    .overlay {
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: PAXMessageStyle.bubbleRadius + 2, style: .continuous)
+                                .stroke(PAXTheme.accent.opacity(0.35), lineWidth: 1)
+                                .padding(.horizontal, -2)
+                                .padding(.vertical, -1)
+                        }
+                    }
+                    .onTapGesture {
+                        onSelect()
+                    }
+
+                    if showQuickActions {
+                        MessageQuickActionBar(
+                            canReply: handler == "admin" && canReply && row.message.role == "user",
+                            canAnalyze: handler == "admin" && row.message.role == "user" && onAnalyze != nil,
+                            canCopy: !row.message.content.isEmpty,
+                            isOutgoing: row.message.role == "admin" || row.message.role == "assistant",
+                            onReply: onReply,
+                            onCopy: onCopy,
+                            onAnalyze: onAnalyze
+                        )
+                        .transition(.opacity.combined(with: .move(edge: .top)))
+                    }
+                }
                 if handler == "team", row.message.role == "admin" {
                     TeamMessageDeliveryStatus(
                         message: row.message,
@@ -362,6 +416,63 @@ private struct ChatMessageRow: View {
                 }
             }
         }
+    }
+}
+
+private struct MessageQuickActionBar: View {
+    let canReply: Bool
+    let canAnalyze: Bool
+    let canCopy: Bool
+    let isOutgoing: Bool
+    let onReply: () -> Void
+    let onCopy: () -> Void
+    var onAnalyze: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: 4) {
+            if canReply {
+                quickAction(icon: "arrowshape.turn.up.left", label: L10n.CommonReply, action: onReply)
+            }
+            if canCopy {
+                quickAction(icon: "doc.on.doc", label: L10n.CommonCopy, action: onCopy)
+            }
+            if canAnalyze, let onAnalyze {
+                quickAction(icon: "sparkles", label: L10n.ChatAnalyzeMessage, action: onAnalyze)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(
+            Capsule(style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    Capsule(style: .continuous)
+                        .fill(PAXTheme.surface.opacity(0.88))
+                )
+                .overlay(
+                    Capsule(style: .continuous)
+                        .stroke(PAXTheme.border.opacity(0.35), lineWidth: 0.5)
+                )
+        )
+        .frame(maxWidth: .infinity, alignment: isOutgoing ? .trailing : .leading)
+        .padding(.horizontal, isOutgoing ? 52 : 0)
+    }
+
+    private func quickAction(icon: String, label: String, action: @escaping () -> Void) -> some View {
+        Button {
+            PAXHaptics.light()
+            action()
+        } label: {
+            HStack(spacing: 4) {
+                PAXIcon(icon, size: .inline, emphasis: .secondary)
+                Text(label)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(PAXTheme.textSecondary)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
     }
 }
 

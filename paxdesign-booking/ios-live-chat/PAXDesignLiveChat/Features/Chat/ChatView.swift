@@ -102,6 +102,7 @@ struct ChatView: View {
             AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: false)
         }
         .onReceive(NotificationCenter.default.publisher(for: .paxSessionSync)) { note in
+            guard !isClosingChat else { return }
             guard let syncedId = note.userInfo?["session_id"] as? String,
                   syncedId == thread.sessionId else { return }
             let serverSeq = coordinator.serverSeq(for: syncedId)
@@ -335,6 +336,7 @@ struct ChatView: View {
                         if thread.handler == "live_request",
                            let session = coordinator.sessions.first(where: { $0.sessionId == thread.sessionId }) {
                             let response = try await auth.api?.takeover(thread.sessionId)
+                            guard !isClosingChat else { return }
                             coordinator.acknowledgeIncomingRequest(session.sessionId)
                             if let response {
                                 coordinator.applyHandlerTransition(response, sessionId: thread.sessionId, auth: auth)
@@ -344,13 +346,15 @@ struct ChatView: View {
                         } else {
                             do {
                                 let response = try await auth.api?.takeover(thread.sessionId)
+                                guard !isClosingChat else { return }
                                 if let response {
                                     coordinator.applyHandlerTransition(response, sessionId: thread.sessionId, auth: auth)
                                 }
                                 await thread.reloadAfterTakeover(auth: auth)
-                                await coordinator.refreshSessions(auth: auth)
+                                Task { await coordinator.refreshSessions(auth: auth) }
                                 PAXHaptics.success()
                             } catch {
+                                guard !isClosingChat else { return }
                                 thread.errorMessage = error.localizedDescription
                             }
                         }
@@ -364,13 +368,14 @@ struct ChatView: View {
                     Task {
                         do {
                             let response = try await auth.api?.release(thread.sessionId)
+                            guard !isClosingChat else { return }
                             if let response {
                                 coordinator.applyHandlerTransition(response, sessionId: thread.sessionId, auth: auth)
                             }
-                            await thread.reloadAfterTakeover(auth: auth)
-                            await coordinator.refreshSessions(auth: auth)
+                            Task { await coordinator.refreshSessions(auth: auth) }
                             PAXHaptics.success()
                         } catch {
+                            guard !isClosingChat else { return }
                             thread.errorMessage = error.localizedDescription
                         }
                     }

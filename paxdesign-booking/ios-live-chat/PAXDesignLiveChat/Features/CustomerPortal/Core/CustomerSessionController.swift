@@ -34,6 +34,8 @@ final class CustomerSessionController: ObservableObject {
         AppLockService.shared.bindAccount(scope: "customer-\(profile.id)")
         AppLockService.shared.prepareForLogin()
         CustomerPushService.shared.configure(api: api)
+        CustomerChatBadgeStore.shared.configure(userId: profile.id)
+        CustomerChatBadgeSyncService.shared.start(api: api, userId: profile.id)
         Task {
             await CustomerPushService.shared.prepareNotificationRegistration()
             CustomerDeviceSessionService.shared.start(api: api)
@@ -74,6 +76,8 @@ final class CustomerSessionController: ObservableObject {
     func deactivate() {
         activeSessionKey = nil
         CustomerDeviceSessionService.shared.stop()
+        CustomerChatBadgeSyncService.shared.stop()
+        CustomerChatBadgeStore.shared.resetForLogout()
         auth.logout()
     }
 

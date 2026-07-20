@@ -710,6 +710,7 @@ final class ChatThreadModel: ObservableObject {
     private var lastTypingNotifyAt = Date.distantPast
     private var lifecycleGeneration = 0
     private var threadSubscriptionId: UUID?
+    private(set) var isSuspended = false
     private var lastStreamEventAt = Date.distantPast
     private var streamSnapshotReady = false
     private var pendingStreamEvents: [ChatStreamEvent] = []
@@ -728,6 +729,7 @@ final class ChatThreadModel: ObservableObject {
 
     func start(auth: AuthStore, expectedServerSeq: Int = 0) {
         self.auth = auth
+        isSuspended = false
         hydrateFromLocalStore()
 
         if let pollTask, !pollTask.isCancelled {
@@ -810,6 +812,7 @@ final class ChatThreadModel: ObservableObject {
     }
 
     func refreshNow(auth: AuthStore, expectedServerSeq: Int = 0, inlineMessage: Any? = nil) async {
+        guard !isSuspended else { return }
         var appliedInline = false
         if let inline = LiveMessage.fromStreamPayload(inlineMessage) {
             insertIncomingMessages([inline], source: "refresh-inline")
@@ -841,6 +844,7 @@ final class ChatThreadModel: ObservableObject {
     }
 
     func suspend() {
+        isSuspended = true
         lifecycleGeneration += 1
         stopBackgroundWork()
         AdminTypingSound.shared.stop()
@@ -1283,9 +1287,11 @@ final class ChatThreadModel: ObservableObject {
 
     @discardableResult
     private func fetchFullHistorySnapshot(auth: AuthStore) async -> Bool {
+        guard !isSuspended else { return false }
         guard let api = auth.api else { return false }
         do {
             let data = try await api.fetchSession(sessionId)
+            guard !isSuspended else { return false }
             applyBaselineSnapshot(data)
             errorMessage = nil
             return true
@@ -1889,7 +1895,9 @@ final class ChatThreadModel: ObservableObject {
     }
 
     func reloadAfterTakeover(auth: AuthStore) async {
+        guard !isSuspended else { return }
         await reloadFullHistory(auth: auth)
+        guard !isSuspended else { return }
         if handler == "admin" {
             await loadQuickReplies(auth: auth)
         } else {

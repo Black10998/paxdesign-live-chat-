@@ -53,6 +53,10 @@ struct CustomerPortalShellView: View {
             }
             .task {
                 guard auth.isLoggedIn, auth.isCustomerSession else { return }
+                if let profileId = auth.customerProfile?.id, profileId > 0 {
+                    CustomerChatBadgeStore.shared.configure(userId: profileId)
+                    CustomerChatBadgeSyncService.shared.start(api: customerSession.api, userId: profileId)
+                }
                 CustomerChatBadgeStore.shared.scheduleRefresh(api: customerSession.api)
                 while !Task.isCancelled {
                     if navigation.selectedTab != .chat {
@@ -60,6 +64,12 @@ struct CustomerPortalShellView: View {
                     }
                     let interval: UInt64 = navigation.selectedTab == .chat ? 15_000_000_000 : 6_000_000_000
                     try? await Task.sleep(nanoseconds: interval)
+                }
+            }
+            .onChange(of: auth.isLoggedIn) { loggedIn in
+                if !loggedIn {
+                    CustomerChatBadgeSyncService.shared.stop()
+                    CustomerChatBadgeStore.shared.resetForLogout()
                 }
             }
     }
@@ -145,6 +155,7 @@ struct CustomerTabView: View {
         .onChange(of: navigation.selectedTab) { tab in
             loadedTabs.insert(tab.rawValue)
             PAXHaptics.light()
+            CustomerChatBadgeStore.shared.isChatForeground = tab == .chat
             if tab == .chat {
                 chatBadge.clear()
             } else if auth.isAuthenticated {
