@@ -197,6 +197,9 @@ final class CustomerPushService: NSObject, ObservableObject {
         playForegroundSound(for: payload)
         guard let api else { return }
         CustomerNotificationsBadgeStore.shared.scheduleRefresh(api: api)
+        if payload.category == "chat" {
+            CustomerChatBadgeStore.shared.scheduleRefresh(api: api)
+        }
     }
 
     func apnsSoundName(for payload: CustomerPushPayload) -> String {
