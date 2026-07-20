@@ -142,7 +142,7 @@ jobs:
       - name: Post-deploy customer platform verification
         env:
           PAX_SITE: https://paxdesign.at
-          PAX_EXPECTED_BOOKING: "3.166.0"
+          PAX_EXPECTED_BOOKING: "3.167.0"
           PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
           PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
           WP_PATH: ${{ secrets.WP_PATH }}
