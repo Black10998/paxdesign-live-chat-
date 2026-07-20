@@ -1,0 +1,110 @@
+name: Inspect and clean WordPress disk
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "inspect (read-only) or full (backup + cleanup + optimize)"
+        required: false
+        default: full
+        type: choice
+        options:
+          - inspect
+          - full
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/inspect-wp-disk.yml'
+      - 'scripts/inspect-and-clean-wp-disk.sh'
+      - '.github/triggers/inspect-wp-disk'
+
+permissions:
+  contents: read
+
+jobs:
+  disk-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate SSH secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing secret: $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Run disk audit on production server
+        id: remote
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+          MODE: ${{ github.event.inputs.mode || 'full' }}
+        run: |
+          set -euo pipefail
+          chmod +x scripts/inspect-and-clean-wp-disk.sh
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+          WP_PATH_QUOTED=$(printf '%q' "$WP_PATH")
+
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "WP_PATH=${WP_PATH_QUOTED} MODE='${MODE}' bash -s" \
+            < scripts/inspect-and-clean-wp-disk.sh | tee remote-disk-audit.log
+
+          REMOTE_REPORT=$(ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "ls -t ${WP_PATH_QUOTED}/wp-content/pax-disk-audit-*.txt 2>/dev/null | head -1 | tr -d '\r'")
+          echo "remote_report=$REMOTE_REPORT" >> "$GITHUB_OUTPUT"
+          if [[ -n "$REMOTE_REPORT" ]]; then
+            REMOTE_REPORT_QUOTED=$(printf '%q' "$REMOTE_REPORT")
+            ssh "${SSH_OPTS[@]}" "$REMOTE" "cat ${REMOTE_REPORT_QUOTED}" > report-raw.txt
+          fi
+
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: wp-disk-audit-report
+          path: |
+            remote-disk-audit.log
+            report-raw.txt
+          if-no-files-found: warn
+
+      - name: Print summary
+        run: |
+          echo "=== Disk audit summary ==="
+          grep -E '^=== |PASS:|WARN:|Removed |Truncated |total_mb|key_group|meta_key|OPTIMIZE|debug' remote-disk-audit.log 2>/dev/null | head -120 || true
+
+      - name: Retrigger WordPress deploy after cleanup
+        if: github.event.inputs.mode != 'inspect'
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          BOOKING_TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          rsync -az --delete -e "ssh ${SSH_OPTS[*]}" paxdesign-booking/ "${WP_SSH_USER}@${WP_SSH_HOST}:${BOOKING_TARGET}/"
+          ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
+            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp plugin activate paxdesign-booking && wp cache flush || true)"
+          chmod +x scripts/configure-wp-production-debug.sh
+          ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
+            "WP_PATH=$(printf '%q' "$WP_PATH") bash -s" < scripts/configure-wp-production-debug.sh
