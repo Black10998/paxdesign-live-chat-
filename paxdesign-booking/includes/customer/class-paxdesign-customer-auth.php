@@ -225,9 +225,12 @@ class PAXdesign_Customer_Auth {
         return true;
     }
 
-    public static function check_rate_limit($user_id, WP_REST_Request $request, $max_per_minute = 120) {
+    public static function check_rate_limit($user_id, WP_REST_Request $request, $max_per_minute = null) {
         $route = $request->get_route();
-        $key = 'customer:' . $user_id . ':' . $route;
+        $method = strtoupper($request->get_method());
+        $limits = self::rate_limit_profile($route, $method);
+        $key = 'customer:' . $user_id . ':' . $limits['bucket'];
+        $max_per_minute = $max_per_minute ?? $limits['max'];
 
         if (class_exists('PDX_RateLimit')) {
             $result = PDX_RateLimit::check($key, (float) $max_per_minute, $max_per_minute / 60.0, 1.0);
@@ -240,14 +243,28 @@ class PAXdesign_Customer_Auth {
             }
             return true;
         }
-        $bucket = md5($user_id . '|' . $route . '|' . gmdate('Y-m-d-H-i'));
+        $bucket = md5($key . '|' . gmdate('Y-m-d-H-i'));
         $transient_key = 'pax_cust_rl_' . $bucket;
         $count = (int) get_transient($transient_key);
         if ($count >= $max_per_minute) {
-            return new WP_Error('rate_limited', __('Too many requests. Please try again shortly.', 'paxdesign-booking'), array('status' => 429));
+            return new WP_Error('rate_limited', __('Too many requests. Please try again shortly.', 'paxdesign-booking'), array('status' => 429, 'retry_after' => 60));
         }
         set_transient($transient_key, $count + 1, MINUTE_IN_SECONDS);
         return true;
+    }
+
+    /**
+     * Route-aware rate limits. Chat sync reads share one bucket with a generous ceiling
+     * so SSE + polling never trip 429 during normal conversation usage.
+     */
+    private static function rate_limit_profile($route, $method) {
+        if ($method === 'GET' && preg_match('#/customer/chat/(messages|events|session|conversations)$#', $route)) {
+            return array('bucket' => 'chat:sync', 'max' => 480);
+        }
+        if ($method === 'GET' && preg_match('#/customer/notifications$#', $route)) {
+            return array('bucket' => 'notifications', 'max' => 240);
+        }
+        return array('bucket' => $route, 'max' => 120);
     }
 
     public static function verify_rest_nonce(WP_REST_Request $request) {

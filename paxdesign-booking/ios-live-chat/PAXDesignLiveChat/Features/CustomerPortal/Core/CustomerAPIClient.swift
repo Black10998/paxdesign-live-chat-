@@ -677,10 +677,16 @@ final class CustomerAPIClient: ObservableObject {
     private static func parseHTTPError(data: Data, statusCode: Int) -> CustomerAPIError {
         if let apiError = try? JSONDecoder().decode(CustomerAPIErrorPayload.self, from: data),
            let message = apiError.message, !message.isEmpty {
+            if statusCode == 429 || apiError.code == "rate_limited" {
+                return .rateLimited(retryAfter: apiError.retryAfter ?? 30, message: message)
+            }
             if let code = apiError.code, !code.isEmpty {
                 return .serverCode(code, message)
             }
             return .server(message)
+        }
+        if statusCode == 429 {
+            return .rateLimited(retryAfter: 30, message: friendlyMessage(forHTTP: 429))
         }
         return .http(statusCode)
     }
@@ -691,6 +697,7 @@ enum CustomerAPIError: LocalizedError {
     case http(Int)
     case server(String)
     case serverCode(String, String)
+    case rateLimited(retryAfter: Int, message: String)
 
     var errorDescription: String? {
         switch self {
@@ -706,7 +713,22 @@ enum CustomerAPIError: LocalizedError {
             return CustomerAPIError.friendlyMessage(forServerText: message)
         case .serverCode(_, let message):
             return CustomerAPIError.friendlyMessage(forServerText: message)
+        case .rateLimited(_, let message):
+            return CustomerAPIError.friendlyMessage(forServerText: message)
         }
+    }
+
+    static func retryAfterSeconds(from error: Error) -> Int? {
+        if case .rateLimited(let retryAfter, _) = error as? CustomerAPIError {
+            return retryAfter
+        }
+        if case .http(429) = error as? CustomerAPIError {
+            return 30
+        }
+        if case .serverCode(let code, _) = error as? CustomerAPIError, code == "rate_limited" {
+            return 30
+        }
+        return nil
     }
 
     static func friendlyMessage(forHTTP code: Int) -> String {
@@ -736,6 +758,16 @@ enum CustomerAPIError: LocalizedError {
 private struct CustomerAPIErrorPayload: Decodable {
     let code: String?
     let message: String?
+    let data: RetryData?
+
+    struct RetryData: Decodable {
+        let status: Int?
+        let retry_after: Int?
+    }
+
+    var retryAfter: Int? {
+        data?.retry_after
+    }
 }
 
 private extension String {

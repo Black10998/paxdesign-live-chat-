@@ -232,10 +232,9 @@
         try {
           handleCustomerStreamPayload(JSON.parse(event.data));
         } catch (e) {}
-        scheduleCustomerStreamRestart(120);
       });
       streamSource.addEventListener('ping', function () {
-        scheduleCustomerStreamRestart(120);
+        // Keep the existing EventSource connection alive; do not reconnect on heartbeat.
       });
       streamSource.onerror = function () {
         stopCustomerStream();

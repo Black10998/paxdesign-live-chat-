@@ -1,7 +1,7 @@
 import XCTest
 
 final class ShellLayoutUITests: XCTestCase {
-    func testCustomerChatComposerSitsAboveTabBar() {
+    func testCustomerChatHidesTabBar() {
         let app = launchCustomerVerificationApp()
         let tabBar = app.otherElements["pax.shell.tabBar"]
         XCTAssertTrue(tabBar.waitForExistence(timeout: 15))
@@ -10,7 +10,13 @@ final class ShellLayoutUITests: XCTestCase {
 
         let composer = customerComposer(in: app)
         XCTAssertTrue(composer.waitForExistence(timeout: 10))
-        assertFrame(composer.frame, sitsFullyAbove: tabBar.frame)
+        XCTAssertFalse(tabBar.isHittable, "Tab bar should be hidden on the dedicated chat screen")
+
+        let back = app.buttons["pax.chat.back"]
+        if back.waitForExistence(timeout: 3) {
+            back.tap()
+            XCTAssertTrue(tabBar.waitForExistence(timeout: 5))
+        }
     }
 
     func testCustomerTabsKeepContentAboveTabBar() {
@@ -18,16 +24,16 @@ final class ShellLayoutUITests: XCTestCase {
         let tabBar = app.otherElements["pax.shell.tabBar"]
         XCTAssertTrue(tabBar.waitForExistence(timeout: 15))
 
-        for tab in ["Home", "Services", "Portfolio", "Chat", "Account"] {
+        for tab in ["Home", "Services", "Portfolio", "Account"] {
             app.buttons[tab].tap()
-            if tab == "Chat" {
-                let composer = customerComposer(in: app)
-                XCTAssertTrue(composer.waitForExistence(timeout: 8))
-                assertFrame(composer.frame, sitsFullyAbove: tabBar.frame)
-            }
             scrollContentToEnd(in: app)
             assertPrimaryContentEndsAboveTabBar(in: app, tabBar: tabBar)
         }
+
+        app.buttons["Chat"].tap()
+        let composer = customerComposer(in: app)
+        XCTAssertTrue(composer.waitForExistence(timeout: 8))
+        XCTAssertFalse(tabBar.isHittable, "Tab bar should stay hidden while chat is open")
     }
 
     func testStaffDashboardKeepsContentAboveTabBar() {

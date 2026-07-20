@@ -320,10 +320,12 @@ struct CustomerDashboardView: View {
 struct CustomerChatView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     @EnvironmentObject private var auth: CustomerAuthStore
+    @EnvironmentObject private var navigation: CustomerNavigationCoordinator
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var network = CustomerNetworkMonitor.shared
     @FocusState private var isInputFocused: Bool
     var initialSessionID: String? = nil
+    var isDedicatedChatScreen: Bool = false
     @State private var poll: CustomerChatPoll?
     @State private var draft = ""
     @State private var error: String?
@@ -345,6 +347,7 @@ struct CustomerChatView: View {
     @State private var pollingSuspended = false
     @State private var pollIntervalNs: UInt64 = 700_000_000
     @State private var eventStreamActive = false
+    @State private var rateLimitUntil: Date?
     @State private var showDocumentPicker = false
     @State private var showCameraPicker = false
     @State private var showAuth = false
@@ -355,6 +358,7 @@ struct CustomerChatView: View {
     }
 
     private let minPollIntervalNs: UInt64 = 700_000_000
+    private let sseHealthyPollIntervalNs: UInt64 = 4_000_000_000
     private let maxPollIntervalNs: UInt64 = 8_000_000_000
 
     private var isHumanQueue: Bool {
@@ -383,7 +387,21 @@ struct CustomerChatView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(PAXBackground())
             .navigationTitle(String(localized: "Chat"))
+            .navigationBarBackButtonHidden(isDedicatedChatScreen)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if isDedicatedChatScreen {
+                        Button {
+                            navigation.dismissChat()
+                        } label: {
+                            HStack(spacing: 4) {
+                                PAXIcon("chevron.left", size: .inline, emphasis: .primary)
+                                Text(String(localized: "Back"))
+                            }
+                        }
+                        .accessibilityIdentifier("pax.chat.back")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     if auth.isAuthenticated {
                         HStack(spacing: 10) {
@@ -490,8 +508,9 @@ struct CustomerChatView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            chatComposer
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                chatComposer
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .overlay(alignment: .top) {
@@ -505,16 +524,16 @@ struct CustomerChatView: View {
                     .frame(maxWidth: .infinity)
             }
         }
-        .sheet(isPresented: $showImagePicker) {
+        .sheet(isPresented: $showImagePicker, onDismiss: dismissComposerKeyboard) {
             CustomerPhotoPicker { data in Task { await sendPhoto(data) } }
         }
-        .sheet(isPresented: $showCameraPicker) {
+        .sheet(isPresented: $showCameraPicker, onDismiss: dismissComposerKeyboard) {
             CustomerCameraPicker { data in Task { await sendPhoto(data) } }
         }
-        .sheet(isPresented: $showDocumentPicker) {
+        .sheet(isPresented: $showDocumentPicker, onDismiss: dismissComposerKeyboard) {
             CustomerDocumentPicker { url in Task { await sendDocument(url) } }
         }
-        .sheet(isPresented: $showLocationSheet) {
+        .sheet(isPresented: $showLocationSheet, onDismiss: dismissComposerKeyboard) {
             CustomerLocationShareSheet { lat, lng, label in
                 Task { await sendLocation(lat: lat, lng: lng, label: label) }
             }
@@ -562,6 +581,10 @@ struct CustomerChatView: View {
             }
         }
         .refreshable { await refresh(full: true) }
+    }
+
+    private func dismissComposerKeyboard() {
+        isInputFocused = false
     }
 
     private var chatComposer: some View {
@@ -656,6 +679,7 @@ struct CustomerChatView: View {
     private func refresh(full: Bool = false) async -> Bool {
         if isSending && !full { return false }
         if pollingSuspended && !full { return false }
+        if let rateLimitUntil, Date() < rateLimitUntil { return false }
         if full && poll == nil { isLoading = true }
         defer { isLoading = false }
         let previousCount = poll?.messages?.count ?? 0
@@ -685,9 +709,32 @@ struct CustomerChatView: View {
             let newCount = poll?.messages?.count ?? 0
             return newCount > previousCount
         } catch {
+            if applyRateLimitBackoff(from: error) {
+                return false
+            }
             await handleChatError(error, savedDraft: nil, duringSend: false)
             return false
         }
+    }
+
+    private func applyRateLimitBackoff(from error: Error) -> Bool {
+        guard let retryAfter = CustomerAPIError.retryAfterSeconds(from: error) else { return false }
+        let pause = max(retryAfter, 5)
+        rateLimitUntil = Date().addingTimeInterval(TimeInterval(pause))
+        pollingSuspended = true
+        pollIntervalNs = maxPollIntervalNs
+        recovery = nil
+        self.error = nil
+        pollTask?.cancel()
+        Task {
+            try? await Task.sleep(nanoseconds: UInt64(pause) * 1_000_000_000)
+            await MainActor.run {
+                rateLimitUntil = nil
+                pollingSuspended = false
+                startPolling()
+            }
+        }
+        return true
     }
 
     private func applyInlineMessage(_ message: CustomerChatPoll.ChatMessage) {
@@ -779,6 +826,12 @@ struct CustomerChatView: View {
     }
 
     private func handleChatError(_ error: Error, savedDraft: String?, duringSend: Bool) async {
+        if applyRateLimitBackoff(from: error) {
+            if duringSend, let savedDraft {
+                draft = savedDraft
+            }
+            return
+        }
         if let action = CustomerChatSessionRecovery.analyze(
             error: error,
             handler: poll?.handler,
@@ -858,18 +911,24 @@ struct CustomerChatView: View {
     private func startPolling() {
         pollTask?.cancel()
         pollingSuspended = false
-        pollIntervalNs = minPollIntervalNs
+        pollIntervalNs = eventStreamActive ? sseHealthyPollIntervalNs : minPollIntervalNs
         pollTask = Task {
             while !Task.isCancelled {
-                let interval = eventStreamActive ? min(pollIntervalNs, 1_200_000_000) : pollIntervalNs
+                if let rateLimitUntil, Date() < rateLimitUntil {
+                    let remaining = rateLimitUntil.timeIntervalSinceNow
+                    try? await Task.sleep(nanoseconds: UInt64(max(remaining, 1)) * 1_000_000_000)
+                    continue
+                }
+                let interval = eventStreamActive ? max(pollIntervalNs, sseHealthyPollIntervalNs) : pollIntervalNs
                 try? await Task.sleep(nanoseconds: interval)
                 guard network.isConnected, !pollingSuspended else { continue }
                 let hadNew = await refresh(full: false)
                 if hadNew {
-                    pollIntervalNs = minPollIntervalNs
+                    pollIntervalNs = eventStreamActive ? sseHealthyPollIntervalNs : minPollIntervalNs
                 } else {
                     let step: UInt64 = isHumanQueue ? 500_000_000 : 800_000_000
-                    pollIntervalNs = min(pollIntervalNs + step, maxPollIntervalNs)
+                    let floor = eventStreamActive ? sseHealthyPollIntervalNs : minPollIntervalNs
+                    pollIntervalNs = min(max(pollIntervalNs + step, floor), maxPollIntervalNs)
                 }
             }
         }
