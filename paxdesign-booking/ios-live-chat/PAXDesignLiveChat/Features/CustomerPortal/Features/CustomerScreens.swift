@@ -520,6 +520,12 @@ struct CustomerChatView: View {
             }
         }
         .task {
+            #if DEBUG
+            if PAXLayoutVerification.isActive {
+                isLoading = false
+                return
+            }
+            #endif
             guard auth.isAuthenticated else { return }
             if let session = try? await api.fetchChatSession() {
                 poll = CustomerChatPoll(

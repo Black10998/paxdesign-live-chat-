@@ -349,11 +349,9 @@ final class AuthStore: ObservableObject {
             profile = AdminProfile.layoutVerificationStub
             username = "layout-verify"
             appPassword = "layout-verify"
-            api = LiveChatAPI(
-                siteURL: AppServerConfig.siteURL,
-                username: "layout-verify",
-                appPassword: "layout-verify"
-            )
+            if let site = URL(string: AppServerConfig.siteURL) {
+                api = LiveChatAPI(siteURL: site, username: "layout-verify", appPassword: "layout-verify")
+            }
         }
     }
     #endif
