@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Inspect WordPress disk usage + DB bloat; backup; safe cleanup; optimize; disable debug logging.
 # Runs ON the production host (via SSH from GitHub Actions).
-set -euo pipefail
+set -uo pipefail
 
 WP_ROOT="${WP_PATH:?WP_PATH is required}"
 MODE="${MODE:-full}"  # inspect | cleanup | full
@@ -49,7 +49,10 @@ emergency_free_disk() {
     fi
   done
   if [[ -d "$BACKUP_ROOT" ]]; then
-    mapfile -t old_backups < <(find "$BACKUP_ROOT" -maxdepth 1 -mindepth 1 -type d | sort)
+    old_backups=()
+    while IFS= read -r dir; do
+      [[ -n "$dir" ]] && old_backups+=("$dir")
+    done <<< "$(find "$BACKUP_ROOT" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort)"
     total=${#old_backups[@]}
     idx=0
     for dir in "${old_backups[@]}"; do
@@ -316,7 +319,10 @@ for logfile in "$WP_ROOT/wp-content/debug.log" "$WP_ROOT/debug.log" "$WP_ROOT/er
   fi
 done
 if [[ -d "$BACKUP_ROOT" ]]; then
-  mapfile -t all_backups < <(find "$BACKUP_ROOT" -maxdepth 1 -mindepth 1 -type d -name 'customer-platform-*' | sort -r)
+  all_backups=()
+  while IFS= read -r dir; do
+    [[ -n "$dir" ]] && all_backups+=("$dir")
+  done <<< "$(find "$BACKUP_ROOT" -maxdepth 1 -mindepth 1 -type d -name 'customer-platform-*' 2>/dev/null | sort -r)"
   kept=0
   for dir in "${all_backups[@]}"; do
     kept=$((kept + 1))
@@ -343,7 +349,10 @@ log "Backup dir: $AUDIT_BACKUP"
 section "Safe filesystem cleanup"
 # Remove stale backup dirs older than 14 days (keep 3 newest regardless)
 if [[ -d "$BACKUP_ROOT" ]]; then
-  mapfile -t all_backups < <(find "$BACKUP_ROOT" -maxdepth 1 -mindepth 1 -type d -name 'customer-platform-*' | sort -r)
+  all_backups=()
+  while IFS= read -r dir; do
+    [[ -n "$dir" ]] && all_backups+=("$dir")
+  done <<< "$(find "$BACKUP_ROOT" -maxdepth 1 -mindepth 1 -type d -name 'customer-platform-*' 2>/dev/null | sort -r)"
   kept=0
   for dir in "${all_backups[@]}"; do
     kept=$((kept + 1))

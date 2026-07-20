@@ -1,2 +1,2 @@
-Emergency disk free first; report to /tmp
-Triggered: 2026-07-20T14:00:00Z
+Fix mapfile/process substitution for SSH bash -s
+Triggered: 2026-07-20T14:05:00Z
