@@ -9,6 +9,9 @@ if (!defined('ABSPATH')) {
 
 class PAXdesign_Customer_Chat_Bridge {
 
+    /** Seconds without customer activity before live-request queue is released. */
+    const CUSTOMER_PRESENCE_TIMEOUT_SECONDS = 180;
+
     public static function init() {
         // Sessions are allocated lazily on first chat message — never on login or page load.
     }
@@ -171,7 +174,11 @@ class PAXdesign_Customer_Chat_Bridge {
             array('%s', '%s'),
             array('%s')
         );
-        self::materialize_session($session_id, $user_id);
+        $wp_user_id = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT wp_user_id FROM " . PAXdesign_Chat_Log::table_name() . " WHERE session_id = %s LIMIT 1",
+            $session_id
+        ));
+        self::materialize_session($session_id, $wp_user_id);
         return $session_id;
     }
 
@@ -335,6 +342,13 @@ class PAXdesign_Customer_Chat_Bridge {
             return $session_id;
         }
 
+        if ($session_id !== '' && class_exists('PAXdesign_Chat_Live')) {
+            $embedded = PAXdesign_Chat_Live::user_id_from_session_id($session_id);
+            if ($embedded > 0 && $embedded !== $user_id) {
+                $session_id = '';
+            }
+        }
+
         $primary = self::primary_session_id($user_id);
         if ($primary === '') {
             return $session_id;
@@ -346,6 +360,109 @@ class PAXdesign_Customer_Chat_Bridge {
 
         self::sync_chat_log_user($session_id, $user_id);
         return self::ensure_persistent_session_open($session_id, $user_id);
+    }
+
+    /**
+     * Record customer activity and expire abandoned live-request queue slots.
+     */
+    public static function touch_customer_presence($session_id, $user_id = 0) {
+        global $wpdb;
+        $session_id = self::sanitize_session_id($session_id);
+        if ($session_id === '') {
+            return $session_id;
+        }
+        $table = PAXdesign_Chat_Log::table_name();
+        $wpdb->update(
+            $table,
+            array('customer_last_seen_at' => current_time('mysql')),
+            array('session_id' => $session_id),
+            array('%s'),
+            array('%s')
+        );
+        return self::expire_inactive_session_if_needed($session_id, $user_id);
+    }
+
+    /**
+     * Mark the customer as disconnected (page closed / app backgrounded).
+     */
+    public static function mark_customer_disconnected($session_id, $user_id = 0) {
+        $session_id = self::sanitize_session_id($session_id);
+        if ($session_id === '') {
+            return '';
+        }
+        if ($user_id > 0 && !self::user_owns_session($user_id, $session_id)) {
+            return '';
+        }
+        return self::expire_inactive_session_if_needed($session_id, $user_id, true);
+    }
+
+    /**
+     * Release stale live-request handlers after customer inactivity.
+     *
+     * @param bool $force When true, treat as immediately disconnected.
+     */
+    public static function expire_inactive_session_if_needed($session_id, $user_id = 0, $force = false) {
+        global $wpdb;
+        $session_id = self::sanitize_session_id($session_id);
+        if ($session_id === '') {
+            return '';
+        }
+        if ($user_id > 0 && !self::user_owns_session($user_id, $session_id)) {
+            return '';
+        }
+
+        $table = PAXdesign_Chat_Log::table_name();
+        $row = $wpdb->get_row($wpdb->prepare(
+            "SELECT handler, customer_last_seen_at, wp_user_id FROM $table WHERE session_id = %s LIMIT 1",
+            $session_id
+        ));
+        if (!$row) {
+            return $session_id;
+        }
+
+        $handler = isset($row->handler) ? (string) $row->handler : PAXdesign_Chat_Live::HANDLER_AI;
+        if ($handler !== PAXdesign_Chat_Live::HANDLER_LIVE) {
+            return $session_id;
+        }
+
+        $last_seen = isset($row->customer_last_seen_at) ? (string) $row->customer_last_seen_at : '';
+        $elapsed = $force ? self::CUSTOMER_PRESENCE_TIMEOUT_SECONDS + 1 : 0;
+        if (!$force && $last_seen !== '') {
+            $ts = strtotime($last_seen);
+            if ($ts) {
+                $elapsed = time() - $ts;
+            }
+        }
+        if ($elapsed < self::CUSTOMER_PRESENCE_TIMEOUT_SECONDS) {
+            return $session_id;
+        }
+
+        $live = PAXdesign_Chat_Live::get_instance();
+        $live->release_abandoned_live_request($session_id);
+        return $session_id;
+    }
+
+    /**
+     * Verify logged-in customer matches session owner (defense in depth).
+     *
+     * @return true|WP_Error
+     */
+    public static function assert_session_owner($user_id, $session_id) {
+        $user_id = absint($user_id);
+        $session_id = self::sanitize_session_id($session_id);
+        if ($user_id <= 0 || $session_id === '') {
+            return new WP_Error('forbidden', __('Invalid session.', 'paxdesign-booking'), array('status' => 403));
+        }
+        if (!self::user_owns_session($user_id, $session_id)) {
+            return new WP_Error('forbidden', __('You do not have access to this conversation.', 'paxdesign-booking'), array('status' => 403));
+        }
+        if (class_exists('PAXdesign_Chat_Live')) {
+            $embedded = PAXdesign_Chat_Live::user_id_from_session_id($session_id);
+            if ($embedded > 0 && $embedded !== $user_id) {
+                return new WP_Error('forbidden', __('Session belongs to another account.', 'paxdesign-booking'), array('status' => 403));
+            }
+        }
+        return true;
     }
 
     public static function user_owns_session($user_id, $session_id) {
@@ -449,6 +566,8 @@ class PAXdesign_Customer_Chat_Bridge {
             'user_typing'        => false,
             'reactions'          => array(),
             'customer_language'  => '',
+            'auth_user_id'       => 0,
+            'wp_user_id'         => 0,
         );
     }
 

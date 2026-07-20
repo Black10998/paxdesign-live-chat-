@@ -317,6 +317,12 @@ class PAXdesign_Customer_REST {
             'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
         ));
 
+        register_rest_route(self::NS, '/customer/chat/disconnect', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'chat_disconnect'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
         register_rest_route(self::NS, '/customer/push/register', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'register_push'),
@@ -652,7 +658,26 @@ class PAXdesign_Customer_REST {
             'handler'        => $handler,
             'message_count'  => $message_count,
             'has_messages'   => $message_count > 0,
+            'user_id'        => $uid,
+            'auth_user_id'   => $uid,
         ));
+    }
+
+    public static function chat_disconnect(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $params = $request->get_json_params() ?: $request->get_params();
+        $session_id = sanitize_text_field($params['session_id'] ?? '');
+        if ($session_id === '') {
+            $session_id = PAXdesign_Customer_Chat_Bridge::lookup_primary_session_id($uid);
+        }
+        if ($session_id === '') {
+            return rest_ensure_response(array('ok' => true));
+        }
+        if (!PAXdesign_Customer_Chat_Bridge::user_owns_session($uid, $session_id)) {
+            return new WP_Error('forbidden', __('You do not have access to this conversation.', 'paxdesign-booking'), array('status' => 403));
+        }
+        PAXdesign_Customer_Chat_Bridge::mark_customer_disconnected($session_id, $uid);
+        return rest_ensure_response(array('ok' => true));
     }
 
     public static function chat_renew_session(WP_REST_Request $request) {
@@ -715,6 +740,7 @@ class PAXdesign_Customer_REST {
             return rest_ensure_response($data);
         }
         $session_id = PAXdesign_Customer_Chat_Bridge::ensure_persistent_session_open($session_id, $uid);
+        PAXdesign_Customer_Chat_Bridge::touch_customer_presence($session_id, $uid);
         $data = $live->get_poll_data($session_id, $since, $full, 'user');
         if (is_wp_error($data)) {
             if ($data->get_error_code() === 'not_found') {
@@ -727,6 +753,7 @@ class PAXdesign_Customer_REST {
             $data['messages'] = PAXdesign_Customer_Chat_Bridge::filter_customer_lifecycle_messages($data['messages']);
         }
         $data['session_id'] = $session_id;
+        $data['auth_user_id'] = $uid;
         if (!isset($data['other_read_seq']) && isset($data['admin_read_seq'])) {
             $data['other_read_seq'] = (int) $data['admin_read_seq'];
         }
