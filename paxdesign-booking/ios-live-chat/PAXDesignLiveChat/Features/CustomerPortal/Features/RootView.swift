@@ -81,7 +81,9 @@ struct CustomerTabView: View {
                 CustomerMoreView()
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        // Overlay + explicit scroll clearance is the reliable model for ZStack tab shells.
+        // Nested safeAreaInset for the tab bar does not consistently expand ScrollView/List insets.
+        .overlay(alignment: .bottom) {
             UiverseMenuBarView(
                 items: menuItems,
                 selection: Binding(
@@ -94,9 +96,11 @@ struct CustomerTabView: View {
             )
             .scaleEffect(menuScrollState.barScale, anchor: .bottom)
             .padding(.horizontal, UiverseMenuMetrics.horizontalMargin)
+            .padding(.bottom, UiverseMenuMetrics.homeIndicatorGap)
+            .ignoresSafeArea(edges: .bottom)
         }
         .environment(\.shellTabBarVisible, true)
-        .environment(\.shellTabBarScrollInset, 0)
+        .environment(\.shellTabBarScrollInset, PAXShellLayout.uiverseMenuScrollInset)
         .environment(\.shellMenuScrollState, menuScrollState)
         .onChange(of: navigation.selectedTab) { tab in
             loadedTabs.insert(tab.rawValue)
@@ -113,19 +117,12 @@ struct CustomerTabView: View {
     @ViewBuilder
     private func customerTabPane<Content: View>(_ tab: CustomerPortalTab, @ViewBuilder content: () -> Content) -> some View {
         if loadedTabs.contains(tab.rawValue) {
-            Group {
-                // Chat manages its own bottom composer above the tab bar; extra clearance
-                // would only pad scroll content and can fight the composer layout.
-                if tab == .chat {
-                    content()
-                } else {
-                    content().paxShellScrollClearance()
-                }
-            }
-            .opacity(navigation.selectedTab == tab ? 1 : 0)
-            .allowsHitTesting(navigation.selectedTab == tab)
-            .accessibilityHidden(navigation.selectedTab != tab)
-            .zIndex(navigation.selectedTab == tab ? 1 : 0)
+            content()
+                .paxShellScrollClearance()
+                .opacity(navigation.selectedTab == tab ? 1 : 0)
+                .allowsHitTesting(navigation.selectedTab == tab)
+                .accessibilityHidden(navigation.selectedTab != tab)
+                .zIndex(navigation.selectedTab == tab ? 1 : 0)
         }
     }
 }

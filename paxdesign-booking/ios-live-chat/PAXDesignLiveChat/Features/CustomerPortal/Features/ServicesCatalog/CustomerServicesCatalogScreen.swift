@@ -64,7 +64,8 @@ struct CustomerServicesCatalogScreen: View {
                     ServicesLanguageSwitcher(language: $language)
                 }
             }
-            .customerPortalToolbar()
+            // No shared portal quick-menu chrome here — it crowded the bar and served no
+            // Services-specific purpose (Account destinations remain on the Account tab).
             .refreshable { await load(force: true) }
             .task(id: language.rawValue) { await load(force: false) }
             .sheet(isPresented: $showRequestSheet) {
@@ -104,7 +105,7 @@ struct CustomerServicesCatalogScreen: View {
                         processSection(catalog)
                     }
                 }
-                .padding(.bottom, 36)
+                .padding(.bottom, 48)
             }
             .onAppear {
                 if let id = navigation.pendingServiceCardID {
@@ -158,7 +159,7 @@ struct CustomerServicesCatalogScreen: View {
                 PremiumServiceRow(
                     card: card,
                     catalog: catalog,
-                    media: media(for: card),
+                    imageURL: ServiceCatalogImagery.imageURL(for: card, apiMedia: media(for: card)),
                     isExpanded: expandedCardIDs.contains(card.id),
                     isSpotlight: spotlightCardID == card.id,
                     ink: ink,
@@ -340,7 +341,7 @@ private struct PremiumServiceRow: View {
 
     let card: CustomerServicesCatalogResponse.Card
     let catalog: CustomerServicesCatalogResponse
-    let media: CustomerServicesResponse.Service?
+    let imageURL: URL?
     let isExpanded: Bool
     let isSpotlight: Bool
     let ink: Color
@@ -463,25 +464,26 @@ private struct PremiumServiceRow: View {
     @ViewBuilder
     private var mediaHero: some View {
         Group {
-            if let urlString = media?.image_url, let url = URL(string: urlString) {
-                AsyncImage(url: url) { phase in
+            if let imageURL {
+                AsyncImage(url: imageURL) { phase in
                     switch phase {
                     case .success(let image):
                         image
                             .resizable()
                             .scaledToFill()
                     case .failure:
-                        iconFallback
+                        photoPlaceholder
                     default:
-                        panel
+                        panel.overlay(ProgressView().tint(inkSecondary))
                     }
                 }
             } else {
-                iconFallback
+                photoPlaceholder
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 210)
+        .frame(height: 220)
+        .clipped()
         .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
@@ -490,14 +492,15 @@ private struct PremiumServiceRow: View {
         .accessibilityHidden(true)
     }
 
-    private var iconFallback: some View {
-        ZStack {
-            panel
-            CustomerServiceIconView(
-                iconKey: media?.icon_key ?? card.order_slug,
-                size: 72
-            )
-        }
+    private var photoPlaceholder: some View {
+        LinearGradient(
+            colors: [
+                colorScheme == .dark ? Color(white: 0.14) : Color(white: 0.92),
+                colorScheme == .dark ? Color(white: 0.08) : Color(white: 0.86)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
     }
 
     private var badgeLabel: String? {

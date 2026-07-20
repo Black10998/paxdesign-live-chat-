@@ -5,8 +5,8 @@ import SwiftUI
 enum UiverseMenuMetrics {
     static let horizontalMargin: CGFloat = 8
     static let maxWidth: CGFloat = 520
-    /// Flush with home indicator region; parent uses safeAreaInset.
-    static let homeIndicatorGap: CGFloat = 0
+    /// Small gap above the Home Indicator when the bar overlays the bottom edge.
+    static let homeIndicatorGap: CGFloat = 3
     static let menuPadding: CGFloat = 4
     static let itemGap: CGFloat = 3
     static let itemPaddingVertical: CGFloat = 5
@@ -35,9 +35,10 @@ enum UiverseMenuMetrics {
         menuPadding * 2 + itemHeight
     }
 
-    /// Extra scroll breathing room above the tab bar when using overlay fallback.
+    /// Full scroll clearance: menu chrome + home-indicator gap + breathing room.
+    /// Used with overlay tab bars (safeAreaInset alone is unreliable in ZStack shells).
     static var scrollInset: CGFloat {
-        menuHeight + 10
+        menuHeight + homeIndicatorGap + 12
     }
 }
 
