@@ -12,6 +12,16 @@ struct PAXDesignLiveChatApp: App {
 
     init() {
         LaunchDiagnostics.mark("App.init")
+        #if DEBUG
+        if PAXLayoutVerification.isActive, let mode = PAXLayoutVerification.mode {
+            AuthStore.shared.configureLayoutVerification(mode: mode)
+            AppSettingsStore.shared.firstLaunchOnboardingCompleted = true
+            AppSettingsStore.shared.onboardingCompleted = true
+            if mode == .customer {
+                CustomerNavigationCoordinator.shared.selectedTab = .chat
+            }
+        }
+        #endif
     }
 
     var body: some Scene {
@@ -251,7 +261,7 @@ struct RootView: View {
             if PAXLayoutVerification.isActive {
                 switch PAXLayoutVerification.mode {
                 case .customer:
-                    PAXLayoutVerification.customerShell
+                    CustomerPortalShellView()
                         .transition(.opacity)
                 case .staff:
                     AdaptiveShellView()

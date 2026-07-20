@@ -602,6 +602,7 @@ struct CustomerChatView: View {
                 }
                 TextField(String(localized: "Message"), text: $draft, axis: .vertical)
                     .lineLimit(1...5)
+                    .accessibilityIdentifier("pax.chat.messageField")
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
                     .background(PAXTheme.surfaceElevated)

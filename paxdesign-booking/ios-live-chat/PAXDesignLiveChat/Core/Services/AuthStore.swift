@@ -343,6 +343,14 @@ final class AuthStore: ObservableObject {
                 role: "customer",
                 avatar_url: nil
             )
+            username = "layout-verify@paxdesign.test"
+            appPassword = "layout-verify"
+            CustomerSessionController.shared.activate(
+                siteURL: siteURLString,
+                username: username,
+                appPassword: appPassword,
+                profile: customerProfile!
+            )
         case .staff:
             sessionMode = .staff
             customerProfile = nil

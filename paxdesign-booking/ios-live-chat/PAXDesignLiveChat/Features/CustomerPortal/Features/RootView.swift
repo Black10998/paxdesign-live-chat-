@@ -49,7 +49,16 @@ struct CustomerTabView: View {
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var menuScrollState = UiverseMenuScrollState()
-    @State private var loadedTabs: Set<Int> = [CustomerPortalTab.home.rawValue]
+    @State private var loadedTabs: Set<Int> = CustomerTabView.initialLoadedTabs()
+
+    private static func initialLoadedTabs() -> Set<Int> {
+        #if DEBUG
+        if PAXLayoutVerification.isActive, PAXLayoutVerification.mode == .customer {
+            return [CustomerPortalTab.chat.rawValue]
+        }
+        #endif
+        return [CustomerPortalTab.home.rawValue]
+    }
 
     private var menuItems: [UiverseMenuBarItem] {
         [
@@ -94,6 +103,9 @@ struct CustomerTabView: View {
             scrollState: menuScrollState
         )
         .environment(\.shellTabBarVisible, true)
+        .onAppear {
+            loadedTabs.insert(navigation.selectedTab.rawValue)
+        }
         .onChange(of: navigation.selectedTab) { tab in
             loadedTabs.insert(tab.rawValue)
             PAXHaptics.light()
