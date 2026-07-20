@@ -429,8 +429,6 @@ struct CustomerChatView: View {
                 }
             }
         }
-        // Chat owns its bottom composer; do not add shell tab-bar clearance here.
-        // Nested bottom safeAreaInset would fight the customer tab bar and hide the composer.
     }
 
     private var chatContent: some View {
@@ -491,70 +489,71 @@ struct CustomerChatView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            // Sit in the layout above the shell tab-bar safe area (not a nested bottom inset).
+        }
+        // Composer as safeAreaInset stacks above the shell tab-bar clearance Color.clear pad.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             chatComposer
         }
-            .overlay(alignment: .top) {
-                if let error, recovery == nil {
-                    Text(error)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                        .padding(8)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity)
-                }
+        .overlay(alignment: .top) {
+            if let error, recovery == nil {
+                Text(error)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .padding(8)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
             }
-            .sheet(isPresented: $showImagePicker) {
-                CustomerPhotoPicker { data in Task { await sendPhoto(data) } }
+        }
+        .sheet(isPresented: $showImagePicker) {
+            CustomerPhotoPicker { data in Task { await sendPhoto(data) } }
+        }
+        .sheet(isPresented: $showCameraPicker) {
+            CustomerCameraPicker { data in Task { await sendPhoto(data) } }
+        }
+        .sheet(isPresented: $showDocumentPicker) {
+            CustomerDocumentPicker { url in Task { await sendDocument(url) } }
+        }
+        .sheet(isPresented: $showLocationSheet) {
+            CustomerLocationShareSheet { lat, lng, label in
+                Task { await sendLocation(lat: lat, lng: lng, label: label) }
             }
-            .sheet(isPresented: $showCameraPicker) {
-                CustomerCameraPicker { data in Task { await sendPhoto(data) } }
+        }
+        .task {
+            guard auth.isAuthenticated else { return }
+            if let session = try? await api.fetchChatSession() {
+                poll = CustomerChatPoll(
+                    session_id: session.session_id,
+                    handler: session.handler,
+                    messages: [],
+                    message_count: nil,
+                    last_preview: nil
+                )
+            } else if let initialSessionID, !initialSessionID.isEmpty {
+                poll = CustomerChatPoll(session_id: initialSessionID, handler: nil, messages: [], message_count: nil, last_preview: nil)
             }
-            .sheet(isPresented: $showDocumentPicker) {
-                CustomerDocumentPicker { url in Task { await sendDocument(url) } }
+            await refresh(full: true)
+            startPolling()
+            startEventStream()
+        }
+        .onDisappear {
+            pollTask?.cancel()
+            streamTask?.cancel()
+            typingTask?.cancel()
+            if poll?.session_id != nil {
+                AppRefreshPolicy.setActiveSession(nil)
             }
-            .sheet(isPresented: $showLocationSheet) {
-                CustomerLocationShareSheet { lat, lng, label in
-                    Task { await sendLocation(lat: lat, lng: lng, label: label) }
-                }
+            Task { try? await api.sendChatTyping(sessionID: poll?.session_id, stop: true) }
+        }
+        .onAppear {
+            AppRefreshPolicy.setActiveSession(poll?.session_id)
+        }
+        .onChange(of: scenePhase) { phase in
+            if phase == .active, auth.isAuthenticated {
+                Task { await refresh(full: false) }
             }
-            .task {
-                guard auth.isAuthenticated else { return }
-                if let session = try? await api.fetchChatSession() {
-                    poll = CustomerChatPoll(
-                        session_id: session.session_id,
-                        handler: session.handler,
-                        messages: [],
-                        message_count: nil,
-                        last_preview: nil
-                    )
-                } else if let initialSessionID, !initialSessionID.isEmpty {
-                    poll = CustomerChatPoll(session_id: initialSessionID, handler: nil, messages: [], message_count: nil, last_preview: nil)
-                }
-                await refresh(full: true)
-                startPolling()
-                startEventStream()
-            }
-            .onDisappear {
-                pollTask?.cancel()
-                streamTask?.cancel()
-                typingTask?.cancel()
-                if poll?.session_id != nil {
-                    AppRefreshPolicy.setActiveSession(nil)
-                }
-                Task { try? await api.sendChatTyping(sessionID: poll?.session_id, stop: true) }
-            }
-            .onAppear {
-                AppRefreshPolicy.setActiveSession(poll?.session_id)
-            }
-            .onChange(of: scenePhase) { phase in
-                if phase == .active, auth.isAuthenticated {
-                    Task { await refresh(full: false) }
-                }
-            }
-            .refreshable { await refresh(full: true) }
+        }
+        .refreshable { await refresh(full: true) }
     }
 
     private var chatComposer: some View {

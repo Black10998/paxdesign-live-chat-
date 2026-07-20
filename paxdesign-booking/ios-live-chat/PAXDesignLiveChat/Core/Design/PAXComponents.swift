@@ -542,26 +542,30 @@ private struct ShellScrollClearanceModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         let padding: CGFloat = {
-            if tabBarVisible && tabBarScrollInset == 0 { return 0 }
             if tabBarScrollInset > 0 { return tabBarScrollInset }
             return PAXShellLayout.scrollBottomPadding(tabBarVisible: tabBarVisible)
         }()
-        if padding > 0 {
-            content.safeAreaInset(edge: .bottom, spacing: 0) {
-                Color.clear
-                    .frame(height: padding)
-                    .accessibilityHidden(true)
-            }
-            .background {
-                if let menuScrollState {
-                    PAXShellScrollOffsetTracker(
-                        scrollState: menuScrollState,
-                        reduceMotion: reduceMotion
-                    )
+
+        // Always pad when the overlay tab bar (or detail breathing room) needs space.
+        // Also keep the scroll tracker mounted so the bar can compress while scrolling.
+        Group {
+            if padding > 0 {
+                content.safeAreaInset(edge: .bottom, spacing: 0) {
+                    Color.clear
+                        .frame(height: padding)
+                        .accessibilityHidden(true)
                 }
+            } else {
+                content
             }
-        } else {
-            content
+        }
+        .background {
+            if let menuScrollState, tabBarVisible {
+                PAXShellScrollOffsetTracker(
+                    scrollState: menuScrollState,
+                    reduceMotion: reduceMotion
+                )
+            }
         }
     }
 }
