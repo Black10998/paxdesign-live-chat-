@@ -353,6 +353,35 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
             </div>
           </div>
 
+          <div class="paxdesign-booking-chat-readiness" id="paxdesignChatReadiness" hidden aria-live="polite" aria-busy="true">
+            <div class="paxdesign-booking-chat-readiness-panel">
+              <div class="paxdesign-booking-chat-readiness-loading" id="paxdesignChatReadinessLoading">
+                <div class="paxdesign-chat-loader" aria-hidden="true">
+                  <div class="bar1"></div>
+                  <div class="bar2"></div>
+                  <div class="bar3"></div>
+                  <div class="bar4"></div>
+                  <div class="bar5"></div>
+                  <div class="bar6"></div>
+                  <div class="bar7"></div>
+                  <div class="bar8"></div>
+                  <div class="bar9"></div>
+                  <div class="bar10"></div>
+                  <div class="bar11"></div>
+                  <div class="bar12"></div>
+                </div>
+                <p class="paxdesign-booking-chat-readiness-text" id="paxdesignChatReadinessText"><?php echo esc_html__('Connecting to chat…', 'paxdesign-booking'); ?></p>
+              </div>
+              <div class="paxdesign-booking-chat-readiness-error" id="paxdesignChatReadinessError" hidden>
+                <p class="paxdesign-booking-chat-readiness-error-text" id="paxdesignChatReadinessErrorText"></p>
+                <div class="paxdesign-booking-chat-readiness-actions">
+                  <button type="button" class="paxdesign-booking-chat-readiness-btn" id="paxdesignChatReadinessRetry"><?php echo esc_html__('Retry', 'paxdesign-booking'); ?></button>
+                  <button type="button" class="paxdesign-booking-chat-readiness-btn paxdesign-booking-chat-readiness-btn--ghost" id="paxdesignChatReadinessClose"><?php echo esc_html__('Close', 'paxdesign-booking'); ?></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="paxdesign-booking-body paxdesign-booking-chat-body">
             <div class="paxdesign-booking-chat-messages" role="log" aria-relevant="additions">
               <div class="paxdesign-booking-chat-entry" id="paxdesignChatEntry" hidden aria-hidden="true">

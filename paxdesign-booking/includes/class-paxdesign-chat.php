@@ -176,7 +176,84 @@ class PAXdesign_Chat {
                 'ar' => PAXdesign_Language_Routing::system_notice($key, 'ar'),
             );
         }
-        return $out;
+        $readiness = array(
+            'readinessConnecting' => array(
+                'de' => 'Verbindung wird hergestellt …',
+                'en' => 'Connecting to chat …',
+                'ar' => 'جاري الاتصال بالدردشة …',
+            ),
+            'readinessAuthenticating' => array(
+                'de' => 'Anmeldung wird geprüft …',
+                'en' => 'Verifying your sign-in …',
+                'ar' => 'جاري التحقق من تسجيل الدخول …',
+            ),
+            'readinessSession' => array(
+                'de' => 'Chat-Sitzung wird vorbereitet …',
+                'en' => 'Preparing your chat session …',
+                'ar' => 'جاري تجهيز جلسة الدردشة …',
+            ),
+            'readinessHistory' => array(
+                'de' => 'Nachrichtenverlauf wird geladen …',
+                'en' => 'Loading conversation history …',
+                'ar' => 'جاري تحميل سجل المحادثة …',
+            ),
+            'readinessRealtime' => array(
+                'de' => 'Echtzeit-Verbindung wird aufgebaut …',
+                'en' => 'Establishing real-time connection …',
+                'ar' => 'جاري إنشاء اتصال فوري …',
+            ),
+            'readinessSyncing' => array(
+                'de' => 'Chat-Status wird synchronisiert …',
+                'en' => 'Synchronizing chat status …',
+                'ar' => 'جاري مزامنة حالة الدردشة …',
+            ),
+            'readinessAuthFailed' => array(
+                'de' => 'Bitte melden Sie sich an, um den Chat zu nutzen.',
+                'en' => 'Please sign in to use chat.',
+                'ar' => 'يرجى تسجيل الدخول لاستخدام الدردشة.',
+            ),
+            'readinessSessionFailed' => array(
+                'de' => 'Die Chat-Sitzung konnte nicht gestartet werden.',
+                'en' => 'Could not start your chat session.',
+                'ar' => 'تعذر بدء جلسة الدردشة.',
+            ),
+            'readinessNetworkFailed' => array(
+                'de' => 'Verbindung zum Server fehlgeschlagen. Bitte prüfen Sie Ihre Internetverbindung.',
+                'en' => 'Could not reach the server. Please check your connection.',
+                'ar' => 'تعذر الاتصال بالخادم. يرجى التحقق من اتصالك.',
+            ),
+            'readinessStreamFailed' => array(
+                'de' => 'Die Echtzeit-Verbindung konnte nicht hergestellt werden.',
+                'en' => 'Real-time connection could not be established.',
+                'ar' => 'تعذر إنشاء الاتصال الفوري.',
+            ),
+            'readinessAiFailed' => array(
+                'de' => 'Der KI-Assistent ist derzeit nicht verfügbar.',
+                'en' => 'The AI assistant is currently unavailable.',
+                'ar' => 'مساعد KI غير متاح حالياً.',
+            ),
+            'readinessLiveFailed' => array(
+                'de' => 'Die Live-Anfrage konnte nicht bestätigt werden. Bitte erneut versuchen.',
+                'en' => 'Could not confirm your live agent request. Please try again.',
+                'ar' => 'تعذر تأكيد طلب موظف الدردشة. يرجى المحاولة مرة أخرى.',
+            ),
+            'readinessGenericFailed' => array(
+                'de' => 'Der Chat konnte nicht geladen werden.',
+                'en' => 'Chat could not be loaded.',
+                'ar' => 'تعذر تحميل الدردشة.',
+            ),
+            'readinessRetry' => array(
+                'de' => 'Erneut versuchen',
+                'en' => 'Retry',
+                'ar' => 'إعادة المحاولة',
+            ),
+            'readinessClose' => array(
+                'de' => 'Schließen',
+                'en' => 'Close',
+                'ar' => 'إغلاق',
+            ),
+        );
+        return array_merge($out, $readiness);
     }
 
     public function get_chat_settings_for_prompt() {

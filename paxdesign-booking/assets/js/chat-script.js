@@ -154,6 +154,24 @@
   var streamSource        = null;
   var streamEventSince    = 0;
   var streamRestartTimer  = null;
+  var READINESS_TIMEOUT_MS = 45000;
+  var READINESS_STREAM_WAIT_MS = 15000;
+  var READINESS_AUTO_RETRY_MAX = 2;
+  var READINESS_AUTO_RETRY_DELAY_MS = 2500;
+  var chatPanelEl = null;
+  var readinessEl = null;
+  var readinessLoadingEl = null;
+  var readinessErrorEl = null;
+  var readinessTextEl = null;
+  var readinessErrorTextEl = null;
+  var readinessRetryBtn = null;
+  var readinessCloseBtn = null;
+  var readinessState = 'idle';
+  var readinessGeneration = 0;
+  var readinessPromise = null;
+  var readinessAutoRetryTimer = null;
+  var readinessUiBound = false;
+  var lastReadinessPollAt = 0;
 
   function customerStreamUrl() {
     var parts = [
@@ -274,6 +292,331 @@
     } catch (e) {
       scheduleCustomerStreamRestart(1200);
     }
+  }
+
+  function localizedReadiness(key, fallback) {
+    var localized = localizedI18n(key);
+    if (localized) return localized;
+    return fallback || '';
+  }
+
+  function initChatReadinessUi() {
+    chatPanelEl = root.querySelector('#paxdesignChatPanel');
+    readinessEl = root.querySelector('#paxdesignChatReadiness');
+    readinessLoadingEl = root.querySelector('#paxdesignChatReadinessLoading');
+    readinessErrorEl = root.querySelector('#paxdesignChatReadinessError');
+    readinessTextEl = root.querySelector('#paxdesignChatReadinessText');
+    readinessErrorTextEl = root.querySelector('#paxdesignChatReadinessErrorText');
+    readinessRetryBtn = root.querySelector('#paxdesignChatReadinessRetry');
+    readinessCloseBtn = root.querySelector('#paxdesignChatReadinessClose');
+    if (readinessRetryBtn) {
+      readinessRetryBtn.textContent = localizedReadiness('readinessRetry', 'Retry');
+    }
+    if (readinessCloseBtn) {
+      readinessCloseBtn.textContent = localizedReadiness('readinessClose', 'Close');
+    }
+    if (readinessUiBound || !readinessEl) return;
+    readinessUiBound = true;
+    if (readinessRetryBtn) {
+      readinessRetryBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (readinessAutoRetryTimer) {
+          clearTimeout(readinessAutoRetryTimer);
+          readinessAutoRetryTimer = null;
+        }
+        beginChatReadiness({ reuseSession: true, attempt: 0 });
+      });
+    }
+    if (readinessCloseBtn) {
+      readinessCloseBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        cancelChatReadiness();
+        hideReadinessOverlay();
+        if (window.PAXdesignBooking && typeof window.PAXdesignBooking.close === 'function') {
+          window.PAXdesignBooking.close();
+        }
+      });
+    }
+  }
+
+  function setReadinessPhase(key, fallback) {
+    if (readinessTextEl) {
+      readinessTextEl.textContent = localizedReadiness(key, fallback);
+    }
+  }
+
+  function showReadinessOverlay() {
+    initChatReadinessUi();
+    if (!readinessEl || !chatPanelEl) return;
+    if (readinessAutoRetryTimer) {
+      clearTimeout(readinessAutoRetryTimer);
+      readinessAutoRetryTimer = null;
+    }
+    readinessEl.hidden = false;
+    readinessEl.setAttribute('aria-busy', 'true');
+    if (readinessLoadingEl) readinessLoadingEl.hidden = false;
+    if (readinessErrorEl) readinessErrorEl.hidden = true;
+    chatPanelEl.classList.add('paxdesign-chat-readiness-active');
+    readinessState = 'loading';
+    setReadinessPhase('readinessConnecting', 'Connecting to chat…');
+  }
+
+  function showReadinessError(message) {
+    initChatReadinessUi();
+    if (!readinessEl) return;
+    readinessState = 'error';
+    readinessEl.setAttribute('aria-busy', 'false');
+    if (readinessLoadingEl) readinessLoadingEl.hidden = true;
+    if (readinessErrorEl) readinessErrorEl.hidden = false;
+    if (readinessErrorTextEl) {
+      readinessErrorTextEl.textContent = message || localizedReadiness('readinessGenericFailed', 'Chat could not be loaded.');
+    }
+  }
+
+  function hideReadinessOverlay() {
+    initChatReadinessUi();
+    if (!readinessEl || !chatPanelEl) return;
+    readinessEl.hidden = true;
+    readinessEl.setAttribute('aria-busy', 'false');
+    chatPanelEl.classList.remove('paxdesign-chat-readiness-active');
+    readinessState = 'ready';
+  }
+
+  function cancelChatReadiness() {
+    readinessGeneration += 1;
+    readinessPromise = null;
+    if (readinessAutoRetryTimer) {
+      clearTimeout(readinessAutoRetryTimer);
+      readinessAutoRetryTimer = null;
+    }
+  }
+
+  function readinessErrorMessage(err) {
+    if (!err) {
+      return localizedReadiness('readinessGenericFailed', 'Chat could not be loaded.');
+    }
+    if (err.message && typeof err.message === 'string' && err.message.indexOf('readiness') !== 0) {
+      return err.message;
+    }
+    if (err.messageKey) {
+      return localizedReadiness(err.messageKey, localizedReadiness('readinessGenericFailed', 'Chat could not be loaded.'));
+    }
+    switch (err.code) {
+      case 'auth':
+        return localizedReadiness('readinessAuthFailed', 'Please sign in to use chat.');
+      case 'session':
+        return localizedReadiness('readinessSessionFailed', 'Could not start your chat session.');
+      case 'network':
+      case 'backend':
+        return localizedReadiness('readinessNetworkFailed', 'Could not reach the server.');
+      case 'sse':
+        return localizedReadiness('readinessStreamFailed', 'Real-time connection could not be established.');
+      case 'ai':
+        return localizedReadiness('readinessAiFailed', 'The AI assistant is currently unavailable.');
+      case 'live':
+        return localizedReadiness('readinessLiveFailed', 'Could not confirm your live agent request.');
+      default:
+        return localizedReadiness('readinessGenericFailed', 'Chat could not be loaded.');
+    }
+  }
+
+  function shouldAutoRetryReadiness(err) {
+    if (!err || err.silent || err.code === 'auth') return false;
+    return true;
+  }
+
+  function scheduleReadinessAutoRetry(attempt) {
+    if (readinessAutoRetryTimer) clearTimeout(readinessAutoRetryTimer);
+    readinessAutoRetryTimer = window.setTimeout(function () {
+      readinessAutoRetryTimer = null;
+      if (readinessState !== 'error' || !widgetOpen) return;
+      beginChatReadiness({ reuseSession: true, attempt: attempt });
+    }, READINESS_AUTO_RETRY_DELAY_MS);
+  }
+
+  function abortIfReadinessStale(generation) {
+    if (generation !== readinessGeneration) {
+      var aborted = { code: 'aborted', silent: true };
+      throw aborted;
+    }
+  }
+
+  function withReadinessTimeout(promise, generation) {
+    return new Promise(function (resolve, reject) {
+      var timer = window.setTimeout(function () {
+        reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+      }, READINESS_TIMEOUT_MS);
+      promise.then(function (value) {
+        window.clearTimeout(timer);
+        resolve(value);
+      }).catch(function (err) {
+        window.clearTimeout(timer);
+        if (generation !== readinessGeneration) {
+          reject({ code: 'aborted', silent: true });
+          return;
+        }
+        reject(err);
+      });
+    });
+  }
+
+  function waitForCustomerStreamOpen(timeoutMs, generation) {
+    return new Promise(function (resolve, reject) {
+      var startedAt = Date.now();
+      startCustomerStream();
+      var tick = function () {
+        if (generation !== readinessGeneration) {
+          reject({ code: 'aborted', silent: true });
+          return;
+        }
+        if (customerStreamConnected()) {
+          resolve(true);
+          return;
+        }
+        if (Date.now() - startedAt >= timeoutMs) {
+          reject({ code: 'sse', messageKey: 'readinessStreamFailed' });
+          return;
+        }
+        window.setTimeout(tick, 100);
+      };
+      tick();
+    });
+  }
+
+  function verifyLiveAgentStateFromServer(expectedHandlers) {
+    expectedHandlers = expectedHandlers || ['live_request', 'admin'];
+    if (expectedHandlers.indexOf(chatHandler) === -1) {
+      return Promise.reject({ code: 'live', messageKey: 'readinessLiveFailed' });
+    }
+    if (chatHandler === 'admin' && !adminName && !(assignedAgent && assignedAgent.name)) {
+      return Promise.reject({ code: 'live', messageKey: 'readinessLiveFailed' });
+    }
+    return Promise.resolve(true);
+  }
+
+  function finalizeChatReadinessUi() {
+    hideReadinessOverlay();
+    updateEntryUi();
+    updateInputState();
+    updateEndButtonUi();
+    scheduleLivePolling();
+    if (widgetOpen || isPersistentAccountChat()) {
+      startCustomerStream();
+    }
+    notifyLayout();
+    if (entryEl && !entryEl.hidden) {
+      try {
+        entryEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } catch (e) {}
+    }
+  }
+
+  function runChatReadinessChecks(options) {
+    options = options || {};
+    var generation = readinessGeneration;
+    var skipSessionBootstrap = !!options.reuseSession && !!getSessionId() && sessionRestored;
+
+    return withReadinessTimeout(Promise.resolve()
+      .then(function () {
+        abortIfReadinessStale(generation);
+        setReadinessPhase('readinessAuthenticating', 'Verifying your sign-in…');
+        if (!canUseChat()) {
+          return Promise.reject({ code: 'auth', messageKey: 'readinessAuthFailed' });
+        }
+        if (!config || config.enabled === false) {
+          return Promise.reject({ code: 'ai', messageKey: 'readinessAiFailed' });
+        }
+      })
+      .then(function () {
+        abortIfReadinessStale(generation);
+        setReadinessPhase('readinessSession', 'Preparing your chat session…');
+        if (skipSessionBootstrap) {
+          return getSessionId();
+        }
+        if (isPersistentAccountChat()) {
+          return refreshAuthenticatedChatSession().then(function () {
+            abortIfReadinessStale(generation);
+            return reopenAuthenticatedSessionIfNeeded();
+          }).then(function () {
+            abortIfReadinessStale(generation);
+            return getSessionId();
+          });
+        }
+        return restoreCustomerSession().then(function () {
+          abortIfReadinessStale(generation);
+          return getSessionId();
+        });
+      })
+      .then(function (sessionId) {
+        abortIfReadinessStale(generation);
+        if (!sessionId) {
+          return Promise.reject({ code: 'session', messageKey: 'readinessSessionFailed' });
+        }
+        setReadinessPhase('readinessHistory', 'Loading conversation history…');
+        return fetchSessionFromServer(true, true);
+      })
+      .then(function () {
+        abortIfReadinessStale(generation);
+        if (chatHandler === 'closed' && isPersistentAccountChat()) {
+          return reopenAuthenticatedSessionIfNeeded().then(function () {
+            abortIfReadinessStale(generation);
+            return fetchSessionFromServer(true, true);
+          });
+        }
+        return true;
+      })
+      .then(function () {
+        abortIfReadinessStale(generation);
+        if (chatHandler === 'live_request' || chatHandler === 'admin') {
+          return verifyLiveAgentStateFromServer(['live_request', 'admin']);
+        }
+        return true;
+      })
+      .then(function () {
+        abortIfReadinessStale(generation);
+        setReadinessPhase('readinessSyncing', 'Synchronizing chat status…');
+        return pollUpdatesOnce(true);
+      })
+      .then(function () {
+        abortIfReadinessStale(generation);
+        setReadinessPhase('readinessRealtime', 'Establishing real-time connection…');
+        return waitForCustomerStreamOpen(READINESS_STREAM_WAIT_MS, generation);
+      })
+      .then(function () {
+        abortIfReadinessStale(generation);
+        return pollUpdatesOnce(false);
+      }), generation);
+  }
+
+  function beginChatReadiness(options) {
+    options = options || {};
+    if (!canUseChat()) return Promise.resolve(false);
+    initChatReadinessUi();
+    if (readinessState === 'loading' && readinessPromise && !options.force) {
+      return readinessPromise;
+    }
+    cancelChatReadiness();
+    var generation = readinessGeneration;
+    var attempt = typeof options.attempt === 'number' ? options.attempt : 0;
+    showReadinessOverlay();
+    readinessPromise = runChatReadinessChecks(options)
+      .then(function () {
+        if (generation !== readinessGeneration) return false;
+        finalizeChatReadinessUi();
+        readinessPromise = null;
+        return true;
+      })
+      .catch(function (err) {
+        if (err && err.silent) return false;
+        if (generation !== readinessGeneration) return false;
+        showReadinessError(readinessErrorMessage(err));
+        readinessPromise = null;
+        if (attempt < READINESS_AUTO_RETRY_MAX && shouldAutoRetryReadiness(err)) {
+          scheduleReadinessAutoRetry(attempt + 1);
+        }
+        return false;
+      });
+    return readinessPromise;
   }
 
   function isLoginGateEnabled() {
@@ -402,11 +745,14 @@
       resetChatForAuthChange(true);
       lastAuthUserId = newUserId;
       hideAuthGate();
-      refreshAuthenticatedChatSession().then(function () {
-        updateEntryUi();
-        scheduleLivePolling();
-        if (widgetOpen) startCustomerStream();
-      });
+      if (widgetOpen) {
+        beginChatReadiness({ reuseSession: false, force: true });
+      } else {
+        refreshAuthenticatedChatSession().then(function () {
+          updateEntryUi();
+          scheduleLivePolling();
+        });
+      }
       return;
     }
 
@@ -415,11 +761,14 @@
     if (canUseChat()) {
       hideAuthGate();
       purgeGuestChatStorage();
-      refreshAuthenticatedChatSession().then(function () {
-        updateEntryUi();
-        scheduleLivePolling();
-        if (widgetOpen) startCustomerStream();
-      });
+      if (widgetOpen) {
+        beginChatReadiness({ reuseSession: false, force: true });
+      } else {
+        refreshAuthenticatedChatSession().then(function () {
+          updateEntryUi();
+          scheduleLivePolling();
+        });
+      }
     }
   }
 
@@ -721,23 +1070,15 @@
     bindAudioUnlock();
     bindVisibilityResume();
     bindChatLifecycle();
-    var boot = isPersistentAccountChat()
-      ? refreshAuthenticatedChatSession().then(function () {
-          return restoreCustomerSession();
-        })
-      : restoreCustomerSession();
-    if (isPersistentAccountChat() && config && config.chatSessionHasMessages) {
-      sessionRestored = true;
-      sessionLoading = true;
-      updateEntryUi();
+    if (isPersistentAccountChat()) {
+      beginChatReadiness({ reuseSession: true });
+    } else {
+      var boot = restoreCustomerSession();
+      boot.then(function () {
+        if (!sessionRestored) updateEntryUi();
+        updateInputState();
+      });
     }
-    boot.then(function () {
-      if (!sessionRestored) updateEntryUi();
-      updateInputState();
-      if (canUseChat()) {
-        scheduleLivePolling();
-      }
-    });
   }
 
   function migrateSessionStorage() {
@@ -844,25 +1185,18 @@
       return;
     }
     hideAuthGate();
-    if (chatHandler === 'closed' && isSessionArchived(getSessionId()) && !isPersistentAccountChat()) {
-      beginFreshSessionSilently();
-    }
-    updateEntryUi();
-    notifyLayout();
-    if (getSessionId()) {
-      pollUpdates();
-      scheduleLivePolling();
-      startCustomerStream();
-    }
-    if (entryEl && !entryEl.hidden) {
-      try {
-        entryEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-      } catch (e) {}
-    }
+    beginChatReadiness({ reuseSession: true }).then(function (ready) {
+      if (!ready) return;
+      if (chatHandler === 'closed' && isSessionArchived(getSessionId()) && !isPersistentAccountChat()) {
+        beginFreshSessionSilently();
+      }
+    });
   }
 
   function onWidgetClose() {
     widgetOpen = false;
+    cancelChatReadiness();
+    hideReadinessOverlay();
     stopCustomerStream();
     sendCustomerDisconnectBeacon();
     scheduleLivePolling();
@@ -1139,7 +1473,9 @@
       if (choice === 'live') {
         liveAgentPhase = 1;
         saveLiveAgentPhase();
-        beginLiveAgentRequest(inferServiceFromConversation());
+        beginLiveAgentRequest(inferServiceFromConversation()).catch(function (err) {
+          showError(err && err.message ? err.message : localizedReadiness('readinessLiveFailed', 'Could not confirm your live agent request.'));
+        });
       } else if (choice === 'ai' && config.greeting) {
         appendLocalAssistant(config.greeting);
       }
@@ -1251,8 +1587,11 @@
     }
   }
 
-  function fetchSessionFromServer(full) {
-    if (!config.ajaxUrl) return Promise.resolve(false);
+  function fetchSessionFromServer(full, strict) {
+    if (!config.ajaxUrl) {
+      if (strict) return Promise.reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+      return Promise.resolve(false);
+    }
     if (full && isPersistentAccountChat()) {
       threadEl.innerHTML = '';
       messages = [];
@@ -1271,12 +1610,16 @@
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) { return safeJson(res); })
       .then(function (json) {
-        if (!json || !json.success || !json.data) return false;
+        if (!json || !json.success || !json.data) {
+          if (strict) return Promise.reject({ code: 'backend', messageKey: 'readinessNetworkFailed' });
+          return false;
+        }
         var data = json.data;
         if (data.auth_user_id && getAuthUserId() > 0 && data.auth_user_id !== getAuthUserId()) {
           clearAllChatStorage();
           resetChatForAuthChange(true);
           refreshAuthenticatedChatSession();
+          if (strict) return Promise.reject({ code: 'auth', messageKey: 'readinessAuthFailed' });
           return false;
         }
         if (data.session_id) {
@@ -1303,9 +1646,13 @@
         sessionLoading = false;
         inferEntryChoiceFromHandler();
         saveSessionSnapshot();
-        return !!(data.messages && data.messages.length) || (typeof data.message_count === 'number' && data.message_count > 0);
+        lastReadinessPollAt = Date.now();
+        return true;
       })
-      .catch(function () { return false; });
+      .catch(function () {
+        if (strict) return Promise.reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+        return false;
+      });
   }
 
   function applyRestoredMessages(incoming) {
@@ -2164,9 +2511,67 @@
     beginFreshSessionSilently();
   }
 
-  function pollUpdates() {
-    if (!config.ajaxUrl) return;
-    if (!canUseChat()) return;
+  function applyPollPayload(data) {
+    if (!data) return false;
+    if (data.auth_user_id && getAuthUserId() > 0 && data.auth_user_id !== getAuthUserId()) {
+      clearAllChatStorage();
+      resetChatForAuthChange(true);
+      refreshAuthenticatedChatSession();
+      return false;
+    }
+    if (data.session_id && data.session_id !== getSessionId()) {
+      adoptSessionId(data.session_id, { fromServer: true, preserveUi: false });
+    }
+    applyHandlerState(data.handler || 'ai', data.admin_name || '');
+    syncSessionMetaFromPoll(data);
+
+    var incomingAdmin = false;
+    var hadNewMessages = false;
+    if (Array.isArray(data.messages) && data.messages.length) {
+      data.messages.sort(function (a, b) {
+        return (a.id || 0) - (b.id || 0);
+      });
+      hadNewMessages = data.messages.some(function (m) {
+        return m && m.id && !domMsgIds[m.id];
+      });
+      incomingAdmin = data.messages.some(function (m) {
+        return m && m.role === 'admin' && m.id && !domMsgIds[m.id];
+      });
+      applyIncomingMessages(data.messages);
+    }
+
+    if (incomingAdmin) {
+      stopAdminTypingFeedback();
+    } else if (data.admin_typing && chatHandler === 'admin') {
+      if (!adminTypingEl) showAdminTypingIndicator();
+      syncTypingSound(true);
+    } else if (data.assistant_typing && chatHandler === 'ai' && !isStreaming) {
+      if (!typingEl) showTyping();
+    } else if (!data.assistant_typing && chatHandler === 'ai' && !isStreaming) {
+      removeTyping();
+    } else {
+      stopAdminTypingFeedback();
+    }
+
+    if (hadNewMessages || incomingAdmin) {
+      ensureAdminMessageChrome();
+    }
+
+    if (data.reactions && typeof data.reactions === 'object') {
+      applyReactionStates(data.reactions);
+    }
+    if (typeof data.seq === 'number') {
+      pollSeq = Math.max(pollSeq, data.seq);
+    }
+    lastReadinessPollAt = Date.now();
+    return true;
+  }
+
+  function pollUpdatesOnce(strict) {
+    if (!config.ajaxUrl || !canUseChat()) {
+      if (strict) return Promise.reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+      return Promise.resolve(null);
+    }
     var formData = new FormData();
     formData.append('action', 'paxdesign_chat_poll');
     formData.append('nonce', config.nonce);
@@ -2174,64 +2579,30 @@
     formData.append('session_id', getSessionId());
     formData.append('since', String(pollSeq));
 
-    fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
+    return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) { return safeJson(res); })
       .then(function (json) {
-        if (handleAuthGateResponse(json)) return;
-        if (!json || !json.success || !json.data) return;
-        var data = json.data;
-        if (data.auth_user_id && getAuthUserId() > 0 && data.auth_user_id !== getAuthUserId()) {
-          clearAllChatStorage();
-          resetChatForAuthChange(true);
-          refreshAuthenticatedChatSession();
-          return;
+        if (handleAuthGateResponse(json)) {
+          if (strict) return Promise.reject({ code: 'auth', messageKey: 'readinessAuthFailed' });
+          return null;
         }
-        if (data.session_id && data.session_id !== getSessionId()) {
-          adoptSessionId(data.session_id, { fromServer: true, preserveUi: false });
+        if (!json || !json.success || !json.data) {
+          if (strict) return Promise.reject({ code: 'backend', messageKey: 'readinessNetworkFailed' });
+          return null;
         }
-        applyHandlerState(data.handler || 'ai', data.admin_name || '');
-        syncSessionMetaFromPoll(data);
-
-        var incomingAdmin = false;
-        var hadNewMessages = false;
-        if (Array.isArray(data.messages) && data.messages.length) {
-          data.messages.sort(function (a, b) {
-            return (a.id || 0) - (b.id || 0);
-          });
-          hadNewMessages = data.messages.some(function (m) {
-            return m && m.id && !domMsgIds[m.id];
-          });
-          incomingAdmin = data.messages.some(function (m) {
-            return m && m.role === 'admin' && m.id && !domMsgIds[m.id];
-          });
-          applyIncomingMessages(data.messages);
-        }
-
-        if (incomingAdmin) {
-          stopAdminTypingFeedback();
-        } else if (data.admin_typing && chatHandler === 'admin') {
-          if (!adminTypingEl) showAdminTypingIndicator();
-          syncTypingSound(true);
-        } else if (data.assistant_typing && chatHandler === 'ai' && !isStreaming) {
-          if (!typingEl) showTyping();
-        } else if (!data.assistant_typing && chatHandler === 'ai' && !isStreaming) {
-          removeTyping();
-        } else {
-          stopAdminTypingFeedback();
-        }
-
-        if (hadNewMessages || incomingAdmin) {
-          ensureAdminMessageChrome();
-        }
-
-        if (data.reactions && typeof data.reactions === 'object') {
-          applyReactionStates(data.reactions);
-        }
-        if (typeof data.seq === 'number') {
-          pollSeq = Math.max(pollSeq, data.seq);
-        }
+        applyPollPayload(json.data);
+        return json.data;
       })
-      .catch(function () {});
+      .catch(function (err) {
+        if (strict) return Promise.reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+        return null;
+      });
+  }
+
+  function pollUpdates() {
+    if (!config.ajaxUrl) return;
+    if (!canUseChat()) return;
+    pollUpdatesOnce(false).catch(function () {});
   }
 
   function morphAdminTypingToMessage(msg) {
@@ -3643,11 +4014,8 @@
       .then(function (res) { return safeJson(res); })
       .then(function (json) {
         if (!json || !json.success) {
-          throw new Error(json && json.data && json.data.message ? json.data.message : 'Weiterleitung fehlgeschlagen.');
+          throw new Error(json && json.data && json.data.message ? json.data.message : localizedReadiness('readinessLiveFailed', 'Could not confirm your live agent request.'));
         }
-        applyHandlerState('live_request', '');
-        liveAgentPhase = 2;
-        saveLiveAgentPhase();
         if (json.data && Array.isArray(json.data.messages)) {
           json.data.messages.forEach(function (msg) {
             if (!msg || !msg.id || domMsgIds[msg.id]) return;
@@ -3657,6 +4025,17 @@
             messages.push({ role: msg.role, content: msg.content, id: msg.id });
           });
         }
+        return pollUpdatesOnce(true).then(function (data) {
+          if (!data || (data.handler !== 'live_request' && data.handler !== 'admin')) {
+            return Promise.reject({ code: 'live', messageKey: 'readinessLiveFailed' });
+          }
+          applyHandlerState(data.handler, data.admin_name || '');
+          liveAgentPhase = 2;
+          saveLiveAgentPhase();
+          return waitForCustomerStreamOpen(READINESS_STREAM_WAIT_MS, readinessGeneration);
+        });
+      })
+      .then(function () {
         playNotificationSound(false);
         syncChatLog({ service: topic || inferServiceFromConversation() });
       });
@@ -3990,6 +4369,7 @@
     abort: abortStream,
     sendMessage: sendMessage,
     canUseChat: canUseChat,
+    beginReadiness: beginChatReadiness,
     ensureAuthGate: function () {
       initAuthGate();
       if (!canUseChat()) {
