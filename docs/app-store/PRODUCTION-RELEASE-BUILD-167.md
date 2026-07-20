@@ -26,11 +26,19 @@ Finalizes the completed pre-TestFlight UX work (PR #139) into `main`, publishes 
 - Home Screen widget layout redesign (Small / Medium / Large)
 - Compile fix: `CustomerChatView` brace structure after guest-auth refactor
 
-## Publish pipeline
+## Publish pipeline (completed)
 
-| Step | Trigger |
-|------|---------|
-| WordPress production deploy | push `main` + `paxdesign-booking/**` / deploy trigger |
-| App Store signed IPA | `.github/triggers/appstore-build` |
-| TestFlight upload | `.github/triggers/testflight-upload` |
-| Internal TestFlight verify | `.github/triggers/testflight-verify-internal` |
+| Step | Result | Run |
+|------|--------|-----|
+| Merge to `main` | ✅ `ed80347` | [PR #140](https://github.com/Black10998/paxdesign-live-chat-/pull/140) |
+| WordPress production deploy (3.157.0) | ✅ | [29712927163](https://github.com/Black10998/paxdesign-live-chat-/actions/runs/29712927163) |
+| App Store signed IPA (`CFBundleVersion=167`) | ✅ | [29712927173](https://github.com/Black10998/paxdesign-live-chat-/actions/runs/29712927173) |
+| TestFlight upload + internal enable | ✅ IPA build 167 validated | [29713007066](https://github.com/Black10998/paxdesign-live-chat-/actions/runs/29713007066) |
+| Internal TestFlight verify | ✅ `IN_BETA_TESTING`, group has build 167 | [29713334481](https://github.com/Black10998/paxdesign-live-chat-/actions/runs/29713334481) |
+
+### Match confirmation
+
+- Live site serves `chat-script.js?ver=3.157.0`
+- App Store / WordPress deploy SHA: `ed80347` (merge of completed UX work + compile fix)
+- TestFlight IPA: `CFBundleVersion=167` (matches `project.yml`)
+- ASC: build 167 `processingState=VALID`, `internalBuildState=IN_BETA_TESTING`
