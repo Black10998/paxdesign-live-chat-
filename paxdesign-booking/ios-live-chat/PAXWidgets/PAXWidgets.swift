@@ -45,19 +45,19 @@ private struct WidgetPalette {
         accent = WidgetBrand.accent(for: colorScheme)
         switch colorScheme {
         case .dark:
-            backgroundTop = Color(red: 0.10, green: 0.12, blue: 0.16)
-            backgroundBottom = Color(red: 0.04, green: 0.05, blue: 0.08)
+            backgroundTop = Color(red: 0.11, green: 0.13, blue: 0.18)
+            backgroundBottom = Color(red: 0.05, green: 0.06, blue: 0.10)
             primaryText = .white
-            secondaryText = Color.white.opacity(0.58)
-            tileFill = Color.white.opacity(0.10)
-            tileStroke = Color.white.opacity(0.14)
+            secondaryText = Color.white.opacity(0.62)
+            tileFill = Color.white.opacity(0.11)
+            tileStroke = Color.white.opacity(0.16)
         default:
-            backgroundTop = Color(red: 0.98, green: 0.99, blue: 1.0)
-            backgroundBottom = Color(red: 0.92, green: 0.94, blue: 0.97)
-            primaryText = Color(red: 0.08, green: 0.10, blue: 0.14)
-            secondaryText = primaryText.opacity(0.52)
-            tileFill = Color.white.opacity(0.94)
-            tileStroke = Color.black.opacity(0.06)
+            backgroundTop = Color(red: 0.99, green: 1.0, blue: 1.0)
+            backgroundBottom = Color(red: 0.93, green: 0.95, blue: 0.98)
+            primaryText = Color(red: 0.07, green: 0.09, blue: 0.13)
+            secondaryText = primaryText.opacity(0.55)
+            tileFill = Color.white
+            tileStroke = Color.black.opacity(0.07)
         }
     }
 }
@@ -114,13 +114,90 @@ private struct WidgetSurfaceBackground: ViewModifier {
 }
 
 private extension PAXDashboardWidgetView {
-    private var header: some View {
+    private var signedOutLayout: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            brandMark(size: 20)
+            Text("Sign in to PAXDesign")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(palette.primaryText)
+                .lineLimit(1)
+            Text("Open the app to sync your business dashboard.")
+                .font(.caption)
+                .foregroundStyle(palette.secondaryText)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var smallLayout: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            widgetHeader(compact: true)
+            VStack(spacing: 5) {
+                HStack(spacing: 5) {
+                    metricTile(.chats, value: snapshot.unreadChats, style: .small)
+                    metricTile(.live, value: snapshot.liveRequests, style: .small)
+                }
+                HStack(spacing: 5) {
+                    metricTile(.tasks, value: snapshot.openTasks, style: .small)
+                    metricTile(.events, value: snapshot.upcomingEvents, style: .small)
+                }
+            }
+        }
+        .padding(EdgeInsets(top: 9, leading: 9, bottom: 9, trailing: 9))
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var mediumLayout: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            widgetHeader(compact: false)
+            HStack(spacing: 8) {
+                metricTile(.chats, value: snapshot.unreadChats, style: .medium)
+                metricTile(.live, value: snapshot.liveRequests, style: .medium)
+                metricTile(.tasks, value: snapshot.openTasks, style: .medium)
+                metricTile(.events, value: snapshot.upcomingEvents, style: .medium)
+            }
+            if !snapshot.liveHighlight.isEmpty {
+                insightRow(title: "Live", value: snapshot.liveHighlight, tint: .orange)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var largeLayout: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            widgetHeader(compact: false)
+            LazyVGrid(
+                columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
+                spacing: 10
+            ) {
+                metricTile(.chats, value: snapshot.unreadChats, style: .large)
+                metricTile(.live, value: snapshot.liveRequests, style: .large)
+                metricTile(.tasks, value: snapshot.openTasks, style: .large)
+                metricTile(.events, value: snapshot.upcomingEvents, style: .large)
+            }
+            if !snapshot.liveHighlight.isEmpty {
+                insightRow(title: "Top live request", value: snapshot.liveHighlight, tint: .orange)
+            } else if !snapshot.nextEventTitle.isEmpty {
+                insightRow(title: "Next event", value: snapshot.nextEventTitle, tint: .purple)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func widgetHeader(compact: Bool) -> some View {
         HStack(spacing: 8) {
-            brandMark
+            brandMark(size: compact ? 18 : 20)
             VStack(alignment: .leading, spacing: 1) {
                 Text("Business pulse")
-                    .font(.caption.weight(.semibold))
+                    .font(compact ? .caption.weight(.semibold) : .subheadline.weight(.semibold))
                     .foregroundStyle(palette.primaryText)
+                    .lineLimit(1)
                 Text(snapshot.updatedAt, style: .time)
                     .font(.caption2)
                     .foregroundStyle(palette.secondaryText)
@@ -133,13 +210,13 @@ private extension PAXDashboardWidgetView {
         }
     }
 
-    private var brandMark: some View {
-        RoundedRectangle(cornerRadius: 7, style: .continuous)
+    private func brandMark(size: CGFloat) -> some View {
+        RoundedRectangle(cornerRadius: size * 0.32, style: .continuous)
             .fill(palette.accent)
-            .frame(width: 22, height: 22)
+            .frame(width: size, height: size)
             .overlay {
                 Text("P")
-                    .font(.system(size: 12, weight: .black, design: .rounded))
+                    .font(.system(size: size * 0.55, weight: .black, design: .rounded))
                     .foregroundStyle(colorScheme == .dark ? Color.black.opacity(0.82) : .white)
             }
             .accessibilityHidden(true)
@@ -154,69 +231,6 @@ private extension PAXDashboardWidgetView {
             .background(Capsule().fill(Color.orange))
     }
 
-    private var signedOutLayout: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            brandMark
-            Text("Sign in to PAXDesign")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(palette.primaryText)
-            Text("Open the app to refresh your business dashboard.")
-                .font(.caption)
-                .foregroundStyle(palette.secondaryText)
-        }
-        .padding(14)
-    }
-
-    private var smallLayout: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            header
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 6) {
-                linkedMetricTile(.chats, value: snapshot.unreadChats, compact: true)
-                linkedMetricTile(.live, value: snapshot.liveRequests, compact: true)
-                linkedMetricTile(.tasks, value: snapshot.openTasks, compact: true)
-                linkedMetricTile(.events, value: snapshot.upcomingEvents, compact: true)
-            }
-        }
-        .padding(12)
-    }
-
-    private var mediumLayout: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            header
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                linkedMetricTile(.chats, value: snapshot.unreadChats)
-                linkedMetricTile(.live, value: snapshot.liveRequests)
-                linkedMetricTile(.tasks, value: snapshot.openTasks)
-                linkedMetricTile(.events, value: snapshot.upcomingEvents)
-            }
-        }
-        .padding(12)
-    }
-
-    private var largeLayout: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            header
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                linkedMetricTile(.chats, value: snapshot.unreadChats, expanded: true)
-                linkedMetricTile(.live, value: snapshot.liveRequests, expanded: true)
-                linkedMetricTile(.tasks, value: snapshot.openTasks, expanded: true)
-                linkedMetricTile(.events, value: snapshot.upcomingEvents, expanded: true)
-            }
-            if !snapshot.liveHighlight.isEmpty || !snapshot.nextEventTitle.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    if !snapshot.liveHighlight.isEmpty {
-                        insightRow(title: "Top live request", value: snapshot.liveHighlight, tint: .orange)
-                    }
-                    if !snapshot.nextEventTitle.isEmpty {
-                        insightRow(title: "Next event", value: snapshot.nextEventTitle, tint: .purple)
-                    }
-                }
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(14)
-    }
-
     private enum MetricKind: String {
         case chats = "Chats"
         case live = "Live"
@@ -227,8 +241,7 @@ private extension PAXDashboardWidgetView {
             switch self {
             case .chats: return URL(string: "paxlivechat://chats")
             case .live: return URL(string: "paxlivechat://live")
-            case .tasks: return URL(string: "paxlivechat://dashboard")
-            case .events: return URL(string: "paxlivechat://dashboard")
+            case .tasks, .events: return URL(string: "paxlivechat://dashboard")
             }
         }
 
@@ -242,52 +255,85 @@ private extension PAXDashboardWidgetView {
         }
     }
 
-    private func linkedMetricTile(_ kind: MetricKind, value: Int, compact: Bool = false, expanded: Bool = false) -> some View {
-        Link(destination: kind.deepLink ?? URL(string: "paxlivechat://dashboard")!) {
-            metricTile(kind, value: value, compact: compact, expanded: expanded)
+    private enum MetricTileStyle {
+        case small, medium, large
+
+        var valueFont: Font {
+            switch self {
+            case .small: return .headline.weight(.bold)
+            case .medium: return .title3.weight(.bold)
+            case .large: return .title2.weight(.bold)
+            }
+        }
+
+        var labelFont: Font {
+            switch self {
+            case .small: return .system(size: 8, weight: .semibold)
+            case .medium: return .caption2.weight(.medium)
+            case .large: return .caption.weight(.medium)
+            }
+        }
+
+        var padding: CGFloat {
+            switch self {
+            case .small: return 6
+            case .medium: return 8
+            case .large: return 10
+            }
         }
     }
 
-    private func metricTile(_ kind: MetricKind, value: Int, compact: Bool, expanded: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: compact ? 2 : (expanded ? 6 : 4)) {
-            Text("\(value)")
-                .font((expanded ? Font.title2 : (compact ? Font.headline : Font.title3)).weight(.bold))
-                .foregroundStyle(value > 0 && kind == .live ? Color.orange : palette.primaryText)
-                .minimumScaleFactor(0.65)
-                .lineLimit(1)
-                .monospacedDigit()
-            Text(kind.rawValue)
-                .font(compact ? .system(size: 10, weight: .medium) : .caption2.weight(.medium))
-                .foregroundStyle(palette.secondaryText)
-                .lineLimit(1)
+    private func metricTile(_ kind: MetricKind, value: Int, style: MetricTileStyle) -> some View {
+        Link(destination: kind.deepLink ?? URL(string: "paxlivechat://dashboard")!) {
+            VStack(alignment: .leading, spacing: style == .small ? 1 : 3) {
+                Text("\(value)")
+                    .font(style.valueFont)
+                    .foregroundStyle(value > 0 && kind == .live ? Color.orange : palette.primaryText)
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                    .monospacedDigit()
+                Text(kind.rawValue)
+                    .font(style.labelFont)
+                    .foregroundStyle(palette.secondaryText)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .padding(style.padding)
+            .background(
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(palette.tileFill)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            .stroke(kind.accent.opacity(colorScheme == .dark ? 0.38 : 0.22), lineWidth: 0.75)
+                    )
+            )
         }
-        .frame(maxWidth: .infinity, minHeight: expanded ? 74 : (compact ? 46 : 56), alignment: .leading)
-        .padding(compact ? 8 : (expanded ? 12 : 10))
-        .background(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(palette.tileFill)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(kind.accent.opacity(colorScheme == .dark ? 0.42 : 0.28), lineWidth: 0.8)
-                )
-        )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(kind.rawValue), \(value)")
     }
 
     private func insightRow(title: String, value: String, tint: Color) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             Circle()
-                .fill(tint.opacity(0.85))
-                .frame(width: 6, height: 6)
+                .fill(tint)
+                .frame(width: 5, height: 5)
             Text(title)
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(palette.secondaryText)
+                .lineLimit(1)
             Text(value)
                 .font(.caption.weight(.medium))
                 .foregroundStyle(palette.primaryText)
                 .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(palette.tileFill.opacity(0.85))
+        )
     }
 }
 

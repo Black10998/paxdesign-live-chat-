@@ -3089,6 +3089,40 @@ body.paxdesign-agent-profile-open {
   color: #ffb347;
 }
 
+#paxdesign-booking-root .paxdesign-booking-chat-auth-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-auth-gate-btn {
+  appearance: none;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.88);
+  border-radius: 12px;
+  padding: 11px 12px;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-auth-gate-btn--primary {
+  background: linear-gradient(135deg, rgba(255, 140, 0, 0.95), rgba(255, 106, 0, 0.92));
+  border-color: rgba(255, 180, 80, 0.45);
+  color: #fff;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-auth-gate-btn.paxdesign-is-active {
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.28);
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-auth-gate-btn:hover {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
 #paxdesign-booking-root .paxdesign-booking-chat-auth-inline {
   width: 100%;
 }

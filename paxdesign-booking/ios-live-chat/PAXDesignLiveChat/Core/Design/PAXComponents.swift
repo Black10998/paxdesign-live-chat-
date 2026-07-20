@@ -542,6 +542,7 @@ private struct ShellScrollClearanceModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         let padding: CGFloat = {
+            if tabBarVisible && tabBarScrollInset == 0 { return 0 }
             if tabBarScrollInset > 0 { return tabBarScrollInset }
             return PAXShellLayout.scrollBottomPadding(tabBarVisible: tabBarVisible)
         }()

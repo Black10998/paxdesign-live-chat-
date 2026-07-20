@@ -81,7 +81,7 @@ struct CustomerTabView: View {
                 CustomerMoreView()
             }
         }
-        .overlay(alignment: .bottom) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             UiverseMenuBarView(
                 items: menuItems,
                 selection: Binding(
@@ -93,11 +93,10 @@ struct CustomerTabView: View {
                 reduceMotion: reduceMotion
             )
             .scaleEffect(menuScrollState.barScale, anchor: .bottom)
-            .padding(.bottom, UiverseMenuMetrics.homeIndicatorGap)
-            .ignoresSafeArea(edges: .bottom)
+            .padding(.horizontal, UiverseMenuMetrics.horizontalMargin)
         }
         .environment(\.shellTabBarVisible, true)
-        .environment(\.shellTabBarScrollInset, PAXShellLayout.uiverseMenuScrollInset)
+        .environment(\.shellTabBarScrollInset, 0)
         .environment(\.shellMenuScrollState, menuScrollState)
         .onChange(of: navigation.selectedTab) { tab in
             loadedTabs.insert(tab.rawValue)
@@ -115,6 +114,7 @@ struct CustomerTabView: View {
     private func customerTabPane<Content: View>(_ tab: CustomerPortalTab, @ViewBuilder content: () -> Content) -> some View {
         if loadedTabs.contains(tab.rawValue) {
             content()
+                .paxShellScrollClearance()
                 .opacity(navigation.selectedTab == tab ? 1 : 0)
                 .allowsHitTesting(navigation.selectedTab == tab)
                 .accessibilityHidden(navigation.selectedTab != tab)
@@ -125,10 +125,43 @@ struct CustomerTabView: View {
 
 struct CustomerMoreView: View {
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
+    @EnvironmentObject private var auth: CustomerAuthStore
+    @EnvironmentObject private var api: CustomerAPIClient
+    @State private var showAuth = false
+    @State private var authMode: CustomerAuthSheetMode = .login
+
+    private enum CustomerAuthSheetMode {
+        case login, register
+    }
 
     var body: some View {
         NavigationStack(path: $navigation.accountPath) {
             List {
+                if !auth.isAuthenticated {
+                    Section {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(String(localized: "Sign in to access your workspace, chat, and files."))
+                                .font(.subheadline)
+                                .foregroundStyle(PAXTheme.textSecondary)
+                            HStack(spacing: 10) {
+                                Button(String(localized: "Sign In")) {
+                                    authMode = .login
+                                    showAuth = true
+                                }
+                                .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .filled))
+                                .frame(maxWidth: .infinity)
+
+                                Button(String(localized: "Create account")) {
+                                    authMode = .register
+                                    showAuth = true
+                                }
+                                .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .tinted))
+                                .frame(maxWidth: .infinity)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
                 Section(String(localized: "Company")) {
                     NavigationLink(String(localized: "About")) { CustomerAboutView() }
                     NavigationLink(String(localized: "Contact")) { CustomerContactView() }
@@ -177,6 +210,28 @@ struct CustomerMoreView: View {
             }
             .navigationTitle(String(localized: "Account"))
             .customerPortalToolbar(showsAvatar: false)
+            .sheet(isPresented: $showAuth) {
+                NavigationStack {
+                    Group {
+                        switch authMode {
+                        case .login:
+                            CustomerLoginView(
+                                onRegister: { authMode = .register },
+                                onForgot: { }
+                            )
+                        case .register:
+                            CustomerRegisterView(onDone: { _ in authMode = .login })
+                        }
+                    }
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button(String(localized: "Close")) { showAuth = false }
+                        }
+                    }
+                }
+                .environmentObject(auth)
+                .environmentObject(api)
+            }
             .navigationDestination(for: CustomerPortalDestination.self) { destination in
                 switch destination.kind {
                 case .project(let id):

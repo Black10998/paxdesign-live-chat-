@@ -786,11 +786,21 @@ struct CustomerHomeGuestPremiumStrip: View {
                 guestFeatureChip(icon: "message.fill", label: String(localized: "Chat"))
                 guestFeatureChip(icon: "doc.on.doc", label: String(localized: "Files"))
             }
-            Button(String(localized: "Sign in to your account")) {
-                PAXHaptics.light()
-                navigation.selectedTab = .account
+            HStack(spacing: 12) {
+                Button(String(localized: "Sign In")) {
+                    PAXHaptics.light()
+                    navigation.selectedTab = .account
+                }
+                .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .filled))
+                .frame(maxWidth: .infinity)
+
+                Button(String(localized: "Create account")) {
+                    PAXHaptics.light()
+                    navigation.selectedTab = .account
+                }
+                .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .tinted))
+                .frame(maxWidth: .infinity)
             }
-            .buttonStyle(CustomerCalmAccentButtonStyle())
         }
         .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)

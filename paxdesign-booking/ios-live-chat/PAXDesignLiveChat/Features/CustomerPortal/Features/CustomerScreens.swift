@@ -319,6 +319,7 @@ struct CustomerDashboardView: View {
 
 struct CustomerChatView: View {
     @EnvironmentObject private var api: CustomerAPIClient
+    @EnvironmentObject private var auth: CustomerAuthStore
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var network = CustomerNetworkMonitor.shared
     @FocusState private var isInputFocused: Bool
@@ -346,6 +347,12 @@ struct CustomerChatView: View {
     @State private var eventStreamActive = false
     @State private var showDocumentPicker = false
     @State private var showCameraPicker = false
+    @State private var showAuth = false
+    @State private var authMode: CustomerChatAuthMode = .login
+
+    private enum CustomerChatAuthMode {
+        case login, register
+    }
 
     private let minPollIntervalNs: UInt64 = 700_000_000
     private let maxPollIntervalNs: UInt64 = 8_000_000_000
@@ -359,7 +366,75 @@ struct CustomerChatView: View {
         NavigationStack {
             ZStack {
                 PAXBackground()
-                VStack(spacing: 0) {
+                if auth.isAuthenticated {
+                    chatContent
+                } else {
+                    CustomerChatGuestAuthPanel(
+                        onSignIn: {
+                            authMode = .login
+                            showAuth = true
+                        },
+                        onRegister: {
+                            authMode = .register
+                            showAuth = true
+                        }
+                    )
+                }
+            }
+            .navigationTitle(String(localized: "Chat"))
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    if auth.isAuthenticated {
+                        HStack(spacing: 10) {
+                            CustomerNavAvatarButton()
+                            NavigationLink(String(localized: "History")) { CustomerConversationsView() }
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showAuth) {
+                NavigationStack {
+                    Group {
+                        switch authMode {
+                        case .login:
+                            CustomerLoginView(
+                                onRegister: { authMode = .register },
+                                onForgot: { }
+                            )
+                        case .register:
+                            CustomerRegisterView(onDone: { _ in authMode = .login })
+                        }
+                    }
+                    .environmentObject(auth)
+                    .environmentObject(api)
+                }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+            }
+            .onChange(of: auth.isAuthenticated) { signedIn in
+                guard signedIn else { return }
+                Task {
+                    if let session = try? await api.fetchChatSession() {
+                        poll = CustomerChatPoll(
+                            session_id: session.session_id,
+                            handler: session.handler,
+                            messages: [],
+                            message_count: nil,
+                            last_preview: nil
+                        )
+                    }
+                    await refresh(full: true)
+                    startPolling()
+                    startEventStream()
+                }
+            }
+        }
+        .paxShellScrollClearance()
+    }
+
+    private var chatContent: some View {
+        ZStack {
+            VStack(spacing: 0) {
                     if !network.isConnected {
                         Text(String(localized: "Offline — messages will send when you reconnect."))
                             .font(.caption).foregroundStyle(.orange).padding(8)
@@ -420,15 +495,6 @@ struct CustomerChatView: View {
                     chatComposer
                 }
             }
-            .navigationTitle(String(localized: "Chat"))
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 10) {
-                        CustomerNavAvatarButton()
-                        NavigationLink(String(localized: "History")) { CustomerConversationsView() }
-                    }
-                }
-            }
             .overlay(alignment: .top) {
                 if let error, recovery == nil {
                     Text(error)
@@ -455,6 +521,7 @@ struct CustomerChatView: View {
                 }
             }
             .task {
+                guard auth.isAuthenticated else { return }
                 if let session = try? await api.fetchChatSession() {
                     poll = CustomerChatPoll(
                         session_id: session.session_id,
@@ -474,7 +541,7 @@ struct CustomerChatView: View {
                 pollTask?.cancel()
                 streamTask?.cancel()
                 typingTask?.cancel()
-                if let sessionID = poll?.session_id {
+                if poll?.session_id != nil {
                     AppRefreshPolicy.setActiveSession(nil)
                 }
                 Task { try? await api.sendChatTyping(sessionID: poll?.session_id, stop: true) }
@@ -483,12 +550,11 @@ struct CustomerChatView: View {
                 AppRefreshPolicy.setActiveSession(poll?.session_id)
             }
             .onChange(of: scenePhase) { phase in
-                if phase == .active {
+                if phase == .active, auth.isAuthenticated {
                     Task { await refresh(full: false) }
                 }
             }
             .refreshable { await refresh(full: true) }
-        }
     }
 
     private var chatComposer: some View {
@@ -1181,6 +1247,40 @@ struct CustomerProfileView: View {
         } catch {
             avatarUploadError = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
         }
+    }
+}
+
+private struct CustomerChatGuestAuthPanel: View {
+    let onSignIn: () -> Void
+    let onRegister: () -> Void
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer(minLength: 0)
+            PAXIcon("chats.fill", size: .display, tint: PAXTheme.accent)
+            VStack(spacing: 8) {
+                Text(String(localized: "Sign in to chat"))
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(PAXTheme.textPrimary)
+                Text(String(localized: "Sign in or create a free account to message our team and keep your conversations synced."))
+                    .font(.subheadline)
+                    .foregroundStyle(PAXTheme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 8)
+            }
+            HStack(spacing: 12) {
+                Button(String(localized: "Sign In"), action: onSignIn)
+                    .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .filled))
+                    .frame(maxWidth: .infinity)
+                Button(String(localized: "Create account"), action: onRegister)
+                    .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .tinted))
+                    .frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal, 4)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 24)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

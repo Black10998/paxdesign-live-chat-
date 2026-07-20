@@ -345,6 +345,10 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
                 <p class="paxdesign-booking-chat-auth-gate-sub" id="paxdesignChatAuthGateSubtitle"><?php echo esc_html__('Sign in or create a free account to message our team.', 'paxdesign-booking'); ?></p>
                 <p class="paxdesign-booking-chat-auth-gate-verify" id="paxdesignChatAuthGateVerify" hidden><?php echo esc_html__('Verify your email to start chatting.', 'paxdesign-booking'); ?></p>
               </div>
+              <div class="paxdesign-booking-chat-auth-actions" id="paxdesignChatAuthActions">
+                <button type="button" class="paxdesign-booking-chat-auth-gate-btn" id="paxdesignChatAuthSignIn" data-auth-view="login"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></button>
+                <button type="button" class="paxdesign-booking-chat-auth-gate-btn paxdesign-booking-chat-auth-gate-btn--primary" id="paxdesignChatAuthRegister" data-auth-view="register"><?php echo esc_html__('Create Account', 'paxdesign-booking'); ?></button>
+              </div>
               <div class="paxdesign-booking-chat-auth-inline" id="paxdesignChatAuthInline" aria-live="polite"></div>
             </div>
           </div>
@@ -377,21 +381,6 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
           <div class="paxdesign-booking-chat-quick-actions" aria-label="Schnellaktionen"></div>
 
           <div class="paxdesign-booking-chat-input-area">
-            <div class="paxdesign-booking-chat-live-confirm" id="paxdesignChatLiveConfirm" hidden>
-              <p class="paxdesign-booking-chat-live-confirm-title"><?php echo esc_html__('Möchten Sie mit einem Live-Agent sprechen?', 'paxdesign-booking'); ?></p>
-              <p class="paxdesign-booking-chat-live-confirm-sub"><?php echo esc_html__('Ein Mitarbeiter antwortet persönlich im Chat. Bitte bestätigen Sie, um fortzufahren.', 'paxdesign-booking'); ?></p>
-              <div class="paxdesign-booking-chat-live-confirm-actions">
-                <button type="button" class="paxdesign-booking-chat-live-confirm-yes" id="paxdesignChatLiveConfirmYes"><?php echo esc_html__('Ja, Live-Agent', 'paxdesign-booking'); ?></button>
-                <button type="button" class="paxdesign-booking-chat-live-confirm-no" id="paxdesignChatLiveConfirmNo"><?php echo esc_html__('Nein, KI nutzen', 'paxdesign-booking'); ?></button>
-              </div>
-            </div>
-            <div class="paxdesign-booking-chat-name-prompt" id="paxdesignChatNamePrompt" hidden>
-              <p class="paxdesign-booking-chat-name-title"><?php echo esc_html__('Bitte geben Sie Ihren Namen ein, damit unser Agent weiß, mit wem er spricht.', 'paxdesign-booking'); ?></p>
-              <div class="paxdesign-booking-chat-name-row">
-                <input type="text" class="paxdesign-booking-chat-name-input" id="paxdesignChatNameInput" maxlength="80" placeholder="<?php echo esc_attr__('Ihr Name', 'paxdesign-booking'); ?>" autocomplete="name">
-                <button type="button" class="paxdesign-booking-chat-name-submit" id="paxdesignChatNameSubmit"><?php echo esc_html__('Weiter', 'paxdesign-booking'); ?></button>
-              </div>
-            </div>
             <div class="paxdesign-booking-chat-end-wrap" id="paxdesignChatEndWrap" hidden>
               <button type="button" class="paxdesign-booking-chat-end-btn" id="paxdesignChatEndBtn"><?php echo esc_html__('Gespräch beenden', 'paxdesign-booking'); ?></button>
             </div>
