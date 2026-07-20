@@ -402,34 +402,43 @@ if [[ "${SKIP_DB_CLEANUP:-0}" == "1" ]]; then
 else
 # Expired transients
 expired_count=$(mysql_query "SELECT COUNT(*) FROM ${OPTIONS} WHERE option_name LIKE '_transient_timeout_%' AND option_value < UNIX_TIMESTAMP();" | tail -1 || echo 0)
-echo "Expired transient timeouts found: $expired_count"
+log "Expired transient timeouts found: $expired_count"
 wp_cmd transient delete --expired 2>/dev/null || true
 
-# Old paxdesign rate-limit transients (>24h stale by name pattern — options table only)
+# Elementor/page revisions store large _elementor_data blobs — safe to remove.
+revision_count=$(wp_cmd post list --post_type=revision --format=count 2>/dev/null || echo 0)
+log "Revision posts before cleanup: $revision_count"
+if [[ "${revision_count:-0}" =~ ^[0-9]+$ ]] && [[ "$revision_count" -gt 0 ]]; then
+  while true; do
+    ids=$(wp_cmd post list --post_type=revision --format=ids --posts_per_page=100 2>/dev/null || true)
+    [[ -z "$ids" ]] && break
+    wp_cmd post delete $ids --force 2>/dev/null || break
+  done
+  remaining=$(wp_cmd post list --post_type=revision --format=count 2>/dev/null || echo 0)
+  log "Revision posts after cleanup: $remaining"
+fi
+
 mysql_query "
 DELETE o1, o2 FROM ${OPTIONS} o1
 INNER JOIN ${OPTIONS} o2 ON o2.option_name = CONCAT('_transient_timeout_', SUBSTRING(o1.option_name, 12))
 WHERE o1.option_name LIKE '_transient_pax%'
   AND o2.option_value < UNIX_TIMESTAMP();
-" 2>/dev/null && echo "Removed expired paxdesign transients" || true
+" 2>/dev/null && log "Removed expired paxdesign transients" || true
 
-# Remove orphan postmeta (posts deleted)
 orphan_meta=$(mysql_query "
 SELECT COUNT(*)
 FROM ${POSTMETA} pm
 LEFT JOIN ${POSTS} p ON p.ID = pm.post_id
 WHERE p.ID IS NULL;
 " | tail -1 || echo 0)
-echo "Orphan postmeta rows: $orphan_meta"
+log "Orphan postmeta rows: $orphan_meta"
 if [[ "${orphan_meta:-0}" =~ ^[0-9]+$ ]] && [[ "$orphan_meta" -gt 0 ]]; then
   mysql_query "
 DELETE pm FROM ${POSTMETA} pm
 LEFT JOIN ${POSTS} p ON p.ID = pm.post_id
 WHERE p.ID IS NULL;
-" && echo "Deleted orphan postmeta rows: $orphan_meta"
+" && log "Deleted orphan postmeta rows: $orphan_meta"
 fi
-
-# Remove redundant oembed cache entries older than 90 days on revisions/auto-drafts only
 mysql_query "
 DELETE pm FROM ${POSTMETA} pm
 INNER JOIN ${POSTS} p ON p.ID = pm.post_id
@@ -467,8 +476,13 @@ foreach ($replacements as $from => $to) {
 if (!preg_match("/define\s*\(\s*['\"]WP_DEBUG['\"]/", $text)) {
     $text = preg_replace("/(\/\* That's all, stop editing!)/", "define('WP_DEBUG', false);\ndefine('WP_DEBUG_LOG', false);\ndefine('WP_DEBUG_DISPLAY', false);\n\n$1", $text, 1);
 }
+if (!preg_match("/define\s*\(\s*['\"]WP_POST_REVISIONS['\"]/", $text)) {
+    $text = preg_replace("/(\/\* That's all, stop editing!)/", "define('WP_POST_REVISIONS', 5);\n\n$1", $text, 1);
+} else {
+    $text = preg_replace("/define\s*\(\s*['\"]WP_POST_REVISIONS['\"]\s*,\s*(?:true|false|\d+)\s*\)/", "define('WP_POST_REVISIONS', 5)", $text);
+}
 file_put_contents($path, $text);
-echo "Updated wp-config.php debug flags\n";
+echo "Updated wp-config.php debug flags and WP_POST_REVISIONS=5\n";
 PHP
   grep -E "WP_DEBUG" "$WP_ROOT/wp-config.php" || true
 fi

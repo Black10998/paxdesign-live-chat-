@@ -31,11 +31,17 @@ foreach (\$replacements as \$from => \$to) {
 if (!preg_match("/define\\s*\\(\\s*['\"]WP_DEBUG['\"]/", \$text)) {
     \$text = preg_replace("/(\\/\\* That's all, stop editing!)/", "define('WP_DEBUG', false);\\ndefine('WP_DEBUG_LOG', false);\\ndefine('WP_DEBUG_DISPLAY', false);\\n\\n\$1", \$text, 1);
 }
+if (!preg_match("/define\\s*\\(\\s*['\"]WP_POST_REVISIONS['\"]/", \$text)) {
+    \$text = preg_replace("/(\\/\\* That's all, stop editing!)/", "define('WP_POST_REVISIONS', 5);\\n\\n\$1", \$text, 1);
+} else {
+    \$text = preg_replace("/define\\s*\\(\\s*['\"]WP_POST_REVISIONS['\"]\s*,\s*(?:true|false|\\d+)\s*\)/", "define('WP_POST_REVISIONS', 5)", \$text);
+}
 file_put_contents(\$path, \$text);
 echo "Updated wp-config.php:\\n";
 echo "  WP_DEBUG = false\\n";
 echo "  WP_DEBUG_LOG = false\\n";
 echo "  WP_DEBUG_DISPLAY = false\\n";
+echo "  WP_POST_REVISIONS = 5\\n";
 PHP
 
 echo "Done. Remove backup manually when satisfied: $BACKUP"
