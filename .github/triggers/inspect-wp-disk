@@ -1,2 +1,2 @@
-Fix mapfile/process substitution for SSH bash -s
-Triggered: 2026-07-20T14:05:00Z
+Revision cleanup + backup retention + deploy 3.162.0
+Triggered: 2026-07-20T14:10:00Z
