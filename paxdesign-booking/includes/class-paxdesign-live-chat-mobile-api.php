@@ -944,11 +944,11 @@ class PAXdesign_Live_Chat_Mobile_API {
 
     public static function route_conversations_sync(WP_REST_Request $request) {
         $user_id = (int) wp_get_current_user()->ID;
-        $live    = self::live()->get_live_list_data(true);
+        $live    = self::live()->get_live_list_data(false);
         if (is_wp_error($live)) {
             return $live;
         }
-        $team = PAXdesign_Team_Messaging::list_sessions_for_user($user_id, true);
+        $team = PAXdesign_Team_Messaging::list_sessions_for_user($user_id, false);
         return self::respond(array(
             'sessions'      => isset($live['sessions']) ? $live['sessions'] : array(),
             'live_count'    => isset($live['live_count']) ? (int) $live['live_count'] : 0,

@@ -180,7 +180,7 @@ class PAXdesign_Chat_Event_Bus {
             }
             echo ": keepalive " . time() . "\n\n";
             self::flush_output();
-            usleep(100000);
+            usleep(500000);
         }
         PAXdesign_DB::drain_connection();
     }
@@ -225,7 +225,7 @@ class PAXdesign_Chat_Event_Bus {
             }
             echo ": keepalive " . time() . "\n\n";
             self::flush_output();
-            usleep(100000);
+            usleep(500000);
         }
         PAXdesign_DB::drain_connection();
     }

@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.161.0
+Version: 3.162.0
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.161.0');
+define('PAXDESIGN_BOOKING_VERSION', '3.162.0');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -669,7 +669,7 @@ class PAXdesign_Booking {
         // Attempt to send notification email; log failure but do not block the booking
         $email_sent = $this->send_booking_email($booking_data, $member_info);
         if (!$email_sent) {
-            error_log('PAXdesign Booking: wp_mail() failed for booking by ' . $booking_data['email']);
+            paxdesign_booking_log_error('PAXdesign Booking: wp_mail() failed for booking by ' . $booking_data['email']);
         }
 
         wp_send_json_success(array(
@@ -813,7 +813,7 @@ class PAXdesign_Booking {
         );
 
         if (!$admin_sent) {
-            error_log('PAXdesign Booking: admin notification wp_mail() failed for booking by ' . $booking_data['email']);
+            paxdesign_booking_log_error('PAXdesign Booking: admin notification wp_mail() failed for booking by ' . $booking_data['email']);
         }
 
         $this->send_customer_confirmation($booking_data, $member_info, $parts);
@@ -879,7 +879,7 @@ class PAXdesign_Booking {
         );
 
         if (!$sent) {
-            error_log('PAXdesign Booking: customer confirmation wp_mail() failed to ' . $booking_data['email']);
+            paxdesign_booking_log_error('PAXdesign Booking: customer confirmation wp_mail() failed to ' . $booking_data['email']);
         }
 
         return $sent;
@@ -916,7 +916,7 @@ class PAXdesign_Booking {
         );
 
         if ($result === false) {
-            error_log('PAXdesign Booking: database insert failed — ' . $wpdb->last_error);
+            paxdesign_booking_log_error('PAXdesign Booking: database insert failed — ' . $wpdb->last_error);
             return false;
         }
 
@@ -1317,6 +1317,15 @@ function paxdesign_booking_upgrade_database() {
 }
 
 /**
+ * Write operational errors to debug.log only when WP_DEBUG_LOG is enabled.
+ */
+function paxdesign_booking_log_error($message) {
+    if (defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+        error_log($message);
+    }
+}
+
+/**
  * Add a column to the bookings table when it does not already exist.
  */
 function paxdesign_booking_add_column_if_missing($table_name, $column_name, $definition, $after = null) {
@@ -1344,11 +1353,11 @@ function paxdesign_booking_add_column_if_missing($table_name, $column_name, $def
     $result = $wpdb->query($sql);
 
     if ($result === false) {
-        error_log('PAXdesign Booking DB migration failed for column ' . $column_name . ': ' . $wpdb->last_error);
+        paxdesign_booking_log_error('PAXdesign Booking DB migration failed for column ' . $column_name . ': ' . $wpdb->last_error);
         return false;
     }
 
-    error_log('PAXdesign Booking DB migration: added column ' . $column_name);
+    paxdesign_booking_log_error('PAXdesign Booking DB migration: added column ' . $column_name);
     return true;
 }
 

@@ -186,6 +186,7 @@ class PAXdesign_Auth_Log {
             '/dashboard',
             '/profile',
             '/sessions',
+            '/conversations/sync',
             '/typing',
         );
         foreach ($patterns as $needle) {

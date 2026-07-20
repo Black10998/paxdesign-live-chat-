@@ -15,6 +15,10 @@ class PAXdesign_Chat_Live {
     const HANDLER_LIVE   = 'live_request';
     const HANDLER_ADMIN  = 'admin';
     const HANDLER_CLOSED = 'closed';
+    const CHAT_SCHEMA_VERSION = '2.3';
+
+    /** @var bool */
+    private static $list_schema_ready = false;
 
     const DEFAULT_AGENT_NAME   = 'Ahmad Alkhalaf';
     const DEFAULT_AGENT_AVATAR   = 'https://paxdesign.at/wp-content/uploads/2026/06/unnamed.jpg';
@@ -528,6 +532,10 @@ class PAXdesign_Chat_Live {
     }
 
     public static function upgrade_schema() {
+        if ((string) get_option('paxdesign_chat_live_schema', '') === self::CHAT_SCHEMA_VERSION) {
+            return;
+        }
+
         global $wpdb;
         $table = PAXdesign_Chat_Log::table_name();
 
@@ -548,6 +556,17 @@ class PAXdesign_Chat_Live {
         foreach ($columns as $col) {
             paxdesign_booking_add_column_if_missing($table, $col[0], $col[1], $col[2]);
         }
+
+        update_option('paxdesign_chat_live_schema', self::CHAT_SCHEMA_VERSION, false);
+    }
+
+    private static function ensure_list_schema() {
+        if (self::$list_schema_ready) {
+            return;
+        }
+        PAXdesign_Chat_Log::create_table();
+        self::upgrade_schema();
+        self::$list_schema_ready = true;
     }
 
     /**
@@ -2802,14 +2821,16 @@ class PAXdesign_Chat_Live {
      * @return array<string, mixed>|WP_Error
      */
     public function get_live_list_data($include_threads = false) {
-        PAXdesign_Chat_Log::create_table();
-        self::upgrade_schema();
+        self::ensure_list_schema();
 
         global $wpdb;
         $table = PAXdesign_Chat_Log::table_name();
 
         $rows = $wpdb->get_results(
-            "SELECT * FROM $table
+            "SELECT id, session_id, handler, admin_user_id, admin_name, customer_name,
+                    session_rating, detected_service, updated_at, message_count, message_seq,
+                    last_preview, customer_language, user_read_seq, admin_read_seq, wp_user_id
+             FROM $table
              ORDER BY
                CASE COALESCE(handler, 'ai')
                  WHEN 'live_request' THEN 0
@@ -2858,11 +2879,16 @@ class PAXdesign_Chat_Live {
      * @return array<string, mixed>
      */
     private function format_live_list_session($row) {
-        $messages = $this->sort_messages($this->decode_messages($row->messages));
-        $last     = !empty($messages) ? end($messages) : null;
-        $preview  = is_array($last) && !empty($last['content'])
-            ? wp_html_excerpt($last['content'], 100, '…')
-            : '';
+        $preview = isset($row->last_preview) ? trim((string) $row->last_preview) : '';
+        $last_role = '';
+        if ($preview === '' && isset($row->messages) && (string) $row->messages !== '') {
+            $messages = $this->sort_messages($this->decode_messages($row->messages));
+            $last = !empty($messages) ? end($messages) : null;
+            $preview = is_array($last) && !empty($last['content'])
+                ? wp_html_excerpt($last['content'], 100, '…')
+                : '';
+            $last_role = is_array($last) && !empty($last['role']) ? (string) $last['role'] : '';
+        }
         $handler  = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
         $agent    = self::session_agent_payload($row);
 
@@ -2881,7 +2907,7 @@ class PAXdesign_Chat_Live {
             'message_count'    => isset($row->message_count) ? (int) $row->message_count : 0,
             'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
             'last_preview'     => $preview,
-            'last_role'        => is_array($last) && !empty($last['role']) ? (string) $last['role'] : '',
+            'last_role'        => $last_role,
             'customer_language'=> class_exists('PAXdesign_Language_Routing')
                 ? PAXdesign_Language_Routing::session_language_from_row($row)
                 : '',
@@ -3132,9 +3158,20 @@ class PAXdesign_Chat_Live {
             'customer_name' => isset($row->customer_name) ? (string) $row->customer_name : '',
         );
         if (class_exists('PAXdesign_Message_Store')) {
-            $all = PAXdesign_Message_Store::all_messages($session_id, 'customer');
-            $new = $full ? $all : PAXdesign_Message_Store::messages_since($session_id, $since, 500, 'customer');
+            if ($full) {
+                $all = PAXdesign_Message_Store::all_messages($session_id, 'customer');
+                $new = $all;
+            } else {
+                $new = PAXdesign_Message_Store::messages_since($session_id, $since, 500, 'customer');
+                $all = null;
+            }
             $message_seq = PAXdesign_Message_Store::latest_seq($session_id, 'customer');
+            $message_count = $full
+                ? count($all)
+                : PAXdesign_Message_Store::count($session_id, 'customer');
+            $reactions_map = $full
+                ? null
+                : PAXdesign_Message_Store::reactions_map($session_id, 'customer');
         } else {
             $messages = $this->decode_messages($row->messages);
             $all = $this->format_messages_for_api($messages, $agent['admin_user_id'], $session_context);
@@ -3142,16 +3179,24 @@ class PAXdesign_Chat_Live {
                 return isset($msg['id']) && (int) $msg['id'] > $since;
             }));
             $message_seq = isset($row->message_seq) ? (int) $row->message_seq : 0;
+            $message_count = count($all);
+            $reactions_map = null;
         }
-        $all = $this->format_messages_for_api($all, $agent['admin_user_id'], $session_context);
+        if ($all !== null && !$full) {
+            $all = $this->format_messages_for_api($all, $agent['admin_user_id'], $session_context);
+        }
         $new = $this->format_messages_for_api($new, $agent['admin_user_id'], $session_context);
         if (class_exists('PAXdesign_Message_Store')) {
-            $all = PAXdesign_Message_Store::mask_messages_for_customer($all);
             $new = PAXdesign_Message_Store::mask_messages_for_customer($new);
+            if ($all !== null && !$full) {
+                $all = PAXdesign_Message_Store::mask_messages_for_customer($all);
+            }
         }
         if ($wp_user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
-            $all = PAXdesign_Customer_Chat_Bridge::filter_customer_lifecycle_messages($all);
             $new = PAXdesign_Customer_Chat_Bridge::filter_customer_lifecycle_messages($new);
+            if ($all !== null && !$full) {
+                $all = PAXdesign_Customer_Chat_Bridge::filter_customer_lifecycle_messages($all);
+            }
         }
 
         $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
@@ -3167,6 +3212,9 @@ class PAXdesign_Chat_Live {
         $unread_staff = class_exists('PAXdesign_Message_Store')
             ? PAXdesign_Message_Store::count_unread_staff_messages($session_id, $reads['user'])
             : 0;
+        $reactions = is_array($reactions_map)
+            ? $reactions_map
+            : $this->extract_message_reactions($full ? $new : ($all ?? $new));
 
         return array(
             'session_id'       => $session_id,
@@ -3180,7 +3228,7 @@ class PAXdesign_Chat_Live {
             'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
             'updated_at'       => PAXdesign_API_Time::format(isset($row->updated_at) ? (string) $row->updated_at : '', false),
             'seq'              => $message_seq,
-            'message_count'    => count($all),
+            'message_count'    => $message_count,
             'last_read_seq'    => $reads['user'],
             'admin_read_seq'   => $reads['admin'],
             'other_read_seq'   => $other_read,
@@ -3188,7 +3236,7 @@ class PAXdesign_Chat_Live {
             'messages'         => $new,
             'admin_typing'     => $this->is_typing($session_id, 'admin'),
             'user_typing'      => $this->is_typing($session_id, 'user'),
-            'reactions'        => $this->extract_message_reactions($all),
+            'reactions'        => $reactions,
             'customer_language'=> class_exists('PAXdesign_Language_Routing')
                 ? PAXdesign_Language_Routing::session_language_from_row($row)
                 : '',

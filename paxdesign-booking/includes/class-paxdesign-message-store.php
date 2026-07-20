@@ -109,9 +109,16 @@ class PAXdesign_Message_Store {
     }
 
     public static function maybe_upgrade() {
-        if ((string) get_option('paxdesign_message_store_schema', '') !== self::SCHEMA_VERSION) {
-            self::create_tables();
+        static $schema_ok = null;
+        if ($schema_ok === true) {
+            return;
         }
+        if ((string) get_option('paxdesign_message_store_schema', '') === self::SCHEMA_VERSION) {
+            $schema_ok = true;
+            return;
+        }
+        self::create_tables();
+        $schema_ok = (string) get_option('paxdesign_message_store_schema', '') === self::SCHEMA_VERSION;
     }
 
     public static function uuid() {
@@ -412,6 +419,37 @@ class PAXdesign_Message_Store {
             "SELECT COUNT(*) FROM $table WHERE session_id = %s",
             sanitize_text_field($session_id)
         ));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function reactions_map($session_id, $channel = 'customer') {
+        global $wpdb;
+        self::maybe_upgrade();
+        self::migrate_customer_session_if_needed($session_id, $channel);
+        $table = self::messages_table();
+        $session_id = sanitize_text_field($session_id);
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT msg_seq, meta_json FROM $table
+             WHERE session_id = %s AND channel = %s AND meta_json LIKE %s",
+            $session_id,
+            sanitize_key($channel),
+            '%\"reaction\"%'
+        ));
+        $reactions = array();
+        $allowed = array('like', 'dislike');
+        foreach ((array) $rows as $row) {
+            $meta = json_decode((string) $row->meta_json, true);
+            if (!is_array($meta) || empty($meta['reaction'])) {
+                continue;
+            }
+            $reaction = sanitize_text_field((string) $meta['reaction']);
+            if (in_array($reaction, $allowed, true)) {
+                $reactions[(int) $row->msg_seq] = $reaction;
+            }
+        }
+        return $reactions;
     }
 
     /**

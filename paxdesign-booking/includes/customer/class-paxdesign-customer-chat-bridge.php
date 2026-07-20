@@ -11,7 +11,6 @@ class PAXdesign_Customer_Chat_Bridge {
 
     public static function init() {
         add_action('pdx_user_logged_in', array(__CLASS__, 'on_user_login'), 10, 1);
-        add_action('wp_login', array(__CLASS__, 'on_user_login'), 10, 2);
     }
 
     public static function sessions_table() {

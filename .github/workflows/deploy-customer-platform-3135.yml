@@ -120,16 +120,36 @@ jobs:
           ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
             "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-customer-db-migrate.php || echo 'wp-cli unavailable — migrations run on next request')"
 
+      - name: Disable WordPress debug logging on production
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          chmod +x scripts/configure-wp-production-debug.sh
+          ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
+            "WP_PATH=$(printf '%q' "$WP_PATH") bash -s" < scripts/configure-wp-production-debug.sh
+
       - name: Post-deploy customer platform verification
         env:
           PAX_SITE: https://paxdesign.at
-          PAX_EXPECTED_BOOKING: "3.153.0"
+          PAX_EXPECTED_BOOKING: "3.162.0"
           PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
           PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
+          WP_PATH: ${{ secrets.WP_PATH }}
         run: |
           set -euo pipefail
-          chmod +x scripts/verify-customer-platform-3135.sh
-          ./scripts/verify-customer-platform-3135.sh | tee verify-customer-platform.log
+          chmod +x scripts/verify-customer-platform-3162.sh scripts/verify-debug-log-post-deploy.sh
+          ./scripts/verify-customer-platform-3162.sh | tee verify-customer-platform.log
+          ./scripts/verify-debug-log-post-deploy.sh | tee verify-debug-log.log || true
 
       - name: Verify production AI stream (fresh ai handler session)
         env:

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Post-deploy verification for v3.112.0 — no email_mapped_to_login spam.
+# Post-deploy verification — debug.log hygiene after production deploy.
 set -euo pipefail
 
 WP_ROOT="${WP_PATH:-$(pwd)}"
@@ -8,11 +8,12 @@ DEBUG_LOG="$WP_ROOT/wp-content/debug.log"
 SITE="${PAX_SITE:-https://paxdesign.at}"
 ADMIN_USER="${PAX_ADMIN_USER:-}"
 ADMIN_PASS="${PAX_ADMIN_APP_PASSWORD:-}"
+EXPECTED="${PAX_EXPECTED_BOOKING:-3.162.0}"
 
 fail() { echo "VERIFY_FAIL: $*"; exit 1; }
 pass() { echo "VERIFY_OK: $*"; }
 
-echo "=== Verify plugin 3.112.0 + debug.log hygiene ==="
+echo "=== Verify plugin ${EXPECTED} + debug.log hygiene ==="
 echo "Time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 echo "WP_ROOT: $WP_ROOT"
 

@@ -180,6 +180,10 @@
     }, delayMs || 600);
   }
 
+  function customerStreamConnected() {
+    return streamSource && streamSource.readyState === EventSource.OPEN;
+  }
+
   function handleCustomerStreamPayload(data) {
     if (!data || !data.type) return;
     if (typeof data.id === 'number') {
@@ -189,7 +193,6 @@
     if (data.type === 'message' && Array.isArray(payload.message ? [payload.message] : payload.messages)) {
       var msgs = payload.message ? [payload.message] : payload.messages;
       applyIncomingMessages(msgs);
-      pollUpdates();
     }
     if (data.type === 'link_scan_updated' && payload.message) {
       if (!isMessagePermanentlyDeleted(payload.message.id)) {
@@ -216,7 +219,7 @@
     if (data.type === 'handler' && payload.handler) {
       applyHandlerState(payload.handler, payload.admin_name || '');
     }
-    if (data.type === 'typing' || data.type === 'handler') {
+    if ((data.type === 'typing' || data.type === 'handler') && !customerStreamConnected()) {
       pollUpdates();
     }
   }
@@ -555,7 +558,6 @@
     boot.then(function () {
       if (!sessionRestored) updateEntryUi();
       logConsultationStarted();
-      startLivePolling();
       updateInputState();
     });
   }
@@ -1667,20 +1669,20 @@
 
   function scheduleLivePolling() {
     if (pollTimer) clearInterval(pollTimer);
-    if (!pageVisible) {
+    if (!pageVisible || !widgetOpen) {
       pollTimer = null;
       return;
     }
-    var interval = widgetOpen ? POLL_INTERVAL_OPEN_MS : POLL_INTERVAL_MS;
+    var interval = POLL_INTERVAL_OPEN_MS;
     pollTimer = window.setInterval(pollUpdates, interval);
   }
 
   document.addEventListener('visibilitychange', function () {
     pageVisible = !document.hidden;
-    if (pageVisible && getSessionId()) {
+    if (pageVisible && widgetOpen && getSessionId()) {
       pollUpdates();
       scheduleLivePolling();
-      if (widgetOpen) startCustomerStream();
+      startCustomerStream();
     } else if (pollTimer) {
       clearInterval(pollTimer);
       pollTimer = null;

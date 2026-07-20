@@ -95,6 +95,19 @@
     var streamEventSince = 0;
     var streamInboxSince = 0;
     var streamRestartTimer = null;
+    var listRefreshTimer = null;
+
+    function scheduleDebouncedListRefresh() {
+      if (listRefreshTimer) clearTimeout(listRefreshTimer);
+      listRefreshTimer = setTimeout(function () {
+        listRefreshTimer = null;
+        loadList();
+      }, 400);
+    }
+
+    function adminStreamConnected() {
+      return streamSource && streamSource.readyState === EventSource.OPEN;
+    }
 
     function adminStreamUrl() {
       var parts = [
@@ -131,10 +144,16 @@
         }
       }
       if (data.type === 'message' || data.type === 'handler' || data.type === 'typing') {
-        if (!sid || sid === selectedSession) {
-          pollMessages();
+        if (data.type === 'message' && adminStreamConnected() && sid === selectedSession) {
+          scheduleDebouncedListRefresh();
+        } else {
+          if (!adminStreamConnected() || data.type !== 'message') {
+            if (!sid || sid === selectedSession) {
+              pollMessages();
+            }
+          }
+          scheduleDebouncedListRefresh();
         }
-        loadList();
       } else if (data.type === 'link_scan_updated' && sid === selectedSession && payload.message) {
         if (!isMessagePermanentlyDeleted(payload.message.id)) {
           updateAdminLinkScanBadge(payload.message);
@@ -182,10 +201,9 @@
           try {
             handleStreamPayload(JSON.parse(event.data));
           } catch (e) {}
-          scheduleAdminStreamRestart(120);
         });
         streamSource.addEventListener('ping', function () {
-          scheduleAdminStreamRestart(120);
+          // Keepalive only — do not reconnect on heartbeat.
         });
         streamSource.onerror = function () {
           stopAdminStream();
@@ -237,7 +255,6 @@
     var domMsgIds = {};
     var deletedMessageIds = {};
     var deletingInProgress = {};
-    var MESSAGE_TRANSFORM_MS = 200;
     var MESSAGE_TRANSFORM_MS = 200;
     var sessionMessageMap = {};
     var replyToId = 0;

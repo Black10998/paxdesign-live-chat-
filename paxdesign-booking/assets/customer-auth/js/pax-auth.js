@@ -2003,12 +2003,6 @@
         stop: stop ? 1 : 0,
       });
     }
-
-    function sendTypingPing(stop) {
-      state.messages.push({ role: role, content: content });
-      renderMessages();
-    }
-
     function sendHumanMessage(text) {
       return customerApiFetch('POST', '/customer/chat/messages', {
         session_id: state.sessionId,

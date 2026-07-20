@@ -886,7 +886,7 @@ class PAXdesign_APNS {
         $response = self::apns_post($url, $headers, wp_json_encode($payload));
         if (is_wp_error($response)) {
             self::log_delivery($user_id, $device, $silent, $push_type, 0, $response->get_error_message());
-            if (defined('WP_DEBUG') && WP_DEBUG) {
+            if (defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
                 error_log('[PAXdesign APNs] transport error: ' . $response->get_error_message());
             }
             return $response;
@@ -933,8 +933,8 @@ class PAXdesign_APNS {
                 }
             }
 
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[PAXdesign APNs] HTTP ' . $code . ' user=' . (int) $user_id . ' body=' . $body_resp);
+            if (defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) {
+                error_log('[PAXdesign APNs] HTTP ' . $code . ' user=' . (int) $user_id);
             }
             self::log_delivery($user_id, $device, $silent, $push_type, $code, $body_resp, $sandbox ? 'sandbox' : 'production', $reason);
             return new WP_Error(
