@@ -502,6 +502,20 @@ WHERE table_schema = DATABASE()
 ORDER BY (data_length + index_length) DESC;
 " || true
 
+section "Post-cleanup wp_postmeta by meta_key (top 10)"
+mysql_query "
+SELECT meta_key,
+       COUNT(*) AS row_count,
+       ROUND(SUM(LENGTH(meta_value))/1024/1024, 2) AS total_mb
+FROM ${POSTMETA}
+GROUP BY meta_key
+ORDER BY SUM(LENGTH(meta_value)) DESC
+LIMIT 10;
+" || true
+
+revision_remaining=$(wp_cmd post list --post_type=revision --format=count 2>/dev/null || echo unknown)
+log "Revision posts remaining: $revision_remaining"
+
 section "Done"
 echo "PASS: disk audit and cleanup complete"
 echo "Report: $REPORT"
