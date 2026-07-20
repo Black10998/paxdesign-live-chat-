@@ -53,11 +53,11 @@ struct CustomerTabView: View {
 
     private var menuItems: [UiverseMenuBarItem] {
         [
-            UiverseMenuBarItem(tag: CustomerPortalTab.home.rawValue, glyph: .home, title: String(localized: "Home")),
-            UiverseMenuBarItem(tag: CustomerPortalTab.services.rawValue, glyph: .grid, title: String(localized: "Services")),
-            UiverseMenuBarItem(tag: CustomerPortalTab.portfolio.rawValue, glyph: .photo, title: String(localized: "Portfolio")),
-            UiverseMenuBarItem(tag: CustomerPortalTab.chat.rawValue, glyph: .chatBubble, title: String(localized: "Chat")),
-            UiverseMenuBarItem(tag: CustomerPortalTab.account.rawValue, glyph: .person, title: String(localized: "Account")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.home.rawValue, icon: "dashboard.fill", title: String(localized: "Home")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.services.rawValue, icon: "platform.fill", title: String(localized: "Services")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.portfolio.rawValue, icon: "photo", title: String(localized: "Portfolio")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.chat.rawValue, icon: "chats.fill", title: String(localized: "Chat")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.account.rawValue, icon: "profile.user", title: String(localized: "Account")),
         ]
     }
 
