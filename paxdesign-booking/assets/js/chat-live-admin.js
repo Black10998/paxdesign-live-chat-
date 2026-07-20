@@ -1,6 +1,6 @@
 /**
  * PAXdesign Live Chat — Admin console + shortcode dashboard
- * Version: 3.45.0
+ * Version: 3.46.0
  */
 (function ($) {
   'use strict';
@@ -162,6 +162,22 @@
           hideAssistantTyping();
         }
       }
+      if (data.type === 'handler' && payload.handler) {
+        if (sid) {
+          patchSessionInList(sid, {
+            handler: payload.handler,
+            handler_label: handlerLabel(payload.handler, payload.admin_name || ''),
+            admin_name: payload.admin_name || '',
+            updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+          });
+        }
+        if (!sid || sid === selectedSession) {
+          updateHandlerUi(payload.handler, payload.admin_name || '');
+          pollMessages();
+        }
+        scheduleDebouncedListRefresh();
+        return;
+      }
       if (data.type === 'message' || data.type === 'handler' || data.type === 'typing') {
         if (data.type === 'message' && adminStreamConnected() && sid === selectedSession) {
           scheduleDebouncedListRefresh();
@@ -225,8 +241,11 @@
           // Keepalive only — do not reconnect on heartbeat.
         });
         streamSource.onerror = function () {
-          stopAdminStream();
-          scheduleAdminStreamRestart(900);
+          if (streamSource) {
+            streamSource.close();
+            streamSource = null;
+          }
+          scheduleAdminStreamRestart(120);
         };
       } catch (e) {
         scheduleAdminStreamRestart(1200);

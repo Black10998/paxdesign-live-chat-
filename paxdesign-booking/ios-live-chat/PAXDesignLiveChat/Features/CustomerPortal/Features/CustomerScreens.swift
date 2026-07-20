@@ -1113,6 +1113,7 @@ struct CustomerChatView: View {
                             let handler = StreamPayload.string(event.payload["handler"])
                             if !handler.isEmpty {
                                 applyHandlerUpdate(handler)
+                                await refresh(full: false)
                             }
                         case "typing":
                             applyTypingUpdate(event.payload)
