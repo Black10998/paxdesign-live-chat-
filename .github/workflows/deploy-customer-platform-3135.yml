@@ -142,14 +142,14 @@ jobs:
       - name: Post-deploy customer platform verification
         env:
           PAX_SITE: https://paxdesign.at
-          PAX_EXPECTED_BOOKING: "3.163.0"
+          PAX_EXPECTED_BOOKING: "3.166.0"
           PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
           PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
           WP_PATH: ${{ secrets.WP_PATH }}
         run: |
           set -euo pipefail
-          chmod +x scripts/verify-customer-platform-3162.sh scripts/verify-debug-log-post-deploy.sh
-          ./scripts/verify-customer-platform-3162.sh | tee verify-customer-platform.log
+          chmod +x scripts/verify-customer-platform-3166.sh scripts/verify-debug-log-post-deploy.sh
+          ./scripts/verify-customer-platform-3166.sh | tee verify-customer-platform.log
           ./scripts/verify-debug-log-post-deploy.sh | tee verify-debug-log.log || true
 
       - name: Verify production AI stream (fresh ai handler session)
