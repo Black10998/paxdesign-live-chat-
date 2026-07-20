@@ -68,6 +68,10 @@ struct CustomerTabView: View {
         return [CustomerPortalTab.home.rawValue]
     }
 
+    private var shouldShowBottomTabBar: Bool {
+        navigation.selectedTab != .chat
+    }
+
     private var menuItems: [UiverseMenuBarItem] {
         [
             UiverseMenuBarItem(tag: CustomerPortalTab.home.rawValue, icon: "dashboard.fill", title: String(localized: "Home")),
@@ -92,25 +96,34 @@ struct CustomerTabView: View {
                 }
             }
             customerTabPane(.chat) {
-                CustomerChatView(initialSessionID: navigation.chatSessionID)
+                CustomerChatView(
+                    initialSessionID: navigation.chatSessionID,
+                    isDedicatedChatScreen: true
+                )
             }
             customerTabPane(.account) {
                 CustomerMoreView()
             }
         }
         .paxShellBottomTabBar(
-            isVisible: true,
+            isVisible: shouldShowBottomTabBar,
             items: menuItems,
             selection: Binding(
                 get: { navigation.selectedTab.rawValue },
                 set: { newValue in
-                    navigation.selectedTab = CustomerPortalTab(rawValue: newValue) ?? .home
+                    let tab = CustomerPortalTab(rawValue: newValue) ?? .home
+                    if tab == .chat {
+                        navigation.enterChat(from: navigation.selectedTab)
+                    } else {
+                        navigation.selectedTab = tab
+                    }
                 }
             ),
             reduceMotion: reduceMotion,
             scrollState: menuScrollState
         )
-        .environment(\.shellTabBarVisible, true)
+        .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.9), value: shouldShowBottomTabBar)
+        .environment(\.shellTabBarVisible, shouldShowBottomTabBar)
         .onAppear {
             loadedTabs.insert(navigation.selectedTab.rawValue)
         }

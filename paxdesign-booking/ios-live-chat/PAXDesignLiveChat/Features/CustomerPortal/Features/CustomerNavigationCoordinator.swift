@@ -37,6 +37,7 @@ final class CustomerNavigationCoordinator: ObservableObject {
     static let shared = CustomerNavigationCoordinator()
 
     @Published var selectedTab: CustomerPortalTab = .home
+    @Published var chatReturnTab: CustomerPortalTab = .home
     @Published var accountPath: [CustomerPortalDestination] = []
     @Published var chatSessionID: String?
     @Published var pendingChatFocus = false
@@ -71,10 +72,7 @@ final class CustomerNavigationCoordinator: ObservableObject {
 
         switch head {
         case "chat":
-            selectedTab = .chat
-            let session = parts.count > 1 ? parts[1] : nil
-            chatSessionID = session
-            pendingChatFocus = true
+            enterChat(from: selectedTab, sessionID: parts.count > 1 ? parts[1] : nil)
         case "projects", "project":
             selectedTab = .account
             if parts.count > 1, let id = Int(parts[1]) {
@@ -151,10 +149,22 @@ final class CustomerNavigationCoordinator: ObservableObject {
         accountPath = [CustomerPortalDestination(kind: .notifications)]
     }
 
-    func openChat(sessionID: String? = nil) {
+    func enterChat(from tab: CustomerPortalTab? = nil, sessionID: String? = nil) {
+        if selectedTab != .chat {
+            chatReturnTab = tab ?? selectedTab
+        }
         selectedTab = .chat
         chatSessionID = sessionID
         pendingChatFocus = true
+    }
+
+    func dismissChat() {
+        selectedTab = chatReturnTab
+        pendingChatFocus = false
+    }
+
+    func openChat(sessionID: String? = nil) {
+        enterChat(from: selectedTab, sessionID: sessionID)
     }
 
     func openProjectsList() {
