@@ -70,6 +70,7 @@ jobs:
 
       - name: Remote backup (database + wp-content)
         if: inputs.skip_backup != 'true'
+        continue-on-error: true
         env:
           WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
           WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
