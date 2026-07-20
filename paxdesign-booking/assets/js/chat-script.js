@@ -224,6 +224,9 @@
       }
     }
     if (data.type === 'handler' && payload.handler) {
+      if (payload.message) {
+        applyIncomingMessages([payload.message]);
+      }
       onRealtimeHandlerChange(payload.handler, payload.admin_name || '');
     }
     if ((data.type === 'typing' || data.type === 'handler') && !customerStreamConnected()) {
@@ -1442,6 +1445,23 @@
     return 'web-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
   }
 
+  function staffReturnedToAiNoticeText() {
+    if (config && config.i18n && config.i18n.staffReturnedToAi) {
+      return String(config.i18n.staffReturnedToAi);
+    }
+    return 'Das Gespräch wurde an den KI-Assistenten zurückgegeben.';
+  }
+
+  function injectStaffReturnedToAiNotice() {
+    var notice = staffReturnedToAiNoticeText();
+    var dedupKey = 'sys:staff_returned_to_ai';
+    if (domClientMsgIds[dedupKey]) return;
+    var tempId = nextLocalId();
+    renderMessageDom('system', notice, tempId, { skipPush: true });
+    rememberMessageIdentity({ id: tempId, role: 'system', content: notice, client_msg_id: dedupKey });
+    messages.push({ role: 'system', content: notice, id: tempId, client_msg_id: dedupKey });
+  }
+
   function systemMessageDedupKey(content) {
     var known = {
       'Chat-Session gestartet.': 'sys:session_started',
@@ -1449,6 +1469,8 @@
       'Der Kunde hat das Gespräch beendet.': 'sys:customer_closed',
       'Der KI-Assistent ist wieder für Sie da. Schreiben Sie jederzeit weiter.': 'sys:customer_released_to_ai',
       'Der KI-Assistent übernimmt den Chat wieder.': 'sys:ai_reclaimed',
+      'The conversation has been returned to the KI Assistant.': 'sys:staff_returned_to_ai',
+      'Das Gespräch wurde an den KI-Assistenten zurückgegeben.': 'sys:staff_returned_to_ai',
       'Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.': 'sys:live_agent_notified',
       'Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter.': 'sys:live_transfer_thanks'
     };
@@ -1927,7 +1949,10 @@
     }
     if (handler === 'ai') {
       resetLiveAgentPhase();
-      if (returningToAi) stopAdminTypingFeedback();
+      if (returningToAi) {
+        stopAdminTypingFeedback();
+        injectStaffReturnedToAiNotice();
+      }
     }
     if (handler === 'closed') {
       abortStream();

@@ -164,12 +164,25 @@
       }
       if (data.type === 'handler' && payload.handler) {
         if (sid) {
-          patchSessionInList(sid, {
+          var handlerPatch = {
             handler: payload.handler,
             handler_label: handlerLabel(payload.handler, payload.admin_name || ''),
             admin_name: payload.admin_name || '',
             updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
-          });
+          };
+          if (payload.handler === 'closed' || payload.handler === 'ai') {
+            handlerPatch.needs_reply = false;
+          }
+          if (payload.message && payload.message.content) {
+            handlerPatch.last_preview = String(payload.message.content).slice(0, 100);
+            handlerPatch.last_role = payload.message.role || 'system';
+            if (typeof payload.seq === 'number') {
+              handlerPatch.seq = payload.seq;
+            } else if (payload.message.id) {
+              handlerPatch.seq = payload.message.id;
+            }
+          }
+          patchSessionInList(sid, handlerPatch);
         }
         if (!sid || sid === selectedSession) {
           updateHandlerUi(payload.handler, payload.admin_name || '');
@@ -2501,7 +2514,17 @@
     $release.on('click', function () {
       if (!selectedSession) return;
       if (!window.confirm('Chat wieder an die KI übergeben?')) return;
-      ajax('paxdesign_chat_live_release', { session_id: selectedSession }).done(function (res) {
+      var releaseId = selectedSession;
+      var releaseNotice = 'Das Gespräch wurde an den KI-Assistenten zurückgegeben.';
+      patchSessionInList(releaseId, {
+        handler: 'ai',
+        handler_label: 'KI aktiv',
+        needs_reply: false,
+        last_preview: releaseNotice,
+        last_role: 'system',
+        updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      });
+      ajax('paxdesign_chat_live_release', { session_id: releaseId }).done(function (res) {
         if (!res.success) {
           alert(res.data && res.data.message ? res.data.message : 'Freigabe fehlgeschlagen.');
           return;
@@ -2543,6 +2566,7 @@
       patchSessionInList(closingId, {
         handler: 'closed',
         handler_label: 'Geschlossen',
+        needs_reply: false,
         updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
       });
       ajax('paxdesign_chat_live_close', { session_id: closingId }).done(function (res) {

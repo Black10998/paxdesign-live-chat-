@@ -59,6 +59,7 @@ enum L10n {
     static var ChatCustomerOverview: String { t("chat.customer_overview") }
     static var ChatCustomerTyping: String { t("chat.customer_typing") }
     static var ChatHandlerActive: String { t("chat.handler.active") }
+    static var ChatHandlerLiveAgent: String { t("chat.handler.live_agent") }
     static var ChatHandlerAi: String { t("chat.handler.ai") }
     static var ChatHandlerClosed: String { t("chat.handler.closed") }
     static var ChatHandlerLiveRequest: String { t("chat.handler.live_request") }

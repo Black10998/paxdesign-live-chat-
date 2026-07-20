@@ -3059,6 +3059,28 @@
         }
       }
     },
+    "chat.handler.live_agent": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live Agent"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live-Agent"
+          }
+        },
+        "ar": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "موظف مباشر"
+          }
+        }
+      }
+    },
     "chat.copy": {
       "localizations": {
         "en": {

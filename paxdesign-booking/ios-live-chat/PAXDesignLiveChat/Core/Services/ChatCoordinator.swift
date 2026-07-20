@@ -182,6 +182,13 @@ final class ChatCoordinator: ObservableObject {
                         }
                     }
                     if event.type == "message" || event.type == "handler" {
+                        if event.type == "handler" {
+                            self.patchBookingSessionHandler(
+                                sessionId: sid,
+                                event: event,
+                                auth: auth
+                            )
+                        }
                         if self.activeSessionId != sid || event.type == "handler" {
                             self.postSessionSync(sessionId: sid, inlineMessage: event.payload["message"])
                         }
@@ -224,6 +231,54 @@ final class ChatCoordinator: ObservableObject {
         updateUnreadCounts()
         persistSessionListCache()
         detectIncomingLiveRequests([updated])
+    }
+
+    private func patchBookingSessionHandler(sessionId: String, event: ChatStreamEvent, auth: AuthStore) {
+        let handler = StreamPayload.string(event.payload["handler"])
+        guard !handler.isEmpty else { return }
+        let adminName = StreamPayload.string(event.payload["admin_name"])
+        let seq = StreamPayload.int(event.payload["seq"])
+        let inlineMessages = StreamPayload.messages(from: event.payload)
+        let inlineMessage = inlineMessages.first
+
+        guard let index = sessions.firstIndex(where: { $0.sessionId == sessionId }) else {
+            scheduleInboxListRefresh(auth: auth)
+            return
+        }
+
+        let label = localizedHandlerLabel(handler, adminName: adminName, fallback: sessions[index].handlerLabel)
+        let updated = LiveSessionPatch.patched(
+            sessions[index],
+            handler: handler,
+            handlerLabel: label,
+            adminName: adminName.isEmpty ? nil : adminName,
+            message: inlineMessage,
+            seq: seq
+        )
+        sessions.remove(at: index)
+        sessions.insert(updated, at: 0)
+        if seq > 0 {
+            noteSessionSeq(sessionId, seq: seq)
+        }
+        updateUnreadCounts()
+        persistSessionListCache()
+    }
+
+    private func localizedHandlerLabel(_ handler: String, adminName: String, fallback: String) -> String {
+        switch handler {
+        case "live_request":
+            return L10n.ChatHandlerLiveRequest
+        case "admin":
+            let name = adminName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !name.isEmpty { return name }
+            return L10n.ChatHandlerLiveAgent
+        case "closed":
+            return L10n.ChatHandlerClosed
+        case "ai":
+            return L10n.ChatHandlerAi
+        default:
+            return fallback.isEmpty ? L10n.ChatHandlerAi : fallback
+        }
     }
 
     private func persistSessionListCache() {

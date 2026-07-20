@@ -1482,6 +1482,20 @@ class PAXdesign_Chat_Live {
     }
 
     /**
+     * Emit handler change with the triggering system message for instant list/thread updates.
+     *
+     * @param array<string, mixed>|null $entry
+     * @param array<string, mixed>       $extra
+     */
+    private function emit_handler_event_with_message($session_id, $handler, $entry, $extra = array()) {
+        if (is_array($entry) && !empty($entry['id'])) {
+            $extra['message'] = $this->format_sse_message_payload($entry);
+            $extra['seq']     = (int) $entry['id'];
+        }
+        $this->emit_handler_event($session_id, $handler, $extra);
+    }
+
+    /**
      * @param array<int, array<string, mixed>> $messages
      * @return array<int, string>
      */
@@ -3596,7 +3610,7 @@ class PAXdesign_Chat_Live {
         if ($was_live_request) {
             $this->dispatch_missed_chat_event($session_id, $row, 'Live-Anfrage geschlossen');
         }
-        $this->emit_handler_event($session_id, self::HANDLER_CLOSED);
+        $this->emit_handler_event_with_message($session_id, self::HANDLER_CLOSED, $entry);
 
         return array(
             'handler' => self::HANDLER_CLOSED,
@@ -3651,16 +3665,18 @@ class PAXdesign_Chat_Live {
             array('%d')
         );
 
-        $entry = $this->append_message(
+        $notice = 'Das Gespräch wurde an den KI-Assistenten zurückgegeben.';
+        $entry  = $this->append_message(
             $session_id,
             'system',
-            'Der KI-Assistent übernimmt den Chat wieder.'
+            $notice,
+            array('client_msg_id' => 'sys:staff_returned_to_ai')
         );
 
         $this->clear_typing($session_id, 'user');
         $this->clear_typing($session_id, 'admin');
         $this->persist_session_last_preview($session_id);
-        $this->emit_handler_event($session_id, self::HANDLER_AI);
+        $this->emit_handler_event_with_message($session_id, self::HANDLER_AI, $entry);
 
         return array(
             'handler' => self::HANDLER_AI,
