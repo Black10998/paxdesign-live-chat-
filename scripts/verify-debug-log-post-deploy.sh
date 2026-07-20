@@ -21,8 +21,8 @@ echo "WP_ROOT: $WP_ROOT"
 
 VER=$(grep "define('PAXDESIGN_BOOKING_VERSION'" "$PLUGIN" | sed "s/.*'\([^']*\)'.*/\1/")
 echo "Installed version: $VER"
-[[ "$VER" == "3.112.0" ]] || fail "Expected 3.112.0, got $VER"
-pass "Plugin version 3.112.0"
+[[ "$VER" == "$EXPECTED" ]] || fail "Expected $EXPECTED, got $VER"
+pass "Plugin version $VER"
 
 # Ensure success-path logging code is gone
 if grep -q "email_mapped_to_login" "$WP_ROOT/wp-content/plugins/paxdesign-booking/includes/class-paxdesign-live-chat-mobile-api.php" 2>/dev/null; then
