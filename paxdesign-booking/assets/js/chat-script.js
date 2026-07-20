@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.40.0
+ * Version: 3.172.2
  */
 (function () {
   'use strict';
@@ -158,6 +158,16 @@
   var READINESS_STREAM_WAIT_MS = 15000;
   var READINESS_AUTO_RETRY_MAX = 2;
   var READINESS_AUTO_RETRY_DELAY_MS = 2500;
+  var READINESS_STEPS = {
+    authentication: 'authentication',
+    session: 'session',
+    history: 'history',
+    liveAgent: 'live_agent',
+    sync: 'sync',
+    sse: 'sse',
+    finalSync: 'final_sync',
+    timeout: 'timeout',
+  };
   var chatPanelEl = null;
   var readinessEl = null;
   var readinessLoadingEl = null;
@@ -172,14 +182,20 @@
   var readinessAutoRetryTimer = null;
   var readinessUiBound = false;
   var lastReadinessPollAt = 0;
+  var silentRefreshPromise = null;
+  var silentRefreshGeneration = 0;
+  var streamCacheBustNext = false;
 
-  function customerStreamUrl() {
+  function customerStreamUrl(cacheBust) {
     var parts = [
       'action=paxdesign_chat_stream',
       'nonce=' + encodeURIComponent(config.nonce),
       'session_id=' + encodeURIComponent(getSessionId()),
       'since=' + encodeURIComponent(String(streamEventSince)),
     ];
+    if (cacheBust) {
+      parts.push('_=' + encodeURIComponent(String(Date.now())));
+    }
     return config.ajaxUrl + '?' + parts.join('&');
   }
 
@@ -267,8 +283,10 @@
     if (!widgetOpen && !isPersistentAccountChat()) return;
     if (!isPersistentAccountChat() && chatHandler === 'closed') return;
     stopCustomerStream();
+    var bustCache = streamCacheBustNext;
+    streamCacheBustNext = false;
     try {
-      streamSource = new EventSource(customerStreamUrl());
+      streamSource = new EventSource(customerStreamUrl(bustCache));
       streamSource.addEventListener('chat', function (event) {
         try {
           handleCustomerStreamPayload(JSON.parse(event.data));
@@ -298,6 +316,59 @@
     var localized = localizedI18n(key);
     if (localized) return localized;
     return fallback || '';
+  }
+
+  function isReadinessDebugEnabled() {
+    return !!(config && config.readinessDebug);
+  }
+
+  function logReadiness(step, status, detail) {
+    if (!isReadinessDebugEnabled()) return;
+    var prefix = '[PAX Chat Readiness]';
+    if (detail !== undefined && detail !== null) {
+      console.log(prefix, step + ':', status, detail);
+    } else {
+      console.log(prefix, step + ':', status);
+    }
+  }
+
+  function readinessFailure(step, code, messageKey, detail) {
+    var err = { step: step, code: code, messageKey: messageKey };
+    if (detail) err.detail = detail;
+    logReadiness(step, 'FAILED', err);
+    return err;
+  }
+
+  function readinessReject(step, code, messageKey, detail) {
+    return Promise.reject(readinessFailure(step, code, messageKey, detail));
+  }
+
+  function classifyChatAjaxFailure(step, json, res, fallbackCode) {
+    var err = { step: step, code: fallbackCode || 'backend', messageKey: 'readinessNetworkFailed' };
+    if (json && json.data && json.data.code === 'login_required') {
+      err.code = 'auth';
+      err.messageKey = 'readinessAuthFailed';
+    }
+    if (json && json.data && json.data.message) {
+      err.detail = String(json.data.message);
+    } else if (json && json.message) {
+      err.detail = String(json.message);
+    }
+    if (res && typeof res.status === 'number') {
+      err.httpStatus = res.status;
+    }
+    logReadiness(step, 'FAILED', err);
+    return err;
+  }
+
+  function logReadinessStart(options) {
+    logReadiness('start', 'BEGIN', {
+      reuseSession: !!(options && options.reuseSession),
+      sessionId: getSessionId() || '',
+      handler: chatHandler,
+      loggedIn: isLoggedIn(),
+      persistent: isPersistentAccountChat(),
+    });
   }
 
   function initChatReadinessUi() {
@@ -395,6 +466,9 @@
     if (!err) {
       return localizedReadiness('readinessGenericFailed', 'Chat could not be loaded.');
     }
+    if (isReadinessDebugEnabled() && err.step) {
+      console.warn('[PAX Chat Readiness] User-facing error for step "' + err.step + '" (code: ' + (err.code || 'unknown') + ')', err.detail || err);
+    }
     if (err.message && typeof err.message === 'string' && err.message.indexOf('readiness') !== 0) {
       return err.message;
     }
@@ -444,7 +518,10 @@
   function withReadinessTimeout(promise, generation) {
     return new Promise(function (resolve, reject) {
       var timer = window.setTimeout(function () {
-        reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+        reject(readinessFailure(READINESS_STEPS.timeout, 'network', 'readinessNetworkFailed', {
+          reason: 'overall_timeout',
+          timeoutMs: READINESS_TIMEOUT_MS,
+        }));
       }, READINESS_TIMEOUT_MS);
       promise.then(function (value) {
         window.clearTimeout(timer);
@@ -470,11 +547,16 @@
           return;
         }
         if (customerStreamConnected()) {
+          logReadiness(READINESS_STEPS.sse, 'OK', { readyState: streamSource.readyState });
           resolve(true);
           return;
         }
         if (Date.now() - startedAt >= timeoutMs) {
-          reject({ code: 'sse', messageKey: 'readinessStreamFailed' });
+          reject(readinessFailure(READINESS_STEPS.sse, 'sse', 'readinessStreamFailed', {
+            reason: 'stream_open_timeout',
+            timeoutMs: timeoutMs,
+            readyState: streamSource ? streamSource.readyState : null,
+          }));
           return;
         }
         window.setTimeout(tick, 100);
@@ -486,11 +568,18 @@
   function verifyLiveAgentStateFromServer(expectedHandlers) {
     expectedHandlers = expectedHandlers || ['live_request', 'admin'];
     if (expectedHandlers.indexOf(chatHandler) === -1) {
-      return Promise.reject({ code: 'live', messageKey: 'readinessLiveFailed' });
+      return readinessReject(READINESS_STEPS.liveAgent, 'live', 'readinessLiveFailed', {
+        reason: 'unexpected_handler',
+        handler: chatHandler,
+      });
     }
     if (chatHandler === 'admin' && !adminName && !(assignedAgent && assignedAgent.name)) {
-      return Promise.reject({ code: 'live', messageKey: 'readinessLiveFailed' });
+      return readinessReject(READINESS_STEPS.liveAgent, 'live', 'readinessLiveFailed', {
+        reason: 'missing_admin_identity',
+        handler: chatHandler,
+      });
     }
+    logReadiness(READINESS_STEPS.liveAgent, 'OK', { handler: chatHandler });
     return Promise.resolve(true);
   }
 
@@ -515,22 +604,31 @@
     options = options || {};
     var generation = readinessGeneration;
     var skipSessionBootstrap = !!options.reuseSession && !!getSessionId() && sessionRestored;
+    logReadinessStart(options);
 
     return withReadinessTimeout(Promise.resolve()
       .then(function () {
         abortIfReadinessStale(generation);
         setReadinessPhase('readinessAuthenticating', 'Verifying your sign-in…');
         if (!canUseChat()) {
-          return Promise.reject({ code: 'auth', messageKey: 'readinessAuthFailed' });
+          return readinessReject(READINESS_STEPS.authentication, 'auth', 'readinessAuthFailed', {
+            reason: 'login_or_verification_required',
+            loggedIn: isLoggedIn(),
+            verified: isVerifiedAccount(),
+          });
         }
         if (!config || config.enabled === false) {
-          return Promise.reject({ code: 'ai', messageKey: 'readinessAiFailed' });
+          return readinessReject(READINESS_STEPS.authentication, 'ai', 'readinessAiFailed', {
+            reason: 'chat_disabled',
+          });
         }
+        logReadiness(READINESS_STEPS.authentication, 'OK');
       })
       .then(function () {
         abortIfReadinessStale(generation);
         setReadinessPhase('readinessSession', 'Preparing your chat session…');
         if (skipSessionBootstrap) {
+          logReadiness(READINESS_STEPS.session, 'OK', { reused: true, sessionId: getSessionId() });
           return getSessionId();
         }
         if (isPersistentAccountChat()) {
@@ -550,13 +648,17 @@
       .then(function (sessionId) {
         abortIfReadinessStale(generation);
         if (!sessionId) {
-          return Promise.reject({ code: 'session', messageKey: 'readinessSessionFailed' });
+          return readinessReject(READINESS_STEPS.session, 'session', 'readinessSessionFailed', {
+            reason: 'missing_session_id',
+          });
         }
+        logReadiness(READINESS_STEPS.session, 'OK', { sessionId: sessionId });
         setReadinessPhase('readinessHistory', 'Loading conversation history…');
         return fetchSessionFromServer(true, true);
       })
       .then(function () {
         abortIfReadinessStale(generation);
+        logReadiness(READINESS_STEPS.history, 'OK');
         if (chatHandler === 'closed' && isPersistentAccountChat()) {
           return reopenAuthenticatedSessionIfNeeded().then(function () {
             abortIfReadinessStale(generation);
@@ -570,6 +672,7 @@
         if (chatHandler === 'live_request' || chatHandler === 'admin') {
           return verifyLiveAgentStateFromServer(['live_request', 'admin']);
         }
+        logReadiness(READINESS_STEPS.liveAgent, 'OK', { skipped: true, handler: chatHandler });
         return true;
       })
       .then(function () {
@@ -579,12 +682,18 @@
       })
       .then(function () {
         abortIfReadinessStale(generation);
+        logReadiness(READINESS_STEPS.sync, 'OK');
         setReadinessPhase('readinessRealtime', 'Establishing real-time connection…');
         return waitForCustomerStreamOpen(READINESS_STREAM_WAIT_MS, generation);
       })
       .then(function () {
         abortIfReadinessStale(generation);
+        logReadiness(READINESS_STEPS.sse, 'OK');
         return pollUpdatesOnce(false);
+      })
+      .then(function () {
+        logReadiness(READINESS_STEPS.finalSync, 'OK');
+        logReadiness('complete', 'SUCCESS');
       }), generation);
   }
 
@@ -638,38 +747,81 @@
   }
 
   function clearAllChatStorage() {
-    var prefixes = [
-      SESSION_KEY,
-      SESSION_META_KEY,
-      SNAPSHOT_PREFIX,
-      ENTRY_CHOICE_KEY,
-      CONSULTATION_KEY,
-      CUSTOMER_NAME_KEY,
-      LIVE_AGENT_KEY,
-      ARCHIVED_IDS_KEY,
-      OPEN_CLOSE_SOUND_KEY,
-    ];
+    clearUserSessionCache([0, getAuthUserId()], { allKnownSessions: true });
+  }
+
+  function storageKeysForUser(userId) {
+    var uid = parseInt(userId, 10) || 0;
+    var keys = [];
+    if (uid > 0) {
+      keys.push(getSessionStorageKeyForUser(uid));
+    } else {
+      keys.push(SESSION_KEY);
+    }
+    return keys;
+  }
+
+  function getSessionStorageKeyForUser(userId) {
+    var uid = parseInt(userId, 10) || 0;
+    return uid > 0 ? SESSION_KEY + '-' + uid : SESSION_KEY;
+  }
+
+  function clearUserSessionCache(userIds, options) {
+    options = options || {};
+    var ids = Array.isArray(userIds) ? userIds : [userIds];
+    var sessionIds = options.sessionIds || [];
+    if (options.sessionId) sessionIds.push(options.sessionId);
+    var seenUsers = {};
+    var seenSessions = {};
     try {
-      var keys = [];
-      var i;
-      for (i = 0; i < localStorage.length; i++) {
-        keys.push(localStorage.key(i));
-      }
-      keys.forEach(function (key) {
-        if (!key) return;
-        prefixes.forEach(function (prefix) {
-          if (key === prefix || key.indexOf(prefix + '-') === 0 || key.indexOf(prefix) === 0) {
+      ids.forEach(function (userId) {
+        var uid = parseInt(userId, 10) || 0;
+        if (seenUsers[uid]) return;
+        seenUsers[uid] = true;
+        storageKeysForUser(uid).forEach(function (key) {
+          localStorage.removeItem(key);
+        });
+        if (uid > 0) {
+          localStorage.removeItem(SESSION_META_KEY + '-' + uid);
+        } else {
+          localStorage.removeItem(SESSION_META_KEY);
+        }
+      });
+      sessionIds.forEach(function (sessionId) {
+        sessionId = String(sessionId || '').trim();
+        if (!sessionId || seenSessions[sessionId]) return;
+        seenSessions[sessionId] = true;
+        localStorage.removeItem(SNAPSHOT_PREFIX + sessionId);
+        localStorage.removeItem(ENTRY_CHOICE_KEY + '-' + sessionId);
+        localStorage.removeItem(CONSULTATION_KEY + '-' + sessionId);
+        localStorage.removeItem(CUSTOMER_NAME_KEY + '-' + sessionId);
+        sessionStorage.removeItem(OPEN_CLOSE_SOUND_KEY + '-' + sessionId);
+      });
+      if (options.allKnownSessions) {
+        var removeKeys = [];
+        var i;
+        for (i = 0; i < localStorage.length; i++) {
+          removeKeys.push(localStorage.key(i));
+        }
+        removeKeys.forEach(function (key) {
+          if (!key) return;
+          if (key.indexOf(SNAPSHOT_PREFIX) === 0
+            || key.indexOf(ENTRY_CHOICE_KEY + '-') === 0
+            || key.indexOf(CONSULTATION_KEY + '-') === 0
+            || key.indexOf(CUSTOMER_NAME_KEY + '-') === 0
+            || key.indexOf(SESSION_KEY) === 0
+            || key.indexOf(SESSION_META_KEY) === 0) {
             localStorage.removeItem(key);
           }
         });
-      });
+      }
       sessionStorage.removeItem(SESSION_KEY);
       sessionStorage.removeItem(LIVE_AGENT_KEY);
-      keys = [];
+      var sessionKeys = [];
       for (i = 0; i < sessionStorage.length; i++) {
-        keys.push(sessionStorage.key(i));
+        sessionKeys.push(sessionStorage.key(i));
       }
-      keys.forEach(function (key) {
+      sessionKeys.forEach(function (key) {
         if (!key) return;
         if (key.indexOf(OPEN_CLOSE_SOUND_KEY + '-') === 0) {
           sessionStorage.removeItem(key);
@@ -677,6 +829,147 @@
       });
     } catch (e) {}
     cachedSessionId = null;
+  }
+
+  function refreshChatAuthNonce() {
+    if (window.PDXAuth && typeof window.PDXAuth.getNonce === 'function') {
+      var freshNonce = window.PDXAuth.getNonce();
+      if (freshNonce && config) config.nonce = freshNonce;
+    }
+    if (window.PDXAuth && typeof window.PDXAuth.refreshSessionNonce === 'function') {
+      return window.PDXAuth.refreshSessionNonce().then(function (ok) {
+        if (window.PDXAuth && typeof window.PDXAuth.getNonce === 'function') {
+          var nonce = window.PDXAuth.getNonce();
+          if (nonce && config) config.nonce = nonce;
+        }
+        if (window.PDXAuth && typeof window.PDXAuth.getUser === 'function' && config) {
+          config.auth = window.PDXAuth.getUser();
+        }
+        return ok !== false;
+      }).catch(function () { return false; });
+    }
+    return Promise.resolve(true);
+  }
+
+  function inferAuthSessionChangeReason(eventDetail, previousUserId, nextUserId) {
+    if (eventDetail && eventDetail.reason) return String(eventDetail.reason);
+    var wasLoggedIn = previousUserId !== null && previousUserId > 0;
+    if (wasLoggedIn && nextUserId <= 0) return 'logout';
+    if (!wasLoggedIn && nextUserId > 0) return 'login';
+    if (wasLoggedIn && nextUserId > 0 && previousUserId !== nextUserId) return 'user_switch';
+    if (wasLoggedIn && nextUserId > 0) return 'session_update';
+    return 'session_update';
+  }
+
+  function stopChatRealtimeTransport() {
+    stopCustomerStream();
+    abortStream();
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  function resetChatConfigSessionMeta() {
+    if (!config) return;
+    config.chatSessionId = '';
+    config.chatSessionHasMessages = false;
+    config.chatMessageCount = 0;
+  }
+
+  function silentRefreshChatSession(reason, options) {
+    options = options || {};
+    if (silentRefreshPromise && !options.force) return silentRefreshPromise;
+
+    var generation = ++silentRefreshGeneration;
+    var previousUserId = typeof options.previousUserId === 'number' ? options.previousUserId : lastAuthUserId;
+    var nextUserId = getAuthUserId();
+    var oldSessionId = cachedSessionId || getSessionId() || (config && config.chatSessionId) || '';
+    logReadiness('silent_refresh', 'BEGIN', {
+      reason: reason || 'session_update',
+      previousUserId: previousUserId,
+      nextUserId: nextUserId,
+      oldSessionId: oldSessionId,
+    });
+
+    silentRefreshPromise = refreshChatAuthNonce().then(function () {
+      if (generation !== silentRefreshGeneration) return false;
+      if (oldSessionId) sendCustomerDisconnectBeacon();
+      stopChatRealtimeTransport();
+      clearUserSessionCache([previousUserId, nextUserId], {
+        sessionIds: [oldSessionId],
+        allKnownSessions: reason === 'logout',
+      });
+      resetChatConfigSessionMeta();
+      cachedSessionId = null;
+      streamEventSince = 0;
+      streamCacheBustNext = true;
+      sessionRestored = false;
+      resetSessionState();
+      lastAuthUserId = nextUserId;
+      updateAuthGateUi();
+
+      if (!canUseChat()) {
+        if (reason === 'logout' || nextUserId <= 0) showAuthGate();
+        return false;
+      }
+
+      hideAuthGate();
+      purgeGuestChatStorage();
+      root.classList.toggle('paxdesign-chat-direct-mode', isPersistentAccountChat());
+      if (isPersistentAccountChat()) {
+        if (entryEl) entryEl.hidden = true;
+        if (quickActions) quickActions.hidden = true;
+      }
+
+      var boot;
+      if (isPersistentAccountChat()) {
+        boot = refreshAuthenticatedChatSession().then(function () {
+          return reopenAuthenticatedSessionIfNeeded();
+        });
+      } else {
+        boot = restoreCustomerSession();
+      }
+
+      return boot.then(function () {
+        if (generation !== silentRefreshGeneration) return false;
+        return fetchSessionFromServer(true, false).then(function () {
+          if (generation !== silentRefreshGeneration) return false;
+          return pollUpdatesOnce(false).then(function () {
+            if (generation !== silentRefreshGeneration) return false;
+            inferEntryChoiceFromHandler();
+            updateEntryUi();
+            updateInputState();
+            updateEndButtonUi();
+            scheduleLivePolling();
+            if (widgetOpen || isPersistentAccountChat()) startCustomerStream();
+            notifyLayout();
+            logReadiness('silent_refresh', 'OK', {
+              reason: reason || 'session_update',
+              sessionId: getSessionId(),
+              handler: chatHandler,
+            });
+            return true;
+          });
+        });
+      });
+    }).catch(function (err) {
+      logReadiness('silent_refresh', 'FAILED', {
+        reason: reason || 'session_update',
+        error: err && err.message ? err.message : err,
+      });
+      return false;
+    }).finally(function () {
+      silentRefreshPromise = null;
+    });
+
+    return silentRefreshPromise;
+  }
+
+  function invalidateAndRefreshChatSession(reason, options) {
+    options = options || {};
+    options.force = true;
+    return silentRefreshChatSession(reason, options);
   }
 
   function resetChatForAuthChange(clearUi) {
@@ -723,53 +1016,58 @@
     } catch (e) {}
   }
 
-  function handleAuthSessionChange() {
-    var newUserId = getAuthUserId();
-    var wasLoggedIn = lastAuthUserId !== null && lastAuthUserId > 0;
-    var userChanged = wasLoggedIn && newUserId > 0 && lastAuthUserId !== newUserId;
-    var loggedOut = wasLoggedIn && newUserId <= 0;
+  function handleAuthSessionChange(event) {
+    var detail = event && event.detail ? event.detail : {};
+    var previousUserId = lastAuthUserId;
+    var nextUserId = getAuthUserId();
+    var reason = inferAuthSessionChangeReason(detail, previousUserId, nextUserId);
+    var wasLoggedIn = previousUserId !== null && previousUserId > 0;
+    var loggedOut = wasLoggedIn && nextUserId <= 0;
 
-    if (loggedOut || (!canUseChat() && wasLoggedIn)) {
-      sendCustomerDisconnectBeacon();
-      clearAllChatStorage();
-      resetChatForAuthChange(true);
-      lastAuthUserId = 0;
+    if (loggedOut || reason === 'logout') {
+      cancelChatReadiness();
+      invalidateAndRefreshChatSession('logout', {
+        previousUserId: previousUserId,
+        force: true,
+      });
+      return;
+    }
+
+    if (!canUseChat() && wasLoggedIn) {
+      cancelChatReadiness();
+      invalidateAndRefreshChatSession('logout', {
+        previousUserId: previousUserId,
+        force: true,
+      });
+      return;
+    }
+
+    if (reason === 'session_update') {
+      lastAuthUserId = nextUserId;
       updateAuthGateUi();
-      if (!canUseChat()) showAuthGate();
+      if (canUseChat()) hideAuthGate();
       return;
     }
 
-    if (userChanged || (newUserId > 0 && !wasLoggedIn)) {
-      if (wasLoggedIn) sendCustomerDisconnectBeacon();
-      clearAllChatStorage();
-      resetChatForAuthChange(true);
-      lastAuthUserId = newUserId;
-      hideAuthGate();
-      if (widgetOpen) {
-        beginChatReadiness({ reuseSession: false, force: true });
-      } else {
-        refreshAuthenticatedChatSession().then(function () {
-          updateEntryUi();
-          scheduleLivePolling();
-        });
-      }
+    var shouldRefresh = reason === 'login'
+      || reason === 'logout'
+      || reason === 'user_switch'
+      || reason === 'new_conversation'
+      || reason === 'verification'
+      || (wasLoggedIn !== (nextUserId > 0))
+      || (wasLoggedIn && nextUserId > 0 && previousUserId !== nextUserId);
+
+    if (shouldRefresh) {
+      cancelChatReadiness();
+      invalidateAndRefreshChatSession(reason, {
+        previousUserId: previousUserId,
+        force: true,
+      });
       return;
     }
 
-    lastAuthUserId = newUserId;
+    lastAuthUserId = nextUserId;
     updateAuthGateUi();
-    if (canUseChat()) {
-      hideAuthGate();
-      purgeGuestChatStorage();
-      if (widgetOpen) {
-        beginChatReadiness({ reuseSession: false, force: true });
-      } else {
-        refreshAuthenticatedChatSession().then(function () {
-          updateEntryUi();
-          scheduleLivePolling();
-        });
-      }
-    }
   }
 
   function isLoggedIn() {
@@ -825,7 +1123,7 @@
     }
     if (!window.__paxChatAuthSessionBound) {
       window.__paxChatAuthSessionBound = true;
-      window.addEventListener('pdx-session-updated', function () {
+      window.addEventListener('pdx-session-updated', function (event) {
         if (config && window.PDXAuth && typeof window.PDXAuth.getUser === 'function') {
           config.auth = window.PDXAuth.getUser();
         }
@@ -833,7 +1131,15 @@
           var freshNonce = window.PDXAuth.getNonce();
           if (freshNonce) config.nonce = freshNonce;
         }
-        handleAuthSessionChange();
+        handleAuthSessionChange(event);
+      });
+      window.addEventListener('pdx-chat-session-invalidate', function (event) {
+        var detail = event && event.detail ? event.detail : {};
+        cancelChatReadiness();
+        invalidateAndRefreshChatSession(detail.reason || 'new_conversation', {
+          previousUserId: lastAuthUserId,
+          force: true,
+        });
       });
     }
     updateAuthGateUi();
@@ -1588,8 +1894,9 @@
   }
 
   function fetchSessionFromServer(full, strict) {
+    var step = READINESS_STEPS.history;
     if (!config.ajaxUrl) {
-      if (strict) return Promise.reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+      if (strict) return readinessReject(step, 'network', 'readinessNetworkFailed', { reason: 'missing_ajax_url' });
       return Promise.resolve(false);
     }
     if (full && isPersistentAccountChat()) {
@@ -1608,10 +1915,15 @@
     formData.append('since', '0');
     if (full) formData.append('full', '1');
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return safeJson(res); })
-      .then(function (json) {
+      .then(function (res) { return safeJson(res).then(function (json) { return { res: res, json: json }; }); })
+      .then(function (result) {
+        var json = result.json;
+        if (handleAuthGateResponse(json)) {
+          if (strict) return readinessReject(step, 'auth', 'readinessAuthFailed', { reason: 'login_required' });
+          return false;
+        }
         if (!json || !json.success || !json.data) {
-          if (strict) return Promise.reject({ code: 'backend', messageKey: 'readinessNetworkFailed' });
+          if (strict) return Promise.reject(classifyChatAjaxFailure(step, json, result.res, 'backend'));
           return false;
         }
         var data = json.data;
@@ -1619,7 +1931,7 @@
           clearAllChatStorage();
           resetChatForAuthChange(true);
           refreshAuthenticatedChatSession();
-          if (strict) return Promise.reject({ code: 'auth', messageKey: 'readinessAuthFailed' });
+          if (strict) return readinessReject(step, 'auth', 'readinessAuthFailed', { reason: 'auth_user_mismatch' });
           return false;
         }
         if (data.session_id) {
@@ -1649,8 +1961,14 @@
         lastReadinessPollAt = Date.now();
         return true;
       })
-      .catch(function () {
-        if (strict) return Promise.reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+      .catch(function (err) {
+        if (strict) {
+          if (err && err.step) return Promise.reject(err);
+          return Promise.reject(readinessFailure(step, 'network', 'readinessNetworkFailed', {
+            reason: 'fetch_failed',
+            message: err && err.message ? String(err.message) : 'unknown',
+          }));
+        }
         return false;
       });
   }
@@ -2495,11 +2813,16 @@
         return;
       }
       window.PDXAuth.customerApiFetch('POST', '/customer/chat/session', { new_conversation: true }).then(function (data) {
+        if (data && data.session_id && config) {
+          config.chatSessionId = data.session_id;
+          config.chatSessionHasMessages = false;
+          config.chatMessageCount = 0;
+        }
         if (data && data.session_id) {
-          adoptSessionId(data.session_id, { fromServer: true, preserveUi: false });
-          resetSessionState();
-          fetchSessionFromServer(true);
-          startLivePolling();
+          invalidateAndRefreshChatSession('new_conversation', {
+            previousUserId: lastAuthUserId,
+            force: true,
+          });
         }
       });
       return;
@@ -2568,8 +2891,9 @@
   }
 
   function pollUpdatesOnce(strict) {
+    var step = strict ? READINESS_STEPS.sync : READINESS_STEPS.finalSync;
     if (!config.ajaxUrl || !canUseChat()) {
-      if (strict) return Promise.reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+      if (strict) return readinessReject(step, 'network', 'readinessNetworkFailed', { reason: 'poll_unavailable' });
       return Promise.resolve(null);
     }
     var formData = new FormData();
@@ -2580,21 +2904,28 @@
     formData.append('since', String(pollSeq));
 
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return safeJson(res); })
-      .then(function (json) {
+      .then(function (res) { return safeJson(res).then(function (json) { return { res: res, json: json }; }); })
+      .then(function (result) {
+        var json = result.json;
         if (handleAuthGateResponse(json)) {
-          if (strict) return Promise.reject({ code: 'auth', messageKey: 'readinessAuthFailed' });
+          if (strict) return readinessReject(step, 'auth', 'readinessAuthFailed', { reason: 'login_required' });
           return null;
         }
         if (!json || !json.success || !json.data) {
-          if (strict) return Promise.reject({ code: 'backend', messageKey: 'readinessNetworkFailed' });
+          if (strict) return Promise.reject(classifyChatAjaxFailure(step, json, result.res, 'backend'));
           return null;
         }
         applyPollPayload(json.data);
         return json.data;
       })
       .catch(function (err) {
-        if (strict) return Promise.reject({ code: 'network', messageKey: 'readinessNetworkFailed' });
+        if (strict) {
+          if (err && err.step) return Promise.reject(err);
+          return Promise.reject(readinessFailure(step, 'network', 'readinessNetworkFailed', {
+            reason: 'poll_fetch_failed',
+            message: err && err.message ? String(err.message) : 'unknown',
+          }));
+        }
         return null;
       });
   }
