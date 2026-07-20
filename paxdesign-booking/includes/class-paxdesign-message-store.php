@@ -148,6 +148,7 @@ class PAXdesign_Message_Store {
                 'Chat-Session gestartet.' => 'sys:session_started',
                 'Dieser Chat wurde geschlossen. Sie können jederzeit ein neues Gespräch starten.' => 'sys:chat_closed',
                 'Der Kunde hat das Gespräch beendet.' => 'sys:customer_closed',
+                'Der KI-Assistent ist wieder für Sie da. Schreiben Sie jederzeit weiter.' => 'sys:customer_released_to_ai',
                 'Der KI-Assistent übernimmt den Chat wieder.' => 'sys:ai_reclaimed',
                 'Ein PAXDesign-Mitarbeiter wurde informiert. Bitte bleiben Sie kurz im Chat.' => 'sys:live_agent_notified',
                 'Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter.' => 'sys:live_transfer_thanks',
@@ -410,6 +411,23 @@ class PAXdesign_Message_Store {
         return (int) $wpdb->get_var($wpdb->prepare(
             "SELECT COUNT(*) FROM $table WHERE session_id = %s",
             sanitize_text_field($session_id)
+        ));
+    }
+
+    /**
+     * Staff/assistant messages the customer has not read yet.
+     */
+    public static function count_unread_staff_messages($session_id, $user_read_seq = 0) {
+        global $wpdb;
+        self::maybe_upgrade();
+        self::migrate_customer_session_if_needed($session_id, 'customer');
+        $table = self::messages_table();
+        $session_id = sanitize_text_field($session_id);
+        $user_read_seq = max(0, (int) $user_read_seq);
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(*) FROM $table WHERE session_id = %s AND channel = 'customer' AND role IN ('admin', 'assistant') AND msg_seq > %d",
+            $session_id,
+            $user_read_seq
         ));
     }
 

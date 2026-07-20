@@ -167,6 +167,7 @@ $tour_done     = (bool) get_user_meta(get_current_user_id(), 'pax_live_dashboard
         <div class="pax-live-dashboard__chat-footer">
           <div class="pax-live-dashboard__actions">
             <button type="button" class="pax-live-btn pax-live-btn--primary" id="paxLiveChatTakeover">Übernehmen</button>
+            <button type="button" class="pax-live-btn pax-live-btn--ghost" id="paxLiveChatDecline" hidden>Ablehnen</button>
             <button type="button" class="pax-live-btn pax-live-btn--ghost" id="paxLiveChatRelease" hidden>An KI zurückgeben</button>
             <button type="button" class="pax-live-btn pax-live-btn--primary" id="paxLiveChatReopen" hidden>Chat wieder öffnen</button>
             <button type="button" class="pax-live-btn pax-live-btn--danger" id="paxLiveChatClose">Chat schließen</button>

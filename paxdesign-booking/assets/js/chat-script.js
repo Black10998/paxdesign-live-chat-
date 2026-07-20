@@ -846,10 +846,20 @@
           seenMsgId(json.data.message.id);
           renderMessageDom(json.data.message.role, json.data.message.content, json.data.message.id, { skipPush: true });
         }
-        applyHandlerState('closed', '');
-        customerEndedChat = true;
-        showRatingUi();
-        archiveClosedSession();
+        var nextHandler = (json.data && json.data.handler) ? json.data.handler : 'closed';
+        if (nextHandler === 'ai' && isPersistentAccountChat()) {
+          applyHandlerState('ai', '');
+          customerEndedChat = false;
+          saveSessionSnapshot();
+          startCustomerStream();
+          return;
+        }
+        applyHandlerState(nextHandler, '');
+        if (nextHandler === 'closed') {
+          customerEndedChat = true;
+          showRatingUi();
+          archiveClosedSession();
+        }
         saveSessionSnapshot();
       })
       .catch(function () { showError('Verbindungsfehler beim Beenden.'); });

@@ -634,12 +634,11 @@ class PAXdesign_Customer_Chat_Bridge {
         if ($user_id <= 0 || $session_id === '' || !self::user_owns_session($user_id, $session_id)) {
             return new WP_Error('forbidden', __('Invalid session.', 'paxdesign-booking'), array('status' => 403));
         }
-        $session_id = self::ensure_persistent_session_open($session_id, $user_id);
         $live = PAXdesign_Chat_Live::get_instance();
-        return array(
-            'handler'    => $live->get_handler($session_id),
-            'session_id' => $session_id,
-            'ok'         => true,
-        );
+        $result = $live->customer_release_to_ai($session_id, $user_id);
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        return array_merge($result, array('ok' => true));
     }
 }

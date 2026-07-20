@@ -153,6 +153,7 @@ struct UiverseMenuBarItem: Identifiable {
     let tag: Int
     let icon: String
     let title: String
+    var badge: Int = 0
 
     var id: Int { tag }
 }
@@ -204,16 +205,28 @@ struct UiverseMenuBarView: View {
             selection = item.tag
             PAXHaptics.light()
         } label: {
-            VStack(spacing: UiverseMenuMetrics.labelMarginTop) {
-                PAXIcon(
-                    item.icon,
-                    size: .tab,
-                    tint: isActive ? palette.activeColor : palette.inactiveColor
-                )
-                Text(item.title)
-                    .font(.system(size: UiverseMenuMetrics.labelFontSize, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+            ZStack(alignment: .topTrailing) {
+                VStack(spacing: UiverseMenuMetrics.labelMarginTop) {
+                    PAXIcon(
+                        item.icon,
+                        size: .tab,
+                        tint: isActive ? palette.activeColor : palette.inactiveColor
+                    )
+                    Text(item.title)
+                        .font(.system(size: UiverseMenuMetrics.labelFontSize, weight: .semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                if item.badge > 0 {
+                    Text(item.badge > 99 ? "99+" : "\(item.badge)")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, item.badge > 9 ? 4 : 3)
+                        .padding(.vertical, 2)
+                        .background(Color.red)
+                        .clipShape(Capsule())
+                        .offset(x: 8, y: -2)
+                }
             }
             .foregroundStyle(isActive ? palette.activeColor : palette.inactiveColor)
             .frame(maxWidth: .infinity)
