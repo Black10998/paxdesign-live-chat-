@@ -95,6 +95,26 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
             Termin buchen
           </button>
         </div>
+
+        <?php if (get_option('paxdesign_customer_require_login_for_chat', '1') === '1') : ?>
+        <div class="paxdesign-booking-chat-auth-gate" id="paxdesignChatAuthGate" hidden>
+          <button type="button" class="paxdesign-booking-chat-auth-gate-close" id="paxdesignChatAuthClose" aria-label="<?php echo esc_attr__('Close', 'paxdesign-booking'); ?>">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+          <div class="paxdesign-booking-chat-auth-gate-inner" role="region" aria-labelledby="paxdesignChatAuthGateTitle">
+            <div class="paxdesign-booking-chat-auth-gate-intro">
+              <h3 class="paxdesign-booking-chat-auth-gate-title" id="paxdesignChatAuthGateTitle"><?php echo esc_html__('Continue to Live Chat', 'paxdesign-booking'); ?></h3>
+              <p class="paxdesign-booking-chat-auth-gate-sub" id="paxdesignChatAuthGateSubtitle"><?php echo esc_html__('Sign in or create a free account to message our team.', 'paxdesign-booking'); ?></p>
+              <p class="paxdesign-booking-chat-auth-gate-verify" id="paxdesignChatAuthGateVerify" hidden><?php echo esc_html__('Verify your email to start chatting.', 'paxdesign-booking'); ?></p>
+            </div>
+            <div class="paxdesign-booking-chat-auth-actions" id="paxdesignChatAuthActions">
+              <button type="button" class="paxdesign-booking-chat-auth-gate-btn" id="paxdesignChatAuthSignIn" data-auth-view="login"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></button>
+              <button type="button" class="paxdesign-booking-chat-auth-gate-btn paxdesign-booking-chat-auth-gate-btn--primary" id="paxdesignChatAuthRegister" data-auth-view="register"><?php echo esc_html__('Create Account', 'paxdesign-booking'); ?></button>
+            </div>
+            <div class="paxdesign-booking-chat-auth-inline" id="paxdesignChatAuthInline" aria-live="polite"></div>
+          </div>
+        </div>
+        <?php endif; ?>
         <?php endif; ?>
 
         <!-- Booking Mode -->
@@ -331,27 +351,6 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
         <?php if (PAXdesign_Chat::get_instance()->is_enabled()) : ?>
         <!-- AI Chat Mode -->
         <div class="paxdesign-booking-mode-panel paxdesign-is-active" id="paxdesignChatPanel" data-mode="chat" role="tabpanel" aria-hidden="false">
-
-          <div class="paxdesign-booking-chat-auth-gate" id="paxdesignChatAuthGate" hidden>
-            <button type="button" class="paxdesign-booking-chat-auth-gate-close" id="paxdesignChatAuthClose" aria-label="<?php echo esc_attr__('Close', 'paxdesign-booking'); ?>">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            </button>
-            <div class="paxdesign-booking-chat-auth-gate-inner" role="region" aria-labelledby="paxdesignChatAuthGateTitle">
-              <div class="paxdesign-booking-chat-auth-gate-intro">
-                <div class="paxdesign-booking-chat-auth-gate-icon" aria-hidden="true">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
-                </div>
-                <h3 class="paxdesign-booking-chat-auth-gate-title" id="paxdesignChatAuthGateTitle"><?php echo esc_html__('Continue to Live Chat', 'paxdesign-booking'); ?></h3>
-                <p class="paxdesign-booking-chat-auth-gate-sub" id="paxdesignChatAuthGateSubtitle"><?php echo esc_html__('Sign in or create a free account to message our team.', 'paxdesign-booking'); ?></p>
-                <p class="paxdesign-booking-chat-auth-gate-verify" id="paxdesignChatAuthGateVerify" hidden><?php echo esc_html__('Verify your email to start chatting.', 'paxdesign-booking'); ?></p>
-              </div>
-              <div class="paxdesign-booking-chat-auth-actions" id="paxdesignChatAuthActions">
-                <button type="button" class="paxdesign-booking-chat-auth-gate-btn" id="paxdesignChatAuthSignIn" data-auth-view="login"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></button>
-                <button type="button" class="paxdesign-booking-chat-auth-gate-btn paxdesign-booking-chat-auth-gate-btn--primary" id="paxdesignChatAuthRegister" data-auth-view="register"><?php echo esc_html__('Create Account', 'paxdesign-booking'); ?></button>
-              </div>
-              <div class="paxdesign-booking-chat-auth-inline" id="paxdesignChatAuthInline" aria-live="polite"></div>
-            </div>
-          </div>
 
           <div class="paxdesign-booking-chat-readiness" id="paxdesignChatReadiness" hidden aria-live="polite" aria-busy="true">
             <div class="paxdesign-booking-chat-readiness-panel">

@@ -1396,6 +1396,10 @@ class PAXdesign_Chat_Live {
         if ($user_id > 0) {
             $data['auth_user_id'] = $user_id;
         }
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, private, max-age=0');
+            header('Pragma: no-cache');
+        }
         wp_send_json_success($data);
     }
 

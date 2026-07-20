@@ -111,8 +111,9 @@
     return code === 'rest_cookie_invalid_nonce' || code === 'rest_invalid_nonce';
   }
 
-  function applySession(data) {
+  function applySession(data, meta) {
     if (!data) return;
+    meta = meta || {};
     if (data.nonce) C.nonce = data.nonce;
     var u = data.user || data;
     if (u.logged_in !== undefined) {
@@ -125,7 +126,10 @@
     }
     updateAuthBar();
     try {
-      window.dispatchEvent(new CustomEvent('pdx-session-updated', { detail: user }));
+      var detail = Object.assign({}, user || {}, {
+        reason: meta.reason || '',
+      });
+      window.dispatchEvent(new CustomEvent('pdx-session-updated', { detail: detail }));
     } catch (e) {}
   }
 
@@ -195,9 +199,10 @@
     });
   }
 
-  function refreshUser() {
+  function refreshUser(meta) {
+    meta = meta || {};
     return apiFetch('GET', '/auth/me').then(function (data) {
-      applySession(data);
+      applySession(data, { reason: meta.reason || 'session_update' });
       return user;
     });
   }
@@ -454,7 +459,7 @@
         applySession({
           nonce: data.nonce,
           user: data.user || { logged_in: false, verified: false, display_name: '', email: '', id: 0 },
-        });
+        }, { reason: 'logout' });
       } else {
         user = { logged_in: false, verified: false };
         C.isLoggedIn = false;
@@ -754,7 +759,7 @@
           showFormMessage(normalizeRestMessage(data), 'error');
           return;
         }
-        applySession({ user: data.user || user, nonce: data.nonce });
+        applySession({ user: data.user || user, nonce: data.nonce }, { reason: 'login' });
         var inline = finishAuthSuccess();
         if (!inline) notify(data.message || 'Logged in.', 'info');
         var mod = returnModule;
@@ -823,7 +828,7 @@
     }
     if (params.get('pdx_auth') === 'verified') {
       notify(decodeURIComponent(params.get('pdx_msg') || 'Email verified!'), 'info');
-      refreshUser();
+      refreshUser({ reason: 'verification' });
       cleanUrl();
     }
     if (params.get('pdx_auth') === 'verify_failed') {
