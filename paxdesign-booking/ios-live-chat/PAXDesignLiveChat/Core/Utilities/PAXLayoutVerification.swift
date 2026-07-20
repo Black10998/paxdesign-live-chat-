@@ -65,7 +65,7 @@ private struct CustomerLayoutVerificationShell: View {
 }
 
 extension AdminProfile {
-    fileprivate static var layoutVerificationStub: AdminProfile {
+    static var layoutVerificationStub: AdminProfile {
         let json = """
         {
           "user_id": 1,
