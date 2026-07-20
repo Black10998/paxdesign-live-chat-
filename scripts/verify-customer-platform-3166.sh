@@ -36,7 +36,7 @@ if [[ -n "$ADMIN_USER" && -n "$ADMIN_PASS" ]]; then
   pass "Staff sync exposes unread badge fields (last_role, needs_reply)"
 
   notif_code="$(curl -sS -o /tmp/cx-notif.json -w '%{http_code}' -u "${ADMIN_USER}:${ADMIN_PASS}" \
-    "$SITE/wp-json/paxdesign/v1/platform/notifications")"
+    "$SITE/wp-json/paxdesign/v1/live-admin/platform/notifications")"
   [ "$notif_code" = "200" ] || fail "platform/notifications returned HTTP $notif_code"
   grep -q '"unread_chats"' /tmp/cx-notif.json || fail "platform/notifications missing unread_chats"
   pass "Platform notifications summary reachable"
