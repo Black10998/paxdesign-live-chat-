@@ -555,7 +555,6 @@ struct CustomerChatView: View {
                 }
             }
             .refreshable { await refresh(full: true) }
-        }
     }
 
     private var chatComposer: some View {
