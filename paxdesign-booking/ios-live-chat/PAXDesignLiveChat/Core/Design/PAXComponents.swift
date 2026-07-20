@@ -480,46 +480,10 @@ enum PAXShellLayout {
             .first(where: \.isKeyWindow)?
             .safeAreaInsets.bottom ?? 0
     }
-
-    static var uiverseMenuScrollInset: CGFloat {
-        UiverseMenuMetrics.scrollInset
-    }
-
-    /// Full obstruction from the bottom edge: tab bar chrome + home indicator + breathing room.
-    static var tabBarScrollInset: CGFloat {
-        uiverseMenuScrollInset
-    }
-
-    static var tabBarReservedHeight: CGFloat {
-        tabBarScrollInset
-    }
-
-    /// Extra scroll padding for detail screens without the tab bar.
-    static func scrollBottomPadding(tabBarVisible: Bool) -> CGFloat {
-        if tabBarVisible {
-            return tabBarScrollInset
-        }
-        return max(bottomSafeArea, 12) + 8
-    }
-}
-
-private struct ShellTabBarScrollInsetKey: EnvironmentKey {
-    static let defaultValue: CGFloat = 0
-}
-
-extension EnvironmentValues {
-    var shellTabBarScrollInset: CGFloat {
-        get { self[ShellTabBarScrollInsetKey.self] }
-        set { self[ShellTabBarScrollInsetKey.self] = newValue }
-    }
 }
 
 private struct ShellTabBarVisibleKey: EnvironmentKey {
     static let defaultValue = false
-}
-
-private struct ShellMenuScrollStateKey: EnvironmentKey {
-    static let defaultValue: UiverseMenuScrollState? = nil
 }
 
 extension EnvironmentValues {
@@ -527,52 +491,59 @@ extension EnvironmentValues {
         get { self[ShellTabBarVisibleKey.self] }
         set { self[ShellTabBarVisibleKey.self] = newValue }
     }
-
-    var shellMenuScrollState: UiverseMenuScrollState? {
-        get { self[ShellMenuScrollStateKey.self] }
-        set { self[ShellMenuScrollStateKey.self] = newValue }
-    }
 }
 
-private struct ShellScrollClearanceModifier: ViewModifier {
-    @Environment(\.shellTabBarVisible) private var tabBarVisible
-    @Environment(\.shellTabBarScrollInset) private var tabBarScrollInset
-    @Environment(\.shellMenuScrollState) private var menuScrollState
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+/// Participates in layout via `safeAreaInset` so ScrollViews, Lists, and composers
+/// receive correct bottom insets automatically (overlay tab bars do not).
+private struct PAXShellBottomTabBarModifier: ViewModifier {
+    let isVisible: Bool
+    let items: [UiverseMenuBarItem]
+    @Binding var selection: Int
+    let reduceMotion: Bool
+    @ObservedObject var scrollState: UiverseMenuScrollState
 
     func body(content: Content) -> some View {
-        let padding: CGFloat = {
-            if tabBarScrollInset > 0 { return tabBarScrollInset }
-            return PAXShellLayout.scrollBottomPadding(tabBarVisible: tabBarVisible)
-        }()
-
-        // Always pad when the overlay tab bar (or detail breathing room) needs space.
-        // Also keep the scroll tracker mounted so the bar can compress while scrolling.
-        Group {
-            if padding > 0 {
-                content.safeAreaInset(edge: .bottom, spacing: 0) {
-                    Color.clear
-                        .frame(height: padding)
-                        .accessibilityHidden(true)
+        content
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if isVisible {
+                    UiverseMenuBarView(
+                        items: items,
+                        selection: $selection,
+                        reduceMotion: reduceMotion
+                    )
+                    .scaleEffect(scrollState.barScale, anchor: .bottom)
+                    .padding(.horizontal, UiverseMenuMetrics.horizontalMargin)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-            } else {
-                content
             }
-        }
-        .background {
-            if let menuScrollState, tabBarVisible {
-                PAXShellScrollOffsetTracker(
-                    scrollState: menuScrollState,
-                    reduceMotion: reduceMotion
-                )
+            .background {
+                if isVisible {
+                    PAXShellScrollOffsetTracker(
+                        scrollState: scrollState,
+                        reduceMotion: reduceMotion
+                    )
+                }
             }
-        }
     }
 }
 
 extension View {
-    func paxShellScrollClearance() -> some View {
-        modifier(ShellScrollClearanceModifier())
+    func paxShellBottomTabBar(
+        isVisible: Bool,
+        items: [UiverseMenuBarItem],
+        selection: Binding<Int>,
+        reduceMotion: Bool,
+        scrollState: UiverseMenuScrollState
+    ) -> some View {
+        modifier(
+            PAXShellBottomTabBarModifier(
+                isVisible: isVisible,
+                items: items,
+                selection: selection,
+                reduceMotion: reduceMotion,
+                scrollState: scrollState
+            )
+        )
     }
 
     /// Replaces the system pull-to-refresh spinner with the premium skeleton loading UI.

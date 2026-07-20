@@ -818,14 +818,14 @@ struct CustomerNotificationsView: View {
     private func markAllRead() async {
         guard let ids = response?.items.filter({ !$0.is_read }).map(\.id), !ids.isEmpty else { return }
         try? await api.markNotificationsRead(ids: ids)
-        CustomerNotificationsBadgeStore.shared.clearAfterMarkAllRead()
+        CustomerNotificationsBadgeStore.shared.clearAfterMarkAllRead(ids: ids)
         await load()
     }
 
     private func openNotification(_ item: CustomerNotificationItem) async {
         if !item.is_read {
             try? await api.markNotificationsRead(ids: [item.id])
-            CustomerNotificationsBadgeStore.shared.decrementAfterRead()
+            CustomerNotificationsBadgeStore.shared.markReadLocally(ids: [item.id])
             await load()
         }
         if let link = CustomerDeepLink(notificationItem: item) {

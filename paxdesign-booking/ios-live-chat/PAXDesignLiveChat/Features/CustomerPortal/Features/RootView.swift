@@ -81,27 +81,19 @@ struct CustomerTabView: View {
                 CustomerMoreView()
             }
         }
-        // Overlay + explicit scroll clearance is the reliable model for ZStack tab shells.
-        // Nested safeAreaInset for the tab bar does not consistently expand ScrollView/List insets.
-        .overlay(alignment: .bottom) {
-            UiverseMenuBarView(
-                items: menuItems,
-                selection: Binding(
-                    get: { navigation.selectedTab.rawValue },
-                    set: { newValue in
-                        navigation.selectedTab = CustomerPortalTab(rawValue: newValue) ?? .home
-                    }
-                ),
-                reduceMotion: reduceMotion
-            )
-            .scaleEffect(menuScrollState.barScale, anchor: .bottom)
-            .padding(.horizontal, UiverseMenuMetrics.horizontalMargin)
-            .padding(.bottom, UiverseMenuMetrics.homeIndicatorGap)
-            .ignoresSafeArea(edges: .bottom)
-        }
+        .paxShellBottomTabBar(
+            isVisible: true,
+            items: menuItems,
+            selection: Binding(
+                get: { navigation.selectedTab.rawValue },
+                set: { newValue in
+                    navigation.selectedTab = CustomerPortalTab(rawValue: newValue) ?? .home
+                }
+            ),
+            reduceMotion: reduceMotion,
+            scrollState: menuScrollState
+        )
         .environment(\.shellTabBarVisible, true)
-        .environment(\.shellTabBarScrollInset, PAXShellLayout.uiverseMenuScrollInset)
-        .environment(\.shellMenuScrollState, menuScrollState)
         .onChange(of: navigation.selectedTab) { tab in
             loadedTabs.insert(tab.rawValue)
             PAXHaptics.light()
@@ -118,7 +110,6 @@ struct CustomerTabView: View {
     private func customerTabPane<Content: View>(_ tab: CustomerPortalTab, @ViewBuilder content: () -> Content) -> some View {
         if loadedTabs.contains(tab.rawValue) {
             content()
-                .paxShellScrollClearance()
                 .opacity(navigation.selectedTab == tab ? 1 : 0)
                 .allowsHitTesting(navigation.selectedTab == tab)
                 .accessibilityHidden(navigation.selectedTab != tab)

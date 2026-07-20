@@ -1,5 +1,49 @@
 import Foundation
 import SwiftUI
+import UserNotifications
+
+/// Persists read notification IDs per customer account so cleared badges stay cleared
+/// across app updates and offline/server lag until genuinely new unread items arrive.
+@MainActor
+enum CustomerNotificationReadStore {
+    private static let storageKey = "pax.customer.readNotificationIdsByUser"
+    private static let maxIdsPerUser = 500
+
+    static func isRead(userId: Int, notificationId: Int) -> Bool {
+        guard userId > 0, notificationId > 0 else { return false }
+        return load()[String(userId)]?.contains(notificationId) == true
+    }
+
+    static func markRead(userId: Int, ids: [Int]) {
+        guard userId > 0 else { return }
+        let cleaned = ids.filter { $0 > 0 }
+        guard !cleaned.isEmpty else { return }
+
+        var map = load()
+        var set = Set(map[String(userId)] ?? [])
+        cleaned.forEach { set.insert($0) }
+        if set.count > maxIdsPerUser {
+            set = Set(set.sorted().suffix(maxIdsPerUser))
+        }
+        map[String(userId)] = Array(set)
+        save(map)
+    }
+
+    static func clearUser(_ userId: Int) {
+        guard userId > 0 else { return }
+        var map = load()
+        map.removeValue(forKey: String(userId))
+        save(map)
+    }
+
+    private static func load() -> [String: [Int]] {
+        UserDefaults.standard.dictionary(forKey: storageKey) as? [String: [Int]] ?? [:]
+    }
+
+    private static func save(_ map: [String: [Int]]) {
+        UserDefaults.standard.set(map, forKey: storageKey)
+    }
+}
 
 @MainActor
 final class CustomerNotificationsBadgeStore: ObservableObject {
@@ -8,14 +52,28 @@ final class CustomerNotificationsBadgeStore: ObservableObject {
     @Published private(set) var unreadCount = 0
 
     private var refreshTask: Task<Void, Never>?
+    private var activeUserId = 0
 
     private init() {}
 
+    func bindUser(_ userId: Int) {
+        guard userId > 0 else { return }
+        activeUserId = userId
+    }
+
     func refresh(api: CustomerAPIClient) async {
+        let userId = AuthStore.shared.customerProfile?.id ?? activeUserId
+        guard userId > 0 else {
+            unreadCount = 0
+            PAXApplicationBadge.clear()
+            return
+        }
+        activeUserId = userId
+
         do {
             let response = try await api.fetchNotifications(unreadOnly: true)
-            unreadCount = max(0, response.unread_count)
-            UNUserNotificationCenter.current().setBadgeCount(unreadCount) { _ in }
+            let visibleUnread = response.items.filter { !CustomerNotificationReadStore.isRead(userId: userId, notificationId: $0.id) }
+            applyUnreadCount(visibleUnread.count)
         } catch {
             #if DEBUG
             print("Customer notification badge refresh failed: \(error.localizedDescription)")
@@ -30,23 +88,25 @@ final class CustomerNotificationsBadgeStore: ObservableObject {
         }
     }
 
-    func decrementAfterRead() {
-        unreadCount = max(0, unreadCount - 1)
-        UNUserNotificationCenter.current().setBadgeCount(unreadCount) { _ in }
+    func markReadLocally(ids: [Int]) {
+        guard activeUserId > 0 else { return }
+        CustomerNotificationReadStore.markRead(userId: activeUserId, ids: ids)
+        let newlyRead = ids.filter { $0 > 0 }.count
+        if newlyRead > 0 {
+            applyUnreadCount(max(0, unreadCount - newlyRead))
+        }
     }
 
-    func incrementUnread() {
-        unreadCount += 1
-        UNUserNotificationCenter.current().setBadgeCount(unreadCount) { _ in }
+    func clearAfterMarkAllRead(ids: [Int]) {
+        markReadLocally(ids: ids)
+        applyUnreadCount(0)
     }
 
-    func clearAfterMarkAllRead() {
-        unreadCount = 0
-        UNUserNotificationCenter.current().setBadgeCount(0) { _ in }
+    private func applyUnreadCount(_ count: Int) {
+        unreadCount = max(0, count)
+        PAXApplicationBadge.sync(total: unreadCount)
     }
 }
-
-import UserNotifications
 
 struct CustomerNotificationBellButton: View {
     @EnvironmentObject private var api: CustomerAPIClient
@@ -86,6 +146,9 @@ struct CustomerNotificationBellButton: View {
         )
         .task(id: AuthStore.shared.sessionEpoch) {
             guard AuthStore.shared.isLoggedIn, AuthStore.shared.isCustomerSession else { return }
+            if let userId = AuthStore.shared.customerProfile?.id {
+                badgeStore.bindUser(userId)
+            }
             badgeStore.scheduleRefresh(api: api)
         }
     }

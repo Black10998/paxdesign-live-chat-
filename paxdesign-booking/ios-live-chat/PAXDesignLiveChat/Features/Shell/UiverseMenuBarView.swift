@@ -35,8 +35,7 @@ enum UiverseMenuMetrics {
         menuPadding * 2 + itemHeight
     }
 
-    /// Full scroll clearance: menu chrome + home-indicator gap + breathing room.
-    /// Used with overlay tab bars (safeAreaInset alone is unreliable in ZStack shells).
+    /// Reserved for legacy references; layout clearance is handled by shell safeAreaInset.
     static var scrollInset: CGFloat {
         menuHeight + homeIndicatorGap + 12
     }

@@ -490,7 +490,7 @@ struct CustomerChatView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        // Composer as safeAreaInset stacks above the shell tab-bar clearance Color.clear pad.
+        // Composer stacks above the shell tab bar via nested safeAreaInsets.
         .safeAreaInset(edge: .bottom, spacing: 0) {
             chatComposer
         }
