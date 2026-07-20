@@ -569,6 +569,7 @@ class PAXdesign_Chat_Live {
             array('customer_language', "varchar(8) NOT NULL DEFAULT ''", 'last_preview'),
             array('user_read_seq', 'int(10) unsigned NOT NULL DEFAULT 0', 'customer_language'),
             array('admin_read_seq', 'int(10) unsigned NOT NULL DEFAULT 0', 'user_read_seq'),
+            array('wp_user_id', 'bigint(20) unsigned NOT NULL DEFAULT 0', 'admin_read_seq'),
         );
 
         foreach ($columns as $col) {
@@ -2901,8 +2902,7 @@ class PAXdesign_Chat_Live {
                     session_rating, detected_service, updated_at, message_count, message_seq,
                     last_preview, customer_language, user_read_seq, admin_read_seq, wp_user_id
              FROM $table
-             WHERE COALESCE(wp_user_id, 0) > 0
-                OR session_id LIKE 'pax_u%'
+             WHERE session_id LIKE 'pax_u%'
              ORDER BY
                CASE COALESCE(handler, 'ai')
                  WHEN 'live_request' THEN 0
