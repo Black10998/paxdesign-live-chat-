@@ -759,6 +759,40 @@
   letter-spacing: 0;
 }
 
+.pax-live-stat--unread {
+  color: #ef4444;
+}
+
+.pax-live-dashboard__unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  margin-left: 6px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+.pax-live-dashboard__item.is-unread:not(.is-selected) {
+  border-color: rgba(239, 68, 68, 0.42);
+  background: rgba(239, 68, 68, 0.04);
+}
+
+.pax-live-dashboard__item-unread-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.18);
+}
+
 .pax-live-badge--live {
   background: rgba(239, 68, 68, 0.2) !important;
   color: #fca5a5 !important;

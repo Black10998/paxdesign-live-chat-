@@ -367,192 +367,292 @@ struct PAXProfessionalAnalyticsDashboard: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var animateChart = false
+    @State private var selectedDayIndex: Int?
+
+    private var totalMessages: Int { days.map(\.messages).reduce(0, +) }
+    private var totalSessions: Int { days.map(\.sessions).reduce(0, +) }
 
     private var messageAverage: Double {
         guard !days.isEmpty else { return 0 }
-        return Double(days.map(\.messages).reduce(0, +)) / Double(days.count)
-    }
-
-    private var sessionAverage: Double {
-        guard !days.isEmpty else { return 0 }
-        return Double(days.map(\.sessions).reduce(0, +)) / Double(days.count)
+        return Double(totalMessages) / Double(days.count)
     }
 
     private var peakMessages: Int {
         days.map(\.messages).max() ?? 0
     }
 
+    private var peakDay: PlatformActivityDay? {
+        days.max(by: { $0.messages < $1.messages })
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            header
-            lineChartSection
-            categorySection
-            ringsSection
-            trendRow
+        VStack(alignment: .leading, spacing: 20) {
+            heroHeader
+            chartCanvas
+            dayProgressRow
+            summaryStrip
         }
-        .padding(16)
-        .paxCard(.standard)
+        .padding(20)
+        .paxPremiumGlass(tier: .premium, cornerRadius: 22)
         .onAppear { startAnimation() }
         .onChange(of: days) { _ in
             animateChart = false
+            selectedDayIndex = nil
             startAnimation()
         }
     }
 
-    private var header: some View {
-        HStack(alignment: .top) {
-            VStack(alignment: .leading, spacing: 4) {
+    private var heroHeader: some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
                 Text(title)
-                    .font(.headline.weight(.semibold))
-                Text(L10n.AnalyticsLineChart)
-                    .font(.caption)
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(PAXTheme.textPrimary)
+                Text(L10n.AnalyticsSevenDay)
+                    .font(.subheadline)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
-            Spacer()
+
+            Spacer(minLength: 8)
+
             VStack(alignment: .trailing, spacing: 2) {
-                Text("\(days.map(\.messages).reduce(0, +))")
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(PAXTheme.accent)
+                Text("\(totalMessages)")
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .foregroundStyle(PAXTheme.textPrimary)
+                    .contentTransition(.numericText())
                 Text(L10n.AnalyticsMessages)
-                    .font(.caption2)
-                    .foregroundStyle(PAXTheme.textSecondary)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(PAXTheme.textTertiary)
             }
         }
     }
 
-    private var lineChartSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 14) {
-                legendDot(color: PAXTheme.accent, label: L10n.AnalyticsMessages)
-                legendDot(color: Color(red: 0.20, green: 0.55, blue: 0.95), label: L10n.AnalyticsSessions)
+    private var chartCanvas: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 16) {
+                legendItem(color: chartPrimary, label: L10n.AnalyticsMessages)
+                legendItem(color: chartSecondary, label: L10n.AnalyticsSessions, dashed: true)
             }
-            .font(.caption2)
+            .font(.caption2.weight(.medium))
 
             GeometryReader { proxy in
-                let width = proxy.size.width
-                let height = proxy.size.height
+                let size = CGSize(width: proxy.size.width, height: proxy.size.height)
                 let maxY = max(CGFloat(peakMessages), CGFloat(days.map(\.sessions).max() ?? 0), 1)
 
-                ZStack {
-                    chartGrid(in: CGSize(width: width, height: height))
+                ZStack(alignment: .bottom) {
+                    premiumGrid(in: size)
+
+                    areaFill(
+                        values: days.map { CGFloat($0.messages) },
+                        maxY: maxY,
+                        size: size,
+                        base: chartPrimary.opacity(colorScheme == .dark ? 0.28 : 0.18),
+                        peak: chartPrimary.opacity(colorScheme == .dark ? 0.06 : 0.04)
+                    )
 
                     chartLine(
                         values: days.map { CGFloat($0.messages) },
                         maxY: maxY,
-                        size: CGSize(width: width, height: height),
-                        color: PAXTheme.accent,
-                        animate: animateChart
+                        size: size,
+                        color: chartPrimary,
+                        animate: animateChart,
+                        lineWidth: 2.5
                     )
 
                     chartLine(
                         values: days.map { CGFloat($0.sessions) },
                         maxY: maxY,
-                        size: CGSize(width: width, height: height),
-                        color: Color(red: 0.20, green: 0.55, blue: 0.95).opacity(0.85),
+                        size: size,
+                        color: chartSecondary,
                         animate: animateChart,
-                        dashed: true
+                        dashed: true,
+                        lineWidth: 1.75
                     )
+
+                    dayMarkers(maxY: maxY, size: size)
                 }
             }
-            .frame(height: 132)
+            .frame(height: 148)
 
-            HStack {
-                ForEach(days, id: \.label) { day in
-                    Text(shortDayLabel(day.label))
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(PAXTheme.textTertiary)
-                        .frame(maxWidth: .infinity)
-                }
+            if let index = selectedDayIndex, days.indices.contains(index) {
+                selectedDayDetail(days[index])
+                    .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .padding(12)
+        .padding(14)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(PAXTheme.surface.opacity(colorScheme == .dark ? 0.42 : 0.55))
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            PAXTheme.surface.opacity(colorScheme == .dark ? 0.34 : 0.52),
+                            PAXTheme.surface.opacity(colorScheme == .dark ? 0.16 : 0.28),
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(PAXTheme.border.opacity(colorScheme == .dark ? 0.14 : 0.18), lineWidth: 0.5)
+                )
         )
     }
 
-    private var categorySection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.AnalyticsCategoryBreakdown)
-                .font(.subheadline.weight(.semibold))
-
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                ForEach(categories) { slice in
-                    HStack(spacing: 8) {
-                        Circle()
-                            .fill(categoryColor(slice.label))
-                            .frame(width: 8, height: 8)
-                        Text(categoryTitle(slice.label))
-                            .font(.caption)
-                            .foregroundStyle(PAXTheme.textSecondary)
-                        Spacer()
-                        Text("\(slice.value)")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(PAXTheme.textPrimary)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(categoryColor(slice.label).opacity(0.12))
-                    )
-                }
-            }
-        }
-    }
-
-    private var ringsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(L10n.AnalyticsActivityLevel)
-                .font(.subheadline.weight(.semibold))
-
-            HStack(spacing: 6) {
-                ForEach(days) { day in
-                    let tint = PAXActivityColorScale.tint(
-                        for: day.messages,
-                        average: messageAverage,
-                        accent: PAXTheme.accent
-                    )
-                    VStack(spacing: 5) {
-                        ZStack {
-                            Circle()
-                                .stroke(tint.opacity(0.18), lineWidth: 4)
-                            Circle()
-                                .trim(from: 0, to: animateChart ? ringProgress(day.messages) : 0)
-                                .stroke(tint, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                                .rotationEffect(.degrees(-90))
-                            Text(day.messages > 0 ? "\(day.messages)" : "·")
-                                .font(.system(size: 9, weight: .bold, design: .rounded))
-                        }
-                        .frame(width: 36, height: 36)
-
-                        Text(shortDayLabel(day.label))
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(PAXTheme.textTertiary)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-            }
-        }
-    }
-
-    private var trendRow: some View {
+    private var dayProgressRow: some View {
         HStack(spacing: 8) {
-            trendChip(title: L10n.AnalyticsSessions, delta: trends.sessionsPct)
-            trendChip(title: L10n.AnalyticsMessages, delta: trends.messagesPct)
-            trendChip(title: L10n.AnalyticsLiveRequests, delta: trends.liveRequestsPct)
+            ForEach(Array(days.enumerated()), id: \.element.label) { index, day in
+                dayColumn(day, index: index)
+            }
         }
     }
 
-    private func legendDot(color: Color, label: String) -> some View {
-        HStack(spacing: 5) {
-            Circle().fill(color).frame(width: 6, height: 6)
-            Text(label).foregroundStyle(PAXTheme.textSecondary)
+    private var summaryStrip: some View {
+        HStack(spacing: 10) {
+            metricCapsule(
+                title: L10n.AnalyticsPeak,
+                value: "\(peakDay?.messages ?? 0)",
+                subtitle: peakDay.map { shortDayLabel($0.label) } ?? "—"
+            )
+            metricCapsule(
+                title: L10n.AnalyticsAvgPerDay,
+                value: String(format: "%.1f", messageAverage),
+                subtitle: L10n.AnalyticsMessages
+            )
+            if !categories.isEmpty {
+                metricCapsule(
+                    title: L10n.AnalyticsSessions,
+                    value: "\(totalSessions)",
+                    subtitle: L10n.AnalyticsRingTotal
+                )
+            }
         }
     }
 
-    private func chartGrid(in size: CGSize) -> some View {
+    private var chartPrimary: Color {
+        PAXTheme.accent.opacity(colorScheme == .dark ? 0.92 : 0.88)
+    }
+
+    private var chartSecondary: Color {
+        PAXTheme.textSecondary.opacity(colorScheme == .dark ? 0.72 : 0.58)
+    }
+
+    private func legendItem(color: Color, label: String, dashed: Bool = false) -> some View {
+        HStack(spacing: 6) {
+            if dashed {
+                Capsule()
+                    .stroke(color, style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))
+                    .frame(width: 14, height: 2)
+            } else {
+                Capsule()
+                    .fill(color)
+                    .frame(width: 14, height: 3)
+            }
+            Text(label)
+                .foregroundStyle(PAXTheme.textSecondary)
+        }
+    }
+
+    private func dayColumn(_ day: PlatformActivityDay, index: Int) -> some View {
+        let progress = peakMessages > 0 ? CGFloat(day.messages) / CGFloat(peakMessages) : 0
+        let isSelected = selectedDayIndex == index
+        let isLatest = index == days.count - 1
+
+        return Button {
+            withAnimation(reduceMotion ? nil : .spring(response: 0.38, dampingFraction: 0.86)) {
+                selectedDayIndex = selectedDayIndex == index ? nil : index
+            }
+            PAXHaptics.light()
+        } label: {
+            VStack(spacing: 8) {
+                ZStack(alignment: .bottom) {
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(PAXTheme.border.opacity(colorScheme == .dark ? 0.18 : 0.12))
+                        .frame(height: 44)
+
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    chartPrimary.opacity(isSelected ? 0.95 : 0.72),
+                                    chartPrimary.opacity(isSelected ? 0.55 : 0.28),
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(height: max(4, 44 * (animateChart ? progress : 0)))
+                        .animation(
+                            reduceMotion ? nil : .spring(response: 0.62, dampingFraction: 0.84).delay(Double(index) * 0.04),
+                            value: animateChart
+                        )
+                }
+                .frame(maxWidth: .infinity)
+
+                Text(shortDayLabel(day.label))
+                    .font(.system(size: 10, weight: isLatest || isSelected ? .semibold : .medium))
+                    .foregroundStyle(isSelected || isLatest ? PAXTheme.textPrimary : PAXTheme.textTertiary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(day.label): \(day.messages) messages")
+    }
+
+    private func metricCapsule(title: String, value: String, subtitle: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(PAXTheme.textTertiary)
+            Text(value)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(PAXTheme.textPrimary)
+            Text(subtitle)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(PAXTheme.textTertiary)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(PAXTheme.surface.opacity(colorScheme == .dark ? 0.28 : 0.42))
+        )
+    }
+
+    @ViewBuilder
+    private func selectedDayDetail(_ day: PlatformActivityDay) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(shortDayLabel(day.label))
+                    .font(.caption.weight(.semibold))
+                Text(L10n.AnalyticsMessages)
+                    .font(.caption2)
+                    .foregroundStyle(PAXTheme.textTertiary)
+            }
+            Spacer()
+            Text("\(day.messages)")
+                .font(.headline.weight(.bold))
+            Text("·")
+                .foregroundStyle(PAXTheme.textTertiary)
+            Text("\(day.sessions)")
+                .font(.headline.weight(.semibold))
+                .foregroundStyle(PAXTheme.textSecondary)
+            Text(L10n.AnalyticsSessions)
+                .font(.caption2)
+                .foregroundStyle(PAXTheme.textTertiary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(chartPrimary.opacity(colorScheme == .dark ? 0.12 : 0.08))
+        )
+    }
+
+    private func premiumGrid(in size: CGSize) -> some View {
         Path { path in
             let rows = 4
             for row in 0...rows {
@@ -561,7 +661,52 @@ struct PAXProfessionalAnalyticsDashboard: View {
                 path.addLine(to: CGPoint(x: size.width, y: y))
             }
         }
-        .stroke(PAXTheme.border.opacity(0.18), lineWidth: 0.5)
+        .stroke(PAXTheme.border.opacity(colorScheme == .dark ? 0.12 : 0.16), lineWidth: 0.5)
+    }
+
+    private func areaFill(
+        values: [CGFloat],
+        maxY: CGFloat,
+        size: CGSize,
+        base: Color,
+        peak: Color
+    ) -> some View {
+        let points = linePoints(values: values, maxY: maxY, size: size)
+        return Path { path in
+            guard let first = points.first else { return }
+            path.move(to: CGPoint(x: first.x, y: size.height))
+            path.addLine(to: first)
+            for point in points.dropFirst() {
+                path.addLine(to: point)
+            }
+            if let last = points.last {
+                path.addLine(to: CGPoint(x: last.x, y: size.height))
+            }
+            path.closeSubpath()
+        }
+        .fill(
+            LinearGradient(
+                colors: [base, peak],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+        .opacity(animateChart ? 1 : 0)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.55), value: animateChart)
+    }
+
+    private func dayMarkers(maxY: CGFloat, size: CGSize) -> some View {
+        ForEach(Array(days.enumerated()), id: \.element.label) { index, day in
+            let point = linePoints(values: days.map { CGFloat($0.messages) }, maxY: maxY, size: size)[safe: index]
+            if let point {
+                Circle()
+                    .fill(chartPrimary)
+                    .frame(width: selectedDayIndex == index ? 7 : 5, height: selectedDayIndex == index ? 7 : 5)
+                    .position(point)
+                    .opacity(animateChart ? 1 : 0)
+                    .animation(.easeOut(duration: 0.25).delay(Double(index) * 0.04), value: animateChart)
+            }
+        }
     }
 
     private func chartLine(
@@ -570,32 +715,27 @@ struct PAXProfessionalAnalyticsDashboard: View {
         size: CGSize,
         color: Color,
         animate: Bool,
-        dashed: Bool = false
+        dashed: Bool = false,
+        lineWidth: CGFloat = 2.5
     ) -> some View {
         let points = linePoints(values: values, maxY: maxY, size: size)
-        return ZStack {
-            Path { path in
-                guard let first = points.first else { return }
-                path.move(to: first)
-                for point in points.dropFirst() {
-                    path.addLine(to: point)
-                }
-            }
-            .trim(from: 0, to: animate ? 1 : 0)
-            .stroke(
-                color,
-                style: StrokeStyle(lineWidth: dashed ? 2 : 2.5, lineCap: .round, lineJoin: .round, dash: dashed ? [5, 4] : [])
-            )
-
-            ForEach(Array(points.enumerated()), id: \.offset) { index, point in
-                Circle()
-                    .fill(color)
-                    .frame(width: 5, height: 5)
-                    .position(point)
-                    .opacity(animate ? 1 : 0)
-                    .animation(.easeOut(duration: 0.25).delay(Double(index) * 0.04), value: animate)
+        return Path { path in
+            guard let first = points.first else { return }
+            path.move(to: first)
+            for point in points.dropFirst() {
+                path.addLine(to: point)
             }
         }
+        .trim(from: 0, to: animate ? 1 : 0)
+        .stroke(
+            color,
+            style: StrokeStyle(
+                lineWidth: lineWidth,
+                lineCap: .round,
+                lineJoin: .round,
+                dash: dashed ? [5, 4] : []
+            )
+        )
     }
 
     private func linePoints(values: [CGFloat], maxY: CGFloat, size: CGSize) -> [CGPoint] {
@@ -604,54 +744,8 @@ struct PAXProfessionalAnalyticsDashboard: View {
         return values.enumerated().map { index, value in
             let x = CGFloat(index) * stepX
             let normalized = value / maxY
-            let y = size.height - (normalized * (size.height - 8)) - 4
+            let y = size.height - (normalized * (size.height - 10)) - 5
             return CGPoint(x: x, y: y)
-        }
-    }
-
-    private func ringProgress(_ value: Int) -> CGFloat {
-        guard peakMessages > 0, value > 0 else { return 0 }
-        return max(0.1, CGFloat(value) / CGFloat(peakMessages))
-    }
-
-    private func trendChip(title: String, delta: Double) -> some View {
-        let positive = delta >= 0
-        return VStack(alignment: .leading, spacing: 2) {
-            Text(title)
-                .font(.caption2)
-                .foregroundStyle(PAXTheme.textTertiary)
-            HStack(spacing: 3) {
-                PAXIcon(positive ? "arrow.up.right" : "arrow.down.right", size: .micro)
-                Text(String(format: "%+.0f%%", delta))
-                    .font(.caption.weight(.semibold))
-            }
-            .foregroundStyle(positive ? PAXTheme.success : PAXTheme.danger)
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(PAXTheme.surface.opacity(0.45))
-        )
-    }
-
-    private func categoryColor(_ label: String) -> Color {
-        switch label.lowercased() {
-        case "live": return PAXTheme.danger
-        case "active": return PAXTheme.accent
-        case "closed": return PAXTheme.textTertiary
-        case "tasks": return PAXTheme.success
-        default: return PAXTheme.accentSecondary
-        }
-    }
-
-    private func categoryTitle(_ label: String) -> String {
-        switch label.lowercased() {
-        case "live": return L10n.FilterLive
-        case "active": return L10n.FilterActive
-        case "closed": return L10n.FilterClosed
-        case "tasks": return L10n.DashboardMetricTasks
-        default: return label.capitalized
         }
     }
 
@@ -670,8 +764,14 @@ struct PAXProfessionalAnalyticsDashboard: View {
             animateChart = true
             return
         }
-        withAnimation(.spring(response: 0.72, dampingFraction: 0.86)) {
+        withAnimation(.spring(response: 0.78, dampingFraction: 0.86)) {
             animateChart = true
         }
+    }
+}
+
+private extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
     }
 }

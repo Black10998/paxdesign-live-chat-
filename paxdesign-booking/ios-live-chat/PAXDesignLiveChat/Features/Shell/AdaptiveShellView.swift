@@ -71,11 +71,21 @@ struct AdaptiveShellView: View {
     }
 
     private var uiverseMenuItems: [UiverseMenuBarItem] {
-        iPhoneTabItems.map { item in
-            UiverseMenuBarItem(
+        let tags = tabTags
+        return iPhoneTabItems.map { item in
+            var badge = 0
+            if item.tag == tags.chats {
+                badge = unreadChatCount
+            } else if item.tag == tags.team {
+                badge = unreadTeamCount
+            } else if item.tag == tags.live {
+                badge = coordinator.liveCount
+            }
+            return UiverseMenuBarItem(
                 tag: item.tag,
                 icon: item.icon,
-                title: item.title
+                title: item.title,
+                badge: badge
             )
         }
     }

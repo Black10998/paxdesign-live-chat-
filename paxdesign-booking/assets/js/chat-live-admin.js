@@ -34,6 +34,8 @@
     var $list = $('#paxLiveChatList');
     var $count = $('#paxLiveChatCount');
     var $liveCount = $('#paxLiveChatLiveCount');
+    var $unreadCount = $('#paxLiveChatUnreadCount');
+    var $unreadBadge = $('#paxLiveChatUnreadBadge');
     var $search = $('#paxLiveChatSearch');
     var $placeholder = $('#paxLiveChatPlaceholder');
     var $active = $('#paxLiveChatActive');
@@ -135,6 +137,19 @@
       var sid = payload.session_id || '';
       if (data.type === 'message' && payload.message && sid === selectedSession) {
         renderMessages([payload.message], false);
+      }
+      if (data.type === 'message' && payload.message && sid && sid !== selectedSession) {
+        var msg = payload.message;
+        var msgSeq = typeof payload.seq === 'number' ? payload.seq : (msg.id || 0);
+        patchSessionInList(sid, {
+          last_preview: msg.content ? String(msg.content).slice(0, 100) : '',
+          last_role: msg.role || 'user',
+          seq: msgSeq,
+          updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        });
+        if (msg.role === 'user' && shouldPlayMessageNotification()) {
+          playMessengerSound();
+        }
       }
       if (data.type === 'typing' && sid === selectedSession) {
         if (payload.active && payload.who === 'user') {
@@ -273,6 +288,81 @@
     var isConsoleContext = $root.hasClass('pax-live-console');
     var knownSessions = {};
     var seenLiveRequests = {};
+    var staffUserKey = (currentEmployee && currentEmployee.id) ? String(currentEmployee.id) : 'staff';
+    var readSeqStorageKey = 'paxLiveStaffReadSeq_' + staffUserKey;
+    var readSeqMap = {};
+
+    function loadReadSeqMap() {
+      try {
+        readSeqMap = JSON.parse(localStorage.getItem(readSeqStorageKey) || '{}') || {};
+      } catch (e) {
+        readSeqMap = {};
+      }
+    }
+
+    function persistReadSeqMap() {
+      try {
+        localStorage.setItem(readSeqStorageKey, JSON.stringify(readSeqMap));
+      } catch (e) {}
+    }
+
+    function getReadSeq(sessionId) {
+      return readSeqMap[sessionId] || 0;
+    }
+
+    function markSessionRead(sessionId, seq) {
+      if (!sessionId) return;
+      var current = getReadSeq(sessionId);
+      var resolved = typeof seq === 'number' ? seq : 0;
+      if (!resolved) {
+        allSessions.forEach(function (s) {
+          if (s.session_id === sessionId) resolved = s.seq || 0;
+        });
+      }
+      if (resolved > current) {
+        readSeqMap[sessionId] = resolved;
+        persistReadSeqMap();
+      }
+      updateUnreadBadges();
+      invalidateListCache();
+      if (allSessions.length) renderList(allSessions);
+    }
+
+    function isSessionUnread(s) {
+      if (!s || s.handler === 'closed') return false;
+      var seq = s.seq || 0;
+      if (seq <= getReadSeq(s.session_id)) return false;
+      if (s.last_role === 'user') return true;
+      if (s.needs_reply) return true;
+      return false;
+    }
+
+    function countUnreadSessions(items) {
+      var total = 0;
+      (items || []).forEach(function (s) {
+        if (isSessionUnread(s)) total++;
+      });
+      return total;
+    }
+
+    function updateUnreadBadges() {
+      var unread = countUnreadSessions(allSessions);
+      if ($unreadCount.length) $unreadCount.text(unread);
+      if ($unreadBadge.length) {
+        if (unread > 0) {
+          $unreadBadge.text(unread > 99 ? '99+' : String(unread)).prop('hidden', false);
+        } else {
+          $unreadBadge.prop('hidden', true);
+        }
+      }
+      var liveBadge = 0;
+      (allSessions || []).forEach(function (s) {
+        if (s.handler === 'live_request' && !seenLiveRequests[s.session_id]) liveBadge++;
+      });
+      updateAppBadge(unread + liveBadge);
+    }
+
+    loadReadSeqMap();
     var liveAlarmTimer = null;
     var liveAlarmActive = false;
     var documentTitleBase = document.title;
@@ -1366,6 +1456,7 @@
         }
         if (!knownSessions[s.session_id]) cls += ' is-new';
       }
+      if (isSessionUnread(s)) cls += ' is-unread';
       return cls;
     }
 
@@ -1389,6 +1480,7 @@
         });
         $liveCount.text(liveTotalQuick);
         updateActivityPanel(allSessions);
+        updateUnreadBadges();
         syncSelectedListItem();
         return;
       }
@@ -1402,6 +1494,7 @@
       $count.text(allSessions.length);
       $liveCount.text(liveTotal);
       updateActivityPanel(allSessions);
+      updateUnreadBadges();
 
       if (!filtered.length) {
         $list.attr('aria-busy', 'false');
@@ -1415,7 +1508,11 @@
         var cls = sessionListClasses(s);
         html += '<button type="button" class="' + cls + '" data-session="' + escapeHtml(s.session_id) + '">';
         html += '<div class="pax-live-dashboard__item-id">' + sessionTypeIcon(h) + ' ' +
-          escapeHtml(sessionCustomerName(s) || ('Chat · ' + shortSessionId(s.session_id))) + '</div>';
+          escapeHtml(sessionCustomerName(s) || ('Chat · ' + shortSessionId(s.session_id)));
+        if (isSessionUnread(s)) {
+          html += ' <span class="pax-live-dashboard__item-unread-dot" aria-hidden="true"></span>';
+        }
+        html += '</div>';
         html += '<div class="pax-live-dashboard__item-top">';
         html += '<span class="pax-live-badge ' + badgeClass(h) + '">' + escapeHtml(s.handler_label || handlerLabel(h, s.admin_name)) + '</span>';
         if (!seenLiveRequests[s.session_id] && h === 'live_request') {
@@ -1458,6 +1555,7 @@
           session_rating: s.session_rating || 0,
           detected_service: s.detected_service || '',
           seq: s.seq || 0,
+          last_role: s.last_role || '',
           updated_at: s.updated_at,
         };
       });
@@ -1477,7 +1575,7 @@
       (items || []).forEach(function (s) {
         if (s.handler === 'live_request' && !seenLiveRequests[s.session_id]) badgeCount++;
       });
-      updateAppBadge(badgeCount);
+      updateUnreadBadges();
     }
 
     function loadList() {
@@ -2279,7 +2377,10 @@
               if (reaction) $msg.append(reactionBadgeHtml(reaction));
             });
           }
-          if (typeof res.data.seq === 'number') pollSeq = Math.max(pollSeq, res.data.seq);
+          if (typeof res.data.seq === 'number') {
+            pollSeq = Math.max(pollSeq, res.data.seq);
+            markSessionRead(selectedSession, pollSeq);
+          }
         });
     }
 
@@ -2287,6 +2388,11 @@
       selectedSession = sessionId;
       suppressMessageSoundsUntil = Date.now() + 1800;
       clearAiSuggestions();
+      var sessionSeq = 0;
+      allSessions.forEach(function (s) {
+        if (s.session_id === sessionId) sessionSeq = s.seq || 0;
+      });
+      markSessionRead(sessionId, sessionSeq);
       if (knownSessions[sessionId] && knownSessions[sessionId].handler === 'live_request') {
         seenLiveRequests[sessionId] = Date.now();
         persistSeenLiveRequests();

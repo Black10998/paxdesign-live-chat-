@@ -3008,17 +3008,22 @@ class PAXdesign_Chat_Live {
     private function format_live_list_session($row) {
         $preview = isset($row->last_preview) ? trim((string) $row->last_preview) : '';
         $last_role = '';
-        if ($preview === '' && isset($row->messages) && (string) $row->messages !== '') {
+        if (isset($row->messages) && (string) $row->messages !== '') {
             $messages = $this->sort_messages($this->decode_messages($row->messages));
             $last = !empty($messages) ? end($messages) : null;
-            $preview = is_array($last) && !empty($last['content'])
-                ? wp_html_excerpt($last['content'], 100, '…')
-                : '';
+            if ($preview === '') {
+                $preview = is_array($last) && !empty($last['content'])
+                    ? wp_html_excerpt($last['content'], 100, '…')
+                    : '';
+            }
             $last_role = is_array($last) && !empty($last['role']) ? (string) $last['role'] : '';
+        }
+        $session_id = isset($row->session_id) ? (string) $row->session_id : '';
+        if ($last_role === '' && $session_id !== '' && class_exists('PAXdesign_Message_Store')) {
+            $last_role = PAXdesign_Message_Store::last_message_role($session_id, 'customer');
         }
         $handler  = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
         $agent    = self::session_agent_payload($row);
-        $session_id = isset($row->session_id) ? (string) $row->session_id : '';
         $wp_user_id = isset($row->wp_user_id) ? (int) $row->wp_user_id : 0;
         if ($wp_user_id <= 0) {
             $wp_user_id = self::user_id_from_session_id($session_id);
@@ -3026,6 +3031,20 @@ class PAXdesign_Chat_Live {
         $customer_name = isset($row->customer_name) ? trim((string) $row->customer_name) : '';
         if ($customer_name === '' && $wp_user_id > 0) {
             $customer_name = self::resolve_customer_identity($wp_user_id, '')->name;
+        }
+
+        $message_seq = isset($row->message_seq) ? (int) $row->message_seq : 0;
+        $admin_read_seq = isset($row->admin_read_seq) ? (int) $row->admin_read_seq : 0;
+        $needs_reply = ($handler !== self::HANDLER_CLOSED && $last_role === 'user')
+            && ($handler === self::HANDLER_ADMIN || $handler === self::HANDLER_LIVE);
+        $unread_count = 0;
+        if ($handler !== self::HANDLER_CLOSED && $last_role === 'user' && $session_id !== ''
+            && class_exists('PAXdesign_Message_Store')) {
+            $unread_count = PAXdesign_Message_Store::count_incoming_messages_since(
+                $session_id,
+                $admin_read_seq,
+                'customer'
+            );
         }
 
         return array(
@@ -3042,9 +3061,12 @@ class PAXdesign_Chat_Live {
             'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
             'updated_at'       => PAXdesign_API_Time::format(isset($row->updated_at) ? (string) $row->updated_at : '', false),
             'message_count'    => isset($row->message_count) ? (int) $row->message_count : 0,
-            'seq'              => isset($row->message_seq) ? (int) $row->message_seq : 0,
+            'seq'              => $message_seq,
             'last_preview'     => $preview,
             'last_role'        => $last_role,
+            'needs_reply'      => $needs_reply,
+            'unread_count'     => $unread_count,
+            'admin_read_seq'   => $admin_read_seq,
             'customer_language'=> class_exists('PAXdesign_Language_Routing')
                 ? PAXdesign_Language_Routing::session_language_from_row($row)
                 : '',
