@@ -493,8 +493,8 @@ extension EnvironmentValues {
     }
 }
 
-/// Participates in layout via `safeAreaInset` so ScrollViews, Lists, and composers
-/// receive correct bottom insets automatically (overlay tab bars do not).
+/// Shell chrome uses an explicit VStack (content + tab bar). Overlay/safeAreaInset tab bars
+/// do not reliably constrain nested NavigationStack / ScrollView children in ZStack shells.
 private struct PAXShellBottomTabBarModifier: ViewModifier {
     let isVisible: Bool
     let items: [UiverseMenuBarItem]
@@ -503,27 +503,29 @@ private struct PAXShellBottomTabBarModifier: ViewModifier {
     @ObservedObject var scrollState: UiverseMenuScrollState
 
     func body(content: Content) -> some View {
-        content
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                if isVisible {
-                    UiverseMenuBarView(
-                        items: items,
-                        selection: $selection,
-                        reduceMotion: reduceMotion
-                    )
-                    .scaleEffect(scrollState.barScale, anchor: .bottom)
-                    .padding(.horizontal, UiverseMenuMetrics.horizontalMargin)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+        VStack(spacing: 0) {
+            content
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background {
+                    if isVisible {
+                        PAXShellScrollOffsetTracker(
+                            scrollState: scrollState,
+                            reduceMotion: reduceMotion
+                        )
+                    }
                 }
+
+            if isVisible {
+                UiverseMenuBarView(
+                    items: items,
+                    selection: $selection,
+                    reduceMotion: reduceMotion
+                )
+                .scaleEffect(scrollState.barScale, anchor: .bottom)
+                .padding(.horizontal, UiverseMenuMetrics.horizontalMargin)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .background {
-                if isVisible {
-                    PAXShellScrollOffsetTracker(
-                        scrollState: scrollState,
-                        reduceMotion: reduceMotion
-                    )
-                }
-            }
+        }
     }
 }
 

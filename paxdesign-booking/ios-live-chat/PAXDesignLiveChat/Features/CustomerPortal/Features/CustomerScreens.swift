@@ -364,8 +364,7 @@ struct CustomerChatView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                PAXBackground()
+            Group {
                 if auth.isAuthenticated {
                     chatContent
                 } else {
@@ -381,6 +380,8 @@ struct CustomerChatView: View {
                     )
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .background(PAXBackground())
             .navigationTitle(String(localized: "Chat"))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -489,11 +490,10 @@ struct CustomerChatView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
-        // Composer stacks above the shell tab bar via nested safeAreaInsets.
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+
             chatComposer
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .overlay(alignment: .top) {
             if let error, recovery == nil {
                 Text(error)

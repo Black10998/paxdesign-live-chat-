@@ -35,7 +35,7 @@ enum UiverseMenuMetrics {
         menuPadding * 2 + itemHeight
     }
 
-    /// Reserved for legacy references; layout clearance is handled by shell safeAreaInset.
+    /// Measured menu chrome height (shell uses VStack layout, not scroll inset padding).
     static var scrollInset: CGFloat {
         menuHeight + homeIndicatorGap + 12
     }
