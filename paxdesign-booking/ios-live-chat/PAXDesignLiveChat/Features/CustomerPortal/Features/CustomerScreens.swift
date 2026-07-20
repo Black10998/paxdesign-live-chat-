@@ -444,22 +444,86 @@ struct CustomerChatView: View {
                 .presentationDragIndicator(.visible)
             }
             .onChange(of: auth.isAuthenticated) { signedIn in
-                guard signedIn else { return }
+                if !signedIn {
+                    resetChatState()
+                    return
+                }
                 Task {
-                    if let session = try? await api.fetchChatSession() {
-                        poll = CustomerChatPoll(
-                            session_id: session.session_id,
-                            handler: session.handler,
-                            messages: [],
-                            message_count: nil,
-                            last_preview: nil
-                        )
-                    }
-                    await refresh(full: true)
-                    startPolling()
-                    startEventStream()
+                    await bootstrapChatSession(full: true)
                 }
             }
+            .onChange(of: auth.profile?.id) { _ in
+                resetChatState()
+                Task {
+                    guard auth.isAuthenticated else { return }
+                    await bootstrapChatSession(full: true)
+                }
+            }
+        }
+        .id(auth.profile?.id ?? 0)
+    }
+
+    private func resetChatState() {
+        pollTask?.cancel()
+        streamTask?.cancel()
+        typingTask?.cancel()
+        poll = nil
+        draft = ""
+        error = nil
+        notice = nil
+        isLoading = false
+        isSending = false
+        lastSeq = 0
+        streamSince = 0
+        recovery = nil
+        isRecovering = false
+        pollingSuspended = false
+        pollIntervalNs = minPollIntervalNs
+        eventStreamActive = false
+        rateLimitUntil = nil
+        isEndingLiveChat = false
+        streamingAssistant = ""
+        isStreamingAI = false
+        AppRefreshPolicy.setActiveSession(nil)
+    }
+
+    private func bootstrapChatSession(full: Bool) async {
+        guard auth.isAuthenticated else { return }
+        isLoading = full
+        defer { isLoading = false }
+        do {
+            let session = try await api.fetchChatSession()
+            let targetID = initialSessionID?.trimmingCharacters(in: .whitespacesAndNewlines)
+            let resolvedID: String
+            if let targetID, !targetID.isEmpty, targetID != session.session_id {
+                if (try? await api.fetchChatMessages(sessionID: targetID, since: 0, full: true)) != nil {
+                    resolvedID = targetID
+                } else {
+                    resolvedID = session.session_id
+                }
+            } else {
+                resolvedID = session.session_id
+            }
+            poll = CustomerChatPoll(
+                session_id: resolvedID,
+                handler: session.handler,
+                messages: [],
+                message_count: session.message_count,
+                last_preview: nil,
+                auth_user_id: session.auth_user_id ?? session.user_id
+            )
+            await refresh(full: full)
+            startPolling()
+            startEventStream()
+        } catch {
+            self.error = friendlyChatError(error)
+        }
+    }
+
+    private func disconnectCurrentSession() {
+        guard let sessionID = poll?.session_id, !sessionID.isEmpty else { return }
+        Task {
+            try? await api.disconnectChatSession(sessionID: sessionID)
         }
     }
 
@@ -573,7 +637,7 @@ struct CustomerChatView: View {
                 Task { await sendLocation(lat: lat, lng: lng, label: label) }
             }
         }
-        .task {
+        .task(id: auth.profile?.id) {
             #if DEBUG
             if PAXLayoutVerification.isActive {
                 isLoading = false
@@ -581,39 +645,14 @@ struct CustomerChatView: View {
             }
             #endif
             guard auth.isAuthenticated else { return }
-            do {
-                let targetID = initialSessionID?.trimmingCharacters(in: .whitespacesAndNewlines)
-                if let targetID, !targetID.isEmpty {
-                    poll = CustomerChatPoll(
-                        session_id: targetID,
-                        handler: "ai",
-                        messages: [],
-                        message_count: nil,
-                        last_preview: nil
-                    )
-                } else {
-                    let session = try await api.fetchChatSession()
-                    poll = CustomerChatPoll(
-                        session_id: session.session_id,
-                        handler: session.handler,
-                        messages: [],
-                        message_count: nil,
-                        last_preview: nil
-                    )
-                }
-            } catch {
-                self.error = friendlyChatError(error)
-                return
-            }
-            await refresh(full: true)
-            startPolling()
-            startEventStream()
+            await bootstrapChatSession(full: true)
         }
         .onDisappear {
             isInputFocused = false
             pollTask?.cancel()
             streamTask?.cancel()
             typingTask?.cancel()
+            disconnectCurrentSession()
             if poll?.session_id != nil {
                 AppRefreshPolicy.setActiveSession(nil)
             }
@@ -626,6 +665,8 @@ struct CustomerChatView: View {
         .onChange(of: scenePhase) { phase in
             if phase == .active, auth.isAuthenticated {
                 Task { await refresh(full: false) }
+            } else if phase == .background {
+                disconnectCurrentSession()
             }
         }
         .refreshable { await refresh(full: true) }
@@ -866,6 +907,12 @@ struct CustomerChatView: View {
     }
 
     private func applyPollUpdate(_ next: CustomerChatPoll, full: Bool) {
+        if let authID = next.auth_user_id, authID > 0,
+           let profileID = auth.profile?.id, profileID > 0, authID != profileID {
+            resetChatState()
+            Task { await bootstrapChatSession(full: true) }
+            return
+        }
         if full || poll == nil {
             poll = next
         } else if let incoming = next.messages, !incoming.isEmpty {

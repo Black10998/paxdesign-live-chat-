@@ -15,7 +15,7 @@ class PAXdesign_Chat_Live {
     const HANDLER_LIVE   = 'live_request';
     const HANDLER_ADMIN  = 'admin';
     const HANDLER_CLOSED = 'closed';
-    const CHAT_SCHEMA_VERSION = '2.4';
+    const CHAT_SCHEMA_VERSION = '2.5';
 
     /** @var bool */
     private static $list_schema_ready = false;
@@ -353,6 +353,8 @@ class PAXdesign_Chat_Live {
     private function __construct() {
         add_action('wp_ajax_paxdesign_chat_poll', array($this, 'handle_poll'));
         add_action('wp_ajax_nopriv_paxdesign_chat_poll', array($this, 'handle_poll'));
+        add_action('wp_ajax_paxdesign_chat_disconnect', array($this, 'handle_disconnect'));
+        add_action('wp_ajax_nopriv_paxdesign_chat_disconnect', array($this, 'handle_disconnect'));
         add_action('wp_ajax_paxdesign_chat_stream', array($this, 'handle_stream'));
         add_action('wp_ajax_nopriv_paxdesign_chat_stream', array($this, 'handle_stream'));
         add_action('wp_ajax_paxdesign_chat_live_stream', array($this, 'handle_admin_stream'));
@@ -570,6 +572,7 @@ class PAXdesign_Chat_Live {
             array('user_read_seq', 'int(10) unsigned NOT NULL DEFAULT 0', 'customer_language'),
             array('admin_read_seq', 'int(10) unsigned NOT NULL DEFAULT 0', 'user_read_seq'),
             array('wp_user_id', 'bigint(20) unsigned NOT NULL DEFAULT 0', 'admin_read_seq'),
+            array('customer_last_seen_at', "datetime NULL DEFAULT NULL", 'wp_user_id'),
         );
 
         foreach ($columns as $col) {
@@ -1370,6 +1373,9 @@ class PAXdesign_Chat_Live {
 
         $since = isset($_POST['since']) ? (int) $_POST['since'] : 0;
         $full  = isset($_POST['full']) && wp_unslash($_POST['full']) === '1';
+        if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            PAXdesign_Customer_Chat_Bridge::touch_customer_presence($session_id, $user_id);
+        }
         $data  = $this->get_poll_data($session_id, $since, $full, 'user');
         if (is_wp_error($data)) {
             $status = 400;
@@ -1381,7 +1387,35 @@ class PAXdesign_Chat_Live {
         }
 
         $data['session_id'] = $session_id;
+        if ($user_id > 0) {
+            $data['auth_user_id'] = $user_id;
+        }
         wp_send_json_success($data);
+    }
+
+    public function handle_disconnect() {
+        if (!$this->verify_chat_nonce()) {
+            wp_send_json_error(array('message' => 'Invalid nonce'), 403);
+        }
+
+        $session_id = $this->sanitize_session_id(
+            isset($_POST['session_id']) ? wp_unslash($_POST['session_id']) : ''
+        );
+        $user_id = get_current_user_id();
+        if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            if ($session_id !== '') {
+                $session_id = PAXdesign_Customer_Chat_Bridge::resolve_ajax_session($user_id, $session_id);
+            }
+            if ($session_id !== '') {
+                PAXdesign_Customer_Chat_Bridge::mark_customer_disconnected($session_id, $user_id);
+            }
+            wp_send_json_success(array('ok' => true));
+        }
+
+        if ($session_id === '') {
+            wp_send_json_error(array('message' => 'Invalid session'), 400);
+        }
+        wp_send_json_success(array('ok' => true));
     }
 
     public function handle_stream() {
@@ -1395,6 +1429,9 @@ class PAXdesign_Chat_Live {
         );
         if (get_current_user_id() > 0) {
             $session_id = $this->resolve_customer_ajax_session($session_id);
+            if ($session_id !== '' && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+                PAXdesign_Customer_Chat_Bridge::touch_customer_presence($session_id, get_current_user_id());
+            }
         }
         if ($session_id === '') {
             status_header(400);
@@ -3402,7 +3439,53 @@ class PAXdesign_Chat_Live {
             'customer_language'=> class_exists('PAXdesign_Language_Routing')
                 ? PAXdesign_Language_Routing::session_language_from_row($row)
                 : '',
+            'auth_user_id'     => $wp_user_id,
+            'wp_user_id'       => $wp_user_id,
         );
+    }
+
+    /**
+     * Release a stale live-request queue slot after customer disconnect or inactivity.
+     */
+    public function release_abandoned_live_request($session_id) {
+        $session_id = $this->sanitize_session_id($session_id);
+        if ($session_id === '') {
+            return false;
+        }
+
+        $row = $this->get_session_row($session_id);
+        if (!$row) {
+            return false;
+        }
+
+        $handler = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
+        if ($handler !== self::HANDLER_LIVE) {
+            return false;
+        }
+
+        global $wpdb;
+        $wp_user_id = isset($row->wp_user_id) ? (int) $row->wp_user_id : 0;
+        if ($wp_user_id > 0) {
+            $wpdb->update(
+                PAXdesign_Chat_Log::table_name(),
+                array(
+                    'handler'       => self::HANDLER_AI,
+                    'admin_user_id' => 0,
+                    'admin_name'    => '',
+                    'updated_at'    => current_time('mysql'),
+                ),
+                array('id' => (int) $row->id),
+                array('%s', '%d', '%s', '%s'),
+                array('%d')
+            );
+            $this->clear_typing($session_id, 'user');
+            $this->clear_typing($session_id, 'admin');
+            $this->persist_session_last_preview($session_id);
+            $this->emit_handler_event($session_id, self::HANDLER_AI);
+            return true;
+        }
+
+        return !is_wp_error($this->admin_decline_live_request($session_id));
     }
 
     /**

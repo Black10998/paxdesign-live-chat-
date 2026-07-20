@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.38.0
+ * Version: 3.39.0
  */
 (function () {
   'use strict';
@@ -134,6 +134,7 @@
   var cachedDeviceToken = null;
   var CONSULTATION_KEY  = 'paxdesign-chat-consultation';
   var ARCHIVED_IDS_KEY  = 'paxdesign-chat-archived-ids';
+  var lastAuthUserId    = null;
   var BOOKING_MARKER_RE = /\[\[BOOKING:([^\]]+)\]\]/gi;
   var USER_BOOKING_RE   = /(?:termin\s*(?:buch|vereinbar|machen|wunsch)?|beratung\s*buchen|kontakt\s*aufnehmen|ruf(?:en)?\s*(?:mich\s*)?an|(?:ein\s*)?angebot|möchte\s*(?:einen?\s*)?termin|ja[\s,]*(?:bitte|gerne|ok)?\s*(?:termin|buchen)?)/i;
   var LIVE_AGENT_RE     = /(?:mit\s+(?:einem\s+)?(?:mitarbeiter|menschen|echten|support|agent|berater)|live\s*(?:agent|chat|support)|(?:kann|möchte|will)\s+ich\s+(?:mit\s+)?(?:einem\s+)?(?:menschen|mitarbeiter|support|agent|berater)|(?:kann|darf)\s+ich\s+mit|sprechen\s+(?:sie\s+)?mit|echter?\s+mensch|menschlichen?\s+support|echte\s+person)/i;
@@ -256,6 +257,155 @@
     return !!(config && config.requireLogin);
   }
 
+  function getAuthUserId() {
+    if (window.PDXAuth && typeof window.PDXAuth.getUser === 'function') {
+      var u = window.PDXAuth.getUser();
+      if (u && u.id) return parseInt(u.id, 10) || 0;
+    }
+    var auth = config && config.auth ? config.auth : {};
+    return parseInt(auth.id, 10) || 0;
+  }
+
+  function getSessionStorageKey() {
+    var uid = getAuthUserId();
+    return uid > 0 ? SESSION_KEY + '-' + uid : SESSION_KEY;
+  }
+
+  function clearAllChatStorage() {
+    var prefixes = [
+      SESSION_KEY,
+      SESSION_META_KEY,
+      SNAPSHOT_PREFIX,
+      ENTRY_CHOICE_KEY,
+      CONSULTATION_KEY,
+      CUSTOMER_NAME_KEY,
+      LIVE_AGENT_KEY,
+      ARCHIVED_IDS_KEY,
+      OPEN_CLOSE_SOUND_KEY,
+    ];
+    try {
+      var keys = [];
+      var i;
+      for (i = 0; i < localStorage.length; i++) {
+        keys.push(localStorage.key(i));
+      }
+      keys.forEach(function (key) {
+        if (!key) return;
+        prefixes.forEach(function (prefix) {
+          if (key === prefix || key.indexOf(prefix + '-') === 0 || key.indexOf(prefix) === 0) {
+            localStorage.removeItem(key);
+          }
+        });
+      });
+      sessionStorage.removeItem(SESSION_KEY);
+      sessionStorage.removeItem(LIVE_AGENT_KEY);
+      keys = [];
+      for (i = 0; i < sessionStorage.length; i++) {
+        keys.push(sessionStorage.key(i));
+      }
+      keys.forEach(function (key) {
+        if (!key) return;
+        if (key.indexOf(OPEN_CLOSE_SOUND_KEY + '-') === 0) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    } catch (e) {}
+    cachedSessionId = null;
+  }
+
+  function resetChatForAuthChange(clearUi) {
+    stopCustomerStream();
+    abortStream();
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+    cachedSessionId = null;
+    if (config) {
+      config.chatSessionId = '';
+      config.chatSessionHasMessages = false;
+      config.chatMessageCount = 0;
+    }
+    if (clearUi) resetSessionState();
+  }
+
+  function sendCustomerDisconnectBeacon() {
+    var sid = cachedSessionId;
+    if (!sid && isPersistentAccountChat()) {
+      try {
+        sid = localStorage.getItem(getSessionStorageKey()) || sessionStorage.getItem(SESSION_KEY) || '';
+      } catch (e) {
+        sid = '';
+      }
+    }
+    if (!sid || !config || !config.ajaxUrl || !config.nonce) return;
+    try {
+      var body = new URLSearchParams();
+      body.append('action', 'paxdesign_chat_disconnect');
+      body.append('nonce', config.nonce);
+      body.append('session_id', sid);
+      if (navigator.sendBeacon) {
+        navigator.sendBeacon(config.ajaxUrl, body);
+        return;
+      }
+      fetch(config.ajaxUrl, {
+        method: 'POST',
+        body: body,
+        credentials: 'same-origin',
+        keepalive: true,
+      }).catch(function () {});
+    } catch (e) {}
+  }
+
+  function handleAuthSessionChange() {
+    var newUserId = getAuthUserId();
+    var wasLoggedIn = lastAuthUserId !== null && lastAuthUserId > 0;
+    var userChanged = wasLoggedIn && newUserId > 0 && lastAuthUserId !== newUserId;
+    var loggedOut = wasLoggedIn && newUserId <= 0;
+
+    if (loggedOut || (!canUseChat() && wasLoggedIn)) {
+      sendCustomerDisconnectBeacon();
+      clearAllChatStorage();
+      resetChatForAuthChange(true);
+      lastAuthUserId = 0;
+      updateAuthGateUi();
+      if (!canUseChat()) showAuthGate();
+      return;
+    }
+
+    if (userChanged || (newUserId > 0 && !wasLoggedIn)) {
+      if (wasLoggedIn) sendCustomerDisconnectBeacon();
+      clearAllChatStorage();
+      resetChatForAuthChange(true);
+      lastAuthUserId = newUserId;
+      hideAuthGate();
+      refreshAuthenticatedChatSession().then(function () {
+        updateEntryUi();
+        if (widgetOpen) {
+          pollUpdates();
+          scheduleLivePolling();
+          startCustomerStream();
+        }
+      });
+      return;
+    }
+
+    lastAuthUserId = newUserId;
+    updateAuthGateUi();
+    if (canUseChat()) {
+      hideAuthGate();
+      purgeGuestChatStorage();
+      refreshAuthenticatedChatSession().then(function () {
+        updateEntryUi();
+        if (widgetOpen) {
+          pollUpdates();
+          scheduleLivePolling();
+          startCustomerStream();
+        }
+      });
+    }
+  }
+
   function isLoggedIn() {
     if (window.PDXAuth && typeof window.PDXAuth.isLoggedIn === 'function') {
       return window.PDXAuth.isLoggedIn();
@@ -310,22 +460,10 @@
     if (!window.__paxChatAuthSessionBound) {
       window.__paxChatAuthSessionBound = true;
       window.addEventListener('pdx-session-updated', function () {
-        if (config && config.auth && window.PDXAuth && typeof window.PDXAuth.getUser === 'function') {
+        if (config && window.PDXAuth && typeof window.PDXAuth.getUser === 'function') {
           config.auth = window.PDXAuth.getUser();
         }
-        updateAuthGateUi();
-        if (canUseChat()) {
-          hideAuthGate();
-          purgeGuestChatStorage();
-          refreshAuthenticatedChatSession().then(function () {
-            updateEntryUi();
-            if (widgetOpen) {
-              pollUpdates();
-              scheduleLivePolling();
-              startCustomerStream();
-            }
-          });
-        }
+        handleAuthSessionChange();
       });
     }
     updateAuthGateUi();
@@ -430,7 +568,7 @@
     opts = opts || {};
     sessionId = String(sessionId || '').trim();
     if (!sessionId || sessionId === cachedSessionId) return;
-    var preserveUi = !!opts.preserveUi || (isPersistentAccountChat() && !!opts.fromServer);
+    var preserveUi = !!opts.preserveUi;
     cachedSessionId = sessionId;
     if (!preserveUi) {
       messages = [];
@@ -446,7 +584,7 @@
       sessionLoading = true;
     }
     try {
-      localStorage.setItem(SESSION_KEY, sessionId);
+      localStorage.setItem(getSessionStorageKey(), sessionId);
       sessionStorage.setItem(SESSION_KEY, sessionId);
     } catch (e) {}
     loadEntryChoice();
@@ -488,20 +626,20 @@
               config.chatMessageCount = data.message_count || 1;
             }
           }
-          adoptSessionId(data.session_id, { fromServer: true, preserveUi: true });
+          adoptSessionId(data.session_id, { fromServer: true, preserveUi: false });
           return fetchSessionFromServer(true);
         }
         return null;
       }).catch(function () {
         if (config && config.chatSessionId) {
-          adoptSessionId(config.chatSessionId, { fromServer: true, preserveUi: true });
+          adoptSessionId(config.chatSessionId, { fromServer: true, preserveUi: false });
           return fetchSessionFromServer(true);
         }
         return null;
       });
     }
     if (config && config.chatSessionId) {
-      adoptSessionId(config.chatSessionId, { fromServer: true, preserveUi: true });
+      adoptSessionId(config.chatSessionId, { fromServer: true, preserveUi: false });
       return fetchSessionFromServer(true);
     }
     return Promise.resolve();
@@ -554,9 +692,11 @@
       if (plusWrap) plusWrap.hidden = true;
     }
     initAuthGate();
+    lastAuthUserId = getAuthUserId();
     purgeGuestChatStorage();
     bindAudioUnlock();
     bindVisibilityResume();
+    bindChatLifecycle();
     var boot = isPersistentAccountChat()
       ? refreshAuthenticatedChatSession().then(function () {
           return restoreCustomerSession();
@@ -588,8 +728,9 @@
 
   function saveSessionSnapshot() {
     var sid = getSessionId();
+    if (isPersistentAccountChat()) return;
     try {
-      localStorage.setItem(SESSION_KEY, sid);
+      localStorage.setItem(getSessionStorageKey(), sid);
       localStorage.setItem(SESSION_META_KEY, JSON.stringify({ sessionId: sid, updatedAt: Date.now() }));
       localStorage.setItem(snapshotKey(sid), JSON.stringify({
         messages: messages,
@@ -696,6 +837,7 @@
   function onWidgetClose() {
     widgetOpen = false;
     stopCustomerStream();
+    sendCustomerDisconnectBeacon();
     scheduleLivePolling();
     notifyLayout();
   }
@@ -986,7 +1128,7 @@
         sessionRestored = true;
       }
       if (config && config.chatSessionId) {
-        adoptSessionId(config.chatSessionId, { fromServer: true, preserveUi: true });
+        adoptSessionId(config.chatSessionId, { fromServer: true, preserveUi: false });
       }
       return fetchSessionFromServer(true).then(function (restored) {
         if (chatHandler === 'closed') {
@@ -1084,6 +1226,14 @@
 
   function fetchSessionFromServer(full) {
     if (!config.ajaxUrl) return Promise.resolve(false);
+    if (full && isPersistentAccountChat()) {
+      threadEl.innerHTML = '';
+      messages = [];
+      domMsgIds = {};
+      domClientMsgIds = {};
+      pollSeq = 0;
+      root.classList.remove('paxdesign-has-chat-messages');
+    }
     var formData = new FormData();
     formData.append('action', 'paxdesign_chat_poll');
     formData.append('nonce', config.nonce);
@@ -1096,6 +1246,18 @@
       .then(function (json) {
         if (!json || !json.success || !json.data) return false;
         var data = json.data;
+        if (data.auth_user_id && getAuthUserId() > 0 && data.auth_user_id !== getAuthUserId()) {
+          clearAllChatStorage();
+          resetChatForAuthChange(true);
+          refreshAuthenticatedChatSession();
+          return false;
+        }
+        if (data.session_id) {
+          if (config) config.chatSessionId = data.session_id;
+          if (data.session_id !== cachedSessionId) {
+            adoptSessionId(data.session_id, { fromServer: true, preserveUi: !full });
+          }
+        }
         applyHandlerState(data.handler || 'ai', data.admin_name || '');
         syncSessionMetaFromPoll(data);
         if (Array.isArray(data.messages) && data.messages.length) applyRestoredMessages(data.messages);
@@ -1319,13 +1481,13 @@
       if (config && config.chatSessionId) {
         cachedSessionId = config.chatSessionId;
         try {
-          localStorage.setItem(SESSION_KEY, config.chatSessionId);
+          localStorage.setItem(getSessionStorageKey(), config.chatSessionId);
           sessionStorage.setItem(SESSION_KEY, config.chatSessionId);
         } catch (e) {}
         return cachedSessionId;
       }
       try {
-        var stored = localStorage.getItem(SESSION_KEY) || sessionStorage.getItem(SESSION_KEY);
+        var stored = localStorage.getItem(getSessionStorageKey()) || sessionStorage.getItem(SESSION_KEY);
         if (stored) {
           cachedSessionId = stored;
           return stored;
@@ -1496,6 +1658,10 @@
     root.addEventListener('click', unlock, { once: false });
     root.addEventListener('touchstart', unlock, { once: false, passive: true });
     input.addEventListener('focus', unlock, { once: false });
+  }
+
+  function bindChatLifecycle() {
+    window.addEventListener('pagehide', sendCustomerDisconnectBeacon);
   }
 
   function bindVisibilityResume() {
@@ -1895,8 +2061,14 @@
         if (handleAuthGateResponse(json)) return;
         if (!json || !json.success || !json.data) return;
         var data = json.data;
+        if (data.auth_user_id && getAuthUserId() > 0 && data.auth_user_id !== getAuthUserId()) {
+          clearAllChatStorage();
+          resetChatForAuthChange(true);
+          refreshAuthenticatedChatSession();
+          return;
+        }
         if (data.session_id && data.session_id !== getSessionId()) {
-          adoptSessionId(data.session_id, { fromServer: true, preserveUi: true });
+          adoptSessionId(data.session_id, { fromServer: true, preserveUi: false });
         }
         applyHandlerState(data.handler || 'ai', data.admin_name || '');
         syncSessionMetaFromPoll(data);
