@@ -334,12 +334,19 @@ struct ChatView: View {
                     Task {
                         if thread.handler == "live_request",
                            let session = coordinator.sessions.first(where: { $0.sessionId == thread.sessionId }) {
-                            await coordinator.acceptLiveRequest(auth: auth, session: session)
+                            let response = try await auth.api?.takeover(thread.sessionId)
+                            coordinator.acknowledgeIncomingRequest(session.sessionId)
+                            if let response {
+                                coordinator.applyHandlerTransition(response, sessionId: thread.sessionId, auth: auth)
+                            }
                             await thread.reloadAfterTakeover(auth: auth)
                             PAXHaptics.success()
                         } else {
                             do {
-                                try await auth.api?.takeover(thread.sessionId)
+                                let response = try await auth.api?.takeover(thread.sessionId)
+                                if let response {
+                                    coordinator.applyHandlerTransition(response, sessionId: thread.sessionId, auth: auth)
+                                }
                                 await thread.reloadAfterTakeover(auth: auth)
                                 await coordinator.refreshSessions(auth: auth)
                                 PAXHaptics.success()
@@ -356,7 +363,10 @@ struct ChatView: View {
                     PAXHaptics.light()
                     Task {
                         do {
-                            _ = try await auth.api?.release(thread.sessionId)
+                            let response = try await auth.api?.release(thread.sessionId)
+                            if let response {
+                                coordinator.applyHandlerTransition(response, sessionId: thread.sessionId, auth: auth)
+                            }
                             await thread.reloadAfterTakeover(auth: auth)
                             await coordinator.refreshSessions(auth: auth)
                             PAXHaptics.success()

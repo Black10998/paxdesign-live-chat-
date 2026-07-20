@@ -627,6 +627,18 @@ struct ConversationSyncResponse: Codable {
     }
 }
 
+struct HandlerTransitionResponse: Codable {
+    let handler: String
+    let adminName: String?
+    let message: LiveMessage?
+
+    enum CodingKeys: String, CodingKey {
+        case handler
+        case adminName = "admin_name"
+        case message
+    }
+}
+
 struct PollResponse: Codable {
     let handler: String
     let handlerLabel: String

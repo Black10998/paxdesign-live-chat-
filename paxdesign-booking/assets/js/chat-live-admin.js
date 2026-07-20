@@ -186,6 +186,7 @@
         }
         if (!sid || sid === selectedSession) {
           updateHandlerUi(payload.handler, payload.admin_name || '');
+          if (payload.message) renderMessages([payload.message], false);
           pollMessages();
         }
         scheduleDebouncedListRefresh();
@@ -2475,19 +2476,46 @@
     $takeover.on('click', function () {
       if (!selectedSession) return;
       if (!window.confirm('Möchten Sie diesen Chat übernehmen? Die KI wird sofort pausiert.')) return;
-      ajax('paxdesign_chat_live_takeover', { session_id: selectedSession }).done(function (res) {
+      var takeoverId = selectedSession;
+      var takeoverNotice = 'Ein Mitarbeiter hat den Live-Chat übernommen.';
+      var optimisticAdmin = (sessionAssignedAgent && sessionAssignedAgent.name) || agentName || 'Live-Agent';
+      patchSessionInList(takeoverId, {
+        handler: 'admin',
+        handler_label: optimisticAdmin,
+        admin_name: optimisticAdmin,
+        needs_reply: false,
+        last_preview: takeoverNotice,
+        last_role: 'system',
+        updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+      });
+      updateHandlerUi('admin', optimisticAdmin);
+      ajax('paxdesign_chat_live_takeover', { session_id: takeoverId }).done(function (res) {
         if (!res.success) {
+          loadList();
+          loadSession(takeoverId, false);
           alert(res.data && res.data.message ? res.data.message : 'Übernahme fehlgeschlagen.');
           return;
         }
-        seenLiveRequests[selectedSession] = Date.now();
+        seenLiveRequests[takeoverId] = Date.now();
         persistSeenLiveRequests();
         stopLiveRequestAlarm();
         hideLiveAlertBar();
-        updateHandlerUi('admin', res.data.admin_name);
+        updateHandlerUi('admin', res.data.admin_name || optimisticAdmin);
         if (res.data.message) renderMessages([res.data.message], false);
+        patchSessionInList(takeoverId, {
+          handler: 'admin',
+          handler_label: handlerLabel('admin', res.data.admin_name || optimisticAdmin),
+          admin_name: res.data.admin_name || optimisticAdmin,
+          needs_reply: false,
+          last_preview: takeoverNotice,
+          last_role: 'system',
+          updated_at: new Date().toISOString().slice(0, 19).replace('T', ' '),
+        });
         maybeSuggestForLatestUserMessage();
         loadList();
+      }).fail(function () {
+        loadList();
+        loadSession(takeoverId, false);
       });
     });
 

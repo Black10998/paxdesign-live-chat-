@@ -888,6 +888,19 @@ struct CustomerChatView: View {
             user_typing: poll?.user_typing,
             other_read_seq: poll?.other_read_seq
         )
+        if handler == "admin" {
+            notice = staffTakeoverNotice(adminName: nil)
+        } else if handler == "ai" {
+            notice = staffReturnedToAiNotice()
+        }
+    }
+
+    private func staffTakeoverNotice(adminName: String?) -> String {
+        String(localized: "Ein Mitarbeiter hat den Live-Chat übernommen.")
+    }
+
+    private func staffReturnedToAiNotice() -> String {
+        String(localized: "Das Gespräch wurde an den KI-Assistenten zurückgegeben.")
     }
 
     private func applyTypingUpdate(_ payload: [String: Any]) {
@@ -1111,10 +1124,26 @@ struct CustomerChatView: View {
                             await refresh(full: true)
                         case "handler":
                             let handler = StreamPayload.string(event.payload["handler"])
+                            let adminName = StreamPayload.string(event.payload["admin_name"])
                             if !handler.isEmpty {
                                 applyHandlerUpdate(handler)
-                                await refresh(full: false)
                             }
+                            if let message = CustomerChatPoll.ChatMessage.fromStreamPayload(event.payload["message"]) {
+                                applyInlineMessage(message)
+                                if handler == "admin" {
+                                    notice = staffTakeoverNotice(adminName: adminName)
+                                    PAXHaptics.success()
+                                } else if handler == "ai" {
+                                    notice = staffReturnedToAiNotice()
+                                }
+                            } else if handler == "admin" {
+                                notice = staffTakeoverNotice(adminName: adminName)
+                                PAXHaptics.success()
+                            } else if handler == "ai" {
+                                notice = staffReturnedToAiNotice()
+                            }
+                            pollIntervalNs = minPollIntervalNs
+                            await refresh(full: true)
                         case "typing":
                             applyTypingUpdate(event.payload)
                         default:
