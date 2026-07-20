@@ -23,6 +23,7 @@ struct ChatView: View {
     @State private var showQuickLinksSheet = false
     @State private var pendingDeleteMessage: LiveMessage?
     @State private var showDeleteConfirm = false
+    @State private var isClosingChat = false
 
     init(sessionId: String) {
         _thread = ObservedObject(wrappedValue: ChatThreadRegistry.shared.bookingThread(sessionId: sessionId))
@@ -174,6 +175,32 @@ struct ChatView: View {
     private func copyMessage(_ message: LiveMessage) {
         UIPasteboard.general.string = message.content
         PAXHaptics.success()
+    }
+
+    /// Dismisses immediately so the staff UI never blocks on close/refresh network calls.
+    private func closeChatSession() {
+        guard !isClosingChat else { return }
+        isClosingChat = true
+        PAXHaptics.warning()
+
+        let sessionId = thread.sessionId
+        AdminTypingSound.shared.stop()
+        thread.suspend()
+        if coordinator.activeSessionId == sessionId {
+            coordinator.activeSessionId = nil
+            AppRefreshPolicy.setActiveSession(nil)
+        }
+        AppRefreshPolicy.update(liveCount: coordinator.liveCount, openChat: false)
+        dismiss()
+
+        Task {
+            do {
+                try await auth.api?.close(sessionId)
+            } catch {
+                // Session list refresh below still reconciles server state.
+            }
+            await coordinator.refreshSessions(auth: auth)
+        }
     }
 
     private var agentDisplayName: String {
@@ -350,13 +377,9 @@ struct ChatView: View {
                 }
             } else if canReply {
                 Button(L10n.CommonClose) {
-                    PAXHaptics.warning()
-                    Task {
-                        try? await auth.api?.close(thread.sessionId)
-                        await coordinator.refreshSessions(auth: auth)
-                        dismiss()
-                    }
+                    closeChatSession()
                 }
+                .disabled(isClosingChat)
             }
         }
     }
