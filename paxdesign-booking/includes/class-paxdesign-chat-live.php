@@ -631,6 +631,17 @@ class PAXdesign_Chat_Live {
         return $session_id !== '' && strpos($session_id, 'pax_u') === 0;
     }
 
+    /**
+     * Extract WordPress user id from durable customer session ids (pax_u{uid}_…).
+     */
+    public static function user_id_from_session_id($session_id) {
+        $session_id = (string) $session_id;
+        if ($session_id === '' || !preg_match('/^pax_u(\d+)_/i', $session_id, $matches)) {
+            return 0;
+        }
+        return absint($matches[1]);
+    }
+
     private static function ensure_list_schema() {
         if (self::$list_schema_ready) {
             return;
@@ -1049,7 +1060,7 @@ class PAXdesign_Chat_Live {
         ) !== false;
     }
 
-    public function ensure_session($session_id, $messages = array()) {
+    public function ensure_session($session_id, $messages = array(), $user_id = 0) {
         $session_id = $this->sanitize_session_id($session_id);
         if ($session_id === '') {
             return null;
@@ -1057,7 +1068,10 @@ class PAXdesign_Chat_Live {
 
         $row = $this->get_session_row($session_id);
         if ($row) {
-            return $row;
+            if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+                PAXdesign_Customer_Chat_Bridge::sync_customer_profile($session_id, $user_id);
+            }
+            return $this->get_session_row($session_id);
         }
 
         PAXdesign_Chat_Log::create_table();
@@ -1078,21 +1092,30 @@ class PAXdesign_Chat_Live {
             ));
             if (!$existing) {
                 $now = current_time('mysql');
-                $wpdb->insert(
-                    $table,
-                    array(
-                        'session_id'           => $session_id,
-                        'started_at'           => $now,
-                        'updated_at'           => $now,
-                        'messages'             => '[]',
-                        'handler'              => self::HANDLER_AI,
-                        'detected_service'     => '',
-                        'booking_triggered'    => 0,
-                        'consultation_started' => 0,
-                        'message_count'        => 0,
-                    ),
-                    array('%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d')
+                $insert = array(
+                    'session_id'           => $session_id,
+                    'started_at'           => $now,
+                    'updated_at'           => $now,
+                    'messages'             => '[]',
+                    'handler'              => self::HANDLER_AI,
+                    'detected_service'     => '',
+                    'booking_triggered'    => 0,
+                    'consultation_started' => 0,
+                    'message_count'        => 0,
                 );
+                $formats = array('%s', '%s', '%s', '%s', '%s', '%s', '%d', '%d', '%d');
+                $user_id = absint($user_id);
+                if ($user_id <= 0) {
+                    $user_id = self::user_id_from_session_id($session_id);
+                }
+                if ($user_id > 0) {
+                    $identity = self::resolve_customer_identity($user_id, '');
+                    $insert['wp_user_id']    = $user_id;
+                    $insert['customer_name'] = $identity['name'];
+                    $formats[] = '%d';
+                    $formats[] = '%s';
+                }
+                $wpdb->insert($table, $insert, $formats);
             }
             return $this->get_session_row($session_id);
         }
@@ -2942,6 +2965,18 @@ class PAXdesign_Chat_Live {
         $live_count = 0;
         $threads    = array();
         foreach ((array) $rows as $row) {
+            $session_id = isset($row->session_id) ? (string) $row->session_id : '';
+            $wp_user_id = isset($row->wp_user_id) ? (int) $row->wp_user_id : 0;
+            if ($session_id !== '' && ($wp_user_id <= 0 || trim((string) ($row->customer_name ?? '')) === '')) {
+                $resolved_user = self::user_id_from_session_id($session_id);
+                if ($resolved_user > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+                    PAXdesign_Customer_Chat_Bridge::sync_customer_profile($session_id, $resolved_user);
+                    $fresh = $this->get_session_row($session_id);
+                    if ($fresh) {
+                        $row = $fresh;
+                    }
+                }
+            }
             $item = $this->format_live_list_session($row);
             if ($item['handler'] === self::HANDLER_LIVE) {
                 $live_count++;
@@ -2983,16 +3018,26 @@ class PAXdesign_Chat_Live {
         }
         $handler  = isset($row->handler) ? (string) $row->handler : self::HANDLER_AI;
         $agent    = self::session_agent_payload($row);
+        $session_id = isset($row->session_id) ? (string) $row->session_id : '';
+        $wp_user_id = isset($row->wp_user_id) ? (int) $row->wp_user_id : 0;
+        if ($wp_user_id <= 0) {
+            $wp_user_id = self::user_id_from_session_id($session_id);
+        }
+        $customer_name = isset($row->customer_name) ? trim((string) $row->customer_name) : '';
+        if ($customer_name === '' && $wp_user_id > 0) {
+            $customer_name = self::resolve_customer_identity($wp_user_id, '')->name;
+        }
 
         return array(
             'id'               => isset($row->id) ? (int) $row->id : 0,
-            'session_id'       => isset($row->session_id) ? (string) $row->session_id : '',
+            'session_id'       => $session_id,
             'handler'          => $handler,
             'handler_label'    => self::handler_label($handler, $agent['admin_name']),
             'admin_user_id'    => $agent['admin_user_id'],
             'admin_name'       => $agent['admin_name'],
             'assigned_agent'   => $agent['assigned_agent'],
-            'customer_name'    => isset($row->customer_name) ? (string) $row->customer_name : '',
+            'customer_name'    => $customer_name,
+            'wp_user_id'       => $wp_user_id,
             'session_rating'   => isset($row->session_rating) ? (int) $row->session_rating : 0,
             'detected_service' => isset($row->detected_service) ? (string) $row->detected_service : '',
             'updated_at'       => PAXdesign_API_Time::format(isset($row->updated_at) ? (string) $row->updated_at : '', false),

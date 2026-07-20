@@ -2219,6 +2219,28 @@ body.paxdesign-agent-profile-open {
   flex-direction: column;
 }
 
+#paxdesign-booking-root.paxdesign-chat-mode-active .paxdesign-booking-widget {
+  min-height: 520px;
+}
+
+#paxdesign-booking-root.paxdesign-chat-mode-active .paxdesign-booking-container {
+  min-height: 520px;
+}
+
+#paxdesign-booking-root.paxdesign-chat-direct-mode .paxdesign-booking-chat-body {
+  max-height: none;
+  flex: 1 1 auto;
+}
+
+#paxdesign-booking-root.paxdesign-chat-direct-mode .paxdesign-booking-body {
+  max-height: none;
+}
+
+#paxdesign-booking-root.paxdesign-chat-direct-mode .paxdesign-booking-chat-messages {
+  flex: 1 1 auto;
+  min-height: 320px;
+}
+
 /* ─── AI Chat (integrated — booking design tokens) ──────────────────────── */
 #paxdesign-booking-root .paxdesign-booking-chat-body {
   flex: 1;

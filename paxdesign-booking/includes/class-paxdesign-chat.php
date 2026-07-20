@@ -230,7 +230,8 @@ class PAXdesign_Chat {
         }
         if (get_current_user_id() > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
             $live = PAXdesign_Chat_Live::get_instance();
-            $session_id = PAXdesign_Customer_Chat_Bridge::resolve_ajax_session(get_current_user_id(), $session_id);
+            $user_id = get_current_user_id();
+            $session_id = PAXdesign_Customer_Chat_Bridge::resolve_ajax_session($user_id, $session_id);
             $last_user = '';
             for ($i = count($messages) - 1; $i >= 0; $i--) {
                 if (is_array($messages[$i]) && ($messages[$i]['role'] ?? '') === 'user') {
@@ -239,13 +240,14 @@ class PAXdesign_Chat {
                 }
             }
             if ($last_user !== '') {
+                PAXdesign_Customer_Chat_Bridge::materialize_session($session_id, $user_id);
                 $assistant_client_id = isset($_POST['assistant_client_msg_id'])
                     ? sanitize_text_field(wp_unslash($_POST['assistant_client_msg_id']))
                     : '';
                 $client_msg_id = isset($_POST['client_msg_id'])
                     ? sanitize_text_field(wp_unslash($_POST['client_msg_id']))
                     : '';
-                $result = PAXdesign_Chat::get_instance()->complete_authenticated_customer_chat(
+                $result = $this->stream_authenticated_customer_chat(
                     $session_id,
                     $last_user,
                     $client_msg_id,
@@ -259,7 +261,7 @@ class PAXdesign_Chat {
                     }
                     wp_send_json_error(array('message' => $result->get_error_message()), $status);
                 }
-                wp_send_json_success($result);
+                exit;
             }
         }
         if ($session_id !== '' && preg_match('/^pax_[a-z0-9_]+$/i', $session_id)) {

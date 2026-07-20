@@ -2039,13 +2039,13 @@
           played = true;
         }
       } else {
-        renderMessageDom(msg.role, msg.content, msg.id, messageRenderOpts(msg));
+        renderMessageDom(msg.role, messageText(msg.content), msg.id, messageRenderOpts(msg));
       }
 
       if (msg.role === 'assistant' || msg.role === 'admin') {
-        messages.push({ role: msg.role, content: msg.content, id: msg.id });
+        messages.push({ role: msg.role, content: messageText(msg.content), id: msg.id });
       } else if (msg.role === 'system') {
-        messages.push({ role: 'system', content: msg.content, id: msg.id });
+        messages.push({ role: 'system', content: messageText(msg.content), id: msg.id });
       }
     });
     if (played) syncChatLog();
@@ -2788,6 +2788,7 @@
 
   function buildBubbleInnerHtml(role, content, opts) {
     opts = opts || {};
+    content = messageText(content);
     var html = '';
     if (opts.image_url) {
       html += '<div class="paxdesign-booking-chat-message-image"><img src="' + escapeHtml(opts.image_url) + '" alt="Foto" loading="lazy" decoding="async"></div>';
@@ -2807,6 +2808,7 @@
 
   function renderMessageDom(role, content, msgId, opts) {
     opts = opts || {};
+    content = messageText(content);
     root.classList.add('paxdesign-has-chat-messages');
     var msg = document.createElement('div');
     msg.className = 'paxdesign-booking-chat-message paxdesign-booking-chat-message--' + role;
@@ -2966,6 +2968,27 @@
     var div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  function messageText(value) {
+    if (value == null) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+    if (typeof value === 'object') {
+      if (typeof value.content === 'string') return value.content;
+      if (typeof value.text === 'string') return value.text;
+      if (typeof value.message === 'string') return value.message;
+    }
+    return '';
+  }
+
+  function apiErrorMessage(json, fallback) {
+    fallback = fallback || 'Fehler bei der Anfrage.';
+    if (!json || !json.data) return fallback;
+    var data = json.data;
+    if (typeof data.message === 'string') return data.message;
+    if (typeof data.error === 'string') return data.error;
+    return fallback;
   }
 
   function stripBookingMarkers(text) {
@@ -3150,6 +3173,7 @@
 
   function finalizeAssistantMessage(fullText, meta) {
     meta = meta || {};
+    fullText = messageText(fullText);
     var cleanText = stripBookingMarkers(fullText);
     var serviceName = parseBookingMarker(fullText);
 
@@ -3247,6 +3271,36 @@
     if (!isLoginRequiredResponse(json)) return false;
     showAuthGate();
     return true;
+  }
+
+  function handleAuthenticatedChatJsonSuccess(data) {
+    removeTyping();
+    isStreaming = false;
+    updateSendButton();
+    if (data && data.session_id) {
+      adoptSessionId(data.session_id, { fromServer: true, preserveUi: true });
+    }
+    if (data && data.handler) {
+      applyHandlerState(data.handler, data.admin_name || '');
+    }
+    if (data && data.assistant) {
+      var assistantPayload = data.assistant;
+      var assistantText = messageText(assistantPayload);
+      var assistantId = assistantPayload.id || nextLocalId();
+      if (assistantText && !isDuplicateMessage(assistantPayload)) {
+        rememberMessageIdentity(assistantPayload);
+        renderMessageDom('assistant', assistantText, assistantId, messageRenderOpts(assistantPayload, { skipPush: true }));
+        messages.push({
+          role: 'assistant',
+          content: assistantText,
+          id: assistantId,
+          client_msg_id: assistantPayload.client_msg_id || newClientMessageId(),
+        });
+        playNotificationSound(false);
+      }
+    }
+    syncChatLog();
+    saveSessionSnapshot();
   }
 
   function sendHumanModeMessage(text, clientMsgId) {
@@ -3446,7 +3500,11 @@
             var message = 'Fehler bei der Anfrage.';
             try {
               var json = JSON.parse(body);
-              if (json.data && json.data.message) message = json.data.message;
+              if (json && json.success && json.data) {
+                handleAuthenticatedChatJsonSuccess(json.data);
+                return;
+              }
+              message = apiErrorMessage(json, message);
             } catch (e) {
               if (body && body.indexOf('-1') === 0) message = 'Sitzung abgelaufen. Bitte laden Sie die Seite neu.';
             }
@@ -3511,6 +3569,31 @@
               }
             } else if (data.type === 'done' && data.message) {
               persistedAssistantMessage = data.message;
+              if (!gotFirstChunk && data.message) {
+                var doneText = messageText(data.message);
+                if (doneText) {
+                  gotFirstChunk = true;
+                  ensureAssistantBubble();
+                  fullText = doneText;
+                  pendingBubble = bubble;
+                  pendingText = fullText;
+                  flushStreamBubble();
+                }
+              }
+            } else if (data.type === 'handoff') {
+              if (data.handler) applyHandlerState(data.handler, '');
+              if (data.assistant) {
+                var handoffText = messageText(data.assistant);
+                if (handoffText) {
+                  gotFirstChunk = true;
+                  ensureAssistantBubble();
+                  fullText = handoffText;
+                  pendingBubble = bubble;
+                  pendingText = fullText;
+                  flushStreamBubble();
+                  persistedAssistantMessage = data.assistant;
+                }
+              }
             }
           } catch (e) {}
         }

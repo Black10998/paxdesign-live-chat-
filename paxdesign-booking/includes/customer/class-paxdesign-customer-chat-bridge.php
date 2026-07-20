@@ -57,11 +57,35 @@ class PAXdesign_Customer_Chat_Bridge {
         if ($session_id === '') {
             return '';
         }
+        PAXdesign_Chat_Live::get_instance()->ensure_session($session_id, array(), $user_id);
         if ($user_id > 0) {
-            self::sync_chat_log_user($session_id, $user_id);
+            self::sync_customer_profile($session_id, $user_id);
         }
-        PAXdesign_Chat_Live::get_instance()->ensure_session($session_id);
         return self::ensure_persistent_session_open($session_id, $user_id);
+    }
+
+    /**
+     * Bind authenticated customer identity to a chat log row (name + wp_user_id).
+     */
+    public static function sync_customer_profile($session_id, $user_id) {
+        global $wpdb;
+        $user_id = absint($user_id);
+        $session_id = self::sanitize_session_id($session_id);
+        if ($user_id <= 0 || $session_id === '') {
+            return;
+        }
+        $identity = PAXdesign_Chat_Live::resolve_customer_identity($user_id, '');
+        $wpdb->update(
+            PAXdesign_Chat_Log::table_name(),
+            array(
+                'wp_user_id'    => $user_id,
+                'customer_name' => sanitize_text_field($identity['name']),
+                'updated_at'    => current_time('mysql'),
+            ),
+            array('session_id' => $session_id),
+            array('%d', '%s', '%s'),
+            array('%s')
+        );
     }
 
     /**
