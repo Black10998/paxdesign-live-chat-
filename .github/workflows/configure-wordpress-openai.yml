@@ -1,0 +1,33 @@
+name: Configure WordPress OpenAI Key
+
+on:
+  workflow_dispatch:
+    inputs:
+      openai_api_key:
+        description: OpenAI API key (sk-proj-...)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  configure-openai-key:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PAX_OPENAI_API_KEY: ${{ inputs.openai_api_key }}
+      WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+      WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+      WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+      WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+      WP_PATH: ${{ secrets.WP_PATH }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Update OpenAI key on production
+        run: |
+          set -euo pipefail
+          chmod +x scripts/configure-production-openai-key-ssh.sh
+          ./scripts/configure-production-openai-key-ssh.sh
