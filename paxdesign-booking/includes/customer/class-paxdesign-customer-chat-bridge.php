@@ -692,9 +692,6 @@ class PAXdesign_Customer_Chat_Bridge {
             self::materialize_session($session_id, $user_id);
             $handler = $live->get_handler($session_id);
         }
-        if (!$live->is_human_queue($session_id)) {
-            return new WP_Error('use_ai_stream', __('Attachments are available during human support.', 'paxdesign-booking'), array('status' => 409));
-        }
 
         $message_extra = array();
         if (!empty($extra['client_msg_id'])) {
