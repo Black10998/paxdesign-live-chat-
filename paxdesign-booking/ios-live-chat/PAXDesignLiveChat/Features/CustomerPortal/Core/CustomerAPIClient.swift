@@ -498,6 +498,8 @@ final class CustomerAPIClient: ObservableObject {
     func streamChatMessage(
         _ message: String,
         sessionID: String?,
+        clientMsgID: String = UUID().uuidString,
+        assistantClientMsgID: String = UUID().uuidString,
         onEvent: @escaping (CustomerStreamEvent) -> Void
     ) async throws {
         try await requireReadySession()
@@ -507,7 +509,11 @@ final class CustomerAPIClient: ObservableObject {
         guard let url = endpointURL("/customer/chat/stream") else {
             throw CustomerAPIError.invalidURL
         }
-        var body: [String: String] = ["message": message]
+        var body: [String: String] = [
+            "message": message,
+            "client_msg_id": clientMsgID,
+            "assistant_client_msg_id": assistantClientMsgID,
+        ]
         if let sessionID, !sessionID.isEmpty {
             body["session_id"] = sessionID
         }
