@@ -206,6 +206,12 @@ class PAXdesign_Live_Chat_Mobile_API {
             'permission_callback' => '__return_true',
         ));
 
+        register_rest_route(self::REST_NAMESPACE, '/system/bootstrap/openai', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_bootstrap_openai_configure'),
+            'permission_callback' => '__return_true',
+        ));
+
         register_rest_route(self::REST_NAMESPACE, '/live-admin/me', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'route_me'),
@@ -397,6 +403,25 @@ class PAXdesign_Live_Chat_Mobile_API {
         register_rest_route(self::REST_NAMESPACE, '/live-admin/system/plugin/update', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'route_plugin_system_update'),
+            'permission_callback' => array(__CLASS__, 'permission_apns_admin'),
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/system/openai', array(
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array(__CLASS__, 'route_openai_system_status'),
+                'permission_callback' => array(__CLASS__, 'permission_apns_admin'),
+            ),
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array(__CLASS__, 'route_openai_system_configure'),
+                'permission_callback' => array(__CLASS__, 'permission_apns_admin'),
+            ),
+        ));
+
+        register_rest_route(self::REST_NAMESPACE, '/live-admin/system/openai/test', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'route_openai_system_test'),
             'permission_callback' => array(__CLASS__, 'permission_apns_admin'),
         ));
 
@@ -1312,6 +1337,15 @@ class PAXdesign_Live_Chat_Mobile_API {
         ));
     }
 
+    public static function route_bootstrap_openai_configure(WP_REST_Request $request) {
+        $check = PAXdesign_ASC_Bootstrap::authorize_request($request);
+        if (is_wp_error($check)) {
+            return $check;
+        }
+
+        return self::route_openai_system_configure($request);
+    }
+
     public static function route_bootstrap_devices_purge(WP_REST_Request $request) {
         $check = PAXdesign_ASC_Bootstrap::authorize_request($request);
         if (is_wp_error($check)) {
@@ -1421,6 +1455,91 @@ class PAXdesign_Live_Chat_Mobile_API {
         update_option('paxdesign_apns_key_p8', $key_p8);
 
         return self::route_apns_system_status($request);
+    }
+
+    public static function route_openai_system_status(WP_REST_Request $request) {
+        if (!class_exists('PAXdesign_Chat')) {
+            return new WP_Error('chat_unavailable', 'Chat module unavailable.', array('status' => 501));
+        }
+
+        $chat = PAXdesign_Chat::get_instance();
+        $api_key = trim((string) get_option('paxdesign_chat_openai_key', ''));
+        if ($api_key === '' && defined('PAXDESIGN_OPENAI_API_KEY')) {
+            $api_key = trim((string) PAXDESIGN_OPENAI_API_KEY);
+        }
+
+        $configured = $api_key !== '';
+        $key_prefix = $configured ? substr($api_key, 0, 7) . '...' . substr($api_key, -4) : '';
+
+        return self::respond(array(
+            'configured'     => $configured,
+            'enabled'        => get_option('paxdesign_chat_enabled', '1') === '1',
+            'model'          => sanitize_text_field((string) get_option('paxdesign_chat_model', 'gpt-4o')),
+            'key_prefix'     => $key_prefix,
+            'plugin_version' => defined('PAXDESIGN_BOOKING_VERSION') ? PAXDESIGN_BOOKING_VERSION : '',
+        ));
+    }
+
+    public static function route_openai_system_configure(WP_REST_Request $request) {
+        if (!class_exists('PAXdesign_Chat')) {
+            return new WP_Error('chat_unavailable', 'Chat module unavailable.', array('status' => 501));
+        }
+
+        $params = $request->get_json_params();
+        if (!is_array($params)) {
+            $params = array();
+        }
+
+        $api_key = isset($params['openai_api_key']) ? sanitize_text_field(trim((string) $params['openai_api_key'])) : '';
+        if ($api_key === '') {
+            return new WP_Error('openai_missing_key', 'openai_api_key is required.', array('status' => 400));
+        }
+
+        update_option('paxdesign_chat_openai_key', $api_key, false);
+        update_option('paxdesign_chat_enabled', '1', false);
+        delete_option('paxdesign_chat_last_error');
+
+        $test = PAXdesign_Chat::get_instance()->test_openai_connection();
+        if (is_wp_error($test)) {
+            return new WP_Error(
+                'openai_verify_failed',
+                $test->get_error_message(),
+                array(
+                    'status' => 502,
+                    'data'   => self::route_openai_system_status($request)->get_data(),
+                )
+            );
+        }
+
+        $status = self::route_openai_system_status($request)->get_data();
+        if (is_array($status)) {
+            $status['verified'] = true;
+            $status['test_model'] = isset($test['model']) ? (string) $test['model'] : '';
+            $status['test_message'] = isset($test['message']) ? (string) $test['message'] : '';
+        }
+
+        return self::respond($status);
+    }
+
+    public static function route_openai_system_test(WP_REST_Request $request) {
+        if (!class_exists('PAXdesign_Chat')) {
+            return new WP_Error('chat_unavailable', 'Chat module unavailable.', array('status' => 501));
+        }
+
+        $test = PAXdesign_Chat::get_instance()->test_openai_connection();
+        if (is_wp_error($test)) {
+            return new WP_Error(
+                'openai_verify_failed',
+                $test->get_error_message(),
+                array('status' => 502)
+            );
+        }
+
+        return self::respond(array(
+            'ok'      => true,
+            'model'   => isset($test['model']) ? (string) $test['model'] : '',
+            'message' => isset($test['message']) ? (string) $test['message'] : '',
+        ));
     }
 
     public static function route_apns_system_test(WP_REST_Request $request) {
