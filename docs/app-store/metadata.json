@@ -7,9 +7,9 @@
     "de-DE",
     "en-US"
   ],
-  "versionString": "2.1.1",
-  "buildNumber": "184",
-  "wordpressVersion": "3.172.3",
+  "versionString": "2.1.2",
+  "buildNumber": "185",
+  "wordpressVersion": "3.172.4",
   "appInfo": {
     "name": "PAXDesign",
     "subtitle": {
@@ -33,9 +33,9 @@
       "ar": "paxdesign,بوابة,مشاريع,دعم,دردشة,طلبات,إشعارات"
     },
     "whatsNew": {
-      "de-DE": "PAXDesign 2.1 — vereinheitlichte Kunden- und Team-App:\n• Customer Portal direkt in der App integriert\n• Projekte, Anfragen, Services, News und Benachrichtigungen\n• Kunden-Chat mit KI und menschlichem Support\n• Bestehende Live-Chat-Funktionen für Support-Teams erhalten\n• Neuer App-Name: PAXDesign",
-      "en-US": "PAXDesign 2.1 — unified customer and team app:\n• Customer Portal integrated directly in the app\n• Projects, requests, services, news, and notifications\n• Customer chat with AI and human support\n• Existing live chat features preserved for support teams\n• New app name: PAXDesign",
-      "ar": "PAXDesign 2.1 — تطبيق موحد للعملاء والفريق:\n• بوابة العملاء مدمجة في التطبيق\n• المشاريع والطلبات والخدمات والأخبار والإشعارات\n• دردشة العملاء مع الذكاء الاصطناعي والدعم البشري\n• ميزات الدردشة المباشرة للفرق محفوظة\n• اسم التطبيق الجديد: PAXDesign"
+      "de-DE": "PAXDesign 2.1.2 — Apple-Review-Optimierungen:\n• Support-Chat: (+)-Menü zeigt Schnellantworten und Shortcuts im KI-Modus\n• Anhänge (Kamera, Fotos, Sprache, Standort) nur bei Live-Support\n• Deutlicher Live-Support-Übergang mit Banner\n• Erscheinungsbild: nur Hell/Dunkel (System folgt weiterhin beim ersten Start)\n• Support-Tab mit Headset-Symbol und lokalisiertem Namen",
+      "en-US": "PAXDesign 2.1.2 — Apple review improvements:\n• Support chat: (+) menu shows quick replies and shortcuts in AI mode\n• Attachments (camera, photos, voice, location) only during live support\n• Clear live support transition banner\n• Appearance: Light/Dark only (system still used on first launch)\n• Support tab with headset icon and localized name",
+      "ar": "PAXDesign 2.1.2 — تحسينات مراجعة Apple:\n• دردشة الدعم: قائمة (+) تعرض ردوداً سريعة واختصارات في وضع الذكاء الاصطناعي\n• المرفقات (صور، صوت، موقع) فقط أثناء الدعم المباشر\n• شريط انتقال واضح للدعم المباشر\n• المظهر: فاتح/داكن فقط (النظام يُستخدم عند أول تشغيل)\n• تبويب الدعم بأيقونة سماعة واسم مترجم"
     },
     "supportUrl": "https://paxdesign.at",
     "marketingUrl": "https://paxdesign.at",

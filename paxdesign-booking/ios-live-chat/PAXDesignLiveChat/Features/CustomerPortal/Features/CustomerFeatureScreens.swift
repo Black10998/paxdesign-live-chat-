@@ -959,7 +959,7 @@ struct CustomerSettingsView: View {
         Form {
             Section(String(localized: "Appearance")) {
                 Picker(String(localized: "Theme"), selection: $settings.appearanceMode) {
-                    ForEach(AppSettingsStore.AppearanceMode.allCases) { mode in
+                    ForEach(AppSettingsStore.AppearanceMode.selectableModes) { mode in
                         Text(mode.title).tag(mode)
                     }
                 }

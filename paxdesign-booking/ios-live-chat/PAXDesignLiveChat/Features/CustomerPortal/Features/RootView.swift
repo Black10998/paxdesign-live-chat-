@@ -102,7 +102,7 @@ struct CustomerTabView: View {
             UiverseMenuBarItem(tag: CustomerPortalTab.home.rawValue, icon: "dashboard.fill", title: String(localized: "Home")),
             UiverseMenuBarItem(tag: CustomerPortalTab.services.rawValue, icon: "platform.fill", title: String(localized: "Services")),
             UiverseMenuBarItem(tag: CustomerPortalTab.portfolio.rawValue, icon: "photo", title: String(localized: "Portfolio")),
-            UiverseMenuBarItem(tag: CustomerPortalTab.chat.rawValue, icon: "chats.fill", title: String(localized: "Chat"), badge: chatBadge.unreadCount),
+            UiverseMenuBarItem(tag: CustomerPortalTab.chat.rawValue, icon: "team.headset", title: String(localized: "Support"), badge: chatBadge.unreadCount),
             UiverseMenuBarItem(tag: CustomerPortalTab.account.rawValue, icon: "profile.user", title: String(localized: "Account")),
         ]
     }

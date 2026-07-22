@@ -1,13 +1,14 @@
 import SwiftUI
 
-/// Compact light / dark / system switch for the top navigation bar.
+/// Compact light / dark switch for the top navigation bar.
 struct PAXAppearanceQuickSwitch: View {
     @ObservedObject private var settings = AppSettingsStore.shared
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
         Menu {
             Picker(String(localized: "Appearance"), selection: $settings.appearanceMode) {
-                ForEach(AppSettingsStore.AppearanceMode.allCases) { mode in
+                ForEach(AppSettingsStore.AppearanceMode.selectableModes) { mode in
                     Label {
                         Text(mode.title)
                     } icon: {
@@ -36,7 +37,8 @@ struct PAXAppearanceQuickSwitch: View {
         switch mode {
         case .light: return "sun.max"
         case .dark: return "moon"
-        case .system: return "circle.lefthalf.filled"
+        case .system:
+            return settings.resolvedIsDark(for: colorScheme) ? "moon" : "sun.max"
         }
     }
 }
