@@ -369,6 +369,14 @@ struct CustomerChatView: View {
         return handler == "admin" || handler == "live_request"
     }
 
+    private var isWaitingForAgent: Bool {
+        poll?.handler == "live_request"
+    }
+
+    private var isConnectedToAgent: Bool {
+        poll?.handler == "admin"
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -389,7 +397,7 @@ struct CustomerChatView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .background(PAXBackground())
-            .navigationTitle(String(localized: "Chat"))
+            .navigationTitle(String(localized: "Support"))
             .navigationBarBackButtonHidden(isDedicatedChatScreen)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -543,6 +551,12 @@ struct CustomerChatView: View {
                     .frame(maxWidth: .infinity)
                     .background(PAXTheme.accentSoft)
             }
+            if isHumanQueue {
+                CustomerLiveSupportBanner(
+                    isWaiting: isWaitingForAgent,
+                    isConnected: isConnectedToAgent
+                )
+            }
             if let recovery, recovery.issue != .closed {
                 CustomerChatRecoveryBanner(
                     action: recovery,
@@ -682,34 +696,10 @@ struct CustomerChatView: View {
         VStack(spacing: 0) {
             Divider().opacity(0.35)
             HStack(alignment: .bottom, spacing: 8) {
-                Menu {
-                    Button {
-                        showCameraPicker = true
-                    } label: {
-                        PAXLabel(String(localized: "Camera"), icon: "camera")
-                    }
-                    Button {
-                        showImagePicker = true
-                    } label: {
-                        PAXLabel(String(localized: "Photo Library"), icon: "photo.on.rectangle")
-                    }
-                    Button {
-                        showDocumentPicker = true
-                    } label: {
-                        PAXLabel(String(localized: "Files"), icon: "doc")
-                    }
-                    Button {
-                        Task { await toggleVoice() }
-                    } label: {
-                        PAXLabel(isRecordingVoice ? String(localized: "Stop recording") : String(localized: "Voice message"), icon: "mic")
-                    }
-                    Button {
-                        showLocationSheet = true
-                    } label: {
-                        PAXLabel(String(localized: "Location"), icon: "location")
-                    }
-                } label: {
-                    PAXIcon("plus.circle.fill", size: .hero, tint: PAXTheme.accent)
+                if isHumanQueue {
+                    humanSupportComposerMenu
+                } else {
+                    aiAssistantComposerMenu
                 }
                 TextField(String(localized: "Message"), text: $draft, axis: .vertical)
                     .lineLimit(1...5)
@@ -735,6 +725,85 @@ struct CustomerChatView: View {
             .padding(.vertical, 10)
             .background(.ultraThinMaterial)
         }
+    }
+
+    @ViewBuilder
+    private var aiAssistantComposerMenu: some View {
+        Menu {
+            Menu {
+                ForEach(CustomerChatShortcutCatalog.quickReplies) { item in
+                    Button(item.title) {
+                        Task { await sendShortcut(item.message) }
+                    }
+                }
+            } label: {
+                PAXLabel(String(localized: "Quick replies"), icon: "bolt.fill")
+            }
+            Menu {
+                ForEach(CustomerChatShortcutCatalog.predefinedMessages) { item in
+                    Button(item.title) {
+                        Task { await sendShortcut(item.message) }
+                    }
+                }
+            } label: {
+                PAXLabel(String(localized: "Predefined messages"), icon: "text.bubble")
+            }
+            Menu {
+                ForEach(CustomerChatShortcutCatalog.customerShortcuts) { item in
+                    Button {
+                        Task { await sendShortcut(item.message) }
+                    } label: {
+                        PAXLabel(item.title, icon: item.icon)
+                    }
+                }
+            } label: {
+                PAXLabel(String(localized: "Customer shortcuts"), icon: "sparkles")
+            }
+        } label: {
+            PAXIcon("plus.circle.fill", size: .hero, tint: PAXTheme.accent)
+        }
+        .accessibilityLabel(String(localized: "Chat options"))
+    }
+
+    @ViewBuilder
+    private var humanSupportComposerMenu: some View {
+        Menu {
+            Button {
+                showCameraPicker = true
+            } label: {
+                PAXLabel(String(localized: "Camera"), icon: "camera")
+            }
+            Button {
+                showImagePicker = true
+            } label: {
+                PAXLabel(String(localized: "Photo Library"), icon: "photo.on.rectangle")
+            }
+            Button {
+                showDocumentPicker = true
+            } label: {
+                PAXLabel(String(localized: "Files"), icon: "doc")
+            }
+            Button {
+                Task { await toggleVoice() }
+            } label: {
+                PAXLabel(isRecordingVoice ? String(localized: "Stop recording") : String(localized: "Voice message"), icon: "mic")
+            }
+            Button {
+                showLocationSheet = true
+            } label: {
+                PAXLabel(String(localized: "Location"), icon: "location")
+            }
+        } label: {
+            PAXIcon("plus.circle.fill", size: .hero, tint: Color.green)
+        }
+        .accessibilityLabel(String(localized: "Attachments"))
+    }
+
+    private func sendShortcut(_ text: String) async {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        draft = trimmed
+        await send()
     }
 
     private var canSend: Bool {
@@ -887,6 +956,10 @@ struct CustomerChatView: View {
         )
         if handler == "admin" {
             notice = staffTakeoverNotice(adminName: nil)
+            PAXHaptics.success()
+        } else if handler == "live_request" {
+            notice = waitingForAgentNotice()
+            PAXHaptics.light()
         } else if handler == "ai" {
             notice = staffReturnedToAiNotice()
         }
@@ -894,6 +967,10 @@ struct CustomerChatView: View {
 
     private func staffTakeoverNotice(adminName: String?) -> String {
         String(localized: "customer.chat.staff_takeover", defaultValue: "A team member has taken over the live chat.")
+    }
+
+    private func waitingForAgentNotice() -> String {
+        String(localized: "customer.chat.waiting_for_agent", defaultValue: "Waiting for a support agent. Please stay in the chat.")
     }
 
     private func staffReturnedToAiNotice() -> String {
@@ -1580,6 +1657,146 @@ struct CustomerProfileView: View {
     }
 }
 
+private struct CustomerLiveSupportBanner: View {
+    let isWaiting: Bool
+    let isConnected: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(bannerTint.opacity(0.18))
+                    .frame(width: 40, height: 40)
+                PAXIcon("team.headset", size: .row, tint: bannerTint)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(String(localized: "Live Support"))
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(PAXTheme.textPrimary)
+                Text(statusText)
+                    .font(.caption)
+                    .foregroundStyle(PAXTheme.textSecondary)
+            }
+            Spacer(minLength: 0)
+            if isWaiting {
+                ProgressView()
+                    .controlSize(.small)
+            } else if isConnected {
+                PAXIcon("checkmark.circle.fill", size: .row, tint: .green)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 0, style: .continuous)
+                .fill(bannerTint.opacity(0.12))
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(bannerTint.opacity(0.35))
+                        .frame(height: 2)
+                }
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(String(localized: "Live Support")). \(statusText)")
+    }
+
+    private var bannerTint: Color {
+        isConnected ? .green : PAXTheme.accent
+    }
+
+    private var statusText: String {
+        if isConnected {
+            return String(localized: "You're connected to a real support agent. Attachments are now available.")
+        }
+        return String(localized: "Waiting for a support agent. You are no longer chatting with AI.")
+    }
+}
+
+private struct CustomerChatShortcutItem: Identifiable {
+    let id: String
+    let title: String
+    let message: String
+    var icon: String = "sparkles"
+}
+
+private enum CustomerChatShortcutCatalog {
+    static var quickReplies: [CustomerChatShortcutItem] {
+        let code = Locale.current.language.languageCode?.identifier ?? "en"
+        switch code {
+        case "ar":
+            return [
+                CustomerChatShortcutItem(id: "qr1", title: "حالة المشروع", message: "ما هي حالة مشروعي؟"),
+                CustomerChatShortcutItem(id: "qr2", title: "سؤال عن الطلب", message: "لدي سؤال بخصوص طلبي."),
+                CustomerChatShortcutItem(id: "qr3", title: "الفواتير", message: "أحتاج مساعدة بخصوص الفاتورة."),
+                CustomerChatShortcutItem(id: "qr4", title: "دعم تقني", message: "أحتاج دعماً تقنياً."),
+            ]
+        case "de":
+            return [
+                CustomerChatShortcutItem(id: "qr1", title: "Projektstatus", message: "Wie ist der Status meines Projekts?"),
+                CustomerChatShortcutItem(id: "qr2", title: "Frage zur Anfrage", message: "Ich habe eine Frage zu meiner Anfrage."),
+                CustomerChatShortcutItem(id: "qr3", title: "Rechnung", message: "Ich brauche Hilfe bei meiner Rechnung."),
+                CustomerChatShortcutItem(id: "qr4", title: "Technischer Support", message: "Ich benötige technischen Support."),
+            ]
+        default:
+            return [
+                CustomerChatShortcutItem(id: "qr1", title: "Project status", message: "What is the status of my project?"),
+                CustomerChatShortcutItem(id: "qr2", title: "Order question", message: "I have a question about my order."),
+                CustomerChatShortcutItem(id: "qr3", title: "Billing help", message: "I need help with my invoice."),
+                CustomerChatShortcutItem(id: "qr4", title: "Technical support", message: "I need technical support."),
+            ]
+        }
+    }
+
+    static var predefinedMessages: [CustomerChatShortcutItem] {
+        let code = Locale.current.language.languageCode?.identifier ?? "en"
+        switch code {
+        case "ar":
+            return [
+                CustomerChatShortcutItem(id: "pm1", title: "تحية", message: "مرحباً، أحتاج مساعدة بخصوص…"),
+                CustomerChatShortcutItem(id: "pm2", title: "شكراً", message: "شكراً لمساعدتكم."),
+                CustomerChatShortcutItem(id: "pm3", title: "متابعة", message: "أود متابعة محادثتنا السابقة."),
+            ]
+        case "de":
+            return [
+                CustomerChatShortcutItem(id: "pm1", title: "Begrüßung", message: "Hallo, ich brauche Hilfe bei…"),
+                CustomerChatShortcutItem(id: "pm2", title: "Danke", message: "Vielen Dank für Ihre Unterstützung."),
+                CustomerChatShortcutItem(id: "pm3", title: "Follow-up", message: "Ich möchte an unser Gespräch anknüpfen."),
+            ]
+        default:
+            return [
+                CustomerChatShortcutItem(id: "pm1", title: "Greeting", message: "Hello, I need help with…"),
+                CustomerChatShortcutItem(id: "pm2", title: "Thank you", message: "Thank you for your assistance."),
+                CustomerChatShortcutItem(id: "pm3", title: "Follow-up", message: "I'd like to follow up on our previous conversation."),
+            ]
+        }
+    }
+
+    static var customerShortcuts: [CustomerChatShortcutItem] {
+        let code = Locale.current.language.languageCode?.identifier ?? "en"
+        switch code {
+        case "ar":
+            return [
+                CustomerChatShortcutItem(id: "cs1", title: "طلب دعم مباشر", message: "أريد التحدث مع موظف دعم.", icon: "team.headset"),
+                CustomerChatShortcutItem(id: "cs2", title: "حالة الطلب", message: "ما هي حالة طلبي الأخير؟", icon: "list.bullet.rectangle"),
+                CustomerChatShortcutItem(id: "cs3", title: "مشاريعي", message: "أرجو تحديثي عن مشاريعي.", icon: "folder"),
+            ]
+        case "de":
+            return [
+                CustomerChatShortcutItem(id: "cs1", title: "Live-Support anfordern", message: "Ich möchte mit einem Mitarbeiter sprechen.", icon: "team.headset"),
+                CustomerChatShortcutItem(id: "cs2", title: "Anfragestatus", message: "Wie ist der Status meiner letzten Anfrage?", icon: "list.bullet.rectangle"),
+                CustomerChatShortcutItem(id: "cs3", title: "Meine Projekte", message: "Bitte informieren Sie mich über meine Projekte.", icon: "folder"),
+            ]
+        default:
+            return [
+                CustomerChatShortcutItem(id: "cs1", title: "Request live support", message: "I'd like to speak with a human agent.", icon: "team.headset"),
+                CustomerChatShortcutItem(id: "cs2", title: "Order status", message: "What is the status of my latest request?", icon: "list.bullet.rectangle"),
+                CustomerChatShortcutItem(id: "cs3", title: "My projects", message: "Please update me on my projects.", icon: "folder"),
+            ]
+        }
+    }
+}
+
 private struct CustomerChatGuestAuthPanel: View {
     let onSignIn: () -> Void
     let onRegister: () -> Void
@@ -1587,7 +1804,7 @@ private struct CustomerChatGuestAuthPanel: View {
     var body: some View {
         VStack(spacing: 24) {
             Spacer(minLength: 0)
-            PAXIcon("chats.fill", size: .display, tint: PAXTheme.accent)
+            PAXIcon("team.headset", size: .display, tint: PAXTheme.accent)
             VStack(spacing: 8) {
                 Text(String(localized: "Sign in to chat"))
                     .font(.title2.weight(.bold))

@@ -10,6 +10,9 @@ final class AppSettingsStore: ObservableObject {
         case light
         case dark
 
+        /// Modes shown in settings UI — system follows the device until the user picks Light or Dark.
+        static var selectableModes: [AppearanceMode] { [.light, .dark] }
+
         var id: String { rawValue }
 
         var title: String {
@@ -442,7 +445,7 @@ final class AppSettingsStore: ObservableObject {
            let mode = AppearanceMode(rawValue: raw) {
             appearanceMode = mode
         } else {
-            appearanceMode = .light
+            appearanceMode = .system
         }
         if let raw = defaults.string(forKey: Keys.language),
            let mode = LanguageMode(rawValue: raw) {

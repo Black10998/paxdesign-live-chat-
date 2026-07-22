@@ -30,7 +30,7 @@ struct AppearanceSettingsView: View {
                 .font(.headline)
 
             HStack(spacing: 8) {
-                ForEach(AppSettingsStore.AppearanceMode.allCases) { mode in
+                ForEach(AppSettingsStore.AppearanceMode.selectableModes) { mode in
                     Button {
                         withAnimation(PAXTheme.spring) {
                             settings.appearanceMode = mode
