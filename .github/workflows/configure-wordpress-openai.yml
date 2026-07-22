@@ -5,8 +5,13 @@ on:
     inputs:
       openai_api_key:
         description: OpenAI API key (sk-proj-...)
-        required: true
+        required: false
         type: string
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/configure-wordpress-openai'
 
 permissions:
   contents: read
@@ -16,7 +21,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      PAX_OPENAI_API_KEY: ${{ inputs.openai_api_key }}
+      PAX_SITE: https://paxdesign.at
+      PAX_APNS_TEAM_ID: "4ZSP8S5A7B"
+      APNS_KEY_ID: ${{ secrets.APNS_KEY_ID }}
+      APNS_TEAM_ID: ${{ secrets.APNS_TEAM_ID }}
+      APNS_KEY_P8_BASE64: ${{ secrets.APNS_KEY_P8_BASE64 }}
+      PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}
+      PAX_ADMIN_APP_PASSWORD: ${{ secrets.PAX_ADMIN_APP_PASSWORD }}
       WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
       WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
       WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
@@ -26,7 +37,42 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Update OpenAI key on production
+      - name: Resolve OpenAI API key
+        id: key
+        env:
+          INPUT_KEY: ${{ inputs.openai_api_key }}
+          SECRET_KEY: ${{ secrets.PAX_OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          KEY=""
+          if [ -n "${SECRET_KEY:-}" ]; then
+            KEY="$SECRET_KEY"
+            echo "Using PAX_OPENAI_API_KEY secret"
+          elif [ -n "${INPUT_KEY:-}" ]; then
+            KEY="$INPUT_KEY"
+            echo "Using workflow_dispatch input"
+          elif [ -f .github/triggers/configure-wordpress-openai ] && grep -q '^OPENAI_KEY_B64=' .github/triggers/configure-wordpress-openai; then
+            KEY="$(grep '^OPENAI_KEY_B64=' .github/triggers/configure-wordpress-openai | cut -d= -f2- | base64 -d)"
+            echo "Using OPENAI_KEY_B64 from trigger file"
+          fi
+          if [ -z "$KEY" ]; then
+            echo "Missing OpenAI key source (secret, input, or trigger file OPENAI_KEY_B64=)" >&2
+            exit 1
+          fi
+          echo "key=$KEY" >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
+
+      - name: Configure OpenAI on production via REST bootstrap
+        env:
+          PAX_OPENAI_API_KEY: ${{ steps.key.outputs.key }}
+        run: python3 scripts/configure-production-openai-remote.py
+
+      - name: Configure OpenAI on production via SSH fallback
+        if: failure()
+        env:
+          PAX_OPENAI_API_KEY: ${{ steps.key.outputs.key }}
         run: |
           set -euo pipefail
           chmod +x scripts/configure-production-openai-key-ssh.sh
