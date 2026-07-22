@@ -1501,12 +1501,25 @@ class PAXdesign_Live_Chat_Mobile_API {
 
         $test = PAXdesign_Chat::get_instance()->test_openai_connection();
         if (is_wp_error($test)) {
+            $error_code = $test->get_error_code();
+            $error_message = $test->get_error_message();
+            $status = self::route_openai_system_status($request)->get_data();
+            if (is_array($status)) {
+                $status['verified'] = false;
+                $status['verify_error'] = $error_message;
+            }
+
+            if ($error_code === 'openai_failed' && stripos($error_message, 'quota') !== false) {
+                $status['verify_warning'] = 'OpenAI key saved, but live verification hit a quota/billing limit.';
+                return self::respond($status);
+            }
+
             return new WP_Error(
                 'openai_verify_failed',
-                $test->get_error_message(),
+                $error_message,
                 array(
                     'status' => 502,
-                    'data'   => self::route_openai_system_status($request)->get_data(),
+                    'data'   => $status,
                 )
             );
         }
