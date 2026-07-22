@@ -680,7 +680,8 @@ class PAXdesign_Chat {
                 update_option('paxdesign_chat_last_test', time(), false);
                 $this->log_event('openai_success', array('model' => $model));
                 if (is_array($stored)) {
-                    echo 'data: ' . wp_json_encode(array('type' => 'done', 'message' => $stored)) . "\n\n";
+                    $payload = PAXdesign_Chat_Live::get_instance()->format_sse_message_payload($stored, 0);
+                    echo 'data: ' . wp_json_encode(array('type' => 'done', 'message' => $payload)) . "\n\n";
                 }
                 if ($session_id !== '' && class_exists('PAXdesign_Chat_Live')) {
                     PAXdesign_Chat_Live::get_instance()->clear_assistant_typing($session_id);
@@ -706,7 +707,7 @@ class PAXdesign_Chat {
         if ($session_id !== '' && class_exists('PAXdesign_Chat_Live')) {
             PAXdesign_Chat_Live::get_instance()->clear_assistant_typing($session_id);
         }
-        echo 'data: ' . wp_json_encode(array('type' => 'error', 'message' => $last_error)) . "\n\n";
+        echo 'data: ' . wp_json_encode(array('type' => 'error', 'text' => $last_error)) . "\n\n";
         echo "data: [DONE]\n\n";
         exit;
     }
@@ -863,12 +864,46 @@ class PAXdesign_Chat {
             return new WP_Error('invalid_session', __('Invalid session.', 'paxdesign-booking'), array('status' => 400));
         }
 
-        if ($live->get_handler($session_id) === PAXdesign_Chat_Live::HANDLER_CLOSED) {
-            return new WP_Error('chat_closed', __('This conversation is closed.', 'paxdesign-booking'), array('status' => 409));
+        $handler = $live->get_handler($session_id);
+        if ($handler === PAXdesign_Chat_Live::HANDLER_CLOSED) {
+            $user_id = get_current_user_id();
+            if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
+                $session_id = PAXdesign_Customer_Chat_Bridge::reopen_closed_session($session_id);
+                $live->ensure_session($session_id);
+                $handler = $live->get_handler($session_id);
+            } else {
+                return new WP_Error('chat_closed', __('This conversation is closed.', 'paxdesign-booking'), array('status' => 409));
+            }
         }
 
         if ($live->is_ai_blocked($session_id)) {
-            return new WP_Error('ai_blocked', __('A team member is handling this conversation.', 'paxdesign-booking'), array('status' => 409));
+            $user_message = sanitize_textarea_field((string) $user_message);
+            if ($user_message === '') {
+                return new WP_Error('empty', __('Message is required.', 'paxdesign-booking'), array('status' => 400));
+            }
+            $message = __('A team member is handling your conversation. Please wait for their reply.', 'paxdesign-booking');
+            if ($handler === PAXdesign_Chat_Live::HANDLER_LIVE) {
+                $message = __('Your request was forwarded to our team. A team member will reply here shortly.', 'paxdesign-booking');
+            }
+            $live->ensure_session($session_id);
+            $user_extra = array('client_msg_id' => sanitize_text_field((string) $client_msg_id));
+            if (class_exists('PAXdesign_Link_Scanner')) {
+                $user_extra = PAXdesign_Link_Scanner::attach_scan_meta($user_message, 'user', $user_extra);
+            }
+            $saved = $live->append_message($session_id, 'user', $user_message, $user_extra);
+            if (is_wp_error($saved) || !$saved) {
+                return new WP_Error('ai_blocked', $message, array('status' => 409));
+            }
+            $this->send_sse_headers();
+            echo 'data: ' . wp_json_encode(array(
+                'type'    => 'handoff',
+                'handler' => $handler,
+                'message' => $live->format_sse_message_payload($saved, 0),
+                'notice'  => $message,
+            )) . "\n\n";
+            $this->flush_sse_output();
+            echo "data: [DONE]\n\n";
+            exit;
         }
 
         $user_id = get_current_user_id();
@@ -1654,13 +1689,18 @@ class PAXdesign_Chat {
         header('Connection: keep-alive');
         header('X-Content-Type-Options: nosniff');
         header('X-Robots-Tag: noindex');
+        header('X-Accel-Buffering: no');
+        if (function_exists('litespeed_finish_request')) {
+            header('X-LiteSpeed-Cache-Control: no-cache');
+        }
         if (function_exists('apache_setenv')) {
             @apache_setenv('no-gzip', '1');
         }
         @ini_set('zlib.output_compression', '0');
         @ini_set('output_buffering', 'off');
+        @ini_set('implicit_flush', '1');
         while (ob_get_level() > 0) {
-            ob_end_flush();
+            ob_end_clean();
         }
     }
 

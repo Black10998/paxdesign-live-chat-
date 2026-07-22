@@ -13,6 +13,47 @@ class PAXdesign_Customer_REST {
 
     public static function init() {
         add_action('rest_api_init', array(__CLASS__, 'register_routes'), 20);
+        add_filter('rest_pre_serve_request', array(__CLASS__, 'maybe_serve_chat_sse'), 10, 4);
+    }
+
+    /**
+     * Prevent WordPress REST from wrapping raw SSE output for chat stream routes.
+     *
+     * @param bool              $served
+     * @param WP_HTTP_Response  $result
+     * @param WP_REST_Request   $request
+     * @param WP_REST_Server    $server
+     * @return bool
+     */
+    public static function maybe_serve_chat_sse($served, $result, $request, $server) {
+        unset($server);
+        if ($served || !($request instanceof WP_REST_Request)) {
+            return $served;
+        }
+        $route = (string) $request->get_route();
+        if ($route !== '/' . self::NS . '/customer/chat/stream' && $route !== '/' . self::NS . '/customer/chat/events') {
+            return $served;
+        }
+        if ($result instanceof WP_Error) {
+            return $served;
+        }
+        // Successful stream handlers call exit() after writing SSE frames.
+        return $served;
+    }
+
+    /**
+     * Prepare the PHP output stack for long-lived SSE responses through REST.
+     */
+    public static function prepare_chat_sse_environment() {
+        if (function_exists('litespeed_finish_request')) {
+            @header('X-LiteSpeed-Cache-Control: no-cache');
+        }
+        @ini_set('zlib.output_compression', '0');
+        @ini_set('output_buffering', 'off');
+        @ini_set('implicit_flush', '1');
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
     }
 
     public static function register_routes() {
@@ -784,6 +825,7 @@ class PAXdesign_Customer_REST {
     }
 
     public static function chat_stream(WP_REST_Request $request) {
+        self::prepare_chat_sse_environment();
         $uid = PAXdesign_Customer_Auth::current_user_id();
         $params = $request->get_json_params() ?: $request->get_params();
         $session_id = sanitize_text_field($params['session_id'] ?? '');
@@ -808,6 +850,7 @@ class PAXdesign_Customer_REST {
     }
 
     public static function chat_events(WP_REST_Request $request) {
+        self::prepare_chat_sse_environment();
         $uid = PAXdesign_Customer_Auth::current_user_id();
         $session_id = sanitize_text_field($request->get_param('session_id') ?? '');
         if ($session_id === '') {

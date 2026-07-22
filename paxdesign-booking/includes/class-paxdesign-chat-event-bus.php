@@ -251,6 +251,10 @@ class PAXdesign_Chat_Event_Bus {
         header('Connection: keep-alive');
         header('X-Content-Type-Options: nosniff');
         header('X-Robots-Tag: noindex');
+        header('X-Accel-Buffering: no');
+        if (function_exists('litespeed_finish_request')) {
+            header('X-LiteSpeed-Cache-Control: no-cache');
+        }
         if (function_exists('apache_setenv')) {
             @apache_setenv('no-gzip', '1');
         }
@@ -258,7 +262,7 @@ class PAXdesign_Chat_Event_Bus {
         @ini_set('output_buffering', 'off');
         @set_time_limit(0);
         while (ob_get_level() > 0) {
-            ob_end_flush();
+            ob_end_clean();
         }
     }
 

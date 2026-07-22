@@ -1309,21 +1309,45 @@ struct CustomerChatView: View {
             } else {
                 isStreamingAI = true
                 streamingAssistant = ""
-                try await api.streamChatMessage(text, sessionID: poll?.session_id) { event in
-                    if event.type == "text", let chunk = event.text {
-                        streamingAssistant += chunk
-                    }
-                    if event.type == "done", let message = event.message {
-                        streamingAssistant = message.content
-                    }
-                    if event.type == "handoff" {
-                        if let handler = event.handler {
-                            applyHandlerUpdate(handler)
+                var receivedAssistantContent = false
+                do {
+                    try await api.streamChatMessage(
+                        text,
+                        sessionID: poll?.session_id,
+                        clientMsgID: clientMsgID,
+                        assistantClientMsgID: assistantClientMsgID
+                    ) { event in
+                        if event.type == "text", let chunk = event.text {
+                            receivedAssistantContent = true
+                            streamingAssistant += chunk
                         }
-                        if let noticeText = event.notice, !noticeText.isEmpty {
-                            notice = noticeText
+                        if event.type == "done", let message = event.message {
+                            receivedAssistantContent = true
+                            streamingAssistant = message.content
+                        }
+                        if event.type == "error", let errorText = event.text, !errorText.isEmpty {
+                            self.error = errorText
+                        }
+                        if event.type == "handoff" {
+                            receivedAssistantContent = true
+                            if let handler = event.handler {
+                                applyHandlerUpdate(handler)
+                            }
+                            if let noticeText = event.notice, !noticeText.isEmpty {
+                                notice = noticeText
+                            }
                         }
                     }
+                } catch {
+                    // Streaming failed — fall back to the JSON completion endpoint below.
+                }
+                if !receivedAssistantContent {
+                    let response = try await sendMessageWithRenewFallback(
+                        text,
+                        clientMsgID: clientMsgID,
+                        assistantClientMsgID: assistantClientMsgID
+                    )
+                    applySendResponse(response)
                 }
                 streamingAssistant = ""
                 isInputFocused = false
