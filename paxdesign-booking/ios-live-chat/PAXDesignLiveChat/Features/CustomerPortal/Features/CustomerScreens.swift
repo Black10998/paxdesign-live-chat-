@@ -684,31 +684,26 @@ struct CustomerChatView: View {
             HStack(alignment: .bottom, spacing: 8) {
                 Menu {
                     Button {
-                        guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
                         showCameraPicker = true
                     } label: {
                         PAXLabel(String(localized: "Camera"), icon: "camera")
                     }
                     Button {
-                        guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
                         showImagePicker = true
                     } label: {
                         PAXLabel(String(localized: "Photo Library"), icon: "photo.on.rectangle")
                     }
                     Button {
-                        guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
                         showDocumentPicker = true
                     } label: {
                         PAXLabel(String(localized: "Files"), icon: "doc")
                     }
                     Button {
-                        guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
                         Task { await toggleVoice() }
                     } label: {
                         PAXLabel(isRecordingVoice ? String(localized: "Stop recording") : String(localized: "Voice message"), icon: "mic")
                     }
                     Button {
-                        guard isHumanQueue else { notice = String(localized: "Attachments are available during human support."); return }
                         showLocationSheet = true
                     } label: {
                         PAXLabel(String(localized: "Location"), icon: "location")

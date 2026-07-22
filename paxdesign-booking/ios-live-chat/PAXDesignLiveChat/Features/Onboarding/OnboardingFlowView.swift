@@ -57,7 +57,36 @@ struct OnboardingFlowView: View {
     }
 
     private var pages: [OnboardingPage] {
-        [
+        if mode == .firstLaunch || auth.isCustomerSession {
+            return [
+                OnboardingPage(
+                    title: L10n.OnboardingWelcomeTitle,
+                    subtitle: L10n.OnboardingWelcomeSubtitle,
+                    systemImage: "bubble.left.and.bubble.right.fill"
+                ),
+                OnboardingPage(
+                    title: String(localized: "Projects & requests"),
+                    subtitle: String(localized: "Track your projects, orders, and service requests in one place."),
+                    systemImage: "folder.fill"
+                ),
+                OnboardingPage(
+                    title: String(localized: "Chat & support"),
+                    subtitle: String(localized: "Message our AI assistant or request human support when you need it."),
+                    systemImage: "message.fill"
+                ),
+                OnboardingPage(
+                    title: String(localized: "Notifications"),
+                    subtitle: String(localized: "Get updates about your projects, chat replies, and account activity."),
+                    systemImage: "bell.badge.fill"
+                ),
+                OnboardingPage(
+                    title: L10n.OnboardingSettingsTitle,
+                    subtitle: L10n.OnboardingSettingsSubtitle,
+                    systemImage: "lock.shield.fill"
+                )
+            ]
+        }
+        return [
             OnboardingPage(
                 title: L10n.OnboardingWelcomeTitle,
                 subtitle: L10n.OnboardingWelcomeSubtitle,
@@ -89,9 +118,9 @@ struct OnboardingFlowView: View {
     private func onboardingTint(for page: OnboardingPage) -> Color {
         switch page.systemImage {
         case "bubble.left.and.bubble.right.fill": return PAXTheme.accent
-        case "list.bullet.rectangle.portrait.fill": return .cyan
-        case "person.3.fill": return .mint
-        case "bell.and.waves.left.and.right.fill": return .orange
+        case "list.bullet.rectangle.portrait.fill", "folder.fill": return .cyan
+        case "person.3.fill", "message.fill": return .mint
+        case "bell.and.waves.left.and.right.fill", "bell.badge.fill": return .orange
         default: return PAXTheme.accentSecondary
         }
     }

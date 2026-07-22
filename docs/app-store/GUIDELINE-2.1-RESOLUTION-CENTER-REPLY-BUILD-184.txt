@@ -1,0 +1,26 @@
+Subject: Build 184 — Guideline 2.1(a) chat attachment fix + Guideline 3.2 public customer app
+
+Hello App Review,
+
+Thank you for the detailed feedback on submission feaacbb0-d5fb-4971-80cf-8521c099dddd.
+
+Guideline 2.1(a) — Chat attachments
+We reproduced the issue: the (+) menu in customer chat showed Camera, Photo Library, Voice message, and Location, but blocked those actions with a message that attachments were only available during human support.
+
+This was incorrect product behavior. In version 2.1.1 (build 184) we fixed it so customer chat attachments work at all times — including while chatting with the AI assistant before a human agent joins. The options in the (+) menu now perform their intended action instead of showing a blocking message.
+
+Guideline 3.2 — Public distribution
+PAXDesign is a public customer app on the App Store. Any user can download the app, create a free account in-app, and use the customer portal (Home, Services, Portfolio, Chat, Account). No invitation, organization membership, or staff credentials are required.
+
+Please sign in with the customer demo account in App Review Information to evaluate the public experience. The app opens directly to the customer portal.
+
+Staff-specific tools exist only for accounts with server-side staff permission and are not part of the public App Store offering.
+
+Test notes for build 184:
+1. Sign in with the customer demo account.
+2. Open Chat tab.
+3. Tap (+) and use Camera, Photo Library, Voice message, or Location — each should work without an error banner.
+
+Privacy policy: https://paxdesign.at/datenschutz/
+
+Thank you for your review.
