@@ -121,6 +121,10 @@ def configure_openai_bootstrap(key_p8: str) -> dict | None:
     if status == 404:
         return None
     if status != 200:
+        verify_error = str(payload.get("message") or payload)
+        if "quota" in verify_error.lower() and payload.get("data", {}).get("data", {}).get("configured"):
+            ok("OpenAI key saved; live verification skipped due to quota/billing limit")
+            return payload.get("data", {}).get("data") or payload
         fail(f"ASC bootstrap OpenAI configure failed ({status}): {payload}")
     if not payload.get("configured"):
         fail(f"ASC bootstrap OpenAI response did not mark backend as configured: {payload}")

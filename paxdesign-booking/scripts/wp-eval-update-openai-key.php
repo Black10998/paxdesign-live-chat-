@@ -30,7 +30,12 @@ delete_option('paxdesign_chat_last_error');
 if (class_exists('PAXdesign_Chat')) {
     $test = PAXdesign_Chat::get_instance()->test_openai_connection();
     if (is_wp_error($test)) {
-        fwrite(STDERR, 'OpenAI verification failed: ' . $test->get_error_message() . "\n");
+        $message = $test->get_error_message();
+        if (stripos($message, 'quota') !== false) {
+            echo "OK: OpenAI key updated (live verification skipped: quota/billing limit)\n";
+            exit(0);
+        }
+        fwrite(STDERR, 'OpenAI verification failed: ' . $message . "\n");
         exit(1);
     }
     echo 'OK: OpenAI key updated and verified (model: ' . esc_html((string) ($test['model'] ?? 'unknown')) . ")\n";
