@@ -403,6 +403,131 @@ class PAXdesign_Chat_Knowledge {
     }
 
     /**
+     * Compact account snapshot for authenticated customer AI replies.
+     *
+     * @param int    $user_id
+     * @param string $session_id
+     * @return string
+     */
+    public static function build_customer_account_context_block($user_id, $session_id = '') {
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return '';
+        }
+
+        if (class_exists('PAXdesign_Customer_Orders')) {
+            PAXdesign_Customer_Orders::link_bookings_for_user($user_id);
+        }
+
+        $user = get_user_by('id', $user_id);
+        $lines = array(
+            '## Customer account context (private — only for this logged-in customer)',
+            '- Use ONLY the facts below for account, project, request, appointment, invoice/file, and notification questions.',
+            '- If the customer asks about their project, order, invoice, appointment, or files, answer from this data.',
+            '- If nothing relevant exists below, say honestly that nothing is on file yet and offer next steps.',
+            '- Never invent statuses, dates, amounts, documents, or appointments.',
+        );
+
+        if ($user instanceof WP_User) {
+            $lines[] = '- Customer name: ' . sanitize_text_field($user->display_name);
+        }
+
+        if (class_exists('PAXdesign_Customer_Projects')) {
+            $projects = PAXdesign_Customer_Projects::list_for_user($user_id);
+            if (empty($projects)) {
+                $lines[] = '- Projects: none on file';
+            } else {
+                $lines[] = '- Projects (' . count($projects) . '):';
+                foreach (array_slice($projects, 0, 5) as $project) {
+                    $summary = sprintf(
+                        '  • %s — %s | status: %s | progress: %d%%',
+                        (string) ($project['ref'] ?? ''),
+                        (string) ($project['title'] ?? ''),
+                        (string) ($project['status'] ?? ''),
+                        (int) ($project['progress'] ?? 0)
+                    );
+                    if (!empty($project['expected_completion'])) {
+                        $summary .= ' | expected completion: ' . (string) $project['expected_completion'];
+                    }
+                    $lines[] = $summary;
+                }
+            }
+        }
+
+        if (class_exists('PAXdesign_Customer_Orders')) {
+            $orders = PAXdesign_Customer_Orders::list_for_user($user_id);
+            if (empty($orders)) {
+                $lines[] = '- Service requests / orders: none on file';
+            } else {
+                $lines[] = '- Service requests / orders (' . count($orders) . '):';
+                foreach (array_slice($orders, 0, 5) as $order) {
+                    $summary = sprintf(
+                        '  • %s — %s | status: %s',
+                        (string) ($order['ref'] ?? ''),
+                        (string) ($order['service_label'] ?? ''),
+                        (string) ($order['status'] ?? '')
+                    );
+                    if (!empty($order['expected_delivery'])) {
+                        $summary .= ' | expected delivery: ' . (string) $order['expected_delivery'];
+                    }
+                    if (!empty($order['booking_id'])) {
+                        $summary .= ' | linked appointment booking_id: ' . (int) $order['booking_id'];
+                    }
+                    $lines[] = $summary;
+                }
+            }
+
+            $appointments = PAXdesign_Customer_Orders::upcoming_bookings_for_user($user_id, 5);
+            if (empty($appointments)) {
+                $lines[] = '- Upcoming appointments: none scheduled';
+            } else {
+                $lines[] = '- Upcoming appointments (' . count($appointments) . '):';
+                foreach ($appointments as $booking) {
+                    $lines[] = sprintf(
+                        '  • %s on %s %s | status: %s',
+                        (string) ($booking['service'] ?? 'Appointment'),
+                        (string) ($booking['booking_date'] ?? ''),
+                        (string) ($booking['booking_time'] ?? ''),
+                        (string) ($booking['status'] ?? 'pending')
+                    );
+                }
+            }
+
+            $files = PAXdesign_Customer_Orders::library_for_user($user_id, 8);
+            if (empty($files)) {
+                $lines[] = '- Shared files / invoices: none available in the customer portal yet';
+            } else {
+                $lines[] = '- Shared files / invoices (' . count($files) . ' recent):';
+                foreach (array_slice($files, 0, 6) as $file) {
+                    $label = (string) ($file['file_name'] ?? 'file');
+                    $kind = (string) ($file['kind'] ?? 'file');
+                    $parent = (string) ($file['parent_title'] ?? '');
+                    $lines[] = '  • ' . $label . ' (' . $kind . ')' . ($parent !== '' ? ' — ' . $parent : '');
+                }
+            }
+        }
+
+        if (class_exists('PAXdesign_Customer_Notifications')) {
+            $unread = PAXdesign_Customer_Notifications::unread_count($user_id);
+            $lines[] = '- Unread portal notifications: ' . (int) $unread;
+        }
+
+        if ($session_id !== '' && class_exists('PAXdesign_Customer_Projects')) {
+            global $wpdb;
+            $linked = $wpdb->get_row($wpdb->prepare(
+                'SELECT project_ref, title, status, progress FROM ' . PAXdesign_Customer_DB::table('projects') . ' WHERE customer_user_id = %d AND chat_session_id = %s LIMIT 1',
+                $user_id,
+                sanitize_text_field($session_id)
+            ), ARRAY_A);
+            if ($linked) {
+                $lines[] = '- Project linked to this chat: ' . (string) $linked['project_ref'] . ' — ' . (string) $linked['title'] . ' (' . (int) $linked['progress'] . '%, status ' . (string) $linked['status'] . ')';
+            }
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
      * Force the assistant to reply in the customer's language.
      *
      * @param string $prompt
@@ -416,11 +541,11 @@ class PAXdesign_Chat_Knowledge {
         }
         switch ($lang) {
             case 'en':
-                return $prompt . "\n\n## Language\n- Always respond in English.\n- Match the customer's tone and keep answers concise.";
+                return $prompt . "\n\n## Language\n- Detect the customer's language from their latest message and ALWAYS reply in that same language (German, English, or Arabic).\n- If they write in English, reply in English.\n- If they write in Arabic, reply in Arabic.\n- If they write in German, reply in German.\n- Match the customer's tone and keep answers concise.";
             case 'ar':
-                return $prompt . "\n\n## اللغة\n- رد دائماً باللغة العربية.\n- استخدم أسلوباً مهنياً وواضحاً وموجزاً.";
+                return $prompt . "\n\n## اللغة\n- حدّد لغة العميل من رسالته الأخيرة ورد دائماً بنفس اللغة (العربية أو الإنجليزية أو الألمانية).\n- إذا كتب بالعربية فأجب بالعربية.\n- إذا كتب بالإنجليزية فأجب بالإنجليزية.\n- إذا كتب بالألمانية فأجب بالألمانية.\n- استخدم أسلوباً مهنياً وواضحاً وموجزاً.";
             default:
-                return $prompt . "\n\n## Sprache\n- Antworte IMMER auf Deutsch.\n- Professionell, freundlich und präzise.";
+                return $prompt . "\n\n## Sprache\n- Erkenne die Sprache des Kunden anhand der letzten Nachricht und antworte IMMER in derselben Sprache (Deutsch, Englisch oder Arabisch).\n- Schreibt der Kunde auf Deutsch, antworte auf Deutsch.\n- Schreibt der Kunde auf Englisch, antworte auf Englisch.\n- Schreibt der Kunde auf Arabisch, antworte auf Arabisch.\n- Professionell, freundlich und präzise.";
         }
     }
 }

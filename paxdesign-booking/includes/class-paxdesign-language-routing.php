@@ -33,11 +33,80 @@ class PAXdesign_Language_Routing {
             return 'de';
         }
 
-        if (preg_match('/\b(the|and|or|you|hello|thanks|please|can|would|your|help)\b/i', $text)) {
+        if (preg_match('/\b(the|and|or|you|hello|thanks|please|can|would|your|help|what|where|when|my|project|invoice|appointment|status)\b/i', $text)) {
             return 'en';
         }
 
+        if (preg_match('/\b(مرحب|شكر|من فضلك|أريد|اريد|السلام|مساعد|مشروع|فاتورة|موعد|حالة)\b/u', $text)) {
+            return 'ar';
+        }
+
+        return '';
+    }
+
+    /**
+     * Resolve the language the customer AI assistant should use for this session.
+     *
+     * @param string $session_id
+     * @param string $latest_user_text
+     * @return string de|en|ar
+     */
+    public static function resolve_session_language($session_id, $latest_user_text = '') {
+        $row = null;
+        if ($session_id !== '' && class_exists('PAXdesign_Chat_Live')) {
+            $row = PAXdesign_Chat_Live::get_instance()->get_session_row($session_id);
+        }
+
+        $latest_user_text = trim((string) $latest_user_text);
+        if ($latest_user_text !== '') {
+            if (preg_match('/[\x{0600}-\x{06FF}\x{0750}-\x{077F}\x{08A0}-\x{08FF}\x{FB50}-\x{FDFF}\x{FE70}-\x{FEFF}]/u', $latest_user_text)) {
+                return 'ar';
+            }
+            if (preg_match('/[äöüßÄÖÜ]/u', $latest_user_text)) {
+                return 'de';
+            }
+            $detected = self::detect_text_language($latest_user_text);
+            if ($detected === 'en' && preg_match('/\b(the|and|you|hello|thanks|please|can|would|your|help|what|where|when|my|project|invoice|appointment|status|have|any)\b/i', $latest_user_text)) {
+                return 'en';
+            }
+            if ($detected === 'de' && preg_match('/\b(und|oder|ich|Sie|danke|bitte|Hallo|was|mein|projekt|rechnung|termin|habe|status)\b/ui', $latest_user_text)) {
+                return 'de';
+            }
+            if ($detected !== '' && in_array($detected, self::SUPPORTED, true)) {
+                return $detected;
+            }
+        }
+
+        $stored = self::session_language_from_row($row);
+        if ($stored !== '' && in_array($stored, self::SUPPORTED, true)) {
+            return $stored;
+        }
+
         return 'de';
+    }
+
+    /**
+     * @param string $session_id
+     * @param string $language
+     */
+    public static function persist_session_language($session_id, $language) {
+        $session_id = sanitize_text_field((string) $session_id);
+        $language = sanitize_key((string) $language);
+        if ($session_id === '' || $language === '' || !in_array($language, self::SUPPORTED, true)) {
+            return;
+        }
+
+        global $wpdb;
+        $wpdb->update(
+            PAXdesign_Chat_Log::table_name(),
+            array(
+                'customer_language' => $language,
+                'updated_at'        => current_time('mysql'),
+            ),
+            array('session_id' => $session_id),
+            array('%s', '%s'),
+            array('%s')
+        );
     }
 
     /**
