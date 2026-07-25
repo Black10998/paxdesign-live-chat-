@@ -222,6 +222,20 @@ class PAXdesign_Customer_Notifications {
         );
     }
 
+    public static function delete_for_entity($entity_type, $entity_id) {
+        global $wpdb;
+        $entity_type = sanitize_key((string) $entity_type);
+        $entity_id = sanitize_text_field((string) $entity_id);
+        if ($entity_type === '' || $entity_id === '') {
+            return 0;
+        }
+        return (int) $wpdb->query($wpdb->prepare(
+            'DELETE FROM ' . PAXdesign_Customer_DB::table('notifications') . ' WHERE entity_type = %s AND entity_id = %s',
+            $entity_type,
+            $entity_id
+        ));
+    }
+
     public static function broadcast_news($news_id, $title, $excerpt) {
         $news_id = absint($news_id);
         if ($news_id <= 0) {

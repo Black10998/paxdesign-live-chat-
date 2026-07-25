@@ -16,6 +16,8 @@ class PAXdesign_Customer_Admin {
         add_action('admin_menu', array(__CLASS__, 'register_menu'), 20);
         add_action('admin_post_paxdesign_customer_save_news', array(__CLASS__, 'handle_save_news'));
         add_action('admin_post_paxdesign_customer_publish_news', array(__CLASS__, 'handle_publish_news'));
+        add_action('admin_post_paxdesign_customer_unpublish_news', array(__CLASS__, 'handle_unpublish_news'));
+        add_action('admin_post_paxdesign_customer_delete_news', array(__CLASS__, 'handle_delete_news'));
         add_action('admin_post_paxdesign_customer_save_project', array(__CLASS__, 'handle_save_project'));
         add_action('admin_post_paxdesign_customer_sync_services', array(__CLASS__, 'handle_sync_services'));
         add_action('admin_post_paxdesign_customer_update_project', array(__CLASS__, 'handle_update_project'));
@@ -180,40 +182,92 @@ class PAXdesign_Customer_Admin {
 
     private static function render_news_tab() {
         $items = PAXdesign_Customer_News::list_admin();
+        $edit_id = absint($_GET['edit_news'] ?? 0);
+        $edit_item = $edit_id > 0 ? PAXdesign_Customer_News::get_row($edit_id) : null;
+        $edit_meta = $edit_item ? json_decode((string) ($edit_item['audience_meta'] ?? ''), true) : array();
+        if (!is_array($edit_meta)) {
+            $edit_meta = array();
+        }
+
         echo '<h2>' . esc_html__('News & announcements', 'paxdesign-booking') . '</h2>';
-        echo '<table class="widefat striped"><thead><tr><th>' . esc_html__('Title', 'paxdesign-booking') . '</th><th>' . esc_html__('Status', 'paxdesign-booking') . '</th><th>' . esc_html__('Published', 'paxdesign-booking') . '</th><th></th></tr></thead><tbody>';
+        echo '<p class="description">' . esc_html__('Published items appear in the mobile app immediately. Deleting an item removes it from the app on the next refresh.', 'paxdesign-booking') . '</p>';
+        echo '<table class="widefat striped"><thead><tr><th>' . esc_html__('Title', 'paxdesign-booking') . '</th><th>' . esc_html__('Slug', 'paxdesign-booking') . '</th><th>' . esc_html__('Status', 'paxdesign-booking') . '</th><th>' . esc_html__('Published', 'paxdesign-booking') . '</th><th></th></tr></thead><tbody>';
         foreach ($items as $item) {
+            $meta = json_decode((string) ($item['audience_meta'] ?? ''), true);
+            if (!is_array($meta)) {
+                $meta = array();
+            }
             echo '<tr>';
-            echo '<td>' . esc_html($item['title']) . '</td>';
+            echo '<td><strong>' . esc_html($item['title']) . '</strong>';
+            if (!empty($meta['featured_image_url'])) {
+                echo '<br><span class="description">' . esc_html__('Featured image set', 'paxdesign-booking') . '</span>';
+            }
+            echo '</td>';
+            echo '<td><code>' . esc_html($item['slug']) . '</code></td>';
             echo '<td>' . esc_html($item['status']) . '</td>';
             echo '<td>' . esc_html($item['published_at'] ?: '—') . '</td>';
-            echo '<td>';
+            echo '<td style="white-space:nowrap">';
+            $edit_url = admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=news&edit_news=' . absint($item['id']));
+            echo '<a class="button button-small" href="' . esc_url($edit_url) . '">' . esc_html__('Edit', 'paxdesign-booking') . '</a> ';
             if ($item['status'] !== 'published') {
                 echo '<form style="display:inline" method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
                 wp_nonce_field('paxdesign_customer_publish_news');
                 echo '<input type="hidden" name="action" value="paxdesign_customer_publish_news" />';
                 echo '<input type="hidden" name="news_id" value="' . esc_attr((string) $item['id']) . '" />';
-                submit_button(__('Publish', 'paxdesign-booking'), 'secondary', 'submit', false);
-                echo '</form>';
+                submit_button(__('Publish', 'paxdesign-booking'), 'secondary button-small', 'submit', false);
+                echo '</form> ';
+            } else {
+                echo '<form style="display:inline" method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
+                wp_nonce_field('paxdesign_customer_unpublish_news');
+                echo '<input type="hidden" name="action" value="paxdesign_customer_unpublish_news" />';
+                echo '<input type="hidden" name="news_id" value="' . esc_attr((string) $item['id']) . '" />';
+                submit_button(__('Unpublish', 'paxdesign-booking'), 'secondary button-small', 'submit', false);
+                echo '</form> ';
             }
+            echo '<form style="display:inline" method="post" action="' . esc_url(admin_url('admin-post.php')) . '" onsubmit="return confirm(' . esc_js(__('Delete this news item from the app and backend?', 'paxdesign-booking')) . ');">';
+            wp_nonce_field('paxdesign_customer_delete_news');
+            echo '<input type="hidden" name="action" value="paxdesign_customer_delete_news" />';
+            echo '<input type="hidden" name="news_id" value="' . esc_attr((string) $item['id']) . '" />';
+            submit_button(__('Delete', 'paxdesign-booking'), 'delete button-small', 'submit', false);
+            echo '</form>';
             echo '</td></tr>';
         }
         if (empty($items)) {
-            echo '<tr><td colspan="4">' . esc_html__('No news items yet.', 'paxdesign-booking') . '</td></tr>';
+            echo '<tr><td colspan="5">' . esc_html__('No news items yet.', 'paxdesign-booking') . '</td></tr>';
         }
         echo '</tbody></table>';
 
-        echo '<h3>' . esc_html__('Create news item', 'paxdesign-booking') . '</h3>';
+        echo '<h3>' . esc_html($edit_item ? __('Edit news item', 'paxdesign-booking') : __('Create news item', 'paxdesign-booking')) . '</h3>';
+        if ($edit_item) {
+            echo '<p><a href="' . esc_url(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=news')) . '">' . esc_html__('Create new item instead', 'paxdesign-booking') . '</a></p>';
+        }
         echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '">';
         wp_nonce_field('paxdesign_customer_save_news');
         echo '<input type="hidden" name="action" value="paxdesign_customer_save_news" />';
+        if ($edit_item) {
+            echo '<input type="hidden" name="news_id" value="' . esc_attr((string) $edit_item['id']) . '" />';
+        }
         echo '<table class="form-table"><tbody>';
-        echo '<tr><th><label for="news_title">' . esc_html__('Title', 'paxdesign-booking') . '</label></th><td><input type="text" name="title" id="news_title" class="regular-text" required /></td></tr>';
-        echo '<tr><th><label for="news_excerpt">' . esc_html__('Excerpt', 'paxdesign-booking') . '</label></th><td><textarea name="excerpt" id="news_excerpt" class="large-text" rows="2"></textarea></td></tr>';
-        echo '<tr><th><label for="news_body">' . esc_html__('Body', 'paxdesign-booking') . '</label></th><td><textarea name="body" id="news_body" class="large-text" rows="8"></textarea></td></tr>';
-        echo '<tr><th>' . esc_html__('Push on publish', 'paxdesign-booking') . '</th><td><label><input type="checkbox" name="push_on_publish" value="1" /> ' . esc_html__('Send push notification to customers', 'paxdesign-booking') . '</label></td></tr>';
+        echo '<tr><th><label for="news_title">' . esc_html__('Title', 'paxdesign-booking') . '</label></th><td><input type="text" name="title" id="news_title" class="regular-text" required value="' . esc_attr($edit_item['title'] ?? '') . '" /></td></tr>';
+        echo '<tr><th><label for="news_slug">' . esc_html__('Slug', 'paxdesign-booking') . '</label></th><td><input type="text" name="slug" id="news_slug" class="regular-text" value="' . esc_attr($edit_item['slug'] ?? '') . '" placeholder="' . esc_attr__('auto-generated from title', 'paxdesign-booking') . '" /><p class="description">' . esc_html__('Used by the mobile app URL. Lowercase letters, numbers, and hyphens only.', 'paxdesign-booking') . '</p></td></tr>';
+        echo '<tr><th><label for="news_excerpt">' . esc_html__('Excerpt', 'paxdesign-booking') . '</label></th><td><textarea name="excerpt" id="news_excerpt" class="large-text" rows="2">' . esc_textarea($edit_item['excerpt'] ?? '') . '</textarea></td></tr>';
+        echo '<tr><th><label for="news_body">' . esc_html__('Body', 'paxdesign-booking') . '</label></th><td><textarea name="body" id="news_body" class="large-text" rows="8">' . esc_textarea($edit_item['body'] ?? '') . '</textarea></td></tr>';
+        echo '<tr><th><label for="news_featured_image_url">' . esc_html__('Featured image URL', 'paxdesign-booking') . '</label></th><td><input type="url" name="featured_image_url" id="news_featured_image_url" class="large-text" value="' . esc_attr($edit_meta['featured_image_url'] ?? '') . '" placeholder="https://..." /><p class="description">' . esc_html__('Shown at the top of the news article in the app.', 'paxdesign-booking') . '</p></td></tr>';
+        echo '<tr><th><label for="news_external_url">' . esc_html__('External link URL', 'paxdesign-booking') . '</label></th><td><input type="url" name="external_url" id="news_external_url" class="large-text" value="' . esc_attr($edit_meta['external_url'] ?? '') . '" placeholder="https://..." /></td></tr>';
+        echo '<tr><th><label for="news_external_link_label">' . esc_html__('External link label', 'paxdesign-booking') . '</label></th><td><input type="text" name="external_link_label" id="news_external_link_label" class="regular-text" value="' . esc_attr($edit_meta['external_link_label'] ?? '') . '" placeholder="' . esc_attr__('Learn more', 'paxdesign-booking') . '" /><p class="description">' . esc_html__('Appended to the article body as plain text so existing app versions can display it.', 'paxdesign-booking') . '</p></td></tr>';
+        echo '<tr><th><label for="news_priority">' . esc_html__('Priority', 'paxdesign-booking') . '</label></th><td><select name="priority" id="news_priority">';
+        foreach (array('normal' => __('Normal', 'paxdesign-booking'), 'high' => __('High', 'paxdesign-booking')) as $value => $label) {
+            printf(
+                '<option value="%s"%s>%s</option>',
+                esc_attr($value),
+                selected($edit_item['priority'] ?? 'normal', $value, false),
+                esc_html($label)
+            );
+        }
+        echo '</select></td></tr>';
+        echo '<tr><th>' . esc_html__('Push on publish', 'paxdesign-booking') . '</th><td><label><input type="checkbox" name="push_on_publish" value="1"' . checked(!empty($edit_item['push_on_publish']), true, false) . ' /> ' . esc_html__('Send push notification to customers', 'paxdesign-booking') . '</label></td></tr>';
         echo '</tbody></table>';
-        submit_button(__('Save draft', 'paxdesign-booking'));
+        submit_button($edit_item ? __('Update news item', 'paxdesign-booking') : __('Save draft', 'paxdesign-booking'));
         echo '</form>';
     }
 
@@ -253,13 +307,23 @@ class PAXdesign_Customer_Admin {
 
     public static function handle_save_news() {
         self::verify_admin('paxdesign_customer_save_news');
-        PAXdesign_Customer_News::save(array(
-            'title'           => sanitize_text_field(wp_unslash($_POST['title'] ?? '')),
-            'excerpt'         => sanitize_textarea_field(wp_unslash($_POST['excerpt'] ?? '')),
-            'body'            => wp_kses_post(wp_unslash($_POST['body'] ?? '')),
-            'push_on_publish' => !empty($_POST['push_on_publish']),
-            'status'          => 'draft',
-        ), get_current_user_id());
+        $news_id = absint($_POST['news_id'] ?? 0);
+        $existing = $news_id > 0 ? PAXdesign_Customer_News::get_row($news_id) : null;
+        $result = PAXdesign_Customer_News::save(array(
+            'title'               => sanitize_text_field(wp_unslash($_POST['title'] ?? '')),
+            'slug'                => sanitize_text_field(wp_unslash($_POST['slug'] ?? '')),
+            'excerpt'             => sanitize_textarea_field(wp_unslash($_POST['excerpt'] ?? '')),
+            'body'                => wp_kses_post(wp_unslash($_POST['body'] ?? '')),
+            'featured_image_url'  => esc_url_raw(wp_unslash($_POST['featured_image_url'] ?? '')),
+            'external_url'        => esc_url_raw(wp_unslash($_POST['external_url'] ?? '')),
+            'external_link_label' => sanitize_text_field(wp_unslash($_POST['external_link_label'] ?? '')),
+            'priority'            => sanitize_key($_POST['priority'] ?? 'normal'),
+            'push_on_publish'     => !empty($_POST['push_on_publish']),
+            'status'              => $existing['status'] ?? 'draft',
+        ), get_current_user_id(), $news_id);
+        if (is_wp_error($result)) {
+            wp_die(esc_html($result->get_error_message()));
+        }
         wp_safe_redirect(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=news&saved=1'));
         exit;
     }
@@ -272,6 +336,28 @@ class PAXdesign_Customer_Admin {
             wp_die(esc_html($result->get_error_message()));
         }
         wp_safe_redirect(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=news&saved=1'));
+        exit;
+    }
+
+    public static function handle_unpublish_news() {
+        self::verify_admin('paxdesign_customer_unpublish_news');
+        $news_id = absint($_POST['news_id'] ?? 0);
+        $result = PAXdesign_Customer_News::unpublish($news_id, get_current_user_id());
+        if (is_wp_error($result)) {
+            wp_die(esc_html($result->get_error_message()));
+        }
+        wp_safe_redirect(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=news&saved=1'));
+        exit;
+    }
+
+    public static function handle_delete_news() {
+        self::verify_admin('paxdesign_customer_delete_news');
+        $news_id = absint($_POST['news_id'] ?? 0);
+        $result = PAXdesign_Customer_News::delete($news_id);
+        if (is_wp_error($result)) {
+            wp_die(esc_html($result->get_error_message()));
+        }
+        wp_safe_redirect(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=news&deleted=1'));
         exit;
     }
 
