@@ -279,6 +279,62 @@ class PAXdesign_Chat {
         return $prompt;
     }
 
+    /**
+     * System prompt with language rules and optional authenticated account context.
+     *
+     * @param string $customer_language de|en|ar
+     * @param int    $user_id
+     * @param string $session_id
+     * @return string
+     */
+    public function build_ai_system_prompt($customer_language = '', $user_id = 0, $session_id = '') {
+        $prompt = $this->get_system_prompt($customer_language);
+        $user_id = absint($user_id);
+        if ($user_id > 0 && class_exists('PAXdesign_Chat_Knowledge')) {
+            $context = PAXdesign_Chat_Knowledge::build_customer_account_context_block($user_id, $session_id);
+            if ($context !== '') {
+                $prompt .= "\n\n" . $context;
+            }
+        }
+        return $prompt;
+    }
+
+    /**
+     * @param string $session_id
+     * @param string $user_message
+     * @return string de|en|ar
+     */
+    private function resolve_and_persist_customer_language($session_id, $user_message) {
+        if (!class_exists('PAXdesign_Language_Routing')) {
+            return 'de';
+        }
+        $language = PAXdesign_Language_Routing::resolve_session_language($session_id, $user_message);
+        PAXdesign_Language_Routing::persist_session_language($session_id, $language);
+        return $language;
+    }
+
+    /**
+     * @param array<int, array{role:string,content:string}> $messages
+     * @return string de|en|ar
+     */
+    private function detect_language_from_messages($messages) {
+        for ($i = count($messages) - 1; $i >= 0; $i--) {
+            if (!is_array($messages[$i]) || ($messages[$i]['role'] ?? '') !== 'user') {
+                continue;
+            }
+            $text = trim((string) ($messages[$i]['content'] ?? ''));
+            if ($text === '') {
+                continue;
+            }
+            if (class_exists('PAXdesign_Language_Routing')) {
+                $language = PAXdesign_Language_Routing::detect_text_language($text);
+                return $language !== '' ? $language : 'de';
+            }
+            break;
+        }
+        return 'de';
+    }
+
     public function register_rest_routes() {
         register_rest_route('paxdesign/v1', '/chat', array(
             'methods'             => 'POST',
@@ -458,9 +514,12 @@ class PAXdesign_Chat {
             ));
         }
 
+        $customer_language = $this->detect_language_from_messages($validated);
+        $user_id = get_current_user_id();
+
         $worker_url = trim(get_option('paxdesign_chat_worker_url', ''));
         if (!empty($worker_url)) {
-            $this->proxy_to_worker($worker_url, $validated);
+            $this->proxy_to_worker($worker_url, $validated, $customer_language, $user_id, $session_id);
             return;
         }
 
@@ -471,7 +530,7 @@ class PAXdesign_Chat {
             wp_send_json_error(array('message' => 'Chat ist derzeit nicht konfiguriert.'));
         }
 
-        $this->stream_openai_response($api_key, $validated, $session_id, $assistant_client_id);
+        $this->stream_openai_response($api_key, $validated, $session_id, $assistant_client_id, $customer_language, $user_id);
     }
 
     private function validate_messages($messages) {
@@ -542,7 +601,7 @@ class PAXdesign_Chat {
         return $ip ?: 'unknown';
     }
 
-    private function proxy_to_worker($worker_url, $messages) {
+    private function proxy_to_worker($worker_url, $messages, $customer_language = '', $user_id = 0, $session_id = '') {
         $secret = get_option('paxdesign_chat_worker_secret', '');
 
         $headers = array(
@@ -554,7 +613,7 @@ class PAXdesign_Chat {
         }
 
         $worker_messages = array_merge(
-            array(array('role' => 'system', 'content' => $this->get_system_prompt())),
+            array(array('role' => 'system', 'content' => $this->build_ai_system_prompt($customer_language, $user_id, $session_id))),
             array_values(array_filter($this->trim_conversation_history($messages), function ($msg) {
                 return $msg['role'] !== 'system';
             }))
@@ -598,14 +657,14 @@ class PAXdesign_Chat {
         exit;
     }
 
-    private function stream_openai_response($api_key, $messages, $session_id = '', $assistant_client_id = '') {
+    private function stream_openai_response($api_key, $messages, $session_id = '', $assistant_client_id = '', $customer_language = '', $user_id = 0) {
         if (!function_exists('curl_init')) {
             status_header(503);
             wp_send_json_error(array('message' => 'Chat-Server unterstützt keine Streaming-Verbindung (cURL fehlt).'));
         }
 
         $openai_messages = array(
-            array('role' => 'system', 'content' => $this->get_system_prompt()),
+            array('role' => 'system', 'content' => $this->build_ai_system_prompt($customer_language, $user_id, $session_id)),
         );
         foreach ($messages as $msg) {
             if ($msg['role'] !== 'system') {
@@ -936,17 +995,13 @@ class PAXdesign_Chat {
             return new WP_Error('send_failed', __('Could not save your message.', 'paxdesign-booking'), array('status' => 500));
         }
 
+        $customer_language = $this->resolve_and_persist_customer_language($session_id, $user_message);
+
         if (
             class_exists('PAXdesign_Language_Routing')
             && PAXdesign_Language_Routing::is_live_agent_intent($user_message)
         ) {
-            $user_id = get_current_user_id();
-            $lang = class_exists('PAXdesign_Language_Routing')
-                ? PAXdesign_Language_Routing::detect_text_language($user_message)
-                : 'de';
-            if ($lang === '') {
-                $lang = 'de';
-            }
+            $lang = $customer_language;
             $escalation = $live->escalate_authenticated_to_live($session_id, $user_id, $lang);
             if (is_wp_error($escalation)) {
                 return $escalation;
@@ -982,7 +1037,7 @@ class PAXdesign_Chat {
             $this->send_sse_headers();
             echo 'data: ' . wp_json_encode(array('type' => 'user', 'message' => $entry)) . "\n\n";
             $this->flush_sse_output();
-            $this->proxy_to_worker($worker_url, $validated);
+            $this->proxy_to_worker($worker_url, $validated, $customer_language, $user_id, $session_id);
             exit;
         }
 
@@ -994,7 +1049,14 @@ class PAXdesign_Chat {
         $this->send_sse_headers();
         echo 'data: ' . wp_json_encode(array('type' => 'user', 'message' => $entry)) . "\n\n";
         $this->flush_sse_output();
-        $this->stream_openai_response($api_key, $validated, $session_id, sanitize_text_field((string) $assistant_client_id));
+        $this->stream_openai_response(
+            $api_key,
+            $validated,
+            $session_id,
+            sanitize_text_field((string) $assistant_client_id),
+            $customer_language,
+            $user_id
+        );
         exit;
     }
 
@@ -1064,19 +1126,7 @@ class PAXdesign_Chat {
         }
 
         $live->ensure_session($session_id);
-        $customer_language = class_exists('PAXdesign_Language_Routing')
-            ? PAXdesign_Language_Routing::detect_text_language($user_message)
-            : 'de';
-        if ($customer_language !== '' && class_exists('PAXdesign_Language_Routing')) {
-            global $wpdb;
-            $wpdb->update(
-                PAXdesign_Chat_Log::table_name(),
-                array('customer_language' => $customer_language, 'updated_at' => current_time('mysql')),
-                array('session_id' => $session_id),
-                array('%s', '%s'),
-                array('%s')
-            );
-        }
+        $customer_language = $this->resolve_and_persist_customer_language($session_id, $user_message);
 
         $extra = array('client_msg_id' => sanitize_text_field((string) $client_msg_id));
         if (class_exists('PAXdesign_Link_Scanner')) {
@@ -1147,7 +1197,7 @@ class PAXdesign_Chat {
         }
 
         $live->mark_assistant_typing($session_id);
-        $completion = $this->request_openai_completion($validated, $customer_language);
+        $completion = $this->request_openai_completion($validated, $customer_language, $user_id, $session_id);
         $live->clear_assistant_typing($session_id);
         if (is_wp_error($completion)) {
             return $completion;
@@ -1196,14 +1246,14 @@ class PAXdesign_Chat {
      * @param string $customer_language
      * @return array{content:string,model:string}|WP_Error
      */
-    private function request_openai_completion($messages, $customer_language = '') {
+    private function request_openai_completion($messages, $customer_language = '', $user_id = 0, $session_id = '') {
         $api_key = $this->get_openai_api_key();
         if ($api_key === '') {
             return new WP_Error('not_configured', __('Chat is not configured yet. Please contact support.', 'paxdesign-booking'), array('status' => 503));
         }
 
         $openai_messages = array(
-            array('role' => 'system', 'content' => $this->get_system_prompt($customer_language)),
+            array('role' => 'system', 'content' => $this->build_ai_system_prompt($customer_language, $user_id, $session_id)),
         );
         foreach ($messages as $msg) {
             if ($msg['role'] !== 'system') {

@@ -110,6 +110,39 @@ class PAXdesign_Customer_Orders {
         }
     }
 
+    /**
+     * Upcoming booking appointments for the customer's email address.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function upcoming_bookings_for_user($user_id, $limit = 5) {
+        global $wpdb;
+        $user = get_user_by('id', absint($user_id));
+        if (!$user) {
+            return array();
+        }
+
+        $bookings = $wpdb->prefix . 'paxdesign_bookings';
+        if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $bookings)) !== $bookings) {
+            return array();
+        }
+
+        $limit = max(1, min(10, (int) $limit));
+        $today = gmdate('Y-m-d');
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT id, service, booking_date, booking_time, status, message
+             FROM $bookings
+             WHERE customer_email = %s AND booking_date >= %s
+             ORDER BY booking_date ASC, booking_time ASC
+             LIMIT %d",
+            $user->user_email,
+            $today,
+            $limit
+        ), ARRAY_A);
+
+        return $rows ?: array();
+    }
+
     public static function link_bookings_for_user($user_id) {
         global $wpdb;
         $user = get_user_by('id', absint($user_id));
