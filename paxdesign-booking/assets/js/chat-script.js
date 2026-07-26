@@ -1853,7 +1853,7 @@
     (snap.messages || []).forEach(function (msg) {
       if (isDuplicateMessage(msg)) return;
       rememberMessageIdentity(msg);
-      renderMessageDom(msg.role, msg.content, msg.id, messageRenderOpts(msg, { skipPush: true }));
+      renderMessageDom(msg.role, messageOriginalContent(msg) || messageText(msg.content), msg.id, messageRenderOpts(msg, { skipPush: true }));
       if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'admin' || msg.role === 'system') {
         messages.push({
           role: msg.role,
@@ -1978,7 +1978,7 @@
       rememberMessageIdentity(msg);
       if (msg.reaction) messageReactions[msg.id] = msg.reaction;
       indexChatMessage(msg);
-      renderMessageDom(msg.role, msg.content, msg.id, messageRenderOpts(msg, { skipPush: true }));
+      renderMessageDom(msg.role, messageOriginalContent(msg) || messageText(msg.content), msg.id, messageRenderOpts(msg, { skipPush: true }));
       if (msg.role === 'user' || msg.role === 'assistant' || msg.role === 'admin') {
         if (!messages.some(function (m) { return m.id === msg.id; })) {
           messages.push({
@@ -3139,6 +3139,7 @@
       link_scan_status: msg.link_scan_status || '',
       link_scan_label: msg.link_scan_label || '',
       link_scan_analysis: msg.link_scan_analysis || '',
+      link_scan_original_content: msg.link_scan_original_content || '',
       sender_name: msg.sender_name || '',
       sender_avatar: msg.sender_avatar || '',
       sender_role: msg.sender_role || '',
@@ -3890,7 +3891,7 @@
     var bubble = msgEl.querySelector('.paxdesign-booking-chat-message-bubble');
     if (!bubble) return;
     var status = serverMsg && serverMsg.link_scan_status ? serverMsg.link_scan_status : '';
-    var content = serverMsg && serverMsg.content ? serverMsg.content : '';
+    var content = messageOriginalContent(serverMsg) || (serverMsg && serverMsg.content ? serverMsg.content : '');
     var urls = extractUrlsFromText(content);
     if (!status && urls.length) status = 'checking';
     if (!status) return;
@@ -3899,8 +3900,9 @@
       msgEl.classList.add('paxdesign-booking-chat-message--dangerous-link');
     }
     var existing = bubble.querySelector('.paxdesign-booking-chat-link-scan');
-    var analysisEl = bubble.querySelector('.paxdesign-booking-chat-link-scan__analysis');
-    if (analysisEl) analysisEl.remove();
+    bubble.querySelectorAll('.paxdesign-booking-chat-link-scan__analysis').forEach(function (el) {
+      el.remove();
+    });
     var html = buildCustomerLinkScanHtml({
       link_scan_status: status,
       content: content,
@@ -3937,7 +3939,11 @@
 
   function renderMessageDom(role, content, msgId, opts) {
     opts = opts || {};
-    content = messageText(content);
+    if (role === 'user' && opts.link_scan_original_content) {
+      content = messageText(opts.link_scan_original_content);
+    } else {
+      content = messageText(content);
+    }
     root.classList.add('paxdesign-has-chat-messages');
     var msg = document.createElement('div');
     msg.className = 'paxdesign-booking-chat-message paxdesign-booking-chat-message--' + role;
@@ -4582,7 +4588,13 @@
           if (serverMessage && serverMessage.id) {
             var local = messages.find(function (m) { return m.client_msg_id === clientMsgId; });
             if (local) local.id = serverMessage.id;
-            updateCustomerLinkScanBadge(userMsgId, serverMessage);
+            var msgEl = threadEl.querySelector('[data-msg-id="' + userMsgId + '"]');
+            if (msgEl) {
+              msgEl.setAttribute('data-msg-id', String(serverMessage.id));
+              delete domMsgIds[userMsgId];
+              domMsgIds[serverMessage.id] = true;
+            }
+            updateCustomerLinkScanMessage(serverMessage);
           }
         })
         .catch(function (err) {
