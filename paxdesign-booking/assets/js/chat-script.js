@@ -1647,9 +1647,7 @@
   }
 
   function updateEndButtonUi() {
-    if (!endWrapEl) return;
-    var show = canCustomerEndChat() && chatHandler !== 'closed';
-    endWrapEl.hidden = !show;
+    if (endWrapEl) endWrapEl.hidden = true;
   }
 
   function customerCloseConversation() {
@@ -3123,6 +3121,7 @@
     updateCustomerLinkScanContent(serverMsg.id, serverMsg);
     updateCustomerLinkScanBadge(serverMsg.id, serverMsg);
     refreshMessageScanState(serverMsg);
+    scrollToBottom();
   }
 
   function messageRenderOpts(msg, extra) {
@@ -3543,6 +3542,7 @@
         updateReactionUi(msgId, normalizedReaction);
       }
     }
+    scrollToBottom();
   }
 
   function showAdminTypingIndicator() {
@@ -4091,17 +4091,24 @@
 
   function autoResizeInput() {
     input.style.height = 'auto';
-    input.style.height = Math.min(input.scrollHeight, 72) + 'px';
+    input.style.height = Math.min(input.scrollHeight, 120) + 'px';
   }
 
   function scrollToBottom() {
-    requestAnimationFrame(function () {
-      if (!messagesEl) return;
+    if (!messagesEl) return;
+    var run = function () {
+      var anchor = threadEl && threadEl.lastElementChild;
+      if (anchor && typeof anchor.scrollIntoView === 'function') {
+        anchor.scrollIntoView({ block: 'end', inline: 'nearest', behavior: 'auto' });
+      }
       messagesEl.scrollTop = messagesEl.scrollHeight;
-      requestAnimationFrame(function () {
-        messagesEl.scrollTop = messagesEl.scrollHeight;
-      });
+    };
+    requestAnimationFrame(function () {
+      run();
+      requestAnimationFrame(run);
     });
+    window.setTimeout(run, 80);
+    window.setTimeout(run, 220);
   }
 
   function escapeHtml(str) {

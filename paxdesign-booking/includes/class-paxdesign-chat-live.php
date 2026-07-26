@@ -22,6 +22,7 @@ class PAXdesign_Chat_Live {
 
     const DEFAULT_AGENT_NAME   = 'Ahmad Alkhalaf';
     const DEFAULT_AGENT_AVATAR   = 'https://paxdesign.at/wp-content/uploads/2026/06/unnamed.jpg';
+    const DEFAULT_AI_AVATAR_URL  = 'https://paxdesign.at/wp-content/uploads/2026/06/a5af1840-117e-11ee-bada-ff65d56e3db4.gif';
     const DEFAULT_AGENT_ROLE     = 'Development Manager';
     const DEFAULT_AGENT_TAGLINE  = 'Owner & Founder · PAXdesign';
     const DEFAULT_AGENT_BIO      = 'I am the owner and founder of PAXdesign. As Development Manager I personally support you with web design, AI chatbots, booking systems, and digital solutions.';
@@ -76,7 +77,7 @@ class PAXdesign_Chat_Live {
         }
         $avatar = trim((string) get_option('paxdesign_chat_ai_avatar', ''));
         if ($avatar === '') {
-            $avatar = self::get_agent_avatar_url();
+            $avatar = self::DEFAULT_AI_AVATAR_URL;
         }
         return array(
             'id'     => 0,
