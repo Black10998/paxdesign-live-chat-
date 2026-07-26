@@ -218,12 +218,31 @@ foreach ($queued as $item) {
 assert_true('cancelled message not queued for scan', !$hasCancelled);
 
 $masked = PAXdesign_Message_Store::mask_message_for_customer(array(
+    'content' => 'see https://example.com',
     'link_scan_status' => 'dangerous',
     'link_scan_review_pending' => '1',
     'link_scan_system_status' => 'dangerous',
-));
-assert_true('customer mask keeps checking while review pending', ($masked['link_scan_status'] ?? '') === 'checking');
-assert_true('customer mask strips internal fields', empty($masked['link_scan_system_status']) && empty($masked['link_scan_review_pending']));
+    'link_scan_urls' => wp_json_encode(array(array('url' => 'https://example.com', 'status' => 'dangerous'))),
+    'link_scan_provider' => 'urlhaus',
+), 'sess_lang');
+assert_true('customer formatter exposes dangerous verdict', ($masked['link_scan_status'] ?? '') === 'dangerous');
+assert_true('customer formatter adds localized analysis', !empty($masked['link_scan_analysis']));
+
+$checking = PAXdesign_Message_Store::mask_message_for_customer(array(
+    'content' => 'see https://example.com',
+    'link_scan_status' => 'checking',
+    'link_scan_frame' => 7,
+    'link_scan_started_at' => time(),
+), 'sess_lang');
+assert_true('checking message scrambles url same length', ($checking['content'] ?? '') !== 'see https://example.com');
+assert_true('checking message keeps prefix text', strpos((string) ($checking['content'] ?? ''), 'see ') === 0);
+
+$scrambled = PAXdesign_Link_Scan_Service::scramble_url('https://example.com', 42);
+assert_true('scramble keeps url length', strlen($scrambled) === strlen('https://example.com'));
+assert_true('scramble changes characters', $scrambled !== 'https://example.com');
+
+assert_true('status label english', PAXdesign_Link_Scan_Service::status_label('safe', 'en') === 'Safe link');
+assert_true('status label arabic', PAXdesign_Link_Scan_Service::status_label('checking', 'ar') !== '');
 
 echo "\n{$passed} passed, {$failed} failed\n";
 exit($failed > 0 ? 1 : 0);

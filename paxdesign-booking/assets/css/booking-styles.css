@@ -3891,9 +3891,36 @@ html.paxdesign-scroll-lock body {
   color: #b91c1c;
 }
 
-#paxdesign-booking-root .paxdesign-booking-chat-link-scan--failed,
-#paxdesign-booking-root .paxdesign-booking-chat-link-scan--timeout,
 #paxdesign-booking-root .paxdesign-booking-chat-link-scan--incomplete {
+  background: #f8fafc;
+  border-color: #64748b;
+  color: #475569;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-message-text {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-message--url-scanning .paxdesign-booking-chat-message-text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  letter-spacing: 0.02em;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-link-scan__analysis {
+  display: block;
+  margin-top: 6px;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  font-weight: 500;
+  white-space: pre-wrap;
+  color: inherit;
+  opacity: 0.92;
+}
+
+#paxdesign-booking-root .paxdesign-booking-chat-link-scan--failed,
+#paxdesign-booking-root .paxdesign-booking-chat-link-scan--timeout {
   background: #f8fafc;
   border-color: #64748b;
   color: #475569;

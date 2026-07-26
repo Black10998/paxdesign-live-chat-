@@ -234,9 +234,7 @@
     }
     if (data.type === 'link_scan_updated' && payload.message) {
       if (!isMessagePermanentlyDeleted(payload.message.id)) {
-        var customerMsg = maskCustomerLinkScanMessage(payload.message);
-        updateCustomerLinkScanBadge(customerMsg.id, customerMsg);
-        refreshMessageScanState(customerMsg);
+        updateCustomerLinkScanMessage(payload.message);
       }
     }
     if (data.type === 'message_deleted' && payload.message_id) {
@@ -2966,15 +2964,136 @@
   }
 
   function maskCustomerLinkScanMessage(msg) {
-    if (!msg) return msg;
-    if (msg.link_scan_review_pending === '1' || msg.link_scan_review_pending === 1 || msg.link_scan_review_pending === true) {
-      return Object.assign({}, msg, {
-        link_scan_status: 'checking',
-        link_scan_system_status: undefined,
-        link_scan_review_pending: undefined
-      });
-    }
     return msg;
+  }
+
+  var urlScanAnimTimers = {};
+  var urlScanAnimOriginals = {};
+
+  function scrambleUrlClient(url, frame) {
+    var chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-_#@$%&*+=/?';
+    var out = '';
+    for (var i = 0; i < url.length; i++) {
+      var seed = 0;
+      var key = url + ':' + frame + ':' + i;
+      for (var j = 0; j < key.length; j++) {
+        seed = ((seed << 5) - seed + key.charCodeAt(j)) | 0;
+      }
+      out += chars.charAt(Math.abs(seed) % chars.length);
+    }
+    return out;
+  }
+
+  function extractUrlsFromText(text) {
+    if (!text) return [];
+    var pattern = /\bhttps?:\/\/[^\s<>"')\]]+/gi;
+    var matches = String(text).match(pattern) || [];
+    var urls = [];
+    matches.forEach(function (raw) {
+      var url = raw.replace(/[.,;:!?)]+$/, '');
+      if (url && urls.indexOf(url) === -1) urls.push(url);
+    });
+    return urls;
+  }
+
+  function customerLinkScanLabel(status, serverLabel) {
+    if (serverLabel) return serverLabel;
+    var lang = (document.documentElement.lang || 'de').toLowerCase();
+    var isEn = lang.indexOf('en') === 0;
+    var isAr = lang.indexOf('ar') === 0;
+    if (status === 'checking') {
+      if (isAr) return 'جاري فحص الأمان …';
+      return isEn ? 'Security scan in progress …' : 'Sicherheitsprüfung läuft …';
+    }
+    if (status === 'safe') {
+      if (isAr) return 'رابط آمن';
+      return isEn ? 'Safe link' : 'Sicherer Link';
+    }
+    if (status === 'suspicious') {
+      if (isAr) return 'رابط مشبوه';
+      return isEn ? 'Suspicious link' : 'Verdächtiger Link';
+    }
+    if (status === 'dangerous') {
+      if (isAr) return 'رابط خطير';
+      return isEn ? 'Dangerous link' : 'Gefährlicher Link';
+    }
+    if (status === 'failed' || status === 'timeout' || status === 'incomplete') {
+      if (isAr) return 'الفحص غير مكتمل';
+      return isEn ? 'Scan not completed.' : 'Scan nicht abgeschlossen.';
+    }
+    return '';
+  }
+
+  function stopUrlScanAnimation(msgId) {
+    var key = String(msgId);
+    if (urlScanAnimTimers[key]) {
+      clearInterval(urlScanAnimTimers[key]);
+      delete urlScanAnimTimers[key];
+    }
+  }
+
+  function startUrlScanAnimation(msgId, originalContent) {
+    var key = String(msgId);
+    if (!originalContent) return;
+    urlScanAnimOriginals[key] = originalContent;
+    stopUrlScanAnimation(msgId);
+    var urls = extractUrlsFromText(originalContent);
+    if (!urls.length) return;
+    var msgEl = threadEl.querySelector('[data-msg-id="' + key + '"]');
+    if (!msgEl) return;
+    var textEl = msgEl.querySelector('.paxdesign-booking-chat-message-text');
+    if (!textEl) return;
+    msgEl.classList.add('paxdesign-booking-chat-message--url-scanning');
+    urlScanAnimTimers[key] = window.setInterval(function () {
+      var frame = Date.now();
+      var display = originalContent;
+      urls.forEach(function (url) {
+        display = display.split(url).join(scrambleUrlClient(url, frame + url.length));
+      });
+      textEl.textContent = display;
+    }, 65);
+  }
+
+  function updateCustomerLinkScanContent(msgId, serverMsg) {
+    if (!msgId || !serverMsg) return;
+    var msgEl = threadEl.querySelector('[data-msg-id="' + msgId + '"]');
+    if (!msgEl) return;
+    var bubble = msgEl.querySelector('.paxdesign-booking-chat-message-bubble');
+    if (!bubble) return;
+    var textEl = bubble.querySelector('.paxdesign-booking-chat-message-text');
+    var content = messageText(serverMsg.content || '');
+    var status = serverMsg.link_scan_status || '';
+    if (!textEl) {
+      var badge = bubble.querySelector('.paxdesign-booking-chat-link-scan');
+      var textWrap = document.createElement('span');
+      textWrap.className = 'paxdesign-booking-chat-message-text';
+      textWrap.textContent = content;
+      if (badge) {
+        bubble.insertBefore(textWrap, badge);
+      } else {
+        bubble.insertBefore(textWrap, bubble.firstChild);
+      }
+      textEl = textWrap;
+    }
+    if (status === 'checking') {
+      if (!urlScanAnimOriginals[String(msgId)]) {
+        urlScanAnimOriginals[String(msgId)] = content;
+      }
+      if (!urlScanAnimTimers[String(msgId)]) {
+        startUrlScanAnimation(msgId, urlScanAnimOriginals[String(msgId)]);
+      }
+      return;
+    }
+    stopUrlScanAnimation(msgId);
+    msgEl.classList.remove('paxdesign-booking-chat-message--url-scanning');
+    textEl.textContent = content;
+  }
+
+  function updateCustomerLinkScanMessage(serverMsg) {
+    if (!serverMsg || !serverMsg.id) return;
+    updateCustomerLinkScanContent(serverMsg.id, serverMsg);
+    updateCustomerLinkScanBadge(serverMsg.id, serverMsg);
+    refreshMessageScanState(serverMsg);
   }
 
   function messageRenderOpts(msg, extra) {
@@ -2989,6 +3108,8 @@
       link_label: msg.link_label || '',
       link_icon: msg.link_icon || '',
       link_scan_status: msg.link_scan_status || '',
+      link_scan_label: msg.link_scan_label || '',
+      link_scan_analysis: msg.link_scan_analysis || '',
       sender_name: msg.sender_name || '',
       sender_avatar: msg.sender_avatar || '',
       sender_role: msg.sender_role || '',
@@ -3598,32 +3719,6 @@
     return '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">' + (paths[key] || paths.link) + '</svg>';
   }
 
-  function extractUrlsFromText(text) {
-    if (!text) return [];
-    var pattern = /\bhttps?:\/\/[^\s<>"')\]]+/gi;
-    var matches = String(text).match(pattern) || [];
-    var urls = [];
-    matches.forEach(function (raw) {
-      var url = raw.replace(/[.,;:!?)]+$/, '');
-      if (url && urls.indexOf(url) === -1) urls.push(url);
-    });
-    return urls;
-  }
-
-  function customerLinkScanLabel(status) {
-    var isEn = document.documentElement.lang && document.documentElement.lang.indexOf('en') === 0;
-    if (status === 'checking') {
-      return isEn ? 'Scanning...' : 'Wird geprüft …';
-    }
-    if (status === 'safe') return isEn ? 'Safe Link' : 'Sicherer Link';
-    if (status === 'suspicious') return isEn ? 'Suspicious Link' : 'Verdächtiger Link';
-    if (status === 'dangerous') return isEn ? 'Dangerous Link' : 'Gefährlicher Link';
-    if (status === 'failed' || status === 'timeout' || status === 'incomplete') {
-      return isEn ? 'Scan not completed.' : 'Scan nicht abgeschlossen.';
-    }
-    return '';
-  }
-
   function isFinalScanStatus(status) {
     return status === 'safe' || status === 'suspicious' || status === 'dangerous'
       || status === 'failed' || status === 'timeout' || status === 'incomplete';
@@ -3748,10 +3843,15 @@
     var urls = extractUrlsFromText(opts.content || '');
     if (!status && !urls.length) return '';
     if (!status) status = 'checking';
-    return '<span class="paxdesign-booking-chat-link-scan paxdesign-booking-chat-link-scan--' + escapeHtml(status) + '" data-scan-status="' + escapeHtml(status) + '" role="status">' +
+    var label = customerLinkScanLabel(status, opts.link_scan_label || '');
+    var html = '<span class="paxdesign-booking-chat-link-scan paxdesign-booking-chat-link-scan--' + escapeHtml(status) + '" data-scan-status="' + escapeHtml(status) + '" role="status">' +
       '<span class="paxdesign-booking-chat-link-scan__icon">' + linkScanIconSvg(status) + '</span>' +
-      '<span class="paxdesign-booking-chat-link-scan__label">' + escapeHtml(customerLinkScanLabel(status)) + '</span>' +
+      '<span class="paxdesign-booking-chat-link-scan__label">' + escapeHtml(label) + '</span>' +
       '</span>';
+    if (opts.link_scan_analysis && isFinalScanStatus(status)) {
+      html += '<span class="paxdesign-booking-chat-link-scan__analysis">' + escapeHtml(opts.link_scan_analysis) + '</span>';
+    }
+    return html;
   }
 
   function updateCustomerLinkScanBadge(msgId, serverMsg) {
@@ -3770,7 +3870,14 @@
       msgEl.classList.add('paxdesign-booking-chat-message--dangerous-link');
     }
     var existing = bubble.querySelector('.paxdesign-booking-chat-link-scan');
-    var html = buildCustomerLinkScanHtml({ link_scan_status: status, content: content });
+    var analysisEl = bubble.querySelector('.paxdesign-booking-chat-link-scan__analysis');
+    if (analysisEl) analysisEl.remove();
+    var html = buildCustomerLinkScanHtml({
+      link_scan_status: status,
+      content: content,
+      link_scan_label: serverMsg && serverMsg.link_scan_label ? serverMsg.link_scan_label : '',
+      link_scan_analysis: serverMsg && serverMsg.link_scan_analysis ? serverMsg.link_scan_analysis : ''
+    });
     if (existing) {
       existing.outerHTML = html;
     } else if (html) {
@@ -3791,7 +3898,7 @@
     } else if (role === 'assistant' || role === 'admin') {
       if (content) html += formatMarkdown(content);
     } else if (role !== 'system' && content) {
-      html += escapeHtml(content);
+      html += '<span class="paxdesign-booking-chat-message-text">' + escapeHtml(content) + '</span>';
     }
     if (role === 'user') {
       html += buildCustomerLinkScanHtml(Object.assign({}, opts, { content: content }));
@@ -3861,6 +3968,9 @@
     scrollToBottom();
     if (role === 'user' && opts.link_scan_status) {
       refreshMessageScanState({ id: msgId, link_scan_status: opts.link_scan_status, content: content });
+      if (opts.link_scan_status === 'checking') {
+        startUrlScanAnimation(msgId, content);
+      }
     }
     if (!opts.skipPush && msgId) saveSessionSnapshot();
     return { bubble: bubble, messageEl: msg };
