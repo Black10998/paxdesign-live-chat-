@@ -34,6 +34,14 @@ if (!function_exists('update_option')) {
         return true;
     }
 }
+if (!function_exists('delete_option')) {
+    function delete_option($name) {
+        if (isset($GLOBALS['pax_test_options'][$name])) {
+            unset($GLOBALS['pax_test_options'][$name]);
+        }
+        return true;
+    }
+}
 if (!function_exists('wp_next_scheduled')) {
     function wp_next_scheduled($hook, $args = array()) {
         return false;
@@ -227,6 +235,20 @@ $masked = PAXdesign_Message_Store::mask_message_for_customer(array(
 ), 'sess_lang');
 assert_true('customer formatter exposes dangerous verdict', ($masked['link_scan_status'] ?? '') === 'dangerous');
 assert_true('customer formatter adds localized analysis', !empty($masked['link_scan_analysis']));
+assert_true('customer formatter keeps url-only content', strpos((string) ($masked['content'] ?? ''), 'Sicherheitsprüfung') === false);
+
+$safeMasked = PAXdesign_Message_Store::mask_message_for_customer(array(
+    'content' => 'https://uiverse.exe',
+    'link_scan_original_content' => 'https://uiverse.exe',
+    'link_scan_status' => 'safe',
+    'link_scan_system_status' => 'incomplete',
+    'link_scan_urls' => wp_json_encode(array(array('url' => 'https://uiverse.exe', 'status' => 'safe'))),
+    'link_scan_provider' => 'server_probe+phishtank+urlhaus',
+    'link_scan_analysis' => 'تعذر إكمال فحص الأمان لجميع المزودين (urlhaus).',
+), 'sess_ar');
+assert_true('customer sees safe when system scan was inconclusive', ($safeMasked['link_scan_status'] ?? '') === 'safe');
+assert_true('stale incomplete analysis is not reused for safe status', strpos((string) ($safeMasked['link_scan_analysis'] ?? ''), 'تعذر') === false);
+assert_true('analysis is not duplicated inside message content', strpos((string) ($safeMasked['content'] ?? ''), 'اكتمل') === false);
 
 $checking = PAXdesign_Message_Store::mask_message_for_customer(array(
     'content' => 'see https://example.com',

@@ -35,6 +35,9 @@ class PAXdesign_Link_Scan_Service {
     /** @var array<string, true> */
     private static $cancelled_scans = array();
 
+    /** @var array<string, true> */
+    private static $active_scans = array();
+
     public static function init() {
         add_action(self::CRON_HOOK, array(__CLASS__, 'run_message_scan'), 10, 2);
         add_action('shutdown', array(__CLASS__, 'flush_dispatch_queue'), 1);
@@ -152,6 +155,9 @@ class PAXdesign_Link_Scan_Service {
             wp_unschedule_event($timestamp, self::CRON_HOOK, array($session_id, $message_seq));
         }
 
+        delete_option(self::scan_lock_option($session_id, $message_seq));
+        unset(self::$active_scans[self::scan_key($session_id, $message_seq)]);
+
         self::delete_scan_rows($session_id, $message_seq);
     }
 
@@ -171,6 +177,41 @@ class PAXdesign_Link_Scan_Service {
 
     private static function scan_key($session_id, $message_seq) {
         return sanitize_text_field((string) $session_id) . ':' . absint($message_seq);
+    }
+
+    private static function scan_lock_option($session_id, $message_seq) {
+        return 'paxdesign_scan_lock_' . md5(self::scan_key($session_id, $message_seq));
+    }
+
+    private static function unschedule_scan_cron($session_id, $message_seq) {
+        while (($timestamp = wp_next_scheduled(self::CRON_HOOK, array($session_id, $message_seq))) !== false) {
+            wp_unschedule_event($timestamp, self::CRON_HOOK, array($session_id, $message_seq));
+        }
+    }
+
+    private static function try_begin_scan($session_id, $message_seq) {
+        $key = self::scan_key($session_id, $message_seq);
+        if (!empty(self::$active_scans[$key])) {
+            return false;
+        }
+        $lock_key = self::scan_lock_option($session_id, $message_seq);
+        $existing = (int) get_option($lock_key, 0);
+        if ($existing > 0) {
+            if (time() - $existing < self::TIMEOUT_SECONDS + 20) {
+                return false;
+            }
+            delete_option($lock_key);
+        }
+        self::$active_scans[$key] = true;
+        update_option($lock_key, time(), false);
+        return true;
+    }
+
+    private static function end_scan($session_id, $message_seq) {
+        $key = self::scan_key($session_id, $message_seq);
+        unset(self::$active_scans[$key]);
+        delete_option(self::scan_lock_option($session_id, $message_seq));
+        self::unschedule_scan_cron($session_id, $message_seq);
     }
 
     public static function flush_dispatch_queue() {
@@ -220,8 +261,18 @@ class PAXdesign_Link_Scan_Service {
             return;
         }
 
+        if (!empty($message['link_scan_completed_at'])) {
+            self::unschedule_scan_cron($session_id, $message_seq);
+            return;
+        }
+
+        if (!self::try_begin_scan($session_id, $message_seq)) {
+            return;
+        }
+
         $urls = self::urls_from_message($message);
         if (empty($urls)) {
+            self::end_scan($session_id, $message_seq);
             return;
         }
 
@@ -234,24 +285,21 @@ class PAXdesign_Link_Scan_Service {
             self::insert_scan_row($session_id, $message_seq, $url, $started_at);
         }
 
-        foreach ($urls as $url) {
-            self::insert_scan_row($session_id, $message_seq, $url, $started_at);
-        }
-
         $scan_started = microtime(true);
         $scan_deadline = $scan_started + (float) self::TIMEOUT_SECONDS;
         $results   = array();
         $providers = array();
         $worst     = self::STATUS_SAFE;
-        $had_error = false;
 
         foreach ($urls as $url) {
             if (self::is_scan_cancelled($session_id, $message_seq)) {
                 self::delete_scan_rows($session_id, $message_seq);
+                self::end_scan($session_id, $message_seq);
                 return;
             }
             if (!PAXdesign_Message_Store::get_message($session_id, $message_seq)) {
                 self::delete_scan_rows($session_id, $message_seq);
+                self::end_scan($session_id, $message_seq);
                 return;
             }
             $outcome = self::scan_url_remote($url, array(
@@ -268,13 +316,12 @@ class PAXdesign_Link_Scan_Service {
             }
             self::complete_scan_row($session_id, $message_seq, $url, $outcome);
             $worst = self::worst_status($worst, $outcome['status']);
-            if (in_array($outcome['status'], array(self::STATUS_FAILED, self::STATUS_TIMEOUT, self::STATUS_INCOMPLETE), true)) {
-                $had_error = true;
-            }
         }
 
-        if ($had_error && !in_array($worst, array(self::STATUS_DANGEROUS, self::STATUS_SUSPICIOUS), true)) {
-            $worst = self::STATUS_SAFE;
+        $system_status = $worst;
+        $customer_status = $worst;
+        if (!in_array($worst, array(self::STATUS_DANGEROUS, self::STATUS_SUSPICIOUS), true)) {
+            $customer_status = self::STATUS_SAFE;
         }
 
         $elapsed = microtime(true) - $scan_started;
@@ -299,24 +346,31 @@ class PAXdesign_Link_Scan_Service {
         $completed = time();
         if (self::is_scan_cancelled($session_id, $message_seq)) {
             self::delete_scan_rows($session_id, $message_seq);
+            self::end_scan($session_id, $message_seq);
             return;
         }
         if (!PAXdesign_Message_Store::get_message($session_id, $message_seq)) {
             self::delete_scan_rows($session_id, $message_seq);
+            self::end_scan($session_id, $message_seq);
+            return;
+        }
+
+        if (!empty(PAXdesign_Message_Store::get_message($session_id, $message_seq)['link_scan_completed_at'])) {
+            self::end_scan($session_id, $message_seq);
             return;
         }
 
         $language = self::resolve_customer_language($session_id);
-        $analysis = self::build_analysis_text($worst, $results, $provider_label, $language);
-        $review_pending = in_array($worst, array(self::STATUS_DANGEROUS, self::STATUS_SUSPICIOUS), true) ? '1' : '';
+        $analysis = self::build_analysis_text($customer_status, $results, $provider_label, $language);
+        $review_pending = in_array($system_status, array(self::STATUS_DANGEROUS, self::STATUS_SUSPICIOUS), true) ? '1' : '';
 
         $meta_updates = array(
-            'link_scan_status'        => $worst,
-            'link_scan_system_status' => $worst,
+            'link_scan_status'        => $customer_status,
+            'link_scan_system_status' => $system_status,
             'link_scan_urls'          => wp_json_encode($results),
             'link_scan_completed_at'  => $completed,
             'link_scan_provider'      => $provider_label,
-            'link_scan_label'         => self::status_label($worst, $language),
+            'link_scan_label'         => self::status_label($customer_status, $language),
             'link_scan_analysis'      => $analysis,
             'link_scan_frame'         => 0,
         );
@@ -332,9 +386,11 @@ class PAXdesign_Link_Scan_Service {
         );
 
         if (is_wp_error($updated) || !is_array($updated)) {
+            self::end_scan($session_id, $message_seq);
             return;
         }
 
+        self::end_scan($session_id, $message_seq);
         self::emit_customer_scan_event($session_id, $message_seq, 'link_scan_updated');
 
         $admin_message = PAXdesign_Message_Store::get_message($session_id, $message_seq);
@@ -1108,9 +1164,6 @@ class PAXdesign_Link_Scan_Service {
      * @return string
      */
     public static function analysis_from_message($message, $lang = 'de') {
-        if (!empty($message['link_scan_analysis'])) {
-            return (string) $message['link_scan_analysis'];
-        }
         $results = array();
         if (!empty($message['link_scan_urls'])) {
             $decoded = json_decode((string) $message['link_scan_urls'], true);
@@ -1118,9 +1171,15 @@ class PAXdesign_Link_Scan_Service {
                 $results = $decoded;
             }
         }
-        $worst = (string) ($message['link_scan_status'] ?? self::STATUS_INCOMPLETE);
+        $status = sanitize_key((string) ($message['link_scan_status'] ?? ''));
         $provider = (string) ($message['link_scan_provider'] ?? 'server');
-        return self::build_analysis_text($worst, $results, $provider, $lang);
+        if ($status !== '' && self::is_final_status($status)) {
+            return self::build_analysis_text($status, $results, $provider, $lang);
+        }
+        if (!empty($message['link_scan_analysis'])) {
+            return (string) $message['link_scan_analysis'];
+        }
+        return self::build_analysis_text(self::STATUS_INCOMPLETE, $results, $provider, $lang);
     }
 
     /**
@@ -1164,9 +1223,6 @@ class PAXdesign_Link_Scan_Service {
         $analysis = self::analysis_from_message($message, $lang);
         $message['link_scan_label'] = self::status_label($status, $lang);
         $message['link_scan_analysis'] = $analysis;
-        if ($analysis !== '' && strpos((string) ($message['content'] ?? ''), $analysis) === false) {
-            $message['content'] = rtrim((string) ($message['content'] ?? '')) . "\n\n" . $analysis;
-        }
         return $message;
     }
 
