@@ -347,6 +347,11 @@
       err.code = 'auth';
       err.messageKey = 'readinessAuthFailed';
     }
+    if (res && res.status === 403 && json && json.data && json.data.message === 'Invalid nonce') {
+      err.code = 'network';
+      err.messageKey = 'readinessNetworkFailed';
+      err.detail = 'invalid_chat_nonce';
+    }
     if (json && json.data && json.data.message) {
       err.detail = String(json.data.message);
     } else if (json && json.message) {
@@ -829,24 +834,34 @@
     cachedSessionId = null;
   }
 
+  function refreshChatAjaxNonce() {
+    if (!config || !config.ajaxUrl) return Promise.resolve(false);
+    return fetch(config.ajaxUrl + '?action=paxdesign_chat_nonce&_=' + Date.now(), {
+      credentials: 'same-origin',
+    }).then(function (res) {
+      return safeJson(res);
+    }).then(function (json) {
+      if (json && json.success && json.data && json.data.nonce) {
+        config.nonce = json.data.nonce;
+        return true;
+      }
+      return false;
+    }).catch(function () {
+      return false;
+    });
+  }
+
   function refreshChatAuthNonce() {
-    if (window.PDXAuth && typeof window.PDXAuth.getNonce === 'function') {
-      var freshNonce = window.PDXAuth.getNonce();
-      if (freshNonce && config) config.nonce = freshNonce;
+    if (window.PDXAuth && typeof window.PDXAuth.getUser === 'function' && config) {
+      config.auth = window.PDXAuth.getUser();
     }
+    var refreshRest = Promise.resolve(true);
     if (window.PDXAuth && typeof window.PDXAuth.refreshSessionNonce === 'function') {
-      return window.PDXAuth.refreshSessionNonce().then(function (ok) {
-        if (window.PDXAuth && typeof window.PDXAuth.getNonce === 'function') {
-          var nonce = window.PDXAuth.getNonce();
-          if (nonce && config) config.nonce = nonce;
-        }
-        if (window.PDXAuth && typeof window.PDXAuth.getUser === 'function' && config) {
-          config.auth = window.PDXAuth.getUser();
-        }
-        return ok !== false;
-      }).catch(function () { return false; });
+      refreshRest = window.PDXAuth.refreshSessionNonce().catch(function () { return false; });
     }
-    return Promise.resolve(true);
+    return Promise.all([refreshChatAjaxNonce(), refreshRest]).then(function () {
+      return true;
+    });
   }
 
   function inferAuthSessionChangeReason(eventDetail, previousUserId, nextUserId) {
@@ -1125,10 +1140,7 @@
         if (config && window.PDXAuth && typeof window.PDXAuth.getUser === 'function') {
           config.auth = window.PDXAuth.getUser();
         }
-        if (window.PDXAuth && typeof window.PDXAuth.getNonce === 'function') {
-          var freshNonce = window.PDXAuth.getNonce();
-          if (freshNonce) config.nonce = freshNonce;
-        }
+        refreshChatAjaxNonce();
         handleAuthSessionChange(event);
       });
       window.addEventListener('pdx-chat-session-invalidate', function (event) {

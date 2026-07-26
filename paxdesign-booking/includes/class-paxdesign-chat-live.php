@@ -352,6 +352,8 @@ class PAXdesign_Chat_Live {
     }
 
     private function __construct() {
+        add_action('wp_ajax_paxdesign_chat_nonce', array($this, 'handle_chat_nonce'));
+        add_action('wp_ajax_nopriv_paxdesign_chat_nonce', array($this, 'handle_chat_nonce'));
         add_action('wp_ajax_paxdesign_chat_poll', array($this, 'handle_poll'));
         add_action('wp_ajax_nopriv_paxdesign_chat_poll', array($this, 'handle_poll'));
         add_action('wp_ajax_paxdesign_chat_disconnect', array($this, 'handle_disconnect'));
@@ -846,12 +848,22 @@ class PAXdesign_Chat_Live {
         return $preview;
     }
 
+    public function handle_chat_nonce() {
+        wp_send_json_success(array(
+            'nonce' => wp_create_nonce('paxdesign_chat_nonce'),
+        ));
+    }
+
     private function verify_chat_nonce() {
         $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
         if ($nonce === '' && isset($_GET['nonce'])) {
             $nonce = sanitize_text_field(wp_unslash($_GET['nonce']));
         }
         if ($nonce && wp_verify_nonce($nonce, 'paxdesign_chat_nonce')) {
+            return true;
+        }
+        // Logged-in widget may briefly send wp_rest nonce after auth session refresh.
+        if ($nonce && is_user_logged_in() && wp_verify_nonce($nonce, 'wp_rest')) {
             return true;
         }
         if ($nonce && wp_verify_nonce($nonce, 'paxdesign_admin_nonce') && current_user_can('manage_options')) {
