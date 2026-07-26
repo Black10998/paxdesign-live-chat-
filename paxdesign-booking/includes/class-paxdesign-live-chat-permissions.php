@@ -200,12 +200,60 @@ class PAXdesign_Live_Chat_Permissions {
         if (self::is_super_admin($user) || user_can($user, 'manage_options')) {
             return true;
         }
+        if (is_array($user->roles) && in_array('administrator', $user->roles, true)) {
+            return true;
+        }
         $staff = self::get_staff_record((int) $user->ID);
         if (!$staff || empty($staff['enabled'])) {
             return false;
         }
         $perms = self::get_effective_permissions($user);
         return !empty($perms[self::PERM_VIEW_CHATS]);
+    }
+
+    /**
+     * Idempotently enable Live Chat staff access (deploy/CLI — no admin UI permission check).
+     *
+     * @param int    $user_id
+     * @param string $source
+     * @return bool True when record was created or updated.
+     */
+    public static function provision_staff_access($user_id, $source = 'cli') {
+        $user_id = (int) $user_id;
+        if ($user_id <= 0) {
+            return false;
+        }
+
+        $user = get_user_by('id', $user_id);
+        if (!$user instanceof WP_User) {
+            return false;
+        }
+
+        if (self::is_super_admin($user)) {
+            return false;
+        }
+
+        $existing = self::get_staff_record($user_id);
+        $needs_update = !$existing
+            || empty($existing['enabled'])
+            || empty($existing['permissions'][self::PERM_VIEW_CHATS]);
+
+        if (!$needs_update) {
+            return false;
+        }
+
+        $all = self::get_all_staff();
+        $all[(string) $user_id] = array(
+            'enabled'     => true,
+            'permissions' => self::all_permissions_true(),
+            'team_role'   => !empty($existing['team_role']) ? sanitize_key((string) $existing['team_role']) : '',
+            'updated_at'  => current_time('mysql'),
+            'updated_by'  => 0,
+            'provisioned' => sanitize_key((string) $source),
+        );
+        update_option(self::OPTION_STAFF, $all, false);
+
+        return true;
     }
 
     /**

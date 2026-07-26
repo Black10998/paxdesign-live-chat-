@@ -29,6 +29,12 @@ pass "Staff live-admin namespace reachable"
 if [[ -n "$ADMIN_USER" && -n "$ADMIN_PASS" ]]; then
   sync_code="$(curl -sS -o /tmp/cx-sync.json -w '%{http_code}' -u "${ADMIN_USER}:${ADMIN_PASS}" \
     "$SITE/wp-json/paxdesign/v1/live-admin/conversations/sync")"
+  if [ "$sync_code" = "403" ]; then
+    if grep -q 'Access to this resource on the server is denied' /tmp/cx-sync.json 2>/dev/null; then
+      fail "conversations/sync returned Hostinger edge 403 (WAF block — not WordPress permissions)"
+    fi
+    fail "conversations/sync returned HTTP 403 (REST rest_forbidden — enable Live Chat staff for deploy admin)"
+  fi
   [ "$sync_code" = "200" ] || fail "conversations/sync returned HTTP $sync_code"
   grep -q '"sessions"' /tmp/cx-sync.json || fail "conversations/sync missing sessions key"
   grep -q '"last_role"' /tmp/cx-sync.json || fail "conversations/sync missing last_role on sessions"
