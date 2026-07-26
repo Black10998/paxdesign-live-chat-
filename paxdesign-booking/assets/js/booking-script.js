@@ -590,7 +590,7 @@
 
         root().toggleClass('paxdesign-mobile-chat-mode', mode === 'chat' && isMobileViewport());
         root().toggleClass('paxdesign-chat-mode-active', mode === 'chat');
-        adjustMobileLayout();
+        adjustMobileLayout(false);
 
         var titles = WIDGET_MODE_TITLES[mode];
         if (titles && $in('#paxdesignWidgetTitle').length) {
@@ -665,7 +665,7 @@
         mobileViewportBound = true;
 
         var onViewportChange = function() {
-            adjustMobileLayout();
+            adjustMobileLayout(false);
         };
 
         if (window.visualViewport) {
@@ -677,50 +677,37 @@
         });
     }
 
-    function adjustMobileLayout() {
+    function adjustMobileLayout(forceKeyboard) {
         var $widget = $in('.paxdesign-booking-widget');
         if (!$widget.hasClass('paxdesign-is-active') || !isMobileViewport()) {
-            $widget.css({ top: '', bottom: '', maxHeight: '' });
+            $widget.css({ top: '', bottom: '', maxHeight: '', height: '' });
             root().removeClass('paxdesign-keyboard-open');
             return;
         }
 
-        var rootEl = root()[0];
-        var styles = rootEl ? getComputedStyle(rootEl) : null;
-        var headerClear = styles ? parseFloat(styles.getPropertyValue('--pax-mobile-header-clearance')) || 96 : 96;
-        var launcherClear = styles ? parseFloat(styles.getPropertyValue('--pax-mobile-launcher-clearance')) || 92 : 92;
         var isChat = root().hasClass('paxdesign-mobile-chat-mode');
-        var capVar = isChat ? '--pax-mobile-widget-max-chat' : '--pax-mobile-widget-max-booking';
-        var absoluteCap = styles ? parseFloat(styles.getPropertyValue(capVar)) || (isChat ? 280 : 420) : (isChat ? 280 : 420);
+        var keyboardOpen = false;
 
-        if (window.visualViewport) {
+        if (window.visualViewport && (forceKeyboard === true || document.activeElement && $in(document.activeElement).closest('.paxdesign-booking-chat-input-area').length)) {
             var vv = window.visualViewport;
-            var keyboardOpen = isChat && (vv.height < window.innerHeight * 0.75);
+            keyboardOpen = isChat && (vv.height < window.innerHeight * 0.75);
+        }
 
-            if (keyboardOpen) {
-                root().addClass('paxdesign-keyboard-open');
-                var topPos = vv.offsetTop + 8;
-                var availHeight = vv.height - 16;
-                var maxH = Math.min(absoluteCap, availHeight);
-
-                $widget.css({
-                    top: topPos + 'px',
-                    bottom: 'auto',
-                    maxHeight: Math.max(160, maxH) + 'px'
-                });
-                return;
-            }
+        if (keyboardOpen) {
+            root().addClass('paxdesign-keyboard-open');
+            var topPos = window.visualViewport.offsetTop + 8;
+            var availHeight = window.visualViewport.height - 16;
+            $widget.css({
+                top: topPos + 'px',
+                bottom: 'auto',
+                height: Math.max(160, availHeight) + 'px',
+                maxHeight: Math.max(160, availHeight) + 'px'
+            });
+            return;
         }
 
         root().removeClass('paxdesign-keyboard-open');
-        var viewportH = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        var computed = Math.min(absoluteCap, viewportH - headerClear - launcherClear - 16);
-
-        $widget.css({
-            top: 'auto',
-            bottom: '',
-            maxHeight: Math.max(200, computed) + 'px'
-        });
+        $widget.css({ top: '', bottom: '', height: '', maxHeight: '' });
     }
 
     window.PAXdesignBookingMobile = {
@@ -808,6 +795,10 @@
 
     function openWidget() {
         var $widget = $in('.paxdesign-booking-widget');
+        if ($in('.paxdesign-booking-mode-switch').length) {
+            root().addClass('paxdesign-chat-mode-active');
+            root().toggleClass('paxdesign-mobile-chat-mode', isMobileViewport());
+        }
         $widget.addClass('paxdesign-is-active').attr('aria-hidden', 'false');
         root().addClass('paxdesign-widget-open');
 
@@ -819,7 +810,7 @@
 
         lockPageScroll();
         bindMobileViewportGuard();
-        adjustMobileLayout();
+        adjustMobileLayout(false);
 
         refreshTeamMembers(function() {
             renderTeamCards();
@@ -844,7 +835,7 @@
 
         root().toggleClass('paxdesign-mobile-chat-mode', isMobileViewport());
         root().addClass('paxdesign-chat-mode-active');
-        adjustMobileLayout();
+        adjustMobileLayout(false);
 
         var titles = WIDGET_MODE_TITLES.chat;
         if ($in('#paxdesignWidgetTitle').length) {
@@ -867,7 +858,7 @@
             window.PAXdesignChat.onClose();
         }
         $in('.paxdesign-booking-widget').removeClass('paxdesign-is-active').attr('aria-hidden', 'true');
-        $in('.paxdesign-booking-widget').css({ top: '', bottom: '', maxHeight: '' });
+        $in('.paxdesign-booking-widget').css({ top: '', bottom: '', maxHeight: '', height: '' });
         root().removeClass('paxdesign-widget-open paxdesign-mobile-chat-mode paxdesign-keyboard-open');
         unlockPageScroll();
         resetWidgetMode();
