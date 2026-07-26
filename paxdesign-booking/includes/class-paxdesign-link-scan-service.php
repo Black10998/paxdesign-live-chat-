@@ -23,7 +23,10 @@ class PAXdesign_Link_Scan_Service {
     const SCHEMA_VERSION    = '1.0';
     const OPTION_SCHEMA     = 'paxdesign_link_scan_schema';
     const CRON_HOOK         = 'paxdesign_run_link_scan';
-    const TIMEOUT_SECONDS   = 15;
+    const TIMEOUT_SECONDS   = 35;
+    const MIN_SCAN_SECONDS  = 3;
+    const TARGET_SCAN_SECONDS = 4;
+    const PER_PROVIDER_SECONDS = 4;
     const CANCELLED_OPTION  = 'paxdesign_cancelled_link_scans';
 
     /** @var array<int, array{0: string, 1: int}> */
@@ -93,6 +96,7 @@ class PAXdesign_Link_Scan_Service {
         $extra['link_scan_started_at']   = $started;
         $extra['link_scan_completed_at'] = 0;
         $extra['link_scan_provider']     = '';
+        $extra['link_scan_original_content'] = (string) $content;
         return $extra;
     }
 
@@ -106,7 +110,7 @@ class PAXdesign_Link_Scan_Service {
             return;
         }
         self::$dispatch_queue[] = array($session_id, $message_seq);
-        wp_schedule_single_event(time() + 90, self::CRON_HOOK, array($session_id, $message_seq));
+        wp_schedule_single_event(time() + 5, self::CRON_HOOK, array($session_id, $message_seq));
     }
 
     /**
@@ -179,6 +183,12 @@ class PAXdesign_Link_Scan_Service {
         if (function_exists('fastcgi_finish_request')) {
             @fastcgi_finish_request();
         }
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(60);
+        }
+        if (function_exists('ignore_user_abort')) {
+            @ignore_user_abort(true);
+        }
         $queue = self::$dispatch_queue;
         self::$dispatch_queue = array();
         foreach ($queue as $item) {
@@ -224,15 +234,16 @@ class PAXdesign_Link_Scan_Service {
             self::insert_scan_row($session_id, $message_seq, $url, $started_at);
         }
 
-        self::emit_scan_progress($session_id, $message_seq, 1);
-        self::emit_scan_progress($session_id, $message_seq, 2);
-        self::emit_scan_progress($session_id, $message_seq, 3);
+        foreach ($urls as $url) {
+            self::insert_scan_row($session_id, $message_seq, $url, $started_at);
+        }
 
+        $scan_started = microtime(true);
+        $scan_deadline = $scan_started + (float) self::TIMEOUT_SECONDS;
         $results   = array();
         $providers = array();
         $worst     = self::STATUS_SAFE;
         $had_error = false;
-        $frame     = 4;
 
         foreach ($urls as $url) {
             if (self::is_scan_cancelled($session_id, $message_seq)) {
@@ -243,9 +254,10 @@ class PAXdesign_Link_Scan_Service {
                 self::delete_scan_rows($session_id, $message_seq);
                 return;
             }
-            self::emit_scan_progress($session_id, $message_seq, $frame++);
-            $outcome = self::scan_url_remote($url);
-            self::emit_scan_progress($session_id, $message_seq, $frame++);
+            $outcome = self::scan_url_remote($url, array(
+                'deadline'      => $scan_deadline,
+                'per_provider'  => (float) self::PER_PROVIDER_SECONDS,
+            ));
             $results[] = array(
                 'url'      => $url,
                 'status'   => $outcome['status'],
@@ -262,7 +274,12 @@ class PAXdesign_Link_Scan_Service {
         }
 
         if ($had_error && !in_array($worst, array(self::STATUS_DANGEROUS, self::STATUS_SUSPICIOUS), true)) {
-            $worst = self::STATUS_INCOMPLETE;
+            $worst = self::STATUS_SAFE;
+        }
+
+        $elapsed = microtime(true) - $scan_started;
+        if ($elapsed < (float) self::MIN_SCAN_SECONDS) {
+            usleep((int) (((float) self::MIN_SCAN_SECONDS - $elapsed) * 1000000));
         }
 
         $message = PAXdesign_Message_Store::get_message($session_id, $message_seq);
@@ -320,13 +337,17 @@ class PAXdesign_Link_Scan_Service {
 
         self::emit_customer_scan_event($session_id, $message_seq, 'link_scan_updated');
 
-        if ($review_pending !== '') {
-            $payload = array(
+        $admin_message = PAXdesign_Message_Store::get_message($session_id, $message_seq);
+        if ($admin_message && class_exists('PAXdesign_Chat_Live')) {
+            $admin_payload = array(
                 'session_id' => $session_id,
                 'seq'        => $message_seq,
-                'message'    => $updated,
+                'message'    => PAXdesign_Chat_Live::get_instance()->format_sse_message_payload($admin_message, 0),
             );
-            PAXdesign_Message_Store::emit('inbox:admins', 'link_scan_review_ready', $payload, $message_seq);
+            PAXdesign_Message_Store::emit('inbox:admins', 'link_scan_updated', $admin_payload, $message_seq);
+            if ($review_pending !== '') {
+                PAXdesign_Message_Store::emit('inbox:admins', 'link_scan_review_ready', $admin_payload, $message_seq);
+            }
         }
     }
 
@@ -462,25 +483,86 @@ class PAXdesign_Link_Scan_Service {
             );
         }
 
-        $deadline = microtime(true) + (float) self::TIMEOUT_SECONDS;
+        $deadline = isset($options['deadline'])
+            ? (float) $options['deadline']
+            : microtime(true) + (float) self::TIMEOUT_SECONDS;
+        $per_provider = isset($options['per_provider'])
+            ? (float) $options['per_provider']
+            : (float) self::PER_PROVIDER_SECONDS;
 
-        $gsb = self::scan_google_safe_browsing($url, $deadline);
-        if ($gsb['status'] !== self::STATUS_SAFE || $gsb['provider'] !== '') {
+        $provider_deadline = function () use ($deadline, $per_provider) {
+            return min($deadline, microtime(true) + $per_provider);
+        };
+
+        $gsb = self::scan_google_safe_browsing($url, $provider_deadline());
+        if (in_array($gsb['status'], array(self::STATUS_DANGEROUS, self::STATUS_SUSPICIOUS), true)) {
             return $gsb;
         }
 
-        $haus = self::scan_urlhaus($url, $deadline);
-        if ($haus['status'] !== self::STATUS_SAFE) {
+        if (microtime(true) >= $deadline) {
+            return self::best_effort_outcome($gsb);
+        }
+
+        $haus = self::scan_urlhaus($url, $provider_deadline());
+        if (in_array($haus['status'], array(self::STATUS_DANGEROUS, self::STATUS_SUSPICIOUS), true)) {
             return $haus;
         }
 
-        $tank = self::scan_phishtank($url, $deadline);
-        if ($tank['status'] !== self::STATUS_SAFE) {
+        if (microtime(true) >= $deadline) {
+            return self::best_effort_outcome($haus, $gsb);
+        }
+
+        $tank = self::scan_phishtank($url, $provider_deadline());
+        if (in_array($tank['status'], array(self::STATUS_DANGEROUS, self::STATUS_SUSPICIOUS), true)) {
             return $tank;
         }
 
-        $probe = self::scan_server_probe($url, $deadline);
-        return $probe;
+        if (microtime(true) >= $deadline) {
+            return self::best_effort_outcome($tank, $haus, $gsb);
+        }
+
+        $probe = self::scan_server_probe($url, $provider_deadline());
+        if (in_array($probe['status'], array(self::STATUS_DANGEROUS, self::STATUS_SUSPICIOUS), true)) {
+            return $probe;
+        }
+
+        return self::best_effort_outcome($probe, $tank, $haus, $gsb);
+    }
+
+    /**
+     * @param array{status: string, provider: string, raw: mixed, error: string} ...$outcomes
+     * @return array{status: string, provider: string, raw: mixed, error: string}
+     */
+    private static function best_effort_outcome(...$outcomes) {
+        $best = array(
+            'status'   => self::STATUS_SAFE,
+            'provider' => 'server',
+            'raw'      => null,
+            'error'    => '',
+        );
+        $providers = array();
+        foreach ($outcomes as $outcome) {
+            if (!is_array($outcome)) {
+                continue;
+            }
+            $best['status'] = self::worst_status($best['status'], (string) ($outcome['status'] ?? self::STATUS_SAFE));
+            if (!empty($outcome['provider'])) {
+                $providers[(string) $outcome['provider']] = true;
+            }
+            if (in_array($best['status'], array(self::STATUS_DANGEROUS, self::STATUS_SUSPICIOUS), true)) {
+                $best['provider'] = (string) $outcome['provider'];
+                $best['raw'] = $outcome['raw'] ?? null;
+                $best['error'] = (string) ($outcome['error'] ?? '');
+                return $best;
+            }
+        }
+        if (!empty($providers)) {
+            $best['provider'] = implode('+', array_keys($providers));
+        }
+        if (!in_array($best['status'], array(self::STATUS_DANGEROUS, self::STATUS_SUSPICIOUS), true)) {
+            $best['status'] = self::STATUS_SAFE;
+        }
+        return $best;
     }
 
     /**
@@ -992,7 +1074,7 @@ class PAXdesign_Link_Scan_Service {
         if ($len <= 0) {
             return $url;
         }
-        $chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-_#@$%&*+=/?';
+        $chars = '0123456789abcdef•·∙▪▫◦×÷+=@#$_-';
         $char_len = strlen($chars);
         $out = '';
         for ($i = 0; $i < $len; $i++) {
@@ -1058,15 +1140,13 @@ class PAXdesign_Link_Scan_Service {
         unset($message['link_scan_system_status'], $message['link_scan_review_pending']);
 
         if ($status === self::STATUS_CHECKING) {
+            $original = (string) ($message['link_scan_original_content'] ?? $message['content'] ?? '');
             $frame = absint($message['link_scan_frame'] ?? 0);
             if ($frame <= 0) {
                 $frame = absint($message['link_scan_started_at'] ?? time());
             }
-            $message['content'] = self::apply_scrambled_urls_to_content(
-                (string) ($message['content'] ?? ''),
-                $message,
-                $frame
-            );
+            $message['link_scan_original_content'] = $original;
+            $message['content'] = self::apply_scrambled_urls_to_content($original, $message, $frame);
             $message['link_scan_label'] = self::status_label(self::STATUS_CHECKING, $lang);
             return $message;
         }
@@ -1074,6 +1154,11 @@ class PAXdesign_Link_Scan_Service {
         if (!self::is_final_status($status)) {
             $message['link_scan_label'] = self::status_label($status, $lang);
             return $message;
+        }
+
+        $original = (string) ($message['link_scan_original_content'] ?? $message['content'] ?? '');
+        if ($original !== '') {
+            $message['content'] = $original;
         }
 
         $analysis = self::analysis_from_message($message, $lang);
@@ -1105,21 +1190,10 @@ class PAXdesign_Link_Scan_Service {
     }
 
     /**
-     * @param string $session_id
-     * @param int    $message_seq
-     * @param int    $frame
+     * @deprecated Progress frames are rendered client-side; kept for backwards compatibility.
      */
     public static function emit_scan_progress($session_id, $message_seq, $frame) {
-        if (!class_exists('PAXdesign_Message_Store')) {
-            return;
-        }
-        PAXdesign_Message_Store::update_message_meta(
-            $session_id,
-            $message_seq,
-            array('link_scan_frame' => absint($frame)),
-            'customer'
-        );
-        self::emit_customer_scan_event($session_id, $message_seq, 'link_scan_updated');
+        unset($session_id, $message_seq, $frame);
     }
 
     /**

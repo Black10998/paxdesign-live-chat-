@@ -1115,6 +1115,7 @@ class PAXdesign_Message_Store {
             'link_scan_urls', 'link_scan_started_at',
             'link_scan_completed_at', 'link_scan_provider',
             'link_scan_frame', 'link_scan_label', 'link_scan_analysis',
+            'link_scan_original_content',
         );
         $meta = array();
         foreach ($allowed as $key) {

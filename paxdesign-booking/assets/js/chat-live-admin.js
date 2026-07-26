@@ -206,10 +206,12 @@
       } else if (data.type === 'link_scan_updated' && sid === selectedSession && payload.message) {
         if (!isMessagePermanentlyDeleted(payload.message.id)) {
           updateAdminLinkScanBadge(payload.message);
+          updateAdminLinkScanReview(payload.message);
         }
       } else if (data.type === 'link_scan_review_ready' && sid === selectedSession && payload.message) {
         if (!isMessagePermanentlyDeleted(payload.message.id)) {
           updateAdminLinkScanBadge(payload.message);
+          updateAdminLinkScanReview(payload.message);
         }
       } else if (data.type === 'message_deleted' && sid === selectedSession && payload.message_id) {
         transformAdminMessageInPlace(

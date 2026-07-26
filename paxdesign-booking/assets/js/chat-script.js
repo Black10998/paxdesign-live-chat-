@@ -2971,7 +2971,7 @@
   var urlScanAnimOriginals = {};
 
   function scrambleUrlClient(url, frame) {
-    var chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-_#@$%&*+=/?';
+    var chars = '0123456789abcdef•·∙▪▫◦×÷+=@#$_-';
     var out = '';
     for (var i = 0; i < url.length; i++) {
       var seed = 0;
@@ -2982,6 +2982,26 @@
       out += chars.charAt(Math.abs(seed) % chars.length);
     }
     return out;
+  }
+
+  function messageOriginalContent(msg) {
+    if (!msg) return '';
+    if (msg.link_scan_original_content) return messageText(msg.link_scan_original_content);
+    return messageText(msg.content || '');
+  }
+
+  function wrapUrlsForScanHtml(content) {
+    content = messageText(content || '');
+    if (!content) return '';
+    var urls = extractUrlsFromText(content);
+    if (!urls.length) return escapeHtml(content);
+    var html = escapeHtml(content);
+    urls.forEach(function (url) {
+      var escaped = escapeHtml(url);
+      var replacement = '<span class="paxdesign-booking-chat-url-scan" data-original-url="' + escaped + '">' + escaped + '</span>';
+      html = html.split(escaped).join(replacement);
+    });
+    return html;
   }
 
   function extractUrlsFromText(text) {
@@ -3024,34 +3044,42 @@
     return '';
   }
 
-  function stopUrlScanAnimation(msgId) {
-    var key = String(msgId);
-    if (urlScanAnimTimers[key]) {
-      clearInterval(urlScanAnimTimers[key]);
-      delete urlScanAnimTimers[key];
-    }
-  }
-
   function startUrlScanAnimation(msgId, originalContent) {
     var key = String(msgId);
     if (!originalContent) return;
     urlScanAnimOriginals[key] = originalContent;
     stopUrlScanAnimation(msgId);
-    var urls = extractUrlsFromText(originalContent);
-    if (!urls.length) return;
     var msgEl = threadEl.querySelector('[data-msg-id="' + key + '"]');
     if (!msgEl) return;
-    var textEl = msgEl.querySelector('.paxdesign-booking-chat-message-text');
-    if (!textEl) return;
+    var urlSpans = msgEl.querySelectorAll('.paxdesign-booking-chat-url-scan');
+    if (!urlSpans.length) return;
     msgEl.classList.add('paxdesign-booking-chat-message--url-scanning');
     urlScanAnimTimers[key] = window.setInterval(function () {
       var frame = Date.now();
-      var display = originalContent;
-      urls.forEach(function (url) {
-        display = display.split(url).join(scrambleUrlClient(url, frame + url.length));
+      urlSpans.forEach(function (span) {
+        var original = span.getAttribute('data-original-url') || '';
+        if (!original) return;
+        span.textContent = scrambleUrlClient(original, frame + original.length);
       });
-      textEl.textContent = display;
-    }, 65);
+    }, 45);
+  }
+
+  function stopUrlScanAnimation(msgId, restoreOriginal) {
+    var key = String(msgId);
+    if (urlScanAnimTimers[key]) {
+      clearInterval(urlScanAnimTimers[key]);
+      delete urlScanAnimTimers[key];
+    }
+    var msgEl = threadEl.querySelector('[data-msg-id="' + key + '"]');
+    if (msgEl) {
+      msgEl.classList.remove('paxdesign-booking-chat-message--url-scanning');
+      if (restoreOriginal !== false) {
+        msgEl.querySelectorAll('.paxdesign-booking-chat-url-scan').forEach(function (span) {
+          var original = span.getAttribute('data-original-url') || '';
+          if (original) span.textContent = original;
+        });
+      }
+    }
   }
 
   function updateCustomerLinkScanContent(msgId, serverMsg) {
@@ -3060,33 +3088,34 @@
     if (!msgEl) return;
     var bubble = msgEl.querySelector('.paxdesign-booking-chat-message-bubble');
     if (!bubble) return;
-    var textEl = bubble.querySelector('.paxdesign-booking-chat-message-text');
-    var content = messageText(serverMsg.content || '');
     var status = serverMsg.link_scan_status || '';
+    var original = messageOriginalContent(serverMsg);
+    var textEl = bubble.querySelector('.paxdesign-booking-chat-message-text');
     if (!textEl) {
       var badge = bubble.querySelector('.paxdesign-booking-chat-link-scan');
-      var textWrap = document.createElement('span');
-      textWrap.className = 'paxdesign-booking-chat-message-text';
-      textWrap.textContent = content;
+      textEl = document.createElement('span');
+      textEl.className = 'paxdesign-booking-chat-message-text';
+      textEl.innerHTML = wrapUrlsForScanHtml(original);
       if (badge) {
-        bubble.insertBefore(textWrap, badge);
+        bubble.insertBefore(textEl, badge);
       } else {
-        bubble.insertBefore(textWrap, bubble.firstChild);
+        bubble.insertBefore(textEl, bubble.firstChild);
       }
-      textEl = textWrap;
     }
     if (status === 'checking') {
       if (!urlScanAnimOriginals[String(msgId)]) {
-        urlScanAnimOriginals[String(msgId)] = content;
+        urlScanAnimOriginals[String(msgId)] = original;
+      }
+      if (!textEl.querySelector('.paxdesign-booking-chat-url-scan')) {
+        textEl.innerHTML = wrapUrlsForScanHtml(original);
       }
       if (!urlScanAnimTimers[String(msgId)]) {
-        startUrlScanAnimation(msgId, urlScanAnimOriginals[String(msgId)]);
+        startUrlScanAnimation(msgId, original);
       }
       return;
     }
-    stopUrlScanAnimation(msgId);
-    msgEl.classList.remove('paxdesign-booking-chat-message--url-scanning');
-    textEl.textContent = content;
+    stopUrlScanAnimation(msgId, true);
+    textEl.innerHTML = wrapUrlsForScanHtml(original);
   }
 
   function updateCustomerLinkScanMessage(serverMsg) {
@@ -3898,7 +3927,7 @@
     } else if (role === 'assistant' || role === 'admin') {
       if (content) html += formatMarkdown(content);
     } else if (role !== 'system' && content) {
-      html += '<span class="paxdesign-booking-chat-message-text">' + escapeHtml(content) + '</span>';
+      html += '<span class="paxdesign-booking-chat-message-text">' + wrapUrlsForScanHtml(content) + '</span>';
     }
     if (role === 'user') {
       html += buildCustomerLinkScanHtml(Object.assign({}, opts, { content: content }));
@@ -3991,7 +4020,9 @@
 
   function notifyLayout() {
     if (window.PAXdesignBookingMobile && typeof window.PAXdesignBookingMobile.adjustLayout === 'function') {
-      window.PAXdesignBookingMobile.adjustLayout();
+      var active = document.activeElement;
+      var keyboardLikely = active && active.classList && active.classList.contains('paxdesign-booking-chat-input');
+      window.PAXdesignBookingMobile.adjustLayout(keyboardLikely);
     }
   }
 
@@ -4789,12 +4820,11 @@
     scheduleUserTypingPing();
   });
   input.addEventListener('focus', function () {
-    setTimeout(notifyLayout, 50);
-    setTimeout(notifyLayout, 300);
+    notifyLayout();
   });
   input.addEventListener('blur', function () {
     clearUserTypingState();
-    setTimeout(notifyLayout, 100);
+    notifyLayout();
   });
   input.addEventListener('keydown', function (e) {
     if (e.key === 'Enter' && !e.shiftKey) {

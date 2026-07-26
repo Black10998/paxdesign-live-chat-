@@ -3212,6 +3212,9 @@ class PAXdesign_Chat_Live {
             if ($role === 'user' && !empty($msg['link_scan_frame'])) {
                 $entry['link_scan_frame'] = absint($msg['link_scan_frame']);
             }
+            if ($role === 'user' && !empty($msg['link_scan_original_content'])) {
+                $entry['link_scan_original_content'] = sanitize_textarea_field((string) $msg['link_scan_original_content']);
+            }
             if ($role === 'admin') {
                 $sender_id = !empty($msg['sender_id']) ? absint($msg['sender_id']) : 0;
                 if ($sender_id <= 0 && $fallback_agent_id > 0) {
