@@ -224,10 +224,15 @@ class PAXdesign_Link_Scan_Service {
             self::insert_scan_row($session_id, $message_seq, $url, $started_at);
         }
 
+        self::emit_scan_progress($session_id, $message_seq, 1);
+        self::emit_scan_progress($session_id, $message_seq, 2);
+        self::emit_scan_progress($session_id, $message_seq, 3);
+
         $results   = array();
         $providers = array();
         $worst     = self::STATUS_SAFE;
         $had_error = false;
+        $frame     = 4;
 
         foreach ($urls as $url) {
             if (self::is_scan_cancelled($session_id, $message_seq)) {
@@ -238,7 +243,9 @@ class PAXdesign_Link_Scan_Service {
                 self::delete_scan_rows($session_id, $message_seq);
                 return;
             }
+            self::emit_scan_progress($session_id, $message_seq, $frame++);
             $outcome = self::scan_url_remote($url);
+            self::emit_scan_progress($session_id, $message_seq, $frame++);
             $results[] = array(
                 'url'      => $url,
                 'status'   => $outcome['status'],
@@ -282,17 +289,28 @@ class PAXdesign_Link_Scan_Service {
             return;
         }
 
+        $language = self::resolve_customer_language($session_id);
+        $analysis = self::build_analysis_text($worst, $results, $provider_label, $language);
+        $review_pending = in_array($worst, array(self::STATUS_DANGEROUS, self::STATUS_SUSPICIOUS), true) ? '1' : '';
+
+        $meta_updates = array(
+            'link_scan_status'        => $worst,
+            'link_scan_system_status' => $worst,
+            'link_scan_urls'          => wp_json_encode($results),
+            'link_scan_completed_at'  => $completed,
+            'link_scan_provider'      => $provider_label,
+            'link_scan_label'         => self::status_label($worst, $language),
+            'link_scan_analysis'      => $analysis,
+            'link_scan_frame'         => 0,
+        );
+        if ($review_pending !== '') {
+            $meta_updates['link_scan_review_pending'] = $review_pending;
+        }
+
         $updated = PAXdesign_Message_Store::update_message_meta(
             $session_id,
             $message_seq,
-            array(
-                'link_scan_status'         => self::STATUS_CHECKING,
-                'link_scan_system_status'  => $worst,
-                'link_scan_review_pending'   => '1',
-                'link_scan_urls'           => wp_json_encode($results),
-                'link_scan_completed_at'   => $completed,
-                'link_scan_provider'       => $provider_label,
-            ),
+            $meta_updates,
             'customer'
         );
 
@@ -300,12 +318,16 @@ class PAXdesign_Link_Scan_Service {
             return;
         }
 
-        $payload = array(
-            'session_id' => $session_id,
-            'seq'        => $message_seq,
-            'message'    => $updated,
-        );
-        PAXdesign_Message_Store::emit('inbox:admins', 'link_scan_review_ready', $payload, $message_seq);
+        self::emit_customer_scan_event($session_id, $message_seq, 'link_scan_updated');
+
+        if ($review_pending !== '') {
+            $payload = array(
+                'session_id' => $session_id,
+                'seq'        => $message_seq,
+                'message'    => $updated,
+            );
+            PAXdesign_Message_Store::emit('inbox:admins', 'link_scan_review_ready', $payload, $message_seq);
+        }
     }
 
     /**
@@ -841,5 +863,285 @@ class PAXdesign_Link_Scan_Service {
         $a = isset($rank[$current]) ? $rank[$current] : 0;
         $b = isset($rank[$next]) ? $rank[$next] : 0;
         return $b > $a ? $next : $current;
+    }
+
+    /**
+     * @param string $session_id
+     * @return string de|en|ar
+     */
+    public static function resolve_customer_language($session_id) {
+        if ($session_id !== '' && class_exists('PAXdesign_Language_Routing')) {
+            return PAXdesign_Language_Routing::resolve_session_language($session_id, '');
+        }
+        return 'de';
+    }
+
+    /**
+     * @param string $status
+     * @param string $lang
+     * @return string
+     */
+    public static function status_label($status, $lang = 'de') {
+        $lang = sanitize_key((string) $lang);
+        if (!in_array($lang, array('de', 'en', 'ar'), true)) {
+            $lang = 'de';
+        }
+        $labels = array(
+            self::STATUS_CHECKING => array(
+                'de' => 'Sicherheitsprüfung läuft …',
+                'en' => 'Security scan in progress …',
+                'ar' => 'جاري فحص الأمان …',
+            ),
+            self::STATUS_SAFE => array(
+                'de' => 'Sicherer Link',
+                'en' => 'Safe link',
+                'ar' => 'رابط آمن',
+            ),
+            self::STATUS_SUSPICIOUS => array(
+                'de' => 'Verdächtiger Link',
+                'en' => 'Suspicious link',
+                'ar' => 'رابط مشبوه',
+            ),
+            self::STATUS_DANGEROUS => array(
+                'de' => 'Gefährlicher Link',
+                'en' => 'Dangerous link',
+                'ar' => 'رابط خطير',
+            ),
+            self::STATUS_FAILED => array(
+                'de' => 'Scan fehlgeschlagen',
+                'en' => 'Scan failed',
+                'ar' => 'فشل الفحص',
+            ),
+            self::STATUS_TIMEOUT => array(
+                'de' => 'Scan-Zeitüberschreitung',
+                'en' => 'Scan timed out',
+                'ar' => 'انتهت مهلة الفحص',
+            ),
+            self::STATUS_INCOMPLETE => array(
+                'de' => 'Scan unvollständig',
+                'en' => 'Scan incomplete',
+                'ar' => 'الفحص غير مكتمل',
+            ),
+        );
+        if (!isset($labels[$status])) {
+            return '';
+        }
+        return $labels[$status][$lang] ?? $labels[$status]['de'];
+    }
+
+    /**
+     * @param string               $worst
+     * @param array<int, array<string, mixed>> $results
+     * @param string               $provider_label
+     * @param string               $lang
+     * @return string
+     */
+    public static function build_analysis_text($worst, $results, $provider_label, $lang = 'de') {
+        $lang = sanitize_key((string) $lang);
+        if (!in_array($lang, array('de', 'en', 'ar'), true)) {
+            $lang = 'de';
+        }
+        $count = count($results);
+        $providers = sanitize_text_field((string) $provider_label);
+        if ($providers === '') {
+            $providers = 'server';
+        }
+
+        if ($worst === self::STATUS_SAFE) {
+            if ($lang === 'en') {
+                return sprintf('Security scan complete: %d link(s) checked via %s. No threats detected.', $count, $providers);
+            }
+            if ($lang === 'ar') {
+                return sprintf('اكتمل فحص الأمان: تم فحص %d رابط/روابط عبر %s. لم يتم العثور على تهديدات.', $count, $providers);
+            }
+            return sprintf('Sicherheitsprüfung abgeschlossen: %d Link(s) über %s geprüft. Keine Bedrohungen erkannt.', $count, $providers);
+        }
+        if ($worst === self::STATUS_SUSPICIOUS) {
+            if ($lang === 'en') {
+                return sprintf('Security scan complete: suspicious signals detected (%s). Open with caution.', $providers);
+            }
+            if ($lang === 'ar') {
+                return sprintf('اكتمل فحص الأمان: تم رصد إشارات مشبوهة (%s). افتح الرابط بحذر.', $providers);
+            }
+            return sprintf('Sicherheitsprüfung abgeschlossen: verdächtige Signale erkannt (%s). Link mit Vorsicht öffnen.', $providers);
+        }
+        if ($worst === self::STATUS_DANGEROUS) {
+            if ($lang === 'en') {
+                return sprintf('Security scan complete: this link was flagged as dangerous (%s). Do not open it.', $providers);
+            }
+            if ($lang === 'ar') {
+                return sprintf('اكتمل فحص الأمان: تم تصنيف هذا الرابط على أنه خطير (%s). لا تفتحه.', $providers);
+            }
+            return sprintf('Sicherheitsprüfung abgeschlossen: dieser Link wurde als gefährlich eingestuft (%s). Nicht öffnen.', $providers);
+        }
+        if ($lang === 'en') {
+            return sprintf('Security scan could not be completed for all providers (%s).', $providers);
+        }
+        if ($lang === 'ar') {
+            return sprintf('تعذر إكمال فحص الأمان لجميع المزودين (%s).', $providers);
+        }
+        return sprintf('Sicherheitsprüfung konnte nicht vollständig abgeschlossen werden (%s).', $providers);
+    }
+
+    /**
+     * Deterministic same-length URL scramble for live scan animation frames.
+     */
+    public static function scramble_url($url, $frame) {
+        $url = (string) $url;
+        $len = function_exists('mb_strlen') ? mb_strlen($url) : strlen($url);
+        if ($len <= 0) {
+            return $url;
+        }
+        $chars = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-_#@$%&*+=/?';
+        $char_len = strlen($chars);
+        $out = '';
+        for ($i = 0; $i < $len; $i++) {
+            $seed = crc32($url . ':' . (int) $frame . ':' . $i);
+            $out .= $chars[$seed % $char_len];
+        }
+        return $out;
+    }
+
+    /**
+     * @param string               $content
+     * @param array<string, mixed> $message
+     * @param int                  $frame
+     * @return string
+     */
+    public static function apply_scrambled_urls_to_content($content, $message, $frame) {
+        $urls = self::urls_from_message($message);
+        if (empty($urls) && class_exists('PAXdesign_Link_Scanner')) {
+            $urls = PAXdesign_Link_Scanner::extract_urls((string) $content);
+        }
+        foreach ($urls as $url) {
+            $scrambled = self::scramble_url($url, $frame);
+            $content = str_replace($url, $scrambled, $content);
+        }
+        return $content;
+    }
+
+    /**
+     * @param array<string, mixed> $message
+     * @param string               $lang
+     * @return string
+     */
+    public static function analysis_from_message($message, $lang = 'de') {
+        if (!empty($message['link_scan_analysis'])) {
+            return (string) $message['link_scan_analysis'];
+        }
+        $results = array();
+        if (!empty($message['link_scan_urls'])) {
+            $decoded = json_decode((string) $message['link_scan_urls'], true);
+            if (is_array($decoded)) {
+                $results = $decoded;
+            }
+        }
+        $worst = (string) ($message['link_scan_status'] ?? self::STATUS_INCOMPLETE);
+        $provider = (string) ($message['link_scan_provider'] ?? 'server');
+        return self::build_analysis_text($worst, $results, $provider, $lang);
+    }
+
+    /**
+     * Customer-facing message enrichment (poll, SSE, mobile).
+     *
+     * @param array<string, mixed> $message
+     * @param string               $session_id
+     * @return array<string, mixed>
+     */
+    public static function format_customer_message($message, $session_id = '') {
+        if (!is_array($message) || empty($message['link_scan_status'])) {
+            return $message;
+        }
+
+        $lang = self::resolve_customer_language($session_id);
+        $status = sanitize_key((string) $message['link_scan_status']);
+        unset($message['link_scan_system_status'], $message['link_scan_review_pending']);
+
+        if ($status === self::STATUS_CHECKING) {
+            $frame = absint($message['link_scan_frame'] ?? 0);
+            if ($frame <= 0) {
+                $frame = absint($message['link_scan_started_at'] ?? time());
+            }
+            $message['content'] = self::apply_scrambled_urls_to_content(
+                (string) ($message['content'] ?? ''),
+                $message,
+                $frame
+            );
+            $message['link_scan_label'] = self::status_label(self::STATUS_CHECKING, $lang);
+            return $message;
+        }
+
+        if (!self::is_final_status($status)) {
+            $message['link_scan_label'] = self::status_label($status, $lang);
+            return $message;
+        }
+
+        $analysis = self::analysis_from_message($message, $lang);
+        $message['link_scan_label'] = self::status_label($status, $lang);
+        $message['link_scan_analysis'] = $analysis;
+        if ($analysis !== '' && strpos((string) ($message['content'] ?? ''), $analysis) === false) {
+            $message['content'] = rtrim((string) ($message['content'] ?? '')) . "\n\n" . $analysis;
+        }
+        return $message;
+    }
+
+    /**
+     * @param string $status
+     * @return bool
+     */
+    public static function is_final_status($status) {
+        return in_array(
+            sanitize_key((string) $status),
+            array(
+                self::STATUS_SAFE,
+                self::STATUS_SUSPICIOUS,
+                self::STATUS_DANGEROUS,
+                self::STATUS_FAILED,
+                self::STATUS_TIMEOUT,
+                self::STATUS_INCOMPLETE,
+            ),
+            true
+        );
+    }
+
+    /**
+     * @param string $session_id
+     * @param int    $message_seq
+     * @param int    $frame
+     */
+    public static function emit_scan_progress($session_id, $message_seq, $frame) {
+        if (!class_exists('PAXdesign_Message_Store')) {
+            return;
+        }
+        PAXdesign_Message_Store::update_message_meta(
+            $session_id,
+            $message_seq,
+            array('link_scan_frame' => absint($frame)),
+            'customer'
+        );
+        self::emit_customer_scan_event($session_id, $message_seq, 'link_scan_updated');
+    }
+
+    /**
+     * @param string $session_id
+     * @param int    $message_seq
+     * @param string $event_type
+     */
+    public static function emit_customer_scan_event($session_id, $message_seq, $event_type = 'link_scan_updated') {
+        if (!class_exists('PAXdesign_Message_Store') || !class_exists('PAXdesign_Chat_Live')) {
+            return;
+        }
+        $message = PAXdesign_Message_Store::get_message($session_id, $message_seq);
+        if (!$message) {
+            return;
+        }
+        $customer = self::format_customer_message($message, $session_id);
+        $payload_message = PAXdesign_Chat_Live::get_instance()->format_sse_message_payload($customer, 0);
+        $payload = array(
+            'session_id' => $session_id,
+            'seq'        => $message_seq,
+            'message'    => $payload_message,
+        );
+        PAXdesign_Message_Store::emit('session:' . $session_id, $event_type, $payload, $message_seq);
     }
 }

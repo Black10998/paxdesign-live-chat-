@@ -866,22 +866,22 @@ class PAXdesign_Message_Store {
      * @param array<string, mixed> $message
      * @return array<string, mixed>
      */
-    public static function mask_message_for_customer($message) {
+    public static function mask_message_for_customer($message, $session_id = '') {
         if (!is_array($message)) {
             return $message;
         }
-        if (self::is_link_review_pending($message)) {
-            $message['link_scan_status'] = 'checking';
+        if (class_exists('PAXdesign_Link_Scan_Service')) {
+            return PAXdesign_Link_Scan_Service::format_customer_message($message, $session_id);
         }
-        unset($message['link_scan_system_status'], $message['link_scan_review_pending']);
         return $message;
     }
 
     /**
      * @param array<int, array<string, mixed>> $messages
+     * @param string                           $session_id
      * @return array<int, array<string, mixed>>
      */
-    public static function mask_messages_for_customer($messages) {
+    public static function mask_messages_for_customer($messages, $session_id = '') {
         if (!is_array($messages)) {
             return array();
         }
@@ -890,7 +890,7 @@ class PAXdesign_Message_Store {
             if (!is_array($message)) {
                 continue;
             }
-            $out[] = self::mask_message_for_customer($message);
+            $out[] = self::mask_message_for_customer($message, $session_id);
         }
         return $out;
     }
@@ -1114,6 +1114,7 @@ class PAXdesign_Message_Store {
             'link_scan_status', 'link_scan_system_status', 'link_scan_review_pending',
             'link_scan_urls', 'link_scan_started_at',
             'link_scan_completed_at', 'link_scan_provider',
+            'link_scan_frame', 'link_scan_label', 'link_scan_analysis',
         );
         $meta = array();
         foreach ($allowed as $key) {

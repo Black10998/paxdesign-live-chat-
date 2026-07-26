@@ -68,6 +68,11 @@ cx_assert_true(strpos($chat_knowledge, 'build_customer_account_context_block') !
 $customer_orders = file_get_contents($customer_dir . '/class-paxdesign-customer-orders.php');
 cx_assert_true(strpos($customer_orders, 'upcoming_bookings_for_user') !== false, 'Customer orders must expose upcoming bookings for AI context');
 
+$link_scan = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/class-paxdesign-link-scan-service.php');
+cx_assert_true(strpos($link_scan, 'format_customer_message') !== false, 'Link scan service must format customer-facing scan messages');
+cx_assert_true(strpos($link_scan, 'scramble_url') !== false, 'Link scan service must scramble URLs for scan animation');
+cx_assert_true(strpos($link_scan, 'emit_customer_scan_event') !== false, 'Link scan service must emit customer scan SSE updates');
+
 $live = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/class-paxdesign-chat-live.php');
 cx_assert_true(strpos($live, 'public function sanitize_session_id') !== false, 'PAXdesign_Chat_Live::sanitize_session_id must be public for cross-class use');
 

@@ -3203,6 +3203,15 @@ class PAXdesign_Chat_Live {
             if ($role === 'user' && !empty($msg['link_scan_provider'])) {
                 $entry['link_scan_provider'] = sanitize_text_field((string) $msg['link_scan_provider']);
             }
+            if ($role === 'user' && !empty($msg['link_scan_label'])) {
+                $entry['link_scan_label'] = sanitize_text_field((string) $msg['link_scan_label']);
+            }
+            if ($role === 'user' && !empty($msg['link_scan_analysis'])) {
+                $entry['link_scan_analysis'] = sanitize_textarea_field((string) $msg['link_scan_analysis']);
+            }
+            if ($role === 'user' && !empty($msg['link_scan_frame'])) {
+                $entry['link_scan_frame'] = absint($msg['link_scan_frame']);
+            }
             if ($role === 'admin') {
                 $sender_id = !empty($msg['sender_id']) ? absint($msg['sender_id']) : 0;
                 if ($sender_id <= 0 && $fallback_agent_id > 0) {
@@ -3387,9 +3396,9 @@ class PAXdesign_Chat_Live {
         }
         $new = $this->format_messages_for_api($new, $agent['admin_user_id'], $session_context);
         if (class_exists('PAXdesign_Message_Store')) {
-            $new = PAXdesign_Message_Store::mask_messages_for_customer($new);
+            $new = PAXdesign_Message_Store::mask_messages_for_customer($new, $session_id);
             if ($all !== null && !$full) {
-                $all = PAXdesign_Message_Store::mask_messages_for_customer($all);
+                $all = PAXdesign_Message_Store::mask_messages_for_customer($all, $session_id);
             }
         }
         if ($wp_user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
