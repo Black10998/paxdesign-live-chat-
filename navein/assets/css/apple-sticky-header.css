@@ -1,19 +1,25 @@
 /**
  * Apple-inspired sticky header — sitewide.
- * Soft glass bar, continuous sticky, compact-on-scroll (no slideInDown).
+ * Soft glass bar with scroll-linked compacting on desktop.
  */
 
 :root {
-  --dtr-apple-header-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --dtr-apple-header-ease: cubic-bezier(0.22, 1, 0.36, 1);
   --dtr-apple-header-blur: saturate(180%) blur(20px);
   --dtr-apple-header-bg: rgba(255, 255, 255, 0.72);
-  --dtr-apple-header-bg-scrolled: rgba(255, 255, 255, 0.9);
+  --dtr-apple-header-bg-scrolled: rgba(255, 255, 255, 0.92);
   --dtr-apple-header-line: rgba(0, 0, 0, 0.08);
   --dtr-apple-header-text: #000000;
   --dtr-apple-header-text-hover: #000000;
   --dtr-apple-header-logo-ink: #1d1d1f;
-  --dtr-apple-header-height: 48px;
+  --dtr-apple-header-height: 52px;
   --dtr-apple-header-height-scrolled: 44px;
+  /* Scroll-linked live values (JS updates on desktop). */
+  --dtr-apple-header-progress: 0;
+  --dtr-apple-header-live-height: var(--dtr-apple-header-height);
+  --dtr-apple-header-logo-scale: 1;
+  --dtr-apple-header-btn-scale: 1;
+  --dtr-apple-header-shade: 0;
 }
 
 @media (min-width: 993px) {
@@ -29,19 +35,14 @@
   }
 
   body.dtr-apple-sticky-header.show-onscroll #dtr-topbar {
-    transition:
-      max-height 0.45s var(--dtr-apple-header-ease),
-      opacity 0.35s var(--dtr-apple-header-ease),
-      padding 0.45s var(--dtr-apple-header-ease),
-      border-color 0.35s ease;
-    max-height: 80px;
-    opacity: 1;
+    max-height: calc(80px * (1 - var(--dtr-apple-header-progress)));
+    opacity: calc(1 - var(--dtr-apple-header-progress));
     overflow: hidden;
+    pointer-events: auto;
+    transition: none;
   }
 
   body.dtr-apple-sticky-header.dtr-apple-header-scrolled.show-onscroll #dtr-topbar {
-    max-height: 0;
-    opacity: 0;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
     border-width: 0 !important;
@@ -56,48 +57,44 @@
     top: auto !important;
     animation: none !important;
     -webkit-animation: none !important;
-    box-shadow: none !important;
     border: 0 !important;
-    border-bottom: 1px solid transparent !important;
+    border-bottom: 1px solid rgba(0, 0, 0, calc(0.08 * var(--dtr-apple-header-shade))) !important;
     padding-top: 0 !important;
     padding-bottom: 0 !important;
     padding-left: clamp(20px, 3vw, 40px) !important;
     padding-right: clamp(20px, 3vw, 40px) !important;
-    min-height: var(--dtr-apple-header-height);
-    background-color: var(--dtr-apple-header-bg) !important;
+    min-height: var(--dtr-apple-header-live-height) !important;
+    height: var(--dtr-apple-header-live-height);
+    background-color: rgba(
+      255,
+      255,
+      255,
+      calc(0.72 + (0.2 * var(--dtr-apple-header-shade)))
+    ) !important;
     background-image: none !important;
     -webkit-backdrop-filter: var(--dtr-apple-header-blur);
     backdrop-filter: var(--dtr-apple-header-blur);
-    transition:
-      min-height 0.4s var(--dtr-apple-header-ease),
-      background-color 0.4s var(--dtr-apple-header-ease),
-      border-color 0.4s ease,
-      box-shadow 0.4s ease;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, calc(0.06 * var(--dtr-apple-header-shade))) !important;
+    /* Scroll-linked values — no delayed CSS transition fighting the scroll. */
+    transition: none;
     z-index: 2;
-  }
-
-  body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-header-global,
-  body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-header-global.header-fixed {
-    min-height: var(--dtr-apple-header-height-scrolled);
-    background-color: var(--dtr-apple-header-bg-scrolled) !important;
-    border-bottom-color: var(--dtr-apple-header-line) !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06) !important;
+    will-change: min-height, height, box-shadow, background-color, border-color;
   }
 
   body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content {
     min-height: inherit;
+    height: 100%;
     align-items: center;
     flex-wrap: nowrap;
     gap: clamp(8px, 1.2vw, 18px);
   }
 
   body.dtr-apple-sticky-header #dtr-header-global .dtr-logo,
-  body.dtr-apple-sticky-header #dtr-header-global .dtr-logo img {
-    transition: transform 0.4s var(--dtr-apple-header-ease), opacity 0.35s ease;
-  }
-
-  body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-header-global .dtr-logo img {
-    transform: scale(0.92);
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-logo img,
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-logo svg {
+    transform: scale(var(--dtr-apple-header-logo-scale));
+    transform-origin: left center;
+    transition: none;
   }
 
   /*
@@ -160,7 +157,8 @@
   body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a {
     display: inline-flex;
     align-items: center;
-    min-height: var(--dtr-apple-header-height);
+    min-height: var(--dtr-apple-header-live-height);
+    height: var(--dtr-apple-header-live-height);
     padding: 0 clamp(8px, 0.9vw, 14px);
     font-size: clamp(12px, 0.92vw, 14px);
     font-weight: 400;
@@ -170,14 +168,7 @@
     text-decoration: none !important;
     white-space: nowrap;
     opacity: 1;
-    transition:
-      color 0.22s ease,
-      opacity 0.22s ease,
-      min-height 0.4s var(--dtr-apple-header-ease);
-  }
-
-  body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-header-global .main-navigation .sf-menu > li > a {
-    min-height: var(--dtr-apple-header-height-scrolled);
+    transition: color 0.22s ease, opacity 0.22s ease;
   }
 
   body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a:hover,
@@ -201,6 +192,9 @@
   body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger,
   body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger,
   body.dtr-apple-sticky-header #dtr-header-global .header-fixed .dtr-search-modal-trigger {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--dtr-apple-header-live-height);
     color: #000000 !important;
     opacity: 1 !important;
   }
@@ -229,14 +223,9 @@
 
   body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-header-btn,
   body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-signup-btn {
-    transition:
-      transform 0.35s var(--dtr-apple-header-ease),
-      background-color 0.25s ease,
-      opacity 0.25s ease;
-  }
-
-  body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-header-global .pdx-auth-header-btn {
-    transform: scale(0.96);
+    transform: scale(var(--dtr-apple-header-btn-scale));
+    transform-origin: center center;
+    transition: background-color 0.25s ease, opacity 0.25s ease;
   }
 
   /* Mega panel sits cleanly under the glass bar */
@@ -244,10 +233,6 @@
   body.dtr-apple-sticky-header .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel {
     top: calc(100% + 10px);
     z-index: 12050;
-  }
-
-  body.dtr-apple-sticky-header.dtr-apple-header-scrolled .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel {
-    top: calc(100% + 8px);
   }
 }
 
