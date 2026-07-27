@@ -138,9 +138,9 @@ jobs:
           test "$CSS" = "200"
           grep -Eq 'dtr-apple-page-intro' /tmp/apple-inner-page-title.css
           grep -Eq 'dtr-page-title--section' /tmp/apple-inner-page-title.css
-          grep -Eq 'dtr-apple-page-intro' /tmp/inner-title.html
-          grep -Eq 'dtr-page-title--section' /tmp/inner-title.html && exit 1 || true
+          grep -Eq 'class="dtr-apple-page-intro"' /tmp/inner-title.html
+          grep -Eq 'class="dtr-page-title--section' /tmp/inner-title.html && exit 1 || true
           grep -Eq 'apple-inner-page-title\.css\?ver=1\.3\.6|style\.css\?ver=1\.3\.6' /tmp/inner-title.html
-          # Homepage should not show the intro banner
-          grep -Eq 'dtr-apple-page-intro' /tmp/home-title.html && exit 1 || true
+          # Homepage should not show the intro banner markup
+          grep -Eq 'class="dtr-apple-page-intro"' /tmp/home-title.html && exit 1 || true
           echo "Apple inner page title verification passed."
