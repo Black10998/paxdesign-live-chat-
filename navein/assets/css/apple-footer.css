@@ -31,6 +31,107 @@ body.dtr-apple-footer #dtr-footer-section {
   overflow: visible;
 }
 
+/* Kill decorative theme diagonals that assume a dark footer */
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap::before,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap::after {
+  display: none !important;
+  content: none !important;
+}
+
+/*
+ * Theme `.dtr-footer-section-wrap h*` forces --dtr-text-color-light (white).
+ * Beat that specificity so Apple light footer text stays readable.
+ */
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap p,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap span,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap li,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap label,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap small {
+  color: var(--af-ink) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap h1,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap h2,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap h3,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap h4,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap h5,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap h6,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__news-title,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__brand,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__col-title,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__col-toggle {
+  color: var(--af-ink) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__eyebrow,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__news-lede,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__tagline,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__trust-label,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__copy,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__locale,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .paxmc-fs-msg {
+  color: var(--af-muted) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__eyebrow,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__trust-label,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__soft,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__col-chevron,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__contact-icon,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__github-lock {
+  color: var(--af-soft) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap a,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__links a,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__social a,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__github-btn,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__legal-links a {
+  color: var(--af-muted) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__brand,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__contact a,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__social-icon {
+  color: var(--af-ink) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap a:hover,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__links a:hover,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__social a:hover,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__github-btn:hover,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__legal-links a:hover,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__contact a:hover {
+  color: var(--af-ink) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__contact a:hover {
+  color: var(--af-blue) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .paxmc-footer-subscribe .input,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .paxmc-footer-subscribe .icon {
+  color: var(--af-ink) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .paxmc-footer-subscribe .icon {
+  color: var(--af-soft) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .paxmc-footer-subscribe .Subscribe-btn {
+  color: #fff !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__trust-list a {
+  color: var(--af-muted) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__trust-list a:hover {
+  color: var(--af-ink) !important;
+}
+
 body.dtr-apple-footer #dtr-footer-section > .container {
   max-width: none;
   width: 100%;
