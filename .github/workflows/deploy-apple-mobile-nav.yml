@@ -47,7 +47,7 @@ jobs:
         run: |
           set -euo pipefail
           PORT="${WP_SSH_PORT:-22}"
-          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30)
           install -m 600 -D /dev/null ~/.ssh/id_deploy
           printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
           ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
@@ -55,14 +55,29 @@ jobs:
           THEME="${WP_PATH%/}/wp-content/themes/navein"
           REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
 
-          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+          retry() {
+            local attempt=1
+            local delay=4
+            until "$@"; do
+              if [ "$attempt" -ge 4 ]; then
+                echo "Command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "Retry ${attempt}/4 after ${delay}s: $*"
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
             "mkdir -p \
               $(printf '%q' "$THEME/assets/css") \
               $(printf '%q' "$THEME/assets/js") \
               $(printf '%q' "$THEME/.apple-mobile-nav-backups")"
 
           STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
-          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
             "BACKUP=$(printf '%q' "$THEME/.apple-mobile-nav-backups/$STAMP")
              mkdir -p \"\$BACKUP\"
              for f in \
@@ -79,21 +94,21 @@ jobs:
              done
              echo \"Backup written to \$BACKUP\""
 
-          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/assets/css/apple-mobile-nav.css \
             navein/assets/css/mega-menu.css \
             "${REMOTE}:${THEME}/assets/css/"
 
-          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/assets/js/apple-mobile-nav.js \
             "${REMOTE}:${THEME}/assets/js/"
 
-          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/functions.php \
             navein/style.css \
             "${REMOTE}:${THEME}/"
 
-          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
             "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
 
           echo "Deployed Apple mobile nav 1.1.3"
