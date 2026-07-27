@@ -1,7 +1,8 @@
 /**
- * Apple-style mega menu helpers for the primary header nav.
- * Premium floating panels, viewport clamping, open-state backdrop,
- * and instant hover preview image swapping.
+ * Apple-style mega menu for the primary header nav.
+ *
+ * Owns Superfish for the desktop primary menu (superfish.js must NOT auto-init).
+ * CSS controls panel visibility; hover swaps the feature preview image + copy.
  */
 (function ($) {
   'use strict';
@@ -21,12 +22,29 @@
     return $menu.find('> li.dtr-has-mega.sfHover').length > 0;
   }
 
+  function clearPanelInline($panel) {
+    if (!$panel.length) {
+      return;
+    }
+    // Let CSS own display/opacity so theme + jQuery do not flash a second layout.
+    $panel.css({
+      display: '',
+      opacity: '',
+      visibility: '',
+      height: '',
+      overflow: '',
+      top: '',
+      right: ''
+    });
+  }
+
   function clampPanel($panel) {
     if (!$panel.length || !isDesktop()) {
       return;
     }
 
-    $panel.css({ left: '50%', right: 'auto', marginLeft: 0 });
+    clearPanelInline($panel);
+    $panel.css({ left: '50%', marginLeft: 0 });
 
     var rect = $panel.get(0).getBoundingClientRect();
     var pad = 24;
@@ -82,7 +100,7 @@
     }
     if ($desc.length) {
       if (desc) {
-        $desc.text(desc).show();
+        $desc.text(desc).css('display', '');
       } else {
         $desc.text('').hide();
       }
@@ -95,47 +113,20 @@
     }
   }
 
-  function cssUrl(src) {
-    return src ? 'url("' + String(src).replace(/"/g, '\\"') + '")' : '';
-  }
-
   function swapFeatureImage($feature, src) {
     if (!$feature.length || !src) {
       return;
     }
 
-    var $media = $feature.find('.dtr-mega-feature__media').first();
-    if (!$media.length) {
+    var $img = $feature.find('.dtr-mega-feature__img').first();
+    if (!$img.length) {
+      $img = $feature.find('.dtr-mega-feature__media img').first();
+    }
+    if (!$img.length) {
       return;
     }
 
-    var current = $feature.attr('data-current-src') || $feature.attr('data-default-src') || '';
-    if (current === src && $media.find('.dtr-mega-feature__layer.is-active').length) {
-      return;
-    }
-
-    var $active = $media.find('.dtr-mega-feature__layer.is-active').first();
-    var $next = $media.find('.dtr-mega-feature__layer').not('.is-active').first();
-
-    // Fallback for older markup with <img> tags.
-    if (!$active.length && !$next.length) {
-      var $imgs = $media.find('img');
-      if ($imgs.length) {
-        $imgs.first().attr('src', src).addClass('is-active').css({
-          opacity: '1',
-          visibility: 'visible',
-          display: 'block'
-        });
-        $imgs.slice(1).removeClass('is-active').css('opacity', '0');
-      }
-      $media.css('background-image', cssUrl(src));
-      $feature.attr('data-current-src', src);
-      return;
-    }
-
-    if (!$next.length) {
-      $active.css('background-image', cssUrl(src)).addClass('is-active');
-      $media.css('background-image', cssUrl(src));
+    if ($img.attr('src') === src) {
       $feature.attr('data-current-src', src);
       return;
     }
@@ -147,10 +138,7 @@
       if ($feature.data('previewToken') !== token) {
         return;
       }
-      $next.css('background-image', cssUrl(src));
-      $next.addClass('is-active');
-      $active.removeClass('is-active');
-      $media.css('background-image', cssUrl(src));
+      $img.attr('src', src);
       $feature.attr('data-current-src', src);
     }
 
@@ -165,10 +153,7 @@
       previewCache[src] = loader;
       activate();
     };
-    loader.onerror = function () {
-      // Still apply the URL so a broken state is visible/debuggable.
-      activate();
-    };
+    loader.onerror = activate;
     loader.src = src;
     if (loader.complete) {
       previewCache[src] = loader;
@@ -224,34 +209,79 @@
     }
 
     $menu.superfish({
-      delay: 240,
-      animation: { opacity: 'show' },
-      animationOut: { opacity: 'hide' },
-      speed: 200,
-      speedOut: 160,
+      delay: 220,
+      // Instant show/hide: CSS owns the panel transition. Avoids jQuery opacity
+      // fighting theme display:block and re-animating a "second" panel.
+      animation: {},
+      animationOut: {},
+      speed: 1,
+      speedOut: 1,
       cssArrows: true,
       disableHI: true,
       onBeforeShow: function () {
-        if (this.hasClass('dtr-mega-panel')) {
-          this.css('display', 'grid');
+        if (!this.hasClass('dtr-mega-panel')) {
+          return;
         }
+        clearPanelInline(this);
+        clampPanel(this);
+        setMegaOpen(true);
+        preloadPanelPreviews(this);
+        // Cancel jQuery.animate — sfHover + CSS display:grid !important shows the panel.
+        return false;
       },
-      onShow: function () {
-        if (this.hasClass('dtr-mega-panel')) {
-          this.css('display', 'grid');
-          clampPanel(this);
-          setMegaOpen(true);
-          preloadPanelPreviews(this);
+      onBeforeHide: function () {
+        if (!this.hasClass('dtr-mega-panel')) {
+          return;
         }
-      },
-      onHide: function () {
-        if (this.hasClass('dtr-mega-panel')) {
-          resetPanelPreview(this);
-        }
+        resetPanelPreview(this);
+        clearPanelInline(this);
         window.requestAnimationFrame(function () {
           setMegaOpen(anyMegaOpen($menu));
         });
+        return false;
       }
+    });
+
+    // Superfish binds focusin on ALL li; nested mega items re-trigger show/hide.
+    // Restrict keyboard focus handling to top-level mega parents only.
+    $menu.off('focusin.superfish focusout.superfish');
+    $menu.on('focusin.dtrMegaFocus', '> li.dtr-has-mega', function () {
+      if (!isDesktop()) {
+        return;
+      }
+      var $li = $(this);
+      $li.siblings('li.dtr-has-mega.sfHover').removeClass('sfHover')
+        .children('ul.dtr-mega-panel').each(function () {
+          resetPanelPreview($(this));
+          clearPanelInline($(this));
+        });
+      if (!$li.hasClass('sfHover')) {
+        $li.addClass('sfHover');
+      }
+      syncExpanded($li, true);
+      var $panel = $li.children('ul.dtr-mega-panel');
+      clearPanelInline($panel);
+      clampPanel($panel);
+      setMegaOpen(true);
+      preloadPanelPreviews($panel);
+    });
+    $menu.on('focusout.dtrMegaFocus', '> li.dtr-has-mega', function (e) {
+      var $li = $(this);
+      var next = e.relatedTarget;
+      if (next && $li.get(0).contains(next)) {
+        return;
+      }
+      window.setTimeout(function () {
+        if ($li.get(0).contains(document.activeElement)) {
+          return;
+        }
+        $li.removeClass('sfHover');
+        syncExpanded($li, false);
+        var $panel = $li.children('ul.dtr-mega-panel');
+        resetPanelPreview($panel);
+        clearPanelInline($panel);
+        setMegaOpen(anyMegaOpen($menu));
+      }, 0);
     });
   }
 
@@ -263,7 +293,7 @@
 
     retuneSuperfish($menu);
 
-    $menu.on('mouseenter.focusin', '> li.dtr-has-mega', function () {
+    $menu.on('mouseenter', '> li.dtr-has-mega', function () {
       if (!isDesktop()) {
         return;
       }
@@ -271,52 +301,34 @@
       var $panel = $li.children('ul.dtr-mega-panel');
       syncExpanded($li, true);
       setMegaOpen(true);
+      clearPanelInline($panel);
       preloadPanelPreviews($panel);
       window.requestAnimationFrame(function () {
         clampPanel($panel);
       });
     });
 
-    $menu.on('mouseleave.focusout', '> li.dtr-has-mega', function (e) {
+    $menu.on('mouseleave', '> li.dtr-has-mega', function () {
       var $li = $(this);
-      if (e.type === 'focusout') {
-        var next = e.relatedTarget;
-        if (next && $li.get(0).contains(next)) {
-          return;
-        }
-      }
       syncExpanded($li, false);
-      resetPanelPreview($li.children('ul.dtr-mega-panel'));
+      var $panel = $li.children('ul.dtr-mega-panel');
+      resetPanelPreview($panel);
       window.setTimeout(function () {
         setMegaOpen(anyMegaOpen($menu));
       }, 40);
     });
 
     $menu.on(
-      'mouseenter.focusin',
+      'mouseenter focusin',
       '> li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item > a[data-preview-src]',
       function () {
         if (!isDesktop()) {
           return;
         }
         var $link = $(this);
-        var $panel = $link.closest('ul.dtr-mega-panel');
-        setItemPreview($panel, $link);
+        setItemPreview($link.closest('ul.dtr-mega-panel'), $link);
       }
     );
-
-    $menu.on('mouseleave', '> li.dtr-has-mega > ul.dtr-mega-panel', function (e) {
-      if (!isDesktop()) {
-        return;
-      }
-      var related = e.relatedTarget;
-      var panel = this;
-      if (related && panel.contains(related)) {
-        return;
-      }
-      // Leaving the panel entirely restores the section default.
-      // Item-to-item moves stay handled by mouseenter on the next item.
-    });
 
     $(window).on('resize.dtrMegaMenu', function () {
       if (!isDesktop()) {
@@ -325,7 +337,8 @@
           left: '',
           marginLeft: '',
           right: '',
-          display: ''
+          display: '',
+          opacity: ''
         });
         return;
       }
@@ -340,12 +353,12 @@
           .children('a').attr('aria-expanded', 'false');
         $menu.find('> li.dtr-has-mega > ul.dtr-mega-panel').each(function () {
           resetPanelPreview($(this));
-        }).hide();
+          clearPanelInline($(this));
+        });
         setMegaOpen(false);
       }
     });
 
-    // Warm the default section previews after first paint.
     window.requestAnimationFrame(function () {
       $menu.find('> li.dtr-has-mega > ul.dtr-mega-panel').each(function () {
         preloadPanelPreviews($(this));
@@ -354,6 +367,7 @@
   }
 
   $(function () {
+    // Run after other ready handlers so we own the only Superfish instance.
     window.setTimeout(bindMegaMenu, 0);
   });
 })(jQuery);

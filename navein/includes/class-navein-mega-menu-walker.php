@@ -188,9 +188,8 @@ if ( ! class_exists( 'Navein_Mega_Menu_Walker' ) ) :
 				. ' data-default-cta="' . esc_attr( $meta['cta'] ) . '"'
 				. ' aria-hidden="false">' . $n;
 			$html .= $indent . "\t" . '<a class="dtr-mega-feature__card" href="' . esc_url( $url ) . '">' . $n;
-			$html .= $indent . "\t\t" . '<span class="dtr-mega-feature__media" style="background-image:url(\'' . esc_url( $image ) . '\')">' . $n;
-			$html .= $indent . "\t\t\t" . '<span class="dtr-mega-feature__layer is-active" data-role="primary" style="background-image:url(\'' . esc_url( $image ) . '\')"></span>' . $n;
-			$html .= $indent . "\t\t\t" . '<span class="dtr-mega-feature__layer" data-role="secondary" style="background-image:url(\'' . esc_url( $image ) . '\')" aria-hidden="true"></span>' . $n;
+			$html .= $indent . "\t\t" . '<span class="dtr-mega-feature__media">' . $n;
+			$html .= $indent . "\t\t\t" . '<img class="dtr-mega-feature__img" src="' . esc_url( $image ) . '" alt="" width="640" height="800" decoding="async">' . $n;
 			$html .= $indent . "\t\t" . '</span>' . $n;
 			$html .= $indent . "\t\t" . '<span class="dtr-mega-feature__copy">' . $n;
 			$html .= $indent . "\t\t\t" . '<span class="dtr-mega-feature__eyebrow">' . esc_html( $meta['eyebrow'] ) . '</span>' . $n;
