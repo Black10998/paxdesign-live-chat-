@@ -1,31 +1,56 @@
 <?php
 /**
- * The Title for page
+ * The Title for page — Apple-style minimal intro (no legacy banner card).
  *
  * @package NaveinTheme
- * @version 1.0.0
+ * @version 1.3.6
  */
 // Exit if accessed directly
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
-$page_desc = '';
-$title_align = navein_get_theme_option( 'navein_page_title_section_align', 'text-center' );
-$page_desc  = get_post_meta( $post->ID, '_navein_page_desc_meta', true );
-if ( ! is_home() && ! is_front_page() && ! is_page_template( 'template-no-page-header.php' ) && ! is_page_template( 'template-apple-homepage.php' ) && ! is_page_template( 'template-apple-app-entwicklung.php' ) && ! is_page_template( 'template-apple-advanced-website-systems.php' ) && ! is_page_template( 'template-apple-softwareentwicklung.php' ) && ! is_page_template( 'template-apple-wartung-support.php' ) && ! is_page_template( 'template-apple-webentwicklung.php' ) && ! is_page( 'app-entwicklung' ) && ! is_page( 'advanced-website-systems' ) && ! is_page( 'softwareentwicklung' ) && ! is_page( 'wartung-support' ) && ! is_page( 'webentwicklung' ) && ! is_page( 'it-consulting' ) && true == navein_get_theme_option( 'navein_enable_pagetitle_section', true ) ) { ?>
-<div class="dtr-page-title--section <?php echo esc_attr( $title_align ); ?> <?php echo esc_attr( navein_get_theme_option( 'navein_page_title_corner', 'dtr-radius--rounded' ) ) ?>">
-    <div class="dtr-page-title__overlay"></div>
-    <div class="container">
-        <div class="dtr-page-title__content">
-            <?php if ( true == navein_get_theme_option( 'navein_enable_page_title', true ) ) {
-                    the_title( '<h1 class="dtr-page-title">', '</h1>' );
-                 } ?>
-        </div>
-        <?php if ( true == navein_get_theme_option( 'navein_enable_page_breadcrumb', true ) ) { ?>
-        <div class="dtr-breadcrumb-wrapper">
-            <?php get_template_part( '/template-parts/header/breadcrumb' ); ?>
-        </div>
-        <?php } ?>
-    </div>
+
+$skip_legacy_banner =
+	is_home()
+	|| is_front_page()
+	|| is_page_template( 'template-no-page-header.php' )
+	|| is_page_template( 'template-apple-homepage.php' )
+	|| is_page_template( 'template-apple-app-entwicklung.php' )
+	|| is_page_template( 'template-apple-advanced-website-systems.php' )
+	|| is_page_template( 'template-apple-softwareentwicklung.php' )
+	|| is_page_template( 'template-apple-wartung-support.php' )
+	|| is_page_template( 'template-apple-webentwicklung.php' )
+	|| is_page( 'app-entwicklung' )
+	|| is_page( 'advanced-website-systems' )
+	|| is_page( 'softwareentwicklung' )
+	|| is_page( 'wartung-support' )
+	|| is_page( 'webentwicklung' )
+	|| is_page( 'it-consulting' );
+
+if ( $skip_legacy_banner ) {
+	return;
+}
+
+if ( true != navein_get_theme_option( 'navein_enable_pagetitle_section', true ) ) {
+	return;
+}
+
+$show_title = ( true == navein_get_theme_option( 'navein_enable_page_title', true ) );
+$show_crumbs = ( true == navein_get_theme_option( 'navein_enable_page_breadcrumb', true ) );
+
+if ( ! $show_title && ! $show_crumbs ) {
+	return;
+}
+?>
+<div class="dtr-apple-page-intro">
+	<div class="dtr-apple-page-intro__inner">
+		<?php if ( $show_title ) {
+			the_title( '<h1 class="dtr-apple-page-intro__title">', '</h1>' );
+		} ?>
+		<?php if ( $show_crumbs ) { ?>
+			<div class="dtr-apple-page-intro__crumbs dtr-breadcrumb-wrapper">
+				<?php get_template_part( '/template-parts/header/breadcrumb' ); ?>
+			</div>
+		<?php } ?>
+	</div>
 </div>
-<?php }
