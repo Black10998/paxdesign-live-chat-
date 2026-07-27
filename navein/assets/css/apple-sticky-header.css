@@ -194,6 +194,31 @@
     opacity: 1;
   }
 
+  /*
+   * Search trigger — theme/link defaults are white (#fff) for dark headers.
+   * Force Apple dark ink on the light glass bar for readable contrast.
+   */
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger,
+  body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger,
+  body.dtr-apple-sticky-header #dtr-header-global .header-fixed .dtr-search-modal-trigger {
+    color: #000000 !important;
+    opacity: 1 !important;
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger::after,
+  body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger::after {
+    color: #000000 !important;
+    opacity: 1 !important;
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger:hover,
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger:focus-visible,
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger:hover::after,
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger:focus-visible::after {
+    color: #000000 !important;
+    opacity: 0.72 !important;
+  }
+
   /* Keep Sign Up / widgets aligned to the compact bar */
   body.dtr-apple-sticky-header #dtr-header-global .dtr-header-widget-wrapper,
   body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar {
@@ -268,6 +293,17 @@
 
   body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo.logo-default .paxlogo-underline {
     stroke: #ccff00 !important;
+  }
+
+  body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger,
+  body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-search-modal-trigger {
+    color: #000000 !important;
+    opacity: 1 !important;
+  }
+
+  body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger::after {
+    color: #000000 !important;
+    opacity: 1 !important;
   }
 }
 
