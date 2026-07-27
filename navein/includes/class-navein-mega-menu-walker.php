@@ -2,11 +2,11 @@
 /**
  * Apple-style mega menu walker for the primary header navigation.
  *
- * Adds premium mega-panel classes and custom blue SVG icons for submenu items.
+ * Builds premium floating mega panels with featured imagery, icons, and copy.
  * Desktop mega panels + Apple full-screen mobile navigation reuse this markup.
  *
  * @package NaveinTheme
- * @version 1.0.4
+ * @version 1.1.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -19,6 +19,13 @@ if ( ! class_exists( 'Navein_Mega_Menu_Walker' ) ) :
 	 * Walker that upgrades first-level dropdowns into mega menus.
 	 */
 	class Navein_Mega_Menu_Walker extends Walker_Nav_Menu {
+
+		/**
+		 * Current top-level parent while rendering its submenu.
+		 *
+		 * @var WP_Post|null
+		 */
+		protected $current_mega_parent = null;
 
 		/**
 		 * Start the submenu list.
@@ -36,8 +43,13 @@ if ( ! class_exists( 'Navein_Mega_Menu_Walker' ) ) :
 				$n = "\n";
 			}
 			$indent = str_repeat( $t, $depth );
-			$classes = ( 0 === (int) $depth ) ? 'sub-menu dtr-mega-panel' : 'sub-menu';
-			$output .= "{$n}{$indent}<ul class=\"{$classes}\">{$n}";
+
+			if ( 0 === (int) $depth ) {
+				$output .= "{$n}{$indent}<ul class=\"sub-menu dtr-mega-panel dtr-mega-panel--premium\">{$n}";
+				$output .= $this->render_feature_block( $this->current_mega_parent, $indent . $t, $n );
+			} else {
+				$output .= "{$n}{$indent}<ul class=\"sub-menu\">{$n}";
+			}
 		}
 
 		/**
@@ -65,7 +77,8 @@ if ( ! class_exists( 'Navein_Mega_Menu_Walker' ) ) :
 			$has_children = in_array( 'menu-item-has-children', $classes, true );
 
 			if ( 0 === (int) $depth && $has_children ) {
-				$classes[] = 'dtr-has-mega';
+				$classes[]                 = 'dtr-has-mega';
+				$this->current_mega_parent = $item;
 			}
 
 			if ( $depth >= 1 ) {
@@ -127,6 +140,7 @@ if ( ! class_exists( 'Navein_Mega_Menu_Walker' ) ) :
 					$item_output .= '<span class="dtr-mega-desc">' . esc_html( $meta['desc'] ) . '</span>';
 				}
 				$item_output .= '</span>';
+				$item_output .= '<span class="dtr-mega-go" aria-hidden="true"></span>';
 			} else {
 				$item_output .= esc_html( $title );
 			}
@@ -136,6 +150,97 @@ if ( ! class_exists( 'Navein_Mega_Menu_Walker' ) ) :
 			$item_output .= isset( $args->after ) ? $args->after : '';
 
 			$output .= apply_filters( 'walker_nav_menu_start_el', $item_output, $item, $depth, $args );
+		}
+
+		/**
+		 * Render the featured media column for a mega panel.
+		 *
+		 * @param WP_Post|null $parent Parent menu item.
+		 * @param string       $indent Indentation.
+		 * @param string       $n      Newline.
+		 * @return string
+		 */
+		protected function render_feature_block( $parent, $indent = '', $n = "\n" ) {
+			if ( ! $parent ) {
+				return '';
+			}
+
+			$key   = self::resolve_icon_key( $parent );
+			$meta  = self::get_feature_meta( $parent, $key );
+			$title = apply_filters( 'the_title', $parent->title, $parent->ID );
+			$url   = ! empty( $parent->url ) ? $parent->url : '#';
+
+			$html  = $indent . '<li class="dtr-mega-feature dtr-mega-feature--' . esc_attr( sanitize_html_class( $key ) ) . '" aria-hidden="false">' . $n;
+			$html .= $indent . "\t" . '<a class="dtr-mega-feature__card" href="' . esc_url( $url ) . '">' . $n;
+			$html .= $indent . "\t\t" . '<span class="dtr-mega-feature__media">' . $n;
+			$html .= $indent . "\t\t\t" . '<img src="' . esc_url( $meta['image'] ) . '" alt="" width="640" height="800" loading="lazy" decoding="async">' . $n;
+			$html .= $indent . "\t\t" . '</span>' . $n;
+			$html .= $indent . "\t\t" . '<span class="dtr-mega-feature__copy">' . $n;
+			$html .= $indent . "\t\t\t" . '<span class="dtr-mega-feature__eyebrow">' . esc_html( $meta['eyebrow'] ) . '</span>' . $n;
+			$html .= $indent . "\t\t\t" . '<span class="dtr-mega-feature__title">' . esc_html( $title ) . '</span>' . $n;
+			if ( ! empty( $meta['desc'] ) ) {
+				$html .= $indent . "\t\t\t" . '<span class="dtr-mega-feature__desc">' . esc_html( $meta['desc'] ) . '</span>' . $n;
+			}
+			$html .= $indent . "\t\t\t" . '<span class="dtr-mega-feature__cta">' . esc_html( $meta['cta'] ) . '</span>' . $n;
+			$html .= $indent . "\t\t" . '</span>' . $n;
+			$html .= $indent . "\t" . '</a>' . $n;
+			$html .= $indent . '</li>' . $n;
+
+			return $html;
+		}
+
+		/**
+		 * Featured imagery + labels for top-level mega sections.
+		 *
+		 * @param WP_Post $item Parent item.
+		 * @param string  $key  Icon/section key.
+		 * @return array{image:string,eyebrow:string,desc:string,cta:string}
+		 */
+		public static function get_feature_meta( $item, $key ) {
+			$uploads = 'https://paxdesign.at/wp-content/uploads';
+
+			$catalog = array(
+				'projects'  => array(
+					'image'   => $uploads . '/2025/02/folio-item-img6.avif',
+					'eyebrow' => 'Explore',
+					'desc'    => 'Ausgewählte Projekte mit Fokus auf Präzision und Wirkung.',
+					'cta'     => 'Alle Referenzen',
+				),
+				'services'  => array(
+					'image'   => $uploads . '/2025/02/Product-Card-Mockup-0.avif',
+					'eyebrow' => 'Solutions',
+					'desc'    => 'Web, App und Software — klar strukturiert und skalierbar.',
+					'cta'     => 'Leistungen entdecken',
+				),
+				'contact'   => array(
+					'image'   => $uploads . '/2025/02/immagepng.avif',
+					'eyebrow' => 'Connect',
+					'desc'    => 'Sprechen Sie mit uns über Ihr nächstes digitales System.',
+					'cta'     => 'Kontakt aufnehmen',
+				),
+				'about'     => array(
+					'image'   => $uploads . '/2025/02/folio-item-img3.avif',
+					'eyebrow' => 'About',
+					'desc'    => 'Team, Werte und der Anspruch hinter PAXdesign.',
+					'cta'     => 'Mehr erfahren',
+				),
+				'web'       => array(
+					'image'   => $uploads . '/2026/01/code-2558220_1280.avif',
+					'eyebrow' => 'Build',
+					'desc'    => 'Moderne Webentwicklung mit Premium-Finish.',
+					'cta'     => 'Zum Überblick',
+				),
+				'default'   => array(
+					'image'   => $uploads . '/2025/02/folio-item-img4.avif',
+					'eyebrow' => 'PAXdesign',
+					'desc'    => 'Digitale Systeme mit Klarheit und Präzision.',
+					'cta'     => 'Mehr erfahren',
+				),
+			);
+
+			$meta = isset( $catalog[ $key ] ) ? $catalog[ $key ] : $catalog['default'];
+
+			return apply_filters( 'navein_mega_menu_feature_meta', $meta, $item, $key );
 		}
 
 		/**

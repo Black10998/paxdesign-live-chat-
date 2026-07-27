@@ -6,13 +6,13 @@
 :root {
   --dtr-apple-header-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
   --dtr-apple-header-blur: saturate(180%) blur(20px);
-  --dtr-apple-header-bg: rgba(22, 22, 23, 0.72);
-  --dtr-apple-header-bg-scrolled: rgba(22, 22, 23, 0.86);
-  --dtr-apple-header-line: rgba(255, 255, 255, 0.12);
-  --dtr-apple-header-text: rgba(245, 245, 247, 0.9);
-  --dtr-apple-header-text-hover: #f5f5f7;
-  --dtr-apple-header-height: 52px;
-  --dtr-apple-header-height-scrolled: 48px;
+  --dtr-apple-header-bg: rgba(255, 255, 255, 0.72);
+  --dtr-apple-header-bg-scrolled: rgba(255, 255, 255, 0.9);
+  --dtr-apple-header-line: rgba(0, 0, 0, 0.08);
+  --dtr-apple-header-text: rgba(29, 29, 31, 0.88);
+  --dtr-apple-header-text-hover: #000000;
+  --dtr-apple-header-height: 48px;
+  --dtr-apple-header-height-scrolled: 44px;
 }
 
 @media (min-width: 993px) {
@@ -80,7 +80,7 @@
     min-height: var(--dtr-apple-header-height-scrolled);
     background-color: var(--dtr-apple-header-bg-scrolled) !important;
     border-bottom-color: var(--dtr-apple-header-line) !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06) !important;
   }
 
   body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content {
@@ -206,7 +206,7 @@
 
   body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-responsive-header {
     background-color: var(--dtr-apple-header-bg-scrolled) !important;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
   }
 }
 

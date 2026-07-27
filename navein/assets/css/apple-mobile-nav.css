@@ -63,7 +63,7 @@
     top: 46px;
   }
 
-  /* Hamburger colors: light on dark bar, black when sheet is open */
+  /* Hamburger colors: black on white bar */
   body.dtr-apple-mobile-nav #dtr-menu-button {
     z-index: 10090;
   }
@@ -71,7 +71,7 @@
   body.dtr-apple-mobile-nav #dtr-menu-button .dtr-hamburger-lines,
   body.dtr-apple-mobile-nav #dtr-menu-button .dtr-hamburger-lines:before,
   body.dtr-apple-mobile-nav #dtr-menu-button .dtr-hamburger-lines:after {
-    background-color: #f5f5f7 !important;
+    background-color: #1d1d1f !important;
   }
 
   body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-hamburger-lines {

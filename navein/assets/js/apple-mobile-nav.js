@@ -108,8 +108,10 @@
           .attr('class', 'dtr-apple-mnav__panel')
           .attr('hidden', true);
 
-        // Keep mega item markup (icon/title/desc); strip nested unused menus.
+        // Keep mega item markup (icon/title/desc); strip nested unused menus + desktop feature cards.
         $children.find('ul.sub-menu').remove();
+        $children.children('li.dtr-mega-feature').remove();
+        $children.find('.dtr-mega-go').remove();
 
         $item.append($toggle).append($children);
       } else {

@@ -1,7 +1,6 @@
 /**
  * Apple-style mega menu helpers for the primary header nav.
- * Re-tunes Superfish timing for large panels, keeps them in viewport,
- * and syncs aria-expanded. Mobile / SlickNav is left unchanged.
+ * Premium floating panels, viewport clamping, open-state backdrop.
  */
 (function ($) {
   'use strict';
@@ -10,6 +9,14 @@
 
   function isDesktop() {
     return DESKTOP_MQ.matches;
+  }
+
+  function setMegaOpen(open) {
+    document.body.classList.toggle('dtr-mega-open', !!open && isDesktop());
+  }
+
+  function anyMegaOpen($menu) {
+    return $menu.find('> li.dtr-has-mega.sfHover').length > 0;
   }
 
   function clampPanel($panel) {
@@ -46,7 +53,6 @@
       return;
     }
 
-    // Prefer a slightly longer delay so the pointer can reach the large panel.
     try {
       $menu.superfish('destroy');
     } catch (e) {
@@ -54,11 +60,11 @@
     }
 
     $menu.superfish({
-      delay: 220,
+      delay: 240,
       animation: { opacity: 'show' },
       animationOut: { opacity: 'hide' },
-      speed: 180,
-      speedOut: 140,
+      speed: 200,
+      speedOut: 160,
       cssArrows: true,
       disableHI: true,
       onBeforeShow: function () {
@@ -70,7 +76,13 @@
         if (this.hasClass('dtr-mega-panel')) {
           this.css('display', 'grid');
           clampPanel(this);
+          setMegaOpen(true);
         }
+      },
+      onHide: function () {
+        window.requestAnimationFrame(function () {
+          setMegaOpen(anyMegaOpen($menu));
+        });
       }
     });
   }
@@ -89,6 +101,7 @@
       }
       var $li = $(this);
       syncExpanded($li, true);
+      setMegaOpen(true);
       window.requestAnimationFrame(function () {
         clampPanel($li.children('ul.dtr-mega-panel'));
       });
@@ -103,10 +116,14 @@
         }
       }
       syncExpanded($li, false);
+      window.setTimeout(function () {
+        setMegaOpen(anyMegaOpen($menu));
+      }, 40);
     });
 
     $(window).on('resize.dtrMegaMenu', function () {
       if (!isDesktop()) {
+        setMegaOpen(false);
         $menu.find('> li.dtr-has-mega > ul.dtr-mega-panel').css({
           left: '',
           marginLeft: '',
@@ -119,10 +136,18 @@
         clampPanel($(this).children('ul.dtr-mega-panel'));
       });
     });
+
+    $(document).on('keydown.dtrMegaMenu', function (e) {
+      if (e.key === 'Escape') {
+        $menu.find('> li.dtr-has-mega.sfHover').removeClass('sfHover')
+          .children('a').attr('aria-expanded', 'false');
+        $menu.find('> li.dtr-has-mega > ul.dtr-mega-panel').hide();
+        setMegaOpen(false);
+      }
+    });
   }
 
   $(function () {
-    // Run after the theme's Superfish boot in superfish.js.
     window.setTimeout(bindMegaMenu, 0);
   });
 })(jQuery);
