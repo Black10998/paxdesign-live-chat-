@@ -62,6 +62,7 @@ jobs:
               $(printf '%q' "$THEME/assets/css") \
               $(printf '%q' "$THEME/assets/js") \
               $(printf '%q' "$THEME/template-parts/pages") \
+              $(printf '%q' "$THEME/template-parts/page-title") \
               $(printf '%q' "$THEME/scripts")"
 
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
