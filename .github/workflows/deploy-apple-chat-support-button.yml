@@ -95,8 +95,14 @@ jobs:
           test "$CSS" = "200"
 
           grep -Eq "Message Support|paxdesign-booking-launcher-icon|Message Support öffnen" /tmp/home.html
-          grep -Evq "modelViewPort|class=\"eva\"|scannerThing" /tmp/home.html
+          if grep -Eq 'modelViewPort|class="eva"|scannerThing' /tmp/home.html; then
+            echo "Old Eva launcher still present" >&2
+            exit 1
+          fi
           grep -Eq "Apple-style Message Support|border-radius: 980px|Message Support" /tmp/booking-styles.css
-          grep -Evq "paxdesign-eva-rotateRight|From Uiverse.io by Subaashbala" /tmp/booking-styles.css
+          if grep -Eq "paxdesign-eva-rotateRight|From Uiverse.io by Subaashbala" /tmp/booking-styles.css; then
+            echo "Old Eva CSS still present" >&2
+            exit 1
+          fi
 
           echo "Apple Message Support launcher verification passed."
