@@ -1,0 +1,89 @@
+name: Deploy Homepage Apple HTML Blocks
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-homepage-html-blocks-cfc9'
+    paths:
+      - '.github/triggers/deploy-homepage-apple-html-blocks'
+      - '.github/workflows/deploy-homepage-apple-html-blocks.yml'
+      - 'scripts/homepage-apple-html-blocks/**'
+      - 'scripts/assign-homepage-apple-html-blocks.sh'
+      - 'scripts/update-homepage-apple-html-blocks.php'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy HTML blocks and update homepage
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/scripts/homepage-apple-html-blocks")"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            scripts/homepage-apple-html-blocks/ \
+            "${REMOTE}:${THEME}/scripts/homepage-apple-html-blocks/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            scripts/assign-homepage-apple-html-blocks.sh \
+            scripts/update-homepage-apple-html-blocks.php \
+            "${REMOTE}:${THEME}/scripts/"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "chmod +x $(printf '%q' "$THEME/scripts/assign-homepage-apple-html-blocks.sh") && \
+             WP_PATH=$(printf '%q' "$WP_PATH") bash $(printf '%q' "$THEME/scripts/assign-homepage-apple-html-blocks.sh")"
+
+          echo "Deployed homepage Apple HTML blocks"
+
+      - name: Verify live homepage HTML blocks
+        run: |
+          set -euo pipefail
+          set +e
+          HOME_HTML=$(curl -sS -o /tmp/home-verify.html -w '%{http_code}' "https://paxdesign.at/?n=$(date +%s)")
+          set -e
+          echo "HOME $HOME_HTML"
+          test "$HOME_HTML" = "200"
+          grep -Eq "paxhome-hero|Digitale Systeme" /tmp/home-verify.html
+          grep -Eq "paxsvc-carousel|Digitale Lösungen" /tmp/home-verify.html
+          grep -Eq "pax-apple-showcase|Design, das sichtbar überzeugt" /tmp/home-verify.html
+          grep -Eq "pax-logo-marquee-section|Technologien" /tmp/home-verify.html
+          # Ensure non-HTML Elementor sections still present
+          grep -Eq "elementor-widget-dtr-feature-highlight|elementor-widget-dtr-process|elementor-widget-dtr-grid-portfolio" /tmp/home-verify.html
+          echo "Homepage Apple HTML blocks verification passed."

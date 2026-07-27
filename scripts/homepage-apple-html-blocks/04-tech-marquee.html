@@ -1,0 +1,188 @@
+<style>
+.pax-logo-marquee-section,
+.pax-logo-marquee-section * { box-sizing: border-box !important; }
+
+.pax-logo-marquee-section {
+  --pm-font: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif;
+  --pm-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  width: 100vw !important;
+  max-width: 100vw !important;
+  margin: 0 calc(50% - 50vw) !important;
+  padding: clamp(72px, 12vh, 120px) 0 !important;
+  overflow: hidden !important;
+  background: #000 !important;
+  color: #fff !important;
+  font-family: var(--pm-font) !important;
+  -webkit-font-smoothing: antialiased !important;
+}
+
+.pax-logo-marquee-title {
+  width: min(1120px, calc(100% - 48px)) !important;
+  margin: 0 auto 48px !important;
+  text-align: center !important;
+  font-size: clamp(28px, 4.5vw, 44px) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.035em !important;
+  line-height: 1.1 !important;
+  color: #f5f5f7 !important;
+}
+
+.pax-logo-row {
+  display: flex !important;
+  gap: 48px !important;
+  margin-bottom: 28px !important;
+  width: max-content !important;
+  animation: pax-home-marquee 42s linear infinite !important;
+}
+
+.pax-logo-row-right { animation-direction: reverse !important; }
+
+@keyframes pax-home-marquee {
+  to { transform: translateX(-50%); }
+}
+
+.pax-logo-item {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 auto !important;
+  min-width: 140px !important;
+  height: 72px !important;
+  padding: 12px 18px !important;
+  border-radius: 16px !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  background: rgba(255,255,255,0.03) !important;
+}
+
+.pax-logo-item img {
+  display: block !important;
+  max-width: 100% !important;
+  max-height: 40px !important;
+  object-fit: contain !important;
+  filter: grayscale(1) brightness(1.4) !important;
+  opacity: 0.72 !important;
+  transition: filter .35s ease, opacity .35s ease !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .pax-logo-row:hover { animation-play-state: paused !important; }
+  .pax-logo-item:hover img {
+    filter: none !important;
+    opacity: 1 !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .pax-logo-marquee-section { padding: 56px 0 !important; }
+  .pax-logo-marquee-title { margin-bottom: 28px !important; }
+  .pax-logo-row { gap: 16px !important; margin-bottom: 14px !important; }
+  .pax-logo-item {
+    min-width: 96px !important;
+    height: 56px !important;
+    padding: 8px 10px !important;
+    border-radius: 12px !important;
+  }
+  .pax-logo-item img { max-height: 28px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pax-logo-row {
+    animation: none !important;
+    transform: none !important;
+    flex-wrap: wrap !important;
+    width: min(1120px, calc(100% - 48px)) !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    justify-content: center !important;
+  }
+}
+</style>
+
+<div class="pax-logo-marquee-section">
+  <h2 class="pax-logo-marquee-title">Technologien &amp; Tools</h2>
+
+  <div class="pax-logo-row">
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg" alt="HTML5" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/css3/css3-original.svg" alt="CSS3" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg" alt="JavaScript" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" alt="TypeScript" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg" alt="React" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vuejs/vuejs-original.svg" alt="Vue.js" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/angular/angular-original.svg" alt="Angular" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/css3/css3-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/javascript/javascript-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/typescript/typescript-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/react/react-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vuejs/vuejs-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/angular/angular-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+  </div>
+
+  <div class="pax-logo-row pax-logo-row-right">
+    <div class="pax-logo-item"><img loading="lazy" class="is-light" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nextjs/nextjs-original.svg" alt="Next.js" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg" alt="Node.js" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" alt="Python" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg" alt="PHP" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" alt="Java" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg" alt="Go" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/rust/rust-plain.svg" alt="Rust" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" class="is-light" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nextjs/nextjs-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nodejs/nodejs-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/php/php-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/java/java-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/go/go-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/rust/rust-plain.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+  </div>
+
+  <div class="pax-logo-row">
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" alt="PostgreSQL" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg" alt="MySQL" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mongodb/mongodb-original.svg" alt="MongoDB" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" alt="Redis" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/firebase/firebase-plain.svg" alt="Firebase" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original-wordmark.svg" alt="AWS" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/googlecloud/googlecloud-original.svg" alt="Google Cloud" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/postgresql/postgresql-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mysql/mysql-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/mongodb/mongodb-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/redis/redis-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/firebase/firebase-plain.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/amazonwebservices/amazonwebservices-original-wordmark.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/googlecloud/googlecloud-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+  </div>
+
+  <div class="pax-logo-row pax-logo-row-right">
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg" alt="Git" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" class="is-light" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="GitHub" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/gitlab/gitlab-original.svg" alt="GitLab" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" alt="Docker" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/kubernetes/kubernetes-plain.svg" alt="Kubernetes" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/jenkins/jenkins-original.svg" alt="Jenkins" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nginx/nginx-original.svg" alt="Nginx" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/git/git-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" class="is-light" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/github/github-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/gitlab/gitlab-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/docker/docker-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/kubernetes/kubernetes-plain.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/jenkins/jenkins-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/nginx/nginx-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+  </div>
+
+  <div class="pax-logo-row">
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/figma/figma-original.svg" alt="Figma" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" class="is-light" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/notion/notion-original.svg" alt="Notion" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vscode/vscode-original.svg" alt="VS Code" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/wordpress/wordpress-plain.svg" alt="WordPress" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/sass/sass-original.svg" alt="Sass" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/bootstrap/bootstrap-original.svg" alt="Bootstrap" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/webpack/webpack-original.svg" alt="Webpack" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/figma/figma-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" class="is-light" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/notion/notion-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vscode/vscode-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/wordpress/wordpress-plain.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/sass/sass-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/bootstrap/bootstrap-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+    <div class="pax-logo-item" aria-hidden="true"><img loading="lazy" src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/webpack/webpack-original.svg" alt="" width="128" height="128" loading="lazy" decoding="async"></div>
+  </div>
+</div>

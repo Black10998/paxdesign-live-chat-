@@ -1,0 +1,273 @@
+<div id="pax-apple-hero" class="paxhome-hero" data-paxhome-reveal-root>
+  <section class="paxhome-hero__section" aria-labelledby="paxapple-hero-title">
+    <div class="paxhome-hero__stage" aria-hidden="true">
+      <picture class="paxhome-hero__media">
+        <img
+          src="https://paxdesign.at/wp-content/uploads/2026/01/code-2558220_1280.avif"
+          alt=""
+          loading="eager"
+          decoding="async"
+          fetchpriority="high"
+        />
+      </picture>
+      <div class="paxhome-hero__veil"></div>
+      <div class="paxhome-hero__glow"></div>
+    </div>
+
+    <div class="paxhome-hero__inner">
+      <p class="paxhome-hero__eyebrow" data-paxhome-reveal>Professionelle IT-Lösungen für Ihr Unternehmen</p>
+      <h1 id="paxapple-hero-title" class="paxhome-hero__title" data-paxhome-reveal>
+        Digitale Systeme,<br>
+        die wirklich funktionieren.
+      </h1>
+      <p class="paxhome-hero__lede" data-paxhome-reveal>
+        Websites, Web-Apps, iOS &amp; Android, E-Commerce, KI-Automatisierung,
+        Backend, DevOps und Code-Schutz — maßgeschneiderte Lösungen aus einer Hand.
+      </p>
+      <p class="paxhome-hero__statement" data-paxhome-reveal>
+        Keine Produkte von der Stange. Sondern sichere, skalierbare und präzise entwickelte Systeme.
+      </p>
+
+      <div class="paxhome-hero__cta" data-paxhome-reveal>
+        <a class="paxhome-btn paxhome-btn--light" href="https://paxdesign.at/projektpreise/" aria-label="Leistungen von PAXdesign entdecken">Leistungen entdecken</a>
+        <a class="paxhome-btn paxhome-btn--ghost" href="https://paxdesign.at/kontakt/" aria-label="Jetzt mit PAXdesign starten">Jetzt starten</a>
+      </div>
+
+      <ul class="paxhome-hero__meta" data-paxhome-reveal aria-label="Leistungsbereiche">
+        <li>Website &amp; Apps</li>
+        <li>KI-Automatisierung</li>
+        <li>IT-Sicherheit</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<style>
+#pax-apple-hero,
+#pax-apple-hero * { box-sizing: border-box !important; }
+
+#pax-apple-hero {
+  --ph-black: #000;
+  --ph-ink: #1d1d1f;
+  --ph-muted: rgba(255,255,255,.62);
+  --ph-line: rgba(255,255,255,.14);
+  --ph-blue: #0071e3;
+  --ph-font: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif;
+  --ph-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+
+  position: relative !important;
+  isolation: isolate !important;
+  display: block !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  margin: 0 calc(50% - 50vw) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  color: #fff !important;
+  background: var(--ph-black) !important;
+  font-family: var(--ph-font) !important;
+  -webkit-font-smoothing: antialiased !important;
+}
+
+#pax-apple-hero .paxhome-hero__section {
+  position: relative !important;
+  min-height: min(92vh, 920px) !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  padding: clamp(120px, 18vh, 180px) 0 clamp(56px, 8vh, 88px) !important;
+}
+
+#pax-apple-hero .paxhome-hero__stage {
+  position: absolute !important;
+  inset: 0 !important;
+  z-index: 0 !important;
+}
+
+#pax-apple-hero .paxhome-hero__media,
+#pax-apple-hero .paxhome-hero__media img {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  display: block !important;
+}
+
+#pax-apple-hero .paxhome-hero__veil {
+  position: absolute !important;
+  inset: 0 !important;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.35) 0%, rgba(0,0,0,.72) 48%, rgba(0,0,0,.92) 100%),
+    radial-gradient(ellipse 70% 50% at 70% 20%, rgba(0,113,227,.22), transparent 60%) !important;
+}
+
+#pax-apple-hero .paxhome-hero__glow {
+  position: absolute !important;
+  width: min(640px, 80vw) !important;
+  height: min(640px, 80vw) !important;
+  right: -8% !important;
+  top: 10% !important;
+  border-radius: 50% !important;
+  background: radial-gradient(circle, rgba(255,255,255,.12), transparent 68%) !important;
+  filter: blur(10px) !important;
+  pointer-events: none !important;
+  animation: paxhome-float 10s var(--ph-ease) infinite !important;
+}
+
+#pax-apple-hero .paxhome-hero__inner {
+  position: relative !important;
+  z-index: 1 !important;
+  width: min(1120px, calc(100% - 48px)) !important;
+  margin: 0 auto !important;
+}
+
+#pax-apple-hero .paxhome-hero__eyebrow {
+  margin: 0 0 18px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+  color: rgba(255,255,255,.55) !important;
+}
+
+#pax-apple-hero .paxhome-hero__title {
+  margin: 0 0 22px !important;
+  max-width: 14ch !important;
+  font-size: clamp(44px, 7.5vw, 80px) !important;
+  font-weight: 600 !important;
+  letter-spacing: -.045em !important;
+  line-height: 1.02 !important;
+  color: #fff !important;
+}
+
+#pax-apple-hero .paxhome-hero__lede {
+  margin: 0 0 18px !important;
+  max-width: 36em !important;
+  font-size: clamp(18px, 2vw, 21px) !important;
+  line-height: 1.45 !important;
+  letter-spacing: -.015em !important;
+  color: var(--ph-muted) !important;
+}
+
+#pax-apple-hero .paxhome-hero__statement {
+  margin: 0 0 34px !important;
+  max-width: 34em !important;
+  font-size: 17px !important;
+  line-height: 1.5 !important;
+  color: rgba(255,255,255,.78) !important;
+}
+
+#pax-apple-hero .paxhome-hero__cta {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 14px 18px !important;
+  align-items: center !important;
+  margin-bottom: 42px !important;
+}
+
+#pax-apple-hero .paxhome-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 48px !important;
+  padding: 0 22px !important;
+  border-radius: 980px !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  letter-spacing: -.01em !important;
+  text-decoration: none !important;
+  transition: transform .25s var(--ph-ease), opacity .25s ease, background-color .25s ease !important;
+}
+
+#pax-apple-hero .paxhome-btn:hover { transform: scale(1.02) !important; }
+
+#pax-apple-hero .paxhome-btn--light {
+  background: #fff !important;
+  color: #000 !important;
+}
+
+#pax-apple-hero .paxhome-btn--ghost {
+  background: transparent !important;
+  color: #2997ff !important;
+  padding-left: 8px !important;
+  padding-right: 8px !important;
+}
+
+#pax-apple-hero .paxhome-btn--ghost:hover {
+  opacity: .75 !important;
+  transform: none !important;
+}
+
+#pax-apple-hero .paxhome-hero__meta {
+  list-style: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px 22px !important;
+  border-top: 1px solid var(--ph-line) !important;
+  padding-top: 22px !important;
+}
+
+#pax-apple-hero .paxhome-hero__meta li {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  letter-spacing: .04em !important;
+  text-transform: uppercase !important;
+  color: rgba(255,255,255,.48) !important;
+}
+
+#pax-apple-hero [data-paxhome-reveal] {
+  opacity: 0 !important;
+  transform: translate3d(0, 24px, 0) !important;
+  transition: opacity .9s var(--ph-ease), transform .9s var(--ph-ease) !important;
+}
+
+#pax-apple-hero.is-ready [data-paxhome-reveal] {
+  opacity: 1 !important;
+  transform: none !important;
+}
+
+#pax-apple-hero.is-ready [data-paxhome-reveal]:nth-child(1) { transition-delay: .05s !important; }
+#pax-apple-hero.is-ready [data-paxhome-reveal]:nth-child(2) { transition-delay: .12s !important; }
+#pax-apple-hero.is-ready [data-paxhome-reveal]:nth-child(3) { transition-delay: .2s !important; }
+#pax-apple-hero.is-ready [data-paxhome-reveal]:nth-child(4) { transition-delay: .28s !important; }
+#pax-apple-hero.is-ready [data-paxhome-reveal]:nth-child(5) { transition-delay: .36s !important; }
+#pax-apple-hero.is-ready [data-paxhome-reveal]:nth-child(6) { transition-delay: .44s !important; }
+
+@keyframes paxhome-float {
+  0%, 100% { transform: translate3d(0,0,0); }
+  50% { transform: translate3d(0, 18px, 0); }
+}
+
+@media (max-width: 720px) {
+  #pax-apple-hero .paxhome-hero__section {
+    min-height: min(88vh, 780px) !important;
+    padding-top: 110px !important;
+  }
+  #pax-apple-hero .paxhome-hero__title { max-width: none !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #pax-apple-hero .paxhome-hero__glow,
+  #pax-apple-hero [data-paxhome-reveal] {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
+</style>
+
+<script>
+(function () {
+  var root = document.getElementById('pax-apple-hero');
+  if (!root || root.dataset.paxReady === '1') return;
+  root.dataset.paxReady = '1';
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function ready() { root.classList.add('is-ready'); }
+  if (reduce) { ready(); return; }
+  if ('requestAnimationFrame' in window) requestAnimationFrame(function () { requestAnimationFrame(ready); });
+  else setTimeout(ready, 40);
+})();
+</script>
