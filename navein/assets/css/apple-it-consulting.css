@@ -1,0 +1,177 @@
+/**
+ * Apple IT Consulting — mobile full-bleed refinements
+ * Overrides Elementor boxed wrappers + inline page CSS on phones.
+ */
+
+/* Kill Elementor nested boxed container around the Apple page */
+body.page-id-2798 .elementor-2798 > .e-con-boxed,
+body.page-id-2798 .elementor-2798 .elementor-element-c7a12f0,
+body.page-slug-it-consulting .elementor > .e-con-boxed {
+  --content-width: 100% !important;
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+}
+
+body.page-id-2798 .elementor-2798 > .e-con-boxed > .e-con-inner,
+body.page-id-2798 .elementor-2798 .elementor-element-c7a12f0 > .e-con-inner,
+body.page-slug-it-consulting .elementor > .e-con-boxed > .e-con-inner {
+  --content-width: 100% !important;
+  max-width: none !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.page-id-2798 #dtr-main-wrapper,
+body.page-slug-it-consulting #dtr-main-wrapper,
+body.page-id-2798 #dtr-primary-section,
+body.page-slug-it-consulting #dtr-primary-section,
+body.page-id-2798 .elementor-widget-html,
+body.page-slug-it-consulting .elementor-widget-html,
+body.page-id-2798 .elementor-widget-container,
+body.page-slug-it-consulting .elementor-widget-container {
+  max-width: none !important;
+  width: 100% !important;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+
+body.page-id-2798 .dtr-page-title--section,
+body.page-slug-it-consulting .dtr-page-title--section,
+body.page-id-2798 .dtr-page-title__section,
+body.page-slug-it-consulting .dtr-page-title__section {
+  display: none !important;
+}
+
+#pax-it-consulting-apple {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  overflow-x: clip !important;
+}
+
+@media (max-width: 960px) {
+  #pax-it-consulting-apple .paxit-inner,
+  #pax-it-consulting-apple .paxit-inner-hero,
+  #pax-it-consulting-apple .paxit-contact-inner {
+    width: 100% !important;
+    max-width: none !important;
+    padding-inline: 22px !important;
+    box-sizing: border-box !important;
+  }
+
+  #pax-it-consulting-apple .paxit-section {
+    width: 100% !important;
+  }
+
+  /* Flatten list “tiles” that read as nested cards */
+  #pax-it-consulting-apple .paxit-feature-list,
+  #pax-it-consulting-apple .paxit-service-light .paxit-feature-list {
+    max-width: none !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+
+  #pax-it-consulting-apple .paxit-feature-list li,
+  #pax-it-consulting-apple .paxit-service-light .paxit-feature-list li {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+}
+
+@media (max-width: 700px) {
+  #pax-it-consulting-apple .paxit-inner,
+  #pax-it-consulting-apple .paxit-inner-hero,
+  #pax-it-consulting-apple .paxit-contact-inner {
+    padding-inline: 16px !important;
+  }
+
+  /* Natural phone typography — override oversized clamp() */
+  #pax-it-consulting-apple .paxit-display {
+    font-size: clamp(34px, 10.2vw, 46px) !important;
+    line-height: 1.05 !important;
+    letter-spacing: -0.04em !important;
+    max-width: none !important;
+  }
+
+  #pax-it-consulting-apple .paxit-title,
+  #pax-it-consulting-apple .paxit-service-title,
+  #pax-it-consulting-apple .paxit-contact-title {
+    font-size: clamp(28px, 8.4vw, 38px) !important;
+    line-height: 1.08 !important;
+    letter-spacing: -0.035em !important;
+    max-width: none !important;
+  }
+
+  #pax-it-consulting-apple .paxit-hero-copy,
+  #pax-it-consulting-apple .paxit-service-text,
+  #pax-it-consulting-apple .paxit-lead,
+  #pax-it-consulting-apple .paxit-copy,
+  #pax-it-consulting-apple .paxit-faq-item p,
+  #pax-it-consulting-apple .paxit-contact-copy {
+    max-width: none !important;
+    font-size: 17px !important;
+    line-height: 1.47 !important;
+  }
+
+  #pax-it-consulting-apple .paxit-actions {
+    width: 100% !important;
+    align-items: stretch !important;
+  }
+
+  #pax-it-consulting-apple .paxit-button {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  #pax-it-consulting-apple .paxit-hero,
+  #pax-it-consulting-apple .paxit-metrics-section,
+  #pax-it-consulting-apple .paxit-service,
+  #pax-it-consulting-apple .paxit-deliverables,
+  #pax-it-consulting-apple .paxit-approach,
+  #pax-it-consulting-apple .paxit-tech,
+  #pax-it-consulting-apple .paxit-fit,
+  #pax-it-consulting-apple .paxit-stats,
+  #pax-it-consulting-apple .paxit-faq,
+  #pax-it-consulting-apple .paxit-contact {
+    padding-top: clamp(56px, 12vh, 88px) !important;
+    padding-bottom: clamp(56px, 12vh, 88px) !important;
+  }
+
+  #pax-it-consulting-apple .paxit-service-index svg {
+    width: min(140px, 42vw) !important;
+    height: auto !important;
+  }
+
+  #pax-it-consulting-apple .paxit-metric,
+  #pax-it-consulting-apple .paxit-deliverable,
+  #pax-it-consulting-apple .paxit-faq-item,
+  #pax-it-consulting-apple .paxit-fit-card,
+  #pax-it-consulting-apple .paxit-stat {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+}
+
+@media (max-width: 390px) {
+  #pax-it-consulting-apple .paxit-display {
+    font-size: 32px !important;
+  }
+
+  #pax-it-consulting-apple .paxit-title,
+  #pax-it-consulting-apple .paxit-service-title,
+  #pax-it-consulting-apple .paxit-contact-title {
+    font-size: 26px !important;
+  }
+
+  #pax-it-consulting-apple .paxit-inner,
+  #pax-it-consulting-apple .paxit-inner-hero,
+  #pax-it-consulting-apple .paxit-contact-inner {
+    padding-inline: 14px !important;
+  }
+}

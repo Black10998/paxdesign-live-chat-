@@ -1,0 +1,131 @@
+name: Deploy Apple product mobile + Login
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-product-mobile-login-cfc9'
+    paths:
+      - '.github/triggers/deploy-apple-product-mobile-login'
+      - '.github/workflows/deploy-apple-product-mobile-login.yml'
+      - 'navein/assets/css/apple-app-page.css'
+      - 'navein/assets/css/apple-it-consulting.css'
+      - 'navein/assets/css/apple-sticky-header.css'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+      - 'paxdesign-booking/assets/customer-auth/css/pdx-auth.css'
+      - 'paxdesign-booking/paxdesign-booking.php'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy product mobile + Login assets
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          PLUGIN="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$PLUGIN/assets/customer-auth/css")"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-app-page.css \
+            navein/assets/css/apple-it-consulting.css \
+            navein/assets/css/apple-sticky-header.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/assets/customer-auth/css/pdx-auth.css \
+            "${REMOTE}:${PLUGIN}/assets/customer-auth/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/paxdesign-booking.php \
+            "${REMOTE}:${PLUGIN}/"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
+
+          echo "Deployed Apple product mobile + Login button assets"
+
+      - name: Verify live pages
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          for path in \
+            app-entwicklung \
+            advanced-website-systems \
+            softwareentwicklung \
+            webentwicklung \
+            it-consulting
+          do
+            code=$(curl -sS -o "/tmp/${path}.html" -w '%{http_code}' \
+              "https://paxdesign.at/${path}/?n=${stamp}")
+            echo "PAGE /${path}/ -> $code"
+            test "$code" = "200"
+          done
+
+          CSS_APP=$(curl -sS -o /tmp/apple-app-page.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-app-page.css?ver=1.2.3&n=${stamp}")
+          CSS_IT=$(curl -sS -o /tmp/apple-it-consulting.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-it-consulting.css?ver=1.2.3&n=${stamp}")
+          CSS_HDR=$(curl -sS -o /tmp/apple-sticky-header.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-sticky-header.css?ver=1.2.3&n=${stamp}")
+          CSS_AUTH=$(curl -sS -o /tmp/pdx-auth.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/customer-auth/css/pdx-auth.css?ver=3.173.7&n=${stamp}")
+
+          echo "CSS app=$CSS_APP it=$CSS_IT hdr=$CSS_HDR auth=$CSS_AUTH"
+          test "$CSS_APP" = "200"
+          test "$CSS_IT" = "200"
+          test "$CSS_HDR" = "200"
+          test "$CSS_AUTH" = "200"
+
+          grep -Eq "padding-left: 16px|Full-width content rail|border-radius: 16px" /tmp/apple-app-page.css
+          grep -Eq "Kill Elementor nested boxed|paxit-display" /tmp/apple-it-consulting.css
+          grep -Eq "Apple Login / Sign Up|border-radius: 980px" /tmp/apple-sticky-header.css
+          grep -Eq "border-radius: 980px|transform: scale\\(0\\.98\\)" /tmp/pdx-auth.css
+
+          grep -Eq "navein-apple-app-page|apple-app-page.css" /tmp/app-entwicklung.html
+          grep -Eq "navein-apple-it-consulting|apple-it-consulting.css" /tmp/it-consulting.html
+          grep -Eq "navein-apple-sticky-header|Apple Login|background:#000" /tmp/app-entwicklung.html
+
+          echo "Apple product mobile + Login verification passed."

@@ -202,15 +202,18 @@
   }
 
   body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-header-btn,
-  body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-signup-btn {
+  body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-signup-btn,
+  body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-trigger {
     transition:
-      transform 0.35s var(--dtr-apple-header-ease),
+      transform 0.3s var(--dtr-apple-header-ease),
       background-color 0.25s ease,
-      opacity 0.25s ease;
+      opacity 0.25s ease,
+      color 0.25s ease;
   }
 
-  body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-header-global .pdx-auth-header-btn {
-    transform: scale(0.96);
+  body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-header-global .pdx-auth-header-btn,
+  body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-header-global .pdx-auth-trigger {
+    transform: scale(0.97);
   }
 
   /* Mega panel sits cleanly under the glass bar */
@@ -270,13 +273,129 @@
   }
 }
 
+/* =========================================================
+   Apple Login / Sign Up — premium minimal header control
+   Beats Customizer glass / glow styles on the white header.
+   ========================================================= */
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-trigger,
+html body.dtr-apple-sticky-header #pdx-auth-bar button.pdx-auth-trigger,
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-signup-btn,
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-header-btn,
+html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger,
+html body.dtr-apple-sticky-header header #pdx-auth-bar button.pdx-auth-trigger,
+html body.dtr-apple-sticky-header header button.pdx-auth-trigger {
+  position: relative !important;
+  top: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  min-width: 0 !important;
+  width: auto !important;
+  min-height: 32px !important;
+  height: 32px !important;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-radius: 980px !important;
+  background: #000 !important;
+  background-color: #000 !important;
+  background-image: none !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, sans-serif !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  transition:
+    background-color 0.25s var(--dtr-apple-header-ease),
+    transform 0.25s var(--dtr-apple-header-ease),
+    opacity 0.25s ease !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-trigger::before,
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-trigger::after,
+html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger::before,
+html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger::after,
+html body.dtr-apple-sticky-header header button.pdx-auth-trigger::before,
+html body.dtr-apple-sticky-header header button.pdx-auth-trigger::after {
+  display: none !important;
+  content: none !important;
+  opacity: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-trigger:hover,
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-trigger:focus,
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-signup-btn:hover,
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-signup-btn:focus,
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-header-btn:hover,
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-header-btn:focus,
+html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger:hover,
+html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger:focus {
+  background: #1d1d1f !important;
+  background-color: #1d1d1f !important;
+  background-image: none !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
+  transform: scale(0.98);
+}
+
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-trigger:active,
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-signup-btn:active,
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-header-btn:active {
+  background: #000 !important;
+  transform: scale(0.96);
+  opacity: 0.92;
+}
+
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-trigger svg,
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-trigger-icon svg {
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  color: currentColor !important;
+  fill: currentColor !important;
+  opacity: 0.92;
+}
+
+html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-trigger-label {
+  color: inherit !important;
+  font: inherit !important;
+}
+
+@media (max-width: 992px) {
+  html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-trigger,
+  html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
+  html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-header-btn {
+    min-height: 30px !important;
+    height: 30px !important;
+    padding: 0 12px !important;
+    font-size: 11px !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   body.dtr-apple-sticky-header #dtr-header-global,
   body.dtr-apple-sticky-header #dtr-header-global.header-fixed,
   body.dtr-apple-sticky-header #dtr-topbar,
   body.dtr-apple-sticky-header #dtr-header-global .dtr-logo img,
   body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a,
-  body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-header-btn {
+  body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-header-btn,
+  html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-trigger,
+  html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-signup-btn {
     transition: none !important;
   }
 }

@@ -655,10 +655,17 @@ body.page-template-template-apple-webentwicklung-php .dtr-page-title__section {
     text-align: center;
   }
 
+  /* Full-width content rail — one gutter, no nested width calc */
+  .pax-aap-wrap,
+  .pax-aap-wrap--narrow,
   .pax-aap-hero__inner {
-    width: min(640px, calc(100% - 40px));
-    margin: 0 auto;
-    padding: 0;
+    width: 100%;
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 22px;
+    padding-right: 22px;
+    box-sizing: border-box;
   }
 
   .pax-aap-hero__lede {
@@ -673,17 +680,32 @@ body.page-template-template-apple-webentwicklung-php .dtr-page-title__section {
   .pax-aap-hero__stage {
     min-height: 340px;
     order: -1;
+    width: 100%;
+    padding-right: 0;
+    justify-content: center;
   }
 
   .pax-aap-feature__grid,
   .pax-aap-feature__grid--reverse {
     grid-template-columns: 1fr;
-    gap: 36px;
+    gap: 28px;
   }
 
   .pax-aap-feature__grid--reverse .pax-aap-feature__copy,
   .pax-aap-feature__grid--reverse .pax-aap-feature__visual {
     order: initial;
+  }
+
+  /* Visuals read as section media, not inset cards */
+  .pax-aap-feature__visual {
+    width: 100%;
+    min-height: 0;
+  }
+
+  .pax-aap-visual {
+    width: 100%;
+    max-width: none;
+    border-radius: 20px;
   }
 
   .pax-aap-strip__row {
@@ -693,7 +715,7 @@ body.page-template-template-apple-webentwicklung-php .dtr-page-title__section {
   .pax-aap-strip__item,
   .pax-aap-strip__item:not(:first-child),
   .pax-aap-strip__item:last-child {
-    padding: 24px 0;
+    padding: 22px 0;
     border-right: 0;
     border-bottom: 1px solid var(--aap-line);
   }
@@ -712,11 +734,52 @@ body.page-template-template-apple-webentwicklung-php .dtr-page-title__section {
   .pax-aap-wrap,
   .pax-aap-wrap--narrow,
   .pax-aap-hero__inner {
-    width: calc(100% - 32px);
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .pax-aap-hero {
+    padding-top: 64px;
+    padding-bottom: 40px;
+  }
+
+  .pax-aap-display {
+    font-size: clamp(34px, 10.5vw, 48px);
+    letter-spacing: -0.04em;
+    line-height: 1.05;
+  }
+
+  .pax-aap-lede,
+  .pax-aap-feature__text,
+  .pax-aap-cta__text {
+    font-size: 17px;
+    line-height: 1.47;
+  }
+
+  .pax-aap-feature,
+  .pax-aap-band,
+  .pax-aap-intro,
+  .pax-aap-process,
+  .pax-aap-cta {
+    padding-top: clamp(56px, 12vh, 88px);
+    padding-bottom: clamp(56px, 12vh, 88px);
+  }
+
+  .pax-aap-visual {
+    border-radius: 16px;
+  }
+
+  .pax-aap-visual__mark {
+    padding: 8px 12px;
+    font-size: 12px;
   }
 
   .pax-aap-device--phone {
     width: min(210px, 64vw);
+  }
+
+  .pax-aap-desktop {
+    border-radius: 14px;
   }
 }
 
@@ -1666,14 +1729,37 @@ body.page-template-template-apple-webentwicklung-php .dtr-page-title__section {
 
 /* Software responsive */
 @media (max-width: 960px) {
+  /* Avoid double side padding (hero + wrap) */
+  .pax-sw-hero {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .pax-sw-hero__inner {
+    width: 100%;
+    padding-left: 22px;
+    padding-right: 22px;
+    box-sizing: border-box;
+  }
+
   .pax-sw-chapter__grid,
   .pax-sw-chapter__grid--flip {
     grid-template-columns: 1fr;
+    gap: 28px;
   }
 
   .pax-sw-chapter__grid--flip .pax-sw-chapter__meta,
   .pax-sw-chapter__grid--flip .pax-sw-panel {
     order: initial;
+  }
+
+  .pax-sw-panel {
+    border-radius: 20px;
+    min-height: 240px;
+  }
+
+  .pax-sw-panel--arch {
+    padding: 28px;
   }
 
   .pax-sw-triptych {
@@ -1683,6 +1769,8 @@ body.page-template-template-apple-webentwicklung-php .dtr-page-title__section {
   .pax-sw-triptych__col {
     border-right: 0;
     border-bottom: 1px solid var(--aap-line);
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .pax-sw-triptych__col:last-child {
@@ -1705,6 +1793,19 @@ body.page-template-template-apple-webentwicklung-php .dtr-page-title__section {
 }
 
 @media (max-width: 720px) {
+  .pax-sw-hero__inner {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .pax-sw-hero__title {
+    font-size: clamp(36px, 11vw, 52px);
+  }
+
+  .pax-sw-hero__lede {
+    font-size: 17px;
+  }
+
   .pax-sw-orbit {
     width: min(360px, 92vw);
   }
@@ -1722,6 +1823,18 @@ body.page-template-template-apple-webentwicklung-php .dtr-page-title__section {
   .pax-sw-orbit__core {
     width: 96px;
     height: 96px;
+  }
+
+  .pax-sw-panel {
+    border-radius: 16px;
+  }
+
+  .pax-sw-panel--arch {
+    padding: 22px;
+  }
+
+  .pax-sw-chapter__title {
+    font-size: clamp(28px, 8vw, 40px);
   }
 }
 
@@ -2161,22 +2274,89 @@ body.page-template-template-apple-webentwicklung-php .dtr-page-title__section {
     min-height: 0;
     padding-bottom: 48px;
   }
+
   .pax-web-hero__copy {
-    width: min(640px, calc(100% - 48px));
-    margin: 0 auto;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding-left: 22px;
+    padding-right: 22px;
+    box-sizing: border-box;
   }
+
+  /* Stage full-bleed — no inset “mock card” gutter */
   .pax-web-hero__stage {
-    min-height: 340px;
-    padding: 0 24px;
+    min-height: 300px;
+    padding: 0;
+    width: 100%;
   }
-  .pax-web-phone { right: 28px; }
-  .pax-web-offer__grid { grid-template-columns: 1fr; gap: 8px; }
-  .pax-web-pillars { grid-template-columns: 1fr; }
+
+  .pax-web-browser {
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-width: none;
+  }
+
+  .pax-web-phone {
+    right: 16px;
+  }
+
+  .pax-web-offer__grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .pax-web-pillars {
+    grid-template-columns: 1fr;
+  }
+
   .pax-web-pillars__col {
     border-right: 0;
     border-bottom: 1px solid var(--aap-line);
+    padding-left: 22px;
+    padding-right: 22px;
   }
-  .pax-web-pillars__col:last-child { border-bottom: 0; }
+
+  .pax-web-pillars__col:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .pax-web-hero__copy {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .pax-web-hero__title {
+    font-size: clamp(34px, 10.5vw, 46px);
+  }
+
+  .pax-web-hero__lede,
+  .pax-web-band__text,
+  .pax-web-offer__body p,
+  .pax-web-cta__text {
+    font-size: 17px;
+  }
+
+  .pax-web-phone {
+    right: 12px;
+    transform: scale(0.92);
+    transform-origin: bottom right;
+  }
+
+  .pax-web-browser {
+    border-radius: 12px 12px 0 0;
+  }
+
+  .pax-web-pillars__col {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .pax-web-tech__list li {
+    padding: 10px 14px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
