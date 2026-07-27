@@ -2,7 +2,7 @@
 /**
  * Navein WordPress Theme.
  * @package NaveinTheme
- * @version 1.0.5
+ * @version 1.0.6
  */
 
 // Exit if accessed directly
@@ -233,11 +233,13 @@ function navein_custom_scripts_styles() {
 		$theme_version
 	);
 
-	// Apple-inspired product pages (App-Entwicklung + Advanced Website Systems)
+	// Apple-inspired product pages
 	$is_apple_product_page = is_page_template( 'template-apple-app-entwicklung.php' )
 		|| is_page_template( 'template-apple-advanced-website-systems.php' )
+		|| is_page_template( 'template-apple-softwareentwicklung.php' )
 		|| is_page( 'app-entwicklung' )
-		|| is_page( 'advanced-website-systems' );
+		|| is_page( 'advanced-website-systems' )
+		|| is_page( 'softwareentwicklung' );
 	if ( $is_apple_product_page ) {
 		wp_enqueue_style(
 			'navein-apple-app-page',
@@ -272,6 +274,7 @@ if ( ! function_exists( 'navein_force_apple_product_templates' ) ) :
 		$map = array(
 			'app-entwicklung'            => 'template-apple-app-entwicklung.php',
 			'advanced-website-systems'   => 'template-apple-advanced-website-systems.php',
+			'softwareentwicklung'        => 'template-apple-softwareentwicklung.php',
 		);
 		foreach ( $map as $slug => $file ) {
 			if ( is_page( $slug ) ) {

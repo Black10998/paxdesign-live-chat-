@@ -1,12 +1,14 @@
 /**
  * Apple-inspired product pages
- * Scoped to App-Entwicklung + Advanced Website Systems templates
+ * Scoped to App-Entwicklung, Advanced Website Systems, Softwareentwicklung
  */
 
 body.page-template-template-apple-app-entwicklung,
 body.page-template-template-apple-app-entwicklung-php,
 body.page-template-template-apple-advanced-website-systems,
-body.page-template-template-apple-advanced-website-systems-php {
+body.page-template-template-apple-advanced-website-systems-php,
+body.page-template-template-apple-softwareentwicklung,
+body.page-template-template-apple-softwareentwicklung-php {
   --aap-black: #000000;
   --aap-ink: #1d1d1f;
   --aap-muted: #86868b;
@@ -26,7 +28,9 @@ body.page-template-template-apple-advanced-website-systems-php {
 body.page-template-template-apple-app-entwicklung #dtr-main-wrapper.pax-apple-app-wrap,
 body.page-template-template-apple-app-entwicklung-php #dtr-main-wrapper.pax-apple-app-wrap,
 body.page-template-template-apple-advanced-website-systems #dtr-main-wrapper.pax-apple-app-wrap,
-body.page-template-template-apple-advanced-website-systems-php #dtr-main-wrapper.pax-apple-app-wrap {
+body.page-template-template-apple-advanced-website-systems-php #dtr-main-wrapper.pax-apple-app-wrap,
+body.page-template-template-apple-softwareentwicklung #dtr-main-wrapper.pax-apple-app-wrap,
+body.page-template-template-apple-softwareentwicklung-php #dtr-main-wrapper.pax-apple-app-wrap {
   max-width: none;
   width: 100%;
   padding: 0;
@@ -37,7 +41,9 @@ body.page-template-template-apple-advanced-website-systems-php #dtr-main-wrapper
 body.page-template-template-apple-app-entwicklung .pax-apple-app,
 body.page-template-template-apple-app-entwicklung-php .pax-apple-app,
 body.page-template-template-apple-advanced-website-systems .pax-apple-app,
-body.page-template-template-apple-advanced-website-systems-php .pax-apple-app {
+body.page-template-template-apple-advanced-website-systems-php .pax-apple-app,
+body.page-template-template-apple-softwareentwicklung .pax-apple-app,
+body.page-template-template-apple-softwareentwicklung-php .pax-apple-app {
   margin: 0;
   padding: 0;
   overflow: hidden;
@@ -47,10 +53,14 @@ body.page-template-template-apple-app-entwicklung .dtr-page-title--section,
 body.page-template-template-apple-app-entwicklung-php .dtr-page-title--section,
 body.page-template-template-apple-advanced-website-systems .dtr-page-title--section,
 body.page-template-template-apple-advanced-website-systems-php .dtr-page-title--section,
+body.page-template-template-apple-softwareentwicklung .dtr-page-title--section,
+body.page-template-template-apple-softwareentwicklung-php .dtr-page-title--section,
 body.page-template-template-apple-app-entwicklung .dtr-page-title__section,
 body.page-template-template-apple-app-entwicklung-php .dtr-page-title__section,
 body.page-template-template-apple-advanced-website-systems .dtr-page-title__section,
-body.page-template-template-apple-advanced-website-systems-php .dtr-page-title__section {
+body.page-template-template-apple-advanced-website-systems-php .dtr-page-title__section,
+body.page-template-template-apple-softwareentwicklung .dtr-page-title__section,
+body.page-template-template-apple-softwareentwicklung-php .dtr-page-title__section {
   display: none !important;
   visibility: hidden !important;
   height: 0 !important;
@@ -838,3 +848,55 @@ body.page-template-template-apple-advanced-website-systems-php .dtr-page-title__
     display: none;
   }
 }
+
+
+/* Code editor visual (Softwareentwicklung hero) */
+.pax-aap-code {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 4px;
+  height: 100%;
+  justify-content: center;
+}
+
+.pax-aap-code__line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 10px;
+}
+
+.pax-aap-code__line--indent {
+  padding-left: 28px;
+}
+
+.pax-aap-code__line i,
+.pax-aap-code__line b,
+.pax-aap-code__line em {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  font-style: normal;
+  font-weight: normal;
+}
+
+.pax-aap-code__line i {
+  width: 52px;
+  background: rgba(0, 113, 227, 0.55);
+}
+
+.pax-aap-code__line b {
+  width: 88px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.pax-aap-code__line em {
+  width: 64px;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.pax-aap-code__line:nth-child(2) i { width: 40px; }
+.pax-aap-code__line:nth-child(3) b { width: 110px; }
+.pax-aap-code__line:nth-child(5) em { width: 48px; }
+.pax-aap-code__line:nth-child(6) i { width: 36px; background: rgba(40, 200, 64, 0.45); }
