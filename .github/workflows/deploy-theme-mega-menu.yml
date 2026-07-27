@@ -133,7 +133,7 @@ jobs:
           test "$CSS" = "200"
           test "$JS" = "200"
           test "$HOME_HTML" = "200"
-          rg -q "dtr-mega-blue|dtr-mega-panel" /tmp/mega-menu.css
-          rg -q "dtr-mega-panel|retuneSuperfish|clampPanel" /tmp/mega-menu.js
-          rg -q "navein-mega-menu|dtr-has-mega|dtr-mega-panel|dtr-mega-icon" /tmp/pax-home.html
+          grep -Eq "dtr-mega-blue|dtr-mega-panel" /tmp/mega-menu.css
+          grep -Eq "dtr-mega-panel|retuneSuperfish|clampPanel" /tmp/mega-menu.js
+          grep -Eq "navein-mega-menu|dtr-has-mega|dtr-mega-panel|dtr-mega-icon" /tmp/pax-home.html
           echo "Live mega menu verification passed."
