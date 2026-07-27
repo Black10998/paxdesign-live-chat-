@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - 'cursor/apple-footer-redesign-cfc9'
+      - 'cursor/apple-footer-contrast-cfc9'
     paths:
       - '.github/triggers/deploy-apple-footer'
       - '.github/workflows/deploy-apple-footer.yml'

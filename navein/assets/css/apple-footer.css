@@ -132,6 +132,22 @@ body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af__trust
   color: var(--af-ink) !important;
 }
 
+/* Modal sits in footer DOM — keep readable dark type on white panel */
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af-github-modal__title,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af-github-modal__icon {
+  color: var(--af-ink) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af-github-modal__badge,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af-github-modal__text,
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af-github-modal__close {
+  color: var(--af-muted) !important;
+}
+
+body.dtr-apple-footer #dtr-footer-section.dtr-footer-section-wrap .pax-af-github-modal__btn {
+  color: #fff !important;
+}
+
 body.dtr-apple-footer #dtr-footer-section > .container {
   max-width: none;
   width: 100%;
@@ -793,3 +809,5 @@ body.dtr-apple-footer #take-to-top {
     opacity: 1;
   }
 }
+
+/* contrast fix 1.2.1 */
