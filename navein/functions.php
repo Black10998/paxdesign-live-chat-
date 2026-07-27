@@ -296,6 +296,27 @@ function navein_custom_scripts_styles() {
 			array( 'navein-style' ),
 			$theme_version
 		);
+		// Beat Customizer non-home #dtr-main-wrapper 92vw / side-padding box.
+		wp_add_inline_style(
+			'navein-apple-app-page',
+			'html body.page-template-template-apple-app-entwicklung #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-app-entwicklung-php #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-advanced-website-systems #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-advanced-website-systems-php #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-softwareentwicklung #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-softwareentwicklung-php #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-wartung-support #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-wartung-support-php #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-webentwicklung #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-webentwicklung-php #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-app-entwicklung #dtr-main-wrapper.pax-apple-app-wrap,' .
+			'html body.page-template-template-apple-advanced-website-systems #dtr-main-wrapper.pax-apple-app-wrap,' .
+			'html body.page-template-template-apple-softwareentwicklung #dtr-main-wrapper.pax-apple-app-wrap,' .
+			'html body.page-template-template-apple-webentwicklung #dtr-main-wrapper.pax-apple-app-wrap{' .
+			'width:100%!important;max-width:none!important;margin:0!important;' .
+			'padding:0!important;padding-left:0!important;padding-right:0!important;' .
+			'box-sizing:border-box!important;}'
+		);
 		wp_enqueue_script(
 			'navein-apple-app-page',
 			get_template_directory_uri() . '/assets/js/apple-app-page.js',
@@ -313,6 +334,14 @@ function navein_custom_scripts_styles() {
 			get_template_directory_uri() . '/assets/css/apple-it-consulting.css',
 			array( 'navein-style', 'navein-apple-sticky-header' ),
 			$theme_version
+		);
+		wp_add_inline_style(
+			'navein-apple-it-consulting',
+			'html body.page-id-2798 #dtr-main-wrapper,' .
+			'html body.page-it-consulting #dtr-main-wrapper{' .
+			'width:100%!important;max-width:none!important;margin:0!important;' .
+			'padding:0!important;padding-left:0!important;padding-right:0!important;' .
+			'box-sizing:border-box!important;}'
 		);
 	}
 

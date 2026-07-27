@@ -1,0 +1,108 @@
+name: Deploy Apple product mobile full-bleed
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-product-mobile-fullbleed-cfc9'
+    paths:
+      - '.github/triggers/deploy-apple-product-mobile-fullbleed'
+      - '.github/workflows/deploy-apple-product-mobile-fullbleed.yml'
+      - 'navein/assets/css/apple-app-page.css'
+      - 'navein/assets/css/apple-it-consulting.css'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+      - 'navein/template-parts/page-title/page-header-page.php'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy full-bleed mobile assets
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/template-parts/page-title")"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-app-page.css \
+            navein/assets/css/apple-it-consulting.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          if [ -f navein/template-parts/page-title/page-header-page.php ]; then
+            rsync -az -e "ssh ${SSH_OPTS[*]}" \
+              navein/template-parts/page-title/page-header-page.php \
+              "${REMOTE}:${THEME}/template-parts/page-title/"
+          fi
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
+
+          echo "Deployed Apple product mobile full-bleed"
+
+      - name: Verify live full-bleed CSS
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          for path in app-entwicklung advanced-website-systems softwareentwicklung webentwicklung it-consulting; do
+            code=$(curl -sS -o "/tmp/${path}.html" -w '%{http_code}' "https://paxdesign.at/${path}/?n=${stamp}")
+            echo "/${path}/ $code"
+            test "$code" = "200"
+          done
+
+          CSS_APP=$(curl -sS -o /tmp/apple-app-page.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-app-page.css?ver=1.2.5&n=${stamp}")
+          CSS_IT=$(curl -sS -o /tmp/apple-it-consulting.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-it-consulting.css?ver=1.2.5&n=${stamp}")
+          test "$CSS_APP" = "200"
+          test "$CSS_IT" = "200"
+
+          grep -Eq "beat Customizer 92vw|width: 100% !important|calc\\(100% \\+ 44px\\)|Mobile full-bleed reinforcement" /tmp/apple-app-page.css
+          grep -Eq "page-it-consulting|92vw|width: 100% !important" /tmp/apple-it-consulting.css
+          grep -Eq "width:100%!important;max-width:none!important" /tmp/app-entwicklung.html
+          grep -Eq "navein-apple-it-consulting|width:100%!important;max-width:none!important" /tmp/it-consulting.html
+          grep -Eq "apple-app-page.css\\?ver=1.2.5" /tmp/app-entwicklung.html
+          grep -Eq "apple-it-consulting.css\\?ver=1.2.5" /tmp/it-consulting.html
+
+          echo "Apple product mobile full-bleed verification passed."
