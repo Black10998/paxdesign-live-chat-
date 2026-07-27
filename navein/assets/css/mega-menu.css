@@ -305,8 +305,12 @@
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item > a:hover,
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item > a:focus-visible,
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item.current-menu-item > a {
-    background: rgba(0, 0, 0, 0.04);
+    background: transparent;
     color: #000 !important;
+    text-decoration: underline;
+    text-underline-offset: 0.22em;
+    text-decoration-thickness: 1px;
+    transform: none;
   }
 
   .dtr-mega-icon {

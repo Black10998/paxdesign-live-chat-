@@ -248,11 +248,14 @@ body.page-template-template-apple-webentwicklung-php .dtr-page-title__section {
   font-weight: 500;
   letter-spacing: -0.01em;
   text-decoration: none !important;
-  transition: transform 0.25s var(--aap-ease), background-color 0.25s ease, color 0.25s ease, opacity 0.25s ease;
+  transition: none;
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
 }
 
 .pax-aap-btn:hover {
-  transform: scale(1.02);
+  transform: none;
+  text-decoration: underline !important;
 }
 
 .pax-aap-btn--dark {
@@ -278,8 +281,9 @@ body.page-template-template-apple-webentwicklung-php .dtr-page-title__section {
 }
 
 .pax-aap-btn--ghost:hover {
-  opacity: 0.75;
+  opacity: 1;
   transform: none;
+  text-decoration: underline !important;
 }
 
 .pax-aap-hero__stage {
@@ -668,11 +672,14 @@ body.page-template-template-apple-webentwicklung-php .dtr-page-title__section {
   text-decoration: none !important;
   font-size: 15px;
   letter-spacing: -0.01em;
-  transition: color 0.2s ease;
+  transition: none;
+  text-underline-offset: 0.22em;
+  text-decoration-thickness: 1px;
 }
 
 .pax-aap-link:hover {
   color: #fff !important;
+  text-decoration: underline !important;
 }
 
 /* Responsive */

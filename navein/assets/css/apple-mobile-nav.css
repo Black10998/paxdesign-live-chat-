@@ -146,21 +146,21 @@
   }
 
   body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__rail {
-    width: 100px;
+    width: auto;
   }
 
   body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__col {
-    height: 100px;
+    height: auto;
   }
 
   body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__dot--mid-v {
-    border-radius: 5px;
-    height: 35px;
+    border-radius: inherit;
+    height: auto;
   }
 
   body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__dot--mid-h {
-    border-radius: 5px;
-    width: 35px;
+    border-radius: inherit;
+    width: auto;
   }
 
   body.dtr-apple-mobile-nav #dtr-menu-button.is-active .dtr-amnav-burger,
@@ -330,6 +330,9 @@
   .dtr-apple-mnav__toggle:hover,
   .dtr-apple-mnav__toggle:focus-visible {
     color: #000;
+    text-decoration: underline !important;
+    text-underline-offset: 0.22em;
+    text-decoration-thickness: 1px;
   }
 
   .dtr-apple-mnav__chevron {

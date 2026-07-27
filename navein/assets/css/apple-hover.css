@@ -1,0 +1,338 @@
+/**
+ * Apple-style hover interactions (sitewide)
+ * Version: 1.3.7
+ *
+ * No pulse, zoom, bounce, scale, glow, or animated hover motion.
+ * Clickable text elements get a clean underline on hover only.
+ */
+
+:root {
+  --dtr-apple-hover-underline-offset: 0.22em;
+  --dtr-apple-hover-underline-thickness: 1px;
+}
+
+/* --------------------------------------------------------------------------
+   Kill motion / glow / scale on hover & focus for interactive targets
+   -------------------------------------------------------------------------- */
+
+a:hover,
+a:focus,
+a:focus-visible,
+button:hover,
+button:focus,
+button:focus-visible,
+[role="button"]:hover,
+[role="button"]:focus,
+[role="button"]:focus-visible,
+.dtr-btn:hover,
+.dtr-btn:focus,
+.dtr-form-btn:hover,
+.dtr-form-btn:focus,
+.wp-block-button__link:hover,
+.wp-block-button__link:focus,
+input[type="submit"]:hover,
+input[type="submit"]:focus,
+input[type="reset"]:hover,
+input[type="reset"]:focus,
+#submit:hover,
+#submit:focus,
+.pax-home-btn:hover,
+.pax-home-btn:focus,
+.pax-aap-btn:hover,
+.pax-aap-btn:focus,
+.pax-home-service:hover,
+.pax-home-signup-form__submit:hover,
+.pax-af .paxmc-footer-subscribe .Subscribe-btn:hover,
+.pax-af__github-btn:hover,
+.pax-af__trust-list a:hover,
+.pax-af-github-modal__btn:hover,
+.pax-af__contact a:hover,
+.pax-af__links a:hover,
+.pax-af__social a:hover,
+.pax-af__legal-links a:hover,
+.pax-af__brand:hover,
+.dtr-portfolio-item:hover,
+.dtr-post-block:hover,
+.dtr-feature-highlight--boxed:hover,
+.dtr-number-feature:hover,
+.dtr-mega-feature__card:hover,
+.main-navigation .sf-menu a:hover,
+.main-navigation .sf-menu li:hover > a,
+.dtr-apple-mnav__link:hover,
+.dtr-apple-mnav__toggle:hover,
+.dtr-apple-mnav__panel > li > a:hover,
+.dtr-apple-mnav__footer a:hover,
+.pdx-auth-signup-btn:hover,
+.pdx-auth-header-btn:hover,
+.dtr-search-modal-trigger:hover,
+#dtr-menu-button:hover,
+.dtr-hamburger:hover,
+#take-to-top:hover,
+.dtr-social-circle a:hover,
+.dtr-social-square a:hover,
+.dtr-social-default a:hover,
+.wp-block-tag-cloud a:hover,
+.dtr-meta-tags a:hover,
+.widget_nav_menu a:hover,
+.dtr-filter-nav a:hover,
+.dtr-number-nav__item a:hover,
+.dtr-arrow-nav__item a:hover,
+.post-page-numbers:hover,
+.dtr-single-post-nav a:hover {
+  transform: none !important;
+  -webkit-transform: none !important;
+  scale: none !important;
+  translate: none !important;
+  animation: none !important;
+  -webkit-animation: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* Nested hover motion (icons, images, arrows, decorative ::before/::after) */
+a:hover img,
+a:focus img,
+button:hover img,
+.dtr-btn:hover .dtr-btn__icon,
+.dtr-btn:hover .dtr-btn__icon i,
+.dtr-btn:hover .dtr-btn__icon svg,
+.wp-block-button__link:hover::after,
+.dtr-post__button:hover::after,
+.dtr-form-btn:hover::after,
+.dtr-portfolio-item:hover .dtr-portfolio-item__img img,
+.dtr-portfolio-item:hover .dtr-portfolio-item__link,
+.dtr-post-block:hover .dtr-post-block__img-wrapper::before,
+.dtr-post-block:hover .dtr-overlay,
+.dtr-feature-highlight--boxed.dtr-feature-hover--styled:hover::before,
+.dtr-feature-highlight--boxed.dtr-feature-hover--styled:focus::before,
+.dtr-number-feature:hover .dtr-number-feature__link,
+.dtr-single-post-nav a:hover .dtr-single-nav__icon,
+.wp-block-categories a:hover::after,
+.wp-block-archives a:hover::after,
+.pax-home-service:hover .pax-home-service__go,
+.pax-af__social a:hover .pax-af__social-icon,
+.pax-af__github-btn:hover .pax-af__social-icon,
+.pax-af__trust-list a:hover img,
+.main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item > a:hover .dtr-mega-icon,
+.main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item > a:hover .dtr-mega-go,
+.dtr-apple-mnav__panel > li > a:hover .dtr-mega-icon,
+body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__rail,
+body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__col,
+body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__dot--mid-v,
+body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__dot--mid-h {
+  transform: none !important;
+  -webkit-transform: none !important;
+  animation: none !important;
+  -webkit-animation: none !important;
+  scale: none !important;
+  filter: none !important;
+  box-shadow: none !important;
+}
+
+/* No slide / padding nudge on service rows */
+.pax-home-service:hover {
+  padding-left: 2px !important;
+}
+
+/* Mega panel link tiles: no lift / fill motion — underline only */
+.main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item > a:hover,
+.main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item > a:focus-visible {
+  background: transparent !important;
+  transform: none !important;
+}
+
+/* Trust pills / cards: no lift shadow */
+.pax-af__trust-list a:hover {
+  border-color: inherit !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   Apple underline on hover (text-like clickables)
+   -------------------------------------------------------------------------- */
+
+a,
+button,
+[role="button"],
+.dtr-btn,
+.dtr-form-btn,
+.wp-block-button__link,
+input[type="submit"],
+input[type="reset"],
+#submit,
+.pax-home-btn,
+.pax-aap-btn,
+.pax-aap-link,
+.pax-home-service,
+.pax-home-signup-form__submit,
+.pax-home-signup__meta a,
+.pax-home-signup__link,
+.pax-af__links a,
+.pax-af__legal-links a,
+.pax-af__contact a,
+.pax-af__github-btn,
+.pax-af__brand,
+.pax-af__trust-list a,
+.pax-af .paxmc-footer-subscribe .Subscribe-btn,
+.pax-af-github-modal__btn,
+.main-navigation .sf-menu a,
+.dtr-apple-mnav__link,
+.dtr-apple-mnav__toggle,
+.dtr-apple-mnav__panel > li > a,
+.dtr-apple-mnav__footer a,
+.pdx-auth-signup-btn,
+.pdx-auth-header-btn,
+.dtr-filter-nav a,
+.dtr-number-nav__item a,
+.dtr-arrow-nav__item a,
+.post-page-numbers,
+.widget_nav_menu a,
+.wp-block-tag-cloud a,
+.dtr-meta-tags a,
+.dtr-social-default a,
+.slicknav_nav a,
+.dtr-footer-section-wrap a {
+  text-decoration: none;
+  text-underline-offset: var(--dtr-apple-hover-underline-offset);
+  text-decoration-thickness: var(--dtr-apple-hover-underline-thickness);
+  transition: none !important;
+}
+
+a:hover,
+a:focus-visible,
+button:hover,
+button:focus-visible,
+[role="button"]:hover,
+[role="button"]:focus-visible,
+.dtr-btn:hover,
+.dtr-btn:focus-visible,
+.dtr-form-btn:hover,
+.dtr-form-btn:focus-visible,
+.wp-block-button__link:hover,
+.wp-block-button__link:focus-visible,
+input[type="submit"]:hover,
+input[type="submit"]:focus-visible,
+input[type="reset"]:hover,
+input[type="reset"]:focus-visible,
+#submit:hover,
+#submit:focus-visible,
+.pax-home-btn:hover,
+.pax-home-btn:focus-visible,
+.pax-aap-btn:hover,
+.pax-aap-btn:focus-visible,
+.pax-aap-link:hover,
+.pax-aap-link:focus-visible,
+.pax-home-service:hover,
+.pax-home-service:focus-visible,
+.pax-home-signup-form__submit:hover,
+.pax-home-signup-form__submit:focus-visible,
+.pax-home-signup__meta a:hover,
+.pax-home-signup__link:hover,
+.pax-af__links a:hover,
+.pax-af__legal-links a:hover,
+.pax-af__contact a:hover,
+.pax-af__github-btn:hover,
+.pax-af__brand:hover,
+.pax-af__trust-list a:hover,
+.pax-af .paxmc-footer-subscribe .Subscribe-btn:hover,
+.pax-af-github-modal__btn:hover,
+.main-navigation .sf-menu a:hover,
+.main-navigation .sf-menu a:focus-visible,
+.main-navigation .sf-menu li.sfHover > a,
+.dtr-apple-mnav__link:hover,
+.dtr-apple-mnav__toggle:hover,
+.dtr-apple-mnav__panel > li > a:hover,
+.dtr-apple-mnav__footer a:hover,
+.pdx-auth-signup-btn:hover,
+.pdx-auth-header-btn:hover,
+.dtr-filter-nav a:hover,
+.dtr-number-nav__item a:hover,
+.dtr-arrow-nav__item a:hover,
+.post-page-numbers:hover,
+.widget_nav_menu a:hover,
+.wp-block-tag-cloud a:hover,
+.dtr-meta-tags a:hover,
+.dtr-social-default a:hover,
+.slicknav_nav a:hover,
+.dtr-footer-section-wrap a:hover,
+h1 a:hover,
+h2 a:hover,
+h3 a:hover,
+h4 a:hover,
+h5 a:hover,
+h6 a:hover {
+  text-decoration: underline !important;
+  text-underline-offset: var(--dtr-apple-hover-underline-offset);
+  text-decoration-thickness: var(--dtr-apple-hover-underline-thickness);
+  text-decoration-skip-ink: auto;
+}
+
+/* Linked headings: underline the link text, not motion */
+h1 a:hover,
+h2 a:hover,
+h3 a:hover,
+h4 a:hover,
+h5 a:hover,
+h6 a:hover {
+  text-decoration: underline !important;
+}
+
+/* --------------------------------------------------------------------------
+   Icon-only / media controls: no underline (would look broken), no motion
+   -------------------------------------------------------------------------- */
+
+.dtr-logo:hover,
+.dtr-logo:focus-visible,
+a.dtr-logo:hover,
+a.dtr-logo:focus-visible,
+.dtr-search-modal-trigger:hover,
+.dtr-search-modal-trigger:focus-visible,
+#dtr-menu-button:hover,
+#dtr-menu-button:focus-visible,
+.dtr-hamburger:hover,
+.dtr-hamburger:focus-visible,
+#take-to-top:hover,
+#take-to-top:focus-visible,
+.dtr-social-circle a:hover,
+.dtr-social-square a:hover,
+.pax-af__social a:hover,
+.pax-af-github-modal__close:hover,
+.pax-af-github-modal__close:focus-visible {
+  text-decoration: none !important;
+  transform: none !important;
+  animation: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+/* Search / burger: subtle static opacity only (Apple chrome), no animation */
+body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger:hover,
+body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger:focus-visible,
+body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger:hover::after,
+body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger:focus-visible::after {
+  opacity: 0.72 !important;
+  transition: none !important;
+}
+
+/* Ghost / text CTAs: underline instead of opacity fade */
+.pax-home-btn--ghost:hover,
+.pax-home-btn--text:hover,
+.pax-aap-btn--ghost:hover {
+  opacity: 1 !important;
+  text-decoration: underline !important;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  a,
+  button,
+  [role="button"],
+  .dtr-btn,
+  .pax-home-btn,
+  .pax-aap-btn,
+  .pax-home-service {
+    transition: none !important;
+    animation: none !important;
+  }
+}

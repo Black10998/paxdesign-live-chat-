@@ -179,7 +179,14 @@
   }
 
   body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a:hover,
-  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.sfHover > a,
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.sfHover > a {
+    color: #000000 !important;
+    opacity: 1;
+    text-decoration: underline !important;
+    text-underline-offset: 0.22em;
+    text-decoration-thickness: 1px;
+  }
+
   body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.current-menu-item > a,
   body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.current-menu-ancestor > a {
     color: #000000 !important;

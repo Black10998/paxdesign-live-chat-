@@ -383,6 +383,14 @@ function navein_custom_scripts_styles() {
 		wp_enqueue_style( 'navein-rtl-style', get_template_directory_uri() . '/assets/css/rtl.css', array(), $theme_version );
 	}
 
+	// Apple-style hover: underline only — no scale / pulse / glow (load last).
+	wp_enqueue_style(
+		'navein-apple-hover',
+		get_template_directory_uri() . '/assets/css/apple-hover.css',
+		array( 'navein-style', 'navein-apple-sticky-header', 'navein-apple-footer', 'navein-apple-mobile-nav' ),
+		$theme_version
+	);
+
 }
 endif;
 add_action( 'wp_enqueue_scripts', 'navein_custom_scripts_styles', 20 );
