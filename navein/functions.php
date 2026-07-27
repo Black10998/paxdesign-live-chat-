@@ -2,7 +2,7 @@
 /**
  * Navein WordPress Theme.
  * @package NaveinTheme
- * @version 1.1.0
+ * @version 1.1.1
  */
 
 // Exit if accessed directly
@@ -268,6 +268,13 @@ function navein_custom_scripts_styles() {
 			get_template_directory_uri() . '/assets/css/apple-homepage.css',
 			array( 'navein-style' ),
 			$theme_version
+		);
+		wp_add_inline_style(
+			'navein-apple-homepage',
+			'html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,' .
+			'html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn{' .
+			'background:#000!important;background-color:#000!important;background-image:none!important;' .
+			'color:#fff!important;border:0!important;box-shadow:none!important;border-radius:980px!important;}'
 		);
 		wp_enqueue_script(
 			'navein-apple-homepage',

@@ -1,6 +1,5 @@
 /**
- * Complete Apple-origin homepage
- * Scoped to body.home / Apple homepage template
+ * Apple-origin homepage — refined light language
  */
 
 body.home.page-template-template-apple-homepage,
@@ -11,7 +10,6 @@ body.page-template-template-apple-homepage-php {
   --ph-ink: #1d1d1f;
   --ph-muted: #86868b;
   --ph-line: rgba(0, 0, 0, 0.08);
-  --ph-line-light: rgba(255, 255, 255, 0.14);
   --ph-white: #fff;
   --ph-snow: #f5f5f7;
   --ph-blue: #0071e3;
@@ -53,11 +51,15 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 }
 
 .pax-home-wrap--narrow {
-  width: min(820px, calc(100% - 48px));
+  width: min(780px, calc(100% - 48px));
+}
+
+.pax-home-center {
+  text-align: center;
 }
 
 .pax-home-brand {
-  margin: 0 0 18px;
+  margin: 0 0 16px;
   font-family: var(--ph-display);
   font-size: clamp(28px, 4vw, 40px);
   font-weight: 600;
@@ -70,41 +72,37 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 }
 
 .pax-home-eyebrow {
-  margin: 0 0 18px;
-  font-size: 13px;
+  margin: 0 0 16px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ph-muted);
 }
 
-.pax-home-eyebrow--light {
-  color: rgba(255, 255, 255, 0.5);
-}
-
 .pax-home-display {
   margin: 0 0 18px;
   font-family: var(--ph-display);
-  font-size: clamp(40px, 6.5vw, 68px);
+  font-size: clamp(36px, 5.8vw, 64px);
   font-weight: 600;
   letter-spacing: -0.04em;
   line-height: 1.05;
   color: var(--ph-ink);
 }
 
-.pax-home-display--light {
-  color: #f5f5f7;
-}
-
 .pax-home-lede {
   margin: 0 0 28px;
-  max-width: 36em;
-  font-size: clamp(17px, 1.8vw, 21px);
+  max-width: 34em;
+  font-size: clamp(17px, 1.7vw, 21px);
   line-height: 1.45;
   color: var(--ph-muted);
 }
 
-/* Buttons — every CTA */
+.pax-home-lede--center {
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .pax-home-actions {
   display: flex;
   flex-wrap: wrap;
@@ -120,14 +118,17 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 48px;
-  padding: 0 22px;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
   border-radius: 980px;
-  font-size: 16px;
+  font: inherit;
+  font-size: 15px;
   font-weight: 500;
   letter-spacing: -0.01em;
   text-decoration: none !important;
-  transition: transform 0.25s var(--ph-ease), background-color 0.25s ease, color 0.25s ease, opacity 0.25s ease;
+  cursor: pointer;
+  transition: transform 0.25s var(--ph-ease), background-color 0.25s ease, opacity 0.25s ease;
 }
 
 .pax-home-btn:hover {
@@ -146,11 +147,9 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 
 .pax-home-btn--dark:hover {
   background: #1d1d1f;
-  color: #fff !important;
 }
 
 .pax-home-btn--ghost,
-.pax-home-btn--ghost-light,
 .pax-home-btn--text {
   background: transparent;
   padding-left: 8px;
@@ -161,26 +160,20 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
   color: var(--ph-blue-soft) !important;
 }
 
-.pax-home-btn--ghost-light {
-  color: #2997ff !important;
-}
-
 .pax-home-btn--text {
   color: var(--ph-blue) !important;
 }
 
 .pax-home-btn--ghost:hover,
-.pax-home-btn--ghost-light:hover,
 .pax-home-btn--text:hover {
   opacity: 0.75;
   transform: none;
 }
 
-/* Reveal */
 [data-ph-reveal] {
   opacity: 0;
-  transform: translate3d(0, 28px, 0);
-  transition: opacity 0.9s var(--ph-ease), transform 0.9s var(--ph-ease);
+  transform: translate3d(0, 24px, 0);
+  transition: opacity 0.85s var(--ph-ease), transform 0.85s var(--ph-ease);
 }
 
 [data-ph-reveal].is-in {
@@ -191,19 +184,18 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 /* Hero */
 .pax-home-hero {
   position: relative;
-  min-height: min(94vh, 980px);
+  min-height: min(92vh, 920px);
   display: flex;
   align-items: flex-end;
-  padding: clamp(120px, 18vh, 180px) 0 clamp(56px, 8vh, 88px);
+  padding: clamp(120px, 16vh, 170px) 0 clamp(64px, 9vh, 96px);
   overflow: hidden;
   color: #fff;
-  background: #000;
+  background: #111;
 }
 
 .pax-home-hero__media {
   position: absolute;
   inset: 0;
-  z-index: 0;
 }
 
 .pax-home-hero__media img {
@@ -216,9 +208,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 .pax-home-hero__veil {
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0.72) 48%, rgba(0, 0, 0, 0.94) 100%),
-    radial-gradient(ellipse 70% 50% at 75% 18%, rgba(0, 113, 227, 0.22), transparent 60%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.2) 0%, rgba(0, 0, 0, 0.55) 45%, rgba(0, 0, 0, 0.82) 100%);
 }
 
 .pax-home-hero__inner {
@@ -229,10 +219,10 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 }
 
 .pax-home-hero__title {
-  margin: 0 0 22px;
-  max-width: 13ch;
+  margin: 0 0 20px;
+  max-width: 12ch;
   font-family: var(--ph-display);
-  font-size: clamp(46px, 7.8vw, 84px);
+  font-size: clamp(44px, 7.2vw, 80px);
   font-weight: 600;
   letter-spacing: -0.045em;
   line-height: 1.02;
@@ -240,50 +230,33 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 }
 
 .pax-home-hero__lede {
-  margin: 0 0 34px;
+  margin: 0 0 32px;
   max-width: 34em;
-  font-size: clamp(18px, 2vw, 22px);
+  font-size: clamp(18px, 2vw, 21px);
   line-height: 1.45;
-  color: rgba(255, 255, 255, 0.66);
+  color: rgba(255, 255, 255, 0.72);
 }
 
-.pax-home-tags {
-  list-style: none;
-  margin: 36px 0 0;
-  padding: 22px 0 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 22px;
-  border-top: 1px solid var(--ph-line-light);
+/* Statement */
+.pax-home-statement {
+  padding: clamp(72px, 11vh, 110px) 0;
+  background: var(--ph-snow);
 }
 
-.pax-home-tags li {
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.48);
-}
-
-/* Manifesto */
-.pax-home-manifesto {
-  padding: clamp(88px, 14vh, 140px) 0;
-  background: #000;
-}
-
-.pax-home-manifesto__text {
+.pax-home-statement__text {
   margin: 0;
   font-family: var(--ph-display);
-  font-size: clamp(28px, 4.6vw, 48px);
+  font-size: clamp(26px, 4vw, 40px);
   font-weight: 500;
   letter-spacing: -0.03em;
-  line-height: 1.18;
-  color: #f5f5f7;
+  line-height: 1.2;
+  color: var(--ph-ink);
+  text-align: center;
 }
 
 /* Sections */
 .pax-home-section {
-  padding: clamp(80px, 12vh, 130px) 0;
+  padding: clamp(72px, 11vh, 120px) 0;
   background: #fff;
 }
 
@@ -292,36 +265,35 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 }
 
 .pax-home-section__cta {
-  margin-top: 40px;
+  margin-top: 36px;
 }
 
-/* Service link rows */
+/* Services */
 .pax-home-services {
   width: min(1120px, calc(100% - 48px));
-  margin: 48px auto 0;
+  margin: 40px auto 0;
   border-top: 1px solid var(--ph-line);
 }
 
 .pax-home-service {
   display: grid;
-  grid-template-columns: 72px 1fr auto;
-  gap: 18px;
+  grid-template-columns: 64px 1fr auto;
+  gap: 16px;
   align-items: center;
-  padding: 28px 4px;
+  padding: 26px 2px;
   border-bottom: 1px solid var(--ph-line);
   text-decoration: none !important;
   color: inherit;
-  transition: background-color 0.3s ease, padding-left 0.35s var(--ph-ease);
+  transition: padding-left 0.3s var(--ph-ease);
 }
 
 .pax-home-service:hover {
-  background: rgba(0, 0, 0, 0.02);
-  padding-left: 10px;
+  padding-left: 8px;
 }
 
 .pax-home-service__num {
   font-family: var(--ph-display);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: rgba(0, 0, 0, 0.28);
 }
@@ -330,7 +302,7 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
   display: block;
   margin-bottom: 4px;
   font-family: var(--ph-display);
-  font-size: clamp(22px, 2.5vw, 28px);
+  font-size: clamp(20px, 2.3vw, 26px);
   font-weight: 600;
   letter-spacing: -0.025em;
   color: var(--ph-ink);
@@ -343,8 +315,8 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 }
 
 .pax-home-service__go {
-  font-size: 22px;
   color: var(--ph-blue);
+  font-size: 20px;
   transition: transform 0.3s var(--ph-ease);
 }
 
@@ -352,101 +324,75 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
   transform: translateX(4px);
 }
 
-/* Capabilities */
-.pax-home-caps {
-  padding: clamp(80px, 12vh, 130px) 0 0;
-  background: #000;
-  color: #fff;
-}
-
-.pax-home-caps__grid {
+/* Pillars */
+.pax-home-pillars {
+  width: min(1120px, calc(100% - 48px));
+  margin: 48px auto 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  margin-top: 56px;
-  border-top: 1px solid var(--ph-line-light);
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0;
+  border-top: 1px solid var(--ph-line);
 }
 
-.pax-home-cap {
-  padding: clamp(40px, 6vh, 64px) clamp(24px, 3vw, 40px);
-  border-right: 1px solid var(--ph-line-light);
-  border-bottom: 1px solid var(--ph-line-light);
+.pax-home-pillar {
+  padding: clamp(32px, 5vh, 48px) clamp(18px, 2.5vw, 32px);
+  border-bottom: 1px solid var(--ph-line);
+  border-right: 1px solid var(--ph-line);
 }
 
-.pax-home-cap:nth-child(2n) {
+.pax-home-pillar:nth-child(2n) {
   border-right: 0;
 }
 
-.pax-home-cap span {
+.pax-home-pillar span {
   display: block;
-  margin-bottom: 18px;
-  font-size: 13px;
+  margin-bottom: 14px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--ph-muted);
 }
 
-.pax-home-cap h3 {
-  margin: 0 0 12px;
+.pax-home-pillar h3 {
+  margin: 0 0 10px;
   font-family: var(--ph-display);
-  font-size: clamp(24px, 2.8vw, 32px);
+  font-size: clamp(22px, 2.4vw, 28px);
   font-weight: 600;
-  letter-spacing: -0.03em;
-  color: #fff;
+  letter-spacing: -0.025em;
+  color: var(--ph-ink);
 }
 
-.pax-home-cap p {
-  margin: 0 0 22px;
-  max-width: 32em;
+.pax-home-pillar p {
+  margin: 0 0 18px;
+  max-width: 30em;
   font-size: 16px;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--ph-muted);
 }
 
-/* Projects visual */
-.pax-home-project-stage {
-  width: min(1120px, calc(100% - 48px));
-  margin: 48px auto 0;
+/* Split projects */
+.pax-home-split {
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  gap: clamp(28px, 5vw, 56px);
+  align-items: center;
 }
 
-.pax-home-project-frame {
-  border-radius: 22px;
+.pax-home-split__visual {
+  border-radius: 28px;
   overflow: hidden;
-  background: #1d1d1f;
-  box-shadow: 0 40px 80px rgba(0, 0, 0, 0.18);
+  background: var(--ph-snow);
+  aspect-ratio: 5 / 4;
 }
 
-.pax-home-project-frame__bar {
-  display: flex;
-  gap: 8px;
-  padding: 14px 16px;
-  background: #2c2c2e;
-}
-
-.pax-home-project-frame__bar i {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #48484a;
-  font-style: normal;
-}
-
-.pax-home-project-frame__bar i:nth-child(1) { background: #ff5f57; }
-.pax-home-project-frame__bar i:nth-child(2) { background: #febc2e; }
-.pax-home-project-frame__bar i:nth-child(3) { background: #28c840; }
-
-.pax-home-project-frame__body {
-  aspect-ratio: 16 / 9;
-  background:
-    radial-gradient(ellipse 60% 50% at 20% 20%, rgba(0, 113, 227, 0.28), transparent 55%),
-    linear-gradient(165deg, #1a1a1c, #0a0a0b);
+.pax-home-split__visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 /* About */
-.pax-home-about {
-  padding: clamp(80px, 12vh, 130px) 0;
-  background: var(--ph-snow);
-}
-
 .pax-home-about__grid {
   display: grid;
   grid-template-columns: 1.1fr 0.9fr;
@@ -464,14 +410,14 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
 .pax-home-stats li {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 22px 0;
+  gap: 4px;
+  padding: 20px 0;
   border-bottom: 1px solid var(--ph-line);
 }
 
 .pax-home-stats strong {
   font-family: var(--ph-display);
-  font-size: clamp(40px, 5vw, 56px);
+  font-size: clamp(36px, 4.5vw, 52px);
   font-weight: 600;
   letter-spacing: -0.04em;
   color: var(--ph-ink);
@@ -482,38 +428,23 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
   color: var(--ph-muted);
 }
 
-/* Awards */
-.pax-home-awards {
-  padding: clamp(88px, 13vh, 140px) 0;
-  background: #000;
-  text-align: center;
-}
-
-.pax-home-awards__text {
-  margin: 0 auto;
-  max-width: 32em;
-  font-size: clamp(18px, 2vw, 22px);
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.62);
-}
-
 /* Quotes */
 .pax-home-quotes {
-  margin-top: 48px;
+  margin-top: 40px;
   border-top: 1px solid var(--ph-line);
 }
 
 .pax-home-quotes blockquote {
   margin: 0;
-  padding: 32px 0;
+  padding: 28px 0;
   border-bottom: 1px solid var(--ph-line);
 }
 
 .pax-home-quotes p {
-  margin: 0 0 16px;
-  max-width: 38em;
+  margin: 0 0 14px;
+  max-width: 36em;
   font-family: var(--ph-display);
-  font-size: clamp(22px, 2.8vw, 30px);
+  font-size: clamp(20px, 2.5vw, 28px);
   font-weight: 500;
   letter-spacing: -0.025em;
   line-height: 1.25;
@@ -525,91 +456,296 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
   color: var(--ph-muted);
 }
 
-/* Process */
-.pax-home-process {
-  padding: clamp(88px, 13vh, 140px) 0;
-  background: #000;
-  color: #fff;
-}
-
-.pax-home-process .pax-home-eyebrow {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.pax-home-process .pax-home-display {
-  color: #f5f5f7;
-  margin-bottom: 48px;
-}
-
-.pax-home-process__list {
+/* Steps */
+.pax-home-steps {
   list-style: none;
-  margin: 0 0 48px;
+  margin: 40px 0 40px;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 28px;
+  gap: 24px;
 }
 
-.pax-home-process__list li {
-  padding-top: 24px;
-  border-top: 1px solid var(--ph-line-light);
+.pax-home-steps li {
+  padding-top: 20px;
+  border-top: 1px solid var(--ph-line);
 }
 
-.pax-home-process__list span {
+.pax-home-steps span {
   display: block;
-  margin-bottom: 16px;
-  font-size: 13px;
+  margin-bottom: 14px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--ph-muted);
 }
 
-.pax-home-process__list strong {
+.pax-home-steps strong {
   display: block;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   font-family: var(--ph-display);
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
-  letter-spacing: -0.025em;
-  color: #fff;
+  letter-spacing: -0.02em;
+  color: var(--ph-ink);
 }
 
-.pax-home-process__list p {
+.pax-home-steps p {
   margin: 0;
   font-size: 15px;
   line-height: 1.45;
-  color: rgba(255, 255, 255, 0.58);
+  color: var(--ph-muted);
+}
+
+/* Signup band — Apple "Sign Up." product moment */
+.pax-home-signup {
+  position: relative;
+  isolation: isolate;
+  padding: clamp(96px, 14vh, 160px) 0;
+  overflow: hidden;
+  background: var(--ph-snow);
+}
+
+.pax-home-signup__atmosphere {
+  position: absolute;
+  inset: -20% -10% auto;
+  height: 70%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(55% 70% at 50% 0%, rgba(0, 113, 227, 0.12) 0%, rgba(0, 113, 227, 0) 70%),
+    radial-gradient(40% 55% at 18% 40%, rgba(255, 255, 255, 0.9) 0%, transparent 70%),
+    radial-gradient(42% 55% at 82% 45%, rgba(255, 255, 255, 0.75) 0%, transparent 72%);
+}
+
+.pax-home-signup .pax-home-wrap {
+  position: relative;
+  z-index: 1;
+}
+
+.pax-home-signup .pax-home-display {
+  font-size: clamp(44px, 7vw, 72px);
+}
+
+.pax-home-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.pax-home-signup-form {
+  width: min(440px, 100%);
+  margin: 8px auto 0;
+}
+
+.pax-home-signup-form__shell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 6px 6px 6px 20px;
+  border-radius: 980px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.pax-home-signup-form__shell:focus-within {
+  border-color: rgba(0, 113, 227, 0.45);
+  box-shadow: 0 18px 44px rgba(0, 113, 227, 0.1);
+}
+
+.pax-home-signup-form__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  color: var(--ph-ink);
+}
+
+.pax-home-signup-form__input::placeholder {
+  color: #a1a1a6;
+}
+
+.pax-home-signup-form__submit {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding: 0 20px;
+  border: 0;
+  border-radius: 980px;
+  background: #000;
+  color: #fff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+  transition: background-color 0.25s ease, transform 0.25s var(--ph-ease);
+}
+
+.pax-home-signup-form__submit:hover {
+  background: #1d1d1f;
+  transform: scale(1.02);
+}
+
+.pax-home-signup-form__note {
+  margin: 12px 0 0;
+  font-size: 13px;
+  color: #b42318;
+}
+
+.pax-home-signup__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  justify-content: center;
+  align-items: center;
+  margin: 28px 0 0;
+  font-size: 14px;
+  color: var(--ph-muted);
+}
+
+.pax-home-signup__meta a,
+.pax-home-signup__link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: inherit;
+  color: var(--ph-blue);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.pax-home-signup__meta a:hover,
+.pax-home-signup__link:hover {
+  opacity: 0.75;
 }
 
 /* Final */
 .pax-home-final {
-  padding: clamp(96px, 14vh, 150px) 0;
+  padding: clamp(88px, 13vh, 140px) 0;
   background: #fff;
-  text-align: center;
 }
 
-.pax-home-final .pax-home-lede {
-  margin-left: auto;
-  margin-right: auto;
+/* Header Sign Up — beat Customizer transparent override */
+html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn.pdx-auth-header-btn,
+html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
+html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn.pdx-auth-header-btn,
+html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn {
+  border: 0 !important;
+  background: #000 !important;
+  background-color: #000 !important;
+  background-image: none !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  min-height: 36px !important;
+  padding: 0 16px !important;
+  border-radius: 980px !important;
+  font-weight: 500 !important;
+  letter-spacing: -0.01em !important;
+}
+
+html body.home #pdx-auth-bar .pdx-auth-signup-btn:hover,
+html body.home #pdx-auth-bar .pdx-auth-signup-btn:focus,
+html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn:hover,
+html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn:focus {
+  background: #1d1d1f !important;
+  background-color: #1d1d1f !important;
+  background-image: none !important;
+  color: #fff !important;
+  outline: none !important;
+}
+
+/* Footer subscribe — Apple clean form on homepage */
+body.home .paxmc-footer-subscribe,
+body.page-template-template-apple-homepage .paxmc-footer-subscribe {
+  max-width: 520px !important;
+  margin: 0 auto !important;
+}
+
+body.home .paxmc-footer-subscribe .input-wrapper,
+body.page-template-template-apple-homepage .paxmc-footer-subscribe .input-wrapper {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-height: 52px !important;
+  padding: 6px 6px 6px 16px !important;
+  border-radius: 980px !important;
+  border: 1px solid rgba(0, 0, 0, 0.12) !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+body.home .paxmc-footer-subscribe .input,
+body.page-template-template-apple-homepage .paxmc-footer-subscribe .input {
+  flex: 1 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 15px !important;
+  color: #1d1d1f !important;
+}
+
+body.home .paxmc-footer-subscribe .Subscribe-btn,
+body.page-template-template-apple-homepage .paxmc-footer-subscribe .Subscribe-btn {
+  min-width: 48px !important;
+  min-height: 40px !important;
+  border-radius: 980px !important;
+  border: 0 !important;
+  background: #000 !important;
+  color: #fff !important;
 }
 
 @media (max-width: 960px) {
-  .pax-home-caps__grid,
+  .pax-home-pillars,
+  .pax-home-split,
   .pax-home-about__grid,
-  .pax-home-process__list {
+  .pax-home-steps {
     grid-template-columns: 1fr;
   }
 
-  .pax-home-cap {
+  .pax-home-pillar {
     border-right: 0;
-  }
-
-  .pax-home-service {
-    grid-template-columns: 48px 1fr auto;
   }
 
   .pax-home-hero__title {
     max-width: none;
+  }
+
+  .pax-home-split__visual {
+    order: -1;
+    aspect-ratio: 16 / 10;
+  }
+
+  .pax-home-signup-form__shell {
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 0;
+    padding: 12px;
+    border-radius: 24px;
+  }
+
+  .pax-home-signup-form__input {
+    min-height: 44px;
+    padding: 0 8px;
+  }
+
+  .pax-home-signup-form__submit {
+    width: 100%;
   }
 }
 
@@ -618,5 +754,10 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
     opacity: 1;
     transform: none;
     transition: none;
+  }
+
+  .pax-home-btn:hover,
+  .pax-home-signup-form__submit:hover {
+    transform: none;
   }
 }

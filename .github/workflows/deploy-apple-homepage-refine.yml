@@ -1,0 +1,147 @@
+name: Deploy Apple Homepage Refine
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-homepage-refine-cfc9'
+    paths:
+      - '.github/triggers/deploy-apple-homepage-refine'
+      - '.github/workflows/deploy-apple-homepage-refine.yml'
+      - 'navein/template-apple-homepage.php'
+      - 'navein/template-parts/pages/homepage.php'
+      - 'navein/template-parts/page-title/page-header-page.php'
+      - 'navein/assets/css/apple-homepage.css'
+      - 'navein/assets/js/apple-homepage.js'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+      - 'scripts/assign-apple-homepage-template.sh'
+      - 'paxdesign-booking/assets/customer-auth/css/pdx-auth.css'
+      - 'paxdesign-toolbar/assets/css/pdx-auth.css'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy refined Apple homepage + Sign Up styles
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          BOOKING="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          TOOLBAR="${WP_PATH%/}/wp-content/plugins/paxdesign-toolbar"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/assets/js") \
+              $(printf '%q' "$THEME/template-parts/pages") \
+              $(printf '%q' "$THEME/template-parts/page-title") \
+              $(printf '%q' "$THEME/scripts") \
+              $(printf '%q' "$BOOKING/assets/customer-auth/css") \
+              $(printf '%q' "$TOOLBAR/assets/css")"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-homepage.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/apple-homepage.js \
+            "${REMOTE}:${THEME}/assets/js/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-apple-homepage.php \
+            "${REMOTE}:${THEME}/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/pages/homepage.php \
+            "${REMOTE}:${THEME}/template-parts/pages/"
+
+          if [ -f navein/template-parts/page-title/page-header-page.php ]; then
+            rsync -az -e "ssh ${SSH_OPTS[*]}" \
+              navein/template-parts/page-title/page-header-page.php \
+              "${REMOTE}:${THEME}/template-parts/page-title/"
+          fi
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            scripts/assign-apple-homepage-template.sh \
+            "${REMOTE}:${THEME}/scripts/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/assets/customer-auth/css/pdx-auth.css \
+            "${REMOTE}:${BOOKING}/assets/customer-auth/css/"
+
+          if [ -d paxdesign-toolbar/assets/css ]; then
+            rsync -az -e "ssh ${SSH_OPTS[*]}" \
+              paxdesign-toolbar/assets/css/pdx-auth.css \
+              "${REMOTE}:${TOOLBAR}/assets/css/" || true
+          fi
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "chmod +x $(printf '%q' "$THEME/scripts/assign-apple-homepage-template.sh") && \
+             WP_PATH=$(printf '%q' "$WP_PATH") bash $(printf '%q' "$THEME/scripts/assign-apple-homepage-template.sh")"
+
+          echo "Deployed refined Apple homepage 1.1.1"
+
+      - name: Verify live homepage refine
+        run: |
+          set -euo pipefail
+          set +e
+          HOME_HTML=$(curl -sS -o /tmp/home-refine.html -w '%{http_code}' "https://paxdesign.at/?n=$(date +%s)")
+          WEB_HTML=$(curl -sS -o /tmp/web-check.html -w '%{http_code}' "https://paxdesign.at/webentwicklung/?n=$(date +%s)")
+          CSS=$(curl -sS -o /tmp/apple-homepage.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-homepage.css?ver=1.1.1")
+          JS=$(curl -sS -o /tmp/apple-homepage.js -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-homepage.js?ver=1.1.1")
+          set -e
+          echo "HOME $HOME_HTML | WEB $WEB_HTML | CSS $CSS | JS $JS"
+          test "$HOME_HTML" = "200"
+          test "$WEB_HTML" = "200"
+          test "$CSS" = "200"
+          test "$JS" = "200"
+          grep -Eq "pax-home-hero|pax-home-brand|PAXdesign" /tmp/home-refine.html
+          grep -Eq "page-template-template-apple-homepage|navein-apple-homepage" /tmp/home-refine.html
+          grep -Eq "pax-home-signup|pax-home-signup-form|Sign.?Up" /tmp/home-refine.html
+          grep -Eq "pax-home-pillars|pax-home-split__visual" /tmp/home-refine.html
+          ! grep -Eq "pax-home-project-frame|pax-home-caps" /tmp/home-refine.html
+          ! grep -Eq "elementor-page-2071" /tmp/home-refine.html
+          grep -Eq "pax-home-signup|Sign Up" /tmp/apple-homepage.css
+          grep -Eq "dtr-mega|navein-mega-menu|dtr-has-mega" /tmp/home-refine.html
+          grep -Eq "pax-aap--web|pax-web-hero" /tmp/web-check.html
+          echo "Refined Apple homepage verification passed."
