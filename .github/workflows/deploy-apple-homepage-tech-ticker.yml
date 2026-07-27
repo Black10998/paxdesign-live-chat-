@@ -118,7 +118,7 @@ jobs:
           retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
             "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
 
-          echo "Deployed Apple homepage tech ticker 1.1.7"
+          echo "Deployed Apple homepage tech ticker 1.1.8"
 
       - name: Verify live homepage tech ticker
         run: |
@@ -127,28 +127,34 @@ jobs:
           HOME_HTML=$(curl -sS -o /tmp/home-ticker.html -w '%{http_code}' "https://paxdesign.at/?n=$(date +%s)")
           SOFT_HTML=$(curl -sS -o /tmp/soft-ticker.html -w '%{http_code}' "https://paxdesign.at/softwareentwicklung/?n=$(date +%s)")
           CSS=$(curl -sS -o /tmp/apple-homepage.css -w '%{http_code}' \
-            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-homepage.css?ver=1.1.7")
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-homepage.css?ver=1.1.8")
           JS=$(curl -sS -o /tmp/apple-homepage.js -w '%{http_code}' \
-            "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-homepage.js?ver=1.1.7")
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-homepage.js?ver=1.1.8")
           set -e
           echo "HOME $HOME_HTML | SOFT $SOFT_HTML | CSS $CSS | JS $JS"
           test "$HOME_HTML" = "200"
           test "$SOFT_HTML" = "200"
           test "$CSS" = "200"
           test "$JS" = "200"
-          grep -Eq "apple-homepage.css\?ver=1.1.7|style.css\?ver=1.1.7" /tmp/home-ticker.html
+          grep -Eq "apple-homepage.css\?ver=1.1.8|style.css\?ver=1.1.8" /tmp/home-ticker.html
           grep -Eq "pax-sw-ribbon|data-sw-marquee|pax-sw-ribbon__track" /tmp/home-ticker.html
           grep -Eq "Java|Spring Boot|Kubernetes|Jenkins" /tmp/home-ticker.html
-          # Ribbon sits after hero, before statement
+          # Ribbon sits immediately under header — first content block, before hero
           python3 - <<'PY'
           import re
           html=open('/tmp/home-ticker.html').read()
-          hero=html.find('pax-home-hero')
-          ribbon=html.find('pax-sw-ribbon')
-          statement=html.find('pax-home-statement')
-          assert hero != -1 and ribbon != -1 and statement != -1
-          assert hero < ribbon < statement, (hero, ribbon, statement)
-          print('Homepage ribbon placement OK')
+          # Prefer article-scoped order
+          art = re.search(r'<article[^>]*class="[^"]*pax-home[^"]*"[^>]*>(.*?)</article>', html, re.S)
+          body = art.group(1) if art else html
+          ribbon=body.find('pax-sw-ribbon')
+          hero=body.find('pax-home-hero')
+          statement=body.find('pax-home-statement')
+          assert ribbon != -1 and hero != -1 and statement != -1
+          assert ribbon < hero < statement, (ribbon, hero, statement)
+          # Ribbon should be the first major section in the article
+          first_section = re.search(r'<section\s+class="([^"]+)"', body)
+          assert first_section and 'pax-sw-ribbon' in first_section.group(1), first_section.group(1) if first_section else None
+          print('Homepage ribbon placement OK (under header, before hero)')
           PY
           grep -Eq "sw-marquee|pax-sw-ribbon__group|animation: sw-marquee" /tmp/apple-homepage.css
           grep -Eq "initTechMarquee|data-sw-marquee|is-paused" /tmp/apple-homepage.js

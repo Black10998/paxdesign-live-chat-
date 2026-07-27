@@ -29,6 +29,22 @@ $service_links = array(
 ?>
 <article <?php post_class( 'pax-home' ); ?>>
 
+	<!-- Tech marquee ribbon — directly under header/nav -->
+	<section class="pax-sw-ribbon" data-ph-reveal aria-label="Tech Stack">
+		<div class="pax-sw-ribbon__track" data-sw-marquee>
+			<div class="pax-sw-ribbon__group">
+				<span>Java</span><span>C#</span><span>Python</span><span>Go</span>
+				<span>Spring Boot</span><span>.NET Core</span><span>Django</span><span>FastAPI</span>
+				<span>Docker</span><span>Kubernetes</span><span>GitLab CI</span><span>Jenkins</span>
+			</div>
+			<div class="pax-sw-ribbon__group" aria-hidden="true">
+				<span>Java</span><span>C#</span><span>Python</span><span>Go</span>
+				<span>Spring Boot</span><span>.NET Core</span><span>Django</span><span>FastAPI</span>
+				<span>Docker</span><span>Kubernetes</span><span>GitLab CI</span><span>Jenkins</span>
+			</div>
+		</div>
+	</section>
+
 	<!-- Hero: brand first, full-bleed visual -->
 	<section class="pax-home-hero" data-ph-reveal>
 		<div class="pax-home-hero__media" aria-hidden="true">
@@ -44,22 +60,6 @@ $service_links = array(
 			<div class="pax-home-actions">
 				<a class="pax-home-btn pax-home-btn--light" href="<?php echo esc_url( $services ); ?>">Leistungen entdecken</a>
 				<a class="pax-home-btn pax-home-btn--ghost" href="<?php echo esc_url( $contact ); ?>">Jetzt starten</a>
-			</div>
-		</div>
-	</section>
-
-	<!-- Tech marquee ribbon (same as /softwareentwicklung/) -->
-	<section class="pax-sw-ribbon" data-ph-reveal aria-label="Tech Stack">
-		<div class="pax-sw-ribbon__track" data-sw-marquee>
-			<div class="pax-sw-ribbon__group">
-				<span>Java</span><span>C#</span><span>Python</span><span>Go</span>
-				<span>Spring Boot</span><span>.NET Core</span><span>Django</span><span>FastAPI</span>
-				<span>Docker</span><span>Kubernetes</span><span>GitLab CI</span><span>Jenkins</span>
-			</div>
-			<div class="pax-sw-ribbon__group" aria-hidden="true">
-				<span>Java</span><span>C#</span><span>Python</span><span>Go</span>
-				<span>Spring Boot</span><span>.NET Core</span><span>Django</span><span>FastAPI</span>
-				<span>Docker</span><span>Kubernetes</span><span>GitLab CI</span><span>Jenkins</span>
 			</div>
 		</div>
 	</section>
