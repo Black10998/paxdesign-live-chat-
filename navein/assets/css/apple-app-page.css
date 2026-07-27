@@ -1,6 +1,6 @@
 /**
  * Apple-inspired product pages
- * Scoped to App-Entwicklung, Advanced Website Systems, Softwareentwicklung
+ * Scoped to Apple product pages (App, AWS, Software, Wartung & Support)
  */
 
 body.page-template-template-apple-app-entwicklung,
@@ -8,7 +8,9 @@ body.page-template-template-apple-app-entwicklung-php,
 body.page-template-template-apple-advanced-website-systems,
 body.page-template-template-apple-advanced-website-systems-php,
 body.page-template-template-apple-softwareentwicklung,
-body.page-template-template-apple-softwareentwicklung-php {
+body.page-template-template-apple-softwareentwicklung-php,
+body.page-template-template-apple-wartung-support,
+body.page-template-template-apple-wartung-support-php {
   --aap-black: #000000;
   --aap-ink: #1d1d1f;
   --aap-muted: #86868b;
@@ -30,7 +32,9 @@ body.page-template-template-apple-app-entwicklung-php #dtr-main-wrapper.pax-appl
 body.page-template-template-apple-advanced-website-systems #dtr-main-wrapper.pax-apple-app-wrap,
 body.page-template-template-apple-advanced-website-systems-php #dtr-main-wrapper.pax-apple-app-wrap,
 body.page-template-template-apple-softwareentwicklung #dtr-main-wrapper.pax-apple-app-wrap,
-body.page-template-template-apple-softwareentwicklung-php #dtr-main-wrapper.pax-apple-app-wrap {
+body.page-template-template-apple-softwareentwicklung-php #dtr-main-wrapper.pax-apple-app-wrap,
+body.page-template-template-apple-wartung-support #dtr-main-wrapper.pax-apple-app-wrap,
+body.page-template-template-apple-wartung-support-php #dtr-main-wrapper.pax-apple-app-wrap {
   max-width: none;
   width: 100%;
   padding: 0;
@@ -43,7 +47,9 @@ body.page-template-template-apple-app-entwicklung-php .pax-apple-app,
 body.page-template-template-apple-advanced-website-systems .pax-apple-app,
 body.page-template-template-apple-advanced-website-systems-php .pax-apple-app,
 body.page-template-template-apple-softwareentwicklung .pax-apple-app,
-body.page-template-template-apple-softwareentwicklung-php .pax-apple-app {
+body.page-template-template-apple-softwareentwicklung-php .pax-apple-app,
+body.page-template-template-apple-wartung-support .pax-apple-app,
+body.page-template-template-apple-wartung-support-php .pax-apple-app {
   margin: 0;
   padding: 0;
   overflow: hidden;
@@ -55,12 +61,16 @@ body.page-template-template-apple-advanced-website-systems .dtr-page-title--sect
 body.page-template-template-apple-advanced-website-systems-php .dtr-page-title--section,
 body.page-template-template-apple-softwareentwicklung .dtr-page-title--section,
 body.page-template-template-apple-softwareentwicklung-php .dtr-page-title--section,
+body.page-template-template-apple-wartung-support .dtr-page-title--section,
+body.page-template-template-apple-wartung-support-php .dtr-page-title--section,
 body.page-template-template-apple-app-entwicklung .dtr-page-title__section,
 body.page-template-template-apple-app-entwicklung-php .dtr-page-title__section,
 body.page-template-template-apple-advanced-website-systems .dtr-page-title__section,
 body.page-template-template-apple-advanced-website-systems-php .dtr-page-title__section,
 body.page-template-template-apple-softwareentwicklung .dtr-page-title__section,
-body.page-template-template-apple-softwareentwicklung-php .dtr-page-title__section {
+body.page-template-template-apple-softwareentwicklung-php .dtr-page-title__section,
+body.page-template-template-apple-wartung-support .dtr-page-title__section,
+body.page-template-template-apple-wartung-support-php .dtr-page-title__section {
   display: none !important;
   visibility: hidden !important;
   height: 0 !important;
@@ -900,3 +910,86 @@ body.page-template-template-apple-softwareentwicklung-php .dtr-page-title__secti
 .pax-aap-code__line:nth-child(3) b { width: 110px; }
 .pax-aap-code__line:nth-child(5) em { width: 48px; }
 .pax-aap-code__line:nth-child(6) i { width: 36px; background: rgba(40, 200, 64, 0.45); }
+
+
+/* Status / monitoring visual (Wartung & Support hero) */
+.pax-aap-status {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 100%;
+  justify-content: center;
+  padding: 6px 2px;
+}
+
+.pax-aap-status__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pax-aap-status__pulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #0071e3;
+  box-shadow: 0 0 0 0 rgba(0, 113, 227, 0.45);
+  animation: aap-pulse 2.4s ease-out infinite;
+  flex-shrink: 0;
+}
+
+.pax-aap-status__pulse--ok {
+  background: #28c840;
+  box-shadow: 0 0 0 0 rgba(40, 200, 64, 0.4);
+}
+
+.pax-aap-status__bar {
+  flex: 1;
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.16);
+  max-width: 180px;
+}
+
+.pax-aap-status__bar--wide { max-width: 220px; }
+.pax-aap-status__bar--mid { max-width: 150px; }
+
+.pax-aap-status__badge {
+  width: 48px;
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(0, 113, 227, 0.45);
+  flex-shrink: 0;
+}
+
+.pax-aap-status__badge--ok {
+  background: rgba(40, 200, 64, 0.45);
+}
+
+.pax-aap-status__metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+  height: 72px;
+}
+
+.pax-aap-status__metrics i {
+  display: block;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-style: normal;
+}
+
+@keyframes aap-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(0, 113, 227, 0.45); }
+  70% { box-shadow: 0 0 0 12px rgba(0, 113, 227, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 113, 227, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pax-aap-status__pulse {
+    animation: none;
+  }
+}
