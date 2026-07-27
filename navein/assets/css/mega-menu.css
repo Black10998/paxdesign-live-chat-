@@ -1,21 +1,19 @@
 /**
  * Apple-style mega menu — desktop only.
- * Scoped to the primary header nav so page layout stays untouched.
+ * Clean SF-style icons, hairline separators, no icon containers.
  */
 
 :root {
-  --dtr-mega-blue: #0a84ff;
-  --dtr-mega-blue-soft: rgba(10, 132, 255, 0.14);
-  --dtr-mega-blue-hover: rgba(10, 132, 255, 0.22);
-  --dtr-mega-panel-bg: rgba(22, 22, 24, 0.92);
-  --dtr-mega-panel-border: rgba(255, 255, 255, 0.08);
-  --dtr-mega-panel-shadow: 0 28px 80px rgba(0, 0, 0, 0.45), 0 2px 0 rgba(255, 255, 255, 0.04) inset;
+  --dtr-mega-blue: #007aff;
+  --dtr-mega-panel-bg: rgba(22, 22, 24, 0.94);
+  --dtr-mega-panel-border: rgba(255, 255, 255, 0.1);
+  --dtr-mega-panel-shadow: 0 24px 64px rgba(0, 0, 0, 0.42);
   --dtr-mega-text: #f5f5f7;
-  --dtr-mega-text-muted: rgba(245, 245, 247, 0.58);
+  --dtr-mega-text-muted: rgba(245, 245, 247, 0.55);
+  --dtr-mega-line: rgba(255, 255, 255, 0.12);
   --dtr-mega-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Keep header stacking clean for the floating panel */
 @media (min-width: 993px) {
   #dtr-main-header,
   #dtr-header-global,
@@ -30,7 +28,6 @@
     z-index: 1000;
   }
 
-  /* Reset classic Superfish flyout for first-level mega parents */
   .main-navigation .sf-menu > li.dtr-has-mega {
     position: static;
   }
@@ -41,26 +38,26 @@
     top: calc(100% + 14px);
     left: 50%;
     right: auto;
-    width: min(920px, calc(100vw - 48px));
-    max-width: 920px;
+    width: min(880px, calc(100vw - 48px));
+    max-width: 880px;
     min-width: 560px;
     margin: 0;
-    padding: 28px 28px 24px;
+    padding: 10px 8px 10px;
     display: none;
     float: none;
     list-style: none;
     border: 1px solid var(--dtr-mega-panel-border);
-    border-radius: 22px;
+    border-radius: 18px;
     background: var(--dtr-mega-panel-bg);
-    -webkit-backdrop-filter: saturate(160%) blur(28px);
-    backdrop-filter: saturate(160%) blur(28px);
+    -webkit-backdrop-filter: saturate(180%) blur(30px);
+    backdrop-filter: saturate(180%) blur(30px);
     box-shadow: var(--dtr-mega-panel-shadow);
     transform: translate3d(-50%, 8px, 0);
     z-index: 1200;
     transition: transform 0.34s var(--dtr-mega-ease);
   }
 
-  /* Hover bridge so the pointer can travel into the panel */
+  /* Hover bridge into the panel */
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel::before {
     content: "";
     position: absolute;
@@ -68,19 +65,27 @@
     right: 0;
     top: -18px;
     height: 18px;
+    pointer-events: auto;
   }
 
-  /* Soft blue glow accent — premium, not neon */
+  /* Static vertical Apple hairline between columns — layout only, no hover */
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel::after {
     content: "";
     position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background:
-      radial-gradient(120% 80% at 10% 0%, rgba(10, 132, 255, 0.16), transparent 45%),
-      radial-gradient(90% 70% at 90% 100%, rgba(10, 132, 255, 0.08), transparent 50%);
+    top: 22px;
+    bottom: 22px;
+    left: 50%;
+    width: 1px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: var(--dtr-mega-line);
+    box-shadow: none;
     opacity: 1;
+    transform: translateX(-0.5px);
+    pointer-events: none;
+    transition: none;
   }
 
   .main-navigation .sf-menu > li.dtr-has-mega.sfHover > ul.dtr-mega-panel,
@@ -88,11 +93,11 @@
   .main-navigation .sf-menu > li.dtr-has-mega:focus-within > ul.dtr-mega-panel {
     display: grid !important;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px 10px;
+    column-gap: 0;
+    row-gap: 0;
     transform: translate3d(-50%, 0, 0);
   }
 
-  /* Override theme lime dropdown colors inside mega panel */
   .dtr-menu-default .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel,
   .dtr-menu-alt .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel {
     background-color: var(--dtr-mega-panel-bg);
@@ -104,17 +109,16 @@
     width: auto;
     min-width: 0;
     white-space: normal;
-    padding: 0;
+    padding: 0 28px;
     margin: 0;
     border: 0;
     position: relative;
     z-index: 1;
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
     transition:
-      opacity 0.3s var(--dtr-mega-ease),
-      transform 0.34s var(--dtr-mega-ease),
-      background-color 0.2s ease;
+      opacity 0.28s var(--dtr-mega-ease),
+      transform 0.32s var(--dtr-mega-ease);
   }
 
   .main-navigation .sf-menu > li.dtr-has-mega.sfHover > ul.dtr-mega-panel > li.dtr-mega-item,
@@ -125,13 +129,13 @@
   }
 
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(1) { transition-delay: 0.02s; }
-  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(2) { transition-delay: 0.05s; }
-  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(3) { transition-delay: 0.08s; }
-  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(4) { transition-delay: 0.11s; }
-  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(5) { transition-delay: 0.14s; }
-  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(6) { transition-delay: 0.17s; }
-  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(7) { transition-delay: 0.2s; }
-  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(8) { transition-delay: 0.23s; }
+  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(2) { transition-delay: 0.04s; }
+  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(3) { transition-delay: 0.06s; }
+  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(4) { transition-delay: 0.08s; }
+  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(5) { transition-delay: 0.1s; }
+  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(6) { transition-delay: 0.12s; }
+  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(7) { transition-delay: 0.14s; }
+  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-child(8) { transition-delay: 0.16s; }
 
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item > a {
     display: flex;
@@ -139,61 +143,74 @@
     gap: 14px;
     width: 100%;
     margin: 0;
-    padding: 14px 14px;
-    border-radius: 16px;
+    padding: 15px 4px;
+    border-radius: 0;
     text-align: left;
     box-sizing: border-box;
     color: var(--dtr-mega-text) !important;
     background: transparent;
     text-decoration: none;
-    -webkit-transition: background-color 0.22s ease, transform 0.22s var(--dtr-mega-ease);
-    transition: background-color 0.22s ease, transform 0.22s var(--dtr-mega-ease);
+    /* Static horizontal hairline — part of layout, no hover treatment */
+    border-bottom: 1px solid var(--dtr-mega-line);
+    -webkit-transition: color 0.18s ease;
+    transition: color 0.18s ease;
   }
 
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item > a::after {
     content: none !important;
   }
 
+  /* Last row: no bottom rule (2-column grid) */
+  .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-last-child(-n+2) > a {
+    border-bottom: 0;
+  }
+
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item > a:hover,
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item > a:focus-visible,
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item.current-menu-item > a {
-    background: rgba(255, 255, 255, 0.06);
+    background: transparent;
     color: #fff !important;
-    transform: translateY(-1px);
+    transform: none;
   }
 
+  /* Bare SF-style icon — no chip / no background shape */
   .dtr-mega-icon {
-    flex: 0 0 44px;
-    width: 44px;
-    height: 44px;
+    flex: 0 0 26px;
+    width: 26px;
+    height: 26px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    border-radius: 12px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none !important;
+    box-shadow: none !important;
     color: var(--dtr-mega-blue);
-    background: var(--dtr-mega-blue-soft);
-    box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.18);
-    transition: background-color 0.22s ease, transform 0.28s var(--dtr-mega-ease), color 0.22s ease;
+    transition: color 0.18s ease;
   }
 
   .dtr-mega-icon svg {
-    width: 22px;
-    height: 22px;
+    width: 24px;
+    height: 24px;
     display: block;
+    overflow: visible;
   }
 
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item > a:hover .dtr-mega-icon,
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item > a:focus-visible .dtr-mega-icon {
-    background: var(--dtr-mega-blue-hover);
-    transform: scale(1.04);
-    color: #3da9ff;
+    background: none !important;
+    box-shadow: none !important;
+    transform: none;
+    color: #2997ff;
   }
 
   .dtr-mega-copy {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 3px;
+    gap: 2px;
     min-width: 0;
   }
 
@@ -202,28 +219,27 @@
     font-size: 15px;
     line-height: 1.25;
     font-weight: 600;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
     color: inherit;
   }
 
   .dtr-mega-desc {
     display: block;
-    font-size: 12.5px;
+    font-size: 12px;
     line-height: 1.35;
     font-weight: 400;
+    letter-spacing: -0.01em;
     color: var(--dtr-mega-text-muted);
   }
 
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item > a:hover .dtr-mega-desc {
-    color: rgba(245, 245, 247, 0.78);
+    color: rgba(245, 245, 247, 0.72);
   }
 
-  /* Hide nested flyouts inside mega panels on desktop (flat Apple-style sections) */
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel ul.sub-menu {
     display: none !important;
   }
 
-  /* Soften caret on mega parents */
   .main-navigation .sf-menu > li.dtr-has-mega > a::after {
     opacity: 0.7;
     transition: transform 0.25s var(--dtr-mega-ease), opacity 0.2s ease;
@@ -235,11 +251,10 @@
     opacity: 1;
   }
 
-  /* Narrow desktop: single column */
   @media (max-width: 1100px) {
     .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel {
-      min-width: 420px;
-      width: min(640px, calc(100vw - 40px));
+      min-width: 400px;
+      width: min(520px, calc(100vw - 40px));
     }
 
     .main-navigation .sf-menu > li.dtr-has-mega.sfHover > ul.dtr-mega-panel,
@@ -248,10 +263,22 @@
       display: grid !important;
       grid-template-columns: 1fr;
     }
+
+    /* Single column: hide vertical rule; keep horizontal rules */
+    .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel::after {
+      content: none;
+    }
+
+    .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:nth-last-child(-n+2) > a {
+      border-bottom: 1px solid var(--dtr-mega-line);
+    }
+
+    .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item:last-child > a {
+      border-bottom: 0;
+    }
   }
 }
 
-/* Mobile / tablet: leave SlickNav alone; strip mega-only chrome */
 @media (max-width: 992px) {
   .dtr-mega-icon,
   .dtr-mega-desc {
@@ -287,7 +314,6 @@
   }
 }
 
-/* Reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel,
   .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel > li.dtr-mega-item,
