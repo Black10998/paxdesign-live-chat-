@@ -2,7 +2,7 @@
 /**
  * Navein WordPress Theme.
  * @package NaveinTheme
- * @version 1.0.9
+ * @version 1.1.0
  */
 
 // Exit if accessed directly
@@ -233,7 +233,7 @@ function navein_custom_scripts_styles() {
 		$theme_version
 	);
 
-	// Apple-inspired product pages
+	// Apple-inspired product pages + complete homepage
 	$is_apple_product_page = is_page_template( 'template-apple-app-entwicklung.php' )
 		|| is_page_template( 'template-apple-advanced-website-systems.php' )
 		|| is_page_template( 'template-apple-softwareentwicklung.php' )
@@ -260,6 +260,24 @@ function navein_custom_scripts_styles() {
 		);
 	}
 
+	$is_apple_homepage = is_front_page()
+		|| is_page_template( 'template-apple-homepage.php' );
+	if ( $is_apple_homepage ) {
+		wp_enqueue_style(
+			'navein-apple-homepage',
+			get_template_directory_uri() . '/assets/css/apple-homepage.css',
+			array( 'navein-style' ),
+			$theme_version
+		);
+		wp_enqueue_script(
+			'navein-apple-homepage',
+			get_template_directory_uri() . '/assets/js/apple-homepage.js',
+			array(),
+			$theme_version,
+			true
+		);
+	}
+
 	// RTL support
 	if ( is_rtl() ) {
 		wp_enqueue_style( 'navein-rtl-style', get_template_directory_uri() . '/assets/css/rtl.css', array(), $theme_version );
@@ -275,6 +293,12 @@ add_action( 'wp_enqueue_scripts', 'navein_custom_scripts_styles', 20 );
  */
 if ( ! function_exists( 'navein_force_apple_product_templates' ) ) :
 	function navein_force_apple_product_templates( $template ) {
+		if ( is_front_page() ) {
+			$home = get_template_directory() . '/template-apple-homepage.php';
+			if ( file_exists( $home ) ) {
+				return $home;
+			}
+		}
 		$map = array(
 			'app-entwicklung'            => 'template-apple-app-entwicklung.php',
 			'advanced-website-systems'   => 'template-apple-advanced-website-systems.php',
