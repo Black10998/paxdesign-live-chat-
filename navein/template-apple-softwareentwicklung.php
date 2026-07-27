@@ -4,7 +4,7 @@
  * Premium Apple-inspired layout for Softwareentwicklung.
  *
  * @package NaveinTheme
- * @version 1.0.6
+ * @version 1.0.8
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

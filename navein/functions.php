@@ -2,7 +2,7 @@
 /**
  * Navein WordPress Theme.
  * @package NaveinTheme
- * @version 1.0.7
+ * @version 1.0.8
  */
 
 // Exit if accessed directly

@@ -1,5 +1,5 @@
 /**
- * App-Entwicklung page — subtle reveal + instant-feel scroll aids.
+ * Apple product pages — reveal, anchors, and Softwareentwicklung extras.
  * Scoped; does not touch global header scroll logic.
  */
 (function () {
@@ -63,9 +63,51 @@
     });
   }
 
+  function initSoftwareOrbit() {
+    var orbit = document.querySelector('[data-sw-orbit]');
+    if (!orbit) {
+      return;
+    }
+
+    var nodes = orbit.querySelectorAll('[data-sw-node]');
+    if (prefersReducedMotion()) {
+      orbit.classList.add('is-ready');
+      return;
+    }
+
+    nodes.forEach(function (node, index) {
+      node.style.transitionDelay = 120 + index * 90 + 'ms';
+    });
+
+    requestAnimationFrame(function () {
+      orbit.classList.add('is-ready');
+    });
+  }
+
+  function initSoftwareMarquee() {
+    var track = document.querySelector('[data-sw-marquee]');
+    if (!track) {
+      return;
+    }
+
+    var ribbon = track.closest('.pax-sw-ribbon');
+    if (!ribbon) {
+      return;
+    }
+
+    ribbon.addEventListener('mouseenter', function () {
+      track.classList.add('is-paused');
+    });
+    ribbon.addEventListener('mouseleave', function () {
+      track.classList.remove('is-paused');
+    });
+  }
+
   function boot() {
     initReveal();
     initAnchors();
+    initSoftwareOrbit();
+    initSoftwareMarquee();
   }
 
   if (document.readyState === 'loading') {
