@@ -17,6 +17,7 @@ on:
       - 'navein/functions.php'
       - 'navein/style.css'
       - 'scripts/assign-apple-homepage-template.sh'
+      - 'scripts/rewrite-apple-signup-custom-css.php'
       - 'paxdesign-booking/assets/customer-auth/css/pdx-auth.css'
       - 'paxdesign-toolbar/assets/css/pdx-auth.css'
 
@@ -101,6 +102,7 @@ jobs:
 
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
             scripts/assign-apple-homepage-template.sh \
+            scripts/rewrite-apple-signup-custom-css.php \
             "${REMOTE}:${THEME}/scripts/"
 
           rsync -az -e "ssh ${SSH_OPTS[*]}" \

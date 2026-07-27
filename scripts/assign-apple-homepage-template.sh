@@ -35,38 +35,22 @@ wp rewrite flush --hard >/dev/null 2>&1 || true
 wp cache flush >/dev/null 2>&1 || true
 
 # Soften broken Customizer CSS that forced a transparent Sign Up button.
-CUSTOM_CSS_ID="$(wp option get custom_css_post_id 2>/dev/null || true)"
-if [[ -n "${CUSTOM_CSS_ID}" && "${CUSTOM_CSS_ID}" != "0" ]]; then
-  wp post get "$CUSTOM_CSS_ID" --field=post_content > "$BACKUP_DIR/custom-css-before.txt" 2>/dev/null || true
-  if [[ -s "$BACKUP_DIR/custom-css-before.txt" ]] && grep -q "pdx-auth-signup-btn" "$BACKUP_DIR/custom-css-before.txt"; then
-    python3 - "$BACKUP_DIR/custom-css-before.txt" "$BACKUP_DIR/custom-css-after.txt" <<'PY'
-import pathlib, re, sys
-src, dst = map(pathlib.Path, sys.argv[1:3])
-content = src.read_text(encoding='utf-8', errors='replace')
-replacement = """/* Apple Sign Up pill */
-.pdx-auth-signup-btn {
-    background: #000 !important;
-    background-color: #000 !important;
-    background-image: none !important;
-    color: #fff !important;
-    border: 0 !important;
-    box-shadow: none !important;
-    border-radius: 980px !important;
-}
-"""
-pattern = re.compile(
-    r"/\*[^*]*Sign Up[^*]*\*/\s*\.pdx-auth-signup-btn\s*\{[^}]*\}",
-    re.I | re.S,
-)
-new_content, n = pattern.subn(replacement, content)
-if n == 0:
-    new_content = content.rstrip() + "\n\n" + replacement
-dst.write_text(new_content, encoding='utf-8')
-print(f"custom css rewritten matches={n}")
-PY
-    wp post update "$CUSTOM_CSS_ID" "$BACKUP_DIR/custom-css-after.txt" >/dev/null
-    echo "Updated Customizer CSS for Apple Sign Up button (post ${CUSTOM_CSS_ID})"
+REWRITE_SCRIPT=""
+for candidate in \
+  "${THEME}/scripts/rewrite-apple-signup-custom-css.php" \
+  "${WP_ROOT}/scripts/rewrite-apple-signup-custom-css.php" \
+  "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/rewrite-apple-signup-custom-css.php"
+do
+  if [[ -f "$candidate" ]]; then
+    REWRITE_SCRIPT="$candidate"
+    break
   fi
+done
+
+if [[ -n "$REWRITE_SCRIPT" ]]; then
+  wp eval-file "$REWRITE_SCRIPT" "$BACKUP_DIR" || echo "Customizer CSS rewrite skipped/failed"
+else
+  echo "rewrite-apple-signup-custom-css.php not found; skipping Customizer CSS rewrite"
 fi
 
 echo "Assigned Apple Homepage template to page ID ${PAGE_ID}"
