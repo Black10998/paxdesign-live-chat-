@@ -75,7 +75,7 @@ jobs:
           CSS=$(curl -sS -o /tmp/apple-sticky-header.css -w '%{http_code}' \
             "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-sticky-header.css?ver=1.2.7&n=${stamp}")
           test "$CSS" = "200"
-          grep -Eq "--dtr-apple-header-text: #000000" /tmp/apple-sticky-header.css
+          grep -Eq "dtr-apple-header-text: #000000" /tmp/apple-sticky-header.css
           grep -Eq "color: #000000 !important" /tmp/apple-sticky-header.css
           if grep -Eq "opacity: 0\\.92" /tmp/apple-sticky-header.css; then
             echo "Faded opacity still present" >&2
