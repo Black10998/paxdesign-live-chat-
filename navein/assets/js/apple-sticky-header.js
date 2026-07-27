@@ -1,21 +1,23 @@
 /**
- * Apple-inspired sticky header — desktop scroll-linked compacting.
- * Progressively shrinks the glass bar as the page scrolls (no hard snap).
+ * Apple-inspired sticky header — desktop scroll-linked slide.
+ * Full header (logo, nav, search, actions) moves as one unit at constant size.
+ *
+ * The theme’s delayed slideInDown (nav hidden above, then pop) is disabled.
+ * Instead, translateY of the whole bar is scrubbed to scroll so it slides
+ * down into the sticky slot progressively — no size shrink.
  */
 (function ($) {
   'use strict';
 
   var MQ = window.matchMedia('(min-width: 993px)');
-  var RANGE = 110;
-  var HEIGHT_EXPANDED = 52;
-  var HEIGHT_COMPACT = 44;
-  var LOGO_SCALE_COMPACT = 0.9;
-  var BTN_SCALE_COMPACT = 0.96;
+  var RANGE = 72;
+  var HEADER_H = 52;
 
   var ticking = false;
   var $win = $(window);
   var $body;
   var $header;
+  var $mainHeader;
   var $responsive;
   var root;
 
@@ -27,36 +29,37 @@
     return n < 0 ? 0 : n > 1 ? 1 : n;
   }
 
-  /* Smooth ease-out so early scroll moves gently, then settles. */
   function easeOutCubic(t) {
     return 1 - Math.pow(1 - t, 3);
   }
 
-  function lerp(a, b, t) {
-    return a + (b - a) * t;
-  }
-
-  function setProgress(progress, compact) {
+  function setReveal(progress, revealed) {
     if (!root) {
       return;
     }
 
-    var height = lerp(HEIGHT_EXPANDED, HEIGHT_COMPACT, progress);
-    var logoScale = lerp(1, LOGO_SCALE_COMPACT, progress);
-    var btnScale = lerp(1, BTN_SCALE_COMPACT, progress);
+    /*
+     * Progressive slide-down of the complete bar:
+     * ty = (1 - progress) * -HEADER_H  →  from above viewport into place.
+     * Scrubbed to scroll (no 350px delay / CSS keyframe pop).
+     */
+    var tyPx = (1 - progress) * -HEADER_H;
     var shade = progress;
 
     root.style.setProperty('--dtr-apple-header-progress', String(progress));
-    root.style.setProperty('--dtr-apple-header-live-height', height.toFixed(2) + 'px');
-    root.style.setProperty('--dtr-apple-header-logo-scale', logoScale.toFixed(4));
-    root.style.setProperty('--dtr-apple-header-btn-scale', btnScale.toFixed(4));
+    root.style.setProperty('--dtr-apple-header-ty', tyPx.toFixed(2) + 'px');
     root.style.setProperty('--dtr-apple-header-shade', shade.toFixed(4));
 
-    $body.toggleClass('dtr-apple-header-scrolled', compact);
-    $header.toggleClass('is-scrolled', compact);
+    $body.toggleClass('dtr-apple-header-scrolled', revealed);
+    $header.toggleClass('is-scrolled', revealed);
+    $header.toggleClass('is-revealed', progress > 0.02);
+
+    if ($mainHeader.length) {
+      $mainHeader.toggleClass('is-revealed', progress > 0.02);
+    }
 
     if ($responsive.length) {
-      $responsive.toggleClass('is-scrolled', compact);
+      $responsive.toggleClass('is-scrolled', revealed);
     }
   }
 
@@ -65,9 +68,7 @@
       return;
     }
     root.style.removeProperty('--dtr-apple-header-progress');
-    root.style.removeProperty('--dtr-apple-header-live-height');
-    root.style.removeProperty('--dtr-apple-header-logo-scale');
-    root.style.removeProperty('--dtr-apple-header-btn-scale');
+    root.style.removeProperty('--dtr-apple-header-ty');
     root.style.removeProperty('--dtr-apple-header-shade');
   }
 
@@ -80,12 +81,14 @@
     var y = $win.scrollTop() || 0;
 
     if (!MQ.matches) {
-      // Mobile keeps a simple compact threshold; no progressive desktop morph.
       resetMobileProgress();
       var mobileCompact = y > 18;
       $body.toggleClass('dtr-apple-header-scrolled', mobileCompact);
       $header.toggleClass('is-scrolled', mobileCompact);
-      $header.removeClass('header-fixed');
+      $header.removeClass('header-fixed is-revealed');
+      if ($mainHeader.length) {
+        $mainHeader.removeClass('is-revealed');
+      }
       if ($responsive.length) {
         $responsive.toggleClass('is-scrolled', mobileCompact);
       }
@@ -93,15 +96,19 @@
       return;
     }
 
-    var raw = prefersReducedMotion() ? (y > RANGE * 0.35 ? 1 : 0) : clamp01(y / RANGE);
-    var progress = prefersReducedMotion() ? raw : easeOutCubic(raw);
-    var compact = progress > 0.55;
+    var progress;
 
-    setProgress(progress, compact);
+    if (prefersReducedMotion()) {
+      progress = y > 0 ? 1 : 0;
+    } else {
+      progress = easeOutCubic(clamp01(y / RANGE));
+    }
 
-    // Legacy hook without menu color class swapping (avoids abrupt ink flashes).
+    var revealed = progress > 0.55;
+    setReveal(progress, revealed);
+
     if ($body.hasClass('show-onscroll')) {
-      $header.toggleClass('header-fixed', compact);
+      $header.toggleClass('header-fixed', revealed);
     }
 
     ticking = false;
@@ -118,6 +125,7 @@
   function boot() {
     $body = $(document.body);
     $header = $('#dtr-header-global');
+    $mainHeader = $('#dtr-main-header');
     $responsive = $('#dtr-responsive-header');
     root = document.documentElement;
 
@@ -128,11 +136,8 @@
     $body.addClass('dtr-apple-sticky-header');
     $header.addClass('dtr-apple-bar');
 
-    // Seed defaults before first paint sync.
     root.style.setProperty('--dtr-apple-header-progress', '0');
-    root.style.setProperty('--dtr-apple-header-live-height', HEIGHT_EXPANDED + 'px');
-    root.style.setProperty('--dtr-apple-header-logo-scale', '1');
-    root.style.setProperty('--dtr-apple-header-btn-scale', '1');
+    root.style.setProperty('--dtr-apple-header-ty', -HEADER_H + 'px');
     root.style.setProperty('--dtr-apple-header-shade', '0');
 
     syncState();

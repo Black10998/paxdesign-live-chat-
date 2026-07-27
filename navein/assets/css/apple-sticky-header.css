@@ -1,6 +1,6 @@
 /**
  * Apple-inspired sticky header — sitewide.
- * Soft glass bar with scroll-linked compacting on desktop.
+ * Soft glass bar; desktop slides the full header down with scroll (constant size).
  */
 
 :root {
@@ -12,22 +12,34 @@
   --dtr-apple-header-text: #000000;
   --dtr-apple-header-text-hover: #000000;
   --dtr-apple-header-logo-ink: #1d1d1f;
+  /* Constant size — do not shrink on scroll. */
   --dtr-apple-header-height: 52px;
-  --dtr-apple-header-height-scrolled: 44px;
-  /* Scroll-linked live values (JS updates on desktop). */
+  /* Scroll-linked reveal (JS updates on desktop). */
   --dtr-apple-header-progress: 0;
-  --dtr-apple-header-live-height: var(--dtr-apple-header-height);
-  --dtr-apple-header-logo-scale: 1;
-  --dtr-apple-header-btn-scale: 1;
+  --dtr-apple-header-ty: -52px;
   --dtr-apple-header-shade: 0;
 }
 
 @media (min-width: 993px) {
+  /*
+   * Fixed overlay: whole bar translates from above the viewport into place,
+   * scrubbed to scroll — menu, search, and actions move together.
+   */
   body.dtr-apple-sticky-header.show-onscroll #dtr-main-header {
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 10050;
     isolation: isolate;
+    transform: translate3d(0, var(--dtr-apple-header-ty, -52px), 0);
+    will-change: transform;
+    pointer-events: none;
+    transition: none;
+  }
+
+  body.dtr-apple-sticky-header.show-onscroll #dtr-main-header.is-revealed {
+    pointer-events: auto;
   }
 
   body.admin-bar.dtr-apple-sticky-header.show-onscroll #dtr-main-header {
@@ -63,8 +75,8 @@
     padding-bottom: 0 !important;
     padding-left: clamp(20px, 3vw, 40px) !important;
     padding-right: clamp(20px, 3vw, 40px) !important;
-    min-height: var(--dtr-apple-header-live-height) !important;
-    height: var(--dtr-apple-header-live-height);
+    min-height: var(--dtr-apple-header-height) !important;
+    height: var(--dtr-apple-header-height);
     background-color: rgba(
       255,
       255,
@@ -75,10 +87,8 @@
     -webkit-backdrop-filter: var(--dtr-apple-header-blur);
     backdrop-filter: var(--dtr-apple-header-blur);
     box-shadow: 0 10px 30px rgba(0, 0, 0, calc(0.06 * var(--dtr-apple-header-shade))) !important;
-    /* Scroll-linked values — no delayed CSS transition fighting the scroll. */
     transition: none;
     z-index: 2;
-    will-change: min-height, height, box-shadow, background-color, border-color;
   }
 
   body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content {
@@ -92,7 +102,7 @@
   body.dtr-apple-sticky-header #dtr-header-global .dtr-logo,
   body.dtr-apple-sticky-header #dtr-header-global .dtr-logo img,
   body.dtr-apple-sticky-header #dtr-header-global .dtr-logo svg {
-    transform: scale(var(--dtr-apple-header-logo-scale));
+    transform: none;
     transform-origin: left center;
     transition: none;
   }
@@ -115,7 +125,6 @@
     fill: var(--dtr-apple-header-logo-ink, #1d1d1f) !important;
   }
 
-  /* Spacer "pax" tspan inside design group stays brand lime but invisible (opacity 0). */
   body.dtr-apple-sticky-header header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default .paxlogo-design tspan[opacity="0"] {
     fill: #ccff00 !important;
   }
@@ -133,7 +142,6 @@
     fill: #000000 !important;
   }
 
-  /* Navigation — Apple-like density & readability */
   body.dtr-apple-sticky-header #dtr-header-global .main-navigation {
     display: flex;
     align-items: center;
@@ -157,8 +165,8 @@
   body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a {
     display: inline-flex;
     align-items: center;
-    min-height: var(--dtr-apple-header-live-height);
-    height: var(--dtr-apple-header-live-height);
+    min-height: var(--dtr-apple-header-height);
+    height: var(--dtr-apple-header-height);
     padding: 0 clamp(8px, 0.9vw, 14px);
     font-size: clamp(12px, 0.92vw, 14px);
     font-weight: 400;
@@ -185,16 +193,12 @@
     opacity: 1;
   }
 
-  /*
-   * Search trigger — theme/link defaults are white (#fff) for dark headers.
-   * Force Apple dark ink on the light glass bar for readable contrast.
-   */
   body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger,
   body.dtr-apple-sticky-header #dtr-header-global a.dtr-search-modal-trigger,
   body.dtr-apple-sticky-header #dtr-header-global .header-fixed .dtr-search-modal-trigger {
     display: inline-flex;
     align-items: center;
-    min-height: var(--dtr-apple-header-live-height);
+    min-height: var(--dtr-apple-header-height);
     color: #000000 !important;
     opacity: 1 !important;
   }
@@ -213,7 +217,6 @@
     opacity: 0.72 !important;
   }
 
-  /* Keep Sign Up / widgets aligned to the compact bar */
   body.dtr-apple-sticky-header #dtr-header-global .dtr-header-widget-wrapper,
   body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar {
     display: flex;
@@ -223,12 +226,10 @@
 
   body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-header-btn,
   body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-signup-btn {
-    transform: scale(var(--dtr-apple-header-btn-scale));
-    transform-origin: center center;
+    transform: none;
     transition: background-color 0.25s ease, opacity 0.25s ease;
   }
 
-  /* Mega panel sits cleanly under the glass bar */
   body.dtr-apple-sticky-header .main-navigation .sf-menu > li.dtr-has-mega > ul.sub-menu.dtr-mega-panel,
   body.dtr-apple-sticky-header .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel {
     top: calc(100% + 10px);
@@ -257,7 +258,6 @@
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
   }
 
-  /* Mobile logo — same dark ink on white responsive bar */
   body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo.logo-default .paxlogo-code-slot {
     color: var(--dtr-apple-header-logo-ink, #1d1d1f) !important;
   }
@@ -293,6 +293,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  body.dtr-apple-sticky-header.show-onscroll #dtr-main-header {
+    transform: translate3d(0, 0, 0) !important;
+    pointer-events: auto !important;
+  }
+
   body.dtr-apple-sticky-header #dtr-header-global,
   body.dtr-apple-sticky-header #dtr-header-global.header-fixed,
   body.dtr-apple-sticky-header #dtr-topbar,
