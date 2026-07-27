@@ -1322,6 +1322,6 @@
         return year + '-' + month + '-' + day;
     }
     
-    // Clock animation removed — Eva chat launcher is pure CSS (booking-widget.php)
+    // Clock animation removed — Message Support launcher is pure CSS (booking-widget.php)
     
 })(jQuery);
