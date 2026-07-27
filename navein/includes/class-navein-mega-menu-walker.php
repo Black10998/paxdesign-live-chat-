@@ -3,10 +3,10 @@
  * Apple-style mega menu walker for the primary header navigation.
  *
  * Adds premium mega-panel classes and custom blue SVG icons for submenu items.
- * Desktop only visually; mobile SlickNav continues to use the same HTML tree.
+ * Desktop mega panels + Apple full-screen mobile navigation reuse this markup.
  *
  * @package NaveinTheme
- * @version 1.0.3
+ * @version 1.0.4
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

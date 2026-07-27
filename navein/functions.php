@@ -2,7 +2,7 @@
 /**
  * Navein WordPress Theme.
  * @package NaveinTheme
- * @version 1.1.2
+ * @version 1.1.3
  */
 
 // Exit if accessed directly
@@ -244,6 +244,21 @@ function navein_custom_scripts_styles() {
 		'navein-apple-sticky-header',
 		get_template_directory_uri() . '/assets/js/apple-sticky-header.js',
 		array( 'jquery', 'navein-custom-js' ),
+		$theme_version,
+		true
+	);
+
+	// Apple-inspired full-screen mobile navigation (≤992px).
+	wp_enqueue_style(
+		'navein-apple-mobile-nav',
+		get_template_directory_uri() . '/assets/css/apple-mobile-nav.css',
+		array( 'navein-style', 'navein-mega-menu', 'navein-apple-sticky-header' ),
+		$theme_version
+	);
+	wp_enqueue_script(
+		'navein-apple-mobile-nav',
+		get_template_directory_uri() . '/assets/js/apple-mobile-nav.js',
+		array( 'jquery', 'navein-custom-js', 'navein-apple-sticky-header' ),
 		$theme_version,
 		true
 	);

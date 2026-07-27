@@ -280,6 +280,7 @@
 }
 
 @media (max-width: 992px) {
+  /* Default SlickNav path still hides icons; Apple mobile nav restores them. */
   .dtr-mega-icon,
   .dtr-mega-desc {
     display: none !important;
@@ -288,6 +289,24 @@
   .dtr-mega-copy,
   .dtr-mega-title {
     display: contents;
+  }
+
+  /* Keep icons + descriptions visible in the Apple full-screen panel */
+  .dtr-apple-mnav .dtr-mega-icon,
+  .dtr-apple-mnav .dtr-mega-desc {
+    display: block !important;
+  }
+
+  .dtr-apple-mnav .dtr-mega-icon {
+    display: inline-flex !important;
+  }
+
+  .dtr-apple-mnav .dtr-mega-copy {
+    display: flex !important;
+  }
+
+  .dtr-apple-mnav .dtr-mega-title {
+    display: block !important;
   }
 
   .slicknav_nav .dtr-mega-panel,
