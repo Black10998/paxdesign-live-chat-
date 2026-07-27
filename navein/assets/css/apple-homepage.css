@@ -749,6 +749,70 @@ body.page-template-template-apple-homepage .paxmc-footer-subscribe .Subscribe-bt
   }
 }
 
+/* Mobile hero — tighter ticker → headline (desktop unchanged) */
+@media (max-width: 734px) {
+  .pax-home .pax-sw-ribbon {
+    padding: 18px 0;
+  }
+
+  .pax-home-hero {
+    /* Shorter plane than desktop 92vh — crop empty top air */
+    min-height: min(58vh, 520px);
+    align-items: flex-start;
+    padding: 32px 0 40px;
+  }
+
+  .pax-home-hero__media img {
+    object-fit: cover;
+    /* Bias crop toward active visual area behind the copy */
+    object-position: center 30%;
+    transform: scale(1.1);
+    transform-origin: center 28%;
+  }
+
+  .pax-home-hero__veil {
+    background: linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.34) 0%,
+      rgba(0, 0, 0, 0.55) 48%,
+      rgba(0, 0, 0, 0.8) 100%
+    );
+  }
+
+  .pax-home-hero__inner {
+    width: calc(100% - 32px);
+    padding-top: 2px;
+  }
+
+  .pax-home-brand {
+    margin-bottom: 12px;
+    font-size: clamp(24px, 7vw, 32px);
+  }
+
+  .pax-home-hero__title {
+    margin-bottom: 14px;
+    font-size: clamp(34px, 9.5vw, 46px);
+  }
+
+  .pax-home-hero__lede {
+    margin-bottom: 22px;
+    font-size: 17px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pax-home-hero {
+    min-height: min(54vh, 460px);
+    padding: 26px 0 36px;
+  }
+
+  .pax-home-hero__media img {
+    object-position: center 26%;
+    transform: scale(1.14);
+    transform-origin: center 24%;
+  }
+}
+
 /* Tech ribbon — shared visual language with /softwareentwicklung/ */
 .pax-home .pax-sw-ribbon {
   background: #000;
