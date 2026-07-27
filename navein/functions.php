@@ -2,7 +2,7 @@
 /**
  * Navein WordPress Theme.
  * @package NaveinTheme
- * @version 1.0.3
+ * @version 1.0.4
  */
 
 // Exit if accessed directly
@@ -233,6 +233,24 @@ function navein_custom_scripts_styles() {
 		$theme_version
 	);
 
+	// Apple-inspired App-Entwicklung page assets
+	$is_apple_app_page = is_page_template( 'template-apple-app-entwicklung.php' ) || is_page( 'app-entwicklung' );
+	if ( $is_apple_app_page ) {
+		wp_enqueue_style(
+			'navein-apple-app-page',
+			get_template_directory_uri() . '/assets/css/apple-app-page.css',
+			array( 'navein-style' ),
+			$theme_version
+		);
+		wp_enqueue_script(
+			'navein-apple-app-page',
+			get_template_directory_uri() . '/assets/js/apple-app-page.js',
+			array(),
+			$theme_version,
+			true
+		);
+	}
+
 	// RTL support
 	if ( is_rtl() ) {
 		wp_enqueue_style( 'navein-rtl-style', get_template_directory_uri() . '/assets/css/rtl.css', array(), $theme_version );
@@ -242,6 +260,22 @@ function navein_custom_scripts_styles() {
 endif;
 add_action( 'wp_enqueue_scripts', 'navein_custom_scripts_styles', 20 );
 // navein_custom_scripts_styles ends
+
+/**
+ * Force Apple App-Entwicklung template even if Elementor tries to own the page.
+ */
+if ( ! function_exists( 'navein_force_apple_app_template' ) ) :
+	function navein_force_apple_app_template( $template ) {
+		if ( is_page( 'app-entwicklung' ) ) {
+			$custom = get_template_directory() . '/template-apple-app-entwicklung.php';
+			if ( file_exists( $custom ) ) {
+				return $custom;
+			}
+		}
+		return $template;
+	}
+endif;
+add_filter( 'template_include', 'navein_force_apple_app_template', 99 );
 
 /**
  * Enqueue Custom Scripts and Styles Overrides
