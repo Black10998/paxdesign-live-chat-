@@ -6,7 +6,7 @@
  * Desktop mega panels + Apple full-screen mobile navigation reuse this markup.
  *
  * @package NaveinTheme
- * @version 1.1.0
+ * @version 1.2.8
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -127,12 +127,20 @@ if ( ! class_exists( 'Navein_Mega_Menu_Walker' ) ) :
 			$title = apply_filters( 'the_title', $item->title, $item->ID );
 			$title = apply_filters( 'nav_menu_item_title', $title, $item, $args, $depth );
 
+			if ( $depth >= 1 ) {
+				$meta          = self::get_item_meta( $item, $icon_key );
+				$preview_desc  = ! empty( $meta['desc'] ) ? $meta['desc'] : '';
+				$attributes   .= ' data-preview-src="' . esc_url( self::get_preview_image_url( $icon_key ) ) . '"';
+				$attributes   .= ' data-preview-title="' . esc_attr( wp_strip_all_tags( $title ) ) . '"';
+				$attributes   .= ' data-preview-desc="' . esc_attr( $preview_desc ) . '"';
+				$attributes   .= ' data-preview-key="' . esc_attr( $icon_key ) . '"';
+			}
+
 			$item_output  = isset( $args->before ) ? $args->before : '';
 			$item_output .= '<a' . $attributes . '>';
 			$item_output .= isset( $args->link_before ) ? $args->link_before : '';
 
 			if ( $depth >= 1 ) {
-				$meta         = self::get_item_meta( $item, $icon_key );
 				$item_output .= '<span class="dtr-mega-icon" aria-hidden="true">' . self::get_svg_icon( $icon_key ) . '</span>';
 				$item_output .= '<span class="dtr-mega-copy">';
 				$item_output .= '<span class="dtr-mega-title">' . esc_html( $title ) . '</span>';
@@ -169,24 +177,56 @@ if ( ! class_exists( 'Navein_Mega_Menu_Walker' ) ) :
 			$meta  = self::get_feature_meta( $parent, $key );
 			$title = apply_filters( 'the_title', $parent->title, $parent->ID );
 			$url   = ! empty( $parent->url ) ? $parent->url : '#';
+			$image = ! empty( $meta['image'] ) ? $meta['image'] : self::get_preview_image_url( $key );
+			$desc  = ! empty( $meta['desc'] ) ? $meta['desc'] : '';
 
-			$html  = $indent . '<li class="dtr-mega-feature dtr-mega-feature--' . esc_attr( sanitize_html_class( $key ) ) . '" aria-hidden="false">' . $n;
+			$html  = $indent . '<li class="dtr-mega-feature dtr-mega-feature--' . esc_attr( sanitize_html_class( $key ) ) . '"'
+				. ' data-default-src="' . esc_url( $image ) . '"'
+				. ' data-default-title="' . esc_attr( wp_strip_all_tags( $title ) ) . '"'
+				. ' data-default-desc="' . esc_attr( $desc ) . '"'
+				. ' data-default-href="' . esc_url( $url ) . '"'
+				. ' data-default-cta="' . esc_attr( $meta['cta'] ) . '"'
+				. ' aria-hidden="false">' . $n;
 			$html .= $indent . "\t" . '<a class="dtr-mega-feature__card" href="' . esc_url( $url ) . '">' . $n;
 			$html .= $indent . "\t\t" . '<span class="dtr-mega-feature__media">' . $n;
-			$html .= $indent . "\t\t\t" . '<img src="' . esc_url( $meta['image'] ) . '" alt="" width="640" height="800" loading="lazy" decoding="async">' . $n;
+			$html .= $indent . "\t\t\t" . '<img class="dtr-mega-feature__img is-active" src="' . esc_url( $image ) . '" alt="" width="640" height="800" loading="eager" decoding="async" data-role="primary">' . $n;
+			$html .= $indent . "\t\t\t" . '<img class="dtr-mega-feature__img" src="' . esc_url( $image ) . '" alt="" width="640" height="800" loading="eager" decoding="async" data-role="secondary" aria-hidden="true">' . $n;
 			$html .= $indent . "\t\t" . '</span>' . $n;
 			$html .= $indent . "\t\t" . '<span class="dtr-mega-feature__copy">' . $n;
 			$html .= $indent . "\t\t\t" . '<span class="dtr-mega-feature__eyebrow">' . esc_html( $meta['eyebrow'] ) . '</span>' . $n;
 			$html .= $indent . "\t\t\t" . '<span class="dtr-mega-feature__title">' . esc_html( $title ) . '</span>' . $n;
-			if ( ! empty( $meta['desc'] ) ) {
-				$html .= $indent . "\t\t\t" . '<span class="dtr-mega-feature__desc">' . esc_html( $meta['desc'] ) . '</span>' . $n;
-			}
+			$html .= $indent . "\t\t\t" . '<span class="dtr-mega-feature__desc">' . esc_html( $desc ) . '</span>' . $n;
 			$html .= $indent . "\t\t\t" . '<span class="dtr-mega-feature__cta">' . esc_html( $meta['cta'] ) . '</span>' . $n;
 			$html .= $indent . "\t\t" . '</span>' . $n;
 			$html .= $indent . "\t" . '</a>' . $n;
 			$html .= $indent . '</li>' . $n;
 
 			return $html;
+		}
+
+		/**
+		 * Absolute URL for a mega-menu preview image keyed by icon/section.
+		 *
+		 * @param string $key Icon key.
+		 * @return string
+		 */
+		public static function get_preview_image_url( $key ) {
+			$key  = sanitize_file_name( (string) $key );
+			$base = trailingslashit( get_template_directory_uri() ) . 'assets/img/mega/';
+			$dir  = trailingslashit( get_template_directory() ) . 'assets/img/mega/';
+			$file = $dir . $key . '.jpg';
+
+			if ( ! is_readable( $file ) ) {
+				$key  = 'default';
+				$file = $dir . 'default.jpg';
+			}
+
+			$url = $base . $key . '.jpg';
+			if ( is_readable( $file ) ) {
+				$url = add_query_arg( 'v', (string) filemtime( $file ), $url );
+			}
+
+			return apply_filters( 'navein_mega_menu_preview_image_url', $url, $key );
 		}
 
 		/**
@@ -197,41 +237,39 @@ if ( ! class_exists( 'Navein_Mega_Menu_Walker' ) ) :
 		 * @return array{image:string,eyebrow:string,desc:string,cta:string}
 		 */
 		public static function get_feature_meta( $item, $key ) {
-			$uploads = 'https://paxdesign.at/wp-content/uploads';
-
 			$catalog = array(
 				'projects'  => array(
-					'image'   => $uploads . '/2025/02/folio-item-img6.avif',
+					'image'   => self::get_preview_image_url( 'projects' ),
 					'eyebrow' => 'Explore',
 					'desc'    => 'Ausgewählte Projekte mit Fokus auf Präzision und Wirkung.',
 					'cta'     => 'Alle Referenzen',
 				),
 				'services'  => array(
-					'image'   => $uploads . '/2025/02/Product-Card-Mockup-0.avif',
+					'image'   => self::get_preview_image_url( 'services' ),
 					'eyebrow' => 'Solutions',
 					'desc'    => 'Web, App und Software — klar strukturiert und skalierbar.',
 					'cta'     => 'Leistungen entdecken',
 				),
 				'contact'   => array(
-					'image'   => $uploads . '/2025/02/immagepng.avif',
+					'image'   => self::get_preview_image_url( 'contact' ),
 					'eyebrow' => 'Connect',
 					'desc'    => 'Sprechen Sie mit uns über Ihr nächstes digitales System.',
 					'cta'     => 'Kontakt aufnehmen',
 				),
 				'about'     => array(
-					'image'   => $uploads . '/2025/02/folio-item-img3.avif',
+					'image'   => self::get_preview_image_url( 'about' ),
 					'eyebrow' => 'About',
 					'desc'    => 'Team, Werte und der Anspruch hinter PAXdesign.',
 					'cta'     => 'Mehr erfahren',
 				),
 				'web'       => array(
-					'image'   => $uploads . '/2026/01/code-2558220_1280.avif',
+					'image'   => self::get_preview_image_url( 'web' ),
 					'eyebrow' => 'Build',
 					'desc'    => 'Moderne Webentwicklung mit Premium-Finish.',
 					'cta'     => 'Zum Überblick',
 				),
 				'default'   => array(
-					'image'   => $uploads . '/2025/02/folio-item-img4.avif',
+					'image'   => self::get_preview_image_url( 'default' ),
 					'eyebrow' => 'PAXdesign',
 					'desc'    => 'Digitale Systeme mit Klarheit und Präzision.',
 					'cta'     => 'Mehr erfahren',
