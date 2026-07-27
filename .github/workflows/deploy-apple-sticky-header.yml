@@ -1,0 +1,130 @@
+name: Deploy Apple Sticky Header
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-sticky-header-cfc9'
+    paths:
+      - '.github/triggers/deploy-apple-sticky-header'
+      - '.github/workflows/deploy-apple-sticky-header.yml'
+      - 'navein/assets/css/apple-sticky-header.css'
+      - 'navein/assets/js/apple-sticky-header.js'
+      - 'navein/assets/css/mega-menu.css'
+      - 'navein/assets/js/mega-menu.js'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy sticky header + mega menu assets
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/assets/js") \
+              $(printf '%q' "$THEME/.apple-sticky-header-backups")"
+
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "BACKUP=$(printf '%q' "$THEME/.apple-sticky-header-backups/$STAMP")
+             mkdir -p \"\$BACKUP\"
+             for f in \
+               functions.php \
+               style.css \
+               assets/css/mega-menu.css \
+               assets/js/mega-menu.js \
+               assets/css/apple-sticky-header.css \
+               assets/js/apple-sticky-header.js
+             do
+               if [ -f $(printf '%q' "$THEME")/\$f ]; then
+                 mkdir -p \"\$BACKUP/\$(dirname \"\$f\")\"
+                 cp -a $(printf '%q' "$THEME")/\$f \"\$BACKUP/\$f\"
+               fi
+             done
+             echo \"Backup written to \$BACKUP\""
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-sticky-header.css \
+            navein/assets/css/mega-menu.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/apple-sticky-header.js \
+            navein/assets/js/mega-menu.js \
+            "${REMOTE}:${THEME}/assets/js/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
+
+          echo "Deployed Apple sticky header 1.1.2"
+
+      - name: Verify live sticky header
+        run: |
+          set -euo pipefail
+          set +e
+          HOME_HTML=$(curl -sS -o /tmp/home-sticky.html -w '%{http_code}' "https://paxdesign.at/?n=$(date +%s)")
+          WEB_HTML=$(curl -sS -o /tmp/web-sticky.html -w '%{http_code}' "https://paxdesign.at/webentwicklung/?n=$(date +%s)")
+          CSS=$(curl -sS -o /tmp/apple-sticky-header.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-sticky-header.css?ver=1.1.2")
+          JS=$(curl -sS -o /tmp/apple-sticky-header.js -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-sticky-header.js?ver=1.1.2")
+          MEGA=$(curl -sS -o /tmp/mega-menu.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/mega-menu.css?ver=1.1.2")
+          set -e
+          echo "HOME $HOME_HTML | WEB $WEB_HTML | CSS $CSS | JS $JS | MEGA $MEGA"
+          test "$HOME_HTML" = "200"
+          test "$WEB_HTML" = "200"
+          test "$CSS" = "200"
+          test "$JS" = "200"
+          test "$MEGA" = "200"
+          grep -Eq "navein-apple-sticky-header|apple-sticky-header.css" /tmp/home-sticky.html
+          grep -Eq "apple-sticky-header.js|navein-apple-sticky-header-js" /tmp/home-sticky.html
+          grep -Eq "dtr-has-mega|dtr-mega-panel|navein-mega-menu" /tmp/home-sticky.html
+          grep -Eq "dtr-apple-sticky-header|backdrop-filter|header-scrolled" /tmp/apple-sticky-header.css
+          grep -Eq "appleSticky|dtr-apple-sticky-header" /tmp/apple-sticky-header.js
+          grep -Eq "dtr-mega-blue|dtr-mega-panel" /tmp/mega-menu.css
+          grep -Eq "style.css\?ver=1.1.2|apple-sticky-header.css\?ver=1.1.2" /tmp/home-sticky.html
+          echo "Apple sticky header verification passed."

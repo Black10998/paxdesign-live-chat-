@@ -54,11 +54,11 @@
     }
 
     $menu.superfish({
-      delay: 180,
+      delay: 220,
       animation: { opacity: 'show' },
       animationOut: { opacity: 'hide' },
-      speed: 160,
-      speedOut: 120,
+      speed: 180,
+      speedOut: 140,
       cssArrows: true,
       disableHI: true,
       onBeforeShow: function () {

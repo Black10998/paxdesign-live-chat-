@@ -1,0 +1,222 @@
+/**
+ * Apple-inspired sticky header — sitewide.
+ * Soft glass bar, continuous sticky, compact-on-scroll (no slideInDown).
+ */
+
+:root {
+  --dtr-apple-header-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --dtr-apple-header-blur: saturate(180%) blur(20px);
+  --dtr-apple-header-bg: rgba(22, 22, 23, 0.72);
+  --dtr-apple-header-bg-scrolled: rgba(22, 22, 23, 0.86);
+  --dtr-apple-header-line: rgba(255, 255, 255, 0.12);
+  --dtr-apple-header-text: rgba(245, 245, 247, 0.9);
+  --dtr-apple-header-text-hover: #f5f5f7;
+  --dtr-apple-header-height: 52px;
+  --dtr-apple-header-height-scrolled: 48px;
+}
+
+@media (min-width: 993px) {
+  body.dtr-apple-sticky-header.show-onscroll #dtr-main-header {
+    position: sticky;
+    top: 0;
+    z-index: 10050;
+    isolation: isolate;
+  }
+
+  body.admin-bar.dtr-apple-sticky-header.show-onscroll #dtr-main-header {
+    top: 32px;
+  }
+
+  body.dtr-apple-sticky-header.show-onscroll #dtr-topbar {
+    transition:
+      max-height 0.45s var(--dtr-apple-header-ease),
+      opacity 0.35s var(--dtr-apple-header-ease),
+      padding 0.45s var(--dtr-apple-header-ease),
+      border-color 0.35s ease;
+    max-height: 80px;
+    opacity: 1;
+    overflow: hidden;
+  }
+
+  body.dtr-apple-sticky-header.dtr-apple-header-scrolled.show-onscroll #dtr-topbar {
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-width: 0 !important;
+    pointer-events: none;
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global,
+  body.dtr-apple-sticky-header #dtr-header-global.header-fixed {
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    animation: none !important;
+    -webkit-animation: none !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-bottom: 1px solid transparent !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    padding-left: clamp(20px, 3vw, 40px) !important;
+    padding-right: clamp(20px, 3vw, 40px) !important;
+    min-height: var(--dtr-apple-header-height);
+    background-color: var(--dtr-apple-header-bg) !important;
+    background-image: none !important;
+    -webkit-backdrop-filter: var(--dtr-apple-header-blur);
+    backdrop-filter: var(--dtr-apple-header-blur);
+    transition:
+      min-height 0.4s var(--dtr-apple-header-ease),
+      background-color 0.4s var(--dtr-apple-header-ease),
+      border-color 0.4s ease,
+      box-shadow 0.4s ease;
+    z-index: 2;
+  }
+
+  body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-header-global,
+  body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-header-global.header-fixed {
+    min-height: var(--dtr-apple-header-height-scrolled);
+    background-color: var(--dtr-apple-header-bg-scrolled) !important;
+    border-bottom-color: var(--dtr-apple-header-line) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12) !important;
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content {
+    min-height: inherit;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: clamp(8px, 1.2vw, 18px);
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-logo,
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-logo img {
+    transition: transform 0.4s var(--dtr-apple-header-ease), opacity 0.35s ease;
+  }
+
+  body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-header-global .dtr-logo img {
+    transform: scale(0.92);
+  }
+
+  /* Navigation — Apple-like density & readability */
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    margin: 0;
+    gap: 0;
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li {
+    float: none;
+    display: flex;
+    align-items: center;
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--dtr-apple-header-height);
+    padding: 0 clamp(8px, 0.9vw, 14px);
+    font-size: clamp(12px, 0.92vw, 14px);
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    color: var(--dtr-apple-header-text) !important;
+    text-decoration: none !important;
+    white-space: nowrap;
+    opacity: 0.92;
+    transition:
+      color 0.22s ease,
+      opacity 0.22s ease,
+      min-height 0.4s var(--dtr-apple-header-ease);
+  }
+
+  body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-header-global .main-navigation .sf-menu > li > a {
+    min-height: var(--dtr-apple-header-height-scrolled);
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a:hover,
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.sfHover > a,
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.current-menu-item > a,
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.current-menu-ancestor > a {
+    color: var(--dtr-apple-header-text-hover) !important;
+    opacity: 1;
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-menu-default .sf-menu > li > a,
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-menu-alt .sf-menu > li > a {
+    color: var(--dtr-apple-header-text) !important;
+  }
+
+  /* Keep Sign Up / widgets aligned to the compact bar */
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-header-widget-wrapper,
+  body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar {
+    display: flex;
+    align-items: center;
+    flex: 0 0 auto;
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-header-btn,
+  body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-signup-btn {
+    transition:
+      transform 0.35s var(--dtr-apple-header-ease),
+      background-color 0.25s ease,
+      opacity 0.25s ease;
+  }
+
+  body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-header-global .pdx-auth-header-btn {
+    transform: scale(0.96);
+  }
+
+  /* Mega panel sits cleanly under the glass bar */
+  body.dtr-apple-sticky-header .main-navigation .sf-menu > li.dtr-has-mega > ul.sub-menu.dtr-mega-panel,
+  body.dtr-apple-sticky-header .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel {
+    top: calc(100% + 10px);
+    z-index: 12050;
+  }
+
+  body.dtr-apple-sticky-header.dtr-apple-header-scrolled .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel {
+    top: calc(100% + 8px);
+  }
+}
+
+@media (min-width: 993px) and (max-width: 1200px) {
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a {
+    padding: 0 clamp(6px, 0.7vw, 10px);
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 992px) {
+  body.dtr-apple-sticky-header #dtr-responsive-header {
+    -webkit-backdrop-filter: var(--dtr-apple-header-blur);
+    backdrop-filter: var(--dtr-apple-header-blur);
+    background-color: var(--dtr-apple-header-bg) !important;
+    border-bottom: 1px solid var(--dtr-apple-header-line);
+    transition: background-color 0.35s ease, box-shadow 0.35s ease;
+  }
+
+  body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-responsive-header {
+    background-color: var(--dtr-apple-header-bg-scrolled) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.dtr-apple-sticky-header #dtr-header-global,
+  body.dtr-apple-sticky-header #dtr-header-global.header-fixed,
+  body.dtr-apple-sticky-header #dtr-topbar,
+  body.dtr-apple-sticky-header #dtr-header-global .dtr-logo img,
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a,
+  body.dtr-apple-sticky-header #dtr-header-global .pdx-auth-header-btn {
+    transition: none !important;
+  }
+}

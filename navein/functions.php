@@ -2,7 +2,7 @@
 /**
  * Navein WordPress Theme.
  * @package NaveinTheme
- * @version 1.1.1
+ * @version 1.1.2
  */
 
 // Exit if accessed directly
@@ -231,6 +231,21 @@ function navein_custom_scripts_styles() {
 		get_template_directory_uri() . '/assets/css/mega-menu.css',
 		array( 'navein-style' ),
 		$theme_version
+	);
+
+	// Apple-inspired sticky header (sitewide) — after header layout + mega menu.
+	wp_enqueue_style(
+		'navein-apple-sticky-header',
+		get_template_directory_uri() . '/assets/css/apple-sticky-header.css',
+		array( 'navein-style', 'navein-mega-menu' ),
+		$theme_version
+	);
+	wp_enqueue_script(
+		'navein-apple-sticky-header',
+		get_template_directory_uri() . '/assets/js/apple-sticky-header.js',
+		array( 'jquery', 'navein-custom-js' ),
+		$theme_version,
+		true
 	);
 
 	// Apple-inspired product pages + complete homepage
