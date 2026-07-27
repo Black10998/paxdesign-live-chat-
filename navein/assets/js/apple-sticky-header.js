@@ -1,23 +1,18 @@
 /**
- * Apple-inspired sticky header — desktop scroll-linked slide.
- * Full header (logo, nav, search, actions) moves as one unit at constant size.
- *
- * The theme’s delayed slideInDown (nav hidden above, then pop) is disabled.
- * Instead, translateY of the whole bar is scrubbed to scroll so it slides
- * down into the sticky slot progressively — no size shrink.
+ * Apple-inspired sticky header — continuously visible, constant size.
+ * Desktop: header is visible on load and stays visible while scrolling.
+ * Glass densifies with scroll; no hide/show, no shrink, no slideInDown pop.
  */
 (function ($) {
   'use strict';
 
   var MQ = window.matchMedia('(min-width: 993px)');
-  var RANGE = 72;
-  var HEADER_H = 52;
+  var RANGE = 80;
 
   var ticking = false;
   var $win = $(window);
   var $body;
   var $header;
-  var $mainHeader;
   var $responsive;
   var root;
 
@@ -33,33 +28,21 @@
     return 1 - Math.pow(1 - t, 3);
   }
 
-  function setReveal(progress, revealed) {
+  function setProgress(progress, scrolled) {
     if (!root) {
       return;
     }
 
-    /*
-     * Progressive slide-down of the complete bar:
-     * ty = (1 - progress) * -HEADER_H  →  from above viewport into place.
-     * Scrubbed to scroll (no 350px delay / CSS keyframe pop).
-     */
-    var tyPx = (1 - progress) * -HEADER_H;
-    var shade = progress;
-
     root.style.setProperty('--dtr-apple-header-progress', String(progress));
-    root.style.setProperty('--dtr-apple-header-ty', tyPx.toFixed(2) + 'px');
-    root.style.setProperty('--dtr-apple-header-shade', shade.toFixed(4));
+    root.style.setProperty('--dtr-apple-header-shade', progress.toFixed(4));
+    /* Always fully in view — never translate above the viewport. */
+    root.style.setProperty('--dtr-apple-header-ty', '0px');
 
-    $body.toggleClass('dtr-apple-header-scrolled', revealed);
-    $header.toggleClass('is-scrolled', revealed);
-    $header.toggleClass('is-revealed', progress > 0.02);
-
-    if ($mainHeader.length) {
-      $mainHeader.toggleClass('is-revealed', progress > 0.02);
-    }
+    $body.toggleClass('dtr-apple-header-scrolled', scrolled);
+    $header.toggleClass('is-scrolled', scrolled);
 
     if ($responsive.length) {
-      $responsive.toggleClass('is-scrolled', revealed);
+      $responsive.toggleClass('is-scrolled', scrolled);
     }
   }
 
@@ -68,8 +51,8 @@
       return;
     }
     root.style.removeProperty('--dtr-apple-header-progress');
-    root.style.removeProperty('--dtr-apple-header-ty');
     root.style.removeProperty('--dtr-apple-header-shade');
+    root.style.removeProperty('--dtr-apple-header-ty');
   }
 
   function syncState() {
@@ -82,15 +65,12 @@
 
     if (!MQ.matches) {
       resetMobileProgress();
-      var mobileCompact = y > 18;
-      $body.toggleClass('dtr-apple-header-scrolled', mobileCompact);
-      $header.toggleClass('is-scrolled', mobileCompact);
-      $header.removeClass('header-fixed is-revealed');
-      if ($mainHeader.length) {
-        $mainHeader.removeClass('is-revealed');
-      }
+      var mobileScrolled = y > 18;
+      $body.toggleClass('dtr-apple-header-scrolled', mobileScrolled);
+      $header.toggleClass('is-scrolled', mobileScrolled);
+      $header.removeClass('header-fixed');
       if ($responsive.length) {
-        $responsive.toggleClass('is-scrolled', mobileCompact);
+        $responsive.toggleClass('is-scrolled', mobileScrolled);
       }
       ticking = false;
       return;
@@ -99,16 +79,21 @@
     var progress;
 
     if (prefersReducedMotion()) {
-      progress = y > 0 ? 1 : 0;
+      progress = y > 12 ? 1 : 0;
     } else {
       progress = easeOutCubic(clamp01(y / RANGE));
     }
 
-    var revealed = progress > 0.55;
-    setReveal(progress, revealed);
+    var scrolled = progress > 0.45;
+    setProgress(progress, scrolled);
 
+    /*
+     * Keep legacy header-fixed in sync for theme hooks, but Apple CSS
+     * forces relative positioning + animation:none so slideInDown never runs.
+     * Apply early so the bar never jumps from relative → fixed → animated.
+     */
     if ($body.hasClass('show-onscroll')) {
-      $header.toggleClass('header-fixed', revealed);
+      $header.toggleClass('header-fixed', y > 0 || scrolled);
     }
 
     ticking = false;
@@ -125,7 +110,6 @@
   function boot() {
     $body = $(document.body);
     $header = $('#dtr-header-global');
-    $mainHeader = $('#dtr-main-header');
     $responsive = $('#dtr-responsive-header');
     root = document.documentElement;
 
@@ -137,8 +121,8 @@
     $header.addClass('dtr-apple-bar');
 
     root.style.setProperty('--dtr-apple-header-progress', '0');
-    root.style.setProperty('--dtr-apple-header-ty', -HEADER_H + 'px');
     root.style.setProperty('--dtr-apple-header-shade', '0');
+    root.style.setProperty('--dtr-apple-header-ty', '0px');
 
     syncState();
     $win.off('scroll.appleSticky resize.appleSticky');
