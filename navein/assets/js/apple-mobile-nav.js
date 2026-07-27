@@ -290,12 +290,24 @@
     }
   }
 
+  function ensureBurgerIcon() {
+    if (!state.$btn || !state.$btn.length) {
+      return;
+    }
+    if (state.$btn.find('.dtr-amnav-burger').length) {
+      return;
+    }
+    state.$btn.empty().append(BURGER_ICON);
+  }
+
   function bind() {
     document.body.classList.add('dtr-apple-mobile-nav');
     state.$btn = $('#dtr-menu-button');
     if (!state.$btn.length) {
       return;
     }
+
+    ensureBurgerIcon();
 
     // Take ownership of the hamburger from SlickNav / custom.js.
     state.$btn.off('click');

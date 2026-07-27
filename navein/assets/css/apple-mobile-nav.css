@@ -67,24 +67,127 @@
     top: 46px;
   }
 
-  /* Hamburger colors: black on white bar */
-  body.dtr-apple-mobile-nav #dtr-menu-button {
+  /* Dot-grid hamburger (Uiverse reference) — visual only; open state uses .is-active */
+  body.dtr-apple-mobile-nav #dtr-menu-button.dtr-hamburger {
     z-index: 10090;
+    width: 35px;
+    height: 35px;
+    margin-top: -17.5px;
+    padding: 0;
+    border: 0;
+    background: transparent !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+    color: inherit;
   }
 
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-hamburger-lines-wrapper,
   body.dtr-apple-mobile-nav #dtr-menu-button .dtr-hamburger-lines,
   body.dtr-apple-mobile-nav #dtr-menu-button .dtr-hamburger-lines:before,
   body.dtr-apple-mobile-nav #dtr-menu-button .dtr-hamburger-lines:after {
-    background-color: #1d1d1f !important;
+    display: none !important;
   }
 
-  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-hamburger-lines {
-    background-color: transparent !important;
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: transform 0.2s ease;
   }
 
-  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-hamburger-lines:before,
-  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-hamburger-lines:after {
-    background-color: #1d1d1f !important;
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__row {
+    width: 100%;
+    height: 50%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__row--bottom {
+    align-items: flex-end;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__dot {
+    width: 8px;
+    height: 8px;
+    box-sizing: border-box;
+    border: 2px solid #1d1d1f;
+    border-radius: 50%;
+    background: transparent;
+    transition: all 0.2s ease;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__rail {
+    position: absolute;
+    width: 100%;
+    height: fit-content;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__col {
+    position: absolute;
+    width: fit-content;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__rail {
+    width: 100px;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__col {
+    height: 100px;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__dot--mid-v {
+    border-radius: 5px;
+    height: 35px;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__dot--mid-h {
+    border-radius: 5px;
+    width: 35px;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button.is-active .dtr-amnav-burger,
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-amnav-burger {
+    transform: rotate(45deg) scale(1.2);
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button.is-active .dtr-amnav-burger__col,
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-amnav-burger__col {
+    height: 100px;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button.is-active .dtr-amnav-burger__rail,
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-amnav-burger__rail {
+    width: 100px;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button.is-active .dtr-amnav-burger__dot--mid-v,
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-amnav-burger__dot--mid-v {
+    border-radius: 5px;
+    height: 35px;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button.is-active .dtr-amnav-burger__dot--mid-h,
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-amnav-burger__dot--mid-h {
+    border-radius: 5px;
+    width: 35px;
   }
 
   /* Full-screen sheet */
@@ -383,14 +486,20 @@
   .dtr-apple-mnav__sheet,
   .dtr-apple-mnav__item,
   .dtr-apple-mnav__chevron,
-  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-hamburger-lines,
-  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-hamburger-lines::before,
-  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-hamburger-lines::after {
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger,
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__dot,
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__rail,
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__col {
     transition: none !important;
     animation: none !important;
   }
 
   .dtr-apple-mnav__sheet {
+    transform: none;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button.is-active .dtr-amnav-burger,
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-amnav-burger {
     transform: none;
   }
 }
