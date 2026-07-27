@@ -1,10 +1,12 @@
 /**
- * Apple-inspired App-Entwicklung page
- * Scoped to body.page-template-template-apple-app-entwicklung
+ * Apple-inspired product pages
+ * Scoped to App-Entwicklung + Advanced Website Systems templates
  */
 
 body.page-template-template-apple-app-entwicklung,
-body.page-template-template-apple-app-entwicklung-php {
+body.page-template-template-apple-app-entwicklung-php,
+body.page-template-template-apple-advanced-website-systems,
+body.page-template-template-apple-advanced-website-systems-php {
   --aap-black: #000000;
   --aap-ink: #1d1d1f;
   --aap-muted: #86868b;
@@ -22,7 +24,9 @@ body.page-template-template-apple-app-entwicklung-php {
 
 /* Soften theme chrome on this page only */
 body.page-template-template-apple-app-entwicklung #dtr-main-wrapper.pax-apple-app-wrap,
-body.page-template-template-apple-app-entwicklung-php #dtr-main-wrapper.pax-apple-app-wrap {
+body.page-template-template-apple-app-entwicklung-php #dtr-main-wrapper.pax-apple-app-wrap,
+body.page-template-template-apple-advanced-website-systems #dtr-main-wrapper.pax-apple-app-wrap,
+body.page-template-template-apple-advanced-website-systems-php #dtr-main-wrapper.pax-apple-app-wrap {
   max-width: none;
   width: 100%;
   padding: 0;
@@ -31,7 +35,9 @@ body.page-template-template-apple-app-entwicklung-php #dtr-main-wrapper.pax-appl
 }
 
 body.page-template-template-apple-app-entwicklung .pax-apple-app,
-body.page-template-template-apple-app-entwicklung-php .pax-apple-app {
+body.page-template-template-apple-app-entwicklung-php .pax-apple-app,
+body.page-template-template-apple-advanced-website-systems .pax-apple-app,
+body.page-template-template-apple-advanced-website-systems-php .pax-apple-app {
   margin: 0;
   padding: 0;
   overflow: hidden;
@@ -39,8 +45,12 @@ body.page-template-template-apple-app-entwicklung-php .pax-apple-app {
 
 body.page-template-template-apple-app-entwicklung .dtr-page-title--section,
 body.page-template-template-apple-app-entwicklung-php .dtr-page-title--section,
+body.page-template-template-apple-advanced-website-systems .dtr-page-title--section,
+body.page-template-template-apple-advanced-website-systems-php .dtr-page-title--section,
 body.page-template-template-apple-app-entwicklung .dtr-page-title__section,
-body.page-template-template-apple-app-entwicklung-php .dtr-page-title__section {
+body.page-template-template-apple-app-entwicklung-php .dtr-page-title__section,
+body.page-template-template-apple-advanced-website-systems .dtr-page-title__section,
+body.page-template-template-apple-advanced-website-systems-php .dtr-page-title__section {
   display: none !important;
   visibility: hidden !important;
   height: 0 !important;
@@ -218,6 +228,11 @@ body.page-template-template-apple-app-entwicklung-php .dtr-page-title__section {
   align-items: center;
   justify-content: center;
   min-height: 420px;
+}
+
+.pax-aap-hero--desktop .pax-aap-hero__stage {
+  min-height: 360px;
+  padding-right: max(16px, calc((100% - 1120px) / 2));
 }
 
 .pax-aap-hero__glow {
@@ -672,5 +687,154 @@ body.page-template-template-apple-app-entwicklung-php .dtr-page-title__section {
 
   .pax-aap-device--phone {
     width: min(210px, 64vw);
+  }
+}
+
+
+/* Desktop / website system visual */
+.pax-aap-device--desktop {
+  width: min(100%, 920px);
+  max-width: 920px;
+}
+
+.pax-aap-desktop {
+  border-radius: 18px;
+  background: #1d1d1f;
+  box-shadow:
+    0 40px 80px rgba(0, 0, 0, 0.28),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  overflow: hidden;
+}
+
+.pax-aap-desktop__bezel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #2c2c2e;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pax-aap-desktop__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #48484a;
+}
+
+.pax-aap-desktop__dot:nth-child(1) { background: #ff5f57; }
+.pax-aap-desktop__dot:nth-child(2) { background: #febc2e; }
+.pax-aap-desktop__dot:nth-child(3) { background: #28c840; }
+
+.pax-aap-desktop__url {
+  flex: 1;
+  margin-left: 8px;
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pax-aap-desktop__screen {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background:
+    radial-gradient(ellipse 70% 55% at 20% 20%, rgba(0, 113, 227, 0.22), transparent 55%),
+    radial-gradient(ellipse 50% 45% at 85% 75%, rgba(255, 255, 255, 0.08), transparent 50%),
+    linear-gradient(165deg, #1a1a1c 0%, #0a0a0b 100%);
+  overflow: hidden;
+}
+
+.pax-aap-desktop__chrome {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  height: 100%;
+}
+
+.pax-aap-desktop__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 18px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pax-aap-desktop__nav span {
+  display: block;
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.pax-aap-desktop__nav span:nth-child(1) { width: 72%; }
+.pax-aap-desktop__nav span:nth-child(2) { width: 58%; }
+.pax-aap-desktop__nav span:nth-child(3) { width: 64%; }
+.pax-aap-desktop__nav span:nth-child(4) { width: 48%; }
+
+.pax-aap-desktop__stage {
+  position: relative;
+  padding: 22px;
+}
+
+.pax-aap-desktop__hero-block {
+  height: 38%;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-bottom: 14px;
+}
+
+.pax-aap-desktop__grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 12px;
+  height: 42%;
+}
+
+.pax-aap-desktop__grid i {
+  display: block;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-style: normal;
+}
+
+.pax-aap-desktop__glow {
+  position: absolute;
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 113, 227, 0.35), transparent 70%);
+  filter: blur(20px);
+  top: -40px;
+  right: -40px;
+  pointer-events: none;
+  animation: aap-orb 10s ease-in-out infinite;
+}
+
+@media (max-width: 720px) {
+  .pax-aap-desktop__chrome {
+    grid-template-columns: 1fr;
+  }
+
+  .pax-aap-desktop__nav {
+    flex-direction: row;
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 14px 16px;
+  }
+
+  .pax-aap-desktop__nav span {
+    width: 48px !important;
+    height: 6px;
+  }
+
+  .pax-aap-desktop__grid {
+    grid-template-columns: 1fr 1fr;
+    height: 36%;
+  }
+
+  .pax-aap-desktop__grid i:last-child {
+    display: none;
   }
 }

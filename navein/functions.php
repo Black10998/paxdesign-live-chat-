@@ -2,7 +2,7 @@
 /**
  * Navein WordPress Theme.
  * @package NaveinTheme
- * @version 1.0.4
+ * @version 1.0.5
  */
 
 // Exit if accessed directly
@@ -233,9 +233,12 @@ function navein_custom_scripts_styles() {
 		$theme_version
 	);
 
-	// Apple-inspired App-Entwicklung page assets
-	$is_apple_app_page = is_page_template( 'template-apple-app-entwicklung.php' ) || is_page( 'app-entwicklung' );
-	if ( $is_apple_app_page ) {
+	// Apple-inspired product pages (App-Entwicklung + Advanced Website Systems)
+	$is_apple_product_page = is_page_template( 'template-apple-app-entwicklung.php' )
+		|| is_page_template( 'template-apple-advanced-website-systems.php' )
+		|| is_page( 'app-entwicklung' )
+		|| is_page( 'advanced-website-systems' );
+	if ( $is_apple_product_page ) {
 		wp_enqueue_style(
 			'navein-apple-app-page',
 			get_template_directory_uri() . '/assets/css/apple-app-page.css',
@@ -262,20 +265,33 @@ add_action( 'wp_enqueue_scripts', 'navein_custom_scripts_styles', 20 );
 // navein_custom_scripts_styles ends
 
 /**
- * Force Apple App-Entwicklung template even if Elementor tries to own the page.
+ * Force Apple product-page templates even if Elementor tries to own the page.
  */
-if ( ! function_exists( 'navein_force_apple_app_template' ) ) :
-	function navein_force_apple_app_template( $template ) {
-		if ( is_page( 'app-entwicklung' ) ) {
-			$custom = get_template_directory() . '/template-apple-app-entwicklung.php';
-			if ( file_exists( $custom ) ) {
-				return $custom;
+if ( ! function_exists( 'navein_force_apple_product_templates' ) ) :
+	function navein_force_apple_product_templates( $template ) {
+		$map = array(
+			'app-entwicklung'            => 'template-apple-app-entwicklung.php',
+			'advanced-website-systems'   => 'template-apple-advanced-website-systems.php',
+		);
+		foreach ( $map as $slug => $file ) {
+			if ( is_page( $slug ) ) {
+				$custom = get_template_directory() . '/' . $file;
+				if ( file_exists( $custom ) ) {
+					return $custom;
+				}
 			}
 		}
 		return $template;
 	}
 endif;
-add_filter( 'template_include', 'navein_force_apple_app_template', 99 );
+add_filter( 'template_include', 'navein_force_apple_product_templates', 99 );
+
+// Back-compat alias if older hook name exists in opcode cache briefly.
+if ( ! function_exists( 'navein_force_apple_app_template' ) ) :
+	function navein_force_apple_app_template( $template ) {
+		return navein_force_apple_product_templates( $template );
+	}
+endif;
 
 /**
  * Enqueue Custom Scripts and Styles Overrides

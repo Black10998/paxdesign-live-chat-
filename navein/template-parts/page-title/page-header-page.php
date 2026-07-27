@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 $page_desc = '';
 $title_align = navein_get_theme_option( 'navein_page_title_section_align', 'text-center' );
 $page_desc  = get_post_meta( $post->ID, '_navein_page_desc_meta', true );
-if ( ! is_home() && ! is_front_page() && ! is_page_template( 'template-no-page-header.php' ) && ! is_page_template( 'template-apple-app-entwicklung.php' ) && ! is_page( 'app-entwicklung' ) && true == navein_get_theme_option( 'navein_enable_pagetitle_section', true ) ) { ?>
+if ( ! is_home() && ! is_front_page() && ! is_page_template( 'template-no-page-header.php' ) && ! is_page_template( 'template-apple-app-entwicklung.php' ) && ! is_page_template( 'template-apple-advanced-website-systems.php' ) && ! is_page( 'app-entwicklung' ) && ! is_page( 'advanced-website-systems' ) && true == navein_get_theme_option( 'navein_enable_pagetitle_section', true ) ) { ?>
 <div class="dtr-page-title--section <?php echo esc_attr( $title_align ); ?> <?php echo esc_attr( navein_get_theme_option( 'navein_page_title_corner', 'dtr-radius--rounded' ) ) ?>">
     <div class="dtr-page-title__overlay"></div>
     <div class="container">
