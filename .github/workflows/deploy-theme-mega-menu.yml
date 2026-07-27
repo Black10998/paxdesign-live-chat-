@@ -124,9 +124,9 @@ jobs:
           set -euo pipefail
           set +e
           CSS=$(curl -sS -o /tmp/mega-menu.css -w '%{http_code}' \
-            "https://paxdesign.at/wp-content/themes/navein/assets/css/mega-menu.css?ver=1.0.2")
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/mega-menu.css?ver=1.0.3")
           JS=$(curl -sS -o /tmp/mega-menu.js -w '%{http_code}' \
-            "https://paxdesign.at/wp-content/themes/navein/assets/js/mega-menu.js?ver=1.0.2")
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/mega-menu.js?ver=1.0.3")
           HOME_HTML=$(curl -sS -o /tmp/pax-home.html -w '%{http_code}' "https://paxdesign.at/")
           set -e
           echo "CSS HTTP $CSS | JS HTTP $JS | HOME HTTP $HOME_HTML"
