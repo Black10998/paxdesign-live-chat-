@@ -1,7 +1,7 @@
 /**
- * Apple-inspired sticky header — continuously visible, constant size.
- * Desktop: header is visible on load and stays visible while scrolling.
- * Glass densifies with scroll; no hide/show, no shrink, no slideInDown pop.
+ * Apple-inspired sticky header — viewport-fixed from the first paint.
+ * Desktop nav stays attached to the top of the viewport while scrolling
+ * (Apple-style). Constant size; glass densifies with scroll; never hides.
  */
 (function ($) {
   'use strict';
@@ -35,8 +35,6 @@
 
     root.style.setProperty('--dtr-apple-header-progress', String(progress));
     root.style.setProperty('--dtr-apple-header-shade', progress.toFixed(4));
-    /* Always fully in view — never translate above the viewport. */
-    root.style.setProperty('--dtr-apple-header-ty', '0px');
 
     $body.toggleClass('dtr-apple-header-scrolled', scrolled);
     $header.toggleClass('is-scrolled', scrolled);
@@ -52,7 +50,6 @@
     }
     root.style.removeProperty('--dtr-apple-header-progress');
     root.style.removeProperty('--dtr-apple-header-shade');
-    root.style.removeProperty('--dtr-apple-header-ty');
   }
 
   function syncState() {
@@ -88,12 +85,12 @@
     setProgress(progress, scrolled);
 
     /*
-     * Keep legacy header-fixed in sync for theme hooks, but Apple CSS
-     * forces relative positioning + animation:none so slideInDown never runs.
-     * Apply early so the bar never jumps from relative → fixed → animated.
+     * Keep header-fixed on from the start on desktop so theme CSS never
+     * switches relative → fixed mid-scroll (which caused the nav to leave
+     * the viewport). Apple CSS forces fixed + animation:none either way.
      */
     if ($body.hasClass('show-onscroll')) {
-      $header.toggleClass('header-fixed', y > 0 || scrolled);
+      $header.addClass('header-fixed');
     }
 
     ticking = false;
@@ -122,7 +119,11 @@
 
     root.style.setProperty('--dtr-apple-header-progress', '0');
     root.style.setProperty('--dtr-apple-header-shade', '0');
-    root.style.setProperty('--dtr-apple-header-ty', '0px');
+
+    /* Pin immediately — do not wait for first scroll. */
+    if (MQ.matches && $body.hasClass('show-onscroll')) {
+      $header.addClass('header-fixed');
+    }
 
     syncState();
     $win.off('scroll.appleSticky resize.appleSticky');

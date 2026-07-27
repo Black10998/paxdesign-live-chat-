@@ -1,7 +1,7 @@
 /**
  * Apple-inspired sticky header — sitewide.
- * Continuously visible glass bar; constant size; elegant sticky densify on scroll.
- * Never hides, never shrinks, never uses slideInDown.
+ * Desktop nav is fixed to the viewport top from page load (Apple-style).
+ * Always visible, constant size, no hide/show, no slideInDown.
  */
 
 :root {
@@ -18,34 +18,23 @@
   /* Scroll-linked glass densify (JS updates on desktop). */
   --dtr-apple-header-progress: 0;
   --dtr-apple-header-shade: 0;
-  --dtr-apple-header-ty: 0px;
 }
 
 @media (min-width: 993px) {
   /*
-   * Sticky (not fixed-from-above): visible on load, follows scroll into
-   * the sticky slot without ever leaving the viewport.
+   * #dtr-main-header also wraps page titles — do NOT sticky/fixed the
+   * whole header element or the nav scrolls away with that tall block.
+   * Pin only the glass nav bar to the viewport from the first paint.
    */
   body.dtr-apple-sticky-header.show-onscroll #dtr-main-header {
-    position: sticky;
-    top: 0;
+    position: relative;
+    top: auto;
     left: auto;
     right: auto;
-    z-index: 10050;
-    isolation: isolate;
-    transform: translate3d(0, 0, 0);
-    pointer-events: auto;
-    /* Soft settle into the sticky slot — never leaves the viewport. */
-    transition: box-shadow 0.45s var(--dtr-apple-header-ease);
-  }
-
-  body.dtr-apple-sticky-header.dtr-apple-header-scrolled.show-onscroll #dtr-main-header {
-    /* Sticky engaged: light depth under the continuous bar */
-    box-shadow: none;
-  }
-
-  body.admin-bar.dtr-apple-sticky-header.show-onscroll #dtr-main-header {
-    top: 32px;
+    z-index: auto;
+    transform: none;
+    /* Reserve in-flow space for the fixed bar so content does not jump. */
+    padding-top: var(--dtr-apple-header-height);
   }
 
   body.dtr-apple-sticky-header.show-onscroll #dtr-topbar {
@@ -65,11 +54,12 @@
 
   body.dtr-apple-sticky-header #dtr-header-global,
   body.dtr-apple-sticky-header #dtr-header-global.header-fixed {
-    position: relative !important;
-    left: auto !important;
-    right: auto !important;
-    top: auto !important;
-    /* Kill theme slideInDown — header must never hide then re-enter. */
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    margin-top: 0 !important;
     animation: none !important;
     -webkit-animation: none !important;
     border: 0 !important;
@@ -92,7 +82,12 @@
     box-shadow: 0 10px 30px rgba(0, 0, 0, calc(0.06 * var(--dtr-apple-header-shade))) !important;
     transform: none !important;
     transition: none;
-    z-index: 2;
+    z-index: 10050 !important;
+  }
+
+  body.admin-bar.dtr-apple-sticky-header #dtr-header-global,
+  body.admin-bar.dtr-apple-sticky-header #dtr-header-global.header-fixed {
+    top: 32px !important;
   }
 
   body.dtr-apple-sticky-header #dtr-header-global .dtr-header-global-content {
@@ -297,7 +292,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body.dtr-apple-sticky-header.show-onscroll #dtr-main-header,
   body.dtr-apple-sticky-header #dtr-header-global,
   body.dtr-apple-sticky-header #dtr-header-global.header-fixed,
   body.dtr-apple-sticky-header #dtr-topbar,
