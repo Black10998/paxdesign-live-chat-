@@ -1,0 +1,156 @@
+name: Deploy Apple Homepage Tech Ticker
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-homepage-tech-ticker-cfc9'
+    paths:
+      - '.github/triggers/deploy-apple-homepage-tech-ticker'
+      - '.github/workflows/deploy-apple-homepage-tech-ticker.yml'
+      - 'navein/template-parts/pages/homepage.php'
+      - 'navein/assets/css/apple-homepage.css'
+      - 'navein/assets/js/apple-homepage.js'
+      - 'navein/assets/js/apple-app-page.js'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy homepage tech ticker
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          retry() {
+            local attempt=1
+            local delay=4
+            until "$@"; do
+              if [ "$attempt" -ge 4 ]; then
+                echo "Command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "Retry ${attempt}/4 after ${delay}s: $*"
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/assets/js") \
+              $(printf '%q' "$THEME/template-parts/pages") \
+              $(printf '%q' "$THEME/.apple-homepage-ticker-backups")"
+
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "BACKUP=$(printf '%q' "$THEME/.apple-homepage-ticker-backups/$STAMP")
+             mkdir -p \"\$BACKUP\"
+             for f in \
+               style.css \
+               functions.php \
+               assets/css/apple-homepage.css \
+               assets/js/apple-homepage.js \
+               assets/js/apple-app-page.js \
+               template-parts/pages/homepage.php
+             do
+               if [ -f $(printf '%q' "$THEME")/\$f ]; then
+                 mkdir -p \"\$BACKUP/\$(dirname \"\$f\")\"
+                 cp -a $(printf '%q' "$THEME")/\$f \"\$BACKUP/\$f\"
+               fi
+             done
+             echo \"Backup written to \$BACKUP\""
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-homepage.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/apple-homepage.js \
+            navein/assets/js/apple-app-page.js \
+            "${REMOTE}:${THEME}/assets/js/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/pages/homepage.php \
+            "${REMOTE}:${THEME}/template-parts/pages/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
+
+          echo "Deployed Apple homepage tech ticker 1.1.7"
+
+      - name: Verify live homepage tech ticker
+        run: |
+          set -euo pipefail
+          set +e
+          HOME_HTML=$(curl -sS -o /tmp/home-ticker.html -w '%{http_code}' "https://paxdesign.at/?n=$(date +%s)")
+          SOFT_HTML=$(curl -sS -o /tmp/soft-ticker.html -w '%{http_code}' "https://paxdesign.at/softwareentwicklung/?n=$(date +%s)")
+          CSS=$(curl -sS -o /tmp/apple-homepage.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-homepage.css?ver=1.1.7")
+          JS=$(curl -sS -o /tmp/apple-homepage.js -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-homepage.js?ver=1.1.7")
+          set -e
+          echo "HOME $HOME_HTML | SOFT $SOFT_HTML | CSS $CSS | JS $JS"
+          test "$HOME_HTML" = "200"
+          test "$SOFT_HTML" = "200"
+          test "$CSS" = "200"
+          test "$JS" = "200"
+          grep -Eq "apple-homepage.css\?ver=1.1.7|style.css\?ver=1.1.7" /tmp/home-ticker.html
+          grep -Eq "pax-sw-ribbon|data-sw-marquee|pax-sw-ribbon__track" /tmp/home-ticker.html
+          grep -Eq "Java|Spring Boot|Kubernetes|Jenkins" /tmp/home-ticker.html
+          # Ribbon sits after hero, before statement
+          python3 - <<'PY'
+          import re
+          html=open('/tmp/home-ticker.html').read()
+          hero=html.find('pax-home-hero')
+          ribbon=html.find('pax-sw-ribbon')
+          statement=html.find('pax-home-statement')
+          assert hero != -1 and ribbon != -1 and statement != -1
+          assert hero < ribbon < statement, (hero, ribbon, statement)
+          print('Homepage ribbon placement OK')
+          PY
+          grep -Eq "sw-marquee|pax-sw-ribbon__group|animation: sw-marquee" /tmp/apple-homepage.css
+          grep -Eq "initTechMarquee|data-sw-marquee|is-paused" /tmp/apple-homepage.js
+          grep -Eq "pax-sw-ribbon|data-sw-marquee" /tmp/soft-ticker.html
+          echo "Apple homepage tech ticker verification passed."

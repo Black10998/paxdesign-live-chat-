@@ -85,21 +85,23 @@
   }
 
   function initSoftwareMarquee() {
-    var track = document.querySelector('[data-sw-marquee]');
-    if (!track) {
+    var tracks = document.querySelectorAll('[data-sw-marquee]');
+    if (!tracks.length) {
       return;
     }
 
-    var ribbon = track.closest('.pax-sw-ribbon');
-    if (!ribbon) {
-      return;
-    }
-
-    ribbon.addEventListener('mouseenter', function () {
-      track.classList.add('is-paused');
-    });
-    ribbon.addEventListener('mouseleave', function () {
-      track.classList.remove('is-paused');
+    tracks.forEach(function (track) {
+      var ribbon = track.closest('.pax-sw-ribbon');
+      if (!ribbon || ribbon.dataset.swMarqueeReady === '1') {
+        return;
+      }
+      ribbon.dataset.swMarqueeReady = '1';
+      ribbon.addEventListener('mouseenter', function () {
+        track.classList.add('is-paused');
+      });
+      ribbon.addEventListener('mouseleave', function () {
+        track.classList.remove('is-paused');
+      });
     });
   }
 

@@ -109,9 +109,31 @@
     });
   }
 
+  function initTechMarquee() {
+    var tracks = document.querySelectorAll('[data-sw-marquee]');
+    if (!tracks.length) {
+      return;
+    }
+
+    tracks.forEach(function (track) {
+      var ribbon = track.closest('.pax-sw-ribbon');
+      if (!ribbon || ribbon.dataset.phMarqueeReady === '1') {
+        return;
+      }
+      ribbon.dataset.phMarqueeReady = '1';
+      ribbon.addEventListener('mouseenter', function () {
+        track.classList.add('is-paused');
+      });
+      ribbon.addEventListener('mouseleave', function () {
+        track.classList.remove('is-paused');
+      });
+    });
+  }
+
   function boot() {
     initReveal();
     initSignup();
+    initTechMarquee();
   }
 
   if (document.readyState === 'loading') {

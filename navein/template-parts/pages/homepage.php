@@ -48,6 +48,22 @@ $service_links = array(
 		</div>
 	</section>
 
+	<!-- Tech marquee ribbon (same as /softwareentwicklung/) -->
+	<section class="pax-sw-ribbon" data-ph-reveal aria-label="Tech Stack">
+		<div class="pax-sw-ribbon__track" data-sw-marquee>
+			<div class="pax-sw-ribbon__group">
+				<span>Java</span><span>C#</span><span>Python</span><span>Go</span>
+				<span>Spring Boot</span><span>.NET Core</span><span>Django</span><span>FastAPI</span>
+				<span>Docker</span><span>Kubernetes</span><span>GitLab CI</span><span>Jenkins</span>
+			</div>
+			<div class="pax-sw-ribbon__group" aria-hidden="true">
+				<span>Java</span><span>C#</span><span>Python</span><span>Go</span>
+				<span>Spring Boot</span><span>.NET Core</span><span>Django</span><span>FastAPI</span>
+				<span>Docker</span><span>Kubernetes</span><span>GitLab CI</span><span>Jenkins</span>
+			</div>
+		</div>
+	</section>
+
 	<!-- Soft statement -->
 	<section class="pax-home-statement" data-ph-reveal>
 		<div class="pax-home-wrap pax-home-wrap--narrow">
