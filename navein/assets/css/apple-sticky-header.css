@@ -11,6 +11,7 @@
   --dtr-apple-header-line: rgba(0, 0, 0, 0.08);
   --dtr-apple-header-text: rgba(29, 29, 31, 0.88);
   --dtr-apple-header-text-hover: #000000;
+  --dtr-apple-header-logo-ink: #1d1d1f;
   --dtr-apple-header-height: 48px;
   --dtr-apple-header-height-scrolled: 44px;
 }
@@ -97,6 +98,42 @@
 
   body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-header-global .dtr-logo img {
     transform: scale(0.92);
+  }
+
+  /*
+   * Logo contrast on white glass header.
+   * Plugin logo CSS forces white icon/text for dark headers — override for Apple light bar.
+   */
+  body.dtr-apple-sticky-header header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default .paxlogo-code-slot {
+    color: var(--dtr-apple-header-logo-ink, #1d1d1f) !important;
+  }
+
+  body.dtr-apple-sticky-header header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default .paxlogo-symbol-icon,
+  body.dtr-apple-sticky-header header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default .paxlogo-symbol-shape {
+    color: inherit !important;
+  }
+
+  body.dtr-apple-sticky-header header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default .paxlogo-design tspan,
+  body.dtr-apple-sticky-header header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default .paxlogo-design text {
+    fill: var(--dtr-apple-header-logo-ink, #1d1d1f) !important;
+  }
+
+  /* Spacer "pax" tspan inside design group stays brand lime but invisible (opacity 0). */
+  body.dtr-apple-sticky-header header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default .paxlogo-design tspan[opacity="0"] {
+    fill: #ccff00 !important;
+  }
+
+  body.dtr-apple-sticky-header header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default .paxlogo-underline {
+    stroke: #ccff00 !important;
+  }
+
+  body.dtr-apple-sticky-header header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default:hover .paxlogo-code-slot {
+    color: #000000 !important;
+  }
+
+  body.dtr-apple-sticky-header header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default:hover .paxlogo-design tspan:not([opacity="0"]),
+  body.dtr-apple-sticky-header header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default:hover .paxlogo-design text {
+    fill: #000000 !important;
   }
 
   /* Navigation — Apple-like density & readability */
@@ -207,6 +244,29 @@
   body.dtr-apple-sticky-header.dtr-apple-header-scrolled #dtr-responsive-header {
     background-color: var(--dtr-apple-header-bg-scrolled) !important;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Mobile logo — same dark ink on white responsive bar */
+  body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo.logo-default .paxlogo-code-slot {
+    color: var(--dtr-apple-header-logo-ink, #1d1d1f) !important;
+  }
+
+  body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo.logo-default .paxlogo-symbol-icon,
+  body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo.logo-default .paxlogo-symbol-shape {
+    color: inherit !important;
+  }
+
+  body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo.logo-default .paxlogo-design tspan,
+  body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo.logo-default .paxlogo-design text {
+    fill: var(--dtr-apple-header-logo-ink, #1d1d1f) !important;
+  }
+
+  body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo.logo-default .paxlogo-design tspan[opacity="0"] {
+    fill: #ccff00 !important;
+  }
+
+  body.dtr-apple-sticky-header #dtr-responsive-header a.dtr-logo.logo-default .paxlogo-underline {
+    stroke: #ccff00 !important;
   }
 }
 
