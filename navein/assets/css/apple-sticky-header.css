@@ -9,7 +9,7 @@
   --dtr-apple-header-bg: rgba(255, 255, 255, 0.72);
   --dtr-apple-header-bg-scrolled: rgba(255, 255, 255, 0.9);
   --dtr-apple-header-line: rgba(0, 0, 0, 0.08);
-  --dtr-apple-header-text: rgba(29, 29, 31, 0.88);
+  --dtr-apple-header-text: #000000;
   --dtr-apple-header-text-hover: #000000;
   --dtr-apple-header-logo-ink: #1d1d1f;
   --dtr-apple-header-height: 48px;
@@ -166,10 +166,10 @@
     font-weight: 400;
     letter-spacing: -0.01em;
     line-height: 1.2;
-    color: var(--dtr-apple-header-text) !important;
+    color: #000000 !important;
     text-decoration: none !important;
     white-space: nowrap;
-    opacity: 0.92;
+    opacity: 1;
     transition:
       color 0.22s ease,
       opacity 0.22s ease,
@@ -184,13 +184,14 @@
   body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.sfHover > a,
   body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.current-menu-item > a,
   body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.current-menu-ancestor > a {
-    color: var(--dtr-apple-header-text-hover) !important;
+    color: #000000 !important;
     opacity: 1;
   }
 
   body.dtr-apple-sticky-header #dtr-header-global .dtr-menu-default .sf-menu > li > a,
   body.dtr-apple-sticky-header #dtr-header-global .dtr-menu-alt .sf-menu > li > a {
-    color: var(--dtr-apple-header-text) !important;
+    color: #000000 !important;
+    opacity: 1;
   }
 
   /* Keep Sign Up / widgets aligned to the compact bar */
