@@ -263,6 +263,21 @@ function navein_custom_scripts_styles() {
 		true
 	);
 
+	// Apple-inspired sitewide footer.
+	wp_enqueue_style(
+		'navein-apple-footer',
+		get_template_directory_uri() . '/assets/css/apple-footer.css',
+		array( 'navein-style', 'navein-apple-sticky-header' ),
+		$theme_version
+	);
+	wp_enqueue_script(
+		'navein-apple-footer',
+		get_template_directory_uri() . '/assets/js/apple-footer.js',
+		array(),
+		$theme_version,
+		true
+	);
+
 	// Apple-inspired product pages + complete homepage
 	$is_apple_product_page = is_page_template( 'template-apple-app-entwicklung.php' )
 		|| is_page_template( 'template-apple-advanced-website-systems.php' )
@@ -323,6 +338,18 @@ function navein_custom_scripts_styles() {
 }
 endif;
 add_action( 'wp_enqueue_scripts', 'navein_custom_scripts_styles', 20 );
+
+/**
+ * Mark body for Apple footer styling (sitewide).
+ *
+ * @param array $classes Body classes.
+ * @return array
+ */
+function navein_apple_footer_body_class( $classes ) {
+	$classes[] = 'dtr-apple-footer';
+	return $classes;
+}
+add_filter( 'body_class', 'navein_apple_footer_body_class' );
 // navein_custom_scripts_styles ends
 
 /**
