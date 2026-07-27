@@ -1,0 +1,125 @@
+name: Deploy Apple Webentwicklung page
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-webentwicklung-cfc9'
+    paths:
+      - '.github/triggers/deploy-apple-webentwicklung'
+      - '.github/workflows/deploy-apple-webentwicklung.yml'
+      - 'navein/template-apple-webentwicklung.php'
+      - 'navein/template-parts/pages/webentwicklung.php'
+      - 'navein/template-parts/page-title/page-header-page.php'
+      - 'navein/assets/css/apple-app-page.css'
+      - 'navein/assets/js/apple-app-page.js'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+      - 'scripts/assign-apple-webentwicklung-template.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy theme files and assign page template
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/assets/js") \
+              $(printf '%q' "$THEME/template-parts/pages") \
+              $(printf '%q' "$THEME/template-parts/page-title") \
+              $(printf '%q' "$THEME/scripts")"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-app-page.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/apple-app-page.js \
+            "${REMOTE}:${THEME}/assets/js/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-apple-webentwicklung.php \
+            "${REMOTE}:${THEME}/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/pages/webentwicklung.php \
+            "${REMOTE}:${THEME}/template-parts/pages/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/page-title/page-header-page.php \
+            "${REMOTE}:${THEME}/template-parts/page-title/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            scripts/assign-apple-webentwicklung-template.sh \
+            "${REMOTE}:${THEME}/scripts/"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "chmod +x $(printf '%q' "$THEME/scripts/assign-apple-webentwicklung-template.sh") && \
+             WP_PATH=$(printf '%q' "$WP_PATH") bash $(printf '%q' "$THEME/scripts/assign-apple-webentwicklung-template.sh")"
+
+          echo "Deployed Apple Webentwicklung page files"
+
+      - name: Verify live page
+        run: |
+          set -euo pipefail
+          set +e
+          WEB_HTML=$(curl -sS -o /tmp/web-page.html -w '%{http_code}' "https://paxdesign.at/webentwicklung/?n=$(date +%s)")
+          APP_HTML=$(curl -sS -o /tmp/app-page.html -w '%{http_code}' "https://paxdesign.at/app-entwicklung/?n=$(date +%s)")
+          CSS=$(curl -sS -o /tmp/apple-app-page.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-app-page.css?ver=1.0.9")
+          JS=$(curl -sS -o /tmp/apple-app-page.js -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-app-page.js?ver=1.0.9")
+          set -e
+          echo "WEB $WEB_HTML | APP $APP_HTML | CSS $CSS | JS $JS"
+          test "$WEB_HTML" = "200"
+          test "$APP_HTML" = "200"
+          test "$CSS" = "200"
+          test "$JS" = "200"
+          grep -Eq "pax-aap--web|pax-web-hero|digitale Exzellenz" /tmp/web-page.html
+          grep -Eq "page-template-template-apple-webentwicklung|navein-apple-app-page" /tmp/web-page.html
+          grep -Eq "pax-web-browser|pax-web-process|pax-web-pillars" /tmp/web-page.html
+          grep -Eq "pax-aap-hero|App-Entwicklung" /tmp/app-page.html
+          grep -Eq "pax-aap--web|pax-web-hero|--aap-black" /tmp/apple-app-page.css
+          echo "Apple Webentwicklung page verification passed."
