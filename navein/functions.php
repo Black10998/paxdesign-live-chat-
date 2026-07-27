@@ -240,29 +240,6 @@ function navein_custom_scripts_styles() {
 		array( 'navein-style', 'navein-mega-menu' ),
 		$theme_version
 	);
-	// Apple Login / Sign Up — beat Customizer glass / glow overrides.
-	wp_add_inline_style(
-		'navein-apple-sticky-header',
-		'html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-trigger,' .
-		'html body.dtr-apple-sticky-header #pdx-auth-bar button.pdx-auth-trigger,' .
-		'html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-signup-btn,' .
-		'html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-header-btn,' .
-		'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger,' .
-		'html body.dtr-apple-sticky-header header button.pdx-auth-trigger{' .
-		'border:0!important;background:#000!important;background-color:#000!important;' .
-		'background-image:none!important;color:#fff!important;box-shadow:none!important;' .
-		'border-radius:980px!important;min-height:32px!important;height:32px!important;' .
-		'padding:0 14px!important;font-weight:500!important;letter-spacing:-0.01em!important;' .
-		'-webkit-backdrop-filter:none!important;backdrop-filter:none!important;top:0!important;}' .
-		'html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-trigger:hover,' .
-		'html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-trigger:focus,' .
-		'html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-signup-btn:hover,' .
-		'html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-signup-btn:focus,' .
-		'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger:hover,' .
-		'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger:focus{' .
-		'background:#1d1d1f!important;background-color:#1d1d1f!important;color:#fff!important;' .
-		'box-shadow:none!important;outline:none!important;}'
-	);
 	wp_enqueue_script(
 		'navein-apple-sticky-header',
 		get_template_directory_uri() . '/assets/js/apple-sticky-header.js',
