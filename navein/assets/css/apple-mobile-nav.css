@@ -28,7 +28,11 @@
 
   body.dtr-apple-mobile-nav.dtr-apple-mnav-open {
     overflow: hidden !important;
-    touch-action: none;
+  }
+
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open .dtr-apple-mnav__scroll {
+    touch-action: pan-y;
+    overscroll-behavior: contain;
   }
 
   body.dtr-apple-mobile-nav #dtr-responsive-header {
@@ -238,15 +242,23 @@
     color: var(--dtr-amnav-ink);
   }
 
+  .dtr-apple-mnav__toggle {
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
   .dtr-apple-mnav__panel {
-    display: none;
+    display: none !important;
     list-style: none;
     margin: 0 0 18px;
     padding: 4px 0 10px;
   }
 
   .dtr-apple-mnav__item.is-open > .dtr-apple-mnav__panel {
-    display: block;
+    display: block !important;
     animation: dtrAmnavPanelIn 0.38s var(--dtr-amnav-ease);
   }
 

@@ -64,9 +64,13 @@
 
   function cleanClone($node) {
     var $clone = $node.clone(false, false);
+    // Superfish / theme may leave inline display:none — strip so accordion can open.
+    $clone.removeAttr('style');
+    $clone.find('[style]').removeAttr('style');
     $clone.find('.sf-sub-indicator, .sf-with-ul > .sf-sub-indicator').remove();
     $clone.find('[id]').removeAttr('id');
     $clone.find('a').removeAttr('aria-haspopup aria-expanded');
+    $clone.prop('hidden', false).removeAttr('hidden');
     return $clone;
   }
 
@@ -87,7 +91,8 @@
       }
 
       var href = $link.attr('href') || '#';
-      var label = $.trim($link.text());
+      // Prefer only the top-level label, not nested mega copy text.
+      var label = $.trim($link.clone().children().remove().end().text()) || $.trim($link.text());
       var $panel = $li.children('ul.dtr-mega-panel, ul.sub-menu').first();
       var hasChildren = $panel.length > 0;
       var $item = $('<li class="dtr-apple-mnav__item"></li>');
@@ -99,21 +104,27 @@
             panelId +
             '"></button>'
         );
-        $toggle.append($('<span></span>').text(label));
+        $toggle.append($('<span class="dtr-apple-mnav__label"></span>').text(label));
         $toggle.append(CHEVRON);
 
         var $children = cleanClone($panel);
         $children
           .attr('id', panelId)
           .attr('class', 'dtr-apple-mnav__panel')
-          .attr('hidden', true);
+          .attr('aria-hidden', 'true');
 
         // Keep mega item markup (icon/title/desc); strip nested unused menus + desktop feature cards.
         $children.find('ul.sub-menu').remove();
         $children.children('li.dtr-mega-feature').remove();
         $children.find('.dtr-mega-go').remove();
 
-        $item.append($toggle).append($children);
+        // If feature stripping left nothing usable, skip empty accordion.
+        if (!$children.children('li').length) {
+          var $aEmpty = $('<a class="dtr-apple-mnav__link"></a>').attr('href', href).text(label);
+          $item.append($aEmpty);
+        } else {
+          $item.append($toggle).append($children);
+        }
       } else {
         var $a = $('<a class="dtr-apple-mnav__link"></a>').attr('href', href).text(label);
         $item.append($a);
@@ -123,30 +134,63 @@
     });
 
     state.built = true;
+    bindAccordion();
     return true;
   }
 
   function setExpanded($item, open) {
+    if (!$item || !$item.length) {
+      return;
+    }
     var $toggle = $item.children('.dtr-apple-mnav__toggle');
     var $panel = $item.children('.dtr-apple-mnav__panel');
-    $item.toggleClass('is-open', open);
+    $item.toggleClass('is-open', !!open);
     $toggle.attr('aria-expanded', open ? 'true' : 'false');
     if ($panel.length) {
+      // Never rely on [hidden] / leftover inline display from Superfish.
+      $panel.prop('hidden', false).removeAttr('hidden').removeAttr('style');
+      $panel.attr('aria-hidden', open ? 'false' : 'true');
       if (open) {
-        $panel.prop('hidden', false).removeAttr('hidden');
+        $panel.css('display', 'block');
       } else {
-        $panel.prop('hidden', true).attr('hidden', true);
+        $panel.css('display', 'none');
       }
     }
   }
 
-  function closeAllSections() {
+  function closeAllSections(except) {
     if (!state.$list) {
       return;
     }
     state.$list.children('.dtr-apple-mnav__item.is-open').each(function () {
+      if (except && this === except.get(0)) {
+        return;
+      }
       setExpanded($(this), false);
     });
+  }
+
+  function onToggleActivate(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    var $toggle = $(e.currentTarget);
+    var $item = $toggle.closest('.dtr-apple-mnav__item');
+    if (!$item.length) {
+      return;
+    }
+    var willOpen = !$item.hasClass('is-open');
+    closeAllSections($item);
+    setExpanded($item, willOpen);
+  }
+
+  function bindAccordion() {
+    if (!state.$list || !state.$list.length) {
+      return;
+    }
+    // Bind on the list (closer than document) for reliable mobile taps.
+    state.$list
+      .off('click.amnavAcc touchend.amnavAcc')
+      .on('click.amnavAcc', '.dtr-apple-mnav__toggle', onToggleActivate);
   }
 
   function lockScroll(lock) {
@@ -170,7 +214,8 @@
     if (!isMobile()) {
       return;
     }
-    if (!state.built && !buildPanel()) {
+    // Rebuild each open so accordion handlers/markup stay fresh after desktop clones.
+    if (!buildPanel()) {
       return;
     }
 
@@ -187,6 +232,7 @@
       .attr('aria-hidden', 'false')
       .addClass('is-open');
     lockScroll(true);
+    closeAllSections();
 
     window.setTimeout(function () {
       var $first = state.$root.find('.dtr-apple-mnav__toggle, .dtr-apple-mnav__link').first();
@@ -198,7 +244,6 @@
 
   function closeNav() {
     if (!state.open) {
-      // Still normalize button/body if partially open.
       $(document.body).removeClass('dtr-apple-mnav-open');
       if (state.$btn) {
         state.$btn.removeClass('is-active').attr('aria-expanded', 'false');
@@ -268,20 +313,7 @@
         e.preventDefault();
         closeNav();
       })
-      .on('click.appleMobileNav', '.dtr-apple-mnav__toggle', function (e) {
-        e.preventDefault();
-        var $item = $(this).closest('.dtr-apple-mnav__item');
-        var willOpen = !$item.hasClass('is-open');
-        // Accordion: one section open at a time for clarity on touch.
-        state.$list.children('.dtr-apple-mnav__item.is-open').each(function () {
-          if (this !== $item.get(0)) {
-            setExpanded($(this), false);
-          }
-        });
-        setExpanded($item, willOpen);
-      })
       .on('click.appleMobileNav', '.dtr-apple-mnav__panel a, .dtr-apple-mnav__link, .dtr-apple-mnav__footer a', function () {
-        // Allow navigation, then close sheet.
         closeNav();
       });
 
@@ -295,7 +327,6 @@
       if (!isMobile() && state.open) {
         closeNav();
       }
-      // Rebuild when returning to mobile so labels stay fresh.
       if (isMobile()) {
         state.built = false;
       }
@@ -307,17 +338,14 @@
       MQ.addListener(onViewportChange);
     }
 
-    // Prefetch panel structure on mobile.
     if (isMobile()) {
       buildPanel();
     }
   }
 
   function boot() {
-    // Wait a tick so SlickNav/custom.js finish binding, then reclaim the button.
     window.setTimeout(bind, 0);
     window.setTimeout(function () {
-      // Re-assert ownership if other scripts rebound the hamburger.
       if (state.$btn && state.$btn.length) {
         state.$btn.off('click').on('click.appleMobileNav', toggleNav);
       }
