@@ -95,25 +95,48 @@
     }
   }
 
+  function cssUrl(src) {
+    return src ? 'url("' + String(src).replace(/"/g, '\\"') + '")' : '';
+  }
+
   function swapFeatureImage($feature, src) {
     if (!$feature.length || !src) {
       return;
     }
 
     var $media = $feature.find('.dtr-mega-feature__media').first();
-    var $active = $media.find('.dtr-mega-feature__img.is-active').first();
-    var $next = $media.find('.dtr-mega-feature__img').not('.is-active').first();
-
-    if (!$active.length) {
-      $active = $media.find('img').first();
-    }
-    if (!$next.length) {
-      $active.attr('src', src);
+    if (!$media.length) {
       return;
     }
 
-    var current = $active.attr('src') || '';
-    if (current === src) {
+    var current = $feature.attr('data-current-src') || $feature.attr('data-default-src') || '';
+    if (current === src && $media.find('.dtr-mega-feature__layer.is-active').length) {
+      return;
+    }
+
+    var $active = $media.find('.dtr-mega-feature__layer.is-active').first();
+    var $next = $media.find('.dtr-mega-feature__layer').not('.is-active').first();
+
+    // Fallback for older markup with <img> tags.
+    if (!$active.length && !$next.length) {
+      var $imgs = $media.find('img');
+      if ($imgs.length) {
+        $imgs.first().attr('src', src).addClass('is-active').css({
+          opacity: '1',
+          visibility: 'visible',
+          display: 'block'
+        });
+        $imgs.slice(1).removeClass('is-active').css('opacity', '0');
+      }
+      $media.css('background-image', cssUrl(src));
+      $feature.attr('data-current-src', src);
+      return;
+    }
+
+    if (!$next.length) {
+      $active.css('background-image', cssUrl(src)).addClass('is-active');
+      $media.css('background-image', cssUrl(src));
+      $feature.attr('data-current-src', src);
       return;
     }
 
@@ -124,9 +147,10 @@
       if ($feature.data('previewToken') !== token) {
         return;
       }
-      $next.attr('src', src);
+      $next.css('background-image', cssUrl(src));
       $next.addClass('is-active');
       $active.removeClass('is-active');
+      $media.css('background-image', cssUrl(src));
       $feature.attr('data-current-src', src);
     }
 
@@ -142,7 +166,8 @@
       activate();
     };
     loader.onerror = function () {
-      // Keep current image if the preview fails to load.
+      // Still apply the URL so a broken state is visible/debuggable.
+      activate();
     };
     loader.src = src;
     if (loader.complete) {

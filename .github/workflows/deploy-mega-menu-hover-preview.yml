@@ -121,7 +121,7 @@ jobs:
           retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
             "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
 
-          echo "Deployed mega menu hover preview 1.2.8"
+          echo "Deployed mega menu hover preview 1.2.9"
 
       - name: Verify live mega menu hover preview
         run: |
@@ -131,9 +131,9 @@ jobs:
           HOME_HTML=$(curl -sS -A "Mozilla/5.0" -o /tmp/home-mega-preview.html -w '%{http_code}' \
             "https://paxdesign.at/?n=${stamp}")
           CSS=$(curl -sS -A "Mozilla/5.0" -o /tmp/mega-menu-preview.css -w '%{http_code}' \
-            "https://paxdesign.at/wp-content/themes/navein/assets/css/mega-menu.css?ver=1.2.8")
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/mega-menu.css?ver=1.2.9")
           JS=$(curl -sS -A "Mozilla/5.0" -o /tmp/mega-menu-preview.js -w '%{http_code}' \
-            "https://paxdesign.at/wp-content/themes/navein/assets/js/mega-menu.js?ver=1.2.8")
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/mega-menu.js?ver=1.2.9")
           set -e
           echo "HOME $HOME_HTML | CSS $CSS | JS $JS"
           test "$HOME_HTML" = "200"
@@ -141,11 +141,12 @@ jobs:
           test "$JS" = "200"
 
           grep -Eq 'data-preview-src=' /tmp/home-mega-preview.html
-          grep -Eq 'dtr-mega-feature__img is-active' /tmp/home-mega-preview.html
+          grep -Eq 'dtr-mega-feature__layer is-active' /tmp/home-mega-preview.html
           grep -Eq 'assets/img/mega/(projects|app|contact|systems|about)\.jpg' /tmp/home-mega-preview.html
-          grep -Eq 'setItemPreview|swapFeatureImage|data-preview-src' /tmp/mega-menu-preview.js
-          grep -Eq 'dtr-mega-feature__img\.is-active|is-preview-active' /tmp/mega-menu-preview.css
-          grep -Eq 'style\.css\?ver=1\.2\.8|mega-menu\.(css|js)\?ver=1\.2\.8' /tmp/home-mega-preview.html
+          grep -Eq 'background-image:url' /tmp/home-mega-preview.html
+          grep -Eq 'setItemPreview|swapFeatureImage|dtr-mega-feature__layer' /tmp/mega-menu-preview.js
+          grep -Eq 'dtr-mega-feature__layer\.is-active|opacity: 1 !important' /tmp/mega-menu-preview.css
+          grep -Eq 'style\.css\?ver=1\.2\.9|mega-menu\.(css|js)\?ver=1\.2\.9' /tmp/home-mega-preview.html
 
           for key in projects visual branding strategy ux commerce concept systems consulting app software web about privacy docs support experts career contact services default; do
             code=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w '%{http_code}' \
