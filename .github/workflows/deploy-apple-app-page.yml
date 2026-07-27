@@ -11,6 +11,7 @@ on:
       - '.github/workflows/deploy-apple-app-page.yml'
       - 'navein/template-apple-app-entwicklung.php'
       - 'navein/template-parts/pages/app-entwicklung.php'
+      - 'navein/template-parts/page-title/page-header-page.php'
       - 'navein/assets/css/apple-app-page.css'
       - 'navein/assets/js/apple-app-page.js'
       - 'navein/functions.php'
@@ -80,6 +81,10 @@ jobs:
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/template-parts/pages/app-entwicklung.php \
             "${REMOTE}:${THEME}/template-parts/pages/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/page-title/page-header-page.php \
+            "${REMOTE}:${THEME}/template-parts/page-title/"
 
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/functions.php \
