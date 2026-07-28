@@ -20,11 +20,13 @@ $skip_legacy_banner =
 	|| is_page_template( 'template-apple-softwareentwicklung.php' )
 	|| is_page_template( 'template-apple-wartung-support.php' )
 	|| is_page_template( 'template-apple-webentwicklung.php' )
+	|| is_page_template( 'template-apple-impressum.php' )
 	|| is_page( 'app-entwicklung' )
 	|| is_page( 'advanced-website-systems' )
 	|| is_page( 'softwareentwicklung' )
 	|| is_page( 'wartung-support' )
 	|| is_page( 'webentwicklung' )
+	|| is_page( 'impressum' )
 	|| is_page( 'it-consulting' );
 
 if ( $skip_legacy_banner ) {
