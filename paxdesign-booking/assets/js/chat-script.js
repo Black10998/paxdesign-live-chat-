@@ -8,6 +8,17 @@
   var config = window.paxdesignChat;
   if (!config || !config.enabled) return;
 
+  (function bootstrapPageContext() {
+    var path = window.location.pathname || '';
+    if (path.indexOf('cybercrime-support') === -1) {
+      return;
+    }
+    window.PAXdesignPageContext = window.PAXdesignPageContext || {};
+    if (!window.PAXdesignPageContext.intent) {
+      window.PAXdesignPageContext.intent = 'cybercrime-support';
+    }
+  })();
+
   var root = document.getElementById('paxdesign-booking-root');
   if (!root) return;
 
@@ -2322,7 +2333,22 @@
   }
 
   function stampChatRequest(formData) {
-    if (formData) formData.append('device_token', getDeviceToken());
+    if (formData) {
+      formData.append('device_token', getDeviceToken());
+      var ctx = window.PAXdesignPageContext || {};
+      if (!ctx.intent) {
+        var path = window.location.pathname || '';
+        if (path.indexOf('cybercrime-support') !== -1) {
+          ctx.intent = 'cybercrime-support';
+        }
+      }
+      if (ctx.intent) {
+        formData.append('page_context', ctx.intent);
+      }
+      if (ctx.language) {
+        formData.append('page_language', ctx.language);
+      }
+    }
     return formData;
   }
 

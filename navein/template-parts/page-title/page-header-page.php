@@ -20,6 +20,7 @@ $skip_legacy_banner =
 	|| is_page_template( 'template-apple-softwareentwicklung.php' )
 	|| is_page_template( 'template-apple-wartung-support.php' )
 	|| is_page_template( 'template-apple-webentwicklung.php' )
+	|| is_page_template( 'template-apple-cybercrime-support.php' )
 	|| is_page_template( 'template-apple-impressum.php' )
 	|| is_page_template( 'template-apple-unsere-experten.php' )
 	|| is_page( 'app-entwicklung' )
@@ -27,6 +28,7 @@ $skip_legacy_banner =
 	|| is_page( 'softwareentwicklung' )
 	|| is_page( 'wartung-support' )
 	|| is_page( 'webentwicklung' )
+	|| is_page( 'cybercrime-support' )
 	|| is_page( 'impressum' )
 	|| is_page( 'unsere-experten' )
 	|| is_page( 'it-consulting' );

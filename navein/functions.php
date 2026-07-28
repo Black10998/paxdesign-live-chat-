@@ -2,7 +2,7 @@
 /**
  * Navein WordPress Theme.
  * @package NaveinTheme
- * @version 1.1.5
+ * @version 1.1.6
  */
 
 // Exit if accessed directly
@@ -304,11 +304,13 @@ function navein_custom_scripts_styles() {
 		|| is_page_template( 'template-apple-softwareentwicklung.php' )
 		|| is_page_template( 'template-apple-wartung-support.php' )
 		|| is_page_template( 'template-apple-webentwicklung.php' )
+		|| is_page_template( 'template-apple-cybercrime-support.php' )
 		|| is_page( 'app-entwicklung' )
 		|| is_page( 'advanced-website-systems' )
 		|| is_page( 'softwareentwicklung' )
 		|| is_page( 'wartung-support' )
-		|| is_page( 'webentwicklung' );
+		|| is_page( 'webentwicklung' )
+		|| is_page( 'cybercrime-support' );
 	if ( $is_apple_product_page ) {
 		wp_enqueue_style(
 			'navein-apple-app-page',
@@ -329,6 +331,8 @@ function navein_custom_scripts_styles() {
 			'html body.page-template-template-apple-wartung-support-php #dtr-main-wrapper,' .
 			'html body.page-template-template-apple-webentwicklung #dtr-main-wrapper,' .
 			'html body.page-template-template-apple-webentwicklung-php #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-cybercrime-support #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-cybercrime-support-php #dtr-main-wrapper,' .
 			'html body.page-template-template-apple-app-entwicklung #dtr-main-wrapper.pax-apple-app-wrap,' .
 			'html body.page-template-template-apple-advanced-website-systems #dtr-main-wrapper.pax-apple-app-wrap,' .
 			'html body.page-template-template-apple-softwareentwicklung #dtr-main-wrapper.pax-apple-app-wrap,' .
@@ -341,6 +345,46 @@ function navein_custom_scripts_styles() {
 			'navein-apple-app-page',
 			get_template_directory_uri() . '/assets/js/apple-app-page.js',
 			array(),
+			$theme_version,
+			true
+		);
+	}
+
+	$is_apple_cybercrime = is_page_template( 'template-apple-cybercrime-support.php' )
+		|| is_page( 'cybercrime-support' );
+	if ( $is_apple_cybercrime ) {
+		wp_enqueue_style(
+			'navein-apple-app-page',
+			get_template_directory_uri() . '/assets/css/apple-app-page.css',
+			array( 'navein-style' ),
+			$theme_version
+		);
+		wp_enqueue_style(
+			'navein-apple-cybercrime-support',
+			get_template_directory_uri() . '/assets/css/apple-cybercrime-support.css',
+			array( 'navein-style', 'navein-apple-app-page' ),
+			$theme_version
+		);
+		wp_add_inline_style(
+			'navein-apple-cybercrime-support',
+			'html body.page-template-template-apple-cybercrime-support #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-cybercrime-support-php #dtr-main-wrapper,' .
+			'html body.page-cybercrime-support #dtr-main-wrapper{' .
+			'width:100%!important;max-width:none!important;margin:0!important;' .
+			'padding:0!important;padding-left:0!important;padding-right:0!important;' .
+			'box-sizing:border-box!important;}'
+		);
+		wp_enqueue_script(
+			'navein-apple-app-page',
+			get_template_directory_uri() . '/assets/js/apple-app-page.js',
+			array(),
+			$theme_version,
+			true
+		);
+		wp_enqueue_script(
+			'navein-apple-cybercrime-support',
+			get_template_directory_uri() . '/assets/js/apple-cybercrime-support.js',
+			array( 'navein-apple-app-page' ),
 			$theme_version,
 			true
 		);
@@ -477,6 +521,7 @@ if ( ! function_exists( 'navein_force_apple_product_templates' ) ) :
 			'softwareentwicklung'        => 'template-apple-softwareentwicklung.php',
 			'wartung-support'            => 'template-apple-wartung-support.php',
 			'webentwicklung'             => 'template-apple-webentwicklung.php',
+			'cybercrime-support'         => 'template-apple-cybercrime-support.php',
 			'impressum'                  => 'template-apple-impressum.php',
 			'unsere-experten'            => 'template-apple-unsere-experten.php',
 		);

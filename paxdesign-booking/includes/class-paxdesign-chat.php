@@ -296,7 +296,77 @@ class PAXdesign_Chat {
                 $prompt .= "\n\n" . $context;
             }
         }
+
+        $page_context = $this->resolve_page_context($session_id);
+        if ($page_context === 'cybercrime-support' && class_exists('PAXdesign_Chat_Knowledge')) {
+            $page_language = $this->resolve_page_language($session_id);
+            if ($page_language === '' && in_array($customer_language, array('de', 'en', 'ar'), true)) {
+                $page_language = $customer_language;
+            }
+            $prompt .= "\n\n" . PAXdesign_Chat_Knowledge::build_cybercrime_support_context_block($page_language);
+        }
+
         return $prompt;
+    }
+
+    /**
+     * Persist page intent/language from the global chat widget (no extra page UI).
+     *
+     * @param string $session_id
+     */
+    private function persist_page_context_from_request($session_id) {
+        $session_id = sanitize_text_field((string) $session_id);
+        if ($session_id === '') {
+            return;
+        }
+
+        $key = md5($session_id);
+        if (isset($_POST['page_context'])) {
+            $context = sanitize_key(wp_unslash($_POST['page_context']));
+            if ($context !== '') {
+                set_transient('pax_chat_page_ctx_' . $key, $context, DAY_IN_SECONDS);
+            }
+        }
+        if (isset($_POST['page_language'])) {
+            $language = sanitize_key(wp_unslash($_POST['page_language']));
+            if (in_array($language, array('de', 'en', 'ar'), true)) {
+                set_transient('pax_chat_page_lang_' . $key, $language, DAY_IN_SECONDS);
+            }
+        }
+    }
+
+    /**
+     * @param string $session_id
+     * @return string
+     */
+    private function resolve_page_context($session_id) {
+        $session_id = sanitize_text_field((string) $session_id);
+        if ($session_id !== '') {
+            $stored = get_transient('pax_chat_page_ctx_' . md5($session_id));
+            if (is_string($stored) && $stored !== '') {
+                return sanitize_key($stored);
+            }
+        }
+
+        $referrer = isset($_SERVER['HTTP_REFERER']) ? esc_url_raw(wp_unslash($_SERVER['HTTP_REFERER'])) : '';
+        if ($referrer !== '' && strpos($referrer, '/cybercrime-support') !== false) {
+            return 'cybercrime-support';
+        }
+
+        return '';
+    }
+
+    /**
+     * @param string $session_id
+     * @return string de|en|ar
+     */
+    private function resolve_page_language($session_id) {
+        $session_id = sanitize_text_field((string) $session_id);
+        if ($session_id === '') {
+            return '';
+        }
+        $stored = get_transient('pax_chat_page_lang_' . md5($session_id));
+        return is_string($stored) ? sanitize_key($stored) : '';
     }
 
     /**
@@ -380,6 +450,7 @@ class PAXdesign_Chat {
         }
 
         $session_id = isset($_POST['session_id']) ? sanitize_text_field(wp_unslash($_POST['session_id'])) : '';
+        $this->persist_page_context_from_request($session_id);
         if (get_option('paxdesign_customer_require_login_for_chat', '1') === '1' && get_current_user_id() <= 0) {
             wp_send_json_error(array(
                 'message' => __('Sign in or create an account to use Live Chat.', 'paxdesign-booking'),

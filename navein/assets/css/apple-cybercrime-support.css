@@ -1,0 +1,247 @@
+/**
+ * Cybercrime Support — bilingual layout + visuals (extends apple-app-page.css).
+ */
+
+body.page-template-template-apple-cybercrime-support,
+body.page-template-template-apple-cybercrime-support-php,
+body.page-cybercrime-support {
+  --aap-black: #000000;
+  --aap-ink: #1d1d1f;
+  --aap-muted: #86868b;
+  --aap-line: rgba(0, 0, 0, 0.08);
+  --aap-line-light: rgba(255, 255, 255, 0.14);
+  --aap-white: #ffffff;
+  --aap-snow: #f5f5f7;
+  --aap-blue: #0071e3;
+  --aap-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+html body.page-template-template-apple-cybercrime-support #dtr-main-wrapper.pax-apple-app-wrap,
+html body.page-template-template-apple-cybercrime-support-php #dtr-main-wrapper.pax-apple-app-wrap,
+html body.page-cybercrime-support #dtr-main-wrapper.pax-apple-app-wrap {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  background: var(--aap-white, #fff);
+}
+
+.pax-ccs {
+  font-family: var(--aap-text, -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif);
+}
+
+.pax-ccs[dir="rtl"] .pax-aap-feature__grid--reverse {
+  direction: rtl;
+}
+
+.pax-ccs-langbar {
+  padding: 12px 0 0;
+  background: var(--aap-white, #fff);
+}
+
+.pax-ccs-langbar__inner {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pax-ccs[dir="rtl"] .pax-ccs-langbar__inner {
+  justify-content: flex-start;
+}
+
+.pax-ccs-langbar__label {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--aap-muted, #86868b);
+}
+
+.pax-ccs-langbar__toggle {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 980px;
+  background: var(--aap-snow, #f5f5f7);
+  border: 1px solid var(--aap-line, rgba(0, 0, 0, 0.08));
+}
+
+.pax-ccs-langbar__btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--aap-ink, #1d1d1f);
+  font: 500 13px/1 var(--aap-text, -apple-system, BlinkMacSystemFont, sans-serif);
+  padding: 8px 14px;
+  border-radius: 980px;
+  cursor: pointer;
+  transition: background 0.25s var(--aap-ease, ease), color 0.25s var(--aap-ease, ease);
+}
+
+.pax-ccs-langbar__btn.is-active {
+  background: #000;
+  color: #fff;
+}
+
+.pax-ccs-hero__stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pax-ccs-shield {
+  position: relative;
+  width: min(280px, 70vw);
+  aspect-ratio: 1;
+}
+
+.pax-ccs-shield__ring,
+.pax-ccs-shield__core,
+.pax-ccs-shield__scan {
+  position: absolute;
+  inset: 0;
+  border-radius: 28px;
+}
+
+.pax-ccs-shield__ring {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: linear-gradient(145deg, #fafafa 0%, #f0f0f2 100%);
+  transform: rotate(8deg);
+}
+
+.pax-ccs-shield__core {
+  inset: 14%;
+  border-radius: 22px;
+  background: #000;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+}
+
+.pax-ccs-shield__scan {
+  inset: 22% 18%;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(0, 113, 227, 0.35), transparent 55%);
+  animation: pax-ccs-scan 3.2s var(--aap-ease, ease) infinite;
+}
+
+@keyframes pax-ccs-scan {
+  0%, 100% { opacity: 0.35; transform: translateY(-6%); }
+  50% { opacity: 0.85; transform: translateY(18%); }
+}
+
+.pax-ccs-overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin-top: 36px;
+}
+
+.pax-ccs-overview__item {
+  padding: 28px 24px;
+  border-radius: 20px;
+  background: var(--aap-snow, #f5f5f7);
+  border: 1px solid var(--aap-line, rgba(0, 0, 0, 0.08));
+}
+
+.pax-ccs-overview__item h3 {
+  margin: 0 0 10px;
+  font: 600 19px/1.2 var(--aap-display, -apple-system, BlinkMacSystemFont, sans-serif);
+  color: var(--aap-ink, #1d1d1f);
+}
+
+.pax-ccs-overview__item p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--aap-muted, #86868b);
+}
+
+.pax-ccs-visual {
+  width: min(320px, 100%);
+  aspect-ratio: 1;
+  border-radius: 24px;
+  margin-inline: auto;
+  background: var(--aap-snow, #f5f5f7);
+  border: 1px solid var(--aap-line, rgba(0, 0, 0, 0.08));
+  position: relative;
+  overflow: hidden;
+}
+
+.pax-aap-feature--dark .pax-ccs-visual {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--aap-line-light, rgba(255, 255, 255, 0.14));
+}
+
+.pax-ccs-visual::after {
+  content: "";
+  position: absolute;
+  inset: 18%;
+  border-radius: 16px;
+  border: 1px dashed rgba(0, 113, 227, 0.35);
+}
+
+.pax-ccs-visual--social::before { content: "@"; }
+.pax-ccs-visual--email::before { content: "✉"; }
+.pax-ccs-visual--shield::before { content: "⛨"; }
+.pax-ccs-visual--identity::before { content: "ID"; }
+.pax-ccs-visual--malware::before { content: "!"; }
+.pax-ccs-visual--evidence::before { content: "⌁"; }
+.pax-ccs-visual--lock::before { content: "LOCK"; font-size: 16px; letter-spacing: 0.12em; }
+.pax-ccs-visual--trust::before { content: "✓"; }
+
+.pax-ccs-visual::before {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font: 600 42px/1 var(--aap-display, sans-serif);
+  color: rgba(0, 113, 227, 0.75);
+}
+
+.pax-ccs-faq__list {
+  margin-top: 28px;
+  display: grid;
+  gap: 12px;
+}
+
+.pax-ccs-faq__item {
+  border-radius: 16px;
+  border: 1px solid var(--aap-line, rgba(0, 0, 0, 0.08));
+  background: #fff;
+  padding: 4px 18px;
+}
+
+.pax-ccs-faq__item summary {
+  cursor: pointer;
+  font: 600 17px/1.35 var(--aap-display, sans-serif);
+  padding: 14px 0;
+  list-style: none;
+}
+
+.pax-ccs-faq__item summary::-webkit-details-marker {
+  display: none;
+}
+
+.pax-ccs-faq__item p {
+  margin: 0 0 16px;
+  color: var(--aap-muted, #86868b);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+@media (max-width: 992px) {
+  .pax-ccs-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .pax-ccs-shield {
+    width: min(220px, 60vw);
+    margin: 24px auto 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pax-ccs-shield__scan {
+    animation: none;
+  }
+}
