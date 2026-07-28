@@ -1,12 +1,49 @@
 /**
- * Cybercrime Support page — language toggle + Live Chat page context (no extra chat UI).
+ * Cybercrime reporting portal — step workflow, review, secure submit.
+ * Live Chat page context only (no extra chat UI on this page).
  */
 (function () {
   'use strict';
 
-  var root = document.querySelector('.pax-ccs');
-  if (!root) {
+  var root = document.querySelector('.pax-ccs-portal');
+  var form = document.getElementById('pax-ccs-intake-form');
+  var config = window.paxCybercrimeIntake || {};
+
+  if (!root || !form) {
     return;
+  }
+
+  var currentStep = 1;
+  var localeInput = document.getElementById('pax-ccs-locale');
+  var reviewEl = document.getElementById('pax-ccs-review');
+  var errorEl = document.getElementById('pax-ccs-form-error');
+  var successEl = document.getElementById('pax-ccs-success');
+  var refEl = document.getElementById('pax-ccs-ref-value');
+  var submitBtn = document.getElementById('pax-ccs-submit');
+
+  function t(key) {
+    var strings = {
+      ar: {
+        identity: 'الهوية',
+        incident: 'الحادث',
+        evidence: 'الأدلة',
+        files: 'ملف(ات)',
+        none: '—',
+        yes: 'نعم',
+        no: 'لا',
+      },
+      de: {
+        identity: 'Identität',
+        incident: 'Vorfall',
+        evidence: 'Beweise',
+        files: 'Datei(en)',
+        none: '—',
+        yes: 'Ja',
+        no: 'Nein',
+      },
+    };
+    var lang = root.getAttribute('data-ccs-lang') || 'ar';
+    return (strings[lang] && strings[lang][key]) || key;
   }
 
   function setPageContext(lang) {
@@ -21,27 +58,241 @@
     if (lang !== 'ar' && lang !== 'de') {
       lang = 'ar';
     }
-
     root.setAttribute('data-ccs-lang', lang);
     root.setAttribute('lang', lang);
     root.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
-
+    if (localeInput) {
+      localeInput.value = lang;
+    }
     root.querySelectorAll('.pax-ccs-t').forEach(function (el) {
       el.hidden = el.getAttribute('data-lang') !== lang;
     });
-
     root.querySelectorAll('[data-ccs-switch]').forEach(function (btn) {
       var active = btn.getAttribute('data-ccs-switch') === lang;
       btn.classList.toggle('is-active', active);
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
-
+    updateSelectLabels(lang);
     setPageContext(lang);
-
     try {
       localStorage.setItem('pax-ccs-lang', lang);
     } catch (e) {}
+    if (currentStep === 4) {
+      renderReview();
+    }
   }
+
+  function updateSelectLabels(lang) {
+    form.querySelectorAll('option[data-label-ar]').forEach(function (opt) {
+      var label = opt.getAttribute(lang === 'de' ? 'data-label-de' : 'data-label-ar');
+      if (label) {
+        opt.textContent = label;
+      }
+    });
+  }
+
+  function getStepEl(step) {
+    return form.querySelector('.pax-ccs-portal__step[data-step="' + step + '"]');
+  }
+
+  function updateProgress(step) {
+    root.querySelectorAll('.pax-ccs-portal__progress-item').forEach(function (item) {
+      var n = parseInt(item.getAttribute('data-progress-step'), 10);
+      item.classList.toggle('is-active', n === step);
+      item.classList.toggle('is-done', n < step);
+    });
+  }
+
+  function showStep(step) {
+    form.querySelectorAll('.pax-ccs-portal__step').forEach(function (panel) {
+      var n = parseInt(panel.getAttribute('data-step'), 10);
+      var active = n === step;
+      panel.hidden = !active;
+      panel.classList.toggle('is-active', active);
+    });
+    currentStep = step;
+    updateProgress(step);
+    if (step === 4) {
+      renderReview();
+    }
+    window.scrollTo({ top: root.offsetTop - 24, behavior: 'smooth' });
+  }
+
+  function markInvalid(field) {
+    var wrap = field.closest('.pax-ccs-portal__field') || field.closest('.pax-ccs-portal__declarations');
+    if (wrap) {
+      wrap.classList.add('is-invalid');
+    }
+  }
+
+  function clearInvalid() {
+    form.querySelectorAll('.is-invalid').forEach(function (el) {
+      el.classList.remove('is-invalid');
+    });
+  }
+
+  function validateStep(step) {
+    clearInvalid();
+    var panel = getStepEl(step);
+    if (!panel) {
+      return true;
+    }
+    var valid = true;
+    panel.querySelectorAll('input, select, textarea').forEach(function (field) {
+      if (field.type === 'file' || field.name === 'website_trap') {
+        return;
+      }
+      if (field.type === 'checkbox') {
+        if (field.required && !field.checked) {
+          valid = false;
+          markInvalid(field);
+        }
+        return;
+      }
+      if (!field.checkValidity()) {
+        valid = false;
+        markInvalid(field);
+      }
+    });
+    if (!valid) {
+      panel.querySelector(':invalid') && panel.querySelector(':invalid').focus();
+    }
+    return valid;
+  }
+
+  function fieldValue(name) {
+    var el = form.elements[name];
+    if (!el) {
+      return '';
+    }
+    if (el.type === 'checkbox') {
+      return el.checked ? t('yes') : t('no');
+    }
+    return (el.value || '').trim();
+  }
+
+  function selectedLabel(selectEl) {
+    if (!selectEl || !selectEl.options[selectEl.selectedIndex]) {
+      return t('none');
+    }
+    return selectEl.options[selectEl.selectedIndex].textContent;
+  }
+
+  function fileSummary(input) {
+    if (!input || !input.files || !input.files.length) {
+      return t('none');
+    }
+    return input.files.length + ' ' + t('files');
+  }
+
+  function renderReview() {
+    if (!reviewEl) {
+      return;
+    }
+    var rows = [
+      { label: document.querySelector('label[for="pax-ccs-full-name"]'), value: fieldValue('full_name') },
+      { label: document.querySelector('label[for="pax-ccs-email"]'), value: fieldValue('email') },
+      { label: document.querySelector('label[for="pax-ccs-phone"]'), value: fieldValue('phone') },
+      { label: document.querySelector('label[for="pax-ccs-country"]'), value: fieldValue('country') },
+      { label: document.querySelector('label[for="pax-ccs-category"]'), value: selectedLabel(form.elements.category) },
+      { label: document.querySelector('label[for="pax-ccs-incident-date"]'), value: fieldValue('incident_date') + (fieldValue('incident_time') ? ' ' + fieldValue('incident_time') : '') },
+      { label: document.querySelector('label[for="pax-ccs-platforms"]'), value: fieldValue('platforms') },
+      { label: document.querySelector('label[for="pax-ccs-urgency"]'), value: selectedLabel(form.elements.urgency) },
+      { label: document.querySelector('label[for="pax-ccs-financial-loss"]'), value: fieldValue('financial_loss') ? fieldValue('financial_loss') + ' ' + fieldValue('financial_currency') : t('none') },
+      { label: document.querySelector('label[for="pax-ccs-description"]'), value: fieldValue('description') },
+      { label: document.querySelector('label[for="pax-ccs-screenshots"]'), value: fileSummary(document.getElementById('pax-ccs-screenshots')) },
+      { label: document.querySelector('label[for="pax-ccs-documents"]'), value: fileSummary(document.getElementById('pax-ccs-documents')) },
+      { label: document.querySelector('label[for="pax-ccs-chats"]'), value: fileSummary(document.getElementById('pax-ccs-chats')) },
+      { label: document.querySelector('label[for="pax-ccs-other"]'), value: fileSummary(document.getElementById('pax-ccs-other')) },
+    ];
+
+    reviewEl.innerHTML = rows.map(function (row) {
+      var labelText = row.label ? row.label.textContent.trim() : '';
+      return '<dl class="pax-ccs-portal__review-row"><dt>' + escapeHtml(labelText) + '</dt><dd>' + escapeHtml(row.value || t('none')) + '</dd></dl>';
+    }).join('');
+  }
+
+  function escapeHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function hideError() {
+    if (errorEl) {
+      errorEl.hidden = true;
+      errorEl.textContent = '';
+    }
+  }
+
+  function showError(msg) {
+    if (errorEl) {
+      errorEl.hidden = false;
+      errorEl.textContent = msg;
+    }
+  }
+
+  form.addEventListener('click', function (e) {
+    var next = e.target.closest('[data-ccs-next]');
+    var back = e.target.closest('[data-ccs-back]');
+    if (next) {
+      e.preventDefault();
+      var target = parseInt(next.getAttribute('data-ccs-next'), 10);
+      if (validateStep(currentStep)) {
+        showStep(target);
+      }
+    }
+    if (back) {
+      e.preventDefault();
+      showStep(parseInt(back.getAttribute('data-ccs-back'), 10));
+    }
+  });
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    hideError();
+    if (!validateStep(4)) {
+      return;
+    }
+    if (!config.ajaxUrl || !config.nonce) {
+      showError('Configuration error.');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    var data = new FormData(form);
+    data.append('action', 'paxdesign_cybercrime_report');
+    data.append('nonce', config.nonce);
+
+    fetch(config.ajaxUrl, {
+      method: 'POST',
+      body: data,
+      credentials: 'same-origin',
+    })
+      .then(function (res) {
+        return res.json();
+      })
+      .then(function (json) {
+        if (!json || !json.success) {
+          throw new Error((json && json.data && json.data.message) || 'Submit failed');
+        }
+        form.hidden = true;
+        root.querySelector('.pax-ccs-portal__progress').hidden = true;
+        if (successEl) {
+          successEl.hidden = false;
+        }
+        if (refEl && json.data && json.data.referenceId) {
+          refEl.textContent = json.data.referenceId;
+        }
+        window.scrollTo({ top: root.offsetTop - 24, behavior: 'smooth' });
+      })
+      .catch(function (err) {
+        showError(err.message || 'Submit failed');
+        submitBtn.disabled = false;
+      });
+  });
 
   root.querySelectorAll('[data-ccs-switch]').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -53,6 +304,5 @@
   try {
     saved = localStorage.getItem('pax-ccs-lang') || '';
   } catch (e) {}
-
   setLang(saved === 'de' ? 'de' : 'ar');
 })();

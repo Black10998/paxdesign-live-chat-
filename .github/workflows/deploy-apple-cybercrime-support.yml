@@ -22,6 +22,7 @@ on:
       - 'paxdesign-booking/includes/class-paxdesign-chat.php'
       - 'paxdesign-booking/includes/class-paxdesign-chat-knowledge.php'
       - 'paxdesign-booking/assets/js/chat-script.js'
+      - 'paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php'
       - 'paxdesign-booking/paxdesign-booking.php'
       - 'scripts/assign-apple-cybercrime-support-template.sh'
 
@@ -77,12 +78,10 @@ jobs:
               $(printf '%q' "$PLUGIN/assets/js")"
 
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
-            navein/assets/css/apple-app-page.css \
             navein/assets/css/apple-cybercrime-support.css \
             "${REMOTE}:${THEME}/assets/css/"
 
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
-            navein/assets/js/apple-app-page.js \
             navein/assets/js/apple-cybercrime-support.js \
             "${REMOTE}:${THEME}/assets/js/"
 
@@ -111,6 +110,7 @@ jobs:
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
             paxdesign-booking/includes/class-paxdesign-chat.php \
             paxdesign-booking/includes/class-paxdesign-chat-knowledge.php \
+            paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php \
             "${REMOTE}:${PLUGIN}/includes/"
 
           rsync -az -e "ssh ${SSH_OPTS[*]}" \
@@ -136,18 +136,19 @@ jobs:
           stamp=$(date +%s)
           PAGE=$(curl -sS -o /tmp/ccs-page.html -w '%{http_code}' "https://paxdesign.at/cybercrime-support/?n=${stamp}")
           CSS=$(curl -sS -o /tmp/apple-ccs.css -w '%{http_code}' \
-            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-cybercrime-support.css?ver=1.4.5&n=${stamp}")
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-cybercrime-support.css?ver=1.4.6&n=${stamp}")
           JS=$(curl -sS -o /tmp/apple-ccs.js -w '%{http_code}' \
-            "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-cybercrime-support.js?ver=1.4.5&n=${stamp}")
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-cybercrime-support.js?ver=1.4.6&n=${stamp}")
           CHAT=$(curl -sS -o /tmp/chat-script.js -w '%{http_code}' \
-            "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?ver=3.173.11&n=${stamp}")
+            "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?ver=3.173.12&n=${stamp}")
           echo "PAGE $PAGE | CSS $CSS | JS $JS | CHAT $CHAT"
           test "$PAGE" = "200"
           test "$CSS" = "200"
           test "$JS" = "200"
           test "$CHAT" = "200"
-          grep -Eq "pax-ccs|cybercrime-support|دعم الجرائم|Cybercrime Support" /tmp/ccs-page.html
+          grep -Eq "pax-ccs-portal|pax-ccs-intake-form|Cybercrime-Meldung|تقرير جريمة" /tmp/ccs-page.html
           grep -Eq "page-template-template-apple-cybercrime-support|navein-apple-cybercrime-support" /tmp/ccs-page.html
-          grep -Eq "PAXdesignPageContext|cybercrime-support" /tmp/apple-ccs.js
+          grep -Eq "pax-ccs-portal__progress|renderReview|paxCybercrimeIntake" /tmp/apple-ccs.js
           grep -Eq "page_context|cybercrime-support" /tmp/chat-script.js
-          echo "Apple Cybercrime Support verification passed."
+          grep -Eq "pax-ccs-shield|pax-aap-hero" /tmp/ccs-page.html && { echo "Old marketing layout still present" >&2; exit 1; } || true
+          echo "Apple Cybercrime Support portal verification passed."

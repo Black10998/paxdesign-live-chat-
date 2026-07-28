@@ -4,7 +4,7 @@
  * Premium Apple-inspired Cybercrime Support page.
  *
  * @package NaveinTheme
- * @version 1.4.5
+ * @version 1.4.6
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -13,8 +13,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 get_header();
 ?>
-<div id="dtr-main-wrapper" class="clearfix dtr-fullwidth pax-apple-app-wrap">
-	<main id="dtr-primary-section" class="dtr-content-area pax-apple-app" aria-label="<?php esc_attr_e( 'Cybercrime Support', 'navein' ); ?>">
+<div id="dtr-main-wrapper" class="clearfix dtr-fullwidth pax-ccs-portal-wrap">
+	<main id="dtr-primary-section" class="dtr-content-area" aria-label="<?php esc_attr_e( 'Cybercrime Support', 'navein' ); ?>">
 		<?php get_template_part( 'template-parts/pages/cybercrime-support' ); ?>
 	</main>
 </div>

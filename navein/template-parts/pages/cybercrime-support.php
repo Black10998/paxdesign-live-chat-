@@ -1,6 +1,6 @@
 <?php
 /**
- * Apple-inspired Cybercrime Support page content (Arabic default, German toggle).
+ * Cybercrime reporting portal — official intake form.
  *
  * @package NaveinTheme
  */
@@ -9,16 +9,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$copy        = include __DIR__ . '/cybercrime-support-data.php';
-$contact_url = home_url( '/kontakt/' );
-$phone       = '+43 681 20543638';
-$email       = 'info@paxdesign.at';
+$copy = include __DIR__ . '/cybercrime-support-data.php';
 
 if ( ! function_exists( 'pax_ccs_text' ) ) {
-	/**
-	 * @param array<string, string>|string $node
-	 * @param string                     $lang
-	 */
 	function pax_ccs_text( $node, $lang ) {
 		if ( is_array( $node ) && isset( $node[ $lang ] ) ) {
 			return $node[ $lang ];
@@ -26,228 +19,225 @@ if ( ! function_exists( 'pax_ccs_text' ) ) {
 		return is_string( $node ) ? $node : '';
 	}
 }
-?>
-<article <?php post_class( 'pax-aap pax-ccs' ); ?> data-ccs-lang="ar" lang="ar" dir="rtl">
 
-	<div class="pax-ccs-langbar" data-aap-reveal>
-		<div class="pax-aap-wrap pax-ccs-langbar__inner">
-			<span class="pax-ccs-langbar__label pax-ccs-t" data-lang="ar">اللغة</span>
-			<span class="pax-ccs-langbar__label pax-ccs-t" data-lang="de" hidden>Sprache</span>
-			<div class="pax-ccs-langbar__toggle" role="group" aria-label="Language">
-				<button type="button" class="pax-ccs-langbar__btn is-active" data-ccs-switch="ar" aria-pressed="true">العربية</button>
-				<button type="button" class="pax-ccs-langbar__btn" data-ccs-switch="de" aria-pressed="false">Deutsch</button>
+if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
+	function pax_ccs_bilingual( $node ) {
+		echo '<span class="pax-ccs-t" data-lang="ar">' . esc_html( pax_ccs_text( $node, 'ar' ) ) . '</span>';
+		echo '<span class="pax-ccs-t" data-lang="de" hidden>' . esc_html( pax_ccs_text( $node, 'de' ) ) . '</span>';
+	}
+}
+?>
+<article <?php post_class( 'pax-ccs-portal' ); ?> data-ccs-lang="ar" lang="ar" dir="rtl">
+
+	<div class="pax-ccs-portal__langbar">
+		<div class="pax-ccs-portal__wrap pax-ccs-portal__langbar-inner">
+			<div class="pax-ccs-portal__lang-toggle" role="group" aria-label="Language">
+				<button type="button" class="pax-ccs-portal__lang-btn is-active" data-ccs-switch="ar" aria-pressed="true">العربية</button>
+				<button type="button" class="pax-ccs-portal__lang-btn" data-ccs-switch="de" aria-pressed="false">Deutsch</button>
 			</div>
 		</div>
 	</div>
 
-	<!-- Hero -->
-	<section class="pax-aap-hero pax-aap-hero--desktop pax-ccs-hero" data-aap-reveal>
-		<div class="pax-aap-hero__inner">
-			<p class="pax-aap-eyebrow pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $copy['hero']['eyebrow'], 'ar' ) ); ?></p>
-			<p class="pax-aap-eyebrow pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $copy['hero']['eyebrow'], 'de' ) ); ?></p>
-			<h1 class="pax-aap-hero__title">
-				<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $copy['hero']['title'], 'ar' ) ); ?></span>
-				<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $copy['hero']['title'], 'de' ) ); ?></span>
-				<br>
-				<span class="pax-aap-hero__accent pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $copy['hero']['accent'], 'ar' ) ); ?></span>
-				<span class="pax-aap-hero__accent pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $copy['hero']['accent'], 'de' ) ); ?></span>
-			</h1>
-			<p class="pax-aap-hero__lede pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $copy['hero']['lede'], 'ar' ) ); ?></p>
-			<p class="pax-aap-hero__lede pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $copy['hero']['lede'], 'de' ) ); ?></p>
-			<div class="pax-aap-hero__cta">
-				<a class="pax-aap-btn pax-aap-btn--dark" href="#overview">
-					<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $copy['hero']['cta_primary'], 'ar' ) ); ?></span>
-					<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $copy['hero']['cta_primary'], 'de' ) ); ?></span>
-				</a>
-				<a class="pax-aap-btn pax-aap-btn--ghost" href="#process">
-					<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $copy['hero']['cta_secondary'], 'ar' ) ); ?></span>
-					<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $copy['hero']['cta_secondary'], 'de' ) ); ?></span>
-				</a>
-			</div>
+	<header class="pax-ccs-portal__header">
+		<div class="pax-ccs-portal__wrap">
+			<p class="pax-ccs-portal__eyebrow"><?php pax_ccs_bilingual( $copy['portal']['eyebrow'] ); ?></p>
+			<h1 class="pax-ccs-portal__title"><?php pax_ccs_bilingual( $copy['portal']['title'] ); ?></h1>
+			<p class="pax-ccs-portal__subtitle"><?php pax_ccs_bilingual( $copy['portal']['subtitle'] ); ?></p>
+			<p class="pax-ccs-portal__badge"><?php pax_ccs_bilingual( $copy['portal']['confidential'] ); ?></p>
 		</div>
-		<div class="pax-aap-hero__stage pax-ccs-hero__stage" aria-hidden="true">
-			<div class="pax-ccs-shield">
-				<div class="pax-ccs-shield__ring"></div>
-				<div class="pax-ccs-shield__core"></div>
-				<div class="pax-ccs-shield__scan"></div>
-			</div>
-		</div>
-	</section>
+	</header>
 
-	<section class="pax-aap-statement" data-aap-reveal>
-		<div class="pax-aap-wrap pax-aap-wrap--narrow">
-			<p class="pax-aap-statement__text pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $copy['statement'], 'ar' ) ); ?></p>
-			<p class="pax-aap-statement__text pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $copy['statement'], 'de' ) ); ?></p>
-		</div>
-	</section>
+	<div class="pax-ccs-portal__wrap">
+		<ol class="pax-ccs-portal__progress" aria-label="Progress">
+			<?php foreach ( $copy['steps'] as $i => $step ) : ?>
+				<li class="pax-ccs-portal__progress-item<?php echo $i === 0 ? ' is-active' : ''; ?>" data-progress-step="<?php echo esc_attr( (string) ( $i + 1 ) ); ?>">
+					<span class="pax-ccs-portal__progress-num"><?php echo esc_html( (string) ( $i + 1 ) ); ?></span>
+					<span class="pax-ccs-portal__progress-label"><?php pax_ccs_bilingual( $step['label'] ); ?></span>
+				</li>
+			<?php endforeach; ?>
+		</ol>
+	</div>
 
-	<section id="overview" class="pax-aap-section pax-aap-section--light" data-aap-reveal>
-		<div class="pax-aap-wrap">
-			<p class="pax-aap-eyebrow pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $copy['overview']['eyebrow'], 'ar' ) ); ?></p>
-			<p class="pax-aap-eyebrow pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $copy['overview']['eyebrow'], 'de' ) ); ?></p>
-			<h2 class="pax-aap-display">
-				<span class="pax-ccs-t" data-lang="ar"><?php echo wp_kses_post( pax_ccs_text( $copy['overview']['title'], 'ar' ) ); ?></span>
-				<span class="pax-ccs-t" data-lang="de" hidden><?php echo wp_kses_post( pax_ccs_text( $copy['overview']['title'], 'de' ) ); ?></span>
-			</h2>
-			<div class="pax-ccs-overview">
-				<?php foreach ( $copy['overview']['items'] as $item ) : ?>
-					<div class="pax-ccs-overview__item">
-						<h3>
-							<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $item['title'], 'ar' ) ); ?></span>
-							<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $item['title'], 'de' ) ); ?></span>
-						</h3>
-						<p>
-							<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $item['text'], 'ar' ) ); ?></span>
-							<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $item['text'], 'de' ) ); ?></span>
-						</p>
+	<form id="pax-ccs-intake-form" class="pax-ccs-portal__form" novalidate enctype="multipart/form-data">
+		<input type="hidden" name="locale" id="pax-ccs-locale" value="ar">
+		<input type="text" name="website_trap" value="" tabindex="-1" autocomplete="off" class="pax-ccs-portal__trap" aria-hidden="true">
+
+		<!-- Step 1: Identity -->
+		<section class="pax-ccs-portal__step is-active" data-step="1" aria-labelledby="pax-ccs-step-1-title">
+			<div class="pax-ccs-portal__wrap pax-ccs-portal__panel">
+				<h2 id="pax-ccs-step-1-title" class="pax-ccs-portal__section-title"><?php pax_ccs_bilingual( $copy['sections']['identity']['title'] ); ?></h2>
+				<p class="pax-ccs-portal__section-intro"><?php pax_ccs_bilingual( $copy['sections']['identity']['intro'] ); ?></p>
+
+				<div class="pax-ccs-portal__grid">
+					<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
+						<label for="pax-ccs-full-name"><?php pax_ccs_bilingual( $copy['fields']['full_name']['label'] ); ?></label>
+						<input type="text" id="pax-ccs-full-name" name="full_name" required autocomplete="name" placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'ar' ) ); ?>" data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'ar' ) ); ?>" data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'de' ) ); ?>">
 					</div>
-				<?php endforeach; ?>
-			</div>
-		</div>
-	</section>
+					<div class="pax-ccs-portal__field">
+						<label for="pax-ccs-email"><?php pax_ccs_bilingual( $copy['fields']['email']['label'] ); ?></label>
+						<input type="email" id="pax-ccs-email" name="email" required autocomplete="email" inputmode="email">
+					</div>
+					<div class="pax-ccs-portal__field">
+						<label for="pax-ccs-phone"><?php pax_ccs_bilingual( $copy['fields']['phone']['label'] ); ?></label>
+						<input type="tel" id="pax-ccs-phone" name="phone" required autocomplete="tel" inputmode="tel">
+					</div>
+					<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
+						<label for="pax-ccs-country"><?php pax_ccs_bilingual( $copy['fields']['country']['label'] ); ?></label>
+						<input type="text" id="pax-ccs-country" name="country" required autocomplete="country-name">
+					</div>
+					<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
+						<label for="pax-ccs-identity-doc"><?php pax_ccs_bilingual( $copy['fields']['identity_document']['label'] ); ?></label>
+						<p class="pax-ccs-portal__hint"><?php pax_ccs_bilingual( $copy['fields']['identity_document']['hint'] ); ?></p>
+						<input type="file" id="pax-ccs-identity-doc" name="identity_document" accept=".pdf,.jpg,.jpeg,.png,.heic,.heif">
+					</div>
+					<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
+						<label class="pax-ccs-portal__check">
+							<input type="checkbox" name="identity_accuracy" id="pax-ccs-identity-accuracy" required value="1">
+							<span><?php pax_ccs_bilingual( $copy['fields']['identity_accuracy']['label'] ); ?></span>
+						</label>
+					</div>
+				</div>
 
-	<?php
-	foreach ( $copy['features'] as $index => $feature ) :
-		$is_dark  = ( $feature['tone'] ?? 'dark' ) === 'dark';
-		$reverse  = ( $index % 2 ) === 1;
-		$section  = $is_dark ? 'pax-aap-feature--dark' : 'pax-aap-feature--light';
-		$list_cls = $is_dark ? 'pax-aap-list' : 'pax-aap-list pax-aap-list--dark';
-		$grid_cls = $reverse ? ' pax-aap-feature__grid--reverse' : '';
-		?>
-	<section id="<?php echo esc_attr( $feature['id'] ); ?>" class="pax-aap-feature <?php echo esc_attr( $section ); ?>" data-aap-reveal>
-		<div class="pax-aap-wrap pax-aap-feature__grid<?php echo esc_attr( $grid_cls ); ?>">
-			<div class="pax-aap-feature__copy">
-				<p class="pax-aap-eyebrow<?php echo $is_dark ? ' pax-aap-eyebrow--light' : ''; ?> pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $feature['eyebrow'], 'ar' ) ); ?></p>
-				<p class="pax-aap-eyebrow<?php echo $is_dark ? ' pax-aap-eyebrow--light' : ''; ?> pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $feature['eyebrow'], 'de' ) ); ?></p>
-				<h3 class="pax-aap-feature__title">
-					<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $feature['title'], 'ar' ) ); ?></span>
-					<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $feature['title'], 'de' ) ); ?></span>
-				</h3>
-				<p class="pax-aap-feature__text">
-					<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $feature['text'], 'ar' ) ); ?></span>
-					<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $feature['text'], 'de' ) ); ?></span>
-				</p>
-				<ul class="<?php echo esc_attr( $list_cls ); ?>">
-					<?php foreach ( $feature['items'] as $li ) : ?>
-						<li>
-							<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $li, 'ar' ) ); ?></span>
-							<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $li, 'de' ) ); ?></span>
-						</li>
-					<?php endforeach; ?>
-				</ul>
+				<div class="pax-ccs-portal__actions">
+					<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary" data-ccs-next="2"><?php pax_ccs_bilingual( $copy['actions']['continue'] ); ?></button>
+				</div>
 			</div>
-			<div class="pax-aap-feature__visual" aria-hidden="true">
-				<div class="pax-ccs-visual pax-ccs-visual--<?php echo esc_attr( $feature['visual'] ); ?>"></div>
-			</div>
-		</div>
-	</section>
-	<?php endforeach; ?>
+		</section>
 
-	<section id="process" class="pax-aap-section pax-aap-section--light pax-aap-process pax-ccs-process" data-aap-reveal>
-		<div class="pax-aap-wrap">
-			<p class="pax-aap-eyebrow pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $copy['process']['eyebrow'], 'ar' ) ); ?></p>
-			<p class="pax-aap-eyebrow pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $copy['process']['eyebrow'], 'de' ) ); ?></p>
-			<h2 class="pax-aap-display">
-				<span class="pax-ccs-t" data-lang="ar"><?php echo wp_kses_post( pax_ccs_text( $copy['process']['title'], 'ar' ) ); ?></span>
-				<span class="pax-ccs-t" data-lang="de" hidden><?php echo wp_kses_post( pax_ccs_text( $copy['process']['title'], 'de' ) ); ?></span>
-			</h2>
-			<ol class="pax-aap-process__list">
-				<?php
-				$step_num = 1;
-				foreach ( $copy['process']['steps'] as $step ) :
-					?>
-					<li class="pax-aap-process__step">
-						<span class="pax-aap-process__num"><?php echo esc_html( sprintf( '%02d', $step_num ) ); ?></span>
-						<div>
-							<h3>
-								<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $step['title'], 'ar' ) ); ?></span>
-								<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $step['title'], 'de' ) ); ?></span>
-							</h3>
-							<p>
-								<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $step['text'], 'ar' ) ); ?></span>
-								<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $step['text'], 'de' ) ); ?></span>
-							</p>
-						</div>
-					</li>
-					<?php
-					$step_num++;
-				endforeach;
-				?>
-			</ol>
-		</div>
-	</section>
+		<!-- Step 2: Incident -->
+		<section class="pax-ccs-portal__step" data-step="2" hidden aria-labelledby="pax-ccs-step-2-title">
+			<div class="pax-ccs-portal__wrap pax-ccs-portal__panel">
+				<h2 id="pax-ccs-step-2-title" class="pax-ccs-portal__section-title"><?php pax_ccs_bilingual( $copy['sections']['incident']['title'] ); ?></h2>
+				<p class="pax-ccs-portal__section-intro"><?php pax_ccs_bilingual( $copy['sections']['incident']['intro'] ); ?></p>
 
-	<section id="faq" class="pax-aap-section pax-aap-section--light pax-ccs-faq" data-aap-reveal>
-		<div class="pax-aap-wrap">
-			<p class="pax-aap-eyebrow pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $copy['faq']['eyebrow'], 'ar' ) ); ?></p>
-			<p class="pax-aap-eyebrow pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $copy['faq']['eyebrow'], 'de' ) ); ?></p>
-			<h2 class="pax-aap-display">
-				<span class="pax-ccs-t" data-lang="ar"><?php echo wp_kses_post( pax_ccs_text( $copy['faq']['title'], 'ar' ) ); ?></span>
-				<span class="pax-ccs-t" data-lang="de" hidden><?php echo wp_kses_post( pax_ccs_text( $copy['faq']['title'], 'de' ) ); ?></span>
-			</h2>
-			<div class="pax-ccs-faq__list">
-				<?php foreach ( $copy['faq']['items'] as $faq ) : ?>
-					<details class="pax-ccs-faq__item">
-						<summary>
-							<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $faq['q'], 'ar' ) ); ?></span>
-							<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $faq['q'], 'de' ) ); ?></span>
-						</summary>
-						<p>
-							<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $faq['a'], 'ar' ) ); ?></span>
-							<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $faq['a'], 'de' ) ); ?></span>
-						</p>
-					</details>
-				<?php endforeach; ?>
-			</div>
-		</div>
-	</section>
+				<div class="pax-ccs-portal__grid">
+					<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
+						<label for="pax-ccs-category"><?php pax_ccs_bilingual( $copy['fields']['category']['label'] ); ?></label>
+						<select id="pax-ccs-category" name="category" required>
+							<option value="">—</option>
+							<?php foreach ( $copy['categories'] as $key => $labels ) : ?>
+								<option value="<?php echo esc_attr( $key ); ?>" data-label-ar="<?php echo esc_attr( pax_ccs_text( $labels, 'ar' ) ); ?>" data-label-de="<?php echo esc_attr( pax_ccs_text( $labels, 'de' ) ); ?>"><?php echo esc_html( pax_ccs_text( $labels, 'ar' ) ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+					<div class="pax-ccs-portal__field">
+						<label for="pax-ccs-incident-date"><?php pax_ccs_bilingual( $copy['fields']['incident_date']['label'] ); ?></label>
+						<input type="date" id="pax-ccs-incident-date" name="incident_date" required>
+					</div>
+					<div class="pax-ccs-portal__field">
+						<label for="pax-ccs-incident-time"><?php pax_ccs_bilingual( $copy['fields']['incident_time']['label'] ); ?></label>
+						<input type="time" id="pax-ccs-incident-time" name="incident_time">
+					</div>
+					<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
+						<label for="pax-ccs-platforms"><?php pax_ccs_bilingual( $copy['fields']['platforms']['label'] ); ?></label>
+						<input type="text" id="pax-ccs-platforms" name="platforms" required>
+					</div>
+					<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
+						<label for="pax-ccs-description"><?php pax_ccs_bilingual( $copy['fields']['description']['label'] ); ?></label>
+						<textarea id="pax-ccs-description" name="description" rows="6" required minlength="20"></textarea>
+					</div>
+					<div class="pax-ccs-portal__field">
+						<label for="pax-ccs-financial-loss"><?php pax_ccs_bilingual( $copy['fields']['financial_loss']['label'] ); ?></label>
+						<input type="text" id="pax-ccs-financial-loss" name="financial_loss" inputmode="decimal" placeholder="0.00">
+					</div>
+					<div class="pax-ccs-portal__field">
+						<label for="pax-ccs-currency">Currency</label>
+						<select id="pax-ccs-currency" name="financial_currency">
+							<option value="EUR">EUR</option>
+							<option value="USD">USD</option>
+							<option value="GBP">GBP</option>
+							<option value="CHF">CHF</option>
+						</select>
+					</div>
+					<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
+						<label for="pax-ccs-urgency"><?php pax_ccs_bilingual( $copy['fields']['urgency']['label'] ); ?></label>
+						<select id="pax-ccs-urgency" name="urgency" required>
+							<?php foreach ( $copy['urgency'] as $key => $labels ) : ?>
+								<option value="<?php echo esc_attr( $key ); ?>" data-label-ar="<?php echo esc_attr( pax_ccs_text( $labels, 'ar' ) ); ?>" data-label-de="<?php echo esc_attr( pax_ccs_text( $labels, 'de' ) ); ?>"><?php echo esc_html( pax_ccs_text( $labels, 'ar' ) ); ?></option>
+							<?php endforeach; ?>
+						</select>
+					</div>
+				</div>
 
-	<section id="trust" class="pax-aap-feature pax-aap-feature--dark pax-ccs-trust" data-aap-reveal>
-		<div class="pax-aap-wrap pax-aap-feature__grid">
-			<div class="pax-aap-feature__copy">
-				<p class="pax-aap-eyebrow pax-aap-eyebrow--light pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $copy['trust']['eyebrow'], 'ar' ) ); ?></p>
-				<p class="pax-aap-eyebrow pax-aap-eyebrow--light pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $copy['trust']['eyebrow'], 'de' ) ); ?></p>
-				<h3 class="pax-aap-feature__title pax-aap-display pax-aap-display--light">
-					<span class="pax-ccs-t" data-lang="ar"><?php echo wp_kses_post( pax_ccs_text( $copy['trust']['title'], 'ar' ) ); ?></span>
-					<span class="pax-ccs-t" data-lang="de" hidden><?php echo wp_kses_post( pax_ccs_text( $copy['trust']['title'], 'de' ) ); ?></span>
-				</h3>
-				<p class="pax-aap-feature__text">
-					<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $copy['trust']['text'], 'ar' ) ); ?></span>
-					<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $copy['trust']['text'], 'de' ) ); ?></span>
-				</p>
-				<ul class="pax-aap-list">
-					<?php foreach ( $copy['trust']['points'] as $point ) : ?>
-						<li>
-							<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $point, 'ar' ) ); ?></span>
-							<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $point, 'de' ) ); ?></span>
-						</li>
-					<?php endforeach; ?>
-				</ul>
+				<div class="pax-ccs-portal__actions">
+					<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--ghost" data-ccs-back="1"><?php pax_ccs_bilingual( $copy['actions']['back'] ); ?></button>
+					<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary" data-ccs-next="3"><?php pax_ccs_bilingual( $copy['actions']['continue'] ); ?></button>
+				</div>
 			</div>
-			<div class="pax-aap-feature__visual" aria-hidden="true">
-				<div class="pax-ccs-visual pax-ccs-visual--trust"></div>
-			</div>
-		</div>
-	</section>
+		</section>
 
-	<section class="pax-aap-cta" data-aap-reveal>
-		<div class="pax-aap-wrap pax-aap-wrap--narrow pax-aap-cta__inner">
-			<h2 class="pax-aap-display pax-aap-display--light">
-				<span class="pax-ccs-t" data-lang="ar"><?php echo wp_kses_post( pax_ccs_text( $copy['cta']['title'], 'ar' ) ); ?></span>
-				<span class="pax-ccs-t" data-lang="de" hidden><?php echo wp_kses_post( pax_ccs_text( $copy['cta']['title'], 'de' ) ); ?></span>
-			</h2>
-			<p class="pax-aap-cta__text">
-				<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $copy['cta']['text'], 'ar' ) ); ?></span>
-				<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $copy['cta']['text'], 'de' ) ); ?></span>
-			</p>
-			<div class="pax-aap-cta__actions">
-				<a class="pax-aap-btn pax-aap-btn--light" href="<?php echo esc_url( $contact_url ); ?>">
-					<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( pax_ccs_text( $copy['cta']['primary'], 'ar' ) ); ?></span>
-					<span class="pax-ccs-t" data-lang="de" hidden><?php echo esc_html( pax_ccs_text( $copy['cta']['primary'], 'de' ) ); ?></span>
-				</a>
-				<a class="pax-aap-link" href="tel:+4368120543638"><?php echo esc_html( $phone ); ?></a>
-				<a class="pax-aap-link" href="mailto:<?php echo esc_attr( $email ); ?>"><?php echo esc_html( $email ); ?></a>
+		<!-- Step 3: Evidence -->
+		<section class="pax-ccs-portal__step" data-step="3" hidden aria-labelledby="pax-ccs-step-3-title">
+			<div class="pax-ccs-portal__wrap pax-ccs-portal__panel">
+				<h2 id="pax-ccs-step-3-title" class="pax-ccs-portal__section-title"><?php pax_ccs_bilingual( $copy['sections']['evidence']['title'] ); ?></h2>
+				<p class="pax-ccs-portal__section-intro"><?php pax_ccs_bilingual( $copy['sections']['evidence']['intro'] ); ?></p>
+
+				<div class="pax-ccs-portal__uploads">
+					<div class="pax-ccs-portal__upload">
+						<label for="pax-ccs-screenshots"><?php pax_ccs_bilingual( $copy['fields']['evidence_screenshots']['label'] ); ?></label>
+						<input type="file" id="pax-ccs-screenshots" name="evidence_screenshots[]" accept="image/*,.pdf" multiple>
+					</div>
+					<div class="pax-ccs-portal__upload">
+						<label for="pax-ccs-documents"><?php pax_ccs_bilingual( $copy['fields']['evidence_documents']['label'] ); ?></label>
+						<input type="file" id="pax-ccs-documents" name="evidence_documents[]" accept=".pdf,.doc,.docx,.txt,.csv,.zip" multiple>
+					</div>
+					<div class="pax-ccs-portal__upload">
+						<label for="pax-ccs-chats"><?php pax_ccs_bilingual( $copy['fields']['evidence_chats']['label'] ); ?></label>
+						<input type="file" id="pax-ccs-chats" name="evidence_chats[]" accept=".txt,.csv,.zip,.pdf,image/*" multiple>
+					</div>
+					<div class="pax-ccs-portal__upload">
+						<label for="pax-ccs-other"><?php pax_ccs_bilingual( $copy['fields']['evidence_other']['label'] ); ?></label>
+						<input type="file" id="pax-ccs-other" name="evidence_other[]" multiple>
+					</div>
+				</div>
+
+				<div class="pax-ccs-portal__actions">
+					<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--ghost" data-ccs-back="2"><?php pax_ccs_bilingual( $copy['actions']['back'] ); ?></button>
+					<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary" data-ccs-next="4"><?php pax_ccs_bilingual( $copy['actions']['continue'] ); ?></button>
+				</div>
 			</div>
+		</section>
+
+		<!-- Step 4: Review & Declaration -->
+		<section class="pax-ccs-portal__step" data-step="4" hidden aria-labelledby="pax-ccs-step-4-title">
+			<div class="pax-ccs-portal__wrap pax-ccs-portal__panel">
+				<h2 id="pax-ccs-step-4-title" class="pax-ccs-portal__section-title"><?php pax_ccs_bilingual( $copy['sections']['review']['title'] ); ?></h2>
+				<p class="pax-ccs-portal__section-intro"><?php pax_ccs_bilingual( $copy['sections']['review']['intro'] ); ?></p>
+
+				<div id="pax-ccs-review" class="pax-ccs-portal__review" aria-live="polite"></div>
+
+				<div class="pax-ccs-portal__declarations">
+					<label class="pax-ccs-portal__check">
+						<input type="checkbox" name="decl_truthful" id="pax-ccs-decl-truthful" required value="1">
+						<span><?php pax_ccs_bilingual( $copy['declarations']['truthful'] ); ?></span>
+					</label>
+					<label class="pax-ccs-portal__check">
+						<input type="checkbox" name="decl_false_reports" id="pax-ccs-decl-false" required value="1">
+						<span><?php pax_ccs_bilingual( $copy['declarations']['false_reports'] ); ?></span>
+					</label>
+					<label class="pax-ccs-portal__check">
+						<input type="checkbox" name="decl_verification" id="pax-ccs-decl-verify" required value="1">
+						<span><?php pax_ccs_bilingual( $copy['declarations']['verification'] ); ?></span>
+					</label>
+				</div>
+
+				<p id="pax-ccs-form-error" class="pax-ccs-portal__error" hidden role="alert"></p>
+
+				<div class="pax-ccs-portal__actions">
+					<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--ghost" data-ccs-back="3"><?php pax_ccs_bilingual( $copy['actions']['back'] ); ?></button>
+					<button type="submit" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary" id="pax-ccs-submit"><?php pax_ccs_bilingual( $copy['actions']['submit'] ); ?></button>
+				</div>
+			</div>
+		</section>
+	</form>
+
+	<section id="pax-ccs-success" class="pax-ccs-portal__success" hidden>
+		<div class="pax-ccs-portal__wrap pax-ccs-portal__panel pax-ccs-portal__panel--success">
+			<div class="pax-ccs-portal__success-icon" aria-hidden="true"></div>
+			<h2 class="pax-ccs-portal__section-title"><?php pax_ccs_bilingual( $copy['success']['title'] ); ?></h2>
+			<p class="pax-ccs-portal__section-intro"><?php pax_ccs_bilingual( $copy['success']['text'] ); ?></p>
+			<p class="pax-ccs-portal__ref-label"><?php pax_ccs_bilingual( $copy['success']['ref_label'] ); ?></p>
+			<p class="pax-ccs-portal__ref-value" id="pax-ccs-ref-value"></p>
 		</div>
 	</section>
 
