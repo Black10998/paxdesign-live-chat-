@@ -1,0 +1,143 @@
+name: Deploy Apple Preise nav icon
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-preise-nav-icon-cfc9'
+    paths:
+      - '.github/triggers/deploy-apple-preise-nav-icon'
+      - '.github/workflows/deploy-apple-preise-nav-icon.yml'
+      - 'navein/includes/class-navein-mega-menu-walker.php'
+      - 'navein/assets/css/apple-sticky-header.css'
+      - 'navein/assets/css/apple-hover.css'
+      - 'navein/style.css'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy Apple Preise nav icon
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          retry() {
+            local attempt=1
+            local delay=4
+            until "$@"; do
+              if [ "$attempt" -ge 4 ]; then
+                echo "Command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "Retry ${attempt}/4 after ${delay}s: $*"
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/includes") \
+              $(printf '%q' "$THEME/.apple-preise-nav-icon-backups")"
+
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "BACKUP=$(printf '%q' "$THEME/.apple-preise-nav-icon-backups/$STAMP")
+             mkdir -p \"\$BACKUP/assets/css\" \"\$BACKUP/includes\"
+             for f in style.css \
+               assets/css/apple-sticky-header.css \
+               assets/css/apple-hover.css \
+               includes/class-navein-mega-menu-walker.php
+             do
+               if [ -f $(printf '%q' "$THEME")/\$f ]; then
+                 mkdir -p \"\$BACKUP/\$(dirname \"\$f\")\"
+                 cp -a $(printf '%q' "$THEME")/\$f \"\$BACKUP/\$f\"
+               fi
+             done
+             echo \"Backup written to \$BACKUP\""
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-sticky-header.css \
+            navein/assets/css/apple-hover.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/includes/class-navein-mega-menu-walker.php \
+            "${REMOTE}:${THEME}/includes/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
+
+          echo "Deployed Apple Preise nav icon 1.3.8"
+
+      - name: Verify live Preise nav icon
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          set +e
+          HOME_HTML=$(curl -sS -A "Mozilla/5.0" -o /tmp/home-preise.html -w '%{http_code}' \
+            "https://paxdesign.at/?n=${stamp}")
+          CSS=$(curl -sS -A "Mozilla/5.0" -o /tmp/apple-sticky-header.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-sticky-header.css?ver=1.3.8")
+          set -e
+          echo "HOME $HOME_HTML | CSS $CSS"
+          test "$HOME_HTML" = "200"
+          test "$CSS" = "200"
+          grep -Eq 'dtr-nav-lead-icon' /tmp/apple-sticky-header.css
+          grep -Eq 'dtr-mega-icon--pricing' /tmp/apple-sticky-header.css
+          grep -Eq '0071e3|--dtr-mega-blue' /tmp/apple-sticky-header.css
+          grep -Eq 'dtr-nav-lead-icon|dtr-mega-icon--pricing' /tmp/home-preise.html
+          grep -Eq 'menu-item-3358[^>]*>.*dtr-nav-lead-icon|dtr-mega-icon--pricing[^>]*>.*dtr-nav-lead-icon' /tmp/home-preise.html
+          # Ensure other top-level items do not get the lead icon
+          python3 - <<'PY'
+          import re, pathlib
+          html = pathlib.Path("/tmp/home-preise.html").read_text(errors="ignore")
+          # Top-level list items in primary menu
+          tops = re.findall(r'<li[^>]*id="menu-item-\d+"[^>]*class="([^"]*)"[^>]*>\s*<a[^>]*>(.*?)</a>', html, re.S)
+          pricing = [c for c, inner in tops if "dtr-mega-icon--pricing" in c or "dtr-nav-lead-icon" in inner]
+          with_icon = [c for c, inner in tops if "dtr-nav-lead-icon" in inner]
+          assert with_icon, "expected Preise lead icon in top-level nav"
+          assert all("dtr-mega-icon--pricing" in c for c in with_icon), "lead icon only on pricing item"
+          print("Preise icon isolation OK:", len(with_icon))
+          PY
+          grep -Eq 'style\.css\?ver=1\.3\.8|apple-sticky-header\.css\?ver=1\.3\.8' /tmp/home-preise.html
+          echo "Apple Preise nav icon verification passed."

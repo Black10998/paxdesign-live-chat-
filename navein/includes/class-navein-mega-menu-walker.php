@@ -6,7 +6,7 @@
  * Desktop mega panels + Apple full-screen mobile navigation reuse this markup.
  *
  * @package NaveinTheme
- * @version 1.2.8
+ * @version 1.3.8
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -149,6 +149,10 @@ if ( ! class_exists( 'Navein_Mega_Menu_Walker' ) ) :
 				}
 				$item_output .= '</span>';
 				$item_output .= '<span class="dtr-mega-go" aria-hidden="true"></span>';
+			} elseif ( self::should_show_top_level_lead_icon( $item, $icon_key ) ) {
+				// Desktop header accent for Preise — Apple blue SF-style SVG beside the label.
+				$item_output .= '<span class="dtr-nav-lead-icon dtr-nav-lead-icon--' . esc_attr( sanitize_html_class( $icon_key ) ) . '" aria-hidden="true">' . self::get_svg_icon( $icon_key ) . '</span>';
+				$item_output .= '<span class="dtr-nav-lead-label">' . esc_html( $title ) . '</span>';
 			} else {
 				$item_output .= esc_html( $title );
 			}
@@ -342,6 +346,9 @@ if ( ! class_exists( 'Navein_Mega_Menu_Walker' ) ) :
 				'kontakt'          => 'contact',
 				'contact'          => 'contact',
 				'hire'             => 'contact',
+				'preise'           => 'pricing',
+				'pricing'          => 'pricing',
+				'projektpreise'    => 'pricing',
 			);
 
 			foreach ( $map as $needle => $key ) {
@@ -398,6 +405,27 @@ if ( ! class_exists( 'Navein_Mega_Menu_Walker' ) ) :
 		}
 
 		/**
+		 * Whether a top-level primary nav item should show a lead SVG icon.
+		 * Currently limited to Preise so it stands out without cluttering the bar.
+		 *
+		 * @param WP_Post $item     Menu item.
+		 * @param string  $icon_key Resolved icon key.
+		 * @return bool
+		 */
+		public static function should_show_top_level_lead_icon( $item, $icon_key ) {
+			if ( 'pricing' !== $icon_key ) {
+				return false;
+			}
+
+			$title = strtolower( remove_accents( trim( wp_strip_all_tags( (string) $item->title ) ) ) );
+			$url   = strtolower( (string) $item->url );
+
+			return ( 'preise' === $title )
+				|| false !== strpos( $url, '/preise' )
+				|| false !== strpos( $url, 'projektpreise' );
+		}
+
+		/**
 		 * Return an Apple-like solid SF Symbol–style SVG icon.
 		 *
 		 * @param string $key Icon key.
@@ -437,6 +465,8 @@ if ( ! class_exists( 'Navein_Mega_Menu_Walker' ) ) :
 				'career'     => '<svg ' . $common . '><path d="M9.2 4.35h5.6c.85 0 1.55.7 1.55 1.55v1.2h2.75A2.3 2.3 0 0 1 21.4 9.4v9.05A2.3 2.3 0 0 1 19.1 20.75H4.9A2.3 2.3 0 0 1 2.6 18.45V9.4A2.3 2.3 0 0 1 4.9 7.1h2.75V5.9c0-.85.7-1.55 1.55-1.55zm1.55 2.75h2.5V7.1h-2.5v-.95zM3.95 12.05h16.1v-1.9c0-.4-.3-.7-.7-.7H4.65c-.4 0-.7.3-.7.7v1.9z"/></svg>',
 				'services'   => '<svg ' . $common . '><path d="M12 2.5l2.2 5.2 5.65.5-4.3 3.7 1.35 5.5L12 14.85 7.1 17.4l1.35-5.5-4.3-3.7 5.65-.5L12 2.5z"/></svg>',
 				'contact'    => '<svg ' . $common . '><path d="M4.6 4.45h14.8A2.35 2.35 0 0 1 21.75 6.8v10.4a2.35 2.35 0 0 1-2.35 2.35H4.6A2.35 2.35 0 0 1 2.25 17.2V6.8A2.35 2.35 0 0 1 4.6 4.45zm.55 2.35 6.15 4.55c.4.3.95.3 1.35 0l6.15-4.55H5.15zm14.25 1.85-5.55 4.1a3.1 3.1 0 0 1-3.7 0l-5.55-4.1V17.2c0 .2.15.35.35.35h14.1c.2 0 .35-.15.35-.35V8.65z"/></svg>',
+				/* SF Symbols–inspired tag.fill — pricing / Preise */
+				'pricing'    => '<svg ' . $common . '><path d="M12.95 2.55 21.45 11a2.2 2.2 0 0 1 0 3.1l-7.35 7.35a2.2 2.2 0 0 1-3.1 0L2.55 12.95A2.2 2.2 0 0 1 1.9 11.4V4.75A2.2 2.2 0 0 1 4.1 2.55h6.65c.58 0 1.14.23 1.55.65zM7.35 6.2a1.85 1.85 0 1 0 0 3.7 1.85 1.85 0 0 0 0-3.7z"/></svg>',
 				'default'    => '<svg ' . $common . '><path d="M12 2.4a9.6 9.6 0 1 1 0 19.2 9.6 9.6 0 0 1 0-19.2zm0 2.2a7.4 7.4 0 1 0 .05 14.8A7.4 7.4 0 0 0 12 4.6zm0 10.75a1.25 1.25 0 1 1 0 2.5 1.25 1.25 0 0 1 0-2.5zm0-7.85c.7 0 1.25.55 1.25 1.25v4.2a1.25 1.25 0 1 1-2.5 0v-4.2c0-.7.55-1.25 1.25-1.25z"/></svg>',
 			);
 		}

@@ -315,6 +315,26 @@ body.dtr-apple-sticky-header #dtr-header-global .dtr-search-modal-trigger:focus-
   transition: none !important;
 }
 
+/* Preise nav lead icon: underline the label only, never the SVG */
+body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-mega-icon--pricing > a:hover,
+body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-mega-icon--pricing > a:focus-visible,
+body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-mega-icon--pricing.sfHover > a {
+  text-decoration: none !important;
+}
+
+body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-mega-icon--pricing > a:hover .dtr-nav-lead-label,
+body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-mega-icon--pricing > a:focus-visible .dtr-nav-lead-label,
+body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-mega-icon--pricing.sfHover > a .dtr-nav-lead-label {
+  text-decoration: underline !important;
+  text-underline-offset: var(--dtr-apple-hover-underline-offset);
+  text-decoration-thickness: var(--dtr-apple-hover-underline-thickness);
+}
+
+body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a .dtr-nav-lead-icon {
+  text-decoration: none !important;
+  color: var(--dtr-mega-blue, #0071e3);
+}
+
 /* Ghost / text CTAs: underline instead of opacity fade */
 .pax-home-btn--ghost:hover,
 .pax-home-btn--text:hover,

@@ -178,6 +178,48 @@
     transition: color 0.22s ease, opacity 0.22s ease;
   }
 
+  /* Preise lead icon — Apple blue, SF-style, aligned with label */
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-mega-icon--pricing > a {
+    gap: 6px;
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a .dtr-nav-lead-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    padding: 0;
+    color: var(--dtr-mega-blue, #0071e3);
+    line-height: 0;
+    pointer-events: none;
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a .dtr-nav-lead-icon svg {
+    display: block;
+    width: 14px;
+    height: 14px;
+    overflow: visible;
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a .dtr-nav-lead-label {
+    display: inline-block;
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-mega-icon--pricing > a:hover,
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-mega-icon--pricing.sfHover > a {
+    text-decoration: none !important;
+  }
+
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-mega-icon--pricing > a:hover .dtr-nav-lead-label,
+  body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.dtr-mega-icon--pricing.sfHover > a .dtr-nav-lead-label {
+    text-decoration: underline !important;
+    text-underline-offset: 0.22em;
+    text-decoration-thickness: 1px;
+  }
+
   body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li > a:hover,
   body.dtr-apple-sticky-header #dtr-header-global .main-navigation .sf-menu > li.sfHover > a {
     color: #000000 !important;
