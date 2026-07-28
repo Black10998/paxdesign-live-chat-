@@ -95,13 +95,8 @@ jobs:
             navein/style.css \
             "${REMOTE}:${THEME}/"
 
-          # Soft-patch Additional CSS white auth text → black (legacy dark-header rules).
-          retry scp "${SSH_OPTS[@]}" \
-            .github/scripts/patch-apple-header-username-contrast.php \
-            "${REMOTE}:/tmp/patch-apple-header-username-contrast.php"
-
           retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
-            "cd $(printf '%q' "$WP_PATH") && wp eval-file /tmp/patch-apple-header-username-contrast.php && rm -f /tmp/patch-apple-header-username-contrast.php && (wp cache flush >/dev/null 2>&1 || true)"
+            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
 
           echo "Deployed Apple header username contrast 1.4.2"
 
