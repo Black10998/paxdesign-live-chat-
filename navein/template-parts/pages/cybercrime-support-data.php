@@ -10,22 +10,137 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 return array(
+	'operator' => array(
+		'service' => array(
+			'ar' => 'PAXDesign · Cybercrime Support',
+			'de' => 'PAXDesign · Cybercrime Support',
+		),
+		'disclaimer' => array(
+			'ar' => 'خدمة إبلاغ مهنية يُشغّلها PAXDesign. هذه ليست موقعاً أو جهة حكومية.',
+			'de' => 'Professioneller Meldedienst von PAXDesign. Dies ist keine Behörde und kein staatliches Portal.',
+		),
+	),
 	'portal' => array(
+		'skip' => array(
+			'ar' => 'انتقل إلى المحتوى الرئيسي',
+			'de' => 'Zum Hauptinhalt springen',
+		),
 		'eyebrow' => array(
-			'ar' => 'بوابة الإبلاغ الرسمية',
-			'de' => 'Offizielles Meldeportal',
+			'ar' => 'بوابة الإبلاغ الرقمية',
+			'de' => 'Digitales Meldeportal',
 		),
 		'title' => array(
-			'ar' => 'تقرير جريمة إلكترونية',
-			'de' => 'Cybercrime-Meldung',
+			'ar' => 'Cybercrime Support Portal',
+			'de' => 'Cybercrime Support Portal',
 		),
 		'subtitle' => array(
-			'ar' => 'قدّم بلاغاً آمناً ومشفراً. تُعالج جميع البيانات بسرية مهنية وقد تُطلب خطوات تحقق إضافية قبل تقديم المساعدة.',
-			'de' => 'Reichen Sie eine sichere Meldung ein. Alle Angaben werden vertraulich behandelt. Vor Unterstützung kann eine zusätzliche Verifizierung erforderlich sein.',
+			'ar' => 'قناة آمنة ومنظّمة لتقديم بلاغات الجرائم الإلكترونية، معالجتها بسرية، والمتابعة المهنية.',
+			'de' => 'Sicherer, strukturierter Kanal für Cybercrime-Meldungen — vertraulich bearbeitet und professionell nachverfolgt.',
 		),
-		'confidential' => array(
-			'ar' => 'سري · مشفر · محمي',
-			'de' => 'Vertraulich · Verschlüsselt · Geschützt',
+		'status' => array(
+			array(
+				'label' => array( 'ar' => 'سرّي', 'de' => 'Vertraulich' ),
+			),
+			array(
+				'label' => array( 'ar' => 'نقل آمن', 'de' => 'Sichere Übertragung' ),
+			),
+			array(
+				'label' => array( 'ar' => 'مسار منظّم', 'de' => 'Strukturierter Ablauf' ),
+			),
+		),
+	),
+	'welcome' => array(
+		'heading' => array(
+			'ar' => 'مرحباً بك في بوابة الإبلاغ',
+			'de' => 'Willkommen im Meldeportal',
+		),
+		'intro' => array(
+			'ar' => 'استخدم هذه البوابة لتقديم بلاغ منظّم عن حادثة إلكترونية. صُمّمت التجربة بمعايير الخدمات الرقمية الحديثة: وضوح، أمان، ومسار واضح من البداية إلى التسليم.',
+			'de' => 'Nutzen Sie dieses Portal für eine strukturierte Cybercrime-Meldung. Die Erfahrung folgt modernen digitalen Servicestandards: Klarheit, Sicherheit und ein nachvollziehbarer Ablauf bis zur Einreichung.',
+		),
+		'blocks' => array(
+			array(
+				'title' => array(
+					'ar' => 'الغرض من البوابة',
+					'de' => 'Zweck des Portals',
+				),
+				'body' => array(
+					'ar' => 'جمع بلاغات الجرائم الإلكترونية — مثل الاحتيال، سرقة الحسابات، التصيّد، البرمجيات الخبيثة، وسرقة الهوية — في نموذج واحد موحّد يسهّل التقييم والمتابعة من قبل فريق PAXDesign المتخصص.',
+					'de' => 'Cybercrime-Vorfälle — Betrug, Kontoübernahmen, Phishing, Malware, Identitätsdiebstahl — werden in einem einheitlichen Format erfasst, damit das PAXDesign-Spezialteam sie bewerten und nachverfolgen kann.',
+				),
+			),
+			array(
+				'title' => array(
+					'ar' => 'كيف تُعالَج البلاغات',
+					'de' => 'Wie Meldungen bearbeitet werden',
+				),
+				'body' => array(
+					'ar' => 'بعد الإرسال، يُسجَّل بلاغك برقم مرجعي فريد. يُراجع الفريق المعلومات والأدلة بسرية، وقد تُطلب خطوات تحقق إضافية. يُحدَّد الأولوية حسب مستوى الاستعجال وطبيعة الحادث.',
+					'de' => 'Nach dem Absenden erhalten Sie eine Referenznummer. Das Team prüft Angaben und Beweise vertraulich; ggf. folgt eine Identitätsverifizierung. Priorität und Bearbeitung richten sich nach Dringlichkeit und Vorfalltyp.',
+				),
+			),
+			array(
+				'title' => array(
+					'ar' => 'ماذا بعد الإرسال',
+					'de' => 'Was nach der Einreichung passiert',
+				),
+				'body' => array(
+					'ar' => 'ستتلقى تأكيداً فورياً مع رقم المرجع. قد يتواصل معك الفريق عبر البريد أو الهاتف المُقدَّم. للاستفسارات العاجلة يمكنك استخدام الدردشة المباشرة العالمية في الموقع — سيتعرّف المساعد على سياق هذه الصفحة.',
+					'de' => 'Sie erhalten sofort eine Bestätigung mit Referenznummer. Das Team kann Sie per E-Mail oder Telefon kontaktieren. Für dringende Rückfragen steht der globale Live Chat zur Verfügung — der Assistent erkennt den Cybercrime-Kontext dieser Seite.',
+				),
+			),
+			array(
+				'title' => array(
+					'ar' => 'أهمية الدقة',
+					'de' => 'Warum Genauigkeit wichtig ist',
+				),
+				'body' => array(
+					'ar' => 'المعلومات الدقيقة تسرّع التقييم وتقلّل التأخير. البلاغات الكاذبة أو غير القابلة للتحقق قد تُرفض. يرجى تقديم وقائع حقيقية فقط، دون مبالغة أو اختلاق.',
+					'de' => 'Präzise Angaben beschleunigen die Einschätzung. Falsche oder nicht überprüfbare Meldungen können abgelehnt werden. Bitte nur nach bestem Wissen wahrheitsgemäß berichten.',
+				),
+			),
+		),
+		'trust_heading' => array(
+			'ar' => 'معايير الخدمة',
+			'de' => 'Servicestandards',
+		),
+		'trust' => array(
+			array(
+				'title' => array( 'ar' => 'السرية', 'de' => 'Vertraulichkeit' ),
+				'text'  => array(
+					'ar' => 'تُعالَج بياناتك في بيئة مهنية مقيّدة.',
+					'de' => 'Ihre Daten werden in einem geschützten, professionellen Prozess behandelt.',
+				),
+			),
+			array(
+				'title' => array( 'ar' => 'الأمان', 'de' => 'Sicherheit' ),
+				'text'  => array(
+					'ar' => 'نقل مشفّر ورفع ملفات آمن للأدلة.',
+					'de' => 'Verschlüsselte Übertragung und sicherer Datei-Upload.',
+				),
+			),
+			array(
+				'title' => array( 'ar' => 'التحقق', 'de' => 'Verifizierung' ),
+				'text'  => array(
+					'ar' => 'قد تُطلب وثائق هوية قبل المتابعة.',
+					'de' => 'Identitätsnachweise können vor der Bearbeitung angefordert werden.',
+				),
+			),
+			array(
+				'title' => array( 'ar' => 'مسار منظّم', 'de' => 'Strukturierter Ablauf' ),
+				'text'  => array(
+					'ar' => 'أربع مراحل: هوية، حادث، أدلة، إقرار.',
+					'de' => 'Vier Phasen: Identität, Vorfall, Beweise, Erklärung.',
+				),
+			),
+		),
+		'time' => array(
+			'ar' => 'المدة التقديرية: 10–15 دقيقة',
+			'de' => 'Geschätzte Dauer: 10–15 Minuten',
+		),
+		'start' => array(
+			'ar' => 'بدء البلاغ',
+			'de' => 'Meldung starten',
 		),
 	),
 	'steps' => array(
@@ -193,8 +308,15 @@ return array(
 	'actions' => array(
 		'continue' => array( 'ar' => 'متابعة', 'de' => 'Weiter' ),
 		'back'     => array( 'ar' => 'رجوع', 'de' => 'Zurück' ),
+		'back_welcome' => array( 'ar' => 'العودة للمقدمة', 'de' => 'Zurück zur Einführung' ),
 		'submit'   => array( 'ar' => 'إرسال البلاغ', 'de' => 'Meldung absenden' ),
 		'edit'     => array( 'ar' => 'تعديل', 'de' => 'Bearbeiten' ),
+	),
+	'workflow' => array(
+		'label' => array(
+			'ar' => 'مسار الإبلاغ',
+			'de' => 'Meldeprozess',
+		),
 	),
 	'success' => array(
 		'title' => array(

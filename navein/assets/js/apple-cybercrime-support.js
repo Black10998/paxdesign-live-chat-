@@ -1,5 +1,5 @@
 /**
- * Cybercrime reporting portal — step workflow, review, secure submit.
+ * Cybercrime reporting portal — welcome screen, step workflow, secure submit.
  * Live Chat page context only (no extra chat UI on this page).
  */
 (function () {
@@ -14,12 +14,16 @@
   }
 
   var currentStep = 1;
+  var phase = 'welcome';
+  var welcomeEl = document.getElementById('pax-ccs-welcome');
+  var workflowEl = document.getElementById('pax-ccs-workflow');
   var localeInput = document.getElementById('pax-ccs-locale');
   var reviewEl = document.getElementById('pax-ccs-review');
   var errorEl = document.getElementById('pax-ccs-form-error');
   var successEl = document.getElementById('pax-ccs-success');
   var refEl = document.getElementById('pax-ccs-ref-value');
   var submitBtn = document.getElementById('pax-ccs-submit');
+  var startBtn = document.getElementById('pax-ccs-start');
 
   function t(key) {
     var strings = {
@@ -72,14 +76,24 @@
       btn.classList.toggle('is-active', active);
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
     });
+    updatePlaceholders(lang);
     updateSelectLabels(lang);
     setPageContext(lang);
     try {
       localStorage.setItem('pax-ccs-lang', lang);
     } catch (e) {}
-    if (currentStep === 4) {
+    if (phase === 'form' && currentStep === 4) {
       renderReview();
     }
+  }
+
+  function updatePlaceholders(lang) {
+    form.querySelectorAll('[data-placeholder-ar]').forEach(function (input) {
+      var ph = input.getAttribute(lang === 'de' ? 'data-placeholder-de' : 'data-placeholder-ar');
+      if (ph) {
+        input.setAttribute('placeholder', ph);
+      }
+    });
   }
 
   function updateSelectLabels(lang) {
@@ -103,6 +117,35 @@
     });
   }
 
+  function setPhase(nextPhase) {
+    phase = nextPhase;
+    root.setAttribute('data-ccs-phase', nextPhase);
+
+    if (welcomeEl) {
+      welcomeEl.hidden = nextPhase !== 'welcome';
+    }
+    if (workflowEl) {
+      workflowEl.hidden = nextPhase !== 'form';
+    }
+    if (form) {
+      form.hidden = nextPhase !== 'form';
+    }
+  }
+
+  function showWelcome() {
+    setPhase('welcome');
+    window.scrollTo({ top: root.offsetTop - 24, behavior: 'smooth' });
+  }
+
+  function startReporting() {
+    setPhase('form');
+    showStep(1);
+    var firstField = form.querySelector('#pax-ccs-full-name');
+    if (firstField) {
+      firstField.focus();
+    }
+  }
+
   function showStep(step) {
     form.querySelectorAll('.pax-ccs-portal__step').forEach(function (panel) {
       var n = parseInt(panel.getAttribute('data-step'), 10);
@@ -115,7 +158,7 @@
     if (step === 4) {
       renderReview();
     }
-    window.scrollTo({ top: root.offsetTop - 24, behavior: 'smooth' });
+    window.scrollTo({ top: (workflowEl || root).offsetTop - 24, behavior: 'smooth' });
   }
 
   function markInvalid(field) {
@@ -155,7 +198,10 @@
       }
     });
     if (!valid) {
-      panel.querySelector(':invalid') && panel.querySelector(':invalid').focus();
+      var invalid = panel.querySelector(':invalid');
+      if (invalid) {
+        invalid.focus();
+      }
     }
     return valid;
   }
@@ -234,9 +280,23 @@
     }
   }
 
+  if (startBtn) {
+    startBtn.addEventListener('click', function () {
+      startReporting();
+    });
+  }
+
   form.addEventListener('click', function (e) {
     var next = e.target.closest('[data-ccs-next]');
     var back = e.target.closest('[data-ccs-back]');
+    var backWelcome = e.target.closest('[data-ccs-back-welcome]');
+
+    if (backWelcome) {
+      e.preventDefault();
+      showWelcome();
+      return;
+    }
+
     if (next) {
       e.preventDefault();
       var target = parseInt(next.getAttribute('data-ccs-next'), 10);
@@ -279,7 +339,13 @@
           throw new Error((json && json.data && json.data.message) || 'Submit failed');
         }
         form.hidden = true;
-        root.querySelector('.pax-ccs-portal__progress').hidden = true;
+        if (workflowEl) {
+          workflowEl.hidden = true;
+        }
+        if (welcomeEl) {
+          welcomeEl.hidden = true;
+        }
+        root.setAttribute('data-ccs-phase', 'success');
         if (successEl) {
           successEl.hidden = false;
         }
@@ -305,4 +371,5 @@
     saved = localStorage.getItem('pax-ccs-lang') || '';
   } catch (e) {}
   setLang(saved === 'de' ? 'de' : 'ar');
+  setPhase('welcome');
 })();
