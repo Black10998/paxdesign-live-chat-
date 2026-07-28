@@ -170,9 +170,9 @@ jobs:
           import re
           for name in ['/tmp/home-emdash.html', '/tmp/web-emdash.html']:
               html = Path(name).read_text(errors='ignore')
-              # Count spaced em dashes in visible-ish body copy (exclude script/style roughly)
               body = re.sub(r'<script[\s\S]*?</script>', '', html, flags=re.I)
               body = re.sub(r'<style[\s\S]*?</style>', '', body, flags=re.I)
+              body = re.sub(r'<!--[\s\S]*?-->', '', body)
               n = body.count(' — ')
               print(name, 'spaced_emdash', n)
               assert n == 0, f'{name} still has {n} spaced em dashes'

@@ -29,7 +29,7 @@ $service_links = array(
 ?>
 <article <?php post_class( 'pax-home' ); ?>>
 
-	<!-- Tech marquee ribbon — directly under header/nav -->
+	<!-- Tech marquee ribbon under header/nav -->
 	<section class="pax-sw-ribbon" data-ph-reveal aria-label="Tech Stack">
 		<div class="pax-sw-ribbon__track" data-sw-marquee>
 			<div class="pax-sw-ribbon__group">
@@ -64,7 +64,7 @@ $service_links = array(
 		</div>
 	</section>
 
-	<!-- Platform & partner logo marquee — below hero (tech ticker above stays unchanged) -->
+	<!-- Platform & partner logo marquee below hero (tech ticker above stays unchanged) -->
 	<section class="pax-sw-ribbon pax-sw-ribbon--partners" data-ph-reveal aria-label="Plattformen und Partner">
 		<div class="pax-sw-ribbon__track" data-sw-marquee>
 			<?php
