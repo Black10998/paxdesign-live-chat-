@@ -90,9 +90,8 @@ $service_links = array(
 			);
 			$partners_uri = trailingslashit( get_template_directory_uri() ) . 'assets/img/partners/';
 			for ( $dup = 0; $dup < 2; $dup++ ) :
-				$hidden = ( 1 === $dup ) ? ' aria-hidden="true"' : '';
 				?>
-			<div class="pax-sw-ribbon__group"<?php echo $hidden; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+			<div class="pax-sw-ribbon__group"<?php echo 1 === $dup ? ' aria-hidden="true"' : ''; ?>>
 				<?php foreach ( $partner_logos as $logo ) : ?>
 					<span class="pax-sw-ribbon__logo">
 						<img
