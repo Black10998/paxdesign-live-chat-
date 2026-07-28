@@ -1,0 +1,146 @@
+name: Deploy Apple inner page title
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-inner-page-title-cfc9'
+    paths:
+      - '.github/triggers/deploy-apple-inner-page-title'
+      - '.github/workflows/deploy-apple-inner-page-title.yml'
+      - 'navein/assets/css/apple-inner-page-title.css'
+      - 'navein/template-parts/page-title/**'
+      - 'navein/single-dtr_portfolio.php'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy Apple inner page title
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          retry() {
+            local attempt=1
+            local delay=4
+            until "$@"; do
+              if [ "$attempt" -ge 4 ]; then
+                echo "Command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "Retry ${attempt}/4 after ${delay}s: $*"
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/template-parts/page-title") \
+              $(printf '%q' "$THEME/.apple-inner-page-title-backups")"
+
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "BACKUP=$(printf '%q' "$THEME/.apple-inner-page-title-backups/$STAMP")
+             mkdir -p \"\$BACKUP\"
+             for f in style.css functions.php single-dtr_portfolio.php \
+               assets/css/apple-inner-page-title.css \
+               template-parts/page-title/page-header-page.php \
+               template-parts/page-title/page-header-single.php \
+               template-parts/page-title/page-header.php
+             do
+               if [ -f $(printf '%q' "$THEME")/\$f ]; then
+                 mkdir -p \"\$BACKUP/\$(dirname \"\$f\")\"
+                 cp -a $(printf '%q' "$THEME")/\$f \"\$BACKUP/\$f\"
+               fi
+             done
+             echo \"Backup written to \$BACKUP\""
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-inner-page-title.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/page-title/page-header-page.php \
+            navein/template-parts/page-title/page-header-single.php \
+            navein/template-parts/page-title/page-header.php \
+            "${REMOTE}:${THEME}/template-parts/page-title/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/single-dtr_portfolio.php \
+            "${REMOTE}:${THEME}/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            "${REMOTE}:${THEME}/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
+
+          echo "Deployed Apple inner page title 1.3.6"
+
+      - name: Verify live inner page title
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          set +e
+          HOME_HTML=$(curl -sS -A "Mozilla/5.0" -o /tmp/home-title.html -w '%{http_code}' \
+            "https://paxdesign.at/?n=${stamp}")
+          INNER=$(curl -sS -A "Mozilla/5.0" -o /tmp/inner-title.html -w '%{http_code}' \
+            "https://paxdesign.at/impressum/?n=${stamp}")
+          CSS=$(curl -sS -A "Mozilla/5.0" -o /tmp/apple-inner-page-title.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-inner-page-title.css?ver=1.3.6")
+          set -e
+          echo "HOME $HOME_HTML | INNER $INNER | CSS $CSS"
+          test "$HOME_HTML" = "200"
+          test "$INNER" = "200"
+          test "$CSS" = "200"
+          grep -Eq 'dtr-apple-page-intro' /tmp/apple-inner-page-title.css
+          grep -Eq 'dtr-page-title--section' /tmp/apple-inner-page-title.css
+          grep -Eq 'class="dtr-apple-page-intro"' /tmp/inner-title.html
+          grep -Eq 'class="dtr-page-title--section' /tmp/inner-title.html && exit 1 || true
+          grep -Eq 'apple-inner-page-title\.css\?ver=1\.3\.6|style\.css\?ver=1\.3\.6' /tmp/inner-title.html
+          # Homepage should not show the intro banner markup
+          grep -Eq 'class="dtr-apple-page-intro"' /tmp/home-title.html && exit 1 || true
+          echo "Apple inner page title verification passed."

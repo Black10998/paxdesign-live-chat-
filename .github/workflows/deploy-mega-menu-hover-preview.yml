@@ -1,0 +1,165 @@
+name: Deploy mega menu hover preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/mega-menu-hover-preview-cfc9'
+    paths:
+      - '.github/triggers/deploy-mega-menu-hover-preview'
+      - '.github/workflows/deploy-mega-menu-hover-preview.yml'
+      - 'navein/assets/css/mega-menu.css'
+      - 'navein/assets/js/mega-menu.js'
+      - 'navein/assets/js/superfish.js'
+      - 'navein/assets/img/mega/**'
+      - 'navein/includes/class-navein-mega-menu-walker.php'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy mega menu hover preview system
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          retry() {
+            local attempt=1
+            local delay=4
+            until "$@"; do
+              if [ "$attempt" -ge 4 ]; then
+                echo "Command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "Retry ${attempt}/4 after ${delay}s: $*"
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/assets/js") \
+              $(printf '%q' "$THEME/assets/img/mega") \
+              $(printf '%q' "$THEME/includes") \
+              $(printf '%q' "$THEME/.mega-menu-hover-preview-backups")"
+
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "BACKUP=$(printf '%q' "$THEME/.mega-menu-hover-preview-backups/$STAMP")
+             mkdir -p \"\$BACKUP\"
+             for f in \
+               functions.php \
+               style.css \
+               assets/css/mega-menu.css \
+               assets/js/mega-menu.js \
+               assets/js/superfish.js \
+               includes/class-navein-mega-menu-walker.php
+             do
+               if [ -f $(printf '%q' "$THEME")/\$f ]; then
+                 mkdir -p \"\$BACKUP/\$(dirname \"\$f\")\"
+                 cp -a $(printf '%q' "$THEME")/\$f \"\$BACKUP/\$f\"
+               fi
+             done
+             echo \"Backup written to \$BACKUP\""
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/mega-menu.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/mega-menu.js \
+            navein/assets/js/superfish.js \
+            "${REMOTE}:${THEME}/assets/js/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/img/mega/ \
+            "${REMOTE}:${THEME}/assets/img/mega/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/includes/class-navein-mega-menu-walker.php \
+            "${REMOTE}:${THEME}/includes/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
+
+          echo "Deployed mega menu hover preview 1.3.0"
+
+      - name: Verify live mega menu hover preview
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          set +e
+          HOME_HTML=$(curl -sS -A "Mozilla/5.0" -o /tmp/home-mega-preview.html -w '%{http_code}' \
+            "https://paxdesign.at/?n=${stamp}")
+          CSS=$(curl -sS -A "Mozilla/5.0" -o /tmp/mega-menu-preview.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/mega-menu.css?ver=1.3.0")
+          JS=$(curl -sS -A "Mozilla/5.0" -o /tmp/mega-menu-preview.js -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/mega-menu.js?ver=1.3.0")
+          SF=$(curl -sS -A "Mozilla/5.0" -o /tmp/superfish.js -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/superfish.js?ver=1.7.10")
+          set -e
+          echo "HOME $HOME_HTML | CSS $CSS | JS $JS | SF $SF"
+          test "$HOME_HTML" = "200"
+          test "$CSS" = "200"
+          test "$JS" = "200"
+          test "$SF" = "200"
+
+          grep -Eq 'data-preview-src=' /tmp/home-mega-preview.html
+          grep -Eq 'dtr-mega-feature__img' /tmp/home-mega-preview.html
+          grep -Eq 'assets/img/mega/(projects|app|contact|systems|about)\.jpg' /tmp/home-mega-preview.html
+          grep -Eq 'setItemPreview|swapFeatureImage|onBeforeShow' /tmp/mega-menu-preview.js
+          grep -Eq 'return false' /tmp/mega-menu-preview.js
+          grep -Eq 'Do not auto-init Superfish|mega-menu.js' /tmp/superfish.js
+          grep -Eq 'dtr-mega-feature__img|height: 220px !important|z-index: 10070' /tmp/mega-menu-preview.css
+          grep -Eq 'style\.css\?ver=1\.3\.0|mega-menu\.(css|js)\?ver=1\.3\.0' /tmp/home-mega-preview.html
+
+          for key in projects visual branding strategy ux commerce concept systems consulting app software web about privacy docs support experts career contact services default; do
+            code=$(curl -sS -A "Mozilla/5.0" -o /dev/null -w '%{http_code}' \
+              "https://paxdesign.at/wp-content/themes/navein/assets/img/mega/${key}.jpg")
+            echo "IMG $key $code"
+            test "$code" = "200"
+          done
+
+          echo "Mega menu hover preview verification passed."

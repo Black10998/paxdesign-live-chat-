@@ -1,0 +1,125 @@
+name: Deploy Apple Advanced Website Systems page
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-advanced-website-systems-cfc9'
+    paths:
+      - '.github/triggers/deploy-apple-advanced-website-systems'
+      - '.github/workflows/deploy-apple-advanced-website-systems.yml'
+      - 'navein/template-apple-advanced-website-systems.php'
+      - 'navein/template-parts/pages/advanced-website-systems.php'
+      - 'navein/template-parts/page-title/page-header-page.php'
+      - 'navein/assets/css/apple-app-page.css'
+      - 'navein/assets/js/apple-app-page.js'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+      - 'scripts/assign-apple-advanced-website-systems-template.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy theme files and assign page template
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/assets/js") \
+              $(printf '%q' "$THEME/template-parts/pages") \
+              $(printf '%q' "$THEME/template-parts/page-title") \
+              $(printf '%q' "$THEME/scripts")"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-app-page.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/apple-app-page.js \
+            "${REMOTE}:${THEME}/assets/js/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-apple-advanced-website-systems.php \
+            "${REMOTE}:${THEME}/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/pages/advanced-website-systems.php \
+            "${REMOTE}:${THEME}/template-parts/pages/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/page-title/page-header-page.php \
+            "${REMOTE}:${THEME}/template-parts/page-title/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            scripts/assign-apple-advanced-website-systems-template.sh \
+            "${REMOTE}:${THEME}/scripts/"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "chmod +x $(printf '%q' "$THEME/scripts/assign-apple-advanced-website-systems-template.sh") && \
+             WP_PATH=$(printf '%q' "$WP_PATH") bash $(printf '%q' "$THEME/scripts/assign-apple-advanced-website-systems-template.sh")"
+
+          echo "Deployed Apple Advanced Website Systems page files"
+
+      - name: Verify live page
+        run: |
+          set -euo pipefail
+          set +e
+          HOME_HTML=$(curl -sS -o /tmp/aws-page.html -w '%{http_code}' "https://paxdesign.at/advanced-website-systems/?n=$(date +%s)")
+          APP_HTML=$(curl -sS -o /tmp/app-page.html -w '%{http_code}' "https://paxdesign.at/app-entwicklung/?n=$(date +%s)")
+          CSS=$(curl -sS -o /tmp/apple-app-page.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-app-page.css?ver=1.0.5")
+          JS=$(curl -sS -o /tmp/apple-app-page.js -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-app-page.js?ver=1.0.5")
+          set -e
+          echo "AWS $HOME_HTML | APP $APP_HTML | CSS $CSS | JS $JS"
+          test "$HOME_HTML" = "200"
+          test "$APP_HTML" = "200"
+          test "$CSS" = "200"
+          test "$JS" = "200"
+          grep -Eq "pax-aap-hero|pax-aap-feature|pax-apple-app|Skalierbare Systeme" /tmp/aws-page.html
+          grep -Eq "page-template-template-apple-advanced-website-systems|navein-apple-app-page" /tmp/aws-page.html
+          grep -Eq "pax-aap-device--desktop|pax-aap-desktop" /tmp/aws-page.html
+          grep -Eq "pax-aap-hero|App-Entwicklung" /tmp/app-page.html
+          grep -Eq "pax-aap-display|--aap-black|pax-aap-device--desktop" /tmp/apple-app-page.css
+          echo "Apple Advanced Website Systems page verification passed."

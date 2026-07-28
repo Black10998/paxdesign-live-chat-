@@ -53,16 +53,21 @@
 }
 
 #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
-  border: 1px solid rgba(255, 224, 166, 0.45);
-  background: linear-gradient(180deg, rgba(255, 224, 166, 0.22) 0%, rgba(255, 224, 166, 0.08) 100%);
-  color: #ffe0a6;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+  border: 0;
+  background: #000;
+  background-image: none;
+  color: #fff;
+  box-shadow: none;
+  font-weight: 500;
+  letter-spacing: -0.01em;
 }
 
 #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
 #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
-  border-color: rgba(255, 224, 166, 0.75);
-  background: linear-gradient(180deg, rgba(255, 224, 166, 0.32) 0%, rgba(255, 224, 166, 0.12) 100%);
+  border-color: transparent;
+  background: #1d1d1f;
+  background-image: none;
+  color: #fff;
   outline: none;
 }
 

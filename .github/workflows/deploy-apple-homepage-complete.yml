@@ -1,0 +1,127 @@
+name: Deploy Apple Homepage Complete
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-homepage-complete-cfc9'
+    paths:
+      - '.github/triggers/deploy-apple-homepage-complete'
+      - '.github/workflows/deploy-apple-homepage-complete.yml'
+      - 'navein/template-apple-homepage.php'
+      - 'navein/template-parts/pages/homepage.php'
+      - 'navein/template-parts/page-title/page-header-page.php'
+      - 'navein/assets/css/apple-homepage.css'
+      - 'navein/assets/js/apple-homepage.js'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+      - 'scripts/assign-apple-homepage-template.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy theme files and assign homepage template
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/assets/js") \
+              $(printf '%q' "$THEME/template-parts/pages") \
+              $(printf '%q' "$THEME/template-parts/page-title") \
+              $(printf '%q' "$THEME/scripts")"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-homepage.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/apple-homepage.js \
+            "${REMOTE}:${THEME}/assets/js/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-apple-homepage.php \
+            "${REMOTE}:${THEME}/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/pages/homepage.php \
+            "${REMOTE}:${THEME}/template-parts/pages/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/page-title/page-header-page.php \
+            "${REMOTE}:${THEME}/template-parts/page-title/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            scripts/assign-apple-homepage-template.sh \
+            "${REMOTE}:${THEME}/scripts/"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "chmod +x $(printf '%q' "$THEME/scripts/assign-apple-homepage-template.sh") && \
+             WP_PATH=$(printf '%q' "$WP_PATH") bash $(printf '%q' "$THEME/scripts/assign-apple-homepage-template.sh")"
+
+          echo "Deployed complete Apple homepage"
+
+      - name: Verify live homepage
+        run: |
+          set -euo pipefail
+          set +e
+          HOME_HTML=$(curl -sS -o /tmp/home-complete.html -w '%{http_code}' "https://paxdesign.at/?n=$(date +%s)")
+          WEB_HTML=$(curl -sS -o /tmp/web-check.html -w '%{http_code}' "https://paxdesign.at/webentwicklung/?n=$(date +%s)")
+          CSS=$(curl -sS -o /tmp/apple-homepage.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-homepage.css?ver=1.1.0")
+          JS=$(curl -sS -o /tmp/apple-homepage.js -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-homepage.js?ver=1.1.0")
+          set -e
+          echo "HOME $HOME_HTML | WEB $WEB_HTML | CSS $CSS | JS $JS"
+          test "$HOME_HTML" = "200"
+          test "$WEB_HTML" = "200"
+          test "$CSS" = "200"
+          test "$JS" = "200"
+          grep -Eq "pax-home-hero|pax-home-brand|PAXdesign" /tmp/home-complete.html
+          grep -Eq "page-template-template-apple-homepage|navein-apple-homepage" /tmp/home-complete.html
+          grep -Eq "pax-home-service|pax-home-btn|webentwicklung|app-entwicklung" /tmp/home-complete.html
+          grep -Eq "dtr-mega|navein-mega-menu|dtr-has-mega" /tmp/home-complete.html
+          # Elementor homepage widgets should no longer own the front
+          ! grep -Eq "elementor-page-2071" /tmp/home-complete.html
+          grep -Eq "pax-aap--web|pax-web-hero" /tmp/web-check.html
+          echo "Complete Apple homepage verification passed."

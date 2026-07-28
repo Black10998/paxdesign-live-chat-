@@ -1,0 +1,142 @@
+name: Deploy Apple header continuous sticky
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-header-continuous-sticky-cfc9'
+    paths:
+      - '.github/triggers/deploy-apple-header-continuous-sticky'
+      - '.github/workflows/deploy-apple-header-continuous-sticky.yml'
+      - 'navein/assets/css/apple-sticky-header.css'
+      - 'navein/assets/js/apple-sticky-header.js'
+      - 'navein/assets/js/custom.js'
+      - 'navein/includes/body-classes.php'
+      - 'navein/style.css'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy continuous visible sticky header
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          retry() {
+            local attempt=1
+            local delay=4
+            until "$@"; do
+              if [ "$attempt" -ge 4 ]; then
+                echo "Command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "Retry ${attempt}/4 after ${delay}s: $*"
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/assets/js") \
+              $(printf '%q' "$THEME/includes") \
+              $(printf '%q' "$THEME/.apple-header-continuous-sticky-backups")"
+
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "BACKUP=$(printf '%q' "$THEME/.apple-header-continuous-sticky-backups/$STAMP")
+             mkdir -p \"\$BACKUP\"
+             for f in style.css assets/css/apple-sticky-header.css assets/js/apple-sticky-header.js assets/js/custom.js includes/body-classes.php
+             do
+               if [ -f $(printf '%q' "$THEME")/\$f ]; then
+                 mkdir -p \"\$BACKUP/\$(dirname \"\$f\")\"
+                 cp -a $(printf '%q' "$THEME")/\$f \"\$BACKUP/\$f\"
+               fi
+             done
+             echo \"Backup written to \$BACKUP\""
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-sticky-header.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/apple-sticky-header.js \
+            "${REMOTE}:${THEME}/assets/js/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/custom.js \
+            "${REMOTE}:${THEME}/assets/js/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/includes/body-classes.php \
+            "${REMOTE}:${THEME}/includes/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
+
+          echo "Deployed Apple continuous sticky header 1.3.4"
+
+      - name: Verify live continuous sticky header
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          set +e
+          HOME_HTML=$(curl -sS -A "Mozilla/5.0" -o /tmp/home-cont-header.html -w '%{http_code}' \
+            "https://paxdesign.at/?n=${stamp}")
+          CSS=$(curl -sS -A "Mozilla/5.0" -o /tmp/apple-sticky-header.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-sticky-header.css?ver=1.3.4")
+          JS=$(curl -sS -A "Mozilla/5.0" -o /tmp/apple-sticky-header.js -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-sticky-header.js?ver=1.3.4")
+          set -e
+          echo "HOME $HOME_HTML | CSS $CSS | JS $JS"
+          test "$HOME_HTML" = "200"
+          test "$CSS" = "200"
+          test "$JS" = "200"
+          grep -Eq 'position:\s*sticky' /tmp/apple-sticky-header.css
+          grep -Eq 'animation:\s*none' /tmp/apple-sticky-header.css
+          grep -Eq 'header-height:\s*52px' /tmp/apple-sticky-header.css
+          grep -Eq 'translate3d\(0, var\(--dtr-apple-header-ty|tyPx = \(1 - progress\)' /tmp/apple-sticky-header.css /tmp/apple-sticky-header.js && exit 1 || true
+          grep -Eq 'Never translate above|setProgress|dtr-apple-header-ty., .0px' /tmp/apple-sticky-header.js
+          grep -Eq 'HEIGHT_COMPACT|live-height|logo-scale' /tmp/apple-sticky-header.js && exit 1 || true
+          grep -Eq 'style\.css\?ver=1\.3\.4|apple-sticky-header\.(css|js)\?ver=1\.3\.4' /tmp/home-cont-header.html
+          grep -Eq 'dtr-apple-sticky-header' /tmp/home-cont-header.html
+          echo "Apple continuous sticky header verification passed."

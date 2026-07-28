@@ -1,0 +1,1224 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css">
+
+<section class="paxsvc-product-slider" id="paxsvc-carousel" aria-labelledby="paxsvc-carousel-title">
+  <div class="paxsvc-shell">
+    <header class="paxsvc-carousel__header">
+      <div class="paxsvc-carousel__heading">
+        <p class="paxsvc-carousel__eyebrow">PAXdesign · Leistungen</p>
+        <h2 class="paxsvc-carousel__title" id="paxsvc-carousel-title">Digitale Lösungen. Klar entwickelt.</h2>
+        <p class="paxsvc-carousel__intro">
+          Websites, Apps, Automatisierung, Sicherheit und digitale Systeme — individuell geplant, präzise umgesetzt und langfristig skalierbar.
+        </p>
+      </div>
+
+      <div class="paxsvc-carousel__nav" aria-label="Karussell-Navigation">
+        <button type="button" class="paxsvc-carousel__btn paxsvc-carousel__btn--prev" data-carousel-prev aria-label="Vorherige Leistung">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+        <button type="button" class="paxsvc-carousel__btn paxsvc-carousel__btn--next" data-carousel-next aria-label="Nächste Leistung">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="paxsvc-carousel__viewport swiper" id="paxsvc-swiper">
+      <div class="paxsvc-carousel__wrp swiper-wrapper" id="pax-home-services"></div>
+    </div>
+
+    <div class="paxsvc-carousel__footer" aria-hidden="true">
+      <span class="paxsvc-carousel__counter">
+        <span data-carousel-current>01</span><span> / </span><span data-carousel-total>00</span>
+      </span>
+      <div class="paxsvc-carousel__progress"><span data-carousel-progress></span></div>
+      <span class="paxsvc-carousel__hint">Ziehen oder Pfeile verwenden</span>
+    </div>
+  </div>
+</section>
+
+<div class="paxsvc-modal" id="paxsvc-modal" hidden aria-hidden="true">
+  <div class="paxsvc-modal__backdrop" data-modal-close></div>
+
+  <div class="paxsvc-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="paxsvc-modal-title">
+    <div class="paxsvc-modal__visual">
+      <span class="paxsvc-modal__kicker">PAXdesign Service</span>
+      <div class="paxsvc-modal__icon" aria-hidden="true"></div>
+      <p class="paxsvc-modal__visual-note">Individuell geplant · Sicher umgesetzt · Skalierbar entwickelt</p>
+    </div>
+
+    <div class="paxsvc-modal__content">
+      <div class="paxsvc-modal__header">
+        <h2 class="paxsvc-modal__title" id="paxsvc-modal-title"></h2>
+        <button type="button" class="paxsvc-modal__close" data-modal-close aria-label="Schließen">×</button>
+      </div>
+
+      <div class="paxsvc-modal__body">
+        <p class="paxsvc-modal__desc"></p>
+        <ul class="paxsvc-modal__features"></ul>
+
+        <div class="paxsvc-modal__actions">
+          <button type="button" class="paxsvc-modal__book paxdesign-booking-trigger" data-service="">Termin buchen</button>
+          <a class="paxsvc-modal__cta" href="https://paxdesign.at/projektpreise/">Mehr anzeigen</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+#paxsvc-carousel,
+#paxsvc-carousel *,
+#paxsvc-carousel *::before,
+#paxsvc-carousel *::after,
+#paxsvc-modal,
+#paxsvc-modal *,
+#paxsvc-modal *::before,
+#paxsvc-modal *::after {
+  box-sizing: border-box !important;
+}
+
+#paxsvc-carousel,
+#paxsvc-modal {
+  --pax-bg: #000000;
+  --pax-panel: #111113;
+  --pax-panel-2: #18181b;
+  --pax-panel-3: #222226;
+  --pax-text: #f5f5f7;
+  --pax-muted: #86868b;
+  --pax-line: #323238;
+  --pax-blue: #0071e3;
+  --pax-blue-strong: #0077ed;
+  --pax-font: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif;
+}
+
+#paxsvc-carousel {
+  position: relative !important;
+  isolation: isolate !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  margin: 0 calc(50% - 50vw) !important;
+  padding: clamp(72px, 10vh, 120px) 0 clamp(56px, 8vh, 96px) !important;
+  overflow: hidden !important;
+  background: var(--pax-bg) !important;
+  color: var(--pax-text) !important;
+  font-family: var(--pax-font) !important;
+  -webkit-font-smoothing: antialiased !important;
+  text-rendering: optimizeLegibility !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+#paxsvc-carousel div,
+#paxsvc-carousel article,
+#paxsvc-carousel header,
+#paxsvc-carousel h2,
+#paxsvc-carousel h3,
+#paxsvc-carousel p,
+#paxsvc-carousel span,
+#paxsvc-carousel ul,
+#paxsvc-carousel li,
+#paxsvc-carousel button,
+#paxsvc-carousel svg,
+#paxsvc-modal div,
+#paxsvc-modal h2,
+#paxsvc-modal p,
+#paxsvc-modal span,
+#paxsvc-modal ul,
+#paxsvc-modal li,
+#paxsvc-modal button,
+#paxsvc-modal a,
+#paxsvc-modal svg {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+  text-transform: none !important;
+  font: inherit !important;
+}
+
+#paxsvc-carousel ul,
+#paxsvc-carousel li,
+#paxsvc-modal ul,
+#paxsvc-modal li { list-style: none !important; }
+
+#paxsvc-carousel button,
+#paxsvc-modal button {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+#paxsvc-carousel .paxsvc-shell {
+  width: 100% !important;
+  max-width: 1420px !important;
+  margin: 0 auto !important;
+  padding-inline: clamp(16px, 3vw, 44px) !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__header {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: end !important;
+  gap: 24px !important;
+  margin-bottom: clamp(24px, 3vw, 38px) !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__eyebrow {
+  color: var(--pax-blue) !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  letter-spacing: .09em !important;
+  text-transform: uppercase !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__title {
+  max-width: 760px !important;
+  margin-top: 12px !important;
+  color: var(--pax-text) !important;
+  font-size: clamp(40px, 6vw, 64px) !important;
+  font-weight: 700 !important;
+  line-height: .98 !important;
+  letter-spacing: -.055em !important;
+  text-wrap: balance !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__intro {
+  max-width: 620px !important;
+  margin-top: 16px !important;
+  color: var(--pax-muted) !important;
+  font-size: clamp(14px, 1.15vw, 18px) !important;
+  font-weight: 500 !important;
+  line-height: 1.45 !important;
+  letter-spacing: -.02em !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__nav {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__btn {
+  display: inline-flex !important;
+  width: 38px !important;
+  height: 38px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  color: var(--pax-text) !important;
+  background: var(--pax-panel-3) !important;
+  cursor: pointer !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__btn.swiper-button-disabled {
+  opacity: .35 !important;
+  pointer-events: none !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__btn svg {
+  width: 17px !important;
+  height: 17px !important;
+  fill: none !important;
+  stroke: currentColor !important;
+  stroke-width: 1.8 !important;
+  stroke-linecap: round !important;
+  stroke-linejoin: round !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__viewport {
+  position: relative !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  touch-action: pan-y !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__wrp {
+  display: flex !important;
+  align-items: stretch !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__item {
+  display: flex !important;
+  height: auto !important;
+}
+
+#paxsvc-carousel .card-container {
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 100% !important;
+  min-height: 330px !important;
+  border-radius: 20px !important;
+  cursor: pointer !important;
+}
+
+#paxsvc-carousel .card-container:focus-visible {
+  outline: 2px solid var(--pax-blue) !important;
+  outline-offset: 4px !important;
+}
+
+#paxsvc-carousel .card {
+  display: flex !important;
+  width: 100% !important;
+  min-height: 330px !important;
+  height: 100% !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  border: 1px solid var(--pax-line) !important;
+  border-radius: 20px !important;
+  color: var(--pax-text) !important;
+  background: var(--pax-panel) !important;
+}
+
+#paxsvc-carousel .card__top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+  padding: 15px 15px 0 !important;
+}
+
+#paxsvc-carousel .card__number {
+  color: #737378 !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  letter-spacing: .08em !important;
+}
+
+#paxsvc-carousel .card__badge {
+  display: inline-flex !important;
+  min-height: 21px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 5px 8px !important;
+  border-radius: 999px !important;
+  color: #fff !important;
+  background: var(--pax-blue-strong) !important;
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  letter-spacing: .07em !important;
+  text-transform: uppercase !important;
+}
+
+#paxsvc-carousel .card__badge--standard {
+  color: #c7c7cc !important;
+  background: var(--pax-panel-3) !important;
+}
+
+#paxsvc-carousel .svc-thumb {
+  display: grid !important;
+  width: 50px !important;
+  height: 50px !important;
+  margin: 17px 15px 0 !important;
+  place-items: center !important;
+  border-radius: 14px !important;
+  color: var(--pax-text) !important;
+  background: var(--pax-panel-3) !important;
+}
+
+#paxsvc-carousel .svc-thumb svg {
+  width: 31px !important;
+  height: 31px !important;
+}
+
+#paxsvc-carousel .card__body {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+  padding: 15px 15px 12px !important;
+}
+
+#paxsvc-carousel .card__meta {
+  color: var(--pax-blue) !important;
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+  letter-spacing: .06em !important;
+  text-transform: uppercase !important;
+}
+
+#paxsvc-carousel .card__meta span:nth-child(2),
+#paxsvc-carousel .card__meta span:nth-child(3) {
+  display: none !important;
+}
+
+#paxsvc-carousel .svc-title {
+  max-width: 16ch !important;
+  margin-top: 7px !important;
+  color: var(--pax-text) !important;
+  font-size: clamp(19px, 1.55vw, 25px) !important;
+  font-weight: 700 !important;
+  line-height: 1.03 !important;
+  letter-spacing: -.045em !important;
+}
+
+#paxsvc-carousel .svc-desc {
+  margin-top: 8px !important;
+  color: var(--pax-muted) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 1.4 !important;
+}
+
+#paxsvc-carousel .svc-features {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  margin-top: 12px !important;
+  border-top: 1px solid var(--pax-line) !important;
+}
+
+#paxsvc-carousel .svc-features li {
+  min-width: 0 !important;
+  padding: 6px 6px 6px 0 !important;
+  border-bottom: 1px solid var(--pax-line) !important;
+  color: #8e8e93 !important;
+  font-size: 8px !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+  overflow-wrap: anywhere !important;
+}
+
+#paxsvc-carousel .svc-features li:nth-child(odd) {
+  border-right: 1px solid var(--pax-line) !important;
+}
+
+#paxsvc-carousel .svc-features li:nth-child(even) {
+  padding-left: 7px !important;
+}
+
+#paxsvc-carousel .card__footer {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 0 15px 15px !important;
+}
+
+#paxsvc-carousel .svc-details-btn {
+  display: inline-flex !important;
+  min-height: 31px !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 5px !important;
+  color: var(--pax-blue) !important;
+  background: transparent !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+}
+
+#paxsvc-carousel .svc-btn {
+  display: inline-flex !important;
+  min-height: 31px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  padding: 8px 10px !important;
+  border-radius: 999px !important;
+  color: #fff !important;
+  background: var(--pax-blue-strong) !important;
+  cursor: pointer !important;
+}
+
+#paxsvc-carousel .svc-btn__label {
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+}
+
+#paxsvc-carousel .svc-arrow {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__footer {
+  display: grid !important;
+  grid-template-columns: auto minmax(100px, 1fr) auto !important;
+  align-items: center !important;
+  gap: 16px !important;
+  margin-top: 22px !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__counter,
+#paxsvc-carousel .paxsvc-carousel__hint {
+  color: #77777c !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__progress {
+  position: relative !important;
+  width: 100% !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  background: #2d2d31 !important;
+}
+
+#paxsvc-carousel .paxsvc-carousel__progress span {
+  position: absolute !important;
+  inset: 0 auto 0 0 !important;
+  width: 0;
+  background: var(--pax-text) !important;
+  transition: width .35s ease !important;
+}
+
+/* Modal */
+#paxsvc-modal[hidden] { display: none !important; }
+
+#paxsvc-modal {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 18px !important;
+  font-family: var(--pax-font) !important;
+}
+
+#paxsvc-modal .paxsvc-modal__backdrop {
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, .82) !important;
+}
+
+#paxsvc-modal .paxsvc-modal__dialog {
+  position: relative !important;
+  z-index: 1 !important;
+  display: grid !important;
+  grid-template-columns: 220px minmax(0, 1fr) !important;
+  width: min(760px, 100%) !important;
+  max-height: min(86svh, 650px) !important;
+  overflow: hidden !important;
+  border: 1px solid var(--pax-line) !important;
+  border-radius: 24px !important;
+  color: var(--pax-text) !important;
+  background: var(--pax-panel) !important;
+}
+
+#paxsvc-modal .paxsvc-modal__visual {
+  display: flex !important;
+  min-height: 430px !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
+  padding: 28px !important;
+  border-right: 1px solid var(--pax-line) !important;
+  background: var(--pax-panel-2) !important;
+}
+
+#paxsvc-modal .paxsvc-modal__kicker {
+  color: var(--pax-blue) !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: .08em !important;
+  text-transform: uppercase !important;
+}
+
+#paxsvc-modal .paxsvc-modal__icon {
+  display: grid !important;
+  width: 120px !important;
+  height: 120px !important;
+  place-items: center !important;
+  border-radius: 30px !important;
+  color: var(--pax-text) !important;
+  background: var(--pax-panel-3) !important;
+}
+
+#paxsvc-modal .paxsvc-modal__icon svg {
+  width: 72% !important;
+  height: 72% !important;
+}
+
+#paxsvc-modal .paxsvc-modal__visual-note {
+  color: var(--pax-muted) !important;
+  font-size: 11px !important;
+  line-height: 1.45 !important;
+}
+
+#paxsvc-modal .paxsvc-modal__content {
+  min-width: 0 !important;
+  overflow: auto !important;
+  padding: 30px !important;
+}
+
+#paxsvc-modal .paxsvc-modal__header {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 18px !important;
+}
+
+#paxsvc-modal .paxsvc-modal__title {
+  max-width: 13ch !important;
+  color: var(--pax-text) !important;
+  font-size: clamp(32px, 4vw, 50px) !important;
+  font-weight: 700 !important;
+  line-height: .98 !important;
+  letter-spacing: -.055em !important;
+}
+
+#paxsvc-modal .paxsvc-modal__close {
+  display: inline-flex !important;
+  width: 34px !important;
+  height: 34px !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  color: var(--pax-text) !important;
+  background: var(--pax-panel-3) !important;
+  font-size: 21px !important;
+  cursor: pointer !important;
+}
+
+#paxsvc-modal .paxsvc-modal__body {
+  margin-top: 25px !important;
+}
+
+#paxsvc-modal .paxsvc-modal__desc {
+  color: var(--pax-muted) !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  line-height: 1.45 !important;
+}
+
+#paxsvc-modal .paxsvc-modal__features {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  margin-top: 24px !important;
+  border-top: 1px solid var(--pax-line) !important;
+}
+
+#paxsvc-modal .paxsvc-modal__features li {
+  padding: 12px 10px 12px 0 !important;
+  border-bottom: 1px solid var(--pax-line) !important;
+  color: var(--pax-muted) !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+#paxsvc-modal .paxsvc-modal__features li:nth-child(odd) {
+  border-right: 1px solid var(--pax-line) !important;
+}
+
+#paxsvc-modal .paxsvc-modal__features li:nth-child(even) {
+  padding-left: 11px !important;
+}
+
+#paxsvc-modal .paxsvc-modal__actions {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  margin-top: 26px !important;
+}
+
+#paxsvc-modal .paxsvc-modal__book,
+#paxsvc-modal .paxsvc-modal__cta {
+  display: inline-flex !important;
+  min-height: 42px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 11px 17px !important;
+  border-radius: 999px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+}
+
+#paxsvc-modal .paxsvc-modal__book {
+  color: #fff !important;
+  background: var(--pax-blue-strong) !important;
+}
+
+#paxsvc-modal .paxsvc-modal__cta {
+  color: var(--pax-blue) !important;
+  background: var(--pax-panel-3) !important;
+}
+
+body.paxsvc-modal-open {
+  overflow: hidden !important;
+}
+
+@media (max-width: 900px) {
+  #paxsvc-carousel .paxsvc-carousel__header {
+    grid-template-columns: 1fr !important;
+  }
+
+  #paxsvc-carousel .paxsvc-carousel__nav {
+    justify-content: flex-start !important;
+  }
+}
+
+@media (max-width: 700px) {
+  #paxsvc-carousel {
+    padding: 38px 0 34px !important;
+  }
+
+  #paxsvc-carousel .paxsvc-shell {
+    padding-inline: 13px !important;
+  }
+
+  #paxsvc-carousel .paxsvc-carousel__header {
+    margin-bottom: 20px !important;
+  }
+
+  #paxsvc-carousel .paxsvc-carousel__viewport {
+    width: 100% !important;
+    margin-inline: auto !important;
+  }
+
+  #paxsvc-carousel .paxsvc-carousel__wrp {
+    align-items: stretch !important;
+  }
+
+  #paxsvc-carousel .paxsvc-carousel__item {
+    min-width: 0 !important;
+  }
+
+  #paxsvc-carousel .paxsvc-carousel__title {
+    font-size: clamp(32px, 10vw, 44px) !important;
+  }
+
+  #paxsvc-carousel .paxsvc-carousel__intro {
+    font-size: 14px !important;
+  }
+
+  #paxsvc-carousel .card-container,
+  #paxsvc-carousel .card {
+    min-height: 315px !important;
+    border-radius: 17px !important;
+  }
+
+  #paxsvc-carousel .card__top {
+    padding: 12px 11px 0 !important;
+  }
+
+  #paxsvc-carousel .svc-thumb {
+    width: 44px !important;
+    height: 44px !important;
+    margin: 14px 11px 0 !important;
+    border-radius: 12px !important;
+  }
+
+  #paxsvc-carousel .svc-thumb svg {
+    width: 27px !important;
+    height: 27px !important;
+  }
+
+  #paxsvc-carousel .card__body {
+    padding: 13px 11px 10px !important;
+  }
+
+  #paxsvc-carousel .svc-title {
+    max-width: 100% !important;
+    font-size: 17px !important;
+  }
+
+  #paxsvc-carousel .svc-desc {
+    font-size: 9.5px !important;
+  }
+
+  #paxsvc-carousel .svc-features {
+    grid-template-columns: 1fr !important;
+    margin-top: 10px !important;
+  }
+
+  #paxsvc-carousel .svc-features li {
+    padding: 5px 0 !important;
+    border-right: 0 !important;
+    font-size: 7.5px !important;
+  }
+
+  #paxsvc-carousel .svc-features li:nth-child(even) {
+    padding-left: 0 !important;
+  }
+
+  #paxsvc-carousel .card__footer {
+    grid-template-columns: 1fr !important;
+    gap: 4px !important;
+    padding: 0 11px 12px !important;
+  }
+
+  #paxsvc-carousel .svc-details-btn,
+  #paxsvc-carousel .svc-btn {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  #paxsvc-carousel .paxsvc-carousel__footer {
+    grid-template-columns: auto minmax(70px, 1fr) !important;
+  }
+
+  #paxsvc-carousel .paxsvc-carousel__hint {
+    display: none !important;
+  }
+
+  #paxsvc-modal {
+    align-items: flex-end !important;
+    padding: 8px !important;
+  }
+
+  #paxsvc-modal .paxsvc-modal__dialog {
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+    max-height: 92svh !important;
+    border-radius: 24px 24px 14px 14px !important;
+  }
+
+  #paxsvc-modal .paxsvc-modal__visual {
+    min-height: auto !important;
+    padding: 18px !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--pax-line) !important;
+  }
+
+  #paxsvc-modal .paxsvc-modal__kicker,
+  #paxsvc-modal .paxsvc-modal__visual-note {
+    display: none !important;
+  }
+
+  #paxsvc-modal .paxsvc-modal__icon {
+    width: 68px !important;
+    height: 68px !important;
+    border-radius: 19px !important;
+  }
+
+  #paxsvc-modal .paxsvc-modal__content {
+    padding: 22px 19px 25px !important;
+  }
+
+  #paxsvc-modal .paxsvc-modal__title {
+    font-size: clamp(30px, 9vw, 42px) !important;
+  }
+
+  #paxsvc-modal .paxsvc-modal__actions {
+    flex-direction: column !important;
+  }
+
+  #paxsvc-modal .paxsvc-modal__book,
+  #paxsvc-modal .paxsvc-modal__cta {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 390px) {
+  #paxsvc-carousel .svc-features,
+  #paxsvc-modal .paxsvc-modal__features {
+    grid-template-columns: 1fr !important;
+  }
+
+  #paxsvc-carousel .svc-features li:nth-child(odd),
+  #paxsvc-modal .paxsvc-modal__features li:nth-child(odd) {
+    border-right: 0 !important;
+  }
+
+  #paxsvc-carousel .svc-features li:nth-child(even),
+  #paxsvc-modal .paxsvc-modal__features li:nth-child(even) {
+    padding-left: 0 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #paxsvc-carousel *,
+  #paxsvc-modal * {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
+
+/* Apple product-page alignment polish */
+#paxsvc-carousel .paxsvc-carousel__eyebrow {
+  letter-spacing: 0.08em !important;
+  text-transform: uppercase !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  color: rgba(255,255,255,0.45) !important;
+}
+#paxsvc-carousel .paxsvc-carousel__title {
+  letter-spacing: -0.04em !important;
+  font-weight: 600 !important;
+  line-height: 1.05 !important;
+}
+#paxsvc-carousel .paxsvc-carousel__intro {
+  font-size: clamp(17px, 1.8vw, 20px) !important;
+  line-height: 1.45 !important;
+  color: rgba(255,255,255,0.62) !important;
+  max-width: 36em !important;
+}
+#paxsvc-carousel .paxsvc-carousel__btn {
+  border-radius: 980px !important;
+  border: 1px solid rgba(255,255,255,0.16) !important;
+  background: rgba(255,255,255,0.06) !important;
+  transition: transform .25s cubic-bezier(0.25,0.1,0.25,1), background-color .25s ease !important;
+}
+#paxsvc-carousel .paxsvc-carousel__btn:hover {
+  background: rgba(255,255,255,0.12) !important;
+  transform: scale(1.04) !important;
+}
+#paxsvc-carousel .svc-card,
+#paxsvc-carousel article.svc-card,
+#paxsvc-carousel .swiper-slide article {
+  border-radius: 28px !important;
+  border: 1px solid rgba(255,255,255,0.08) !important;
+  background: linear-gradient(165deg, #1c1c1e, #0a0a0b) !important;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.28) !important;
+  transition: transform .45s cubic-bezier(0.25,0.1,0.25,1), border-color .3s ease !important;
+}
+#paxsvc-carousel .svc-card:hover,
+#paxsvc-carousel article.svc-card:hover {
+  transform: translateY(-4px) !important;
+  border-color: rgba(255,255,255,0.16) !important;
+}
+#paxsvc-modal .paxsvc-modal__dialog {
+  border-radius: 28px !important;
+  overflow: hidden !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  box-shadow: 0 40px 80px rgba(0,0,0,0.45) !important;
+}
+#paxsvc-modal .paxsvc-modal__book,
+#paxsvc-modal .paxsvc-modal__cta {
+  border-radius: 980px !important;
+}
+
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  const root = document.getElementById('paxsvc-carousel');
+  const grid = document.getElementById('pax-home-services');
+  const modal = document.getElementById('paxsvc-modal');
+
+  if (!root || !grid || !modal) return;
+
+  /* يمنع تهيئة نفس المقطع مرتين فقط، من دون الاعتماد على متغير عام قد يخص نسخة قديمة */
+  if (root.dataset.paxInitialized === '1') return;
+  root.dataset.paxInitialized = '1';
+
+const iconMenu='<svg viewBox="0 0 16 16"><path d="M1 2.75A.75.75 0 0 1 1.75 2h12.5a.75.75 0 0 1 0 1.5H1.75A.75.75 0 0 1 1 2.75Zm0 5A.75.75 0 0 1 1.75 7h12.5a.75.75 0 0 1 0 1.5H1.75A.75.75 0 0 1 1 7.75ZM1.75 12h12.5a.75.75 0 0 1 0 1.5H1.75a.75.75 0 0 1 0-1.5Z"/></svg>';
+const iconDefault='<svg viewBox="0 0 40 40" fill="none"><rect x="8" y="9" width="24" height="22" rx="4" stroke="currentColor" stroke-width="1.4"/><path d="M13 17h14M13 22h10M13 27h16" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity=".75"/></svg>';
+const iconShield='<svg viewBox="0 0 40 40" fill="none"><path d="M20 6l11 4.5V19c0 6.5-4.5 10-11 12.5C13.5 29 9 25.5 9 19v-8.5L20 6z" stroke="currentColor" stroke-width="1.4"/><path d="M15 20l3 3 7-7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+const iconChart='<svg viewBox="0 0 40 40" fill="none"><rect x="8" y="24" width="5" height="9" rx="1" fill="currentColor" opacity=".45"/><rect x="18" y="18" width="5" height="15" rx="1" fill="currentColor" opacity=".7"/><rect x="28" y="12" width="5" height="21" rx="1" fill="currentColor"/><path d="M7 33h27" stroke="currentColor" stroke-width="1"/></svg>';
+const iconPhone='<svg viewBox="0 0 40 40" fill="none"><rect x="14" y="5" width="12" height="30" rx="3" stroke="currentColor" stroke-width="1.4"/><rect x="17" y="8" width="6" height="1.5" rx=".75" fill="currentColor"/><circle cx="20" cy="31" r="1.2" fill="currentColor"/></svg>';
+
+const SERVICES=[
+{id:'aiautomation',glow:'glow-ai',repo:'ai-automation',title:'AI Automation',desc:'KI-Lösungen zur Automatisierung wiederkehrender Aufgaben und schnelleren Abläufen.',service:'AI Automation',isNew:1,icon:iconDefault,features:['Prozessautomatisierung','AI Chatbots','API-Anbindung','Intelligente Reports']},
+{id:'aichatbot',glow:'glow-aibot',repo:'ai-chatbot',title:'AI Chatbot',desc:'Intelligenter Assistent für Website oder Shop – Antworten, Leads und Weiterleitung.',service:'AI Chatbot',isNew:1,icon:iconDefault,features:['Automatische Antworten','Mehrsprachiger Support','WhatsApp-Anbindung','Training auf Ihren Daten']},
+{id:'ecommerce',glow:'glow-shop',repo:'ecommerce',title:'E-Commerce Shop',desc:'Professioneller Online-Shop mit Zahlung, Produktverwaltung und Conversion-Fokus.',service:'E-Commerce Shop',isNew:1,icon:iconDefault,features:['WooCommerce / Shopify','Zahlungsgateways','Produktverwaltung','Conversion-Optimierung']},
+{id:'maintenance',glow:'glow-maint',repo:'maintenance',title:'Monatliche Wartung',desc:'Laufende Betreuung für Sicherheit, Updates, Backups und schnellen Support.',service:'Monthly Maintenance',isNew:1,icon:iconDefault,features:['Updates','Backups','Security Check','Schneller Support']},
+{id:'pagespeed',glow:'glow-speed',repo:'pagespeed',title:'Website-Geschwindigkeit',desc:'Performance-Optimierung für schnellere Ladezeiten und bessere UX.',service:'Website Speed Optimization',isNew:1,icon:iconChart,features:['Core Web Vitals','Caching','Bildoptimierung','Code-Optimierung']},
+{id:'uiux',glow:'glow-uiux',repo:'ui-ux',title:'UI/UX Design',desc:'Professionelle Interfaces, die Besucher schnell zur Entscheidung führen.',service:'UI/UX Design',isNew:1,icon:iconDefault,features:['Wireframes','Interface Design','Conversion UX','Responsive Layout']},
+{id:'branding',glow:'glow-brand',repo:'branding',title:'Branding & Identity',desc:'Logo, Farben, Typografie und konsistenter Markenauftritt.',service:'Branding & Identity',isNew:1,icon:iconDefault,features:['Logo','Farben','Typografie','Brand Guidelines']},
+{id:'crm',glow:'glow-crm',repo:'crm',title:'CRM System',desc:'Kunden, Aufträge, Follow-ups und Aufgaben in einem System.',service:'CRM System',isNew:1,icon:iconDefault,features:['Kundenverwaltung','Follow-ups','Aufgaben','Automationen']},
+{id:'bookingsystem',glow:'glow-booking',repo:'booking',title:'Terminbuchung',desc:'Smartes Buchungssystem mit Kalender, Zahlung und Benachrichtigungen.',service:'Appointment Booking System',isNew:1,icon:iconDefault,features:['Kalender','Zahlung','Benachrichtigungen','Verfügbarkeit']},
+{id:'pwa',glow:'glow-pwa',repo:'pwa',title:'Website zur App',desc:'Installierbare PWA mit Push, Offline-Modus und App-Feeling.',service:'Website to App',isNew:1,icon:iconPhone,features:['PWA','Push','Offline-Modus','App-Feeling']},
+{id:'analytics',glow:'glow-analytics',repo:'analytics',title:'Daten & Reports',desc:'Dashboards für Umsatz, Kunden, Bestellungen und Traffic.',service:'Data Analytics & Reports',isNew:1,icon:iconChart,features:['Dashboards','Umsatzberichte','Traffic Reports','KPIs']},
+{id:'gdpr',glow:'glow-gdpr',repo:'gdpr',title:'GDPR & Cookies',desc:'Rechtssichere Cookie-Banner, Privacy Policy und Consent Mode.',service:'GDPR & Cookie Setup',isNew:1,icon:iconShield,features:['Cookie Banner','Consent Mode','Privacy Policy','Tracking Setup']},
+{id:'secflash',glow:'glow-secflash',repo:'flash-protection',title:'Military Flash Protection',desc:'Schutz gegen Kopieren und Manipulation von Code und Dateien.',service:'Military Flash Protection',isNew:1,icon:iconShield,features:['Copy Protection','File Protection','Hardening','Monitoring']},
+{id:'seclayers',glow:'glow-seclayers',repo:'encrypted-layers',title:'Encrypted Protection Layers',desc:'Verschlüsselte Schutzschichten für JS, CSS und Kernlogik.',service:'Encrypted Protection Layers',isNew:1,icon:iconShield,features:['JS Schutz','CSS Schutz','Layer Protection','Asset Security']},
+{id:'sectamper',glow:'glow-sectamper',repo:'anti-tamper',title:'Anti-Tamper Shield',desc:'Erkennt unautorisierte Änderungen an Dateien und Systemen.',service:'Anti-Tamper Shield',isNew:1,icon:iconShield,features:['Tamper Detection','Checksums','Alerts','File Watch']},
+{id:'secruntime',glow:'glow-secruntime',repo:'secure-runtime',title:'Secure Runtime Mode',desc:'Sicherer Betrieb mit weniger sichtbaren sensiblen Daten.',service:'Secure Runtime Mode',isNew:1,icon:iconShield,features:['Runtime Protection','Minimal Exposure','Secure Assets','Controlled Access']},
+{id:'secobfusc',glow:'glow-secobfusc',repo:'obfuscation',title:'Obfuscated Source Protection',desc:'Minify & Obfuscation gegen Reverse Engineering.',service:'Obfuscated Source Protection',isNew:1,icon:iconShield,features:['Minify','Obfuscation','No Source Maps','Hardening']},
+{id:'sectoken',glow:'glow-sectoken',repo:'token-access',title:'Token-Based Asset Access',desc:'Sensible Assets nur via temporäre, sichere Tokens.',service:'Token-Based Asset Access',isNew:1,icon:iconShield,features:['Signed Tokens','Temporary Access','Secure Streaming','Asset Control']},
+{id:'seclicense',glow:'glow-seclicense',repo:'license-verify',title:'Server-Side License Verification',desc:'Lizenzprüfung auf dem Server vor Feature-Freigabe.',service:'Server-Side License Verification',isNew:1,icon:iconShield,features:['Server Check','License Gate','Remote Control','Access Rules']},
+{id:'secintegrity',glow:'glow-secintegrity',repo:'integrity-check',title:'Integrity Check',desc:'Hash/Checksum-Prüfung für unveränderte Dateien.',service:'Integrity Check',isNew:1,icon:iconShield,features:['Hash Check','Checksum','Integrity Logs','Alerts']},
+{id:'website',glow:'glow-web',repo:'website',title:'Website',desc:'Responsive Website mit starkem Design und Performance.',service:'Website',isNew:0,icon:iconDefault,features:['Responsive Design','SEO Basics','Performance','Kontaktintegration']},
+{id:'webapp',glow:'glow-app',repo:'web-app',title:'Web App',desc:'Individuelle Webanwendung für Prozesse und Automatisierung.',service:'Web App',isNew:0,icon:iconDefault,features:['Custom Logic','Dashboard','API','Automation']},
+{id:'mobile',glow:'glow-mobile',repo:'mobile',title:'iOS + Android',desc:'Cross-Platform-Apps für beide Stores.',service:'iOS + Android',isNew:0,icon:iconPhone,features:['iOS','Android','Store Ready','Push']},
+{id:'security',glow:'glow-security',repo:'security',title:'IT-Sicherheit',desc:'Security, Hardening, Monitoring und Schutz vor Angriffen.',service:'IT-Sicherheit',isNew:0,icon:iconShield,features:['Hardening','Monitoring','Security Audit','Protection']},
+{id:'backend',glow:'glow-backend',repo:'backend',title:'Backend System',desc:'Stabile Schnittstellen, Datenbanken und Admin-Systeme.',service:'Backend System',isNew:0,icon:iconDefault,features:['APIs','Database','Admin Panel','Automation']},
+{id:'enterprise',glow:'glow-enterprise',repo:'enterprise',title:'Enterprise',desc:'Skalierbare Lösungen für Teams, Prozesse und Wachstum.',service:'Enterprise',isNew:0,icon:iconDefault,features:['Alle Leistungen','Dediziertes Team','24/7 Support','SLA Garantie']}
+];
+
+  const modalTitle = modal.querySelector('.paxsvc-modal__title');
+  const modalDesc = modal.querySelector('.paxsvc-modal__desc');
+  const modalFeatures = modal.querySelector('.paxsvc-modal__features');
+  const modalIcon = modal.querySelector('.paxsvc-modal__icon');
+  const modalBook = modal.querySelector('.paxsvc-modal__book');
+  const modalCta = modal.querySelector('.paxsvc-modal__cta');
+  const modalClose = modal.querySelector('.paxsvc-modal__close');
+  const currentEl = root.querySelector('[data-carousel-current]');
+  const totalEl = root.querySelector('[data-carousel-total]');
+  const progressEl = root.querySelector('[data-carousel-progress]');
+
+  let swiper = null;
+  let lastFocus = null;
+
+  function esc(value) {
+    return String(value).replace(/[&<>"']/g, function (char) {
+      return {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+      }[char];
+    });
+  }
+
+  function pad(number) {
+    return String(number).padStart(2, '0');
+  }
+
+  function getService(id) {
+    return SERVICES.find(function (service) {
+      return service.id === id;
+    });
+  }
+
+  function categoryFor(service) {
+    if (/^sec/.test(service.id) || service.id === 'security') return 'Security';
+    if (/^ai/.test(service.id)) return 'Artificial Intelligence';
+    if (['ecommerce', 'crm', 'bookingsystem', 'maintenance'].includes(service.id)) return 'Business Systems';
+    if (['uiux', 'branding'].includes(service.id)) return 'Design';
+    if (['analytics', 'pagespeed', 'gdpr'].includes(service.id)) return 'Data & Performance';
+    if (['pwa', 'mobile'].includes(service.id)) return 'Mobile';
+    return 'Development';
+  }
+
+  function detailsUrl(service) {
+    return 'https://paxdesign.at/projektpreise/#' + encodeURIComponent(service.id);
+  }
+
+  grid.innerHTML = SERVICES.map(function (service, index) {
+    return `
+      <div class="paxsvc-carousel__item swiper-slide">
+        <article
+          class="card-container ${service.isNew ? 'home-service-card--new' : ''}"
+          data-svc="${esc(service.id)}"
+          role="button"
+          tabindex="0"
+          aria-haspopup="dialog"
+          aria-label="${esc(service.title)} – Details öffnen"
+        >
+          <div class="card">
+            <div class="card__top">
+              <span class="card__number">${pad(index + 1)}</span>
+              <span class="card__badge ${service.isNew ? '' : 'card__badge--standard'}">
+                ${service.isNew ? 'Neu' : 'PAXdesign'}
+              </span>
+            </div>
+
+            <div class="svc-thumb" aria-hidden="true">${service.icon}</div>
+
+            <div class="card__body">
+              <div class="card__meta">
+                <span>${esc(categoryFor(service))}</span>
+                <span></span>
+                <span>${esc(service.repo)}</span>
+              </div>
+
+              <h3 class="svc-title">${esc(service.title)}</h3>
+              <p class="svc-desc">${esc(service.desc)}</p>
+
+              <ul class="svc-features" aria-label="Leistungsmerkmale">
+                ${(service.features || []).map(function (feature) {
+                  return `<li>${esc(feature)}</li>`;
+                }).join('')}
+              </ul>
+            </div>
+
+            <div class="card__footer">
+              <button type="button" class="svc-details-btn" data-open-service="${esc(service.id)}">
+                Mehr erfahren <span aria-hidden="true">→</span>
+              </button>
+
+              <button
+                type="button"
+                class="svc-btn paxdesign-booking-trigger"
+                data-service="${esc(service.service)}"
+                aria-label="Termin für ${esc(service.title)} buchen"
+              >
+                <span class="svc-btn__label">Termin</span>
+                <span class="svc-arrow" aria-hidden="true">↗</span>
+              </button>
+            </div>
+          </div>
+        </article>
+      </div>
+    `;
+  }).join('');
+
+  if (totalEl) totalEl.textContent = pad(SERVICES.length);
+
+  function openModal(id) {
+    const service = getService(id);
+    if (!service) return;
+
+    modalTitle.textContent = service.title;
+    modalDesc.textContent = service.desc;
+    modalFeatures.innerHTML = (service.features || []).map(function (feature) {
+      return '<li>' + esc(feature) + '</li>';
+    }).join('');
+    modalIcon.innerHTML = service.icon;
+    modalBook.dataset.service = service.service || service.title;
+    modalCta.href = detailsUrl(service);
+
+    lastFocus = document.activeElement;
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('paxsvc-modal-open');
+
+    if (swiper && swiper.autoplay) swiper.autoplay.stop();
+
+    requestAnimationFrame(function () {
+      modalClose.focus();
+    });
+  }
+
+  function closeModal() {
+    if (modal.hidden) return;
+
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('paxsvc-modal-open');
+
+    if (swiper && swiper.autoplay) swiper.autoplay.start();
+
+    if (lastFocus && typeof lastFocus.focus === 'function') {
+      lastFocus.focus();
+    }
+  }
+
+  function triggerBooking(serviceName) {
+    try {
+      sessionStorage.setItem('paxdesign-selected-service', serviceName || '');
+    } catch (error) {}
+
+    const bookingButton = document.querySelector('.paxdesign-booking-button');
+    if (bookingButton) {
+      bookingButton.click();
+      return;
+    }
+
+    if (window.PAXDesignBooking && typeof window.PAXDesignBooking.open === 'function') {
+      window.PAXDesignBooking.open(serviceName);
+      return;
+    }
+
+    const widget = document.querySelector('.paxdesign-booking-widget');
+    if (widget) {
+      widget.classList.add('active');
+      widget.dispatchEvent(new CustomEvent('paxdesign:booking', {
+        bubbles: true,
+        detail: { service: serviceName }
+      }));
+      return;
+    }
+
+    window.dispatchEvent(new CustomEvent('paxdesign:booking', {
+      detail: { service: serviceName }
+    }));
+  }
+
+  function updateSliderUi() {
+    if (!swiper) return;
+
+    const current = (typeof swiper.realIndex === 'number' ? swiper.realIndex : 0) + 1;
+
+    if (currentEl) currentEl.textContent = pad(current);
+    if (progressEl) {
+      progressEl.style.width = ((current / SERVICES.length) * 100) + '%';
+    }
+  }
+
+  function initSwiper() {
+    if (!window.Swiper) {
+      setTimeout(initSwiper, 100);
+      return;
+    }
+
+    swiper = new Swiper('#paxsvc-swiper', {
+      slidesPerView: 2,
+      spaceBetween: 8,
+      speed: 480,
+      loop: true,
+      grabCursor: true,
+      watchOverflow: true,
+      observer: true,
+      observeParents: true,
+      autoplay: {
+        delay: 3800,
+        disableOnInteraction: false,
+        pauseOnMouseEnter: true
+      },
+      navigation: {
+        prevEl: '#paxsvc-carousel [data-carousel-prev]',
+        nextEl: '#paxsvc-carousel [data-carousel-next]'
+      },
+      breakpoints: {
+        480:  { slidesPerView: 2,    spaceBetween: 9 },
+        700:  { slidesPerView: 2.8,  spaceBetween: 11 },
+        900:  { slidesPerView: 3.55, spaceBetween: 12 },
+        1180: { slidesPerView: 4.65, spaceBetween: 13 },
+        1380: { slidesPerView: 5.15, spaceBetween: 14 }
+      },
+      on: {
+        init: updateSliderUi,
+        slideChange: updateSliderUi,
+        resize: updateSliderUi
+      }
+    });
+  }
+
+  root.addEventListener('click', function (event) {
+    const booking = event.target.closest('.paxdesign-booking-trigger');
+    if (booking) {
+      event.preventDefault();
+      event.stopPropagation();
+      triggerBooking(booking.dataset.service || '');
+      return;
+    }
+
+    const detailsButton = event.target.closest('[data-open-service]');
+    if (detailsButton) {
+      event.preventDefault();
+      event.stopPropagation();
+      openModal(detailsButton.dataset.openService);
+      return;
+    }
+
+    const card = event.target.closest('.card-container[data-svc]');
+    if (card) {
+      event.preventDefault();
+      openModal(card.dataset.svc);
+    }
+  });
+
+  modal.addEventListener('click', function (event) {
+    const close = event.target.closest('[data-modal-close]');
+    if (close) {
+      event.preventDefault();
+      closeModal();
+      return;
+    }
+
+    const booking = event.target.closest('.paxdesign-booking-trigger');
+    if (booking) {
+      event.preventDefault();
+      event.stopPropagation();
+      triggerBooking(booking.dataset.service || '');
+    }
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key === 'Escape' && !modal.hidden) {
+      closeModal();
+      return;
+    }
+
+    const card = event.target.closest && event.target.closest('.card-container[data-svc]');
+    if (card && (event.key === 'Enter' || event.key === ' ')) {
+      event.preventDefault();
+      openModal(card.dataset.svc);
+    }
+  });
+
+  initSwiper();
+})();
+</script>

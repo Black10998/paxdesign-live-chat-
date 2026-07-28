@@ -1,0 +1,514 @@
+/**
+ * Apple-inspired mobile navigation — full-screen white/black panel.
+ */
+
+:root {
+  --dtr-amnav-bg: #ffffff;
+  --dtr-amnav-ink: #1d1d1f;
+  --dtr-amnav-muted: #86868b;
+  --dtr-amnav-line: rgba(0, 0, 0, 0.08);
+  --dtr-amnav-blue: #0071e3;
+  --dtr-amnav-blue-soft: #2997ff;
+  --dtr-amnav-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --dtr-amnav-display: "SF Pro Display", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif;
+  --dtr-amnav-text: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, sans-serif;
+}
+
+@media (max-width: 992px) {
+  /* Hide legacy SlickNav chrome — Apple panel replaces it */
+  body.dtr-apple-mobile-nav .dtr-responsive-header-menu,
+  body.dtr-apple-mobile-nav .slicknav_menu,
+  body.dtr-apple-mobile-nav .slicknav_nav {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+  }
+
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open {
+    overflow: hidden !important;
+  }
+
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open .dtr-apple-mnav__scroll {
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-responsive-header {
+    position: sticky;
+    top: 0;
+    z-index: 10085;
+  }
+
+  body.admin-bar.dtr-apple-mobile-nav #dtr-responsive-header {
+    top: 46px;
+  }
+
+  @media (max-width: 782px) {
+    body.admin-bar.dtr-apple-mobile-nav #dtr-responsive-header {
+      top: 46px;
+    }
+  }
+
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-responsive-header {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: 0;
+    background-color: rgba(255, 255, 255, 0.96) !important;
+    border-bottom: 1px solid var(--dtr-amnav-line) !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: saturate(180%) blur(18px);
+    backdrop-filter: saturate(180%) blur(18px);
+  }
+
+  body.admin-bar.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-responsive-header {
+    top: 46px;
+  }
+
+  /* Dot-grid hamburger (Uiverse reference) — visual only; open state uses .is-active */
+  body.dtr-apple-mobile-nav #dtr-menu-button.dtr-hamburger {
+    z-index: 10090;
+    width: 35px;
+    height: 35px;
+    margin-top: -17.5px;
+    padding: 0;
+    border: 0;
+    background: transparent !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+    color: inherit;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-hamburger-lines-wrapper,
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-hamburger-lines,
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-hamburger-lines:before,
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-hamburger-lines:after {
+    display: none !important;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger {
+    width: 35px;
+    height: 35px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: transform 0.2s ease;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__row {
+    width: 100%;
+    height: 50%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__row--bottom {
+    align-items: flex-end;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__dot {
+    width: 8px;
+    height: 8px;
+    box-sizing: border-box;
+    border: 2px solid #1d1d1f;
+    border-radius: 50%;
+    background: transparent;
+    transition: all 0.2s ease;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__rail {
+    position: absolute;
+    width: 100%;
+    height: fit-content;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__col {
+    position: absolute;
+    width: fit-content;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__rail {
+    width: auto;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__col {
+    height: auto;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__dot--mid-v {
+    border-radius: inherit;
+    height: auto;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button:hover .dtr-amnav-burger__dot--mid-h {
+    border-radius: inherit;
+    width: auto;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button.is-active .dtr-amnav-burger,
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-amnav-burger {
+    transform: rotate(45deg) scale(1.2);
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button.is-active .dtr-amnav-burger__col,
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-amnav-burger__col {
+    height: 100px;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button.is-active .dtr-amnav-burger__rail,
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-amnav-burger__rail {
+    width: 100px;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button.is-active .dtr-amnav-burger__dot--mid-v,
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-amnav-burger__dot--mid-v {
+    border-radius: 5px;
+    height: 35px;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button.is-active .dtr-amnav-burger__dot--mid-h,
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-amnav-burger__dot--mid-h {
+    border-radius: 5px;
+    width: 35px;
+  }
+
+  /* Full-screen sheet */
+  .dtr-apple-mnav {
+    position: fixed;
+    inset: 0;
+    z-index: 10070;
+    display: flex;
+    flex-direction: column;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      opacity 0.35s var(--dtr-amnav-ease),
+      visibility 0.35s;
+  }
+
+  .dtr-apple-mnav.is-open {
+    pointer-events: auto;
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .dtr-apple-mnav__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.28);
+    opacity: 0;
+    transition: opacity 0.35s var(--dtr-amnav-ease);
+  }
+
+  .dtr-apple-mnav.is-open .dtr-apple-mnav__backdrop {
+    opacity: 1;
+  }
+
+  .dtr-apple-mnav__sheet {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    max-height: 100dvh;
+    margin: 0;
+    padding:
+      calc(max(12px, env(safe-area-inset-top, 0px)) + 56px)
+      0
+      max(24px, env(safe-area-inset-bottom, 0px));
+    background: var(--dtr-amnav-bg);
+    color: var(--dtr-amnav-ink);
+    font-family: var(--dtr-amnav-text);
+    -webkit-font-smoothing: antialiased;
+    transform: translate3d(0, -18px, 0);
+    opacity: 0;
+    transition:
+      transform 0.45s var(--dtr-amnav-ease),
+      opacity 0.35s ease;
+    overflow: hidden;
+  }
+
+  .dtr-apple-mnav.is-open .dtr-apple-mnav__sheet {
+    transform: none;
+    opacity: 1;
+  }
+
+  .dtr-apple-mnav__scroll {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding: 8px 22px 28px;
+  }
+
+  .dtr-apple-mnav__brand {
+    margin: 8px 0 28px;
+    font-family: var(--dtr-amnav-display);
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    line-height: 1.1;
+    color: var(--dtr-amnav-ink);
+  }
+
+  .dtr-apple-mnav__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .dtr-apple-mnav__item {
+    border-bottom: 1px solid var(--dtr-amnav-line);
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+
+  .dtr-apple-mnav.is-open .dtr-apple-mnav__item {
+    opacity: 1;
+    transform: none;
+    transition:
+      opacity 0.4s var(--dtr-amnav-ease),
+      transform 0.45s var(--dtr-amnav-ease);
+  }
+
+  .dtr-apple-mnav.is-open .dtr-apple-mnav__item:nth-child(1) { transition-delay: 0.04s; }
+  .dtr-apple-mnav.is-open .dtr-apple-mnav__item:nth-child(2) { transition-delay: 0.07s; }
+  .dtr-apple-mnav.is-open .dtr-apple-mnav__item:nth-child(3) { transition-delay: 0.1s; }
+  .dtr-apple-mnav.is-open .dtr-apple-mnav__item:nth-child(4) { transition-delay: 0.13s; }
+  .dtr-apple-mnav.is-open .dtr-apple-mnav__item:nth-child(5) { transition-delay: 0.16s; }
+  .dtr-apple-mnav.is-open .dtr-apple-mnav__item:nth-child(6) { transition-delay: 0.19s; }
+  .dtr-apple-mnav.is-open .dtr-apple-mnav__item:nth-child(7) { transition-delay: 0.22s; }
+  .dtr-apple-mnav.is-open .dtr-apple-mnav__item:nth-child(8) { transition-delay: 0.25s; }
+  .dtr-apple-mnav.is-open .dtr-apple-mnav__item:nth-child(9) { transition-delay: 0.28s; }
+  .dtr-apple-mnav.is-open .dtr-apple-mnav__item:nth-child(10) { transition-delay: 0.31s; }
+
+  .dtr-apple-mnav__link,
+  .dtr-apple-mnav__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    width: 100%;
+    margin: 0;
+    padding: 22px 2px;
+    border: 0;
+    background: transparent;
+    color: var(--dtr-amnav-ink);
+    font-family: var(--dtr-amnav-display);
+    font-size: clamp(28px, 8vw, 34px);
+    font-weight: 600;
+    letter-spacing: -0.035em;
+    line-height: 1.15;
+    text-align: left;
+    text-decoration: none !important;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .dtr-apple-mnav__link:hover,
+  .dtr-apple-mnav__link:focus-visible,
+  .dtr-apple-mnav__toggle:hover,
+  .dtr-apple-mnav__toggle:focus-visible {
+    color: #000;
+    text-decoration: underline !important;
+    text-underline-offset: 0.22em;
+    text-decoration-thickness: 1px;
+  }
+
+  .dtr-apple-mnav__chevron {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    color: var(--dtr-amnav-muted);
+    transition: transform 0.35s var(--dtr-amnav-ease), color 0.2s ease;
+  }
+
+  .dtr-apple-mnav__item.is-open > .dtr-apple-mnav__toggle .dtr-apple-mnav__chevron {
+    transform: rotate(180deg);
+    color: var(--dtr-amnav-ink);
+  }
+
+  .dtr-apple-mnav__toggle {
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .dtr-apple-mnav__panel {
+    display: none !important;
+    list-style: none;
+    margin: 0 0 18px;
+    padding: 4px 0 10px;
+  }
+
+  .dtr-apple-mnav__item.is-open > .dtr-apple-mnav__panel {
+    display: block !important;
+    animation: dtrAmnavPanelIn 0.38s var(--dtr-amnav-ease);
+  }
+
+  @keyframes dtrAmnavPanelIn {
+    from {
+      opacity: 0;
+      transform: translate3d(0, 8px, 0);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .dtr-apple-mnav__panel > li > a {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    margin: 0;
+    padding: 14px 4px;
+    border-radius: 14px;
+    color: var(--dtr-amnav-ink) !important;
+    text-decoration: none !important;
+    -webkit-tap-highlight-color: transparent;
+    transition: background-color 0.2s ease;
+  }
+
+  .dtr-apple-mnav__panel > li > a:active,
+  .dtr-apple-mnav__panel > li > a:hover,
+  .dtr-apple-mnav__panel > li > a:focus-visible {
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  /* Restore mega icons/descriptions inside Apple mobile panel */
+  .dtr-apple-mnav .dtr-mega-icon,
+  .dtr-apple-mnav .dtr-mega-desc,
+  .dtr-apple-mnav .dtr-mega-copy,
+  .dtr-apple-mnav .dtr-mega-title {
+    display: block !important;
+  }
+
+  .dtr-apple-mnav .dtr-mega-icon {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    color: var(--dtr-amnav-blue);
+  }
+
+  .dtr-apple-mnav .dtr-mega-icon svg {
+    width: 26px;
+    height: 26px;
+    display: block;
+  }
+
+  .dtr-apple-mnav .dtr-mega-copy {
+    display: flex !important;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .dtr-apple-mnav .dtr-mega-title {
+    font-family: var(--dtr-amnav-display);
+    font-size: 17px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.25;
+    color: var(--dtr-amnav-ink);
+  }
+
+  .dtr-apple-mnav .dtr-mega-desc {
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+    color: var(--dtr-amnav-muted);
+  }
+
+  .dtr-apple-mnav__panel > li > a:hover .dtr-mega-icon,
+  .dtr-apple-mnav__panel > li > a:focus-visible .dtr-mega-icon {
+    color: var(--dtr-amnav-blue-soft);
+  }
+
+  /* Leaf mega-less child fallback (plain text links) */
+  .dtr-apple-mnav__panel > li > a:not(:has(.dtr-mega-copy)) {
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    padding-left: 8px;
+  }
+
+  .dtr-apple-mnav__footer {
+    margin-top: 28px;
+    padding-top: 22px;
+    border-top: 1px solid var(--dtr-amnav-line);
+  }
+
+  .dtr-apple-mnav__footer a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--dtr-amnav-blue) !important;
+    text-decoration: none !important;
+  }
+
+  .dtr-apple-mnav__footer a:hover {
+    opacity: 0.75;
+  }
+}
+
+@media (max-width: 992px) and (prefers-reduced-motion: reduce) {
+  .dtr-apple-mnav,
+  .dtr-apple-mnav__backdrop,
+  .dtr-apple-mnav__sheet,
+  .dtr-apple-mnav__item,
+  .dtr-apple-mnav__chevron,
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger,
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__dot,
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__rail,
+  body.dtr-apple-mobile-nav #dtr-menu-button .dtr-amnav-burger__col {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .dtr-apple-mnav__sheet {
+    transform: none;
+  }
+
+  body.dtr-apple-mobile-nav #dtr-menu-button.is-active .dtr-amnav-burger,
+  body.dtr-apple-mobile-nav.dtr-apple-mnav-open #dtr-menu-button .dtr-amnav-burger {
+    transform: none;
+  }
+}
+
+@media (min-width: 993px) {
+  .dtr-apple-mnav {
+    display: none !important;
+  }
+}

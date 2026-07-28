@@ -1,0 +1,139 @@
+name: Deploy theme Apple mega menu
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-mega-menu-header-cfc9'
+    paths:
+      - '.github/triggers/deploy-theme-mega-menu'
+      - '.github/workflows/deploy-theme-mega-menu.yml'
+      - 'navein/assets/css/mega-menu.css'
+      - 'navein/assets/js/mega-menu.js'
+      - 'navein/includes/class-navein-mega-menu-walker.php'
+      - 'navein/template-parts/header/main-menu.php'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy mega menu theme files (no full-theme wipe)
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          # Safety: only touch mega-menu related paths. Never --delete the theme tree.
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/assets/js") \
+              $(printf '%q' "$THEME/includes") \
+              $(printf '%q' "$THEME/template-parts/header") \
+              $(printf '%q' "$THEME/.mega-menu-backups")"
+
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "BACKUP=$(printf '%q' "$THEME/.mega-menu-backups/$STAMP")
+             mkdir -p \"\$BACKUP\"
+             for f in \
+               functions.php \
+               style.css \
+               template-parts/header/main-menu.php \
+               assets/css/mega-menu.css \
+               assets/js/mega-menu.js \
+               includes/class-navein-mega-menu-walker.php
+             do
+               if [ -f $(printf '%q' "$THEME")/\$f ]; then
+                 mkdir -p \"\$BACKUP/\$(dirname \"\$f\")\"
+                 cp -a $(printf '%q' "$THEME")/\$f \"\$BACKUP/\$f\"
+               fi
+             done
+             echo \"Backup written to \$BACKUP\""
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/mega-menu.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/mega-menu.js \
+            "${REMOTE}:${THEME}/assets/js/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/includes/class-navein-mega-menu-walker.php \
+            "${REMOTE}:${THEME}/includes/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/header/main-menu.php \
+            "${REMOTE}:${THEME}/template-parts/header/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && \
+             (command -v wp >/dev/null && wp cache flush || true) && \
+             (command -v wp >/dev/null && wp rewrite flush || true) && \
+             ls -la \
+               $(printf '%q' "$THEME/assets/css/mega-menu.css") \
+               $(printf '%q' "$THEME/assets/js/mega-menu.js") \
+               $(printf '%q' "$THEME/includes/class-navein-mega-menu-walker.php") \
+               $(printf '%q' "$THEME/template-parts/header/main-menu.php") \
+               $(printf '%q' "$THEME/functions.php") \
+               $(printf '%q' "$THEME/style.css")"
+
+          echo "Deployed Apple mega menu theme files to ${THEME}"
+
+      - name: Verify mega menu assets are live
+        run: |
+          set -euo pipefail
+          set +e
+          CSS=$(curl -sS -o /tmp/mega-menu.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/mega-menu.css?ver=1.0.3")
+          JS=$(curl -sS -o /tmp/mega-menu.js -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/mega-menu.js?ver=1.0.3")
+          HOME_HTML=$(curl -sS -o /tmp/pax-home.html -w '%{http_code}' "https://paxdesign.at/")
+          set -e
+          echo "CSS HTTP $CSS | JS HTTP $JS | HOME HTTP $HOME_HTML"
+          test "$CSS" = "200"
+          test "$JS" = "200"
+          test "$HOME_HTML" = "200"
+          grep -Eq "dtr-mega-blue|dtr-mega-panel" /tmp/mega-menu.css
+          grep -Eq "dtr-mega-panel|retuneSuperfish|clampPanel" /tmp/mega-menu.js
+          grep -Eq "navein-mega-menu|dtr-has-mega|dtr-mega-panel|dtr-mega-icon" /tmp/pax-home.html
+          echo "Live mega menu verification passed."

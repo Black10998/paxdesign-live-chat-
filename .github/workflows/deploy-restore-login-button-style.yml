@@ -1,0 +1,116 @@
+name: Deploy restore Login button style
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/restore-login-button-style-cfc9'
+    paths:
+      - '.github/triggers/deploy-restore-login-button-style'
+      - '.github/workflows/deploy-restore-login-button-style.yml'
+      - 'navein/assets/css/apple-sticky-header.css'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+      - 'paxdesign-booking/assets/customer-auth/css/pdx-auth.css'
+      - 'paxdesign-booking/paxdesign-booking.php'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy restored Login button styles
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          PLUGIN="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$PLUGIN/assets/customer-auth/css")"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-sticky-header.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/assets/customer-auth/css/pdx-auth.css \
+            "${REMOTE}:${PLUGIN}/assets/customer-auth/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/paxdesign-booking.php \
+            "${REMOTE}:${PLUGIN}/"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
+
+          echo "Deployed restored Login button styles"
+
+      - name: Verify restored Login styles
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          code=$(curl -sS -o /tmp/home.html -w '%{http_code}' "https://paxdesign.at/?n=${stamp}")
+          test "$code" = "200"
+
+          CSS_HDR=$(curl -sS -o /tmp/apple-sticky-header.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-sticky-header.css?ver=1.2.4&n=${stamp}")
+          CSS_AUTH=$(curl -sS -o /tmp/pdx-auth.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/customer-auth/css/pdx-auth.css?ver=3.173.9&n=${stamp}")
+          test "$CSS_HDR" = "200"
+          test "$CSS_AUTH" = "200"
+
+          if grep -Eq "Apple Login / Sign Up — premium minimal header control" /tmp/apple-sticky-header.css; then
+            echo "Apple Login override still present in sticky header CSS" >&2
+            exit 1
+          fi
+          if grep -Eq "background:#000!important;background-color:#000!important" /tmp/home.html; then
+            # homepage Sign Up inline may still exist; ensure sticky-header auth force-black is gone
+            if grep -Fq "html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-trigger,html body.dtr-apple-sticky-header #pdx-auth-bar button.pdx-auth-trigger" /tmp/home.html; then
+              echo "Forced Apple Login inline style still present" >&2
+              exit 1
+            fi
+          fi
+          grep -Eq "color: #ffe0a6" /tmp/pdx-auth.css
+          grep -Eq "background: rgba\\(0, 0, 0, 0\\.35\\)" /tmp/pdx-auth.css
+          # Overlay/modal styles must remain (unchanged login window design)
+          grep -Eq "#pdx-auth-overlay|#ffe0a6" /tmp/pdx-auth.css
+
+          echo "Restored Login button style verification passed."

@@ -1,0 +1,87 @@
+name: Deploy Apple header nav black
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-header-nav-black-cfc9'
+    paths:
+      - '.github/triggers/deploy-apple-header-nav-black'
+      - '.github/workflows/deploy-apple-header-nav-black.yml'
+      - 'navein/assets/css/apple-sticky-header.css'
+      - 'navein/style.css'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy header nav black styles
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p $(printf '%q' "$THEME/assets/css")"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-sticky-header.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
+
+          echo "Deployed Apple header nav black"
+
+      - name: Verify live header nav color
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          CSS=$(curl -sS -o /tmp/apple-sticky-header.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-sticky-header.css?ver=1.2.7&n=${stamp}")
+          test "$CSS" = "200"
+          grep -Eq "dtr-apple-header-text: #000000" /tmp/apple-sticky-header.css
+          grep -Eq "color: #000000 !important" /tmp/apple-sticky-header.css
+          if grep -Eq "opacity: 0\\.92" /tmp/apple-sticky-header.css; then
+            echo "Faded opacity still present" >&2
+            exit 1
+          fi
+          HOME=$(curl -sS -o /tmp/home.html -w '%{http_code}' "https://paxdesign.at/?n=${stamp}")
+          test "$HOME" = "200"
+          grep -Eq "apple-sticky-header.css\\?ver=1.2.7" /tmp/home.html
+          echo "Header nav black verification passed."

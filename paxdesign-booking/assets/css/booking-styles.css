@@ -79,7 +79,7 @@
   --pax-shadow-color:   #292929;
   /* Mobile viewport layout */
   --pax-mobile-header-clearance: 112px;
-  --pax-mobile-launcher-clearance: 92px;
+  --pax-mobile-launcher-clearance: 64px;
   --pax-mobile-gutter: 12px;
   --pax-mobile-widget-max-booking: 420px;
   --pax-mobile-widget-max-chat: 380px;
@@ -249,34 +249,64 @@
   overflow: hidden;
 }
 
-/* ─── Floating Eva Chat Launcher ────────────────────────────────────────── */
+/* ─── Floating Apple-style Message Support launcher ─────────────────────── */
 #paxdesign-booking-root .paxdesign-booking-button {
+  --pax-support-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
   position: fixed;
-  bottom: 20px;
-  right: 20px;
+  bottom: max(20px, env(safe-area-inset-bottom, 0px));
+  right: max(20px, env(safe-area-inset-right, 0px));
   width: auto;
-  height: 80px;
-  --pax-launcher-size: 80px;
-  --pax-launcher-scale: 0.25;
-  background: transparent;
-  border: none;
+  height: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: 0 18px 0 14px;
+  border: 0;
+  border-radius: 980px;
+  background: #000;
+  color: #fff;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.22),
+    0 2px 8px rgba(0, 0, 0, 0.12);
   cursor: pointer;
   z-index: 99991;
-  display: flex;
+  display: inline-flex;
   visibility: visible;
   opacity: 1;
   flex-direction: row;
   align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 0;
-  overflow: visible;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
   pointer-events: auto;
-  transition: transform var(--pax-transition);
+  -webkit-tap-highlight-color: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, sans-serif;
+  transition:
+    transform 0.28s var(--pax-support-ease),
+    background-color 0.25s ease,
+    box-shadow 0.28s ease,
+    opacity 0.25s ease;
 }
 
-#paxdesign-booking-root .paxdesign-booking-button:hover {
-  box-shadow: none;
+#paxdesign-booking-root .paxdesign-booking-button:hover,
+#paxdesign-booking-root .paxdesign-booking-button:focus {
+  background: #1d1d1f;
+  color: #fff;
+  outline: none;
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, 0.26),
+    0 4px 12px rgba(0, 0, 0, 0.14);
+  transform: scale(1.02);
+}
+
+#paxdesign-booking-root .paxdesign-booking-button:active {
+  background: #000;
+  transform: scale(0.97);
+  opacity: 0.94;
+}
+
+#paxdesign-booking-root .paxdesign-booking-button:focus-visible {
+  outline: 2px solid rgba(0, 113, 227, 0.55);
+  outline-offset: 3px;
 }
 
 /* Hide floating launcher while the widget (chat or booking) is open */
@@ -284,271 +314,55 @@
   visibility: hidden;
   opacity: 0;
   pointer-events: none;
-  transform: scale(0.85);
+  transform: scale(0.92);
+}
+
+#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: currentColor;
+  pointer-events: none;
+}
+
+#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher-icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
 }
 
 #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher-label {
   flex-shrink: 0;
-  padding: 5px 11px;
-  border-radius: 6px;
-  background: #000;
-  color: #9bdaeb;
-  font-family: var(--pax-font);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
   line-height: 1;
-  text-transform: uppercase;
-  box-shadow: 0 0 10px rgba(11, 218, 235, 0.28), inset 0 0 0 1px rgba(155, 218, 235, 0.18);
+  text-transform: none;
+  box-shadow: none;
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
-}
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher {
-  width: var(--pax-launcher-size);
-  height: var(--pax-launcher-size);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: visible;
-}
-
-#paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher .loader {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transform: scale(var(--pax-launcher-scale));
-  transform-origin: center center;
-}
-
-/* From Uiverse.io by Subaashbala */
-#paxdesign-booking-root .paxdesign-booking-button .modelViewPort {
-  /* The black circle background around the model*/
-  perspective: 1000px;
-  width: 20rem;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: #2a2a2e;
-  overflow: hidden;
-}
-#paxdesign-booking-root .paxdesign-booking-button .eva {
-  --EVA-ROTATION-DURATION: 4s;
-  transform-style: preserve-3d;
-  animation: paxdesign-eva-rotateRight var(--EVA-ROTATION-DURATION) linear infinite alternate;
-}
-#paxdesign-booking-root .paxdesign-booking-button .head {
-  position: relative;
-  width: 6rem;
-  height: 4rem;
-  border-radius: 48% 53% 45% 55% / 79% 79% 20% 22%;
-  background: linear-gradient(to right, white 45%, gray);
-}
-#paxdesign-booking-root .paxdesign-booking-button .eyeChamber {
-  width: 4.5rem;
-  height: 2.75rem;
-  position: relative;
-  left: 50%;
-  top: 55%;
-  border-radius: 45% 53% 45% 48% / 62% 59% 35% 34%;
-  background-color: #0c203c;
-  box-shadow: 0px 0px 2px 2px white, inset 0px 0px 0px 2px black;
-  transform: translate(-50%, -50%);
-}
-#paxdesign-booking-root .paxdesign-booking-button .eye {
-  width: 1.2rem;
-  height: 1.5rem;
-  position: absolute;
-  border-radius: 50%;
-  transform-origin: center center;
-}
-#paxdesign-booking-root .paxdesign-booking-button .eye:first-child {
-  left: 12px;
-  top: 50%;
-  background: repeating-linear-gradient(
-    65deg,
-    #9bdaeb 0px,
-    #9bdaeb 1px,
-    white 2px
-  );
-  box-shadow: inset 0px 0px 5px #04b8d5, 0px 0px 15px 1px #0bdaeb;
-  transform: translate(0, -50%) rotate(-65deg);
-  animation: paxdesign-eva-eye-left-life 8s ease-in-out infinite;
-}
-#paxdesign-booking-root .paxdesign-booking-button .eye:nth-child(2) {
-  right: 12px;
-  top: 50%;
-  background: repeating-linear-gradient(
-    -65deg,
-    #9bdaeb 0px,
-    #9bdaeb 1px,
-    white 2px
-  );
-  box-shadow: inset 0px 0px 5px #04b8d5, 0px 0px 15px 1px #0bdaeb;
-  transform: translate(0, -50%) rotate(65deg);
-  animation: paxdesign-eva-eye-right-life 8s ease-in-out infinite;
-}
-#paxdesign-booking-root .paxdesign-booking-button .body {
-  width: 6rem;
-  height: 8rem;
-  position: relative;
-  margin-block-start: 0.25rem;
-  border-radius: 47% 53% 45% 55% / 12% 9% 90% 88%;
-  background: linear-gradient(to right, white 35%, gray);
-}
-#paxdesign-booking-root .paxdesign-booking-button .hand {
-  position: absolute;
-  left: -1.5rem;
-  top: 0.75rem;
-  width: 2rem;
-  height: 5.5rem;
-  border-radius: 40%;
-  background: linear-gradient(to left, white 15%, gray);
-  box-shadow: 5px 0px 5px rgba(0, 0, 0, 0.25);
-  transform: rotateY(55deg) rotateZ(10deg);
-}
-#paxdesign-booking-root .paxdesign-booking-button .hand:first-child {
-  animation: paxdesign-eva-compensateRotation var(--EVA-ROTATION-DURATION) linear infinite
-    alternate;
-}
-#paxdesign-booking-root .paxdesign-booking-button .hand:nth-child(2) {
-  left: 92%;
-  background: linear-gradient(to right, white 15%, gray);
-  transform: rotateY(55deg) rotateZ(-10deg);
-  animation: paxdesign-eva-compensateRotationRight var(--EVA-ROTATION-DURATION) linear
-    infinite alternate;
-}
-#paxdesign-booking-root .paxdesign-booking-button .scannerThing {
-  width: 0;
-  height: 0;
-  position: absolute;
-  right: 40%;
-  top: 10%;
-  border-top: 180px solid #9bdaeb;
-  border-left: 250px solid transparent;
-  border-right: 250px solid transparent;
-  transform-origin: top right;
-  mask: linear-gradient(to left, white, transparent 35%);
-  animation: paxdesign-eva-glow-left 2s cubic-bezier(0.86, 0, 0.07, 1) infinite;
-}
-#paxdesign-booking-root .paxdesign-booking-button .scannerOrigin {
-  position: absolute;
-  width: 8px;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  right: 40%;
-  top: 10%;
-  background: #9bdaeb;
-  box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0.5);
-}
-@keyframes paxdesign-eva-rotateRight {
-  from {
-    transform: rotateY(0deg);
-  }
-  to {
-    transform: rotateY(25deg);
-  }
-}
-@keyframes paxdesign-eva-eye-left-life {
-  0%, 100% {
-    transform: translate(0, -50%) rotate(-65deg) scale(1, 1);
-    border-radius: 50%;
-    box-shadow: inset 0px 0px 5px #04b8d5, 0px 0px 15px 1px #0bdaeb;
-  }
-  7%, 8% {
-    transform: translate(0, -50%) rotate(-65deg) scale(1, 0.06);
-    border-radius: 50%;
-  }
-  34%, 35% {
-    transform: translate(0, -50%) rotate(-65deg) scale(1, 0.06);
-    border-radius: 50%;
-  }
-  58%, 63% {
-    transform: translate(0, -50%) rotate(-65deg) scale(1.1, 0.9);
-    border-radius: 45% 45% 55% 55%;
-    box-shadow: inset 0px 0px 6px #04b8d5, 0px 0px 18px 2px #0bdaeb;
-  }
-  71%, 72% {
-    transform: translate(0, -50%) rotate(-65deg) scale(1, 0.06);
-    border-radius: 50%;
-  }
-}
-@keyframes paxdesign-eva-eye-right-life {
-  0%, 100% {
-    transform: translate(0, -50%) rotate(65deg) scale(1, 1);
-    border-radius: 50%;
-    box-shadow: inset 0px 0px 5px #04b8d5, 0px 0px 15px 1px #0bdaeb;
-  }
-  7%, 8% {
-    transform: translate(0, -50%) rotate(65deg) scale(1, 0.06);
-    border-radius: 50%;
-  }
-  34%, 35% {
-    transform: translate(0, -50%) rotate(65deg) scale(1, 0.06);
-    border-radius: 50%;
-  }
-  49%, 50% {
-    transform: translate(0, -50%) rotate(65deg) scale(1, 0.06);
-    border-radius: 50%;
-  }
-  58%, 63% {
-    transform: translate(0, -50%) rotate(65deg) scale(1.1, 0.9);
-    border-radius: 45% 45% 55% 55%;
-    box-shadow: inset 0px 0px 6px #04b8d5, 0px 0px 18px 2px #0bdaeb;
-  }
-  71%, 72% {
-    transform: translate(0, -50%) rotate(65deg) scale(1, 0.06);
-    border-radius: 50%;
-  }
-}
-@keyframes paxdesign-eva-compensateRotation {
-  from {
-    transform: rotateY(55deg) rotateZ(10deg);
-  }
-  to {
-    transform: rotatey(30deg) rotateZ(10deg);
-  }
-}
-@keyframes paxdesign-eva-compensateRotationRight {
-  from {
-    transform: rotateY(55deg) rotateZ(-10deg);
-  }
-  to {
-    transform: rotateY(70deg) rotateZ(-10deg);
-  }
-}
-@keyframes paxdesign-eva-glow-left {
-  from {
-    opacity: 0;
-  }
-  20% {
-    opacity: 1;
-  }
-  45% {
-    transform: rotate(25deg);
-  }
-  75% {
-    transform: rotate(-5deg);
-  }
-  100% {
-    opacity: 0;
-  }
 }
 
 /* ─── Widget Shell ──────────────────────────────────────────────────────── */
 #paxdesign-booking-root .paxdesign-booking-widget {
   display: none;
   position: fixed;
-  bottom: 110px;
+  bottom: 76px;
   right: 20px;
   left: auto;
   width: 360px;
   max-width: calc(100vw - 40px);
-  max-height: min(580px, calc(100dvh - 120px));
+  max-height: min(580px, calc(100dvh - 100px));
   z-index: 99992;
   flex-direction: column;
   filter: drop-shadow(var(--pax-shadow-widget));
@@ -2080,15 +1894,22 @@ body.paxdesign-agent-profile-open {
   #paxdesign-booking-root .paxdesign-booking-button {
     bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     right: calc(16px + env(safe-area-inset-right, 0px));
-    height: 70px;
-    --pax-launcher-size: 70px;
-    --pax-launcher-scale: 0.21875;
+    height: 42px;
+    min-height: 42px;
+    padding: 0 16px 0 13px;
+    gap: 7px;
     z-index: 99993;
   }
 
+  #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher-icon,
+  #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher-icon svg {
+    width: 17px;
+    height: 17px;
+  }
+
   #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher-label {
-    font-size: 10px;
-    padding: 4px 9px;
+    font-size: 12.5px;
+    letter-spacing: -0.01em;
   }
 
   #paxdesign-booking-root .paxdesign-booking-body { padding: 14px 12px; }
@@ -2114,7 +1935,7 @@ body.paxdesign-agent-profile-open {
 @media (max-width: 400px) {
   #paxdesign-booking-root {
     --pax-mobile-header-clearance: 88px;
-    --pax-mobile-launcher-clearance: 84px;
+    --pax-mobile-launcher-clearance: 60px;
     --pax-mobile-gutter: 10px;
     --pax-mobile-widget-max-booking: 400px;
     --pax-mobile-widget-max-chat: 360px;
@@ -2132,16 +1953,21 @@ body.paxdesign-agent-profile-open {
   #paxdesign-booking-root .paxdesign-booking-button {
     bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     right: calc(12px + env(safe-area-inset-right, 0px));
-    height: 60px;
-    --pax-launcher-size: 60px;
-    --pax-launcher-scale: 0.1875;
-    gap: 8px;
+    height: 40px;
+    min-height: 40px;
+    padding: 0 14px 0 12px;
+    gap: 6px;
+  }
+
+  #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher-icon,
+  #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher-icon svg {
+    width: 16px;
+    height: 16px;
   }
 
   #paxdesign-booking-root .paxdesign-booking-button .paxdesign-booking-launcher-label {
-    font-size: 9px;
-    padding: 4px 8px;
-    letter-spacing: 0.08em;
+    font-size: 12px;
+    letter-spacing: -0.01em;
   }
 }
 

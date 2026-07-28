@@ -1,0 +1,108 @@
+name: Deploy Apple Message Support launcher
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-chat-support-button-cfc9'
+    paths:
+      - '.github/triggers/deploy-apple-chat-support-button'
+      - '.github/workflows/deploy-apple-chat-support-button.yml'
+      - 'paxdesign-booking/templates/booking-widget.php'
+      - 'paxdesign-booking/assets/css/booking-styles.css'
+      - 'paxdesign-booking/assets/js/booking-script.js'
+      - 'paxdesign-booking/paxdesign-booking.php'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy Message Support launcher assets
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          PLUGIN="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$PLUGIN/templates") \
+              $(printf '%q' "$PLUGIN/assets/css") \
+              $(printf '%q' "$PLUGIN/assets/js")"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/templates/booking-widget.php \
+            "${REMOTE}:${PLUGIN}/templates/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/assets/css/booking-styles.css \
+            "${REMOTE}:${PLUGIN}/assets/css/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/assets/js/booking-script.js \
+            "${REMOTE}:${PLUGIN}/assets/js/"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/paxdesign-booking.php \
+            "${REMOTE}:${PLUGIN}/"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
+
+          echo "Deployed Apple Message Support launcher"
+
+      - name: Verify live launcher
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          code=$(curl -sS -o /tmp/home.html -w '%{http_code}' "https://paxdesign.at/?n=${stamp}")
+          echo "HOME $code"
+          test "$code" = "200"
+
+          CSS=$(curl -sS -o /tmp/booking-styles.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/css/booking-styles.css?ver=3.173.8&n=${stamp}")
+          echo "CSS $CSS"
+          test "$CSS" = "200"
+
+          grep -Eq "Message Support|paxdesign-booking-launcher-icon|Message Support öffnen" /tmp/home.html
+          if grep -Eq 'modelViewPort|class="eva"|scannerThing' /tmp/home.html; then
+            echo "Old Eva launcher still present" >&2
+            exit 1
+          fi
+          grep -Eq "Apple-style Message Support|border-radius: 980px|Message Support" /tmp/booking-styles.css
+          if grep -Eq "paxdesign-eva-rotateRight|From Uiverse.io by Subaashbala" /tmp/booking-styles.css; then
+            echo "Old Eva CSS still present" >&2
+            exit 1
+          fi
+
+          echo "Apple Message Support launcher verification passed."
