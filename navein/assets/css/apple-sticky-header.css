@@ -278,6 +278,53 @@
     transition: background-color 0.25s ease, opacity 0.25s ease;
   }
 
+  /*
+   * Logged-in username contrast on the light Apple header.
+   * Beats legacy Customizer + late footer rules that force white text
+   * (written for the old dark header). Sign Up stays unchanged.
+   */
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn.pdx-cx-btn,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn.pdx-cx-btn--ghost,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-label,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn .pdx-name-with-badge,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn .pdx-name-with-badge > span:not(.pdx-verified-badge),
+  html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn,
+  html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-label,
+  html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-name-with-badge,
+  html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger,
+  html body.dtr-apple-sticky-header header #pdx-auth-bar button.pdx-auth-trigger,
+  html body.dtr-apple-sticky-header header button.pdx-auth-trigger.pdx-auth-trigger--logged-in,
+  html body.dtr-apple-sticky-header header button.pdx-auth-trigger.pdx-auth-trigger--verified,
+  html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger .pdx-auth-trigger-label,
+  html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger .pdx-name-with-badge,
+  html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-name-with-badge {
+    color: var(--dtr-apple-header-text, #000000) !important;
+    text-shadow: none !important;
+  }
+
+  html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger,
+  html body.dtr-apple-sticky-header header #pdx-auth-bar button.pdx-auth-trigger,
+  html body.dtr-apple-sticky-header header button.pdx-auth-trigger.pdx-auth-trigger--logged-in,
+  html body.dtr-apple-sticky-header header button.pdx-auth-trigger.pdx-auth-trigger--verified {
+    background: rgba(0, 0, 0, 0.04) !important;
+    border: 1px solid rgba(0, 0, 0, 0.12) !important;
+    box-shadow: none !important;
+    filter: none !important;
+  }
+
+  html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger:hover,
+  html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger:focus,
+  html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger:active,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn:hover,
+  html body.dtr-apple-sticky-header #dtr-header-global #pdx-auth-bar .pdx-auth-account-btn:focus {
+    color: var(--dtr-apple-header-text, #000000) !important;
+    background: rgba(0, 0, 0, 0.06) !important;
+    border-color: rgba(0, 0, 0, 0.18) !important;
+    box-shadow: none !important;
+    filter: none !important;
+  }
+
   body.dtr-apple-sticky-header .main-navigation .sf-menu > li.dtr-has-mega > ul.sub-menu.dtr-mega-panel,
   body.dtr-apple-sticky-header .main-navigation .sf-menu > li.dtr-has-mega > ul.dtr-mega-panel {
     top: calc(100% + 10px);
@@ -337,6 +384,15 @@
   body.dtr-apple-sticky-header #dtr-responsive-header .dtr-search-modal-trigger::after {
     color: #000000 !important;
     opacity: 1 !important;
+  }
+
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-auth-account-btn,
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-auth-account-label,
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-name-with-badge,
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-auth-trigger,
+  html body.dtr-apple-sticky-header #dtr-responsive-header #pdx-auth-bar .pdx-auth-trigger-label {
+    color: var(--dtr-apple-header-text, #000000) !important;
+    text-shadow: none !important;
   }
 }
 

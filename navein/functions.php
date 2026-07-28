@@ -240,6 +240,18 @@ function navein_custom_scripts_styles() {
 		array( 'navein-style', 'navein-mega-menu' ),
 		$theme_version
 	);
+	// Late-loading safety net: logged-in username must stay dark on the light Apple header
+	// (Customizer + footer snippets still force white for the old dark header).
+	wp_add_inline_style(
+		'navein-apple-sticky-header',
+		'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn,' .
+		'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-label,' .
+		'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-name-with-badge,' .
+		'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-name-with-badge,' .
+		'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger,' .
+		'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger-label{' .
+		'color:#000!important;text-shadow:none!important;}'
+	);
 	wp_enqueue_script(
 		'navein-apple-sticky-header',
 		get_template_directory_uri() . '/assets/js/apple-sticky-header.js',
@@ -773,3 +785,33 @@ if ( ! function_exists( 'navein_set_default_page_template' ) ) {
     }
 }
 add_filter( 'template_include', 'navein_set_default_page_template' );
+
+/**
+ * Print logged-in username contrast CSS at the very end of the footer so it
+ * beats legacy Customizer / snippet rules that force white text on #pdx-auth-bar.
+ */
+if ( ! function_exists( 'navein_apple_header_username_contrast_footer' ) ) {
+	function navein_apple_header_username_contrast_footer() {
+		if ( is_admin() ) {
+			return;
+		}
+		echo '<style id="navein-apple-auth-username-contrast">'
+			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn,'
+			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-label,'
+			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-name-with-badge,'
+			. 'html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-account-btn .pdx-name-with-badge,'
+			. 'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-name-with-badge,'
+			. 'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger,'
+			. 'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger-label,'
+			. 'html body.dtr-apple-sticky-header header button.pdx-auth-trigger.pdx-auth-trigger--logged-in,'
+			. 'html body.dtr-apple-sticky-header header button.pdx-auth-trigger.pdx-auth-trigger--verified{'
+			. 'color:#000!important;text-shadow:none!important;}'
+			. 'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger,'
+			. 'html body.dtr-apple-sticky-header header button.pdx-auth-trigger.pdx-auth-trigger--logged-in,'
+			. 'html body.dtr-apple-sticky-header header button.pdx-auth-trigger.pdx-auth-trigger--verified{'
+			. 'background:rgba(0,0,0,.04)!important;border:1px solid rgba(0,0,0,.12)!important;'
+			. 'box-shadow:none!important;filter:none!important;}'
+			. '</style>' . "\n";
+	}
+}
+add_action( 'wp_footer', 'navein_apple_header_username_contrast_footer', 99999 );
