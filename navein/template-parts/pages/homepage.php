@@ -64,6 +64,52 @@ $service_links = array(
 		</div>
 	</section>
 
+	<!-- Platform & partner logo marquee — below hero (tech ticker above stays unchanged) -->
+	<section class="pax-sw-ribbon pax-sw-ribbon--partners" data-ph-reveal aria-label="Plattformen und Partner">
+		<div class="pax-sw-ribbon__track" data-sw-marquee>
+			<?php
+			$partner_logos = array(
+				array( 'apple', 'Apple' ),
+				array( 'android', 'Android' ),
+				array( 'microsoft', 'Microsoft' ),
+				array( 'visualstudio', 'Visual Studio' ),
+				array( 'visualstudiocode', 'Visual Studio Code' ),
+				array( 'github', 'GitHub' ),
+				array( 'figma', 'Figma' ),
+				array( 'adobe', 'Adobe' ),
+				array( 'aws', 'AWS' ),
+				array( 'googlecloud', 'Google Cloud' ),
+				array( 'azure', 'Azure' ),
+				array( 'firebase', 'Firebase' ),
+				array( 'stripe', 'Stripe' ),
+				array( 'openai', 'OpenAI' ),
+				array( 'linux', 'Linux' ),
+				array( 'ubuntu', 'Ubuntu' ),
+				array( 'vmware', 'VMware' ),
+				array( 'cloudflare', 'Cloudflare' ),
+			);
+			$partners_uri = trailingslashit( get_template_directory_uri() ) . 'assets/img/partners/';
+			for ( $dup = 0; $dup < 2; $dup++ ) :
+				$hidden = ( 1 === $dup ) ? ' aria-hidden="true"' : '';
+				?>
+			<div class="pax-sw-ribbon__group"<?php echo $hidden; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
+				<?php foreach ( $partner_logos as $logo ) : ?>
+					<span class="pax-sw-ribbon__logo">
+						<img
+							src="<?php echo esc_url( $partners_uri . $logo[0] . '.svg' ); ?>"
+							alt="<?php echo 0 === $dup ? esc_attr( $logo[1] ) : ''; ?>"
+							width="32"
+							height="32"
+							loading="lazy"
+							decoding="async"
+						>
+					</span>
+				<?php endforeach; ?>
+			</div>
+			<?php endfor; ?>
+		</div>
+	</section>
+
 	<!-- Soft statement -->
 	<section class="pax-home-statement" data-ph-reveal>
 		<div class="pax-home-wrap pax-home-wrap--narrow">
