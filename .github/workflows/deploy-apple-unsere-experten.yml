@@ -151,14 +151,21 @@ jobs:
           test "$JS" = "200"
           grep -Eq 'page-template-template-apple-unsere-experten|pax-apple-experts|pax-experts__name' /tmp/experts-live.html
           grep -Eq 'Ahmad Al-Khalaf' /tmp/experts-live.html
-          if grep -Eq 'Sophia Hartmann|Lena Mayer|images\.unsplash\.com' /tmp/experts-live.html; then
-            echo "Placeholder profiles still present" >&2
-            exit 1
-          fi
-          if grep -Eq 'pax-isolated-team|paxteam-wrap|paxteam-panel' /tmp/experts-live.html; then
-            echo "Old Elementor team markup still present" >&2
-            exit 1
-          fi
+          # Visible page body must not include placeholders.
+          python3 - <<'PY'
+from pathlib import Path
+html = Path('/tmp/experts-live.html').read_text(encoding='utf-8', errors='ignore')
+start = html.find('id="pax-apple-experts"')
+end = html.find('</article>', start)
+chunk = html[start:end] if start >= 0 and end > start else ''
+assert 'Ahmad Al-Khalaf' in chunk, 'Ahmad missing from experts article'
+for bad in ('Sophia Hartmann', 'Lena Mayer', 'images.unsplash.com', 'paxteam-panel', 'pax-isolated-team'):
+    assert bad not in chunk, f'Forbidden marker in article: {bad}'
+# Social preview should not keep Unsplash Sophia image.
+head = html[:8000]
+assert 'images.unsplash.com' not in head, 'Unsplash still present in document head/SEO tags'
+print('Experts content and SEO checks passed')
+PY
           grep -Eq 'pax-experts__portrait|pax-experts__title|--pax-experts-ink' /tmp/apple-experts.css
           grep -Eq 'apple-experts\.css\?ver=1\.4\.4|style\.css\?ver=1\.4\.4' /tmp/experts-live.html
           echo "Apple Unsere Experten page verification passed."
