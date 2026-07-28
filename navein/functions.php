@@ -366,6 +366,26 @@ function navein_custom_scripts_styles() {
 		);
 	}
 
+	// Apple-inspired Unsere Experten page.
+	$is_apple_experts = is_page_template( 'template-apple-unsere-experten.php' )
+		|| is_page( 'unsere-experten' )
+		|| is_page( 2818 );
+	if ( $is_apple_experts ) {
+		wp_enqueue_style(
+			'navein-apple-experts',
+			get_template_directory_uri() . '/assets/css/apple-experts.css',
+			array( 'navein-style', 'navein-apple-sticky-header' ),
+			$theme_version
+		);
+		wp_enqueue_script(
+			'navein-apple-experts',
+			get_template_directory_uri() . '/assets/js/apple-experts.js',
+			array(),
+			$theme_version,
+			true
+		);
+	}
+
 	// Apple IT Consulting (Elementor HTML block) — mobile full-bleed overrides.
 	$is_apple_it_consulting = is_page( 'it-consulting' ) || is_page( 2798 );
 	if ( $is_apple_it_consulting ) {
@@ -458,6 +478,7 @@ if ( ! function_exists( 'navein_force_apple_product_templates' ) ) :
 			'wartung-support'            => 'template-apple-wartung-support.php',
 			'webentwicklung'             => 'template-apple-webentwicklung.php',
 			'impressum'                  => 'template-apple-impressum.php',
+			'unsere-experten'            => 'template-apple-unsere-experten.php',
 		);
 		foreach ( $map as $slug => $file ) {
 			if ( is_page( $slug ) ) {

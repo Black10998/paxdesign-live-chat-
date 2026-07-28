@@ -1,0 +1,164 @@
+name: Deploy Apple Unsere Experten page
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/apple-experten-page-cfc9'
+    paths:
+      - '.github/triggers/deploy-apple-unsere-experten'
+      - '.github/workflows/deploy-apple-unsere-experten.yml'
+      - 'navein/template-apple-unsere-experten.php'
+      - 'navein/template-parts/pages/unsere-experten.php'
+      - 'navein/template-parts/page-title/page-header-page.php'
+      - 'navein/assets/css/apple-experts.css'
+      - 'navein/assets/js/apple-experts.js'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+      - 'scripts/assign-apple-unsere-experten-template.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy Experten theme files and assign template
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          retry() {
+            local attempt=1
+            local delay=4
+            until "$@"; do
+              if [ "$attempt" -ge 4 ]; then
+                echo "Command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "Retry ${attempt}/4 after ${delay}s: $*"
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/assets/js") \
+              $(printf '%q' "$THEME/template-parts/pages") \
+              $(printf '%q' "$THEME/template-parts/page-title") \
+              $(printf '%q' "$THEME/scripts") \
+              $(printf '%q' "$THEME/.apple-experts-backups")"
+
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "BACKUP=$(printf '%q' "$THEME/.apple-experts-backups/$STAMP")
+             mkdir -p \"\$BACKUP/assets/css\" \"\$BACKUP/assets/js\" \"\$BACKUP/template-parts/pages\" \"\$BACKUP/template-parts/page-title\"
+             for f in style.css functions.php template-apple-unsere-experten.php \
+               assets/css/apple-experts.css assets/js/apple-experts.js \
+               template-parts/pages/unsere-experten.php \
+               template-parts/page-title/page-header-page.php
+             do
+               if [ -f $(printf '%q' "$THEME")/\$f ]; then
+                 mkdir -p \"\$BACKUP/\$(dirname \"\$f\")\"
+                 cp -a $(printf '%q' "$THEME")/\$f \"\$BACKUP/\$f\"
+               fi
+             done
+             echo \"Backup written to \$BACKUP\""
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-experts.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/apple-experts.js \
+            "${REMOTE}:${THEME}/assets/js/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-apple-unsere-experten.php \
+            "${REMOTE}:${THEME}/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/pages/unsere-experten.php \
+            "${REMOTE}:${THEME}/template-parts/pages/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/page-title/page-header-page.php \
+            "${REMOTE}:${THEME}/template-parts/page-title/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            scripts/assign-apple-unsere-experten-template.sh \
+            "${REMOTE}:${THEME}/scripts/"
+
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "chmod +x $(printf '%q' "$THEME/scripts/assign-apple-unsere-experten-template.sh") && \
+             WP_PATH=$(printf '%q' "$WP_PATH") bash $(printf '%q' "$THEME/scripts/assign-apple-unsere-experten-template.sh")"
+
+          echo "Deployed Apple Unsere Experten page 1.4.4"
+
+      - name: Verify live Experten page
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          set +e
+          PAGE=$(curl -sS -A "Mozilla/5.0" -o /tmp/experts-live.html -w '%{http_code}' \
+            "https://paxdesign.at/unsere-experten/?n=${stamp}")
+          CSS=$(curl -sS -A "Mozilla/5.0" -o /tmp/apple-experts.css -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-experts.css?ver=1.4.4&n=${stamp}")
+          JS=$(curl -sS -A "Mozilla/5.0" -o /tmp/apple-experts.js -w '%{http_code}' \
+            "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-experts.js?ver=1.4.4&n=${stamp}")
+          set -e
+          echo "PAGE $PAGE | CSS $CSS | JS $JS"
+          test "$PAGE" = "200"
+          test "$CSS" = "200"
+          test "$JS" = "200"
+          grep -Eq 'page-template-template-apple-unsere-experten|pax-apple-experts|pax-experts__name' /tmp/experts-live.html
+          grep -Eq 'Ahmad Al-Khalaf' /tmp/experts-live.html
+          if grep -Eq 'Sophia Hartmann|Lena Mayer|images\.unsplash\.com' /tmp/experts-live.html; then
+            echo "Placeholder profiles still present" >&2
+            exit 1
+          fi
+          if grep -Eq 'pax-isolated-team|paxteam-wrap|paxteam-panel' /tmp/experts-live.html; then
+            echo "Old Elementor team markup still present" >&2
+            exit 1
+          fi
+          grep -Eq 'pax-experts__portrait|pax-experts__title|--pax-experts-ink' /tmp/apple-experts.css
+          grep -Eq 'apple-experts\.css\?ver=1\.4\.4|style\.css\?ver=1\.4\.4' /tmp/experts-live.html
+          echo "Apple Unsere Experten page verification passed."
