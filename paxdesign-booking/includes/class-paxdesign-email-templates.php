@@ -56,7 +56,7 @@ class PAXdesign_Email_Templates {
             'company_name'  => 'PAXDesign',
             'legal_name'    => 'PAXdesign (PrimoJob GmbH)',
             'address'       => 'Franzensbrückenstraße 14, 1020 Wien',
-            'company_intro' => 'PAXDesign entwickelt maßgeschneiderte digitale Lösungen — von Websites und Apps bis zu sicheren Enterprise-Systemen. Als inhabergeführtes Studio verbinden wir Design, Technologie und Strategie in einem klaren Prozess.',
+            'company_intro' => 'PAXDesign entwickelt maßgeschneiderte digitale Lösungen, von Websites und Apps bis zu sicheren Enterprise-Systemen. Als inhabergeführtes Studio verbinden wir Design, Technologie und Strategie in einem klaren Prozess.',
         );
     }
 
@@ -159,7 +159,7 @@ class PAXdesign_Email_Templates {
         $body .= self::intro_block($brand);
         $body .= self::cta_row($brand, false);
 
-        return self::layout('Ihre Terminanfrage bei PAXDesign – ' . $parts['date'], $body, $brand, true);
+        return self::layout('Ihre Terminanfrage bei PAXDesign, ' . $parts['date'], $body, $brand, true);
     }
 
     private static function layout($title, $body_html, $brand, $customer_email) {

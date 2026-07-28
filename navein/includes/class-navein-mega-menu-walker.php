@@ -250,7 +250,7 @@ if ( ! class_exists( 'Navein_Mega_Menu_Walker' ) ) :
 				'services'  => array(
 					'image'   => self::get_preview_image_url( 'services' ),
 					'eyebrow' => 'Solutions',
-					'desc'    => 'Web, App und Software — klar strukturiert und skalierbar.',
+					'desc'    => 'Web, App und Software, klar strukturiert und skalierbar.',
 					'cta'     => 'Leistungen entdecken',
 				),
 				'contact'   => array(

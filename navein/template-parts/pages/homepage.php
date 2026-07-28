@@ -55,7 +55,7 @@ $service_links = array(
 			<p class="pax-home-brand">PAXdesign</p>
 			<h1 class="pax-home-hero__title">Digitale Systeme,<br>die wirklich funktionieren.</h1>
 			<p class="pax-home-hero__lede">
-				Websites, Apps, Software und sichere IT‑Systeme — individuell entwickelt, performant und bereit für Wachstum.
+				Websites, Apps, Software und sichere IT‑Systeme, individuell entwickelt, performant und bereit für Wachstum.
 			</p>
 			<div class="pax-home-actions">
 				<a class="pax-home-btn pax-home-btn--light" href="<?php echo esc_url( $services ); ?>">Leistungen entdecken</a>
@@ -89,13 +89,14 @@ $service_links = array(
 				array( 'cloudflare', 'Cloudflare' ),
 			);
 			$partners_uri = trailingslashit( get_template_directory_uri() ) . 'assets/img/partners/';
+			$partners_ver = rawurlencode( (string) wp_get_theme()->get( 'Version' ) );
 			for ( $dup = 0; $dup < 2; $dup++ ) :
 				?>
 			<div class="pax-sw-ribbon__group"<?php echo 1 === $dup ? ' aria-hidden="true"' : ''; ?>>
 				<?php foreach ( $partner_logos as $logo ) : ?>
 					<span class="pax-sw-ribbon__logo">
 						<img
-							src="<?php echo esc_url( $partners_uri . $logo[0] . '.svg' ); ?>"
+							src="<?php echo esc_url( $partners_uri . $logo[0] . '.svg?ver=' . $partners_ver ); ?>"
 							alt="<?php echo 0 === $dup ? esc_attr( $logo[1] ) : ''; ?>"
 							width="32"
 							height="32"
@@ -113,7 +114,7 @@ $service_links = array(
 	<section class="pax-home-statement" data-ph-reveal>
 		<div class="pax-home-wrap pax-home-wrap--narrow">
 			<p class="pax-home-statement__text">
-				Keine Produkte von der Stange — sondern Systeme, die klar, sicher und selbstverständlich wirken.
+				Keine Produkte von der Stange, sondern Systeme, die klar, sicher und selbstverständlich wirken.
 			</p>
 		</div>
 	</section>
@@ -123,7 +124,7 @@ $service_links = array(
 		<div class="pax-home-wrap">
 			<p class="pax-home-eyebrow">Leistungen</p>
 			<h2 class="pax-home-display">Alles aus einer Hand.</h2>
-			<p class="pax-home-lede">Von der ersten Idee bis zum laufenden Betrieb — direkt in jede Disziplin.</p>
+			<p class="pax-home-lede">Von der ersten Idee bis zum laufenden Betrieb, direkt in jede Disziplin.</p>
 		</div>
 		<div class="pax-home-services">
 			<?php foreach ( $service_links as $i => $item ) : ?>
@@ -153,7 +154,7 @@ $service_links = array(
 			<div class="pax-home-pillar">
 				<span>01</span>
 				<h3>Webdesign &amp; Webentwicklung</h3>
-				<p>Moderne, performante Websites — individuell und auf Ihr Unternehmen zugeschnitten.</p>
+				<p>Moderne, performante Websites, individuell und auf Ihr Unternehmen zugeschnitten.</p>
 				<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/webentwicklung/' ) ); ?>">Mehr erfahren</a>
 			</div>
 			<div class="pax-home-pillar">
@@ -201,7 +202,7 @@ $service_links = array(
 			<div>
 				<p class="pax-home-eyebrow">Über uns</p>
 				<h2 class="pax-home-display">Wir sind<br>PAXdesign.</h2>
-				<p class="pax-home-lede">Digitale Entwickler seit 2016 — Technologie, Design und Strategie für leistungsstarke Websites und individuelle Software.</p>
+				<p class="pax-home-lede">Digitale Entwickler seit 2016, Technologie, Design und Strategie für leistungsstarke Websites und individuelle Software.</p>
 				<div class="pax-home-actions">
 					<a class="pax-home-btn pax-home-btn--dark" href="<?php echo esc_url( $about ); ?>">Mehr erfahren</a>
 					<a class="pax-home-btn pax-home-btn--text" href="<?php echo esc_url( home_url( '/unsere-experten/' ) ); ?>">Unsere Experten</a>
@@ -235,7 +236,7 @@ $service_links = array(
 					<footer>Thomas Müller · CEO, TechStart GmbH</footer>
 				</blockquote>
 				<blockquote>
-					<p>100% zufrieden. Modern, seriös, einfach zu bedienen — und dennoch besonders. Absolute Empfehlung.</p>
+					<p>100% zufrieden. Modern, seriös, einfach zu bedienen und dennoch besonders. Absolute Empfehlung.</p>
 					<footer>Jannis Rettig · CEO, Rettig &amp; Partner</footer>
 				</blockquote>
 				<blockquote>
@@ -282,7 +283,7 @@ $service_links = array(
 			<p class="pax-home-brand pax-home-brand--dark">PAXdesign</p>
 			<h2 class="pax-home-display">Sign&nbsp;Up.</h2>
 			<p class="pax-home-lede pax-home-lede--center">
-				Erstellen Sie Ihr Konto für Live&nbsp;Chat und den Kundenbereich — klar, sicher und in wenigen Schritten.
+				Erstellen Sie Ihr Konto für Live&nbsp;Chat und den Kundenbereich, klar, sicher und in wenigen Schritten.
 			</p>
 			<form class="pax-home-signup-form" data-pax-signup-form novalidate>
 				<label class="pax-home-sr" for="pax-home-signup-email">E-Mail-Adresse</label>

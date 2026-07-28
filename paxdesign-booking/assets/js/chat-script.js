@@ -143,7 +143,7 @@
     'Antwort wird erstellt …',
     'Einen kleinen Moment bitte …',
   ];
-  var LIVE_QUALIFY_TEXT   = 'Gerne. Damit ich Sie richtig weiterleiten kann: Worum geht es kurz — Website, AI Chatbot, Booking, Support oder ein anderes Thema?';
+  var LIVE_QUALIFY_TEXT   = 'Gerne. Damit ich Sie richtig weiterleiten kann: Worum geht es kurz: Website, AI Chatbot, Booking, Support oder ein anderes Thema?';
   var POLL_INTERVAL_MS    = 1200;
   var POLL_INTERVAL_OPEN_MS = 450;
   var POLL_INTERVAL_HUMAN_MS = 250;
@@ -2817,7 +2817,7 @@
       if (!window.PDXAuth || typeof window.PDXAuth.customerApiFetch !== 'function') {
         return;
       }
-      if (!window.confirm('Neues Gespräch starten? Ihr bisheriger Chat bleibt gespeichert — es beginnt eine neue Session.')) {
+      if (!window.confirm('Neues Gespräch starten? Ihr bisheriger Chat bleibt gespeichert, es beginnt eine neue Session.')) {
         return;
       }
       window.PDXAuth.customerApiFetch('POST', '/customer/chat/session', { new_conversation: true }).then(function (data) {
@@ -2835,7 +2835,7 @@
       });
       return;
     }
-    if (!window.confirm('Neues Gespräch starten? Ihr bisheriger Chat bleibt gespeichert — es beginnt eine neue Session.')) {
+    if (!window.confirm('Neues Gespräch starten? Ihr bisheriger Chat bleibt gespeichert, es beginnt eine neue Session.')) {
       return;
     }
     archiveClosedSession();
@@ -3414,7 +3414,7 @@
       btn.classList.toggle('paxdesign-is-active', active);
       btn.setAttribute('aria-pressed', active ? 'true' : 'false');
       btn.title = active
-        ? (PAX_FEEDBACK_KEYS[key] + ' — erneut tippen zum Entfernen')
+        ? (PAX_FEEDBACK_KEYS[key] + ', erneut tippen zum Entfernen')
         : PAX_FEEDBACK_KEYS[key];
     });
   }

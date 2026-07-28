@@ -25,7 +25,7 @@ $icon_url    = 'https://paxdesign.at/wp-content/uploads/2026/07/paxdesign-origin
 				<span class="pax-aap-hero__accent">iOS, Android &amp; TV.</span>
 			</h1>
 			<p class="pax-aap-hero__lede">
-				Von mobilen Apps bis zu Smart‑TV‑Anwendungen — performant, intuitiv und für jede Plattform gedacht.
+				Von mobilen Apps bis zu Smart‑TV‑Anwendungen, performant, intuitiv und für jede Plattform gedacht.
 			</p>
 			<div class="pax-aap-hero__cta">
 				<a class="pax-aap-btn pax-aap-btn--dark" href="<?php echo esc_url( $contact_url ); ?>">Beratung anfragen</a>
@@ -49,7 +49,7 @@ $icon_url    = 'https://paxdesign.at/wp-content/uploads/2026/07/paxdesign-origin
 	<section class="pax-aap-statement" data-aap-reveal>
 		<div class="pax-aap-wrap pax-aap-wrap--narrow">
 			<p class="pax-aap-statement__text">
-				Wir bauen digitale Produkte, die sich anfühlen wie selbstverständlich — klar in der Bedienung, stark in der Technik, bereit für Wachstum.
+				Wir bauen digitale Produkte, die sich anfühlen wie selbstverständlich, klar in der Bedienung, stark in der Technik, bereit für Wachstum.
 			</p>
 		</div>
 	</section>
@@ -69,7 +69,7 @@ $icon_url    = 'https://paxdesign.at/wp-content/uploads/2026/07/paxdesign-origin
 				<p class="pax-aap-eyebrow pax-aap-eyebrow--light">iOS</p>
 				<h3 class="pax-aap-feature__title">iOS Apps</h3>
 				<p class="pax-aap-feature__text">
-					Native Entwicklung mit Swift und SwiftUI für iPhone und iPad — präzise, flüssig und tief in das Apple‑Ökosystem integriert.
+					Native Entwicklung mit Swift und SwiftUI für iPhone und iPad, präzise, flüssig und tief in das Apple‑Ökosystem integriert.
 				</p>
 				<ul class="pax-aap-list">
 					<li>App Store Optimierung</li>
@@ -96,7 +96,7 @@ $icon_url    = 'https://paxdesign.at/wp-content/uploads/2026/07/paxdesign-origin
 				<p class="pax-aap-eyebrow">Android</p>
 				<h3 class="pax-aap-feature__title">Android Apps</h3>
 				<p class="pax-aap-feature__text">
-					Native Android‑Entwicklung mit Kotlin und Jetpack Compose — modern, skalierbar und bereit für den Google Play Store.
+					Native Android‑Entwicklung mit Kotlin und Jetpack Compose, modern, skalierbar und bereit für den Google Play Store.
 				</p>
 				<ul class="pax-aap-list pax-aap-list--dark">
 					<li>Google Play Optimierung</li>
@@ -123,7 +123,7 @@ $icon_url    = 'https://paxdesign.at/wp-content/uploads/2026/07/paxdesign-origin
 				<p class="pax-aap-eyebrow pax-aap-eyebrow--light">Living Room</p>
 				<h3 class="pax-aap-feature__title">Smart TV Apps</h3>
 				<p class="pax-aap-feature__text">
-					Große Screens, klare Navigation — Apps für Apple TV, Android TV, Fire TV und Samsung Tizen.
+					Große Screens, klare Navigation, Apps für Apple TV, Android TV, Fire TV und Samsung Tizen.
 				</p>
 				<ul class="pax-aap-list">
 					<li>Apple tvOS</li>
@@ -149,7 +149,7 @@ $icon_url    = 'https://paxdesign.at/wp-content/uploads/2026/07/paxdesign-origin
 			<div class="pax-aap-strip__row">
 				<div class="pax-aap-strip__item">
 					<h3>Cross‑Platform</h3>
-					<p>Eine Codebasis für iOS und Android mit React Native oder Flutter — schnellere Entwicklung, klare Kosteneffizienz.</p>
+					<p>Eine Codebasis für iOS und Android mit React Native oder Flutter, schnellere Entwicklung, klare Kosteneffizienz.</p>
 				</div>
 				<div class="pax-aap-strip__item">
 					<h3>Backend &amp; API</h3>
@@ -157,7 +157,7 @@ $icon_url    = 'https://paxdesign.at/wp-content/uploads/2026/07/paxdesign-origin
 				</div>
 				<div class="pax-aap-strip__item">
 					<h3>Wartung &amp; Updates</h3>
-					<p>Bug Fixes, OS‑Updates, Feature‑Releases und Performance‑Monitoring — langfristig betreut.</p>
+					<p>Bug Fixes, OS‑Updates, Feature‑Releases und Performance‑Monitoring, langfristig betreut.</p>
 				</div>
 			</div>
 		</div>

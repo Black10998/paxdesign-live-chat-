@@ -842,10 +842,14 @@ body.paxdesign-agent-profile-open {
 }
 
 #paxdesign-booking-root .paxdesign-booking-selected-service-features li::before {
-  content: "–";
+  content: "";
   position: absolute;
   left: 0;
-  color: #7e7e7e;
+  top: 0.55em;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #7e7e7e;
 }
 
 #paxdesign-booking-root .paxdesign-booking-selected-service-category {
@@ -890,10 +894,14 @@ body.paxdesign-agent-profile-open {
 }
 
 #paxdesign-booking-root .paxdesign-booking-summary-service-features li::before {
-  content: "–";
+  content: "";
   position: absolute;
   left: 0;
-  color: #7e7e7e;
+  top: 0.55em;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #7e7e7e;
 }
 
 #paxdesign-booking-root .paxdesign-booking-summary-service-category {

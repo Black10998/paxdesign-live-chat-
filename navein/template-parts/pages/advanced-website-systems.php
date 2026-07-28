@@ -24,7 +24,7 @@ $email       = 'info@paxdesign.at';
 				<span class="pax-aap-hero__accent">für das Web.</span>
 			</h1>
 			<p class="pax-aap-hero__lede">
-				Individuelle Website‑Architekturen — performant, sicher und bereit für Wachstum. Keine Templates von der Stange, sondern Systeme, die mit Ihrem Unternehmen skalieren.
+				Individuelle Website‑Architekturen, performant, sicher und bereit für Wachstum. Keine Templates von der Stange, sondern Systeme, die mit Ihrem Unternehmen skalieren.
 			</p>
 			<div class="pax-aap-hero__cta">
 				<a class="pax-aap-btn pax-aap-btn--dark" href="<?php echo esc_url( $contact_url ); ?>">Beratung anfragen</a>
@@ -64,7 +64,7 @@ $email       = 'info@paxdesign.at';
 	<section class="pax-aap-statement" data-aap-reveal>
 		<div class="pax-aap-wrap pax-aap-wrap--narrow">
 			<p class="pax-aap-statement__text">
-				Wir entwickeln Website‑Systeme, die Klarheit in der Oberfläche mit Stabilität in der Architektur verbinden — elegant für Nutzer, robust für Teams.
+				Wir entwickeln Website‑Systeme, die Klarheit in der Oberfläche mit Stabilität in der Architektur verbinden, elegant für Nutzer, robust für Teams.
 			</p>
 		</div>
 	</section>
@@ -84,7 +84,7 @@ $email       = 'info@paxdesign.at';
 				<p class="pax-aap-eyebrow pax-aap-eyebrow--light">Architecture</p>
 				<h3 class="pax-aap-feature__title">Systemarchitektur</h3>
 				<p class="pax-aap-feature__text">
-					Saubere Strukturen, klare Module und zukunftssichere Grundlagen — von Corporate Sites bis komplexen Web‑Plattformen.
+					Saubere Strukturen, klare Module und zukunftssichere Grundlagen, von Corporate Sites bis komplexen Web‑Plattformen.
 				</p>
 				<ul class="pax-aap-list">
 					<li>Modulare Informationsarchitektur</li>
@@ -111,7 +111,7 @@ $email       = 'info@paxdesign.at';
 				<p class="pax-aap-eyebrow">Experience</p>
 				<h3 class="pax-aap-feature__title">Design &amp; UX</h3>
 				<p class="pax-aap-feature__text">
-					Ruhige Typografie, klare Hierarchien und Interfaces, die sich selbst erklären — auf Desktop, Tablet und Mobile.
+					Ruhige Typografie, klare Hierarchien und Interfaces, die sich selbst erklären, auf Desktop, Tablet und Mobile.
 				</p>
 				<ul class="pax-aap-list pax-aap-list--dark">
 					<li>Premium UI‑Systeme</li>
@@ -168,11 +168,11 @@ $email       = 'info@paxdesign.at';
 				</div>
 				<div class="pax-aap-strip__item">
 					<h3>Integrationen</h3>
-					<p>CRM, Buchung, Analytics, Automatisierung und Payment — sauber angebunden statt notdürftig angehängt.</p>
+					<p>CRM, Buchung, Analytics, Automatisierung und Payment, sauber angebunden statt notdürftig angehängt.</p>
 				</div>
 				<div class="pax-aap-strip__item">
 					<h3>Betrieb &amp; Care</h3>
-					<p>Updates, Backups, Monitoring und Weiterentwicklung — damit Ihr System dauerhaft auf Niveau bleibt.</p>
+					<p>Updates, Backups, Monitoring und Weiterentwicklung, damit Ihr System dauerhaft auf Niveau bleibt.</p>
 				</div>
 			</div>
 		</div>
@@ -210,7 +210,7 @@ $email       = 'info@paxdesign.at';
 					<span class="pax-aap-process__num">04</span>
 					<div>
 						<h3>Entwicklung</h3>
-						<p>Frontend, Backend und Integrationen — wartbar und dokumentiert.</p>
+						<p>Frontend, Backend und Integrationen, wartbar und dokumentiert.</p>
 					</div>
 				</li>
 				<li class="pax-aap-process__step">
@@ -224,7 +224,7 @@ $email       = 'info@paxdesign.at';
 					<span class="pax-aap-process__num">06</span>
 					<div>
 						<h3>Weiterentwicklung</h3>
-						<p>Messung, Iteration und Ausbau — Ihr System wächst mit.</p>
+						<p>Messung, Iteration und Ausbau, Ihr System wächst mit.</p>
 					</div>
 				</li>
 			</ol>
@@ -235,7 +235,7 @@ $email       = 'info@paxdesign.at';
 	<section class="pax-aap-cta" data-aap-reveal>
 		<div class="pax-aap-wrap pax-aap-wrap--narrow pax-aap-cta__inner">
 			<h2 class="pax-aap-display pax-aap-display--light">Bereit für ein<br>stärkeres System?</h2>
-			<p class="pax-aap-cta__text">Lassen Sie uns Ihre Website als skalierbares Produkt denken — und bauen.</p>
+			<p class="pax-aap-cta__text">Lassen Sie uns Ihre Website als skalierbares Produkt denken und bauen.</p>
 			<div class="pax-aap-cta__actions">
 				<a class="pax-aap-btn pax-aap-btn--light" href="<?php echo esc_url( $contact_url ); ?>">Kostenlose Beratung</a>
 				<a class="pax-aap-link" href="tel:+4368120543638"><?php echo esc_html( $phone ); ?></a>

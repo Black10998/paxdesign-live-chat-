@@ -24,7 +24,7 @@ $email       = 'info@paxdesign.at';
 				<span>für digitale Exzellenz.</span>
 			</h1>
 			<p class="pax-web-hero__lede">
-				Corporate Websites, E‑Commerce und Web Apps — performant, sicher und für jedes Gerät gedacht.
+				Corporate Websites, E‑Commerce und Web Apps, performant, sicher und für jedes Gerät gedacht.
 			</p>
 			<div class="pax-web-hero__cta">
 				<a class="pax-aap-btn pax-aap-btn--dark" href="<?php echo esc_url( $contact_url ); ?>">Projekt anfragen</a>
@@ -60,7 +60,7 @@ $email       = 'info@paxdesign.at';
 	<section class="pax-web-band" data-aap-reveal>
 		<div class="pax-aap-wrap pax-aap-wrap--narrow">
 			<p class="pax-web-band__text">
-				Von der Idee bis zum Launch — transparente Prozesse, moderne Technologien und Weblösungen, die messbar performen.
+				Von der Idee bis zum Launch, transparente Prozesse, moderne Technologien und Weblösungen, die messbar performen.
 			</p>
 		</div>
 	</section>
@@ -79,7 +79,7 @@ $email       = 'info@paxdesign.at';
 			<div class="pax-web-offer__index">01</div>
 			<div class="pax-web-offer__body">
 				<h3>Corporate Websites</h3>
-				<p>Markenstarke Auftritte mit klarer Struktur, starker Typografie und Conversion‑Fokus — gebaut für Vertrauen und Wachstum.</p>
+				<p>Markenstarke Auftritte mit klarer Struktur, starker Typografie und Conversion‑Fokus, gebaut für Vertrauen und Wachstum.</p>
 				<ul class="pax-aap-list">
 					<li>Informationsarchitektur</li>
 					<li>CMS‑fähige Themes</li>
@@ -109,7 +109,7 @@ $email       = 'info@paxdesign.at';
 			<div class="pax-web-offer__index">03</div>
 			<div class="pax-web-offer__body">
 				<h3>Web Apps</h3>
-				<p>Komplexe Webanwendungen mit React, Vue oder Angular — interaktiv, wartbar und bereit für echte Business‑Prozesse.</p>
+				<p>Komplexe Webanwendungen mit React, Vue oder Angular, interaktiv, wartbar und bereit für echte Business‑Prozesse.</p>
 				<ul class="pax-aap-list">
 					<li>Custom Interfaces</li>
 					<li>API‑Integrationen</li>
@@ -124,12 +124,12 @@ $email       = 'info@paxdesign.at';
 		<div class="pax-web-pillars__col">
 			<span>Responsive</span>
 			<h3>Jedes Gerät. Eine Erfahrung.</h3>
-			<p>Perfekte Darstellung vom Smartphone bis zum Desktop — flüssig, klar und konsistent.</p>
+			<p>Perfekte Darstellung vom Smartphone bis zum Desktop, flüssig, klar und konsistent.</p>
 		</div>
 		<div class="pax-web-pillars__col">
 			<span>Performance</span>
 			<h3>Schnell. Messbar. SEO‑stark.</h3>
-			<p>Optimierte Ladezeiten und starke Core Web Vitals — für Nutzer und Suchmaschinen.</p>
+			<p>Optimierte Ladezeiten und starke Core Web Vitals, für Nutzer und Suchmaschinen.</p>
 		</div>
 		<div class="pax-web-pillars__col">
 			<span>Sicherheit</span>
@@ -201,7 +201,7 @@ $email       = 'info@paxdesign.at';
 		<div class="pax-aap-wrap pax-aap-wrap--narrow">
 			<p class="pax-aap-eyebrow">Next step</p>
 			<h2 class="pax-aap-display">Bereit für Ihr<br>Webprojekt?</h2>
-			<p class="pax-web-cta__text">Lassen Sie uns Ihre Website oder Web App als klares, skalierbares Produkt denken — und bauen.</p>
+			<p class="pax-web-cta__text">Lassen Sie uns Ihre Website oder Web App als klares, skalierbares Produkt denken und bauen.</p>
 			<div class="pax-aap-cta__actions">
 				<a class="pax-aap-btn pax-aap-btn--dark" href="<?php echo esc_url( $contact_url ); ?>">Kostenlose Beratung</a>
 				<a class="pax-aap-link" href="tel:+4368120543638"><?php echo esc_html( $phone ); ?></a>

@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.173.9
+Version: 3.173.10
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.173.9');
+define('PAXDESIGN_BOOKING_VERSION', '3.173.10');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -198,7 +198,7 @@ class PAXdesign_Booking {
 
         $sent = wp_mail(
             $to,
-            'PAXdesign Booking – SMTP Test',
+            'PAXdesign Booking, SMTP Test',
             "Diese E-Mail bestätigt, dass Ihre SMTP-Konfiguration korrekt funktioniert.\n\nPAXdesign Booking System",
             array('Content-Type: text/plain; charset=UTF-8', 'From: ' . $this->get_from_header())
         );
@@ -269,8 +269,8 @@ class PAXdesign_Booking {
         $all_members = array(
             'ahmad' => array(
                 'name' => 'Ahmad Alkhalaf',
-                'role' => 'Gründer & Geschäftsführer – PAXDesign',
-                'role_en' => 'Founder & CEO – PAXDesign',
+                'role' => 'Gründer & Geschäftsführer, PAXDesign',
+                'role_en' => 'Founder & CEO, PAXDesign',
                 'email' => get_option('paxdesign_booking_email_ahmad', 'info@paxdesign.at'),
                 'image' => PAXdesign_Chat_Live::DEFAULT_AGENT_AVATAR,
                 'has_services' => true,
@@ -433,7 +433,7 @@ class PAXdesign_Booking {
             ),
             'seclicense' => array(
                 'name' => 'Server-Side License Verification',
-                'description' => 'Lizenzprüfung auf dem Server — geschützte Funktionen erst nach validierter Freigabe',
+                'description' => 'Lizenzprüfung auf dem Server, geschützte Funktionen erst nach validierter Freigabe',
             ),
             'secintegrity' => array(
                 'name' => 'Integrity Check',
@@ -778,7 +778,7 @@ class PAXdesign_Booking {
         $admin_plain = "Neue Terminbuchung bei PAXdesign\n"
             . "=====================================\n\n"
             . "ANSPRECHPARTNER:\n"
-            . $member_info['name'] . " – " . $member_info['role'] . "\n\n"
+            . $member_info['name'] . ", " . $member_info['role'] . "\n\n"
             . $this->format_service_details_block($booking_data)
             . "TERMIN:\n"
             . "Datum:   " . $parts['date'] . "\n"
@@ -873,7 +873,7 @@ class PAXdesign_Booking {
 
         $sent = $this->send_html_mail(
             $booking_data['email'],
-            'Ihre Terminanfrage bei PAXDesign – ' . $parts['date'],
+            'Ihre Terminanfrage bei PAXDesign, ' . $parts['date'],
             $customer_html,
             $customer_plain,
             $customer_headers
@@ -917,7 +917,7 @@ class PAXdesign_Booking {
         );
 
         if ($result === false) {
-            paxdesign_booking_log_error('PAXdesign Booking: database insert failed — ' . $wpdb->last_error);
+            paxdesign_booking_log_error('PAXdesign Booking: database insert failed, ' . $wpdb->last_error);
             return false;
         }
 

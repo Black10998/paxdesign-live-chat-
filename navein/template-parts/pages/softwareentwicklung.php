@@ -25,7 +25,7 @@ $email       = 'info@paxdesign.at';
 				<span class="pax-sw-hero__accent">mit Ihrem Business denkt.</span>
 			</h1>
 			<p class="pax-sw-hero__lede">
-				Individuelle Systeme für Desktop, Cloud und Integration — klar in der Architektur, präzise in der Umsetzung, gebaut für Wachstum.
+				Individuelle Systeme für Desktop, Cloud und Integration, klar in der Architektur, präzise in der Umsetzung, gebaut für Wachstum.
 			</p>
 			<div class="pax-sw-hero__cta">
 				<a class="pax-aap-btn pax-aap-btn--dark" href="<?php echo esc_url( $contact_url ); ?>">Projekt starten</a>
@@ -54,7 +54,7 @@ $email       = 'info@paxdesign.at';
 		<div class="pax-aap-wrap pax-aap-wrap--narrow">
 			<p class="pax-sw-manifesto__kicker">Engineering principle</p>
 			<p class="pax-sw-manifesto__text">
-				Gute Software verschwindet im Alltag — und hinterlässt Klarheit, Geschwindigkeit und Kontrolle.
+				Gute Software verschwindet im Alltag und hinterlässt Klarheit, Geschwindigkeit und Kontrolle.
 			</p>
 		</div>
 	</section>
@@ -79,7 +79,7 @@ $email       = 'info@paxdesign.at';
 				<span class="pax-sw-chapter__num">01 / Architecture</span>
 				<h3 class="pax-sw-chapter__title">Enterprise Foundations</h3>
 				<p class="pax-sw-chapter__text">
-					Modulare Fachanwendungen, saubere Domänengrenzen und Integrationen, die mitwachsen — statt monolithischer Kompromisse.
+					Modulare Fachanwendungen, saubere Domänengrenzen und Integrationen, die mitwachsen, statt monolithischer Kompromisse.
 				</p>
 				<ul class="pax-aap-list">
 					<li>Domain‑driven Strukturen</li>
@@ -102,7 +102,7 @@ $email       = 'info@paxdesign.at';
 				<span class="pax-sw-chapter__num pax-sw-chapter__num--dark">02 / Runtime</span>
 				<h3 class="pax-sw-chapter__title pax-sw-chapter__title--ink">Desktop &amp; Cloud</h3>
 				<p class="pax-sw-chapter__text pax-sw-chapter__text--ink">
-					Native Desktop‑Software für Windows, macOS und Linux — oder cloud‑native Services mit Container, Skalierung und klaren Deployments.
+					Native Desktop‑Software für Windows, macOS und Linux oder cloud‑native Services mit Container, Skalierung und klaren Deployments.
 				</p>
 				<ul class="pax-aap-list pax-aap-list--dark">
 					<li>Native Desktop‑Clients</li>
@@ -132,7 +132,7 @@ $email       = 'info@paxdesign.at';
 				<span class="pax-sw-chapter__num">03 / Interfaces</span>
 				<h3 class="pax-sw-chapter__title">APIs &amp; Datenflüsse</h3>
 				<p class="pax-sw-chapter__text">
-					REST und GraphQL, robuste Datenmodelle und Echtzeit‑Pfade — damit Systeme sprechen, statt nebeneinander zu existieren.
+					REST und GraphQL, robuste Datenmodelle und Echtzeit‑Pfade, damit Systeme sprechen, statt nebeneinander zu existieren.
 				</p>
 				<ul class="pax-aap-list">
 					<li>API‑first Design</li>
@@ -179,17 +179,17 @@ $email       = 'info@paxdesign.at';
 		<div class="pax-sw-triptych__col">
 			<span class="pax-sw-triptych__label">Stack</span>
 			<h3>Backend mit Substanz</h3>
-			<p>Java, C#, Python und Go — mit Frameworks, die Enterprise‑Last tragen und trotzdem wartbar bleiben.</p>
+			<p>Java, C#, Python und Go, mit Frameworks, die Enterprise‑Last tragen und trotzdem wartbar bleiben.</p>
 		</div>
 		<div class="pax-sw-triptych__col">
 			<span class="pax-sw-triptych__label">DevOps</span>
 			<h3>Vom Commit zum Release</h3>
-			<p>Container, Pipelines und reproduzierbare Deployments — damit Releases ruhig und nachvollziehbar sind.</p>
+			<p>Container, Pipelines und reproduzierbare Deployments, damit Releases ruhig und nachvollziehbar sind.</p>
 		</div>
 		<div class="pax-sw-triptych__col">
 			<span class="pax-sw-triptych__label">Security</span>
 			<h3>Sicherheit eingebaut</h3>
-			<p>Hardening, DSGVO‑konforme Setups und Monitoring — Security als Teil der Architektur, nicht als Afterthought.</p>
+			<p>Hardening, DSGVO‑konforme Setups und Monitoring, Security als Teil der Architektur, nicht als Afterthought.</p>
 		</div>
 	</section>
 
@@ -234,7 +234,7 @@ $email       = 'info@paxdesign.at';
 		<div class="pax-aap-wrap pax-aap-wrap--narrow pax-sw-cta__inner">
 			<p class="pax-aap-eyebrow pax-aap-eyebrow--light">Next step</p>
 			<h2 class="pax-aap-display pax-aap-display--light">Bereit, Software<br>wie ein Produkt zu bauen?</h2>
-			<p class="pax-sw-cta__text">Lassen Sie uns Ihre Anforderungen in eine Architektur übersetzen — und in Software, die hält.</p>
+			<p class="pax-sw-cta__text">Lassen Sie uns Ihre Anforderungen in eine Architektur übersetzen und in Software, die hält.</p>
 			<div class="pax-aap-cta__actions">
 				<a class="pax-aap-btn pax-aap-btn--light" href="<?php echo esc_url( $contact_url ); ?>">Kostenlose Beratung</a>
 				<a class="pax-aap-link" href="tel:+4368120543638"><?php echo esc_html( $phone ); ?></a>

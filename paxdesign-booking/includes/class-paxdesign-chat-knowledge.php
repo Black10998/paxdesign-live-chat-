@@ -18,12 +18,12 @@ class PAXdesign_Chat_Knowledge {
             'name'      => 'PAXDesign',
             'url'       => 'https://paxdesign.at',
             'tagline'   => 'Professionelle IT-Lösungen für Ihr Unternehmen',
-            'statement' => 'Wir entwickeln keine Produkte von der Stange – wir bauen funktionierende, sichere und skalierbare Systeme.',
+            'statement' => 'Wir entwickeln keine Produkte von der Stange, sondern funktionierende, sichere und skalierbare Systeme.',
             'process'   => array(
-                'Anfrage stellen — Kontakt über Buchungsformular oder Chat',
-                'Analyse & Beratung — Anforderungen verstehen',
-                'Angebot erstellen — maßgeschneidertes Angebot',
-                'Umsetzung — professionelle Entwicklung und Betreuung',
+                'Anfrage stellen. Kontakt über Buchungsformular oder Chat',
+                'Analyse & Beratung. Anforderungen verstehen',
+                'Angebot erstellen. Maßgeschneidertes Angebot',
+                'Umsetzung. Professionelle Entwicklung und Betreuung',
             ),
         );
     }
@@ -38,13 +38,13 @@ class PAXdesign_Chat_Knowledge {
             'website' => array(
                 'booking_name' => 'Website',
                 'title'        => 'Website',
-                'summary'      => 'Moderne, responsive Website mit professionellem Design, SEO und Performance — individuell entwickelt, ohne Standard-Templates.',
+                'summary'      => 'Moderne, responsive Website mit professionellem Design, SEO und Performance, individuell entwickelt, ohne Standard-Templates.',
                 'features'     => array('Responsive Design', 'SEO-Optimierung', 'CMS Integration', 'SSL-Zertifikat'),
             ),
             'webapp' => array(
                 'booking_name' => 'Web App',
                 'title'        => 'Web App',
-                'summary'      => 'Individuelle Webanwendung, die Geschäftsprozesse digitalisiert und automatisiert — maßgeschneidert, nicht generisches SaaS.',
+                'summary'      => 'Individuelle Webanwendung, die Geschäftsprozesse digitalisiert und automatisiert, maßgeschneidert, nicht generisches SaaS.',
                 'features'     => array('Custom Development', 'API Integration', 'User Management', 'Cloud Hosting'),
             ),
             'android' => array(
@@ -56,13 +56,13 @@ class PAXdesign_Chat_Knowledge {
             'ios' => array(
                 'booking_name' => 'iOS App',
                 'title'        => 'iOS App',
-                'summary'      => 'Native iOS-App in Swift für iPhone und iPad — App Store Connect und Release-Betreuung inklusive.',
+                'summary'      => 'Native iOS-App in Swift für iPhone und iPad, App Store Connect und Release-Betreuung inklusive.',
                 'features'     => array('Swift Development', 'App Store Veröffentlichung', 'iCloud Integration', 'Face ID / Touch ID'),
             ),
             'crossplatform' => array(
                 'booking_name' => 'iOS + Android',
                 'title'        => 'iOS + Android',
-                'summary'      => 'Cross-Platform-Lösung mit gemeinsamer Codebasis — effizient, mit plattformspezifischer Feinabstimmung.',
+                'summary'      => 'Cross-Platform-Lösung mit gemeinsamer Codebasis, effizient, mit plattformspezifischer Feinabstimmung.',
                 'features'     => array('Beide Plattformen', 'Gemeinsame Codebasis', 'Alle Store-Features', 'Synchronisation'),
             ),
             'androidtv' => array(
@@ -86,7 +86,7 @@ class PAXdesign_Chat_Knowledge {
             'devops' => array(
                 'booking_name' => 'Server & DevOps',
                 'title'        => 'Server & DevOps',
-                'summary'      => 'Cloud-Infrastruktur mit CI/CD, Monitoring und Backup — AWS, Azure oder Hetzner, projektspezifisch.',
+                'summary'      => 'Cloud-Infrastruktur mit CI/CD, Monitoring und Backup, AWS, Azure oder Hetzner, projektspezifisch.',
                 'features'     => array('Cloud Setup', 'CI/CD Pipeline', 'Monitoring', 'Backup-Strategie'),
             ),
             'enterprise' => array(
@@ -98,13 +98,13 @@ class PAXdesign_Chat_Knowledge {
             'aiautomation' => array(
                 'booking_name' => 'AI Automation',
                 'title'        => 'AI Automation',
-                'summary'      => 'KI-gestützte Automatisierung wiederkehrender Prozesse — von Datenerfassung bis Report-Erstellung.',
+                'summary'      => 'KI-gestützte Automatisierung wiederkehrender Prozesse, von Datenerfassung bis Report-Erstellung.',
                 'features'     => array('Prozessautomatisierung', 'AI Chatbots', 'API-Anbindung', 'Intelligente Reports'),
             ),
             'aichatbot' => array(
                 'booking_name' => 'AI Chatbot',
                 'title'        => 'AI Chatbot',
-                'summary'      => 'Intelligenter Assistent für Website oder Shop — trainiert auf Ihre Marke, Produkte und Prozesse.',
+                'summary'      => 'Intelligenter Assistent für Website oder Shop, trainiert auf Ihre Marke, Produkte und Prozesse.',
                 'features'     => array('Automatische Antworten', 'Mehrsprachiger Support', 'WhatsApp-Anbindung', 'Training mit Ihren Daten'),
             ),
             'ecommerce' => array(
@@ -140,7 +140,7 @@ class PAXdesign_Chat_Knowledge {
             'crm' => array(
                 'booking_name' => 'CRM System',
                 'title'        => 'CRM System',
-                'summary'      => 'Maßgeschneidertes CRM für Kunden, Aufträge und Follow-ups — exakt auf Ihre Vertriebsprozesse abgestimmt.',
+                'summary'      => 'Maßgeschneidertes CRM für Kunden, Aufträge und Follow-ups, exakt auf Ihre Vertriebsprozesse abgestimmt.',
                 'features'     => array('Kundenverwaltung', 'Auftragsverfolgung', 'Benutzerrechte', 'Management-Reports'),
             ),
             'bookingsystem' => array(
@@ -152,13 +152,13 @@ class PAXdesign_Chat_Knowledge {
             'pwa' => array(
                 'booking_name' => 'Website to App',
                 'title'        => 'Website zur App',
-                'summary'      => 'Progressive Web App — installierbare App-Erfahrung vom Homescreen, ohne App Store.',
+                'summary'      => 'Progressive Web App, installierbare App-Erfahrung vom Homescreen, ohne App Store.',
                 'features'     => array('PWA', 'Push-Benachrichtigungen', 'Offline-Funktion', 'Installation auf dem Handy'),
             ),
             'analytics' => array(
                 'booking_name' => 'Data Analytics & Reports',
                 'title'        => 'Datenanalyse & Reports',
-                'summary'      => 'Dashboards für Umsatz, Kunden, Bestellungen und Traffic — datenbasierte Entscheidungen statt Bauchgefühl.',
+                'summary'      => 'Dashboards für Umsatz, Kunden, Bestellungen und Traffic, datenbasierte Entscheidungen statt Bauchgefühl.',
                 'features'     => array('Dashboard', 'Google Analytics', 'Individuelle Reports', 'KPIs'),
             ),
             'gdpr' => array(
@@ -170,25 +170,25 @@ class PAXdesign_Chat_Knowledge {
             'secflash' => array(
                 'booking_name' => 'Military Flash Protection',
                 'title'        => 'Military Flash Protection',
-                'summary'      => 'Schutz gegen unbefugtes Kopieren und Manipulation digitaler Assets — Enterprise-Niveau.',
+                'summary'      => 'Schutz gegen unbefugtes Kopieren und Manipulation digitaler Assets, Enterprise-Niveau.',
                 'features'     => array('Anti-Copy Schutz', 'Flash-Härtung', 'Manipulationserkennung', 'Deployment-Sicherheit'),
             ),
             'seclayers' => array(
                 'booking_name' => 'Encrypted Protection Layers',
                 'title'        => 'Encrypted Protection Layers',
-                'summary'      => 'Verschlüsselte Schutzschichten für JS, CSS und interne Logik — erschwert Reverse Engineering.',
+                'summary'      => 'Verschlüsselte Schutzschichten für JS, CSS und interne Logik, erschwert Reverse Engineering.',
                 'features'     => array('Mehrschicht-Verschlüsselung', 'JS/CSS Schutz', 'Schlüsselmanagement', 'Runtime-Entschlüsselung'),
             ),
             'sectamper' => array(
                 'booking_name' => 'Anti-Tamper Shield',
                 'title'        => 'Anti-Tamper Shield',
-                'summary'      => 'Erkennt unautorisierte Änderungen an Dateien und Builds — reagiert sofort, nicht erst beim Audit.',
+                'summary'      => 'Erkennt unautorisierte Änderungen an Dateien und Builds, reagiert sofort, nicht erst beim Audit.',
                 'features'     => array('Tamper Detection', 'Echtzeit-Alarm', 'Integritäts-Trigger', 'Auto-Block Option'),
             ),
             'secruntime' => array(
                 'booking_name' => 'Secure Runtime Mode',
                 'title'        => 'Secure Runtime Mode',
-                'summary'      => 'Sicherer Frontend-Betrieb mit reduzierter Datenoffenlegung — sensible Logik bleibt im Hintergrund.',
+                'summary'      => 'Sicherer Frontend-Betrieb mit reduzierter Datenoffenlegung, sensible Logik bleibt im Hintergrund.',
                 'features'     => array('Runtime Härtung', 'Datenminimierung', 'DOM-Schutz', 'Sichere API-Aufrufe'),
             ),
             'secobfusc' => array(
@@ -200,19 +200,19 @@ class PAXdesign_Chat_Knowledge {
             'sectoken' => array(
                 'booking_name' => 'Token-Based Asset Access',
                 'title'        => 'Token-Based Asset Access',
-                'summary'      => 'Geschützte Assets nur über temporäre, signierte Tokens — kein dauerhafter Direktzugriff.',
+                'summary'      => 'Geschützte Assets nur über temporäre, signierte Tokens, kein dauerhafter Direktzugriff.',
                 'features'     => array('Temporäre Tokens', 'Signierte URLs', 'Ablauf-Logik', 'Zugriffskontrolle'),
             ),
             'seclicense' => array(
                 'booking_name' => 'Server-Side License Verification',
                 'title'        => 'Server-Side License Verification',
-                'summary'      => 'Serverseitige Lizenzprüfung — geschützte Funktionen erst nach validierter Freigabe.',
+                'summary'      => 'Serverseitige Lizenzprüfung, geschützte Funktionen erst nach validierter Freigabe.',
                 'features'     => array('Server-Lizenzcheck', 'Feature-Gating', 'Domain-Bindung', 'Renewal-Logik'),
             ),
             'secintegrity' => array(
                 'booking_name' => 'Integrity Check',
                 'title'        => 'Integrity Check',
-                'summary'      => 'Hash- und Checksum-Validierung — Dateiintegrität in Deploy und Runtime nachweisbar.',
+                'summary'      => 'Hash- und Checksum-Validierung, Dateiintegrität in Deploy und Runtime nachweisbar.',
                 'features'     => array('Hash-Validierung', 'Checksum Monitoring', 'Build-Verifikation', 'Manipulations-Report'),
             ),
         );
@@ -282,7 +282,7 @@ class PAXdesign_Chat_Knowledge {
             $s = $catalog[$key];
             $feat = implode(', ', array_slice($s['features'], 0, 3));
             $lines[] = sprintf(
-                '- %s (Buchung: „%s"): %s — u.a. %s',
+                '- %s (Buchung: „%s"): %s, u.a. %s',
                 $s['title'],
                 $s['booking_name'],
                 $s['summary'],
@@ -333,11 +333,11 @@ class PAXdesign_Chat_Knowledge {
 
         $style_block = $style !== '' ? $style : implode("\n", array(
             '- Antworte kurz: maximal 2–3 kurze Absätze oder 3–5 Bulletpoints.',
-            '- Immer auf Deutsch, professionell, freundlich, beratend — nicht zu technisch.',
+            '- Immer auf Deutsch, professionell, freundlich, beratend, nicht zu technisch.',
             '- Keine langen Leistungs- oder Preislisten am Anfang.',
             '- Stelle pro Antwort höchstens eine gezielte Rückfrage.',
             '- Qualifiziere Leads schrittweise: Projektart → Bestand/Neustart → Branche → Funktionen → Zeitrahmen → Budget (wenn passend) → Name → E-Mail → Telefon (optional).',
-            '- Nicht alle Fragen auf einmal — natürlich im Gespräch.',
+            '- Nicht alle Fragen auf einmal, natürlich im Gespräch.',
         ));
 
         $price_block = '';
@@ -354,10 +354,10 @@ class PAXdesign_Chat_Knowledge {
                 '## Terminbuchung & Aktionen',
                 '- Wenn der Kunde Interesse zeigt oder einen Termin, Beratung, Kontakt oder ein Angebot möchte: biete aktiv an: „Soll ich Ihnen direkt einen Termin zur ' . $cta_text . ' öffnen?"',
                 '- Bei Zustimmung (ja, bitte, gerne, ok, …) oder klarem Wunsch („Termin buchen", „Beratung buchen", „Kontakt aufnehmen", „Angebot") am ENDE der Antwort genau EINEN unsichtbaren Marker setzen:',
-                '  [[BOOKING:BOOKING_NAME]] — BOOKING_NAME exakt wie in der Leistungsliste (z.B. Website, AI Chatbot, CRM System).',
+                '  [[BOOKING:BOOKING_NAME]], BOOKING_NAME exakt wie in der Leistungsliste (z.B. Website, AI Chatbot, CRM System).',
                 '- Bei allgemeiner Beratung ohne konkreten Service: [[BOOKING:Beratung]]',
                 '- Marker erscheinen NUR am Ende, nie mitten im Text. Keine Erklärung der Marker.',
-                '- Der Marker öffnet im Widget automatisch die Terminbuchung — der Kunde muss nichts suchen.',
+                '- Der Marker öffnet im Widget automatisch die Terminbuchung, der Kunde muss nichts suchen.',
             ));
         }
 
@@ -369,7 +369,7 @@ class PAXdesign_Chat_Knowledge {
             $company['statement'],
             '',
             '## Deine Rolle',
-            '- Du kennst alle PAXDesign-Leistungen präzise und berätst wie ein erfahrener Mitarbeiter — nicht generisch.',
+            '- Du kennst alle PAXDesign-Leistungen präzise und berätst wie ein erfahrener Mitarbeiter, nicht generisch.',
             '- Du führst Besucher zum passenden Service und qualifizierst Leads für die Erstberatung.',
             '- Keine übertriebenen Versprechen, keine erfundenen Projektdetails.',
             '',
@@ -384,14 +384,14 @@ class PAXdesign_Chat_Knowledge {
             '- E-Mail: ' . $email,
             '- Termine: über das Booking-Widget auf der Website (wird per Marker geöffnet)',
             $price_block,
-            '## Leistungen (Quelle: paxdesign.at Leistungsseite — nutze exakt diese Begriffe)',
+            '## Leistungen (Quelle: paxdesign.at Leistungsseite, nutze exakt diese Begriffe)',
             $services_block,
             $booking_block,
             '',
             '## Live-Agent / Mitarbeiter',
             '- Wenn der Kunde einen echten Menschen, Mitarbeiter, Live Agent, Live Chat, Support-Mitarbeiter oder Ahmad sprechen möchte:',
-            '  1. Frage NICHT sofort weiter — stelle zuerst EINE kurze Qualifizierungsfrage:',
-            '     „Gerne. Damit ich Sie richtig weiterleiten kann: Worum geht es kurz — Website, AI Chatbot, Booking, Support oder ein anderes Thema?"',
+            '  1. Frage NICHT sofort weiter, stelle zuerst EINE kurze Qualifizierungsfrage:',
+            '     „Gerne. Damit ich Sie richtig weiterleiten kann: Worum geht es kurz: Website, AI Chatbot, Booking, Support oder ein anderes Thema?"',
             '  2. Nach der kurzen Antwort des Kunden: „Danke. Ich leite Sie jetzt an einen PAXDesign-Mitarbeiter weiter."',
             '- Während auf einen Mitarbeiter gewartet wird: keine langen KI-Antworten, keine Sales-Pitches.',
             '',
@@ -421,7 +421,7 @@ class PAXdesign_Chat_Knowledge {
 
         $user = get_user_by('id', $user_id);
         $lines = array(
-            '## Customer account context (private — only for this logged-in customer)',
+            '## Customer account context (private, only for this logged-in customer)',
             '- Use ONLY the facts below for account, project, request, appointment, invoice/file, and notification questions.',
             '- If the customer asks about their project, order, invoice, appointment, or files, answer from this data.',
             '- If nothing relevant exists below, say honestly that nothing is on file yet and offer next steps.',
@@ -440,7 +440,7 @@ class PAXdesign_Chat_Knowledge {
                 $lines[] = '- Projects (' . count($projects) . '):';
                 foreach (array_slice($projects, 0, 5) as $project) {
                     $summary = sprintf(
-                        '  • %s — %s | status: %s | progress: %d%%',
+                        '  • %s, %s | status: %s | progress: %d%%',
                         (string) ($project['ref'] ?? ''),
                         (string) ($project['title'] ?? ''),
                         (string) ($project['status'] ?? ''),
@@ -462,7 +462,7 @@ class PAXdesign_Chat_Knowledge {
                 $lines[] = '- Service requests / orders (' . count($orders) . '):';
                 foreach (array_slice($orders, 0, 5) as $order) {
                     $summary = sprintf(
-                        '  • %s — %s | status: %s',
+                        '  • %s, %s | status: %s',
                         (string) ($order['ref'] ?? ''),
                         (string) ($order['service_label'] ?? ''),
                         (string) ($order['status'] ?? '')
@@ -502,7 +502,7 @@ class PAXdesign_Chat_Knowledge {
                     $label = (string) ($file['file_name'] ?? 'file');
                     $kind = (string) ($file['kind'] ?? 'file');
                     $parent = (string) ($file['parent_title'] ?? '');
-                    $lines[] = '  • ' . $label . ' (' . $kind . ')' . ($parent !== '' ? ' — ' . $parent : '');
+                    $lines[] = '  • ' . $label . ' (' . $kind . ')' . ($parent !== '' ? ', ' . $parent : '');
                 }
             }
         }
@@ -520,7 +520,7 @@ class PAXdesign_Chat_Knowledge {
                 sanitize_text_field($session_id)
             ), ARRAY_A);
             if ($linked) {
-                $lines[] = '- Project linked to this chat: ' . (string) $linked['project_ref'] . ' — ' . (string) $linked['title'] . ' (' . (int) $linked['progress'] . '%, status ' . (string) $linked['status'] . ')';
+                $lines[] = '- Project linked to this chat: ' . (string) $linked['project_ref'] . ', ' . (string) $linked['title'] . ' (' . (int) $linked['progress'] . '%, status ' . (string) $linked['status'] . ')';
             }
         }
 

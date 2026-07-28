@@ -125,7 +125,7 @@ if ( ! function_exists( 'navein_apple_footer_icon' ) ) {
 			<div class="pax-af__newsletter-copy">
 				<p class="pax-af__eyebrow"><?php esc_html_e( 'Newsletter', 'navein' ); ?></p>
 				<h2 id="pax-af-news-title" class="pax-af__news-title"><?php esc_html_e( 'Bleiben Sie auf dem Laufenden.', 'navein' ); ?></h2>
-				<p class="pax-af__news-lede"><?php esc_html_e( 'Produkt-Updates, Launch-Hinweise und klare Insights — kompakt und ohne Rauschen.', 'navein' ); ?></p>
+				<p class="pax-af__news-lede"><?php esc_html_e( 'Produkt-Updates, Launch-Hinweise und klare Insights, kompakt und ohne Rauschen.', 'navein' ); ?></p>
 			</div>
 			<div class="pax-af__newsletter-form">
 				<div class="paxmc-footer-subscribe" lang="de" dir="ltr">
@@ -146,7 +146,7 @@ if ( ! function_exists( 'navein_apple_footer_icon' ) ) {
 		<nav class="pax-af__directory" data-pax-af-reveal aria-label="<?php esc_attr_e( 'Footer', 'navein' ); ?>">
 			<div class="pax-af__brand-col">
 				<a class="pax-af__brand" href="<?php echo esc_url( home_url( '/' ) ); ?>">PAX<span>design</span></a>
-				<p class="pax-af__tagline"><?php esc_html_e( 'Digitale Systeme mit Klarheit, Präzision und Premium-Feeling — entwickelt in Wien.', 'navein' ); ?></p>
+				<p class="pax-af__tagline"><?php esc_html_e( 'Digitale Systeme mit Klarheit, Präzision und Premium-Feeling, entwickelt in Wien.', 'navein' ); ?></p>
 				<ul class="pax-af__contact">
 					<li>
 						<a href="<?php echo esc_url( 'mailto:' . $email ); ?>">
@@ -260,7 +260,7 @@ if ( ! function_exists( 'navein_apple_footer_icon' ) ) {
 				<span><?php navein_apple_footer_icon( 'lock' ); ?></span>
 			</div>
 			<p class="pax-af-github-modal__badge"><?php esc_html_e( 'Private Repository', 'navein' ); ?></p>
-			<h3 id="pax-af-github-modal-title" class="pax-af-github-modal__title"><?php esc_html_e( 'Powered by GitHub — Not Open Source', 'navein' ); ?></h3>
+			<h3 id="pax-af-github-modal-title" class="pax-af-github-modal__title"><?php esc_html_e( 'Powered by GitHub. Not Open Source', 'navein' ); ?></h3>
 			<p class="pax-af-github-modal__text"><?php esc_html_e( 'PAXdesign nutzt GitHub für professionelle Entwicklung und Deployments. Unser Code ist proprietär, sicher verwaltet und nicht öffentlich verfügbar.', 'navein' ); ?></p>
 			<p class="pax-af-github-modal__text"><?php esc_html_e( 'Dieses Projekt ist nicht Open Source. Zugang nur für autorisierte Teammitglieder.', 'navein' ); ?></p>
 			<button type="button" class="pax-af-github-modal__btn" data-pax-github-close><?php esc_html_e( 'Verstanden', 'navein' ); ?></button>

@@ -24,7 +24,7 @@ $email       = 'info@paxdesign.at';
 				<span class="pax-aap-hero__accent">rund um die Uhr laufen.</span>
 			</h1>
 			<p class="pax-aap-hero__lede">
-				Monitoring, Updates, Backups und Priority Support — damit Ihre Website und Software stabil, sicher und performant bleiben.
+				Monitoring, Updates, Backups und Priority Support, damit Ihre Website und Software stabil, sicher und performant bleiben.
 			</p>
 			<div class="pax-aap-hero__cta">
 				<a class="pax-aap-btn pax-aap-btn--dark" href="<?php echo esc_url( $contact_url ); ?>">Support anfragen</a>
@@ -100,7 +100,7 @@ $email       = 'info@paxdesign.at';
 				<p class="pax-aap-eyebrow pax-aap-eyebrow--light">Monitoring</p>
 				<h3 class="pax-aap-feature__title">24/7 Monitoring</h3>
 				<p class="pax-aap-feature__text">
-					Kontinuierliche Überwachung von Verfügbarkeit, Performance und kritischen Diensten — mit klaren Alerts, bevor Nutzer etwas merken.
+					Kontinuierliche Überwachung von Verfügbarkeit, Performance und kritischen Diensten, mit klaren Alerts, bevor Nutzer etwas merken.
 				</p>
 				<ul class="pax-aap-list">
 					<li>Uptime‑ &amp; Response‑Monitoring</li>
@@ -127,7 +127,7 @@ $email       = 'info@paxdesign.at';
 				<p class="pax-aap-eyebrow">Security</p>
 				<h3 class="pax-aap-feature__title">Updates &amp; Security</h3>
 				<p class="pax-aap-feature__text">
-					Regelmäßige Updates, Sicherheitspatches und proaktives Security Management — für stabile Systeme und weniger Risiken.
+					Regelmäßige Updates, Sicherheitspatches und proaktives Security Management, für stabile Systeme und weniger Risiken.
 				</p>
 				<ul class="pax-aap-list pax-aap-list--dark">
 					<li>Core‑, Plugin‑ &amp; Dependency‑Updates</li>
@@ -154,7 +154,7 @@ $email       = 'info@paxdesign.at';
 				<p class="pax-aap-eyebrow pax-aap-eyebrow--light">Reliability</p>
 				<h3 class="pax-aap-feature__title">Backup &amp; Performance</h3>
 				<p class="pax-aap-feature__text">
-					Automatische Backups, schnelle Wiederherstellung und kontinuierliche Optimierung — damit Geschwindigkeit und Sicherheit Hand in Hand gehen.
+					Automatische Backups, schnelle Wiederherstellung und kontinuierliche Optimierung, damit Geschwindigkeit und Sicherheit Hand in Hand gehen.
 				</p>
 				<ul class="pax-aap-list">
 					<li>Automatische Backup‑Routinen</li>
@@ -180,15 +180,15 @@ $email       = 'info@paxdesign.at';
 			<div class="pax-aap-strip__row">
 				<div class="pax-aap-strip__item">
 					<h3>Priority Support</h3>
-					<p>Schneller, persönlicher Support durch erfahrene Techniker — mit klaren Reaktionszeiten und direkter Kommunikation.</p>
+					<p>Schneller, persönlicher Support durch erfahrene Techniker, mit klaren Reaktionszeiten und direkter Kommunikation.</p>
 				</div>
 				<div class="pax-aap-strip__item">
 					<h3>Care‑Pakete</h3>
-					<p>Basic, Professional oder Enterprise — abgestimmt auf Komplexität, kritische Systeme und gewünschte Reaktionsgeschwindigkeit.</p>
+					<p>Basic, Professional oder Enterprise, abgestimmt auf Komplexität, kritische Systeme und gewünschte Reaktionsgeschwindigkeit.</p>
 				</div>
 				<div class="pax-aap-strip__item">
 					<h3>Langfristiger Betrieb</h3>
-					<p>Wartung, Dokumentation und Weiterentwicklung — damit Ihr System dauerhaft auf Premium‑Niveau bleibt.</p>
+					<p>Wartung, Dokumentation und Weiterentwicklung, damit Ihr System dauerhaft auf Premium‑Niveau bleibt.</p>
 				</div>
 			</div>
 		</div>
@@ -205,7 +205,7 @@ $email       = 'info@paxdesign.at';
 					<span class="pax-aap-process__num">01</span>
 					<div>
 						<h3>Onboarding</h3>
-						<p>Systeme, Zugänge und Prioritäten erfassen — sauber und dokumentiert.</p>
+						<p>Systeme, Zugänge und Prioritäten erfassen, sauber und dokumentiert.</p>
 					</div>
 				</li>
 				<li class="pax-aap-process__step">
@@ -251,7 +251,7 @@ $email       = 'info@paxdesign.at';
 	<section class="pax-aap-cta" data-aap-reveal>
 		<div class="pax-aap-wrap pax-aap-wrap--narrow pax-aap-cta__inner">
 			<h2 class="pax-aap-display pax-aap-display--light">Benötigen Sie<br>sofortigen Support?</h2>
-			<p class="pax-aap-cta__text">Sprechen Sie mit uns — wir kümmern uns um Stabilität, Sicherheit und Performance Ihrer Systeme.</p>
+			<p class="pax-aap-cta__text">Sprechen Sie mit uns, wir kümmern uns um Stabilität, Sicherheit und Performance Ihrer Systeme.</p>
 			<div class="pax-aap-cta__actions">
 				<a class="pax-aap-btn pax-aap-btn--light" href="<?php echo esc_url( $contact_url ); ?>">Support anfragen</a>
 				<a class="pax-aap-link" href="tel:+4368120543638"><?php echo esc_html( $phone ); ?></a>

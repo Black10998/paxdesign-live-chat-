@@ -1,0 +1,182 @@
+name: Deploy remove emdash separators
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/remove-emdash-separators-cfc9'
+    paths:
+      - '.github/triggers/deploy-remove-emdash-separators'
+      - '.github/workflows/deploy-remove-emdash-separators.yml'
+      - 'navein/template-parts/pages/**'
+      - 'navein/template-parts/footer/apple-footer.php'
+      - 'navein/includes/class-navein-mega-menu-walker.php'
+      - 'navein/style.css'
+      - 'paxdesign-booking/templates/booking-widget.php'
+      - 'paxdesign-booking/paxdesign-booking.php'
+      - 'paxdesign-booking/includes/class-paxdesign-email-templates.php'
+      - 'paxdesign-booking/includes/class-paxdesign-chat-knowledge.php'
+      - 'paxdesign-booking/assets/js/chat-script.js'
+      - 'paxdesign-booking/assets/css/booking-styles.css'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy emdash removal
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          PLUGIN="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          retry() {
+            local attempt=1
+            local delay=4
+            until "$@"; do
+              if [ "$attempt" -ge 4 ]; then
+                echo "Command failed after ${attempt} attempts: $*" >&2
+                return 1
+              fi
+              echo "Retry ${attempt}/4 after ${delay}s: $*"
+              sleep "$delay"
+              attempt=$((attempt + 1))
+              delay=$((delay * 2))
+            done
+          }
+
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/template-parts/pages") \
+              $(printf '%q' "$THEME/template-parts/footer") \
+              $(printf '%q' "$THEME/includes") \
+              $(printf '%q' "$PLUGIN/templates") \
+              $(printf '%q' "$PLUGIN/includes") \
+              $(printf '%q' "$PLUGIN/assets/js") \
+              $(printf '%q' "$PLUGIN/assets/css") \
+              $(printf '%q' "$THEME/.remove-emdash-separators-backups")"
+
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "BACKUP=$(printf '%q' "$THEME/.remove-emdash-separators-backups/$STAMP")
+             mkdir -p \"\$BACKUP\"
+             echo \"Backup dir \$BACKUP\""
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/pages/homepage.php \
+            navein/template-parts/pages/webentwicklung.php \
+            navein/template-parts/pages/advanced-website-systems.php \
+            navein/template-parts/pages/wartung-support.php \
+            navein/template-parts/pages/softwareentwicklung.php \
+            navein/template-parts/pages/app-entwicklung.php \
+            "${REMOTE}:${THEME}/template-parts/pages/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/footer/apple-footer.php \
+            "${REMOTE}:${THEME}/template-parts/footer/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/includes/class-navein-mega-menu-walker.php \
+            "${REMOTE}:${THEME}/includes/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/templates/booking-widget.php \
+            "${REMOTE}:${PLUGIN}/templates/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/paxdesign-booking.php \
+            "${REMOTE}:${PLUGIN}/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/includes/class-paxdesign-email-templates.php \
+            paxdesign-booking/includes/class-paxdesign-chat-knowledge.php \
+            "${REMOTE}:${PLUGIN}/includes/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/assets/js/chat-script.js \
+            "${REMOTE}:${PLUGIN}/assets/js/"
+
+          retry rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/assets/css/booking-styles.css \
+            "${REMOTE}:${PLUGIN}/assets/css/"
+
+          # Replace em/en dash separators in WordPress page/post content + Elementor meta
+          retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && \
+             wp search-replace $' — ' $', ' wp_posts --include-columns=post_content,post_title,post_excerpt --precise --all-tables-with-prefix --skip-columns=guid 2>/dev/null || \
+             wp search-replace $' — ' $', ' wp_posts --include-columns=post_content,post_title,post_excerpt --precise 2>/dev/null || true; \
+             wp search-replace $' – ' $', ' wp_posts --include-columns=post_content,post_title,post_excerpt --precise 2>/dev/null || true; \
+             wp search-replace $' — ' $', ' wp_postmeta --include-columns=meta_value --precise 2>/dev/null || true; \
+             wp search-replace $' – ' $', ' wp_postmeta --include-columns=meta_value --precise 2>/dev/null || true; \
+             wp search-replace $' — sondern ' $', sondern ' wp_posts --include-columns=post_content --precise 2>/dev/null || true; \
+             (wp cache flush >/dev/null 2>&1 || true); \
+             (wp litespeed-purge all >/dev/null 2>&1 || true)"
+
+          echo "Deployed remove emdash separators theme 1.4.1 / booking 3.173.10"
+
+      - name: Verify live emdash removal
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          set +e
+          HOME_HTML=$(curl -sS -A "Mozilla/5.0" -o /tmp/home-emdash.html -w '%{http_code}' \
+            "https://paxdesign.at/?n=${stamp}")
+          WEB=$(curl -sS -A "Mozilla/5.0" -o /tmp/web-emdash.html -w '%{http_code}' \
+            "https://paxdesign.at/webentwicklung/?n=${stamp}")
+          set -e
+          echo "HOME $HOME_HTML | WEB $WEB"
+          test "$HOME_HTML" = "200"
+          test "$WEB" = "200"
+          grep -Fq 'Stange, sondern' /tmp/home-emdash.html
+          grep -Fq 'Stange — sondern' /tmp/home-emdash.html && exit 1 || true
+          # Tech ticker / hero content should not use spaced em dash separators
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          for name in ['/tmp/home-emdash.html', '/tmp/web-emdash.html']:
+              html = Path(name).read_text(errors='ignore')
+              # Count spaced em dashes in visible-ish body copy (exclude script/style roughly)
+              body = re.sub(r'<script[\s\S]*?</script>', '', html, flags=re.I)
+              body = re.sub(r'<style[\s\S]*?</style>', '', body, flags=re.I)
+              n = body.count(' — ')
+              print(name, 'spaced_emdash', n)
+              assert n == 0, f'{name} still has {n} spaced em dashes'
+          print('Em-dash separator verification passed.')
+          PY
+          grep -Eq 'style\.css\?ver=1\.4\.1' /tmp/home-emdash.html
+          echo "Remove emdash separators verification passed."
