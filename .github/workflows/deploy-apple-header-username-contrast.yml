@@ -95,41 +95,13 @@ jobs:
             navein/style.css \
             "${REMOTE}:${THEME}/"
 
-          # Soft-patch Additional CSS: white logged-in auth text → dark for light header.
+          # Soft-patch Additional CSS white auth text → black (legacy dark-header rules).
+          retry scp "${SSH_OPTS[@]}" \
+            .github/scripts/patch-apple-header-username-contrast.php \
+            "${REMOTE}:/tmp/patch-apple-header-username-contrast.php"
+
           retry ssh "${SSH_OPTS[@]}" "$REMOTE" \
-            "cd $(printf '%q' "$WP_PATH") && wp eval '
-\$post_id = (int) get_option(\"custom_css_post_id\");
-if (\$post_id > 0) {
-  \$post = get_post(\$post_id);
-  if (\$post && isset(\$post->post_content)) {
-    \$css = \$post->post_content;
-    \$orig = \$css;
-    \$css = preg_replace(
-      \"/(header\\\\s+#pdx-auth-bar\\\\s+\\\\.pdx-auth-trigger[^{]*\\\\{[^}]*?)color\\\\s*:\\\\s*#ffffff\\\\s*!important/is\",
-      \"\$1color: #000000 !important\",
-      \$css
-    );
-    \$css = preg_replace(
-      \"/(header\\\\s+button\\\\.pdx-auth-trigger\\\\.pdx-auth-trigger--(?:logged-in|verified)[^{]*\\\\{[^}]*?)color\\\\s*:\\\\s*#ffffff\\\\s*!important/is\",
-      \"\$1color: #000000 !important\",
-      \$css
-    );
-    \$css = preg_replace(
-      \"/(#pdx-auth-bar\\\\s+\\\\.pdx-name-with-badge\\\\s*\\\\{[^}]*?)color\\\\s*:\\\\s*#fff(?:fff)?\\\\s*!important/is\",
-      \"\$1color: #000000 !important\",
-      \$css
-    );
-    if (\$css !== \$orig) {
-      wp_update_post(array(\"ID\" => \$post_id, \"post_content\" => \$css));
-      echo \"Updated custom_css post {\$post_id}\\n\";
-    } else {
-      echo \"custom_css unchanged (no matching white auth rules)\\n\";
-    }
-  }
-} else {
-  echo \"No custom_css_post_id\\n\";
-}
-' && (wp cache flush >/dev/null 2>&1 || true)"
+            "cd $(printf '%q' "$WP_PATH") && wp eval-file /tmp/patch-apple-header-username-contrast.php && rm -f /tmp/patch-apple-header-username-contrast.php && (wp cache flush >/dev/null 2>&1 || true)"
 
           echo "Deployed Apple header username contrast 1.4.2"
 
