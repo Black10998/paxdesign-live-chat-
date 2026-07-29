@@ -146,9 +146,14 @@
   var LIVE_QUALIFY_TEXT   = 'Gerne. Damit ich Sie richtig weiterleiten kann: Worum geht es kurz — Website, AI Chatbot, Booking, Support oder ein anderes Thema?';
   var POLL_INTERVAL_MS    = 1200;
   var POLL_INTERVAL_OPEN_MS = 450;
-  var POLL_INTERVAL_HUMAN_MS = 250;
+  var POLL_INTERVAL_HUMAN_MS = 800;
   var POLL_INTERVAL_BACKGROUND_MS = 2000;
-  var STREAM_RESTART_MS   = 120;
+  var POLL_INTERVAL_SSE_MS = 10000;
+  var STREAM_RECONNECT_BASE_MS = 1500;
+  var STREAM_RECONNECT_MAX_MS = 30000;
+  var EDGE_BLOCK_PAUSE_MS = 300000;
+  var customerStreamReconnectDelay = STREAM_RECONNECT_BASE_MS;
+  var edgeBlockUntil = 0;
   var widgetOpen          = false;
   var pageVisible         = !document.hidden;
   var streamSource        = null;
@@ -211,15 +216,47 @@
   }
 
   function scheduleCustomerStreamRestart(delayMs) {
+    if (isEdgeBlocked()) return;
     if (streamRestartTimer) clearTimeout(streamRestartTimer);
+    var delay = typeof delayMs === 'number' ? delayMs : customerStreamReconnectDelay;
     streamRestartTimer = window.setTimeout(function () {
       streamRestartTimer = null;
       startCustomerStream();
-    }, delayMs || 600);
+      customerStreamReconnectDelay = Math.min(customerStreamReconnectDelay * 2, STREAM_RECONNECT_MAX_MS);
+    }, delay);
   }
 
   function customerStreamConnected() {
     return streamSource && streamSource.readyState === EventSource.OPEN;
+  }
+
+  function isEdgeBlocked() {
+    return Date.now() < edgeBlockUntil;
+  }
+
+  function isEdgeForbiddenResponse(res, bodyText) {
+    if (!res || res.status !== 403) return false;
+    var body = bodyText || '';
+    return body.indexOf('Access to this resource on the server is denied') !== -1;
+  }
+
+  function markEdgeBlocked() {
+    if (isEdgeBlocked()) return;
+    edgeBlockUntil = Date.now() + EDGE_BLOCK_PAUSE_MS;
+    stopCustomerStream();
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = null;
+    }
+    window.setTimeout(function () {
+      edgeBlockUntil = 0;
+      customerStreamReconnectDelay = STREAM_RECONNECT_BASE_MS;
+      if (pageVisible && canUseChat()) {
+        pollUpdates();
+        scheduleLivePolling();
+        if (widgetOpen || isPersistentAccountChat()) startCustomerStream();
+      }
+    }, EDGE_BLOCK_PAUSE_MS);
   }
 
   function handleCustomerStreamPayload(data) {
@@ -269,9 +306,11 @@
 
   function onRealtimeHandlerChange(handler, name) {
     applyHandlerState(handler, name || '');
-    pollUpdates();
+    if (!customerStreamConnected()) {
+      pollUpdates();
+    }
     scheduleLivePolling();
-    scheduleCustomerStreamRestart(STREAM_RESTART_MS);
+    scheduleCustomerStreamRestart(customerStreamReconnectDelay);
   }
 
   function startCustomerStream() {
@@ -280,11 +319,16 @@
     if (!getSessionId()) return;
     if (!widgetOpen && !isPersistentAccountChat()) return;
     if (!isPersistentAccountChat() && chatHandler === 'closed') return;
+    if (isEdgeBlocked()) return;
     stopCustomerStream();
     var bustCache = streamCacheBustNext;
     streamCacheBustNext = false;
     try {
       streamSource = new EventSource(customerStreamUrl(bustCache));
+      streamSource.onopen = function () {
+        customerStreamReconnectDelay = STREAM_RECONNECT_BASE_MS;
+        scheduleLivePolling();
+      };
       streamSource.addEventListener('chat', function (event) {
         try {
           handleCustomerStreamPayload(JSON.parse(event.data));
@@ -303,10 +347,10 @@
           streamSource.close();
           streamSource = null;
         }
-        scheduleCustomerStreamRestart(STREAM_RESTART_MS);
+        scheduleCustomerStreamRestart();
       };
     } catch (e) {
-      scheduleCustomerStreamRestart(1200);
+      scheduleCustomerStreamRestart(STREAM_RECONNECT_BASE_MS);
     }
   }
 
@@ -1274,7 +1318,7 @@
       sessionStorage.setItem(SESSION_KEY, sessionId);
     } catch (e) {}
     if (opts.fromServer) {
-      scheduleCustomerStreamRestart(STREAM_RESTART_MS);
+      scheduleCustomerStreamRestart(customerStreamReconnectDelay);
     }
     loadEntryChoice();
     loadCustomerName();
@@ -2626,20 +2670,25 @@
     scheduleLivePolling();
   }
 
-  function scheduleLivePolling() {
-    if (pollTimer) clearInterval(pollTimer);
-    if (!pageVisible || !canUseChat()) {
-      pollTimer = null;
-      return;
-    }
-    var interval = POLL_INTERVAL_BACKGROUND_MS;
+  function effectivePollIntervalMs() {
+    if (customerStreamConnected()) return POLL_INTERVAL_SSE_MS;
+    if (!pageVisible) return POLL_INTERVAL_BACKGROUND_MS;
     if (widgetOpen) {
-      interval = (chatHandler === 'admin' || chatHandler === 'live_request')
+      return (chatHandler === 'admin' || chatHandler === 'live_request')
         ? POLL_INTERVAL_HUMAN_MS
         : POLL_INTERVAL_OPEN_MS;
     }
+    return POLL_INTERVAL_BACKGROUND_MS;
+  }
+
+  function scheduleLivePolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    if (!pageVisible || !canUseChat() || isEdgeBlocked()) {
+      pollTimer = null;
+      return;
+    }
     pollUpdates();
-    pollTimer = window.setInterval(pollUpdates, interval);
+    pollTimer = window.setInterval(pollUpdates, effectivePollIntervalMs());
   }
 
   document.addEventListener('visibilitychange', function () {
@@ -2712,7 +2761,7 @@
     updateInputState();
     updateEndButtonUi();
     scheduleLivePolling();
-    scheduleCustomerStreamRestart(STREAM_RESTART_MS);
+    scheduleCustomerStreamRestart(customerStreamReconnectDelay);
   }
 
   function updateHandlerUi() {
@@ -2904,6 +2953,10 @@
       if (strict) return readinessReject(step, 'network', 'readinessNetworkFailed', { reason: 'poll_unavailable' });
       return Promise.resolve(null);
     }
+    if (isEdgeBlocked()) {
+      if (strict) return readinessReject(step, 'network', 'readinessNetworkFailed', { reason: 'edge_blocked' });
+      return Promise.resolve(null);
+    }
     var formData = new FormData();
     formData.append('action', 'paxdesign_chat_poll');
     formData.append('nonce', config.nonce);
@@ -2912,8 +2965,20 @@
     formData.append('since', String(pollSeq));
 
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return safeJson(res).then(function (json) { return { res: res, json: json }; }); })
+      .then(function (res) {
+        return res.text().then(function (text) {
+          if (isEdgeForbiddenResponse(res, text)) {
+            markEdgeBlocked();
+            if (strict) return readinessReject(step, 'network', 'readinessNetworkFailed', { reason: 'edge_blocked' });
+            return null;
+          }
+          var json = null;
+          try { json = JSON.parse(text); } catch (e) { json = null; }
+          return { res: res, json: json };
+        });
+      })
       .then(function (result) {
+        if (!result) return null;
         var json = result.json;
         if (handleAuthGateResponse(json)) {
           if (strict) return readinessReject(step, 'auth', 'readinessAuthFailed', { reason: 'login_required' });

@@ -89,9 +89,18 @@
     var pollSeq = 0;
     var listTimer = null;
     var msgTimer = null;
-    var LIST_POLL_MS = 2000;
-    var MSG_POLL_MS = 400;
-    var LIST_POLL_ACTIVE_MS = 1200;
+    var LIST_POLL_MS = 8000;
+    var MSG_POLL_MS = 2500;
+    var LIST_POLL_ACTIVE_MS = 5000;
+    var LIST_POLL_SSE_MS = 60000;
+    var MSG_POLL_SSE_MS = 8000;
+    var EDGE_BLOCK_PAUSE_MS = 300000;
+    var STREAM_RECONNECT_BASE_MS = 1500;
+    var STREAM_RECONNECT_MAX_MS = 30000;
+    var PRESENCE_TOUCH_MS = 60000;
+    var edgeBlockUntil = 0;
+    var streamReconnectDelay = STREAM_RECONNECT_BASE_MS;
+    var presenceTimer = null;
     var pageVisible = !document.hidden;
     var streamSource = null;
     var streamEventSince = 0;
@@ -109,6 +118,71 @@
 
     function adminStreamConnected() {
       return streamSource && streamSource.readyState === EventSource.OPEN;
+    }
+
+    function isEdgeBlocked() {
+      return Date.now() < edgeBlockUntil;
+    }
+
+    function isEdgeForbiddenResponse(xhr) {
+      if (!xhr || xhr.status !== 403) return false;
+      var body = xhr.responseText || '';
+      return body.indexOf('Access to this resource on the server is denied') !== -1;
+    }
+
+    function updateConnectionStatus(online) {
+      var $dot = $('.pax-live-app__status-dot');
+      var $status = $('#paxLiveConnectionStatus');
+      if ($dot.length) {
+        $dot.toggleClass('pax-live-app__status-dot--offline', !online);
+      }
+      if ($status.length) {
+        $status.text(online ? 'Online' : 'Offline');
+      }
+    }
+
+    function markEdgeBlocked() {
+      if (isEdgeBlocked()) return;
+      edgeBlockUntil = Date.now() + EDGE_BLOCK_PAUSE_MS;
+      stopAdminStream();
+      if (listTimer) { clearInterval(listTimer); listTimer = null; }
+      if (msgTimer) { clearInterval(msgTimer); msgTimer = null; }
+      updateConnectionStatus(false);
+      window.setTimeout(function () {
+        if (!pageVisible) return;
+        edgeBlockUntil = 0;
+        streamReconnectDelay = STREAM_RECONNECT_BASE_MS;
+        loadList();
+        scheduleListPoll();
+        scheduleMsgPoll();
+        startAdminStream();
+      }, EDGE_BLOCK_PAUSE_MS);
+    }
+
+    function handleTransportFailure(xhr) {
+      if (isEdgeForbiddenResponse(xhr)) {
+        markEdgeBlocked();
+        return true;
+      }
+      updateConnectionStatus(false);
+      return false;
+    }
+
+    function effectiveListPollMs() {
+      if (adminStreamConnected()) return LIST_POLL_SSE_MS;
+      return selectedSession ? LIST_POLL_ACTIVE_MS : LIST_POLL_MS;
+    }
+
+    function effectiveMsgPollMs() {
+      if (adminStreamConnected()) return MSG_POLL_SSE_MS;
+      return MSG_POLL_MS;
+    }
+
+    function onAdminStreamOpen() {
+      streamReconnectDelay = STREAM_RECONNECT_BASE_MS;
+      updateConnectionStatus(true);
+      scheduleListPoll();
+      scheduleMsgPoll();
     }
 
     function adminStreamUrl() {
@@ -187,7 +261,7 @@
         if (!sid || sid === selectedSession) {
           updateHandlerUi(payload.handler, payload.admin_name || '');
           if (payload.message) renderMessages([payload.message], false);
-          pollMessages();
+          if (!adminStreamConnected()) pollMessages();
         }
         scheduleDebouncedListRefresh();
         return;
@@ -236,18 +310,24 @@
     }
 
     function scheduleAdminStreamRestart(delayMs) {
+      if (isEdgeBlocked()) return;
       if (streamRestartTimer) clearTimeout(streamRestartTimer);
+      var delay = typeof delayMs === 'number' ? delayMs : streamReconnectDelay;
       streamRestartTimer = setTimeout(function () {
         streamRestartTimer = null;
         startAdminStream();
-      }, delayMs || 600);
+        streamReconnectDelay = Math.min(streamReconnectDelay * 2, STREAM_RECONNECT_MAX_MS);
+      }, delay);
     }
 
     function startAdminStream() {
-      if (!pageVisible || typeof EventSource === 'undefined') return;
+      if (!pageVisible || typeof EventSource === 'undefined' || isEdgeBlocked()) return;
       stopAdminStream();
       try {
         streamSource = new EventSource(adminStreamUrl());
+        streamSource.onopen = function () {
+          onAdminStreamOpen();
+        };
         streamSource.addEventListener('chat', function (event) {
           try {
             handleStreamPayload(JSON.parse(event.data));
@@ -261,24 +341,37 @@
             streamSource.close();
             streamSource = null;
           }
-          scheduleAdminStreamRestart(120);
+          updateConnectionStatus(false);
+          scheduleAdminStreamRestart();
         };
       } catch (e) {
-        scheduleAdminStreamRestart(1200);
+        scheduleAdminStreamRestart(STREAM_RECONNECT_BASE_MS);
       }
     }
 
     function scheduleListPoll() {
       if (listTimer) clearInterval(listTimer);
-      if (!pageVisible) return;
-      var interval = selectedSession ? LIST_POLL_ACTIVE_MS : LIST_POLL_MS;
-      listTimer = setInterval(loadList, interval);
+      if (!pageVisible || isEdgeBlocked()) return;
+      listTimer = setInterval(loadList, effectiveListPollMs());
     }
 
     function scheduleMsgPoll() {
       if (msgTimer) clearInterval(msgTimer);
-      if (!pageVisible || !selectedSession) return;
-      msgTimer = setInterval(pollMessages, MSG_POLL_MS);
+      if (!pageVisible || !selectedSession || isEdgeBlocked()) return;
+      msgTimer = setInterval(pollMessages, effectiveMsgPollMs());
+    }
+
+    function touchTeamPresence() {
+      if (isEdgeBlocked()) return;
+      ajax('paxdesign_chat_live_presence').fail(function (xhr) {
+        handleTransportFailure(xhr);
+      });
+    }
+
+    function schedulePresenceTouch() {
+      if (presenceTimer) clearInterval(presenceTimer);
+      touchTeamPresence();
+      presenceTimer = setInterval(touchTeamPresence, PRESENCE_TOUCH_MS);
     }
 
     if ('serviceWorker' in navigator) {
@@ -1031,7 +1124,9 @@
       data = data || {};
       data.action = action;
       data.nonce = cfg.nonce;
-      return $.post(cfg.ajaxUrl, data);
+      return $.post(cfg.ajaxUrl, data).fail(function (xhr) {
+        handleTransportFailure(xhr);
+      });
     }
 
     function roleLabel(role, msg) {
@@ -1614,6 +1709,7 @@
     }
 
     function loadList() {
+      if (isEdgeBlocked()) return $.Deferred().reject().promise();
       if (!$list.children('.pax-live-dashboard__item').length) {
         renderListLoadingSkeleton();
       }
@@ -1622,8 +1718,10 @@
           if (!res || !res.success) {
             $list.attr('aria-busy', 'false');
             $list.html('<p class="pax-live-dashboard__error">Chats konnten nicht geladen werden.</p>');
+            updateConnectionStatus(false);
             return;
           }
+          updateConnectionStatus(true);
           var sessions = res.data.sessions || [];
           processListNotifications(sessions);
           renderList(sessions);
@@ -1631,9 +1729,11 @@
             updateSessionHeader(knownSessions[selectedSession] || {});
           }
         })
-        .fail(function () {
+        .fail(function (xhr) {
           $list.attr('aria-busy', 'false');
-          $list.html('<p class="pax-live-dashboard__error">Verbindungsfehler beim Laden der Chats.</p>');
+          if (!isEdgeBlocked()) {
+            $list.html('<p class="pax-live-dashboard__error">Verbindungsfehler beim Laden der Chats.</p>');
+          }
         });
     }
 
@@ -2441,6 +2541,7 @@
       loadSession(sessionId, true);
       pollMessages();
       scheduleMsgPoll();
+      scheduleListPoll();
       startAdminStream();
       syncSelectedListItem();
       updateMobilePanels();
@@ -2723,6 +2824,7 @@
     }
     loadList();
     scheduleListPoll();
+    schedulePresenceTouch();
     startAdminStream();
 
     window.setTimeout(function () {

@@ -28,7 +28,7 @@ if (!defined('ABSPATH')) {
         <p class="pax-live-console__subtitle pax-live-console__agent-role"><?php echo esc_html(PAXdesign_Chat_Live::get_agent_role()); ?></p>
         <p class="pax-live-console__subtitle pax-live-console__subtitle-meta">
           <span class="pax-live-app__status-dot" aria-hidden="true"></span>
-          <?php echo esc_html($agent_name); ?> · Online
+          <?php echo esc_html($agent_name); ?> · <span id="paxLiveConnectionStatus">Online</span>
         </p>
       </div>
     </div>

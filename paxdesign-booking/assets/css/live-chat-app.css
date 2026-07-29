@@ -37,6 +37,11 @@
   vertical-align: middle;
 }
 
+.pax-live-app__status-dot--offline {
+  background: #94a3b8;
+  box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.18);
+}
+
 .pax-live-app__stats .pax-live-console__stat {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--plc-app-border);

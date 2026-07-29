@@ -366,6 +366,7 @@ class PAXdesign_Chat_Live {
         add_action('wp_ajax_paxdesign_chat_live_request', array($this, 'handle_live_request'));
         add_action('wp_ajax_nopriv_paxdesign_chat_live_request', array($this, 'handle_live_request'));
         add_action('wp_ajax_paxdesign_chat_live_list', array($this, 'handle_live_list'));
+        add_action('wp_ajax_paxdesign_chat_live_presence', array($this, 'handle_live_presence'));
         add_action('wp_ajax_paxdesign_chat_live_session', array($this, 'handle_live_session'));
         add_action('wp_ajax_paxdesign_chat_live_takeover', array($this, 'handle_takeover'));
         add_action('wp_ajax_paxdesign_chat_live_decline', array($this, 'handle_decline'));
@@ -903,6 +904,19 @@ class PAXdesign_Chat_Live {
         check_ajax_referer('paxdesign_admin_nonce', 'nonce');
         if (!current_user_can('manage_options')) {
             wp_send_json_error(array('message' => 'Keine Berechtigung.'), 403);
+        }
+    }
+
+    /**
+     * Mark the current staff member as online for team presence.
+     */
+    private function touch_staff_presence_if_applicable() {
+        $user_id = get_current_user_id();
+        if ($user_id <= 0 || !class_exists('PAXdesign_Live_Chat_Permissions')) {
+            return;
+        }
+        if (PAXdesign_Live_Chat_Permissions::has_live_chat_access($user_id)) {
+            PAXdesign_Live_Chat_Permissions::touch_team_presence($user_id);
         }
     }
 
@@ -1492,6 +1506,7 @@ class PAXdesign_Chat_Live {
 
     public function handle_admin_stream() {
         $this->verify_admin_stream_access();
+        $this->touch_staff_presence_if_applicable();
 
         $session_id = $this->sanitize_session_id(
             isset($_GET['session_id']) ? wp_unslash($_GET['session_id']) : ''
@@ -1861,6 +1876,7 @@ class PAXdesign_Chat_Live {
 
     public function handle_live_list() {
         $this->verify_admin_nonce();
+        $this->touch_staff_presence_if_applicable();
 
         $data = $this->get_live_list_data();
         if (is_wp_error($data)) {
@@ -1873,6 +1889,12 @@ class PAXdesign_Chat_Live {
         }
 
         wp_send_json_success($data);
+    }
+
+    public function handle_live_presence() {
+        $this->verify_admin_nonce();
+        $this->touch_staff_presence_if_applicable();
+        wp_send_json_success(array('ok' => true));
     }
 
     public function handle_tour_complete() {
