@@ -77,18 +77,24 @@
 
 body.pdx-auth-page-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
 body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
-  color: #fff;
-  background: #0071e3;
-  border-color: #0071e3;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  color: #0071e3;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  font-weight: 400;
+  font-size: 14px;
+  padding: 0 10px;
+  min-height: 32px;
 }
 
 body.pdx-auth-page-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
 body.pdx-auth-page-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus,
 body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
 body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
-  background: #0077ed;
-  border-color: #0077ed;
+  background: transparent;
+  border: 0;
+  color: #0077ed;
+  text-decoration: underline;
 }
 
 #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,

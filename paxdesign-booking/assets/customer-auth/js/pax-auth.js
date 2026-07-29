@@ -882,13 +882,25 @@
     }
   }
 
+  function isAuthPageFormMount() {
+    return !!(inlineAuthMount && inlineAuthMount.context === 'page' && inlineAuthMount.compact);
+  }
+
+  function appleSubmitBtn(label) {
+    return '<div class="pdx-auth-submit-wrap">' +
+      '<button type="submit" class="pdx-auth-submit">' + escHtml(label) + '</button></div>';
+  }
+
   function submitBtn(label, iconName) {
+    if (isAuthPageFormMount()) {
+      return appleSubmitBtn(label);
+    }
     return '<div class="pdx-auth-submit-wrap">' + pearlBtn(label, { icon: iconName || 'check' }) + '</div>';
   }
 
   function setFormLoading(loading) {
     var root = activeAuthRoot();
-    var btn = root && root.querySelector('.pdx-btn-pearl');
+    var btn = root && (root.querySelector('.pdx-auth-submit') || root.querySelector('.pdx-btn-pearl'));
     if (btn) {
       btn.disabled = !!loading;
       btn.classList.toggle('is-loading', !!loading);
