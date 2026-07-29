@@ -85,6 +85,7 @@ class PAXdesign_Auth_Page {
         }
 
         update_option(self::OPTION_PAGE_ID, (int) $page_id, false);
+        flush_rewrite_rules(false);
         return (int) $page_id;
     }
 

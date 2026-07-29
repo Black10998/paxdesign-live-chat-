@@ -1287,12 +1287,15 @@ function paxdesign_booking_upgrade_live_notify_defaults() {
  * Ensure the dedicated /account authentication page exists after updates.
  */
 function paxdesign_booking_upgrade_auth_page() {
-    if (get_option('paxdesign_auth_page_version') === '1') {
+    require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/auth/class-paxdesign-auth-page.php';
+    $page_id = (int) get_option(PAXdesign_Auth_Page::OPTION_PAGE_ID, 0);
+    if (get_option('paxdesign_auth_page_version') === '1' && $page_id > 0 && get_post($page_id)) {
         return;
     }
-    require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/auth/class-paxdesign-auth-page.php';
-    PAXdesign_Auth_Page::ensure_page();
-    update_option('paxdesign_auth_page_version', '1', false);
+    $page_id = PAXdesign_Auth_Page::ensure_page();
+    if ($page_id > 0) {
+        update_option('paxdesign_auth_page_version', '1', false);
+    }
 }
 
 /**
