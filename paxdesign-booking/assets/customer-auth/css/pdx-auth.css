@@ -59,6 +59,38 @@
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
 }
 
+/* High-contrast Sign Up on light headers / account page */
+@media (prefers-color-scheme: light) {
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
+    color: #fff;
+    background: #0071e3;
+    border-color: #0071e3;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+  }
+
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
+    background: #0077ed;
+    border-color: #0077ed;
+  }
+}
+
+body.pdx-auth-page-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
+  color: #fff;
+  background: #0071e3;
+  border-color: #0071e3;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+body.pdx-auth-page-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
+body.pdx-auth-page-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus,
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
+  background: #0077ed;
+  border-color: #0077ed;
+}
+
 #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
 #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
   border-color: rgba(255, 224, 166, 0.75);

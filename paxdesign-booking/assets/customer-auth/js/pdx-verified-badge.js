@@ -19,8 +19,7 @@
   function svgMarkup(size) {
     return '<svg class="pdx-vb" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' +
       '<circle class="pdx-vb__bg" cx="12" cy="12" r="10"/>' +
-      '<ellipse class="pdx-vb__shine" cx="12" cy="9" rx="5.5" ry="3.75"/>' +
-      '<path class="pdx-vb__check" d="M7.75 12.25l2.65 2.65 5.85-6.1"/>' +
+      '<path class="pdx-vb__check" d="M7.6 12.3l2.5 2.5 6.3-6.4"/>' +
     '</svg>';
   }
 

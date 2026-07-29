@@ -1,13 +1,12 @@
 /**
- * PAXDesign Verified Badge — premium blue circle + white check (original identity asset).
+ * PAXDesign Verified Badge — official-style blue verification mark.
  */
 
 :root {
-  --pdx-vb-fill: #228be6;
-  --pdx-vb-fill-deep: #1c6fcc;
-  --pdx-vb-shine: rgba(255, 255, 255, 0.22);
+  --pdx-vb-fill: #1d9bf0;
+  --pdx-vb-fill-deep: #1781cc;
   --pdx-vb-check: #ffffff;
-  --pdx-vb-glow: rgba(34, 139, 230, 0.42);
+  --pdx-vb-glow: rgba(29, 155, 240, 0.35);
   --pdx-vb-tip-bg: rgba(12, 14, 18, 0.94);
   --pdx-vb-tip-text: #f4f6f8;
   --pdx-vb-tip-border: rgba(255, 255, 255, 0.1);
@@ -15,9 +14,9 @@
 
 @media (prefers-color-scheme: light) {
   :root {
-    --pdx-vb-fill: #1a73e8;
-    --pdx-vb-fill-deep: #1558b0;
-    --pdx-vb-glow: rgba(26, 115, 232, 0.38);
+    --pdx-vb-fill: #1d9bf0;
+    --pdx-vb-fill-deep: #1781cc;
+    --pdx-vb-glow: rgba(29, 155, 240, 0.32);
     --pdx-vb-tip-bg: rgba(255, 255, 255, 0.98);
     --pdx-vb-tip-text: #1a1d21;
     --pdx-vb-tip-border: rgba(0, 0, 0, 0.08);
@@ -29,6 +28,7 @@
 .pdx-account-status-row,
 .pdx-auth-menu-status,
 .pdx-account-profile-head,
+.pdx-account-sidebar-name,
 .pdx-admin-name-with-badge {
   display: inline-flex;
   align-items: center;
@@ -55,34 +55,30 @@
 }
 
 .pdx-verified-badge--inline {
-  margin-left: 1px;
+  margin-left: 2px;
 }
 
 .pdx-vb {
   display: block;
   overflow: visible;
-  filter: drop-shadow(0 1px 2px var(--pdx-vb-glow));
+  filter: drop-shadow(0 1px 1px var(--pdx-vb-glow));
 }
 
 .pdx-vb__bg {
   fill: var(--pdx-vb-fill);
 }
 
-.pdx-vb__shine {
-  fill: var(--pdx-vb-shine);
-}
-
 .pdx-vb__check {
   fill: none;
   stroke: var(--pdx-vb-check);
-  stroke-width: 2.25;
+  stroke-width: 2.4;
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;
 }
 
 .pdx-verified-badge:focus-visible .pdx-vb {
-  filter: drop-shadow(0 0 0 2px rgba(34, 139, 230, 0.45)) drop-shadow(0 1px 2px var(--pdx-vb-glow));
+  filter: drop-shadow(0 0 0 2px rgba(29, 155, 240, 0.45)) drop-shadow(0 1px 1px var(--pdx-vb-glow));
 }
 
 .pdx-verified-badge[data-pdx-tip]::after {

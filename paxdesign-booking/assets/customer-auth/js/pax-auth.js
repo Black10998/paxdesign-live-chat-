@@ -18,6 +18,17 @@
   var dashboardData = null;
   var authPageEl = null;
   var authPageFormEl = null;
+  var accountAppEl = null;
+  var accountSidebarEl = null;
+  var accountMainEl = null;
+  var accountState = {
+    section: 'overview',
+    detail: null,
+    dashboard: null,
+    profile: null,
+    files: null,
+    loaded: false,
+  };
   var sessionSyncInFlight = false;
   var sessionSyncTimer = null;
   var SESSION_SYNC_INTERVAL_MS = 45000;
@@ -84,6 +95,11 @@
   }
 
   /** Server-driven PAXDesign verified badge — only when verified === true from API. */
+  function accountStatusText(verified) {
+    if (user.is_admin) return 'Administrator';
+    return verified ? 'Verified' : 'Pending verification';
+  }
+
   function verifiedBadgeHtml(verified, opts) {
     if (window.PDXVerifiedBadge) return window.PDXVerifiedBadge.render(verified, opts);
     return '';
@@ -504,10 +520,7 @@
       head.innerHTML =
         '<div class="pdx-auth-menu-name">' + nameWithBadge(user.display_name || 'Account', user.verified, { size: 15, context: 'account' }) + '</div>' +
         '<div class="pdx-auth-menu-email">' + escHtml(user.email || '') + '</div>' +
-        '<div class="pdx-auth-menu-status">' +
-          escHtml(accountStatusLabel()) +
-          verifiedBadgeHtml(user.verified, { size: 13, inline: true, context: 'email' }) +
-        '</div>';
+        '<div class="pdx-auth-menu-status">' + escHtml(accountStatusLabel()) + '</div>';
       authMenu.removeAttribute('hidden');
     } else {
       if (head) head.innerHTML = '';
@@ -547,6 +560,11 @@
   }
 
   function openProfileOverlay() {
+    if (C.accountPageUrl || isAuthPage()) {
+      if (isAuthPage()) setAccountSection('personal');
+      else window.location.href = accountPageUrl() + '#/personal';
+      return;
+    }
     if (!profileOverlay) {
       profileOverlay = document.createElement('div');
       profileOverlay.id = 'pdx-profile-overlay';
@@ -582,7 +600,7 @@
     body.innerHTML =
       '<div class="pdx-profile-row"><span class="pdx-profile-label">Full Name</span><span class="pdx-profile-value">' + nameWithBadge(user.display_name || '—', user.verified, { size: 15, context: 'account' }) + '</span></div>' +
       '<div class="pdx-profile-row"><span class="pdx-profile-label">Email</span><span class="pdx-profile-value">' + escHtml(user.email || '—') + '</span></div>' +
-      '<div class="pdx-profile-row"><span class="pdx-profile-label">Account Status</span><span class="pdx-profile-value pdx-profile-value--status">' + escHtml(accountStatusLabel()) + verifiedBadgeHtml(user.verified, { size: 14, inline: true, context: user.verified ? 'email' : 'account' }) + '</span></div>' +
+      '<div class="pdx-profile-row"><span class="pdx-profile-label">Account Status</span><span class="pdx-profile-value pdx-profile-value--status">' + escHtml(accountStatusText(user.verified)) + '</span></div>' +
       '<div class="pdx-profile-row"><span class="pdx-profile-label">Login Status</span><span class="pdx-profile-value">' + (user.logged_in ? 'Signed in' : 'Signed out') + '</span></div>';
     profileOverlay.classList.add('is-open');
     document.body.classList.add('pdx-no-scroll');
@@ -987,6 +1005,9 @@
     authPageEl = document.getElementById('pdx-auth-page');
     if (!authPageEl) return;
     authPageFormEl = document.getElementById('pdx-auth-page-form');
+    accountAppEl = document.getElementById('pdx-account-app');
+    accountSidebarEl = document.getElementById('pdx-account-sidebar');
+    accountMainEl = document.getElementById('pdx-account-main');
     var params = new URLSearchParams(window.location.search);
     var initialView = params.get('view') || 'login';
     if (initialView === 'reset' || params.get('pdx_reset') === '1') {
@@ -999,11 +1020,307 @@
       currentView = 'login';
     }
     bindAuthPageControls();
+    parseAccountSectionFromHash();
     updateAuthPagePanels();
     if (!user.logged_in) {
       renderAuthForm(authPageFormEl);
       syncAuthPageSegment();
     }
+    window.addEventListener('hashchange', parseAccountSectionFromHash);
+  }
+
+  function accountNavGroups() {
+    return [
+      {
+        label: 'Account',
+        items: [
+          { id: 'overview', label: 'Overview', icon: 'dashboard' },
+          { id: 'personal', label: 'Personal Information', icon: 'user' },
+          { id: 'security', label: 'Security', icon: 'lock' },
+        ],
+      },
+      {
+        label: 'Your Work',
+        items: [
+          { id: 'projects', label: 'Projects', icon: 'folder' },
+          { id: 'orders', label: 'Orders & Requests', icon: 'receipt' },
+          { id: 'files', label: 'Files & Invoices', icon: 'file' },
+        ],
+      },
+      {
+        label: 'Support',
+        items: [
+          { id: 'support', label: 'Messages', icon: 'message' },
+          { id: 'services', label: 'Services', icon: 'package' },
+        ],
+      },
+    ];
+  }
+
+  function accountSectionTitle(section) {
+    var titles = {
+      overview: 'Overview',
+      personal: 'Personal Information',
+      security: 'Security',
+      projects: 'Projects',
+      orders: 'Orders & Requests',
+      files: 'Files & Invoices',
+      support: 'Messages',
+      services: 'Services',
+    };
+    return titles[section] || 'Account';
+  }
+
+  function accountSectionLead(section) {
+    var leads = {
+      overview: 'A snapshot of your projects, requests, and account activity.',
+      personal: 'Update your name and contact details.',
+      security: 'Manage your password and account security.',
+      projects: 'Track active work and deliverables.',
+      orders: 'View requests, billing, and payment history.',
+      files: 'Download shared files and invoices.',
+      support: 'Continue your conversation with PAXDesign.',
+      services: 'Browse services and start new requests.',
+    };
+    return leads[section] || '';
+  }
+
+  function accountSectionToPortalTab(section) {
+    var map = {
+      overview: 'overview',
+      projects: 'projects',
+      orders: 'orders',
+      support: 'chat',
+      services: 'services',
+    };
+    return map[section] || 'overview';
+  }
+
+  function parseAccountSectionFromHash() {
+    if (!isAuthPage() || !user.logged_in) return;
+    var hash = (window.location.hash || '').replace(/^#\/?/, '');
+    if (!hash) hash = 'overview';
+    if (hash === 'chat') hash = 'support';
+    if (hash === 'profile') hash = 'personal';
+    accountState.section = hash;
+    if (accountState.loaded) renderAccountApp();
+  }
+
+  function setAccountSection(section, options) {
+    options = options || {};
+    if (!isAuthPage() || !user.logged_in) {
+      if (C.accountPageUrl) {
+        window.location.href = accountPageUrl() + '#/' + section;
+      }
+      return;
+    }
+    accountState.section = section || 'overview';
+    accountState.detail = options.keepDetail ? accountState.detail : null;
+    if (!options.skipHash) {
+      try {
+        window.history.replaceState({}, '', window.location.pathname + window.location.search + '#/' + accountState.section);
+      } catch (e) {}
+    }
+    renderAccountApp();
+  }
+
+  function activePortalContainer() {
+    if (isAuthPage() && accountMainEl) return accountMainEl;
+    if (portalOverlay) {
+      return portalOverlay.querySelector('.pdx-customer-portal-body');
+    }
+    return null;
+  }
+
+  function renderAccountSidebar() {
+    if (!accountSidebarEl) return;
+    var html = '<div class="pdx-account-sidebar-user">' +
+      '<div class="pdx-account-sidebar-name">' + nameWithBadge(user.display_name || 'Account', user.verified, { size: 15, inline: true, context: 'account' }) + '</div>' +
+      '<div class="pdx-account-sidebar-email">' + escHtml(user.email || '') + '</div>' +
+      '<div class="pdx-account-sidebar-status">' + escHtml(accountStatusText(user.verified)) + '</div>' +
+    '</div>';
+    accountNavGroups().forEach(function (group) {
+      html += '<div class="pdx-account-nav-group"><div class="pdx-account-nav-label">' + escHtml(group.label) + '</div>';
+      group.items.forEach(function (item) {
+        var active = accountState.section === item.id ? ' is-active' : '';
+        html += '<button type="button" class="pdx-account-nav-btn' + active + '" data-account-section="' + item.id + '">' +
+          cxIcon(item.icon, 16) + escHtml(item.label) + '</button>';
+      });
+      html += '</div>';
+    });
+    html += '<div class="pdx-account-sidebar-footer">' +
+      '<button type="button" class="pdx-cx-btn pdx-cx-btn--ghost pdx-account-signout">' + cxIcon('logout', 16) + escHtml('Sign Out') + '</button>' +
+    '</div>';
+    accountSidebarEl.innerHTML = html;
+    accountSidebarEl.querySelectorAll('[data-account-section]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setAccountSection(btn.getAttribute('data-account-section'));
+      });
+    });
+    var signOut = accountSidebarEl.querySelector('.pdx-account-signout');
+    if (signOut) signOut.addEventListener('click', doLogout);
+  }
+
+  function renderAccountPersonalSection(profile) {
+    profile = profile || {};
+    return '<div class="pdx-account-card">' +
+      '<div class="pdx-account-card-title">Personal Information</div>' +
+      '<form id="pdx-customer-profile-form">' +
+        field('display_name', 'Display name', profile.display_name || user.display_name) +
+        field('email', 'Email', profile.email || user.email, 'email') +
+        '<div style="margin-top:12px">' + pearlBtn('Save changes', { type: 'submit', icon: 'check', small: true, inline: true }) + '</div>' +
+      '</form>' +
+    '</div>';
+  }
+
+  function renderAccountSecuritySection() {
+    return '<div class="pdx-account-card">' +
+      '<div class="pdx-account-card-title">Security</div>' +
+      '<form id="pdx-customer-security-form">' +
+        field('current_password', 'Current password', '', 'password') +
+        field('new_password', 'New password', '', 'password') +
+        field('confirm_password', 'Confirm new password', '', 'password') +
+        '<div style="margin-top:12px">' + pearlBtn('Update password', { type: 'submit', icon: 'lock', small: true, inline: true }) + '</div>' +
+      '</form>' +
+    '</div>';
+  }
+
+  function renderAccountFilesSection(files) {
+    files = files || [];
+    var html = '<div class="pdx-account-card"><div class="pdx-account-card-title">Files & Invoices</div>';
+    if (!files.length) {
+      html += '<p class="pdx-portal-empty">No shared files yet. Project deliverables and invoices appear here.</p>';
+    } else {
+      files.forEach(function (file) {
+        var href = file.download_url || file.url || '#';
+        html += '<a class="pdx-portal-row pdx-portal-row--link" href="' + escHtml(href) + '" target="_blank" rel="noopener">' +
+          '<strong>' + escHtml(file.name || file.filename || 'File') + '</strong>' +
+          '<span>' + escHtml(file.project_title || file.type || '') + '</span></a>';
+      });
+    }
+    return html + '</div>';
+  }
+
+  function bindAccountPersonalForm(container) {
+    var form = container.querySelector('#pdx-customer-profile-form');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var fd = new FormData(form);
+      customerApiFetch('POST', '/customer/profile', {
+        display_name: fd.get('display_name'),
+        email: fd.get('email'),
+      }).then(function (data) {
+        notify((data && data.message) || 'Profile updated.', data && data._ok ? 'info' : 'warn');
+        if (data && data._ok) {
+          refreshUser({ trigger: 'profile_update' });
+          renderAccountApp();
+        }
+      });
+    });
+  }
+
+  function bindAccountSecurityForm(container) {
+    var form = container.querySelector('#pdx-customer-security-form');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var fd = new FormData(form);
+      var p1 = String(fd.get('new_password') || '');
+      var p2 = String(fd.get('confirm_password') || '');
+      if (p1.length < 8) {
+        notify('Password must be at least 8 characters.', 'warn');
+        return;
+      }
+      if (p1 !== p2) {
+        notify('Passwords do not match.', 'warn');
+        return;
+      }
+      customerApiFetch('POST', '/customer/profile', {
+        current_password: fd.get('current_password'),
+        new_password: p1,
+      }).then(function (data) {
+        notify((data && data.message) || 'Security settings updated.', data && data._ok ? 'info' : 'warn');
+        if (data && data._ok) form.reset();
+      });
+    });
+  }
+
+  function renderAccountMain() {
+    if (!accountMainEl || !accountState.dashboard) return;
+    var section = accountState.section;
+    var head = '<div class="pdx-account-page-head"><h2 class="pdx-account-page-title">' + escHtml(accountSectionTitle(section)) + '</h2>' +
+      '<p class="pdx-account-page-lead">' + escHtml(accountSectionLead(section)) + '</p></div>';
+
+    if (section === 'personal') {
+      accountMainEl.innerHTML = head + renderAccountPersonalSection(accountState.profile);
+      bindAccountPersonalForm(accountMainEl);
+      return;
+    }
+    if (section === 'security') {
+      accountMainEl.innerHTML = head + renderAccountSecuritySection();
+      bindAccountSecurityForm(accountMainEl);
+      return;
+    }
+    if (section === 'files') {
+      accountMainEl.innerHTML = head + renderAccountFilesSection(accountState.files);
+      return;
+    }
+
+    portalState.tab = accountSectionToPortalTab(section);
+    portalState.detail = accountState.detail;
+    portalState.dashboard = accountState.dashboard;
+    accountMainEl.innerHTML = head + '<div class="pdx-account-portal-host"></div>';
+    var host = accountMainEl.querySelector('.pdx-account-portal-host');
+    renderCustomerPortalDashboard(host, accountState.dashboard);
+  }
+
+  function loadAccountAppData(force) {
+    if (!isAuthPage() || !user.logged_in) return Promise.resolve(false);
+    if (accountState.loaded && !force) {
+      renderAccountApp();
+      return Promise.resolve(true);
+    }
+    if (accountMainEl) accountMainEl.innerHTML = cxLoading('Loading your account…');
+    return claimGuestSessionIfNeeded().then(function () {
+      return Promise.all([
+        customerApiFetch('GET', '/customer/dashboard'),
+        customerApiFetch('GET', '/customer/profile'),
+        customerApiFetch('GET', '/customer/files'),
+      ]);
+    }).then(function (results) {
+      var dashboard = results[0];
+      if (!dashboard || dashboard._status === 401) {
+        if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">Please sign in to continue.</p>';
+        return false;
+      }
+      if (dashboard.code === 'pdx_email_unverified') {
+        if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">Verify your email to access your account dashboard.</p>';
+        return false;
+      }
+      accountState.dashboard = dashboard;
+      accountState.profile = (results[1] && results[1]._ok !== false) ? results[1] : {};
+      accountState.files = (results[2] && Array.isArray(results[2].files)) ? results[2].files : (Array.isArray(results[2]) ? results[2] : []);
+      accountState.loaded = true;
+      portalState.dashboard = dashboard;
+      renderAccountApp();
+      return true;
+    }).catch(function () {
+      if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">Unable to load your account. Please try again.</p>';
+      return false;
+    });
+  }
+
+  function renderAccountApp() {
+    if (!accountAppEl || !accountSidebarEl || !accountMainEl) return;
+    renderAccountSidebar();
+    renderAccountMain();
+  }
+
+  function initAccountApp(force) {
+    if (!isAuthPage() || !user.logged_in) return;
+    document.body.classList.add('pdx-account-dashboard-body');
+    loadAccountAppData(force);
   }
 
   function bindAuthPageControls() {
@@ -1014,18 +1331,6 @@
         setAuthPageView(btn.getAttribute('data-auth-view') || 'login');
       });
     });
-    var portalBtn = authPageEl.querySelector('.pdx-auth-page-portal-btn');
-    if (portalBtn) {
-      portalBtn.addEventListener('click', function () { openCustomerPortal(); });
-    }
-    var profileBtn = authPageEl.querySelector('.pdx-auth-page-profile-btn');
-    if (profileBtn) {
-      profileBtn.addEventListener('click', function () { openProfileOverlay(); });
-    }
-    var logoutBtn = authPageEl.querySelector('.pdx-auth-page-logout-btn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', function () { doLogout(); });
-    }
   }
 
   function setAuthPageView(view) {
@@ -1058,25 +1363,16 @@
   function updateAuthPagePanels() {
     if (!authPageEl) return;
     var guestPanel = document.getElementById('pdx-auth-page-guest');
-    var signedPanel = document.getElementById('pdx-auth-page-signed-in');
-    if (!guestPanel || !signedPanel) return;
+    if (!guestPanel) return;
     if (user.logged_in) {
       guestPanel.hidden = true;
-      signedPanel.hidden = false;
-      var head = signedPanel.querySelector('.pdx-auth-page-signed-head');
-      if (head) {
-        head.innerHTML =
-          '<div class="pdx-auth-page-signed-name">' + nameWithBadge(user.display_name || 'Account', user.verified, { size: 16, context: 'account' }) + '</div>' +
-          '<div class="pdx-auth-page-signed-email">' + escHtml(user.email || '') + '</div>' +
-          '<div class="pdx-auth-page-signed-status">' + escHtml(accountStatusLabel()) + verifiedBadgeHtml(user.verified, { size: 13, inline: true, context: 'email' }) + '</div>';
-      }
-      var subtitle = authPageEl.querySelector('.pdx-auth-page-subtitle');
-      if (subtitle) subtitle.textContent = 'Manage your PAXDesign account and customer portal.';
+      if (accountAppEl) accountAppEl.hidden = false;
+      initAccountApp(false);
     } else {
       guestPanel.hidden = false;
-      signedPanel.hidden = true;
-      var subtitleGuest = authPageEl.querySelector('.pdx-auth-page-subtitle');
-      if (subtitleGuest) subtitleGuest.textContent = 'Sign in or create your PAXDesign account.';
+      if (accountAppEl) accountAppEl.hidden = true;
+      document.body.classList.remove('pdx-account-dashboard-body');
+      accountState.loaded = false;
       if (authPageFormEl) renderAuthForm(authPageFormEl);
       syncAuthPageSegment();
     }
@@ -1254,7 +1550,7 @@
         '<p class="pdx-cx-card__sub">Your profile, verification status, and account security.</p>' +
         '<div class="pdx-account-profile-head">' + nameWithBadge(p.display_name || 'Account', p.verified, { size: 16, context: 'account' }) + '</div>' +
         '<div class="pdx-account-status-row">' +
-          '<span class="pdx-account-status pdx-account-status--' + statusCls + '">' + statusLabel + verifiedBadgeHtml(p.verified, { size: 13, inline: true, context: 'email' }) + '</span>' +
+          '<span class="pdx-account-status pdx-account-status--' + statusCls + '">' + escHtml(statusLabel) + '</span>' +
           (!p.verified ? '<button type="button" class="pdx-cx-btn pdx-cx-btn--ghost pdx-resend-verify">' + cxIcon('mail', 16) + 'Resend email</button>' : '') +
         '</div>' +
       '</div>' +
@@ -1605,6 +1901,10 @@
       btn.addEventListener('click', function () {
         portalState.tab = btn.dataset.portalTab;
         portalState.detail = null;
+        if (isAuthPage()) {
+          setAccountSection(btn.dataset.portalTab === 'chat' ? 'support' : btn.dataset.portalTab);
+          return;
+        }
         renderCustomerPortalDashboard(container, portalState.dashboard);
       });
     });
@@ -1617,15 +1917,23 @@
     }
   }
 
-  function openCustomerPortal() {
+  function openCustomerPortal(tab) {
+    tab = tab || 'overview';
     if (!user.logged_in) {
-      notify('Please use Sign Up in the header to create an account or sign in.', 'info');
-      openOverlay('register');
+      navigateToAuthPage('register');
       return;
     }
     if (!user.verified && !user.is_admin) {
-      notify('Please verify your email to access your customer portal.', 'warn');
-      openOverlay('login');
+      notify('Please verify your email to access your account.', 'warn');
+      navigateToAuthPage('login');
+      return;
+    }
+    if (C.accountPageUrl || isAuthPage()) {
+      if (isAuthPage()) {
+        setAccountSection(tab === 'chat' ? 'support' : tab);
+        return;
+      }
+      window.location.href = accountPageUrl() + '#/' + (tab === 'chat' ? 'support' : tab);
       return;
     }
     if (!portalOverlay) {
@@ -1780,6 +2088,7 @@
 
   function openPortalDetail(container, kind, id) {
     portalState.detail = { kind: kind, id: id };
+    accountState.detail = portalState.detail;
     var body = container;
     if (kind === 'project') {
       body.innerHTML = renderPortalNav() + '<div class="pdx-portal-content">' + cxLoading('Loading project…') + '</div>';
@@ -1896,7 +2205,12 @@
         btn.addEventListener('click', function () {
           portalState.tab = btn.dataset.portalTabJump;
           portalState.detail = null;
-          var body = portalOverlay && portalOverlay.querySelector('.pdx-customer-portal-body');
+          if (isAuthPage()) {
+            var jump = btn.dataset.portalTabJump;
+            setAccountSection(jump === 'chat' ? 'support' : jump, { keepDetail: false });
+            return;
+          }
+          var body = activePortalContainer();
           if (body) renderCustomerPortalDashboard(body, portalState.dashboard);
         });
       });
@@ -2485,6 +2799,7 @@
     unmountInlineAuth: unmountInlineAuth,
     renderAuthGate: renderAuthGate,
     openCustomerPortal: openCustomerPortal,
+    openAccountSection: setAccountSection,
     closeCustomerPortal: closeCustomerPortal,
     customerApiFetch: customerApiFetch,
     customerApiStream: customerApiStream,
