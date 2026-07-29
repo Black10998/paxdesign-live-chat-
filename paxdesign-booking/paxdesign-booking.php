@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.173.9
+Version: 3.174.0
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.173.9');
+define('PAXDESIGN_BOOKING_VERSION', '3.174.0');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -496,6 +496,7 @@ class PAXdesign_Booking {
         if (class_exists('PAXdesign_Team_Messaging')) {
             PAXdesign_Team_Messaging::maybe_reconcile_store();
         }
+        paxdesign_booking_upgrade_auth_page();
     }
 
     /**
@@ -1227,6 +1228,9 @@ function paxdesign_booking_activate() {
     add_option('paxdesign_live_whatsapp_phone', '4368120543638');
     add_option('paxdesign_live_whatsapp_callmebot_key', '3515631');
     add_option('paxdesign_live_notify_emails', "info@paxdesign.at\nal.kahalaf.ahmad@gmail.com");
+
+    require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/auth/class-paxdesign-auth-page.php';
+    PAXdesign_Auth_Page::ensure_page();
 }
 register_activation_hook(__FILE__, 'paxdesign_booking_activate');
 
@@ -1277,6 +1281,18 @@ function paxdesign_booking_upgrade_live_notify_defaults() {
     }
 
     update_option('paxdesign_live_notify_defaults_version', $defaults_version, false);
+}
+
+/**
+ * Ensure the dedicated /account authentication page exists after updates.
+ */
+function paxdesign_booking_upgrade_auth_page() {
+    if (get_option('paxdesign_auth_page_version') === '1') {
+        return;
+    }
+    require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/auth/class-paxdesign-auth-page.php';
+    PAXdesign_Auth_Page::ensure_page();
+    update_option('paxdesign_auth_page_version', '1', false);
 }
 
 /**

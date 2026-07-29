@@ -1,0 +1,260 @@
+/**
+ * Dedicated /account authentication page — Apple-inspired layout.
+ */
+
+body.pdx-auth-page-body {
+  background: #f5f5f7;
+  color: #1d1d1f;
+}
+
+@media (prefers-color-scheme: dark) {
+  body.pdx-auth-page-body {
+    background: #000;
+    color: #f5f5f7;
+  }
+}
+
+body.pdx-auth-page-body #pdx-auth-page ~ *,
+body.pdx-auth-page-body .entry-content > :not(#pdx-auth-page):not(.pdx-auth-page) {
+  display: none;
+}
+
+.pdx-auth-page {
+  position: relative;
+  min-height: calc(100vh - 120px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(24px, 5vw, 48px) 16px 64px;
+  box-sizing: border-box;
+}
+
+.pdx-auth-page-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, rgba(120, 120, 128, 0.16), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 100% 100%, rgba(120, 120, 128, 0.1), transparent 55%);
+}
+
+.pdx-auth-page-shell {
+  position: relative;
+  width: min(440px, 100%);
+  border-radius: 24px;
+  padding: clamp(24px, 4vw, 36px);
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.04),
+    0 12px 40px rgba(0, 0, 0, 0.08);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+@media (prefers-color-scheme: dark) {
+  .pdx-auth-page-shell {
+    background: rgba(28, 28, 30, 0.88);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.35),
+      0 16px 48px rgba(0, 0, 0, 0.45);
+  }
+}
+
+.pdx-auth-page-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.pdx-auth-page-mark {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  color: #1d1d1f;
+  background: rgba(0, 0, 0, 0.04);
+}
+
+@media (prefers-color-scheme: dark) {
+  .pdx-auth-page-mark {
+    color: #f5f5f7;
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.pdx-auth-page-title {
+  margin: 0 0 6px;
+  font-size: clamp(28px, 4vw, 34px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.pdx-auth-page-subtitle {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #6e6e73;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pdx-auth-page-subtitle {
+    color: #98989d;
+  }
+}
+
+.pdx-auth-page-segment {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin-bottom: 20px;
+  border-radius: 12px;
+  background: rgba(118, 118, 128, 0.12);
+}
+
+.pdx-auth-page-segment-btn {
+  border: 0;
+  border-radius: 9px;
+  min-height: 34px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6e6e73;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.pdx-auth-page-segment-btn.is-active {
+  color: #1d1d1f;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  .pdx-auth-page-segment {
+    background: rgba(118, 118, 128, 0.24);
+  }
+
+  .pdx-auth-page-segment-btn {
+    color: #98989d;
+  }
+
+  .pdx-auth-page-segment-btn.is-active {
+    color: #f5f5f7;
+    background: rgba(99, 99, 102, 0.72);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  }
+}
+
+.pdx-auth-page-form-wrap .pdx-auth-form {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+
+.pdx-auth-page-form-wrap .pdx-auth-form::before,
+.pdx-auth-page-form-wrap .pdx-auth-form::after {
+  display: none;
+}
+
+.pdx-auth-page-form-wrap .pdx-cx-auth-head {
+  display: none;
+}
+
+.pdx-auth-page-form-wrap .pdx-auth-field-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d1d1f;
+  margin-bottom: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pdx-auth-page-form-wrap .pdx-auth-field-label {
+    color: #f5f5f7;
+  }
+}
+
+.pdx-auth-page-form-wrap .pdx-auth-input-container {
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+@media (prefers-color-scheme: dark) {
+  .pdx-auth-page-form-wrap .pdx-auth-input-container {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(44, 44, 46, 0.9);
+  }
+}
+
+.pdx-auth-page-form-wrap .pdx-auth-input {
+  font-size: 16px;
+}
+
+.pdx-auth-page-form-wrap .pdx-auth-links {
+  margin-top: 14px;
+}
+
+.pdx-auth-page-form-wrap .pdx-auth-link {
+  color: #0066cc;
+  font-size: 14px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pdx-auth-page-form-wrap .pdx-auth-link {
+    color: #0a84ff;
+  }
+}
+
+.pdx-auth-page-signed-head {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.pdx-auth-page-signed-name {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+
+.pdx-auth-page-signed-email {
+  font-size: 14px;
+  color: #6e6e73;
+  margin-bottom: 8px;
+}
+
+.pdx-auth-page-signed-status {
+  font-size: 13px;
+  color: #6e6e73;
+}
+
+.pdx-auth-page-signed-actions {
+  display: grid;
+  gap: 10px;
+}
+
+.pdx-auth-page-signed-actions .pdx-cx-btn {
+  width: 100%;
+  justify-content: center;
+  min-height: 44px;
+  border-radius: 12px;
+}
+
+@media (max-width: 640px) {
+  .pdx-auth-page {
+    min-height: calc(100dvh - 80px);
+    padding-inline: 12px;
+  }
+
+  .pdx-auth-page-shell {
+    border-radius: 20px;
+    padding: 20px 16px 24px;
+  }
+}

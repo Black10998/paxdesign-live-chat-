@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.173.9
+ * Version: 3.174.0
  */
 (function () {
   'use strict';

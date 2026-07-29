@@ -102,6 +102,8 @@ class PAXdesign_Auth_Frontend {
             'userEmail'     => is_user_logged_in() ? wp_get_current_user()->user_email : '',
             'publicModules' => PAXdesign_Auth_Native::public_modules(),
             'modules'       => array(),
+            'accountPageUrl'=> esc_url(PAXdesign_Auth_Page::page_url()),
+            'isAuthPage'    => PAXdesign_Auth_Page::is_auth_page(),
         );
     }
 }

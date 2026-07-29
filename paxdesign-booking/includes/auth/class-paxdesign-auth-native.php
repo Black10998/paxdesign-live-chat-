@@ -104,7 +104,7 @@ class PAXdesign_Auth_Native {
 		if ( wp_doing_ajax() ) {
 			return;
 		}
-		wp_safe_redirect( add_query_arg( 'pdx_account', '1', home_url( '/' ) ) );
+		wp_safe_redirect( self::account_page_url() );
 		exit;
 	}
 
@@ -112,7 +112,7 @@ class PAXdesign_Auth_Native {
 		if ( ! is_user_logged_in() || self::is_site_admin() ) {
 			return;
 		}
-		wp_safe_redirect( add_query_arg( 'pdx_account', '1', home_url( '/' ) ) );
+		wp_safe_redirect( self::account_page_url() );
 		exit;
 	}
 
@@ -124,9 +124,19 @@ class PAXdesign_Auth_Native {
 	public static function customer_login_redirect( $redirect_to, $requested, $user ): string {
 		unset( $requested );
 		if ( $user instanceof WP_User && ! user_can( $user, 'manage_options' ) ) {
-			return add_query_arg( 'pdx_account', '1', home_url( '/' ) );
+			return self::account_page_url();
 		}
 		return (string) $redirect_to;
+	}
+
+	/**
+	 * Official customer authentication page URL.
+	 */
+	public static function account_page_url(): string {
+		if ( class_exists( 'PAXdesign_Auth_Page' ) ) {
+			return PAXdesign_Auth_Page::page_url();
+		}
+		return add_query_arg( 'pdx_account', '1', home_url( '/' ) );
 	}
 
 	private static function assign_customer_role( int $user_id ): void {

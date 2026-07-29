@@ -16,6 +16,12 @@
   var returnModule = null;
   var currentView = 'login';
   var dashboardData = null;
+  var authPageEl = null;
+  var authPageFormEl = null;
+  var sessionSyncInFlight = false;
+  var sessionSyncTimer = null;
+  var SESSION_SYNC_INTERVAL_MS = 45000;
+  var authBroadcast = null;
 
   var SVG_GRADIENT = '<defs><linearGradient id="pdx-gradient-stroke" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="black"></stop><stop offset="100%" stop-color="white"></stop></linearGradient></defs>';
   var SVG_EMAIL = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' + SVG_GRADIENT + '<g stroke="url(#pdx-gradient-stroke)" fill="none" stroke-width="1"><path d="M21.6365 5H3L12.2275 12.3636L21.6365 5Z"></path><path d="M16.5 11.5L22.5 6.5V17L16.5 11.5Z"></path><path d="M8 11.5L2 6.5V17L8 11.5Z"></path><path d="M9.5 12.5L2.81805 18.5002H21.6362L15 12.5L12 15L9.5 12.5Z"></path></g></svg>';
@@ -114,6 +120,7 @@
   function applySession(data, meta) {
     if (!data) return;
     meta = meta || {};
+    var before = userSnapshot();
     if (data.nonce) C.nonce = data.nonce;
     var u = data.user || data;
     if (u.logged_in !== undefined) {
@@ -125,12 +132,147 @@
       C.userEmail = u.email || '';
     }
     updateAuthBar();
+    updateAuthPagePanels();
+    if (meta.reason === 'logout') {
+      dashboardData = null;
+      closeCustomerPortal();
+      closeProfileOverlay();
+      closeOverlay();
+    }
     try {
       var detail = Object.assign({}, user || {}, {
         reason: meta.reason || '',
       });
       window.dispatchEvent(new CustomEvent('pdx-session-updated', { detail: detail }));
     } catch (e) {}
+    if (meta.broadcast !== false && sessionStateChanged(before, userSnapshot())) {
+      broadcastSessionChange();
+    }
+  }
+
+  function userSnapshot() {
+    return {
+      id: user.id || 0,
+      logged_in: !!user.logged_in,
+      verified: !!user.verified,
+    };
+  }
+
+  function sessionStateChanged(before, after) {
+    if (!before || !after) return true;
+    return before.id !== after.id
+      || before.logged_in !== after.logged_in
+      || before.verified !== after.verified;
+  }
+
+  function detectSessionChangeReason(before, after) {
+    if (!after.logged_in && before.logged_in) return 'logout';
+    if (after.logged_in && !before.logged_in) return 'login';
+    if (after.id && before.id && after.id !== before.id) return 'user_switch';
+    if (after.verified !== before.verified) return 'verification';
+    return 'session_update';
+  }
+
+  function broadcastSessionChange() {
+    try {
+      if (authBroadcast) {
+        authBroadcast.postMessage({ type: 'session-changed', at: Date.now() });
+      }
+    } catch (e) {}
+  }
+
+  function syncSessionFromServer(trigger, options) {
+    options = options || {};
+    if (sessionSyncInFlight) return Promise.resolve(false);
+    sessionSyncInFlight = true;
+    var before = userSnapshot();
+    var cacheBust = options.cacheBust ? ('?_=' + Date.now()) : '';
+    return apiFetch('GET', '/auth/me' + cacheBust).then(function (data) {
+      var after = {
+        id: data.id || (data.user && data.user.id) || 0,
+        logged_in: data.logged_in !== undefined ? !!data.logged_in : !!(data.user && data.user.logged_in),
+        verified: data.verified !== undefined ? !!data.verified : !!(data.user && data.user.verified),
+      };
+      if (sessionStateChanged(before, after)) {
+        applySession(data, {
+          reason: detectSessionChangeReason(before, after),
+          broadcast: false,
+          trigger: trigger || '',
+        });
+        return true;
+      }
+      if (data.nonce) C.nonce = data.nonce;
+      return false;
+    }).catch(function () {
+      return false;
+    }).finally(function () {
+      sessionSyncInFlight = false;
+    });
+  }
+
+  function bindSessionAutoSync() {
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') {
+        syncSessionFromServer('visibility', { cacheBust: true });
+      }
+    });
+    window.addEventListener('focus', function () {
+      syncSessionFromServer('focus', { cacheBust: true });
+    });
+    window.addEventListener('pageshow', function (e) {
+      if (e.persisted) syncSessionFromServer('pageshow', { cacheBust: true });
+    });
+    try {
+      authBroadcast = new BroadcastChannel('pdx-auth-session');
+      authBroadcast.onmessage = function (ev) {
+        if (!ev || !ev.data || ev.data.type !== 'session-changed') return;
+        syncSessionFromServer('broadcast', { cacheBust: true });
+      };
+    } catch (e) {
+      authBroadcast = null;
+    }
+    if (sessionSyncTimer) clearInterval(sessionSyncTimer);
+    sessionSyncTimer = setInterval(function () {
+      if (document.visibilityState === 'visible') {
+        syncSessionFromServer('interval', { cacheBust: true });
+      }
+    }, SESSION_SYNC_INTERVAL_MS);
+  }
+
+  function isAuthPage() {
+    return !!(C.isAuthPage || document.getElementById('pdx-auth-page'));
+  }
+
+  function accountPageUrl(view) {
+    var base = C.accountPageUrl || '';
+    if (!base) return '';
+    try {
+      var url = new URL(base, window.location.origin);
+      if (view === 'register') url.searchParams.set('view', 'register');
+      else if (view === 'forgot') url.searchParams.set('view', 'forgot');
+      else if (view === 'reset') url.searchParams.set('view', 'reset');
+      else url.searchParams.delete('view');
+      return url.pathname + url.search + url.hash;
+    } catch (e) {
+      return base;
+    }
+  }
+
+  function navigateToAuthPage(view) {
+    if (isAuthPage()) {
+      setAuthPageView(view || 'login');
+      return;
+    }
+    var url = accountPageUrl(view || 'login');
+    if (!url) {
+      openOverlay(view || 'login');
+      return;
+    }
+    if (window.location.href.split('#')[0] === url.split('#')[0]) {
+      setAuthPageView(view || 'login');
+      return;
+    }
+    window.location.href = url;
   }
 
   function refreshSessionNonce() {
@@ -201,8 +343,7 @@
 
   function refreshUser(meta) {
     meta = meta || {};
-    return apiFetch('GET', '/auth/me').then(function (data) {
-      applySession(data, { reason: meta.reason || 'session_update' });
+    return syncSessionFromServer(meta.trigger || 'refresh', { cacheBust: true }).then(function () {
       return user;
     });
   }
@@ -309,7 +450,7 @@
     var signupBtn = authBar.querySelector('.pdx-auth-signup-btn');
     var portalBtn = authBar.querySelector('.pdx-auth-portal-btn');
     if (signupBtn) {
-      signupBtn.addEventListener('click', function () { openOverlay('register'); });
+      signupBtn.addEventListener('click', function () { navigateToAuthPage('register'); });
     }
     if (portalBtn) {
       portalBtn.addEventListener('click', function () { openCustomerPortal(); });
@@ -392,7 +533,7 @@
 
   function onAuthBarClick() {
     if (!user.logged_in) {
-      openOverlay('register');
+      navigateToAuthPage('register');
       return;
     }
     if (authMenuOpen) closeAuthMenu();
@@ -459,11 +600,20 @@
         applySession({
           nonce: data.nonce,
           user: data.user || { logged_in: false, verified: false, display_name: '', email: '', id: 0 },
-        }, { reason: 'logout' });
+        }, { reason: 'logout', broadcast: true });
       } else {
-        user = { logged_in: false, verified: false };
+        user = { logged_in: false, verified: false, id: 0, display_name: '', email: '' };
         C.isLoggedIn = false;
+        C.emailVerified = false;
+        C.userId = 0;
+        C.userName = '';
+        C.userEmail = '';
         updateAuthBar();
+        updateAuthPagePanels();
+        broadcastSessionChange();
+        try {
+          window.dispatchEvent(new CustomEvent('pdx-session-updated', { detail: { reason: 'logout' } }));
+        } catch (e) {}
       }
       notify('Logged out.', 'info');
       if (window.PDXDock && window.PDXDock.closePanel) window.PDXDock.closePanel();
@@ -500,7 +650,12 @@
   }
 
   function openOverlay(view, moduleId) {
+    if (!overlay) return;
     if (moduleId) returnModule = moduleId;
+    if (!inlineAuthMount && !isAuthPage() && C.accountPageUrl && (view === 'login' || view === 'register' || view === 'forgot')) {
+      navigateToAuthPage(view);
+      return;
+    }
     currentView = view || 'login';
     renderAuthForm();
     overlay.classList.add('is-open');
@@ -520,6 +675,13 @@
     if (target) {
       if (target === formEl) {
         inlineAuthMount = null;
+      } else if (authPageFormEl && target === authPageFormEl) {
+        inlineAuthMount = {
+          container: target,
+          compact: true,
+          context: 'page',
+          onSuccess: function () { updateAuthPagePanels(); },
+        };
       } else {
         inlineAuthMount = inlineAuthMount || {};
         inlineAuthMount.container = target;
@@ -617,7 +779,6 @@
   function finishAuthSuccess() {
     if (inlineAuthMount && inlineAuthMount.container) {
       if (inlineAuthMount.onSuccess) inlineAuthMount.onSuccess();
-      window.dispatchEvent(new CustomEvent('pdx-session-updated'));
       return true;
     }
     closeOverlay();
@@ -759,9 +920,12 @@
           showFormMessage(normalizeRestMessage(data), 'error');
           return;
         }
-        applySession({ user: data.user || user, nonce: data.nonce }, { reason: 'login' });
+        applySession({ user: data.user || user, nonce: data.nonce }, { reason: 'login', broadcast: true });
         var inline = finishAuthSuccess();
-        if (!inline) notify(data.message || 'Logged in.', 'info');
+        if (!inline && isAuthPage()) {
+          updateAuthPagePanels();
+        }
+        if (!inline && !isAuthPage()) notify(data.message || 'Logged in.', 'info');
         var mod = returnModule;
         returnModule = null;
         refreshUser().then(function () {
@@ -819,16 +983,119 @@
     }
   }
 
+  function initAuthPage() {
+    authPageEl = document.getElementById('pdx-auth-page');
+    if (!authPageEl) return;
+    authPageFormEl = document.getElementById('pdx-auth-page-form');
+    var params = new URLSearchParams(window.location.search);
+    var initialView = params.get('view') || 'login';
+    if (initialView === 'reset' || params.get('pdx_reset') === '1') {
+      currentView = 'reset';
+    } else if (initialView === 'register') {
+      currentView = 'register';
+    } else if (initialView === 'forgot') {
+      currentView = 'forgot';
+    } else {
+      currentView = 'login';
+    }
+    bindAuthPageControls();
+    updateAuthPagePanels();
+    if (!user.logged_in) {
+      renderAuthForm(authPageFormEl);
+      syncAuthPageSegment();
+    }
+  }
+
+  function bindAuthPageControls() {
+    if (!authPageEl || authPageEl.dataset.bound === '1') return;
+    authPageEl.dataset.bound = '1';
+    authPageEl.querySelectorAll('.pdx-auth-page-segment-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        setAuthPageView(btn.getAttribute('data-auth-view') || 'login');
+      });
+    });
+    var portalBtn = authPageEl.querySelector('.pdx-auth-page-portal-btn');
+    if (portalBtn) {
+      portalBtn.addEventListener('click', function () { openCustomerPortal(); });
+    }
+    var profileBtn = authPageEl.querySelector('.pdx-auth-page-profile-btn');
+    if (profileBtn) {
+      profileBtn.addEventListener('click', function () { openProfileOverlay(); });
+    }
+    var logoutBtn = authPageEl.querySelector('.pdx-auth-page-logout-btn');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function () { doLogout(); });
+    }
+  }
+
+  function setAuthPageView(view) {
+    currentView = view || 'login';
+    if (isAuthPage() && authPageFormEl) {
+      renderAuthForm(authPageFormEl);
+      syncAuthPageSegment();
+      try {
+        var url = new URL(window.location.href);
+        if (view === 'login') url.searchParams.delete('view');
+        else url.searchParams.set('view', view);
+        window.history.replaceState({}, '', url.pathname + url.search);
+      } catch (e) {}
+    } else {
+      navigateToAuthPage(view);
+    }
+  }
+
+  function syncAuthPageSegment() {
+    if (!authPageEl) return;
+    var activeView = currentView === 'register' ? 'register' : 'login';
+    authPageEl.querySelectorAll('.pdx-auth-page-segment-btn').forEach(function (btn) {
+      var view = btn.getAttribute('data-auth-view') || 'login';
+      var active = view === activeView;
+      btn.classList.toggle('is-active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+  }
+
+  function updateAuthPagePanels() {
+    if (!authPageEl) return;
+    var guestPanel = document.getElementById('pdx-auth-page-guest');
+    var signedPanel = document.getElementById('pdx-auth-page-signed-in');
+    if (!guestPanel || !signedPanel) return;
+    if (user.logged_in) {
+      guestPanel.hidden = true;
+      signedPanel.hidden = false;
+      var head = signedPanel.querySelector('.pdx-auth-page-signed-head');
+      if (head) {
+        head.innerHTML =
+          '<div class="pdx-auth-page-signed-name">' + nameWithBadge(user.display_name || 'Account', user.verified, { size: 16, context: 'account' }) + '</div>' +
+          '<div class="pdx-auth-page-signed-email">' + escHtml(user.email || '') + '</div>' +
+          '<div class="pdx-auth-page-signed-status">' + escHtml(accountStatusLabel()) + verifiedBadgeHtml(user.verified, { size: 13, inline: true, context: 'email' }) + '</div>';
+      }
+      var subtitle = authPageEl.querySelector('.pdx-auth-page-subtitle');
+      if (subtitle) subtitle.textContent = 'Manage your PAXDesign account and customer portal.';
+    } else {
+      guestPanel.hidden = false;
+      signedPanel.hidden = true;
+      var subtitleGuest = authPageEl.querySelector('.pdx-auth-page-subtitle');
+      if (subtitleGuest) subtitleGuest.textContent = 'Sign in or create your PAXDesign account.';
+      if (authPageFormEl) renderAuthForm(authPageFormEl);
+      syncAuthPageSegment();
+    }
+  }
+
   /* ─── URL handlers ─────────────────────────────────────── */
   function handleUrlParams() {
     var params = new URLSearchParams(window.location.search);
     if (params.get('pdx_reset') === '1' && params.get('token')) {
       currentView = 'reset';
-      openOverlay('reset');
+      if (isAuthPage()) {
+        renderAuthForm(authPageFormEl);
+      } else {
+        openOverlay('reset');
+      }
     }
     if (params.get('pdx_auth') === 'verified') {
       notify(decodeURIComponent(params.get('pdx_msg') || 'Email verified!'), 'info');
-      refreshUser({ reason: 'verification' });
+      refreshUser({ reason: 'verification', trigger: 'verification' });
       cleanUrl();
     }
     if (params.get('pdx_auth') === 'verify_failed') {
@@ -836,10 +1103,14 @@
       cleanUrl();
     }
     if (params.get('pdx_account') === '1') {
+      if (C.accountPageUrl && !isAuthPage()) {
+        window.location.replace(accountPageUrl(user.logged_in ? 'login' : 'login'));
+        return;
+      }
       if (user.logged_in) {
         openAccountPanel();
-      } else {
-        openOverlay('login');
+      } else if (!isAuthPage()) {
+        navigateToAuthPage('login');
       }
       cleanUrl();
     }
@@ -879,12 +1150,12 @@
           notify(data.message || 'Verification email sent.', data.success ? 'info' : 'warn');
         });
       } else {
-        openOverlay('login', moduleId);
+        navigateToAuthPage('login');
       }
     });
     var regBtn = container.querySelector('.pdx-auth-gate-register');
     if (regBtn) {
-      regBtn.addEventListener('click', function () { openOverlay('register', moduleId); });
+      regBtn.addEventListener('click', function () { navigateToAuthPage('register'); });
     }
   }
 
@@ -2188,9 +2459,14 @@
   window.PDXAuth = {
     init: function () {
       createAuthBar();
-      createOverlay();
+      if (isAuthPage()) {
+        initAuthPage();
+      } else {
+        createOverlay();
+      }
       handleUrlParams();
-      refreshUser();
+      syncSessionFromServer('init', { cacheBust: true });
+      bindSessionAutoSync();
       window.addEventListener('resize', function () {
         updateAuthBar();
       }, { passive: true });
@@ -2199,7 +2475,12 @@
     isVerified: function () { return !!user.verified || !!user.is_admin; },
     canAccessModule: canAccessModule,
     moduleRequiresAuth: moduleRequiresAuth,
-    openLogin: function (moduleId) { openOverlay('login', moduleId); },
+    openLogin: function (moduleId) {
+      if (moduleId) returnModule = moduleId;
+      navigateToAuthPage(typeof moduleId === 'string' && moduleId === 'register' ? 'register' : 'login');
+    },
+    openAccountPage: function (view) { navigateToAuthPage(view || 'login'); },
+    accountPageUrl: accountPageUrl,
     mountInlineAuth: mountInlineAuth,
     unmountInlineAuth: unmountInlineAuth,
     renderAuthGate: renderAuthGate,
@@ -2208,6 +2489,7 @@
     customerApiFetch: customerApiFetch,
     customerApiStream: customerApiStream,
     refreshUser: refreshUser,
+    syncSession: syncSessionFromServer,
     refreshSessionNonce: refreshSessionNonce,
     applySession: applySession,
     getNonce: function () { return C.nonce || ''; },

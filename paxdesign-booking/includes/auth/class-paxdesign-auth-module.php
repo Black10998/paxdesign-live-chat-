@@ -16,9 +16,11 @@ class PAXdesign_Auth_Module {
         require_once $base . 'class-paxdesign-auth.php';
         require_once $base . 'class-paxdesign-auth-rest.php';
         require_once $base . 'class-paxdesign-auth-frontend.php';
+        require_once $base . 'class-paxdesign-auth-page.php';
 
         PAXdesign_Auth::register_hooks();
         PAXdesign_Auth_REST::init();
         PAXdesign_Auth_Frontend::init();
+        PAXdesign_Auth_Page::init();
     }
 }
