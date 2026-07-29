@@ -151,6 +151,8 @@
     updateAuthPagePanels();
     if (meta.reason === 'logout') {
       dashboardData = null;
+      accountState.loaded = false;
+      accountState.dashboard = null;
       closeCustomerPortal();
       closeProfileOverlay();
       closeOverlay();
@@ -1912,6 +1914,11 @@
     if (back) {
       back.addEventListener('click', function () {
         portalState.detail = null;
+        accountState.detail = null;
+        if (isAuthPage()) {
+          renderAccountApp();
+          return;
+        }
         renderCustomerPortalDashboard(container, portalState.dashboard);
       });
     }
