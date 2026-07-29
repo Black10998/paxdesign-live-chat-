@@ -400,6 +400,86 @@ class PAXdesign_Message_Store {
         return self::fetch_all_rows($session_id);
     }
 
+    /**
+     * Latest N messages in ascending seq order (for initial chat window).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function latest_messages($session_id, $limit = 10, $channel = 'customer') {
+        global $wpdb;
+        self::maybe_upgrade();
+        self::migrate_customer_session_if_needed($session_id, $channel);
+        $table = self::messages_table();
+        $limit = max(1, min(100, absint($limit)));
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT msg_seq, client_msg_id, role, content, meta_json, created_at
+             FROM $table
+             WHERE session_id = %s AND channel = %s
+             ORDER BY msg_seq DESC
+             LIMIT %d",
+            sanitize_text_field($session_id),
+            sanitize_key($channel),
+            $limit
+        ));
+        if (!is_array($rows) || empty($rows)) {
+            return array();
+        }
+        $rows = array_reverse($rows);
+        return array_map(array(__CLASS__, 'format_row'), $rows);
+    }
+
+    /**
+     * Messages strictly before a seq, oldest-first (for scroll-up pagination).
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public static function messages_before($session_id, $before_seq, $limit = 10, $channel = 'customer') {
+        global $wpdb;
+        self::maybe_upgrade();
+        self::migrate_customer_session_if_needed($session_id, $channel);
+        $table = self::messages_table();
+        $before_seq = absint($before_seq);
+        if ($before_seq <= 0) {
+            return array();
+        }
+        $limit = max(1, min(100, absint($limit)));
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT msg_seq, client_msg_id, role, content, meta_json, created_at
+             FROM $table
+             WHERE session_id = %s AND channel = %s AND msg_seq < %d
+             ORDER BY msg_seq DESC
+             LIMIT %d",
+            sanitize_text_field($session_id),
+            sanitize_key($channel),
+            $before_seq,
+            $limit
+        ));
+        if (!is_array($rows) || empty($rows)) {
+            return array();
+        }
+        $rows = array_reverse($rows);
+        return array_map(array(__CLASS__, 'format_row'), $rows);
+    }
+
+    public static function has_older_than($session_id, $before_seq, $channel = 'customer') {
+        global $wpdb;
+        self::maybe_upgrade();
+        self::migrate_customer_session_if_needed($session_id, $channel);
+        $before_seq = absint($before_seq);
+        if ($before_seq <= 0) {
+            return false;
+        }
+        $table = self::messages_table();
+        return (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT 1 FROM $table
+             WHERE session_id = %s AND channel = %s AND msg_seq < %d
+             LIMIT 1",
+            sanitize_text_field($session_id),
+            sanitize_key($channel),
+            $before_seq
+        )) === 1;
+    }
+
     private static function fetch_all_rows($session_id) {
         global $wpdb;
         $table = self::messages_table();

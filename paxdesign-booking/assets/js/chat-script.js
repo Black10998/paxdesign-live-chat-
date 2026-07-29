@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.172.2
+ * Version: 3.173.9
  */
 (function () {
   'use strict';
@@ -49,6 +49,12 @@
   var assignedAgent      = null;
   var pollSeq            = 0;
   var pollTimer          = null;
+  var HISTORY_INITIAL    = 10;
+  var HISTORY_BATCH      = 10;
+  var oldestLoadedSeq    = 0;
+  var hasOlderMessages   = false;
+  var loadingOlderHistory = false;
+  var historyScrollBound = false;
   var localMsgId         = 0;
   var domMsgIds          = {};
   var domClientMsgIds    = {};
@@ -1425,6 +1431,7 @@
       if (plusWrap) plusWrap.hidden = true;
     }
     initAuthGate();
+    initHistoryScroll();
     lastAuthUserId = getAuthUserId();
     purgeGuestChatStorage();
     bindAudioUnlock();
@@ -1906,7 +1913,8 @@
     if (snap.customerEndedChat) customerEndedChat = true;
     if (snap.consultationLogged) consultationLogged = true;
     syncLocalMessageCursor(snap.messages || [], snap.pollSeq);
-    (snap.messages || []).forEach(function (msg) {
+    var snapMessages = (snap.messages || []).slice(-HISTORY_INITIAL);
+    snapMessages.forEach(function (msg) {
       if (isDuplicateMessage(msg)) return;
       rememberMessageIdentity(msg);
       renderMessageDom(msg.role, messageOriginalContent(msg) || messageText(msg.content), msg.id, messageRenderOpts(msg, { skipPush: true }));
@@ -1947,19 +1955,122 @@
     }
   }
 
+  function clearHistoryDomState() {
+    threadEl.innerHTML = '';
+    messages = [];
+    domMsgIds = {};
+    domClientMsgIds = {};
+    pollSeq = 0;
+    oldestLoadedSeq = 0;
+    hasOlderMessages = false;
+    loadingOlderHistory = false;
+    root.classList.remove('paxdesign-has-chat-messages');
+  }
+
+  function syncHistoryPaginationFromPoll(data) {
+    if (!data) return;
+    if (typeof data.has_older === 'boolean') {
+      hasOlderMessages = data.has_older;
+    }
+    if (typeof data.oldest_seq === 'number' && data.oldest_seq > 0) {
+      oldestLoadedSeq = data.oldest_seq;
+      return;
+    }
+    if (Array.isArray(data.messages) && data.messages.length) {
+      data.messages.forEach(function (msg) {
+        var id = msg && msg.id ? parseInt(msg.id, 10) : 0;
+        if (id > 0 && (oldestLoadedSeq === 0 || id < oldestLoadedSeq)) {
+          oldestLoadedSeq = id;
+        }
+      });
+    }
+  }
+
+  function initHistoryScroll() {
+    if (historyScrollBound || !messagesEl) return;
+    historyScrollBound = true;
+    messagesEl.addEventListener('scroll', function () {
+      if (!hasOlderMessages || loadingOlderHistory) return;
+      if (messagesEl.scrollTop <= 80) {
+        fetchOlderMessages();
+      }
+    }, { passive: true });
+  }
+
+  function fetchOlderMessages() {
+    if (loadingOlderHistory || !hasOlderMessages || !oldestLoadedSeq || !config.ajaxUrl || !canUseChat()) {
+      return Promise.resolve(false);
+    }
+    if (isEdgeBlocked()) return Promise.resolve(false);
+    loadingOlderHistory = true;
+    var formData = new FormData();
+    formData.append('action', 'paxdesign_chat_poll');
+    formData.append('nonce', config.nonce);
+    stampChatRequest(formData);
+    formData.append('session_id', getSessionId());
+    formData.append('since', '0');
+    formData.append('before', String(oldestLoadedSeq));
+    formData.append('history_limit', String(HISTORY_BATCH));
+    return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
+      .then(function (res) { return safeJson(res).then(function (json) { return { res: res, json: json }; }); })
+      .then(function (result) {
+        var json = result.json;
+        if (handleAuthGateResponse(json)) return false;
+        if (!json || !json.success || !json.data) return false;
+        var data = json.data;
+        syncHistoryPaginationFromPoll(data);
+        if (Array.isArray(data.messages) && data.messages.length) {
+          applyOlderMessages(data.messages);
+        } else {
+          hasOlderMessages = false;
+        }
+        if (data.reactions) applyReactionStates(data.reactions);
+        return true;
+      })
+      .catch(function () { return false; })
+      .finally(function () {
+        loadingOlderHistory = false;
+      });
+  }
+
+  function applyOlderMessages(incoming) {
+    incoming.sort(function (a, b) { return (a.id || 0) - (b.id || 0); });
+    var prevScrollHeight = messagesEl ? messagesEl.scrollHeight : 0;
+    incoming.forEach(function (msg) {
+      if (isDuplicateMessage(msg)) return;
+      rememberMessageIdentity(msg);
+      if (msg.reaction) messageReactions[msg.id] = msg.reaction;
+      indexChatMessage(msg);
+      renderMessageDom(
+        msg.role,
+        messageOriginalContent(msg) || messageText(msg.content),
+        msg.id,
+        messageRenderOpts(msg, { skipPush: true, prepend: true, skipScroll: true })
+      );
+      var entry = {
+        role: msg.role,
+        content: msg.content,
+        id: msg.id,
+        client_msg_id: msg.client_msg_id || ''
+      };
+      if (!messages.some(function (m) { return m.id === msg.id; })) {
+        messages.unshift(entry);
+      }
+    });
+    syncLocalMessageCursor(messages);
+    if (messagesEl) {
+      messagesEl.scrollTop = messagesEl.scrollHeight - prevScrollHeight;
+    }
+  }
+
   function fetchSessionFromServer(full, strict) {
     var step = READINESS_STEPS.history;
     if (!config.ajaxUrl) {
       if (strict) return readinessReject(step, 'network', 'readinessNetworkFailed', { reason: 'missing_ajax_url' });
       return Promise.resolve(false);
     }
-    if (full && isPersistentAccountChat()) {
-      threadEl.innerHTML = '';
-      messages = [];
-      domMsgIds = {};
-      domClientMsgIds = {};
-      pollSeq = 0;
-      root.classList.remove('paxdesign-has-chat-messages');
+    if (full) {
+      clearHistoryDomState();
     }
     var formData = new FormData();
     formData.append('action', 'paxdesign_chat_poll');
@@ -1967,7 +2078,10 @@
     stampChatRequest(formData);
     formData.append('session_id', getSessionId());
     formData.append('since', '0');
-    if (full) formData.append('full', '1');
+    if (full) {
+      formData.append('full', '1');
+      formData.append('history_limit', String(HISTORY_INITIAL));
+    }
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) { return safeJson(res).then(function (json) { return { res: res, json: json }; }); })
       .then(function (result) {
@@ -1997,6 +2111,7 @@
         applyHandlerState(data.handler || 'ai', data.admin_name || '');
         syncSessionMetaFromPoll(data);
         if (Array.isArray(data.messages) && data.messages.length) applyRestoredMessages(data.messages);
+        syncHistoryPaginationFromPoll(data);
         if (data.reactions) applyReactionStates(data.reactions);
         if (typeof data.seq === 'number') {
           pollSeq = Math.max(pollSeq, data.seq);
@@ -2810,6 +2925,9 @@
     domMsgIds = {};
     domClientMsgIds = {};
     pollSeq = 0;
+    oldestLoadedSeq = 0;
+    hasOlderMessages = false;
+    loadingOlderHistory = false;
     localMsgId = 0;
     chatHandler = 'ai';
     adminName = '';
@@ -4078,8 +4196,14 @@
         image_url: opts.image_url || ''
       });
     }
-    threadEl.appendChild(msg);
-    scrollToBottom();
+    if (opts.prepend && threadEl.firstChild) {
+      threadEl.insertBefore(msg, threadEl.firstChild);
+    } else {
+      threadEl.appendChild(msg);
+    }
+    if (!opts.skipScroll) {
+      scrollToBottom();
+    }
     if (role === 'user' && opts.link_scan_status) {
       refreshMessageScanState({ id: msgId, link_scan_status: opts.link_scan_status, content: content });
       if (opts.link_scan_status === 'checking') {

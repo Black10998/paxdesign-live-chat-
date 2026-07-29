@@ -1400,10 +1400,12 @@ class PAXdesign_Chat_Live {
 
         $since = isset($_POST['since']) ? (int) $_POST['since'] : 0;
         $full  = isset($_POST['full']) && wp_unslash($_POST['full']) === '1';
+        $history_limit = isset($_POST['history_limit']) ? absint($_POST['history_limit']) : 0;
+        $before = isset($_POST['before']) ? absint($_POST['before']) : 0;
         if ($user_id > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
             PAXdesign_Customer_Chat_Bridge::touch_customer_presence($session_id, $user_id);
         }
-        $data  = $this->get_poll_data($session_id, $since, $full, 'user');
+        $data  = $this->get_poll_data($session_id, $since, $full, 'user', $history_limit, $before);
         if (is_wp_error($data)) {
             if ($data->get_error_code() === 'not_found' && $this->can_serve_unmaterialized_poll($session_id, $user_id)) {
                 $data = class_exists('PAXdesign_Customer_Chat_Bridge')
@@ -3377,13 +3379,16 @@ class PAXdesign_Chat_Live {
     /**
      * @return array<string, mixed>|WP_Error
      */
-    public function get_poll_data($session_id, $since = 0, $full = false, $mark_read = '') {
+    public function get_poll_data($session_id, $since = 0, $full = false, $mark_read = '', $history_limit = 0, $before = 0) {
         $session_id = $this->sanitize_session_id($session_id);
         if ($session_id === '') {
             return new WP_Error('invalid_session', 'Invalid session', array('status' => 400));
         }
 
         $since = (int) $since;
+        $history_limit = max(0, min(100, absint($history_limit)));
+        $before = absint($before);
+        $history_window = $history_limit > 0;
         $row   = $this->get_session_row($session_id);
 
         if (!$row) {
@@ -3404,8 +3409,24 @@ class PAXdesign_Chat_Live {
             'wp_user_id'    => isset($row->wp_user_id) ? (int) $row->wp_user_id : 0,
             'customer_name' => isset($row->customer_name) ? (string) $row->customer_name : '',
         );
+        $has_older = false;
+        $oldest_seq = 0;
         if (class_exists('PAXdesign_Message_Store')) {
-            if ($full) {
+            if ($before > 0 && $history_window) {
+                $new = PAXdesign_Message_Store::messages_before($session_id, $before, $history_limit, 'customer');
+                $all = null;
+                if (!empty($new)) {
+                    $oldest_seq = (int) $new[0]['id'];
+                    $has_older = PAXdesign_Message_Store::has_older_than($session_id, $oldest_seq, 'customer');
+                }
+            } elseif ($full && $history_window) {
+                $new = PAXdesign_Message_Store::latest_messages($session_id, $history_limit, 'customer');
+                $all = null;
+                if (!empty($new)) {
+                    $oldest_seq = (int) $new[0]['id'];
+                    $has_older = PAXdesign_Message_Store::has_older_than($session_id, $oldest_seq, 'customer');
+                }
+            } elseif ($full) {
                 $all = PAXdesign_Message_Store::all_messages($session_id, 'customer');
                 $new = $all;
             } else {
@@ -3413,18 +3434,37 @@ class PAXdesign_Chat_Live {
                 $all = null;
             }
             $message_seq = PAXdesign_Message_Store::latest_seq($session_id, 'customer');
-            $message_count = $full
+            $message_count = ($full && !$history_window)
                 ? count($all)
                 : PAXdesign_Message_Store::count($session_id, 'customer');
-            $reactions_map = $full
+            $reactions_map = ($full && !$history_window)
                 ? null
                 : PAXdesign_Message_Store::reactions_map($session_id, 'customer');
         } else {
             $messages = $this->decode_messages($row->messages);
             $all = $this->format_messages_for_api($messages, $agent['admin_user_id'], $session_context);
-            $new = $full ? $all : array_values(array_filter($all, function ($msg) use ($since) {
-                return isset($msg['id']) && (int) $msg['id'] > $since;
-            }));
+            if ($before > 0 && $history_window) {
+                $new = array_values(array_filter($all, function ($msg) use ($before) {
+                    return isset($msg['id']) && (int) $msg['id'] < $before;
+                }));
+                $new = array_slice($new, -$history_limit);
+                if (!empty($new)) {
+                    $oldest_seq = (int) $new[0]['id'];
+                    $has_older = count(array_filter($all, function ($msg) use ($oldest_seq) {
+                        return isset($msg['id']) && (int) $msg['id'] < $oldest_seq;
+                    })) > 0;
+                }
+            } elseif ($full && $history_window) {
+                $new = array_slice($all, -$history_limit);
+                if (!empty($new)) {
+                    $oldest_seq = (int) $new[0]['id'];
+                    $has_older = count($all) > count($new);
+                }
+            } else {
+                $new = $full ? $all : array_values(array_filter($all, function ($msg) use ($since) {
+                    return isset($msg['id']) && (int) $msg['id'] > $since;
+                }));
+            }
             $message_seq = isset($row->message_seq) ? (int) $row->message_seq : 0;
             $message_count = count($all);
             $reactions_map = null;
@@ -3463,7 +3503,7 @@ class PAXdesign_Chat_Live {
             ? $reactions_map
             : $this->extract_message_reactions($full ? $new : ($all ?? $new));
 
-        return array(
+        $payload = array(
             'session_id'       => $session_id,
             'handler'          => $handler,
             'handler_label'    => self::handler_label($handler, $agent['admin_name']),
@@ -3491,6 +3531,11 @@ class PAXdesign_Chat_Live {
             'auth_user_id'     => $wp_user_id,
             'wp_user_id'       => $wp_user_id,
         );
+        if ($history_window) {
+            $payload['has_older'] = $has_older;
+            $payload['oldest_seq'] = $oldest_seq;
+        }
+        return $payload;
     }
 
     /**
