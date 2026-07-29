@@ -13,30 +13,30 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
 
 <div id="paxdesign-booking-root" class="paxdesign-booking paxdesign-booking-wrapper paxdesign-booking-root" aria-live="polite">
 
-  <!-- Floating Chat Launcher (Eva) -->
-  <div class="paxdesign-booking-button" role="button" tabindex="0" aria-label="<?php echo esc_attr__('Chat öffnen', 'paxdesign-booking'); ?>">
-    <span class="paxdesign-booking-launcher-label" aria-hidden="true">Chat</span>
-    <div class="paxdesign-booking-launcher">
-      <!-- From Uiverse.io by Subaashbala -->
-      <div class="loader">
-        <div class="modelViewPort">
-          <div class="eva">
-            <div class="head">
-              <div class="eyeChamber">
-                <div class="eye"></div>
-                <div class="eye"></div>
-              </div>
-            </div>
-            <div class="body">
-              <div class="hand"></div>
-              <div class="hand"></div>
-              <div class="scannerThing"></div>
-              <div class="scannerOrigin"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <!-- Floating Apple-style Support Message launcher -->
+  <div
+    class="paxdesign-booking-button"
+    role="button"
+    tabindex="0"
+    aria-label="<?php echo esc_attr__('Support Message öffnen', 'paxdesign-booking'); ?>"
+  >
+    <span class="paxdesign-booking-launcher-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+        <path
+          d="M7.5 19.5 4 22V7.5A3.5 3.5 0 0 1 7.5 4h9A3.5 3.5 0 0 1 20 7.5v8a3.5 3.5 0 0 1-3.5 3.5H7.5Z"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linejoin="round"
+        />
+        <path
+          d="M8.25 10.25h7.5M8.25 13.5h4.75"
+          stroke="currentColor"
+          stroke-width="1.7"
+          stroke-linecap="round"
+        />
+      </svg>
+    </span>
+    <span class="paxdesign-booking-launcher-label">Support Message</span>
   </div>
 
   <!-- Booking Panel -->
@@ -409,6 +409,9 @@ $team_members = PAXdesign_Booking::get_instance()->get_team_members();
           <div class="paxdesign-booking-chat-quick-actions" aria-label="Schnellaktionen" hidden></div>
 
           <div class="paxdesign-booking-chat-input-area">
+            <div class="paxdesign-booking-chat-end-wrap" id="paxdesignChatEndWrap" hidden>
+              <button type="button" class="paxdesign-booking-chat-end-btn" id="paxdesignChatEndBtn"><?php echo esc_html__('Gespräch beenden', 'paxdesign-booking'); ?></button>
+            </div>
             <div class="paxdesign-booking-chat-closed-bar" hidden>
               <p class="paxdesign-booking-chat-closed-text">Dieses Gespräch wurde beendet.</p>
               <div class="paxdesign-booking-chat-rating" id="paxdesignChatRating" hidden>

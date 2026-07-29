@@ -1703,7 +1703,9 @@
   }
 
   function updateEndButtonUi() {
-    if (endWrapEl) endWrapEl.hidden = true;
+    if (!endWrapEl) return;
+    var show = canCustomerEndChat() && chatHandler !== 'closed';
+    endWrapEl.hidden = !show;
   }
 
   function customerCloseConversation() {
