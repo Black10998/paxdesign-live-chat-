@@ -65,7 +65,7 @@ jobs:
       - name: Verify hero button links to pricing page
         run: |
           set -euo pipefail
-          HOME_HTML=$(curl -sS "https://paxdesign.at/?n=$(date +%s)")
-          echo "$HOME_HTML" | grep -Fq 'class="pax-home-btn pax-home-btn--light" href="https://paxdesign.at/preise/"'
-          echo "$HOME_HTML" | grep -Fq '>Leistungen entdecken</a>'
+          curl -sS "https://paxdesign.at/?n=$(date +%s)" -o /tmp/home-hero.html
+          grep -Fq 'class="pax-home-btn pax-home-btn--light" href="https://paxdesign.at/preise/"' /tmp/home-hero.html
+          grep -Fq '>Leistungen entdecken</a>' /tmp/home-hero.html
           echo "Hero button pricing link verification passed."
