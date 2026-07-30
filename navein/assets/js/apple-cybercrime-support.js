@@ -1032,7 +1032,7 @@
       }
       fetchActiveReport(activeReport.reference_id).then(function (report) {
         if (report) {
-          showActiveReport(report);
+          applyReportRefresh(report);
         }
       });
     });
