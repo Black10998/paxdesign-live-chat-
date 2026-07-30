@@ -48,6 +48,8 @@
   var reportPollTimer = null;
   var expandedTimelineId = null;
   var timelineAccordionBound = false;
+  var lastKnownLatestTimelineId = null;
+  var lastKnownTimelineCount = 0;
   var timelineCopy = {
     ar: {
       status: 'الحالة',
@@ -181,6 +183,71 @@
     return (timelineCopy[lang] && timelineCopy[lang][key]) || key;
   }
 
+  function getOfficialTimelineSorted(entries) {
+    return (entries || []).filter(function (entry) {
+      return entry && entry.author_type !== 'ai' && entry.channel !== 'chat';
+    }).slice().sort(function (a, b) {
+      var aTime = String(a.created_at || '') + String(a.id != null ? a.id : '');
+      var bTime = String(b.created_at || '') + String(b.id != null ? b.id : '');
+      return bTime.localeCompare(aTime);
+    });
+  }
+
+  function getNewestTimelineEntryId(entries) {
+    var sorted = getOfficialTimelineSorted(entries);
+    if (!sorted.length) {
+      return null;
+    }
+    var newest = sorted[0];
+    return String(newest.id != null ? newest.id : 0);
+  }
+
+  function timelineHasNewActivity(entries) {
+    var newestId = getNewestTimelineEntryId(entries);
+    var count = getOfficialTimelineSorted(entries).length;
+    if (newestId === null) {
+      return false;
+    }
+    if (lastKnownLatestTimelineId === null) {
+      return false;
+    }
+    return newestId !== lastKnownLatestTimelineId || count > lastKnownTimelineCount;
+  }
+
+  function rememberTimelineSnapshot(entries) {
+    lastKnownLatestTimelineId = getNewestTimelineEntryId(entries);
+    lastKnownTimelineCount = getOfficialTimelineSorted(entries).length;
+  }
+
+  function resetTimelineTracking() {
+    lastKnownLatestTimelineId = null;
+    lastKnownTimelineCount = 0;
+    expandedTimelineId = null;
+  }
+
+  function applyReportRefresh(report, options) {
+    if (!report) {
+      return;
+    }
+    options = options || {};
+    var newActivity = options.forceNewest || timelineHasNewActivity(report.timeline || []);
+
+    activeReport = report;
+    if (activeStatusEl) {
+      activeStatusEl.textContent = report.status_label || report.status || '';
+      activeStatusEl.setAttribute('data-status', report.status || '');
+    }
+    renderTimeline(report.timeline || [], { forceNewest: newActivity });
+    if (newActivity && activeTimelineEl) {
+      var openItem = activeTimelineEl.querySelector('.pax-ccs-portal__accordion-item.is-open');
+      if (openItem) {
+        try {
+          openItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } catch (e) {}
+      }
+    }
+  }
+
   function bindTimelineAccordion() {
     if (timelineAccordionBound || !activeTimelineEl) {
       return;
@@ -226,36 +293,33 @@
 
   /**
    * @param {Array} entries
-   * @param {'newest'|'preserve'} expandMode
+   * @param {{forceNewest?: boolean}} options
    */
-  function renderTimeline(entries, expandMode) {
+  function renderTimeline(entries, options) {
     if (!activeTimelineEl) {
       return;
     }
-    expandMode = expandMode || 'newest';
-    entries = (entries || []).filter(function (entry) {
-      return entry && entry.author_type !== 'ai' && entry.channel !== 'chat';
-    });
-    if (!entries.length) {
+    options = options || {};
+    var sorted = getOfficialTimelineSorted(entries);
+    if (!sorted.length) {
       activeTimelineEl.innerHTML = '<p class="pax-ccs-portal__accordion-empty">' + escapeHtml(timelineText('empty')) + '</p>';
-      expandedTimelineId = null;
+      resetTimelineTracking();
       return;
     }
 
-    var sorted = entries.slice().sort(function (a, b) {
-      var aTime = String(a.created_at || '') + String(a.id || '');
-      var bTime = String(b.created_at || '') + String(b.id || '');
-      return bTime.localeCompare(aTime);
-    });
-
     var newestId = String(sorted[0].id != null ? sorted[0].id : 0);
-    var openId = expandMode === 'preserve' && expandedTimelineId
-      ? expandedTimelineId
-      : newestId;
-    if (!sorted.some(function (entry) { return String(entry.id != null ? entry.id : '') === openId; })) {
+    var openId = newestId;
+    if (!options.forceNewest && expandedTimelineId &&
+        sorted.some(function (entry, index) {
+          return String(entry.id != null ? entry.id : index) === expandedTimelineId;
+        })) {
+      openId = expandedTimelineId;
+    }
+    if (options.forceNewest) {
       openId = newestId;
     }
     expandedTimelineId = openId;
+    rememberTimelineSnapshot(entries);
 
     activeTimelineEl.innerHTML = sorted.map(function (entry, index) {
       var entryId = String(entry.id != null ? entry.id : index);
@@ -319,9 +383,12 @@
     }).join('');
   }
 
-  function showActiveReport(report, resetTimeline) {
+  function showActiveReport(report, forceNewest) {
     if (!report || !activeReportEl) {
       return;
+    }
+    if (!activeReport || activeReport.reference_id !== report.reference_id) {
+      resetTimelineTracking();
     }
     activeReport = report;
     setPhase('active-report');
@@ -338,7 +405,7 @@
     if (activeSubmittedEl) {
       activeSubmittedEl.textContent = formatDate(report.created_at || '');
     }
-    renderTimeline(report.timeline || [], resetTimeline ? 'newest' : 'preserve');
+    renderTimeline(report.timeline || [], { forceNewest: forceNewest !== false });
     renderAttachments(report.attachments || []);
     var isActive = report.is_active !== false;
     if (activeReplyWrap) {
@@ -360,22 +427,32 @@
     startReportPolling();
   }
 
+  var reportVisibilityBound = false;
+
   function startReportPolling() {
     stopReportPolling();
     if (!activeReport || !activeReport.reference_id) {
       return;
     }
-    reportPollTimer = window.setInterval(function () {
+    var poll = function () {
+      if (phase !== 'active-report' || !activeReport || !activeReport.reference_id) {
+        return;
+      }
       fetchActiveReport(activeReport.reference_id).then(function (report) {
         if (report) {
-          activeReport = report;
-          if (activeStatusEl) {
-            activeStatusEl.textContent = report.status_label || report.status || '';
-          }
-          renderTimeline(report.timeline || [], 'preserve');
+          applyReportRefresh(report);
         }
       });
-    }, 60000);
+    };
+    reportPollTimer = window.setInterval(poll, 15000);
+    if (!reportVisibilityBound) {
+      reportVisibilityBound = true;
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && phase === 'active-report') {
+          poll();
+        }
+      });
+    }
   }
 
   function stopReportPolling() {
