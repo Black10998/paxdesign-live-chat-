@@ -20,12 +20,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 function pax_apple_web_key_p8_from_env(): string {
 	$raw = trim( (string) getenv( 'PAX_APPLE_WEB_KEY_P8' ) );
 	if ( $raw !== '' ) {
-		return $raw;
+		return str_replace( '\\n', "\n", $raw );
 	}
 
 	$b64 = trim( (string) getenv( 'PAX_APPLE_WEB_KEY_P8_BASE64' ) );
 	if ( $b64 === '' ) {
 		return '';
+	}
+
+	if ( strpos( $b64, '-----BEGIN PRIVATE KEY-----' ) !== false ) {
+		return str_replace( '\\n', "\n", $b64 );
 	}
 
 	$decoded = base64_decode( preg_replace( '/\s+/', '', $b64 ), true );
@@ -36,7 +40,7 @@ function pax_apple_web_key_p8_from_env(): string {
 
 	$decoded = str_replace( '\\n', "\n", trim( $decoded ) );
 	if ( strpos( $decoded, '-----BEGIN PRIVATE KEY-----' ) === false ) {
-		$decoded = "-----BEGIN PRIVATE KEY-----\n" . chunk_split( $decoded, 64, "\n" ) . "-----END PRIVATE KEY-----\n";
+		$decoded = "-----BEGIN PRIVATE KEY-----\n" . chunk_split( trim( $decoded ), 64, "\n" ) . "-----END PRIVATE KEY-----\n";
 	}
 
 	return $decoded;
