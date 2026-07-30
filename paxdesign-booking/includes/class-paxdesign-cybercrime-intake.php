@@ -328,7 +328,7 @@ class PAXdesign_Cybercrime_Intake {
             return new WP_Error('invalid_date', __('Please enter the date of the incident.', 'paxdesign-booking'));
         }
 
-        if (!in_array($locale, array('ar', 'de'), true)) {
+        if (!in_array($locale, array('ar', 'de', 'en'), true)) {
             $locale = 'ar';
         }
 

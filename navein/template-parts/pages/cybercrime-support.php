@@ -113,7 +113,15 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 							<span class="pax-ccs-t" data-lang="ar" data-ccs-start-label="view" hidden><?php echo esc_html( pax_ccs_text( $copy['welcome']['view_report'], 'ar' ) ); ?></span>
 							<span class="pax-ccs-t" data-lang="de" data-ccs-start-label="view" hidden><?php echo esc_html( pax_ccs_text( $copy['welcome']['view_report'], 'de' ) ); ?></span>
 							<span class="pax-ccs-t" data-lang="en" data-ccs-start-label="view" hidden><?php echo esc_html( pax_ccs_text( $copy['welcome']['view_report'], 'en' ) ); ?></span>
+							<span id="pax-ccs-start-unread" class="pax-ccs-portal__unread-badge pax-ccs-portal__unread-badge--btn" hidden aria-hidden="true"></span>
 						</button>
+					</div>
+
+					<div id="pax-ccs-report-history" class="pax-ccs-portal__history" hidden>
+						<h3 class="pax-ccs-portal__history-title"><?php pax_ccs_bilingual( $copy['ticket_history']['heading'] ); ?></h3>
+						<p class="pax-ccs-portal__history-intro"><?php pax_ccs_bilingual( $copy['ticket_history']['intro'] ); ?></p>
+						<ul id="pax-ccs-history-list" class="pax-ccs-portal__history-list" aria-live="polite"></ul>
+						<p class="pax-ccs-portal__history-hint"><?php pax_ccs_bilingual( $copy['ticket_history']['new_report_hint'] ); ?></p>
 					</div>
 				</div>
 			</div>
@@ -147,9 +155,15 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 
 					<div class="pax-ccs-portal__active-report-head">
 						<div class="pax-ccs-portal__active-report-head-main">
-							<h2 id="pax-ccs-active-report-title" class="pax-ccs-portal__section-title pax-ccs-portal__section-title--compact"><?php pax_ccs_bilingual( $copy['active_report']['title'] ); ?></h2>
+							<h2 id="pax-ccs-active-report-title" class="pax-ccs-portal__section-title pax-ccs-portal__section-title--compact">
+								<?php pax_ccs_bilingual( $copy['active_report']['title'] ); ?>
+								<span id="pax-ccs-unread-badge" class="pax-ccs-portal__unread-badge" hidden aria-live="polite"></span>
+							</h2>
 							<p class="pax-ccs-portal__section-intro pax-ccs-portal__section-intro--compact"><?php pax_ccs_bilingual( $copy['active_report']['intro'] ); ?></p>
 						</div>
+						<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--ghost pax-ccs-portal__btn--compact" id="pax-ccs-back-history" hidden>
+							<?php pax_ccs_bilingual( $copy['active_report']['back_history'] ); ?>
+						</button>
 						<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--ghost pax-ccs-portal__btn--compact" id="pax-ccs-refresh-report">
 							<?php pax_ccs_bilingual( $copy['active_report']['refresh'] ); ?>
 						</button>
@@ -406,12 +420,10 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 				<p class="pax-ccs-portal__ref-value" id="pax-ccs-ref-value"></p>
 				<div class="pax-ccs-portal__success-actions">
 					<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary" id="pax-ccs-chat-support">
-						<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( $copy['success']['chat_button']['ar'] ); ?></span>
-						<span class="pax-ccs-t" data-lang="de"><?php echo esc_html( $copy['success']['chat_button']['de'] ); ?></span>
+						<?php pax_ccs_bilingual( $copy['success']['chat_button'] ); ?>
 					</button>
 					<p class="pax-ccs-portal__success-chat-hint">
-						<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( $copy['success']['chat_hint']['ar'] ); ?></span>
-						<span class="pax-ccs-t" data-lang="de"><?php echo esc_html( $copy['success']['chat_hint']['de'] ); ?></span>
+						<?php pax_ccs_bilingual( $copy['success']['chat_hint'] ); ?>
 					</p>
 				</div>
 			</div>

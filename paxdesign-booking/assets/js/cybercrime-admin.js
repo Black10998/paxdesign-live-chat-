@@ -2,17 +2,22 @@
   'use strict';
 
   var cfg = window.paxCybercrimeAdmin || {};
+  if (!cfg.ajaxUrl || !cfg.nonce) {
+    return;
+  }
+
   var i18n = cfg.i18n || {};
   var statusClasses = cfg.statusClasses || {};
   var workflowOrder = ['submitted', 'in_review', 'waiting_for_customer', 'resolved', 'closed'];
   var REQUEST_TIMEOUT_MS = 45000;
+  var POLL_INTERVAL_MS = 15000;
 
+  var view = cfg.view || (cfg.reference ? 'detail' : 'list');
+  var referenceId = cfg.reference || '';
   var actionsRoot = document.getElementById('pax-cc-ticket-actions');
-  if (!actionsRoot || !cfg.ajaxUrl || !cfg.nonce) {
-    return;
-  }
+  var listPollTimer = null;
+  var detailPollTimer = null;
 
-  var referenceId = actionsRoot.getAttribute('data-reference') || '';
   var statusSelect = document.getElementById('pax-cc-status');
   var statusFeedback = document.getElementById('pax-cc-status-feedback');
   var replyForm = document.getElementById('pax-cc-reply-form');
@@ -22,6 +27,11 @@
   var timelineEl = document.getElementById('pax-cc-admin-timeline');
   var statusBadge = document.getElementById('pax-cc-admin-status-badge');
   var workflowEl = document.getElementById('pax-cc-admin-workflow');
+  var tabUnreadBadge = document.getElementById('pax-cc-tab-unread-badge');
+
+  if (actionsRoot && !referenceId) {
+    referenceId = actionsRoot.getAttribute('data-reference') || '';
+  }
 
   var lastSavedStatus = statusSelect ? statusSelect.value : '';
   var statusSaveTimer = null;
@@ -81,11 +91,11 @@
     });
   }
 
-  function postAction(action, payload) {
+  function postAction(action, payload, refOverride) {
     var body = new URLSearchParams();
     body.set('action', action);
     body.set('nonce', cfg.nonce);
-    body.set('reference_id', referenceId);
+    body.set('reference_id', refOverride || referenceId || '');
     Object.keys(payload || {}).forEach(function (key) {
       body.set(key, payload[key]);
     });
@@ -121,6 +131,83 @@
     }
 
     return request;
+  }
+
+  function updateTabUnreadBadge(total) {
+    if (!tabUnreadBadge) {
+      return;
+    }
+    var count = parseInt(total, 10) || 0;
+    if (count <= 0) {
+      tabUnreadBadge.hidden = true;
+      tabUnreadBadge.textContent = '';
+      return;
+    }
+    tabUnreadBadge.hidden = false;
+    tabUnreadBadge.textContent = count > 99 ? '99+' : String(count);
+  }
+
+  function applyUnreadSummary(summary) {
+    if (!summary || typeof summary !== 'object') {
+      return;
+    }
+    updateTabUnreadBadge(summary.total || 0);
+    var reports = Array.isArray(summary.reports) ? summary.reports : [];
+    var unreadMap = {};
+    reports.forEach(function (item) {
+      if (item && item.reference_id) {
+        unreadMap[item.reference_id] = parseInt(item.unread_count, 10) || 0;
+      }
+    });
+    document.querySelectorAll('.pax-cc-unread-badge--row').forEach(function (badge) {
+      var ref = badge.getAttribute('data-unread-for') || '';
+      var count = unreadMap[ref] || 0;
+      if (count > 0) {
+        badge.hidden = false;
+        badge.textContent = count > 99 ? '99+' : String(count);
+      } else {
+        badge.hidden = true;
+        badge.textContent = '';
+      }
+    });
+  }
+
+  function pollUnreadSummary(refForDetail) {
+    return postAction('paxdesign_cybercrime_admin_unread', {}, refForDetail || '')
+      .then(function (data) {
+        if (data.summary) {
+          applyUnreadSummary(data.summary);
+        } else {
+          applyUnreadSummary(data);
+        }
+        if (view === 'detail' && data.report) {
+          applyReport(data.report);
+        }
+        return data;
+      })
+      .catch(function () {
+        return null;
+      });
+  }
+
+  function startListPolling() {
+    if (view !== 'list') {
+      return;
+    }
+    pollUnreadSummary('');
+    listPollTimer = window.setInterval(function () {
+      pollUnreadSummary('');
+    }, POLL_INTERVAL_MS);
+  }
+
+  function startDetailPolling() {
+    if (view !== 'detail' || !referenceId) {
+      return;
+    }
+    pollUnreadSummary(referenceId);
+    detailPollTimer = window.setInterval(function () {
+      pollUnreadSummary(referenceId);
+    }, POLL_INTERVAL_MS);
   }
 
   function updateWorkflow(currentStatus) {
@@ -293,4 +380,7 @@
         });
     });
   }
+
+  startListPolling();
+  startDetailPolling();
 })();

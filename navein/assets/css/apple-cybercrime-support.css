@@ -1090,6 +1090,7 @@ html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
 
 .pax-ccs-portal__active-report-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
@@ -1395,4 +1396,91 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
   background: rgba(110, 110, 115, 0.12);
   color: var(--ccs-muted);
   font-size: 13px;
+}
+
+.pax-ccs-portal__unread-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  margin-inline-start: 8px;
+  border-radius: 999px;
+  background: #ff3b30;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.pax-ccs-portal__unread-badge--btn {
+  margin-inline-start: 10px;
+  min-width: 20px;
+  height: 20px;
+}
+
+.pax-ccs-portal--report-closed .pax-ccs-portal__panel--active-report {
+  opacity: 0.72;
+  filter: grayscale(0.15);
+}
+
+.pax-ccs-portal--report-closed .pax-ccs-portal__reply-wrap,
+.pax-ccs-portal--report-closed .pax-ccs-portal__reply-wrap--compact {
+  display: none !important;
+}
+
+.pax-ccs-portal__history {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--ccs-line);
+}
+
+.pax-ccs-portal__history-title {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.pax-ccs-portal__history-intro,
+.pax-ccs-portal__history-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--ccs-muted);
+  line-height: 1.45;
+}
+
+.pax-ccs-portal__history-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.pax-ccs-portal__history-btn {
+  width: 100%;
+  text-align: start;
+  border: 1px solid var(--ccs-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.65);
+  padding: 12px 14px;
+  cursor: pointer;
+}
+
+.pax-ccs-portal__history-btn:hover {
+  border-color: rgba(0, 113, 227, 0.35);
+}
+
+.pax-ccs-portal__history-ref {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.pax-ccs-portal__history-meta {
+  display: block;
+  font-size: 13px;
+  color: var(--ccs-muted);
 }

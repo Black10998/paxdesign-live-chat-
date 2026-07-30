@@ -147,6 +147,36 @@ return array(
 			'de' => 'Ihre Meldung ansehen',
 		),
 	),
+	'ticket_history' => array(
+		'heading' => array(
+			'ar' => 'سجل البلاغات',
+			'de' => 'Meldungsverlauf',
+		),
+		'intro' => array(
+			'ar' => 'البلاغات المغلقة للقراءة فقط. لمساعدة جديدة، ابدأ بلاغًا جديدًا.',
+			'de' => 'Abgeschlossene Meldungen sind schreibgeschützt. Für neue Hilfe starten Sie eine neue Meldung.',
+		),
+		'empty' => array(
+			'ar' => 'لا توجد بلاغات سابقة.',
+			'de' => 'Keine früheren Meldungen.',
+		),
+		'closed_badge' => array(
+			'ar' => 'مغلق',
+			'de' => 'Geschlossen',
+		),
+		'active_badge' => array(
+			'ar' => 'نشط',
+			'de' => 'Aktiv',
+		),
+		'new_report_hint' => array(
+			'ar' => 'للحصول على مساعدة جديدة، استخدم «بدء البلاغ» أعلاه.',
+			'de' => 'Für neue Hilfe nutzen Sie oben «Meldung starten».',
+		),
+		'unread' => array(
+			'ar' => 'جديد',
+			'de' => 'Neu',
+		),
+	),
 	'active_report' => array(
 		'title' => array(
 			'ar' => 'بلاغك الحالي',
@@ -235,6 +265,18 @@ return array(
 		'refresh' => array(
 			'ar' => 'تحديث',
 			'de' => 'Aktualisieren',
+		),
+		'closed_title' => array(
+			'ar' => 'بلاغ مغلق (للقراءة فقط)',
+			'de' => 'Abgeschlossene Meldung (nur Lesen)',
+		),
+		'read_only' => array(
+			'ar' => 'هذا البلاغ مغلق. يمكنك عرض السجل الكامل فقط.',
+			'de' => 'Diese Meldung ist abgeschlossen. Sie können nur den Verlauf ansehen.',
+		),
+		'back_history' => array(
+			'ar' => 'العودة إلى سجل البلاغات',
+			'de' => 'Zurück zum Meldungsverlauf',
 		),
 	),
 	'login_gate' => array(

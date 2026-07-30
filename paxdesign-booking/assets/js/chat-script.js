@@ -61,8 +61,8 @@
   var assignedAgent      = null;
   var pollSeq            = 0;
   var pollTimer          = null;
-  var HISTORY_INITIAL    = 100;
-  var HISTORY_BATCH      = 50;
+  var HISTORY_INITIAL    = 10;
+  var HISTORY_BATCH      = 10;
   var oldestLoadedSeq    = 0;
   var hasOlderMessages   = false;
   var loadingOlderHistory = false;
@@ -2097,6 +2097,7 @@
     formData.append('since', '0');
     if (full) {
       formData.append('full', '1');
+      formData.append('history_limit', String(HISTORY_INITIAL));
     }
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) { return safeJson(res).then(function (json) { return { res: res, json: json }; }); })

@@ -147,6 +147,11 @@ if ( ! function_exists( 'pax_ccs_portal_i18n' ) ) {
 			$review[ $key ] = $pick( $labels );
 		}
 
+		$history = array();
+		foreach ( (array) ( $copy['ticket_history'] ?? array() ) as $key => $labels ) {
+			$history[ $key ] = $pick( $labels );
+		}
+
 		return array(
 			'langs'           => $langs,
 			'supportTeam'     => $pick( $copy['timeline_i18n']['support_team'] ?? array() ),
@@ -159,6 +164,12 @@ if ( ! function_exists( 'pax_ccs_portal_i18n' ) ) {
 			'urgency'         => $urgency,
 			'errors'          => $errors,
 			'review'          => $review,
+			'ticketHistory'   => $history,
+			'activeReport'    => $pick( array(
+				'closed_title' => $copy['active_report']['closed_title'] ?? array(),
+				'read_only'    => $copy['active_report']['read_only'] ?? array(),
+				'back_history' => $copy['active_report']['back_history'] ?? array(),
+			) ),
 		);
 	}
 }

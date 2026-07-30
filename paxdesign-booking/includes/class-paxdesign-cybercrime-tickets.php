@@ -10,7 +10,7 @@ if (!defined('ABSPATH')) {
 class PAXdesign_Cybercrime_Tickets {
 
     const TABLE_MESSAGES = 'paxdesign_cybercrime_messages';
-    const SCHEMA_VERSION = '2';
+    const SCHEMA_VERSION = '3';
 
     /** @var list<string> Canonical workflow statuses (admin + database). */
     private static $workflow_statuses = array(
@@ -46,6 +46,9 @@ class PAXdesign_Cybercrime_Tickets {
         add_action('wp_ajax_paxdesign_cybercrime_admin_status', array(__CLASS__, 'ajax_admin_status'));
         add_action('wp_ajax_paxdesign_cybercrime_admin_reply', array(__CLASS__, 'ajax_admin_reply'));
         add_action('wp_ajax_paxdesign_cybercrime_admin_internal_note', array(__CLASS__, 'ajax_admin_internal_note'));
+        add_action('wp_ajax_paxdesign_cybercrime_admin_unread', array(__CLASS__, 'ajax_admin_unread'));
+        add_action('wp_ajax_paxdesign_cybercrime_mark_read', array(__CLASS__, 'ajax_mark_read'));
+        add_action('wp_ajax_paxdesign_cybercrime_report_list', array(__CLASS__, 'ajax_report_list'));
     }
 
     const ADMIN_NONCE_ACTION = 'paxdesign_cybercrime_admin';
@@ -89,6 +92,14 @@ class PAXdesign_Cybercrime_Tickets {
         $columns = $wpdb->get_col("SHOW COLUMNS FROM `$reports`", 0);
         if (is_array($columns) && !in_array('chat_session_id', $columns, true)) {
             $wpdb->query("ALTER TABLE `$reports` ADD COLUMN chat_session_id varchar(64) NOT NULL DEFAULT '' AFTER customer_user_id");
+        }
+        $columns = $wpdb->get_col("SHOW COLUMNS FROM `$reports`", 0);
+        if (is_array($columns) && !in_array('customer_last_read_message_id', $columns, true)) {
+            $wpdb->query("ALTER TABLE `$reports` ADD COLUMN customer_last_read_message_id bigint(20) unsigned NOT NULL DEFAULT 0 AFTER chat_session_id");
+        }
+        $columns = $wpdb->get_col("SHOW COLUMNS FROM `$reports`", 0);
+        if (is_array($columns) && !in_array('staff_last_read_message_id', $columns, true)) {
+            $wpdb->query("ALTER TABLE `$reports` ADD COLUMN staff_last_read_message_id bigint(20) unsigned NOT NULL DEFAULT 0 AFTER customer_last_read_message_id");
         }
 
         update_option('paxdesign_cybercrime_tickets_schema_version', self::SCHEMA_VERSION, false);
@@ -361,7 +372,7 @@ class PAXdesign_Cybercrime_Tickets {
      * @param bool                 $with_timeline
      * @return array<string, mixed>
      */
-    public static function format_report_row($row, $with_timeline = false, $timeline_audience = 'customer') {
+    public static function format_report_row($row, $with_timeline = false, $timeline_audience = 'customer', $unread_audience = '') {
         $payload = json_decode((string) ($row['payload'] ?? ''), true);
         if (!is_array($payload)) {
             $payload = array();
@@ -399,6 +410,13 @@ class PAXdesign_Cybercrime_Tickets {
 
         $customer_display_name = self::resolve_customer_display_name($row);
         $out['customer_display_name'] = $customer_display_name;
+        $read_audience = $unread_audience !== ''
+            ? sanitize_key((string) $unread_audience)
+            : ($timeline_audience === 'admin' ? 'staff' : 'customer');
+        if (!in_array($read_audience, array('staff', 'customer'), true)) {
+            $read_audience = 'customer';
+        }
+        $out['unread_count'] = self::count_unread_for_audience((string) ($row['reference_id'] ?? ''), $read_audience, $row);
 
         if ($with_timeline) {
             if ($timeline_audience === 'admin') {
@@ -1344,6 +1362,203 @@ class PAXdesign_Cybercrime_Tickets {
     }
 
     /**
+     * @param string               $reference_id
+     * @param string               $audience staff|customer
+     * @param array<string, mixed>|null $row
+     * @return int
+     */
+    public static function count_unread_for_audience($reference_id, $audience, $row = null) {
+        $reference_id = sanitize_text_field((string) $reference_id);
+        $audience = sanitize_key((string) $audience);
+        if ($reference_id === '' || !in_array($audience, array('staff', 'customer'), true)) {
+            return 0;
+        }
+        if (!is_array($row)) {
+            $row = self::get_report_row($reference_id);
+        }
+        if (!is_array($row)) {
+            return 0;
+        }
+
+        $cursor = $audience === 'staff'
+            ? (int) ($row['staff_last_read_message_id'] ?? 0)
+            : (int) ($row['customer_last_read_message_id'] ?? 0);
+
+        $count = 0;
+        foreach (self::list_messages($reference_id, 500) as $entry) {
+            if (!is_array($entry) || (int) ($entry['id'] ?? 0) <= $cursor) {
+                continue;
+            }
+            $author = sanitize_key((string) ($entry['author_type'] ?? ''));
+            if ($audience === 'staff' && $author === 'customer' && self::is_official_timeline_entry($entry)) {
+                $count++;
+            } elseif ($audience === 'customer' && $author === 'staff' && self::is_customer_visible_timeline_entry($entry)) {
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * @param string $reference_id
+     * @param string $audience staff|customer
+     * @param int    $user_id
+     * @return bool
+     */
+    public static function mark_read_for_audience($reference_id, $audience, $user_id = 0) {
+        $reference_id = sanitize_text_field((string) $reference_id);
+        $audience = sanitize_key((string) $audience);
+        if ($reference_id === '' || !in_array($audience, array('staff', 'customer'), true)) {
+            return false;
+        }
+
+        $row = self::get_report_row($reference_id);
+        if (!is_array($row)) {
+            return false;
+        }
+
+        $max_id = $audience === 'staff'
+            ? (int) ($row['staff_last_read_message_id'] ?? 0)
+            : (int) ($row['customer_last_read_message_id'] ?? 0);
+
+        foreach (self::list_messages($reference_id, 500) as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $id = (int) ($entry['id'] ?? 0);
+            $author = sanitize_key((string) ($entry['author_type'] ?? ''));
+            if ($audience === 'staff' && $author === 'customer' && self::is_official_timeline_entry($entry)) {
+                $max_id = max($max_id, $id);
+            } elseif ($audience === 'customer' && $author === 'staff' && self::is_customer_visible_timeline_entry($entry)) {
+                $max_id = max($max_id, $id);
+            }
+        }
+
+        $column = $audience === 'staff' ? 'staff_last_read_message_id' : 'customer_last_read_message_id';
+        $current = (int) ($row[$column] ?? 0);
+        if ($max_id <= $current) {
+            if ($audience === 'customer') {
+                self::mark_customer_notifications_read($row, $user_id);
+            }
+            return true;
+        }
+
+        global $wpdb;
+        $updated = $wpdb->update(
+            PAXdesign_Cybercrime_Intake::table_name(),
+            array($column => $max_id),
+            array('reference_id' => $reference_id),
+            array('%d'),
+            array('%s')
+        );
+
+        if ($audience === 'customer') {
+            self::mark_customer_notifications_read($row, $user_id);
+        }
+
+        return $updated !== false;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @param int                  $user_id
+     */
+    private static function mark_customer_notifications_read($row, $user_id) {
+        if (!class_exists('PAXdesign_Customer_Notifications')) {
+            return;
+        }
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            $user_id = (int) ($row['customer_user_id'] ?? 0);
+        }
+        if ($user_id <= 0) {
+            return;
+        }
+        $reference_id = sanitize_text_field((string) ($row['reference_id'] ?? ''));
+        if ($reference_id === '') {
+            return;
+        }
+        PAXdesign_Customer_Notifications::mark_read_for_entity($user_id, 'cybercrime', $reference_id);
+    }
+
+    /**
+     * @param int $limit
+     * @return array{total: int, reports: array<int, array{reference_id: string, unread_count: int}>}
+     */
+    public static function staff_unread_summary($limit = 50) {
+        $reports = self::list_reports_for_admin($limit);
+        $out = array();
+        $total = 0;
+        foreach ($reports as $report) {
+            if (!is_array($report)) {
+                continue;
+            }
+            $count = (int) ($report['unread_count'] ?? 0);
+            if ($count <= 0) {
+                continue;
+            }
+            $total += $count;
+            $out[] = array(
+                'reference_id' => (string) ($report['reference_id'] ?? ''),
+                'unread_count' => $count,
+            );
+        }
+        return array(
+            'total'   => $total,
+            'reports' => $out,
+        );
+    }
+
+    /**
+     * @param int $user_id
+     * @param int $limit
+     * @return array<int, array<string, mixed>>
+     */
+    public static function list_reports_for_user($user_id, $limit = 30) {
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return array();
+        }
+
+        global $wpdb;
+        $table = PAXdesign_Cybercrime_Intake::table_name();
+        $user = get_user_by('id', $user_id);
+        $email = ($user instanceof WP_User) ? sanitize_email($user->user_email) : '';
+        $lim = max(1, min(50, (int) $limit));
+
+        if ($email !== '') {
+            $rows = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM $table
+                 WHERE customer_user_id = %d OR (customer_user_id = 0 AND reporter_email = %s)
+                 ORDER BY updated_at DESC
+                 LIMIT %d",
+                $user_id,
+                $email,
+                $lim
+            ), ARRAY_A);
+        } else {
+            $rows = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM $table WHERE customer_user_id = %d ORDER BY updated_at DESC LIMIT %d",
+                $user_id,
+                $lim
+            ), ARRAY_A);
+        }
+
+        if (!is_array($rows)) {
+            return array();
+        }
+
+        $out = array();
+        foreach ($rows as $row) {
+            if (is_array($row)) {
+                $out[] = self::format_report_row($row, false, 'customer', 'customer');
+            }
+        }
+        return $out;
+    }
+
+    /**
      * @param int $limit
      * @return array<int, array<string, mixed>>
      */
@@ -1360,7 +1575,7 @@ class PAXdesign_Cybercrime_Tickets {
         $out = array();
         foreach ($rows as $row) {
             if (is_array($row)) {
-                $out[] = self::format_report_row($row, false);
+                $out[] = self::format_report_row($row, false, 'customer', 'staff');
             }
         }
         return $out;
@@ -1517,6 +1732,77 @@ class PAXdesign_Cybercrime_Tickets {
         ));
     }
 
+    public static function ajax_admin_unread() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Insufficient permissions.', 'paxdesign-booking')), 403);
+        }
+        check_ajax_referer(self::ADMIN_NONCE_ACTION, 'nonce');
+
+        $reference = sanitize_text_field(wp_unslash($_POST['reference_id'] ?? ''));
+        if ($reference !== '') {
+            $report = self::get_report_for_admin($reference);
+            if (!$report) {
+                wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
+            }
+            wp_send_json_success(array(
+                'report' => $report,
+                'summary' => self::staff_unread_summary(50),
+            ));
+        }
+
+        wp_send_json_success(self::staff_unread_summary(50));
+    }
+
+    public static function ajax_mark_read() {
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('Please sign in.', 'paxdesign-booking')), 401);
+        }
+        check_ajax_referer(PAXdesign_Cybercrime_Intake::NONCE_ACTION, 'nonce');
+
+        $reference = sanitize_text_field(wp_unslash($_POST['reference_id'] ?? $_POST['reference'] ?? ''));
+        $row = self::get_report_row($reference);
+        if (!$row || !self::user_can_view_report($row, get_current_user_id())) {
+            wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
+        }
+
+        self::mark_read_for_audience($reference, 'customer', get_current_user_id());
+        $report = self::get_report_for_user($reference, get_current_user_id());
+
+        wp_send_json_success(array(
+            'unread_count' => 0,
+            'report'       => $report,
+        ));
+    }
+
+    public static function ajax_report_list() {
+        if (!is_user_logged_in()) {
+            wp_send_json_error(array('message' => __('Please sign in.', 'paxdesign-booking'), 'code' => 'login_required'), 401);
+        }
+        check_ajax_referer(PAXdesign_Cybercrime_Intake::NONCE_ACTION, 'nonce');
+
+        $reports = self::list_reports_for_user(get_current_user_id(), 30);
+        $active = null;
+        $history = array();
+        foreach ($reports as $report) {
+            if (!is_array($report)) {
+                continue;
+            }
+            if (!empty($report['is_active'])) {
+                if ($active === null) {
+                    $active = $report;
+                }
+            } else {
+                $history[] = $report;
+            }
+        }
+
+        wp_send_json_success(array(
+            'reports' => $reports,
+            'active'  => $active,
+            'history' => $history,
+        ));
+    }
+
     public static function ajax_active_report() {
         if (!is_user_logged_in()) {
             wp_send_json_error(array('message' => __('Please sign in.', 'paxdesign-booking'), 'code' => 'login_required'), 401);
@@ -1551,6 +1837,12 @@ class PAXdesign_Cybercrime_Tickets {
             'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
         ));
 
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/cybercrime/reports', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'rest_list_reports'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
         register_rest_route(PAXdesign_Customer_REST::NS, '/customer/cybercrime/reports/(?P<reference>[A-Z0-9-]+)', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'rest_get_report'),
@@ -1576,6 +1868,30 @@ class PAXdesign_Cybercrime_Tickets {
         return rest_ensure_response(array(
             'active' => !empty($report),
             'report' => $report,
+        ));
+    }
+
+    public static function rest_list_reports(WP_REST_Request $request) {
+        unset($request);
+        $reports = self::list_reports_for_user(PAXdesign_Customer_Auth::current_user_id(), 30);
+        $active = null;
+        $history = array();
+        foreach ($reports as $report) {
+            if (!is_array($report)) {
+                continue;
+            }
+            if (!empty($report['is_active'])) {
+                if ($active === null) {
+                    $active = $report;
+                }
+            } else {
+                $history[] = $report;
+            }
+        }
+        return rest_ensure_response(array(
+            'reports' => $reports,
+            'active'  => $active,
+            'history' => $history,
         ));
     }
 

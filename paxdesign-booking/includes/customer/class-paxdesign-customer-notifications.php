@@ -76,6 +76,33 @@ class PAXdesign_Customer_Notifications {
     }
 
     /**
+     * Mark all unread notifications for an entity as read (e.g. cybercrime ticket opened).
+     *
+     * @return int Number of rows updated.
+     */
+    public static function mark_read_for_entity($user_id, $entity_type, $entity_id) {
+        global $wpdb;
+        $user_id = absint($user_id);
+        $entity_type = sanitize_key((string) $entity_type);
+        $entity_id = sanitize_text_field((string) $entity_id);
+        if ($user_id <= 0 || $entity_type === '' || $entity_id === '') {
+            return 0;
+        }
+        $table = PAXdesign_Customer_DB::table('notifications');
+        $updated = (int) $wpdb->query($wpdb->prepare(
+            "UPDATE $table SET is_read = 1, read_at = %s WHERE user_id = %d AND entity_type = %s AND entity_id = %s AND is_read = 0",
+            current_time('mysql', true),
+            $user_id,
+            $entity_type,
+            $entity_id
+        ));
+        if ($updated > 0) {
+            self::push_badge_sync($user_id);
+        }
+        return $updated;
+    }
+
+    /**
      * Silent badge refresh for the customer's other devices after read state changes.
      */
     public static function push_badge_sync($user_id) {

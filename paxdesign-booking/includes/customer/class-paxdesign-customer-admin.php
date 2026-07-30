@@ -60,12 +60,12 @@ class PAXdesign_Customer_Admin {
         if (sanitize_key(wp_unslash($_GET['tab'] ?? '')) !== 'cybercrime') {
             return;
         }
-        if (sanitize_text_field(wp_unslash($_GET['reference'] ?? '')) === '') {
-            return;
-        }
         if (!class_exists('PAXdesign_Cybercrime_Tickets') || !defined('PAXDESIGN_BOOKING_PLUGIN_URL')) {
             return;
         }
+
+        $reference = sanitize_text_field(wp_unslash($_GET['reference'] ?? ''));
+        $view = $reference !== '' ? 'detail' : 'list';
 
         wp_enqueue_script(
             'paxdesign-cybercrime-admin',
@@ -75,8 +75,10 @@ class PAXdesign_Customer_Admin {
             true
         );
         wp_localize_script('paxdesign-cybercrime-admin', 'paxCybercrimeAdmin', array(
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce'   => wp_create_nonce(PAXdesign_Cybercrime_Tickets::ADMIN_NONCE_ACTION),
+            'ajaxUrl'   => admin_url('admin-ajax.php'),
+            'nonce'     => wp_create_nonce(PAXdesign_Cybercrime_Tickets::ADMIN_NONCE_ACTION),
+            'view'      => $view,
+            'reference' => $reference,
             'statusClasses' => array(
                 'submitted'             => 'pax-cc-status--submitted',
                 'in_review'             => 'pax-cc-status--in_review',
@@ -116,7 +118,8 @@ class PAXdesign_Customer_Admin {
             'cybercrime'    => __('Cybercrime Reports', 'paxdesign-booking'),
         ) as $slug => $label) {
             $class = $tab === $slug ? ' nav-tab nav-tab-active' : ' nav-tab';
-            echo '<a class="' . esc_attr(trim($class)) . '" href="' . esc_url(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=' . $slug)) . '">' . esc_html($label) . '</a>';
+            $badge = $slug === 'cybercrime' ? ' <span class="pax-cc-unread-badge" id="pax-cc-tab-unread-badge" hidden aria-label="' . esc_attr__('Unread reports', 'paxdesign-booking') . '"></span>' : '';
+            echo '<a class="' . esc_attr(trim($class)) . '" href="' . esc_url(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=' . $slug)) . '">' . esc_html($label) . $badge . '</a>';
         }
         echo '</nav>';
 
@@ -658,19 +661,23 @@ class PAXdesign_Customer_Admin {
         echo '<th>' . esc_html__('Category', 'paxdesign-booking') . '</th>';
         echo '<th>' . esc_html__('Status', 'paxdesign-booking') . '</th>';
         echo '<th>' . esc_html__('Updated', 'paxdesign-booking') . '</th>';
-        echo '</tr></thead><tbody>';
+        echo '<th>' . esc_html__('Alerts', 'paxdesign-booking') . '</th>';
+        echo '</tr></thead><tbody id="pax-cc-admin-list-body">';
         if (empty($reports)) {
-            echo '<tr><td colspan="5">' . esc_html__('No reports yet.', 'paxdesign-booking') . '</td></tr>';
+            echo '<tr><td colspan="6">' . esc_html__('No reports yet.', 'paxdesign-booking') . '</td></tr>';
         }
         foreach ($reports as $report) {
             $url = admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=cybercrime&reference=' . rawurlencode((string) $report['reference_id']));
             $status = (string) ($report['status'] ?? '');
-            echo '<tr>';
-            echo '<td><a href="' . esc_url($url) . '"><code>' . esc_html((string) $report['reference_id']) . '</code></a></td>';
+            $ref = (string) ($report['reference_id'] ?? '');
+            $unread = (int) ($report['unread_count'] ?? 0);
+            echo '<tr data-reference="' . esc_attr($ref) . '">';
+            echo '<td><a href="' . esc_url($url) . '"><code>' . esc_html($ref) . '</code></a></td>';
             echo '<td>' . esc_html((string) ($report['reporter_name'] ?? '')) . '<br><small>' . esc_html((string) ($report['reporter_email'] ?? '')) . '</small></td>';
             echo '<td>' . esc_html((string) ($report['category_label'] ?? '')) . '</td>';
             echo '<td><span class="' . esc_attr(PAXdesign_Cybercrime_Tickets::admin_status_badge_class($status)) . '">' . esc_html((string) ($report['status_label'] ?? '')) . '</span></td>';
             echo '<td>' . esc_html((string) ($report['updated_at'] ?? '')) . '</td>';
+            echo '<td><span class="pax-cc-unread-badge pax-cc-unread-badge--row" data-unread-for="' . esc_attr($ref) . '"' . ($unread > 0 ? '' : ' hidden') . '>' . esc_html((string) $unread) . '</span></td>';
             echo '</tr>';
         }
         echo '</tbody></table>';
@@ -734,6 +741,9 @@ class PAXdesign_Customer_Admin {
         .pax-cc-actions__feedback.is-saving{color:#135e96}
         .pax-cc-timeline__item--internal .pax-cc-timeline__meta{color:#8c8f94}
         .pax-cc-timeline__internal-tag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;background:#f0f0f1;color:#646970}
+        .pax-cc-unread-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px;border-radius:999px;background:#d63638;color:#fff;font-size:11px;font-weight:700;line-height:1;box-shadow:0 0 0 2px #fff}
+        .pax-cc-unread-badge--row{min-width:22px;height:22px;font-size:12px}
+        #pax-cc-tab-unread-badge{margin-left:6px;vertical-align:middle}
         </style>';
     }
 
@@ -776,6 +786,8 @@ class PAXdesign_Customer_Admin {
             echo '<p>' . esc_html__('Report not found.', 'paxdesign-booking') . '</p>';
             return;
         }
+
+        PAXdesign_Cybercrime_Tickets::mark_read_for_audience($reference, 'staff', get_current_user_id());
 
         $report = PAXdesign_Cybercrime_Tickets::format_report_row($row, true, 'admin');
         $status = (string) ($report['status'] ?? '');

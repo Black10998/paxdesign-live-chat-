@@ -69,6 +69,15 @@ return array(
 		'start' => 'Start report',
 		'view_report' => 'View your report',
 	),
+	'ticket_history' => array(
+		'heading' => 'Ticket history',
+		'intro' => 'Closed reports are read-only. For new help, start a new report.',
+		'empty' => 'No previous reports.',
+		'closed_badge' => 'Closed',
+		'active_badge' => 'Active',
+		'new_report_hint' => 'For new assistance, use “Start report” above.',
+		'unread' => 'New',
+	),
 	'active_report' => array(
 		'title' => 'Your current report',
 		'intro' => 'Track the official status of your report and communication with the PAXDesign Support team.',
@@ -92,6 +101,9 @@ return array(
 		'ai_heading' => 'AI assistant — questions & guidance',
 		'ai_note' => 'Separate chat for questions and explanations. Not saved as official ticket replies.',
 		'refresh' => 'Refresh',
+		'closed_title' => 'Closed report (read-only)',
+		'read_only' => 'This report is closed. You can view the full history only.',
+		'back_history' => 'Back to ticket history',
 	),
 	'login_gate' => array(
 		'title' => 'Sign in required',
