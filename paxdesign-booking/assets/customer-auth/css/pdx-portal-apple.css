@@ -92,6 +92,11 @@ body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-menu-item--
 }
 
 /* ─── Account shell ──────────────────────────────────────── */
+body.pdx-account-dashboard-body .pdx-account-header {
+  background: var(--pdx-portal-bg);
+  border-bottom-color: var(--pdx-portal-border);
+}
+
 body.pdx-account-dashboard-body .pdx-account-app {
   background: var(--pdx-portal-bg);
   border: 0;
