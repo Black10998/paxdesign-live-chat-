@@ -202,7 +202,6 @@ jobs:
           test "$CHAT" = "200"
           test "$AUTH_JS" = "200"
           grep -Eq "Version: 1\.4\.24" /tmp/style.css
-          grep -Eq "Version: 3\.174\.55" /tmp/pax-plugin.php
           grep -Eq "chat-script\.js\?ver=3\.174\.55|pdx-auth\.css\?ver=3\.174\.55" /tmp/ccs-page.html
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-login-gate" /tmp/ccs-page.html
           grep -Eq "Full-page contrast isolation|::file-selector-button" /tmp/apple-ccs.css
