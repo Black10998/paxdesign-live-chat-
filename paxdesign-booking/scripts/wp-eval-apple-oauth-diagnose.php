@@ -50,12 +50,17 @@ $response = wp_remote_post(
 			'Accept'       => 'application/json',
 			'Content-Type' => 'application/x-www-form-urlencoded',
 		),
-		'body'    => array(
-			'client_id'     => $service_id,
-			'client_secret' => $secret,
-			'code'          => 'diagnostic-invalid-code',
-			'grant_type'    => 'authorization_code',
-			'redirect_uri'  => PAXdesign_Auth_Apple::web_callback_url(),
+		'body'    => http_build_query(
+			array(
+				'client_id'     => $service_id,
+				'client_secret' => $secret,
+				'code'          => 'diagnostic-invalid-code',
+				'grant_type'    => 'authorization_code',
+				'redirect_uri'  => PAXdesign_Auth_Apple::web_callback_url(),
+			),
+			'',
+			'&',
+			PHP_QUERY_RFC3986
 		),
 	)
 );

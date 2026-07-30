@@ -75,7 +75,8 @@ class PAXdesign_Auth_Apple {
 	 * @return string
 	 */
 	public static function web_callback_url(): string {
-		return rest_url( 'pdx/v1/auth/apple/callback' );
+		$path = '/' . ltrim( rest_get_url_prefix(), '/' ) . '/pdx/v1/auth/apple/callback';
+		return untrailingslashit( home_url( $path, 'https' ) );
 	}
 
 	/**
@@ -103,14 +104,15 @@ class PAXdesign_Auth_Apple {
 			return new WP_Error( 'apple_web_unconfigured', 'Sign in with Apple is not configured on the server yet.' );
 		}
 
-		$cfg         = self::web_config();
-		$return_path = sanitize_text_field( (string) $request->get_param( 'return_to' ) );
-		$return_url  = self::sanitize_return_url( $return_path );
-		$state       = self::create_oauth_state( $return_url );
+		$cfg           = self::web_config();
+		$return_path   = sanitize_text_field( (string) $request->get_param( 'return_to' ) );
+		$return_url    = self::sanitize_return_url( $return_path );
+		$redirect_uri  = self::web_callback_url();
+		$state         = self::create_oauth_state( $return_url, $cfg['service_id'], $redirect_uri );
 
 		$params = array(
 			'client_id'     => $cfg['service_id'],
-			'redirect_uri'  => self::web_callback_url(),
+			'redirect_uri'  => $redirect_uri,
 			'response_type' => 'code',
 			'scope'         => 'name email',
 			'response_mode' => 'form_post',
@@ -146,18 +148,31 @@ class PAXdesign_Auth_Apple {
 			return self::web_error_redirect_url( 'Apple did not return a valid authorization response.' );
 		}
 
-		$return_url = self::consume_oauth_state( $state );
-		if ( is_wp_error( $return_url ) ) {
+		$state_data = self::consume_oauth_state( $state );
+		if ( is_wp_error( $state_data ) ) {
 			self::log_failure( 'apple_state_invalid' );
 			self::trace( 'callback_state_invalid' );
-			return self::web_error_redirect_url( $return_url->get_error_message() );
+			return self::web_error_redirect_url( $state_data->get_error_message() );
 		}
 
-		$tokens = self::exchange_authorization_code( $code );
+		$return_url   = (string) ( $state_data['return_url'] ?? '' );
+		$client_id    = (string) ( $state_data['client_id'] ?? '' );
+		$redirect_uri = (string) ( $state_data['redirect_uri'] ?? '' );
+
+		$tokens = self::exchange_authorization_code( $code, $client_id, $redirect_uri );
 		if ( is_wp_error( $tokens ) ) {
 			self::log_failure( 'apple_token_exchange', array( 'reason' => $tokens->get_error_code(), 'message' => $tokens->get_error_message() ) );
-			self::trace( 'callback_token_exchange_failed', array( 'reason' => $tokens->get_error_code(), 'message' => $tokens->get_error_message() ) );
-			return self::web_error_redirect_url( $tokens->get_error_message() );
+			self::trace(
+				'callback_token_exchange_failed',
+				array_merge(
+					self::token_exchange_trace_context( $client_id, $redirect_uri ),
+					array(
+						'reason'  => $tokens->get_error_code(),
+						'message' => $tokens->get_error_message(),
+					)
+				)
+			);
+			return self::web_error_redirect_url( self::friendly_token_exchange_error( $tokens->get_error_message() ) );
 		}
 
 		$id_token = (string) ( $tokens['id_token'] ?? '' );
@@ -409,23 +424,45 @@ class PAXdesign_Auth_Apple {
 			'service_id' => self::web_service_id(),
 			'team_id'    => trim( (string) get_option( 'paxdesign_apns_team_id', '' ) ),
 			'key_id'     => trim( (string) get_option( 'paxdesign_apns_key_id', '' ) ),
-			'key_p8'     => trim( (string) get_option( 'paxdesign_apns_key_p8', '' ) ),
+			'key_p8'     => self::normalize_private_key( (string) get_option( 'paxdesign_apns_key_p8', '' ) ),
 		);
 	}
 
 	/**
 	 * @return string|WP_Error
 	 */
-	private static function exchange_authorization_code( string $code ) {
+	private static function exchange_authorization_code( string $code, string $client_id = '', string $redirect_uri = '' ) {
 		$cfg = self::web_config();
 		if ( ! self::is_web_configured() ) {
 			return new WP_Error( 'apple_web_unconfigured', 'Sign in with Apple is not configured on the server yet.' );
 		}
 
-		$client_secret = self::make_client_secret( $cfg );
+		if ( $client_id === '' ) {
+			$client_id = $cfg['service_id'];
+		}
+		if ( $redirect_uri === '' ) {
+			$redirect_uri = self::web_callback_url();
+		}
+
+		$secret_cfg             = $cfg;
+		$secret_cfg['service_id'] = $client_id;
+		$client_secret          = self::make_client_secret( $secret_cfg );
 		if ( is_wp_error( $client_secret ) ) {
 			return $client_secret;
 		}
+
+		$post_body = http_build_query(
+			array(
+				'client_id'     => $client_id,
+				'client_secret' => $client_secret,
+				'code'          => $code,
+				'grant_type'    => 'authorization_code',
+				'redirect_uri'  => $redirect_uri,
+			),
+			'',
+			'&',
+			PHP_QUERY_RFC3986
+		);
 
 		$response = wp_remote_post(
 			self::TOKEN_URL,
@@ -435,13 +472,7 @@ class PAXdesign_Auth_Apple {
 					'Accept'       => 'application/json',
 					'Content-Type' => 'application/x-www-form-urlencoded',
 				),
-				'body'    => array(
-					'client_id'     => $cfg['service_id'],
-					'client_secret' => $client_secret,
-					'code'          => $code,
-					'grant_type'    => 'authorization_code',
-					'redirect_uri'  => self::web_callback_url(),
-				),
+				'body'    => $post_body,
 			)
 		);
 
@@ -459,6 +490,7 @@ class PAXdesign_Auth_Apple {
 			return new WP_Error( 'apple_token_exchange', $message );
 		}
 
+		self::trace( 'callback_token_exchange_ok', self::token_exchange_trace_context( $client_id, $redirect_uri ) );
 		return $body;
 	}
 
@@ -482,7 +514,7 @@ class PAXdesign_Auth_Apple {
 				array(
 					'iss' => $cfg['team_id'],
 					'iat' => time(),
-					'exp' => time() + 15777000,
+					'exp' => time() + MONTH_IN_SECONDS * 3,
 					'aud' => self::ISSUER,
 					'sub' => $cfg['service_id'],
 				),
@@ -491,7 +523,7 @@ class PAXdesign_Auth_Apple {
 		);
 		$input  = $header . '.' . $claims;
 
-		$key = openssl_pkey_get_private( $cfg['key_p8'] );
+		$key = openssl_pkey_get_private( self::normalize_private_key( $cfg['key_p8'] ) );
 		if ( ! $key ) {
 			return new WP_Error( 'apple_client_secret', 'Apple Sign in private key is invalid.' );
 		}
@@ -512,20 +544,29 @@ class PAXdesign_Auth_Apple {
 	/**
 	 * @return string
 	 */
-	private static function create_oauth_state( string $return_url ): string {
+	private static function create_oauth_state( string $return_url, string $client_id, string $redirect_uri ): string {
 		$state = bin2hex( random_bytes( 16 ) );
 		$key   = 'pax_apple_oauth_' . hash( 'sha256', $state );
 		$data  = array(
-			'return_url' => $return_url,
-			'created'    => time(),
+			'return_url'   => $return_url,
+			'client_id'    => $client_id,
+			'redirect_uri' => $redirect_uri,
+			'created'      => time(),
 		);
 		set_transient( $key, $data, self::OAUTH_STATE_TTL );
 		update_option( $key, $data, false );
+		self::trace(
+			'oauth_state_created',
+			array(
+				'client_id'    => $client_id,
+				'redirect_uri' => $redirect_uri,
+			)
+		);
 		return $state;
 	}
 
 	/**
-	 * @return string|WP_Error
+	 * @return array<string, string>|WP_Error
 	 */
 	private static function consume_oauth_state( string $state ) {
 		$key  = 'pax_apple_oauth_' . hash( 'sha256', $state );
@@ -539,7 +580,52 @@ class PAXdesign_Auth_Apple {
 		if ( ! is_array( $data ) || empty( $data['return_url'] ) ) {
 			return new WP_Error( 'apple_state_invalid', 'Your Apple sign-in session expired. Please try again.' );
 		}
-		return (string) $data['return_url'];
+		return array(
+			'return_url'   => (string) $data['return_url'],
+			'client_id'    => (string) ( $data['client_id'] ?? self::web_service_id() ),
+			'redirect_uri' => (string) ( $data['redirect_uri'] ?? self::web_callback_url() ),
+		);
+	}
+
+	/**
+	 * @return array<string, string>
+	 */
+	private static function token_exchange_trace_context( string $client_id, string $redirect_uri ): array {
+		$cfg = self::web_config();
+		return array(
+			'client_id'    => $client_id,
+			'redirect_uri' => $redirect_uri,
+			'key_id'       => $cfg['key_id'],
+			'team_id_tail' => $cfg['team_id'] !== '' ? substr( $cfg['team_id'], -4 ) : '',
+		);
+	}
+
+	/**
+	 * @return string
+	 */
+	private static function friendly_token_exchange_error( string $message ): string {
+		$normalized = strtolower( trim( $message ) );
+		if ( $normalized === 'invalid_client' ) {
+			return 'Apple could not verify the website sign-in configuration (invalid_client). Please try again in a private window. If this continues, contact support.';
+		}
+		if ( $normalized === 'invalid_grant' ) {
+			return 'Your Apple sign-in authorization expired. Please start again from the account page.';
+		}
+		return $message !== '' ? $message : 'Apple sign-in failed. Please try again.';
+	}
+
+	/**
+	 * @return string
+	 */
+	private static function normalize_private_key( string $key ): string {
+		$key = trim( $key );
+		if ( $key === '' ) {
+			return '';
+		}
+		if ( strpos( $key, '\\n' ) !== false ) {
+			$key = str_replace( '\\n', "\n", $key );
+		}
+		return $key;
 	}
 
 	/**

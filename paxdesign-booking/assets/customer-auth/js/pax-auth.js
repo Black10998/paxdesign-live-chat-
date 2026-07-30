@@ -998,8 +998,38 @@
     if (!msg) {
       try { msg = sessionStorage.getItem('pdx_apple_error') || ''; } catch (e) {}
     }
-    if (!msg) return;
+    if (!msg) {
+      removeAppleErrorBanner();
+      return;
+    }
     showFormMessage(msg, 'error');
+    showAppleErrorBanner(msg);
+  }
+
+  function showAppleErrorBanner(msg) {
+    if (!authPageEl || !msg) return;
+    var banner = document.getElementById('pdx-apple-error-banner');
+    if (!banner) {
+      banner = document.createElement('div');
+      banner.id = 'pdx-apple-error-banner';
+      banner.className = 'pdx-auth-message pdx-auth-message--error pdx-auth-apple-error-banner';
+      banner.setAttribute('role', 'alert');
+      var guest = document.getElementById('pdx-auth-page-guest');
+      if (guest) {
+        guest.insertBefore(banner, guest.firstChild);
+      } else {
+        authPageEl.insertBefore(banner, authPageEl.firstChild);
+      }
+    }
+    banner.textContent = msg;
+    banner.hidden = false;
+  }
+
+  function removeAppleErrorBanner() {
+    var banner = document.getElementById('pdx-apple-error-banner');
+    if (banner && banner.parentNode) {
+      banner.parentNode.removeChild(banner);
+    }
   }
 
   function captureAppleErrorFromUrl(params) {
@@ -1015,8 +1045,6 @@
   function clearPendingAppleErrorFromUrl(params) {
     if (!params || params.get('pdx_apple') !== 'error') return;
     setTimeout(function () {
-      pendingAppleError = '';
-      try { sessionStorage.removeItem('pdx_apple_error'); } catch (e) {}
       if (window.history && window.history.replaceState) {
         try {
           params.delete('pdx_apple');

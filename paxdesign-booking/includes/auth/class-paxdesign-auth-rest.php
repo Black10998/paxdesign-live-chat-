@@ -224,6 +224,11 @@ class PAXdesign_Auth_REST {
     }
 
     public static function apple_web_start(WP_REST_Request $request) {
+        if (!defined('DONOTCACHEPAGE')) {
+            define('DONOTCACHEPAGE', true);
+        }
+        nocache_headers();
+
         $limited = self::rate_limit('login');
         if ($limited) {
             wp_safe_redirect(PAXdesign_Auth_Apple::web_error_redirect_url(

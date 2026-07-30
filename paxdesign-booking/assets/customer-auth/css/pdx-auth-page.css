@@ -273,6 +273,17 @@ body.pdx-account-dashboard-body #pdx-auth-bar .pdx-auth-portal-btn {
   border: 1px solid #ffd6d6;
 }
 
+.pdx-auth-apple-error-banner {
+  margin: 0 0 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.45;
+  padding: 12px 14px;
+  background: #fff2f2;
+  color: #bf0022;
+  border: 1px solid #ffd6d6;
+}
+
 .pdx-auth-page-form-wrap .pdx-auth-message--success {
   background: #f0faf0;
   color: #1d7a1d;
