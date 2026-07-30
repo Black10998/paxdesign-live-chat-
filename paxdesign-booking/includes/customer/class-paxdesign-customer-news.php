@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 
 class PAXdesign_Customer_News {
 
-    public static function list_for_user($user_id, $limit = 20) {
+    public static function list_for_user($user_id, $limit = 20, $lang = 'de') {
         global $wpdb;
         $table = PAXdesign_Customer_DB::table('news');
         $now = current_time('mysql', true);
@@ -27,23 +27,23 @@ class PAXdesign_Customer_News {
         $items = array();
         foreach ($rows ?: array() as $row) {
             if (self::matches_audience($row, $user_id)) {
-                $items[] = self::format($row);
+                $items[] = self::format($row, false, $lang);
             }
         }
         return $items;
     }
 
-    public static function get_published($slug) {
+    public static function get_published($slug, $lang = 'de') {
         $row = self::find_row_by_slug($slug, true);
-        return $row ? self::format($row, true) : null;
+        return $row ? self::format($row, true, $lang) : null;
     }
 
-    public static function get_published_for_user($slug, $user_id) {
+    public static function get_published_for_user($slug, $user_id, $lang = 'de') {
         $row = self::find_row_by_slug($slug, true);
         if (!$row || !self::matches_audience($row, $user_id)) {
             return null;
         }
-        return self::format($row, true);
+        return self::format($row, true, $lang);
     }
 
     public static function user_matches_audience($row, $user_id) {
@@ -160,14 +160,45 @@ class PAXdesign_Customer_News {
         return $body === '' ? $suffix : $body . "\n\n" . $suffix;
     }
 
-    private static function format($row, $full = false) {
+    private static function localized_copy($row, array $meta, $lang = 'de') {
+        $lang = in_array($lang, array('de', 'en', 'ar'), true) ? $lang : 'de';
+        $translations = isset($meta['translations']) && is_array($meta['translations']) ? $meta['translations'] : array();
+        $localized = isset($translations[$lang]) && is_array($translations[$lang]) ? $translations[$lang] : array();
+
+        $title = !empty($localized['title']) ? (string) $localized['title'] : (string) ($row['title'] ?? '');
+        $excerpt = array_key_exists('excerpt', $localized)
+            ? (string) $localized['excerpt']
+            : (string) ($row['excerpt'] ?? '');
+        $body = !empty($localized['body']) ? (string) $localized['body'] : (string) ($row['body'] ?? '');
+
+        return array(
+            'title'   => $title,
+            'excerpt' => $excerpt,
+            'body'    => $body,
+        );
+    }
+
+    private static function localized_link_label(array $meta, $lang = 'de') {
+        $labels = isset($meta['link_labels']) && is_array($meta['link_labels']) ? $meta['link_labels'] : array();
+        if (!empty($labels[$lang])) {
+            return sanitize_text_field((string) $labels[$lang]);
+        }
+        if (!empty($meta['external_link_label'])) {
+            return sanitize_text_field((string) $meta['external_link_label']);
+        }
+        return __('Learn more', 'paxdesign-booking');
+    }
+
+    private static function format($row, $full = false, $lang = 'de') {
         $meta = self::decode_meta($row);
+        $copy = self::localized_copy($row, $meta, $lang);
         $item = array(
             'slug'         => (string) $row['slug'],
-            'title'        => $row['title'],
-            'excerpt'      => $row['excerpt'],
+            'title'        => $copy['title'],
+            'excerpt'      => $copy['excerpt'],
             'priority'     => $row['priority'],
             'published_at' => $row['published_at'],
+            'lang'         => in_array($lang, array('de', 'en', 'ar'), true) ? $lang : 'de',
         );
 
         $image_url = self::image_url_for_row($row, $meta);
@@ -177,12 +208,16 @@ class PAXdesign_Customer_News {
         if (!empty($meta['external_url'])) {
             $item['external_url'] = esc_url_raw((string) $meta['external_url']);
         }
-        if (!empty($meta['external_link_label'])) {
-            $item['external_link_label'] = sanitize_text_field((string) $meta['external_link_label']);
+        $link_label = self::localized_link_label($meta, $lang);
+        if ($link_label !== '') {
+            $item['external_link_label'] = $link_label;
         }
 
         if ($full) {
-            $item['body'] = self::append_external_link_to_body($row['body'] ?? '', $meta);
+            $body = self::append_external_link_to_body($copy['body'], array_merge($meta, array(
+                'external_link_label' => $link_label,
+            )));
+            $item['body'] = $body;
         }
 
         return $item;
@@ -227,6 +262,9 @@ class PAXdesign_Customer_News {
             } else {
                 unset($meta['external_link_label']);
             }
+        }
+        if (array_key_exists('audience_meta', $data) && is_array($data['audience_meta'])) {
+            $meta = array_merge($meta, $data['audience_meta']);
         }
         return $meta;
     }
@@ -299,6 +337,10 @@ class PAXdesign_Customer_News {
             'updated_at'      => $now,
             'author_user_id'  => absint($actor_id),
         );
+
+        if (array_key_exists('image_attachment_id', $data)) {
+            $row['image_attachment_id'] = absint($data['image_attachment_id']);
+        }
 
         if ($news_id > 0) {
             if ($status === 'published' && empty($existing['published_at'])) {

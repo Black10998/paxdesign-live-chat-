@@ -135,6 +135,20 @@ jobs:
           ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
             "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-ensure-auth-page.php || echo 'wp-cli unavailable — account page runs on next request')"
 
+      - name: Publish platform update news announcement
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
+            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-seed-platform-news.php || echo 'wp-cli unavailable — news seed runs on next request')"
+
       - name: Configure Sign in with Apple web OAuth
         env:
           WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}

@@ -161,12 +161,16 @@ final class CustomerAPIClient: ObservableObject {
         return try await post("/customer/orders", body: body, as: CustomerOrderDetail.self)
     }
 
-    func fetchNews() async throws -> CustomerNewsResponse {
-        try await get("/customer/news", as: CustomerNewsResponse.self)
+    func fetchNews(lang: String? = nil) async throws -> CustomerNewsResponse {
+        let language = lang ?? Locale.current.language.languageCode?.identifier ?? "de"
+        let normalized = language.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? language
+        return try await get("/customer/news?lang=\(normalized)", as: CustomerNewsResponse.self)
     }
 
-    func fetchNewsItem(slug: String) async throws -> CustomerNewsItem {
-        try await get("/customer/news/\(slug)", as: CustomerNewsItem.self)
+    func fetchNewsItem(slug: String, lang: String? = nil) async throws -> CustomerNewsItem {
+        let language = lang ?? Locale.current.language.languageCode?.identifier ?? "de"
+        let normalized = language.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? language
+        return try await get("/customer/news/\(slug)?lang=\(normalized)", as: CustomerNewsItem.self)
     }
 
     func fetchNotifications(unreadOnly: Bool = false) async throws -> CustomerNotificationsResponse {

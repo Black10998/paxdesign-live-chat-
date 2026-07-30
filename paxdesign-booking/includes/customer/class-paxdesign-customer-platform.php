@@ -19,6 +19,7 @@ class PAXdesign_Customer_Platform {
         PAXdesign_Customer_Staff_REST::init();
         PAXdesign_Customer_Admin::init();
         PAXdesign_Customer_News_Seed::init();
+        PAXdesign_Customer_News_Announcements::init();
         add_action('paxdesign_session_sync', array(__CLASS__, 'maybe_notify_customer_chat_reply'), 10, 2);
         if (get_option('paxdesign_customer_require_login_for_chat', '') === '') {
             update_option('paxdesign_customer_require_login_for_chat', '1', false);
@@ -114,6 +115,7 @@ class PAXdesign_Customer_Platform {
         require_once $base . 'class-paxdesign-customer-notifications.php';
         require_once $base . 'class-paxdesign-customer-news.php';
         require_once $base . 'class-paxdesign-customer-news-seed.php';
+        require_once $base . 'class-paxdesign-customer-news-announcements.php';
         require_once $base . 'class-paxdesign-customer-portfolio.php';
         require_once $base . 'class-paxdesign-customer-portfolio-showcase.php';
         require_once $base . 'class-paxdesign-customer-elementor.php';
