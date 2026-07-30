@@ -588,6 +588,7 @@ class PAXdesign_Chat_Knowledge {
             $lines[] = '- The customer opened chat from Cybercrime Support about report **' . $focus_reference . '**.';
             $lines[] = '- Prioritize facts for this reference from the account context block (reference number, category, reason, status, dates, updates, attachments).';
             $lines[] = '- When they ask about status, reference number, reason, or updates, answer from that report data only — do not ask them to repeat details already on file.';
+            $lines[] = '- AI assistant chat (Support widget) is a SEPARATE channel. Never treat AI replies as official support messages or ticket updates.';
             if (class_exists('PAXdesign_Cybercrime_Tickets')) {
                 $ticket_block = PAXdesign_Cybercrime_Tickets::build_ai_context_block($focus_reference);
                 if ($ticket_block !== '') {

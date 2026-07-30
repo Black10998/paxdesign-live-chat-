@@ -153,8 +153,16 @@ return array(
 			'de' => 'Ihre aktuelle Meldung',
 		),
 		'intro' => array(
-			'ar' => 'لديك بلاغ مفتوح قيد المعالجة. يمكنك متابعة الحالة والرسائل والمرفقات هنا.',
-			'de' => 'Sie haben eine offene Meldung in Bearbeitung. Status, Nachrichten und Anhänge finden Sie hier.',
+			'ar' => 'تابع حالة بلاغك الرسمي والمراسلات مع فريق PAXDesign Support.',
+			'de' => 'Verfolgen Sie den offiziellen Status Ihrer Meldung und die Kommunikation mit dem PAXDesign-Support.',
+		),
+		'official_heading' => array(
+			'ar' => 'المحادثة الرسمية',
+			'de' => 'Offizielle Kommunikation',
+		),
+		'official_note' => array(
+			'ar' => 'هذا السجل الرسمي للبلاغ — بينك وبين فريق الدعم فقط. لا يشمل محادثة المساعد الذكي.',
+			'de' => 'Dies ist der offizielle Verlauf Ihrer Meldung — nur zwischen Ihnen und dem Support-Team. Der KI-Assistent ist separat.',
 		),
 		'status' => array(
 			'ar' => 'الحالة',
@@ -173,8 +181,24 @@ return array(
 			'de' => 'Eingereicht am',
 		),
 		'timeline' => array(
-			'ar' => 'سجل المحادثة',
-			'de' => 'Verlauf',
+			'ar' => 'التحديثات',
+			'de' => 'Updates',
+		),
+		'timeline_status' => array(
+			'ar' => 'الحالة',
+			'de' => 'Status',
+		),
+		'timeline_sender' => array(
+			'ar' => 'المرسل',
+			'de' => 'Absender',
+		),
+		'timeline_subject' => array(
+			'ar' => 'الموضوع',
+			'de' => 'Betreff',
+		),
+		'timeline_when' => array(
+			'ar' => 'التاريخ',
+			'de' => 'Datum',
 		),
 		'attachments' => array(
 			'ar' => 'المرفقات',
@@ -197,8 +221,16 @@ return array(
 			'de' => 'Diese Meldung ist abgeschlossen. Neue Nachrichten sind nicht möglich.',
 		),
 		'chat' => array(
-			'ar' => 'الدردشة مع الدعم',
-			'de' => 'Mit Support chatten',
+			'ar' => 'المساعد الذكي',
+			'de' => 'KI-Assistent',
+		),
+		'ai_heading' => array(
+			'ar' => 'مساعد ذكي — استفسارات وإرشاد',
+			'de' => 'KI-Assistent — Fragen & Orientierung',
+		),
+		'ai_note' => array(
+			'ar' => 'محادثة منفصلة للأسئلة والشرح. لا تُسجّل كردود رسمية على البلاغ.',
+			'de' => 'Separater Chat für Fragen und Erklärungen. Wird nicht als offizielle Ticket-Antwort gespeichert.',
 		),
 		'refresh' => array(
 			'ar' => 'تحديث',

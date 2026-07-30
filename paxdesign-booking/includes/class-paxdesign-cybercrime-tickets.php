@@ -251,10 +251,91 @@ class PAXdesign_Cybercrime_Tickets {
         );
 
         if ($with_timeline) {
-            $out['timeline'] = self::list_messages((string) ($row['reference_id'] ?? ''));
+            $out['timeline'] = self::list_official_messages((string) ($row['reference_id'] ?? ''));
         }
 
         return $out;
+    }
+
+    /**
+     * Official ticket timeline — excludes AI assistant and live-chat widget messages.
+     *
+     * @param string $reference_id
+     * @param int    $limit
+     * @return array<int, array<string, mixed>>
+     */
+    public static function list_official_messages($reference_id, $limit = 200) {
+        $messages = self::list_messages($reference_id, $limit);
+        $official = array();
+        foreach ($messages as $entry) {
+            if (!is_array($entry) || !self::is_official_timeline_entry($entry)) {
+                continue;
+            }
+            $official[] = self::format_timeline_entry($entry);
+        }
+        return $official;
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     * @return bool
+     */
+    public static function is_official_timeline_entry($entry) {
+        if (!is_array($entry)) {
+            return false;
+        }
+        $author = sanitize_key((string) ($entry['author_type'] ?? ''));
+        $channel = sanitize_key((string) ($entry['channel'] ?? ''));
+        if ($author === 'ai' || $channel === 'chat') {
+            return false;
+        }
+        return in_array($author, array('customer', 'staff', 'system'), true);
+    }
+
+    /**
+     * @param array<string, mixed> $entry
+     * @return array<string, mixed>
+     */
+    public static function format_timeline_entry($entry) {
+        $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
+        $author = sanitize_key((string) ($entry['author_type'] ?? ''));
+        $event = sanitize_key((string) ($meta['event'] ?? ''));
+
+        $status_key = '';
+        if ($event === 'status_change' && !empty($meta['to'])) {
+            $status_key = sanitize_key((string) $meta['to']);
+        } elseif ($author === 'staff') {
+            $status_key = 'waiting_for_customer';
+        } elseif ($author === 'customer') {
+            $status_key = 'customer_replied';
+        } elseif ($event === 'submitted') {
+            $status_key = 'submitted';
+        }
+
+        $subject = sanitize_text_field((string) ($entry['subject'] ?? ''));
+        if ($subject === '' && $event === 'status_change') {
+            $subject = self::status_label($status_key !== '' ? $status_key : 'submitted');
+        } elseif ($subject === '' && $author === 'staff') {
+            $subject = __('Support reply', 'paxdesign-booking');
+        } elseif ($subject === '' && $author === 'customer') {
+            $subject = __('Customer message', 'paxdesign-booking');
+        } elseif ($subject === '' && $event === 'submitted') {
+            $subject = __('Report submitted', 'paxdesign-booking');
+        }
+
+        $sender_label = __('System', 'paxdesign-booking');
+        if ($author === 'staff') {
+            $sender_label = __('Support', 'paxdesign-booking');
+        } elseif ($author === 'customer') {
+            $sender_label = __('Customer', 'paxdesign-booking');
+        }
+
+        $entry['status'] = $status_key;
+        $entry['status_label'] = $status_key !== '' ? self::status_label($status_key) : '';
+        $entry['sender_label'] = $sender_label;
+        $entry['subject'] = $subject;
+
+        return $entry;
     }
 
     /**
@@ -727,16 +808,17 @@ class PAXdesign_Cybercrime_Tickets {
             }
         }
 
-        $lines[] = '- Conversation timeline (use ONLY these messages for status/update questions):';
+        $lines[] = '- Official ticket timeline (Support ↔ Customer only — never mix with AI assistant chat):';
         foreach (($detail['timeline'] ?? array()) as $entry) {
             if (!is_array($entry)) {
                 continue;
             }
             $lines[] = '  • [' . ($entry['created_at'] ?? '') . '] '
-                . ($entry['author_type'] ?? '') . '/' . ($entry['channel'] ?? '')
+                . ($entry['sender_label'] ?? $entry['author_type'] ?? '')
                 . ': ' . wp_html_excerpt((string) ($entry['body'] ?? ''), 260, '…');
         }
 
+        $lines[] = '- AI assistant chat is a separate channel and is NOT part of this official timeline.';
         $lines[] = '- Never invent reference numbers, staff messages, or status changes not listed above.';
 
         return implode("\n", $lines);
@@ -766,6 +848,13 @@ class PAXdesign_Cybercrime_Tickets {
      * @param int    $message_id
      */
     public static function on_chat_message($session_id, $role, $content, $message_id = 0) {
+        unset($role, $content, $message_id);
+        $session_id = sanitize_text_field((string) $session_id);
+        if ($session_id === '') {
+            return;
+        }
+
+        // Link chat session for AI context only — never store widget messages in the official ticket.
         $reference_id = self::get_reference_for_session($session_id);
         if ($reference_id === '') {
             $row = self::get_active_report_row_for_session_context($session_id);
@@ -775,7 +864,7 @@ class PAXdesign_Cybercrime_Tickets {
                     global $wpdb;
                     $wpdb->update(
                         PAXdesign_Cybercrime_Intake::table_name(),
-                        array('chat_session_id' => sanitize_text_field((string) $session_id)),
+                        array('chat_session_id' => $session_id),
                         array('reference_id' => $reference_id),
                         array('%s'),
                         array('%s')
@@ -783,10 +872,6 @@ class PAXdesign_Cybercrime_Tickets {
                 }
             }
         }
-        if ($reference_id === '') {
-            return;
-        }
-        self::maybe_log_chat_message($reference_id, $session_id, $role, $content, (int) $message_id);
     }
 
     /**

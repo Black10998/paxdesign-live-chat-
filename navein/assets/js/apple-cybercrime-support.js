@@ -42,9 +42,32 @@
   var activeClosedNote = document.getElementById('pax-ccs-active-closed-note');
   var activeChatBtn = document.getElementById('pax-ccs-active-chat');
   var refreshReportBtn = document.getElementById('pax-ccs-refresh-report');
+  var attachmentsFoldEl = document.getElementById('pax-ccs-attachments-fold');
 
   var activeReport = null;
   var reportPollTimer = null;
+  var timelineCopy = {
+    ar: {
+      status: 'الحالة',
+      sender: 'المرسل',
+      subject: 'الموضوع',
+      when: 'التاريخ',
+      empty: '—',
+      customer: 'العميل',
+      support: 'الدعم',
+      system: 'النظام',
+    },
+    de: {
+      status: 'Status',
+      sender: 'Absender',
+      subject: 'Betreff',
+      when: 'Datum',
+      empty: '—',
+      customer: 'Kunde',
+      support: 'Support',
+      system: 'System',
+    },
+  };
 
   function isLoggedIn() {
     if (config.isLoggedIn === true) {
@@ -88,12 +111,16 @@
   }
 
   function authorLabel(type) {
-    var map = {
-      ar: { customer: 'أنت', staff: 'الفريق', ai: 'المساعد', system: 'النظام' },
-      de: { customer: 'Sie', staff: 'Team', ai: 'Assistent', system: 'System' },
-    };
-    var lang = root.getAttribute('data-ccs-lang') || 'ar';
-    return (map[lang] && map[lang][type]) || type;
+    if (type === 'staff') {
+      return timelineText('support');
+    }
+    if (type === 'customer') {
+      return timelineText('customer');
+    }
+    if (type === 'system') {
+      return timelineText('system');
+    }
+    return type;
   }
 
   function formatDate(value) {
@@ -147,23 +174,70 @@
       .catch(function () { return null; });
   }
 
-  function renderTimeline(entries) {
+  function timelineText(key) {
+    var lang = root.getAttribute('data-ccs-lang') === 'de' ? 'de' : 'ar';
+    return (timelineCopy[lang] && timelineCopy[lang][key]) || key;
+  }
+
+  function getExpandedTimelineIds() {
+    if (!activeTimelineEl) {
+      return [];
+    }
+    return Array.prototype.slice.call(activeTimelineEl.querySelectorAll('details[open][data-entry-id]')).map(function (el) {
+      return el.getAttribute('data-entry-id');
+    });
+  }
+
+  function renderTimeline(entries, preserveOpen) {
     if (!activeTimelineEl) {
       return;
     }
+    var openIds = preserveOpen ? getExpandedTimelineIds() : [];
+    entries = (entries || []).filter(function (entry) {
+      return entry && entry.author_type !== 'ai' && entry.channel !== 'chat';
+    });
     if (!entries || !entries.length) {
-      activeTimelineEl.innerHTML = '<li class="pax-ccs-portal__timeline-empty">—</li>';
+      activeTimelineEl.innerHTML = '<p class="pax-ccs-portal__accordion-empty">' + escapeHtml(timelineText('empty')) + '</p>';
       return;
     }
-    activeTimelineEl.innerHTML = entries.map(function (entry) {
-      var body = escapeHtml(entry.body || '');
-      return '<li class="pax-ccs-portal__timeline-item">'
-        + '<div class="pax-ccs-portal__timeline-meta">'
-        + '<strong>' + escapeHtml(authorLabel(entry.author_type || '')) + '</strong>'
-        + ' · <span>' + escapeHtml(formatDate(entry.created_at || '')) + '</span>'
+
+    var sorted = entries.slice().sort(function (a, b) {
+      var aTime = String(a.created_at || '') + String(a.id || '');
+      var bTime = String(b.created_at || '') + String(b.id || '');
+      return bTime.localeCompare(aTime);
+    });
+
+    activeTimelineEl.innerHTML = sorted.map(function (entry, index) {
+      var entryId = String(entry.id || index);
+      var shouldOpen = openIds.indexOf(entryId) !== -1 || (openIds.length === 0 && index === 0);
+      var sender = entry.sender_label || authorLabel(entry.author_type || '');
+      var status = entry.status_label || timelineText('empty');
+      var subject = entry.subject || timelineText('empty');
+      var when = formatDate(entry.created_at || '');
+      var body = escapeHtml(entry.body || '').replace(/\n/g, '<br>');
+
+      return '<details class="pax-ccs-portal__accordion-item"' + (shouldOpen ? ' open' : '') + ' data-entry-id="' + escapeHtml(entryId) + '">'
+        + '<summary class="pax-ccs-portal__accordion-summary">'
+        + '<span class="pax-ccs-portal__accordion-summary-main">'
+        + '<span class="pax-ccs-portal__accordion-subject">' + escapeHtml(subject) + '</span>'
+        + '<span class="pax-ccs-portal__accordion-meta">'
+        + '<span class="pax-ccs-portal__accordion-badge">' + escapeHtml(status) + '</span>'
+        + '<span>' + escapeHtml(when) + '</span>'
+        + '<span>' + escapeHtml(sender) + '</span>'
+        + '</span>'
+        + '</span>'
+        + '<span class="pax-ccs-portal__accordion-chevron" aria-hidden="true"></span>'
+        + '</summary>'
+        + '<div class="pax-ccs-portal__accordion-body">'
+        + '<dl class="pax-ccs-portal__accordion-details">'
+        + '<div><dt>' + escapeHtml(timelineText('status')) + '</dt><dd>' + escapeHtml(status) + '</dd></div>'
+        + '<div><dt>' + escapeHtml(timelineText('when')) + '</dt><dd>' + escapeHtml(when) + '</dd></div>'
+        + '<div><dt>' + escapeHtml(timelineText('sender')) + '</dt><dd>' + escapeHtml(sender) + '</dd></div>'
+        + (subject && subject !== timelineText('empty') ? '<div><dt>' + escapeHtml(timelineText('subject')) + '</dt><dd>' + escapeHtml(subject) + '</dd></div>' : '')
+        + '</dl>'
+        + '<div class="pax-ccs-portal__accordion-message">' + body + '</div>'
         + '</div>'
-        + '<div class="pax-ccs-portal__timeline-body">' + body.replace(/\n/g, '<br>') + '</div>'
-        + '</li>';
+        + '</details>';
     }).join('');
   }
 
@@ -171,8 +245,12 @@
     if (!activeAttachmentsEl) {
       return;
     }
-    if (!files || !files.length) {
-      activeAttachmentsEl.innerHTML = '<li class="pax-ccs-portal__attachment-empty">—</li>';
+    var hasFiles = files && files.length;
+    if (attachmentsFoldEl) {
+      attachmentsFoldEl.hidden = !hasFiles;
+    }
+    if (!hasFiles) {
+      activeAttachmentsEl.innerHTML = '';
       return;
     }
     activeAttachmentsEl.innerHTML = files.map(function (file) {
@@ -184,7 +262,7 @@
     }).join('');
   }
 
-  function showActiveReport(report) {
+  function showActiveReport(report, resetTimeline) {
     if (!report || !activeReportEl) {
       return;
     }
@@ -203,7 +281,7 @@
     if (activeSubmittedEl) {
       activeSubmittedEl.textContent = formatDate(report.created_at || '');
     }
-    renderTimeline(report.timeline || []);
+    renderTimeline(report.timeline || [], !resetTimeline);
     renderAttachments(report.attachments || []);
     var isActive = report.is_active !== false;
     if (activeReplyWrap) {
@@ -221,7 +299,7 @@
       var query = params.toString();
       window.history.replaceState({}, '', window.location.pathname + (query ? '?' + query : '') + window.location.hash);
     } catch (e) {}
-    window.scrollTo({ top: activeReportEl.offsetTop - 24, behavior: 'smooth' });
+    window.scrollTo({ top: activeReportEl.offsetTop - 12, behavior: 'smooth' });
     startReportPolling();
   }
 
@@ -237,7 +315,7 @@
           if (activeStatusEl) {
             activeStatusEl.textContent = report.status_label || report.status || '';
           }
-          renderTimeline(report.timeline || []);
+          renderTimeline(report.timeline || [], true);
         }
       });
     }, 60000);
@@ -791,7 +869,7 @@
           }
           activeReplyInput.value = '';
           if (json.data && json.data.report) {
-            showActiveReport(json.data.report);
+            showActiveReport(json.data.report, true);
           }
         })
         .catch(function (err) {
