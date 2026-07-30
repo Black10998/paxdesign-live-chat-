@@ -143,12 +143,14 @@ jobs:
           WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
           WP_PATH: ${{ secrets.WP_PATH }}
           PAX_APPLE_WEB_SERVICE_ID: at.paxdesign.web.login
+          PAX_APPLE_WEB_KEY_ID: ${{ secrets.PAX_APPLE_WEB_KEY_ID }}
+          PAX_APPLE_WEB_KEY_P8_BASE64: ${{ secrets.PAX_APPLE_WEB_KEY_P8_BASE64 }}
         run: |
           set -euo pipefail
           PORT="${WP_SSH_PORT:-22}"
           SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
           ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
-            "cd '$(printf '%q' "$WP_PATH")' && export PAX_APPLE_WEB_SERVICE_ID=$(printf '%q' "${PAX_APPLE_WEB_SERVICE_ID:-at.paxdesign.web.login}") && (command -v wp >/dev/null && wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-apple-web-oauth-config.php || echo 'wp-cli unavailable — Apple web OAuth config runs on next deploy')"
+            "cd '$(printf '%q' "$WP_PATH")' && export PAX_APPLE_WEB_SERVICE_ID=$(printf '%q' "${PAX_APPLE_WEB_SERVICE_ID:-at.paxdesign.web.login}") && export PAX_APPLE_WEB_KEY_ID=$(printf '%q' "${PAX_APPLE_WEB_KEY_ID:-}") && export PAX_APPLE_WEB_KEY_P8_BASE64=$(printf '%q' "${PAX_APPLE_WEB_KEY_P8_BASE64:-}") && (command -v wp >/dev/null && wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-apple-web-oauth-config.php || echo 'wp-cli unavailable — Apple web OAuth config runs on next deploy')"
 
       - name: Diagnose Apple OAuth client secret
         continue-on-error: true

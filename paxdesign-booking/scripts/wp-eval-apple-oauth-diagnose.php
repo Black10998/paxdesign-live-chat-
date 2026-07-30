@@ -13,8 +13,14 @@ require_once WP_PLUGIN_DIR . '/paxdesign-booking/includes/auth/class-paxdesign-a
 $service_id = PAXdesign_Auth_Apple::web_service_id();
 $bundle_id  = trim( (string) get_option( 'paxdesign_apns_bundle_id', 'at.paxdesign.livechat' ) );
 $team_id    = trim( (string) get_option( 'paxdesign_apns_team_id', '' ) );
-$key_id     = trim( (string) get_option( 'paxdesign_apns_key_id', '' ) );
-$key_p8     = trim( (string) get_option( 'paxdesign_apns_key_p8', '' ) );
+$key_id     = trim( (string) get_option( 'paxdesign_apple_web_key_id', '' ) );
+if ( $key_id === '' ) {
+	$key_id = trim( (string) get_option( 'paxdesign_apns_key_id', '' ) );
+}
+$key_p8     = trim( (string) get_option( 'paxdesign_apple_web_key_p8', '' ) );
+if ( $key_p8 === '' ) {
+	$key_p8 = trim( (string) get_option( 'paxdesign_apns_key_p8', '' ) );
+}
 
 echo "flow=web_oauth (Service ID + client_secret JWT; separate from mobile identity_token flow)\n";
 echo "ios_bundle_id={$bundle_id}\n";
@@ -25,7 +31,8 @@ if ( $service_id !== '' && $service_id === $bundle_id ) {
 echo 'callback=' . PAXdesign_Auth_Apple::web_callback_url() . "\n";
 echo 'configured=' . ( PAXdesign_Auth_Apple::is_web_configured() ? 'yes' : 'no' ) . "\n";
 echo 'team_id=' . ( $team_id !== '' ? 'set' : 'missing' ) . "\n";
-echo 'key_id=' . ( $key_id !== '' ? 'set' : 'missing' ) . "\n";
+echo 'web_key_id_option=' . trim( (string) get_option( 'paxdesign_apple_web_key_id', '' ) ) . "\n";
+echo 'active_key_id=' . ( $key_id !== '' ? $key_id : 'missing' ) . "\n";
 echo 'key_p8=' . ( $key_p8 !== '' ? 'set(' . strlen( $key_p8 ) . ' bytes)' : 'missing' ) . "\n";
 
 if ( ! PAXdesign_Auth_Apple::is_web_configured() ) {
