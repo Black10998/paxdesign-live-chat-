@@ -25,6 +25,7 @@ on:
       - 'paxdesign-booking/includes/class-paxdesign-chat-knowledge.php'
       - 'paxdesign-booking/assets/js/chat-script.js'
       - 'paxdesign-booking/assets/js/booking-script.js'
+      - 'paxdesign-booking/assets/js/cybercrime-admin.js'
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php'
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-tickets.php'
       - 'paxdesign-booking/includes/class-paxdesign-chat-live.php'
@@ -151,6 +152,7 @@ jobs:
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             paxdesign-booking/assets/js/chat-script.js \
             paxdesign-booking/assets/js/booking-script.js \
+            paxdesign-booking/assets/js/cybercrime-admin.js \
             "${REMOTE}:${PLUGIN}/assets/js/"
 
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
@@ -183,24 +185,28 @@ jobs:
           THEME_CSS=$(curl -sS -o /tmp/style.css -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/style.css?n=${stamp}")
           CCS_CSS=$(curl -sS -o /tmp/apple-ccs.css -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-cybercrime-support.css?n=${stamp}")
           CCS_JS=$(curl -sS -o /tmp/apple-ccs.js -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-cybercrime-support.js?n=${stamp}")
+          ADMIN_JS=$(curl -sS -o /tmp/cybercrime-admin.js -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/cybercrime-admin.js?n=${stamp}")
           PLUGIN=$(curl -sS -o /tmp/pax-plugin.php -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?n=${stamp}")
           BOOKING_JS=$(curl -sS -o /tmp/booking-script.js -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/booking-script.js?n=${stamp}")
           AUTH_CSS=$(curl -sS -o /tmp/pdx-auth.css -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/customer-auth/css/pdx-auth.css?n=${stamp}")
           CHAT=$(curl -sS -o /tmp/chat-script.js -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?n=${stamp}")
-          echo "PAGE $PAGE | THEME_CSS $THEME_CSS | CCS_CSS $CCS_CSS | CCS_JS $CCS_JS | PLUGIN $PLUGIN | BOOKING_JS $BOOKING_JS | AUTH_CSS $AUTH_CSS | CHAT $CHAT"
+          echo "PAGE $PAGE | THEME_CSS $THEME_CSS | CCS_CSS $CCS_CSS | CCS_JS $CCS_JS | ADMIN_JS $ADMIN_JS | PLUGIN $PLUGIN | BOOKING_JS $BOOKING_JS | AUTH_CSS $AUTH_CSS | CHAT $CHAT"
           test "$PAGE" = "200"
           test "$THEME_CSS" = "200"
           test "$CCS_CSS" = "200"
           test "$CCS_JS" = "200"
+          test "$ADMIN_JS" = "200"
           test "$AUTH_CSS" = "200"
           test "$CHAT" = "200"
-          grep -Eq "Version: 1\.4\.11" /tmp/style.css
+          grep -Eq "Version: 1\.4\.21" /tmp/style.css
+          grep -Eq "define\('PAXDESIGN_BOOKING_VERSION', '3\.174\.50'\)" /tmp/pax-plugin.php
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-login-gate" /tmp/ccs-page.html
           grep -Eq "Full-page contrast isolation|::file-selector-button" /tmp/apple-ccs.css
           grep -Eq "Sitewide isolated Sign In|background: #000 !important" /tmp/pdx-auth.css
-          grep -Eq "openForCybercrime|openSupportChat" /tmp/apple-ccs.js
+          grep -Eq "openForCybercrime|openSupportChat|setInterval\(poll, 5000\)" /tmp/apple-ccs.js
+          grep -Eq "paxdesign_cybercrime_admin_status|pax-cc-ticket-actions" /tmp/cybercrime-admin.js
           grep -Eq "page_reference|openForCybercrime" /tmp/chat-script.js
-          grep -Eq "chat-script\.js\?ver=3\.174\.41|pdx-auth\.css\?ver=3\.174\.41" /tmp/ccs-page.html
+          grep -Eq "chat-script\.js\?ver=3\.174\.50|pdx-auth\.css\?ver=3\.174\.50" /tmp/ccs-page.html
           grep -A6 '#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {' /tmp/pdx-auth.css | grep -Eq 'background: #000|background-color: #000'
           if [ "$BOOKING_JS" = "200" ]; then grep -Eq 'open: openWidget' /tmp/booking-script.js; fi
           echo "Cybercrime Support production verification passed."
