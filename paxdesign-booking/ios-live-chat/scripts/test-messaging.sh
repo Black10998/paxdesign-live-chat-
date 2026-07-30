@@ -26,7 +26,7 @@ xcrun simctl boot "$UDID" 2>/dev/null || true
 xcrun simctl bootstatus "$UDID" -b
 xcodebuild \
   -project "$ROOT/PAXDesignLiveChat.xcodeproj" \
-  -scheme PAXDesignLiveChatTests \
+  -scheme PAXDesignLiveChat \
   -destination "platform=iOS Simulator,id=$UDID" \
   -derivedDataPath "$ROOT/build/TestDerivedData" \
   test
