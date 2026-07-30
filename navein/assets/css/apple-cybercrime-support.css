@@ -1004,7 +1004,76 @@ html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
 }
 
 .pax-ccs-portal__panel--active-report {
+  position: relative;
   padding: 20px 22px;
+}
+
+.pax-ccs-portal__status-hero {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  border: 1px solid transparent;
+}
+
+.pax-ccs-portal__status-hero-dot {
+  display: none;
+}
+
+.pax-ccs-portal__status-hero--under_review {
+  background: rgba(255, 149, 0, 0.12);
+  color: #c93400;
+  border-color: rgba(255, 149, 0, 0.28);
+}
+
+.pax-ccs-portal__status-hero--under_review .pax-ccs-portal__status-hero-dot {
+  background: #ff9500;
+}
+
+.pax-ccs-portal__status-hero--waiting_for_customer {
+  background: rgba(0, 113, 227, 0.1);
+  color: #0040dd;
+  border-color: rgba(0, 113, 227, 0.22);
+}
+
+.pax-ccs-portal__status-hero--waiting_for_customer .pax-ccs-portal__status-hero-dot {
+  background: #0071e3;
+}
+
+.pax-ccs-portal__status-hero--escalated {
+  background: rgba(175, 82, 222, 0.12);
+  color: #8944ab;
+  border-color: rgba(175, 82, 222, 0.28);
+}
+
+.pax-ccs-portal__status-hero--escalated .pax-ccs-portal__status-hero-dot {
+  background: #af52de;
+}
+
+.pax-ccs-portal__status-hero--resolved {
+  background: rgba(52, 199, 89, 0.12);
+  color: #248a3d;
+  border-color: rgba(52, 199, 89, 0.28);
+}
+
+.pax-ccs-portal__status-hero--resolved .pax-ccs-portal__status-hero-dot {
+  background: #34c759;
+}
+
+.pax-ccs-portal__status-hero--closed {
+  background: rgba(255, 59, 48, 0.1);
+  color: #d70015;
+  border-color: rgba(255, 59, 48, 0.22);
+}
+
+.pax-ccs-portal__status-hero--closed .pax-ccs-portal__status-hero-dot {
+  background: #ff3b30;
 }
 
 .pax-ccs-portal__section-title--compact {
@@ -1029,7 +1098,7 @@ html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
 
 .pax-ccs-portal__active-meta--compact {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin: 0 0 14px;
   padding: 0;

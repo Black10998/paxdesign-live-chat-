@@ -371,6 +371,9 @@ return array(
 		'financial_loss' => array(
 			'label' => array( 'ar' => 'الخسارة المالية التقديرية (إن وجدت)', 'de' => 'Geschätzter finanzieller Schaden (falls zutreffend)' ),
 		),
+		'financial_currency' => array(
+			'label' => array( 'ar' => 'العملة', 'de' => 'Währung' ),
+		),
 		'urgency' => array(
 			'label' => array( 'ar' => 'مستوى الاستعجال', 'de' => 'Dringlichkeit' ),
 		),
@@ -458,6 +461,151 @@ return array(
 		'submit'   => array(
 			'ar' => 'تعذر إرسال البلاغ. يرجى المحاولة مرة أخرى.',
 			'de' => 'Senden fehlgeschlagen. Bitte erneut versuchen.',
+		),
+	),
+	'status_badge_map' => array(
+		'under_review'         => array( 'submitted', 'in_review', 'customer_replied' ),
+		'waiting_for_customer' => array( 'needs_info', 'waiting_for_customer' ),
+		'escalated'            => array( 'waiting_for_staff' ),
+		'resolved'             => array( 'resolved' ),
+		'closed'               => array( 'closed' ),
+	),
+	'status_badges' => array(
+		'under_review' => array(
+			'emoji' => '🟠',
+			'label' => array(
+				'ar' => 'قيد المراجعة',
+				'de' => 'In Prüfung',
+			),
+		),
+		'waiting_for_customer' => array(
+			'emoji' => '🔵',
+			'label' => array(
+				'ar' => 'بانتظار العميل',
+				'de' => 'Wartet auf Kunden',
+			),
+		),
+		'escalated' => array(
+			'emoji' => '🟣',
+			'label' => array(
+				'ar' => 'تم التصعيد',
+				'de' => 'Eskaliert',
+			),
+		),
+		'resolved' => array(
+			'emoji' => '🟢',
+			'label' => array(
+				'ar' => 'تم الحل',
+				'de' => 'Gelöst',
+			),
+		),
+		'closed' => array(
+			'emoji' => '🔴',
+			'label' => array(
+				'ar' => 'مغلق',
+				'de' => 'Geschlossen',
+			),
+		),
+	),
+	'timeline_i18n' => array(
+		'support_team' => array(
+			'ar' => 'فريق PAXDesign Support',
+			'de' => 'PAXDesign Support Team',
+		),
+		'customer_fallback' => array(
+			'ar' => 'العميل',
+			'de' => 'Kunde',
+		),
+		'empty_timeline' => array(
+			'ar' => 'لا توجد تحديثات بعد.',
+			'de' => 'Noch keine Updates.',
+		),
+		'subjects' => array(
+			'report_submitted' => array(
+				'ar' => 'تم تقديم البلاغ',
+				'de' => 'Meldung eingereicht',
+			),
+			'status_submitted' => array(
+				'ar' => 'بلاغ جديد',
+				'de' => 'Neue Meldung',
+			),
+			'status_in_review' => array(
+				'ar' => 'قيد المراجعة',
+				'de' => 'In Bearbeitung',
+			),
+			'status_needs_info' => array(
+				'ar' => 'معلومات إضافية مطلوبة',
+				'de' => 'Zusätzliche Informationen angefordert',
+			),
+			'status_waiting_for_customer' => array(
+				'ar' => 'بانتظار رد العميل',
+				'de' => 'Wartet auf Kunden',
+			),
+			'status_customer_replied' => array(
+				'ar' => 'رد العميل',
+				'de' => 'Kunde hat geantwortet',
+			),
+			'status_waiting_for_staff' => array(
+				'ar' => 'بانتظار فريق الدعم',
+				'de' => 'Wartet auf Support',
+			),
+			'status_resolved' => array(
+				'ar' => 'تم الحل',
+				'de' => 'Gelöst',
+			),
+			'status_closed' => array(
+				'ar' => 'مغلق',
+				'de' => 'Geschlossen',
+			),
+		),
+	),
+	'portal_js' => array(
+		'errors' => array(
+			'config' => array(
+				'ar' => 'خطأ في الإعداد. يرجى تحديث الصفحة.',
+				'de' => 'Konfigurationsfehler. Bitte Seite neu laden.',
+			),
+			'submit' => array(
+				'ar' => 'تعذر إرسال البلاغ. يرجى المحاولة مرة أخرى.',
+				'de' => 'Senden fehlgeschlagen. Bitte erneut versuchen.',
+			),
+			'reply' => array(
+				'ar' => 'تعذر إرسال الرسالة. يرجى المحاولة مرة أخرى.',
+				'de' => 'Nachricht konnte nicht gesendet werden.',
+			),
+			'login_required' => array(
+				'ar' => 'يرجى تسجيل الدخول للمتابعة.',
+				'de' => 'Bitte melden Sie sich an, um fortzufahren.',
+			),
+			'active_report_exists' => array(
+				'ar' => 'لديك بلاغ مفتوح بالفعل. اعرض بلاغك الحالي لإضافة تحديثات.',
+				'de' => 'Sie haben bereits eine offene Meldung. Zeigen Sie Ihre aktuelle Meldung an.',
+			),
+			'message_required' => array(
+				'ar' => 'الرسالة مطلوبة.',
+				'de' => 'Nachricht ist erforderlich.',
+			),
+			'report_not_found' => array(
+				'ar' => 'لم يتم العثور على البلاغ.',
+				'de' => 'Meldung nicht gefunden.',
+			),
+			'request_rejected' => array(
+				'ar' => 'تم رفض الطلب.',
+				'de' => 'Anfrage abgelehnt.',
+			),
+			'rate_limited' => array(
+				'ar' => 'محاولات كثيرة. يرجى الانتظار قبل المحاولة مرة أخرى.',
+				'de' => 'Zu viele Versuche. Bitte warten Sie, bevor Sie es erneut versuchen.',
+			),
+		),
+		'review' => array(
+			'identity' => array( 'ar' => 'الهوية', 'de' => 'Identität' ),
+			'incident' => array( 'ar' => 'الحادث', 'de' => 'Vorfall' ),
+			'evidence' => array( 'ar' => 'الأدلة', 'de' => 'Beweise' ),
+			'files'    => array( 'ar' => 'ملف(ات)', 'de' => 'Datei(en)' ),
+			'none'     => array( 'ar' => '—', 'de' => '—' ),
+			'yes'      => array( 'ar' => 'نعم', 'de' => 'Ja' ),
+			'no'       => array( 'ar' => 'لا', 'de' => 'Nein' ),
 		),
 	),
 );

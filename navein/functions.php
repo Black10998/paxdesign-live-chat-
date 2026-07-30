@@ -10,6 +10,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+require_once get_template_directory() . '/inc/cybercrime-support-locale.php';
+
 // included plugins current versions
 define( 'NAVEIN_CORE_PLUGIN_CURRENT_VERSION', '1.0.0' );
 define( 'NAVEIN_ELEMENTOR_ADDON_PLUGIN_CURRENT_VERSION', '1.0.0' );
@@ -381,10 +383,14 @@ function navein_custom_scripts_styles() {
 			true
 		);
 		if ( class_exists( 'PAXdesign_Cybercrime_Intake' ) ) {
+			$ccs_config = PAXdesign_Cybercrime_Intake::public_config();
+			if ( function_exists( 'pax_ccs_portal_i18n' ) ) {
+				$ccs_config['i18n'] = pax_ccs_portal_i18n();
+			}
 			wp_localize_script(
 				'navein-apple-cybercrime-support',
 				'paxCybercrimeIntake',
-				PAXdesign_Cybercrime_Intake::public_config()
+				$ccs_config
 			);
 		}
 	}

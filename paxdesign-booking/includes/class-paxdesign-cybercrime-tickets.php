@@ -250,11 +250,48 @@ class PAXdesign_Cybercrime_Tickets {
             'chat_session_id' => (string) ($row['chat_session_id'] ?? ''),
         );
 
+        $customer_display_name = self::resolve_customer_display_name($row);
+        $out['customer_display_name'] = $customer_display_name;
+
         if ($with_timeline) {
-            $out['timeline'] = self::list_official_messages((string) ($row['reference_id'] ?? ''));
+            $out['timeline'] = self::list_official_messages(
+                (string) ($row['reference_id'] ?? ''),
+                200,
+                $customer_display_name
+            );
         }
 
         return $out;
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return string
+     */
+    public static function resolve_customer_display_name($row) {
+        if (!is_array($row)) {
+            return '';
+        }
+        $name = trim(sanitize_text_field((string) ($row['reporter_name'] ?? '')));
+        if ($name !== '') {
+            return $name;
+        }
+        $user_id = absint($row['customer_user_id'] ?? 0);
+        if ($user_id <= 0) {
+            return '';
+        }
+        $user = get_user_by('id', $user_id);
+        if (!($user instanceof WP_User)) {
+            return '';
+        }
+        $display = trim(sanitize_text_field($user->display_name));
+        if ($display !== '' && $display !== $user->user_login) {
+            return $display;
+        }
+        $first = trim(sanitize_text_field((string) get_user_meta($user_id, 'first_name', true)));
+        $last  = trim(sanitize_text_field((string) get_user_meta($user_id, 'last_name', true)));
+        $full  = trim($first . ' ' . $last);
+        return $full !== '' ? $full : $display;
     }
 
     /**
@@ -264,14 +301,20 @@ class PAXdesign_Cybercrime_Tickets {
      * @param int    $limit
      * @return array<int, array<string, mixed>>
      */
-    public static function list_official_messages($reference_id, $limit = 200) {
+    public static function list_official_messages($reference_id, $limit = 200, $customer_display_name = '') {
+        if ($customer_display_name === '') {
+            $report_row = self::get_report_row($reference_id);
+            if (is_array($report_row)) {
+                $customer_display_name = self::resolve_customer_display_name($report_row);
+            }
+        }
         $messages = self::list_messages($reference_id, $limit);
         $official = array();
         foreach ($messages as $entry) {
             if (!is_array($entry) || !self::is_official_timeline_entry($entry)) {
                 continue;
             }
-            $official[] = self::format_timeline_entry($entry);
+            $official[] = self::format_timeline_entry($entry, $customer_display_name);
         }
         return $official;
     }
@@ -296,7 +339,7 @@ class PAXdesign_Cybercrime_Tickets {
      * @param array<string, mixed> $entry
      * @return array<string, mixed>
      */
-    public static function format_timeline_entry($entry) {
+    public static function format_timeline_entry($entry, $customer_display_name = '') {
         $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
         $author = sanitize_key((string) ($entry['author_type'] ?? ''));
         $event = sanitize_key((string) ($meta['event'] ?? ''));
@@ -313,21 +356,19 @@ class PAXdesign_Cybercrime_Tickets {
         }
 
         $subject = sanitize_text_field((string) ($entry['subject'] ?? ''));
+        $subject_key = '';
         if ($subject === '' && $event === 'status_change' && $status_key !== '') {
-            $subject = self::status_label($status_key);
+            $subject_key = 'status_' . $status_key;
         } elseif ($subject === '' && $event === 'submitted') {
-            $subject = __('Report submitted', 'paxdesign-booking');
+            $subject_key = 'report_submitted';
         }
 
-        if ($author === 'customer') {
-            $sender_label = 'Customer';
-        } else {
-            $sender_label = 'PAXDesign Support Team';
-        }
-
+        $customer_display_name = trim(sanitize_text_field((string) $customer_display_name));
         $entry['status'] = $status_key;
         $entry['status_label'] = $status_key !== '' ? self::status_label($status_key) : '';
-        $entry['sender_label'] = $sender_label;
+        $entry['sender_key'] = $author === 'customer' ? 'customer' : 'support';
+        $entry['customer_name'] = $author === 'customer' ? $customer_display_name : '';
+        $entry['subject_key'] = $subject_key;
         $entry['subject'] = $subject;
 
         return $entry;
@@ -939,7 +980,7 @@ class PAXdesign_Cybercrime_Tickets {
         $reference = sanitize_text_field(wp_unslash($_POST['reference'] ?? ''));
         $body = sanitize_textarea_field(wp_unslash($_POST['message'] ?? ''));
         if ($body === '') {
-            wp_send_json_error(array('message' => __('Message is required.', 'paxdesign-booking')), 400);
+            wp_send_json_error(array('message' => __('Message is required.', 'paxdesign-booking'), 'code' => 'message_required'), 400);
         }
 
         $result = self::add_customer_reply($reference, $body, get_current_user_id());

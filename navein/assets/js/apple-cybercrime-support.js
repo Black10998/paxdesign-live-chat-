@@ -30,7 +30,8 @@
   var chatBtn = document.getElementById('pax-ccs-chat-support');
   var activeReportEl = document.getElementById('pax-ccs-active-report');
   var activeRefEl = document.getElementById('pax-ccs-active-ref');
-  var activeStatusEl = document.getElementById('pax-ccs-active-status');
+  var activeStatusBadgeEl = document.getElementById('pax-ccs-active-status-badge');
+  var activeStatusLabelEl = document.getElementById('pax-ccs-active-status-label');
   var activeCategoryEl = document.getElementById('pax-ccs-active-category');
   var activeSubmittedEl = document.getElementById('pax-ccs-active-submitted');
   var activeTimelineEl = document.getElementById('pax-ccs-active-timeline');
@@ -50,18 +51,96 @@
   var timelineAccordionBound = false;
   var lastKnownLatestTimelineId = null;
   var lastKnownTimelineCount = 0;
-  var timelineCopy = {
-    ar: {
-      empty: '—',
-      customer: 'Customer',
-      support: 'PAXDesign Support Team',
-    },
-    de: {
-      empty: '—',
-      customer: 'Customer',
-      support: 'PAXDesign Support Team',
-    },
-  };
+
+  function getLang() {
+    var lang = root.getAttribute('data-ccs-lang') || 'ar';
+    return lang === 'de' || lang === 'en' ? lang : 'ar';
+  }
+
+  function i18nBundle() {
+    return (config && config.i18n) || {};
+  }
+
+  function i18nText(path, fallback) {
+    var parts = String(path || '').split('.');
+    var node = i18nBundle();
+    for (var i = 0; i < parts.length; i++) {
+      if (!node || typeof node !== 'object') {
+        node = null;
+        break;
+      }
+      node = node[parts[i]];
+    }
+    if (node && typeof node === 'object' && node[getLang()]) {
+      return node[getLang()];
+    }
+    return fallback !== undefined ? fallback : path;
+  }
+
+  function statusBadgeKey(status) {
+    var map = i18nBundle().statusBadgeMap || {};
+    var key;
+    for (key in map) {
+      if (!Object.prototype.hasOwnProperty.call(map, key)) {
+        continue;
+      }
+      var statuses = map[key] || [];
+      if (statuses.indexOf(status) !== -1) {
+        return key;
+      }
+    }
+    return 'under_review';
+  }
+
+  function updateStatusBadge(report) {
+    if (!activeStatusBadgeEl || !activeStatusLabelEl || !report) {
+      return;
+    }
+    var badgeKey = statusBadgeKey(report.status || '');
+    var badges = i18nBundle().statusBadges || {};
+    var badge = badges[badgeKey] || {};
+    var label = (badge.label && badge.label[getLang()]) || report.status || '';
+    var emoji = badge.emoji || '';
+    activeStatusBadgeEl.className = 'pax-ccs-portal__status-hero pax-ccs-portal__status-hero--' + badgeKey;
+    activeStatusLabelEl.textContent = (emoji ? emoji + ' ' : '') + label;
+    activeStatusBadgeEl.hidden = !label;
+  }
+
+  function categoryLabel(category) {
+    var categories = i18nBundle().categories || {};
+    var labels = categories[category];
+    if (labels && labels[getLang()]) {
+      return labels[getLang()];
+    }
+    return category || '';
+  }
+
+  function mapServerError(json, fallbackKey) {
+    var code = json && json.data && json.data.code;
+    if (code) {
+      var localized = i18nText('errors.' + code, '');
+      if (localized) {
+        return localized;
+      }
+    }
+    if (json && json.data && json.data.message) {
+      return json.data.message;
+    }
+    return i18nText('errors.' + (fallbackKey || 'submit'), 'Error');
+  }
+
+  function timelineSubjectLabel(entry) {
+    if (!entry) {
+      return '';
+    }
+    if (entry.subject_key) {
+      var translated = i18nText('subjects.' + entry.subject_key, '');
+      if (translated) {
+        return translated;
+      }
+    }
+    return entry.subject || '';
+  }
 
   function isLoggedIn() {
     if (config.isLoggedIn === true) {
@@ -106,20 +185,30 @@
 
   function authorLabel(type) {
     if (type === 'customer') {
-      return timelineText('customer');
+      return i18nText('customerFallback', 'Customer');
     }
-    return timelineText('support');
+    return i18nText('supportTeam', 'PAXDesign Support Team');
   }
 
   function timelineSenderLabel(entry) {
-    if (entry && entry.sender_label) {
-      return entry.sender_label;
+    if (!entry) {
+      return authorLabel('');
     }
-    return authorLabel(entry && entry.author_type ? entry.author_type : '');
+    if (entry.sender_key === 'customer' || entry.author_type === 'customer') {
+      var name = (entry.customer_name || '').trim();
+      if (!name && activeReport && activeReport.customer_display_name) {
+        name = String(activeReport.customer_display_name).trim();
+      }
+      if (name) {
+        return name;
+      }
+      return i18nText('customerFallback', 'Customer');
+    }
+    return i18nText('supportTeam', 'PAXDesign Support Team');
   }
 
-  function hasTimelineSubject(subject) {
-    return !!subject && subject !== timelineText('empty');
+  function hasTimelineSubject(entry) {
+    return !!timelineSubjectLabel(entry);
   }
 
   function formatDate(value) {
@@ -131,8 +220,8 @@
       return value;
     }
     try {
-      var lang = root.getAttribute('data-ccs-lang') === 'de' ? 'de-AT' : 'ar';
-      return d.toLocaleString(lang, { dateStyle: 'medium', timeStyle: 'short' });
+      var localeMap = { ar: 'ar', de: 'de-AT', en: 'en-GB' };
+      return d.toLocaleString(localeMap[getLang()] || 'ar', { dateStyle: 'medium', timeStyle: 'short' });
     } catch (e) {
       return value;
     }
@@ -174,8 +263,7 @@
   }
 
   function timelineText(key) {
-    var lang = root.getAttribute('data-ccs-lang') === 'de' ? 'de' : 'ar';
-    return (timelineCopy[lang] && timelineCopy[lang][key]) || key;
+    return i18nText(key, key);
   }
 
   function getOfficialTimelineSorted(entries) {
@@ -228,9 +316,9 @@
     var newActivity = options.forceNewest || timelineHasNewActivity(report.timeline || []);
 
     activeReport = report;
-    if (activeStatusEl) {
-      activeStatusEl.textContent = report.status_label || report.status || '';
-      activeStatusEl.setAttribute('data-status', report.status || '');
+    updateStatusBadge(report);
+    if (activeCategoryEl) {
+      activeCategoryEl.textContent = categoryLabel(report.category || '');
     }
     renderTimeline(report.timeline || [], { forceNewest: newActivity });
     if (newActivity && activeTimelineEl) {
@@ -297,7 +385,7 @@
     options = options || {};
     var sorted = getOfficialTimelineSorted(entries);
     if (!sorted.length) {
-      activeTimelineEl.innerHTML = '<p class="pax-ccs-portal__accordion-empty">' + escapeHtml(timelineText('empty')) + '</p>';
+      activeTimelineEl.innerHTML = '<p class="pax-ccs-portal__accordion-empty">' + escapeHtml(i18nText('emptyTimeline', '—')) + '</p>';
       resetTimelineTracking();
       return;
     }
@@ -320,8 +408,8 @@
       var entryId = String(entry.id != null ? entry.id : index);
       var isOpen = entryId === openId;
       var sender = timelineSenderLabel(entry);
-      var subject = entry.subject || '';
-      var showSubject = hasTimelineSubject(subject);
+      var subject = timelineSubjectLabel(entry);
+      var showSubject = hasTimelineSubject(entry);
       var when = formatDate(entry.created_at || '');
       var body = escapeHtml(entry.body || '').replace(/\n/g, '<br>');
       var panelId = 'pax-ccs-acc-panel-' + entryId;
@@ -383,12 +471,9 @@
     if (activeRefEl) {
       activeRefEl.textContent = report.reference_id || '';
     }
-    if (activeStatusEl) {
-      activeStatusEl.textContent = report.status_label || report.status || '';
-      activeStatusEl.setAttribute('data-status', report.status || '');
-    }
+    updateStatusBadge(report);
     if (activeCategoryEl) {
-      activeCategoryEl.textContent = report.category_label || report.category || '';
+      activeCategoryEl.textContent = categoryLabel(report.category || '');
     }
     if (activeSubmittedEl) {
       activeSubmittedEl.textContent = formatDate(report.created_at || '');
@@ -532,28 +617,7 @@
   }
 
   function t(key) {
-    var strings = {
-      ar: {
-        identity: 'الهوية',
-        incident: 'الحادث',
-        evidence: 'الأدلة',
-        files: 'ملف(ات)',
-        none: '—',
-        yes: 'نعم',
-        no: 'لا',
-      },
-      de: {
-        identity: 'Identität',
-        incident: 'Vorfall',
-        evidence: 'Beweise',
-        files: 'Datei(en)',
-        none: '—',
-        yes: 'Ja',
-        no: 'Nein',
-      },
-    };
-    var lang = root.getAttribute('data-ccs-lang') || 'ar';
-    return (strings[lang] && strings[lang][key]) || key;
+    return i18nText('review.' + key, key);
   }
 
   function setPageContext(lang, referenceId) {
@@ -588,7 +652,7 @@
   }
 
   function setLang(lang) {
-    if (lang !== 'ar' && lang !== 'de') {
+    if (lang !== 'ar' && lang !== 'de' && lang !== 'en') {
       lang = 'ar';
     }
     root.setAttribute('data-ccs-lang', lang);
@@ -614,11 +678,29 @@
     if (phase === 'form' && currentStep === 4) {
       renderReview();
     }
+    if (phase === 'active-report' && activeReport) {
+      updateStatusBadge(activeReport);
+      if (activeCategoryEl) {
+        activeCategoryEl.textContent = categoryLabel(activeReport.category || '');
+      }
+      if (activeSubmittedEl) {
+        activeSubmittedEl.textContent = formatDate(activeReport.created_at || '');
+      }
+      renderTimeline(activeReport.timeline || [], { forceNewest: false });
+    }
+  }
+
+  function placeholderAttr(lang) {
+    return 'data-placeholder-' + lang;
+  }
+
+  function labelAttr(lang) {
+    return 'data-label-' + lang;
   }
 
   function updatePlaceholders(lang) {
     form.querySelectorAll('[data-placeholder-ar]').forEach(function (input) {
-      var ph = input.getAttribute(lang === 'de' ? 'data-placeholder-de' : 'data-placeholder-ar');
+      var ph = input.getAttribute(placeholderAttr(lang));
       if (ph) {
         input.setAttribute('placeholder', ph);
       }
@@ -627,7 +709,7 @@
 
   function updateSelectLabels(lang) {
     form.querySelectorAll('option[data-label-ar]').forEach(function (opt) {
-      var label = opt.getAttribute(lang === 'de' ? 'data-label-de' : 'data-label-ar');
+      var label = opt.getAttribute(labelAttr(lang));
       if (label) {
         opt.textContent = label;
       }
@@ -874,7 +956,7 @@
       return;
     }
     if (!config.ajaxUrl || !config.nonce) {
-      showError('Configuration error.');
+      showError(i18nText('errors.config', 'Configuration error.'));
       return;
     }
 
@@ -905,7 +987,7 @@
             showActiveReport(json.data.activeReport);
             return;
           }
-          var errMsg = (json && json.data && json.data.message) || 'Submit failed';
+          var errMsg = mapServerError(json, 'submit');
           if (json && json.data && json.data.detail) {
             errMsg += ' (' + json.data.detail + ')';
           }
@@ -954,7 +1036,7 @@
         window.scrollTo({ top: root.offsetTop - 24, behavior: 'smooth' });
       })
       .catch(function (err) {
-        showError(err.message || 'Submit failed');
+        showError(err.message || i18nText('errors.submit', 'Submit failed'));
         submitBtn.disabled = false;
       });
   });
@@ -987,7 +1069,7 @@
         .then(function (res) { return res.json(); })
         .then(function (json) {
           if (!json || !json.success) {
-            throw new Error((json && json.data && json.data.message) || 'Reply failed');
+            throw new Error(mapServerError(json, 'reply'));
           }
           activeReplyInput.value = '';
           if (json.data && json.data.report) {
@@ -997,7 +1079,7 @@
         .catch(function (err) {
           if (activeReplyError) {
             activeReplyError.hidden = false;
-            activeReplyError.textContent = err.message || 'Reply failed';
+            activeReplyError.textContent = err.message || i18nText('errors.reply', 'Reply failed');
           }
         })
         .finally(function () {
@@ -1037,7 +1119,7 @@
   try {
     saved = localStorage.getItem('pax-ccs-lang') || '';
   } catch (e) {}
-  setLang(saved === 'de' ? 'de' : 'ar');
+  setLang(saved === 'de' || saved === 'en' ? saved : 'ar');
   bootstrapActiveReport().then(function (shown) {
     if (!shown) {
       setPhase('welcome');
