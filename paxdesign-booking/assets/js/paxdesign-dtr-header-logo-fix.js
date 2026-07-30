@@ -4,6 +4,8 @@
   var DESKTOP_SELECTOR = 'header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default';
   var FILTER_ID = 'pdx-header-pax-shadow';
   var BRAND_GREEN = '#CCFF00';
+  var MAX_RETRIES = 40;
+  var RETRY_MS = 100;
 
   function fixGradientStops(svg) {
     if (!svg) {
@@ -19,14 +21,11 @@
       return;
     }
     var shine = pax.querySelector('.paxlogo-pax-shine');
-    if (!shine) {
+    if (!shine || shine.dataset.pdxShineOff === '1') {
       return;
     }
     shine.setAttribute('opacity', '0');
-    shine.setAttribute('fill', BRAND_GREEN);
-    shine.style.setProperty('opacity', '0', 'important');
-    shine.style.setProperty('animation', 'none', 'important');
-    shine.style.setProperty('visibility', 'hidden', 'important');
+    shine.dataset.pdxShineOff = '1';
   }
 
   function ensureShadowFilter(svg) {
@@ -38,10 +37,8 @@
       defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
       svg.insertBefore(defs, svg.firstChild);
     }
-
-    var existing = defs.querySelector('#' + FILTER_ID);
-    if (existing) {
-      existing.remove();
+    if (defs.querySelector('#' + FILTER_ID)) {
+      return FILTER_ID;
     }
 
     var filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
@@ -67,8 +64,8 @@
   }
 
   function enhanceDesktopLogo(link) {
-    if (!link) {
-      return false;
+    if (!link || link.dataset.pdxDesktopPaxFix === '1') {
+      return true;
     }
 
     var root = link.querySelector('#pax-isolated-logo.paxlogo-wrap');
@@ -92,45 +89,36 @@
     disableShine(pax);
 
     var filterId = ensureShadowFilter(svg);
-    if (filterId) {
+    if (filterId && !pax.getAttribute('filter')) {
       pax.setAttribute('filter', 'url(#' + filterId + ')');
     }
 
     link.dataset.pdxDesktopPaxFix = '1';
-    root.dataset.pdxDesktopPaxFix = '1';
-    pax.classList.add('pdx-header-pax-shadow');
     return true;
   }
 
   function scan() {
-    document.querySelectorAll(DESKTOP_SELECTOR).forEach(enhanceDesktopLogo);
+    var done = true;
+    document.querySelectorAll(DESKTOP_SELECTOR).forEach(function (link) {
+      if (!enhanceDesktopLogo(link)) {
+        done = false;
+      }
+    });
+    return done;
   }
 
   function boot() {
-    scan();
+    if (scan()) {
+      return;
+    }
 
-    var observer = new MutationObserver(function () {
-      scan();
-    });
-    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-
-    var ticks = 0;
-    var interval = window.setInterval(function () {
-      scan();
-      ticks += 1;
-      if (ticks >= 120) {
-        window.clearInterval(interval);
-        observer.disconnect();
-        scan();
+    var attempts = 0;
+    var timer = window.setInterval(function () {
+      attempts += 1;
+      if (scan() || attempts >= MAX_RETRIES) {
+        window.clearInterval(timer);
       }
-    }, 500);
-
-    window.addEventListener('load', scan, { passive: true });
-    document.addEventListener('visibilitychange', function () {
-      if (!document.hidden) {
-        scan();
-      }
-    });
+    }, RETRY_MS);
   }
 
   if (document.readyState === 'loading') {
