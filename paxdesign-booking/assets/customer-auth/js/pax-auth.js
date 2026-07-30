@@ -1218,7 +1218,13 @@
       shell.appendChild(root);
     }
 
-    ensureAuthShellHomeLogo(shell);
+    if (user.logged_in) {
+      removeAuthShellHomeLogo();
+      ensureAccountDashboardHeader(shell);
+    } else {
+      removeAccountDashboardHeader();
+      ensureAuthShellHomeLogo(shell);
+    }
     suppressAuthPageIntruders();
   }
 
@@ -1312,9 +1318,9 @@
     paxGroup.classList.add('pdx-auth-pax-mark');
   }
 
-  function mountOfficialLogoInLink(link, logoHtml) {
+  function mountOfficialLogoInLink(link, logoHtml, officialClass) {
     link.innerHTML = logoHtml;
-    link.classList.add('pdx-auth-shell-home--official');
+    link.classList.add(officialClass || 'pdx-auth-shell-home--official');
     var wrap = link.querySelector('.paxlogo-wrap');
     if (wrap) {
       wrap.classList.add('is-visible', 'pdx-auth-shell-logo');
@@ -1323,17 +1329,28 @@
     enhanceAuthShellLogo(link);
   }
 
-  function ensureAuthShellHomeLogo(shell) {
-    if (!shell) return;
+  function removeAuthShellHomeLogo() {
+    var link = document.getElementById('pdx-auth-shell-home');
+    if (link && link.parentNode) {
+      link.parentNode.removeChild(link);
+    }
+    if (authShellLogoRetryTimer) {
+      clearInterval(authShellLogoRetryTimer);
+      authShellLogoRetryTimer = null;
+    }
+  }
+
+  function removeAccountDashboardHeader() {
+    var header = document.getElementById('pdx-account-header');
+    if (header && header.parentNode) {
+      header.parentNode.removeChild(header);
+    }
+  }
+
+  function mountShellLogoLink(link, officialClass) {
+    if (!link) return;
     var homeUrl = homePageUrl();
     var siteName = C.siteName || 'Home';
-    var link = document.getElementById('pdx-auth-shell-home');
-    if (!link) {
-      link = document.createElement('a');
-      link.id = 'pdx-auth-shell-home';
-      link.className = 'pdx-auth-shell-home';
-      shell.insertBefore(link, shell.firstChild);
-    }
     link.href = homeUrl;
     link.setAttribute('aria-label', 'Back to ' + siteName);
 
@@ -1343,7 +1360,7 @@
 
     var logoHtml = resolveSiteLogoHtml();
     if (logoHtml) {
-      mountOfficialLogoInLink(link, logoHtml);
+      mountOfficialLogoInLink(link, logoHtml, officialClass);
       link.setAttribute('data-pdx-official-logo', '1');
       if (authShellLogoRetryTimer) {
         clearInterval(authShellLogoRetryTimer);
@@ -1364,9 +1381,9 @@
         if (html) {
           clearInterval(authShellLogoRetryTimer);
           authShellLogoRetryTimer = null;
-          var logoLink = document.getElementById('pdx-auth-shell-home');
+          var logoLink = link.id ? document.getElementById(link.id) : null;
           if (logoLink) {
-            mountOfficialLogoInLink(logoLink, html);
+            mountOfficialLogoInLink(logoLink, html, officialClass);
             logoLink.setAttribute('data-pdx-official-logo', '1');
           }
         } else if (attempts >= 60) {
@@ -1375,6 +1392,41 @@
         }
       }, 50);
     }
+  }
+
+  function ensureAccountDashboardHeader(shell) {
+    if (!shell) return;
+    var header = document.getElementById('pdx-account-header');
+    if (!header) {
+      header = document.createElement('header');
+      header.id = 'pdx-account-header';
+      header.className = 'pdx-account-header';
+      shell.insertBefore(header, shell.firstChild);
+    }
+
+    var link = document.getElementById('pdx-account-header-home');
+    if (!link) {
+      link = document.createElement('a');
+      link.id = 'pdx-account-header-home';
+      link.className = 'pdx-account-header-home pdx-auth-shell-home';
+      header.appendChild(link);
+    } else if (link.parentNode !== header) {
+      header.appendChild(link);
+    }
+
+    mountShellLogoLink(link, 'pdx-account-header-home--official');
+  }
+
+  function ensureAuthShellHomeLogo(shell) {
+    if (!shell) return;
+    var link = document.getElementById('pdx-auth-shell-home');
+    if (!link) {
+      link = document.createElement('a');
+      link.id = 'pdx-auth-shell-home';
+      link.className = 'pdx-auth-shell-home';
+      shell.insertBefore(link, shell.firstChild);
+    }
+    mountShellLogoLink(link, 'pdx-auth-shell-home--official');
   }
 
   function suppressAuthPageIntruders() {
