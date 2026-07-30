@@ -415,7 +415,11 @@ class PAXdesign_Customer_REST {
             'orders_recent'   => array_slice(PAXdesign_Customer_Orders::list_for_user($uid), 0, 5),
             'notifications'   => PAXdesign_Customer_Notifications::list_for_user($uid, true, 10),
             'unread_count'    => PAXdesign_Customer_Notifications::unread_count($uid),
-            'news'            => PAXdesign_Customer_News::list_for_user($uid, 5),
+            'news'            => PAXdesign_Customer_News::list_for_user(
+                $uid,
+                5,
+                PAXdesign_Customer_Homepage::normalize_language((string) $request->get_param('lang'))
+            ),
             'portfolio'       => array_slice(PAXdesign_Customer_Portfolio::list_items(6), 0, 6),
             'files_count'     => count(PAXdesign_Customer_Orders::library_for_user($uid, 100)),
             'services_featured' => array_values(array_filter(PAXdesign_Customer_Services::list_services(), function ($s) {
@@ -650,15 +654,17 @@ class PAXdesign_Customer_REST {
         ));
     }
 
-    public static function list_news() {
+    public static function list_news(WP_REST_Request $request) {
         $uid = PAXdesign_Customer_Auth::current_user_id();
-        return rest_ensure_response(array('items' => PAXdesign_Customer_News::list_for_user($uid)));
+        $lang = PAXdesign_Customer_Homepage::normalize_language((string) $request->get_param('lang'));
+        return rest_ensure_response(array('items' => PAXdesign_Customer_News::list_for_user($uid, 20, $lang)));
     }
 
     public static function get_news(WP_REST_Request $request) {
         $uid = PAXdesign_Customer_Auth::current_user_id();
+        $lang = PAXdesign_Customer_Homepage::normalize_language((string) $request->get_param('lang'));
         $slug = sanitize_text_field(rawurldecode((string) $request->get_param('slug')));
-        $item = PAXdesign_Customer_News::get_published_for_user($slug, $uid);
+        $item = PAXdesign_Customer_News::get_published_for_user($slug, $uid, $lang);
         if (!$item) {
             return new WP_Error('not_found', __('News item not found.', 'paxdesign-booking'), array('status' => 404));
         }
