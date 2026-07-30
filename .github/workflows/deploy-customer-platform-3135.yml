@@ -149,9 +149,13 @@ jobs:
           set -euo pipefail
           PORT="${WP_SSH_PORT:-22}"
           SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          SCP_OPTS=(-i ~/.ssh/id_deploy -P "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
           if [ -n "${PAX_APPLE_WEB_KEY_P8_BASE64:-}" ]; then
             python3 scripts/prepare-apple-web-oauth-key.py > /tmp/apple-web-oauth-key.pem
-            scp "${SSH_OPTS[@]}" /tmp/apple-web-oauth-key.pem "${WP_SSH_USER}@${WP_SSH_HOST}:${WP_PATH%/}/apple-web-oauth-key.pem"
+            scp "${SCP_OPTS[@]}" /tmp/apple-web-oauth-key.pem "${WP_SSH_USER}@${WP_SSH_HOST}:${WP_PATH%/}/apple-web-oauth-key.pem"
           fi
           ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
             "cd '$(printf '%q' "$WP_PATH")' && \
