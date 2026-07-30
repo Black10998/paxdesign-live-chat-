@@ -789,6 +789,7 @@
 
     window.PAXdesignBooking = {
         openFromChat: openBookingFromChat,
+        open: openWidget,
         switchMode: switchWidgetMode,
         close: closeDialog
     };

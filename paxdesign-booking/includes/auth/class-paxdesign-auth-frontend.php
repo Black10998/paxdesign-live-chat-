@@ -57,6 +57,11 @@ class PAXdesign_Auth_Frontend {
             array('pax-auth-customer-ui'),
             self::asset_version($base . 'css/pdx-auth.css')
         );
+        wp_add_inline_style(
+            'pax-auth-ui',
+            'html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn{background:#000!important;background-color:#000!important;color:#fff!important;border:0!important;box-shadow:none!important;border-radius:980px!important;background-image:none!important}' .
+            'html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus{background:#1d1d1f!important;color:#fff!important;border:0!important;text-decoration:none!important}'
+        );
 
         $script_args = array('strategy' => 'defer', 'in_footer' => true);
 

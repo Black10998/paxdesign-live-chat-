@@ -50,16 +50,33 @@ body.pdx-account-dashboard-body .pdx-account-portal-host {
 
 /* ─── Header auth bar (light on dashboard) ───────────────── */
 body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-trigger,
-body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-header-btn,
-body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-signup-btn {
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-account-btn.pdx-auth-header-btn,
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-portal-btn.pdx-auth-header-btn {
   background: #fff;
   border: 1px solid var(--pdx-portal-border-strong);
   color: var(--pdx-portal-text);
   box-shadow: none;
 }
 
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-signup-btn.pdx-auth-header-btn {
+  background: #000 !important;
+  background-color: #000 !important;
+  background-image: none !important;
+  color: #fff !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 980px !important;
+}
+
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-signup-btn.pdx-auth-header-btn:hover,
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-signup-btn.pdx-auth-header-btn:focus {
+  background: #1d1d1f !important;
+  color: #fff !important;
+}
+
 body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-trigger:hover,
-body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-header-btn:hover {
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-account-btn.pdx-auth-header-btn:hover,
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-portal-btn.pdx-auth-header-btn:hover {
   background: #fafafa;
   border-color: rgba(0, 0, 0, 0.16);
 }

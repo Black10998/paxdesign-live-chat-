@@ -407,9 +407,10 @@ class PAXdesign_Chat_Knowledge {
      *
      * @param int    $user_id
      * @param string $session_id
+     * @param string $focus_reference Optional Cybercrime Support reference for this chat.
      * @return string
      */
-    public static function build_customer_account_context_block($user_id, $session_id = '') {
+    public static function build_customer_account_context_block($user_id, $session_id = '', $focus_reference = '') {
         $user_id = absint($user_id);
         if ($user_id <= 0) {
             return '';
@@ -512,6 +513,10 @@ class PAXdesign_Chat_Knowledge {
             $lines[] = '- Unread portal notifications: ' . (int) $unread;
         }
 
+        if (class_exists('PAXdesign_Cybercrime_Intake')) {
+            $lines[] = PAXdesign_Cybercrime_Intake::build_account_context_block($user_id, $focus_reference);
+        }
+
         if ($session_id !== '' && class_exists('PAXdesign_Customer_Projects')) {
             global $wpdb;
             $linked = $wpdb->get_row($wpdb->prepare(
@@ -522,6 +527,67 @@ class PAXdesign_Chat_Knowledge {
             if ($linked) {
                 $lines[] = '- Project linked to this chat: ' . (string) $linked['project_ref'] . ' — ' . (string) $linked['title'] . ' (' . (int) $linked['progress'] . '%, status ' . (string) $linked['status'] . ')';
             }
+        }
+
+        return implode("\n", $lines);
+    }
+
+    /**
+     * Cybercrime Support page context for the global Live Chat assistant.
+     *
+     * @param string $language de|en|ar
+     * @param string $focus_reference Optional active Cybercrime Support reference.
+     * @return string
+     */
+    public static function build_cybercrime_support_context_block($language = '', $focus_reference = '') {
+        $language = sanitize_key((string) $language);
+        if ($language === '') {
+            $language = 'ar';
+        }
+
+        $lines = array(
+            '## Page context: Cybercrime Support (/cybercrime-support/)',
+            'The visitor is on the Cybercrime Support reporting portal or opened Live Chat from that page.',
+            'Switch from sales mode to confidential cyber-incident support.',
+            '',
+            '## Your role on this page',
+            '- You help with Cybercrime Support: explaining the service, guiding reporting, and answering status questions for logged-in customers.',
+            '- For authenticated customers, use the Cybercrime Support report facts from the account context block (reference number, category, status, dates, summary).',
+            '- Answer questions like "What is my request number?", "Why did I submit this report?", "What is the current status?", and "Are there any updates?" from those report facts only.',
+            '- Never invent a reference number, status change, or team message that is not listed in the account context.',
+            '- Do NOT pitch unrelated services (websites, apps, marketing) unless the visitor explicitly asks.',
+            '- Treat all details as sensitive; never ask for passwords, OTP codes, seed phrases, or full payment card numbers.',
+            '',
+            '## Reporting guidance',
+            '- Guests must sign in on the page before submitting a structured report.',
+            '- If they have not submitted yet, explain they can start a report after login and will receive a reference number.',
+            '- Give calm containment advice when relevant (secure accounts, change passwords from a clean device, enable 2FA, contact bank/platform).',
+            '- Offer a live PAXDesign expert for urgent or complex cases.',
+            '',
+            '## Language',
+        );
+
+        if ($language === 'de') {
+            $lines[] = '- The Cybercrime Support page defaults to Arabic, but this visitor may use German.';
+            $lines[] = '- Reply in German if they write in German; otherwise match their language (Arabic/English/German).';
+        } elseif ($language === 'en') {
+            $lines[] = '- Default page language is Arabic; match the visitor\'s language from their messages.';
+        } else {
+            $lines[] = '- لغة الصفحة الافتراضية العربية. فضّل العربية حتى يكتب الزائر بلغة أخرى، ثم طابق لغته.';
+            $lines[] = '- Default page language is Arabic; prefer Arabic until the visitor writes in another language, then match their language.';
+        }
+
+        $lines[] = '';
+        $lines[] = '## Tone';
+        $lines[] = '- Empathetic, precise, no blame. Short paragraphs. One focused question per turn when gathering facts.';
+
+        $focus_reference = sanitize_text_field((string) $focus_reference);
+        if ($focus_reference !== '') {
+            $lines[] = '';
+            $lines[] = '## Active report focus';
+            $lines[] = '- The customer opened chat from Cybercrime Support about report **' . $focus_reference . '**.';
+            $lines[] = '- Prioritize facts for this reference from the account context block (reference number, category, reason, status, dates, updates, attachments).';
+            $lines[] = '- When they ask about status, reference number, reason, or updates, answer from that report data only — do not ask them to repeat details already on file.';
         }
 
         return implode("\n", $lines);

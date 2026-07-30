@@ -5,6 +5,18 @@
 (function () {
   'use strict';
 
+  var path = window.location.pathname || '';
+  if (path.indexOf('cybercrime-support') !== -1) {
+    window.PAXdesignPageContext = window.PAXdesignPageContext || {};
+    if (!window.PAXdesignPageContext.intent) {
+      window.PAXdesignPageContext.intent = 'cybercrime-support';
+    }
+  }
+})();
+
+(function () {
+  'use strict';
+
   var config = window.paxdesignChat;
   if (!config || !config.enabled) return;
 
@@ -2483,8 +2495,30 @@
   }
 
   function stampChatRequest(formData) {
-    if (formData) formData.append('device_token', getDeviceToken());
+    if (formData) {
+      formData.append('device_token', getDeviceToken());
+      appendPageContextFields(formData);
+    }
     return formData;
+  }
+
+  function appendPageContextFields(formData) {
+    var ctx = window.PAXdesignPageContext || {};
+    if (!ctx.intent) {
+      var path = window.location.pathname || '';
+      if (path.indexOf('cybercrime-support') !== -1) {
+        ctx.intent = 'cybercrime-support';
+      }
+    }
+    if (ctx.intent) {
+      formData.append('page_context', ctx.intent);
+    }
+    if (ctx.language) {
+      formData.append('page_language', ctx.language);
+    }
+    if (ctx.referenceId) {
+      formData.append('page_reference', ctx.referenceId);
+    }
   }
 
   function loadArchivedIds() {
@@ -5055,6 +5089,27 @@
     }
   });
 
+  function openForCybercrime(opts) {
+    opts = opts || {};
+    window.PAXdesignPageContext = window.PAXdesignPageContext || {};
+    window.PAXdesignPageContext.intent = 'cybercrime-support';
+    if (opts.language) {
+      window.PAXdesignPageContext.language = opts.language;
+    }
+    if (opts.referenceId) {
+      window.PAXdesignPageContext.referenceId = opts.referenceId;
+    }
+    setEntryChoice('ai');
+    if (window.PAXdesignBooking && typeof window.PAXdesignBooking.open === 'function') {
+      window.PAXdesignBooking.open();
+      return;
+    }
+    var launcher = document.querySelector('.paxdesign-booking-button');
+    if (launcher) {
+      launcher.click();
+    }
+  }
+
   window.PAXdesignChat = {
     init: init,
     onOpen: onWidgetOpen,
@@ -5063,6 +5118,7 @@
     sendMessage: sendMessage,
     canUseChat: canUseChat,
     beginReadiness: beginChatReadiness,
+    openForCybercrime: openForCybercrime,
     ensureAuthGate: function () {
       initAuthGate();
       if (!canUseChat()) {
