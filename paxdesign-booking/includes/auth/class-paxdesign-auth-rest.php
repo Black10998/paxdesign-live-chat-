@@ -243,14 +243,22 @@ class PAXdesign_Auth_REST {
     }
 
     public static function apple_web_callback(WP_REST_Request $request) {
+        if (!defined('DONOTCACHEPAGE')) {
+            define('DONOTCACHEPAGE', true);
+        }
+        nocache_headers();
         $redirect = PAXdesign_Auth_Apple::web_handle_callback($request);
-        wp_redirect(PAXdesign_Auth_Apple::safe_redirect_url($redirect));
+        wp_safe_redirect(PAXdesign_Auth_Apple::safe_redirect_url($redirect));
         exit;
     }
 
     public static function apple_web_complete(WP_REST_Request $request) {
+        if (!defined('DONOTCACHEPAGE')) {
+            define('DONOTCACHEPAGE', true);
+        }
+        nocache_headers();
         $redirect = PAXdesign_Auth_Apple::web_complete_login($request);
-        wp_redirect(PAXdesign_Auth_Apple::safe_redirect_url($redirect));
+        wp_safe_redirect(PAXdesign_Auth_Apple::safe_redirect_url($redirect));
         exit;
     }
 

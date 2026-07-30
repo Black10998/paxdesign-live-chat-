@@ -17,6 +17,15 @@ class PAXdesign_Auth_Apple {
 	const TOKEN_URL               = 'https://appleid.apple.com/auth/token';
 	const IOS_BUNDLE_ID           = 'at.paxdesign.livechat';
 	const OAUTH_STATE_TTL         = 600;
+	const LOGIN_TICKET_TTL        = 300;
+	const OPTION_TRACE            = 'paxdesign_apple_oauth_trace';
+
+	/**
+	 * @return void
+	 */
+	public static function register_hooks(): void {
+		add_action( 'init', array( __CLASS__, 'maybe_finish_web_login' ), 0 );
+	}
 
 	/**
 	 * Complete a mobile session using a verified Apple identity token.
@@ -116,6 +125,7 @@ class PAXdesign_Auth_Apple {
 	 * @return string Safe redirect URL for wp_safe_redirect().
 	 */
 	public static function web_handle_callback( WP_REST_Request $request ): string {
+		self::trace( 'callback_start', array( 'method' => $request->get_method() ) );
 		$params = self::callback_params( $request );
 
 		$error = sanitize_text_field( (string) ( $params['error'] ?? '' ) );
@@ -123,6 +133,7 @@ class PAXdesign_Auth_Apple {
 			$detail = sanitize_text_field( (string) ( $params['error_description'] ?? '' ) );
 			$msg    = $detail !== '' ? $detail : 'Apple sign-in was cancelled or denied.';
 			self::log_failure( 'apple_callback_denied', array( 'error' => $error ) );
+			self::trace( 'callback_denied', array( 'error' => $error ) );
 			return self::web_error_redirect_url( $msg );
 		}
 
@@ -130,24 +141,28 @@ class PAXdesign_Auth_Apple {
 		$state = sanitize_text_field( (string) ( $params['state'] ?? '' ) );
 		if ( $code === '' || $state === '' ) {
 			self::log_failure( 'apple_callback_missing_params', array( 'has_code' => $code !== '', 'has_state' => $state !== '' ) );
+			self::trace( 'callback_missing_params', array( 'has_code' => $code !== '', 'has_state' => $state !== '' ) );
 			return self::web_error_redirect_url( 'Apple did not return a valid authorization response.' );
 		}
 
 		$return_url = self::consume_oauth_state( $state );
 		if ( is_wp_error( $return_url ) ) {
 			self::log_failure( 'apple_state_invalid' );
+			self::trace( 'callback_state_invalid' );
 			return self::web_error_redirect_url( $return_url->get_error_message() );
 		}
 
 		$tokens = self::exchange_authorization_code( $code );
 		if ( is_wp_error( $tokens ) ) {
 			self::log_failure( 'apple_token_exchange', array( 'reason' => $tokens->get_error_code(), 'message' => $tokens->get_error_message() ) );
+			self::trace( 'callback_token_exchange_failed', array( 'reason' => $tokens->get_error_code(), 'message' => $tokens->get_error_message() ) );
 			return self::web_error_redirect_url( $tokens->get_error_message() );
 		}
 
 		$id_token = (string) ( $tokens['id_token'] ?? '' );
 		if ( $id_token === '' ) {
 			self::log_failure( 'apple_missing_id_token' );
+			self::trace( 'callback_missing_id_token' );
 			return self::web_error_redirect_url( 'Apple did not return an identity token.' );
 		}
 
@@ -157,43 +172,82 @@ class PAXdesign_Auth_Apple {
 		$claims     = self::verify_identity_token( $id_token, array( $service_id ) );
 		if ( is_wp_error( $claims ) ) {
 			self::log_failure( 'apple_jwt_verify', array( 'reason' => $claims->get_error_code(), 'message' => $claims->get_error_message() ) );
+			self::trace( 'callback_jwt_verify_failed', array( 'reason' => $claims->get_error_code(), 'message' => $claims->get_error_message() ) );
 			return self::web_error_redirect_url( $claims->get_error_message() );
 		}
 
 		$user = self::resolve_user_from_claims( $claims, $profile );
 		if ( is_wp_error( $user ) ) {
 			self::log_failure( 'apple_user_resolve', array( 'reason' => $user->get_error_code(), 'message' => $user->get_error_message() ) );
+			self::trace( 'callback_user_resolve_failed', array( 'reason' => $user->get_error_code(), 'message' => $user->get_error_message() ) );
 			return self::web_error_redirect_url( $user->get_error_message() );
 		}
 
-		return self::web_complete_url_for_user( (int) $user->ID, $return_url );
+		$finish_url = self::web_complete_url_for_user( (int) $user->ID, $return_url );
+		self::trace( 'callback_success', array( 'user_id' => (int) $user->ID ) );
+		return $finish_url;
 	}
 
 	/**
-	 * Finish login on a same-site GET request so auth cookies persist after Apple's cross-site POST.
+	 * Finish login on a normal WordPress page request (reliable auth cookies).
 	 *
-	 * @return string Safe redirect URL for wp_safe_redirect().
+	 * @return void
+	 */
+	public static function maybe_finish_web_login(): void {
+		if ( empty( $_GET['pdx_apple_finish'] ) ) {
+			return;
+		}
+
+		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+			define( 'DONOTCACHEPAGE', true );
+		}
+
+		$ticket = sanitize_text_field( wp_unslash( (string) $_GET['pdx_apple_finish'] ) );
+		if ( $ticket === '' ) {
+			return;
+		}
+
+		self::trace( 'finish_request', array( 'ticket_len' => strlen( $ticket ) ) );
+		nocache_headers();
+
+		$redirect = self::complete_login_from_ticket( $ticket );
+		wp_safe_redirect( self::safe_redirect_url( $redirect ) );
+		exit;
+	}
+
+	/**
+	 * @return string
 	 */
 	public static function web_complete_login( WP_REST_Request $request ): string {
 		$ticket = sanitize_text_field( (string) $request->get_param( 'ticket' ) );
+		self::trace( 'complete_request_rest', array( 'ticket_len' => strlen( $ticket ) ) );
+		return self::complete_login_from_ticket( $ticket );
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function complete_login_from_ticket( string $ticket ): string {
 		if ( $ticket === '' ) {
+			self::trace( 'complete_missing_ticket' );
 			return self::web_error_redirect_url( 'Apple sign-in session is invalid. Please try again.' );
 		}
 
-		$key  = 'pax_apple_login_' . hash( 'sha256', $ticket );
-		$data = get_transient( $key );
-		delete_transient( $key );
+		$data = self::consume_login_ticket( $ticket );
 		if ( ! is_array( $data ) || empty( $data['user_id'] ) ) {
 			self::log_failure( 'apple_complete_ticket_invalid' );
+			self::trace( 'complete_ticket_invalid' );
 			return self::web_error_redirect_url( 'Apple sign-in session expired. Please try again.' );
 		}
 
 		$result = PAXdesign_Auth_Native::web_login_for_user( (int) $data['user_id'] );
 		if ( empty( $result['success'] ) ) {
 			self::log_failure( 'apple_web_session', array( 'message' => (string) ( $result['message'] ?? '' ) ) );
+			self::trace( 'complete_session_failed', array( 'message' => (string) ( $result['message'] ?? '' ) ) );
 			return self::web_error_redirect_url( (string) ( $result['message'] ?? 'Could not sign you in.' ) );
 		}
 
+		self::trace( 'complete_success', array( 'user_id' => (int) $data['user_id'] ) );
 		return (string) ( $data['return_url'] ?? ( PAXdesign_Auth_Page::page_url() . '#/overview' ) );
 	}
 
@@ -202,17 +256,68 @@ class PAXdesign_Auth_Apple {
 	 */
 	public static function web_complete_url_for_user( int $user_id, string $return_url ): string {
 		$ticket = bin2hex( random_bytes( 16 ) );
-		set_transient(
-			'pax_apple_login_' . hash( 'sha256', $ticket ),
+		self::store_login_ticket(
+			$ticket,
 			array(
 				'user_id'    => $user_id,
 				'return_url' => $return_url,
 				'created'    => time(),
-			),
-			300
+			)
 		);
 
-		return add_query_arg( 'ticket', $ticket, rest_url( 'pdx/v1/auth/apple/complete' ) );
+		return add_query_arg( 'pdx_apple_finish', $ticket, PAXdesign_Auth_Page::page_url() );
+	}
+
+	/**
+	 * @param array<string, mixed> $data
+	 */
+	private static function store_login_ticket( string $ticket, array $data ): void {
+		$key = self::login_ticket_key( $ticket );
+		set_transient( $key, $data, self::LOGIN_TICKET_TTL );
+		update_option( $key, $data, false );
+	}
+
+	/**
+	 * @return array<string, mixed>|null
+	 */
+	private static function consume_login_ticket( string $ticket ) {
+		$key  = self::login_ticket_key( $ticket );
+		$data = get_transient( $key );
+		if ( ! is_array( $data ) ) {
+			$stored = get_option( $key, null );
+			$data   = is_array( $stored ) ? $stored : null;
+		}
+		delete_transient( $key );
+		delete_option( $key );
+		return $data;
+	}
+
+	/**
+	 * @return string
+	 */
+	private static function login_ticket_key( string $ticket ): string {
+		return 'pax_apple_login_' . hash( 'sha256', $ticket );
+	}
+
+	/**
+	 * @param array<string, mixed> $context
+	 */
+	private static function trace( string $step, array $context = array() ): void {
+		$rows = get_option( self::OPTION_TRACE, array() );
+		if ( ! is_array( $rows ) ) {
+			$rows = array();
+		}
+		$rows[] = array_merge(
+			array(
+				't'    => gmdate( 'c' ),
+				'step' => $step,
+			),
+			$context
+		);
+		if ( count( $rows ) > 25 ) {
+			$rows = array_slice( $rows, -25 );
+		}
+		update_option( self::OPTION_TRACE, $rows, false );
 	}
 
 	/**
