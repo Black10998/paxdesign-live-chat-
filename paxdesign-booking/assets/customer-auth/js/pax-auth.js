@@ -1553,6 +1553,7 @@
         items: [
           { id: 'projects', label: 'Projects', icon: 'folder' },
           { id: 'orders', label: 'Requests', icon: 'receipt' },
+          { id: 'records', label: 'Records / Ticket History', icon: 'file' },
           { id: 'files', label: 'Files & Invoices', icon: 'file' },
         ],
       },
@@ -1581,6 +1582,7 @@
       settings: 'Settings',
       projects: 'Projects',
       orders: 'Requests',
+      records: 'Records / Ticket History',
       files: 'Files & Invoices',
       news: 'News',
       notifications: 'Alerts',
@@ -1598,6 +1600,7 @@
       settings: 'Control notifications and communication preferences.',
       projects: 'Track active work and deliverables.',
       orders: 'View requests, billing, and payment history.',
+      records: 'Review closed Cybercrime Support reports in read-only mode.',
       files: 'Download shared files and invoices.',
       news: 'Announcements and updates from PAXDesign.',
       notifications: 'Your account alerts and activity notifications.',
@@ -1612,6 +1615,7 @@
       overview: 'overview',
       projects: 'projects',
       orders: 'orders',
+      records: 'records',
       support: 'chat',
       services: 'services',
       news: 'news',
@@ -2634,6 +2638,9 @@
         case 'orders':
           html += renderPortalOrdersSection(data);
           break;
+        case 'records':
+          html += renderPortalRecordsSection();
+          break;
         case 'services':
           html += renderPortalServicesSection();
           break;
@@ -2658,6 +2665,9 @@
     }
     if (portalState.tab === 'notifications' && !portalState.detail) {
       bindPortalNotificationsSection(container);
+    }
+    if (portalState.tab === 'records' && !portalState.detail) {
+      bindPortalRecordsSection(container);
     }
     container.querySelectorAll('[data-portal-open]').forEach(function (el) {
       el.addEventListener('click', function () {
@@ -2724,6 +2734,21 @@
         portalState.detail.data = service;
         renderCustomerPortalDashboard(container, portalState.dashboard);
       });
+      return;
+    }
+    if (kind === 'cybercrime') {
+      body.innerHTML = renderPortalNav() + '<div class="pdx-portal-content">' + cxLoading('Loading record…') + '</div>';
+      customerApiFetch('GET', '/customer/cybercrime/reports/' + encodeURIComponent(id)).then(function (data) {
+        var report = data && data.report ? data.report : null;
+        if (!report || !report.reference_id || !data._ok) {
+          portalState.detail = null;
+          renderCustomerPortalDashboard(container, portalState.dashboard);
+          notify('Record could not be loaded.', 'warn');
+          return;
+        }
+        portalState.detail.data = report;
+        renderCustomerPortalDashboard(container, portalState.dashboard);
+      });
     }
   }
 
@@ -2742,6 +2767,9 @@
     }
     if (detail.kind === 'service') {
       return renderPortalServiceDetail(detail.data);
+    }
+    if (detail.kind === 'cybercrime') {
+      return renderPortalCybercrimeDetail(detail.data);
     }
     return '';
   }
@@ -2898,6 +2926,150 @@
         html += '<li>' + escHtml(n.body) + '</li>';
       });
       html += '</ul>';
+    }
+    return html + '</article>';
+  }
+
+  function portalFormatDate(value) {
+    if (!value) {
+      return '—';
+    }
+    var d = new Date(String(value).replace(' ', 'T') + 'Z');
+    if (isNaN(d.getTime())) {
+      return String(value);
+    }
+    try {
+      return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    } catch (e) {
+      return String(value);
+    }
+  }
+
+  function cybercrimeReportIsActive(report) {
+    if (!report) {
+      return false;
+    }
+    if (report.is_active === false || report.is_active === 0 || report.is_active === '0') {
+      return false;
+    }
+    var status = String(report.status || '');
+    return status !== 'closed' && status !== 'resolved';
+  }
+
+  function cybercrimeVisibleTimeline(report) {
+    return (report && report.timeline ? report.timeline : []).filter(function (entry) {
+      if (!entry || entry.author_type === 'ai' || entry.channel === 'chat') {
+        return false;
+      }
+      if (entry.customer_visible === false) {
+        return false;
+      }
+      return !!(entry.body && String(entry.body).trim());
+    }).sort(function (a, b) {
+      var aTime = String(a.created_at || '') + String(a.id != null ? a.id : '');
+      var bTime = String(b.created_at || '') + String(b.id != null ? b.id : '');
+      return bTime.localeCompare(aTime);
+    });
+  }
+
+  function renderPortalRecordsSection() {
+    return '<section class="pdx-portal-section pdx-portal-records" id="pdx-portal-records">' + cxLoading('Loading records…') + '</section>';
+  }
+
+  function bindPortalRecordsSection(container) {
+    var section = container.querySelector('#pdx-portal-records');
+    if (!section) {
+      return;
+    }
+    customerApiFetch('GET', '/customer/cybercrime/reports').then(function (data) {
+      if (!data || !data._ok) {
+        section.innerHTML = '<p class="pdx-auth-error">Records could not be loaded.</p>';
+        return;
+      }
+      var history = Array.isArray(data.history) ? data.history : (data.reports || []).filter(function (report) {
+        return report && !cybercrimeReportIsActive(report);
+      });
+      var active = data.active || null;
+      var html = '<h3>' + cxIcon('file', 16) + 'Cybercrime Support records</h3>';
+      html += '<p class="pdx-portal-lead">Closed reports stay read-only. Start a new report anytime if you need help again.</p>';
+      if (active && cybercrimeReportIsActive(active)) {
+        html += '<p class="pdx-portal-note">You currently have an open report (<code>' + escHtml(active.reference_id || '') + '</code>). ' +
+          '<a href="' + escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/?ref=' + encodeURIComponent(active.reference_id || '')) + '">View active report</a></p>';
+      }
+      if (history.length) {
+        history.forEach(function (report) {
+          html += '<button type="button" class="pdx-portal-row pdx-portal-row--link pdx-portal-row--records' +
+            (cybercrimeReportIsActive(report) ? '' : ' is-closed') + '" data-portal-open="cybercrime" data-portal-id="' +
+            escHtml(String(report.reference_id || '')) + '">' +
+            '<strong>' + escHtml(report.reference_id || 'Record') + '</strong>' +
+            '<span>' + escHtml(report.status_label || report.status || '') + ' · ' + escHtml(portalFormatDate(report.updated_at || report.created_at)) + '</span>' +
+            (report.category_label ? '<span class="pdx-portal-row-sub">' + escHtml(report.category_label) + '</span>' : '') +
+            '</button>';
+        });
+      } else {
+        html += '<p class="pdx-portal-empty">No closed Cybercrime Support records yet.</p>';
+      }
+      html += '<p class="pdx-portal-records-actions"><a class="pdx-portal-btn pdx-portal-btn--secondary" href="' +
+        escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/') + '">Start a new report</a></p>';
+      section.innerHTML = html;
+      section.querySelectorAll('[data-portal-open]').forEach(function (el) {
+        el.addEventListener('click', function () {
+          openPortalDetail(container, el.dataset.portalOpen, el.dataset.portalId || '');
+        });
+      });
+    });
+  }
+
+  function renderPortalCybercrimeDetail(report) {
+    var html = portalBackBtn('All records');
+    var isActive = cybercrimeReportIsActive(report);
+    html += '<article class="pdx-portal-detail pdx-portal-detail--cybercrime' + (isActive ? '' : ' is-closed') + '">';
+    html += '<h3>' + escHtml(report.reference_id || 'Cybercrime report') + '</h3>';
+    html += '<p class="pdx-portal-meta">' + escHtml(report.status_label || report.status || '') +
+      (report.category_label ? ' · ' + escHtml(report.category_label) : '') + '</p>';
+    html += '<dl class="pdx-portal-records-meta">';
+    html += '<div><dt>Submitted</dt><dd>' + escHtml(portalFormatDate(report.created_at)) + '</dd></div>';
+    html += '<div><dt>Updated</dt><dd>' + escHtml(portalFormatDate(report.updated_at || report.created_at)) + '</dd></div>';
+    html += '</dl>';
+    if (!isActive) {
+      html += '<p class="pdx-portal-note pdx-portal-note--closed">This record is closed and read-only. To request new help, start a new report.</p>';
+    }
+    if (report.description) {
+      html += '<h4>Summary</h4><div class="pdx-portal-body-text">' + escHtml(report.description) + '</div>';
+    }
+    if (report.platforms) {
+      html += '<h4>Platforms</h4><div class="pdx-portal-body-text">' + escHtml(report.platforms) + '</div>';
+    }
+    var timeline = cybercrimeVisibleTimeline(report);
+    if (timeline.length) {
+      html += '<h4>Official updates</h4><ul class="pdx-portal-cybercrime-timeline">';
+      timeline.forEach(function (entry) {
+        var author = entry.author_type === 'customer' ? 'You' : 'PAXDesign Support Team';
+        html += '<li class="pdx-portal-cybercrime-timeline__item">' +
+          '<p class="pdx-portal-cybercrime-timeline__meta"><strong>' + escHtml(author) + '</strong> · ' +
+          escHtml(portalFormatDate(entry.created_at)) + '</p>' +
+          '<div class="pdx-portal-cybercrime-timeline__body">' + escHtml(entry.body || '') + '</div></li>';
+      });
+      html += '</ul>';
+    }
+    if ((report.attachments || []).length) {
+      html += '<h4>Attachments</h4><ul class="pdx-portal-list">';
+      report.attachments.forEach(function (file) {
+        if (!file) {
+          return;
+        }
+        var name = escHtml(file.name || 'file');
+        if (file.url) {
+          html += '<li><a href="' + escHtml(file.url) + '" target="_blank" rel="noopener">' + name + '</a></li>';
+        } else {
+          html += '<li>' + name + '</li>';
+        }
+      });
+      html += '</ul>';
+    }
+    if (!isActive) {
+      html += '<p class="pdx-portal-records-actions"><a class="pdx-portal-btn pdx-portal-btn--secondary" href="' +
+        escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/') + '">Start a new report</a></p>';
     }
     return html + '</article>';
   }

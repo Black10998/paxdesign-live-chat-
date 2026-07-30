@@ -67,6 +67,8 @@
   var hasOlderMessages   = false;
   var loadingOlderHistory = false;
   var historyScrollBound = false;
+  var historyLoadedAt = 0;
+  var HISTORY_REUSE_MS = 8000;
   var localMsgId         = 0;
   var domMsgIds          = {};
   var domClientMsgIds    = {};
@@ -178,7 +180,8 @@
   var streamEventSince    = 0;
   var streamRestartTimer  = null;
   var READINESS_TIMEOUT_MS = 45000;
-  var READINESS_STREAM_WAIT_MS = 15000;
+  var READINESS_STREAM_WAIT_MS = 3000;
+  var READINESS_STREAM_BACKGROUND_MS = 12000;
   var READINESS_AUTO_RETRY_MAX = 2;
   var READINESS_AUTO_RETRY_DELAY_MS = 2500;
   var READINESS_STEPS = {
@@ -665,6 +668,54 @@
     }
   }
 
+  function queueBackgroundRealtimeSync(generation) {
+    window.setTimeout(function () {
+      if (generation !== readinessGeneration) {
+        return;
+      }
+      waitForCustomerStreamOpen(READINESS_STREAM_BACKGROUND_MS, generation)
+        .catch(function (err) {
+          if (err && err.silent) {
+            return null;
+          }
+          logReadiness(READINESS_STEPS.sse, 'DEFERRED', {
+            reason: err && err.code ? err.code : 'stream_background_failed',
+          });
+          return null;
+        })
+        .then(function () {
+          if (generation !== readinessGeneration) {
+            return null;
+          }
+          logReadiness(READINESS_STEPS.sse, 'OK', { background: true });
+          return pollUpdatesOnce(false);
+        })
+        .then(function () {
+          if (generation !== readinessGeneration) {
+            return;
+          }
+          logReadiness(READINESS_STEPS.finalSync, 'OK', { background: true });
+        });
+    }, 0);
+  }
+
+  function shouldSkipHistoryFetch(options) {
+    options = options || {};
+    if (options.forceHistory) {
+      return false;
+    }
+    if (options.skipHistory) {
+      return true;
+    }
+    if (!options.reuseSession) {
+      return false;
+    }
+    if (!historyLoadedAt || oldestLoadedSeq <= 0) {
+      return false;
+    }
+    return (Date.now() - historyLoadedAt) < HISTORY_REUSE_MS;
+  }
+
   function runChatReadinessChecks(options) {
     options = options || {};
     var generation = readinessGeneration;
@@ -697,7 +748,7 @@
           return getSessionId();
         }
         if (isPersistentAccountChat()) {
-          return refreshAuthenticatedChatSession().then(function () {
+          return refreshAuthenticatedChatSession({ skipHistory: true }).then(function () {
             abortIfReadinessStale(generation);
             return reopenAuthenticatedSessionIfNeeded();
           }).then(function () {
@@ -719,6 +770,10 @@
         }
         logReadiness(READINESS_STEPS.session, 'OK', { sessionId: sessionId });
         setReadinessPhase('readinessHistory', 'Loading conversation history…');
+        if (shouldSkipHistoryFetch(options)) {
+          logReadiness(READINESS_STEPS.history, 'OK', { reused: true, skipped: true });
+          return true;
+        }
         return fetchSessionFromServer(true, true);
       })
       .then(function () {
@@ -748,17 +803,8 @@
       .then(function () {
         abortIfReadinessStale(generation);
         logReadiness(READINESS_STEPS.sync, 'OK');
-        setReadinessPhase('readinessRealtime', 'Establishing real-time connection…');
-        return waitForCustomerStreamOpen(READINESS_STREAM_WAIT_MS, generation);
-      })
-      .then(function () {
-        abortIfReadinessStale(generation);
-        logReadiness(READINESS_STEPS.sse, 'OK');
-        return pollUpdatesOnce(false);
-      })
-      .then(function () {
-        logReadiness(READINESS_STEPS.finalSync, 'OK');
         logReadiness('complete', 'SUCCESS');
+        queueBackgroundRealtimeSync(generation);
       }), generation);
   }
 
@@ -1365,7 +1411,8 @@
     }
   }
 
-  function refreshAuthenticatedChatSession() {
+  function refreshAuthenticatedChatSession(options) {
+    options = options || {};
     if (!isLoggedIn()) return Promise.resolve();
     if (window.PDXAuth && typeof window.PDXAuth.customerApiFetch === 'function') {
       return window.PDXAuth.customerApiFetch('GET', '/customer/chat/session').then(function (data) {
@@ -1378,20 +1425,27 @@
             }
           }
           adoptSessionId(data.session_id, { fromServer: true, preserveUi: false });
-          return fetchSessionFromServer(true);
+          if (!options.skipHistory) {
+            return fetchSessionFromServer(true, false);
+          }
+          return data.session_id;
         }
         return null;
       }).catch(function () {
         if (config && config.chatSessionId) {
           adoptSessionId(config.chatSessionId, { fromServer: true, preserveUi: false });
-          return fetchSessionFromServer(true);
+          if (!options.skipHistory) {
+            return fetchSessionFromServer(true, false);
+          }
         }
         return null;
       });
     }
     if (config && config.chatSessionId) {
       adoptSessionId(config.chatSessionId, { fromServer: true, preserveUi: false });
-      return fetchSessionFromServer(true);
+      if (!options.skipHistory) {
+        return fetchSessionFromServer(true, false);
+      }
     }
     return Promise.resolve();
   }
@@ -1450,7 +1504,11 @@
     bindVisibilityResume();
     bindChatLifecycle();
     if (isPersistentAccountChat()) {
-      beginChatReadiness({ reuseSession: true });
+      if (config && config.chatSessionId) {
+        adoptSessionId(config.chatSessionId, { fromServer: true, preserveUi: true });
+      }
+      updateEntryUi();
+      updateInputState();
     } else {
       var boot = restoreCustomerSession();
       boot.then(function () {
@@ -2145,6 +2203,9 @@
         inferEntryChoiceFromHandler();
         saveSessionSnapshot();
         lastReadinessPollAt = Date.now();
+        if (full) {
+          historyLoadedAt = Date.now();
+        }
         return true;
       })
       .catch(function (err) {
