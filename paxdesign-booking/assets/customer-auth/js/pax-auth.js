@@ -1252,17 +1252,64 @@
   }
 
   function resolveSiteLogoHtml() {
-    var node = findSiteLogoNode();
-    if (node) {
-      return uniquifyLogoHtml(node.outerHTML);
-    }
     var raw = '';
-    if (typeof window.PAXDESIGN_LOGO_SVG === 'string' && window.PAXDESIGN_LOGO_SVG.trim()) {
-      raw = window.PAXDESIGN_LOGO_SVG;
-    } else if (typeof window.PAXDESIGN_LOGO_SVG_MOBILE === 'string' && window.PAXDESIGN_LOGO_SVG_MOBILE.trim()) {
+    if (typeof window.PAXDESIGN_LOGO_SVG_MOBILE === 'string' && window.PAXDESIGN_LOGO_SVG_MOBILE.trim()) {
       raw = window.PAXDESIGN_LOGO_SVG_MOBILE;
+    } else if (typeof window.PAXDESIGN_LOGO_SVG === 'string' && window.PAXDESIGN_LOGO_SVG.trim()) {
+      raw = window.PAXDESIGN_LOGO_SVG;
+    } else {
+      var node = findSiteLogoNode();
+      if (node) {
+        return uniquifyLogoHtml(node.outerHTML);
+      }
+      return '';
     }
-    return raw ? uniquifyLogoHtml(raw) : '';
+    return uniquifyLogoHtml(raw);
+  }
+
+  function enhanceAuthShellLogo(link) {
+    if (!link) return;
+    var svg = link.querySelector('svg.paxlogo-svg');
+    var paxGroup = link.querySelector('.paxlogo-pax');
+    if (!svg || !paxGroup) return;
+
+    var shine = paxGroup.querySelector('.paxlogo-pax-shine');
+    if (shine) {
+      shine.setAttribute('opacity', '0');
+    }
+    var paxText = paxGroup.querySelector('text');
+    if (paxText) {
+      paxText.setAttribute('fill', '#CCFF00');
+    }
+
+    var defs = svg.querySelector('defs');
+    if (!defs) {
+      defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      svg.insertBefore(defs, svg.firstChild);
+    }
+
+    var filterId = 'pdx-auth-pax-shadow';
+    if (!defs.querySelector('#' + filterId)) {
+      var filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
+      filter.setAttribute('id', filterId);
+      filter.setAttribute('x', '-50%');
+      filter.setAttribute('y', '-50%');
+      filter.setAttribute('width', '200%');
+      filter.setAttribute('height', '200%');
+      filter.setAttribute('color-interpolation-filters', 'sRGB');
+
+      var shadow = document.createElementNS('http://www.w3.org/2000/svg', 'feDropShadow');
+      shadow.setAttribute('dx', '0');
+      shadow.setAttribute('dy', '1.5');
+      shadow.setAttribute('stdDeviation', '1.35');
+      shadow.setAttribute('flood-color', '#000000');
+      shadow.setAttribute('flood-opacity', '0.72');
+      filter.appendChild(shadow);
+      defs.appendChild(filter);
+    }
+
+    paxGroup.setAttribute('filter', 'url(#' + filterId + ')');
+    paxGroup.classList.add('pdx-auth-pax-mark');
   }
 
   function mountOfficialLogoInLink(link, logoHtml) {
@@ -1273,6 +1320,7 @@
       wrap.classList.add('is-visible', 'pdx-auth-shell-logo');
       wrap.setAttribute('aria-hidden', 'false');
     }
+    enhanceAuthShellLogo(link);
   }
 
   function ensureAuthShellHomeLogo(shell) {
