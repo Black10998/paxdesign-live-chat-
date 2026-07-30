@@ -64,7 +64,7 @@ jobs:
         run: |
           set -euo pipefail
           PORT="${WP_SSH_PORT:-22}"
-          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
           install -m 600 -D /dev/null ~/.ssh/id_deploy
           printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
           ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
@@ -73,7 +73,19 @@ jobs:
           PLUGIN="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
           REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
 
-          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+          retry_ssh() {
+            local attempt
+            for attempt in 1 2 3 4; do
+              if "$@"; then
+                return 0
+              fi
+              echo "SSH/rsync attempt ${attempt} failed; retrying in $((attempt * 4))s..." >&2
+              sleep $((attempt * 4))
+            done
+            return 1
+          }
+
+          retry_ssh ssh "${SSH_OPTS[@]}" "$REMOTE" \
             "mkdir -p \
               $(printf '%q' "$THEME/assets/css") \
               $(printf '%q' "$THEME/assets/js") \
@@ -81,80 +93,106 @@ jobs:
               $(printf '%q' "$THEME/template-parts/page-title") \
               $(printf '%q' "$THEME/scripts") \
               $(printf '%q' "$PLUGIN/includes") \
-              $(printf '%q' "$PLUGIN/assets/js")"
+              $(printf '%q' "$PLUGIN/includes/auth") \
+              $(printf '%q' "$PLUGIN/assets/js") \
+              $(printf '%q' "$PLUGIN/assets/customer-auth/css") \
+              $(printf '%q' "$PLUGIN/assets/customer-auth/js")"
 
-          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/assets/css/apple-cybercrime-support.css \
             "${REMOTE}:${THEME}/assets/css/"
 
-          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/assets/js/apple-cybercrime-support.js \
             "${REMOTE}:${THEME}/assets/js/"
 
-          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/template-apple-cybercrime-support.php \
             "${REMOTE}:${THEME}/"
 
-          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/template-parts/pages/cybercrime-support.php \
             navein/template-parts/pages/cybercrime-support-data.php \
             "${REMOTE}:${THEME}/template-parts/pages/"
 
-          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/template-parts/page-title/page-header-page.php \
             "${REMOTE}:${THEME}/template-parts/page-title/"
 
-          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/functions.php \
             navein/style.css \
             "${REMOTE}:${THEME}/"
 
-          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             scripts/assign-apple-cybercrime-support-template.sh \
             "${REMOTE}:${THEME}/scripts/"
 
-          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             paxdesign-booking/includes/class-paxdesign-chat.php \
             paxdesign-booking/includes/class-paxdesign-chat-knowledge.php \
             paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php \
             "${REMOTE}:${PLUGIN}/includes/"
 
-          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/includes/auth/class-paxdesign-auth-frontend.php \
+            "${REMOTE}:${PLUGIN}/includes/auth/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             paxdesign-booking/assets/js/chat-script.js \
+            paxdesign-booking/assets/js/booking-script.js \
             "${REMOTE}:${PLUGIN}/assets/js/"
 
-          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/assets/customer-auth/css/pdx-auth.css \
+            paxdesign-booking/assets/customer-auth/css/pdx-portal-apple.css \
+            "${REMOTE}:${PLUGIN}/assets/customer-auth/css/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/assets/customer-auth/js/pax-auth.js \
+            "${REMOTE}:${PLUGIN}/assets/customer-auth/js/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             paxdesign-booking/paxdesign-booking.php \
             "${REMOTE}:${PLUGIN}/"
 
-          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+          retry_ssh ssh "${SSH_OPTS[@]}" "$REMOTE" \
             "chmod +x $(printf '%q' "$THEME/scripts/assign-apple-cybercrime-support-template.sh") && \
              WP_PATH=$(printf '%q' "$WP_PATH") bash $(printf '%q' "$THEME/scripts/assign-apple-cybercrime-support-template.sh")"
 
-          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+          retry_ssh ssh "${SSH_OPTS[@]}" "$REMOTE" \
             "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
 
-          echo "Deployed Apple Cybercrime Support page + Live Chat context"
+          echo "Deployed Apple Cybercrime Support page + auth + plugin updates"
 
       - name: Verify live page
         run: |
           set -euo pipefail
           stamp=$(date +%s)
           PAGE=$(curl -sS -o /tmp/ccs-page.html -w '%{http_code}' "https://paxdesign.at/cybercrime-support/?n=${stamp}")
-          CSS=$(curl -sS -o /tmp/apple-ccs.css -w '%{http_code}' \
-            "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-cybercrime-support.css?ver=1.4.6&n=${stamp}")
-          JS=$(curl -sS -o /tmp/apple-ccs.js -w '%{http_code}' \
-            "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-cybercrime-support.js?ver=1.4.6&n=${stamp}")
-          CHAT=$(curl -sS -o /tmp/chat-script.js -w '%{http_code}' \
-            "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?ver=3.173.12&n=${stamp}")
-          echo "PAGE $PAGE | CSS $CSS | JS $JS | CHAT $CHAT"
+          THEME_CSS=$(curl -sS -o /tmp/style.css -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/style.css?n=${stamp}")
+          CCS_CSS=$(curl -sS -o /tmp/apple-ccs.css -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-cybercrime-support.css?n=${stamp}")
+          CCS_JS=$(curl -sS -o /tmp/apple-ccs.js -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-cybercrime-support.js?n=${stamp}")
+          PLUGIN=$(curl -sS -o /tmp/pax-plugin.php -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?n=${stamp}")
+          INTAKE=$(curl -sS -o /tmp/pax-intake.php -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php?n=${stamp}")
+          AUTH_CSS=$(curl -sS -o /tmp/pdx-auth.css -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/customer-auth/css/pdx-auth.css?n=${stamp}")
+          CHAT=$(curl -sS -o /tmp/chat-script.js -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?n=${stamp}")
+          echo "PAGE $PAGE | THEME_CSS $THEME_CSS | CCS_CSS $CCS_CSS | CCS_JS $CCS_JS | PLUGIN $PLUGIN | INTAKE $INTAKE | AUTH_CSS $AUTH_CSS | CHAT $CHAT"
           test "$PAGE" = "200"
-          test "$CSS" = "200"
-          test "$JS" = "200"
+          test "$THEME_CSS" = "200"
+          test "$CCS_CSS" = "200"
+          test "$CCS_JS" = "200"
+          test "$PLUGIN" = "200"
+          test "$INTAKE" = "200"
+          test "$AUTH_CSS" = "200"
           test "$CHAT" = "200"
-          grep -Eq "pax-ccs-portal|pax-ccs-intake-form|Cybercrime-Meldung|تقرير جريمة" /tmp/ccs-page.html
-          grep -Eq "page-template-template-apple-cybercrime-support|navein-apple-cybercrime-support" /tmp/ccs-page.html
-          grep -Eq "pax-ccs-portal__progress|renderReview|paxCybercrimeIntake" /tmp/apple-ccs.js
-          grep -Eq "page_context|cybercrime-support" /tmp/chat-script.js
-          grep -Eq "pax-ccs-shield|pax-aap-hero" /tmp/ccs-page.html && { echo "Old marketing layout still present" >&2; exit 1; } || true
-          echo "Apple Cybercrime Support portal verification passed."
+          grep -Eq "Version: 1\.4\.11" /tmp/style.css
+          grep -Eq "3\.174\.41" /tmp/pax-plugin.php
+          grep -Eq "ensure_schema|SCHEMA_VERSION" /tmp/pax-intake.php
+          grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-login-gate" /tmp/ccs-page.html
+          grep -Eq "Full-page contrast isolation|::file-selector-button" /tmp/apple-ccs.css
+          grep -Eq "Sitewide isolated Sign In|background: #000 !important" /tmp/pdx-auth.css
+          grep -Eq "openForCybercrime|openSupportChat" /tmp/apple-ccs.js
+          grep -Eq "page_reference|openForCybercrime" /tmp/chat-script.js
+          grep -Eq "ffe0a6" /tmp/pdx-auth.css && { echo "Gold Sign In styling still present" >&2; exit 1; } || true
+          echo "Cybercrime Support production verification passed."
