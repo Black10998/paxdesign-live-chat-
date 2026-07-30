@@ -46,6 +46,8 @@
 
   var activeReport = null;
   var reportPollTimer = null;
+  var expandedTimelineId = null;
+  var timelineAccordionBound = false;
   var timelineCopy = {
     ar: {
       status: 'الحالة',
@@ -179,25 +181,64 @@
     return (timelineCopy[lang] && timelineCopy[lang][key]) || key;
   }
 
-  function getExpandedTimelineIds() {
-    if (!activeTimelineEl) {
-      return [];
+  function bindTimelineAccordion() {
+    if (timelineAccordionBound || !activeTimelineEl) {
+      return;
     }
-    return Array.prototype.slice.call(activeTimelineEl.querySelectorAll('details[open][data-entry-id]')).map(function (el) {
-      return el.getAttribute('data-entry-id');
+    timelineAccordionBound = true;
+    activeTimelineEl.addEventListener('click', function (e) {
+      var trigger = e.target.closest('.pax-ccs-portal__accordion-trigger');
+      if (!trigger || !activeTimelineEl.contains(trigger)) {
+        return;
+      }
+      e.preventDefault();
+      var item = trigger.closest('.pax-ccs-portal__accordion-item');
+      if (!item) {
+        return;
+      }
+      var entryId = item.getAttribute('data-entry-id');
+      if (!entryId) {
+        return;
+      }
+      if (item.classList.contains('is-open')) {
+        expandedTimelineId = null;
+        setExpandedTimelineItem(null);
+        return;
+      }
+      expandedTimelineId = entryId;
+      setExpandedTimelineItem(entryId);
     });
   }
 
-  function renderTimeline(entries, preserveOpen) {
+  function setExpandedTimelineItem(entryId) {
     if (!activeTimelineEl) {
       return;
     }
-    var openIds = preserveOpen ? getExpandedTimelineIds() : [];
+    activeTimelineEl.querySelectorAll('.pax-ccs-portal__accordion-item').forEach(function (item) {
+      var isOpen = entryId !== null && item.getAttribute('data-entry-id') === entryId;
+      item.classList.toggle('is-open', isOpen);
+      var trigger = item.querySelector('.pax-ccs-portal__accordion-trigger');
+      if (trigger) {
+        trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      }
+    });
+  }
+
+  /**
+   * @param {Array} entries
+   * @param {'newest'|'preserve'} expandMode
+   */
+  function renderTimeline(entries, expandMode) {
+    if (!activeTimelineEl) {
+      return;
+    }
+    expandMode = expandMode || 'newest';
     entries = (entries || []).filter(function (entry) {
       return entry && entry.author_type !== 'ai' && entry.channel !== 'chat';
     });
-    if (!entries || !entries.length) {
+    if (!entries.length) {
       activeTimelineEl.innerHTML = '<p class="pax-ccs-portal__accordion-empty">' + escapeHtml(timelineText('empty')) + '</p>';
+      expandedTimelineId = null;
       return;
     }
 
@@ -207,17 +248,29 @@
       return bTime.localeCompare(aTime);
     });
 
+    var newestId = String(sorted[0].id != null ? sorted[0].id : 0);
+    var openId = expandMode === 'preserve' && expandedTimelineId
+      ? expandedTimelineId
+      : newestId;
+    if (!sorted.some(function (entry) { return String(entry.id != null ? entry.id : '') === openId; })) {
+      openId = newestId;
+    }
+    expandedTimelineId = openId;
+
     activeTimelineEl.innerHTML = sorted.map(function (entry, index) {
-      var entryId = String(entry.id || index);
-      var shouldOpen = openIds.indexOf(entryId) !== -1 || (openIds.length === 0 && index === 0);
+      var entryId = String(entry.id != null ? entry.id : index);
+      var isOpen = entryId === openId;
       var sender = entry.sender_label || authorLabel(entry.author_type || '');
       var status = entry.status_label || timelineText('empty');
       var subject = entry.subject || timelineText('empty');
       var when = formatDate(entry.created_at || '');
       var body = escapeHtml(entry.body || '').replace(/\n/g, '<br>');
+      var panelId = 'pax-ccs-acc-panel-' + entryId;
+      var triggerId = 'pax-ccs-acc-trigger-' + entryId;
 
-      return '<details class="pax-ccs-portal__accordion-item"' + (shouldOpen ? ' open' : '') + ' data-entry-id="' + escapeHtml(entryId) + '">'
-        + '<summary class="pax-ccs-portal__accordion-summary">'
+      return '<article class="pax-ccs-portal__accordion-item' + (isOpen ? ' is-open' : '') + '" data-entry-id="' + escapeHtml(entryId) + '">'
+        + '<button type="button" class="pax-ccs-portal__accordion-trigger" id="' + escapeHtml(triggerId) + '"'
+        + ' aria-expanded="' + (isOpen ? 'true' : 'false') + '" aria-controls="' + escapeHtml(panelId) + '">'
         + '<span class="pax-ccs-portal__accordion-summary-main">'
         + '<span class="pax-ccs-portal__accordion-subject">' + escapeHtml(subject) + '</span>'
         + '<span class="pax-ccs-portal__accordion-meta">'
@@ -227,8 +280,9 @@
         + '</span>'
         + '</span>'
         + '<span class="pax-ccs-portal__accordion-chevron" aria-hidden="true"></span>'
-        + '</summary>'
-        + '<div class="pax-ccs-portal__accordion-body">'
+        + '</button>'
+        + '<div class="pax-ccs-portal__accordion-panel" id="' + escapeHtml(panelId) + '" role="region" aria-labelledby="' + escapeHtml(triggerId) + '">'
+        + '<div class="pax-ccs-portal__accordion-panel-inner">'
         + '<dl class="pax-ccs-portal__accordion-details">'
         + '<div><dt>' + escapeHtml(timelineText('status')) + '</dt><dd>' + escapeHtml(status) + '</dd></div>'
         + '<div><dt>' + escapeHtml(timelineText('when')) + '</dt><dd>' + escapeHtml(when) + '</dd></div>'
@@ -237,8 +291,11 @@
         + '</dl>'
         + '<div class="pax-ccs-portal__accordion-message">' + body + '</div>'
         + '</div>'
-        + '</details>';
+        + '</div>'
+        + '</article>';
     }).join('');
+
+    bindTimelineAccordion();
   }
 
   function renderAttachments(files) {
@@ -281,7 +338,7 @@
     if (activeSubmittedEl) {
       activeSubmittedEl.textContent = formatDate(report.created_at || '');
     }
-    renderTimeline(report.timeline || [], !resetTimeline);
+    renderTimeline(report.timeline || [], resetTimeline ? 'newest' : 'preserve');
     renderAttachments(report.attachments || []);
     var isActive = report.is_active !== false;
     if (activeReplyWrap) {
@@ -315,7 +372,7 @@
           if (activeStatusEl) {
             activeStatusEl.textContent = report.status_label || report.status || '';
           }
-          renderTimeline(report.timeline || [], true);
+          renderTimeline(report.timeline || [], 'preserve');
         }
       });
     }, 60000);

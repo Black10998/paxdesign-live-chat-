@@ -1110,23 +1110,75 @@ html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
   border-radius: 12px;
   background: #fff;
   overflow: hidden;
+  transition: box-shadow 0.28s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
-.pax-ccs-portal__accordion-item[open] {
+.pax-ccs-portal__accordion-item.is-open {
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
-.pax-ccs-portal__accordion-summary {
-  list-style: none;
+.pax-ccs-portal__accordion-trigger {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: start;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.pax-ccs-portal__accordion-summary::-webkit-details-marker {
+.pax-ccs-portal__accordion-trigger:focus-visible {
+  outline: 2px solid #0071e3;
+  outline-offset: -2px;
+}
+
+.pax-ccs-portal__accordion-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+  border-top: 1px solid transparent;
+}
+
+.pax-ccs-portal__accordion-item.is-open .pax-ccs-portal__accordion-panel {
+  grid-template-rows: 1fr;
+  border-top-color: var(--ccs-line);
+}
+
+.pax-ccs-portal__accordion-panel-inner {
+  overflow: hidden;
+  min-height: 0;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 0.28s cubic-bezier(0.32, 0.72, 0, 1), transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  padding: 0 14px;
+}
+
+.pax-ccs-portal__accordion-item.is-open .pax-ccs-portal__accordion-panel-inner {
+  opacity: 1;
+  transform: translateY(0);
+  padding: 0 14px 12px;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__accordion-item:not(.is-open) .pax-ccs-portal__accordion-panel-inner,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__accordion-item:not(.is-open) .pax-ccs-portal__accordion-panel-inner,
+html body.page-cybercrime-support .pax-ccs-portal__accordion-item:not(.is-open) .pax-ccs-portal__accordion-panel-inner {
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-ccs-portal__accordion-panel-inner,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__accordion-item.is-open .pax-ccs-portal__accordion-panel-inner,
+html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-ccs-portal__accordion-panel-inner {
+  visibility: visible !important;
+}
+
+.pax-ccs-portal__accordion-summary {
   display: none;
 }
 
@@ -1171,14 +1223,9 @@ html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
   margin-top: -4px;
 }
 
-.pax-ccs-portal__accordion-item[open] .pax-ccs-portal__accordion-chevron {
+.pax-ccs-portal__accordion-item.is-open .pax-ccs-portal__accordion-chevron {
   transform: rotate(-135deg);
   margin-top: 4px;
-}
-
-.pax-ccs-portal__accordion-body {
-  padding: 0 14px 12px;
-  border-top: 1px solid var(--ccs-line);
 }
 
 .pax-ccs-portal__accordion-details {
