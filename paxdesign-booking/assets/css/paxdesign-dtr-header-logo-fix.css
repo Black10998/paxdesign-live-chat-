@@ -1,6 +1,6 @@
 /**
- * Desktop header logo — fluorescent #CCFF00 parity with mobile.
- * Shadow is applied via SVG feDropShadow in paxdesign-dtr-header-logo-fix.js.
+ * Desktop header logo — fluorescent #CCFF00 + no yellow shine overlay + pax shadow.
+ * Mobile responsive header is intentionally unchanged.
  */
 
 header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default linearGradient stop {
@@ -9,4 +9,32 @@ header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default linearGradient s
 
 header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default .paxlogo-pax text {
   fill: #CCFF00 !important;
+}
+
+header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default .paxlogo-pax rect.paxlogo-pax-shine {
+  fill: #CCFF00 !important;
+}
+
+/* Kill the yellow-tinted animated shine on desktop — solid brand green only. */
+header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default .paxlogo-pax-shine,
+header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default #pax-isolated-logo.paxlogo-wrap .paxlogo-pax-shine,
+header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default #pax-isolated-logo.paxlogo-wrap.is-visible .paxlogo-pax-shine {
+  opacity: 0 !important;
+  animation: none !important;
+  visibility: hidden !important;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default:hover .paxlogo-pax-shine {
+    opacity: 0 !important;
+    animation: none !important;
+    visibility: hidden !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default .paxlogo-pax-shine {
+    opacity: 0 !important;
+    animation: none !important;
+  }
 }
