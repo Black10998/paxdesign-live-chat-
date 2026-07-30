@@ -14,6 +14,7 @@ class PAXdesign_Customer_Admin {
 
     public static function init() {
         add_action('admin_menu', array(__CLASS__, 'register_menu'), 20);
+        add_action('admin_enqueue_scripts', array(__CLASS__, 'enqueue_cybercrime_admin_assets'));
         add_action('admin_post_paxdesign_customer_save_news', array(__CLASS__, 'handle_save_news'));
         add_action('admin_post_paxdesign_customer_publish_news', array(__CLASS__, 'handle_publish_news'));
         add_action('admin_post_paxdesign_customer_unpublish_news', array(__CLASS__, 'handle_unpublish_news'));
@@ -38,6 +39,51 @@ class PAXdesign_Customer_Admin {
             self::MENU_SLUG,
             array(__CLASS__, 'render_page')
         );
+    }
+
+    public static function enqueue_cybercrime_admin_assets($hook) {
+        if ($hook !== 'paxdesign-booking_page_' . self::MENU_SLUG) {
+            return;
+        }
+        if (sanitize_key(wp_unslash($_GET['tab'] ?? '')) !== 'cybercrime') {
+            return;
+        }
+        if (sanitize_text_field(wp_unslash($_GET['reference'] ?? '')) === '') {
+            return;
+        }
+        if (!class_exists('PAXdesign_Cybercrime_Tickets') || !defined('PAXDESIGN_BOOKING_PLUGIN_URL')) {
+            return;
+        }
+
+        wp_enqueue_script(
+            'paxdesign-cybercrime-admin',
+            PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/js/cybercrime-admin.js',
+            array(),
+            defined('PAXDESIGN_BOOKING_VERSION') ? PAXDESIGN_BOOKING_VERSION : '1.0',
+            true
+        );
+        wp_localize_script('paxdesign-cybercrime-admin', 'paxCybercrimeAdmin', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce'   => wp_create_nonce(PAXdesign_Cybercrime_Tickets::ADMIN_NONCE_ACTION),
+            'statusClasses' => array(
+                'submitted'             => 'pax-cc-status--submitted',
+                'in_review'             => 'pax-cc-status--in_review',
+                'waiting_for_customer'  => 'pax-cc-status--waiting_for_customer',
+                'resolved'              => 'pax-cc-status--resolved',
+                'closed'                => 'pax-cc-status--closed',
+            ),
+            'i18n' => array(
+                'statusSaved' => __('Status saved.', 'paxdesign-booking'),
+                'replySent'   => __('Reply sent to customer.', 'paxdesign-booking'),
+                'noteAdded'   => __('Internal note added.', 'paxdesign-booking'),
+                'saving'      => __('Saving…', 'paxdesign-booking'),
+                'sending'     => __('Sending…', 'paxdesign-booking'),
+                'addingNote'  => __('Adding note…', 'paxdesign-booking'),
+                'error'       => __('Something went wrong. Please try again.', 'paxdesign-booking'),
+                'internal'    => __('internal', 'paxdesign-booking'),
+                'noTimeline'  => __('No timeline entries yet.', 'paxdesign-booking'),
+            ),
+        ));
     }
 
     public static function render_page() {
@@ -663,10 +709,29 @@ class PAXdesign_Customer_Admin {
         .pax-cc-form label{font-weight:500;font-size:13px}
         .pax-cc-form select,.pax-cc-form textarea{width:100%;max-width:100%}
         .pax-cc-form__hint{margin:4px 0 0;font-size:12px;color:#646970}
+        .pax-cc-actions{display:flex;flex-direction:column;gap:16px}
+        .pax-cc-actions__section{padding-top:16px;border-top:1px solid #e0e0e0}
+        .pax-cc-actions__section:first-child{padding-top:0;border-top:0}
+        .pax-cc-actions__section-title{margin:0 0 10px;font-size:13px;font-weight:600;color:#1d2327}
+        .pax-cc-actions__section--internal .pax-cc-actions__section-title{color:#646970}
+        .pax-cc-actions__status-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+        .pax-cc-actions__status-row select{flex:1 1 180px;max-width:100%}
+        .pax-cc-actions__feedback{font-size:12px;color:#646970;min-height:18px}
+        .pax-cc-actions__feedback.is-success{color:#007017}
+        .pax-cc-actions__feedback.is-error{color:#b32d2e}
+        .pax-cc-actions__feedback.is-saving{color:#135e96}
+        .pax-cc-timeline__item--internal .pax-cc-timeline__meta{color:#8c8f94}
+        .pax-cc-timeline__internal-tag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;background:#f0f0f1;color:#646970}
         </style>';
     }
 
     private static function render_cybercrime_workflow($current_status) {
+        echo '<ol class="pax-cc-workflow">';
+        self::render_cybercrime_workflow_steps($current_status);
+        echo '</ol>';
+    }
+
+    private static function render_cybercrime_workflow_steps($current_status) {
         $steps = PAXdesign_Cybercrime_Tickets::workflow_steps();
         $order = PAXdesign_Cybercrime_Tickets::workflow_statuses();
         $current = PAXdesign_Cybercrime_Tickets::normalize_workflow_status($current_status);
@@ -675,7 +740,6 @@ class PAXdesign_Customer_Admin {
             $current_index = 0;
         }
 
-        echo '<ol class="pax-cc-workflow">';
         foreach ($order as $index => $slug) {
             if (!isset($steps[$slug])) {
                 continue;
@@ -692,7 +756,6 @@ class PAXdesign_Customer_Admin {
             echo '<span class="pax-cc-workflow__desc">' . esc_html($steps[$slug]['description']) . '</span>';
             echo '</li>';
         }
-        echo '</ol>';
     }
 
     private static function render_cybercrime_detail($reference) {
@@ -714,16 +777,17 @@ class PAXdesign_Customer_Admin {
         echo '<dl class="pax-cc-admin__meta">';
         echo '<div><dt>' . esc_html__('Reporter', 'paxdesign-booking') . '</dt><dd>' . esc_html((string) $report['reporter_name']) . '<br><small>' . esc_html((string) $report['reporter_email']) . '</small></dd></div>';
         echo '<div><dt>' . esc_html__('Category', 'paxdesign-booking') . '</dt><dd>' . esc_html((string) $report['category_label']) . '</dd></div>';
-        echo '<div><dt>' . esc_html__('Status', 'paxdesign-booking') . '</dt><dd><span class="' . esc_attr(PAXdesign_Cybercrime_Tickets::admin_status_badge_class($status)) . '">' . esc_html((string) $report['status_label']) . '</span></dd></div>';
+        echo '<div><dt>' . esc_html__('Status', 'paxdesign-booking') . '</dt><dd><span id="pax-cc-admin-status-badge" class="' . esc_attr(PAXdesign_Cybercrime_Tickets::admin_status_badge_class($status)) . '">' . esc_html((string) $report['status_label']) . '</span></dd></div>';
         echo '<div><dt>' . esc_html__('Submitted', 'paxdesign-booking') . '</dt><dd>' . esc_html((string) $report['created_at']) . '</dd></div>';
         echo '<div><dt>' . esc_html__('Updated', 'paxdesign-booking') . '</dt><dd>' . esc_html((string) $report['updated_at']) . '</dd></div>';
         echo '</dl>';
         echo '</div>';
 
-        echo '<div class="pax-cc-admin__card">';
+        echo '<div class="pax-cc-admin__card" id="pax-cc-admin-workflow-card">';
         echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Workflow', 'paxdesign-booking') . '</h3>';
-        self::render_cybercrime_workflow($status);
-        echo '</div>';
+        echo '<ol class="pax-cc-workflow" id="pax-cc-admin-workflow">';
+        self::render_cybercrime_workflow_steps($status);
+        echo '</ol></div>';
 
         $indicators = (array) ($report['activity_indicators'] ?? array());
         if (!empty($indicators)) {
@@ -778,7 +842,7 @@ class PAXdesign_Customer_Admin {
 
         echo '<div class="pax-cc-admin__card">';
         echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Internal timeline', 'paxdesign-booking') . '</h3>';
-        echo '<ul class="pax-cc-timeline">';
+        echo '<ul class="pax-cc-timeline" id="pax-cc-admin-timeline">';
         $timeline = (array) ($report['timeline'] ?? array());
         if (empty($timeline)) {
             echo '<li class="pax-cc-timeline__item">' . esc_html__('No timeline entries yet.', 'paxdesign-booking') . '</li>';
@@ -787,53 +851,70 @@ class PAXdesign_Customer_Admin {
             if (!is_array($entry)) {
                 continue;
             }
-            $author = (string) ($entry['author_type'] ?? '');
-            $channel = (string) ($entry['channel'] ?? '');
-            echo '<li class="pax-cc-timeline__item">';
-            echo '<p class="pax-cc-timeline__meta"><strong>' . esc_html($author) . '</strong> · ' . esc_html($channel) . ' · ' . esc_html((string) ($entry['created_at'] ?? '')) . '</p>';
-            echo '<div class="pax-cc-timeline__body">' . nl2br(esc_html((string) ($entry['body'] ?? ''))) . '</div>';
-            echo '</li>';
+            self::render_cybercrime_timeline_item($entry);
         }
         echo '</ul></div>';
 
-        echo '<div>';
-        echo '<div class="pax-cc-admin__card">';
-        echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Update status', 'paxdesign-booking') . '</h3>';
-        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="pax-cc-form">';
-        wp_nonce_field('paxdesign_cybercrime_update_status');
-        echo '<input type="hidden" name="action" value="paxdesign_cybercrime_update_status">';
-        echo '<input type="hidden" name="reference_id" value="' . esc_attr((string) $report['reference_id']) . '">';
-        echo '<p><label for="pax-cc-status">' . esc_html__('Workflow status', 'paxdesign-booking') . '</label><br>';
-        echo '<select name="status" id="pax-cc-status">';
+        echo '<div class="pax-cc-admin__card pax-cc-actions" id="pax-cc-ticket-actions" data-reference="' . esc_attr((string) $report['reference_id']) . '">';
+        echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Ticket actions', 'paxdesign-booking') . '</h3>';
+
+        echo '<div class="pax-cc-actions__section">';
+        echo '<p class="pax-cc-actions__section-title">' . esc_html__('Workflow status', 'paxdesign-booking') . '</p>';
+        echo '<div class="pax-cc-actions__status-row">';
+        echo '<select id="pax-cc-status" aria-label="' . esc_attr__('Workflow status', 'paxdesign-booking') . '">';
         foreach (PAXdesign_Cybercrime_Tickets::workflow_statuses() as $workflow_status) {
             echo '<option value="' . esc_attr($workflow_status) . '"' . selected($status, $workflow_status, false) . '>' . esc_html(PAXdesign_Cybercrime_Tickets::status_label($workflow_status)) . '</option>';
         }
-        echo '</select></p>';
-        echo '<p><label for="pax-cc-customer-note">' . esc_html__('Message to customer (optional)', 'paxdesign-booking') . '</label><br>';
-        echo '<textarea name="summary" id="pax-cc-customer-note" rows="3" class="large-text"></textarea>';
-        echo '<span class="pax-cc-form__hint">' . esc_html__('If provided, this note is sent to the customer timeline.', 'paxdesign-booking') . '</span></p>';
-        echo '<p><button type="submit" class="button button-primary">' . esc_html__('Save status', 'paxdesign-booking') . '</button></p>';
-        echo '</form></div>';
+        echo '</select>';
+        echo '</div>';
+        echo '<p class="pax-cc-actions__feedback" id="pax-cc-status-feedback" aria-live="polite"></p>';
+        echo '<p class="pax-cc-form__hint">' . esc_html__('Changes save automatically. The customer portal updates within a few seconds.', 'paxdesign-booking') . '</p>';
+        echo '</div>';
 
-        echo '<div class="pax-cc-admin__card">';
-        echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Reply to customer', 'paxdesign-booking') . '</h3>';
-        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" class="pax-cc-form">';
-        wp_nonce_field('paxdesign_cybercrime_staff_reply');
-        echo '<input type="hidden" name="action" value="paxdesign_cybercrime_staff_reply">';
-        echo '<input type="hidden" name="reference_id" value="' . esc_attr((string) $report['reference_id']) . '">';
+        echo '<div class="pax-cc-actions__section">';
+        echo '<p class="pax-cc-actions__section-title">' . esc_html__('Reply to customer', 'paxdesign-booking') . '</p>';
+        echo '<form id="pax-cc-reply-form" class="pax-cc-form">';
         echo '<p><label for="pax-cc-staff-message">' . esc_html__('Message', 'paxdesign-booking') . '</label><br>';
-        echo '<textarea name="message" id="pax-cc-staff-message" rows="5" class="large-text" required></textarea></p>';
-        echo '<p><label for="pax-cc-reply-status">' . esc_html__('Set status after reply', 'paxdesign-booking') . '</label><br>';
-        echo '<select name="status" id="pax-cc-reply-status">';
-        echo '<option value="waiting_for_customer">' . esc_html__('Waiting for Customer', 'paxdesign-booking') . '</option>';
-        echo '<option value="in_review">' . esc_html__('In Review', 'paxdesign-booking') . '</option>';
+        echo '<textarea id="pax-cc-staff-message" rows="5" class="large-text" required></textarea></p>';
+        echo '<p><label for="pax-cc-reply-status">' . esc_html__('After reply, set status to', 'paxdesign-booking') . '</label><br>';
+        echo '<select id="pax-cc-reply-status">';
+        echo '<option value="waiting_for_customer"' . selected($status, 'waiting_for_customer', false) . '>' . esc_html__('Waiting for Customer', 'paxdesign-booking') . '</option>';
+        echo '<option value="in_review"' . selected($status, 'in_review', false) . '>' . esc_html__('In Review', 'paxdesign-booking') . '</option>';
         echo '<option value="resolved">' . esc_html__('Resolved', 'paxdesign-booking') . '</option>';
         echo '</select>';
-        echo '<span class="pax-cc-form__hint">' . esc_html__('Usually set to Waiting for Customer when requesting information.', 'paxdesign-booking') . '</span></p>';
-        echo '<p><button type="submit" class="button button-primary">' . esc_html__('Send reply', 'paxdesign-booking') . '</button></p>';
+        echo '<span class="pax-cc-form__hint">' . esc_html__('The reply appears on the customer timeline immediately.', 'paxdesign-booking') . '</span></p>';
+        echo '<p><button type="submit" class="button button-primary" id="pax-cc-reply-submit">' . esc_html__('Send reply', 'paxdesign-booking') . '</button></p>';
+        echo '<p class="pax-cc-actions__feedback" id="pax-cc-reply-feedback" aria-live="polite"></p>';
+        echo '</form></div>';
+
+        echo '<div class="pax-cc-actions__section pax-cc-actions__section--internal">';
+        echo '<p class="pax-cc-actions__section-title">' . esc_html__('Internal note (staff only)', 'paxdesign-booking') . '</p>';
+        echo '<form id="pax-cc-internal-note-form" class="pax-cc-form">';
+        echo '<p><label for="pax-cc-internal-note">' . esc_html__('Note', 'paxdesign-booking') . '</label><br>';
+        echo '<textarea id="pax-cc-internal-note" rows="3" class="large-text" required></textarea>';
+        echo '<span class="pax-cc-form__hint">' . esc_html__('Not visible to the customer. Use for staff coordination only.', 'paxdesign-booking') . '</span></p>';
+        echo '<p><button type="submit" class="button" id="pax-cc-internal-note-submit">' . esc_html__('Add internal note', 'paxdesign-booking') . '</button></p>';
+        echo '<p class="pax-cc-actions__feedback" id="pax-cc-internal-note-feedback" aria-live="polite"></p>';
         echo '</form></div>';
 
         echo '</div></div></div>';
+    }
+
+    private static function render_cybercrime_timeline_item($entry) {
+        $author = (string) ($entry['author_type'] ?? '');
+        $channel = (string) ($entry['channel'] ?? '');
+        $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
+        $is_internal = !empty($meta['internal_only']);
+        $item_class = 'pax-cc-timeline__item' . ($is_internal ? ' pax-cc-timeline__item--internal' : '');
+
+        echo '<li class="' . esc_attr($item_class) . '">';
+        echo '<p class="pax-cc-timeline__meta"><strong>' . esc_html($author) . '</strong> · ' . esc_html($channel) . ' · ' . esc_html((string) ($entry['created_at'] ?? ''));
+        if ($is_internal) {
+            echo ' <span class="pax-cc-timeline__internal-tag">' . esc_html__('internal', 'paxdesign-booking') . '</span>';
+        }
+        echo '</p>';
+        echo '<div class="pax-cc-timeline__body">' . nl2br(esc_html((string) ($entry['body'] ?? ''))) . '</div>';
+        echo '</li>';
     }
 
     private static function verify_admin($action) {

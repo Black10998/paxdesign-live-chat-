@@ -523,7 +523,7 @@
         }
       });
     };
-    reportPollTimer = window.setInterval(poll, 15000);
+    reportPollTimer = window.setInterval(poll, 5000);
     if (!reportVisibilityBound) {
       reportVisibilityBound = true;
       document.addEventListener('visibilitychange', function () {

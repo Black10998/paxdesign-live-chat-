@@ -40,7 +40,12 @@ class PAXdesign_Cybercrime_Tickets {
         add_action('paxdesign_chat_message_appended', array(__CLASS__, 'on_chat_message'), 10, 4);
         add_action('admin_post_paxdesign_cybercrime_update_status', array(__CLASS__, 'admin_update_status'));
         add_action('admin_post_paxdesign_cybercrime_staff_reply', array(__CLASS__, 'admin_staff_reply'));
+        add_action('wp_ajax_paxdesign_cybercrime_admin_status', array(__CLASS__, 'ajax_admin_status'));
+        add_action('wp_ajax_paxdesign_cybercrime_admin_reply', array(__CLASS__, 'ajax_admin_reply'));
+        add_action('wp_ajax_paxdesign_cybercrime_admin_internal_note', array(__CLASS__, 'ajax_admin_internal_note'));
     }
+
+    const ADMIN_NONCE_ACTION = 'paxdesign_cybercrime_admin';
 
     public static function messages_table() {
         global $wpdb;
@@ -532,6 +537,10 @@ class PAXdesign_Cybercrime_Tickets {
         $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
         $event = sanitize_key((string) ($meta['event'] ?? ''));
 
+        if (!empty($meta['internal_only'])) {
+            return false;
+        }
+
         if ($author === 'customer' || $author === 'staff') {
             return true;
         }
@@ -994,7 +1003,70 @@ class PAXdesign_Cybercrime_Tickets {
         }
         self::update_status($reference_id, $status, $staff_user_id, '', false, false);
 
+        $customer_id = (int) ($row['customer_user_id'] ?? 0);
+        if ($customer_id > 0 && class_exists('PAXdesign_Customer_Notifications')) {
+            PAXdesign_Customer_Notifications::notify_user(
+                $customer_id,
+                'security',
+                sprintf(__('New reply on cybercrime report %s', 'paxdesign-booking'), $reference_id),
+                $body,
+                'cybercrime',
+                $reference_id,
+                home_url('/cybercrime-support/?ref=' . rawurlencode($reference_id))
+            );
+            self::email_customer_update($row, $reference_id, $body, $status);
+        }
+
         return $message_id;
+    }
+
+    /**
+     * @param string $reference_id
+     * @param string $body
+     * @param int    $staff_user_id
+     * @return int|false|WP_Error
+     */
+    public static function add_internal_note($reference_id, $body, $staff_user_id) {
+        if (!current_user_can('manage_options')) {
+            return new WP_Error('forbidden', __('Insufficient permissions.', 'paxdesign-booking'));
+        }
+        $body = trim((string) $body);
+        if ($body === '') {
+            return new WP_Error('message_required', __('Message is required.', 'paxdesign-booking'));
+        }
+        $row = self::get_report_row($reference_id);
+        if (!$row) {
+            return new WP_Error('not_found', __('Report not found.', 'paxdesign-booking'));
+        }
+
+        $message_id = self::add_message(
+            $reference_id,
+            'staff',
+            $body,
+            'admin',
+            $staff_user_id,
+            array(
+                'event'         => 'internal_note',
+                'internal_only' => true,
+            )
+        );
+        if (!$message_id) {
+            return new WP_Error('save_failed', __('Could not save internal note.', 'paxdesign-booking'));
+        }
+
+        return $message_id;
+    }
+
+    /**
+     * @param string $reference_id
+     * @return array<string, mixed>|null
+     */
+    public static function get_report_for_admin($reference_id) {
+        $row = self::get_report_row($reference_id);
+        if (!$row) {
+            return null;
+        }
+        return self::format_report_row($row, true, 'admin');
     }
 
     /**
@@ -1293,6 +1365,88 @@ class PAXdesign_Cybercrime_Tickets {
             'saved'    => '1',
         ), admin_url('admin.php')));
         exit;
+    }
+
+    public static function ajax_admin_status() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Insufficient permissions.', 'paxdesign-booking')), 403);
+        }
+        check_ajax_referer(self::ADMIN_NONCE_ACTION, 'nonce');
+
+        $reference = sanitize_text_field(wp_unslash($_POST['reference_id'] ?? ''));
+        $status = sanitize_key(wp_unslash($_POST['status'] ?? ''));
+
+        $result = self::update_status($reference, $status, get_current_user_id(), '', true);
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()), 400);
+        }
+
+        $report = self::get_report_for_admin($reference);
+        if (!$report) {
+            wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
+        }
+
+        wp_send_json_success(array(
+            'report'  => $report,
+            'message' => __('Status saved.', 'paxdesign-booking'),
+        ));
+    }
+
+    public static function ajax_admin_reply() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Insufficient permissions.', 'paxdesign-booking')), 403);
+        }
+        check_ajax_referer(self::ADMIN_NONCE_ACTION, 'nonce');
+
+        $reference = sanitize_text_field(wp_unslash($_POST['reference_id'] ?? ''));
+        $body = sanitize_textarea_field(wp_unslash($_POST['message'] ?? ''));
+        $status = sanitize_key(wp_unslash($_POST['status'] ?? ''));
+
+        if ($body === '') {
+            wp_send_json_error(array('message' => __('Message is required.', 'paxdesign-booking')), 400);
+        }
+
+        $result = self::add_staff_reply($reference, $body, get_current_user_id(), $status);
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()), 400);
+        }
+
+        $report = self::get_report_for_admin($reference);
+        if (!$report) {
+            wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
+        }
+
+        wp_send_json_success(array(
+            'report'     => $report,
+            'message_id' => $result,
+            'message'    => __('Reply sent to customer.', 'paxdesign-booking'),
+        ));
+    }
+
+    public static function ajax_admin_internal_note() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Insufficient permissions.', 'paxdesign-booking')), 403);
+        }
+        check_ajax_referer(self::ADMIN_NONCE_ACTION, 'nonce');
+
+        $reference = sanitize_text_field(wp_unslash($_POST['reference_id'] ?? ''));
+        $body = sanitize_textarea_field(wp_unslash($_POST['message'] ?? ''));
+
+        $result = self::add_internal_note($reference, $body, get_current_user_id());
+        if (is_wp_error($result)) {
+            wp_send_json_error(array('message' => $result->get_error_message()), 400);
+        }
+
+        $report = self::get_report_for_admin($reference);
+        if (!$report) {
+            wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
+        }
+
+        wp_send_json_success(array(
+            'report'     => $report,
+            'message_id' => $result,
+            'message'    => __('Internal note added.', 'paxdesign-booking'),
+        ));
     }
 
     public static function ajax_active_report() {
