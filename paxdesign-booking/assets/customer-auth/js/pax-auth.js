@@ -173,6 +173,9 @@
       C.userId = u.id || 0;
       C.userName = u.display_name || '';
       C.userEmail = u.email || '';
+      if (u.logged_in) {
+        clearPendingAppleError();
+      }
     }
     updateAuthBar();
     updateAuthPagePanels();
@@ -455,7 +458,7 @@
     authBar.className = 'pdx-cx-shell';
     authBar.innerHTML =
       '<div class="pdx-auth-bar-inner">' +
-        '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn">Sign Up</button>' +
+        '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn">Sign In</button>' +
         '<button type="button" class="pdx-auth-account-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" aria-haspopup="true" aria-expanded="false" hidden>' +
           '<span class="pdx-auth-account-label">Account</span>' +
         '</button>' +
@@ -495,7 +498,7 @@
     var signupBtn = authBar.querySelector('.pdx-auth-signup-btn');
     var portalBtn = authBar.querySelector('.pdx-auth-portal-btn');
     if (signupBtn) {
-      signupBtn.addEventListener('click', function () { navigateToAuthPage('register'); });
+      signupBtn.addEventListener('click', function () { navigateToAuthPage('login'); });
     }
     if (portalBtn) {
       portalBtn.addEventListener('click', function () { openCustomerPortal(); });
@@ -575,7 +578,7 @@
 
   function onAuthBarClick() {
     if (!user.logged_in) {
-      navigateToAuthPage('register');
+      navigateToAuthPage('login');
       return;
     }
     if (authMenuOpen) closeAuthMenu();
@@ -952,6 +955,7 @@
     var btn = root.querySelector('[data-pdx-apple-signin]');
     if (!btn) return;
     btn.addEventListener('click', function () {
+      clearPendingAppleError();
       var url = appleWebStartUrl();
       if (!url) {
         showFormMessage('Sign in with Apple is not available right now.', 'error');
@@ -993,7 +997,18 @@
     slot.innerHTML = safe ? '<div class="pdx-auth-message pdx-auth-message--' + type + '">' + safe + '</div>' : '';
   }
 
+  function clearPendingAppleError() {
+    pendingAppleError = '';
+    try { sessionStorage.removeItem('pdx_apple_error'); } catch (e) {}
+    removeAppleErrorBanner();
+    showFormMessage('', '');
+  }
+
   function showPendingAppleError() {
+    if (user.logged_in) {
+      clearPendingAppleError();
+      return;
+    }
     var msg = pendingAppleError;
     if (!msg) {
       try { msg = sessionStorage.getItem('pdx_apple_error') || ''; } catch (e) {}
@@ -1156,7 +1171,13 @@
     accountSidebarEl = document.getElementById('pdx-account-sidebar');
     accountMainEl = document.getElementById('pdx-account-main');
     var params = new URLSearchParams(window.location.search);
-    captureAppleErrorFromUrl(params);
+    if (user.logged_in) {
+      clearPendingAppleError();
+    } else if (params.get('pdx_apple') === 'error') {
+      captureAppleErrorFromUrl(params);
+    } else {
+      clearPendingAppleError();
+    }
     clearPendingAppleErrorFromUrl(params);
     var initialView = params.get('view') || 'login';
     if (initialView === 'reset' || params.get('pdx_reset') === '1') {
@@ -2146,7 +2167,7 @@
   function openCustomerPortal(tab) {
     tab = tab || 'overview';
     if (!user.logged_in) {
-      navigateToAuthPage('register');
+      navigateToAuthPage('login');
       return;
     }
     if (!user.verified && !user.is_admin) {
