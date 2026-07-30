@@ -27,7 +27,9 @@ jobs:
           printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
           ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
           ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
-            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-apple-oauth-trace.php || echo 'wp-cli unavailable')" | tee apple-oauth-trace.log
+            "cd '$(printf '%q' "$WP_PATH")' && wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-apple-oauth-diagnose.php" | tee apple-oauth-diagnose.log
+          ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
+            "cd '$(printf '%q' "$WP_PATH")' && wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-apple-oauth-trace.php" | tee apple-oauth-trace.log
 
       - uses: actions/upload-artifact@v4
         with:

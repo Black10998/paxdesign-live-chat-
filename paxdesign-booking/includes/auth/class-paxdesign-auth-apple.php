@@ -144,13 +144,22 @@ class PAXdesign_Auth_Apple {
 			return self::web_error_redirect_url( $msg );
 		}
 
-		$code  = sanitize_text_field( (string) ( $params['code'] ?? '' ) );
+		$code  = self::normalize_authorization_code( (string) ( $params['code'] ?? '' ) );
 		$state = sanitize_text_field( (string) ( $params['state'] ?? '' ) );
 		if ( $code === '' || $state === '' ) {
 			self::log_failure( 'apple_callback_missing_params', array( 'has_code' => $code !== '', 'has_state' => $state !== '' ) );
 			self::trace( 'callback_missing_params', array( 'has_code' => $code !== '', 'has_state' => $state !== '' ) );
 			return self::web_error_redirect_url( 'Apple did not return a valid authorization response.' );
 		}
+
+		self::trace(
+			'callback_received_code',
+			array(
+				'code_len'    => strlen( $code ),
+				'code_parts'  => substr_count( $code, '.' ) + 1,
+				'content_type'=> (string) ( $_SERVER['CONTENT_TYPE'] ?? '' ),
+			)
+		);
 
 		$state_data = self::consume_oauth_state( $state );
 		if ( is_wp_error( $state_data ) ) {
@@ -165,17 +174,19 @@ class PAXdesign_Auth_Apple {
 
 		$tokens = self::exchange_authorization_code( $code, $client_id, $redirect_uri );
 		if ( is_wp_error( $tokens ) ) {
-			self::log_failure( 'apple_token_exchange', array( 'reason' => $tokens->get_error_code(), 'message' => $tokens->get_error_message() ) );
-			self::trace(
-				'callback_token_exchange_failed',
-				array_merge(
-					self::token_exchange_trace_context( $client_id, $redirect_uri ),
-					array(
-						'reason'  => $tokens->get_error_code(),
-						'message' => $tokens->get_error_message(),
-					)
+			$fail_ctx = array_merge(
+				self::token_exchange_trace_context( $client_id, $redirect_uri ),
+				array(
+					'reason'  => $tokens->get_error_code(),
+					'message' => $tokens->get_error_message(),
 				)
 			);
+			$extra = $tokens->get_error_data();
+			if ( is_array( $extra ) ) {
+				$fail_ctx = array_merge( $fail_ctx, $extra );
+			}
+			self::log_failure( 'apple_token_exchange', array( 'reason' => $tokens->get_error_code(), 'message' => $tokens->get_error_message() ) );
+			self::trace( 'callback_token_exchange_failed', $fail_ctx );
 			return self::web_error_redirect_url( self::friendly_token_exchange_error( $tokens->get_error_message() ) );
 		}
 
@@ -334,8 +345,8 @@ class PAXdesign_Auth_Apple {
 			),
 			$context
 		);
-		if ( count( $rows ) > 25 ) {
-			$rows = array_slice( $rows, -25 );
+		if ( count( $rows ) > 40 ) {
+			$rows = array_slice( $rows, -40 );
 		}
 		update_option( self::OPTION_TRACE, $rows, false );
 	}
@@ -424,11 +435,16 @@ class PAXdesign_Auth_Apple {
 	 * @return array<string, string>
 	 */
 	private static function web_config(): array {
+		$web_key_id = trim( (string) get_option( 'paxdesign_apple_web_key_id', '' ) );
+		$web_key_p8 = self::normalize_private_key( (string) get_option( 'paxdesign_apple_web_key_p8', '' ) );
+		$apns_key_id = trim( (string) get_option( 'paxdesign_apns_key_id', '' ) );
+		$apns_key_p8 = self::normalize_private_key( (string) get_option( 'paxdesign_apns_key_p8', '' ) );
+
 		return array(
 			'service_id' => self::web_service_id(),
 			'team_id'    => trim( (string) get_option( 'paxdesign_apns_team_id', '' ) ),
-			'key_id'     => trim( (string) get_option( 'paxdesign_apns_key_id', '' ) ),
-			'key_p8'     => self::normalize_private_key( (string) get_option( 'paxdesign_apns_key_p8', '' ) ),
+			'key_id'     => $web_key_id !== '' ? $web_key_id : $apns_key_id,
+			'key_p8'     => $web_key_p8 !== '' ? $web_key_p8 : $apns_key_p8,
 		);
 	}
 
@@ -485,13 +501,25 @@ class PAXdesign_Auth_Apple {
 		}
 
 		$status = (int) wp_remote_retrieve_response_code( $response );
-		$body   = json_decode( wp_remote_retrieve_body( $response ), true );
+		$raw    = wp_remote_retrieve_body( $response );
+		$body   = json_decode( $raw, true );
 		if ( $status < 200 || $status >= 300 || ! is_array( $body ) ) {
-			$message = is_array( $body ) ? (string) ( $body['error_description'] ?? $body['error'] ?? '' ) : '';
+			$error_code = is_array( $body ) ? (string) ( $body['error'] ?? '' ) : '';
+			$message    = is_array( $body ) ? (string) ( $body['error_description'] ?? $body['error'] ?? '' ) : '';
 			if ( $message === '' ) {
 				$message = 'Apple token exchange failed.';
 			}
-			return new WP_Error( 'apple_token_exchange', $message );
+			$err = new WP_Error( 'apple_token_exchange', $message );
+			$err->add_data(
+				array(
+					'apple_http_status'        => $status,
+					'apple_error'              => $error_code,
+					'apple_error_description'  => is_array( $body ) ? (string) ( $body['error_description'] ?? '' ) : '',
+					'code_len'                 => strlen( $code ),
+					'client_secret_len'        => strlen( $client_secret ),
+				)
+			);
+			return $err;
 		}
 
 		self::trace( 'callback_token_exchange_ok', self::token_exchange_trace_context( $client_id, $redirect_uri ) );
@@ -517,7 +545,7 @@ class PAXdesign_Auth_Apple {
 			wp_json_encode(
 				array(
 					'iss' => $cfg['team_id'],
-					'iat' => time(),
+					'iat' => time() - 30,
 					'exp' => time() + MONTH_IN_SECONDS * 3,
 					'aud' => self::ISSUER,
 					'sub' => $cfg['service_id'],
@@ -616,6 +644,23 @@ class PAXdesign_Auth_Apple {
 			return 'Your Apple sign-in authorization expired. Please start again from the account page.';
 		}
 		return $message !== '' ? $message : 'Apple sign-in failed. Please try again.';
+	}
+
+	/**
+	 * @return string
+	 */
+	private static function normalize_authorization_code( string $code ): string {
+		$code = trim( wp_unslash( $code ) );
+		if ( $code === '' ) {
+			return '';
+		}
+		if ( preg_match( '/%[0-9A-Fa-f]{2}/', $code ) ) {
+			$decoded = rawurldecode( $code );
+			if ( is_string( $decoded ) && $decoded !== '' ) {
+				$code = $decoded;
+			}
+		}
+		return $code;
 	}
 
 	/**
