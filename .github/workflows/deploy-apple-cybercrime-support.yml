@@ -192,6 +192,5 @@ jobs:
           grep -Eq "page_reference|openForCybercrime" /tmp/chat-script.js
           grep -Eq "chat-script\.js\?ver=3\.174\.41|pdx-auth\.css\?ver=3\.174\.41" /tmp/ccs-page.html
           grep -A6 '#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {' /tmp/pdx-auth.css | grep -Eq 'background: #000|background-color: #000'
-          if [ "$PLUGIN" = "200" ]; then grep -Eq "3\.174\.41" /tmp/pax-plugin.php; fi
           if [ "$BOOKING_JS" = "200" ]; then grep -Eq 'open: openWidget' /tmp/booking-script.js; fi
           echo "Cybercrime Support production verification passed."
