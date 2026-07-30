@@ -128,6 +128,19 @@ body.pdx-auth-isolated > *:not(#pdx-auth-isolated-shell):not(#wpadminbar) {
   transform-box: fill-box;
 }
 
+/* Keep brand #CCFF00 fill; add edge definition so "pax" reads on white auth backgrounds. */
+.pdx-auth-shell-home .paxlogo-pax {
+  filter: drop-shadow(0 0 0.4px rgba(29, 29, 31, 0.62))
+    drop-shadow(0 0.5px 1px rgba(29, 29, 31, 0.22));
+}
+
+.pdx-auth-shell-home .paxlogo-pax text {
+  paint-order: stroke fill;
+  stroke: rgba(29, 29, 31, 0.22);
+  stroke-width: 0.5px;
+  stroke-linejoin: round;
+}
+
 .pdx-auth-shell-home .paxlogo-wrap.is-visible .paxlogo-pax,
 .pdx-auth-shell-home .paxlogo-wrap.is-visible .paxlogo-design,
 .pdx-auth-shell-home .pdx-auth-shell-logo.is-visible .paxlogo-pax,
