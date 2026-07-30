@@ -103,7 +103,7 @@ class PAXdesign_Auth_Apple {
 			'redirect_uri'  => self::web_callback_url(),
 			'response_type' => 'code',
 			'scope'         => 'name email',
-			'response_mode' => 'query',
+			'response_mode' => 'form_post',
 			'state'         => $state,
 		);
 

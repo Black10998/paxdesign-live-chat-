@@ -74,7 +74,7 @@ class PAXdesign_Auth_REST {
             'permission_callback' => $pub,
         ));
         register_rest_route(self::NS, '/auth/apple/callback', array(
-            'methods'             => WP_REST_Server::READABLE,
+            'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'apple_web_callback'),
             'permission_callback' => $pub,
         ));
