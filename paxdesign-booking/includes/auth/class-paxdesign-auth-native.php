@@ -690,6 +690,54 @@ class PAXdesign_Auth_Native {
 	}
 
 	/**
+	 * Start a browser cookie session for an already-authenticated user (e.g. Sign in with Apple web OAuth).
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function web_login_for_user( int $user_id, bool $remember = true ): array {
+		$user_id = absint( $user_id );
+		if ( $user_id <= 0 ) {
+			return [ 'success' => false, 'error' => 'invalid_user', 'message' => 'Invalid account.' ];
+		}
+
+		$user = get_user_by( 'id', $user_id );
+		if ( ! $user instanceof WP_User ) {
+			return [ 'success' => false, 'error' => 'invalid_user', 'message' => 'Invalid account.' ];
+		}
+
+		if ( ! PAXdesign_Customers::is_login_allowed( $user_id ) ) {
+			return [
+				'success' => false,
+				'error'   => 'suspended',
+				'message' => 'Your account has been suspended. Please contact support.',
+			];
+		}
+
+		wp_set_current_user( $user_id );
+		wp_set_auth_cookie( $user_id, $remember, is_ssl() );
+		self::assign_customer_role( $user_id );
+		PAXdesign_Customers::record_login( $user_id );
+
+		do_action( 'pdx_user_logged_in', $user_id );
+
+		if ( class_exists( 'PDX_Audit' ) ) {
+			PDX_Audit::log( 'auth', 'user_login', [ 'user_id' => $user_id, 'provider' => 'apple' ] );
+		}
+		if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+			PAXdesign_Auth_Log::event( 'web_login_success', [ 'user_id' => $user_id, 'provider' => 'apple' ] );
+		}
+
+		return array_merge(
+			[
+				'success' => true,
+				'message' => 'Logged in successfully.',
+				'user'    => self::user_payload( $user_id ),
+			],
+			self::session_payload()
+		);
+	}
+
+	/**
 	 * @param array{password:string,uuid:string} $app
 	 * @return array<string, mixed>
 	 */

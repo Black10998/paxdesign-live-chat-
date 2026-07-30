@@ -25,6 +25,10 @@ $apns_key_id        = get_option('paxdesign_apns_key_id', '');
 $apns_team_id       = get_option('paxdesign_apns_team_id', '');
 $apns_bundle_id     = get_option('paxdesign_apns_bundle_id', 'at.paxdesign.livechat');
 $apns_key_p8        = get_option('paxdesign_apns_key_p8', '');
+$apple_web_service_id = get_option('paxdesign_apple_web_service_id', '');
+$apple_web_callback_url = class_exists('PAXdesign_Auth_Apple')
+    ? PAXdesign_Auth_Apple::web_callback_url()
+    : rest_url('pdx/v1/auth/apple/callback');
 $live_agent_name    = get_option('paxdesign_live_chat_agent_name', PAXdesign_Chat_Live::get_agent_display_name());
 $live_agent_avatar  = get_option('paxdesign_live_chat_agent_avatar', PAXdesign_Chat_Live::get_agent_avatar_url());
 $live_agent_role    = get_option('paxdesign_live_chat_agent_role', PAXdesign_Chat_Live::get_agent_role());
@@ -216,6 +220,24 @@ $chat_quick_links   = class_exists('PAXdesign_Chat_Quick_Links') ? PAXdesign_Cha
               <textarea id="paxdesign_apns_key_p8" name="paxdesign_apns_key_p8"
                         class="ps-input" rows="6"
                         placeholder="-----BEGIN PRIVATE KEY-----"><?php echo esc_textarea($apns_key_p8); ?></textarea>
+            </div>
+
+            <div class="ps-divider"></div>
+            <h3 class="ps-subheading">Website — Sign in with Apple (Web OAuth)</h3>
+            <p class="ps-hint ps-hint--block">Service ID (Web Client ID) from Apple Developer → Identifiers → Services IDs. Uses the same Team ID and .p8 key as APNs above. Register the Return URL in Apple Developer only after the callback endpoint is deployed.</p>
+
+            <div class="ps-field">
+              <label class="ps-label" for="paxdesign_apple_web_service_id">Apple Web Service ID</label>
+              <input type="text" id="paxdesign_apple_web_service_id" name="paxdesign_apple_web_service_id"
+                     class="ps-input" value="<?php echo esc_attr($apple_web_service_id); ?>" placeholder="at.paxdesign.web">
+              <span class="ps-hint">Client ID for the website OAuth flow (separate from the iOS bundle ID).</span>
+            </div>
+
+            <div class="ps-field">
+              <label class="ps-label">OAuth Return URL (register in Apple Developer)</label>
+              <input type="text" class="ps-input" readonly value="<?php echo esc_attr($apple_web_callback_url); ?>"
+                     onclick="this.select();" style="cursor:pointer">
+              <span class="ps-hint">Service ID → Sign in with Apple → Web Authentication Configuration → Return URLs. Also register domain: <?php echo esc_html(wp_parse_url(home_url('/'), PHP_URL_HOST) ?: 'your-domain'); ?></span>
             </div>
 
             <div class="ps-divider"></div>

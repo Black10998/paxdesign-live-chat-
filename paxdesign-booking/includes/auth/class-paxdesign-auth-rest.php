@@ -68,6 +68,16 @@ class PAXdesign_Auth_REST {
             'callback'            => array(__CLASS__, 'apple_login'),
             'permission_callback' => $pub,
         ));
+        register_rest_route(self::NS, '/auth/apple/start', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'apple_web_start'),
+            'permission_callback' => $pub,
+        ));
+        register_rest_route(self::NS, '/auth/apple/callback', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'apple_web_callback'),
+            'permission_callback' => $pub,
+        ));
         register_rest_route(self::NS, '/auth/mobile-logout', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'mobile_logout'),
@@ -206,6 +216,31 @@ class PAXdesign_Auth_REST {
             }
         }
         return new WP_REST_Response($result, $status);
+    }
+
+    public static function apple_web_start(WP_REST_Request $request) {
+        $limited = self::rate_limit('login');
+        if ($limited) {
+            wp_safe_redirect(PAXdesign_Auth_Apple::web_error_redirect_url(
+                __('Too many attempts. Please try again later.', 'paxdesign-booking')
+            ));
+            exit;
+        }
+
+        $url = PAXdesign_Auth_Apple::web_begin_authorization($request);
+        if (is_wp_error($url)) {
+            wp_safe_redirect(PAXdesign_Auth_Apple::web_error_redirect_url($url->get_error_message()));
+            exit;
+        }
+
+        wp_redirect($url);
+        exit;
+    }
+
+    public static function apple_web_callback(WP_REST_Request $request) {
+        $redirect = PAXdesign_Auth_Apple::web_handle_callback($request);
+        wp_safe_redirect($redirect);
+        exit;
     }
 
     public static function apple_login(WP_REST_Request $request) {

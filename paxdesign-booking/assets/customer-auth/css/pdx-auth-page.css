@@ -279,6 +279,65 @@ body.pdx-account-dashboard-body #pdx-auth-bar .pdx-auth-portal-btn {
   border: 1px solid #cceacc;
 }
 
+.pdx-auth-page-form-wrap .pdx-auth-apple-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0 16px;
+  color: #86868b;
+  font-size: 13px;
+}
+
+.pdx-auth-page-form-wrap .pdx-auth-apple-divider::before,
+.pdx-auth-page-form-wrap .pdx-auth-apple-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: #d2d2d7;
+}
+
+.pdx-auth-page-form-wrap .pdx-auth-apple-wrap {
+  margin-top: 0;
+}
+
+.pdx-auth-page-form-wrap .pdx-auth-apple-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 11px 16px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #fff;
+  background: #000;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.pdx-auth-page-form-wrap .pdx-auth-apple-btn:hover {
+  background: #1d1d1f;
+}
+
+.pdx-auth-page-form-wrap .pdx-auth-apple-btn:active {
+  background: #333;
+}
+
+.pdx-auth-page-form-wrap .pdx-auth-apple-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: #fff;
+}
+
 @media (max-width: 640px) {
   .pdx-auth-page {
     min-height: calc(100dvh - 72px);

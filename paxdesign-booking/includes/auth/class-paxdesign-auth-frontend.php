@@ -104,6 +104,9 @@ class PAXdesign_Auth_Frontend {
             'modules'       => array(),
             'accountPageUrl'=> esc_url(PAXdesign_Auth_Page::page_url()),
             'isAuthPage'    => PAXdesign_Auth_Page::is_auth_page(),
+            'appleWebEnabled'  => class_exists('PAXdesign_Auth_Apple') && PAXdesign_Auth_Apple::is_web_configured(),
+            'appleStartUrl'    => class_exists('PAXdesign_Auth_Apple') ? esc_url(PAXdesign_Auth_Apple::web_start_url()) : '',
+            'appleCallbackUrl' => class_exists('PAXdesign_Auth_Apple') ? esc_url(PAXdesign_Auth_Apple::web_callback_url()) : '',
         );
     }
 }
