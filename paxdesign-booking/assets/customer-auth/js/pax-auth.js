@@ -2364,8 +2364,25 @@
   }
 
   /* ─── Public API ───────────────────────────────────────── */
+  function customerPortalLang() {
+    var lang = (document.documentElement.lang || navigator.language || 'de').toLowerCase();
+    if (lang.indexOf('ar') === 0) return 'ar';
+    if (lang.indexOf('en') === 0) return 'en';
+    return 'de';
+  }
+
+  function withPortalLang(path) {
+    var lang = encodeURIComponent(customerPortalLang());
+    if (path.indexOf('/customer/news') === 0 || path.indexOf('/customer/dashboard') === 0) {
+      var join = path.indexOf('?') >= 0 ? '&' : '?';
+      return path + join + 'lang=' + lang;
+    }
+    return path;
+  }
+
   function customerApiFetch(method, path, body) {
     var base = (C.restUrl || '/wp-json/pdx/v1').replace(/\/$/, '');
+    var requestPath = method === 'GET' ? withPortalLang(path) : path;
     var opts = {
       method: method,
       credentials: 'same-origin',
@@ -2375,7 +2392,7 @@
       },
     };
     if (body && method !== 'GET') opts.body = JSON.stringify(body);
-    return fetch(base + path, opts).then(function (r) {
+    return fetch(base + requestPath, opts).then(function (r) {
       return r.json().then(function (data) {
         data._status = r.status;
         data._ok = r.ok;
