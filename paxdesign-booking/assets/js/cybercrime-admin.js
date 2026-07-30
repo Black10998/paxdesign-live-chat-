@@ -5,6 +5,7 @@
   var i18n = cfg.i18n || {};
   var statusClasses = cfg.statusClasses || {};
   var workflowOrder = ['submitted', 'in_review', 'waiting_for_customer', 'resolved', 'closed'];
+  var REQUEST_TIMEOUT_MS = 45000;
 
   var actionsRoot = document.getElementById('pax-cc-ticket-actions');
   if (!actionsRoot || !cfg.ajaxUrl || !cfg.nonce) {
@@ -48,6 +49,38 @@
     }
   }
 
+  function setSubmitEnabled(submitBtn, enabled) {
+    if (submitBtn) {
+      submitBtn.disabled = !enabled;
+    }
+  }
+
+  function parseActionResponse(response) {
+    return response.text().then(function (body) {
+      var data = null;
+      var trimmed = (body || '').trim();
+
+      if (trimmed === '-1' || trimmed === '0') {
+        throw new Error(text('error', 'Something went wrong.'));
+      }
+
+      try {
+        data = trimmed ? JSON.parse(trimmed) : null;
+      } catch (error) {
+        throw new Error(text('error', 'Something went wrong.'));
+      }
+
+      if (!response.ok || !data || data.success !== true) {
+        var message = (data && data.data && data.data.message)
+          ? data.data.message
+          : text('error', 'Something went wrong.');
+        throw new Error(message);
+      }
+
+      return data.data || {};
+    });
+  }
+
   function postAction(action, payload) {
     var body = new URLSearchParams();
     body.set('action', action);
@@ -57,22 +90,37 @@
       body.set(key, payload[key]);
     });
 
-    return fetch(cfg.ajaxUrl, {
+    var fetchOptions = {
       method: 'POST',
       credentials: 'same-origin',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
       },
       body: body.toString()
-    }).then(function (response) {
-      return response.json().then(function (data) {
-        if (!response.ok || !data || data.success !== true) {
-          var message = (data && data.data && data.data.message) ? data.data.message : text('error', 'Something went wrong.');
-          throw new Error(message);
+    };
+
+    var request;
+    if (typeof AbortController === 'function') {
+      var controller = new AbortController();
+      var timeoutId = window.setTimeout(function () {
+        controller.abort();
+      }, REQUEST_TIMEOUT_MS);
+      fetchOptions.signal = controller.signal;
+      request = fetch(cfg.ajaxUrl, fetchOptions).then(function (response) {
+        window.clearTimeout(timeoutId);
+        return parseActionResponse(response);
+      }, function (error) {
+        window.clearTimeout(timeoutId);
+        if (error && error.name === 'AbortError') {
+          throw new Error(text('error', 'Something went wrong.'));
         }
-        return data.data || {};
+        throw error;
       });
-    });
+    } else {
+      request = fetch(cfg.ajaxUrl, fetchOptions).then(parseActionResponse);
+    }
+
+    return request;
   }
 
   function updateWorkflow(currentStatus) {
@@ -193,9 +241,7 @@
         return;
       }
 
-      if (submitBtn) {
-        submitBtn.disabled = true;
-      }
+      setSubmitEnabled(submitBtn, false);
       setFeedback(replyFeedback, text('sending', 'Sending…'), 'saving');
 
       postAction('paxdesign_cybercrime_admin_reply', {
@@ -212,10 +258,8 @@
         .catch(function (error) {
           setFeedback(replyFeedback, error.message || text('error', 'Something went wrong.'), 'error');
         })
-        .finally(function () {
-          if (submitBtn) {
-            submitBtn.disabled = false;
-          }
+        .then(function () {
+          setSubmitEnabled(submitBtn, true);
         });
     });
   }
@@ -230,9 +274,7 @@
         return;
       }
 
-      if (submitBtn) {
-        submitBtn.disabled = true;
-      }
+      setSubmitEnabled(submitBtn, false);
       setFeedback(internalNoteFeedback, text('addingNote', 'Adding note…'), 'saving');
 
       postAction('paxdesign_cybercrime_admin_internal_note', { message: message })
@@ -246,10 +288,8 @@
         .catch(function (error) {
           setFeedback(internalNoteFeedback, error.message || text('error', 'Something went wrong.'), 'error');
         })
-        .finally(function () {
-          if (submitBtn) {
-            submitBtn.disabled = false;
-          }
+        .then(function () {
+          setSubmitEnabled(submitBtn, true);
         });
     });
   }

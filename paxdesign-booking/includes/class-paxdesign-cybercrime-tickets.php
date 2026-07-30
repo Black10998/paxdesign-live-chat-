@@ -31,6 +31,9 @@ class PAXdesign_Cybercrime_Tickets {
     /** @var list<string> */
     private static $closed_statuses = array('resolved', 'closed');
 
+    /** @var list<array<string, mixed>> */
+    private static $deferred_customer_notifications = array();
+
     public static function init() {
         add_action('init', array(__CLASS__, 'ensure_schema'));
         add_action('wp_ajax_paxdesign_cybercrime_active_report', array(__CLASS__, 'ajax_active_report'));
@@ -806,20 +809,88 @@ class PAXdesign_Cybercrime_Tickets {
         }
 
         $customer_id = (int) ($row['customer_user_id'] ?? 0);
-        if ($notify_customer && $customer_id > 0 && class_exists('PAXdesign_Customer_Notifications')) {
+        if ($notify_customer && $customer_id > 0) {
+            self::queue_customer_notification(
+                $row,
+                $reference_id,
+                $message,
+                $new_status,
+                sprintf(__('Cybercrime report %s updated', 'paxdesign-booking'), $reference_id)
+            );
+        }
+
+        return true;
+    }
+
+    /**
+     * Queue customer notification + email for shutdown so admin-ajax returns promptly.
+     *
+     * @param array<string, mixed> $row
+     * @param string               $reference_id
+     * @param string               $message
+     * @param string               $status
+     * @param string               $title
+     */
+    private static function queue_customer_notification($row, $reference_id, $message, $status, $title) {
+        if (!is_array($row) || !class_exists('PAXdesign_Customer_Notifications')) {
+            return;
+        }
+        $customer_id = (int) ($row['customer_user_id'] ?? 0);
+        if ($customer_id <= 0) {
+            return;
+        }
+
+        self::$deferred_customer_notifications[] = array(
+            'row'          => $row,
+            'reference_id' => $reference_id,
+            'message'      => $message,
+            'status'       => $status,
+            'title'        => $title,
+            'customer_id'  => $customer_id,
+        );
+
+        if (!has_action('shutdown', array(__CLASS__, 'flush_deferred_customer_notifications'))) {
+            add_action('shutdown', array(__CLASS__, 'flush_deferred_customer_notifications'), 1);
+        }
+    }
+
+    public static function flush_deferred_customer_notifications() {
+        if (empty(self::$deferred_customer_notifications)) {
+            return;
+        }
+
+        if (function_exists('fastcgi_finish_request')) {
+            @fastcgi_finish_request();
+        }
+
+        $pending = self::$deferred_customer_notifications;
+        self::$deferred_customer_notifications = array();
+
+        foreach ($pending as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $customer_id = (int) ($item['customer_id'] ?? 0);
+            if ($customer_id <= 0 || !class_exists('PAXdesign_Customer_Notifications')) {
+                continue;
+            }
+            $row = is_array($item['row'] ?? null) ? $item['row'] : array();
+            $reference_id = sanitize_text_field((string) ($item['reference_id'] ?? ''));
+            $message = (string) ($item['message'] ?? '');
+            $status = sanitize_key((string) ($item['status'] ?? ''));
+            $title = sanitize_text_field((string) ($item['title'] ?? ''));
+
             PAXdesign_Customer_Notifications::notify_user(
                 $customer_id,
                 'security',
-                sprintf(__('Cybercrime report %s updated', 'paxdesign-booking'), $reference_id),
+                $title,
                 $message,
                 'cybercrime',
                 $reference_id,
                 home_url('/cybercrime-support/?ref=' . rawurlencode($reference_id))
             );
-            self::email_customer_update($row, $reference_id, $message, $new_status);
+            self::email_customer_update($row, $reference_id, $message, $status);
         }
-
-        return true;
     }
 
     /**
@@ -1004,17 +1075,14 @@ class PAXdesign_Cybercrime_Tickets {
         self::update_status($reference_id, $status, $staff_user_id, '', false, false);
 
         $customer_id = (int) ($row['customer_user_id'] ?? 0);
-        if ($customer_id > 0 && class_exists('PAXdesign_Customer_Notifications')) {
-            PAXdesign_Customer_Notifications::notify_user(
-                $customer_id,
-                'security',
-                sprintf(__('New reply on cybercrime report %s', 'paxdesign-booking'), $reference_id),
-                $body,
-                'cybercrime',
+        if ($customer_id > 0) {
+            self::queue_customer_notification(
+                $row,
                 $reference_id,
-                home_url('/cybercrime-support/?ref=' . rawurlencode($reference_id))
+                $body,
+                $status,
+                sprintf(__('New reply on cybercrime report %s', 'paxdesign-booking'), $reference_id)
             );
-            self::email_customer_update($row, $reference_id, $body, $status);
         }
 
         return $message_id;

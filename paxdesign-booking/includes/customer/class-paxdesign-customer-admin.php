@@ -52,7 +52,9 @@ class PAXdesign_Customer_Admin {
     }
 
     public static function enqueue_cybercrime_admin_assets($hook) {
-        if (self::$page_hook === '' || $hook !== self::$page_hook) {
+        unset($hook);
+        // Match by menu slug — reliable even when the parent menu title changes the hook suffix.
+        if (sanitize_key(wp_unslash($_GET['page'] ?? '')) !== self::MENU_SLUG) {
             return;
         }
         if (sanitize_key(wp_unslash($_GET['tab'] ?? '')) !== 'cybercrime') {
@@ -883,7 +885,7 @@ class PAXdesign_Customer_Admin {
 
         echo '<div class="pax-cc-actions__section">';
         echo '<p class="pax-cc-actions__section-title">' . esc_html__('Reply to customer', 'paxdesign-booking') . '</p>';
-        echo '<form id="pax-cc-reply-form" class="pax-cc-form">';
+        echo '<form id="pax-cc-reply-form" class="pax-cc-form" onsubmit="return false;">';
         echo '<p><label for="pax-cc-staff-message">' . esc_html__('Message', 'paxdesign-booking') . '</label><br>';
         echo '<textarea id="pax-cc-staff-message" rows="5" class="large-text" required></textarea></p>';
         echo '<p><label for="pax-cc-reply-status">' . esc_html__('After reply, set status to', 'paxdesign-booking') . '</label><br>';
@@ -899,7 +901,7 @@ class PAXdesign_Customer_Admin {
 
         echo '<div class="pax-cc-actions__section pax-cc-actions__section--internal">';
         echo '<p class="pax-cc-actions__section-title">' . esc_html__('Internal note (staff only)', 'paxdesign-booking') . '</p>';
-        echo '<form id="pax-cc-internal-note-form" class="pax-cc-form">';
+        echo '<form id="pax-cc-internal-note-form" class="pax-cc-form" onsubmit="return false;">';
         echo '<p><label for="pax-cc-internal-note">' . esc_html__('Note', 'paxdesign-booking') . '</label><br>';
         echo '<textarea id="pax-cc-internal-note" rows="3" class="large-text" required></textarea>';
         echo '<span class="pax-cc-form__hint">' . esc_html__('Not visible to the customer. Use for staff coordination only.', 'paxdesign-booking') . '</span></p>';
