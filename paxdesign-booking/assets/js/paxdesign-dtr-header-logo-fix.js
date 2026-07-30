@@ -10,11 +10,23 @@
       return;
     }
     svg.querySelectorAll('linearGradient stop').forEach(function (stop) {
-      var color = (stop.getAttribute('stop-color') || '').toUpperCase();
-      if (color === '#BFFF00') {
-        stop.setAttribute('stop-color', BRAND_GREEN);
-      }
+      stop.setAttribute('stop-color', BRAND_GREEN);
     });
+  }
+
+  function disableShine(pax) {
+    if (!pax) {
+      return;
+    }
+    var shine = pax.querySelector('.paxlogo-pax-shine');
+    if (!shine) {
+      return;
+    }
+    shine.setAttribute('opacity', '0');
+    shine.setAttribute('fill', BRAND_GREEN);
+    shine.style.setProperty('opacity', '0', 'important');
+    shine.style.setProperty('animation', 'none', 'important');
+    shine.style.setProperty('visibility', 'hidden', 'important');
   }
 
   function ensureShadowFilter(svg) {
@@ -26,46 +38,48 @@
       defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
       svg.insertBefore(defs, svg.firstChild);
     }
-    if (defs.querySelector('#' + FILTER_ID)) {
-      return FILTER_ID;
+
+    var existing = defs.querySelector('#' + FILTER_ID);
+    if (existing) {
+      existing.remove();
     }
 
     var filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
     filter.setAttribute('id', FILTER_ID);
-    filter.setAttribute('x', '-50%');
-    filter.setAttribute('y', '-50%');
-    filter.setAttribute('width', '200%');
-    filter.setAttribute('height', '200%');
+    filter.setAttribute('x', '-60%');
+    filter.setAttribute('y', '-60%');
+    filter.setAttribute('width', '220%');
+    filter.setAttribute('height', '220%');
     filter.setAttribute('color-interpolation-filters', 'sRGB');
 
     var shadow = document.createElementNS('http://www.w3.org/2000/svg', 'feDropShadow');
     shadow.setAttribute('dx', '0');
-    shadow.setAttribute('dy', '1.5');
-    shadow.setAttribute('stdDeviation', '1.35');
+    shadow.setAttribute('dy', '2');
+    shadow.setAttribute('stdDeviation', '2');
     shadow.setAttribute('flood-color', '#000000');
-    var opacity = document.body.classList.contains('dtr-apple-sticky-header') ? '0.78' : '0.72';
-    shadow.setAttribute('flood-opacity', opacity);
+    shadow.setAttribute(
+      'flood-opacity',
+      document.body.classList.contains('dtr-apple-sticky-header') ? '0.88' : '0.8'
+    );
     filter.appendChild(shadow);
     defs.appendChild(filter);
     return FILTER_ID;
   }
 
   function enhanceDesktopLogo(link) {
-    if (!link || link.dataset.pdxDesktopPaxFix === '1') {
-      return;
+    if (!link) {
+      return false;
     }
 
     var root = link.querySelector('#pax-isolated-logo.paxlogo-wrap');
     if (!root) {
-      return;
+      return false;
     }
-
-    link.dataset.pdxDesktopPaxFix = '1';
 
     var svg = root.querySelector('svg.paxlogo-svg');
     var pax = root.querySelector('.paxlogo-pax');
     if (!svg || !pax) {
-      return;
+      return false;
     }
 
     fixGradientStops(svg);
@@ -75,11 +89,17 @@
       paxText.setAttribute('fill', BRAND_GREEN);
     }
 
+    disableShine(pax);
+
     var filterId = ensureShadowFilter(svg);
     if (filterId) {
       pax.setAttribute('filter', 'url(#' + filterId + ')');
-      pax.classList.add('pdx-header-pax-shadow');
     }
+
+    link.dataset.pdxDesktopPaxFix = '1';
+    root.dataset.pdxDesktopPaxFix = '1';
+    pax.classList.add('pdx-header-pax-shadow');
+    return true;
   }
 
   function scan() {
@@ -88,12 +108,29 @@
 
   function boot() {
     scan();
-    var observer = new MutationObserver(scan);
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-    window.setTimeout(function () {
-      observer.disconnect();
+
+    var observer = new MutationObserver(function () {
       scan();
-    }, 10000);
+    });
+    observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+
+    var ticks = 0;
+    var interval = window.setInterval(function () {
+      scan();
+      ticks += 1;
+      if (ticks >= 120) {
+        window.clearInterval(interval);
+        observer.disconnect();
+        scan();
+      }
+    }, 500);
+
+    window.addEventListener('load', scan, { passive: true });
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) {
+        scan();
+      }
+    });
   }
 
   if (document.readyState === 'loading') {

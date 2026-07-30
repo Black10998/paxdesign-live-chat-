@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 
 final class PAXdesign_Dtr_Header_Logo_Fix {
 
-    const VERSION = '1.0.0';
+    const VERSION = '1.1.0';
 
     public static function init() {
         if (is_admin()) {
@@ -20,6 +20,7 @@ final class PAXdesign_Dtr_Header_Logo_Fix {
         }
 
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_assets'), 100);
+        add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_inline_overrides'), 101);
         add_action('wp_footer', array(__CLASS__, 'print_footer_script'), 100);
     }
 
@@ -36,6 +37,11 @@ final class PAXdesign_Dtr_Header_Logo_Fix {
             $deps,
             $ver
         );
+    }
+
+    public static function enqueue_inline_overrides() {
+        $css = 'header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default #pax-isolated-logo.paxlogo-wrap.is-visible .paxlogo-pax-shine{opacity:0!important;animation:none!important;visibility:hidden!important}';
+        wp_add_inline_style('paxdesign-dtr-header-logo-fix', $css);
     }
 
     public static function print_footer_script() {
