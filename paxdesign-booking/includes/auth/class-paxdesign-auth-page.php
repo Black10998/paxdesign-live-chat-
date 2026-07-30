@@ -17,6 +17,7 @@ class PAXdesign_Auth_Page {
         add_action('init', array(__CLASS__, 'register_shortcode'));
         add_filter('body_class', array(__CLASS__, 'body_class'));
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue_page_assets'), 25);
+        add_action('wp_head', array(__CLASS__, 'render_isolated_shell_critical_css'), 999);
     }
 
     public static function register_shortcode() {
@@ -131,11 +132,24 @@ class PAXdesign_Auth_Page {
     public static function body_class($classes) {
         if (self::is_auth_page()) {
             $classes[] = 'pdx-auth-page-body';
+            $classes[] = 'pdx-auth-isolated';
             if (is_user_logged_in()) {
                 $classes[] = 'pdx-account-dashboard-body';
+            } else {
+                $classes[] = 'pdx-auth-guest-body';
             }
         }
         return $classes;
+    }
+
+    /**
+     * Prevent theme chrome flash before auth CSS/JS load.
+     */
+    public static function render_isolated_shell_critical_css() {
+        if (!self::is_auth_page()) {
+            return;
+        }
+        echo '<style id="pdx-auth-isolated-critical">html.pdx-auth-isolated,body.pdx-auth-isolated{height:100svh;overflow:hidden;background:#fff!important}body.pdx-auth-isolated>*:not(#pdx-auth-isolated-shell):not(#wpadminbar){display:none!important}#pdx-auth-isolated-shell{position:fixed;inset:0;z-index:2147483000;background:#fff;display:flex;overflow:hidden}body.pdx-auth-guest-body #pdx-auth-isolated-shell{align-items:center;justify-content:center}body.pdx-auth-guest-body #pdx-auth-page{min-height:0;height:auto;max-height:100svh;overflow:auto}#paxdesign-booking-root,#pdx-auth-bar,[class*="cookie" i],[id*="cookie" i]{display:none!important}</style>';
     }
 
     public static function enqueue_page_assets() {

@@ -1195,9 +1195,75 @@
     }
   }
 
+  function isolateAuthShell() {
+    if (!isAuthPage()) return;
+    var root = document.getElementById('pdx-auth-page');
+    if (!root) return;
+
+    document.documentElement.classList.add('pdx-auth-isolated');
+    document.body.classList.add('pdx-auth-isolated');
+    document.body.classList.toggle('pdx-auth-guest-body', !user.logged_in);
+    document.body.classList.toggle('pdx-account-dashboard-body', !!user.logged_in);
+
+    var shell = document.getElementById('pdx-auth-isolated-shell');
+    if (!shell) {
+      shell = document.createElement('div');
+      shell.id = 'pdx-auth-isolated-shell';
+      shell.className = 'pdx-auth-isolated-shell';
+      shell.setAttribute('role', 'main');
+      document.body.appendChild(shell);
+    }
+
+    if (root.parentNode !== shell) {
+      shell.appendChild(root);
+    }
+
+    suppressAuthPageIntruders();
+  }
+
+  function suppressAuthPageIntruders() {
+    var selectors = [
+      '#paxdesign-booking-root',
+      '#pdx-auth-bar',
+      'header',
+      'footer',
+      '.site-header',
+      '.site-footer',
+      '#masthead',
+      '#colophon',
+      '.elementor-location-header',
+      '.elementor-location-footer',
+      '.entry-header',
+      '.page-header',
+      '.page-title',
+      '[class*="cookie" i]',
+      '[id*="cookie" i]',
+      '[class*="Cookie" i]',
+      '[id*="Cookie" i]',
+    ];
+    selectors.forEach(function (selector) {
+      try {
+        document.querySelectorAll(selector).forEach(function (el) {
+          if (el.closest('#pdx-auth-isolated-shell')) return;
+          el.setAttribute('aria-hidden', 'true');
+          el.hidden = true;
+          el.style.setProperty('display', 'none', 'important');
+        });
+      } catch (e) {}
+    });
+
+    Array.prototype.forEach.call(document.body.children, function (child) {
+      if (!child || child.id === 'pdx-auth-isolated-shell' || child.id === 'wpadminbar') return;
+      child.setAttribute('aria-hidden', 'true');
+      child.hidden = true;
+      child.style.setProperty('display', 'none', 'important');
+    });
+  }
+
   function initAuthPage() {
     authPageEl = document.getElementById('pdx-auth-page');
     if (!authPageEl) return;
+    isolateAuthShell();
     authPageFormEl = document.getElementById('pdx-auth-page-form');
     accountAppEl = document.getElementById('pdx-account-app');
     accountSidebarEl = document.getElementById('pdx-account-sidebar');
@@ -1648,6 +1714,7 @@
 
   function updateAuthPagePanels() {
     if (!authPageEl) return;
+    isolateAuthShell();
     var guestPanel = document.getElementById('pdx-auth-page-guest');
     if (!guestPanel) return;
     if (user.logged_in) {

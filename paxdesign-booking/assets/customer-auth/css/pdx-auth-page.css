@@ -1,6 +1,50 @@
 /**
  * Dedicated /account page — Apple-style bright authentication (always light).
+ * Uses a fixed isolated shell (#pdx-auth-isolated-shell) for full-viewport auth.
  */
+
+html.pdx-auth-isolated,
+body.pdx-auth-isolated {
+  height: 100svh;
+  min-height: 100svh;
+  overflow: hidden !important;
+  background: #fff !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.pdx-auth-isolated > *:not(#pdx-auth-isolated-shell):not(#wpadminbar) {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+}
+
+#pdx-auth-isolated-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: flex;
+  box-sizing: border-box;
+  background: #fff;
+  overflow: hidden;
+  padding:
+    max(12px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(12px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+}
+
+body.pdx-auth-guest-body #pdx-auth-isolated-shell {
+  align-items: center;
+  justify-content: center;
+}
+
+body.pdx-account-dashboard-body #pdx-auth-isolated-shell {
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+  background: #f5f5f7;
+}
 
 body.pdx-auth-page-body:not(.pdx-account-dashboard-body),
 body.pdx-auth-page-body:not(.pdx-account-dashboard-body) .site,
@@ -17,105 +61,78 @@ body.pdx-auth-page-body:not(.pdx-account-dashboard-body) article {
 body.pdx-auth-page-body {
   background: #fff !important;
   color: #1d1d1f !important;
-  overflow: hidden;
-  height: 100svh;
-  min-height: 100svh;
 }
 
-body.pdx-auth-page-body:not(.pdx-account-dashboard-body) {
-  background: #fff !important;
-}
-
-body.pdx-auth-page-body:not(.pdx-account-dashboard-body) .site-content,
-body.pdx-auth-page-body:not(.pdx-account-dashboard-body) .content-area,
-body.pdx-auth-page-body:not(.pdx-account-dashboard-body) .entry-content,
-body.pdx-auth-page-body:not(.pdx-account-dashboard-body) main {
-  padding-top: 0 !important;
-  margin-top: 0 !important;
-}
-
-/* Focused auth shell — hide site chrome (native app feel) */
-body.pdx-auth-page-body #masthead,
-body.pdx-auth-page-body .site-header,
-body.pdx-auth-page-body header.site-header,
-body.pdx-auth-page-body .elementor-location-header,
-body.pdx-auth-page-body #site-navigation,
-body.pdx-auth-page-body .main-navigation,
-body.pdx-auth-page-body #colophon,
-body.pdx-auth-page-body .site-footer,
-body.pdx-auth-page-body footer.site-footer,
-body.pdx-auth-page-body .elementor-location-footer,
-body.pdx-auth-page-body #pdx-auth-bar {
+/* Hide theme chrome and floating widgets (Navein, Elementor, cookies, chat) */
+body.pdx-auth-isolated header,
+body.pdx-auth-isolated footer,
+body.pdx-auth-isolated .site-header,
+body.pdx-auth-isolated .site-footer,
+body.pdx-auth-isolated #masthead,
+body.pdx-auth-isolated #colophon,
+body.pdx-auth-isolated .elementor-location-header,
+body.pdx-auth-isolated .elementor-location-footer,
+body.pdx-auth-isolated .entry-header,
+body.pdx-auth-isolated .page-header,
+body.pdx-auth-isolated .page-title,
+body.pdx-auth-isolated h1.entry-title,
+body.pdx-auth-isolated .dtr-page-title,
+body.pdx-auth-isolated #paxdesign-booking-root,
+body.pdx-auth-isolated #pdx-auth-bar,
+body.pdx-auth-isolated [class*="cookie" i],
+body.pdx-auth-isolated [id*="cookie" i],
+body.pdx-auth-isolated [class*="Cookie" i],
+body.pdx-auth-isolated [id*="Cookie" i] {
   display: none !important;
-}
-
-body.pdx-auth-page-body .site,
-body.pdx-auth-page-body #page,
-body.pdx-auth-page-body .site-content,
-body.pdx-auth-page-body #content,
-body.pdx-auth-page-body .content-area,
-body.pdx-auth-page-body main,
-body.pdx-auth-page-body .entry-content,
-body.pdx-auth-page-body article,
-body.pdx-auth-page-body #pdx-auth-page {
-  min-height: 100svh;
-  height: 100svh;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-body.pdx-auth-page-body #pdx-auth-page ~ *,
-body.pdx-auth-page-body .entry-content > :not(#pdx-auth-page):not(.pdx-auth-page) {
-  display: none;
-}
-
-/* Guest auth: hide redundant header Sign Up (segment control is enough) */
-body.pdx-auth-page-body:not(.pdx-account-dashboard-body) #pdx-auth-bar .pdx-auth-signup-btn {
-  display: none !important;
-}
-
-body.pdx-account-dashboard-body .pdx-auth-page {
-  align-items: stretch;
-  min-height: 100svh;
-  height: 100svh;
-  padding: 0;
-  overflow: hidden;
-  background: #f5f5f7;
+  visibility: hidden !important;
+  pointer-events: none !important;
 }
 
 body.pdx-account-dashboard-body,
-body.pdx-account-dashboard-body .site,
-body.pdx-account-dashboard-body .site-content,
-body.pdx-account-dashboard-body #content,
-body.pdx-account-dashboard-body .content-area,
-body.pdx-account-dashboard-body main,
-body.pdx-account-dashboard-body .entry-content,
-body.pdx-account-dashboard-body article {
+body.pdx-account-dashboard-body .pdx-auth-page,
+body.pdx-account-dashboard-body #pdx-account-app {
   background: #f5f5f7 !important;
   color: #1d1d1f !important;
-}
-
-body.pdx-account-dashboard-body #pdx-auth-bar .pdx-auth-portal-btn {
-  display: none !important;
 }
 
 .pdx-auth-page {
   position: relative;
   width: 100%;
-  min-height: 100svh;
-  height: 100svh;
+  max-width: 100%;
+  margin: 0;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+body.pdx-auth-guest-body .pdx-auth-page {
+  flex: 0 1 auto;
+  width: min(360px, 100%);
+  min-height: 0;
+  height: auto;
+  max-height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
-  box-sizing: border-box;
-  background: #fff;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  padding: 0;
+  overflow: visible;
+}
+
+body.pdx-account-dashboard-body .pdx-auth-page {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
+  overflow: hidden;
+  background: #f5f5f7;
 }
 
 .pdx-auth-page-guest {
-  width: min(360px, 100%);
+  width: 100%;
 }
 
 .pdx-auth-page-brand {
@@ -490,8 +507,16 @@ body.pdx-account-dashboard-body #pdx-auth-bar .pdx-auth-portal-btn {
 }
 
 @media (max-width: 640px) {
-  .pdx-auth-page {
-    padding: 12px 16px;
+  body.pdx-auth-guest-body #pdx-auth-isolated-shell {
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(12px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(12px, env(safe-area-inset-left));
+  }
+
+  body.pdx-auth-guest-body .pdx-auth-page {
+    width: 100%;
   }
 
   .pdx-auth-page-title {
@@ -514,11 +539,6 @@ body.pdx-account-dashboard-body #pdx-auth-bar .pdx-auth-portal-btn {
 }
 
 @media (max-height: 740px) {
-  .pdx-auth-page {
-    padding-top: 8px;
-    padding-bottom: 12px;
-  }
-
   .pdx-auth-page-title {
     font-size: 20px;
     margin-bottom: 8px;
