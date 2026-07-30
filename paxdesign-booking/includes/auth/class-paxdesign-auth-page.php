@@ -196,7 +196,7 @@ class PAXdesign_Auth_Page {
     /**
      * @return string
      */
-    private static function brand_logo_url() {
+    public static function brand_logo_url() {
         $override = trim((string) get_option('paxdesign_booking_logo_url', ''));
         if ($override !== '') {
             return esc_url($override);
