@@ -34,6 +34,54 @@ body.pdx-auth-isolated > *:not(#pdx-auth-isolated-shell):not(#wpadminbar) {
     max(16px, env(safe-area-inset-left));
 }
 
+.pdx-auth-shell-home {
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  left: max(16px, env(safe-area-inset-left));
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  max-width: min(140px, 42vw);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-decoration: none;
+  opacity: 0.92;
+  transition: opacity 0.15s ease;
+  pointer-events: auto;
+}
+
+.pdx-auth-shell-home:hover,
+.pdx-auth-shell-home:focus-visible {
+  opacity: 1;
+  outline: none;
+}
+
+.pdx-auth-shell-home:focus-visible {
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.22);
+  border-radius: 6px;
+}
+
+.pdx-auth-shell-home__logo {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  height: 26px;
+  object-fit: contain;
+}
+
+.pdx-auth-shell-home__wordmark {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: #1d1d1f;
+}
+
+body.pdx-account-dashboard-body .pdx-auth-shell-home__wordmark {
+  color: #1d1d1f;
+}
+
 body.pdx-auth-guest-body #pdx-auth-isolated-shell {
   align-items: center;
   justify-content: center;

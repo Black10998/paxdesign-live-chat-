@@ -1218,7 +1218,29 @@
       shell.appendChild(root);
     }
 
+    ensureAuthShellHomeLogo(shell);
     suppressAuthPageIntruders();
+  }
+
+  function ensureAuthShellHomeLogo(shell) {
+    if (!shell) return;
+    var homeUrl = homePageUrl();
+    var logoUrl = C.logoUrl || '';
+    var siteName = C.siteName || 'Home';
+    var link = document.getElementById('pdx-auth-shell-home');
+    if (!link) {
+      link = document.createElement('a');
+      link.id = 'pdx-auth-shell-home';
+      link.className = 'pdx-auth-shell-home';
+      shell.insertBefore(link, shell.firstChild);
+    }
+    link.href = homeUrl;
+    link.setAttribute('aria-label', 'Back to ' + siteName);
+    if (logoUrl) {
+      link.innerHTML = '<img class="pdx-auth-shell-home__logo" src="' + escHtml(logoUrl) + '" alt="' + escHtml(siteName) + '" width="120" height="28" decoding="async" />';
+    } else {
+      link.innerHTML = '<span class="pdx-auth-shell-home__wordmark">' + escHtml(siteName) + '</span>';
+    }
   }
 
   function suppressAuthPageIntruders() {

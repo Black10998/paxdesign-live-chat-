@@ -108,6 +108,8 @@ class PAXdesign_Auth_Frontend {
             'appleStartUrl'    => class_exists('PAXdesign_Auth_Apple') ? esc_url(PAXdesign_Auth_Apple::web_start_url()) : '',
             'appleCallbackUrl' => class_exists('PAXdesign_Auth_Apple') ? esc_url(PAXdesign_Auth_Apple::web_callback_url()) : '',
             'homeUrl'          => esc_url(home_url('/')),
+            'logoUrl'          => class_exists('PAXdesign_Auth_Page') ? PAXdesign_Auth_Page::brand_logo_url() : '',
+            'siteName'         => get_bloginfo('name'),
         );
     }
 }
