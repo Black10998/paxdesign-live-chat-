@@ -97,7 +97,10 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 
 					<div class="pax-ccs-portal__actions pax-ccs-portal__actions--welcome">
 						<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary" id="pax-ccs-start" data-ccs-start>
-							<?php pax_ccs_bilingual( $copy['welcome']['start'] ); ?>
+							<span class="pax-ccs-t" data-lang="ar" data-ccs-start-label="start"><?php pax_ccs_bilingual( $copy['welcome']['start'] ); ?></span>
+							<span class="pax-ccs-t" data-lang="de" data-ccs-start-label="start" hidden><?php pax_ccs_bilingual( $copy['welcome']['start'] ); ?></span>
+							<span class="pax-ccs-t" data-lang="ar" data-ccs-start-label="view" hidden><?php pax_ccs_bilingual( $copy['welcome']['view_report'] ); ?></span>
+							<span class="pax-ccs-t" data-lang="de" data-ccs-start-label="view" hidden><?php pax_ccs_bilingual( $copy['welcome']['view_report'] ); ?></span>
 						</button>
 					</div>
 				</div>
@@ -118,6 +121,65 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 							<?php pax_ccs_bilingual( $copy['login_gate']['button'] ); ?>
 						</button>
 					</div>
+				</div>
+			</div>
+		</section>
+
+		<section id="pax-ccs-active-report" class="pax-ccs-portal__active-report" hidden aria-labelledby="pax-ccs-active-report-title">
+			<div class="pax-ccs-portal__wrap pax-ccs-portal__wrap--wide">
+				<div class="pax-ccs-portal__panel pax-ccs-portal__panel--active-report">
+					<div class="pax-ccs-portal__active-report-head">
+						<div>
+							<h2 id="pax-ccs-active-report-title" class="pax-ccs-portal__section-title"><?php pax_ccs_bilingual( $copy['active_report']['title'] ); ?></h2>
+							<p class="pax-ccs-portal__section-intro"><?php pax_ccs_bilingual( $copy['active_report']['intro'] ); ?></p>
+						</div>
+						<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--ghost" id="pax-ccs-refresh-report">
+							<?php pax_ccs_bilingual( $copy['active_report']['refresh'] ); ?>
+						</button>
+					</div>
+
+					<dl class="pax-ccs-portal__active-meta">
+						<div class="pax-ccs-portal__active-meta-row">
+							<dt><?php pax_ccs_bilingual( $copy['active_report']['reference'] ); ?></dt>
+							<dd><code id="pax-ccs-active-ref"></code></dd>
+						</div>
+						<div class="pax-ccs-portal__active-meta-row">
+							<dt><?php pax_ccs_bilingual( $copy['active_report']['status'] ); ?></dt>
+							<dd><span class="pax-ccs-portal__status-badge" id="pax-ccs-active-status"></span></dd>
+						</div>
+						<div class="pax-ccs-portal__active-meta-row">
+							<dt><?php pax_ccs_bilingual( $copy['active_report']['category'] ); ?></dt>
+							<dd id="pax-ccs-active-category"></dd>
+						</div>
+						<div class="pax-ccs-portal__active-meta-row">
+							<dt><?php pax_ccs_bilingual( $copy['active_report']['submitted'] ); ?></dt>
+							<dd id="pax-ccs-active-submitted"></dd>
+						</div>
+					</dl>
+
+					<h3 class="pax-ccs-portal__subsection-title"><?php pax_ccs_bilingual( $copy['active_report']['attachments'] ); ?></h3>
+					<ul id="pax-ccs-active-attachments" class="pax-ccs-portal__attachment-list"></ul>
+
+					<h3 class="pax-ccs-portal__subsection-title"><?php pax_ccs_bilingual( $copy['active_report']['timeline'] ); ?></h3>
+					<ol id="pax-ccs-active-timeline" class="pax-ccs-portal__timeline" aria-live="polite"></ol>
+
+					<div id="pax-ccs-active-reply-wrap" class="pax-ccs-portal__reply-wrap">
+						<label for="pax-ccs-active-reply" class="pax-ccs-portal__reply-label"><?php pax_ccs_bilingual( $copy['active_report']['reply_label'] ); ?></label>
+						<textarea id="pax-ccs-active-reply" class="pax-ccs-portal__reply-input" rows="4"
+							placeholder="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'ar' ) ); ?>"
+							data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'ar' ) ); ?>"
+							data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'de' ) ); ?>"></textarea>
+						<p id="pax-ccs-active-reply-error" class="pax-ccs-portal__error" hidden role="alert"></p>
+						<div class="pax-ccs-portal__actions">
+							<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary" id="pax-ccs-active-reply-submit">
+								<?php pax_ccs_bilingual( $copy['active_report']['reply_submit'] ); ?>
+							</button>
+							<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--ghost" id="pax-ccs-active-chat">
+								<?php pax_ccs_bilingual( $copy['active_report']['chat'] ); ?>
+							</button>
+						</div>
+					</div>
+					<p id="pax-ccs-active-closed-note" class="pax-ccs-portal__closed-note" hidden><?php pax_ccs_bilingual( $copy['active_report']['closed_note'] ); ?></p>
 				</div>
 			</div>
 		</section>

@@ -1002,3 +1002,125 @@ html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
   color: #fff !important;
   background: var(--ccs-navy) !important;
 }
+
+.pax-ccs-portal__active-report-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.pax-ccs-portal__active-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 0 0 28px;
+  padding: 0;
+}
+
+.pax-ccs-portal__active-meta-row {
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--ccs-line);
+  border-radius: 12px;
+  background: #fff;
+}
+
+.pax-ccs-portal__active-meta-row dt {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ccs-muted);
+  margin: 0 0 6px;
+}
+
+.pax-ccs-portal__active-meta-row dd {
+  margin: 0;
+  font-size: 16px;
+  color: var(--ccs-ink);
+}
+
+.pax-ccs-portal__status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: rgba(0, 113, 227, 0.12);
+  color: #0071e3;
+}
+
+.pax-ccs-portal__subsection-title {
+  font-size: 18px;
+  margin: 0 0 12px;
+  color: var(--ccs-ink);
+}
+
+.pax-ccs-portal__attachment-list,
+.pax-ccs-portal__timeline {
+  list-style: none;
+  margin: 0 0 28px;
+  padding: 0;
+}
+
+.pax-ccs-portal__attachment-list li,
+.pax-ccs-portal__timeline-empty,
+.pax-ccs-portal__attachment-empty {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--ccs-line);
+  color: var(--ccs-ink);
+}
+
+.pax-ccs-portal__attachment-list a {
+  color: #0071e3;
+  text-decoration: none;
+}
+
+.pax-ccs-portal__timeline-item {
+  padding: 14px 0 14px 16px;
+  border-left: 3px solid var(--ccs-line);
+  margin: 0 0 12px;
+}
+
+.pax-ccs-portal__timeline-meta {
+  font-size: 13px;
+  color: var(--ccs-muted);
+  margin-bottom: 6px;
+}
+
+.pax-ccs-portal__timeline-body {
+  color: var(--ccs-ink);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.pax-ccs-portal__reply-wrap {
+  margin-top: 8px;
+}
+
+.pax-ccs-portal__reply-label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--ccs-ink);
+}
+
+.pax-ccs-portal__reply-input {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px 14px;
+  border: 1px solid var(--ccs-line);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ccs-ink);
+  resize: vertical;
+}
+
+.pax-ccs-portal__closed-note {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(110, 110, 115, 0.12);
+  color: var(--ccs-muted);
+}

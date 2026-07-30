@@ -142,6 +142,68 @@ return array(
 			'ar' => 'بدء البلاغ',
 			'de' => 'Meldung starten',
 		),
+		'view_report' => array(
+			'ar' => 'عرض بلاغك',
+			'de' => 'Ihre Meldung ansehen',
+		),
+	),
+	'active_report' => array(
+		'title' => array(
+			'ar' => 'بلاغك الحالي',
+			'de' => 'Ihre aktuelle Meldung',
+		),
+		'intro' => array(
+			'ar' => 'لديك بلاغ مفتوح قيد المعالجة. يمكنك متابعة الحالة والرسائل والمرفقات هنا.',
+			'de' => 'Sie haben eine offene Meldung in Bearbeitung. Status, Nachrichten und Anhänge finden Sie hier.',
+		),
+		'status' => array(
+			'ar' => 'الحالة',
+			'de' => 'Status',
+		),
+		'reference' => array(
+			'ar' => 'رقم المرجع',
+			'de' => 'Referenznummer',
+		),
+		'category' => array(
+			'ar' => 'الفئة',
+			'de' => 'Kategorie',
+		),
+		'submitted' => array(
+			'ar' => 'تاريخ التقديم',
+			'de' => 'Eingereicht am',
+		),
+		'timeline' => array(
+			'ar' => 'سجل المحادثة',
+			'de' => 'Verlauf',
+		),
+		'attachments' => array(
+			'ar' => 'المرفقات',
+			'de' => 'Anhänge',
+		),
+		'reply_label' => array(
+			'ar' => 'إضافة رسالة',
+			'de' => 'Nachricht hinzufügen',
+		),
+		'reply_placeholder' => array(
+			'ar' => 'اكتب رسالتك للفريق…',
+			'de' => 'Nachricht an das Team…',
+		),
+		'reply_submit' => array(
+			'ar' => 'إرسال',
+			'de' => 'Senden',
+		),
+		'closed_note' => array(
+			'ar' => 'تم إغلاق هذا البلاغ. لا يمكن إضافة رسائل جديدة.',
+			'de' => 'Diese Meldung ist abgeschlossen. Neue Nachrichten sind nicht möglich.',
+		),
+		'chat' => array(
+			'ar' => 'الدردشة مع الدعم',
+			'de' => 'Mit Support chatten',
+		),
+		'refresh' => array(
+			'ar' => 'تحديث',
+			'de' => 'Aktualisieren',
+		),
 	),
 	'login_gate' => array(
 		'title' => array(

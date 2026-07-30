@@ -1254,6 +1254,12 @@ class PAXdesign_Chat_Live {
         }
         $id = isset($entry['id']) ? absint($entry['id']) : 0;
 
+        if ($id > 0 && !empty($entry['_deduplicated'])) {
+            // Skip duplicate hook firing.
+        } elseif ($id > 0) {
+            do_action('paxdesign_chat_message_appended', $session_id, $role, $content, $id);
+        }
+
         if ($role === 'user' && class_exists('PAXdesign_Language_Routing')) {
             $detected = PAXdesign_Language_Routing::detect_text_language($content);
             if ($detected !== '') {

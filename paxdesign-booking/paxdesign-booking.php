@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.174.41
+Version: 3.174.42
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.174.41');
+define('PAXDESIGN_BOOKING_VERSION', '3.174.42');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -55,6 +55,7 @@ require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-auth-log.p
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-live-chat-mobile-api.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-cybercrime-intake.php';
+require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-cybercrime-tickets.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-icons.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-quick-links.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-link-scanner.php';
@@ -90,6 +91,7 @@ PAXdesign_Auth_Module::init();
 PAXdesign_Customer_Platform::init();
 PAXdesign_Auth_Log::init();
 PAXdesign_Cybercrime_Intake::init();
+PAXdesign_Cybercrime_Tickets::init();
 
 /**
  * Main Plugin Class
@@ -502,6 +504,9 @@ class PAXdesign_Booking {
         paxdesign_booking_upgrade_auth_page();
         if (class_exists('PAXdesign_Cybercrime_Intake')) {
             PAXdesign_Cybercrime_Intake::ensure_schema();
+        }
+        if (class_exists('PAXdesign_Cybercrime_Tickets')) {
+            PAXdesign_Cybercrime_Tickets::ensure_schema();
         }
     }
 

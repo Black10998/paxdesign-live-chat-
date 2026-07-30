@@ -55,6 +55,7 @@ class PAXdesign_Customer_Admin {
             'news'          => __('News', 'paxdesign-booking'),
             'services'      => __('Services', 'paxdesign-booking'),
             'notifications' => __('Notifications', 'paxdesign-booking'),
+            'cybercrime'    => __('Cybercrime Reports', 'paxdesign-booking'),
         ) as $slug => $label) {
             $class = $tab === $slug ? ' nav-tab nav-tab-active' : ' nav-tab';
             echo '<a class="' . esc_attr(trim($class)) . '" href="' . esc_url(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=' . $slug)) . '">' . esc_html($label) . '</a>';
@@ -83,6 +84,9 @@ class PAXdesign_Customer_Admin {
                 break;
             case 'notifications':
                 self::render_notifications_tab();
+                break;
+            case 'cybercrime':
+                self::render_cybercrime_tab();
                 break;
             default:
                 self::render_overview_tab();
@@ -567,6 +571,131 @@ class PAXdesign_Customer_Admin {
         );
         wp_safe_redirect(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=notifications&saved=1'));
         exit;
+    }
+
+    private static function render_cybercrime_tab() {
+        if (!class_exists('PAXdesign_Cybercrime_Tickets')) {
+            echo '<p>' . esc_html__('Cybercrime ticket module is not available.', 'paxdesign-booking') . '</p>';
+            return;
+        }
+
+        $reference = sanitize_text_field($_GET['reference'] ?? '');
+        if ($reference !== '') {
+            self::render_cybercrime_detail($reference);
+            return;
+        }
+
+        $reports = PAXdesign_Cybercrime_Tickets::list_reports_for_admin(50);
+        echo '<h2>' . esc_html__('Cybercrime Support reports', 'paxdesign-booking') . '</h2>';
+        echo '<table class="widefat striped"><thead><tr>';
+        echo '<th>' . esc_html__('Reference', 'paxdesign-booking') . '</th>';
+        echo '<th>' . esc_html__('Reporter', 'paxdesign-booking') . '</th>';
+        echo '<th>' . esc_html__('Category', 'paxdesign-booking') . '</th>';
+        echo '<th>' . esc_html__('Status', 'paxdesign-booking') . '</th>';
+        echo '<th>' . esc_html__('Updated', 'paxdesign-booking') . '</th>';
+        echo '</tr></thead><tbody>';
+        if (empty($reports)) {
+            echo '<tr><td colspan="5">' . esc_html__('No reports yet.', 'paxdesign-booking') . '</td></tr>';
+        }
+        foreach ($reports as $report) {
+            $url = admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=cybercrime&reference=' . rawurlencode((string) $report['reference_id']));
+            echo '<tr>';
+            echo '<td><a href="' . esc_url($url) . '"><code>' . esc_html((string) $report['reference_id']) . '</code></a></td>';
+            echo '<td>' . esc_html((string) ($report['reporter_name'] ?? '')) . '<br><small>' . esc_html((string) ($report['reporter_email'] ?? '')) . '</small></td>';
+            echo '<td>' . esc_html((string) ($report['category_label'] ?? '')) . '</td>';
+            echo '<td>' . esc_html((string) ($report['status_label'] ?? '')) . '</td>';
+            echo '<td>' . esc_html((string) ($report['updated_at'] ?? '')) . '</td>';
+            echo '</tr>';
+        }
+        echo '</tbody></table>';
+    }
+
+    private static function render_cybercrime_detail($reference) {
+        $row = PAXdesign_Cybercrime_Tickets::get_report_row($reference);
+        if (!$row) {
+            echo '<p>' . esc_html__('Report not found.', 'paxdesign-booking') . '</p>';
+            return;
+        }
+
+        $report = PAXdesign_Cybercrime_Tickets::format_report_row($row, true);
+        $statuses = array('submitted', 'in_review', 'needs_info', 'waiting_for_customer', 'customer_replied', 'waiting_for_staff', 'resolved', 'closed');
+        $back_url = admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=cybercrime');
+
+        echo '<p><a href="' . esc_url($back_url) . '">&larr; ' . esc_html__('All reports', 'paxdesign-booking') . '</a></p>';
+        echo '<h2><code>' . esc_html((string) $report['reference_id']) . '</code></h2>';
+        echo '<p><strong>' . esc_html((string) $report['reporter_name']) . '</strong> &lt;' . esc_html((string) $report['reporter_email']) . '&gt;<br>';
+        echo esc_html((string) $report['category_label']) . ' · ' . esc_html((string) $report['status_label']) . '<br>';
+        echo esc_html__('Submitted', 'paxdesign-booking') . ': ' . esc_html((string) $report['created_at']) . '<br>';
+        echo esc_html__('Updated', 'paxdesign-booking') . ': ' . esc_html((string) $report['updated_at']) . '</p>';
+
+        if (!empty($report['description'])) {
+            echo '<h3>' . esc_html__('Summary', 'paxdesign-booking') . '</h3>';
+            echo '<p style="max-width:720px">' . nl2br(esc_html((string) $report['description'])) . '</p>';
+        }
+
+        if (!empty($report['attachments']) && is_array($report['attachments'])) {
+            echo '<h3>' . esc_html__('Attachments', 'paxdesign-booking') . '</h3><ul>';
+            foreach ($report['attachments'] as $file) {
+                if (!is_array($file)) {
+                    continue;
+                }
+                $name = (string) ($file['name'] ?? 'file');
+                $url = (string) ($file['url'] ?? '');
+                if ($url !== '') {
+                    echo '<li><a href="' . esc_url($url) . '" target="_blank" rel="noopener">' . esc_html($name) . '</a></li>';
+                } else {
+                    echo '<li>' . esc_html($name) . '</li>';
+                }
+            }
+            echo '</ul>';
+        }
+
+        echo '<h3>' . esc_html__('Timeline', 'paxdesign-booking') . '</h3>';
+        echo '<div style="max-width:720px">';
+        foreach (($report['timeline'] ?? array()) as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            echo '<div style="border-left:3px solid #ccc;padding:8px 12px;margin:0 0 12px 12px">';
+            echo '<strong>' . esc_html((string) ($entry['author_type'] ?? '')) . '</strong> · ';
+            echo esc_html((string) ($entry['channel'] ?? '')) . ' · ';
+            echo '<small>' . esc_html((string) ($entry['created_at'] ?? '')) . '</small>';
+            echo '<div>' . nl2br(esc_html((string) ($entry['body'] ?? ''))) . '</div>';
+            echo '</div>';
+        }
+        echo '</div>';
+
+        echo '<h3>' . esc_html__('Update status', 'paxdesign-booking') . '</h3>';
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="max-width:520px">';
+        wp_nonce_field('paxdesign_cybercrime_update_status');
+        echo '<input type="hidden" name="action" value="paxdesign_cybercrime_update_status">';
+        echo '<input type="hidden" name="reference_id" value="' . esc_attr((string) $report['reference_id']) . '">';
+        echo '<p><label>' . esc_html__('Status', 'paxdesign-booking') . '<br>';
+        echo '<select name="status">';
+        foreach ($statuses as $status) {
+            echo '<option value="' . esc_attr($status) . '"' . selected($report['status'], $status, false) . '>' . esc_html(PAXdesign_Cybercrime_Tickets::status_label($status)) . '</option>';
+        }
+        echo '</select></label></p>';
+        echo '<p><label>' . esc_html__('Customer note (optional)', 'paxdesign-booking') . '<br>';
+        echo '<textarea name="summary" rows="3" class="large-text"></textarea></label></p>';
+        echo '<p><button type="submit" class="button button-primary">' . esc_html__('Save status', 'paxdesign-booking') . '</button></p>';
+        echo '</form>';
+
+        echo '<h3>' . esc_html__('Staff reply', 'paxdesign-booking') . '</h3>';
+        echo '<form method="post" action="' . esc_url(admin_url('admin-post.php')) . '" style="max-width:520px">';
+        wp_nonce_field('paxdesign_cybercrime_staff_reply');
+        echo '<input type="hidden" name="action" value="paxdesign_cybercrime_staff_reply">';
+        echo '<input type="hidden" name="reference_id" value="' . esc_attr((string) $report['reference_id']) . '">';
+        echo '<p><label>' . esc_html__('Message to customer', 'paxdesign-booking') . '<br>';
+        echo '<textarea name="message" rows="5" class="large-text" required></textarea></label></p>';
+        echo '<p><label>' . esc_html__('Status after reply', 'paxdesign-booking') . '<br>';
+        echo '<select name="status">';
+        echo '<option value="waiting_for_customer">' . esc_html__('Waiting for Customer', 'paxdesign-booking') . '</option>';
+        echo '<option value="in_review">' . esc_html__('In Progress', 'paxdesign-booking') . '</option>';
+        echo '<option value="resolved">' . esc_html__('Resolved', 'paxdesign-booking') . '</option>';
+        echo '</select></label></p>';
+        echo '<p><button type="submit" class="button button-primary">' . esc_html__('Send reply', 'paxdesign-booking') . '</button></p>';
+        echo '</form>';
     }
 
     private static function verify_admin($action) {
