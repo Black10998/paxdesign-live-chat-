@@ -59,6 +59,11 @@
     return (d.textContent || d.innerText || '').replace(/\s+/g, ' ').trim();
   }
 
+  function renderTrustedNewsHtml(html) {
+    if (!html) return '';
+    return String(html);
+  }
+
   function normalizeRestMessage(data) {
     if (!data || typeof data !== 'object') {
       return 'Something went wrong. Please try again.';
@@ -2947,12 +2952,18 @@
 
   function renderPortalNewsDetail(item) {
     var html = portalBackBtn('All news');
-    html += '<article class="pdx-portal-detail"><h3>' + escHtml(item.title) + '</h3>';
+    html += '<article class="pdx-portal-detail pdx-portal-detail--news">';
+    if (item.image_url) {
+      html += '<figure class="pdx-portal-news-hero">' +
+        '<img class="pdx-portal-news-hero__img" src="' + escHtml(item.image_url) + '" alt="" loading="lazy" decoding="async" />' +
+        '</figure>';
+    }
+    html += '<h3>' + escHtml(item.title) + '</h3>';
     html += '<p class="pdx-portal-meta">' + escHtml(formatDate(item.published_at)) + '</p>';
     if (item.excerpt) {
       html += '<p class="pdx-portal-lead">' + escHtml(item.excerpt) + '</p>';
     }
-    html += '<div class="pdx-portal-body-text">' + (item.body_html || escHtml(item.body || '')) + '</div></article>';
+    html += '<div class="pdx-portal-body-text pdx-portal-body-text--html">' + renderTrustedNewsHtml(item.body || '') + '</div></article>';
     return html;
   }
 

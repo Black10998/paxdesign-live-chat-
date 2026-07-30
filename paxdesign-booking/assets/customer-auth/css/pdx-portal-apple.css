@@ -316,6 +316,10 @@ body.pdx-account-dashboard-body .pdx-portal-body-text {
   color: var(--pdx-portal-text);
 }
 
+body.pdx-account-dashboard-body .pdx-portal-news-hero__img {
+  border-color: var(--pdx-portal-border);
+}
+
 body.pdx-account-dashboard-body .pdx-portal-stats {
   gap: 10px;
 }
