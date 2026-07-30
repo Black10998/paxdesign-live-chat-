@@ -12,6 +12,16 @@ class PAXdesign_Customer_Admin {
     const PARENT_SLUG = 'paxdesign-booking';
     const MENU_SLUG   = 'paxdesign-customer-portal';
 
+    /**
+     * Actual admin page hook suffix returned by add_submenu_page(). WordPress
+     * derives this from the parent menu's sanitized title (e.g. "Booking System"
+     * => "booking-system_page_..."), which is not the same as the parent slug, so
+     * it must be captured at registration time rather than hardcoded.
+     *
+     * @var string
+     */
+    private static $page_hook = '';
+
     public static function init() {
         add_action('admin_menu', array(__CLASS__, 'register_menu'), 20);
         add_action('admin_enqueue_scripts', array(__CLASS__, 'enqueue_cybercrime_admin_assets'));
@@ -31,7 +41,7 @@ class PAXdesign_Customer_Admin {
     }
 
     public static function register_menu() {
-        add_submenu_page(
+        self::$page_hook = (string) add_submenu_page(
             self::PARENT_SLUG,
             __('Customer Portal', 'paxdesign-booking'),
             __('Customer Portal', 'paxdesign-booking'),
@@ -42,7 +52,7 @@ class PAXdesign_Customer_Admin {
     }
 
     public static function enqueue_cybercrime_admin_assets($hook) {
-        if ($hook !== 'paxdesign-booking_page_' . self::MENU_SLUG) {
+        if (self::$page_hook === '' || $hook !== self::$page_hook) {
             return;
         }
         if (sanitize_key(wp_unslash($_GET['tab'] ?? '')) !== 'cybercrime') {
