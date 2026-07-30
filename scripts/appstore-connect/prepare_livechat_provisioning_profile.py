@@ -125,6 +125,19 @@ def find_existing_profiles(client: ASCClient, bundle_resource_id: str) -> list[d
     return matches
 
 
+def find_profiles_by_name(client: ASCClient, profile_name: str) -> list[dict[str, Any]]:
+    payload = client.get(
+        "/profiles",
+        **{"filter[profileType]": "IOS_APP_STORE", "limit": "200"},
+    )
+    matches: list[dict[str, Any]] = []
+    for profile in payload.get("data") or []:
+        attrs = profile.get("attributes") or {}
+        if attrs.get("name") == profile_name:
+            matches.append(profile)
+    return matches
+
+
 def delete_profile(client: ASCClient, profile_id: str, name: str) -> None:
     print(f"Deleting stale profile {name!r} ({profile_id}) …")
     status, payload = client.request("DELETE", f"/profiles/{profile_id}", allow_error=True)
@@ -157,6 +170,35 @@ def create_profile(client: ASCClient, bundle_resource_id: str, certificate_id: s
         allow_error=True,
     )
     if status == 409:
+        duplicates = find_profiles_by_name(client, PROFILE_NAME)
+        for profile in duplicates:
+            attrs = profile.get("attributes") or {}
+            delete_profile(client, profile["id"], str(attrs.get("name", profile["id"])))
+            time.sleep(2)
+        status, payload = client.request(
+            "POST",
+            "/profiles",
+            body={
+                "data": {
+                    "type": "profiles",
+                    "attributes": {
+                        "name": PROFILE_NAME,
+                        "profileType": "IOS_APP_STORE",
+                    },
+                    "relationships": {
+                        "bundleId": {
+                            "data": {"type": "bundleIds", "id": bundle_resource_id}
+                        },
+                        "certificates": {
+                            "data": [{"type": "certificates", "id": certificate_id}]
+                        },
+                    },
+                }
+            },
+            allow_error=True,
+        )
+        if status == 201:
+            return resource_data(payload, label=f"Profile {PROFILE_NAME}")
         existing = find_existing_profiles(client, bundle_resource_id)
         for profile in existing:
             attrs = profile.get("attributes") or {}
@@ -230,6 +272,11 @@ def export_for_build(raw: bytes) -> None:
 def ensure_fresh_profile(
     client: ASCClient, bundle_resource_id: str, certificate_id: str
 ) -> dict[str, Any]:
+    for profile in find_profiles_by_name(client, PROFILE_NAME):
+        attrs = profile.get("attributes") or {}
+        delete_profile(client, profile["id"], str(attrs.get("name", profile["id"])))
+        time.sleep(2)
+
     existing = find_existing_profiles(client, bundle_resource_id)
     for profile in existing:
         attrs = profile.get("attributes") or {}
