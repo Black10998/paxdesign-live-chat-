@@ -8,6 +8,7 @@ on:
       - 'cursor/cybercrime-support-page-bdff'
       - 'cursor/cybercrime-support-fixes-db83'
       - 'cursor/cybercrime-ticket-workflow-db83'
+      - 'cursor/cybercrime-admin-reply-hotfix-3a65'
     paths:
       - '.github/triggers/deploy-apple-cybercrime-support'
       - '.github/workflows/deploy-apple-cybercrime-support.yml'
