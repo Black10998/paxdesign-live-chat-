@@ -234,10 +234,7 @@ return array(
 			'label' => 'Under Review',
 		),
 		'waiting_for_customer' => array(
-			'label' => 'Waiting for Customer',
-		),
-		'escalated' => array(
-			'label' => 'Escalated',
+			'label' => 'Waiting for Your Reply',
 		),
 		'resolved' => array(
 			'label' => 'Resolved',

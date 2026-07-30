@@ -10,32 +10,26 @@ if (!defined('ABSPATH')) {
 class PAXdesign_Cybercrime_Tickets {
 
     const TABLE_MESSAGES = 'paxdesign_cybercrime_messages';
-    const SCHEMA_VERSION = '1';
+    const SCHEMA_VERSION = '2';
 
-    /** @var list<string> */
-    private static $active_statuses = array(
+    /** @var list<string> Canonical workflow statuses (admin + database). */
+    private static $workflow_statuses = array(
         'submitted',
         'in_review',
-        'needs_info',
         'waiting_for_customer',
-        'customer_replied',
-        'waiting_for_staff',
+        'resolved',
+        'closed',
+    );
+
+    /** @var list<string> Legacy values normalized on read/write. */
+    private static $legacy_status_map = array(
+        'needs_info'         => 'waiting_for_customer',
+        'customer_replied'   => 'in_review',
+        'waiting_for_staff'  => 'in_review',
     );
 
     /** @var list<string> */
     private static $closed_statuses = array('resolved', 'closed');
-
-    /** @var list<string> */
-    private static $staff_statuses = array(
-        'submitted',
-        'in_review',
-        'needs_info',
-        'waiting_for_customer',
-        'customer_replied',
-        'waiting_for_staff',
-        'resolved',
-        'closed',
-    );
 
     public static function init() {
         add_action('init', array(__CLASS__, 'ensure_schema'));
@@ -90,6 +84,62 @@ class PAXdesign_Cybercrime_Tickets {
         }
 
         update_option('paxdesign_cybercrime_tickets_schema_version', self::SCHEMA_VERSION, false);
+
+        if (get_option('paxdesign_cybercrime_status_migrated') !== self::SCHEMA_VERSION) {
+            $wpdb->query("UPDATE `$reports` SET status = 'in_review' WHERE status IN ('customer_replied', 'waiting_for_staff')");
+            $wpdb->query("UPDATE `$reports` SET status = 'waiting_for_customer' WHERE status = 'needs_info'");
+            update_option('paxdesign_cybercrime_status_migrated', self::SCHEMA_VERSION, false);
+        }
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function workflow_statuses() {
+        return self::$workflow_statuses;
+    }
+
+    /**
+     * @return array<string, array{label: string, description: string}>
+     */
+    public static function workflow_steps() {
+        return array(
+            'submitted' => array(
+                'label'       => __('New', 'paxdesign-booking'),
+                'description' => __('New report received', 'paxdesign-booking'),
+            ),
+            'in_review' => array(
+                'label'       => __('In Review', 'paxdesign-booking'),
+                'description' => __('Team is analyzing the report', 'paxdesign-booking'),
+            ),
+            'waiting_for_customer' => array(
+                'label'       => __('Waiting for Customer', 'paxdesign-booking'),
+                'description' => __('Customer information is required', 'paxdesign-booking'),
+            ),
+            'resolved' => array(
+                'label'       => __('Resolved', 'paxdesign-booking'),
+                'description' => __('Issue solved', 'paxdesign-booking'),
+            ),
+            'closed' => array(
+                'label'       => __('Closed', 'paxdesign-booking'),
+                'description' => __('Ticket completed', 'paxdesign-booking'),
+            ),
+        );
+    }
+
+    /**
+     * @param string $status
+     * @return string
+     */
+    public static function normalize_workflow_status($status) {
+        $status = sanitize_key((string) $status);
+        if (isset(self::$legacy_status_map[$status])) {
+            return (string) self::$legacy_status_map[$status];
+        }
+        if (in_array($status, self::$workflow_statuses, true)) {
+            return $status;
+        }
+        return 'submitted';
     }
 
     /**
@@ -97,34 +147,118 @@ class PAXdesign_Cybercrime_Tickets {
      * @return bool
      */
     public static function is_active_status($status) {
-        return in_array(sanitize_key((string) $status), self::$active_statuses, true);
+        return !in_array(self::normalize_workflow_status($status), self::$closed_statuses, true);
+    }
+
+    /**
+     * Admin-facing workflow label.
+     *
+     * @param string $status
+     * @return string
+     */
+    public static function status_label($status) {
+        $status = self::normalize_workflow_status($status);
+        $steps = self::workflow_steps();
+        if (isset($steps[$status]['label'])) {
+            return (string) $steps[$status]['label'];
+        }
+        return ucfirst(str_replace('_', ' ', $status));
+    }
+
+    /**
+     * Customer portal badge key (4 simple states).
+     *
+     * @param string $status
+     * @return string under_review|waiting_for_customer|resolved|closed
+     */
+    public static function customer_status_key($status) {
+        $status = self::normalize_workflow_status($status);
+        switch ($status) {
+            case 'waiting_for_customer':
+                return 'waiting_for_customer';
+            case 'resolved':
+                return 'resolved';
+            case 'closed':
+                return 'closed';
+            default:
+                return 'under_review';
+        }
     }
 
     /**
      * @param string $status
      * @return string
      */
-    public static function status_label($status) {
-        $status = sanitize_key((string) $status);
-        switch ($status) {
-            case 'submitted':
-                return __('New', 'paxdesign-booking');
-            case 'in_review':
-                return __('In Progress', 'paxdesign-booking');
-            case 'needs_info':
-            case 'waiting_for_customer':
-                return __('Waiting for Customer', 'paxdesign-booking');
-            case 'customer_replied':
-                return __('Customer Replied', 'paxdesign-booking');
-            case 'waiting_for_staff':
-                return __('Waiting for Staff', 'paxdesign-booking');
-            case 'resolved':
-                return __('Resolved', 'paxdesign-booking');
-            case 'closed':
-                return __('Closed', 'paxdesign-booking');
-            default:
-                return ucfirst(str_replace('_', ' ', $status));
+    public static function admin_status_badge_class($status) {
+        $status = self::normalize_workflow_status($status);
+        return 'pax-cc-status pax-cc-status--' . $status;
+    }
+
+    /**
+     * @param array<string, mixed>      $row
+     * @param array<int, array<mixed>>|null $timeline
+     * @return array<int, array<string, string>>
+     */
+    public static function build_activity_indicators($row, $timeline = null) {
+        $indicators = array();
+        $raw_status = sanitize_key((string) ($row['status'] ?? ''));
+        if (isset(self::$legacy_status_map[$raw_status])) {
+            if ($raw_status === 'customer_replied') {
+                $indicators[] = array(
+                    'key'   => 'customer_replied',
+                    'label' => __('Customer replied — review pending', 'paxdesign-booking'),
+                );
+            } elseif ($raw_status === 'waiting_for_staff') {
+                $indicators[] = array(
+                    'key'   => 'waiting_for_staff',
+                    'label' => __('Waiting for staff action', 'paxdesign-booking'),
+                );
+            }
         }
+
+        if (!is_array($timeline) || empty($timeline)) {
+            return $indicators;
+        }
+
+        $last_customer = null;
+        $last_staff = null;
+        foreach (array_reverse($timeline) as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            $author = sanitize_key((string) ($entry['author_type'] ?? ''));
+            if ($author === 'customer' && $last_customer === null) {
+                $last_customer = $entry;
+            }
+            if ($author === 'staff' && $last_staff === null) {
+                $last_staff = $entry;
+            }
+            if ($last_customer !== null && $last_staff !== null) {
+                break;
+            }
+        }
+
+        if ($last_customer !== null) {
+            $customer_at = (string) ($last_customer['created_at'] ?? '');
+            $staff_at = $last_staff ? (string) ($last_staff['created_at'] ?? '') : '';
+            if ($staff_at === '' || $customer_at > $staff_at) {
+                $indicators[] = array(
+                    'key'   => 'latest_customer_reply',
+                    'label' => __('Latest activity: customer reply', 'paxdesign-booking'),
+                    'at'    => $customer_at,
+                );
+            }
+        }
+
+        return $indicators;
+    }
+
+    /**
+     * @param string $status
+     * @return bool
+     */
+    public static function is_valid_workflow_status($status) {
+        return in_array(self::normalize_workflow_status($status), self::$workflow_statuses, true);
     }
 
     /**
@@ -141,19 +275,19 @@ class PAXdesign_Cybercrime_Tickets {
         $table = PAXdesign_Cybercrime_Intake::table_name();
         $user = get_user_by('id', $user_id);
         $email = ($user instanceof WP_User) ? sanitize_email($user->user_email) : '';
-        $active = array_map('sanitize_key', self::$active_statuses);
-        $placeholders = implode(',', array_fill(0, count($active), '%s'));
+        $closed = array_map('sanitize_key', self::$closed_statuses);
+        $placeholders = implode(',', array_fill(0, count($closed), '%s'));
 
         if ($email !== '') {
-            $sql = "SELECT * FROM $table WHERE status IN ($placeholders)
+            $sql = "SELECT * FROM $table WHERE status NOT IN ($placeholders)
                     AND (customer_user_id = %d OR (customer_user_id = 0 AND reporter_email = %s))
                     ORDER BY created_at DESC LIMIT 1";
-            $params = array_merge($active, array($user_id, $email));
+            $params = array_merge($closed, array($user_id, $email));
             $row = $wpdb->get_row($wpdb->prepare($sql, $params), ARRAY_A);
         } else {
-            $sql = "SELECT * FROM $table WHERE status IN ($placeholders) AND customer_user_id = %d
+            $sql = "SELECT * FROM $table WHERE status NOT IN ($placeholders) AND customer_user_id = %d
                     ORDER BY created_at DESC LIMIT 1";
-            $params = array_merge($active, array($user_id));
+            $params = array_merge($closed, array($user_id));
             $row = $wpdb->get_row($wpdb->prepare($sql, $params), ARRAY_A);
         }
 
@@ -229,11 +363,16 @@ class PAXdesign_Cybercrime_Tickets {
             $attachments = array();
         }
 
+        $raw_status = sanitize_key((string) ($row['status'] ?? ''));
+        $workflow_status = self::normalize_workflow_status($raw_status);
+
         $out = array(
             'reference_id'    => (string) ($row['reference_id'] ?? ''),
-            'status'          => (string) ($row['status'] ?? ''),
-            'status_label'    => self::status_label((string) ($row['status'] ?? '')),
-            'is_active'       => self::is_active_status((string) ($row['status'] ?? '')),
+            'status'          => $workflow_status,
+            'status_raw'      => $raw_status !== $workflow_status ? $raw_status : '',
+            'status_label'    => self::status_label($raw_status),
+            'customer_status' => self::customer_status_key($raw_status),
+            'is_active'       => self::is_active_status($raw_status),
             'category'        => (string) ($row['category'] ?? ''),
             'category_label'  => PAXdesign_Cybercrime_Intake::category_label((string) ($row['category'] ?? '')),
             'urgency'         => (string) ($row['urgency'] ?? ''),
@@ -267,6 +406,9 @@ class PAXdesign_Cybercrime_Tickets {
                     200,
                     $customer_display_name
                 );
+            }
+            if ($timeline_audience === 'admin') {
+                $out['activity_indicators'] = self::build_activity_indicators($row, $out['timeline']);
             }
         }
 
@@ -452,7 +594,7 @@ class PAXdesign_Cybercrime_Tickets {
         } elseif ($author === 'staff') {
             $status_key = 'waiting_for_customer';
         } elseif ($author === 'customer') {
-            $status_key = 'customer_replied';
+            $status_key = 'in_review';
         } elseif ($event === 'submitted') {
             $status_key = 'submitted';
         }
@@ -605,7 +747,8 @@ class PAXdesign_Cybercrime_Tickets {
     public static function update_status($reference_id, $new_status, $actor_user_id = 0, $summary = '', $notify_customer = true, $log_timeline = true) {
         $reference_id = sanitize_text_field((string) $reference_id);
         $new_status = sanitize_key((string) $new_status);
-        if ($reference_id === '' || !in_array($new_status, self::$staff_statuses, true)) {
+        $new_status = self::normalize_workflow_status($new_status);
+        if ($reference_id === '' || !in_array($new_status, self::$workflow_statuses, true)) {
             return new WP_Error('invalid_status', __('Invalid status.', 'paxdesign-booking'));
         }
 
@@ -614,7 +757,7 @@ class PAXdesign_Cybercrime_Tickets {
             return new WP_Error('not_found', __('Report not found.', 'paxdesign-booking'));
         }
 
-        $old_status = (string) ($row['status'] ?? '');
+        $old_status = self::normalize_workflow_status((string) ($row['status'] ?? ''));
         if ($old_status === $new_status) {
             return true;
         }
@@ -805,7 +948,7 @@ class PAXdesign_Cybercrime_Tickets {
             return new WP_Error('save_failed', __('Could not save your message.', 'paxdesign-booking'));
         }
 
-        self::update_status($reference_id, 'customer_replied', $user_id, '', false, false);
+        self::update_status($reference_id, 'in_review', $user_id, '', false, false);
         self::notify_staff_reply($row, $reference_id, $body);
 
         return $message_id;
@@ -901,7 +1044,7 @@ class PAXdesign_Cybercrime_Tickets {
             return new WP_Error('save_failed', __('Could not store email reply.', 'paxdesign-booking'));
         }
 
-        self::update_status($reference_id, 'customer_replied', $user_id, '', false, false);
+        self::update_status($reference_id, 'in_review', $user_id, '', false, false);
         self::notify_staff_reply($row, $reference_id, $body);
 
         return array('reference_id' => $reference_id, 'message_id' => $message_id);

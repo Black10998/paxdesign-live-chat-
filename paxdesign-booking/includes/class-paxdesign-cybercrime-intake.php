@@ -606,14 +606,18 @@ class PAXdesign_Cybercrime_Intake {
      * @return string
      */
     public static function status_label($status) {
+        if (class_exists('PAXdesign_Cybercrime_Tickets')) {
+            return PAXdesign_Cybercrime_Tickets::status_label($status);
+        }
         $status = sanitize_key((string) $status);
         switch ($status) {
             case 'submitted':
-                return __('Submitted — awaiting review', 'paxdesign-booking');
+                return __('New', 'paxdesign-booking');
             case 'in_review':
-                return __('In review', 'paxdesign-booking');
+                return __('In Review', 'paxdesign-booking');
             case 'needs_info':
-                return __('Additional information requested', 'paxdesign-booking');
+            case 'waiting_for_customer':
+                return __('Waiting for Customer', 'paxdesign-booking');
             case 'resolved':
                 return __('Resolved', 'paxdesign-booking');
             case 'closed':

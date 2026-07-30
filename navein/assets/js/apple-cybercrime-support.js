@@ -96,7 +96,7 @@
     if (!activeStatusBadgeEl || !activeStatusLabelEl || !report) {
       return;
     }
-    var badgeKey = statusBadgeKey(report.status || '');
+    var badgeKey = report.customer_status || statusBadgeKey(report.status || '');
     var badges = i18nBundle().statusBadges || {};
     var badge = badges[badgeKey] || {};
     var label = (badge.label && badge.label[getLang()]) || report.status || '';

@@ -464,9 +464,8 @@ return array(
 		),
 	),
 	'status_badge_map' => array(
-		'under_review'         => array( 'submitted', 'in_review', 'customer_replied' ),
-		'waiting_for_customer' => array( 'needs_info', 'waiting_for_customer' ),
-		'escalated'            => array( 'waiting_for_staff' ),
+		'under_review'         => array( 'submitted', 'in_review' ),
+		'waiting_for_customer' => array( 'waiting_for_customer', 'needs_info' ),
 		'resolved'             => array( 'resolved' ),
 		'closed'               => array( 'closed' ),
 	),
@@ -481,15 +480,8 @@ return array(
 		'waiting_for_customer' => array(
 			'emoji' => '🔵',
 			'label' => array(
-				'ar' => 'بانتظار العميل',
-				'de' => 'Wartet auf Kunden',
-			),
-		),
-		'escalated' => array(
-			'emoji' => '🟣',
-			'label' => array(
-				'ar' => 'تم التصعيد',
-				'de' => 'Eskaliert',
+				'ar' => 'بانتظار ردك',
+				'de' => 'Wartet auf Ihre Antwort',
 			),
 		),
 		'resolved' => array(
