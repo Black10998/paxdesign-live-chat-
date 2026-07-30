@@ -311,6 +311,29 @@
     }
   }
 
+  function getReturnToParam() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      var returnTo = params.get('return_to') || '';
+      if (!returnTo) return '';
+      if (returnTo.charAt(0) === '/') {
+        return returnTo;
+      }
+      var url = new URL(returnTo, window.location.origin);
+      if (url.origin === window.location.origin) {
+        return url.pathname + url.search + url.hash;
+      }
+    } catch (e) {}
+    return '';
+  }
+
+  function redirectAfterAuthSuccess() {
+    var returnTo = getReturnToParam();
+    if (!returnTo) return false;
+    window.location.href = returnTo;
+    return true;
+  }
+
   function homePageUrl() {
     return C.homeUrl || '/';
   }
@@ -956,7 +979,7 @@
   function appleWebStartUrl() {
     var base = C.appleStartUrl || ((C.restUrl || '') + '/auth/apple/start');
     if (!base) return '';
-    var returnTo = window.location.pathname + window.location.search + '#/overview';
+    var returnTo = getReturnToParam() || (window.location.pathname + window.location.search + '#/overview');
     var join = base.indexOf('?') >= 0 ? '&' : '?';
     return base + join + 'return_to=' + encodeURIComponent(returnTo);
   }
@@ -1140,6 +1163,9 @@
         applySession({ user: data.user || user, nonce: data.nonce }, { reason: 'login', broadcast: true });
         var inline = finishAuthSuccess();
         if (!inline && isAuthPage()) {
+          if (redirectAfterAuthSuccess()) {
+            return;
+          }
           updateAuthPagePanels();
         }
         if (!inline && !isAuthPage()) notify(data.message || 'Logged in.', 'info');
@@ -1970,11 +1996,17 @@
         return;
       }
       if (user.logged_in) {
+        if (redirectAfterAuthSuccess()) {
+          return;
+        }
         openAccountPanel();
       } else if (!isAuthPage()) {
         navigateToAuthPage('login');
       }
       cleanUrl();
+    }
+    if (isAuthPage() && user.logged_in && getReturnToParam()) {
+      redirectAfterAuthSuccess();
     }
   }
 
