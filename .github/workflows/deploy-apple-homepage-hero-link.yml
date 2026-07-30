@@ -1,0 +1,71 @@
+name: Deploy Apple Homepage Hero Link Fix
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/deploy-apple-homepage-hero-link'
+      - '.github/workflows/deploy-apple-homepage-hero-link.yml'
+      - 'navein/template-parts/pages/homepage.php'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy homepage template
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p $(printf '%q' "$THEME/template-parts/pages")"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/pages/homepage.php \
+            "${REMOTE}:${THEME}/template-parts/pages/"
+
+          ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp cache flush || true)"
+
+          echo "Deployed homepage hero link fix"
+
+      - name: Verify hero button links to pricing page
+        run: |
+          set -euo pipefail
+          HOME_HTML=$(curl -sS "https://paxdesign.at/?n=$(date +%s)")
+          echo "$HOME_HTML" | grep -Fq 'class="pax-home-btn pax-home-btn--light" href="https://paxdesign.at/preise/"'
+          echo "$HOME_HTML" | grep -Fq '>Leistungen entdecken</a>'
+          echo "Hero button pricing link verification passed."
