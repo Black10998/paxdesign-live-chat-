@@ -99,6 +99,50 @@ final class AuthStore: ObservableObject {
         client.useDefaultServer()
         let response = try await client.authMobileLogin(login: login, password: password)
 
+        try await completeMobileLogin(response: response)
+
+        if !isBootstrapping {
+            NotificationCenter.default.post(name: .paxInteractiveLoginSucceeded, object: nil)
+        }
+    }
+
+    func loginWithApple(
+        identityToken: String,
+        authorizationCode: String?,
+        fullName: PersonNameComponents?,
+        email: String?
+    ) async throws {
+        let client = CustomerAPIClient()
+        client.useDefaultServer()
+        var payload: [String: String] = [
+            "identity_token": identityToken,
+            "device_label": "PAXDesign iOS",
+        ]
+        if let authorizationCode, !authorizationCode.isEmpty {
+            payload["authorization_code"] = authorizationCode
+        }
+        if let email, !email.isEmpty {
+            payload["email"] = email
+        }
+        if let given = fullName?.givenName, !given.isEmpty {
+            payload["given_name"] = given
+        }
+        if let family = fullName?.familyName, !family.isEmpty {
+            payload["family_name"] = family
+        }
+        if let given = fullName?.givenName, let family = fullName?.familyName {
+            payload["name"] = "\(given) \(family)".trimmingCharacters(in: .whitespaces)
+        }
+
+        let response = try await client.authAppleLogin(payload: payload)
+        try await completeMobileLogin(response: response)
+
+        if !isBootstrapping {
+            NotificationCenter.default.post(name: .paxInteractiveLoginSucceeded, object: nil)
+        }
+    }
+
+    private func completeMobileLogin(response: MobileLoginResponse) async throws {
         guard response.success == true,
               let mode = response.session_mode,
               let userLogin = response.username,
@@ -119,10 +163,6 @@ final class AuthStore: ObservableObject {
         } else {
             try await loginCustomer()
             persistCredentials(mode: .customer)
-        }
-
-        if !isBootstrapping {
-            NotificationCenter.default.post(name: .paxInteractiveLoginSucceeded, object: nil)
         }
     }
 
@@ -267,13 +307,29 @@ final class AuthStore: ObservableObject {
         unauthorizedRecoveryTask?.cancel()
         unauthorizedRecoveryTask = nil
         let apiClient = api
+        let customerToken = CustomerPushService.shared.deviceToken
         let tokenToUnregister = PushService.shared.deviceToken
         let logoutUUID = appPasswordUUID
         let logoutUser = username
         let logoutPass = appPassword
+        let wasCustomer = isCustomerSession
 
         DeviceSessionService.shared.stop()
+        CustomerNotificationsBadgeStore.shared.resetForLogout()
         PlatformSyncService.shared.reset()
+
+        if wasCustomer, let token = customerToken, !logoutUser.isEmpty, !logoutPass.isEmpty {
+            let bridgeAuth = CustomerAuthStore()
+            bridgeAuth.siteURL = AppServerConfig.siteURL
+            bridgeAuth.username = logoutUser
+            bridgeAuth.appPassword = logoutPass
+            let client = CustomerAPIClient()
+            client.configure(baseURL: AppServerConfig.siteURL, auth: bridgeAuth)
+            Task {
+                try? await client.unregisterPush(token: token, deviceID: PAXDeviceInfo.deviceId)
+            }
+        }
+
         invalidateStoredSession(keepFormFields: false)
         PushDiagnosticsStore.shared.recordServerRegistration(success: false, tokenPrefix: nil, error: "logged out")
 

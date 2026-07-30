@@ -24,6 +24,12 @@ enum PAXTheme {
     static var textTertiary: Color {
         cachedIsDark ? Color(UIColor.tertiaryLabel) : Color(red: 0.28, green: 0.30, blue: 0.34)
     }
+    static var link: Color {
+        cachedIsDark ? accent : Color(uiColor: .systemBlue)
+    }
+    static var onAccent: Color {
+        PAXBrand.accentLabelColor(isDark: cachedIsDark)
+    }
     static var icon: Color { .primary }
     static var iconSecondary: Color { textSecondary }
     static var iconTertiary: Color { textTertiary }

@@ -622,14 +622,91 @@ class PAXdesign_Auth_Native {
 			);
 		}
 
+		return self::mobile_login_response_for_user( (int) $signed->ID, $session_mode, $app, $role );
+	}
+
+	/**
+	 * Start a mobile session for an already-authenticated user (e.g. Sign in with Apple).
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function mobile_login_for_user( int $user_id, string $device_label = '' ): array {
+		$user_id = absint( $user_id );
+		if ( $user_id <= 0 ) {
+			return [ 'success' => false, 'error' => 'invalid_user', 'message' => 'Invalid account.' ];
+		}
+
+		$user = get_user_by( 'id', $user_id );
+		if ( ! $user instanceof WP_User ) {
+			return [ 'success' => false, 'error' => 'invalid_user', 'message' => 'Invalid account.' ];
+		}
+
+		if ( ! PAXdesign_Customers::is_login_allowed( $user_id ) ) {
+			return [
+				'success' => false,
+				'error'   => 'suspended',
+				'message' => 'Your account has been suspended. Please contact support.',
+			];
+		}
+
+		$session_mode = self::resolve_mobile_session_mode( $user_id );
+		if ( $session_mode === 'customer' && ! self::is_email_verified( $user_id ) ) {
+			return [
+				'success' => false,
+				'error'   => 'email_unverified',
+				'message' => 'Please verify your email before signing in.',
+			];
+		}
+
+		$app = self::create_mobile_application_password( $user_id, $device_label );
+		if ( is_wp_error( $app ) ) {
+			if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+				PAXdesign_Auth_Log::event( 'mobile_login_failed', [ 'user_id' => $user_id, 'reason' => 'app_password_failed' ], 'error' );
+			}
+			return [
+				'success' => false,
+				'error'   => 'session_failed',
+				'message' => 'Could not start a secure session. Please try again.',
+			];
+		}
+
+		if ( $session_mode === 'customer' ) {
+			PAXdesign_Customers::record_login( $user_id );
+			do_action( 'pdx_user_logged_in', $user_id );
+		}
+
+		$role = self::resolve_portal_role( $user_id );
+		if ( class_exists( 'PDX_Audit' ) ) {
+			PDX_Audit::log( 'auth', 'mobile_login', [ 'user_id' => $user_id, 'session_mode' => $session_mode, 'role' => $role, 'provider' => 'apple' ] );
+		}
+		if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
+			PAXdesign_Auth_Log::event(
+				'mobile_login_success',
+				[ 'user_id' => $user_id, 'session_mode' => $session_mode, 'role' => $role, 'provider' => 'apple' ]
+			);
+		}
+
+		return self::mobile_login_response_for_user( $user_id, $session_mode, $app, $role );
+	}
+
+	/**
+	 * @param array{password:string,uuid:string} $app
+	 * @return array<string, mixed>
+	 */
+	private static function mobile_login_response_for_user( int $user_id, string $session_mode, array $app, string $role ): array {
+		$user = get_user_by( 'id', $user_id );
+		if ( ! $user instanceof WP_User ) {
+			return [ 'success' => false, 'error' => 'invalid_user', 'message' => 'Invalid account.' ];
+		}
+
 		return [
 			'success'           => true,
 			'message'           => 'Signed in successfully.',
 			'session_mode'      => $session_mode,
-			'username'          => $signed->user_login,
+			'username'          => $user->user_login,
 			'app_password'      => $app['password'],
 			'app_password_uuid' => $app['uuid'],
-			'user'              => self::user_payload( (int) $signed->ID ),
+			'user'              => self::user_payload( $user_id ),
 			'role'              => $role,
 		];
 	}

@@ -63,6 +63,10 @@ final class CustomerAPIClient: ObservableObject {
         )
     }
 
+    func authAppleLogin(payload: [String: String]) async throws -> MobileLoginResponse {
+        try await publicPost("/auth/apple-login", json: payload, as: MobileLoginResponse.self)
+    }
+
     func authMobileLogout(appPasswordUUID: String) async throws {
         guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
         guard let url = endpointURL("/auth/mobile-logout") else { throw CustomerAPIError.invalidURL }
@@ -110,6 +114,18 @@ final class CustomerAPIClient: ObservableObject {
             body[key] = value
         }
         _ = try await requestJSON(path: "/customer/push/register", method: "POST", json: body, as: CustomerEmptyResponse.self)
+    }
+
+    func unregisterPush(token: String, deviceID: String) async throws {
+        _ = try await requestJSON(
+            path: "/customer/push/unregister",
+            method: "POST",
+            json: [
+                "token": token,
+                "device_id": deviceID,
+            ],
+            as: CustomerEmptyResponse.self
+        )
     }
 
     func fetchDevices() async throws -> CustomerDevicesResponse {

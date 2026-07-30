@@ -34,6 +34,12 @@ final class CustomerNotificationBadgeTests: XCTestCase {
         XCTAssertTrue(CustomerNotificationReadStore.isRead(userId: 20, notificationId: 6))
     }
 
+    func testBadgeStoreResetsOnLogout() {
+        CustomerNotificationsBadgeStore.shared.bindUser(42)
+        CustomerNotificationsBadgeStore.shared.resetForLogout()
+        XCTAssertEqual(CustomerNotificationsBadgeStore.shared.unreadCount, 0)
+    }
+
     func testReadStoreSurvivesReloadFromUserDefaults() {
         CustomerNotificationReadStore.markRead(userId: 5, ids: [88])
         let stored = UserDefaults.standard.dictionary(forKey: storageKey) as? [String: [Int]]

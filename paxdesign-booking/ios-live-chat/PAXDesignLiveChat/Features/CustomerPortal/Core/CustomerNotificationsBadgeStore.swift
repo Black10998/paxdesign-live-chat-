@@ -58,14 +58,23 @@ final class CustomerNotificationsBadgeStore: ObservableObject {
 
     func bindUser(_ userId: Int) {
         guard userId > 0 else { return }
+        if activeUserId != 0 && activeUserId != userId {
+            applyUnreadCount(0)
+        }
         activeUserId = userId
+    }
+
+    func resetForLogout() {
+        refreshTask?.cancel()
+        refreshTask = nil
+        activeUserId = 0
+        applyUnreadCount(0)
     }
 
     func refresh(api: CustomerAPIClient) async {
         let userId = AuthStore.shared.customerProfile?.id ?? activeUserId
         guard userId > 0 else {
-            unreadCount = 0
-            PAXApplicationBadge.clear()
+            resetForLogout()
             return
         }
         activeUserId = userId

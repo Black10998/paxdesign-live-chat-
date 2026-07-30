@@ -26,7 +26,7 @@ struct PAXField: View {
         VStack(alignment: .leading, spacing: 6) {
             Label { Text(title) } icon: { PAXIcon(icon) }
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(PAXTheme.textSecondary)
 
             Group {
                 if isSecure {

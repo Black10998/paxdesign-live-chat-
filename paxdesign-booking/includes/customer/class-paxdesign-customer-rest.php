@@ -370,6 +370,12 @@ class PAXdesign_Customer_REST {
             'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
         ));
 
+        register_rest_route(self::NS, '/customer/push/unregister', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'unregister_push'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
         register_rest_route(self::NS, '/customer/devices', array(
             'methods'             => WP_REST_Server::READABLE,
             'callback'            => array(__CLASS__, 'list_devices'),
@@ -906,6 +912,7 @@ class PAXdesign_Customer_REST {
         if ($token === '' || $device_id === '') {
             return new WP_Error('invalid_device', __('Device token and device ID are required.', 'paxdesign-booking'), array('status' => 400));
         }
+        self::purge_customer_push_token_from_other_users($token, $uid);
         $devices = self::customer_devices_meta($uid);
         $key = 'did_' . $device_id;
         $existing = isset($devices[$key]) && is_array($devices[$key]) ? $devices[$key] : array();
@@ -951,6 +958,36 @@ class PAXdesign_Customer_REST {
             );
         }
         return rest_ensure_response(array('success' => true, 'device_id' => $device_id));
+    }
+
+    public static function unregister_push(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $device_id = sanitize_text_field($request->get_param('device_id') ?? '');
+        $token = sanitize_text_field($request->get_param('token') ?? '');
+        if ($device_id === '' && $token === '') {
+            return new WP_Error('invalid_device', __('Device ID or token is required.', 'paxdesign-booking'), array('status' => 400));
+        }
+
+        $devices = self::customer_devices_meta($uid);
+        $changed = false;
+        foreach ($devices as $key => $device) {
+            if (!is_array($device)) {
+                continue;
+            }
+            $matches_device = $device_id !== '' && isset($device['device_id']) && (string) $device['device_id'] === $device_id;
+            $matches_token = $token !== '' && isset($device['token']) && (string) $device['token'] === $token;
+            if (!$matches_device && !$matches_token) {
+                continue;
+            }
+            unset($devices[$key]);
+            $changed = true;
+        }
+
+        if ($changed) {
+            update_user_meta($uid, PAXdesign_Customer_Notifications::USER_META_DEVICES, $devices);
+        }
+
+        return rest_ensure_response(array('success' => true));
     }
 
     public static function list_devices(WP_REST_Request $request) {
@@ -1011,6 +1048,56 @@ class PAXdesign_Customer_REST {
     private static function customer_devices_meta($user_id) {
         $devices = get_user_meta(absint($user_id), PAXdesign_Customer_Notifications::USER_META_DEVICES, true);
         return is_array($devices) ? $devices : array();
+    }
+
+    /**
+     * Ensure a physical device token is linked to only one customer account.
+     */
+    private static function purge_customer_push_token_from_other_users($token, $current_user_id) {
+        global $wpdb;
+        $token = sanitize_text_field((string) $token);
+        $current_user_id = absint($current_user_id);
+        if ($token === '' || $current_user_id <= 0) {
+            return;
+        }
+
+        $meta_key = PAXdesign_Customer_Notifications::USER_META_DEVICES;
+        $like = '%' . $wpdb->esc_like($token) . '%';
+        $rows = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT user_id, meta_value FROM {$wpdb->usermeta} WHERE meta_key = %s AND meta_value LIKE %s",
+                $meta_key,
+                $like
+            ),
+            ARRAY_A
+        );
+        if (!is_array($rows)) {
+            return;
+        }
+
+        foreach ($rows as $row) {
+            $user_id = absint($row['user_id'] ?? 0);
+            if ($user_id <= 0 || $user_id === $current_user_id) {
+                continue;
+            }
+            $devices = maybe_unserialize($row['meta_value']);
+            if (!is_array($devices)) {
+                continue;
+            }
+            $changed = false;
+            foreach ($devices as $key => $device) {
+                if (!is_array($device)) {
+                    continue;
+                }
+                if ((string) ($device['token'] ?? '') === $token) {
+                    unset($devices[$key]);
+                    $changed = true;
+                }
+            }
+            if ($changed) {
+                update_user_meta($user_id, $meta_key, $devices);
+            }
+        }
     }
 
     /**

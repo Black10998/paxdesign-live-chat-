@@ -63,6 +63,11 @@ class PAXdesign_Auth_REST {
             'callback'            => array(__CLASS__, 'mobile_login'),
             'permission_callback' => $pub,
         ));
+        register_rest_route(self::NS, '/auth/apple-login', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'apple_login'),
+            'permission_callback' => $pub,
+        ));
         register_rest_route(self::NS, '/auth/mobile-logout', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'mobile_logout'),
@@ -193,6 +198,36 @@ class PAXdesign_Auth_REST {
         if (empty($result['success'])) {
             $error = (string) ($result['error'] ?? '');
             if (in_array($error, array('invalid_credentials', 'email_unverified', 'suspended'), true)) {
+                $status = 401;
+            } elseif ($error === 'locked') {
+                $status = 429;
+            } else {
+                $status = 400;
+            }
+        }
+        return new WP_REST_Response($result, $status);
+    }
+
+    public static function apple_login(WP_REST_Request $request) {
+        $limited = self::rate_limit('login');
+        if ($limited) {
+            return $limited;
+        }
+        $profile = array(
+            'email'       => sanitize_email((string) $request->get_param('email')),
+            'given_name'  => sanitize_text_field((string) $request->get_param('given_name')),
+            'family_name' => sanitize_text_field((string) $request->get_param('family_name')),
+            'name'        => sanitize_text_field((string) $request->get_param('name')),
+        );
+        $result = PAXdesign_Auth::apple_mobile_login(
+            (string) $request->get_param('identity_token'),
+            sanitize_text_field((string) $request->get_param('device_label')),
+            $profile
+        );
+        $status = 200;
+        if (empty($result['success'])) {
+            $error = (string) ($result['error'] ?? '');
+            if (in_array($error, array('apple_invalid', 'email_unverified', 'suspended', 'email_required'), true)) {
                 $status = 401;
             } elseif ($error === 'locked') {
                 $status = 429;

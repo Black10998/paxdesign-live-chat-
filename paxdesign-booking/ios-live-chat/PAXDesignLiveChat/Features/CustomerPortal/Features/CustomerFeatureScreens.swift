@@ -795,7 +795,7 @@ struct CustomerNotificationsView: View {
                 CustomerNotificationsSkeleton()
             }
         }
-        .task { await load() }
+        .task(id: AuthStore.shared.sessionEpoch) { await load() }
         .refreshable { await load() }
     }
 
@@ -805,7 +805,7 @@ struct CustomerNotificationsView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(filter == value ? PAXTheme.accent : PAXTheme.surfaceElevated)
-            .foregroundStyle(filter == value ? Color.white : PAXTheme.textPrimary)
+            .foregroundStyle(filter == value ? PAXTheme.onAccent : PAXTheme.textPrimary)
             .clipShape(Capsule())
     }
 

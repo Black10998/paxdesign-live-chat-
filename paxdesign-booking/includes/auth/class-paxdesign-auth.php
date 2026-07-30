@@ -65,6 +65,10 @@ class PAXdesign_Auth {
         return self::engine()::mobile_login($login, $password, $device_label);
     }
 
+    public static function apple_mobile_login($identity_token, $device_label = '', $profile = array()) {
+        return PAXdesign_Auth_Apple::mobile_login($identity_token, $device_label, is_array($profile) ? $profile : array());
+    }
+
     public static function mobile_logout($user_id, $uuid) {
         return self::engine()::mobile_logout((int) $user_id, $uuid);
     }

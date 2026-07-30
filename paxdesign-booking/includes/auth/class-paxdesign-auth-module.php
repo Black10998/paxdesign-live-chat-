@@ -13,6 +13,7 @@ class PAXdesign_Auth_Module {
         $base = PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/auth/';
         require_once $base . 'class-paxdesign-customers.php';
         require_once $base . 'class-paxdesign-auth-native.php';
+        require_once $base . 'class-paxdesign-auth-apple.php';
         require_once $base . 'class-paxdesign-auth.php';
         require_once $base . 'class-paxdesign-auth-rest.php';
         require_once $base . 'class-paxdesign-auth-frontend.php';

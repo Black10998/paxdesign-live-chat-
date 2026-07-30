@@ -3,6 +3,9 @@ import SwiftUI
 /// Pixel-accurate reproduction of the PAXdesign website header logo animation
 /// (`Paxdesign_Dtr_Header_Logo` v1.6.0).
 struct PAXAnimatedLogoView: View {
+    private let paxColor = Color(red: 204 / 255, green: 1, blue: 0)
+
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Matches website `--paxlogo-mark-w: clamp(118px, 44vw, 168px)` on mobile.
@@ -13,8 +16,6 @@ struct PAXAnimatedLogoView: View {
     private let revealDuration: TimeInterval = 0.45
     private let paxRevealDelay: TimeInterval = 0.12
     private let designRevealDelay: TimeInterval = 0.2
-    private let paxColor = Color(red: 204 / 255, green: 1, blue: 0)
-    private let designColor = Color.white
 
     @State private var symbolIndex = 0
     @State private var isMorphing = false
@@ -25,10 +26,14 @@ struct PAXAnimatedLogoView: View {
 
     private var iconSize: CGFloat { markWidth * 0.128 }
     private var wordmarkFontSize: CGFloat { markWidth * (38 / 148) }
+    private var markForeground: Color {
+        colorScheme == .dark ? .white : Color(red: 0.12, green: 0.13, blue: 0.16)
+    }
+    private var designColor: Color { markForeground }
 
     var body: some View {
         HStack(alignment: .center, spacing: max(2, markWidth * 0.02)) {
-            PAXLogoSymbolView(iconIndex: symbolIndex, size: iconSize, isMorphing: isMorphing)
+            PAXLogoSymbolView(iconIndex: symbolIndex, size: iconSize, isMorphing: isMorphing, tint: markForeground)
             wordmark
         }
         .environment(\.layoutDirection, .leftToRight)
@@ -126,6 +131,7 @@ private struct PAXLogoSymbolView: View {
     let iconIndex: Int
     let size: CGFloat
     let isMorphing: Bool
+    var tint: Color = .white
 
     private var strokeWidth: CGFloat { size * 0.065 }
 
@@ -134,9 +140,9 @@ private struct PAXLogoSymbolView: View {
             let scale = min(canvasSize.width, canvasSize.height) / 24
             let stroke = StrokeStyle(lineWidth: strokeWidth, lineCap: .round, lineJoin: .round)
             var strokeContext = context
-            strokeContext.stroke(PAXLogoSymbolPaths.strokedPaths(for: iconIndex, scale: scale), with: .color(.white), style: stroke)
+            strokeContext.stroke(PAXLogoSymbolPaths.strokedPaths(for: iconIndex, scale: scale), with: .color(tint), style: stroke)
             var fillContext = context
-            fillContext.fill(PAXLogoSymbolPaths.filledPaths(for: iconIndex, scale: scale), with: .color(.white))
+            fillContext.fill(PAXLogoSymbolPaths.filledPaths(for: iconIndex, scale: scale), with: .color(tint))
         }
         .frame(width: size, height: size)
         .scaleEffect(isMorphing ? 0.84 : 1)

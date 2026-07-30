@@ -11,6 +11,7 @@ struct PAXAuthHeroView: View {
     let title: String
     let subtitle: String
     var markWidth: CGFloat = 128
+    var showsTitle: Bool = true
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -22,12 +23,15 @@ struct PAXAuthHeroView: View {
         VStack(spacing: 18) {
             heroMark
             VStack(spacing: 8) {
-                Text(title)
-                    .font(.title2.weight(.semibold))
-                    .multilineTextAlignment(.center)
+                if showsTitle {
+                    Text(title)
+                        .font(.title2.weight(.semibold))
+                        .foregroundStyle(PAXTheme.textPrimary)
+                        .multilineTextAlignment(.center)
+                }
                 Text(subtitle)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(PAXTheme.textSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
             }

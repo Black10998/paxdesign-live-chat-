@@ -40,6 +40,7 @@ class PAXdesign_Customer_Notifications {
             'entity_type'     => $entity_type,
             'entity_id'       => $entity_id,
             'deep_link'       => $deep_link,
+            'user_id'         => $user_id,
         )));
         return $id;
     }
@@ -98,6 +99,7 @@ class PAXdesign_Customer_Notifications {
             'category'        => 'news',
             'type'            => 'badge_sync',
             'event'           => 'badge_sync',
+            'user_id'         => $user_id,
         ));
         foreach ($devices as $device) {
             if (empty($device['token']) || !empty($device['revoked'])) {
@@ -171,6 +173,9 @@ class PAXdesign_Customer_Notifications {
         );
         $data['type'] = isset($type_map[$category]) ? $type_map[$category] : 'message';
         $data['event'] = 'customer_' . $category;
+        if (!empty($data['user_id'])) {
+            $data['user_id'] = absint($data['user_id']);
+        }
         if (($data['entity_type'] ?? '') === 'chat' && !empty($data['entity_id'])) {
             $data['session_id'] = (string) $data['entity_id'];
         }

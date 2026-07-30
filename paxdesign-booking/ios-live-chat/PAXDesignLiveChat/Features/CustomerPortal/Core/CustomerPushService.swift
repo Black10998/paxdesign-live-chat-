@@ -130,6 +130,14 @@ final class CustomerPushService: NSObject, ObservableObject {
         let sessionId = (pax["session_id"] as? String) ?? ""
         let deepLink = (pax["deep_link"] as? String) ?? ""
         let notificationId = (pax["notification_id"] as? Int) ?? Int(pax["notification_id"] as? String ?? "") ?? 0
+        let userId = (pax["user_id"] as? Int) ?? Int(pax["user_id"] as? String ?? "") ?? 0
+
+        if userId > 0,
+           let currentUserId = AuthStore.shared.customerProfile?.id,
+           currentUserId > 0,
+           userId != currentUserId {
+            return nil
+        }
 
         let aps = userInfo["aps"] as? [String: Any]
         let alert = aps?["alert"]

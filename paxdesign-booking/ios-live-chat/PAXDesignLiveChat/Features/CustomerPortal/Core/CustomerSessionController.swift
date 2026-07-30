@@ -35,6 +35,7 @@ final class CustomerSessionController: ObservableObject {
         AppLockService.shared.prepareForLogin()
         CustomerPushService.shared.configure(api: api)
         CustomerChatBadgeStore.shared.configure(userId: profile.id)
+        CustomerNotificationsBadgeStore.shared.bindUser(profile.id)
         CustomerChatBadgeSyncService.shared.start(api: api, userId: profile.id)
         Task {
             await CustomerPushService.shared.prepareNotificationRegistration()
@@ -78,6 +79,7 @@ final class CustomerSessionController: ObservableObject {
         CustomerDeviceSessionService.shared.stop()
         CustomerChatBadgeSyncService.shared.stop()
         CustomerChatBadgeStore.shared.resetForLogout()
+        CustomerNotificationsBadgeStore.shared.resetForLogout()
         auth.logout()
     }
 
