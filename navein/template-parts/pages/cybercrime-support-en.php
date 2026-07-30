@@ -1,0 +1,284 @@
+<?php
+/**
+ * English copy for the Cybercrime Support portal (merged into cybercrime-support-data.php).
+ *
+ * @package NaveinTheme
+ */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
+return array(
+	'operator' => array(
+		'service' => 'PAXDesign · Cybercrime Support',
+		'disclaimer' => 'Professional reporting service operated by PAXDesign. This is not a government agency or official portal.',
+	),
+	'portal' => array(
+		'skip' => 'Skip to main content',
+		'eyebrow' => 'Digital reporting portal',
+		'title' => 'Cybercrime Support Portal',
+		'subtitle' => 'A secure, structured channel for cybercrime reports — handled confidentially and followed up professionally.',
+		'status' => array(
+			array( 'label' => 'Confidential' ),
+			array( 'label' => 'Secure transfer' ),
+			array( 'label' => 'Structured process' ),
+		),
+	),
+	'welcome' => array(
+		'heading' => 'Welcome to the reporting portal',
+		'intro' => 'Use this portal to submit a structured report about a cyber incident. The experience follows modern digital service standards: clarity, security, and a clear path from start to submission.',
+		'blocks' => array(
+			array(
+				'title' => 'Purpose of the portal',
+				'body' => 'Cybercrime incidents — fraud, account takeovers, phishing, malware, identity theft — are captured in a unified format so the PAXDesign specialist team can assess and follow up.',
+			),
+			array(
+				'title' => 'How reports are handled',
+				'body' => 'After submission, your report receives a unique reference number. The team reviews information and evidence confidentially; additional verification steps may be requested. Priority depends on urgency and incident type.',
+			),
+			array(
+				'title' => 'What happens after submission',
+				'body' => 'You will receive immediate confirmation with your reference number. The team may contact you via the email or phone provided. For urgent questions, use the global live chat on the site — the assistant recognizes the context of this page.',
+			),
+			array(
+				'title' => 'Why accuracy matters',
+				'body' => 'Accurate information speeds up assessment and reduces delays. False or unverifiable reports may be rejected. Please report only facts to the best of your knowledge.',
+			),
+		),
+		'trust_heading' => 'Service standards',
+		'trust' => array(
+			array(
+				'title' => 'Confidentiality',
+				'text' => 'Your data is handled in a professional, restricted environment.',
+			),
+			array(
+				'title' => 'Security',
+				'text' => 'Encrypted transfer and secure file upload for evidence.',
+			),
+			array(
+				'title' => 'Verification',
+				'text' => 'Identity documents may be requested before processing continues.',
+			),
+			array(
+				'title' => 'Structured process',
+				'text' => 'Four stages: identity, incident, evidence, declaration.',
+			),
+		),
+		'time' => 'Estimated time: 10–15 minutes',
+		'start' => 'Start report',
+		'view_report' => 'View your report',
+	),
+	'active_report' => array(
+		'title' => 'Your current report',
+		'intro' => 'Track the official status of your report and communication with the PAXDesign Support team.',
+		'official_heading' => 'Official communication',
+		'official_note' => 'This is the official record of your report — between you and the support team only. It does not include AI assistant chat.',
+		'status' => 'Status',
+		'reference' => 'Reference number',
+		'category' => 'Category',
+		'submitted' => 'Submitted',
+		'timeline' => 'Updates',
+		'timeline_status' => 'Status',
+		'timeline_sender' => 'Sender',
+		'timeline_subject' => 'Subject',
+		'timeline_when' => 'Date',
+		'attachments' => 'Attachments',
+		'reply_label' => 'Add a message',
+		'reply_placeholder' => 'Write your message to the team…',
+		'reply_submit' => 'Send',
+		'closed_note' => 'This report is closed. New messages cannot be added.',
+		'chat' => 'AI assistant',
+		'ai_heading' => 'AI assistant — questions & guidance',
+		'ai_note' => 'Separate chat for questions and explanations. Not saved as official ticket replies.',
+		'refresh' => 'Refresh',
+	),
+	'login_gate' => array(
+		'title' => 'Sign in required',
+		'message' => 'Cybercrime Support is a secure service for submitting and tracking cybercrime reports. Please sign in to your account to continue with your report.',
+		'button' => 'Sign in to continue',
+		'back' => 'Back to overview',
+	),
+	'steps' => array(
+		array( 'label' => 'Identity' ),
+		array( 'label' => 'Incident' ),
+		array( 'label' => 'Evidence' ),
+		array( 'label' => 'Review' ),
+	),
+	'sections' => array(
+		'identity' => array(
+			'title' => 'Identity & verification',
+			'intro' => 'Enter your legal details as shown on official documents. We may request ID verification before proceeding.',
+		),
+		'incident' => array(
+			'title' => 'Incident information',
+			'intro' => 'Describe what happened accurately. The clearer the details, the faster the assessment.',
+		),
+		'evidence' => array(
+			'title' => 'Upload evidence',
+			'intro' => 'Attach screenshots, documents, or supporting files. Maximum 25 MB per file.',
+		),
+		'review' => array(
+			'title' => 'Declaration & review',
+			'intro' => 'Review your report before submitting. By continuing, you confirm accuracy and accept the processing terms.',
+		),
+	),
+	'fields' => array(
+		'full_name' => array(
+			'label' => 'Full legal name',
+			'placeholder' => 'As on passport or ID',
+		),
+		'email' => array(
+			'label' => 'Email address',
+			'placeholder' => 'name@example.com',
+		),
+		'phone' => array(
+			'label' => 'Phone number',
+			'placeholder' => '+43 …',
+		),
+		'country' => array(
+			'label' => 'Country',
+			'placeholder' => 'Austria',
+		),
+		'identity_document' => array(
+			'label' => 'Identity document (optional)',
+			'hint' => 'PDF or JPG — passport, ID card, or driver\'s license.',
+		),
+		'identity_accuracy' => array(
+			'label' => 'I confirm that the identity information I provided is accurate and correct.',
+		),
+		'category' => array(
+			'label' => 'Incident category',
+		),
+		'incident_date' => array(
+			'label' => 'Incident date',
+		),
+		'incident_time' => array(
+			'label' => 'Time (approximate)',
+		),
+		'platforms' => array(
+			'label' => 'Affected platforms or services',
+			'placeholder' => 'e.g. Gmail, Instagram, Binance, …',
+		),
+		'description' => array(
+			'label' => 'Detailed incident description',
+			'placeholder' => 'Describe what happened, steps you took, and any other parties involved…',
+		),
+		'financial_loss' => array(
+			'label' => 'Estimated financial loss (if any)',
+		),
+		'financial_currency' => array(
+			'label' => 'Currency',
+		),
+		'urgency' => array(
+			'label' => 'Urgency level',
+		),
+		'evidence_screenshots' => array(
+			'label' => 'Screenshots',
+		),
+		'evidence_documents' => array(
+			'label' => 'Documents & files',
+		),
+		'evidence_chats' => array(
+			'label' => 'Chat exports',
+		),
+		'evidence_other' => array(
+			'label' => 'Additional evidence',
+		),
+	),
+	'categories' => array(
+		'account_takeover'      => 'Account takeover',
+		'phishing_fraud'        => 'Phishing / fraud',
+		'identity_theft'        => 'Identity theft',
+		'malware_ransomware'    => 'Malware / ransomware',
+		'social_media_recovery' => 'Social media recovery',
+		'financial_fraud'       => 'Financial fraud',
+		'data_breach'           => 'Data breach',
+		'other'                 => 'Other',
+	),
+	'urgency' => array(
+		'low'      => 'Low',
+		'medium'   => 'Medium',
+		'high'     => 'High',
+		'critical' => 'Critical — active now',
+	),
+	'declarations' => array(
+		'truthful' => 'I confirm that all information is true and accurate to the best of my knowledge.',
+		'false_reports' => 'I understand that false or misleading reports may be rejected.',
+		'verification' => 'I agree that additional verification steps may be required before assistance is provided.',
+	),
+	'actions' => array(
+		'continue'     => 'Continue',
+		'back'         => 'Back',
+		'back_welcome' => 'Back to introduction',
+		'submit'       => 'Submit report',
+		'edit'         => 'Edit',
+	),
+	'workflow' => array(
+		'label' => 'Reporting process',
+	),
+	'success' => array(
+		'title' => 'Report received',
+		'text' => 'Thank you. Your report has been recorded securely. Keep the reference number below — it will be used in any follow-up communication.',
+		'ref_label' => 'Reference number',
+		'chat_button' => 'Ask AI about this report',
+		'chat_hint' => 'Opens live chat with your report context — reference, status, and updates are recognized automatically.',
+	),
+	'errors' => array(
+		'required' => 'This field is required.',
+		'checkbox' => 'This confirmation is required.',
+		'submit'   => 'Could not submit the report. Please try again.',
+	),
+	'status_badges' => array(
+		'under_review' => array(
+			'label' => 'Under Review',
+		),
+		'waiting_for_customer' => array(
+			'label' => 'Waiting for Your Reply',
+		),
+		'resolved' => array(
+			'label' => 'Resolved',
+		),
+		'closed' => array(
+			'label' => 'Closed',
+		),
+	),
+	'timeline_i18n' => array(
+		'support_team' => 'PAXDesign Support Team',
+		'customer_fallback' => 'Customer',
+		'empty_timeline' => 'No updates yet.',
+		'subjects' => array(
+			'report_submitted' => 'Report submitted',
+			'status_submitted' => 'New report',
+			'status_in_review' => 'In progress',
+			'status_needs_info' => 'Additional information requested',
+			'status_waiting_for_customer' => 'Waiting for customer',
+			'status_customer_replied' => 'Customer replied',
+			'status_waiting_for_staff' => 'Waiting for staff',
+			'status_resolved' => 'Resolved',
+			'status_closed' => 'Closed',
+		),
+	),
+	'portal_js' => array(
+		'errors' => array(
+			'config' => 'Configuration error. Please refresh the page.',
+			'submit' => 'Could not submit the report. Please try again.',
+			'reply'  => 'Could not send the message. Please try again.',
+			'login_required' => 'Please sign in to continue.',
+			'active_report_exists' => 'You already have an open report. View your current report to add updates.',
+			'message_required' => 'Message is required.',
+			'report_not_found' => 'Report not found.',
+			'request_rejected' => 'Request rejected.',
+			'rate_limited' => 'Too many attempts. Please wait before trying again.',
+		),
+		'review' => array(
+			'identity' => 'Identity',
+			'incident' => 'Incident',
+			'evidence' => 'Evidence',
+			'files'    => 'file(s)',
+			'none'     => '—',
+			'yes'      => 'Yes',
+			'no'       => 'No',
+		),
+	),
+);

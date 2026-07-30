@@ -14,6 +14,7 @@ class PAXdesign_Customer_Admin {
 
     public static function init() {
         add_action('admin_menu', array(__CLASS__, 'register_menu'), 20);
+        add_action('admin_enqueue_scripts', array(__CLASS__, 'enqueue_cybercrime_admin_assets'));
         add_action('admin_post_paxdesign_customer_save_news', array(__CLASS__, 'handle_save_news'));
         add_action('admin_post_paxdesign_customer_publish_news', array(__CLASS__, 'handle_publish_news'));
         add_action('admin_post_paxdesign_customer_unpublish_news', array(__CLASS__, 'handle_unpublish_news'));
@@ -40,6 +41,51 @@ class PAXdesign_Customer_Admin {
         );
     }
 
+    public static function enqueue_cybercrime_admin_assets($hook) {
+        if ($hook !== 'paxdesign-booking_page_' . self::MENU_SLUG) {
+            return;
+        }
+        if (sanitize_key(wp_unslash($_GET['tab'] ?? '')) !== 'cybercrime') {
+            return;
+        }
+        if (sanitize_text_field(wp_unslash($_GET['reference'] ?? '')) === '') {
+            return;
+        }
+        if (!class_exists('PAXdesign_Cybercrime_Tickets') || !defined('PAXDESIGN_BOOKING_PLUGIN_URL')) {
+            return;
+        }
+
+        wp_enqueue_script(
+            'paxdesign-cybercrime-admin',
+            PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/js/cybercrime-admin.js',
+            array(),
+            defined('PAXDESIGN_BOOKING_VERSION') ? PAXDESIGN_BOOKING_VERSION : '1.0',
+            true
+        );
+        wp_localize_script('paxdesign-cybercrime-admin', 'paxCybercrimeAdmin', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce'   => wp_create_nonce(PAXdesign_Cybercrime_Tickets::ADMIN_NONCE_ACTION),
+            'statusClasses' => array(
+                'submitted'             => 'pax-cc-status--submitted',
+                'in_review'             => 'pax-cc-status--in_review',
+                'waiting_for_customer'  => 'pax-cc-status--waiting_for_customer',
+                'resolved'              => 'pax-cc-status--resolved',
+                'closed'                => 'pax-cc-status--closed',
+            ),
+            'i18n' => array(
+                'statusSaved' => __('Status saved.', 'paxdesign-booking'),
+                'replySent'   => __('Reply sent to customer.', 'paxdesign-booking'),
+                'noteAdded'   => __('Internal note added.', 'paxdesign-booking'),
+                'saving'      => __('Saving…', 'paxdesign-booking'),
+                'sending'     => __('Sending…', 'paxdesign-booking'),
+                'addingNote'  => __('Adding note…', 'paxdesign-booking'),
+                'error'       => __('Something went wrong. Please try again.', 'paxdesign-booking'),
+                'internal'    => __('internal', 'paxdesign-booking'),
+                'noTimeline'  => __('No timeline entries yet.', 'paxdesign-booking'),
+            ),
+        ));
+    }
+
     public static function render_page() {
         if (!current_user_can('manage_options')) {
             wp_die(esc_html__('Insufficient permissions.', 'paxdesign-booking'));
@@ -55,6 +101,7 @@ class PAXdesign_Customer_Admin {
             'news'          => __('News', 'paxdesign-booking'),
             'services'      => __('Services', 'paxdesign-booking'),
             'notifications' => __('Notifications', 'paxdesign-booking'),
+            'cybercrime'    => __('Cybercrime Reports', 'paxdesign-booking'),
         ) as $slug => $label) {
             $class = $tab === $slug ? ' nav-tab nav-tab-active' : ' nav-tab';
             echo '<a class="' . esc_attr(trim($class)) . '" href="' . esc_url(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=' . $slug)) . '">' . esc_html($label) . '</a>';
@@ -83,6 +130,9 @@ class PAXdesign_Customer_Admin {
                 break;
             case 'notifications':
                 self::render_notifications_tab();
+                break;
+            case 'cybercrime':
+                self::render_cybercrime_tab();
                 break;
             default:
                 self::render_overview_tab();
@@ -567,6 +617,304 @@ class PAXdesign_Customer_Admin {
         );
         wp_safe_redirect(admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=notifications&saved=1'));
         exit;
+    }
+
+    private static function render_cybercrime_tab() {
+        if (!class_exists('PAXdesign_Cybercrime_Tickets')) {
+            echo '<p>' . esc_html__('Cybercrime ticket module is not available.', 'paxdesign-booking') . '</p>';
+            return;
+        }
+
+        self::render_cybercrime_admin_styles();
+
+        $reference = sanitize_text_field($_GET['reference'] ?? '');
+        if ($reference !== '') {
+            self::render_cybercrime_detail($reference);
+            return;
+        }
+
+        $reports = PAXdesign_Cybercrime_Tickets::list_reports_for_admin(50);
+        echo '<div class="pax-cc-admin">';
+        echo '<div class="pax-cc-admin__header">';
+        echo '<h2 class="pax-cc-admin__title">' . esc_html__('Cybercrime Support', 'paxdesign-booking') . '</h2>';
+        echo '<p class="pax-cc-admin__subtitle">' . esc_html__('Manage customer reports through a clear workflow: New → In Review → Waiting for Customer → Resolved → Closed.', 'paxdesign-booking') . '</p>';
+        echo '</div>';
+
+        echo '<table class="widefat striped pax-cc-admin__table"><thead><tr>';
+        echo '<th>' . esc_html__('Reference', 'paxdesign-booking') . '</th>';
+        echo '<th>' . esc_html__('Reporter', 'paxdesign-booking') . '</th>';
+        echo '<th>' . esc_html__('Category', 'paxdesign-booking') . '</th>';
+        echo '<th>' . esc_html__('Status', 'paxdesign-booking') . '</th>';
+        echo '<th>' . esc_html__('Updated', 'paxdesign-booking') . '</th>';
+        echo '</tr></thead><tbody>';
+        if (empty($reports)) {
+            echo '<tr><td colspan="5">' . esc_html__('No reports yet.', 'paxdesign-booking') . '</td></tr>';
+        }
+        foreach ($reports as $report) {
+            $url = admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=cybercrime&reference=' . rawurlencode((string) $report['reference_id']));
+            $status = (string) ($report['status'] ?? '');
+            echo '<tr>';
+            echo '<td><a href="' . esc_url($url) . '"><code>' . esc_html((string) $report['reference_id']) . '</code></a></td>';
+            echo '<td>' . esc_html((string) ($report['reporter_name'] ?? '')) . '<br><small>' . esc_html((string) ($report['reporter_email'] ?? '')) . '</small></td>';
+            echo '<td>' . esc_html((string) ($report['category_label'] ?? '')) . '</td>';
+            echo '<td><span class="' . esc_attr(PAXdesign_Cybercrime_Tickets::admin_status_badge_class($status)) . '">' . esc_html((string) ($report['status_label'] ?? '')) . '</span></td>';
+            echo '<td>' . esc_html((string) ($report['updated_at'] ?? '')) . '</td>';
+            echo '</tr>';
+        }
+        echo '</tbody></table>';
+        echo '</div>';
+    }
+
+    private static function render_cybercrime_admin_styles() {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        echo '<style>
+        .pax-cc-admin{max-width:1100px;margin-top:12px}
+        .pax-cc-admin__header{margin:0 0 20px}
+        .pax-cc-admin__title{margin:0 0 6px;font-size:22px;font-weight:600}
+        .pax-cc-admin__subtitle{margin:0;color:#646970;font-size:14px;line-height:1.5}
+        .pax-cc-admin__back{display:inline-block;margin:0 0 16px;text-decoration:none;font-size:13px}
+        .pax-cc-admin__card{background:#fff;border:1px solid #dcdcde;border-radius:10px;padding:18px 20px;margin:0 0 16px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+        .pax-cc-admin__card-title{margin:0 0 12px;font-size:15px;font-weight:600}
+        .pax-cc-admin__meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0 0 4px}
+        .pax-cc-admin__meta dt{margin:0 0 2px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#646970}
+        .pax-cc-admin__meta dd{margin:0;font-size:14px;font-weight:500}
+        .pax-cc-workflow{display:flex;flex-wrap:wrap;gap:8px;margin:0;padding:0;list-style:none}
+        .pax-cc-workflow__step{flex:1 1 140px;min-width:120px;border:1px solid #dcdcde;border-radius:10px;padding:12px;background:#f6f7f7;text-align:center}
+        .pax-cc-workflow__step.is-current{border-color:#2271b1;background:#f0f6fc;box-shadow:inset 0 0 0 1px #2271b1}
+        .pax-cc-workflow__step.is-done{border-color:#00a32a;background:#edfaef}
+        .pax-cc-workflow__num{display:block;font-size:11px;font-weight:700;color:#646970;margin:0 0 4px}
+        .pax-cc-workflow__label{display:block;font-size:13px;font-weight:600;color:#1d2327;margin:0 0 2px}
+        .pax-cc-workflow__desc{display:block;font-size:11px;color:#646970;line-height:1.35}
+        .pax-cc-activity{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 4px}
+        .pax-cc-activity__chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:500;background:#fcf0f1;color:#8a2424;border:1px solid #f1aeb5}
+        .pax-cc-activity__chip--info{background:#f0f6fc;color:#135e96;border-color:#c5d9ed}
+        .pax-cc-admin__grid{display:grid;grid-template-columns:1fr 340px;gap:16px;align-items:start}
+        @media(max-width:960px){.pax-cc-admin__grid{grid-template-columns:1fr}}
+        .pax-cc-timeline{border-left:3px solid #dcdcde;margin:0;padding:0 0 0 14px;list-style:none}
+        .pax-cc-timeline__item{margin:0 0 14px;padding:0}
+        .pax-cc-timeline__meta{font-size:12px;color:#646970;margin:0 0 4px}
+        .pax-cc-timeline__body{font-size:14px;line-height:1.5;color:#1d2327}
+        .pax-cc-status{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;line-height:1.3}
+        .pax-cc-status--submitted{background:#f0f0f1;color:#50575e}
+        .pax-cc-status--in_review{background:#f0f6fc;color:#135e96}
+        .pax-cc-status--waiting_for_customer{background:#fcf9e8;color:#9d6e00}
+        .pax-cc-status--resolved{background:#edfaef;color:#007017}
+        .pax-cc-status--closed{background:#f6f7f7;color:#646970}
+        .pax-cc-form .large-text{width:100%}
+        .pax-cc-form p{margin:0 0 12px}
+        .pax-cc-form label{font-weight:500;font-size:13px}
+        .pax-cc-form select,.pax-cc-form textarea{width:100%;max-width:100%}
+        .pax-cc-form__hint{margin:4px 0 0;font-size:12px;color:#646970}
+        .pax-cc-actions{display:flex;flex-direction:column;gap:16px}
+        .pax-cc-actions__section{padding-top:16px;border-top:1px solid #e0e0e0}
+        .pax-cc-actions__section:first-child{padding-top:0;border-top:0}
+        .pax-cc-actions__section-title{margin:0 0 10px;font-size:13px;font-weight:600;color:#1d2327}
+        .pax-cc-actions__section--internal .pax-cc-actions__section-title{color:#646970}
+        .pax-cc-actions__status-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+        .pax-cc-actions__status-row select{flex:1 1 180px;max-width:100%}
+        .pax-cc-actions__feedback{font-size:12px;color:#646970;min-height:18px}
+        .pax-cc-actions__feedback.is-success{color:#007017}
+        .pax-cc-actions__feedback.is-error{color:#b32d2e}
+        .pax-cc-actions__feedback.is-saving{color:#135e96}
+        .pax-cc-timeline__item--internal .pax-cc-timeline__meta{color:#8c8f94}
+        .pax-cc-timeline__internal-tag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600;text-transform:uppercase;background:#f0f0f1;color:#646970}
+        </style>';
+    }
+
+    private static function render_cybercrime_workflow($current_status) {
+        echo '<ol class="pax-cc-workflow">';
+        self::render_cybercrime_workflow_steps($current_status);
+        echo '</ol>';
+    }
+
+    private static function render_cybercrime_workflow_steps($current_status) {
+        $steps = PAXdesign_Cybercrime_Tickets::workflow_steps();
+        $order = PAXdesign_Cybercrime_Tickets::workflow_statuses();
+        $current = PAXdesign_Cybercrime_Tickets::normalize_workflow_status($current_status);
+        $current_index = array_search($current, $order, true);
+        if ($current_index === false) {
+            $current_index = 0;
+        }
+
+        foreach ($order as $index => $slug) {
+            if (!isset($steps[$slug])) {
+                continue;
+            }
+            $classes = array('pax-cc-workflow__step');
+            if ($slug === $current) {
+                $classes[] = 'is-current';
+            } elseif ($index < $current_index) {
+                $classes[] = 'is-done';
+            }
+            echo '<li class="' . esc_attr(implode(' ', $classes)) . '">';
+            echo '<span class="pax-cc-workflow__num">' . esc_html(sprintf(__('Step %d', 'paxdesign-booking'), $index + 1)) . '</span>';
+            echo '<span class="pax-cc-workflow__label">' . esc_html($steps[$slug]['label']) . '</span>';
+            echo '<span class="pax-cc-workflow__desc">' . esc_html($steps[$slug]['description']) . '</span>';
+            echo '</li>';
+        }
+    }
+
+    private static function render_cybercrime_detail($reference) {
+        $row = PAXdesign_Cybercrime_Tickets::get_report_row($reference);
+        if (!$row) {
+            echo '<p>' . esc_html__('Report not found.', 'paxdesign-booking') . '</p>';
+            return;
+        }
+
+        $report = PAXdesign_Cybercrime_Tickets::format_report_row($row, true, 'admin');
+        $status = (string) ($report['status'] ?? '');
+        $back_url = admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=cybercrime');
+
+        echo '<div class="pax-cc-admin">';
+        echo '<a class="pax-cc-admin__back" href="' . esc_url($back_url) . '">&larr; ' . esc_html__('All reports', 'paxdesign-booking') . '</a>';
+
+        echo '<div class="pax-cc-admin__card">';
+        echo '<h2 class="pax-cc-admin__title"><code>' . esc_html((string) $report['reference_id']) . '</code></h2>';
+        echo '<dl class="pax-cc-admin__meta">';
+        echo '<div><dt>' . esc_html__('Reporter', 'paxdesign-booking') . '</dt><dd>' . esc_html((string) $report['reporter_name']) . '<br><small>' . esc_html((string) $report['reporter_email']) . '</small></dd></div>';
+        echo '<div><dt>' . esc_html__('Category', 'paxdesign-booking') . '</dt><dd>' . esc_html((string) $report['category_label']) . '</dd></div>';
+        echo '<div><dt>' . esc_html__('Status', 'paxdesign-booking') . '</dt><dd><span id="pax-cc-admin-status-badge" class="' . esc_attr(PAXdesign_Cybercrime_Tickets::admin_status_badge_class($status)) . '">' . esc_html((string) $report['status_label']) . '</span></dd></div>';
+        echo '<div><dt>' . esc_html__('Submitted', 'paxdesign-booking') . '</dt><dd>' . esc_html((string) $report['created_at']) . '</dd></div>';
+        echo '<div><dt>' . esc_html__('Updated', 'paxdesign-booking') . '</dt><dd>' . esc_html((string) $report['updated_at']) . '</dd></div>';
+        echo '</dl>';
+        echo '</div>';
+
+        echo '<div class="pax-cc-admin__card" id="pax-cc-admin-workflow-card">';
+        echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Workflow', 'paxdesign-booking') . '</h3>';
+        echo '<ol class="pax-cc-workflow" id="pax-cc-admin-workflow">';
+        self::render_cybercrime_workflow_steps($status);
+        echo '</ol></div>';
+
+        $indicators = (array) ($report['activity_indicators'] ?? array());
+        if (!empty($indicators)) {
+            echo '<div class="pax-cc-admin__card">';
+            echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Internal activity', 'paxdesign-booking') . '</h3>';
+            echo '<div class="pax-cc-activity">';
+            foreach ($indicators as $indicator) {
+                if (!is_array($indicator)) {
+                    continue;
+                }
+                $class = 'pax-cc-activity__chip';
+                if (($indicator['key'] ?? '') === 'latest_customer_reply') {
+                    $class .= ' pax-cc-activity__chip--info';
+                }
+                echo '<span class="' . esc_attr($class) . '">' . esc_html((string) ($indicator['label'] ?? ''));
+                if (!empty($indicator['at'])) {
+                    echo ' · ' . esc_html((string) $indicator['at']);
+                }
+                echo '</span>';
+            }
+            echo '</div>';
+            echo '<p class="pax-cc-form__hint">' . esc_html__('These indicators are for staff only — customers see simplified status badges.', 'paxdesign-booking') . '</p>';
+            echo '</div>';
+        }
+
+        if (!empty($report['description'])) {
+            echo '<div class="pax-cc-admin__card">';
+            echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Report summary', 'paxdesign-booking') . '</h3>';
+            echo '<p style="margin:0;max-width:720px;line-height:1.55">' . nl2br(esc_html((string) $report['description'])) . '</p>';
+            echo '</div>';
+        }
+
+        if (!empty($report['attachments']) && is_array($report['attachments'])) {
+            echo '<div class="pax-cc-admin__card">';
+            echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Attachments', 'paxdesign-booking') . '</h3><ul style="margin:0">';
+            foreach ($report['attachments'] as $file) {
+                if (!is_array($file)) {
+                    continue;
+                }
+                $name = (string) ($file['name'] ?? 'file');
+                $url = (string) ($file['url'] ?? '');
+                if ($url !== '') {
+                    echo '<li><a href="' . esc_url($url) . '" target="_blank" rel="noopener">' . esc_html($name) . '</a></li>';
+                } else {
+                    echo '<li>' . esc_html($name) . '</li>';
+                }
+            }
+            echo '</ul></div>';
+        }
+
+        echo '<div class="pax-cc-admin__grid">';
+
+        echo '<div class="pax-cc-admin__card">';
+        echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Internal timeline', 'paxdesign-booking') . '</h3>';
+        echo '<ul class="pax-cc-timeline" id="pax-cc-admin-timeline">';
+        $timeline = (array) ($report['timeline'] ?? array());
+        if (empty($timeline)) {
+            echo '<li class="pax-cc-timeline__item">' . esc_html__('No timeline entries yet.', 'paxdesign-booking') . '</li>';
+        }
+        foreach ($timeline as $entry) {
+            if (!is_array($entry)) {
+                continue;
+            }
+            self::render_cybercrime_timeline_item($entry);
+        }
+        echo '</ul></div>';
+
+        echo '<div class="pax-cc-admin__card pax-cc-actions" id="pax-cc-ticket-actions" data-reference="' . esc_attr((string) $report['reference_id']) . '">';
+        echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Ticket actions', 'paxdesign-booking') . '</h3>';
+
+        echo '<div class="pax-cc-actions__section">';
+        echo '<p class="pax-cc-actions__section-title">' . esc_html__('Workflow status', 'paxdesign-booking') . '</p>';
+        echo '<div class="pax-cc-actions__status-row">';
+        echo '<select id="pax-cc-status" aria-label="' . esc_attr__('Workflow status', 'paxdesign-booking') . '">';
+        foreach (PAXdesign_Cybercrime_Tickets::workflow_statuses() as $workflow_status) {
+            echo '<option value="' . esc_attr($workflow_status) . '"' . selected($status, $workflow_status, false) . '>' . esc_html(PAXdesign_Cybercrime_Tickets::status_label($workflow_status)) . '</option>';
+        }
+        echo '</select>';
+        echo '</div>';
+        echo '<p class="pax-cc-actions__feedback" id="pax-cc-status-feedback" aria-live="polite"></p>';
+        echo '<p class="pax-cc-form__hint">' . esc_html__('Changes save automatically. The customer portal updates within a few seconds.', 'paxdesign-booking') . '</p>';
+        echo '</div>';
+
+        echo '<div class="pax-cc-actions__section">';
+        echo '<p class="pax-cc-actions__section-title">' . esc_html__('Reply to customer', 'paxdesign-booking') . '</p>';
+        echo '<form id="pax-cc-reply-form" class="pax-cc-form">';
+        echo '<p><label for="pax-cc-staff-message">' . esc_html__('Message', 'paxdesign-booking') . '</label><br>';
+        echo '<textarea id="pax-cc-staff-message" rows="5" class="large-text" required></textarea></p>';
+        echo '<p><label for="pax-cc-reply-status">' . esc_html__('After reply, set status to', 'paxdesign-booking') . '</label><br>';
+        echo '<select id="pax-cc-reply-status">';
+        echo '<option value="waiting_for_customer"' . selected($status, 'waiting_for_customer', false) . '>' . esc_html__('Waiting for Customer', 'paxdesign-booking') . '</option>';
+        echo '<option value="in_review"' . selected($status, 'in_review', false) . '>' . esc_html__('In Review', 'paxdesign-booking') . '</option>';
+        echo '<option value="resolved">' . esc_html__('Resolved', 'paxdesign-booking') . '</option>';
+        echo '</select>';
+        echo '<span class="pax-cc-form__hint">' . esc_html__('The reply appears on the customer timeline immediately.', 'paxdesign-booking') . '</span></p>';
+        echo '<p><button type="submit" class="button button-primary" id="pax-cc-reply-submit">' . esc_html__('Send reply', 'paxdesign-booking') . '</button></p>';
+        echo '<p class="pax-cc-actions__feedback" id="pax-cc-reply-feedback" aria-live="polite"></p>';
+        echo '</form></div>';
+
+        echo '<div class="pax-cc-actions__section pax-cc-actions__section--internal">';
+        echo '<p class="pax-cc-actions__section-title">' . esc_html__('Internal note (staff only)', 'paxdesign-booking') . '</p>';
+        echo '<form id="pax-cc-internal-note-form" class="pax-cc-form">';
+        echo '<p><label for="pax-cc-internal-note">' . esc_html__('Note', 'paxdesign-booking') . '</label><br>';
+        echo '<textarea id="pax-cc-internal-note" rows="3" class="large-text" required></textarea>';
+        echo '<span class="pax-cc-form__hint">' . esc_html__('Not visible to the customer. Use for staff coordination only.', 'paxdesign-booking') . '</span></p>';
+        echo '<p><button type="submit" class="button" id="pax-cc-internal-note-submit">' . esc_html__('Add internal note', 'paxdesign-booking') . '</button></p>';
+        echo '<p class="pax-cc-actions__feedback" id="pax-cc-internal-note-feedback" aria-live="polite"></p>';
+        echo '</form></div>';
+
+        echo '</div></div></div>';
+    }
+
+    private static function render_cybercrime_timeline_item($entry) {
+        $author = (string) ($entry['author_type'] ?? '');
+        $channel = (string) ($entry['channel'] ?? '');
+        $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
+        $is_internal = !empty($meta['internal_only']);
+        $item_class = 'pax-cc-timeline__item' . ($is_internal ? ' pax-cc-timeline__item--internal' : '');
+
+        echo '<li class="' . esc_attr($item_class) . '">';
+        echo '<p class="pax-cc-timeline__meta"><strong>' . esc_html($author) . '</strong> · ' . esc_html($channel) . ' · ' . esc_html((string) ($entry['created_at'] ?? ''));
+        if ($is_internal) {
+            echo ' <span class="pax-cc-timeline__internal-tag">' . esc_html__('internal', 'paxdesign-booking') . '</span>';
+        }
+        echo '</p>';
+        echo '<div class="pax-cc-timeline__body">' . nl2br(esc_html((string) ($entry['body'] ?? ''))) . '</div>';
+        echo '</li>';
     }
 
     private static function verify_admin($action) {

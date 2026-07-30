@@ -123,7 +123,25 @@ class PAXdesign_Cybercrime_Intake {
             'isLoggedIn'    => is_user_logged_in(),
             'loginUrl'      => esc_url($login_url),
             'resumeParam'   => 'pdx_ccs_start',
+            'activeReport'  => self::safe_active_report_for_current_user(),
         );
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private static function safe_active_report_for_current_user() {
+        if (!is_user_logged_in() || !class_exists('PAXdesign_Cybercrime_Tickets')) {
+            return null;
+        }
+        try {
+            return PAXdesign_Cybercrime_Tickets::get_active_report_for_user(get_current_user_id());
+        } catch (Throwable $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PAXdesign Cybercrime] activeReport config failed: ' . $e->getMessage());
+            }
+            return null;
+        }
     }
 
     public static function handle_submit() {
@@ -146,6 +164,20 @@ class PAXdesign_Cybercrime_Intake {
             ), 429);
         }
 
+        $user_id = get_current_user_id();
+
+        if (class_exists('PAXdesign_Cybercrime_Tickets')) {
+            PAXdesign_Cybercrime_Tickets::ensure_schema();
+            $active = PAXdesign_Cybercrime_Tickets::get_active_report_for_user($user_id);
+            if ($active) {
+                wp_send_json_error(array(
+                    'message'      => __('You already have an open report. View your existing report to add updates or messages.', 'paxdesign-booking'),
+                    'code'         => 'active_report_exists',
+                    'activeReport' => $active,
+                ), 409);
+            }
+        }
+
         $parsed = self::parse_submission($_POST);
         if (is_wp_error($parsed)) {
             wp_send_json_error(array('message' => $parsed->get_error_message()), 400);
@@ -160,8 +192,9 @@ class PAXdesign_Cybercrime_Intake {
 
         $reference = self::generate_reference_id();
         $now = current_time('mysql', true);
-        $user_id = get_current_user_id();
         global $wpdb;
+        $user_id = get_current_user_id();
+        $chat_session_id = sanitize_text_field(wp_unslash($_POST['chat_session_id'] ?? ''));
 
         $payload = array(
             'identity_accuracy'   => !empty($parsed['identity_accuracy']),
@@ -215,9 +248,13 @@ class PAXdesign_Cybercrime_Intake {
         self::notify_admin($reference, $parsed, $uploads);
         self::notify_customer_submitted($user_id, $reference, $parsed);
 
+        if (class_exists('PAXdesign_Cybercrime_Tickets')) {
+            PAXdesign_Cybercrime_Tickets::record_submission($reference, $user_id, $parsed, $chat_session_id);
+        }
+
         wp_send_json_success(array(
             'referenceId' => $reference,
-            'message'       => __('Your report has been submitted securely.', 'paxdesign-booking'),
+            'message'     => __('Your report has been submitted securely.', 'paxdesign-booking'),
         ));
     }
 
@@ -569,14 +606,18 @@ class PAXdesign_Cybercrime_Intake {
      * @return string
      */
     public static function status_label($status) {
+        if (class_exists('PAXdesign_Cybercrime_Tickets')) {
+            return PAXdesign_Cybercrime_Tickets::status_label($status);
+        }
         $status = sanitize_key((string) $status);
         switch ($status) {
             case 'submitted':
-                return __('Submitted — awaiting review', 'paxdesign-booking');
+                return __('New', 'paxdesign-booking');
             case 'in_review':
-                return __('In review', 'paxdesign-booking');
+                return __('In Review', 'paxdesign-booking');
             case 'needs_info':
-                return __('Additional information requested', 'paxdesign-booking');
+            case 'waiting_for_customer':
+                return __('Waiting for Customer', 'paxdesign-booking');
             case 'resolved':
                 return __('Resolved', 'paxdesign-booking');
             case 'closed':

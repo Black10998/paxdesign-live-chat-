@@ -61,8 +61,8 @@
   var assignedAgent      = null;
   var pollSeq            = 0;
   var pollTimer          = null;
-  var HISTORY_INITIAL    = 10;
-  var HISTORY_BATCH      = 10;
+  var HISTORY_INITIAL    = 100;
+  var HISTORY_BATCH      = 50;
   var oldestLoadedSeq    = 0;
   var hasOlderMessages   = false;
   var loadingOlderHistory = false;
@@ -1567,7 +1567,12 @@
     beginChatReadiness({ reuseSession: true }).then(function (ready) {
       if (!ready) return;
       if (chatHandler === 'closed' && isSessionArchived(getSessionId()) && !isPersistentAccountChat()) {
-        beginFreshSessionSilently();
+        fetchSessionFromServer(true).then(function () {
+          var hasHistory = messages.length > 0 || (config && config.chatMessageCount > 0);
+          if (!hasHistory) {
+            beginFreshSessionSilently();
+          }
+        });
       }
     });
   }
@@ -1925,7 +1930,7 @@
     if (snap.customerEndedChat) customerEndedChat = true;
     if (snap.consultationLogged) consultationLogged = true;
     syncLocalMessageCursor(snap.messages || [], snap.pollSeq);
-    var snapMessages = (snap.messages || []).slice(-HISTORY_INITIAL);
+    var snapMessages = snap.messages || [];
     snapMessages.forEach(function (msg) {
       if (isDuplicateMessage(msg)) return;
       rememberMessageIdentity(msg);
@@ -2092,7 +2097,6 @@
     formData.append('since', '0');
     if (full) {
       formData.append('full', '1');
-      formData.append('history_limit', String(HISTORY_INITIAL));
     }
     return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (res) { return safeJson(res).then(function (json) { return { res: res, json: json }; }); })

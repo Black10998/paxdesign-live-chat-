@@ -28,6 +28,119 @@
   var loginContinueBtn = document.getElementById('pax-ccs-login-continue');
   var loginBackBtn = document.getElementById('pax-ccs-login-back');
   var chatBtn = document.getElementById('pax-ccs-chat-support');
+  var activeReportEl = document.getElementById('pax-ccs-active-report');
+  var activeRefEl = document.getElementById('pax-ccs-active-ref');
+  var activeStatusBadgeEl = document.getElementById('pax-ccs-active-status-badge');
+  var activeStatusLabelEl = document.getElementById('pax-ccs-active-status-label');
+  var activeCategoryEl = document.getElementById('pax-ccs-active-category');
+  var activeSubmittedEl = document.getElementById('pax-ccs-active-submitted');
+  var activeTimelineEl = document.getElementById('pax-ccs-active-timeline');
+  var activeAttachmentsEl = document.getElementById('pax-ccs-active-attachments');
+  var activeReplyWrap = document.getElementById('pax-ccs-active-reply-wrap');
+  var activeReplyInput = document.getElementById('pax-ccs-active-reply');
+  var activeReplySubmit = document.getElementById('pax-ccs-active-reply-submit');
+  var activeReplyError = document.getElementById('pax-ccs-active-reply-error');
+  var activeClosedNote = document.getElementById('pax-ccs-active-closed-note');
+  var activeChatBtn = document.getElementById('pax-ccs-active-chat');
+  var refreshReportBtn = document.getElementById('pax-ccs-refresh-report');
+  var attachmentsFoldEl = document.getElementById('pax-ccs-attachments-fold');
+
+  var activeReport = null;
+  var reportPollTimer = null;
+  var expandedTimelineId = null;
+  var timelineAccordionBound = false;
+  var lastKnownLatestTimelineId = null;
+  var lastKnownTimelineCount = 0;
+
+  function getLang() {
+    var lang = root.getAttribute('data-ccs-lang') || 'ar';
+    return lang === 'de' || lang === 'en' ? lang : 'ar';
+  }
+
+  function i18nBundle() {
+    return (config && config.i18n) || {};
+  }
+
+  function i18nText(path, fallback) {
+    var parts = String(path || '').split('.');
+    var node = i18nBundle();
+    for (var i = 0; i < parts.length; i++) {
+      if (!node || typeof node !== 'object') {
+        node = null;
+        break;
+      }
+      node = node[parts[i]];
+    }
+    if (node && typeof node === 'object' && node[getLang()]) {
+      return node[getLang()];
+    }
+    return fallback !== undefined ? fallback : path;
+  }
+
+  function statusBadgeKey(status) {
+    var map = i18nBundle().statusBadgeMap || {};
+    var key;
+    for (key in map) {
+      if (!Object.prototype.hasOwnProperty.call(map, key)) {
+        continue;
+      }
+      var statuses = map[key] || [];
+      if (statuses.indexOf(status) !== -1) {
+        return key;
+      }
+    }
+    return 'under_review';
+  }
+
+  function updateStatusBadge(report) {
+    if (!activeStatusBadgeEl || !activeStatusLabelEl || !report) {
+      return;
+    }
+    var badgeKey = report.customer_status || statusBadgeKey(report.status || '');
+    var badges = i18nBundle().statusBadges || {};
+    var badge = badges[badgeKey] || {};
+    var label = (badge.label && badge.label[getLang()]) || report.status || '';
+    var emoji = badge.emoji || '';
+    activeStatusBadgeEl.className = 'pax-ccs-portal__status-hero pax-ccs-portal__status-hero--' + badgeKey;
+    activeStatusLabelEl.textContent = (emoji ? emoji + ' ' : '') + label;
+    activeStatusBadgeEl.hidden = !label;
+  }
+
+  function categoryLabel(category) {
+    var categories = i18nBundle().categories || {};
+    var labels = categories[category];
+    if (labels && labels[getLang()]) {
+      return labels[getLang()];
+    }
+    return category || '';
+  }
+
+  function mapServerError(json, fallbackKey) {
+    var code = json && json.data && json.data.code;
+    if (code) {
+      var localized = i18nText('errors.' + code, '');
+      if (localized) {
+        return localized;
+      }
+    }
+    if (json && json.data && json.data.message) {
+      return json.data.message;
+    }
+    return i18nText('errors.' + (fallbackKey || 'submit'), 'Error');
+  }
+
+  function timelineSubjectLabel(entry) {
+    if (!entry) {
+      return '';
+    }
+    if (entry.subject_key) {
+      var translated = i18nText('subjects.' + entry.subject_key, '');
+      if (translated) {
+        return translated;
+      }
+    }
+    return entry.subject || '';
+  }
 
   function isLoggedIn() {
     if (config.isLoggedIn === true) {
@@ -62,13 +175,415 @@
     window.scrollTo({ top: (loginGateEl || root).offsetTop - 24, behavior: 'smooth' });
   }
 
-  function requestLoginToContinue() {
-    if (!requiresLogin() || isLoggedIn()) {
-      startReporting();
+  function getChatSessionId() {
+    try {
+      return localStorage.getItem('paxdesign-chat-session') || sessionStorage.getItem('paxdesign-chat-session') || '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  function authorLabel(type) {
+    if (type === 'customer') {
+      return i18nText('customerFallback', 'Customer');
+    }
+    return i18nText('supportTeam', 'PAXDesign Support Team');
+  }
+
+  function timelineSenderLabel(entry) {
+    if (!entry) {
+      return authorLabel('');
+    }
+    if (entry.sender_key === 'customer' || entry.author_type === 'customer') {
+      var name = (entry.customer_name || '').trim();
+      if (!name && activeReport && activeReport.customer_display_name) {
+        name = String(activeReport.customer_display_name).trim();
+      }
+      if (name) {
+        return name;
+      }
+      return i18nText('customerFallback', 'Customer');
+    }
+    return i18nText('supportTeam', 'PAXDesign Support Team');
+  }
+
+  function hasTimelineSubject(entry) {
+    return !!timelineSubjectLabel(entry);
+  }
+
+  function formatDate(value) {
+    if (!value) {
+      return '—';
+    }
+    var d = new Date(String(value).replace(' ', 'T') + 'Z');
+    if (isNaN(d.getTime())) {
+      return value;
+    }
+    try {
+      var localeMap = { ar: 'ar', de: 'de-AT', en: 'en-GB' };
+      return d.toLocaleString(localeMap[getLang()] || 'ar', { dateStyle: 'medium', timeStyle: 'short' });
+    } catch (e) {
+      return value;
+    }
+  }
+
+  function updateStartButtonLabel() {
+    if (!startBtn) {
       return;
     }
-    showLoginGate();
+    var mode = activeReport && activeReport.is_active ? 'view' : 'start';
+    startBtn.querySelectorAll('[data-ccs-start-label]').forEach(function (el) {
+      el.hidden = el.getAttribute('data-ccs-start-label') !== mode;
+    });
   }
+
+  function fetchActiveReport(reference) {
+    if (!config.ajaxUrl || !config.nonce || !isLoggedIn()) {
+      return Promise.resolve(null);
+    }
+    var url = config.ajaxUrl + '?action=paxdesign_cybercrime_active_report&nonce=' + encodeURIComponent(config.nonce);
+    if (reference) {
+      url = config.ajaxUrl + '?action=paxdesign_cybercrime_report_detail&nonce=' + encodeURIComponent(config.nonce) + '&reference=' + encodeURIComponent(reference);
+    }
+    return fetch(url, { credentials: 'same-origin' })
+      .then(function (res) { return res.json(); })
+      .then(function (json) {
+        if (!json || !json.success) {
+          return null;
+        }
+        if (reference && json.data && json.data.report) {
+          return json.data.report;
+        }
+        if (json.data && json.data.active && json.data.report) {
+          return json.data.report;
+        }
+        return null;
+      })
+      .catch(function () { return null; });
+  }
+
+  function timelineText(key) {
+    return i18nText(key, key);
+  }
+
+  function getVisibleTimelineSorted(entries) {
+    return (entries || []).filter(function (entry) {
+      if (!entry || entry.author_type === 'ai' || entry.channel === 'chat') {
+        return false;
+      }
+      if (entry.customer_visible === false) {
+        return false;
+      }
+      return !!(entry.body && String(entry.body).trim());
+    }).slice().sort(function (a, b) {
+      var aTime = String(a.created_at || '') + String(a.id != null ? a.id : '');
+      var bTime = String(b.created_at || '') + String(b.id != null ? b.id : '');
+      return bTime.localeCompare(aTime);
+    });
+  }
+
+  function getOfficialTimelineSorted(entries) {
+    return getVisibleTimelineSorted(entries);
+  }
+
+  function getNewestTimelineEntryId(entries) {
+    var sorted = getOfficialTimelineSorted(entries);
+    if (!sorted.length) {
+      return null;
+    }
+    var newest = sorted[0];
+    return String(newest.id != null ? newest.id : 0);
+  }
+
+  function timelineHasNewActivity(entries) {
+    var newestId = getNewestTimelineEntryId(entries);
+    var count = getOfficialTimelineSorted(entries).length;
+    if (newestId === null) {
+      return false;
+    }
+    if (lastKnownLatestTimelineId === null) {
+      return false;
+    }
+    return newestId !== lastKnownLatestTimelineId || count > lastKnownTimelineCount;
+  }
+
+  function rememberTimelineSnapshot(entries) {
+    lastKnownLatestTimelineId = getNewestTimelineEntryId(entries);
+    lastKnownTimelineCount = getOfficialTimelineSorted(entries).length;
+  }
+
+  function resetTimelineTracking() {
+    lastKnownLatestTimelineId = null;
+    lastKnownTimelineCount = 0;
+    expandedTimelineId = null;
+  }
+
+  function applyReportRefresh(report, options) {
+    if (!report) {
+      return;
+    }
+    options = options || {};
+    var newActivity = options.forceNewest || timelineHasNewActivity(report.timeline || []);
+
+    activeReport = report;
+    updateStatusBadge(report);
+    if (activeCategoryEl) {
+      activeCategoryEl.textContent = categoryLabel(report.category || '');
+    }
+    renderTimeline(report.timeline || [], { forceNewest: newActivity });
+    if (newActivity && activeTimelineEl) {
+      var openItem = activeTimelineEl.querySelector('.pax-ccs-portal__accordion-item.is-open');
+      if (openItem) {
+        try {
+          openItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        } catch (e) {}
+      }
+    }
+  }
+
+  function bindTimelineAccordion() {
+    if (timelineAccordionBound || !activeTimelineEl) {
+      return;
+    }
+    timelineAccordionBound = true;
+    activeTimelineEl.addEventListener('click', function (e) {
+      var trigger = e.target.closest('.pax-ccs-portal__accordion-trigger');
+      if (!trigger || !activeTimelineEl.contains(trigger)) {
+        return;
+      }
+      e.preventDefault();
+      var item = trigger.closest('.pax-ccs-portal__accordion-item');
+      if (!item) {
+        return;
+      }
+      var entryId = item.getAttribute('data-entry-id');
+      if (!entryId) {
+        return;
+      }
+      if (item.classList.contains('is-open')) {
+        expandedTimelineId = null;
+        setExpandedTimelineItem(null);
+        return;
+      }
+      expandedTimelineId = entryId;
+      setExpandedTimelineItem(entryId);
+    });
+  }
+
+  function setExpandedTimelineItem(entryId) {
+    if (!activeTimelineEl) {
+      return;
+    }
+    activeTimelineEl.querySelectorAll('.pax-ccs-portal__accordion-item').forEach(function (item) {
+      var isOpen = entryId !== null && item.getAttribute('data-entry-id') === entryId;
+      item.classList.toggle('is-open', isOpen);
+      var trigger = item.querySelector('.pax-ccs-portal__accordion-trigger');
+      if (trigger) {
+        trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      }
+    });
+  }
+
+  /**
+   * @param {Array} entries
+   * @param {{forceNewest?: boolean}} options
+   */
+  function renderTimeline(entries, options) {
+    if (!activeTimelineEl) {
+      return;
+    }
+    options = options || {};
+    var sorted = getOfficialTimelineSorted(entries);
+    if (!sorted.length) {
+      activeTimelineEl.innerHTML = '<p class="pax-ccs-portal__accordion-empty">' + escapeHtml(i18nText('emptyTimeline', '—')) + '</p>';
+      resetTimelineTracking();
+      return;
+    }
+
+    var newestId = String(sorted[0].id != null ? sorted[0].id : 0);
+    var openId = newestId;
+    if (!options.forceNewest && expandedTimelineId &&
+        sorted.some(function (entry, index) {
+          return String(entry.id != null ? entry.id : index) === expandedTimelineId;
+        })) {
+      openId = expandedTimelineId;
+    }
+    if (options.forceNewest) {
+      openId = newestId;
+    }
+    expandedTimelineId = openId;
+    rememberTimelineSnapshot(entries);
+
+    activeTimelineEl.innerHTML = sorted.map(function (entry, index) {
+      var entryId = String(entry.id != null ? entry.id : index);
+      var isOpen = entryId === openId;
+      var sender = timelineSenderLabel(entry);
+      var when = formatDate(entry.created_at || '');
+      var body = escapeHtml(entry.body || '').replace(/\n/g, '<br>');
+      var panelId = 'pax-ccs-acc-panel-' + entryId;
+      var triggerId = 'pax-ccs-acc-trigger-' + entryId;
+
+      return '<article class="pax-ccs-portal__accordion-item' + (isOpen ? ' is-open' : '') + '" data-entry-id="' + escapeHtml(entryId) + '">'
+        + '<button type="button" class="pax-ccs-portal__accordion-trigger" id="' + escapeHtml(triggerId) + '"'
+        + ' aria-expanded="' + (isOpen ? 'true' : 'false') + '" aria-controls="' + escapeHtml(panelId) + '">'
+        + '<span class="pax-ccs-portal__accordion-head">'
+        + '<span class="pax-ccs-portal__accordion-head-row">'
+        + '<span class="pax-ccs-portal__accordion-sender">' + escapeHtml(sender) + '</span>'
+        + '<span class="pax-ccs-portal__accordion-when">' + escapeHtml(when) + '</span>'
+        + '</span>'
+        + '<span class="pax-ccs-portal__accordion-chevron" aria-hidden="true"></span>'
+        + '</button>'
+        + '<div class="pax-ccs-portal__accordion-panel" id="' + escapeHtml(panelId) + '" role="region" aria-labelledby="' + escapeHtml(triggerId) + '">'
+        + '<div class="pax-ccs-portal__accordion-panel-inner">'
+        + '<div class="pax-ccs-portal__accordion-message">' + body + '</div>'
+        + '</div>'
+        + '</div>'
+        + '</article>';
+    }).join('');
+
+    bindTimelineAccordion();
+  }
+
+  function renderAttachments(files) {
+    if (!activeAttachmentsEl) {
+      return;
+    }
+    var hasFiles = files && files.length;
+    if (attachmentsFoldEl) {
+      attachmentsFoldEl.hidden = !hasFiles;
+    }
+    if (!hasFiles) {
+      activeAttachmentsEl.innerHTML = '';
+      return;
+    }
+    activeAttachmentsEl.innerHTML = files.map(function (file) {
+      var name = escapeHtml(file.name || 'file');
+      if (file.url) {
+        return '<li><a href="' + escapeHtml(file.url) + '" target="_blank" rel="noopener">' + name + '</a></li>';
+      }
+      return '<li>' + name + '</li>';
+    }).join('');
+  }
+
+  function showActiveReport(report, forceNewest) {
+    if (!report || !activeReportEl) {
+      return;
+    }
+    if (!activeReport || activeReport.reference_id !== report.reference_id) {
+      resetTimelineTracking();
+    }
+    activeReport = report;
+    setPhase('active-report');
+    if (activeRefEl) {
+      activeRefEl.textContent = report.reference_id || '';
+    }
+    updateStatusBadge(report);
+    if (activeCategoryEl) {
+      activeCategoryEl.textContent = categoryLabel(report.category || '');
+    }
+    if (activeSubmittedEl) {
+      activeSubmittedEl.textContent = formatDate(report.created_at || '');
+    }
+    renderTimeline(report.timeline || [], { forceNewest: forceNewest !== false });
+    renderAttachments(report.attachments || []);
+    var isActive = report.is_active !== false;
+    if (activeReplyWrap) {
+      activeReplyWrap.hidden = !isActive;
+    }
+    if (activeClosedNote) {
+      activeClosedNote.hidden = isActive;
+    }
+    setPageContext(root.getAttribute('data-ccs-lang') || 'ar', report.reference_id || '');
+    updateStartButtonLabel();
+    try {
+      var params = new URLSearchParams(window.location.search);
+      params.set('ref', report.reference_id || '');
+      params.delete(resumeParamName());
+      var query = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (query ? '?' + query : '') + window.location.hash);
+    } catch (e) {}
+    window.scrollTo({ top: activeReportEl.offsetTop - 12, behavior: 'smooth' });
+    startReportPolling();
+  }
+
+  var reportVisibilityBound = false;
+
+  function startReportPolling() {
+    stopReportPolling();
+    if (!activeReport || !activeReport.reference_id) {
+      return;
+    }
+    var poll = function () {
+      if (phase !== 'active-report' || !activeReport || !activeReport.reference_id) {
+        return;
+      }
+      fetchActiveReport(activeReport.reference_id).then(function (report) {
+        if (report) {
+          applyReportRefresh(report);
+        }
+      });
+    };
+    reportPollTimer = window.setInterval(poll, 5000);
+    if (!reportVisibilityBound) {
+      reportVisibilityBound = true;
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && phase === 'active-report') {
+          poll();
+        }
+      });
+    }
+  }
+
+  function stopReportPolling() {
+    if (reportPollTimer) {
+      window.clearInterval(reportPollTimer);
+      reportPollTimer = null;
+    }
+  }
+
+  function bootstrapActiveReport() {
+    if (!isLoggedIn()) {
+      updateStartButtonLabel();
+      return Promise.resolve(false);
+    }
+    var paramsRef = '';
+    try {
+      paramsRef = new URLSearchParams(window.location.search).get('ref') || '';
+    } catch (e) {}
+    if (config.activeReport && config.activeReport.reference_id) {
+      activeReport = config.activeReport;
+      showActiveReport(config.activeReport);
+      return Promise.resolve(true);
+    }
+    return fetchActiveReport(paramsRef || '').then(function (report) {
+      if (report && (report.is_active || paramsRef)) {
+        showActiveReport(report);
+        return true;
+      }
+      activeReport = null;
+      updateStartButtonLabel();
+      return false;
+    });
+  }
+
+  function viewActiveOrStart() {
+    if (activeReport) {
+      showActiveReport(activeReport);
+      return;
+    }
+    if (requiresLogin() && !isLoggedIn()) {
+      showLoginGate();
+      return;
+    }
+    fetchActiveReport('').then(function (report) {
+      if (report && report.is_active) {
+        showActiveReport(report);
+        return;
+      }
+      startReporting();
+    });
+  }
+
 
   function requiresLogin() {
     return config.requireLogin !== false;
@@ -97,33 +612,18 @@
         return;
       }
       clearResumeParam();
-      startReporting();
+      fetchActiveReport('').then(function (report) {
+        if (report && report.is_active) {
+          showActiveReport(report);
+          return;
+        }
+        startReporting();
+      });
     } catch (e) {}
   }
 
   function t(key) {
-    var strings = {
-      ar: {
-        identity: 'الهوية',
-        incident: 'الحادث',
-        evidence: 'الأدلة',
-        files: 'ملف(ات)',
-        none: '—',
-        yes: 'نعم',
-        no: 'لا',
-      },
-      de: {
-        identity: 'Identität',
-        incident: 'Vorfall',
-        evidence: 'Beweise',
-        files: 'Datei(en)',
-        none: '—',
-        yes: 'Ja',
-        no: 'Nein',
-      },
-    };
-    var lang = root.getAttribute('data-ccs-lang') || 'ar';
-    return (strings[lang] && strings[lang][key]) || key;
+    return i18nText('review.' + key, key);
   }
 
   function setPageContext(lang, referenceId) {
@@ -158,7 +658,7 @@
   }
 
   function setLang(lang) {
-    if (lang !== 'ar' && lang !== 'de') {
+    if (lang !== 'ar' && lang !== 'de' && lang !== 'en') {
       lang = 'ar';
     }
     root.setAttribute('data-ccs-lang', lang);
@@ -184,11 +684,29 @@
     if (phase === 'form' && currentStep === 4) {
       renderReview();
     }
+    if (phase === 'active-report' && activeReport) {
+      updateStatusBadge(activeReport);
+      if (activeCategoryEl) {
+        activeCategoryEl.textContent = categoryLabel(activeReport.category || '');
+      }
+      if (activeSubmittedEl) {
+        activeSubmittedEl.textContent = formatDate(activeReport.created_at || '');
+      }
+      renderTimeline(activeReport.timeline || [], { forceNewest: false });
+    }
+  }
+
+  function placeholderAttr(lang) {
+    return 'data-placeholder-' + lang;
+  }
+
+  function labelAttr(lang) {
+    return 'data-label-' + lang;
   }
 
   function updatePlaceholders(lang) {
     form.querySelectorAll('[data-placeholder-ar]').forEach(function (input) {
-      var ph = input.getAttribute(lang === 'de' ? 'data-placeholder-de' : 'data-placeholder-ar');
+      var ph = input.getAttribute(placeholderAttr(lang));
       if (ph) {
         input.setAttribute('placeholder', ph);
       }
@@ -197,7 +715,7 @@
 
   function updateSelectLabels(lang) {
     form.querySelectorAll('option[data-label-ar]').forEach(function (opt) {
-      var label = opt.getAttribute(lang === 'de' ? 'data-label-de' : 'data-label-ar');
+      var label = opt.getAttribute(labelAttr(lang));
       if (label) {
         opt.textContent = label;
       }
@@ -234,6 +752,12 @@
     }
     if (successEl) {
       successEl.hidden = nextPhase !== 'success';
+    }
+    if (activeReportEl) {
+      activeReportEl.hidden = nextPhase !== 'active-report';
+    }
+    if (nextPhase !== 'active-report') {
+      stopReportPolling();
     }
   }
 
@@ -387,7 +911,7 @@
 
   if (startBtn) {
     startBtn.addEventListener('click', function () {
-      requestLoginToContinue();
+      viewActiveOrStart();
     });
   }
 
@@ -438,7 +962,7 @@
       return;
     }
     if (!config.ajaxUrl || !config.nonce) {
-      showError('Configuration error.');
+      showError(i18nText('errors.config', 'Configuration error.'));
       return;
     }
 
@@ -446,6 +970,10 @@
     var data = new FormData(form);
     data.append('action', 'paxdesign_cybercrime_report');
     data.append('nonce', config.nonce);
+    var chatSid = getChatSessionId();
+    if (chatSid) {
+      data.append('chat_session_id', chatSid);
+    }
 
     fetch(config.ajaxUrl, {
       method: 'POST',
@@ -461,11 +989,40 @@
             showLoginGate();
             return;
           }
-          var errMsg = (json && json.data && json.data.message) || 'Submit failed';
+          if (json && json.data && json.data.code === 'active_report_exists' && json.data.activeReport) {
+            showActiveReport(json.data.activeReport);
+            return;
+          }
+          var errMsg = mapServerError(json, 'submit');
           if (json && json.data && json.data.detail) {
             errMsg += ' (' + json.data.detail + ')';
           }
           throw new Error(errMsg);
+        }
+        if (json.data && json.data.referenceId) {
+          fetchActiveReport(json.data.referenceId).then(function (report) {
+            if (report) {
+              showActiveReport(report);
+              return;
+            }
+            form.hidden = true;
+            if (workflowEl) {
+              workflowEl.hidden = true;
+            }
+            if (welcomeEl) {
+              welcomeEl.hidden = true;
+            }
+            root.setAttribute('data-ccs-phase', 'success');
+            if (successEl) {
+              successEl.hidden = false;
+            }
+            if (refEl) {
+              refEl.textContent = json.data.referenceId;
+            }
+            setPageContext(root.getAttribute('data-ccs-lang') || 'ar', json.data.referenceId);
+            window.scrollTo({ top: root.offsetTop - 24, behavior: 'smooth' });
+          });
+          return;
         }
         form.hidden = true;
         if (workflowEl) {
@@ -485,7 +1042,7 @@
         window.scrollTo({ top: root.offsetTop - 24, behavior: 'smooth' });
       })
       .catch(function (err) {
-        showError(err.message || 'Submit failed');
+        showError(err.message || i18nText('errors.submit', 'Submit failed'));
         submitBtn.disabled = false;
       });
   });
@@ -495,6 +1052,67 @@
       setLang(btn.getAttribute('data-ccs-switch'));
     });
   });
+
+  if (activeReplySubmit && activeReplyInput) {
+    activeReplySubmit.addEventListener('click', function () {
+      if (!activeReport || !activeReport.reference_id) {
+        return;
+      }
+      var message = (activeReplyInput.value || '').trim();
+      if (!message) {
+        return;
+      }
+      if (activeReplyError) {
+        activeReplyError.hidden = true;
+      }
+      activeReplySubmit.disabled = true;
+      var body = new FormData();
+      body.append('action', 'paxdesign_cybercrime_customer_reply');
+      body.append('nonce', config.nonce);
+      body.append('reference', activeReport.reference_id);
+      body.append('message', message);
+      fetch(config.ajaxUrl, { method: 'POST', body: body, credentials: 'same-origin' })
+        .then(function (res) { return res.json(); })
+        .then(function (json) {
+          if (!json || !json.success) {
+            throw new Error(mapServerError(json, 'reply'));
+          }
+          activeReplyInput.value = '';
+          if (json.data && json.data.report) {
+            showActiveReport(json.data.report, true);
+          }
+        })
+        .catch(function (err) {
+          if (activeReplyError) {
+            activeReplyError.hidden = false;
+            activeReplyError.textContent = err.message || i18nText('errors.reply', 'Reply failed');
+          }
+        })
+        .finally(function () {
+          activeReplySubmit.disabled = false;
+        });
+    });
+  }
+
+  if (activeChatBtn) {
+    activeChatBtn.addEventListener('click', function () {
+      openSupportChat(activeReport && activeReport.reference_id ? activeReport.reference_id : '');
+    });
+  }
+
+  if (refreshReportBtn) {
+    refreshReportBtn.addEventListener('click', function () {
+      if (!activeReport || !activeReport.reference_id) {
+        bootstrapActiveReport();
+        return;
+      }
+      fetchActiveReport(activeReport.reference_id).then(function (report) {
+        if (report) {
+          applyReportRefresh(report);
+        }
+      });
+    });
+  }
 
   if (chatBtn) {
     chatBtn.addEventListener('click', function () {
@@ -507,7 +1125,11 @@
   try {
     saved = localStorage.getItem('pax-ccs-lang') || '';
   } catch (e) {}
-  setLang(saved === 'de' ? 'de' : 'ar');
-  setPhase('welcome');
-  maybeResumeAfterLogin();
+  setLang(saved === 'de' || saved === 'en' ? saved : 'ar');
+  bootstrapActiveReport().then(function (shown) {
+    if (!shown) {
+      setPhase('welcome');
+      maybeResumeAfterLogin();
+    }
+  });
 })();

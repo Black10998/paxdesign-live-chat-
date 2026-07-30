@@ -10,6 +10,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+if ( ! function_exists( 'pax_ccs_bootstrap_locale_helpers' ) ) {
+	/**
+	 * Load cybercrime locale helpers only when present (never fatal site-wide).
+	 */
+	function pax_ccs_bootstrap_locale_helpers() {
+		static $loaded = false;
+		if ( $loaded ) {
+			return;
+		}
+		foreach ( array( get_stylesheet_directory(), get_template_directory() ) as $base ) {
+			$path = $base . '/inc/cybercrime-support-locale.php';
+			if ( is_readable( $path ) ) {
+				require_once $path;
+				$loaded = true;
+				return;
+			}
+		}
+	}
+}
+
 // included plugins current versions
 define( 'NAVEIN_CORE_PLUGIN_CURRENT_VERSION', '1.0.0' );
 define( 'NAVEIN_ELEMENTOR_ADDON_PLUGIN_CURRENT_VERSION', '1.0.0' );
@@ -381,10 +401,22 @@ function navein_custom_scripts_styles() {
 			true
 		);
 		if ( class_exists( 'PAXdesign_Cybercrime_Intake' ) ) {
+			pax_ccs_bootstrap_locale_helpers();
+			$ccs_config = PAXdesign_Cybercrime_Intake::public_config();
+			if ( function_exists( 'pax_ccs_portal_i18n' ) ) {
+				try {
+					$ccs_config['i18n'] = pax_ccs_portal_i18n();
+				} catch ( Throwable $e ) {
+					$ccs_config['i18n'] = array();
+					if ( defined( 'WP_DEBUG' ) && WP_DEBUG ) {
+						error_log( '[PAX CCS] i18n bundle failed: ' . $e->getMessage() );
+					}
+				}
+			}
 			wp_localize_script(
 				'navein-apple-cybercrime-support',
 				'paxCybercrimeIntake',
-				PAXdesign_Cybercrime_Intake::public_config()
+				$ccs_config
 			);
 		}
 	}

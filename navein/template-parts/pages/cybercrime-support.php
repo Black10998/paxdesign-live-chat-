@@ -9,12 +9,19 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$copy = include __DIR__ . '/cybercrime-support-data.php';
+if ( function_exists( 'pax_ccs_bootstrap_locale_helpers' ) ) {
+	pax_ccs_bootstrap_locale_helpers();
+}
+
+$copy = function_exists( 'pax_ccs_portal_copy' ) ? pax_ccs_portal_copy() : include __DIR__ . '/cybercrime-support-data.php';
 
 if ( ! function_exists( 'pax_ccs_text' ) ) {
 	function pax_ccs_text( $node, $lang ) {
 		if ( is_array( $node ) && isset( $node[ $lang ] ) ) {
 			return $node[ $lang ];
+		}
+		if ( is_array( $node ) && isset( $node['en'] ) ) {
+			return $node['en'];
 		}
 		return is_string( $node ) ? $node : '';
 	}
@@ -22,8 +29,10 @@ if ( ! function_exists( 'pax_ccs_text' ) ) {
 
 if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 	function pax_ccs_bilingual( $node ) {
-		echo '<span class="pax-ccs-t" data-lang="ar">' . esc_html( pax_ccs_text( $node, 'ar' ) ) . '</span>';
-		echo '<span class="pax-ccs-t" data-lang="de" hidden>' . esc_html( pax_ccs_text( $node, 'de' ) ) . '</span>';
+		foreach ( array( 'ar', 'de', 'en' ) as $lang ) {
+			$hidden = $lang !== 'ar' ? ' hidden' : '';
+			echo '<span class="pax-ccs-t" data-lang="' . esc_attr( $lang ) . '"' . $hidden . '>' . esc_html( pax_ccs_text( $node, $lang ) ) . '</span>';
+		}
 	}
 }
 ?>
@@ -45,6 +54,7 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 			<div class="pax-ccs-portal__lang-toggle" role="group" aria-label="Language">
 				<button type="button" class="pax-ccs-portal__lang-btn is-active" data-ccs-switch="ar" aria-pressed="true">العربية</button>
 				<button type="button" class="pax-ccs-portal__lang-btn" data-ccs-switch="de" aria-pressed="false">Deutsch</button>
+				<button type="button" class="pax-ccs-portal__lang-btn" data-ccs-switch="en" aria-pressed="false">English</button>
 			</div>
 		</div>
 	</div>
@@ -97,7 +107,12 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 
 					<div class="pax-ccs-portal__actions pax-ccs-portal__actions--welcome">
 						<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary" id="pax-ccs-start" data-ccs-start>
-							<?php pax_ccs_bilingual( $copy['welcome']['start'] ); ?>
+							<span class="pax-ccs-t" data-lang="ar" data-ccs-start-label="start"><?php echo esc_html( pax_ccs_text( $copy['welcome']['start'], 'ar' ) ); ?></span>
+							<span class="pax-ccs-t" data-lang="de" data-ccs-start-label="start" hidden><?php echo esc_html( pax_ccs_text( $copy['welcome']['start'], 'de' ) ); ?></span>
+							<span class="pax-ccs-t" data-lang="en" data-ccs-start-label="start" hidden><?php echo esc_html( pax_ccs_text( $copy['welcome']['start'], 'en' ) ); ?></span>
+							<span class="pax-ccs-t" data-lang="ar" data-ccs-start-label="view" hidden><?php echo esc_html( pax_ccs_text( $copy['welcome']['view_report'], 'ar' ) ); ?></span>
+							<span class="pax-ccs-t" data-lang="de" data-ccs-start-label="view" hidden><?php echo esc_html( pax_ccs_text( $copy['welcome']['view_report'], 'de' ) ); ?></span>
+							<span class="pax-ccs-t" data-lang="en" data-ccs-start-label="view" hidden><?php echo esc_html( pax_ccs_text( $copy['welcome']['view_report'], 'en' ) ); ?></span>
 						</button>
 					</div>
 				</div>
@@ -118,6 +133,78 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 							<?php pax_ccs_bilingual( $copy['login_gate']['button'] ); ?>
 						</button>
 					</div>
+				</div>
+			</div>
+		</section>
+
+		<section id="pax-ccs-active-report" class="pax-ccs-portal__active-report" hidden aria-labelledby="pax-ccs-active-report-title">
+			<div class="pax-ccs-portal__wrap pax-ccs-portal__wrap--wide">
+				<div class="pax-ccs-portal__panel pax-ccs-portal__panel--active-report">
+					<div id="pax-ccs-active-status-badge" class="pax-ccs-portal__status-hero" role="status" aria-live="polite" hidden>
+						<span class="pax-ccs-portal__status-hero-dot" aria-hidden="true"></span>
+						<span class="pax-ccs-portal__status-hero-label" id="pax-ccs-active-status-label"></span>
+					</div>
+
+					<div class="pax-ccs-portal__active-report-head">
+						<div class="pax-ccs-portal__active-report-head-main">
+							<h2 id="pax-ccs-active-report-title" class="pax-ccs-portal__section-title pax-ccs-portal__section-title--compact"><?php pax_ccs_bilingual( $copy['active_report']['title'] ); ?></h2>
+							<p class="pax-ccs-portal__section-intro pax-ccs-portal__section-intro--compact"><?php pax_ccs_bilingual( $copy['active_report']['intro'] ); ?></p>
+						</div>
+						<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--ghost pax-ccs-portal__btn--compact" id="pax-ccs-refresh-report">
+							<?php pax_ccs_bilingual( $copy['active_report']['refresh'] ); ?>
+						</button>
+					</div>
+
+					<dl class="pax-ccs-portal__active-meta pax-ccs-portal__active-meta--compact">
+						<div class="pax-ccs-portal__active-meta-row">
+							<dt><?php pax_ccs_bilingual( $copy['active_report']['reference'] ); ?></dt>
+							<dd><code id="pax-ccs-active-ref"></code></dd>
+						</div>
+						<div class="pax-ccs-portal__active-meta-row">
+							<dt><?php pax_ccs_bilingual( $copy['active_report']['category'] ); ?></dt>
+							<dd id="pax-ccs-active-category"></dd>
+						</div>
+						<div class="pax-ccs-portal__active-meta-row">
+							<dt><?php pax_ccs_bilingual( $copy['active_report']['submitted'] ); ?></dt>
+							<dd id="pax-ccs-active-submitted"></dd>
+						</div>
+					</dl>
+
+					<details class="pax-ccs-portal__attachments-fold" id="pax-ccs-attachments-fold" hidden>
+						<summary class="pax-ccs-portal__subsection-title pax-ccs-portal__subsection-title--fold"><?php pax_ccs_bilingual( $copy['active_report']['attachments'] ); ?></summary>
+						<ul id="pax-ccs-active-attachments" class="pax-ccs-portal__attachment-list pax-ccs-portal__attachment-list--compact"></ul>
+					</details>
+
+					<div class="pax-ccs-portal__official-block">
+						<h3 class="pax-ccs-portal__subsection-title pax-ccs-portal__subsection-title--compact"><?php pax_ccs_bilingual( $copy['active_report']['official_heading'] ); ?></h3>
+						<p class="pax-ccs-portal__official-note"><?php pax_ccs_bilingual( $copy['active_report']['official_note'] ); ?></p>
+						<div id="pax-ccs-active-timeline" class="pax-ccs-portal__accordion" aria-live="polite"></div>
+					</div>
+
+					<div id="pax-ccs-active-reply-wrap" class="pax-ccs-portal__reply-wrap pax-ccs-portal__reply-wrap--compact">
+						<label for="pax-ccs-active-reply" class="pax-ccs-portal__reply-label"><?php pax_ccs_bilingual( $copy['active_report']['reply_label'] ); ?></label>
+						<textarea id="pax-ccs-active-reply" class="pax-ccs-portal__reply-input" rows="3"
+							placeholder="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'ar' ) ); ?>"
+							data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'ar' ) ); ?>"
+							data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'de' ) ); ?>"
+							data-placeholder-en="<?php echo esc_attr( pax_ccs_text( $copy['active_report']['reply_placeholder'], 'en' ) ); ?>"></textarea>
+						<p id="pax-ccs-active-reply-error" class="pax-ccs-portal__error" hidden role="alert"></p>
+						<div class="pax-ccs-portal__actions pax-ccs-portal__actions--compact">
+							<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary pax-ccs-portal__btn--compact" id="pax-ccs-active-reply-submit">
+								<?php pax_ccs_bilingual( $copy['active_report']['reply_submit'] ); ?>
+							</button>
+						</div>
+					</div>
+
+					<div class="pax-ccs-portal__ai-block">
+						<h3 class="pax-ccs-portal__subsection-title pax-ccs-portal__subsection-title--compact"><?php pax_ccs_bilingual( $copy['active_report']['ai_heading'] ); ?></h3>
+						<p class="pax-ccs-portal__ai-note"><?php pax_ccs_bilingual( $copy['active_report']['ai_note'] ); ?></p>
+						<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--ghost pax-ccs-portal__btn--compact" id="pax-ccs-active-chat">
+							<?php pax_ccs_bilingual( $copy['active_report']['chat'] ); ?>
+						</button>
+					</div>
+
+					<p id="pax-ccs-active-closed-note" class="pax-ccs-portal__closed-note" hidden><?php pax_ccs_bilingual( $copy['active_report']['closed_note'] ); ?></p>
 				</div>
 			</div>
 		</section>
@@ -149,7 +236,7 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 					<div class="pax-ccs-portal__grid">
 						<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
 							<label for="pax-ccs-full-name"><?php pax_ccs_bilingual( $copy['fields']['full_name']['label'] ); ?></label>
-							<input type="text" id="pax-ccs-full-name" name="full_name" required autocomplete="name" placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'ar' ) ); ?>" data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'ar' ) ); ?>" data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'de' ) ); ?>">
+							<input type="text" id="pax-ccs-full-name" name="full_name" required autocomplete="name" placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'ar' ) ); ?>" data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'ar' ) ); ?>" data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'de' ) ); ?>" data-placeholder-en="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'en' ) ); ?>">
 						</div>
 						<div class="pax-ccs-portal__field">
 							<label for="pax-ccs-email"><?php pax_ccs_bilingual( $copy['fields']['email']['label'] ); ?></label>
@@ -195,7 +282,7 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 							<select id="pax-ccs-category" name="category" required>
 								<option value="">—</option>
 								<?php foreach ( $copy['categories'] as $key => $labels ) : ?>
-									<option value="<?php echo esc_attr( $key ); ?>" data-label-ar="<?php echo esc_attr( pax_ccs_text( $labels, 'ar' ) ); ?>" data-label-de="<?php echo esc_attr( pax_ccs_text( $labels, 'de' ) ); ?>"><?php echo esc_html( pax_ccs_text( $labels, 'ar' ) ); ?></option>
+									<option value="<?php echo esc_attr( $key ); ?>" data-label-ar="<?php echo esc_attr( pax_ccs_text( $labels, 'ar' ) ); ?>" data-label-de="<?php echo esc_attr( pax_ccs_text( $labels, 'de' ) ); ?>" data-label-en="<?php echo esc_attr( pax_ccs_text( $labels, 'en' ) ); ?>"><?php echo esc_html( pax_ccs_text( $labels, 'ar' ) ); ?></option>
 								<?php endforeach; ?>
 							</select>
 						</div>
@@ -220,7 +307,7 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 							<input type="text" id="pax-ccs-financial-loss" name="financial_loss" inputmode="decimal" placeholder="0.00">
 						</div>
 						<div class="pax-ccs-portal__field">
-							<label for="pax-ccs-currency">Currency</label>
+							<label for="pax-ccs-currency"><?php pax_ccs_bilingual( $copy['fields']['financial_currency']['label'] ); ?></label>
 							<select id="pax-ccs-currency" name="financial_currency">
 								<option value="EUR">EUR</option>
 								<option value="USD">USD</option>
@@ -232,7 +319,7 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 							<label for="pax-ccs-urgency"><?php pax_ccs_bilingual( $copy['fields']['urgency']['label'] ); ?></label>
 							<select id="pax-ccs-urgency" name="urgency" required>
 								<?php foreach ( $copy['urgency'] as $key => $labels ) : ?>
-									<option value="<?php echo esc_attr( $key ); ?>" data-label-ar="<?php echo esc_attr( pax_ccs_text( $labels, 'ar' ) ); ?>" data-label-de="<?php echo esc_attr( pax_ccs_text( $labels, 'de' ) ); ?>"><?php echo esc_html( pax_ccs_text( $labels, 'ar' ) ); ?></option>
+									<option value="<?php echo esc_attr( $key ); ?>" data-label-ar="<?php echo esc_attr( pax_ccs_text( $labels, 'ar' ) ); ?>" data-label-de="<?php echo esc_attr( pax_ccs_text( $labels, 'de' ) ); ?>" data-label-en="<?php echo esc_attr( pax_ccs_text( $labels, 'en' ) ); ?>"><?php echo esc_html( pax_ccs_text( $labels, 'ar' ) ); ?></option>
 								<?php endforeach; ?>
 							</select>
 						</div>

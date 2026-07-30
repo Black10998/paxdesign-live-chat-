@@ -142,6 +142,100 @@ return array(
 			'ar' => 'بدء البلاغ',
 			'de' => 'Meldung starten',
 		),
+		'view_report' => array(
+			'ar' => 'عرض بلاغك',
+			'de' => 'Ihre Meldung ansehen',
+		),
+	),
+	'active_report' => array(
+		'title' => array(
+			'ar' => 'بلاغك الحالي',
+			'de' => 'Ihre aktuelle Meldung',
+		),
+		'intro' => array(
+			'ar' => 'تابع حالة بلاغك الرسمي والمراسلات مع فريق PAXDesign Support.',
+			'de' => 'Verfolgen Sie den offiziellen Status Ihrer Meldung und die Kommunikation mit dem PAXDesign-Support.',
+		),
+		'official_heading' => array(
+			'ar' => 'المحادثة الرسمية',
+			'de' => 'Offizielle Kommunikation',
+		),
+		'official_note' => array(
+			'ar' => 'هذا السجل الرسمي للبلاغ — بينك وبين فريق الدعم فقط. لا يشمل محادثة المساعد الذكي.',
+			'de' => 'Dies ist der offizielle Verlauf Ihrer Meldung — nur zwischen Ihnen und dem Support-Team. Der KI-Assistent ist separat.',
+		),
+		'status' => array(
+			'ar' => 'الحالة',
+			'de' => 'Status',
+		),
+		'reference' => array(
+			'ar' => 'رقم المرجع',
+			'de' => 'Referenznummer',
+		),
+		'category' => array(
+			'ar' => 'الفئة',
+			'de' => 'Kategorie',
+		),
+		'submitted' => array(
+			'ar' => 'تاريخ التقديم',
+			'de' => 'Eingereicht am',
+		),
+		'timeline' => array(
+			'ar' => 'التحديثات',
+			'de' => 'Updates',
+		),
+		'timeline_status' => array(
+			'ar' => 'الحالة',
+			'de' => 'Status',
+		),
+		'timeline_sender' => array(
+			'ar' => 'المرسل',
+			'de' => 'Absender',
+		),
+		'timeline_subject' => array(
+			'ar' => 'الموضوع',
+			'de' => 'Betreff',
+		),
+		'timeline_when' => array(
+			'ar' => 'التاريخ',
+			'de' => 'Datum',
+		),
+		'attachments' => array(
+			'ar' => 'المرفقات',
+			'de' => 'Anhänge',
+		),
+		'reply_label' => array(
+			'ar' => 'إضافة رسالة',
+			'de' => 'Nachricht hinzufügen',
+		),
+		'reply_placeholder' => array(
+			'ar' => 'اكتب رسالتك للفريق…',
+			'de' => 'Nachricht an das Team…',
+		),
+		'reply_submit' => array(
+			'ar' => 'إرسال',
+			'de' => 'Senden',
+		),
+		'closed_note' => array(
+			'ar' => 'تم إغلاق هذا البلاغ. لا يمكن إضافة رسائل جديدة.',
+			'de' => 'Diese Meldung ist abgeschlossen. Neue Nachrichten sind nicht möglich.',
+		),
+		'chat' => array(
+			'ar' => 'المساعد الذكي',
+			'de' => 'KI-Assistent',
+		),
+		'ai_heading' => array(
+			'ar' => 'مساعد ذكي — استفسارات وإرشاد',
+			'de' => 'KI-Assistent — Fragen & Orientierung',
+		),
+		'ai_note' => array(
+			'ar' => 'محادثة منفصلة للأسئلة والشرح. لا تُسجّل كردود رسمية على البلاغ.',
+			'de' => 'Separater Chat für Fragen und Erklärungen. Wird nicht als offizielle Ticket-Antwort gespeichert.',
+		),
+		'refresh' => array(
+			'ar' => 'تحديث',
+			'de' => 'Aktualisieren',
+		),
 	),
 	'login_gate' => array(
 		'title' => array(
@@ -277,6 +371,9 @@ return array(
 		'financial_loss' => array(
 			'label' => array( 'ar' => 'الخسارة المالية التقديرية (إن وجدت)', 'de' => 'Geschätzter finanzieller Schaden (falls zutreffend)' ),
 		),
+		'financial_currency' => array(
+			'label' => array( 'ar' => 'العملة', 'de' => 'Währung' ),
+		),
 		'urgency' => array(
 			'label' => array( 'ar' => 'مستوى الاستعجال', 'de' => 'Dringlichkeit' ),
 		),
@@ -364,6 +461,143 @@ return array(
 		'submit'   => array(
 			'ar' => 'تعذر إرسال البلاغ. يرجى المحاولة مرة أخرى.',
 			'de' => 'Senden fehlgeschlagen. Bitte erneut versuchen.',
+		),
+	),
+	'status_badge_map' => array(
+		'under_review'         => array( 'submitted', 'in_review' ),
+		'waiting_for_customer' => array( 'waiting_for_customer', 'needs_info' ),
+		'resolved'             => array( 'resolved' ),
+		'closed'               => array( 'closed' ),
+	),
+	'status_badges' => array(
+		'under_review' => array(
+			'emoji' => '🟠',
+			'label' => array(
+				'ar' => 'قيد المراجعة',
+				'de' => 'In Prüfung',
+			),
+		),
+		'waiting_for_customer' => array(
+			'emoji' => '🔵',
+			'label' => array(
+				'ar' => 'بانتظار ردك',
+				'de' => 'Wartet auf Ihre Antwort',
+			),
+		),
+		'resolved' => array(
+			'emoji' => '🟢',
+			'label' => array(
+				'ar' => 'تم الحل',
+				'de' => 'Gelöst',
+			),
+		),
+		'closed' => array(
+			'emoji' => '🔴',
+			'label' => array(
+				'ar' => 'مغلق',
+				'de' => 'Geschlossen',
+			),
+		),
+	),
+	'timeline_i18n' => array(
+		'support_team' => array(
+			'ar' => 'فريق PAXDesign Support',
+			'de' => 'PAXDesign Support Team',
+		),
+		'customer_fallback' => array(
+			'ar' => 'العميل',
+			'de' => 'Kunde',
+		),
+		'empty_timeline' => array(
+			'ar' => 'لا توجد تحديثات بعد.',
+			'de' => 'Noch keine Updates.',
+		),
+		'subjects' => array(
+			'report_submitted' => array(
+				'ar' => 'تم تقديم البلاغ',
+				'de' => 'Meldung eingereicht',
+			),
+			'status_submitted' => array(
+				'ar' => 'بلاغ جديد',
+				'de' => 'Neue Meldung',
+			),
+			'status_in_review' => array(
+				'ar' => 'قيد المراجعة',
+				'de' => 'In Bearbeitung',
+			),
+			'status_needs_info' => array(
+				'ar' => 'معلومات إضافية مطلوبة',
+				'de' => 'Zusätzliche Informationen angefordert',
+			),
+			'status_waiting_for_customer' => array(
+				'ar' => 'بانتظار رد العميل',
+				'de' => 'Wartet auf Kunden',
+			),
+			'status_customer_replied' => array(
+				'ar' => 'رد العميل',
+				'de' => 'Kunde hat geantwortet',
+			),
+			'status_waiting_for_staff' => array(
+				'ar' => 'بانتظار فريق الدعم',
+				'de' => 'Wartet auf Support',
+			),
+			'status_resolved' => array(
+				'ar' => 'تم الحل',
+				'de' => 'Gelöst',
+			),
+			'status_closed' => array(
+				'ar' => 'مغلق',
+				'de' => 'Geschlossen',
+			),
+		),
+	),
+	'portal_js' => array(
+		'errors' => array(
+			'config' => array(
+				'ar' => 'خطأ في الإعداد. يرجى تحديث الصفحة.',
+				'de' => 'Konfigurationsfehler. Bitte Seite neu laden.',
+			),
+			'submit' => array(
+				'ar' => 'تعذر إرسال البلاغ. يرجى المحاولة مرة أخرى.',
+				'de' => 'Senden fehlgeschlagen. Bitte erneut versuchen.',
+			),
+			'reply' => array(
+				'ar' => 'تعذر إرسال الرسالة. يرجى المحاولة مرة أخرى.',
+				'de' => 'Nachricht konnte nicht gesendet werden.',
+			),
+			'login_required' => array(
+				'ar' => 'يرجى تسجيل الدخول للمتابعة.',
+				'de' => 'Bitte melden Sie sich an, um fortzufahren.',
+			),
+			'active_report_exists' => array(
+				'ar' => 'لديك بلاغ مفتوح بالفعل. اعرض بلاغك الحالي لإضافة تحديثات.',
+				'de' => 'Sie haben bereits eine offene Meldung. Zeigen Sie Ihre aktuelle Meldung an.',
+			),
+			'message_required' => array(
+				'ar' => 'الرسالة مطلوبة.',
+				'de' => 'Nachricht ist erforderlich.',
+			),
+			'report_not_found' => array(
+				'ar' => 'لم يتم العثور على البلاغ.',
+				'de' => 'Meldung nicht gefunden.',
+			),
+			'request_rejected' => array(
+				'ar' => 'تم رفض الطلب.',
+				'de' => 'Anfrage abgelehnt.',
+			),
+			'rate_limited' => array(
+				'ar' => 'محاولات كثيرة. يرجى الانتظار قبل المحاولة مرة أخرى.',
+				'de' => 'Zu viele Versuche. Bitte warten Sie, bevor Sie es erneut versuchen.',
+			),
+		),
+		'review' => array(
+			'identity' => array( 'ar' => 'الهوية', 'de' => 'Identität' ),
+			'incident' => array( 'ar' => 'الحادث', 'de' => 'Vorfall' ),
+			'evidence' => array( 'ar' => 'الأدلة', 'de' => 'Beweise' ),
+			'files'    => array( 'ar' => 'ملف(ات)', 'de' => 'Datei(en)' ),
+			'none'     => array( 'ar' => '—', 'de' => '—' ),
+			'yes'      => array( 'ar' => 'نعم', 'de' => 'Ja' ),
+			'no'       => array( 'ar' => 'لا', 'de' => 'Nein' ),
 		),
 	),
 );
