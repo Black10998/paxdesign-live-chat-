@@ -306,6 +306,10 @@
     }
   }
 
+  function homePageUrl() {
+    return C.homeUrl || '/';
+  }
+
   function navigateToAuthPage(view) {
     if (isAuthPage()) {
       setAuthPageView(view || 'login');
@@ -441,6 +445,11 @@
   function mountAuthBar() {
     removeLegacyTopbar();
     authBar.classList.remove('pdx-auth-bar--topbar');
+    if (isAuthPage()) {
+      authBar.hidden = true;
+      return;
+    }
+    authBar.hidden = false;
     var mount = findHeaderMount();
     if (mount) {
       mount.classList.add('pdx-header-has-auth');
@@ -524,6 +533,9 @@
 
   function updateAuthBar() {
     if (!authMenu) return;
+    if (isAuthPage() && authBar) {
+      authBar.hidden = true;
+    }
     var accountBtn = authBar ? authBar.querySelector('.pdx-auth-account-btn') : null;
     var labelEl = accountBtn ? accountBtn.querySelector('.pdx-auth-account-label') : null;
     var head = authMenu.querySelector('.pdx-auth-menu-head');
@@ -1356,6 +1368,9 @@
       html += '</div>';
     });
     html += '<div class="pdx-account-sidebar-footer">' +
+      '<a class="pdx-portal-btn pdx-portal-btn--secondary pdx-portal-btn--full pdx-account-website-link" href="' + escHtml(homePageUrl()) + '">' +
+        cxIcon('chevron', 16) + escHtml('Continue to website') +
+      '</a>' +
       '<button type="button" class="pdx-portal-btn pdx-portal-btn--destructive pdx-portal-btn--full pdx-account-signout">' + cxIcon('logout', 16) + escHtml('Sign Out') + '</button>' +
     '</div>';
     accountSidebarEl.innerHTML = html;
