@@ -1126,11 +1126,61 @@ html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
   text-align: start;
   cursor: pointer;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 14px;
+  padding: 11px 14px;
   -webkit-tap-highlight-color: transparent;
+}
+
+.pax-ccs-portal__accordion-head {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.pax-ccs-portal__accordion-head-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pax-ccs-portal__accordion-sender {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ccs-ink);
+  letter-spacing: -0.01em;
+}
+
+.pax-ccs-portal__accordion-when {
+  font-size: 12px;
+  color: var(--ccs-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.pax-ccs-portal__accordion-subject {
+  font-size: 13px;
+  line-height: 1.35;
+  color: var(--ccs-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pax-ccs-portal__accordion-item.is-open .pax-ccs-portal__accordion-subject {
+  white-space: normal;
+}
+
+.pax-ccs-portal__accordion-summary,
+.pax-ccs-portal__accordion-summary-main,
+.pax-ccs-portal__accordion-meta,
+.pax-ccs-portal__accordion-badge,
+.pax-ccs-portal__accordion-details {
+  display: none !important;
 }
 
 .pax-ccs-portal__accordion-trigger:focus-visible {
@@ -1162,7 +1212,7 @@ html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
 .pax-ccs-portal__accordion-item.is-open .pax-ccs-portal__accordion-panel-inner {
   opacity: 1;
   transform: translateY(0);
-  padding: 0 14px 12px;
+  padding: 10px 14px 12px;
 }
 
 html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__accordion-item:not(.is-open) .pax-ccs-portal__accordion-panel-inner,
@@ -1178,38 +1228,11 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
   visibility: visible !important;
 }
 
-.pax-ccs-portal__accordion-summary {
-  display: none;
-}
-
-.pax-ccs-portal__accordion-summary-main {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.pax-ccs-portal__accordion-subject {
+.pax-ccs-portal__accordion-message {
   font-size: 14px;
-  font-weight: 600;
+  line-height: 1.55;
   color: var(--ccs-ink);
-}
-
-.pax-ccs-portal__accordion-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--ccs-muted);
-}
-
-.pax-ccs-portal__accordion-badge {
-  display: inline-block;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: rgba(0, 113, 227, 0.1);
-  color: #0071e3;
-  font-weight: 600;
+  white-space: pre-wrap;
 }
 
 .pax-ccs-portal__accordion-chevron {

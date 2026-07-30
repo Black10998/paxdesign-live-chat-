@@ -52,24 +52,14 @@
   var lastKnownTimelineCount = 0;
   var timelineCopy = {
     ar: {
-      status: 'الحالة',
-      sender: 'المرسل',
-      subject: 'الموضوع',
-      when: 'التاريخ',
       empty: '—',
-      customer: 'العميل',
-      support: 'الدعم',
-      system: 'النظام',
+      customer: 'Customer',
+      support: 'PAXDesign Support Team',
     },
     de: {
-      status: 'Status',
-      sender: 'Absender',
-      subject: 'Betreff',
-      when: 'Datum',
       empty: '—',
-      customer: 'Kunde',
-      support: 'Support',
-      system: 'System',
+      customer: 'Customer',
+      support: 'PAXDesign Support Team',
     },
   };
 
@@ -115,16 +105,21 @@
   }
 
   function authorLabel(type) {
-    if (type === 'staff') {
-      return timelineText('support');
-    }
     if (type === 'customer') {
       return timelineText('customer');
     }
-    if (type === 'system') {
-      return timelineText('system');
+    return timelineText('support');
+  }
+
+  function timelineSenderLabel(entry) {
+    if (entry && entry.sender_label) {
+      return entry.sender_label;
     }
-    return type;
+    return authorLabel(entry && entry.author_type ? entry.author_type : '');
+  }
+
+  function hasTimelineSubject(subject) {
+    return !!subject && subject !== timelineText('empty');
   }
 
   function formatDate(value) {
@@ -324,9 +319,9 @@
     activeTimelineEl.innerHTML = sorted.map(function (entry, index) {
       var entryId = String(entry.id != null ? entry.id : index);
       var isOpen = entryId === openId;
-      var sender = entry.sender_label || authorLabel(entry.author_type || '');
-      var status = entry.status_label || timelineText('empty');
-      var subject = entry.subject || timelineText('empty');
+      var sender = timelineSenderLabel(entry);
+      var subject = entry.subject || '';
+      var showSubject = hasTimelineSubject(subject);
       var when = formatDate(entry.created_at || '');
       var body = escapeHtml(entry.body || '').replace(/\n/g, '<br>');
       var panelId = 'pax-ccs-acc-panel-' + entryId;
@@ -335,24 +330,17 @@
       return '<article class="pax-ccs-portal__accordion-item' + (isOpen ? ' is-open' : '') + '" data-entry-id="' + escapeHtml(entryId) + '">'
         + '<button type="button" class="pax-ccs-portal__accordion-trigger" id="' + escapeHtml(triggerId) + '"'
         + ' aria-expanded="' + (isOpen ? 'true' : 'false') + '" aria-controls="' + escapeHtml(panelId) + '">'
-        + '<span class="pax-ccs-portal__accordion-summary-main">'
-        + '<span class="pax-ccs-portal__accordion-subject">' + escapeHtml(subject) + '</span>'
-        + '<span class="pax-ccs-portal__accordion-meta">'
-        + '<span class="pax-ccs-portal__accordion-badge">' + escapeHtml(status) + '</span>'
-        + '<span>' + escapeHtml(when) + '</span>'
-        + '<span>' + escapeHtml(sender) + '</span>'
+        + '<span class="pax-ccs-portal__accordion-head">'
+        + '<span class="pax-ccs-portal__accordion-head-row">'
+        + '<span class="pax-ccs-portal__accordion-sender">' + escapeHtml(sender) + '</span>'
+        + '<span class="pax-ccs-portal__accordion-when">' + escapeHtml(when) + '</span>'
         + '</span>'
+        + (showSubject ? '<span class="pax-ccs-portal__accordion-subject">' + escapeHtml(subject) + '</span>' : '')
         + '</span>'
         + '<span class="pax-ccs-portal__accordion-chevron" aria-hidden="true"></span>'
         + '</button>'
         + '<div class="pax-ccs-portal__accordion-panel" id="' + escapeHtml(panelId) + '" role="region" aria-labelledby="' + escapeHtml(triggerId) + '">'
         + '<div class="pax-ccs-portal__accordion-panel-inner">'
-        + '<dl class="pax-ccs-portal__accordion-details">'
-        + '<div><dt>' + escapeHtml(timelineText('status')) + '</dt><dd>' + escapeHtml(status) + '</dd></div>'
-        + '<div><dt>' + escapeHtml(timelineText('when')) + '</dt><dd>' + escapeHtml(when) + '</dd></div>'
-        + '<div><dt>' + escapeHtml(timelineText('sender')) + '</dt><dd>' + escapeHtml(sender) + '</dd></div>'
-        + (subject && subject !== timelineText('empty') ? '<div><dt>' + escapeHtml(timelineText('subject')) + '</dt><dd>' + escapeHtml(subject) + '</dd></div>' : '')
-        + '</dl>'
         + '<div class="pax-ccs-portal__accordion-message">' + body + '</div>'
         + '</div>'
         + '</div>'

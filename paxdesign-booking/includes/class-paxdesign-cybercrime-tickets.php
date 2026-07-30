@@ -313,21 +313,16 @@ class PAXdesign_Cybercrime_Tickets {
         }
 
         $subject = sanitize_text_field((string) ($entry['subject'] ?? ''));
-        if ($subject === '' && $event === 'status_change') {
-            $subject = self::status_label($status_key !== '' ? $status_key : 'submitted');
-        } elseif ($subject === '' && $author === 'staff') {
-            $subject = __('Support reply', 'paxdesign-booking');
-        } elseif ($subject === '' && $author === 'customer') {
-            $subject = __('Customer message', 'paxdesign-booking');
+        if ($subject === '' && $event === 'status_change' && $status_key !== '') {
+            $subject = self::status_label($status_key);
         } elseif ($subject === '' && $event === 'submitted') {
             $subject = __('Report submitted', 'paxdesign-booking');
         }
 
-        $sender_label = __('System', 'paxdesign-booking');
-        if ($author === 'staff') {
-            $sender_label = __('Support', 'paxdesign-booking');
-        } elseif ($author === 'customer') {
-            $sender_label = __('Customer', 'paxdesign-booking');
+        if ($author === 'customer') {
+            $sender_label = 'Customer';
+        } else {
+            $sender_label = 'PAXDesign Support Team';
         }
 
         $entry['status'] = $status_key;
