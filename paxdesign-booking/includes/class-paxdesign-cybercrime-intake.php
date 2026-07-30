@@ -123,10 +123,25 @@ class PAXdesign_Cybercrime_Intake {
             'isLoggedIn'    => is_user_logged_in(),
             'loginUrl'      => esc_url($login_url),
             'resumeParam'   => 'pdx_ccs_start',
-            'activeReport'  => (is_user_logged_in() && class_exists('PAXdesign_Cybercrime_Tickets'))
-                ? PAXdesign_Cybercrime_Tickets::get_active_report_for_user(get_current_user_id())
-                : null,
+            'activeReport'  => self::safe_active_report_for_current_user(),
         );
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private static function safe_active_report_for_current_user() {
+        if (!is_user_logged_in() || !class_exists('PAXdesign_Cybercrime_Tickets')) {
+            return null;
+        }
+        try {
+            return PAXdesign_Cybercrime_Tickets::get_active_report_for_user(get_current_user_id());
+        } catch (Throwable $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PAXdesign Cybercrime] activeReport config failed: ' . $e->getMessage());
+            }
+            return null;
+        }
     }
 
     public static function handle_submit() {

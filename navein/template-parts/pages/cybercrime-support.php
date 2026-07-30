@@ -9,6 +9,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+if ( function_exists( 'pax_ccs_bootstrap_locale_helpers' ) ) {
+	pax_ccs_bootstrap_locale_helpers();
+}
+
 $copy = function_exists( 'pax_ccs_portal_copy' ) ? pax_ccs_portal_copy() : include __DIR__ . '/cybercrime-support-data.php';
 
 if ( ! function_exists( 'pax_ccs_text' ) ) {

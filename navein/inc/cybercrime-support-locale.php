@@ -43,16 +43,34 @@ if ( ! function_exists( 'pax_ccs_portal_copy' ) ) {
 		if ( is_array( $copy ) ) {
 			return $copy;
 		}
-		$copy = include get_template_directory() . '/template-parts/pages/cybercrime-support-data.php';
-		if ( ! is_array( $copy ) ) {
-			$copy = array();
+		$copy = array();
+		$data_paths = array(
+			get_template_directory() . '/template-parts/pages/cybercrime-support-data.php',
+			get_stylesheet_directory() . '/template-parts/pages/cybercrime-support-data.php',
+		);
+		foreach ( $data_paths as $data_path ) {
+			if ( ! is_readable( $data_path ) ) {
+				continue;
+			}
+			$loaded = include $data_path;
+			if ( is_array( $loaded ) ) {
+				$copy = $loaded;
+				break;
+			}
 		}
-		$en_path = get_template_directory() . '/template-parts/pages/cybercrime-support-en.php';
-		if ( is_readable( $en_path ) ) {
+		$en_paths = array(
+			get_template_directory() . '/template-parts/pages/cybercrime-support-en.php',
+			get_stylesheet_directory() . '/template-parts/pages/cybercrime-support-en.php',
+		);
+		foreach ( $en_paths as $en_path ) {
+			if ( ! is_readable( $en_path ) ) {
+				continue;
+			}
 			$en = include $en_path;
 			if ( is_array( $en ) ) {
 				$copy = pax_ccs_merge_locale_en( $copy, $en );
 			}
+			break;
 		}
 		return $copy;
 	}
@@ -85,7 +103,7 @@ if ( ! function_exists( 'pax_ccs_portal_i18n' ) ) {
 		$copy = pax_ccs_portal_copy();
 		$langs = array( 'ar', 'de', 'en' );
 
-		$pick = static function ( $node ) use ( $langs ) {
+		$pick = function ( $node ) use ( $langs ) {
 			$out = array();
 			foreach ( $langs as $lang ) {
 				$out[ $lang ] = pax_ccs_pick_lang( $node, $lang );
