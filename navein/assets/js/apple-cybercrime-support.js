@@ -27,6 +27,7 @@
   var startBtn = document.getElementById('pax-ccs-start');
   var loginContinueBtn = document.getElementById('pax-ccs-login-continue');
   var loginBackBtn = document.getElementById('pax-ccs-login-back');
+  var chatBtn = document.getElementById('pax-ccs-chat-support');
 
   function isLoggedIn() {
     if (config.isLoggedIn === true) {
@@ -125,11 +126,34 @@
     return (strings[lang] && strings[lang][key]) || key;
   }
 
-  function setPageContext(lang) {
+  function setPageContext(lang, referenceId) {
     window.PAXdesignPageContext = window.PAXdesignPageContext || {};
     window.PAXdesignPageContext.intent = 'cybercrime-support';
     if (lang) {
       window.PAXdesignPageContext.language = lang;
+    }
+    if (referenceId) {
+      window.PAXdesignPageContext.referenceId = referenceId;
+    }
+  }
+
+  function openSupportChat(referenceId) {
+    var lang = root.getAttribute('data-ccs-lang') || 'ar';
+    setPageContext(lang, referenceId || '');
+    if (window.PAXdesignChat && typeof window.PAXdesignChat.openForCybercrime === 'function') {
+      window.PAXdesignChat.openForCybercrime({
+        language: lang,
+        referenceId: referenceId || '',
+      });
+      return;
+    }
+    if (window.PAXdesignBooking && typeof window.PAXdesignBooking.open === 'function') {
+      window.PAXdesignBooking.open();
+      return;
+    }
+    var launcher = document.querySelector('.paxdesign-booking-button');
+    if (launcher) {
+      launcher.click();
     }
   }
 
@@ -153,7 +177,7 @@
     });
     updatePlaceholders(lang);
     updateSelectLabels(lang);
-    setPageContext(lang);
+    setPageContext(lang, window.PAXdesignPageContext && window.PAXdesignPageContext.referenceId);
     try {
       localStorage.setItem('pax-ccs-lang', lang);
     } catch (e) {}
@@ -452,6 +476,7 @@
         }
         if (refEl && json.data && json.data.referenceId) {
           refEl.textContent = json.data.referenceId;
+          setPageContext(root.getAttribute('data-ccs-lang') || 'ar', json.data.referenceId);
         }
         window.scrollTo({ top: root.offsetTop - 24, behavior: 'smooth' });
       })
@@ -466,6 +491,13 @@
       setLang(btn.getAttribute('data-ccs-switch'));
     });
   });
+
+  if (chatBtn) {
+    chatBtn.addEventListener('click', function () {
+      var referenceId = refEl ? (refEl.textContent || '').trim() : '';
+      openSupportChat(referenceId);
+    });
+  }
 
   var saved = '';
   try {

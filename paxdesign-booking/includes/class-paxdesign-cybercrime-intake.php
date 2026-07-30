@@ -168,6 +168,7 @@ class PAXdesign_Cybercrime_Intake {
         }
 
         self::notify_admin($reference, $parsed, $uploads);
+        self::notify_customer_submitted($user_id, $reference, $parsed);
 
         wp_send_json_success(array(
             'referenceId' => $reference,
@@ -382,6 +383,34 @@ class PAXdesign_Cybercrime_Intake {
         wp_mail($to, $subject, $body, array('Content-Type: text/plain; charset=UTF-8'));
     }
 
+    /**
+     * @param int                  $user_id
+     * @param string               $reference
+     * @param array<string, mixed> $parsed
+     */
+    private static function notify_customer_submitted($user_id, $reference, $parsed) {
+        $user_id = absint($user_id);
+        if ($user_id <= 0 || !class_exists('PAXdesign_Customer_Notifications')) {
+            return;
+        }
+
+        $category_label = self::category_label((string) ($parsed['category'] ?? ''));
+        PAXdesign_Customer_Notifications::notify_user(
+            $user_id,
+            'security',
+            __('Cybercrime report received', 'paxdesign-booking'),
+            sprintf(
+                /* translators: 1: reference id, 2: category label */
+                __('Reference %1$s — %2$s. Your report is recorded and awaiting review.', 'paxdesign-booking'),
+                $reference,
+                $category_label
+            ),
+            'cybercrime',
+            $reference,
+            home_url('/cybercrime-support/')
+        );
+    }
+
     private static function generate_reference_id() {
         return 'CCS-' . gmdate('Ymd') . '-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 8));
     }
@@ -507,20 +536,34 @@ class PAXdesign_Cybercrime_Intake {
             if (!is_array($attachments)) {
                 $attachments = array();
             }
+            $attachment_names = array();
+            foreach ($attachments as $attachment) {
+                if (!is_array($attachment)) {
+                    continue;
+                }
+                $name = sanitize_file_name((string) ($attachment['name'] ?? ''));
+                if ($name !== '') {
+                    $attachment_names[] = $name;
+                }
+            }
+
             $out[] = array(
-                'reference_id'   => (string) ($row['reference_id'] ?? ''),
-                'status'         => (string) ($row['status'] ?? ''),
-                'status_label'   => self::status_label((string) ($row['status'] ?? '')),
-                'category'       => (string) ($row['category'] ?? ''),
-                'category_label' => self::category_label((string) ($row['category'] ?? '')),
-                'urgency'        => (string) ($row['urgency'] ?? ''),
-                'incident_at'    => (string) ($row['incident_at'] ?? ''),
-                'created_at'     => (string) ($row['created_at'] ?? ''),
-                'updated_at'     => (string) ($row['updated_at'] ?? ''),
-                'description'    => (string) ($payload['description'] ?? ''),
-                'platforms'      => (string) ($payload['platforms'] ?? ''),
-                'locale'         => (string) ($payload['locale'] ?? ''),
-                'attachments'    => count($attachments),
+                'reference_id'       => (string) ($row['reference_id'] ?? ''),
+                'status'             => (string) ($row['status'] ?? ''),
+                'status_label'       => self::status_label((string) ($row['status'] ?? '')),
+                'category'           => (string) ($row['category'] ?? ''),
+                'category_label'     => self::category_label((string) ($row['category'] ?? '')),
+                'urgency'            => (string) ($row['urgency'] ?? ''),
+                'incident_at'        => (string) ($row['incident_at'] ?? ''),
+                'created_at'         => (string) ($row['created_at'] ?? ''),
+                'updated_at'         => (string) ($row['updated_at'] ?? ''),
+                'description'        => (string) ($payload['description'] ?? ''),
+                'platforms'          => (string) ($payload['platforms'] ?? ''),
+                'locale'             => (string) ($payload['locale'] ?? ''),
+                'financial_loss'     => (string) ($payload['financial_loss'] ?? ''),
+                'financial_currency' => (string) ($payload['financial_currency'] ?? ''),
+                'attachments'        => count($attachments),
+                'attachment_names'   => $attachment_names,
             );
         }
 
@@ -533,17 +576,86 @@ class PAXdesign_Cybercrime_Intake {
      * @param int $user_id
      * @return string
      */
-    public static function build_account_context_block($user_id) {
+    /**
+     * @param int    $user_id
+     * @param string $reference_id
+     * @return array<int, array<string, string>>
+     */
+    private static function list_report_updates($user_id, $reference_id) {
+        $user_id = absint($user_id);
+        $reference_id = sanitize_text_field((string) $reference_id);
+        if ($user_id <= 0 || $reference_id === '' || !class_exists('PAXdesign_Customer_DB')) {
+            return array();
+        }
+
+        global $wpdb;
+        $table = PAXdesign_Customer_DB::table('notifications');
+        $rows = $wpdb->get_results($wpdb->prepare(
+            "SELECT title, body, created_at FROM $table
+             WHERE user_id = %d AND entity_type = %s AND entity_id = %s
+             ORDER BY created_at DESC
+             LIMIT 5",
+            $user_id,
+            'cybercrime',
+            $reference_id
+        ), ARRAY_A);
+
+        if (!is_array($rows)) {
+            return array();
+        }
+
+        $out = array();
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $out[] = array(
+                'title'      => sanitize_text_field((string) ($row['title'] ?? '')),
+                'body'       => sanitize_textarea_field((string) ($row['body'] ?? '')),
+                'created_at' => (string) ($row['created_at'] ?? ''),
+            );
+        }
+
+        return $out;
+    }
+
+    /**
+     * Account-aware AI context for authenticated customers.
+     *
+     * @param int    $user_id
+     * @param string $focus_reference Optional report reference the customer is asking about now.
+     * @return string
+     */
+    public static function build_account_context_block($user_id, $focus_reference = '') {
         $reports = self::list_for_user($user_id, 5);
         if (empty($reports)) {
             return '- Cybercrime Support reports: none submitted yet for this account';
         }
 
+        $focus_reference = sanitize_text_field((string) $focus_reference);
+        if ($focus_reference !== '') {
+            usort($reports, function ($a, $b) use ($focus_reference) {
+                $a_match = (($a['reference_id'] ?? '') === $focus_reference) ? 0 : 1;
+                $b_match = (($b['reference_id'] ?? '') === $focus_reference) ? 0 : 1;
+                return $a_match <=> $b_match;
+            });
+        }
+
         $lines = array('- Cybercrime Support reports (' . count($reports) . ' recent):');
+        if ($focus_reference !== '') {
+            $lines[] = '- Active focus reference for this chat: ' . $focus_reference;
+        }
+
         foreach ($reports as $report) {
+            $reference_id = (string) ($report['reference_id'] ?? '');
+            $is_focus = ($focus_reference !== '' && $reference_id === $focus_reference);
+            if ($is_focus) {
+                $lines[] = '  [FOCUS — customer opened chat about this report]';
+            }
+
             $summary = sprintf(
                 '  • %s — %s | status: %s | urgency: %s | submitted: %s',
-                (string) ($report['reference_id'] ?? ''),
+                $reference_id,
                 (string) ($report['category_label'] ?? ''),
                 (string) ($report['status_label'] ?? ''),
                 (string) ($report['urgency'] ?? ''),
@@ -563,13 +675,29 @@ class PAXdesign_Cybercrime_Intake {
                 }
                 $lines[] = '    reason/summary: ' . $desc;
             }
-            if ((int) ($report['attachments'] ?? 0) > 0) {
+            if (!empty($report['financial_loss'])) {
+                $lines[] = '    reported financial loss: ' . (string) $report['financial_loss'] . ' ' . (string) ($report['financial_currency'] ?? '');
+            }
+            $attachment_names = is_array($report['attachment_names'] ?? null) ? $report['attachment_names'] : array();
+            if (!empty($attachment_names)) {
+                $lines[] = '    attachments (' . count($attachment_names) . '): ' . implode(', ', array_slice($attachment_names, 0, 8));
+            } elseif ((int) ($report['attachments'] ?? 0) > 0) {
                 $lines[] = '    attachments: ' . (int) $report['attachments'];
             }
-            $lines[] = '    latest update: ' . (string) ($report['updated_at'] ?? $report['created_at'] ?? '');
+            $updates = self::list_report_updates($user_id, $reference_id);
+            if (!empty($updates)) {
+                $lines[] = '    updates/messages:';
+                foreach ($updates as $update) {
+                    $lines[] = '      - ' . (string) ($update['created_at'] ?? '') . ': '
+                        . (string) ($update['title'] ?? '') . ' — ' . (string) ($update['body'] ?? '');
+                }
+            } else {
+                $lines[] = '    updates/messages: none yet beyond initial submission';
+            }
+            $lines[] = '    last status change: ' . (string) ($report['updated_at'] ?? $report['created_at'] ?? '');
         }
 
-        $lines[] = '- For Cybercrime Support questions, use ONLY these report facts (reference number, category, status, dates, summary).';
+        $lines[] = '- For Cybercrime Support questions, use ONLY these report facts (reference number, category, status, dates, summary, updates, attachments).';
         $lines[] = '- If the customer asks for updates and none are listed above, say the report is recorded and the team will contact them when there is news.';
 
         return implode("\n", $lines);

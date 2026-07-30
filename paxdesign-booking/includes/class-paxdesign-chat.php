@@ -290,20 +290,22 @@ class PAXdesign_Chat {
     public function build_ai_system_prompt($customer_language = '', $user_id = 0, $session_id = '') {
         $prompt = $this->get_system_prompt($customer_language);
         $user_id = absint($user_id);
+        $page_context = $this->resolve_page_context($session_id);
+        $focus_reference = ($page_context === 'cybercrime-support') ? $this->resolve_page_reference($session_id) : '';
+
         if ($user_id > 0 && class_exists('PAXdesign_Chat_Knowledge')) {
-            $context = PAXdesign_Chat_Knowledge::build_customer_account_context_block($user_id, $session_id);
+            $context = PAXdesign_Chat_Knowledge::build_customer_account_context_block($user_id, $session_id, $focus_reference);
             if ($context !== '') {
                 $prompt .= "\n\n" . $context;
             }
         }
 
-        $page_context = $this->resolve_page_context($session_id);
         if ($page_context === 'cybercrime-support' && class_exists('PAXdesign_Chat_Knowledge')) {
             $page_language = $this->resolve_page_language($session_id);
             if ($page_language === '' && in_array($customer_language, array('de', 'en', 'ar'), true)) {
                 $page_language = $customer_language;
             }
-            $prompt .= "\n\n" . PAXdesign_Chat_Knowledge::build_cybercrime_support_context_block($page_language);
+            $prompt .= "\n\n" . PAXdesign_Chat_Knowledge::build_cybercrime_support_context_block($page_language, $focus_reference);
         }
 
         return $prompt;
@@ -331,6 +333,12 @@ class PAXdesign_Chat {
                 set_transient('pax_chat_page_lang_' . $key, $language, DAY_IN_SECONDS);
             }
         }
+        if (isset($_POST['page_reference'])) {
+            $reference = sanitize_text_field(wp_unslash($_POST['page_reference']));
+            if ($reference !== '') {
+                set_transient('pax_chat_page_ref_' . $key, $reference, DAY_IN_SECONDS);
+            }
+        }
     }
 
     /**
@@ -349,6 +357,29 @@ class PAXdesign_Chat {
         $referrer = isset($_SERVER['HTTP_REFERER']) ? esc_url_raw(wp_unslash($_SERVER['HTTP_REFERER'])) : '';
         if ($referrer !== '' && strpos($referrer, '/cybercrime-support') !== false) {
             return 'cybercrime-support';
+        }
+
+        return '';
+    }
+
+    /**
+     * @param string $session_id
+     * @return string
+     */
+    private function resolve_page_reference($session_id) {
+        $session_id = sanitize_text_field((string) $session_id);
+        if ($session_id !== '') {
+            $stored = get_transient('pax_chat_page_ref_' . md5($session_id));
+            if (is_string($stored) && $stored !== '') {
+                return sanitize_text_field($stored);
+            }
+        }
+
+        if (isset($_POST['page_reference'])) {
+            $reference = sanitize_text_field(wp_unslash($_POST['page_reference']));
+            if ($reference !== '') {
+                return $reference;
+            }
         }
 
         return '';

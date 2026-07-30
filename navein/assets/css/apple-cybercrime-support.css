@@ -699,6 +699,22 @@ html body.page-cybercrime-support #dtr-main-wrapper {
   letter-spacing: 0.04em;
 }
 
+.pax-ccs-portal__success-actions {
+  margin-top: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.pax-ccs-portal__success-chat-hint {
+  margin: 0;
+  max-width: 36rem;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--ccs-muted);
+}
+
 .pax-ccs-portal__field.is-invalid input,
 .pax-ccs-portal__field.is-invalid select,
 .pax-ccs-portal__field.is-invalid textarea {

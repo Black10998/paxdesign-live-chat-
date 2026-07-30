@@ -2516,6 +2516,9 @@
     if (ctx.language) {
       formData.append('page_language', ctx.language);
     }
+    if (ctx.referenceId) {
+      formData.append('page_reference', ctx.referenceId);
+    }
   }
 
   function loadArchivedIds() {
@@ -5086,6 +5089,27 @@
     }
   });
 
+  function openForCybercrime(opts) {
+    opts = opts || {};
+    window.PAXdesignPageContext = window.PAXdesignPageContext || {};
+    window.PAXdesignPageContext.intent = 'cybercrime-support';
+    if (opts.language) {
+      window.PAXdesignPageContext.language = opts.language;
+    }
+    if (opts.referenceId) {
+      window.PAXdesignPageContext.referenceId = opts.referenceId;
+    }
+    setEntryChoice('ai');
+    if (window.PAXdesignBooking && typeof window.PAXdesignBooking.open === 'function') {
+      window.PAXdesignBooking.open();
+      return;
+    }
+    var launcher = document.querySelector('.paxdesign-booking-button');
+    if (launcher) {
+      launcher.click();
+    }
+  }
+
   window.PAXdesignChat = {
     init: init,
     onOpen: onWidgetOpen,
@@ -5094,6 +5118,7 @@
     sendMessage: sendMessage,
     canUseChat: canUseChat,
     beginReadiness: beginChatReadiness,
+    openForCybercrime: openForCybercrime,
     ensureAuthGate: function () {
       initAuthGate();
       if (!canUseChat()) {

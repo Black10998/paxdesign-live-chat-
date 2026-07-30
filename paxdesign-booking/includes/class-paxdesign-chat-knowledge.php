@@ -407,9 +407,10 @@ class PAXdesign_Chat_Knowledge {
      *
      * @param int    $user_id
      * @param string $session_id
+     * @param string $focus_reference Optional Cybercrime Support reference for this chat.
      * @return string
      */
-    public static function build_customer_account_context_block($user_id, $session_id = '') {
+    public static function build_customer_account_context_block($user_id, $session_id = '', $focus_reference = '') {
         $user_id = absint($user_id);
         if ($user_id <= 0) {
             return '';
@@ -513,7 +514,7 @@ class PAXdesign_Chat_Knowledge {
         }
 
         if (class_exists('PAXdesign_Cybercrime_Intake')) {
-            $lines[] = PAXdesign_Cybercrime_Intake::build_account_context_block($user_id);
+            $lines[] = PAXdesign_Cybercrime_Intake::build_account_context_block($user_id, $focus_reference);
         }
 
         if ($session_id !== '' && class_exists('PAXdesign_Customer_Projects')) {
@@ -535,9 +536,10 @@ class PAXdesign_Chat_Knowledge {
      * Cybercrime Support page context for the global Live Chat assistant.
      *
      * @param string $language de|en|ar
+     * @param string $focus_reference Optional active Cybercrime Support reference.
      * @return string
      */
-    public static function build_cybercrime_support_context_block($language = '') {
+    public static function build_cybercrime_support_context_block($language = '', $focus_reference = '') {
         $language = sanitize_key((string) $language);
         if ($language === '') {
             $language = 'ar';
@@ -578,6 +580,15 @@ class PAXdesign_Chat_Knowledge {
         $lines[] = '';
         $lines[] = '## Tone';
         $lines[] = '- Empathetic, precise, no blame. Short paragraphs. One focused question per turn when gathering facts.';
+
+        $focus_reference = sanitize_text_field((string) $focus_reference);
+        if ($focus_reference !== '') {
+            $lines[] = '';
+            $lines[] = '## Active report focus';
+            $lines[] = '- The customer opened chat from Cybercrime Support about report **' . $focus_reference . '**.';
+            $lines[] = '- Prioritize facts for this reference from the account context block (reference number, category, reason, status, dates, updates, attachments).';
+            $lines[] = '- When they ask about status, reference number, reason, or updates, answer from that report data only — do not ask them to repeat details already on file.';
+        }
 
         return implode("\n", $lines);
     }

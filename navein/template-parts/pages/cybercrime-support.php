@@ -317,6 +317,16 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 				<p class="pax-ccs-portal__section-intro"><?php pax_ccs_bilingual( $copy['success']['text'] ); ?></p>
 				<p class="pax-ccs-portal__ref-label"><?php pax_ccs_bilingual( $copy['success']['ref_label'] ); ?></p>
 				<p class="pax-ccs-portal__ref-value" id="pax-ccs-ref-value"></p>
+				<div class="pax-ccs-portal__success-actions">
+					<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary" id="pax-ccs-chat-support">
+						<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( $copy['success']['chat_button']['ar'] ); ?></span>
+						<span class="pax-ccs-t" data-lang="de"><?php echo esc_html( $copy['success']['chat_button']['de'] ); ?></span>
+					</button>
+					<p class="pax-ccs-portal__success-chat-hint">
+						<span class="pax-ccs-t" data-lang="ar"><?php echo esc_html( $copy['success']['chat_hint']['ar'] ); ?></span>
+						<span class="pax-ccs-t" data-lang="de"><?php echo esc_html( $copy['success']['chat_hint']['de'] ); ?></span>
+					</p>
+				</div>
 			</div>
 		</section>
 	</div>

@@ -23,6 +23,7 @@ on:
       - 'paxdesign-booking/includes/class-paxdesign-chat.php'
       - 'paxdesign-booking/includes/class-paxdesign-chat-knowledge.php'
       - 'paxdesign-booking/assets/js/chat-script.js'
+      - 'paxdesign-booking/assets/js/booking-script.js'
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php'
       - 'paxdesign-booking/assets/customer-auth/js/pax-auth.js'
       - 'paxdesign-booking/paxdesign-booking.php'

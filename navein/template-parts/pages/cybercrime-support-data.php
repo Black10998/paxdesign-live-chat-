@@ -349,6 +349,14 @@ return array(
 			'ar' => 'رقم المرجع',
 			'de' => 'Referenznummer',
 		),
+		'chat_button' => array(
+			'ar' => 'اسأل الذكاء الاصطناعي عن هذا البلاغ',
+			'de' => 'KI zu dieser Meldung fragen',
+		),
+		'chat_hint' => array(
+			'ar' => 'يفتح الدردشة مع سياق بلاغك — يمكن للمساعد الإجابة عن رقم المرجع والحالة والتحديثات.',
+			'de' => 'Öffnet den Live-Chat mit Ihrem Meldekontext — Referenz, Status und Updates werden automatisch erkannt.',
+		),
 	),
 	'errors' => array(
 		'required' => array( 'ar' => 'هذا الحقل مطلوب.', 'de' => 'Dieses Feld ist erforderlich.' ),
