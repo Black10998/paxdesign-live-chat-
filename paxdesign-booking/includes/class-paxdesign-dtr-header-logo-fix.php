@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
 
 final class PAXdesign_Dtr_Header_Logo_Fix {
 
-    const VERSION = '1.1.0';
+    const VERSION = '1.1.1';
 
     public static function init() {
         if (is_admin()) {
