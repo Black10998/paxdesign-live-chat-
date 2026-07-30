@@ -26,6 +26,10 @@ jobs:
       APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
       APPLE_PROVISIONING_PROFILE_MAIN_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_MAIN_BASE64 }}
       APPLE_PROVISIONING_PROFILE_WIDGET_BASE64: ${{ secrets.APPLE_PROVISIONING_PROFILE_WIDGET_BASE64 }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY }}
+      APP_STORE_CONNECT_API_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_P8_BASE64 }}
       MAIN_BUNDLE_ID: at.paxdesign.livechat
       WIDGET_BUNDLE_ID: at.paxdesign.livechat.widgets
     steps:
@@ -48,6 +52,15 @@ jobs:
 
       - name: Install xcodegen
         run: brew install xcodegen
+
+      - name: Install App Store Connect API dependencies
+        run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
+
+      - name: Validate App Store Connect private key
+        run: python3 scripts/appstore-connect/prepare-asc-key.py
+
+      - name: Refresh Live Chat App Store provisioning profile
+        run: python3 scripts/appstore-connect/prepare_livechat_provisioning_profile.py
 
       - name: Build signed App Store IPA
         shell: bash

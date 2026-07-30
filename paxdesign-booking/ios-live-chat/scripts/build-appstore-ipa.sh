@@ -109,10 +109,13 @@ install_provisioning_profile() {
     || fail "$label provisioning profile bundle ID mismatch (expected *$expected_bundle_suffix*, got ${app_id:-<empty>}, team ${team_id:-<unknown>})"
 
   if [[ "$label" == "Main" ]]; then
-    local aps_value
+    local aps_value apple_signin
     aps_value="$(profile_field "$plist_path" Entitlements:aps-environment)"
     [[ "$aps_value" == "production" ]] \
       || fail "Main provisioning profile must include aps-environment=production (enable Push Notifications for $expected_bundle_suffix in Apple Developer)"
+    apple_signin="$(profile_field "$plist_path" Entitlements:com.apple.developer.applesignin:0)"
+    [[ "$apple_signin" == "Default" ]] \
+      || fail "Main provisioning profile must include com.apple.developer.applesignin=Default (enable Sign in with Apple for $expected_bundle_suffix and regenerate the App Store profile)"
   fi
 
   local profiles_dir="$HOME/Library/MobileDevice/Provisioning Profiles"
@@ -185,10 +188,13 @@ APS_ENTITLEMENT_VALUE=""
 
 verify_entitlements_source() {
   local entitlements_file="$ROOT/PAXDesignLiveChat/PAXDesignLiveChat.entitlements"
-  local aps_value
+  local aps_value apple_signin
   aps_value="$(/usr/libexec/PlistBuddy -c 'Print :aps-environment' "$entitlements_file" 2>/dev/null || true)"
   [[ "$aps_value" == "production" ]] \
     || fail "PAXDesignLiveChat.entitlements must use aps-environment=production for App Store builds"
+  apple_signin="$(/usr/libexec/PlistBuddy -c 'Print :com.apple.developer.applesignin:0' "$entitlements_file" 2>/dev/null || true)"
+  [[ "$apple_signin" == "Default" ]] \
+    || fail "PAXDesignLiveChat.entitlements must include com.apple.developer.applesignin=Default"
   APS_ENTITLEMENT_VALUE="$aps_value"
 }
 
@@ -521,11 +527,15 @@ resign_archived_products() {
     "$app_path" 2>"$SIGNING_DIR/resign-app.err" \
     || fail "Main app re-sign failed: $(cat "$SIGNING_DIR/resign-app.err" 2>/dev/null || echo unknown)"
 
-  local signed_aps
+  local signed_aps signed_apple_signin
   signed_aps="$(read_signed_entitlement "$app_path" "aps-environment")"
   [[ "$signed_aps" == "production" ]] \
     || fail "Re-signed archive still missing codesign aps-environment=production (got ${signed_aps:-<missing>})"
+  signed_apple_signin="$(read_signed_entitlement "$app_path" "com.apple.developer.applesignin:0")"
+  [[ "$signed_apple_signin" == "Default" ]] \
+    || fail "Re-signed archive missing com.apple.developer.applesignin=Default (got ${signed_apple_signin:-<missing>})"
   echo "    Verified codesign aps-environment=$signed_aps"
+  echo "    Verified codesign com.apple.developer.applesignin=Default"
 }
 
 echo "==> Re-signing archive to embed push entitlements in codesign signature"

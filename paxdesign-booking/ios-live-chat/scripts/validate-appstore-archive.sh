@@ -107,6 +107,10 @@ MAIN_APS="$(read_codesign_entitlement "$APP_PATH" "aps-environment")"
 [[ -n "$MAIN_APS" ]] || fail "Codesign entitlements missing aps-environment in archive (Push not embedded in signature)"
 [[ "$MAIN_APS" == "production" ]] || fail "Main app codesign aps-environment must be production (got ${MAIN_APS})"
 
+MAIN_APPLE_SIGNIN="$(read_codesign_entitlement "$APP_PATH" "com.apple.developer.applesignin:0")"
+[[ "$MAIN_APPLE_SIGNIN" == "Default" ]] \
+  || fail "Main app codesign missing com.apple.developer.applesignin=Default (got ${MAIN_APPLE_SIGNIN:-<missing>})"
+
 APS_MIRROR="$(/usr/libexec/PlistBuddy -c 'Print :PAXSignedAPSEnvironment' "$APP_PATH/Info.plist" 2>/dev/null || true)"
 [[ "$APS_MIRROR" == "production" ]] || fail "Archived Info.plist missing PAXSignedAPSEnvironment=production"
 
@@ -121,4 +125,5 @@ echo "  Archive: $ARCHIVE_PATH"
 echo "  Main app: $MAIN_ID"
 echo "  Widget: $WIDGET_ID (embedded)"
 echo "  codesign aps-environment=$MAIN_APS"
+echo "  codesign com.apple.developer.applesignin=$MAIN_APPLE_SIGNIN"
 echo "  PAXSignedAPSEnvironment=$APS_MIRROR"

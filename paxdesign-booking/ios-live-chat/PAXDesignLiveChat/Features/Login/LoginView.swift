@@ -74,7 +74,7 @@ struct LoginView: View {
         }
     }
 
-    private var contentHeightEstimate: CGFloat { 560 }
+    private var contentHeightEstimate: CGFloat { 580 }
 
     private var loginCard: some View {
         VStack(spacing: 22) {
@@ -86,26 +86,9 @@ struct LoginView: View {
                 showsTitle: false
             )
 
-            VStack(spacing: 14) {
-                PAXSignInWithAppleButton(isLoading: isAppleLoading) { credential in
-                    signInWithApple(credential)
-                } onFailure: { appleError in
-                    error = appleError.localizedDescription
-                    PAXHaptics.warning()
-                }
-
-                HStack(spacing: 12) {
-                    Rectangle().fill(PAXTheme.border.opacity(0.45)).frame(height: 1)
-                    Text(String(localized: "or"))
-                        .font(.footnote)
-                        .foregroundStyle(PAXTheme.textSecondary)
-                    Rectangle().fill(PAXTheme.border.opacity(0.45)).frame(height: 1)
-                }
-
-                VStack(spacing: 12) {
-                    PAXField(title: L10n.LoginUsername, icon: "person", text: $username, keyboardType: .emailAddress)
-                    PAXField(title: L10n.LoginPassword, icon: "lock", text: $password, isSecure: true)
-                }
+            VStack(spacing: 12) {
+                PAXField(title: L10n.LoginUsername, icon: "person", text: $username, keyboardType: .emailAddress)
+                PAXField(title: L10n.LoginPassword, icon: "lock", text: $password, isSecure: true)
             }
 
             if let error {
@@ -137,6 +120,22 @@ struct LoginView: View {
                 .foregroundStyle(PAXTheme.textSecondary)
             }
 
+            HStack(spacing: 12) {
+                Rectangle().fill(PAXTheme.border.opacity(0.45)).frame(height: 1)
+                Text(String(localized: "or"))
+                    .font(.footnote)
+                    .foregroundStyle(PAXTheme.textSecondary)
+                Rectangle().fill(PAXTheme.border.opacity(0.45)).frame(height: 1)
+            }
+            .padding(.top, 4)
+
+            PAXSignInWithAppleButton(isLoading: isAppleLoading) { credential in
+                signInWithApple(credential)
+            } onFailure: { appleError in
+                error = appleError.localizedDescription
+                PAXHaptics.warning()
+            }
+
             VStack(spacing: 8) {
                 Link(L10n.LoginPrivacy, destination: PAXLegalLinks.privacyPolicy)
                     .foregroundStyle(PAXTheme.link)
@@ -144,6 +143,7 @@ struct LoginView: View {
                     .foregroundStyle(PAXTheme.link)
             }
             .font(.footnote)
+            .padding(.top, 4)
         }
         .padding(.vertical, 8)
     }

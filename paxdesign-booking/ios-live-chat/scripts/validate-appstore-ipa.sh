@@ -80,8 +80,16 @@ MAIN_APS="$(read_codesign_entitlement "$APP_PATH" "aps-environment")"
 [[ -n "$MAIN_APS" ]] || fail "Codesign entitlements missing aps-environment in exported IPA (Push not embedded in signature)"
 [[ "$MAIN_APS" == "production" ]] || fail "Exported IPA codesign aps-environment must be production (got ${MAIN_APS})"
 
+MAIN_APPLE_SIGNIN="$(read_codesign_entitlement "$APP_PATH" "com.apple.developer.applesignin:0")"
+[[ "$MAIN_APPLE_SIGNIN" == "Default" ]] \
+  || fail "Exported IPA codesign missing com.apple.developer.applesignin=Default (got ${MAIN_APPLE_SIGNIN:-<missing>})"
+
 PROFILE_APS="$(read_profile_entitlement "$APP_PATH" "aps-environment")"
 [[ "$PROFILE_APS" == "production" ]] || fail "embedded.mobileprovision aps-environment must be production (got ${PROFILE_APS:-<missing>})"
+
+PROFILE_APPLE_SIGNIN="$(read_profile_entitlement "$APP_PATH" "com.apple.developer.applesignin:0")"
+[[ "$PROFILE_APPLE_SIGNIN" == "Default" ]] \
+  || fail "embedded.mobileprovision missing com.apple.developer.applesignin=Default (got ${PROFILE_APPLE_SIGNIN:-<missing>})"
 
 APS_MIRROR="$(/usr/libexec/PlistBuddy -c 'Print :PAXSignedAPSEnvironment' "$APP_PATH/Info.plist" 2>/dev/null || true)"
 [[ "$APS_MIRROR" == "production" ]] || fail "Info.plist missing PAXSignedAPSEnvironment=production (got ${APS_MIRROR:-<missing>})"
@@ -107,5 +115,7 @@ done
 
 echo "App Store IPA validation passed: $(basename "$IPA_PATH")"
 echo "  codesign aps-environment=$MAIN_APS"
+echo "  codesign com.apple.developer.applesignin=$MAIN_APPLE_SIGNIN"
 echo "  profile aps-environment=$PROFILE_APS"
+echo "  profile com.apple.developer.applesignin=$PROFILE_APPLE_SIGNIN"
 echo "  PAXSignedAPSEnvironment=$APS_MIRROR"
