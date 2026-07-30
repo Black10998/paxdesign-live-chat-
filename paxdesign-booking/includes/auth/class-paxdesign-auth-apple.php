@@ -1,6 +1,10 @@
 <?php
 /**
  * Sign in with Apple — mobile identity tokens and website OAuth.
+ *
+ * Mobile (iOS app): client sends identity_token; audience = IOS_BUNDLE_ID; no client_secret.
+ * Website (OAuth):  browser authorization code; client_id = web Service ID; server exchanges
+ *                   code using ES256 client_secret JWT (sub = Service ID, not bundle ID).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

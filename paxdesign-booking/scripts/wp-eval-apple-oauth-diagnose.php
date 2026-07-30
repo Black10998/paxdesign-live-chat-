@@ -11,11 +11,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 require_once WP_PLUGIN_DIR . '/paxdesign-booking/includes/auth/class-paxdesign-auth-apple.php';
 
 $service_id = PAXdesign_Auth_Apple::web_service_id();
+$bundle_id  = trim( (string) get_option( 'paxdesign_apns_bundle_id', 'at.paxdesign.livechat' ) );
 $team_id    = trim( (string) get_option( 'paxdesign_apns_team_id', '' ) );
 $key_id     = trim( (string) get_option( 'paxdesign_apns_key_id', '' ) );
 $key_p8     = trim( (string) get_option( 'paxdesign_apns_key_p8', '' ) );
 
-echo "service_id={$service_id}\n";
+echo "flow=web_oauth (Service ID + client_secret JWT; separate from mobile identity_token flow)\n";
+echo "ios_bundle_id={$bundle_id}\n";
+echo "web_service_id={$service_id}\n";
+if ( $service_id !== '' && $service_id === $bundle_id ) {
+	echo "warning=web_service_id_matches_bundle_id (web OAuth requires a Services ID, not the iOS bundle ID)\n";
+}
 echo 'callback=' . PAXdesign_Auth_Apple::web_callback_url() . "\n";
 echo 'configured=' . ( PAXdesign_Auth_Apple::is_web_configured() ? 'yes' : 'no' ) . "\n";
 echo 'team_id=' . ( $team_id !== '' ? 'set' : 'missing' ) . "\n";
@@ -41,6 +47,23 @@ if ( is_wp_error( $secret ) ) {
 
 $parts = explode( '.', $secret );
 echo 'client_secret_parts=' . count( $parts ) . ' len=' . strlen( $secret ) . "\n";
+
+if ( count( $parts ) >= 2 ) {
+	$payload_json = base64_decode( strtr( $parts[1], '-_', '+/' ) );
+	$payload      = is_string( $payload_json ) ? json_decode( $payload_json, true ) : null;
+	if ( is_array( $payload ) ) {
+		$sub = (string) ( $payload['sub'] ?? '' );
+		$aud = (string) ( $payload['aud'] ?? '' );
+		echo "jwt_sub={$sub}\n";
+		echo "jwt_aud={$aud}\n";
+		if ( $sub !== $service_id ) {
+			echo "warning=jwt_sub_must_equal_web_service_id\n";
+		}
+		if ( $sub === $bundle_id ) {
+			echo "warning=jwt_sub_is_bundle_id_web_requires_service_id\n";
+		}
+	}
+}
 
 $response = wp_remote_post(
 	'https://appleid.apple.com/auth/token',

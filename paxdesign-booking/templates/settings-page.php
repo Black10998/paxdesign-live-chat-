@@ -224,7 +224,7 @@ $chat_quick_links   = class_exists('PAXdesign_Chat_Quick_Links') ? PAXdesign_Cha
 
             <div class="ps-divider"></div>
             <h3 class="ps-subheading">Website — Sign in with Apple (Web OAuth)</h3>
-            <p class="ps-hint ps-hint--block">Service ID (Web Client ID) from Apple Developer → Identifiers → Services IDs. Uses the same Team ID and .p8 key as APNs above. Register the Return URL in Apple Developer only after the callback endpoint is deployed.</p>
+            <p class="ps-hint ps-hint--block">The iOS app and the website use <strong>different Apple identifiers</strong>. Mobile Sign in with Apple sends an identity token verified with the bundle ID below. Website Sign in with Apple uses a separate <strong>Service ID</strong> and an OAuth authorization-code flow with a signed client-secret JWT at token exchange — a working mobile login does not automatically mean the web Service ID is configured correctly in Apple Developer.</p>
 
             <div class="ps-field">
               <label class="ps-label" for="paxdesign_apple_web_service_id">Apple Web Service ID</label>
