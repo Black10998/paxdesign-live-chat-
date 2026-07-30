@@ -180,6 +180,24 @@ jobs:
           ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
             "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-apple-oauth-trace.php || echo 'wp-cli unavailable')"
 
+      - name: Smoke test Apple finish URL on account page
+        continue-on-error: true
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          FINISH_URL="$(ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
+            "cd '$(printf '%q' "$WP_PATH")' && wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-apple-oauth-smoke-finish.php" | rg '^finish_url=' | cut -d= -f2-)"
+          echo "Generated finish URL: $FINISH_URL"
+          curl -sI "$FINISH_URL" | tee smoke-finish-headers.txt
+          rg -i "^HTTP|^location|^set-cookie" smoke-finish-headers.txt
+
       - name: Fix Hostinger REST Authorization passthrough
         env:
           WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
