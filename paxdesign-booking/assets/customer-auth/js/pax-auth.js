@@ -1384,13 +1384,18 @@
       { key: 'push_enabled', label: 'Push notifications (mobile app)' },
     ];
     var html = '<div class="pdx-account-card"><div class="pdx-account-card-title">Notification preferences</div>' +
-      '<form id="pdx-customer-settings-form">';
+      '<form id="pdx-customer-settings-form"><div class="pdx-portal-toggle-group">';
     toggles.forEach(function (t) {
       var checked = prefs[t.key] !== false ? ' checked' : '';
-      html += '<label class="pdx-portal-toggle"><span class="pdx-portal-toggle__label">' + escHtml(t.label) +
-        '</span><input type="checkbox" name="' + escHtml(t.key) + '"' + checked + ' /></label>';
+      html += '<label class="pdx-portal-toggle">' +
+        '<span class="pdx-portal-toggle__label">' + escHtml(t.label) + '</span>' +
+        '<span class="pdx-portal-toggle__switch">' +
+          '<input type="checkbox" name="' + escHtml(t.key) + '"' + checked + ' />' +
+          '<span class="pdx-portal-toggle__track" aria-hidden="true"></span>' +
+        '</span>' +
+      '</label>';
     });
-    html += '<div class="pdx-portal-btn-row">' +
+    html += '</div><div class="pdx-portal-btn-row">' +
       actionBtn('Save preferences', { type: 'submit', icon: 'check', small: true }) +
     '</div></form></div>';
     return html;
