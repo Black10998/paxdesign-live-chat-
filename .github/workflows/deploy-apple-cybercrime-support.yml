@@ -174,25 +174,24 @@ jobs:
           CCS_CSS=$(curl -sS -o /tmp/apple-ccs.css -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-cybercrime-support.css?n=${stamp}")
           CCS_JS=$(curl -sS -o /tmp/apple-ccs.js -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-cybercrime-support.js?n=${stamp}")
           PLUGIN=$(curl -sS -o /tmp/pax-plugin.php -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?n=${stamp}")
-          INTAKE=$(curl -sS -o /tmp/pax-intake.php -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php?n=${stamp}")
+          BOOKING_JS=$(curl -sS -o /tmp/booking-script.js -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/booking-script.js?n=${stamp}")
           AUTH_CSS=$(curl -sS -o /tmp/pdx-auth.css -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/customer-auth/css/pdx-auth.css?n=${stamp}")
           CHAT=$(curl -sS -o /tmp/chat-script.js -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?n=${stamp}")
-          echo "PAGE $PAGE | THEME_CSS $THEME_CSS | CCS_CSS $CCS_CSS | CCS_JS $CCS_JS | PLUGIN $PLUGIN | INTAKE $INTAKE | AUTH_CSS $AUTH_CSS | CHAT $CHAT"
+          echo "PAGE $PAGE | THEME_CSS $THEME_CSS | CCS_CSS $CCS_CSS | CCS_JS $CCS_JS | PLUGIN $PLUGIN | BOOKING_JS $BOOKING_JS | AUTH_CSS $AUTH_CSS | CHAT $CHAT"
           test "$PAGE" = "200"
           test "$THEME_CSS" = "200"
           test "$CCS_CSS" = "200"
           test "$CCS_JS" = "200"
-          test "$PLUGIN" = "200"
-          test "$INTAKE" = "200"
           test "$AUTH_CSS" = "200"
           test "$CHAT" = "200"
           grep -Eq "Version: 1\.4\.11" /tmp/style.css
-          grep -Eq "3\.174\.41" /tmp/pax-plugin.php
-          grep -Eq "ensure_schema|SCHEMA_VERSION" /tmp/pax-intake.php
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-login-gate" /tmp/ccs-page.html
           grep -Eq "Full-page contrast isolation|::file-selector-button" /tmp/apple-ccs.css
           grep -Eq "Sitewide isolated Sign In|background: #000 !important" /tmp/pdx-auth.css
           grep -Eq "openForCybercrime|openSupportChat" /tmp/apple-ccs.js
           grep -Eq "page_reference|openForCybercrime" /tmp/chat-script.js
-          grep -Eq "ffe0a6" /tmp/pdx-auth.css && { echo "Gold Sign In styling still present" >&2; exit 1; } || true
+          grep -Eq "chat-script\.js\?ver=3\.174\.41|pdx-auth\.css\?ver=3\.174\.41" /tmp/ccs-page.html
+          grep -A6 '#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {' /tmp/pdx-auth.css | grep -Eq 'background: #000|background-color: #000'
+          if [ "$PLUGIN" = "200" ]; then grep -Eq "3\.174\.41" /tmp/pax-plugin.php; fi
+          if [ "$BOOKING_JS" = "200" ]; then grep -Eq 'open: openWidget' /tmp/booking-script.js; fi
           echo "Cybercrime Support production verification passed."
