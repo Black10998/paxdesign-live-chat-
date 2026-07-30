@@ -229,7 +229,7 @@ $chat_quick_links   = class_exists('PAXdesign_Chat_Quick_Links') ? PAXdesign_Cha
             <div class="ps-field">
               <label class="ps-label" for="paxdesign_apple_web_service_id">Apple Web Service ID</label>
               <input type="text" id="paxdesign_apple_web_service_id" name="paxdesign_apple_web_service_id"
-                     class="ps-input" value="<?php echo esc_attr($apple_web_service_id); ?>" placeholder="at.paxdesign.web">
+                     class="ps-input" value="<?php echo esc_attr($apple_web_service_id); ?>" placeholder="at.paxdesign.web.login">
               <span class="ps-hint">Client ID for the website OAuth flow (separate from the iOS bundle ID).</span>
             </div>
 
