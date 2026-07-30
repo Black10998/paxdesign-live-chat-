@@ -94,8 +94,8 @@ body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-menu-item--
 /* ─── Account shell ──────────────────────────────────────── */
 body.pdx-account-dashboard-body .pdx-account-app {
   background: var(--pdx-portal-bg);
-  border: 1px solid var(--pdx-portal-border);
-  box-shadow: var(--pdx-portal-shadow);
+  border: 0;
+  box-shadow: none;
 }
 
 body.pdx-account-dashboard-body .pdx-account-sidebar {
@@ -134,7 +134,12 @@ body.pdx-account-dashboard-body .pdx-account-nav-btn.is-active {
 }
 
 body.pdx-account-dashboard-body .pdx-account-sidebar-footer {
+  gap: 8px;
   border-top-color: var(--pdx-portal-border);
+}
+
+body.pdx-account-dashboard-body .pdx-account-website-link {
+  margin-bottom: 0;
 }
 
 body.pdx-account-dashboard-body .pdx-account-page-title {
