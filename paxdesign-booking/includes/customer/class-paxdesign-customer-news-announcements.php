@@ -14,17 +14,30 @@ class PAXdesign_Customer_News_Announcements {
     const DATA_FILE          = 'news-platform-update-2026.php';
 
     public static function init() {
-        add_action('paxdesign_customer_platform_ready', array(__CLASS__, 'maybe_publish_platform_update'), 25);
+        // Published via wp-cli on deploy (wp-eval-seed-platform-news.php), not during web bootstrap.
     }
 
     public static function maybe_publish_platform_update() {
         if (get_option(self::OPTION_KEY) === '1') {
             return;
         }
+        if (!self::should_auto_publish()) {
+            return;
+        }
         $result = self::publish_platform_update_2026();
         if (!is_wp_error($result)) {
             update_option(self::OPTION_KEY, '1', false);
         }
+    }
+
+    private static function should_auto_publish() {
+        if (defined('WP_CLI') && WP_CLI) {
+            return true;
+        }
+        if (function_exists('wp_doing_cron') && wp_doing_cron()) {
+            return true;
+        }
+        return false;
     }
 
     /**
