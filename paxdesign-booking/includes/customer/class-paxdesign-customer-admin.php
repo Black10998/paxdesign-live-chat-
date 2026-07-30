@@ -96,6 +96,8 @@ class PAXdesign_Customer_Admin {
                 'error'       => __('Something went wrong. Please try again.', 'paxdesign-booking'),
                 'internal'    => __('internal', 'paxdesign-booking'),
                 'noTimeline'  => __('No timeline entries yet.', 'paxdesign-booking'),
+                'closeTicket' => __('Close ticket', 'paxdesign-booking'),
+                'closeConfirm'=> __('Close this ticket? The customer can start a new report.', 'paxdesign-booking'),
             ),
         ));
     }
@@ -890,12 +892,14 @@ class PAXdesign_Customer_Admin {
             echo '<option value="' . esc_attr($workflow_status) . '"' . selected($status, $workflow_status, false) . '>' . esc_html(PAXdesign_Cybercrime_Tickets::status_label($workflow_status)) . '</option>';
         }
         echo '</select>';
+        echo '<button type="button" class="button" id="pax-cc-close-ticket"' . (PAXdesign_Cybercrime_Tickets::is_active_status($status) ? '' : ' hidden') . '>' . esc_html__('Close ticket', 'paxdesign-booking') . '</button>';
         echo '</div>';
         echo '<p class="pax-cc-actions__feedback" id="pax-cc-status-feedback" aria-live="polite"></p>';
-        echo '<p class="pax-cc-form__hint">' . esc_html__('Changes save automatically. The customer portal updates within a few seconds.', 'paxdesign-booking') . '</p>';
+        echo '<p class="pax-cc-form__hint">' . esc_html__('Changes save automatically. Closing a ticket lets the customer start a new report.', 'paxdesign-booking') . '</p>';
         echo '</div>';
 
-        echo '<div class="pax-cc-actions__section">';
+        $reply_section_hidden = !PAXdesign_Cybercrime_Tickets::is_active_status($status);
+        echo '<div class="pax-cc-actions__section"' . ($reply_section_hidden ? ' hidden' : '') . ' id="pax-cc-reply-section">';
         echo '<p class="pax-cc-actions__section-title">' . esc_html__('Reply to customer', 'paxdesign-booking') . '</p>';
         echo '<form id="pax-cc-reply-form" class="pax-cc-form" onsubmit="return false;">';
         echo '<p><label for="pax-cc-staff-message">' . esc_html__('Message', 'paxdesign-booking') . '</label><br>';
@@ -905,6 +909,7 @@ class PAXdesign_Customer_Admin {
         echo '<option value="waiting_for_customer"' . selected($status, 'waiting_for_customer', false) . '>' . esc_html__('Waiting for Customer', 'paxdesign-booking') . '</option>';
         echo '<option value="in_review"' . selected($status, 'in_review', false) . '>' . esc_html__('In Review', 'paxdesign-booking') . '</option>';
         echo '<option value="resolved">' . esc_html__('Resolved', 'paxdesign-booking') . '</option>';
+        echo '<option value="closed">' . esc_html__('Closed', 'paxdesign-booking') . '</option>';
         echo '</select>';
         echo '<span class="pax-cc-form__hint">' . esc_html__('The reply appears on the customer timeline immediately.', 'paxdesign-booking') . '</span></p>';
         echo '<p><button type="submit" class="button button-primary" id="pax-cc-reply-submit">' . esc_html__('Send reply', 'paxdesign-booking') . '</button></p>';

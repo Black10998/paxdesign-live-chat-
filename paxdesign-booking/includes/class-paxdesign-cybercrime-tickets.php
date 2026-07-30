@@ -805,6 +805,12 @@ class PAXdesign_Cybercrime_Tickets {
             return new WP_Error('db_error', __('Could not update status.', 'paxdesign-booking'));
         }
 
+        $fresh = self::get_report_row($reference_id);
+        if (!$fresh || self::normalize_workflow_status((string) ($fresh['status'] ?? '')) !== $new_status) {
+            return new WP_Error('db_error', __('Could not update status.', 'paxdesign-booking'));
+        }
+        $row = $fresh;
+
         $label = self::status_label($new_status);
         $message = $summary !== ''
             ? $summary
@@ -835,6 +841,10 @@ class PAXdesign_Cybercrime_Tickets {
                 $new_status,
                 sprintf(__('Cybercrime report %s updated', 'paxdesign-booking'), $reference_id)
             );
+        }
+
+        if (in_array($new_status, self::$closed_statuses, true)) {
+            self::close_linked_chat_session($row);
         }
 
         return true;
@@ -1288,6 +1298,64 @@ class PAXdesign_Cybercrime_Tickets {
             $session_id
         ));
         return is_string($reference) ? sanitize_text_field($reference) : '';
+    }
+
+    /**
+     * Close the cybercrime report linked to a live-chat session (if still active).
+     *
+     * @param string $session_id
+     * @param int    $actor_user_id
+     * @return bool|WP_Error
+     */
+    public static function close_report_for_chat_session($session_id, $actor_user_id = 0) {
+        $session_id = sanitize_text_field((string) $session_id);
+        if ($session_id === '') {
+            return true;
+        }
+
+        $reference_id = self::get_reference_for_session($session_id);
+        if ($reference_id === '') {
+            return true;
+        }
+
+        $row = self::get_report_row($reference_id);
+        if (!$row || !self::is_active_status((string) ($row['status'] ?? ''))) {
+            return true;
+        }
+
+        return self::update_status(
+            $reference_id,
+            'closed',
+            $actor_user_id,
+            __('Ticket closed with chat.', 'paxdesign-booking'),
+            true,
+            true
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     */
+    private static function close_linked_chat_session($row) {
+        if (!is_array($row) || !class_exists('PAXdesign_Chat_Live')) {
+            return;
+        }
+        $session_id = sanitize_text_field((string) ($row['chat_session_id'] ?? ''));
+        if ($session_id === '') {
+            return;
+        }
+
+        $live = PAXdesign_Chat_Live::get_instance();
+        if (!method_exists($live, 'admin_close')) {
+            return;
+        }
+
+        $result = $live->admin_close($session_id);
+        if (is_wp_error($result) && $result->get_error_code() !== 'not_found') {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[PAXdesign Cybercrime] Linked chat close failed: ' . $result->get_error_message());
+            }
+        }
     }
 
     /**

@@ -20,6 +20,8 @@
 
   var statusSelect = document.getElementById('pax-cc-status');
   var statusFeedback = document.getElementById('pax-cc-status-feedback');
+  var closeTicketBtn = document.getElementById('pax-cc-close-ticket');
+  var replySection = document.getElementById('pax-cc-reply-section');
   var replyForm = document.getElementById('pax-cc-reply-form');
   var replyFeedback = document.getElementById('pax-cc-reply-feedback');
   var internalNoteForm = document.getElementById('pax-cc-internal-note-form');
@@ -35,6 +37,11 @@
 
   var lastSavedStatus = statusSelect ? statusSelect.value : '';
   var statusSaveTimer = null;
+  var closedStatuses = ['resolved', 'closed'];
+
+  function isClosedStatus(status) {
+    return closedStatuses.indexOf(status || '') !== -1;
+  }
 
   function text(key, fallback) {
     return i18n[key] || fallback || '';
@@ -267,6 +274,39 @@
     timelineEl.innerHTML = entries.map(renderTimelineItem).join('');
   }
 
+  function updateListRowStatus(report) {
+    if (!report || !report.reference_id) {
+      return;
+    }
+    var row = document.querySelector('tr[data-reference="' + report.reference_id + '"]');
+    if (!row) {
+      return;
+    }
+    var badge = row.querySelector('.pax-cc-status');
+    if (!badge) {
+      return;
+    }
+    var status = report.status || '';
+    badge.textContent = report.status_label || status;
+    badge.className = 'pax-cc-status ' + (statusClasses[status] || 'pax-cc-status--submitted');
+  }
+
+  function updateClosedUi(report) {
+    if (!report) {
+      return;
+    }
+    var closed = isClosedStatus(report.status || '');
+    if (closeTicketBtn) {
+      closeTicketBtn.hidden = closed;
+    }
+    if (replySection) {
+      replySection.hidden = closed;
+    }
+    if (statusSelect) {
+      statusSelect.disabled = closed;
+    }
+  }
+
   function applyReport(report) {
     if (!report) {
       return;
@@ -274,6 +314,8 @@
     updateStatusBadge(report);
     updateWorkflow(report.status || '');
     renderTimeline(report.timeline || []);
+    updateListRowStatus(report);
+    updateClosedUi(report);
     if (statusSelect && report.status) {
       statusSelect.value = report.status;
       lastSavedStatus = report.status;
@@ -311,9 +353,26 @@
       if (statusSaveTimer) {
         window.clearTimeout(statusSaveTimer);
       }
+      var delay = isClosedStatus(nextStatus) ? 0 : 150;
+      if (delay === 0) {
+        saveStatus(nextStatus);
+        return;
+      }
       statusSaveTimer = window.setTimeout(function () {
         saveStatus(nextStatus);
-      }, 150);
+      }, delay);
+    });
+  }
+
+  if (closeTicketBtn) {
+    closeTicketBtn.addEventListener('click', function () {
+      if (!window.confirm(text('closeConfirm', 'Close this ticket? The customer can start a new report.'))) {
+        return;
+      }
+      if (statusSelect) {
+        statusSelect.value = 'closed';
+      }
+      saveStatus('closed');
     });
   }
 

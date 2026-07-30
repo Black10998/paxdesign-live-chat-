@@ -199,13 +199,13 @@ jobs:
           test "$ADMIN_JS" = "200"
           test "$AUTH_CSS" = "200"
           test "$CHAT" = "200"
-          grep -Eq "Version: 1\.4\.22" /tmp/style.css
-          grep -Eq "chat-script\.js\?ver=3\.174\.53|pdx-auth\.css\?ver=3\.174\.53" /tmp/ccs-page.html
+          grep -Eq "Version: 1\.4\.23" /tmp/style.css
+          grep -Eq "chat-script\.js\?ver=3\.174\.54|pdx-auth\.css\?ver=3\.174\.54" /tmp/ccs-page.html
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-login-gate" /tmp/ccs-page.html
           grep -Eq "Full-page contrast isolation|::file-selector-button" /tmp/apple-ccs.css
           grep -Eq "Sitewide isolated Sign In|background: #000 !important" /tmp/pdx-auth.css
-          grep -Eq "openForCybercrime|openSupportChat|setInterval\(poll, 5000\)" /tmp/apple-ccs.js
-          grep -Eq "paxdesign_cybercrime_admin_status|pax-cc-ticket-actions|REQUEST_TIMEOUT_MS" /tmp/cybercrime-admin.js
+          grep -Eq "isReportActive|applyReportLifecycle|pax-ccs-portal--report-closed" /tmp/apple-ccs.js
+          grep -Eq "paxdesign_cybercrime_admin_status|pax-cc-close-ticket|REQUEST_TIMEOUT_MS" /tmp/cybercrime-admin.js
           grep -Eq "page_reference|openForCybercrime" /tmp/chat-script.js
           grep -A6 '#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {' /tmp/pdx-auth.css | grep -Eq 'background: #000|background-color: #000'
           if [ "$BOOKING_JS" = "200" ]; then grep -Eq 'open: openWidget' /tmp/booking-script.js; fi

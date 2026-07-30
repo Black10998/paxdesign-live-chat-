@@ -98,6 +98,54 @@
     return 'under_review';
   }
 
+  function isReportActive(report) {
+    if (!report) {
+      return false;
+    }
+    if (report.is_active === false || report.is_active === 0 || report.is_active === '0') {
+      return false;
+    }
+    var status = String(report.status || report.customer_status || '');
+    return status !== 'closed' && status !== 'resolved';
+  }
+
+  function clearReportRefParam() {
+    try {
+      var params = new URLSearchParams(window.location.search);
+      if (!params.has('ref')) {
+        return;
+      }
+      params.delete('ref');
+      var query = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (query ? '?' + query : '') + window.location.hash);
+    } catch (e) {}
+  }
+
+  function applyReportLifecycle(report) {
+    if (!report) {
+      return;
+    }
+    var isActive = isReportActive(report);
+    root.classList.toggle('pax-ccs-portal--report-closed', !isActive);
+    if (activeReplyWrap) {
+      activeReplyWrap.hidden = !isActive;
+    }
+    if (activeClosedNote) {
+      activeClosedNote.hidden = isActive;
+    }
+    if (backHistoryBtn) {
+      backHistoryBtn.hidden = isActive;
+    }
+    updateStartButtonLabel();
+    if (phase === 'active-report') {
+      if (isActive) {
+        startReportPolling();
+      } else {
+        stopReportPolling();
+      }
+    }
+  }
+
   function updateStatusBadge(report) {
     if (!activeStatusBadgeEl || !activeStatusLabelEl || !report) {
       return;
@@ -268,7 +316,7 @@
   function updateStartUnreadFromReports(reports) {
     var total = 0;
     (reports || []).forEach(function (report) {
-      if (report && report.is_active && (parseInt(report.unread_count, 10) || 0) > 0) {
+      if (report && isReportActive(report) && (parseInt(report.unread_count, 10) || 0) > 0) {
         total += parseInt(report.unread_count, 10) || 0;
       }
     });
@@ -320,7 +368,7 @@
       return;
     }
     var closed = (reports || []).filter(function (report) {
-      return report && report.is_active === false;
+      return report && !isReportActive(report);
     });
     if (!closed.length) {
       reportHistoryEl.hidden = true;
@@ -363,7 +411,7 @@
     if (!startBtn) {
       return;
     }
-    var mode = activeReport && activeReport.is_active ? 'view' : 'start';
+    var mode = isReportActive(activeReport) ? 'view' : 'start';
     startBtn.querySelectorAll('[data-ccs-start-label]').forEach(function (el) {
       el.hidden = el.getAttribute('data-ccs-start-label') !== mode;
     });
@@ -465,6 +513,7 @@
     }
     updateUnreadBadges(parseInt(report.unread_count, 10) || prevUnread);
     renderTimeline(report.timeline || [], { forceNewest: newActivity });
+    applyReportLifecycle(report);
     if (phase === 'active-report' && report.reference_id && (parseInt(report.unread_count, 10) || 0) > 0) {
       markReportRead(report.reference_id);
     }
@@ -611,8 +660,7 @@
     }
     activeReport = report;
     setPhase('active-report');
-    var isActive = report.is_active !== false;
-    root.classList.toggle('pax-ccs-portal--report-closed', !isActive);
+    applyReportLifecycle(report);
     if (activeRefEl) {
       activeRefEl.textContent = report.reference_id || '';
     }
@@ -625,14 +673,8 @@
     }
     renderTimeline(report.timeline || [], { forceNewest: forceNewest !== false });
     renderAttachments(report.attachments || []);
-    if (activeReplyWrap) {
-      activeReplyWrap.hidden = !isActive;
-    }
-    if (activeClosedNote) {
-      activeClosedNote.hidden = isActive;
-    }
-    if (backHistoryBtn) {
-      backHistoryBtn.hidden = isActive;
+    if (activeReplyError) {
+      activeReplyError.hidden = true;
     }
     updateUnreadBadges(parseInt(report.unread_count, 10) || 0);
     markReportRead(report.reference_id || '').then(function (updated) {
@@ -645,7 +687,6 @@
       }
     });
     setPageContext(root.getAttribute('data-ccs-lang') || 'ar', report.reference_id || '');
-    updateStartButtonLabel();
     try {
       var params = new URLSearchParams(window.location.search);
       params.set('ref', report.reference_id || '');
@@ -654,11 +695,6 @@
       window.history.replaceState({}, '', window.location.pathname + (query ? '?' + query : '') + window.location.hash);
     } catch (e) {}
     window.scrollTo({ top: activeReportEl.offsetTop - 12, behavior: 'smooth' });
-    if (isActive) {
-      startReportPolling();
-    } else {
-      stopReportPolling();
-    }
   }
 
   var reportVisibilityBound = false;
@@ -712,7 +748,7 @@
       return Promise.resolve(true);
     }
     return fetchActiveReport(paramsRef || '').then(function (report) {
-      if (report && (report.is_active || paramsRef)) {
+      if (report && (isReportActive(report) || paramsRef)) {
         showActiveReport(report);
         return true;
       }
@@ -723,7 +759,7 @@
   }
 
   function viewActiveOrStart() {
-    if (activeReport) {
+    if (activeReport && isReportActive(activeReport)) {
       showActiveReport(activeReport);
       return;
     }
@@ -732,10 +768,12 @@
       return;
     }
     fetchActiveReport('').then(function (report) {
-      if (report && report.is_active) {
+      if (report && isReportActive(report)) {
         showActiveReport(report);
         return;
       }
+      activeReport = null;
+      clearReportRefParam();
       startReporting();
     });
   }
@@ -769,10 +807,12 @@
       }
       clearResumeParam();
       fetchActiveReport('').then(function (report) {
-        if (report && report.is_active) {
+        if (report && isReportActive(report)) {
           showActiveReport(report);
           return;
         }
+        activeReport = null;
+        clearReportRefParam();
         startReporting();
       });
     } catch (e) {}
@@ -923,6 +963,10 @@
   }
 
   function startReporting() {
+    if (activeReport && !isReportActive(activeReport)) {
+      activeReport = null;
+      clearReportRefParam();
+    }
     setPhase('form');
     showStep(1);
     var firstField = form.querySelector('#pax-ccs-full-name');
@@ -1211,7 +1255,7 @@
 
   if (activeReplySubmit && activeReplyInput) {
     activeReplySubmit.addEventListener('click', function () {
-      if (!activeReport || !activeReport.reference_id) {
+      if (!activeReport || !activeReport.reference_id || !isReportActive(activeReport)) {
         return;
       }
       var message = (activeReplyInput.value || '').trim();

@@ -3758,6 +3758,10 @@ class PAXdesign_Chat_Live {
         }
         $this->emit_handler_event_with_message($session_id, self::HANDLER_CLOSED, $entry);
 
+        if (class_exists('PAXdesign_Cybercrime_Tickets')) {
+            PAXdesign_Cybercrime_Tickets::close_report_for_chat_session($session_id, get_current_user_id());
+        }
+
         return array(
             'handler' => self::HANDLER_CLOSED,
             'message' => $entry,
