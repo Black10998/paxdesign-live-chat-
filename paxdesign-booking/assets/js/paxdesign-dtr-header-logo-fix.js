@@ -1,74 +1,63 @@
 (function () {
   'use strict';
 
-  var DESKTOP_SELECTOR = 'header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default';
-  var FILTER_ID = 'pdx-header-pax-shadow';
-  var BRAND_GREEN = '#CCFF00';
+  var LOGO_LINK_SELECTORS = [
+    'header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default',
+    '#dtr-responsive-header a.dtr-logo.logo-default',
+  ];
   var MAX_RETRIES = 40;
   var RETRY_MS = 100;
 
-  function fixGradientStops(svg) {
-    if (!svg) {
-      return;
-    }
-    svg.querySelectorAll('linearGradient stop').forEach(function (stop) {
-      stop.setAttribute('stop-color', BRAND_GREEN);
-    });
+  function findLogoRoot(link) {
+    return (
+      link.querySelector('#pax-isolated-logo.paxlogo-wrap') ||
+      link.querySelector('.pax-isolated-logo.paxlogo-wrap') ||
+      link.querySelector('.paxlogo-wrap')
+    );
   }
 
-  function disableShine(pax) {
-    if (!pax) {
-      return;
-    }
-    var shine = pax.querySelector('.paxlogo-pax-shine');
-    if (!shine || shine.dataset.pdxShineOff === '1') {
-      return;
-    }
-    shine.setAttribute('opacity', '0');
-    shine.dataset.pdxShineOff = '1';
-  }
-
-  function ensureShadowFilter(svg) {
+  function ensurePaxShadowFilter(svg) {
     if (!svg) {
       return null;
     }
+    if (svg.dataset.pdxPaxShadowFilter) {
+      return svg.dataset.pdxPaxShadowFilter;
+    }
+
+    var filterId = 'pdx-pax-shadow-' + Math.random().toString(36).slice(2, 8);
     var defs = svg.querySelector('defs');
     if (!defs) {
       defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
       svg.insertBefore(defs, svg.firstChild);
     }
-    if (defs.querySelector('#' + FILTER_ID)) {
-      return FILTER_ID;
-    }
 
     var filter = document.createElementNS('http://www.w3.org/2000/svg', 'filter');
-    filter.setAttribute('id', FILTER_ID);
-    filter.setAttribute('x', '-60%');
-    filter.setAttribute('y', '-60%');
-    filter.setAttribute('width', '220%');
-    filter.setAttribute('height', '220%');
+    filter.setAttribute('id', filterId);
+    filter.setAttribute('x', '-50%');
+    filter.setAttribute('y', '-50%');
+    filter.setAttribute('width', '200%');
+    filter.setAttribute('height', '200%');
     filter.setAttribute('color-interpolation-filters', 'sRGB');
 
     var shadow = document.createElementNS('http://www.w3.org/2000/svg', 'feDropShadow');
     shadow.setAttribute('dx', '0');
-    shadow.setAttribute('dy', '2');
-    shadow.setAttribute('stdDeviation', '2');
+    shadow.setAttribute('dy', '1.5');
+    shadow.setAttribute('stdDeviation', '1.35');
     shadow.setAttribute('flood-color', '#000000');
-    shadow.setAttribute(
-      'flood-opacity',
-      document.body.classList.contains('dtr-apple-sticky-header') ? '0.88' : '0.8'
-    );
+    shadow.setAttribute('flood-opacity', '0.75');
     filter.appendChild(shadow);
     defs.appendChild(filter);
-    return FILTER_ID;
+
+    svg.dataset.pdxPaxShadowFilter = filterId;
+    return filterId;
   }
 
-  function enhanceDesktopLogo(link) {
-    if (!link || link.dataset.pdxDesktopPaxFix === '1') {
+  function applyPaxShadow(link) {
+    if (!link || link.dataset.pdxPaxShadow === '1') {
       return true;
     }
 
-    var root = link.querySelector('#pax-isolated-logo.paxlogo-wrap');
+    var root = findLogoRoot(link);
     if (!root) {
       return false;
     }
@@ -79,30 +68,23 @@
       return false;
     }
 
-    fixGradientStops(svg);
-
-    var paxText = pax.querySelector('text');
-    if (paxText) {
-      paxText.setAttribute('fill', BRAND_GREEN);
-    }
-
-    disableShine(pax);
-
-    var filterId = ensureShadowFilter(svg);
-    if (filterId && !pax.getAttribute('filter')) {
+    var filterId = ensurePaxShadowFilter(svg);
+    if (filterId) {
       pax.setAttribute('filter', 'url(#' + filterId + ')');
     }
 
-    link.dataset.pdxDesktopPaxFix = '1';
+    link.dataset.pdxPaxShadow = '1';
     return true;
   }
 
   function scan() {
     var done = true;
-    document.querySelectorAll(DESKTOP_SELECTOR).forEach(function (link) {
-      if (!enhanceDesktopLogo(link)) {
-        done = false;
-      }
+    LOGO_LINK_SELECTORS.forEach(function (selector) {
+      document.querySelectorAll(selector).forEach(function (link) {
+        if (!applyPaxShadow(link)) {
+          done = false;
+        }
+      });
     });
     return done;
   }
