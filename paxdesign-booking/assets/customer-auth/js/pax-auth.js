@@ -27,6 +27,7 @@
     dashboard: null,
     profile: null,
     files: null,
+    settings: null,
     loaded: false,
   };
   var sessionSyncInFlight = false;
@@ -121,6 +122,31 @@
     var iconHtml = opts.icon ? cxIcon(opts.icon, 16) : '';
     return '<button type="' + (opts.type || 'submit') + '" class="' + cls + '">' +
       '<span class="pdx-btn-pearl__wrap">' + iconHtml + '<span>' + escHtml(label) + '</span></span></button>';
+  }
+
+  function isAccountDashboard() {
+    return document.body.classList.contains('pdx-account-dashboard-body') || (isAuthPage() && !!user.logged_in);
+  }
+
+  function portalBtn(label, opts) {
+    opts = opts || {};
+    var cls = 'pdx-portal-btn';
+    if (opts.variant === 'secondary') cls += ' pdx-portal-btn--secondary';
+    else if (opts.variant === 'destructive') cls += ' pdx-portal-btn--destructive';
+    else if (opts.variant === 'ghost') cls += ' pdx-portal-btn--ghost';
+    if (opts.small) cls += ' pdx-portal-btn--sm';
+    if (opts.inline) cls += ' pdx-portal-btn--inline';
+    if (opts.full) cls += ' pdx-portal-btn--full';
+    if (opts.className) cls += ' ' + opts.className;
+    var iconHtml = opts.icon ? cxIcon(opts.icon, 16) : '';
+    var idAttr = opts.id ? ' id="' + escHtml(opts.id) + '"' : '';
+    return '<button type="' + (opts.type || 'submit') + '" class="' + cls + '"' + idAttr + '>' +
+      iconHtml + '<span>' + escHtml(label) + '</span></button>';
+  }
+
+  function actionBtn(label, opts) {
+    if (isAccountDashboard()) return portalBtn(label, opts);
+    return pearlBtn(label, opts);
   }
 
   function cxLoading(label) {
@@ -458,7 +484,7 @@
       btn.addEventListener('click', function () {
         var action = btn.dataset.action;
         closeAuthMenu();
-        if (action === 'portal') openCustomerPortal();
+        if (action === 'portal') openCustomerPortal('overview');
         else if (action === 'profile') openProfileOverlay();
         else if (action === 'account') openAccountPanel();
         else if (action === 'logout') doLogout();
@@ -556,6 +582,11 @@
   }
 
   function openAccountPanel() {
+    if (C.accountPageUrl || isAuthPage()) {
+      if (isAuthPage()) setAccountSection('overview');
+      else window.location.href = accountPageUrl() + '#/overview';
+      return;
+    }
     if (window.PDXDock && window.PDXDock.openPanel) {
       window.PDXDock.openPanel('account');
     }
@@ -900,7 +931,7 @@
 
   function setFormLoading(loading) {
     var root = activeAuthRoot();
-    var btn = root && (root.querySelector('.pdx-auth-submit') || root.querySelector('.pdx-btn-pearl'));
+    var btn = root && (root.querySelector('.pdx-auth-submit') || root.querySelector('.pdx-portal-btn') || root.querySelector('.pdx-btn-pearl'));
     if (btn) {
       btn.disabled = !!loading;
       btn.classList.toggle('is-loading', !!loading);
@@ -1051,14 +1082,22 @@
           { id: 'overview', label: 'Overview', icon: 'dashboard' },
           { id: 'personal', label: 'Personal Information', icon: 'user' },
           { id: 'security', label: 'Security', icon: 'lock' },
+          { id: 'settings', label: 'Settings', icon: 'settings' },
         ],
       },
       {
         label: 'Your Work',
         items: [
           { id: 'projects', label: 'Projects', icon: 'folder' },
-          { id: 'orders', label: 'Orders & Requests', icon: 'receipt' },
+          { id: 'orders', label: 'Requests', icon: 'receipt' },
           { id: 'files', label: 'Files & Invoices', icon: 'file' },
+        ],
+      },
+      {
+        label: 'Updates',
+        items: [
+          { id: 'news', label: 'News', icon: 'news' },
+          { id: 'notifications', label: 'Alerts', icon: 'bell' },
         ],
       },
       {
@@ -1076,9 +1115,12 @@
       overview: 'Overview',
       personal: 'Personal Information',
       security: 'Security',
+      settings: 'Settings',
       projects: 'Projects',
-      orders: 'Orders & Requests',
+      orders: 'Requests',
       files: 'Files & Invoices',
+      news: 'News',
+      notifications: 'Alerts',
       support: 'Messages',
       services: 'Services',
     };
@@ -1090,9 +1132,12 @@
       overview: 'A snapshot of your projects, requests, and account activity.',
       personal: 'Update your name and contact details.',
       security: 'Manage your password and account security.',
+      settings: 'Control notifications and communication preferences.',
       projects: 'Track active work and deliverables.',
       orders: 'View requests, billing, and payment history.',
       files: 'Download shared files and invoices.',
+      news: 'Announcements and updates from PAXDesign.',
+      notifications: 'Your account alerts and activity notifications.',
       support: 'Continue your conversation with PAXDesign.',
       services: 'Browse services and start new requests.',
     };
@@ -1106,6 +1151,8 @@
       orders: 'orders',
       support: 'chat',
       services: 'services',
+      news: 'news',
+      notifications: 'notifications',
     };
     return map[section] || 'overview';
   }
@@ -1163,7 +1210,7 @@
       html += '</div>';
     });
     html += '<div class="pdx-account-sidebar-footer">' +
-      '<button type="button" class="pdx-cx-btn pdx-cx-btn--ghost pdx-account-signout">' + cxIcon('logout', 16) + escHtml('Sign Out') + '</button>' +
+      '<button type="button" class="pdx-portal-btn pdx-portal-btn--destructive pdx-portal-btn--full pdx-account-signout">' + cxIcon('logout', 16) + escHtml('Sign Out') + '</button>' +
     '</div>';
     accountSidebarEl.innerHTML = html;
     accountSidebarEl.querySelectorAll('[data-account-section]').forEach(function (btn) {
@@ -1182,7 +1229,7 @@
       '<form id="pdx-customer-profile-form">' +
         field('display_name', 'Display name', profile.display_name || user.display_name) +
         field('email', 'Email', profile.email || user.email, 'email') +
-        '<div style="margin-top:12px">' + pearlBtn('Save changes', { type: 'submit', icon: 'check', small: true, inline: true }) + '</div>' +
+        '<div style="margin-top:12px">' + actionBtn('Save changes', { type: 'submit', icon: 'check', small: true, inline: true }) + '</div>' +
       '</form>' +
     '</div>';
   }
@@ -1194,9 +1241,57 @@
         field('current_password', 'Current password', '', 'password') +
         field('new_password', 'New password', '', 'password') +
         field('confirm_password', 'Confirm new password', '', 'password') +
-        '<div style="margin-top:12px">' + pearlBtn('Update password', { type: 'submit', icon: 'lock', small: true, inline: true }) + '</div>' +
+        '<div style="margin-top:12px">' + actionBtn('Update password', { type: 'submit', icon: 'lock', small: true, inline: true }) + '</div>' +
       '</form>' +
     '</div>';
+  }
+
+  function renderAccountSettingsSection(settings) {
+    settings = settings || {};
+    var prefs = settings.notifications || {};
+    var toggles = [
+      { key: 'chat', label: 'Message notifications' },
+      { key: 'project', label: 'Project updates' },
+      { key: 'order', label: 'Request updates' },
+      { key: 'news', label: 'News announcements' },
+      { key: 'security', label: 'Security alerts' },
+      { key: 'push_enabled', label: 'Push notifications (mobile app)' },
+    ];
+    var html = '<div class="pdx-account-card"><div class="pdx-account-card-title">Notification preferences</div>' +
+      '<form id="pdx-customer-settings-form">';
+    toggles.forEach(function (t) {
+      var checked = prefs[t.key] !== false ? ' checked' : '';
+      html += '<label class="pdx-portal-toggle"><span class="pdx-portal-toggle__label">' + escHtml(t.label) +
+        '</span><input type="checkbox" name="' + escHtml(t.key) + '"' + checked + ' /></label>';
+    });
+    html += '<div class="pdx-portal-btn-row">' +
+      actionBtn('Save preferences', { type: 'submit', icon: 'check', small: true }) +
+    '</div></form></div>';
+    return html;
+  }
+
+  function bindAccountSettingsForm(container) {
+    var form = container.querySelector('#pdx-customer-settings-form');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var fd = new FormData(form);
+      customerApiFetch('POST', '/customer/settings', {
+        notifications: {
+          chat: !!fd.get('chat'),
+          project: !!fd.get('project'),
+          order: !!fd.get('order'),
+          news: !!fd.get('news'),
+          security: !!fd.get('security'),
+          push_enabled: !!fd.get('push_enabled'),
+        },
+      }).then(function (data) {
+        notify((data && data.message) || 'Settings saved.', data && data._ok !== false ? 'info' : 'warn');
+        if (data && data._ok !== false) {
+          accountState.settings = data;
+        }
+      });
+    });
   }
 
   function renderAccountFilesSection(files) {
@@ -1276,6 +1371,11 @@
       bindAccountSecurityForm(accountMainEl);
       return;
     }
+    if (section === 'settings') {
+      accountMainEl.innerHTML = head + renderAccountSettingsSection(accountState.settings);
+      bindAccountSettingsForm(accountMainEl);
+      return;
+    }
     if (section === 'files') {
       accountMainEl.innerHTML = head + renderAccountFilesSection(accountState.files);
       return;
@@ -1301,6 +1401,7 @@
         customerApiFetch('GET', '/customer/dashboard'),
         customerApiFetch('GET', '/customer/profile'),
         customerApiFetch('GET', '/customer/files'),
+        customerApiFetch('GET', '/customer/settings'),
       ]);
     }).then(function (results) {
       var dashboard = results[0];
@@ -1315,6 +1416,7 @@
       accountState.dashboard = dashboard;
       accountState.profile = (results[1] && results[1]._ok !== false) ? results[1] : {};
       accountState.files = (results[2] && Array.isArray(results[2].files)) ? results[2].files : (Array.isArray(results[2]) ? results[2] : []);
+      accountState.settings = (results[3] && results[3]._ok !== false) ? results[3] : {};
       accountState.loaded = true;
       portalState.dashboard = dashboard;
       renderAccountApp();
@@ -1575,7 +1677,7 @@
           field('email', 'Email', p.email, 'email') +
           field('current_password', 'Current password (to change password)', '', 'password') +
           field('new_password', 'New password', '', 'password') +
-          '<div style="margin-top:12px">' + pearlBtn('Save changes', { type: 'submit', icon: 'check', small: true, inline: true }) + '</div>' +
+          '<div style="margin-top:12px">' + actionBtn('Save changes', { type: 'submit', icon: 'check', small: true, inline: true }) + '</div>' +
         '</form>' +
       '</div>' +
       '<button type="button" class="pdx-cx-btn pdx-cx-btn--ghost pdx-logout-btn">' + cxIcon('logout', 16) + 'Log out</button>' +
@@ -1947,56 +2049,16 @@
       navigateToAuthPage('login');
       return;
     }
-    if (C.accountPageUrl || isAuthPage()) {
-      if (isAuthPage()) {
-        setAccountSection(tab === 'chat' ? 'support' : tab);
-        return;
-      }
-      window.location.href = accountPageUrl() + '#/' + (tab === 'chat' ? 'support' : tab);
+    var section = tab === 'chat' ? 'support' : tab;
+    if (isAuthPage()) {
+      setAccountSection(section);
       return;
     }
-    if (!portalOverlay) {
-      portalOverlay = document.createElement('div');
-      portalOverlay.id = 'pdx-customer-portal';
-      portalOverlay.className = 'pdx-cx-shell';
-      portalOverlay.setAttribute('role', 'dialog');
-      portalOverlay.setAttribute('aria-modal', 'true');
-      portalOverlay.setAttribute('aria-label', 'Customer Portal');
-      portalOverlay.innerHTML =
-        '<div class="pdx-customer-portal-card pdx-customer-portal-card--full">' +
-          '<button type="button" class="pdx-auth-close" aria-label="Close">&times;</button>' +
-          '<div class="pdx-customer-portal-head">' + cxIcon('dashboard', 20) + '<span>Customer Portal</span></div>' +
-          '<div class="pdx-customer-portal-body">' + cxLoading('Loading your workspace…') + '</div>' +
-        '</div>';
-      document.body.appendChild(portalOverlay);
-      portalOverlay.querySelector('.pdx-auth-close').addEventListener('click', closeCustomerPortal);
-      portalOverlay.addEventListener('click', function (e) {
-        if (e.target === portalOverlay) closeCustomerPortal();
-      });
+    if (C.accountPageUrl) {
+      window.location.href = accountPageUrl() + '#/' + section;
+      return;
     }
-    portalOverlay.classList.add('is-open');
-    document.body.classList.add('pdx-no-scroll');
-    portalState.tab = 'overview';
-    portalState.detail = null;
-    portalState.dashboard = null;
-    var body = portalOverlay.querySelector('.pdx-customer-portal-body');
-    body.innerHTML = cxLoading('Loading your workspace…');
-    claimGuestSessionIfNeeded().finally(function () {
-      customerApiFetch('GET', '/customer/dashboard').then(function (data) {
-        if (!data || data._status === 401) {
-          body.innerHTML = '<p class="pdx-auth-error">Please sign in to continue.</p>';
-          return;
-        }
-        if (data.code === 'pdx_email_unverified') {
-          body.innerHTML = '<p class="pdx-auth-error">Verify your email to access your portal.</p>';
-          return;
-        }
-        portalState.dashboard = data;
-        renderCustomerPortalDashboard(body, data);
-      }).catch(function () {
-        body.innerHTML = '<p class="pdx-auth-error">Unable to load your portal. Please try again.</p>';
-      });
-    });
+    notify('Account page is not configured.', 'warn');
   }
 
   function closeCustomerPortal() {
@@ -2252,7 +2314,7 @@
       '</div>' +
       '<form class="pdx-portal-chat-form" id="pdx-portal-chat-form">' +
         '<textarea rows="2" placeholder="Write a message…" aria-label="Message"></textarea>' +
-        pearlBtn('Send', { type: 'submit', small: true, inline: true, icon: 'send' }) +
+        actionBtn('Send', { type: 'submit', small: true, inline: true, icon: 'send' }) +
       '</form></section>';
   }
 
@@ -2378,7 +2440,7 @@
     }
     html += '<form class="pdx-portal-request-form" id="pdx-portal-request-form">' +
       '<textarea rows="3" placeholder="Describe your request…" aria-label="Request message" required></textarea>' +
-      pearlBtn('Submit request', { type: 'submit', small: true, inline: true, icon: 'send' }) +
+      actionBtn('Submit request', { type: 'submit', small: true, inline: true, icon: 'send' }) +
       '</form></article>';
     setTimeout(function () {
       var form = document.getElementById('pdx-portal-request-form');
@@ -2459,7 +2521,7 @@
         });
         html += '</div>';
         if (data.unread_count) {
-          html += '<button type="button" class="pdx-cx-btn pdx-cx-btn--ghost" id="pdx-portal-mark-read">Mark all read</button>';
+          html += portalBtn('Mark all read', { type: 'button', variant: 'secondary', small: true, id: 'pdx-portal-mark-read' });
         }
       } else {
         html += '<p class="pdx-portal-empty">No notifications yet.</p>';

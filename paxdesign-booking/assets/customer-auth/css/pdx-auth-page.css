@@ -40,6 +40,22 @@ body.pdx-account-dashboard-body .pdx-auth-page {
   background: #f5f5f7;
 }
 
+body.pdx-account-dashboard-body,
+body.pdx-account-dashboard-body .site,
+body.pdx-account-dashboard-body .site-content,
+body.pdx-account-dashboard-body #content,
+body.pdx-account-dashboard-body .content-area,
+body.pdx-account-dashboard-body main,
+body.pdx-account-dashboard-body .entry-content,
+body.pdx-account-dashboard-body article {
+  background: #f5f5f7 !important;
+  color: #1d1d1f !important;
+}
+
+body.pdx-account-dashboard-body #pdx-auth-bar .pdx-auth-portal-btn {
+  display: none !important;
+}
+
 .pdx-auth-page {
   position: relative;
   min-height: calc(100vh - 120px);

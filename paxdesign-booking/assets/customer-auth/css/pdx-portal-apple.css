@@ -1,0 +1,523 @@
+/**
+ * Logged-in customer portal — Apple-style white experience on /account.
+ * Scoped to body.pdx-account-dashboard-body (never dark theme).
+ */
+
+body.pdx-account-dashboard-body {
+  color-scheme: light;
+  background: #f5f5f7 !important;
+  color: #1d1d1f !important;
+}
+
+body.pdx-account-dashboard-body .site,
+body.pdx-account-dashboard-body .site-content,
+body.pdx-account-dashboard-body #content,
+body.pdx-account-dashboard-body .content-area,
+body.pdx-account-dashboard-body main,
+body.pdx-account-dashboard-body .entry-content,
+body.pdx-account-dashboard-body article {
+  background: #f5f5f7 !important;
+  color: #1d1d1f !important;
+}
+
+/* ─── Design tokens (portal scope) ───────────────────────── */
+body.pdx-account-dashboard-body .pdx-cx-shell,
+body.pdx-account-dashboard-body #pdx-account-app,
+body.pdx-account-dashboard-body .pdx-account-portal-host {
+  --pdx-portal-bg: #ffffff;
+  --pdx-portal-bg-muted: #f5f5f7;
+  --pdx-portal-border: rgba(0, 0, 0, 0.08);
+  --pdx-portal-border-strong: rgba(0, 0, 0, 0.12);
+  --pdx-portal-text: #1d1d1f;
+  --pdx-portal-text-secondary: #6e6e73;
+  --pdx-portal-text-tertiary: #86868b;
+  --pdx-portal-blue: #0071e3;
+  --pdx-portal-blue-hover: #0077ed;
+  --pdx-portal-blue-active: #006edb;
+  --pdx-portal-red: #ff3b30;
+  --pdx-portal-red-hover: #ff453a;
+  --pdx-portal-red-active: #d70015;
+  --pdx-portal-radius: 12px;
+  --pdx-portal-radius-sm: 10px;
+  --pdx-portal-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 4px 16px rgba(0, 0, 0, 0.04);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  color: var(--pdx-portal-text);
+}
+
+/* ─── Header auth bar (light on dashboard) ───────────────── */
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-trigger,
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-header-btn,
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-signup-btn {
+  background: #fff;
+  border: 1px solid var(--pdx-portal-border-strong);
+  color: var(--pdx-portal-text);
+  box-shadow: none;
+}
+
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-trigger:hover,
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-header-btn:hover {
+  background: #fafafa;
+  border-color: rgba(0, 0, 0, 0.16);
+}
+
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-menu {
+  background: #fff;
+  border: 1px solid var(--pdx-portal-border-strong);
+  box-shadow: var(--pdx-portal-shadow);
+}
+
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-menu-name {
+  color: var(--pdx-portal-text);
+}
+
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-menu-email,
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-menu-status {
+  color: var(--pdx-portal-text-secondary);
+}
+
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-menu-item {
+  color: var(--pdx-portal-text);
+}
+
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-menu-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-cx-shell .pdx-auth-menu-item--logout {
+  color: var(--pdx-portal-red);
+}
+
+/* ─── Account shell ──────────────────────────────────────── */
+body.pdx-account-dashboard-body .pdx-account-app {
+  background: var(--pdx-portal-bg);
+  border: 1px solid var(--pdx-portal-border);
+  box-shadow: var(--pdx-portal-shadow);
+}
+
+body.pdx-account-dashboard-body .pdx-account-sidebar {
+  background: var(--pdx-portal-bg-muted);
+  border-right-color: var(--pdx-portal-border);
+}
+
+body.pdx-account-dashboard-body .pdx-account-sidebar-user {
+  border-bottom-color: var(--pdx-portal-border);
+}
+
+body.pdx-account-dashboard-body .pdx-account-sidebar-name {
+  color: var(--pdx-portal-text);
+}
+
+body.pdx-account-dashboard-body .pdx-account-sidebar-email,
+body.pdx-account-dashboard-body .pdx-account-sidebar-status {
+  color: var(--pdx-portal-text-secondary);
+}
+
+body.pdx-account-dashboard-body .pdx-account-nav-label {
+  color: var(--pdx-portal-text-tertiary);
+}
+
+body.pdx-account-dashboard-body .pdx-account-nav-btn {
+  color: var(--pdx-portal-text);
+}
+
+body.pdx-account-dashboard-body .pdx-account-nav-btn:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+body.pdx-account-dashboard-body .pdx-account-nav-btn.is-active {
+  background: rgba(0, 113, 227, 0.1);
+  color: var(--pdx-portal-blue);
+}
+
+body.pdx-account-dashboard-body .pdx-account-sidebar-footer {
+  border-top-color: var(--pdx-portal-border);
+}
+
+body.pdx-account-dashboard-body .pdx-account-page-title {
+  color: var(--pdx-portal-text);
+}
+
+body.pdx-account-dashboard-body .pdx-account-page-lead {
+  color: var(--pdx-portal-text-secondary);
+}
+
+body.pdx-account-dashboard-body .pdx-account-card {
+  background: var(--pdx-portal-bg);
+  border-color: var(--pdx-portal-border);
+  box-shadow: none;
+}
+
+body.pdx-account-dashboard-body .pdx-account-card-title {
+  color: var(--pdx-portal-text-tertiary);
+}
+
+body.pdx-account-dashboard-body .pdx-account-field label {
+  color: var(--pdx-portal-text);
+  font-weight: 600;
+}
+
+body.pdx-account-dashboard-body .pdx-account-field input,
+body.pdx-account-dashboard-body .pdx-portal-request-form textarea,
+body.pdx-account-dashboard-body .pdx-portal-chat-form textarea {
+  background: #fff;
+  border: 1px solid var(--pdx-portal-border-strong);
+  color: var(--pdx-portal-text);
+  font-size: 15px;
+}
+
+body.pdx-account-dashboard-body .pdx-account-field input:focus,
+body.pdx-account-dashboard-body .pdx-portal-request-form textarea:focus,
+body.pdx-account-dashboard-body .pdx-portal-chat-form textarea:focus {
+  border-color: var(--pdx-portal-blue);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+  outline: none;
+}
+
+/* ─── Portal buttons (dedicated Apple-style) ─────────────── */
+body.pdx-account-dashboard-body .pdx-portal-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: var(--pdx-portal-radius-sm);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: #fff;
+  background: var(--pdx-portal-blue);
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease, transform 0.1s ease;
+  text-decoration: none;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-btn:hover {
+  background: var(--pdx-portal-blue-hover);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-btn:active {
+  background: var(--pdx-portal-blue-active);
+  transform: scale(0.98);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-btn:disabled,
+body.pdx-account-dashboard-body .pdx-portal-btn.is-loading {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-btn--sm {
+  min-height: 34px;
+  padding: 0 14px;
+  font-size: 14px;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-btn--full {
+  width: 100%;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-btn--inline {
+  width: auto;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-btn--secondary {
+  color: var(--pdx-portal-blue);
+  background: rgba(0, 113, 227, 0.08);
+  border: 1px solid rgba(0, 113, 227, 0.2);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-btn--secondary:hover {
+  background: rgba(0, 113, 227, 0.12);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-btn--ghost {
+  color: var(--pdx-portal-text-secondary);
+  background: transparent;
+  border: 0;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-btn--ghost:hover {
+  color: var(--pdx-portal-text);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-btn--destructive {
+  color: #fff;
+  background: var(--pdx-portal-red);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-btn--destructive:hover {
+  background: var(--pdx-portal-red-hover);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-btn--destructive:active {
+  background: var(--pdx-portal-red-active);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+body.pdx-account-dashboard-body .pdx-account-signout {
+  justify-content: flex-start;
+}
+
+/* Hide legacy pearl buttons inside dashboard (use .pdx-portal-btn instead) */
+body.pdx-account-dashboard-body .pdx-btn-pearl {
+  display: none !important;
+}
+
+/* ─── Portal sections ────────────────────────────────────── */
+body.pdx-account-dashboard-body .pdx-portal-section {
+  background: var(--pdx-portal-bg);
+  border: 1px solid var(--pdx-portal-border);
+  border-radius: var(--pdx-portal-radius);
+  padding: 18px 20px;
+  margin-bottom: 14px;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-section h3,
+body.pdx-account-dashboard-body .pdx-portal-section h4,
+body.pdx-account-dashboard-body .pdx-portal-detail h3,
+body.pdx-account-dashboard-body .pdx-portal-detail h4 {
+  color: var(--pdx-portal-text);
+  font-weight: 600;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-lead,
+body.pdx-account-dashboard-body .pdx-portal-meta,
+body.pdx-account-dashboard-body .pdx-portal-empty,
+body.pdx-account-dashboard-body .pdx-portal-body-text,
+body.pdx-account-dashboard-body .pdx-portal-list {
+  color: var(--pdx-portal-text-secondary);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-body-text {
+  color: var(--pdx-portal-text);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-stats {
+  gap: 10px;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-stat {
+  background: var(--pdx-portal-bg-muted);
+  border: 1px solid var(--pdx-portal-border);
+  color: var(--pdx-portal-text-secondary);
+  border-radius: var(--pdx-portal-radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-stat span {
+  color: var(--pdx-portal-text);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-stat:hover {
+  border-color: rgba(0, 113, 227, 0.25);
+  background: rgba(0, 113, 227, 0.04);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-row {
+  border-bottom-color: var(--pdx-portal-border);
+  color: var(--pdx-portal-text);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-row strong {
+  color: var(--pdx-portal-text);
+  font-weight: 600;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-row span {
+  color: var(--pdx-portal-text-secondary);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-row--link:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-back {
+  color: var(--pdx-portal-blue);
+  font-weight: 500;
+  padding: 4px 0;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-back:hover {
+  color: var(--pdx-portal-blue-hover);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--pdx-portal-red);
+}
+
+/* ─── Notifications ──────────────────────────────────────── */
+body.pdx-account-dashboard-body .pdx-portal-notify {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--pdx-portal-border);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-notify strong {
+  color: var(--pdx-portal-text);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-notify p {
+  color: var(--pdx-portal-text-secondary);
+  margin: 4px 0;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-notify--unread {
+  background: rgba(0, 113, 227, 0.04);
+  margin: 0 -12px;
+  padding: 12px;
+  border-radius: var(--pdx-portal-radius-sm);
+  border-bottom: 0;
+}
+
+/* ─── Chat ───────────────────────────────────────────────── */
+body.pdx-account-dashboard-body .pdx-portal-chat-log {
+  background: var(--pdx-portal-bg-muted);
+  border: 1px solid var(--pdx-portal-border);
+  border-radius: var(--pdx-portal-radius-sm);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-chat-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-chat-form textarea {
+  flex: 1 1 220px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: var(--pdx-portal-radius-sm);
+  resize: vertical;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--pdx-portal-border-strong);
+  background: #fff;
+  color: var(--pdx-portal-text-secondary);
+  cursor: pointer;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-tool:hover {
+  background: var(--pdx-portal-bg-muted);
+  color: var(--pdx-portal-text);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-msg {
+  color: var(--pdx-portal-text);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-msg--staff {
+  background: rgba(0, 113, 227, 0.08);
+}
+
+body.pdx-account-dashboard-body .pdx-portal-msg--customer {
+  background: #fff;
+  border: 1px solid var(--pdx-portal-border);
+}
+
+/* ─── Settings toggles ───────────────────────────────────── */
+body.pdx-account-dashboard-body .pdx-portal-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--pdx-portal-border);
+  cursor: pointer;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-toggle:last-of-type {
+  border-bottom: 0;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-toggle__label {
+  font-size: 15px;
+  color: var(--pdx-portal-text);
+  font-weight: 500;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-toggle input {
+  width: 51px;
+  height: 31px;
+  appearance: none;
+  background: #e9e9eb;
+  border-radius: 999px;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-toggle input::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-toggle input:checked {
+  background: #34c759;
+}
+
+body.pdx-account-dashboard-body .pdx-portal-toggle input:checked::after {
+  transform: translateX(20px);
+}
+
+/* ─── Loading & errors ───────────────────────────────────── */
+body.pdx-account-dashboard-body .pdx-cx-loading {
+  color: var(--pdx-portal-text-secondary);
+}
+
+body.pdx-account-dashboard-body .pdx-cx-loading__spinner {
+  border-color: var(--pdx-portal-border);
+  border-top-color: var(--pdx-portal-blue);
+}
+
+body.pdx-account-dashboard-body .pdx-auth-error {
+  color: var(--pdx-portal-red);
+  font-weight: 500;
+}
+
+body.pdx-account-dashboard-body .pdx-cx-icon {
+  color: var(--pdx-portal-text-secondary);
+}
+
+body.pdx-account-dashboard-body .pdx-account-nav-btn.is-active .pdx-cx-icon,
+body.pdx-account-dashboard-body .pdx-portal-section h3 .pdx-cx-icon {
+  color: var(--pdx-portal-blue);
+}

@@ -167,6 +167,16 @@ class PAXdesign_Auth_Page {
                 PAXDESIGN_BOOKING_VERSION . '.' . filemtime($account_app_css)
             );
         }
+
+        $portal_apple_css = PAXDESIGN_BOOKING_PLUGIN_DIR . $base . 'css/pdx-portal-apple.css';
+        if (is_readable($portal_apple_css)) {
+            wp_enqueue_style(
+                'pax-portal-apple',
+                $url . 'css/pdx-portal-apple.css',
+                array('pax-account-app'),
+                PAXDESIGN_BOOKING_VERSION . '.' . filemtime($portal_apple_css)
+            );
+        }
     }
 
     /**
