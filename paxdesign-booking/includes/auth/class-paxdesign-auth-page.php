@@ -210,13 +210,6 @@ class PAXdesign_Auth_Page {
             }
         }
 
-        if (function_exists('get_site_icon_url')) {
-            $site_icon = get_site_icon_url(96);
-            if (is_string($site_icon) && $site_icon !== '') {
-                return esc_url($site_icon);
-            }
-        }
-
         return '';
     }
 
@@ -224,19 +217,11 @@ class PAXdesign_Auth_Page {
      * @return string
      */
     public static function render_shortcode() {
-        $logo_url = self::brand_logo_url();
         ob_start();
         ?>
         <div id="pdx-auth-page" class="pdx-auth-page" data-pdx-auth-page="1">
             <div id="pdx-auth-page-guest" class="pdx-auth-page-guest">
                 <div class="pdx-auth-page-shell pdx-auth-page-shell--compact">
-                    <div class="pdx-auth-page-brand">
-                        <?php if ($logo_url !== '') : ?>
-                            <img class="pdx-auth-page-logo" src="<?php echo esc_url($logo_url); ?>" alt="<?php echo esc_attr(get_bloginfo('name')); ?>" width="120" height="36" decoding="async" />
-                        <?php else : ?>
-                            <span class="pdx-auth-page-wordmark"><?php echo esc_html(get_bloginfo('name')); ?></span>
-                        <?php endif; ?>
-                    </div>
                     <h1 class="pdx-auth-page-title" id="pdx-auth-page-title"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></h1>
                     <div class="pdx-auth-page-segment" role="tablist" aria-label="<?php echo esc_attr__('Authentication', 'paxdesign-booking'); ?>">
                         <button type="button" class="pdx-auth-page-segment-btn is-active" data-auth-view="login" role="tab" aria-selected="true"><?php echo esc_html__('Sign In', 'paxdesign-booking'); ?></button>

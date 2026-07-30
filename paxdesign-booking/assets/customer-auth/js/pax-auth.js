@@ -1222,10 +1222,62 @@
     suppressAuthPageIntruders();
   }
 
+  var AUTH_SITE_LOGO_SELECTORS = [
+    'header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default #pax-isolated-logo.paxlogo-wrap',
+    'header#dtr-main-header .dtr-header-left a.dtr-logo.logo-default .paxlogo-wrap',
+    '#dtr-responsive-header a.dtr-logo.logo-default .pax-isolated-logo.paxlogo-wrap',
+    '#dtr-responsive-header a.dtr-logo.logo-default #pax-isolated-logo.paxlogo-wrap',
+    '#dtr-responsive-header a.dtr-logo.logo-default .paxlogo-wrap',
+  ];
+  var authShellLogoRetryTimer = null;
+
+  function uniquifyLogoHtml(html) {
+    if (!html) return '';
+    var uid = 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    return html
+      .replace(/\sid="pax-isolated-logo"/g, ' id="pdx-auth-shell-logo"')
+      .replace(/\sid="paxlogo-/g, ' id="paxlogo-' + uid + '-')
+      .replace(/url\(#paxlogo-/g, 'url(#paxlogo-' + uid + '-');
+  }
+
+  function findSiteLogoNode() {
+    var i;
+    for (i = 0; i < AUTH_SITE_LOGO_SELECTORS.length; i++) {
+      var node = document.querySelector(AUTH_SITE_LOGO_SELECTORS[i]);
+      if (node && (node.querySelector('.paxlogo-svg') || node.querySelector('.paxlogo-layout'))) {
+        return node;
+      }
+    }
+    return null;
+  }
+
+  function resolveSiteLogoHtml() {
+    var node = findSiteLogoNode();
+    if (node) {
+      return uniquifyLogoHtml(node.outerHTML);
+    }
+    var raw = '';
+    if (typeof window.PAXDESIGN_LOGO_SVG === 'string' && window.PAXDESIGN_LOGO_SVG.trim()) {
+      raw = window.PAXDESIGN_LOGO_SVG;
+    } else if (typeof window.PAXDESIGN_LOGO_SVG_MOBILE === 'string' && window.PAXDESIGN_LOGO_SVG_MOBILE.trim()) {
+      raw = window.PAXDESIGN_LOGO_SVG_MOBILE;
+    }
+    return raw ? uniquifyLogoHtml(raw) : '';
+  }
+
+  function mountOfficialLogoInLink(link, logoHtml) {
+    link.innerHTML = logoHtml;
+    link.classList.add('pdx-auth-shell-home--official');
+    var wrap = link.querySelector('.paxlogo-wrap');
+    if (wrap) {
+      wrap.classList.add('is-visible', 'pdx-auth-shell-logo');
+      wrap.setAttribute('aria-hidden', 'false');
+    }
+  }
+
   function ensureAuthShellHomeLogo(shell) {
     if (!shell) return;
     var homeUrl = homePageUrl();
-    var logoUrl = C.logoUrl || '';
     var siteName = C.siteName || 'Home';
     var link = document.getElementById('pdx-auth-shell-home');
     if (!link) {
@@ -1236,10 +1288,44 @@
     }
     link.href = homeUrl;
     link.setAttribute('aria-label', 'Back to ' + siteName);
-    if (logoUrl) {
-      link.innerHTML = '<img class="pdx-auth-shell-home__logo" src="' + escHtml(logoUrl) + '" alt="' + escHtml(siteName) + '" width="120" height="28" decoding="async" />';
-    } else {
+
+    if (link.getAttribute('data-pdx-official-logo') === '1') {
+      return;
+    }
+
+    var logoHtml = resolveSiteLogoHtml();
+    if (logoHtml) {
+      mountOfficialLogoInLink(link, logoHtml);
+      link.setAttribute('data-pdx-official-logo', '1');
+      if (authShellLogoRetryTimer) {
+        clearInterval(authShellLogoRetryTimer);
+        authShellLogoRetryTimer = null;
+      }
+      return;
+    }
+
+    if (!link.textContent.trim()) {
       link.innerHTML = '<span class="pdx-auth-shell-home__wordmark">' + escHtml(siteName) + '</span>';
+    }
+
+    if (!authShellLogoRetryTimer) {
+      var attempts = 0;
+      authShellLogoRetryTimer = setInterval(function () {
+        attempts += 1;
+        var html = resolveSiteLogoHtml();
+        if (html) {
+          clearInterval(authShellLogoRetryTimer);
+          authShellLogoRetryTimer = null;
+          var logoLink = document.getElementById('pdx-auth-shell-home');
+          if (logoLink) {
+            mountOfficialLogoInLink(logoLink, html);
+            logoLink.setAttribute('data-pdx-official-logo', '1');
+          }
+        } else if (attempts >= 60) {
+          clearInterval(authShellLogoRetryTimer);
+          authShellLogoRetryTimer = null;
+        }
+      }, 50);
     }
   }
 
