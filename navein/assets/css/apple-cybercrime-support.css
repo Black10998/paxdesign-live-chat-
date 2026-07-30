@@ -1251,39 +1251,6 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
   margin-top: 4px;
 }
 
-.pax-ccs-portal__accordion-details {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-  margin: 10px 0;
-  padding: 0;
-}
-
-.pax-ccs-portal__accordion-details div {
-  margin: 0;
-}
-
-.pax-ccs-portal__accordion-details dt {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--ccs-muted);
-  margin: 0 0 2px;
-}
-
-.pax-ccs-portal__accordion-details dd {
-  margin: 0;
-  font-size: 13px;
-  color: var(--ccs-ink);
-}
-
-.pax-ccs-portal__accordion-message {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--ccs-ink);
-  white-space: pre-wrap;
-}
-
 .pax-ccs-portal__accordion-empty {
   margin: 0;
   padding: 10px 0;
