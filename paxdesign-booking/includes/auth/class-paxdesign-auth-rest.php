@@ -78,6 +78,11 @@ class PAXdesign_Auth_REST {
             'callback'            => array(__CLASS__, 'apple_web_callback'),
             'permission_callback' => $pub,
         ));
+        register_rest_route(self::NS, '/auth/apple/complete', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'apple_web_complete'),
+            'permission_callback' => $pub,
+        ));
         register_rest_route(self::NS, '/auth/mobile-logout', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'mobile_logout'),
@@ -239,7 +244,13 @@ class PAXdesign_Auth_REST {
 
     public static function apple_web_callback(WP_REST_Request $request) {
         $redirect = PAXdesign_Auth_Apple::web_handle_callback($request);
-        wp_safe_redirect($redirect);
+        wp_redirect(PAXdesign_Auth_Apple::safe_redirect_url($redirect));
+        exit;
+    }
+
+    public static function apple_web_complete(WP_REST_Request $request) {
+        $redirect = PAXdesign_Auth_Apple::web_complete_login($request);
+        wp_redirect(PAXdesign_Auth_Apple::safe_redirect_url($redirect));
         exit;
     }
 

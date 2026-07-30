@@ -1113,14 +1113,16 @@
           appleMsg = decodeURIComponent(appleMsg.replace(/\+/g, ' '));
         } catch (e) {}
         showFormMessage(appleMsg, 'error');
-        if (window.history && window.history.replaceState) {
-          try {
-            params.delete('pdx_apple');
-            params.delete('pdx_msg');
-            var cleanQuery = params.toString();
-            window.history.replaceState({}, '', window.location.pathname + (cleanQuery ? '?' + cleanQuery : '') + window.location.hash);
-          } catch (err) {}
-        }
+        setTimeout(function () {
+          if (window.history && window.history.replaceState) {
+            try {
+              params.delete('pdx_apple');
+              params.delete('pdx_msg');
+              var cleanQuery = params.toString();
+              window.history.replaceState({}, '', window.location.pathname + (cleanQuery ? '?' + cleanQuery : '') + window.location.hash);
+            } catch (err) {}
+          }
+        }, 12000);
       }
     }
     window.addEventListener('hashchange', parseAccountSectionFromHash);

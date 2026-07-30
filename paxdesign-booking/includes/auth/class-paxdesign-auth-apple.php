@@ -116,65 +116,160 @@ class PAXdesign_Auth_Apple {
 	 * @return string Safe redirect URL for wp_safe_redirect().
 	 */
 	public static function web_handle_callback( WP_REST_Request $request ): string {
-		$error = sanitize_text_field( (string) $request->get_param( 'error' ) );
+		$params = self::callback_params( $request );
+
+		$error = sanitize_text_field( (string) ( $params['error'] ?? '' ) );
 		if ( $error !== '' ) {
-			$detail = sanitize_text_field( (string) $request->get_param( 'error_description' ) );
+			$detail = sanitize_text_field( (string) ( $params['error_description'] ?? '' ) );
 			$msg    = $detail !== '' ? $detail : 'Apple sign-in was cancelled or denied.';
+			self::log_failure( 'apple_callback_denied', array( 'error' => $error ) );
 			return self::web_error_redirect_url( $msg );
 		}
 
-		$code  = sanitize_text_field( (string) $request->get_param( 'code' ) );
-		$state = sanitize_text_field( (string) $request->get_param( 'state' ) );
+		$code  = sanitize_text_field( (string) ( $params['code'] ?? '' ) );
+		$state = sanitize_text_field( (string) ( $params['state'] ?? '' ) );
 		if ( $code === '' || $state === '' ) {
+			self::log_failure( 'apple_callback_missing_params', array( 'has_code' => $code !== '', 'has_state' => $state !== '' ) );
 			return self::web_error_redirect_url( 'Apple did not return a valid authorization response.' );
 		}
 
 		$return_url = self::consume_oauth_state( $state );
 		if ( is_wp_error( $return_url ) ) {
+			self::log_failure( 'apple_state_invalid' );
 			return self::web_error_redirect_url( $return_url->get_error_message() );
 		}
 
 		$tokens = self::exchange_authorization_code( $code );
 		if ( is_wp_error( $tokens ) ) {
-			self::log_failure( $tokens->get_error_code() );
+			self::log_failure( 'apple_token_exchange', array( 'reason' => $tokens->get_error_code(), 'message' => $tokens->get_error_message() ) );
 			return self::web_error_redirect_url( $tokens->get_error_message() );
 		}
 
 		$id_token = (string) ( $tokens['id_token'] ?? '' );
 		if ( $id_token === '' ) {
+			self::log_failure( 'apple_missing_id_token' );
 			return self::web_error_redirect_url( 'Apple did not return an identity token.' );
 		}
 
-		$profile = array();
-		$user_json = (string) $request->get_param( 'user' );
-		if ( $user_json !== '' ) {
-			$decoded = json_decode( $user_json, true );
-			if ( is_array( $decoded ) ) {
-				$profile['email']       = sanitize_email( (string) ( $decoded['email'] ?? '' ) );
-				$name                   = isset( $decoded['name'] ) && is_array( $decoded['name'] ) ? $decoded['name'] : array();
-				$profile['given_name']  = sanitize_text_field( (string) ( $name['firstName'] ?? '' ) );
-				$profile['family_name'] = sanitize_text_field( (string) ( $name['lastName'] ?? '' ) );
-			}
-		}
+		$profile = self::profile_from_callback_params( $params );
 
 		$service_id = self::web_service_id();
 		$claims     = self::verify_identity_token( $id_token, array( $service_id ) );
 		if ( is_wp_error( $claims ) ) {
-			self::log_failure( $claims->get_error_code() );
+			self::log_failure( 'apple_jwt_verify', array( 'reason' => $claims->get_error_code(), 'message' => $claims->get_error_message() ) );
 			return self::web_error_redirect_url( $claims->get_error_message() );
 		}
 
 		$user = self::resolve_user_from_claims( $claims, $profile );
 		if ( is_wp_error( $user ) ) {
+			self::log_failure( 'apple_user_resolve', array( 'reason' => $user->get_error_code(), 'message' => $user->get_error_message() ) );
 			return self::web_error_redirect_url( $user->get_error_message() );
 		}
 
-		$result = PAXdesign_Auth_Native::web_login_for_user( (int) $user->ID );
+		return self::web_complete_url_for_user( (int) $user->ID, $return_url );
+	}
+
+	/**
+	 * Finish login on a same-site GET request so auth cookies persist after Apple's cross-site POST.
+	 *
+	 * @return string Safe redirect URL for wp_safe_redirect().
+	 */
+	public static function web_complete_login( WP_REST_Request $request ): string {
+		$ticket = sanitize_text_field( (string) $request->get_param( 'ticket' ) );
+		if ( $ticket === '' ) {
+			return self::web_error_redirect_url( 'Apple sign-in session is invalid. Please try again.' );
+		}
+
+		$key  = 'pax_apple_login_' . hash( 'sha256', $ticket );
+		$data = get_transient( $key );
+		delete_transient( $key );
+		if ( ! is_array( $data ) || empty( $data['user_id'] ) ) {
+			self::log_failure( 'apple_complete_ticket_invalid' );
+			return self::web_error_redirect_url( 'Apple sign-in session expired. Please try again.' );
+		}
+
+		$result = PAXdesign_Auth_Native::web_login_for_user( (int) $data['user_id'] );
 		if ( empty( $result['success'] ) ) {
+			self::log_failure( 'apple_web_session', array( 'message' => (string) ( $result['message'] ?? '' ) ) );
 			return self::web_error_redirect_url( (string) ( $result['message'] ?? 'Could not sign you in.' ) );
 		}
 
-		return $return_url;
+		return (string) ( $data['return_url'] ?? ( PAXdesign_Auth_Page::page_url() . '#/overview' ) );
+	}
+
+	/**
+	 * @return string
+	 */
+	public static function web_complete_url_for_user( int $user_id, string $return_url ): string {
+		$ticket = bin2hex( random_bytes( 16 ) );
+		set_transient(
+			'pax_apple_login_' . hash( 'sha256', $ticket ),
+			array(
+				'user_id'    => $user_id,
+				'return_url' => $return_url,
+				'created'    => time(),
+			),
+			300
+		);
+
+		return add_query_arg( 'ticket', $ticket, rest_url( 'pdx/v1/auth/apple/complete' ) );
+	}
+
+	/**
+	 * Preserve URL fragments that wp_validate_redirect() may strip.
+	 *
+	 * @return string
+	 */
+	public static function safe_redirect_url( string $url ): string {
+		$fallback = PAXdesign_Auth_Page::page_url();
+		$safe     = wp_validate_redirect( $url, $fallback );
+		if ( ! is_string( $safe ) || $safe === '' ) {
+			return $fallback;
+		}
+		if ( strpos( $url, '#' ) !== false && strpos( $safe, '#' ) === false ) {
+			$safe .= substr( $url, strpos( $url, '#' ) );
+		}
+		return $safe;
+	}
+
+	/**
+	 * @return array<string, mixed>
+	 */
+	private static function callback_params( WP_REST_Request $request ): array {
+		$params = $request->get_body_params();
+		if ( ! is_array( $params ) || $params === array() ) {
+			$params = $request->get_params();
+		}
+		if ( ( ! is_array( $params ) || $params === array() ) && ! empty( $_POST ) && is_array( $_POST ) ) {
+			$params = wp_unslash( $_POST );
+		}
+		return is_array( $params ) ? $params : array();
+	}
+
+	/**
+	 * @param array<string, mixed> $params
+	 * @return array<string, mixed>
+	 */
+	private static function profile_from_callback_params( array $params ): array {
+		$profile   = array();
+		$user_json = (string) ( $params['user'] ?? '' );
+		if ( $user_json === '' ) {
+			return $profile;
+		}
+
+		$decoded = json_decode( wp_unslash( $user_json ), true );
+		if ( ! is_array( $decoded ) ) {
+			$decoded = json_decode( $user_json, true );
+		}
+		if ( ! is_array( $decoded ) ) {
+			return $profile;
+		}
+
+		$profile['email'] = sanitize_email( (string) ( $decoded['email'] ?? '' ) );
+		$name             = isset( $decoded['name'] ) && is_array( $decoded['name'] ) ? $decoded['name'] : array();
+		$profile['given_name']  = sanitize_text_field( (string) ( $name['firstName'] ?? '' ) );
+		$profile['family_name'] = sanitize_text_field( (string) ( $name['lastName'] ?? '' ) );
+		return $profile;
 	}
 
 	/**
@@ -376,10 +471,7 @@ class PAXdesign_Auth_Apple {
 
 		if ( ! $user ) {
 			if ( $email === '' ) {
-				return new WP_Error(
-					'email_required',
-					'Apple did not share an email address. Sign in with email once, or allow email sharing with Apple.'
-				);
+				$email = self::apple_account_email_for_sub( $sub );
 			}
 			$created = self::create_customer_from_apple( $sub, $email, $profile );
 			if ( is_wp_error( $created ) ) {
@@ -438,13 +530,12 @@ class PAXdesign_Auth_Apple {
 
 		$now = time();
 		$iss = (string) ( $payload['iss'] ?? '' );
-		$aud = (string) ( $payload['aud'] ?? '' );
 		$exp = (int) ( $payload['exp'] ?? 0 );
 
 		if ( $iss !== self::ISSUER ) {
 			return new WP_Error( 'apple_jwt', 'Apple identity token issuer is invalid.' );
 		}
-		if ( ! in_array( $aud, $allowed_audiences, true ) ) {
+		if ( ! self::audience_matches( $payload, $allowed_audiences ) ) {
 			return new WP_Error( 'apple_jwt', 'Apple identity token audience is invalid.' );
 		}
 		if ( $exp > 0 && $exp < ( $now - 60 ) ) {
@@ -675,9 +766,44 @@ class PAXdesign_Auth_Apple {
 		);
 	}
 
-	private static function log_failure( string $reason ): void {
+	/**
+	 * Stable internal email when Apple omits email on repeat web authorizations.
+	 *
+	 * @return string
+	 */
+	private static function apple_account_email_for_sub( string $sub ): string {
+		return 'apple+' . substr( hash( 'sha256', $sub ), 0, 32 ) . '@id.paxdesign.at';
+	}
+
+	/**
+	 * @param array<string, mixed> $payload
+	 * @param array<int, string>   $allowed_audiences
+	 */
+	private static function audience_matches( array $payload, array $allowed_audiences ): bool {
+		$aud = $payload['aud'] ?? '';
+		if ( is_array( $aud ) ) {
+			foreach ( $aud as $value ) {
+				if ( in_array( (string) $value, $allowed_audiences, true ) ) {
+					return true;
+				}
+			}
+			return false;
+		}
+
+		if ( in_array( (string) $aud, $allowed_audiences, true ) ) {
+			return true;
+		}
+
+		$azp = (string) ( $payload['azp'] ?? '' );
+		return $azp !== '' && in_array( $azp, $allowed_audiences, true );
+	}
+
+	/**
+	 * @param array<string, mixed> $context
+	 */
+	private static function log_failure( string $reason, array $context = array() ): void {
 		if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
-			PAXdesign_Auth_Log::event( 'apple_login_failed', array( 'reason' => $reason ), 'warn' );
+			PAXdesign_Auth_Log::event( 'apple_login_failed', array_merge( array( 'reason' => $reason ), $context ), 'warn' );
 		}
 	}
 }
