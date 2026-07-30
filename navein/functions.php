@@ -348,11 +348,20 @@ function navein_custom_scripts_styles() {
 
 	$is_apple_cybercrime = is_page_template( 'template-apple-cybercrime-support.php' )
 		|| is_page( 'cybercrime-support' );
+
+	// Apple-style hover: underline only — no scale / pulse / glow (load last).
+	wp_enqueue_style(
+		'navein-apple-hover',
+		get_template_directory_uri() . '/assets/css/apple-hover.css',
+		array( 'navein-style', 'navein-apple-sticky-header', 'navein-apple-footer', 'navein-apple-mobile-nav' ),
+		$theme_version
+	);
+
 	if ( $is_apple_cybercrime ) {
 		wp_enqueue_style(
 			'navein-apple-cybercrime-support',
 			get_template_directory_uri() . '/assets/css/apple-cybercrime-support.css',
-			array( 'navein-style' ),
+			array( 'navein-style', 'navein-apple-hover' ),
 			$theme_version
 		);
 		wp_add_inline_style(
@@ -468,14 +477,6 @@ function navein_custom_scripts_styles() {
 	if ( is_rtl() ) {
 		wp_enqueue_style( 'navein-rtl-style', get_template_directory_uri() . '/assets/css/rtl.css', array(), $theme_version );
 	}
-
-	// Apple-style hover: underline only — no scale / pulse / glow (load last).
-	wp_enqueue_style(
-		'navein-apple-hover',
-		get_template_directory_uri() . '/assets/css/apple-hover.css',
-		array( 'navein-style', 'navein-apple-sticky-header', 'navein-apple-footer', 'navein-apple-mobile-nav' ),
-		$theme_version
-	);
 
 }
 endif;

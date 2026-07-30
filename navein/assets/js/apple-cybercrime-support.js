@@ -461,7 +461,11 @@
             showLoginGate();
             return;
           }
-          throw new Error((json && json.data && json.data.message) || 'Submit failed');
+          var errMsg = (json && json.data && json.data.message) || 'Submit failed';
+          if (json && json.data && json.data.detail) {
+            errMsg += ' (' + json.data.detail + ')';
+          }
+          throw new Error(errMsg);
         }
         form.hidden = true;
         if (workflowEl) {

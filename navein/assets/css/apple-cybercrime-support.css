@@ -857,3 +857,148 @@ body.page-cybercrime-support .dtr-content-area {
   color: #86868b;
   opacity: 1;
 }
+
+/* Full-page contrast isolation — immune to theme dark-body / input tokens */
+html body.page-template-template-apple-cybercrime-support,
+html body.page-template-template-apple-cybercrime-support-php,
+html body.page-cybercrime-support {
+  color: var(--ccs-ink) !important;
+  background: #fff !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal,
+html body.page-cybercrime-support .pax-ccs-portal {
+  color: var(--ccs-ink) !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal h1,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal h2,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal h3,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal h1,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal h2,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal h3,
+html body.page-cybercrime-support .pax-ccs-portal h1,
+html body.page-cybercrime-support .pax-ccs-portal h2,
+html body.page-cybercrime-support .pax-ccs-portal h3,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal label,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal label,
+html body.page-cybercrime-support .pax-ccs-portal label,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal .pax-ccs-t,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal .pax-ccs-t,
+html body.page-cybercrime-support .pax-ccs-portal .pax-ccs-t,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal p,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal p,
+html body.page-cybercrime-support .pax-ccs-portal p,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal dt,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal dt,
+html body.page-cybercrime-support .pax-ccs-portal dt,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal dd,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal dd,
+html body.page-cybercrime-support .pax-ccs-portal dd,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal button,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal button,
+html body.page-cybercrime-support .pax-ccs-portal button {
+  color: inherit;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__section-title,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__section-title,
+html body.page-cybercrime-support .pax-ccs-portal__section-title,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__title,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__title,
+html body.page-cybercrime-support .pax-ccs-portal__title,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__field label,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__field label,
+html body.page-cybercrime-support .pax-ccs-portal__field label,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__upload label,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__upload label,
+html body.page-cybercrime-support .pax-ccs-portal__upload label,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__upload .pax-ccs-t,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__upload .pax-ccs-t,
+html body.page-cybercrime-support .pax-ccs-portal__upload .pax-ccs-t,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__check span,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__check span,
+html body.page-cybercrime-support .pax-ccs-portal__check span,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__btn--ghost,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__btn--ghost,
+html body.page-cybercrime-support .pax-ccs-portal__btn--ghost {
+  color: var(--ccs-ink) !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__section-intro,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__section-intro,
+html body.page-cybercrime-support .pax-ccs-portal__section-intro,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__hint,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__hint,
+html body.page-cybercrime-support .pax-ccs-portal__hint,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__info-text,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__info-text,
+html body.page-cybercrime-support .pax-ccs-portal__info-text,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__review-row dt,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__review-row dt,
+html body.page-cybercrime-support .pax-ccs-portal__review-row dt {
+  color: var(--ccs-muted) !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal input,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal select,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal textarea,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal input,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal select,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal textarea,
+html body.page-cybercrime-support .pax-ccs-portal input,
+html body.page-cybercrime-support .pax-ccs-portal select,
+html body.page-cybercrime-support .pax-ccs-portal textarea {
+  color: var(--ccs-ink) !important;
+  background-color: #fff !important;
+  border-color: var(--ccs-line) !important;
+  -webkit-text-fill-color: var(--ccs-ink) !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__upload,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__upload,
+html body.page-cybercrime-support .pax-ccs-portal__upload {
+  color: var(--ccs-ink) !important;
+  background: var(--ccs-snow) !important;
+  border-color: var(--ccs-line) !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__upload input[type="file"],
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__upload input[type="file"],
+html body.page-cybercrime-support .pax-ccs-portal__upload input[type="file"],
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__field input[type="file"],
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__field input[type="file"],
+html body.page-cybercrime-support .pax-ccs-portal__field input[type="file"] {
+  color: var(--ccs-ink) !important;
+  background-color: transparent !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal input::placeholder,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal textarea::placeholder,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal input::placeholder,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal textarea::placeholder,
+html body.page-cybercrime-support .pax-ccs-portal input::placeholder,
+html body.page-cybercrime-support .pax-ccs-portal textarea::placeholder {
+  color: #86868b !important;
+  opacity: 1 !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal input[type="file"]::file-selector-button,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal input[type="file"]::file-selector-button,
+html body.page-cybercrime-support .pax-ccs-portal input[type="file"]::file-selector-button {
+  color: var(--ccs-ink) !important;
+  background-color: #fff !important;
+  border: 1px solid var(--ccs-line) !important;
+  border-radius: 8px !important;
+  padding: 8px 14px !important;
+  margin-inline-end: 12px !important;
+  font: 500 14px/1.2 var(--ccs-font) !important;
+}
+
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__btn--primary,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__btn--primary,
+html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
+  color: #fff !important;
+  background: var(--ccs-navy) !important;
+}

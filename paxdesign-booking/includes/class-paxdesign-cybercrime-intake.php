@@ -12,6 +12,7 @@ class PAXdesign_Cybercrime_Intake {
     const TABLE_SUFFIX = 'paxdesign_cybercrime_reports';
     const NONCE_ACTION = 'paxdesign_cybercrime_report';
     const UPLOAD_SUBDIR = 'pax-cybercrime-intake';
+    const SCHEMA_VERSION = '2';
     const MAX_FILES = 20;
     const MAX_FILE_BYTES = 26214400; // 25 MB
 
@@ -33,6 +34,37 @@ class PAXdesign_Cybercrime_Intake {
     public static function init() {
         add_action('init', array(__CLASS__, 'maybe_create_table'));
         add_action('wp_ajax_paxdesign_cybercrime_report', array(__CLASS__, 'handle_submit'));
+    }
+
+    /**
+     * Ensure table exists and required columns/indexes are present.
+     */
+    public static function ensure_schema() {
+        self::maybe_create_table();
+
+        global $wpdb;
+        $table = self::table_name();
+        if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) !== $table) {
+            self::maybe_create_table();
+        }
+
+        $columns = $wpdb->get_col("SHOW COLUMNS FROM `$table`", 0);
+        if (!is_array($columns)) {
+            $columns = array();
+        }
+
+        if (!in_array('customer_user_id', $columns, true)) {
+            $wpdb->query("ALTER TABLE `$table` ADD COLUMN customer_user_id bigint(20) unsigned NOT NULL DEFAULT 0 AFTER reference_id");
+            $columns = $wpdb->get_col("SHOW COLUMNS FROM `$table`", 0);
+        }
+        if (is_array($columns) && in_array('customer_user_id', $columns, true)) {
+            $indexes = $wpdb->get_results("SHOW INDEX FROM `$table` WHERE Key_name = 'customer_user_id'", ARRAY_A);
+            if (empty($indexes)) {
+                $wpdb->query("ALTER TABLE `$table` ADD KEY customer_user_id (customer_user_id)");
+            }
+        }
+
+        update_option('paxdesign_cybercrime_schema_version', self::SCHEMA_VERSION, false);
     }
 
     public static function table_name() {
@@ -124,6 +156,8 @@ class PAXdesign_Cybercrime_Intake {
             wp_send_json_error(array('message' => $uploads->get_error_message()), 400);
         }
 
+        self::ensure_schema();
+
         $reference = self::generate_reference_id();
         $now = current_time('mysql', true);
         $user_id = get_current_user_id();
@@ -142,29 +176,40 @@ class PAXdesign_Cybercrime_Intake {
         $inserted = $wpdb->insert(
             self::table_name(),
             array(
-                'reference_id'    => $reference,
-                'customer_user_id'=> max(0, (int) $user_id),
-                'status'          => 'submitted',
-                'reporter_name'   => $parsed['full_name'],
-                'reporter_email'  => $parsed['email'],
-                'reporter_phone'  => $parsed['phone'],
-                'reporter_country'=> $parsed['country'],
-                'category'        => $parsed['category'],
-                'urgency'         => $parsed['urgency'],
-                'incident_at'     => $parsed['incident_at_sql'],
-                'payload'         => wp_json_encode($payload),
-                'attachments'     => wp_json_encode($uploads),
-                'ip_hash'         => self::hash_ip(self::client_ip()),
-                'created_at'      => $now,
-                'updated_at'      => $now,
+                'reference_id'     => $reference,
+                'customer_user_id' => max(0, (int) $user_id),
+                'status'           => 'submitted',
+                'reporter_name'    => $parsed['full_name'],
+                'reporter_email'   => $parsed['email'],
+                'reporter_phone'   => $parsed['phone'],
+                'reporter_country' => $parsed['country'],
+                'category'         => $parsed['category'],
+                'urgency'          => $parsed['urgency'],
+                'incident_at'      => $parsed['incident_at_sql'],
+                'payload'          => wp_json_encode($payload),
+                'attachments'      => wp_json_encode($uploads),
+                'ip_hash'          => self::hash_ip(self::client_ip()),
+                'created_at'       => $now,
+                'updated_at'       => $now,
             ),
             array('%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
         );
 
         if (!$inserted) {
-            wp_send_json_error(array(
+            $db_error = (string) $wpdb->last_error;
+            if ($db_error !== '') {
+                error_log('[PAXdesign Cybercrime] Insert failed: ' . $db_error);
+            }
+
+            $response = array(
                 'message' => __('Could not save your report. Please try again or contact support.', 'paxdesign-booking'),
-            ), 500);
+                'code'    => 'db_insert_failed',
+            );
+            if ($db_error !== '' && (defined('WP_DEBUG') && WP_DEBUG || current_user_can('manage_options'))) {
+                $response['detail'] = $db_error;
+            }
+
+            wp_send_json_error($response, 500);
         }
 
         self::notify_admin($reference, $parsed, $uploads);
@@ -287,6 +332,8 @@ class PAXdesign_Cybercrime_Intake {
             'txt'          => 'text/plain',
             'csv'          => 'text/csv',
             'zip'          => 'application/zip',
+            'doc'          => 'application/msword',
+            'docx'         => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'heic'         => 'image/heic',
             'heif'         => 'image/heif',
         );
@@ -294,65 +341,119 @@ class PAXdesign_Cybercrime_Intake {
         $saved = array();
         $count = 0;
 
-        foreach ($_FILES as $field => $file) {
-            if (!is_array($file) || empty($file['name'])) {
-                continue;
-            }
+        add_filter('upload_dir', array(__CLASS__, 'filter_upload_dir'));
 
-            $names = $file['name'];
-            if (!is_array($names)) {
-                $batch = array($file);
-            } else {
-                $batch = array();
-                foreach ($names as $i => $name) {
-                    if ($name === '') {
-                        continue;
-                    }
-                    $batch[] = array(
-                        'name'     => $name,
-                        'type'     => $file['type'][$i] ?? '',
-                        'tmp_name' => $file['tmp_name'][$i] ?? '',
-                        'error'    => $file['error'][$i] ?? UPLOAD_ERR_NO_FILE,
-                        'size'     => $file['size'][$i] ?? 0,
-                    );
-                }
-            }
-
-            foreach ($batch as $single) {
-                if ($count >= self::MAX_FILES) {
-                    return new WP_Error('too_many_files', __('Too many attachments.', 'paxdesign-booking'));
-                }
-                if ((int) ($single['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        try {
+            foreach ($_FILES as $field => $file) {
+                if (!is_array($file) || empty($file['name'])) {
                     continue;
                 }
-                if ((int) $single['size'] > self::MAX_FILE_BYTES) {
-                    return new WP_Error('file_too_large', __('One or more files exceed the size limit.', 'paxdesign-booking'));
+
+                $names = $file['name'];
+                if (!is_array($names)) {
+                    $batch = array($file);
+                } else {
+                    $batch = array();
+                    foreach ($names as $i => $name) {
+                        if ($name === '') {
+                            continue;
+                        }
+                        $batch[] = array(
+                            'name'     => $name,
+                            'type'     => $file['type'][$i] ?? '',
+                            'tmp_name' => $file['tmp_name'][$i] ?? '',
+                            'error'    => $file['error'][$i] ?? UPLOAD_ERR_NO_FILE,
+                            'size'     => $file['size'][$i] ?? 0,
+                        );
+                    }
                 }
 
-                $upload = wp_handle_upload($single, array(
-                    'test_form' => false,
-                    'mimes'     => $allowed,
-                    'unique_filename_callback' => function ($dir, $name, $ext) {
-                        return wp_unique_filename($dir, 'ccs-' . wp_generate_password(8, false) . $ext);
-                    },
-                ));
+                foreach ($batch as $single) {
+                    if ($count >= self::MAX_FILES) {
+                        return new WP_Error('too_many_files', __('Too many attachments.', 'paxdesign-booking'));
+                    }
+                    $upload_error = (int) ($single['error'] ?? UPLOAD_ERR_NO_FILE);
+                    if ($upload_error === UPLOAD_ERR_NO_FILE) {
+                        continue;
+                    }
+                    if ($upload_error !== UPLOAD_ERR_OK) {
+                        return new WP_Error(
+                            'upload_failed',
+                            self::upload_error_message($upload_error)
+                        );
+                    }
+                    if ((int) $single['size'] > self::MAX_FILE_BYTES) {
+                        return new WP_Error('file_too_large', __('One or more files exceed the size limit.', 'paxdesign-booking'));
+                    }
 
-                if (!empty($upload['error'])) {
-                    return new WP_Error('upload_failed', $upload['error']);
+                    $upload = wp_handle_upload($single, array(
+                        'test_form' => false,
+                        'mimes'     => $allowed,
+                        'unique_filename_callback' => function ($dir, $name, $ext) {
+                            return wp_unique_filename($dir, 'ccs-' . wp_generate_password(8, false) . $ext);
+                        },
+                    ));
+
+                    if (!empty($upload['error'])) {
+                        error_log('[PAXdesign Cybercrime] Upload failed: ' . $upload['error']);
+                        return new WP_Error('upload_failed', $upload['error']);
+                    }
+
+                    $saved[] = array(
+                        'field' => sanitize_key((string) $field),
+                        'name'  => basename($upload['file']),
+                        'url'   => $upload['url'],
+                        'type'  => $upload['type'] ?? '',
+                        'size'  => (string) filesize($upload['file']),
+                    );
+                    $count++;
                 }
-
-                $saved[] = array(
-                    'field' => sanitize_key((string) $field),
-                    'name'  => basename($upload['file']),
-                    'url'   => $upload['url'],
-                    'type'  => $upload['type'] ?? '',
-                    'size'  => (string) filesize($upload['file']),
-                );
-                $count++;
             }
+        } finally {
+            remove_filter('upload_dir', array(__CLASS__, 'filter_upload_dir'));
         }
 
         return $saved;
+    }
+
+    /**
+     * @param array<string, string> $dirs
+     * @return array<string, string>
+     */
+    public static function filter_upload_dir($dirs) {
+        if (!is_array($dirs)) {
+            return $dirs;
+        }
+        $subdir = '/' . self::UPLOAD_SUBDIR;
+        if (strpos((string) ($dirs['subdir'] ?? ''), self::UPLOAD_SUBDIR) === false) {
+            $dirs['subdir'] = $subdir;
+            $dirs['path']   = ($dirs['basedir'] ?? '') . $subdir;
+            $dirs['url']    = ($dirs['baseurl'] ?? '') . $subdir;
+        }
+        if (!wp_mkdir_p($dirs['path'])) {
+            error_log('[PAXdesign Cybercrime] Could not create upload directory: ' . $dirs['path']);
+        }
+        return $dirs;
+    }
+
+    /**
+     * @param int $code PHP upload error code.
+     * @return string
+     */
+    private static function upload_error_message($code) {
+        switch ((int) $code) {
+            case UPLOAD_ERR_INI_SIZE:
+            case UPLOAD_ERR_FORM_SIZE:
+                return __('One or more files exceed the server upload limit.', 'paxdesign-booking');
+            case UPLOAD_ERR_PARTIAL:
+                return __('A file upload was interrupted. Please try again.', 'paxdesign-booking');
+            case UPLOAD_ERR_NO_TMP_DIR:
+            case UPLOAD_ERR_CANT_WRITE:
+            case UPLOAD_ERR_EXTENSION:
+                return __('The server could not store uploaded files. Please contact support.', 'paxdesign-booking');
+            default:
+                return __('File upload failed. Please try again.', 'paxdesign-booking');
+        }
     }
 
     /**
