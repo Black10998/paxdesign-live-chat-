@@ -47,6 +47,7 @@ class PAXdesign_Cybercrime_Intake {
         $sql = "CREATE TABLE IF NOT EXISTS $table (
             id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
             reference_id varchar(32) NOT NULL,
+            customer_user_id bigint(20) unsigned NOT NULL DEFAULT 0,
             status varchar(24) NOT NULL DEFAULT 'submitted',
             reporter_name varchar(190) NOT NULL DEFAULT '',
             reporter_email varchar(190) NOT NULL DEFAULT '',
@@ -63,7 +64,8 @@ class PAXdesign_Cybercrime_Intake {
             PRIMARY KEY (id),
             UNIQUE KEY reference_id (reference_id),
             KEY status (status),
-            KEY created_at (created_at)
+            KEY created_at (created_at),
+            KEY customer_user_id (customer_user_id)
         ) $charset;";
         require_once ABSPATH . 'wp-admin/includes/upgrade.php';
         dbDelta($sql);
@@ -124,6 +126,7 @@ class PAXdesign_Cybercrime_Intake {
 
         $reference = self::generate_reference_id();
         $now = current_time('mysql', true);
+        $user_id = get_current_user_id();
         global $wpdb;
 
         $payload = array(
@@ -140,6 +143,7 @@ class PAXdesign_Cybercrime_Intake {
             self::table_name(),
             array(
                 'reference_id'    => $reference,
+                'customer_user_id'=> max(0, (int) $user_id),
                 'status'          => 'submitted',
                 'reporter_name'   => $parsed['full_name'],
                 'reporter_email'  => $parsed['email'],
@@ -154,7 +158,7 @@ class PAXdesign_Cybercrime_Intake {
                 'created_at'      => $now,
                 'updated_at'      => $now,
             ),
-            array('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
+            array('%s', '%d', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s')
         );
 
         if (!$inserted) {
@@ -404,5 +408,170 @@ class PAXdesign_Cybercrime_Intake {
         }
         set_transient($key, $count + 1, HOUR_IN_SECONDS);
         return true;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function category_labels() {
+        return array(
+            'account_takeover'        => __('Account takeover', 'paxdesign-booking'),
+            'phishing_fraud'          => __('Phishing / fraud', 'paxdesign-booking'),
+            'identity_theft'          => __('Identity theft', 'paxdesign-booking'),
+            'malware_ransomware'      => __('Malware / ransomware', 'paxdesign-booking'),
+            'social_media_recovery'   => __('Social media recovery', 'paxdesign-booking'),
+            'financial_fraud'         => __('Financial fraud', 'paxdesign-booking'),
+            'data_breach'             => __('Data breach', 'paxdesign-booking'),
+            'other'                   => __('Other cyber incident', 'paxdesign-booking'),
+        );
+    }
+
+    /**
+     * @return string
+     */
+    public static function category_label($category) {
+        $labels = self::category_labels();
+        $key = sanitize_key((string) $category);
+        return isset($labels[$key]) ? (string) $labels[$key] : $key;
+    }
+
+    /**
+     * @return string
+     */
+    public static function status_label($status) {
+        $status = sanitize_key((string) $status);
+        switch ($status) {
+            case 'submitted':
+                return __('Submitted — awaiting review', 'paxdesign-booking');
+            case 'in_review':
+                return __('In review', 'paxdesign-booking');
+            case 'needs_info':
+                return __('Additional information requested', 'paxdesign-booking');
+            case 'resolved':
+                return __('Resolved', 'paxdesign-booking');
+            case 'closed':
+                return __('Closed', 'paxdesign-booking');
+            default:
+                return ucfirst(str_replace('_', ' ', $status));
+        }
+    }
+
+    /**
+     * @param int $user_id
+     * @param int $limit
+     * @return array<int, array<string, mixed>>
+     */
+    public static function list_for_user($user_id, $limit = 5) {
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return array();
+        }
+
+        global $wpdb;
+        $table = self::table_name();
+        $user = get_user_by('id', $user_id);
+        $email = ($user instanceof WP_User) ? sanitize_email($user->user_email) : '';
+
+        if ($email !== '') {
+            $rows = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM $table
+                 WHERE customer_user_id = %d OR (customer_user_id = 0 AND reporter_email = %s)
+                 ORDER BY created_at DESC
+                 LIMIT %d",
+                $user_id,
+                $email,
+                max(1, min(20, (int) $limit))
+            ), ARRAY_A);
+        } else {
+            $rows = $wpdb->get_results($wpdb->prepare(
+                "SELECT * FROM $table WHERE customer_user_id = %d ORDER BY created_at DESC LIMIT %d",
+                $user_id,
+                max(1, min(20, (int) $limit))
+            ), ARRAY_A);
+        }
+
+        if (!is_array($rows)) {
+            return array();
+        }
+
+        $out = array();
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+            $payload = json_decode((string) ($row['payload'] ?? ''), true);
+            if (!is_array($payload)) {
+                $payload = array();
+            }
+            $attachments = json_decode((string) ($row['attachments'] ?? ''), true);
+            if (!is_array($attachments)) {
+                $attachments = array();
+            }
+            $out[] = array(
+                'reference_id'   => (string) ($row['reference_id'] ?? ''),
+                'status'         => (string) ($row['status'] ?? ''),
+                'status_label'   => self::status_label((string) ($row['status'] ?? '')),
+                'category'       => (string) ($row['category'] ?? ''),
+                'category_label' => self::category_label((string) ($row['category'] ?? '')),
+                'urgency'        => (string) ($row['urgency'] ?? ''),
+                'incident_at'    => (string) ($row['incident_at'] ?? ''),
+                'created_at'     => (string) ($row['created_at'] ?? ''),
+                'updated_at'     => (string) ($row['updated_at'] ?? ''),
+                'description'    => (string) ($payload['description'] ?? ''),
+                'platforms'      => (string) ($payload['platforms'] ?? ''),
+                'locale'         => (string) ($payload['locale'] ?? ''),
+                'attachments'    => count($attachments),
+            );
+        }
+
+        return $out;
+    }
+
+    /**
+     * Account-aware AI context for authenticated customers.
+     *
+     * @param int $user_id
+     * @return string
+     */
+    public static function build_account_context_block($user_id) {
+        $reports = self::list_for_user($user_id, 5);
+        if (empty($reports)) {
+            return '- Cybercrime Support reports: none submitted yet for this account';
+        }
+
+        $lines = array('- Cybercrime Support reports (' . count($reports) . ' recent):');
+        foreach ($reports as $report) {
+            $summary = sprintf(
+                '  • %s — %s | status: %s | urgency: %s | submitted: %s',
+                (string) ($report['reference_id'] ?? ''),
+                (string) ($report['category_label'] ?? ''),
+                (string) ($report['status_label'] ?? ''),
+                (string) ($report['urgency'] ?? ''),
+                (string) ($report['created_at'] ?? '')
+            );
+            if (!empty($report['incident_at'])) {
+                $summary .= ' | incident: ' . (string) $report['incident_at'];
+            }
+            $lines[] = $summary;
+            if (!empty($report['platforms'])) {
+                $lines[] = '    platforms: ' . preg_replace('/\s+/', ' ', trim((string) $report['platforms']));
+            }
+            if (!empty($report['description'])) {
+                $desc = trim((string) $report['description']);
+                if (strlen($desc) > 220) {
+                    $desc = substr($desc, 0, 217) . '...';
+                }
+                $lines[] = '    reason/summary: ' . $desc;
+            }
+            if ((int) ($report['attachments'] ?? 0) > 0) {
+                $lines[] = '    attachments: ' . (int) $report['attachments'];
+            }
+            $lines[] = '    latest update: ' . (string) ($report['updated_at'] ?? $report['created_at'] ?? '');
+        }
+
+        $lines[] = '- For Cybercrime Support questions, use ONLY these report facts (reference number, category, status, dates, summary).';
+        $lines[] = '- If the customer asks for updates and none are listed above, say the report is recorded and the team will contact them when there is news.';
+
+        return implode("\n", $lines);
     }
 }

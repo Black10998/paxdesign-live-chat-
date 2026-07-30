@@ -104,6 +104,24 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 			</div>
 		</section>
 
+		<section id="pax-ccs-login-gate" class="pax-ccs-portal__login-gate" hidden aria-labelledby="pax-ccs-login-gate-title">
+			<div class="pax-ccs-portal__wrap pax-ccs-portal__wrap--wide">
+				<div class="pax-ccs-portal__panel pax-ccs-portal__panel--login-gate">
+					<div class="pax-ccs-portal__login-gate-icon" aria-hidden="true"></div>
+					<h2 id="pax-ccs-login-gate-title" class="pax-ccs-portal__section-title"><?php pax_ccs_bilingual( $copy['login_gate']['title'] ); ?></h2>
+					<p class="pax-ccs-portal__section-intro pax-ccs-portal__section-intro--lead"><?php pax_ccs_bilingual( $copy['login_gate']['message'] ); ?></p>
+					<div class="pax-ccs-portal__actions pax-ccs-portal__actions--login-gate">
+						<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--ghost" id="pax-ccs-login-back" data-ccs-login-back>
+							<?php pax_ccs_bilingual( $copy['login_gate']['back'] ); ?>
+						</button>
+						<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--primary" id="pax-ccs-login-continue">
+							<?php pax_ccs_bilingual( $copy['login_gate']['button'] ); ?>
+						</button>
+					</div>
+				</div>
+			</div>
+		</section>
+
 		<div class="pax-ccs-portal__workflow" id="pax-ccs-workflow" hidden>
 			<div class="pax-ccs-portal__wrap pax-ccs-portal__wrap--wide">
 				<p class="pax-ccs-portal__workflow-label"><?php pax_ccs_bilingual( $copy['workflow']['label'] ); ?></p>

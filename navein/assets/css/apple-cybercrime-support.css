@@ -320,6 +320,55 @@ html body.page-cybercrime-support #dtr-main-wrapper {
   justify-content: flex-start;
 }
 
+.pax-ccs-portal__login-gate {
+  padding: 28px 0 0;
+}
+
+.pax-ccs-portal__panel--login-gate {
+  border-top: 4px solid var(--ccs-blue);
+  text-align: center;
+}
+
+.pax-ccs-portal__login-gate-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
+  background: var(--ccs-snow);
+  border: 1px solid var(--ccs-line);
+  position: relative;
+}
+
+.pax-ccs-portal__login-gate-icon::before {
+  content: "";
+  position: absolute;
+  inset: 14px 18px 14px 18px;
+  border: 3px solid var(--ccs-navy);
+  border-radius: 4px 4px 0 0;
+  box-sizing: border-box;
+}
+
+.pax-ccs-portal__login-gate-icon::after {
+  content: "";
+  position: absolute;
+  width: 14px;
+  height: 10px;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  border-radius: 0 0 8px 8px;
+  background: var(--ccs-navy);
+}
+
+.pax-ccs-portal__actions--login-gate {
+  margin-top: 28px;
+  justify-content: center;
+}
+
+.pax-ccs-portal[dir="rtl"] .pax-ccs-portal__actions--login-gate {
+  justify-content: center;
+}
+
 .pax-ccs-portal[dir="ltr"] .pax-ccs-portal__actions--welcome {
   justify-content: flex-start;
 }
@@ -734,6 +783,7 @@ body.page-cybercrime-support .dtr-content-area {
 .pax-ccs-portal__panel,
 .pax-ccs-portal__header,
 .pax-ccs-portal__welcome,
+.pax-ccs-portal__login-gate,
 .pax-ccs-portal__workflow,
 .pax-ccs-portal__form,
 .pax-ccs-portal__success {

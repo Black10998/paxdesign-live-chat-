@@ -16,6 +16,7 @@
   var currentStep = 1;
   var phase = 'welcome';
   var welcomeEl = document.getElementById('pax-ccs-welcome');
+  var loginGateEl = document.getElementById('pax-ccs-login-gate');
   var workflowEl = document.getElementById('pax-ccs-workflow');
   var localeInput = document.getElementById('pax-ccs-locale');
   var reviewEl = document.getElementById('pax-ccs-review');
@@ -24,6 +25,8 @@
   var refEl = document.getElementById('pax-ccs-ref-value');
   var submitBtn = document.getElementById('pax-ccs-submit');
   var startBtn = document.getElementById('pax-ccs-start');
+  var loginContinueBtn = document.getElementById('pax-ccs-login-continue');
+  var loginBackBtn = document.getElementById('pax-ccs-login-back');
 
   function isLoggedIn() {
     if (config.isLoggedIn === true) {
@@ -51,6 +54,19 @@
     if (url) {
       window.location.href = url;
     }
+  }
+
+  function showLoginGate() {
+    setPhase('login-gate');
+    window.scrollTo({ top: (loginGateEl || root).offsetTop - 24, behavior: 'smooth' });
+  }
+
+  function requestLoginToContinue() {
+    if (!requiresLogin() || isLoggedIn()) {
+      startReporting();
+      return;
+    }
+    showLoginGate();
   }
 
   function requiresLogin() {
@@ -183,11 +199,17 @@
     if (welcomeEl) {
       welcomeEl.hidden = nextPhase !== 'welcome';
     }
+    if (loginGateEl) {
+      loginGateEl.hidden = nextPhase !== 'login-gate';
+    }
     if (workflowEl) {
       workflowEl.hidden = nextPhase !== 'form';
     }
     if (form) {
       form.hidden = nextPhase !== 'form';
+    }
+    if (successEl) {
+      successEl.hidden = nextPhase !== 'success';
     }
   }
 
@@ -341,11 +363,19 @@
 
   if (startBtn) {
     startBtn.addEventListener('click', function () {
-      if (requiresLogin() && !isLoggedIn()) {
-        redirectToLogin();
-        return;
-      }
-      startReporting();
+      requestLoginToContinue();
+    });
+  }
+
+  if (loginContinueBtn) {
+    loginContinueBtn.addEventListener('click', function () {
+      redirectToLogin();
+    });
+  }
+
+  if (loginBackBtn) {
+    loginBackBtn.addEventListener('click', function () {
+      showWelcome();
     });
   }
 
@@ -380,7 +410,7 @@
       return;
     }
     if (requiresLogin() && !isLoggedIn()) {
-      redirectToLogin();
+      showLoginGate();
       return;
     }
     if (!config.ajaxUrl || !config.nonce) {
@@ -404,7 +434,7 @@
       .then(function (json) {
         if (!json || !json.success) {
           if (json && json.data && json.data.code === 'login_required') {
-            redirectToLogin();
+            showLoginGate();
             return;
           }
           throw new Error((json && json.data && json.data.message) || 'Submit failed');

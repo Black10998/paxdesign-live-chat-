@@ -143,6 +143,24 @@ return array(
 			'de' => 'Meldung starten',
 		),
 	),
+	'login_gate' => array(
+		'title' => array(
+			'ar' => 'تسجيل الدخول مطلوب',
+			'de' => 'Anmeldung erforderlich',
+		),
+		'message' => array(
+			'ar' => 'Cybercrime Support خدمة آمنة لتقديم بلاغات الجرائم الإلكترونية ومتابعتها. يرجى تسجيل الدخول إلى حسابك للمتابعة مع بلاغك.',
+			'de' => 'Cybercrime Support ist ein sicherer Service zum Einreichen und Nachverfolgen von Cybercrime-Meldungen. Bitte melden Sie sich an, um mit Ihrer Meldung fortzufahren.',
+		),
+		'button' => array(
+			'ar' => 'تسجيل الدخول للمتابعة',
+			'de' => 'Anmelden und fortfahren',
+		),
+		'back' => array(
+			'ar' => 'العودة إلى المعلومات',
+			'de' => 'Zurück zur Übersicht',
+		),
+	),
 	'steps' => array(
 		array(
 			'id'    => 'identity',
