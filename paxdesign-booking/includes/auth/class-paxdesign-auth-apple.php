@@ -471,37 +471,15 @@ class PAXdesign_Auth_Apple {
 			return $client_secret;
 		}
 
-		$post_body = http_build_query(
-			array(
-				'client_id'     => $client_id,
-				'client_secret' => $client_secret,
-				'code'          => $code,
-				'grant_type'    => 'authorization_code',
-				'redirect_uri'  => $redirect_uri,
-			),
-			'',
-			'&',
-			PHP_QUERY_RFC3986
-		);
+		$post_body = self::build_token_exchange_body( $client_id, $client_secret, $code, $redirect_uri );
 
-		$response = wp_remote_post(
-			self::TOKEN_URL,
-			array(
-				'timeout' => 20,
-				'headers' => array(
-					'Accept'       => 'application/json',
-					'Content-Type' => 'application/x-www-form-urlencoded',
-				),
-				'body'    => $post_body,
-			)
-		);
-
-		if ( is_wp_error( $response ) ) {
-			return new WP_Error( 'apple_token_exchange', 'Could not contact Apple to complete sign-in.' );
+		$http = self::apple_token_http_post( $post_body );
+		if ( is_wp_error( $http ) ) {
+			return $http;
 		}
 
-		$status = (int) wp_remote_retrieve_response_code( $response );
-		$raw    = wp_remote_retrieve_body( $response );
+		$status = (int) ( $http['status'] ?? 0 );
+		$raw    = (string) ( $http['body'] ?? '' );
 		$body   = json_decode( $raw, true );
 		if ( $status < 200 || $status >= 300 || ! is_array( $body ) ) {
 			$error_code = is_array( $body ) ? (string) ( $body['error'] ?? '' ) : '';
@@ -517,6 +495,7 @@ class PAXdesign_Auth_Apple {
 					'apple_error_description'  => is_array( $body ) ? (string) ( $body['error_description'] ?? '' ) : '',
 					'code_len'                 => strlen( $code ),
 					'client_secret_len'        => strlen( $client_secret ),
+					'transport'                => (string) ( $http['transport'] ?? '' ),
 				)
 			);
 			return $err;
@@ -524,6 +503,88 @@ class PAXdesign_Auth_Apple {
 
 		self::trace( 'callback_token_exchange_ok', self::token_exchange_trace_context( $client_id, $redirect_uri ) );
 		return $body;
+	}
+
+	/**
+	 * @return string
+	 */
+	private static function build_token_exchange_body( string $client_id, string $client_secret, string $code, string $redirect_uri ): string {
+		return http_build_query(
+			array(
+				'client_id'     => $client_id,
+				'client_secret' => $client_secret,
+				'code'          => $code,
+				'grant_type'    => 'authorization_code',
+				'redirect_uri'  => $redirect_uri,
+			),
+			'',
+			'&',
+			PHP_QUERY_RFC3986
+		);
+	}
+
+	/**
+	 * @return array<string, mixed>|WP_Error
+	 */
+	private static function apple_token_http_post( string $post_body ) {
+		$headers = array(
+			'Accept: application/json',
+			'Content-Type: application/x-www-form-urlencoded',
+			'User-Agent: PAXDesign-AppleWebOAuth/' . ( defined( 'PAXDESIGN_BOOKING_VERSION' ) ? PAXDESIGN_BOOKING_VERSION : '1.0' ),
+		);
+
+		if ( function_exists( 'curl_init' ) ) {
+			$ch = curl_init( self::TOKEN_URL );
+			if ( $ch !== false ) {
+				curl_setopt_array(
+					$ch,
+					array(
+						CURLOPT_POST           => true,
+						CURLOPT_POSTFIELDS     => $post_body,
+						CURLOPT_HTTPHEADER     => $headers,
+						CURLOPT_RETURNTRANSFER => true,
+						CURLOPT_TIMEOUT        => 20,
+					)
+				);
+				$raw    = curl_exec( $ch );
+				$status = (int) curl_getinfo( $ch, CURLINFO_HTTP_CODE );
+				$error  = curl_error( $ch );
+				curl_close( $ch );
+				if ( is_string( $raw ) ) {
+					return array(
+						'status'    => $status,
+						'body'      => $raw,
+						'transport' => 'curl',
+					);
+				}
+				if ( $error !== '' ) {
+					return new WP_Error( 'apple_token_exchange', 'Could not contact Apple to complete sign-in.' );
+				}
+			}
+		}
+
+		$response = wp_remote_post(
+			self::TOKEN_URL,
+			array(
+				'timeout' => 20,
+				'headers' => array(
+					'Accept'       => 'application/json',
+					'Content-Type' => 'application/x-www-form-urlencoded',
+					'User-Agent'   => 'PAXDesign-AppleWebOAuth/' . ( defined( 'PAXDESIGN_BOOKING_VERSION' ) ? PAXDESIGN_BOOKING_VERSION : '1.0' ),
+				),
+				'body'    => $post_body,
+			)
+		);
+
+		if ( is_wp_error( $response ) ) {
+			return new WP_Error( 'apple_token_exchange', 'Could not contact Apple to complete sign-in.' );
+		}
+
+		return array(
+			'status'    => (int) wp_remote_retrieve_response_code( $response ),
+			'body'      => wp_remote_retrieve_body( $response ),
+			'transport' => 'wp_remote_post',
+		);
 	}
 
 	/**

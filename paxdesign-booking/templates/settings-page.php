@@ -26,6 +26,8 @@ $apns_team_id       = get_option('paxdesign_apns_team_id', '');
 $apns_bundle_id     = get_option('paxdesign_apns_bundle_id', 'at.paxdesign.livechat');
 $apns_key_p8        = get_option('paxdesign_apns_key_p8', '');
 $apple_web_service_id = get_option('paxdesign_apple_web_service_id', '');
+$apple_web_key_id     = get_option('paxdesign_apple_web_key_id', '');
+$apple_web_key_p8     = get_option('paxdesign_apple_web_key_p8', '');
 $apple_web_callback_url = class_exists('PAXdesign_Auth_Apple')
     ? PAXdesign_Auth_Apple::web_callback_url()
     : rest_url('pdx/v1/auth/apple/callback');
@@ -231,6 +233,20 @@ $chat_quick_links   = class_exists('PAXdesign_Chat_Quick_Links') ? PAXdesign_Cha
               <input type="text" id="paxdesign_apple_web_service_id" name="paxdesign_apple_web_service_id"
                      class="ps-input" value="<?php echo esc_attr($apple_web_service_id); ?>" placeholder="at.paxdesign.web.login">
               <span class="ps-hint">Client ID for the website OAuth flow (separate from the iOS bundle ID).</span>
+            </div>
+
+            <div class="ps-field">
+              <label class="ps-label" for="paxdesign_apple_web_key_id">Apple Web OAuth Key ID (optional)</label>
+              <input type="text" id="paxdesign_apple_web_key_id" name="paxdesign_apple_web_key_id"
+                     class="ps-input" value="<?php echo esc_attr($apple_web_key_id); ?>" placeholder="Sign in with Apple Key ID">
+              <span class="ps-hint">Use a dedicated Sign in with Apple key for web if token exchange fails with invalid_client. Leave empty to reuse the APNs key above.</span>
+            </div>
+
+            <div class="ps-field">
+              <label class="ps-label" for="paxdesign_apple_web_key_p8">Apple Web OAuth Key (.p8, optional)</label>
+              <textarea id="paxdesign_apple_web_key_p8" name="paxdesign_apple_web_key_p8"
+                        class="ps-input" rows="6"
+                        placeholder="-----BEGIN PRIVATE KEY-----"><?php echo esc_textarea($apple_web_key_p8); ?></textarea>
             </div>
 
             <div class="ps-field">
