@@ -266,14 +266,24 @@
     return i18nText(key, key);
   }
 
-  function getOfficialTimelineSorted(entries) {
+  function getVisibleTimelineSorted(entries) {
     return (entries || []).filter(function (entry) {
-      return entry && entry.author_type !== 'ai' && entry.channel !== 'chat';
+      if (!entry || entry.author_type === 'ai' || entry.channel === 'chat') {
+        return false;
+      }
+      if (entry.customer_visible === false) {
+        return false;
+      }
+      return !!(entry.body && String(entry.body).trim());
     }).slice().sort(function (a, b) {
       var aTime = String(a.created_at || '') + String(a.id != null ? a.id : '');
       var bTime = String(b.created_at || '') + String(b.id != null ? b.id : '');
       return bTime.localeCompare(aTime);
     });
+  }
+
+  function getOfficialTimelineSorted(entries) {
+    return getVisibleTimelineSorted(entries);
   }
 
   function getNewestTimelineEntryId(entries) {
@@ -408,8 +418,6 @@
       var entryId = String(entry.id != null ? entry.id : index);
       var isOpen = entryId === openId;
       var sender = timelineSenderLabel(entry);
-      var subject = timelineSubjectLabel(entry);
-      var showSubject = hasTimelineSubject(entry);
       var when = formatDate(entry.created_at || '');
       var body = escapeHtml(entry.body || '').replace(/\n/g, '<br>');
       var panelId = 'pax-ccs-acc-panel-' + entryId;
@@ -422,8 +430,6 @@
         + '<span class="pax-ccs-portal__accordion-head-row">'
         + '<span class="pax-ccs-portal__accordion-sender">' + escapeHtml(sender) + '</span>'
         + '<span class="pax-ccs-portal__accordion-when">' + escapeHtml(when) + '</span>'
-        + '</span>'
-        + (showSubject ? '<span class="pax-ccs-portal__accordion-subject">' + escapeHtml(subject) + '</span>' : '')
         + '</span>'
         + '<span class="pax-ccs-portal__accordion-chevron" aria-hidden="true"></span>'
         + '</button>'

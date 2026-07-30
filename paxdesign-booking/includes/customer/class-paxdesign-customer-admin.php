@@ -617,7 +617,7 @@ class PAXdesign_Customer_Admin {
             return;
         }
 
-        $report = PAXdesign_Cybercrime_Tickets::format_report_row($row, true);
+        $report = PAXdesign_Cybercrime_Tickets::format_report_row($row, true, 'admin');
         $statuses = array('submitted', 'in_review', 'needs_info', 'waiting_for_customer', 'customer_replied', 'waiting_for_staff', 'resolved', 'closed');
         $back_url = admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=cybercrime');
 

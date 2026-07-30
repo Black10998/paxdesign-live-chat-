@@ -219,7 +219,7 @@ class PAXdesign_Cybercrime_Tickets {
      * @param bool                 $with_timeline
      * @return array<string, mixed>
      */
-    public static function format_report_row($row, $with_timeline = false) {
+    public static function format_report_row($row, $with_timeline = false, $timeline_audience = 'customer') {
         $payload = json_decode((string) ($row['payload'] ?? ''), true);
         if (!is_array($payload)) {
             $payload = array();
@@ -254,11 +254,20 @@ class PAXdesign_Cybercrime_Tickets {
         $out['customer_display_name'] = $customer_display_name;
 
         if ($with_timeline) {
-            $out['timeline'] = self::list_official_messages(
-                (string) ($row['reference_id'] ?? ''),
-                200,
-                $customer_display_name
-            );
+            if ($timeline_audience === 'admin') {
+                $out['timeline'] = self::list_official_messages(
+                    (string) ($row['reference_id'] ?? ''),
+                    200,
+                    $customer_display_name,
+                    'admin'
+                );
+            } else {
+                $out['timeline'] = self::list_customer_messages(
+                    (string) ($row['reference_id'] ?? ''),
+                    200,
+                    $customer_display_name
+                );
+            }
         }
 
         return $out;
@@ -301,7 +310,7 @@ class PAXdesign_Cybercrime_Tickets {
      * @param int    $limit
      * @return array<int, array<string, mixed>>
      */
-    public static function list_official_messages($reference_id, $limit = 200, $customer_display_name = '') {
+    public static function list_official_messages($reference_id, $limit = 200, $customer_display_name = '', $audience = 'admin') {
         if ($customer_display_name === '') {
             $report_row = self::get_report_row($reference_id);
             if (is_array($report_row)) {
@@ -314,9 +323,35 @@ class PAXdesign_Cybercrime_Tickets {
             if (!is_array($entry) || !self::is_official_timeline_entry($entry)) {
                 continue;
             }
-            $official[] = self::format_timeline_entry($entry, $customer_display_name);
+            $official[] = self::format_timeline_entry($entry, $customer_display_name, $audience);
         }
         return $official;
+    }
+
+    /**
+     * Customer-facing timeline — conversation only, no internal/system noise.
+     *
+     * @param string $reference_id
+     * @param int    $limit
+     * @param string $customer_display_name
+     * @return array<int, array<string, mixed>>
+     */
+    public static function list_customer_messages($reference_id, $limit = 200, $customer_display_name = '') {
+        if ($customer_display_name === '') {
+            $report_row = self::get_report_row($reference_id);
+            if (is_array($report_row)) {
+                $customer_display_name = self::resolve_customer_display_name($report_row);
+            }
+        }
+        $messages = self::list_messages($reference_id, $limit);
+        $visible = array();
+        foreach ($messages as $entry) {
+            if (!is_array($entry) || !self::is_customer_visible_timeline_entry($entry)) {
+                continue;
+            }
+            $visible[] = self::format_timeline_entry($entry, $customer_display_name, 'customer');
+        }
+        return $visible;
     }
 
     /**
@@ -336,10 +371,77 @@ class PAXdesign_Cybercrime_Tickets {
     }
 
     /**
+     * Customer portal — only conversation messages intended for the reporter.
+     *
+     * @param array<string, mixed> $entry
+     * @return bool
+     */
+    public static function is_customer_visible_timeline_entry($entry) {
+        if (!is_array($entry) || !self::is_official_timeline_entry($entry)) {
+            return false;
+        }
+
+        $author = sanitize_key((string) ($entry['author_type'] ?? ''));
+        $body = trim((string) ($entry['body'] ?? ''));
+        if ($body === '') {
+            return false;
+        }
+
+        $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
+        $event = sanitize_key((string) ($meta['event'] ?? ''));
+
+        if ($author === 'customer' || $author === 'staff') {
+            return true;
+        }
+
+        if ($author !== 'system') {
+            return false;
+        }
+
+        if ($event === 'submitted') {
+            return false;
+        }
+
+        if (!empty($meta['visible_to_customer'])) {
+            return true;
+        }
+
+        if ($event === 'status_change' && !self::is_internal_system_message($body)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * @param string $body
+     * @return bool
+     */
+    private static function is_internal_system_message($body) {
+        $body = trim((string) $body);
+        if ($body === '') {
+            return true;
+        }
+
+        $patterns = array(
+            '/^Status changed to .+\.$/i',
+            '/^Customer added a portal reply\.$/i',
+            '/^Customer replied by email\.$/i',
+        );
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $body)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @param array<string, mixed> $entry
      * @return array<string, mixed>
      */
-    public static function format_timeline_entry($entry, $customer_display_name = '') {
+    public static function format_timeline_entry($entry, $customer_display_name = '', $audience = 'customer') {
         $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
         $author = sanitize_key((string) ($entry['author_type'] ?? ''));
         $event = sanitize_key((string) ($meta['event'] ?? ''));
@@ -357,10 +459,12 @@ class PAXdesign_Cybercrime_Tickets {
 
         $subject = sanitize_text_field((string) ($entry['subject'] ?? ''));
         $subject_key = '';
-        if ($subject === '' && $event === 'status_change' && $status_key !== '') {
-            $subject_key = 'status_' . $status_key;
-        } elseif ($subject === '' && $event === 'submitted') {
-            $subject_key = 'report_submitted';
+        if ($audience === 'admin') {
+            if ($subject === '' && $event === 'status_change' && $status_key !== '') {
+                $subject_key = 'status_' . $status_key;
+            } elseif ($subject === '' && $event === 'submitted') {
+                $subject_key = 'report_submitted';
+            }
         }
 
         $customer_display_name = trim(sanitize_text_field((string) $customer_display_name));
@@ -368,8 +472,9 @@ class PAXdesign_Cybercrime_Tickets {
         $entry['status_label'] = $status_key !== '' ? self::status_label($status_key) : '';
         $entry['sender_key'] = $author === 'customer' ? 'customer' : 'support';
         $entry['customer_name'] = $author === 'customer' ? $customer_display_name : '';
+        $entry['customer_visible'] = self::is_customer_visible_timeline_entry($entry);
         $entry['subject_key'] = $subject_key;
-        $entry['subject'] = $subject;
+        $entry['subject'] = $audience === 'customer' ? '' : $subject;
 
         return $entry;
     }
@@ -497,7 +602,7 @@ class PAXdesign_Cybercrime_Tickets {
      * @param bool   $notify_customer
      * @return bool|WP_Error
      */
-    public static function update_status($reference_id, $new_status, $actor_user_id = 0, $summary = '', $notify_customer = true) {
+    public static function update_status($reference_id, $new_status, $actor_user_id = 0, $summary = '', $notify_customer = true, $log_timeline = true) {
         $reference_id = sanitize_text_field((string) $reference_id);
         $new_status = sanitize_key((string) $new_status);
         if ($reference_id === '' || !in_array($new_status, self::$staff_statuses, true)) {
@@ -532,14 +637,21 @@ class PAXdesign_Cybercrime_Tickets {
             ? $summary
             : sprintf(__('Status changed to %s.', 'paxdesign-booking'), $label);
 
-        self::add_message(
-            $reference_id,
-            'system',
-            $message,
-            'admin',
-            $actor_user_id,
-            array('event' => 'status_change', 'from' => $old_status, 'to' => $new_status)
-        );
+        if ($log_timeline) {
+            self::add_message(
+                $reference_id,
+                'system',
+                $message,
+                'admin',
+                $actor_user_id,
+                array(
+                    'event'               => 'status_change',
+                    'from'                => $old_status,
+                    'to'                  => $new_status,
+                    'visible_to_customer' => $summary !== '',
+                )
+            );
+        }
 
         $customer_id = (int) ($row['customer_user_id'] ?? 0);
         if ($notify_customer && $customer_id > 0 && class_exists('PAXdesign_Customer_Notifications')) {
@@ -693,7 +805,7 @@ class PAXdesign_Cybercrime_Tickets {
             return new WP_Error('save_failed', __('Could not save your message.', 'paxdesign-booking'));
         }
 
-        self::update_status($reference_id, 'customer_replied', $user_id, __('Customer added a portal reply.', 'paxdesign-booking'), false);
+        self::update_status($reference_id, 'customer_replied', $user_id, '', false, false);
         self::notify_staff_reply($row, $reference_id, $body);
 
         return $message_id;
@@ -737,7 +849,7 @@ class PAXdesign_Cybercrime_Tickets {
         if ($status === '') {
             $status = self::is_active_status((string) ($row['status'] ?? '')) ? 'waiting_for_customer' : (string) ($row['status'] ?? '');
         }
-        self::update_status($reference_id, $status, $staff_user_id, '', true);
+        self::update_status($reference_id, $status, $staff_user_id, '', false, false);
 
         return $message_id;
     }
@@ -789,7 +901,7 @@ class PAXdesign_Cybercrime_Tickets {
             return new WP_Error('save_failed', __('Could not store email reply.', 'paxdesign-booking'));
         }
 
-        self::update_status($reference_id, 'customer_replied', $user_id, __('Customer replied by email.', 'paxdesign-booking'), true);
+        self::update_status($reference_id, 'customer_replied', $user_id, '', false, false);
         self::notify_staff_reply($row, $reference_id, $body);
 
         return array('reference_id' => $reference_id, 'message_id' => $message_id);
