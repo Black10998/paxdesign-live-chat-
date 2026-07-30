@@ -718,6 +718,10 @@ class PAXdesign_Auth_Native {
 		self::assign_customer_role( $user_id );
 		PAXdesign_Customers::record_login( $user_id );
 
+		$user = get_user_by( 'id', $user_id );
+		if ( $user instanceof WP_User ) {
+			do_action( 'wp_login', $user->user_login, $user );
+		}
 		do_action( 'pdx_user_logged_in', $user_id );
 
 		if ( class_exists( 'PDX_Audit' ) ) {

@@ -13,6 +13,11 @@ if ( ! is_array( $trace ) ) {
 	$trace = array();
 }
 
+$last_error = get_option( 'paxdesign_apple_oauth_last_error', array() );
+if ( is_array( $last_error ) && ! empty( $last_error['message'] ) ) {
+	echo "last_error=" . (string) $last_error['message'] . " at " . (string) ( $last_error['t'] ?? '' ) . "\n";
+}
+
 echo "=== Apple OAuth trace (last " . count( $trace ) . " events) ===\n";
 foreach ( $trace as $row ) {
 	if ( ! is_array( $row ) ) {

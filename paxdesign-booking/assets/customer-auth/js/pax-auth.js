@@ -34,6 +34,7 @@
   var sessionSyncTimer = null;
   var SESSION_SYNC_INTERVAL_MS = 45000;
   var authBroadcast = null;
+  var pendingAppleError = '';
 
   var SVG_GRADIENT = '<defs><linearGradient id="pdx-gradient-stroke" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="black"></stop><stop offset="100%" stop-color="white"></stop></linearGradient></defs>';
   var SVG_EMAIL = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' + SVG_GRADIENT + '<g stroke="url(#pdx-gradient-stroke)" fill="none" stroke-width="1"><path d="M21.6365 5H3L12.2275 12.3636L21.6365 5Z"></path><path d="M16.5 11.5L22.5 6.5V17L16.5 11.5Z"></path><path d="M8 11.5L2 6.5V17L8 11.5Z"></path><path d="M9.5 12.5L2.81805 18.5002H21.6362L15 12.5L12 15L9.5 12.5Z"></path></g></svg>';
@@ -804,6 +805,7 @@
       });
     });
     bindAppleSignInButton(mount);
+    showPendingAppleError();
   }
 
   function mountInlineAuth(container, view, options) {
@@ -991,6 +993,41 @@
     slot.innerHTML = safe ? '<div class="pdx-auth-message pdx-auth-message--' + type + '">' + safe + '</div>' : '';
   }
 
+  function showPendingAppleError() {
+    var msg = pendingAppleError;
+    if (!msg) {
+      try { msg = sessionStorage.getItem('pdx_apple_error') || ''; } catch (e) {}
+    }
+    if (!msg) return;
+    showFormMessage(msg, 'error');
+  }
+
+  function captureAppleErrorFromUrl(params) {
+    if (!params || params.get('pdx_apple') !== 'error') return;
+    var appleMsg = params.get('pdx_msg') || 'Apple sign-in failed. Please try again.';
+    try {
+      appleMsg = decodeURIComponent(appleMsg.replace(/\+/g, ' '));
+    } catch (e) {}
+    pendingAppleError = appleMsg;
+    try { sessionStorage.setItem('pdx_apple_error', appleMsg); } catch (err) {}
+  }
+
+  function clearPendingAppleErrorFromUrl(params) {
+    if (!params || params.get('pdx_apple') !== 'error') return;
+    setTimeout(function () {
+      pendingAppleError = '';
+      try { sessionStorage.removeItem('pdx_apple_error'); } catch (e) {}
+      if (window.history && window.history.replaceState) {
+        try {
+          params.delete('pdx_apple');
+          params.delete('pdx_msg');
+          var cleanQuery = params.toString();
+          window.history.replaceState({}, '', window.location.pathname + (cleanQuery ? '?' + cleanQuery : '') + window.location.hash);
+        } catch (err) {}
+      }
+    }, 60000);
+  }
+
   function onAuthSubmit(e) {
     e.preventDefault();
     var form = e.target;
@@ -1091,6 +1128,8 @@
     accountSidebarEl = document.getElementById('pdx-account-sidebar');
     accountMainEl = document.getElementById('pdx-account-main');
     var params = new URLSearchParams(window.location.search);
+    captureAppleErrorFromUrl(params);
+    clearPendingAppleErrorFromUrl(params);
     var initialView = params.get('view') || 'login';
     if (initialView === 'reset' || params.get('pdx_reset') === '1') {
       currentView = 'reset';
@@ -1107,23 +1146,7 @@
     if (!user.logged_in) {
       renderAuthForm(authPageFormEl);
       syncAuthPageSegment();
-      if (params.get('pdx_apple') === 'error') {
-        var appleMsg = params.get('pdx_msg') || 'Apple sign-in failed. Please try again.';
-        try {
-          appleMsg = decodeURIComponent(appleMsg.replace(/\+/g, ' '));
-        } catch (e) {}
-        showFormMessage(appleMsg, 'error');
-        setTimeout(function () {
-          if (window.history && window.history.replaceState) {
-            try {
-              params.delete('pdx_apple');
-              params.delete('pdx_msg');
-              var cleanQuery = params.toString();
-              window.history.replaceState({}, '', window.location.pathname + (cleanQuery ? '?' + cleanQuery : '') + window.location.hash);
-            } catch (err) {}
-          }
-        }, 12000);
-      }
+      showPendingAppleError();
     }
     window.addEventListener('hashchange', parseAccountSectionFromHash);
   }

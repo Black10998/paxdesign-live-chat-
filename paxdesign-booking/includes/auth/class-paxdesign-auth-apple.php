@@ -16,9 +16,10 @@ class PAXdesign_Auth_Apple {
 	const AUTHORIZE_URL           = 'https://appleid.apple.com/auth/authorize';
 	const TOKEN_URL               = 'https://appleid.apple.com/auth/token';
 	const IOS_BUNDLE_ID           = 'at.paxdesign.livechat';
-	const OAUTH_STATE_TTL         = 600;
-	const LOGIN_TICKET_TTL        = 300;
+	const OAUTH_STATE_TTL         = 1800;
+	const LOGIN_TICKET_TTL        = 600;
 	const OPTION_TRACE            = 'paxdesign_apple_oauth_trace';
+	const OPTION_LAST_ERROR       = 'paxdesign_apple_oauth_last_error';
 
 	/**
 	 * @return void
@@ -381,6 +382,16 @@ class PAXdesign_Auth_Apple {
 	 * @return string
 	 */
 	public static function web_error_redirect_url( string $message ): string {
+		update_option(
+			self::OPTION_LAST_ERROR,
+			array(
+				't'       => gmdate( 'c' ),
+				'message' => $message,
+			),
+			false
+		);
+		self::trace( 'error_redirect', array( 'message' => $message ) );
+
 		return add_query_arg(
 			array(
 				'pdx_apple' => 'error',
@@ -503,14 +514,13 @@ class PAXdesign_Auth_Apple {
 	 */
 	private static function create_oauth_state( string $return_url ): string {
 		$state = bin2hex( random_bytes( 16 ) );
-		set_transient(
-			'pax_apple_oauth_' . hash( 'sha256', $state ),
-			array(
-				'return_url' => $return_url,
-				'created'    => time(),
-			),
-			self::OAUTH_STATE_TTL
+		$key   = 'pax_apple_oauth_' . hash( 'sha256', $state );
+		$data  = array(
+			'return_url' => $return_url,
+			'created'    => time(),
 		);
+		set_transient( $key, $data, self::OAUTH_STATE_TTL );
+		update_option( $key, $data, false );
 		return $state;
 	}
 
@@ -520,7 +530,12 @@ class PAXdesign_Auth_Apple {
 	private static function consume_oauth_state( string $state ) {
 		$key  = 'pax_apple_oauth_' . hash( 'sha256', $state );
 		$data = get_transient( $key );
+		if ( ! is_array( $data ) ) {
+			$stored = get_option( $key, null );
+			$data   = is_array( $stored ) ? $stored : null;
+		}
 		delete_transient( $key );
+		delete_option( $key );
 		if ( ! is_array( $data ) || empty( $data['return_url'] ) ) {
 			return new WP_Error( 'apple_state_invalid', 'Your Apple sign-in session expired. Please try again.' );
 		}
