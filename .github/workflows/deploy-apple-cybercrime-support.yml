@@ -214,11 +214,11 @@ jobs:
           test "$AUTH_CSS" = "200"
           test "$CHAT" = "200"
           test "$AUTH_JS" = "200"
-          grep -Eq "Version: 1\.4\.28" /tmp/style.css
-          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.28|apple-cybercrime-support\.js\?ver=1\.4\.28" /tmp/ccs-page.html
+          grep -Eq "Version: 1\.4\.29" /tmp/style.css
+          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.29|apple-cybercrime-support\.js\?ver=1\.4\.29" /tmp/ccs-page.html
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-country-search|pax-ccs-phone-code" /tmp/ccs-page.html
           grep -Eq "full-bleed Apple-style|--ccs-gutter|pax-ccs-portal__coverage-track" /tmp/apple-ccs.css
-          grep -Eq "initCountryPicker|validateAllSteps|initCoverageMarquee|pax-ccs-country-search" /tmp/apple-ccs.js
+          grep -Eq "initCountryPicker|validateAllSteps|coverageMarqueeState|pax-ccs-country-search" /tmp/apple-ccs.js
           grep -Eq 'name="identity_document" required|pax-ccs-portal__required' /tmp/ccs-page.html
           grep -Eq "Sitewide isolated Sign In|background: #000 !important" /tmp/pdx-auth.css
           grep -Eq "isReportActive|applyReportLifecycle|pax-ccs-portal--report-closed" /tmp/apple-ccs.js
