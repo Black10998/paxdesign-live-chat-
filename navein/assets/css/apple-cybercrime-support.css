@@ -877,6 +877,16 @@ html body.page-cybercrime-support .pax-ccs-portal-wrap {
     max-width: none;
   }
 
+  .pax-ccs-portal__coverage-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .pax-ccs-portal__coverage-note {
+    max-width: none;
+  }
+
   .pax-ccs-portal__title {
     font-size: clamp(26px, 7vw, 34px);
   }
