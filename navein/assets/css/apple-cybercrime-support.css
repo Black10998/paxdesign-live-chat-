@@ -158,7 +158,9 @@ html body.page-cybercrime-support .pax-ccs-portal-wrap {
 .pax-ccs-portal__coverage-track {
   display: flex;
   width: max-content;
-  animation: pax-ccs-coverage-scroll 52s linear infinite;
+  gap: 0;
+  will-change: transform;
+  animation: pax-ccs-coverage-scroll var(--ccs-marquee-duration, 52s) linear infinite;
 }
 
 .pax-ccs-portal__coverage-group {
@@ -187,16 +189,12 @@ html body.page-cybercrime-support .pax-ccs-portal-wrap {
   font-weight: 400;
 }
 
-.pax-ccs-portal__coverage-item:last-child::after {
-  content: none;
-}
-
 @keyframes pax-ccs-coverage-scroll {
-  from {
+  0% {
     transform: translate3d(0, 0, 0);
   }
-  to {
-    transform: translate3d(-50%, 0, 0);
+  100% {
+    transform: translate3d(var(--ccs-marquee-shift, -50%), 0, 0);
   }
 }
 

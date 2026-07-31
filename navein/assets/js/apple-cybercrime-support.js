@@ -1551,6 +1551,60 @@
     });
   }
 
+  function initCoverageMarquee() {
+    var track = root.querySelector('.pax-ccs-portal__coverage-track');
+    if (!track) {
+      return;
+    }
+
+    var container = track.parentElement;
+    if (!container) {
+      return;
+    }
+
+    while (track.children.length > 2) {
+      track.removeChild(track.lastChild);
+    }
+
+    var segment = track.querySelector('.pax-ccs-portal__coverage-group');
+    if (!segment) {
+      return;
+    }
+
+    var segmentWidth = segment.offsetWidth;
+    if (!segmentWidth) {
+      return;
+    }
+
+    var minTrackWidth = container.offsetWidth + segmentWidth;
+    while (track.scrollWidth < minTrackWidth) {
+      var clone = segment.cloneNode(true);
+      clone.setAttribute('aria-hidden', 'true');
+      track.appendChild(clone);
+    }
+
+    track.style.setProperty('--ccs-marquee-shift', '-' + segmentWidth + 'px');
+    track.style.setProperty('--ccs-marquee-duration', '52s');
+  }
+
+  var coverageMarqueeResizeTimer = null;
+  function scheduleCoverageMarqueeInit() {
+    window.requestAnimationFrame(function () {
+      initCoverageMarquee();
+    });
+  }
+
+  scheduleCoverageMarqueeInit();
+  window.addEventListener('resize', function () {
+    if (coverageMarqueeResizeTimer) {
+      window.clearTimeout(coverageMarqueeResizeTimer);
+    }
+    coverageMarqueeResizeTimer = window.setTimeout(scheduleCoverageMarqueeInit, 150);
+  });
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(scheduleCoverageMarqueeInit).catch(function () {});
+  }
+
   var saved = '';
   try {
     saved = localStorage.getItem('pax-ccs-lang') || '';
