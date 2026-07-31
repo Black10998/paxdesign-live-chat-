@@ -368,17 +368,23 @@ return array(
 		),
 		'phone' => array(
 			'label' => array( 'ar' => 'رقم الهاتف', 'de' => 'Telefonnummer' ),
-			'placeholder' => array( 'ar' => '+43 …', 'de' => '+43 …' ),
+			'placeholder' => array( 'ar' => '660 1234567', 'de' => '660 1234567' ),
+		),
+		'phone_code' => array(
+			'label' => array( 'ar' => 'رمز الدولة', 'de' => 'Ländervorwahl' ),
 		),
 		'country' => array(
 			'label' => array( 'ar' => 'الدولة', 'de' => 'Land' ),
-			'placeholder' => array( 'ar' => 'النمسا', 'de' => 'Österreich' ),
+			'placeholder' => array( 'ar' => 'ابحث عن دولتك…', 'de' => 'Land suchen…' ),
+		),
+		'required' => array(
+			'label' => array( 'ar' => 'مطلوب', 'de' => 'Pflichtfeld' ),
 		),
 		'identity_document' => array(
-			'label' => array( 'ar' => 'وثيقة الهوية (اختياري)', 'de' => 'Ausweisdokument (optional)' ),
+			'label' => array( 'ar' => 'وثيقة الهوية', 'de' => 'Ausweisdokument' ),
 			'hint' => array(
-				'ar' => 'PDF أو JPG — جواز سفر، بطاقة هوية، أو رخصة.',
-				'de' => 'PDF oder JPG — Reisepass, Personalausweis oder Führerschein.',
+				'ar' => 'PDF أو JPG — جواز سفر، بطاقة هوية، أو رخصة. مطلوب للمتابعة.',
+				'de' => 'PDF oder JPG — Reisepass, Personalausweis oder Führerschein. Erforderlich zur Bearbeitung.',
 			),
 		),
 		'identity_accuracy' => array(
@@ -630,6 +636,14 @@ return array(
 			'rate_limited' => array(
 				'ar' => 'محاولات كثيرة. يرجى الانتظار قبل المحاولة مرة أخرى.',
 				'de' => 'Zu viele Versuche. Bitte warten Sie, bevor Sie es erneut versuchen.',
+			),
+			'identity_document' => array(
+				'ar' => 'يرجى رفع وثيقة الهوية قبل المتابعة.',
+				'de' => 'Bitte laden Sie ein Ausweisdokument hoch, bevor Sie fortfahren.',
+			),
+			'country_required' => array(
+				'ar' => 'يرجى اختيار دولتك.',
+				'de' => 'Bitte wählen Sie Ihr Land.',
 			),
 		),
 		'review' => array(

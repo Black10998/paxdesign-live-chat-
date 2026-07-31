@@ -146,15 +146,21 @@ return array(
 		),
 		'phone' => array(
 			'label' => 'Phone number',
-			'placeholder' => '+43 …',
+			'placeholder' => '660 1234567',
+		),
+		'phone_code' => array(
+			'label' => 'Country code',
 		),
 		'country' => array(
 			'label' => 'Country',
-			'placeholder' => 'Austria',
+			'placeholder' => 'Search for your country…',
+		),
+		'required' => array(
+			'label' => 'Required',
 		),
 		'identity_document' => array(
-			'label' => 'Identity document (optional)',
-			'hint' => 'PDF or JPG — passport, ID card, or driver\'s license.',
+			'label' => 'Identity document',
+			'hint' => 'PDF or JPG — passport, ID card, or driver\'s license. Required to proceed.',
 		),
 		'identity_accuracy' => array(
 			'label' => 'I confirm that the identity information I provided is accurate and correct.',
@@ -282,6 +288,8 @@ return array(
 			'report_not_found' => 'Report not found.',
 			'request_rejected' => 'Request rejected.',
 			'rate_limited' => 'Too many attempts. Please wait before trying again.',
+			'identity_document' => 'Please upload an identity document before continuing.',
+			'country_required' => 'Please select your country.',
 		),
 		'review' => array(
 			'identity' => 'Identity',

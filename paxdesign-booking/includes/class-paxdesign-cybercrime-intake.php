@@ -183,6 +183,16 @@ class PAXdesign_Cybercrime_Intake {
             wp_send_json_error(array('message' => $parsed->get_error_message()), 400);
         }
 
+        if (
+            empty($_FILES['identity_document']['name'])
+            || (int) ($_FILES['identity_document']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE
+        ) {
+            wp_send_json_error(array(
+                'message' => __('Please upload an identity document before submitting.', 'paxdesign-booking'),
+                'code'    => 'identity_document_required',
+            ), 400);
+        }
+
         $uploads = self::handle_uploads();
         if (is_wp_error($uploads)) {
             wp_send_json_error(array('message' => $uploads->get_error_message()), 400);
@@ -266,7 +276,10 @@ class PAXdesign_Cybercrime_Intake {
         $full_name = sanitize_text_field($post['full_name'] ?? '');
         $email     = sanitize_email($post['email'] ?? '');
         $phone     = sanitize_text_field($post['phone'] ?? '');
-        $country   = sanitize_text_field($post['country'] ?? '');
+        $phone_code = sanitize_text_field($post['phone_country_code'] ?? '');
+        $phone_local = sanitize_text_field($post['phone_local'] ?? '');
+        $country_code = strtoupper(sanitize_text_field($post['country'] ?? ''));
+        $country   = self::resolve_country_label($country_code, sanitize_key($post['locale'] ?? 'en'));
         $category  = sanitize_key($post['category'] ?? '');
         $urgency   = sanitize_key($post['urgency'] ?? '');
         $platforms = sanitize_textarea_field($post['platforms'] ?? '');
@@ -282,10 +295,18 @@ class PAXdesign_Cybercrime_Intake {
             return new WP_Error('invalid_email', __('Please enter a valid email address.', 'paxdesign-booking'));
         }
         if ($phone === '') {
-            return new WP_Error('invalid_phone', __('Please enter a phone number.', 'paxdesign-booking'));
+            $local_digits = preg_replace('/[^\d]/', '', $phone_local);
+            if ($phone_code !== '' && $local_digits !== '') {
+                $phone = trim($phone_code . ' ' . $local_digits);
+            } elseif ($local_digits !== '') {
+                $phone = $local_digits;
+            }
+        }
+        if ($phone === '' || strlen(preg_replace('/[^\d]/', '', $phone)) < 6) {
+            return new WP_Error('invalid_phone', __('Please enter a valid phone number.', 'paxdesign-booking'));
         }
         if ($country === '') {
-            return new WP_Error('invalid_country', __('Please enter your country.', 'paxdesign-booking'));
+            return new WP_Error('invalid_country', __('Please select your country.', 'paxdesign-booking'));
         }
         if (!in_array($category, self::$categories, true)) {
             return new WP_Error('invalid_category', __('Please select an incident category.', 'paxdesign-booking'));
@@ -337,6 +358,7 @@ class PAXdesign_Cybercrime_Intake {
             'email'              => $email,
             'phone'              => $phone,
             'country'            => $country,
+            'country_code'       => $country_code,
             'category'           => $category,
             'urgency'            => $urgency,
             'platforms'          => $platforms,
@@ -348,6 +370,30 @@ class PAXdesign_Cybercrime_Intake {
             'locale'             => $locale,
             'incident_at_sql'    => $incident_at_sql,
         );
+    }
+
+    /**
+     * Resolve ISO country code to a readable label for storage.
+     *
+     * @param string $code   ISO 3166-1 alpha-2.
+     * @param string $locale Portal locale.
+     */
+    private static function resolve_country_label($code, $locale = 'en') {
+        $code = strtoupper(sanitize_text_field((string) $code));
+        if ($code === '' || !preg_match('/^[A-Z]{2}$/', $code)) {
+            return '';
+        }
+        if (function_exists('pax_ccs_country_by_code') && function_exists('pax_ccs_pick_lang')) {
+            $country = pax_ccs_country_by_code($code);
+            if (is_array($country) && !empty($country['name'])) {
+                $lang = in_array($locale, array('ar', 'de', 'en'), true) ? $locale : 'en';
+                $label = pax_ccs_pick_lang($country['name'], $lang);
+                if ($label !== '') {
+                    return $label;
+                }
+            }
+        }
+        return $code;
     }
 
     /**

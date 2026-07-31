@@ -76,6 +76,78 @@ if ( ! function_exists( 'pax_ccs_portal_copy' ) ) {
 	}
 }
 
+if ( ! function_exists( 'pax_ccs_countries' ) ) {
+	/**
+	 * @return array<int, array<string, mixed>>
+	 */
+	function pax_ccs_countries() {
+		static $countries = null;
+		if ( is_array( $countries ) ) {
+			return $countries;
+		}
+		$countries = array();
+		$paths = array(
+			get_template_directory() . '/inc/cybercrime-countries.php',
+			get_stylesheet_directory() . '/inc/cybercrime-countries.php',
+		);
+		foreach ( $paths as $path ) {
+			if ( ! is_readable( $path ) ) {
+				continue;
+			}
+			$loaded = include $path;
+			if ( is_array( $loaded ) ) {
+				$countries = $loaded;
+				break;
+			}
+		}
+		return $countries;
+	}
+}
+
+if ( ! function_exists( 'pax_ccs_countries_for_js' ) ) {
+	/**
+	 * @return array<int, array<string, mixed>>
+	 */
+	function pax_ccs_countries_for_js() {
+		$out = array();
+		foreach ( pax_ccs_countries() as $country ) {
+			if ( empty( $country['code'] ) ) {
+				continue;
+			}
+			$out[] = array(
+				'code' => (string) $country['code'],
+				'dial' => (string) ( $country['dial'] ?? '' ),
+				'flag' => (string) ( $country['flag'] ?? '' ),
+				'name' => array(
+					'ar' => pax_ccs_pick_lang( $country['name'] ?? array(), 'ar' ),
+					'de' => pax_ccs_pick_lang( $country['name'] ?? array(), 'de' ),
+					'en' => pax_ccs_pick_lang( $country['name'] ?? array(), 'en' ),
+				),
+			);
+		}
+		return $out;
+	}
+}
+
+if ( ! function_exists( 'pax_ccs_country_by_code' ) ) {
+	/**
+	 * @param string $code ISO 3166-1 alpha-2.
+	 * @return array<string, mixed>|null
+	 */
+	function pax_ccs_country_by_code( $code ) {
+		$code = strtoupper( sanitize_text_field( (string) $code ) );
+		if ( $code === '' ) {
+			return null;
+		}
+		foreach ( pax_ccs_countries() as $country ) {
+			if ( strtoupper( (string) ( $country['code'] ?? '' ) ) === $code ) {
+				return $country;
+			}
+		}
+		return null;
+	}
+}
+
 if ( ! function_exists( 'pax_ccs_pick_lang' ) ) {
 	/**
 	 * @param array<string, mixed>|string $node

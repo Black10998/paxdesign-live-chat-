@@ -422,6 +422,10 @@ function navein_custom_scripts_styles() {
 					}
 				}
 			}
+			if ( function_exists( 'pax_ccs_countries_for_js' ) ) {
+				$ccs_config['countries'] = pax_ccs_countries_for_js();
+				$ccs_config['phonePopular'] = array( 'AT', 'DE', 'CH', 'US', 'GB', 'AE', 'SA', 'FR', 'IT', 'ES', 'NL', 'BE', 'PL', 'TR', 'EG', 'JO', 'LB', 'QA', 'KW', 'BH', 'OM' );
+			}
 			wp_localize_script(
 				'navein-apple-cybercrime-support',
 				'paxCybercrimeIntake',

@@ -58,6 +58,164 @@
   var lastKnownLatestTimelineId = null;
   var lastKnownTimelineCount = 0;
 
+  var phoneCodeEl = document.getElementById('pax-ccs-phone-code');
+  var phoneLocalEl = document.getElementById('pax-ccs-phone-local');
+  var phoneHiddenEl = document.getElementById('pax-ccs-phone');
+  var countrySearchEl = document.getElementById('pax-ccs-country-search');
+  var countryHiddenEl = document.getElementById('pax-ccs-country');
+  var countryListEl = document.getElementById('pax-ccs-country-list');
+  var countryPickerEl = document.getElementById('pax-ccs-country-picker');
+  var identityDocEl = document.getElementById('pax-ccs-identity-doc');
+  var countries = Array.isArray(config.countries) ? config.countries.slice() : [];
+  var countriesByCode = {};
+  var selectedCountryCode = '';
+
+  countries.forEach(function (country) {
+    if (country && country.code) {
+      countriesByCode[country.code] = country;
+    }
+  });
+
+  countries.sort(function (a, b) {
+    return countryName(a).localeCompare(countryName(b), getLang(), { sensitivity: 'base' });
+  });
+
+  function countryName(country) {
+    if (!country || !country.name) {
+      return '';
+    }
+    var lang = getLang();
+    return country.name[lang] || country.name.en || country.name.de || '';
+  }
+
+  function syncPhoneField() {
+    if (!phoneHiddenEl) {
+      return;
+    }
+    var dial = phoneCodeEl ? (phoneCodeEl.value || '').trim() : '';
+    var local = phoneLocalEl ? phoneLocalEl.value.replace(/[^\d\s\-().]/g, '').trim() : '';
+    phoneHiddenEl.value = dial && local ? (dial + ' ' + local).trim() : local;
+  }
+
+  function renderCountryOptions(filter) {
+    if (!countryListEl) {
+      return;
+    }
+    var query = String(filter || '').trim().toLowerCase();
+    var matches = countries.filter(function (country) {
+      if (!query) {
+        return true;
+      }
+      var label = (country.flag + ' ' + countryName(country)).toLowerCase();
+      return label.indexOf(query) !== -1 || String(country.code || '').toLowerCase().indexOf(query) !== -1;
+    }).slice(0, 40);
+
+    countryListEl.innerHTML = matches.map(function (country) {
+      var label = country.flag + ' ' + countryName(country);
+      return '<li role="option" tabindex="-1" data-country-code="' + escapeHtml(country.code) + '">' + escapeHtml(label) + '</li>';
+    }).join('');
+  }
+
+  function openCountryList() {
+    if (!countryListEl || !countrySearchEl) {
+      return;
+    }
+    renderCountryOptions(countrySearchEl.value);
+    countryListEl.hidden = false;
+    countrySearchEl.setAttribute('aria-expanded', 'true');
+  }
+
+  function closeCountryList() {
+    if (!countryListEl || !countrySearchEl) {
+      return;
+    }
+    countryListEl.hidden = true;
+    countrySearchEl.setAttribute('aria-expanded', 'false');
+  }
+
+  function selectCountry(code) {
+    var country = countriesByCode[code];
+    if (!country || !countryHiddenEl || !countrySearchEl) {
+      return;
+    }
+    selectedCountryCode = code;
+    countryHiddenEl.value = code;
+    countrySearchEl.value = country.flag + ' ' + countryName(country);
+    closeCountryList();
+    if (countryPickerEl) {
+      countryPickerEl.classList.remove('is-invalid');
+    }
+  }
+
+  function refreshCountrySearchLabel() {
+    if (!countrySearchEl || !selectedCountryCode) {
+      return;
+    }
+    var country = countriesByCode[selectedCountryCode];
+    if (country) {
+      countrySearchEl.value = country.flag + ' ' + countryName(country);
+    }
+  }
+
+  function initCountryPicker() {
+    if (!countrySearchEl || !countryListEl) {
+      return;
+    }
+    renderCountryOptions('');
+    countrySearchEl.addEventListener('focus', function () {
+      openCountryList();
+    });
+    countrySearchEl.addEventListener('input', function () {
+      selectedCountryCode = '';
+      if (countryHiddenEl) {
+        countryHiddenEl.value = '';
+      }
+      openCountryList();
+    });
+    countrySearchEl.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        closeCountryList();
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        var first = countryListEl.querySelector('[data-country-code]');
+        if (first) {
+          selectCountry(first.getAttribute('data-country-code'));
+        }
+      }
+    });
+    countryListEl.addEventListener('click', function (e) {
+      var item = e.target.closest('[data-country-code]');
+      if (!item) {
+        return;
+      }
+      selectCountry(item.getAttribute('data-country-code'));
+    });
+    document.addEventListener('click', function (e) {
+      if (!countryPickerEl || countryPickerEl.contains(e.target)) {
+        return;
+      }
+      closeCountryList();
+    });
+  }
+
+  if (phoneCodeEl) {
+    phoneCodeEl.addEventListener('change', syncPhoneField);
+  }
+  if (phoneLocalEl) {
+    phoneLocalEl.addEventListener('input', syncPhoneField);
+  }
+  if (identityDocEl) {
+    identityDocEl.addEventListener('change', function () {
+      var wrap = identityDocEl.closest('.pax-ccs-portal__field');
+      if (wrap) {
+        wrap.classList.remove('is-invalid');
+      }
+    });
+  }
+  initCountryPicker();
+
   function getLang() {
     var lang = root.getAttribute('data-ccs-lang') || 'ar';
     return lang === 'de' || lang === 'en' ? lang : 'ar';
@@ -873,6 +1031,7 @@
     });
     updatePlaceholders(lang);
     updateSelectLabels(lang);
+    refreshCountrySearchLabel();
     setPageContext(lang, window.PAXdesignPageContext && window.PAXdesignPageContext.referenceId);
     try {
       localStorage.setItem('pax-ccs-lang', lang);
@@ -1001,6 +1160,9 @@
     form.querySelectorAll('.is-invalid').forEach(function (el) {
       el.classList.remove('is-invalid');
     });
+    if (countryPickerEl) {
+      countryPickerEl.classList.remove('is-invalid');
+    }
   }
 
   function validateStep(step) {
@@ -1009,9 +1171,15 @@
     if (!panel) {
       return true;
     }
+    if (step === 1) {
+      syncPhoneField();
+    }
     var valid = true;
     panel.querySelectorAll('input, select, textarea').forEach(function (field) {
       if (field.type === 'file' || field.name === 'website_trap') {
+        return;
+      }
+      if (field.id === 'pax-ccs-country-search' || field.id === 'pax-ccs-phone') {
         return;
       }
       if (field.type === 'checkbox') {
@@ -1026,13 +1194,56 @@
         markInvalid(field);
       }
     });
+    if (step === 1) {
+      if (countryHiddenEl && !countryHiddenEl.value.trim()) {
+        valid = false;
+        if (countryPickerEl) {
+          countryPickerEl.classList.add('is-invalid');
+        }
+        if (countrySearchEl) {
+          countrySearchEl.focus();
+        }
+      }
+      if (identityDocEl && (!identityDocEl.files || !identityDocEl.files.length)) {
+        valid = false;
+        markInvalid(identityDocEl);
+      }
+      syncPhoneField();
+      if (phoneHiddenEl && phoneHiddenEl.value.replace(/\D/g, '').length < 6) {
+        valid = false;
+        if (phoneLocalEl) {
+          markInvalid(phoneLocalEl);
+        }
+      }
+    }
     if (!valid) {
-      var invalid = panel.querySelector(':invalid');
+      var invalid = panel.querySelector('.is-invalid input, .is-invalid select, .is-invalid textarea, .is-invalid .pax-ccs-portal__country-picker');
       if (invalid) {
-        invalid.focus();
+        if (invalid.classList && invalid.classList.contains('pax-ccs-portal__country-picker') && countrySearchEl) {
+          countrySearchEl.focus();
+        } else if (invalid.focus) {
+          invalid.focus();
+        }
+      } else {
+        var nativeInvalid = panel.querySelector(':invalid');
+        if (nativeInvalid && nativeInvalid.focus) {
+          nativeInvalid.focus();
+        }
       }
     }
     return valid;
+  }
+
+  function validateAllSteps() {
+    for (var step = 1; step <= 4; step++) {
+      if (!validateStep(step)) {
+        if (step !== currentStep) {
+          showStep(step);
+        }
+        return false;
+      }
+    }
+    return true;
   }
 
   function fieldValue(name) {
@@ -1060,15 +1271,23 @@
     return input.files.length + ' ' + t('files');
   }
 
+  function countryDisplayValue() {
+    var code = fieldValue('country');
+    var country = countriesByCode[code];
+    return country ? (country.flag + ' ' + countryName(country)) : code;
+  }
+
   function renderReview() {
     if (!reviewEl) {
       return;
     }
+    syncPhoneField();
     var rows = [
       { label: document.querySelector('label[for="pax-ccs-full-name"]'), value: fieldValue('full_name') },
       { label: document.querySelector('label[for="pax-ccs-email"]'), value: fieldValue('email') },
-      { label: document.querySelector('label[for="pax-ccs-phone"]'), value: fieldValue('phone') },
-      { label: document.querySelector('label[for="pax-ccs-country"]'), value: fieldValue('country') },
+      { label: document.querySelector('label[for="pax-ccs-phone-local"]'), value: fieldValue('phone') },
+      { label: document.querySelector('label[for="pax-ccs-country-search"]'), value: countryDisplayValue() },
+      { label: document.querySelector('label[for="pax-ccs-identity-doc"]'), value: fileSummary(identityDocEl) },
       { label: document.querySelector('label[for="pax-ccs-category"]'), value: selectedLabel(form.elements.category) },
       { label: document.querySelector('label[for="pax-ccs-incident-date"]'), value: fieldValue('incident_date') + (fieldValue('incident_time') ? ' ' + fieldValue('incident_time') : '') },
       { label: document.querySelector('label[for="pax-ccs-platforms"]'), value: fieldValue('platforms') },
@@ -1154,7 +1373,7 @@
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     hideError();
-    if (!validateStep(4)) {
+    if (!validateAllSteps()) {
       return;
     }
     if (requiresLogin() && !isLoggedIn()) {
