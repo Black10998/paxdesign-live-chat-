@@ -1586,6 +1586,12 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
   }
 }
 
+.pax-ccs-portal__history-ref {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
 .pax-ccs-portal__history-meta {
   display: block;
   font-size: 13px;
