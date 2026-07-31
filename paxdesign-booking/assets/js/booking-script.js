@@ -16,6 +16,33 @@
         return $root;
     }
 
+    function ensureChatReady(callback) {
+        if (window.PAXdesignWidgetLoader && typeof window.PAXdesignWidgetLoader.ensureChat === 'function') {
+            window.PAXdesignWidgetLoader.ensureChat().then(function () {
+                if (typeof callback === 'function') {
+                    callback();
+                }
+            }).catch(function () {
+                if (typeof callback === 'function') {
+                    callback();
+                }
+            });
+            return;
+        }
+        if (typeof callback === 'function') {
+            callback();
+        }
+    }
+
+    function runChatInit() {
+        if (window.PAXdesignChat && typeof window.PAXdesignChat.init === 'function') {
+            window.PAXdesignChat.init();
+        }
+        if (window.PAXdesignChat && typeof window.PAXdesignChat.onOpen === 'function') {
+            window.PAXdesignChat.onOpen();
+        }
+    }
+
     function $in(selector) {
         return root().find(selector);
     }
@@ -482,7 +509,7 @@
             var opening = !$widget.hasClass('paxdesign-is-active');
 
             if (opening) {
-                openWidget();
+                ensureChatReady(openWidget);
             } else {
                 closeDialog();
             }
@@ -599,12 +626,7 @@
         }
 
         if (mode === 'chat') {
-            if (window.PAXdesignChat && typeof window.PAXdesignChat.init === 'function') {
-                window.PAXdesignChat.init();
-            }
-            if (window.PAXdesignChat && typeof window.PAXdesignChat.onOpen === 'function') {
-                window.PAXdesignChat.onOpen();
-            }
+            ensureChatReady(runChatInit);
             if (!isMobileViewport()) {
                 setTimeout(function() {
                     var $input = $in('.paxdesign-booking-chat-input');
@@ -789,7 +811,9 @@
 
     window.PAXdesignBooking = {
         openFromChat: openBookingFromChat,
-        open: openWidget,
+        open: function () {
+            ensureChatReady(openWidget);
+        },
         switchMode: switchWidgetMode,
         close: closeDialog
     };
@@ -844,14 +868,7 @@
             $in('#paxdesignWidgetSubtitle').text(titles.subtitle);
         }
 
-        if (window.PAXdesignChat) {
-            if (typeof window.PAXdesignChat.init === 'function') {
-                window.PAXdesignChat.init();
-            }
-            if (typeof window.PAXdesignChat.onOpen === 'function') {
-                window.PAXdesignChat.onOpen();
-            }
-        }
+        ensureChatReady(runChatInit);
     }
 
     function closeDialog() {

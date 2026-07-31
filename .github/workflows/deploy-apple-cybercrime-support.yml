@@ -133,6 +133,7 @@ jobs:
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/inc/cybercrime-countries.php \
             navein/inc/cybercrime-support-locale.php \
+            navein/inc/performance.php \
             "${REMOTE}:${THEME}/inc/"
 
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
@@ -150,6 +151,7 @@ jobs:
             paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php \
             paxdesign-booking/includes/class-paxdesign-cybercrime-tickets.php \
             paxdesign-booking/includes/class-paxdesign-chat-live.php \
+            paxdesign-booking/includes/class-paxdesign-widget-performance.php \
             "${REMOTE}:${PLUGIN}/includes/"
 
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
@@ -163,6 +165,7 @@ jobs:
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             paxdesign-booking/assets/js/chat-script.js \
             paxdesign-booking/assets/js/booking-script.js \
+            paxdesign-booking/assets/js/widget-loader.js \
             paxdesign-booking/assets/js/cybercrime-admin.js \
             paxdesign-booking/assets/js/cybercrime-admin-notifications.js \
             "${REMOTE}:${PLUGIN}/assets/js/"
@@ -214,11 +217,13 @@ jobs:
           test "$AUTH_CSS" = "200"
           test "$CHAT" = "200"
           test "$AUTH_JS" = "200"
-          grep -Eq "Version: 1\.4\.30" /tmp/style.css
-          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.30|apple-cybercrime-support\.js\?ver=1\.4\.30" /tmp/ccs-page.html
+          grep -Eq "Version: 1\.4\.31" /tmp/style.css
+          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.31|apple-cybercrime-support\.js\?ver=1\.4\.31" /tmp/ccs-page.html
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-country-search|pax-ccs-phone-code" /tmp/ccs-page.html
           grep -Eq "full-bleed Apple-style|--ccs-gutter|pax-ccs-portal__coverage-track" /tmp/apple-ccs.css
-          grep -Eq "initCountryPicker|validateAllSteps|--ccs-marquee-distance|pax-ccs-country-search" /tmp/apple-ccs.js
+          grep -Eq "initCountryPicker|validateAllSteps|pax-ccs-country-search" /tmp/apple-ccs.js
+          curl -sS -o /tmp/widget-loader.js -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/widget-loader.js?n=${stamp}" | grep -Eq '^200$'
+          grep -Eq "PAXdesignWidgetLoader" /tmp/widget-loader.js
           grep -Eq 'name="identity_document" required|pax-ccs-portal__required' /tmp/ccs-page.html
           grep -Eq "Sitewide isolated Sign In|background: #000 !important" /tmp/pdx-auth.css
           grep -Eq "isReportActive|applyReportLifecycle|pax-ccs-portal--report-closed" /tmp/apple-ccs.js
@@ -228,5 +233,5 @@ jobs:
           grep -Eq "queueBackgroundRealtimeSync|shouldSkipHistoryFetch|HISTORY_INITIAL" /tmp/chat-script.js
           grep -Eq "renderPortalRecordsSection|renderPortalCybercrimeDetail|cybercrime/reports" /tmp/pax-auth.js
           grep -A6 '#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {' /tmp/pdx-auth.css | grep -Eq 'background: #000|background-color: #000'
-          if [ "$BOOKING_JS" = "200" ]; then grep -Eq 'open: openWidget' /tmp/booking-script.js; fi
+          if [ "$BOOKING_JS" = "200" ]; then grep -Eq 'ensureChatReady' /tmp/booking-script.js; fi
           echo "Cybercrime Support production verification passed."

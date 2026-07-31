@@ -994,21 +994,28 @@
   function openSupportChat(referenceId) {
     var lang = root.getAttribute('data-ccs-lang') || 'ar';
     setPageContext(lang, referenceId || '');
-    if (window.PAXdesignChat && typeof window.PAXdesignChat.openForCybercrime === 'function') {
-      window.PAXdesignChat.openForCybercrime({
-        language: lang,
-        referenceId: referenceId || '',
-      });
+    var openChat = function () {
+      if (window.PAXdesignChat && typeof window.PAXdesignChat.openForCybercrime === 'function') {
+        window.PAXdesignChat.openForCybercrime({
+          language: lang,
+          referenceId: referenceId || '',
+        });
+        return;
+      }
+      if (window.PAXdesignBooking && typeof window.PAXdesignBooking.open === 'function') {
+        window.PAXdesignBooking.open();
+        return;
+      }
+      var launcher = document.querySelector('.paxdesign-booking-button');
+      if (launcher) {
+        launcher.click();
+      }
+    };
+    if (window.PAXdesignWidgetLoader && typeof window.PAXdesignWidgetLoader.ensureChat === 'function') {
+      window.PAXdesignWidgetLoader.ensureChat().then(openChat).catch(openChat);
       return;
     }
-    if (window.PAXdesignBooking && typeof window.PAXdesignBooking.open === 'function') {
-      window.PAXdesignBooking.open();
-      return;
-    }
-    var launcher = document.querySelector('.paxdesign-booking-button');
-    if (launcher) {
-      launcher.click();
-    }
+    openChat();
   }
 
   function setLang(lang) {

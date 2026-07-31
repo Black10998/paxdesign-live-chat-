@@ -41,19 +41,33 @@ class PAXdesign_Chat {
         return (bool) get_option('paxdesign_chat_enabled', true);
     }
 
-    public function enqueue_assets() {
+    public function register_assets() {
         if (!$this->is_enabled() || is_admin()) {
             return;
         }
 
-        wp_enqueue_script(
+        wp_register_script(
             'paxdesign-chat-script',
             PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/js/chat-script.js',
             array('paxdesign-booking-script'),
             PAXDESIGN_BOOKING_VERSION,
-            true
+            array('strategy' => 'defer', 'in_footer' => true)
         );
 
+        if (wp_script_is('paxdesign-booking-script', 'enqueued') || wp_script_is('paxdesign-booking-script', 'registered')) {
+            wp_localize_script('paxdesign-booking-script', 'paxdesignChat', $this->get_frontend_config());
+        }
+    }
+
+    public function enqueue_assets() {
+        $this->register_assets();
+        wp_enqueue_script('paxdesign-chat-script');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function get_frontend_config() {
         $auth_payload = class_exists('PAXdesign_Customer_Auth')
             ? PAXdesign_Customer_Auth::user_payload()
             : array('logged_in' => is_user_logged_in(), 'verified' => false, 'id' => get_current_user_id());
@@ -61,19 +75,10 @@ class PAXdesign_Chat {
         if (!empty($auth_payload['logged_in']) && class_exists('PAXdesign_Customer_Chat_Bridge')) {
             $chat_session_id = PAXdesign_Customer_Chat_Bridge::lookup_primary_session_id((int) $auth_payload['id']);
         }
-        $chat_message_count = 0;
-        if ($chat_session_id !== '' && class_exists('PAXdesign_Chat_Log')) {
-            global $wpdb;
-            PAXdesign_Chat_Log::create_table();
-            $table = PAXdesign_Chat_Log::table_name();
-            $chat_message_count = (int) $wpdb->get_var($wpdb->prepare(
-                "SELECT message_count FROM $table WHERE session_id = %s LIMIT 1",
-                $chat_session_id
-            ));
-        }
+
         $ai_identity = PAXdesign_Chat_Live::get_ai_assistant_identity();
 
-        wp_localize_script('paxdesign-chat-script', 'paxdesignChat', array(
+        return array(
             'ajaxUrl'          => admin_url('admin-ajax.php'),
             'restUrl'          => rest_url('paxdesign/v1/chat'),
             'nonce'            => wp_create_nonce('paxdesign_chat_nonce'),
@@ -81,8 +86,8 @@ class PAXdesign_Chat {
             'requireLogin'     => get_option('paxdesign_customer_require_login_for_chat', '1') === '1',
             'auth'             => $auth_payload,
             'chatSessionId'    => $chat_session_id,
-            'chatSessionHasMessages' => $chat_message_count > 0,
-            'chatMessageCount' => $chat_message_count,
+            'chatSessionHasMessages' => false,
+            'chatMessageCount' => 0,
             'aiAssistant'      => $ai_identity,
             'authGate'         => array(
                 'title'       => __('Continue to Live Chat', 'paxdesign-booking'),
@@ -115,7 +120,7 @@ class PAXdesign_Chat {
             ),
             'readinessDebug'     => (defined('WP_DEBUG') && WP_DEBUG)
                 || (isset($_GET['pax_chat_debug']) && sanitize_text_field(wp_unslash($_GET['pax_chat_debug'])) === '1'),
-        ));
+        );
     }
 
     public function get_quick_actions() {

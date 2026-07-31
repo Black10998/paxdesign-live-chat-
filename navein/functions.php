@@ -164,6 +164,8 @@ function navein_theme_setup() {
 endif; // navein_theme_setup
 add_action( 'after_setup_theme', 'navein_theme_setup' );
 
+require_once get_template_directory() . '/inc/performance.php';
+
 /**
  * Enqueue Plugins Scripts and Styles
  *
@@ -259,18 +261,6 @@ function navein_custom_scripts_styles() {
 		get_template_directory_uri() . '/assets/css/apple-sticky-header.css',
 		array( 'navein-style', 'navein-mega-menu' ),
 		$theme_version
-	);
-	// Late-loading safety net: logged-in username must stay dark on the light Apple header
-	// (Customizer + footer snippets still force white for the old dark header).
-	wp_add_inline_style(
-		'navein-apple-sticky-header',
-		'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn,' .
-		'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-label,' .
-		'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-name-with-badge,' .
-		'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-name-with-badge,' .
-		'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger,' .
-		'html body.dtr-apple-sticky-header header #pdx-auth-bar .pdx-auth-trigger-label{' .
-		'color:#000!important;text-shadow:none!important;}'
 	);
 	wp_enqueue_script(
 		'navein-apple-sticky-header',

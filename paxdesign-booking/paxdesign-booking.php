@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.174.57
+Version: 3.174.58
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.174.57');
+define('PAXDESIGN_BOOKING_VERSION', '3.174.58');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -61,6 +61,7 @@ require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-chat-quick
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-link-scanner.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-link-scan-service.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-dtr-header-logo-fix.php';
+require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-widget-performance.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/class-paxdesign-settings-admin.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/auth/class-paxdesign-auth-module.php';
 require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/customer/class-paxdesign-customer-platform.php';
@@ -221,6 +222,9 @@ class PAXdesign_Booking {
         if (is_admin()) {
             return;
         }
+        if (class_exists('PAXdesign_Auth_Page') && PAXdesign_Auth_Page::is_auth_page()) {
+            return;
+        }
 
         wp_enqueue_style(
             'paxdesign-booking-styles',
@@ -234,7 +238,7 @@ class PAXdesign_Booking {
             PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/js/booking-script.js',
             array('jquery'),
             PAXDESIGN_BOOKING_VERSION,
-            true
+            array('strategy' => 'defer', 'in_footer' => true)
         );
         
         wp_localize_script('paxdesign-booking-script', 'paxdesignBooking', array(
@@ -266,7 +270,10 @@ class PAXdesign_Booking {
         if (is_admin()) {
             return;
         }
-        PAXdesign_Chat::get_instance()->enqueue_assets();
+        if (class_exists('PAXdesign_Auth_Page') && PAXdesign_Auth_Page::is_auth_page()) {
+            return;
+        }
+        PAXdesign_Chat::get_instance()->register_assets();
     }
     
     public function get_team_members($include_disabled = false) {
