@@ -177,6 +177,35 @@
         badge.textContent = '';
       }
     });
+    if (typeof window.paxCybercrimeAdminApplyUnread === 'function') {
+      window.paxCybercrimeAdminApplyUnread(summary);
+    }
+  }
+
+  function markStaffRead(refOverride) {
+    return postAction('paxdesign_cybercrime_admin_mark_read', {}, refOverride || referenceId || '')
+      .then(function (data) {
+        if (data.summary) {
+          applyUnreadSummary(data.summary);
+        }
+        if (view === 'detail' && data.report) {
+          applyReport(data.report);
+        }
+        return data;
+      })
+      .catch(function () {
+        return null;
+      });
+  }
+
+  function clearUnreadForReference(ref) {
+    if (!ref) {
+      return;
+    }
+    document.querySelectorAll('.pax-cc-unread-badge--row[data-unread-for="' + ref + '"]').forEach(function (badge) {
+      badge.hidden = true;
+      badge.textContent = '';
+    });
   }
 
   function pollUnreadSummary(refForDetail) {
@@ -211,7 +240,10 @@
     if (view !== 'detail' || !referenceId) {
       return;
     }
-    pollUnreadSummary(referenceId);
+    clearUnreadForReference(referenceId);
+    markStaffRead(referenceId).then(function () {
+      pollUnreadSummary(referenceId);
+    });
     detailPollTimer = window.setInterval(function () {
       pollUnreadSummary(referenceId);
     }, POLL_INTERVAL_MS);
@@ -332,12 +364,18 @@
     return postAction('paxdesign_cybercrime_admin_status', { status: status })
       .then(function (data) {
         applyReport(data.report);
+        if (isClosedStatus(status)) {
+          clearUnreadForReference(referenceId);
+        }
         setFeedback(statusFeedback, data.message || text('statusSaved', 'Status saved.'), 'success');
         window.setTimeout(function () {
           if (statusFeedback && statusFeedback.textContent === (data.message || text('statusSaved', 'Status saved.'))) {
             setFeedback(statusFeedback, '', '');
           }
         }, 2500);
+        return markStaffRead(referenceId).then(function () {
+          return data;
+        });
       })
       .catch(function (error) {
         if (statusSelect) {

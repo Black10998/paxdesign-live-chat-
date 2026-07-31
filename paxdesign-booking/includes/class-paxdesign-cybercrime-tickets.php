@@ -47,6 +47,7 @@ class PAXdesign_Cybercrime_Tickets {
         add_action('wp_ajax_paxdesign_cybercrime_admin_reply', array(__CLASS__, 'ajax_admin_reply'));
         add_action('wp_ajax_paxdesign_cybercrime_admin_internal_note', array(__CLASS__, 'ajax_admin_internal_note'));
         add_action('wp_ajax_paxdesign_cybercrime_admin_unread', array(__CLASS__, 'ajax_admin_unread'));
+        add_action('wp_ajax_paxdesign_cybercrime_admin_mark_read', array(__CLASS__, 'ajax_admin_mark_read'));
         add_action('wp_ajax_paxdesign_cybercrime_mark_read', array(__CLASS__, 'ajax_mark_read'));
         add_action('wp_ajax_paxdesign_cybercrime_report_list', array(__CLASS__, 'ajax_report_list'));
     }
@@ -536,6 +537,26 @@ class PAXdesign_Cybercrime_Tickets {
             return false;
         }
         return in_array($author, array('customer', 'staff', 'system'), true);
+    }
+
+    /**
+     * Messages that should increment staff unread counts until the ticket is opened.
+     *
+     * @param array<string, mixed> $entry
+     */
+    public static function is_staff_unread_message($entry) {
+        if (!is_array($entry) || !self::is_official_timeline_entry($entry)) {
+            return false;
+        }
+        $author = sanitize_key((string) ($entry['author_type'] ?? ''));
+        if ($author === 'customer') {
+            return true;
+        }
+        if ($author === 'system') {
+            $meta = is_array($entry['meta'] ?? null) ? $entry['meta'] : array();
+            return sanitize_key((string) ($meta['event'] ?? '')) === 'submitted';
+        }
+        return false;
     }
 
     /**
@@ -1457,10 +1478,9 @@ class PAXdesign_Cybercrime_Tickets {
             if (!is_array($entry) || (int) ($entry['id'] ?? 0) <= $cursor) {
                 continue;
             }
-            $author = sanitize_key((string) ($entry['author_type'] ?? ''));
-            if ($audience === 'staff' && $author === 'customer' && self::is_official_timeline_entry($entry)) {
+            if ($audience === 'staff' && self::is_staff_unread_message($entry)) {
                 $count++;
-            } elseif ($audience === 'customer' && $author === 'staff' && self::is_customer_visible_timeline_entry($entry)) {
+            } elseif ($audience === 'customer' && self::is_customer_visible_timeline_entry($entry)) {
                 $count++;
             }
         }
@@ -1495,10 +1515,9 @@ class PAXdesign_Cybercrime_Tickets {
                 continue;
             }
             $id = (int) ($entry['id'] ?? 0);
-            $author = sanitize_key((string) ($entry['author_type'] ?? ''));
-            if ($audience === 'staff' && $author === 'customer' && self::is_official_timeline_entry($entry)) {
+            if ($audience === 'staff' && self::is_staff_unread_message($entry)) {
                 $max_id = max($max_id, $id);
-            } elseif ($audience === 'customer' && $author === 'staff' && self::is_customer_visible_timeline_entry($entry)) {
+            } elseif ($audience === 'customer' && self::is_customer_visible_timeline_entry($entry)) {
                 $max_id = max($max_id, $id);
             }
         }
@@ -1552,7 +1571,7 @@ class PAXdesign_Cybercrime_Tickets {
 
     /**
      * @param int $limit
-     * @return array{total: int, reports: array<int, array{reference_id: string, unread_count: int}>}
+     * @return array{total: int, reports: array<int, array{reference_id: string, unread_count: int}>, first_reference_id: string, target_url: string}
      */
     public static function staff_unread_summary($limit = 50) {
         $reports = self::list_reports_for_admin($limit);
@@ -1572,9 +1591,17 @@ class PAXdesign_Cybercrime_Tickets {
                 'unread_count' => $count,
             );
         }
+        $first_ref = !empty($out) ? (string) ($out[0]['reference_id'] ?? '') : '';
+        $portal_page = 'paxdesign-customer-portal';
+        $target_url = $first_ref !== ''
+            ? admin_url('admin.php?page=' . $portal_page . '&tab=cybercrime&reference=' . rawurlencode($first_ref))
+            : admin_url('admin.php?page=' . $portal_page . '&tab=cybercrime');
+
         return array(
-            'total'   => $total,
-            'reports' => $out,
+            'total'               => $total,
+            'reports'             => $out,
+            'first_reference_id'  => $first_ref,
+            'target_url'          => $target_url,
         );
     }
 
@@ -1813,12 +1840,38 @@ class PAXdesign_Cybercrime_Tickets {
                 wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
             }
             wp_send_json_success(array(
-                'report' => $report,
+                'report'  => $report,
                 'summary' => self::staff_unread_summary(50),
             ));
         }
 
-        wp_send_json_success(self::staff_unread_summary(50));
+        wp_send_json_success(array(
+            'summary' => self::staff_unread_summary(50),
+        ));
+    }
+
+    public static function ajax_admin_mark_read() {
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error(array('message' => __('Insufficient permissions.', 'paxdesign-booking')), 403);
+        }
+        check_ajax_referer(self::ADMIN_NONCE_ACTION, 'nonce');
+
+        $reference = sanitize_text_field(wp_unslash($_POST['reference_id'] ?? ''));
+        if ($reference === '') {
+            wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
+        }
+
+        $row = self::get_report_row($reference);
+        if (!$row) {
+            wp_send_json_error(array('message' => __('Report not found.', 'paxdesign-booking')), 404);
+        }
+
+        self::mark_read_for_audience($reference, 'staff', get_current_user_id());
+
+        wp_send_json_success(array(
+            'summary' => self::staff_unread_summary(50),
+            'report'  => self::get_report_for_admin($reference),
+        ));
     }
 
     public static function ajax_mark_read() {

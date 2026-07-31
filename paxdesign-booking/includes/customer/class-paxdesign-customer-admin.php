@@ -24,6 +24,8 @@ class PAXdesign_Customer_Admin {
 
     public static function init() {
         add_action('admin_menu', array(__CLASS__, 'register_menu'), 20);
+        add_action('admin_menu', array(__CLASS__, 'add_menu_unread_badges'), 999);
+        add_action('admin_enqueue_scripts', array(__CLASS__, 'enqueue_admin_notification_assets'));
         add_action('admin_enqueue_scripts', array(__CLASS__, 'enqueue_cybercrime_admin_assets'));
         add_action('admin_post_paxdesign_customer_save_news', array(__CLASS__, 'handle_save_news'));
         add_action('admin_post_paxdesign_customer_publish_news', array(__CLASS__, 'handle_publish_news'));
@@ -48,6 +50,88 @@ class PAXdesign_Customer_Admin {
             'manage_options',
             self::MENU_SLUG,
             array(__CLASS__, 'render_page')
+        );
+    }
+
+    /**
+     * Append unread Cybercrime counts to Booking System + Customer Portal admin menu labels.
+     */
+    public static function add_menu_unread_badges() {
+        if (!current_user_can('manage_options') || !class_exists('PAXdesign_Cybercrime_Tickets')) {
+            return;
+        }
+
+        $summary = PAXdesign_Cybercrime_Tickets::staff_unread_summary(50);
+        $total = (int) ($summary['total'] ?? 0);
+        if ($total <= 0) {
+            return;
+        }
+
+        $label = $total > 99 ? '99+' : (string) $total;
+        $badge = ' <span class="awaiting-mod pax-cc-menu-unread-badge"><span class="pax-cc-menu-unread-count">' . esc_html($label) . '</span></span>';
+
+        global $submenu;
+        if (isset($submenu[self::PARENT_SLUG]) && is_array($submenu[self::PARENT_SLUG])) {
+            foreach ($submenu[self::PARENT_SLUG] as $index => $item) {
+                if (!is_array($item) || ($item[2] ?? '') !== self::MENU_SLUG) {
+                    continue;
+                }
+                $submenu[self::PARENT_SLUG][$index][0] .= $badge;
+                break;
+            }
+        }
+
+        global $menu;
+        if (is_array($menu)) {
+            foreach ($menu as $index => $item) {
+                if (!is_array($item) || ($item[2] ?? '') !== self::PARENT_SLUG) {
+                    continue;
+                }
+                $menu[$index][0] .= $badge;
+                break;
+            }
+        }
+    }
+
+    /**
+     * Poll unread counts and keep admin menu badges in sync on every wp-admin screen.
+     */
+    public static function enqueue_admin_notification_assets($hook) {
+        unset($hook);
+        if (!current_user_can('manage_options') || !class_exists('PAXdesign_Cybercrime_Tickets') || !defined('PAXDESIGN_BOOKING_PLUGIN_URL')) {
+            return;
+        }
+
+        wp_enqueue_script(
+            'paxdesign-cybercrime-admin-notifications',
+            PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/js/cybercrime-admin-notifications.js',
+            array(),
+            defined('PAXDESIGN_BOOKING_VERSION') ? PAXDESIGN_BOOKING_VERSION : '1.0',
+            true
+        );
+
+        wp_localize_script(
+            'paxdesign-cybercrime-admin-notifications',
+            'paxCybercrimeAdminNotify',
+            array(
+                'ajaxUrl'          => admin_url('admin-ajax.php'),
+                'nonce'            => wp_create_nonce(PAXdesign_Cybercrime_Tickets::ADMIN_NONCE_ACTION),
+                'pollIntervalMs'   => 30000,
+                'initialSummary'   => PAXdesign_Cybercrime_Tickets::staff_unread_summary(50),
+                'defaultPortalUrl' => admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=cybercrime'),
+                'parentMenuSlug'   => self::PARENT_SLUG,
+                'portalMenuSlug'   => self::MENU_SLUG,
+            )
+        );
+
+        wp_register_style('paxdesign-cybercrime-admin-notify', false, array(), defined('PAXDESIGN_BOOKING_VERSION') ? PAXDESIGN_BOOKING_VERSION : '1.0');
+        wp_enqueue_style('paxdesign-cybercrime-admin-notify');
+        wp_add_inline_style(
+            'paxdesign-cybercrime-admin-notify',
+            '.pax-cc-menu-unread-badge .pax-cc-menu-unread-count{display:inline-block;min-width:18px;height:18px;padding:0 6px;border-radius:10px;background:#d63638;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center}'
+            . '.pax-cc-unread-badge{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 6px;border-radius:999px;background:#d63638;color:#fff;font-size:11px;font-weight:700;line-height:1;box-shadow:0 0 0 2px #fff}'
+            . '.pax-cc-unread-badge--row{min-width:22px;height:22px;font-size:12px}'
+            . '#pax-cc-tab-unread-badge{margin-left:6px;vertical-align:middle}'
         );
     }
 
@@ -791,7 +875,13 @@ class PAXdesign_Customer_Admin {
 
         PAXdesign_Cybercrime_Tickets::mark_read_for_audience($reference, 'staff', get_current_user_id());
 
-        $report = PAXdesign_Cybercrime_Tickets::format_report_row($row, true, 'admin');
+        $row = PAXdesign_Cybercrime_Tickets::get_report_row($reference);
+        if (!$row) {
+            echo '<p>' . esc_html__('Report not found.', 'paxdesign-booking') . '</p>';
+            return;
+        }
+
+        $report = PAXdesign_Cybercrime_Tickets::format_report_row($row, true, 'admin', 'staff');
         $status = (string) ($report['status'] ?? '');
         $back_url = admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=cybercrime');
 
