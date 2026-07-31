@@ -65,7 +65,6 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 	<section class="pax-ccs-portal__coverage" aria-labelledby="pax-ccs-coverage-label">
 		<div class="pax-ccs-portal__wrap pax-ccs-portal__coverage-head">
 			<p id="pax-ccs-coverage-label" class="pax-ccs-portal__coverage-label"><?php pax_ccs_bilingual( $copy['platforms_coverage']['label'] ); ?></p>
-			<p class="pax-ccs-portal__coverage-note"><?php pax_ccs_bilingual( $copy['platforms_coverage']['note'] ); ?></p>
 		</div>
 		<?php if ( ! empty( $ccs_platforms ) ) : ?>
 			<div class="pax-ccs-portal__coverage-marquee">
