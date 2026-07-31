@@ -207,7 +207,8 @@ jobs:
           AUTH_CSS=$(curl -sS -o /tmp/pdx-auth.css -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/customer-auth/css/pdx-auth.css?n=${stamp}")
           CHAT=$(curl -sS -o /tmp/chat-script.js -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?n=${stamp}")
           AUTH_JS=$(curl -sS -o /tmp/pax-auth.js -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/customer-auth/js/pax-auth.js?n=${stamp}")
-          echo "PAGE $PAGE | THEME_CSS $THEME_CSS | CCS_CSS $CCS_CSS | CCS_JS $CCS_JS | ADMIN_JS $ADMIN_JS | ADMIN_NOTIFY_JS $ADMIN_NOTIFY_JS | PLUGIN $PLUGIN | BOOKING_JS $BOOKING_JS | AUTH_CSS $AUTH_CSS | CHAT $CHAT | AUTH_JS $AUTH_JS"
+          WIDGET_LOADER=$(curl -sS -o /tmp/widget-loader.js -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/widget-loader.js?n=${stamp}")
+          echo "PAGE $PAGE | THEME_CSS $THEME_CSS | CCS_CSS $CCS_CSS | CCS_JS $CCS_JS | ADMIN_JS $ADMIN_JS | ADMIN_NOTIFY_JS $ADMIN_NOTIFY_JS | PLUGIN $PLUGIN | BOOKING_JS $BOOKING_JS | AUTH_CSS $AUTH_CSS | CHAT $CHAT | AUTH_JS $AUTH_JS | WIDGET_LOADER $WIDGET_LOADER"
           test "$PAGE" = "200"
           test "$THEME_CSS" = "200"
           test "$CCS_CSS" = "200"
@@ -217,12 +218,12 @@ jobs:
           test "$AUTH_CSS" = "200"
           test "$CHAT" = "200"
           test "$AUTH_JS" = "200"
+          test "$WIDGET_LOADER" = "200"
           grep -Eq "Version: 1\.4\.31" /tmp/style.css
           grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.31|apple-cybercrime-support\.js\?ver=1\.4\.31" /tmp/ccs-page.html
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-country-search|pax-ccs-phone-code" /tmp/ccs-page.html
           grep -Eq "full-bleed Apple-style|--ccs-gutter|pax-ccs-portal__coverage-track" /tmp/apple-ccs.css
           grep -Eq "initCountryPicker|validateAllSteps|pax-ccs-country-search" /tmp/apple-ccs.js
-          curl -sS -o /tmp/widget-loader.js -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/widget-loader.js?n=${stamp}" | grep -Eq '^200$'
           grep -Eq "PAXdesignWidgetLoader" /tmp/widget-loader.js
           grep -Eq 'name="identity_document" required|pax-ccs-portal__required' /tmp/ccs-page.html
           grep -Eq "Sitewide isolated Sign In|background: #000 !important" /tmp/pdx-auth.css
