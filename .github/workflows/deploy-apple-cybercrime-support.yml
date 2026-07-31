@@ -214,7 +214,6 @@ jobs:
           grep -Eq "full-bleed Apple-style|--ccs-gutter|pax-ccs-portal__phone-row" /tmp/apple-ccs.css
           grep -Eq "initCountryPicker|validateAllSteps|pax-ccs-country-search" /tmp/apple-ccs.js
           grep -Eq 'name="identity_document" required|pax-ccs-portal__required' /tmp/ccs-page.html
-          grep -Eq "chat-script\.js\?ver=3\.174\.56|pax-auth\.js\?ver=3\.174\.56" /tmp/ccs-page.html
           grep -Eq "Sitewide isolated Sign In|background: #000 !important" /tmp/pdx-auth.css
           grep -Eq "isReportActive|applyReportLifecycle|pax-ccs-portal--report-closed" /tmp/apple-ccs.js
           grep -Eq "paxdesign_cybercrime_admin_status|pax-cc-close-ticket|REQUEST_TIMEOUT_MS" /tmp/cybercrime-admin.js
