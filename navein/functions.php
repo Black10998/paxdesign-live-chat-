@@ -388,10 +388,19 @@ function navein_custom_scripts_styles() {
 			'navein-apple-cybercrime-support',
 			'html body.page-template-template-apple-cybercrime-support #dtr-main-wrapper,' .
 			'html body.page-template-template-apple-cybercrime-support-php #dtr-main-wrapper,' .
-			'html body.page-cybercrime-support #dtr-main-wrapper{' .
+			'html body.page-cybercrime-support #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-cybercrime-support #dtr-primary-section,' .
+			'html body.page-template-template-apple-cybercrime-support-php #dtr-primary-section,' .
+			'html body.page-cybercrime-support #dtr-primary-section,' .
+			'html body.page-template-template-apple-cybercrime-support .dtr-content-area,' .
+			'html body.page-template-template-apple-cybercrime-support-php .dtr-content-area,' .
+			'html body.page-cybercrime-support .dtr-content-area,' .
+			'html body.page-template-template-apple-cybercrime-support .pax-ccs-portal-wrap,' .
+			'html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal-wrap,' .
+			'html body.page-cybercrime-support .pax-ccs-portal-wrap{' .
 			'width:100%!important;max-width:none!important;margin:0!important;' .
 			'padding:0!important;padding-left:0!important;padding-right:0!important;' .
-			'box-sizing:border-box!important;}'
+			'float:none!important;box-sizing:border-box!important;}'
 		);
 		wp_enqueue_script(
 			'navein-apple-cybercrime-support',

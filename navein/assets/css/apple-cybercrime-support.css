@@ -1,5 +1,5 @@
 /**
- * Cybercrime reporting portal — structured digital service experience.
+ * Cybercrime reporting portal — full-bleed Apple-style digital service experience.
  */
 
 body.page-template-template-apple-cybercrime-support,
@@ -7,13 +7,18 @@ body.page-template-template-apple-cybercrime-support-php,
 body.page-cybercrime-support {
   --ccs-ink: #1d1d1f;
   --ccs-muted: #6e6e73;
-  --ccs-line: #d2d2d7;
+  --ccs-line: #e8e8ed;
+  --ccs-line-strong: #d2d2d7;
   --ccs-snow: #f5f5f7;
   --ccs-panel: #fafafa;
   --ccs-blue: #0071e3;
   --ccs-green: #1d7d4f;
   --ccs-navy: #0b1f33;
   --ccs-radius: 12px;
+  --ccs-gutter: clamp(20px, 4.5vw, 48px);
+  --ccs-content-max: min(1080px, 100%);
+  --ccs-content-wide: min(1200px, 100%);
+  --ccs-section-y: clamp(28px, 5vw, 56px);
   --ccs-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --ccs-display: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", Helvetica, Arial, sans-serif;
   background: #fff;
@@ -22,26 +27,46 @@ body.page-cybercrime-support {
 
 html body.page-template-template-apple-cybercrime-support #dtr-main-wrapper,
 html body.page-template-template-apple-cybercrime-support-php #dtr-main-wrapper,
-html body.page-cybercrime-support #dtr-main-wrapper {
+html body.page-cybercrime-support #dtr-main-wrapper,
+html body.page-template-template-apple-cybercrime-support #dtr-primary-section,
+html body.page-template-template-apple-cybercrime-support-php #dtr-primary-section,
+html body.page-cybercrime-support #dtr-primary-section,
+html body.page-template-template-apple-cybercrime-support .dtr-content-area,
+html body.page-template-template-apple-cybercrime-support-php .dtr-content-area,
+html body.page-cybercrime-support .dtr-content-area,
+html body.page-template-template-apple-cybercrime-support .pax-ccs-portal-wrap,
+html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal-wrap,
+html body.page-cybercrime-support .pax-ccs-portal-wrap {
   width: 100% !important;
   max-width: none !important;
   margin: 0 !important;
   padding: 0 !important;
+  float: none !important;
+  box-sizing: border-box !important;
   background: #fff;
 }
 
 .pax-ccs-portal {
   font-family: var(--ccs-font);
-  padding-bottom: 80px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 0 clamp(64px, 10vw, 96px);
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .pax-ccs-portal__wrap {
-  width: min(720px, calc(100% - 40px));
+  width: 100%;
+  max-width: var(--ccs-content-max);
   margin-inline: auto;
+  padding-inline: var(--ccs-gutter);
+  box-sizing: border-box;
 }
 
 .pax-ccs-portal__wrap--wide {
-  width: min(840px, calc(100% - 40px));
+  max-width: var(--ccs-content-wide);
 }
 
 .pax-ccs-portal__skip {
@@ -67,8 +92,8 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 .pax-ccs-portal__servicebar {
   background: var(--ccs-navy);
   color: #fff;
-  padding: 10px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 12px 0;
+  border-bottom: none;
 }
 
 .pax-ccs-portal__servicebar-inner {
@@ -94,7 +119,7 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 }
 
 .pax-ccs-portal__langbar {
-  padding: 16px 0 0;
+  padding: clamp(12px, 2.5vw, 20px) 0 0;
 }
 
 .pax-ccs-portal__langbar-inner {
@@ -111,7 +136,7 @@ html body.page-cybercrime-support #dtr-main-wrapper {
   padding: 3px;
   border-radius: 980px;
   background: var(--ccs-snow);
-  border: 1px solid var(--ccs-line);
+  border: none;
 }
 
 .pax-ccs-portal__lang-btn {
@@ -136,10 +161,10 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 }
 
 .pax-ccs-portal__header {
-  padding: 28px 0 24px;
-  border-bottom: 1px solid var(--ccs-line);
+  padding: clamp(24px, 5vw, 48px) 0 clamp(20px, 4vw, 32px);
+  border-bottom: none;
   margin-bottom: 0;
-  background: linear-gradient(180deg, var(--ccs-panel) 0%, #fff 100%);
+  background: #fff;
 }
 
 .pax-ccs-portal__eyebrow {
@@ -158,11 +183,11 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 }
 
 .pax-ccs-portal__subtitle {
-  margin: 0 0 18px;
-  font-size: 17px;
+  margin: 0 0 20px;
+  font-size: clamp(16px, 2.2vw, 19px);
   line-height: 1.55;
   color: var(--ccs-muted);
-  max-width: 58ch;
+  max-width: 62ch;
 }
 
 .pax-ccs-portal__status {
@@ -178,12 +203,12 @@ html body.page-cybercrime-support #dtr-main-wrapper {
   display: inline-flex;
   align-items: center;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 980px;
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.03em;
-  background: #fff;
-  border: 1px solid var(--ccs-line);
+  background: var(--ccs-snow);
+  border: none;
   color: var(--ccs-ink);
 }
 
@@ -198,36 +223,37 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 }
 
 .pax-ccs-portal__welcome {
-  padding: 28px 0 0;
+  padding: 0;
 }
 
 .pax-ccs-portal__panel--welcome {
-  border-top: 4px solid var(--ccs-navy);
+  border-top: none;
 }
 
 .pax-ccs-portal__section-intro--lead {
-  font-size: 16px;
-  max-width: 62ch;
+  font-size: clamp(16px, 2.2vw, 18px);
+  max-width: 68ch;
+  line-height: 1.6;
 }
 
 .pax-ccs-portal__info-blocks {
   list-style: none;
-  margin: 28px 0 0;
+  margin: clamp(24px, 4vw, 36px) 0 0;
   padding: 0;
   display: grid;
   gap: 0;
-  border: 1px solid var(--ccs-line);
-  border-radius: var(--ccs-radius);
-  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
 }
 
 .pax-ccs-portal__info-block {
   display: grid;
-  grid-template-columns: 48px 1fr;
-  gap: 16px;
-  padding: 20px 20px 20px 16px;
+  grid-template-columns: 44px 1fr;
+  gap: clamp(12px, 3vw, 20px);
+  padding: clamp(18px, 3vw, 24px) 0;
   border-bottom: 1px solid var(--ccs-line);
-  background: #fff;
+  background: transparent;
 }
 
 .pax-ccs-portal__info-block:last-child {
@@ -261,8 +287,8 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 }
 
 .pax-ccs-portal__trust {
-  margin-top: 28px;
-  padding-top: 24px;
+  margin-top: clamp(28px, 5vw, 40px);
+  padding-top: clamp(24px, 4vw, 32px);
   border-top: 1px solid var(--ccs-line);
 }
 
@@ -280,14 +306,14 @@ html body.page-cybercrime-support #dtr-main-wrapper {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: clamp(16px, 3vw, 28px);
 }
 
 .pax-ccs-portal__trust-item {
-  padding: 16px;
-  border: 1px solid var(--ccs-line);
-  border-radius: var(--ccs-radius);
-  background: var(--ccs-panel);
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
 }
 
 .pax-ccs-portal__trust-title {
@@ -305,27 +331,28 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 }
 
 .pax-ccs-portal__time-estimate {
-  margin: 24px 0 0;
-  padding: 12px 16px;
-  border-radius: var(--ccs-radius);
-  background: var(--ccs-snow);
-  border: 1px solid var(--ccs-line);
-  font-size: 14px;
+  margin: clamp(20px, 3vw, 28px) 0 0;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  font-size: 15px;
   font-weight: 600;
   color: var(--ccs-ink);
+  line-height: 1.5;
 }
 
 .pax-ccs-portal__actions--welcome {
-  margin-top: 24px;
+  margin-top: clamp(24px, 4vw, 32px);
   justify-content: flex-start;
 }
 
 .pax-ccs-portal__login-gate {
-  padding: 28px 0 0;
+  padding: 0;
 }
 
 .pax-ccs-portal__panel--login-gate {
-  border-top: 4px solid var(--ccs-blue);
+  border-top: none;
   text-align: center;
 }
 
@@ -335,7 +362,7 @@ html body.page-cybercrime-support #dtr-main-wrapper {
   margin: 0 auto 20px;
   border-radius: 50%;
   background: var(--ccs-snow);
-  border: 1px solid var(--ccs-line);
+  border: none;
   position: relative;
 }
 
@@ -374,7 +401,7 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 }
 
 .pax-ccs-portal__workflow {
-  padding: 24px 0 0;
+  padding: 0;
 }
 
 .pax-ccs-portal__workflow-label {
@@ -388,33 +415,32 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 
 .pax-ccs-portal__progress {
   list-style: none;
-  margin: 0 0 8px;
+  margin: 0 0 12px;
   padding: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
+  gap: clamp(6px, 1.5vw, 10px);
 }
 
 .pax-ccs-portal__progress-item {
   text-align: center;
-  padding: 12px 6px;
-  border-radius: var(--ccs-radius);
-  border: 1px solid var(--ccs-line);
-  background: #fff;
+  padding: clamp(10px, 2vw, 14px) clamp(4px, 1vw, 8px);
+  border-radius: 10px;
+  border: none;
+  background: var(--ccs-snow);
   color: var(--ccs-muted);
-  transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+  transition: color 0.2s ease, background 0.2s ease;
 }
 
 .pax-ccs-portal__progress-item.is-active {
-  border-color: var(--ccs-navy);
   color: var(--ccs-navy);
-  background: var(--ccs-snow);
-  box-shadow: inset 0 -3px 0 var(--ccs-navy);
+  background: rgba(11, 31, 51, 0.08);
+  box-shadow: none;
 }
 
 .pax-ccs-portal__progress-item.is-done {
-  border-color: var(--ccs-green);
   color: var(--ccs-green);
+  background: rgba(29, 125, 79, 0.08);
 }
 
 .pax-ccs-portal__progress-num {
@@ -430,21 +456,21 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 }
 
 .pax-ccs-portal__form {
-  padding-top: 16px;
+  padding-top: 0;
 }
 
 .pax-ccs-portal__panel {
-  border: 1px solid var(--ccs-line);
-  border-radius: 18px;
-  padding: clamp(24px, 4vw, 36px);
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border: none;
+  border-radius: 0;
+  padding: var(--ccs-section-y) 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .pax-ccs-portal__section-title {
-  margin: 0 0 8px;
-  font: 600 24px/1.2 var(--ccs-display);
-  letter-spacing: -0.015em;
+  margin: 0 0 10px;
+  font: 600 clamp(22px, 3.5vw, 28px)/1.15 var(--ccs-display);
+  letter-spacing: -0.02em;
 }
 
 .pax-ccs-portal__section-intro {
@@ -489,9 +515,9 @@ html body.page-cybercrime-support #dtr-main-wrapper {
   width: 100%;
   box-sizing: border-box;
   appearance: none;
-  border: 1px solid var(--ccs-line);
-  border-radius: 10px;
-  padding: 12px 14px;
+  border: 1px solid var(--ccs-line-strong);
+  border-radius: 12px;
+  padding: 14px 16px;
   font: 400 16px/1.35 var(--ccs-font);
   color: var(--ccs-ink);
   background: #fff;
@@ -524,9 +550,9 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 }
 
 .pax-ccs-portal__upload {
-  padding: 16px;
-  border: 1px dashed var(--ccs-line);
-  border-radius: var(--ccs-radius);
+  padding: clamp(16px, 3vw, 20px);
+  border: 1px dashed var(--ccs-line-strong);
+  border-radius: 12px;
   background: var(--ccs-snow);
 }
 
@@ -555,15 +581,15 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 .pax-ccs-portal__declarations {
   display: grid;
   gap: 14px;
-  margin: 24px 0 0;
-  padding-top: 20px;
+  margin: clamp(24px, 4vw, 32px) 0 0;
+  padding-top: clamp(20px, 3vw, 28px);
   border-top: 1px solid var(--ccs-line);
 }
 
 .pax-ccs-portal__review {
-  border: 1px solid var(--ccs-line);
-  border-radius: var(--ccs-radius);
-  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  overflow: visible;
   margin-bottom: 8px;
 }
 
@@ -571,9 +597,9 @@ html body.page-cybercrime-support #dtr-main-wrapper {
   display: grid;
   grid-template-columns: minmax(120px, 34%) 1fr;
   gap: 12px;
-  padding: 12px 16px;
+  padding: 14px 0;
   border-bottom: 1px solid var(--ccs-line);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.45;
 }
 
@@ -609,10 +635,11 @@ html body.page-cybercrime-support #dtr-main-wrapper {
   appearance: none;
   border: 0;
   border-radius: 980px;
-  padding: 12px 22px;
-  font: 500 15px/1 var(--ccs-font);
+  padding: 14px 24px;
+  font: 500 16px/1 var(--ccs-font);
   cursor: pointer;
-  transition: opacity 0.15s ease, background 0.15s ease;
+  transition: opacity 0.15s ease, background 0.15s ease, transform 0.15s ease;
+  min-height: 48px;
 }
 
 .pax-ccs-portal__btn:focus-visible {
@@ -637,13 +664,13 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 .pax-ccs-portal__btn--ghost {
   background: transparent;
   color: var(--ccs-ink);
-  border: 1px solid var(--ccs-line);
+  border: 1px solid var(--ccs-line-strong);
 }
 
 .pax-ccs-portal__error {
   margin: 16px 0 0;
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #fff4f4;
   border: 1px solid #ffcaca;
   color: #a30000;
@@ -659,12 +686,12 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 }
 
 .pax-ccs-portal__success {
-  padding: 24px 0 0;
+  padding: 0;
 }
 
 .pax-ccs-portal__panel--success {
   text-align: center;
-  border-top: 4px solid var(--ccs-green);
+  border-top: none;
 }
 
 .pax-ccs-portal__success-icon {
@@ -727,13 +754,48 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 }
 
 @media (max-width: 768px) {
+  body.page-template-template-apple-cybercrime-support,
+  body.page-template-template-apple-cybercrime-support-php,
+  body.page-cybercrime-support {
+    --ccs-gutter: clamp(16px, 4.2vw, 24px);
+    --ccs-section-y: clamp(24px, 6vw, 40px);
+  }
+
   .pax-ccs-portal__trust-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
   }
 
   .pax-ccs-portal__servicebar-inner {
     flex-direction: column;
     align-items: flex-start;
+    gap: 6px;
+  }
+
+  .pax-ccs-portal__service-disclaimer {
+    max-width: none;
+  }
+
+  .pax-ccs-portal__title {
+    font-size: clamp(26px, 7vw, 34px);
+  }
+
+  .pax-ccs-portal__subtitle {
+    font-size: 16px;
+  }
+
+  .pax-ccs-portal__active-meta--compact {
+    grid-template-columns: 1fr;
+  }
+
+  .pax-ccs-portal__accordion-when {
+    white-space: normal;
+    text-align: end;
+  }
+
+  .pax-ccs-portal__accordion-head-row {
+    flex-wrap: wrap;
+    gap: 4px 8px;
   }
 }
 
@@ -748,12 +810,19 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 
   .pax-ccs-portal__trust-grid {
     grid-template-columns: 1fr;
+    gap: 18px;
   }
 
   .pax-ccs-portal__info-block {
-    grid-template-columns: 40px 1fr;
+    grid-template-columns: 36px 1fr;
     gap: 12px;
-    padding: 16px;
+    padding: 16px 0;
+  }
+
+  .pax-ccs-portal__info-num {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
   }
 
   .pax-ccs-portal__review-row {
@@ -763,11 +832,25 @@ html body.page-cybercrime-support #dtr-main-wrapper {
 
   .pax-ccs-portal__actions {
     flex-direction: column-reverse;
+    gap: 10px;
   }
 
   .pax-ccs-portal__btn {
     width: 100%;
     text-align: center;
+  }
+
+  .pax-ccs-portal__status {
+    gap: 6px;
+  }
+
+  .pax-ccs-portal__status-item {
+    font-size: 11px;
+    padding: 5px 10px;
+  }
+
+  .pax-ccs-portal__panel--active-report {
+    padding: 0;
   }
 }
 
@@ -1005,7 +1088,7 @@ html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
 
 .pax-ccs-portal__panel--active-report {
   position: relative;
-  padding: 20px 22px;
+  padding: 0;
 }
 
 .pax-ccs-portal__status-hero {
@@ -1113,10 +1196,11 @@ html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
 
 .pax-ccs-portal__active-meta-row {
   margin: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--ccs-line);
-  border-radius: 10px;
-  background: #fff;
+  padding: 12px 0;
+  border: none;
+  border-bottom: 1px solid var(--ccs-line);
+  border-radius: 0;
+  background: transparent;
 }
 
 .pax-ccs-portal__active-meta-row dt {
@@ -1163,28 +1247,32 @@ html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
 }
 
 .pax-ccs-portal__ai-block {
-  padding: 12px 14px;
-  border: 1px solid var(--ccs-line);
-  border-radius: 12px;
-  background: rgba(245, 245, 247, 0.85);
+  padding: clamp(14px, 3vw, 18px) 0;
+  border: none;
+  border-top: 1px solid var(--ccs-line);
+  border-bottom: 1px solid var(--ccs-line);
+  border-radius: 0;
+  background: transparent;
 }
 
 .pax-ccs-portal__accordion {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 0;
 }
 
 .pax-ccs-portal__accordion-item {
-  border: 1px solid var(--ccs-line);
-  border-radius: 12px;
-  background: #fff;
+  border: none;
+  border-bottom: 1px solid var(--ccs-line);
+  border-radius: 0;
+  background: transparent;
   overflow: hidden;
-  transition: box-shadow 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+  transition: background 0.2s ease;
 }
 
 .pax-ccs-portal__accordion-item.is-open {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  box-shadow: none;
+  background: rgba(245, 245, 247, 0.5);
 }
 
 .pax-ccs-portal__accordion-trigger {
@@ -1199,7 +1287,7 @@ html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 11px 14px;
+  padding: clamp(14px, 3vw, 16px) 0;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -1276,13 +1364,13 @@ html body.page-cybercrime-support .pax-ccs-portal__btn--primary {
   opacity: 0;
   transform: translateY(-4px);
   transition: opacity 0.28s cubic-bezier(0.32, 0.72, 0, 1), transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
-  padding: 0 14px;
+  padding: 0;
 }
 
 .pax-ccs-portal__accordion-item.is-open .pax-ccs-portal__accordion-panel-inner {
   opacity: 1;
   transform: translateY(0);
-  padding: 10px 14px 12px;
+  padding: 0 0 clamp(14px, 3vw, 18px);
 }
 
 html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__accordion-item:not(.is-open) .pax-ccs-portal__accordion-panel-inner,
@@ -1329,11 +1417,12 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
 }
 
 .pax-ccs-portal__attachments-fold {
-  margin: 0 0 12px;
-  border: 1px solid var(--ccs-line);
-  border-radius: 10px;
-  background: #fff;
-  padding: 0 12px;
+  margin: 0 0 16px;
+  border: none;
+  border-top: 1px solid var(--ccs-line);
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
 }
 
 .pax-ccs-portal__subsection-title--fold {
@@ -1432,8 +1521,8 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
 }
 
 .pax-ccs-portal__history {
-  margin-top: 24px;
-  padding-top: 20px;
+  margin-top: clamp(24px, 4vw, 32px);
+  padding-top: clamp(20px, 3vw, 28px);
   border-top: 1px solid var(--ccs-line);
 }
 
@@ -1456,27 +1545,45 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
   margin: 0 0 12px;
   padding: 0;
   display: grid;
-  gap: 8px;
+  gap: 0;
 }
 
 .pax-ccs-portal__history-btn {
   width: 100%;
   text-align: start;
-  border: 1px solid var(--ccs-line);
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.65);
-  padding: 12px 14px;
+  border: none;
+  border-bottom: 1px solid var(--ccs-line);
+  border-radius: 0;
+  background: transparent;
+  padding: clamp(14px, 3vw, 16px) 0;
   cursor: pointer;
+  transition: opacity 0.15s ease;
 }
 
 .pax-ccs-portal__history-btn:hover {
-  border-color: rgba(0, 113, 227, 0.35);
+  opacity: 0.72;
 }
 
-.pax-ccs-portal__history-ref {
-  display: block;
-  font-weight: 600;
-  margin-bottom: 4px;
+#pax-ccs-welcome,
+#pax-ccs-login-gate,
+#pax-ccs-active-report,
+#pax-ccs-workflow,
+#pax-ccs-success {
+  border-top: 1px solid var(--ccs-line);
+}
+
+#pax-ccs-main > header.pax-ccs-portal__header + #pax-ccs-welcome {
+  border-top: none;
+}
+
+@media (min-width: 900px) {
+  .pax-ccs-portal__trust-title {
+    font-size: 14px;
+  }
+
+  .pax-ccs-portal__trust-text {
+    font-size: 14px;
+  }
 }
 
 .pax-ccs-portal__history-meta {
