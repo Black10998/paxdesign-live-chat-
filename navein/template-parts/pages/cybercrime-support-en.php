@@ -14,6 +14,10 @@ return array(
 		'service' => 'PAXDesign · Cybercrime Support',
 		'disclaimer' => 'Professional reporting service operated by PAXDesign. This is not a government agency or official portal.',
 	),
+	'platforms_coverage' => array(
+		'label' => 'Platforms & online services — cybercrime coverage',
+		'note' => 'For illustration only. No partnership, endorsement, or affiliation with the listed providers.',
+	),
 	'portal' => array(
 		'skip' => 'Skip to main content',
 		'eyebrow' => 'Digital reporting portal',

@@ -118,6 +118,107 @@ html body.page-cybercrime-support .pax-ccs-portal-wrap {
   max-width: 52ch;
 }
 
+.pax-ccs-portal__coverage {
+  background: var(--ccs-snow);
+  border-bottom: 1px solid var(--ccs-line);
+  padding: 10px 0 12px;
+}
+
+.pax-ccs-portal__coverage-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  margin-bottom: 8px;
+}
+
+.pax-ccs-portal__coverage-label {
+  margin: 0;
+  font: 600 11px/1.35 var(--ccs-font);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ccs-muted);
+}
+
+.pax-ccs-portal__coverage-note {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #86868b;
+  max-width: 56ch;
+}
+
+.pax-ccs-portal__coverage-marquee {
+  overflow: hidden;
+  mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+}
+
+.pax-ccs-portal__coverage-track {
+  display: flex;
+  width: max-content;
+  animation: pax-ccs-coverage-scroll 52s linear infinite;
+}
+
+.pax-ccs-portal__coverage-group {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  flex-shrink: 0;
+}
+
+.pax-ccs-portal__coverage-item {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  font: 500 13px/1.3 var(--ccs-font);
+  color: #424245;
+  white-space: nowrap;
+}
+
+.pax-ccs-portal__coverage-item::after {
+  content: "·";
+  margin-inline-start: 14px;
+  color: #c7c7cc;
+  font-weight: 400;
+}
+
+.pax-ccs-portal__coverage-item:last-child::after {
+  content: none;
+}
+
+@keyframes pax-ccs-coverage-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pax-ccs-portal__coverage-marquee {
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .pax-ccs-portal__coverage-track {
+    animation: none;
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: center;
+    row-gap: 6px;
+  }
+
+  .pax-ccs-portal__coverage-group[aria-hidden="true"] {
+    display: none;
+  }
+}
+
 .pax-ccs-portal__langbar {
   padding: clamp(12px, 2.5vw, 20px) 0 0;
 }

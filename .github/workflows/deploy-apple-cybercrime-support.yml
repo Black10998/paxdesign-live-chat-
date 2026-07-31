@@ -15,6 +15,7 @@ on:
       - 'navein/template-apple-cybercrime-support.php'
       - 'navein/template-parts/pages/cybercrime-support.php'
       - 'navein/template-parts/pages/cybercrime-support-data.php'
+      - 'navein/template-parts/pages/cybercrime-support-en.php'
       - 'navein/template-parts/page-title/page-header-page.php'
       - 'navein/assets/css/apple-app-page.css'
       - 'navein/assets/css/apple-cybercrime-support.css'

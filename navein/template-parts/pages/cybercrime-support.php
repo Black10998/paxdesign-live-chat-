@@ -57,6 +57,31 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 		</div>
 	</div>
 
+	<?php
+	$ccs_platforms = isset( $copy['platforms_coverage']['platforms'] ) && is_array( $copy['platforms_coverage']['platforms'] )
+		? $copy['platforms_coverage']['platforms']
+		: array();
+	?>
+	<section class="pax-ccs-portal__coverage" aria-labelledby="pax-ccs-coverage-label">
+		<div class="pax-ccs-portal__wrap pax-ccs-portal__coverage-head">
+			<p id="pax-ccs-coverage-label" class="pax-ccs-portal__coverage-label"><?php pax_ccs_bilingual( $copy['platforms_coverage']['label'] ); ?></p>
+			<p class="pax-ccs-portal__coverage-note"><?php pax_ccs_bilingual( $copy['platforms_coverage']['note'] ); ?></p>
+		</div>
+		<?php if ( ! empty( $ccs_platforms ) ) : ?>
+			<div class="pax-ccs-portal__coverage-marquee">
+				<div class="pax-ccs-portal__coverage-track">
+					<?php for ( $dup = 0; $dup < 2; $dup++ ) : ?>
+						<ul class="pax-ccs-portal__coverage-group"<?php echo 1 === $dup ? ' aria-hidden="true"' : ''; ?>>
+							<?php foreach ( $ccs_platforms as $platform ) : ?>
+								<li class="pax-ccs-portal__coverage-item"><?php echo esc_html( (string) $platform ); ?></li>
+							<?php endforeach; ?>
+						</ul>
+					<?php endfor; ?>
+				</div>
+			</div>
+		<?php endif; ?>
+	</section>
+
 	<div class="pax-ccs-portal__langbar">
 		<div class="pax-ccs-portal__wrap pax-ccs-portal__langbar-inner">
 			<div class="pax-ccs-portal__lang-toggle" role="group" aria-label="Language">
