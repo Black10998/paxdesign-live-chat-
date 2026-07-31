@@ -123,6 +123,7 @@ jobs:
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/template-parts/pages/cybercrime-support.php \
             navein/template-parts/pages/cybercrime-support-data.php \
+            navein/template-parts/pages/cybercrime-support-en.php \
             "${REMOTE}:${THEME}/template-parts/pages/"
 
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
