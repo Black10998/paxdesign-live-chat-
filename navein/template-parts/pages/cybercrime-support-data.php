@@ -24,10 +24,12 @@ return array(
 		'label' => array(
 			'ar' => 'منصات وخدمات إلكترونية — تغطية الجرائم الإلكترونية',
 			'de' => 'Plattformen & Online-Dienste — Cybercrime-Abdeckung',
+			'en' => 'Platforms & online services — cybercrime coverage',
 		),
 		'note' => array(
 			'ar' => 'للتوضيح فقط. لا يُعدّ ذلك شراكة أو تأييداً أو انتماءً لأي من هذه الجهات.',
 			'de' => 'Nur zur Veranschaulichung. Keine Partnerschaft, Billigung oder Zugehörigkeit zu den genannten Anbietern.',
+			'en' => 'For illustration only. No partnership, endorsement, or affiliation with the listed providers.',
 		),
 		'platforms' => array(
 			'Google',
