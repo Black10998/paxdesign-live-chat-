@@ -151,6 +151,7 @@ html body.page-cybercrime-support .pax-ccs-portal-wrap {
 
 .pax-ccs-portal__coverage-marquee {
   overflow: hidden;
+  contain: layout paint;
   mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
   -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
 }
@@ -160,10 +161,12 @@ html body.page-cybercrime-support .pax-ccs-portal-wrap {
   width: max-content;
   gap: 0;
   flex-wrap: nowrap;
-  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  animation: pax-ccs-coverage-scroll var(--ccs-marquee-duration, 52s) linear infinite;
 }
 
-.pax-ccs-portal__coverage-track.is-marquee-ready {
+.pax-ccs-portal__coverage-track.is-marquee-static {
   animation: none;
 }
 
@@ -191,6 +194,12 @@ html body.page-cybercrime-support .pax-ccs-portal-wrap {
   margin-inline-start: 14px;
   color: #c7c7cc;
   font-weight: 400;
+}
+
+@keyframes pax-ccs-coverage-scroll {
+  to {
+    transform: translate3d(var(--ccs-marquee-distance, -50%), 0, 0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

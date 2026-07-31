@@ -67,11 +67,12 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 			<p id="pax-ccs-coverage-label" class="pax-ccs-portal__coverage-label"><?php pax_ccs_bilingual( $copy['platforms_coverage']['label'] ); ?></p>
 		</div>
 		<?php if ( ! empty( $ccs_platforms ) ) : ?>
+			<?php $ccs_platforms_loop = array_merge( $ccs_platforms, $ccs_platforms ); ?>
 			<div class="pax-ccs-portal__coverage-marquee">
 				<div class="pax-ccs-portal__coverage-track">
 					<?php for ( $dup = 0; $dup < 2; $dup++ ) : ?>
 						<ul class="pax-ccs-portal__coverage-group"<?php echo 1 === $dup ? ' aria-hidden="true"' : ''; ?>>
-							<?php foreach ( $ccs_platforms as $platform ) : ?>
+							<?php foreach ( $ccs_platforms_loop as $platform ) : ?>
 								<li class="pax-ccs-portal__coverage-item"><?php echo esc_html( (string) $platform ); ?></li>
 							<?php endforeach; ?>
 						</ul>
