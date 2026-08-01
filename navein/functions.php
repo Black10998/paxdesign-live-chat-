@@ -518,6 +518,39 @@ endif;
 add_action( 'wp_enqueue_scripts', 'navein_custom_scripts_styles', 20 );
 
 /**
+ * Load after sitewide custom CSS so Cybercrime Support has no mobile header gap.
+ */
+if ( ! function_exists( 'navein_cybercrime_mobile_layout_fix' ) ) :
+function navein_cybercrime_mobile_layout_fix() {
+	if ( ! is_page_template( 'template-apple-cybercrime-support.php' ) && ! is_page( 'cybercrime-support' ) ) {
+		return;
+	}
+
+	$theme_version = wp_get_theme()->get( 'Version' );
+	wp_register_style( 'navein-cybercrime-mobile-layout-fix', false, array(), $theme_version );
+	wp_enqueue_style( 'navein-cybercrime-mobile-layout-fix' );
+	wp_add_inline_style(
+		'navein-cybercrime-mobile-layout-fix',
+		'@media (max-width:768px){' .
+		'html body.page-template-template-apple-cybercrime-support #dtr-main-wrapper,' .
+		'html body.page-template-template-apple-cybercrime-support-php #dtr-main-wrapper,' .
+		'html body.page-cybercrime-support #dtr-main-wrapper{' .
+		'padding-top:0!important;margin-top:0!important;}' .
+		'html body.page-template-template-apple-cybercrime-support .dtr-page-title__section,' .
+		'html body.page-template-template-apple-cybercrime-support-php .dtr-page-title__section,' .
+		'html body.page-cybercrime-support .dtr-page-title__section,' .
+		'html body.page-template-template-apple-cybercrime-support .dtr-page-title--section,' .
+		'html body.page-template-template-apple-cybercrime-support-php .dtr-page-title--section,' .
+		'html body.page-cybercrime-support .dtr-page-title--section{' .
+		'display:none!important;margin:0!important;padding:0!important;' .
+		'min-height:0!important;height:0!important;overflow:hidden!important;}' .
+		'}'
+	);
+}
+endif;
+add_action( 'wp_enqueue_scripts', 'navein_cybercrime_mobile_layout_fix', 999 );
+
+/**
  * Mark body for Apple footer styling (sitewide).
  *
  * @param array $classes Body classes.

@@ -1827,3 +1827,27 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
     grid-template-columns: 1fr;
   }
 }
+
+/* Mobile: cancel sitewide inner-page title / main-wrapper offsets on this template. */
+@media (max-width: 768px) {
+  html body.page-template-template-apple-cybercrime-support #dtr-main-wrapper,
+  html body.page-template-template-apple-cybercrime-support-php #dtr-main-wrapper,
+  html body.page-cybercrime-support #dtr-main-wrapper {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+  }
+
+  html body.page-template-template-apple-cybercrime-support .dtr-page-title__section,
+  html body.page-template-template-apple-cybercrime-support-php .dtr-page-title__section,
+  html body.page-cybercrime-support .dtr-page-title__section,
+  html body.page-template-template-apple-cybercrime-support .dtr-page-title--section,
+  html body.page-template-template-apple-cybercrime-support-php .dtr-page-title--section,
+  html body.page-cybercrime-support .dtr-page-title--section {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+}

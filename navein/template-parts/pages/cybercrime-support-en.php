@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 return array(
 	'operator' => array(
 		'service' => 'PAXDesign · Cybercrime Support',
-		'disclaimer' => 'Professional reporting service operated by PAXDesign. This is not a government agency or official portal.',
+		'disclaimer' => 'PAXDesign is an independent online service. This service is not operated by, affiliated with, or an official website of any government authority.',
 	),
 	'platforms_coverage' => array(
 		'label' => 'Platforms & online services — cybercrime coverage',
