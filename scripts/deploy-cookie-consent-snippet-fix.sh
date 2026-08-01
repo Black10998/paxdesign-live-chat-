@@ -30,10 +30,17 @@ sed -n '522p' "$SRC"
 
 cp "$SRC" "$FIXED"
 
-perl -i -pe '
-  if ($. == 522 || /\$url\s*=\s*strtolower\(\s*\(\s*string\s*\)\s*\$url\s*\)\s*;/) {
-    s/\$url\s*=\s*strtolower\(\s*\(\s*string\s*\)\s*\$url\s*\)\s*;/$url = is_array( $url ) ? strtolower( (string) ( $url[\x27href\x27] ?? reset( $url ) ) ) : strtolower( (string) $url );/;
-  }
+php -r '
+$file = $argv[1];
+$code = file_get_contents($file);
+$replacement = "\$url = is_array( \$url ) ? strtolower( (string) ( \$url[\"href\"] ?? reset( \$url ) ) ) : strtolower( (string) \$url );";
+$updated = preg_replace("/\\\$url\\s*=\\s*strtolower\\(\\s*\\(\\s*string\\s*\\)\\s*\\\$url\\s*\\)\\s*;/", $replacement, $code, 1, $count);
+if ($count < 1) {
+    fwrite(STDERR, "Resource hint pattern not found\n");
+    exit(1);
+}
+file_put_contents($file, $updated);
+echo "Applied resource hint array guard.\n";
 ' "$FIXED"
 
 echo "=== Line 522 (after fix) ==="
