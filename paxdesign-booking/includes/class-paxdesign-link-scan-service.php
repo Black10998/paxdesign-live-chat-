@@ -865,11 +865,11 @@ class PAXdesign_Link_Scan_Service {
         }
 
         $host = strtolower((string) $parts['host']);
-        if (preg_match('/^\d{1,3}(\.\d{1,3}){3}$/', $host)) {
+        if (self::is_blocked_probe_host($host)) {
             return array(
-                'status'   => self::STATUS_SUSPICIOUS,
+                'status'   => self::STATUS_DANGEROUS,
                 'provider' => 'server_probe',
-                'raw'      => array('reason' => 'raw_ip'),
+                'raw'      => array('reason' => 'blocked_host'),
                 'error'    => '',
             );
         }
@@ -1273,5 +1273,65 @@ class PAXdesign_Link_Scan_Service {
             'message'    => $payload_message,
         );
         PAXdesign_Message_Store::emit('session:' . $session_id, $event_type, $payload, $message_seq);
+    }
+
+    /**
+     * @param string $ip
+     * @return bool
+     */
+    private static function is_private_or_reserved_ip($ip) {
+        if (!is_string($ip) || $ip === '') {
+            return true;
+        }
+        return filter_var(
+            $ip,
+            FILTER_VALIDATE_IP,
+            FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
+        ) === false;
+    }
+
+    /**
+     * Block SSRF targets such as localhost, cloud metadata, and private networks.
+     *
+     * @param string $host
+     * @return bool
+     */
+    private static function is_blocked_probe_host($host) {
+        $host = strtolower(trim((string) $host));
+        if ($host === '') {
+            return true;
+        }
+
+        $host = trim($host, '[]');
+
+        if (in_array($host, array('localhost', 'localhost.localdomain', 'metadata', 'metadata.google.internal'), true)) {
+            return true;
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            return self::is_private_or_reserved_ip($host);
+        }
+
+        $records = @dns_get_record($host, DNS_A + DNS_AAAA);
+        if (!is_array($records) || $records === array()) {
+            return false;
+        }
+
+        foreach ($records as $record) {
+            if (!is_array($record)) {
+                continue;
+            }
+            $ip = '';
+            if (!empty($record['ip'])) {
+                $ip = (string) $record['ip'];
+            } elseif (!empty($record['ipv6'])) {
+                $ip = (string) $record['ipv6'];
+            }
+            if ($ip !== '' && self::is_private_or_reserved_ip($ip)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

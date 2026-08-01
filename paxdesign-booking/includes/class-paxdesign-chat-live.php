@@ -2713,8 +2713,7 @@ class PAXdesign_Chat_Live {
 
     const DEFAULT_NOTIFY_EMAIL         = 'info@paxdesign.at';
     const DEFAULT_NOTIFY_EMAIL_SECOND  = 'al.kahalaf.ahmad@gmail.com';
-    const DEFAULT_WHATSAPP_PHONE       = '4368120543638';
-    const DEFAULT_WHATSAPP_CALLMEBOT_KEY = '3515631';
+    const DEFAULT_WHATSAPP_PHONE = '4368120543638';
 
     /**
      * Escalate an authenticated mobile/web customer session to the live-agent queue.
@@ -2907,7 +2906,7 @@ class PAXdesign_Chat_Live {
             $key = trim((string) PAXDESIGN_WHATSAPP_CALLMEBOT_KEY);
         }
         if ($key === '') {
-            $key = self::DEFAULT_WHATSAPP_CALLMEBOT_KEY;
+            return '';
         }
         return $key;
     }

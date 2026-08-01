@@ -1,5 +1,13 @@
 dist/
 .DS_Store
+.env
+.env.*
+*.pem
+*.p8
+*.key
+secrets/
+wp-config.php
+wp-config-local.php
 paxdesign-booking/ios-live-chat/.build/
 paxdesign-booking/ios-live-chat/build/
 paxdesign-booking/ios-live-chat/DerivedData/

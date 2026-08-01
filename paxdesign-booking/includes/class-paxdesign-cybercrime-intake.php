@@ -515,8 +515,34 @@ class PAXdesign_Cybercrime_Intake {
         }
         if (!wp_mkdir_p($dirs['path'])) {
             error_log('[PAXdesign Cybercrime] Could not create upload directory: ' . $dirs['path']);
+        } else {
+            self::ensure_upload_dir_hardened($dirs['path']);
         }
         return $dirs;
+    }
+
+    /**
+     * Deny direct web access to sensitive intake uploads (Apache/LiteSpeed).
+     *
+     * @param string $path
+     */
+    private static function ensure_upload_dir_hardened($path) {
+        if (!is_string($path) || $path === '' || !is_dir($path)) {
+            return;
+        }
+
+        $index = trailingslashit($path) . 'index.php';
+        if (!is_file($index)) {
+            file_put_contents($index, "<?php\n// Silence is golden.\n");
+        }
+
+        $htaccess = trailingslashit($path) . '.htaccess';
+        if (is_file($htaccess)) {
+            return;
+        }
+
+        $rules = "Options -Indexes\n<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nDeny from all\n</IfModule>\n";
+        file_put_contents($htaccess, $rules);
     }
 
     /**

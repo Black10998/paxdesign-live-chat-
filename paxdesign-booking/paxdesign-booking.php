@@ -2,7 +2,7 @@
 /*
 Plugin Name: PAXdesign Booking System
 Description: Professional booking system with minimal chat-style interface and team management
-Version: 3.174.58
+Version: 3.174.59
 Author: PAXdesign
 Author URI: https://paxdesign.at
 License: GPL v2 or later
@@ -21,7 +21,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
 }
 
 // Define plugin constants
-define('PAXDESIGN_BOOKING_VERSION', '3.174.58');
+define('PAXDESIGN_BOOKING_VERSION', '3.174.59');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('PAXDESIGN_BOOKING_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -171,6 +171,8 @@ class PAXdesign_Booking {
      * Sensitive fields (email) are stripped before sending.
      */
     public function handle_get_team_members() {
+        check_ajax_referer('paxdesign_booking_nonce', 'nonce');
+
         $members = $this->get_team_members(true); // include disabled
         $public  = array();
         foreach ($members as $key => $m) {
@@ -505,6 +507,7 @@ class PAXdesign_Booking {
         PAXdesign_Message_Store::maybe_upgrade();
         PAXdesign_Link_Scan_Service::maybe_upgrade();
         paxdesign_booking_upgrade_live_notify_defaults();
+        paxdesign_booking_upgrade_security_defaults();
         if (class_exists('PAXdesign_Team_Messaging')) {
             PAXdesign_Team_Messaging::maybe_reconcile_store();
         }
@@ -696,9 +699,16 @@ class PAXdesign_Booking {
         }
 
         wp_send_json_success(array(
-            'message'     => 'Termin erfolgreich gebucht!',
+            'message'      => 'Termin erfolgreich gebucht!',
             'booking_data' => $booking_data,
-            'member_info'  => $member_info,
+            'member_info'  => array(
+                'name'         => $member_info['name'],
+                'role'         => $member_info['role'],
+                'role_en'      => isset($member_info['role_en']) ? $member_info['role_en'] : '',
+                'image'        => $member_info['image'],
+                'has_services' => !empty($member_info['has_services']),
+                'is_founder'   => !empty($member_info['is_founder']),
+            ),
         ));
     }
     
@@ -1085,7 +1095,7 @@ class PAXdesign_Booking {
     
     public function render_team_management_page() {
         // Debug: Show current settings if debug parameter is present
-        if (isset($_GET['debug']) && $_GET['debug'] === '1') {
+        if (isset($_GET['debug']) && $_GET['debug'] === '1' && current_user_can('manage_options') && defined('WP_DEBUG') && WP_DEBUG) {
             echo '<div class="notice notice-info"><pre>';
             echo 'Current Settings in Database:' . "\n";
             print_r(get_option('paxdesign_booking_team_settings', array()));
@@ -1258,7 +1268,7 @@ function paxdesign_booking_activate() {
     add_option('paxdesign_booking_notification_email', 'info@paxdesign.at');
     add_option('paxdesign_booking_email_ahmad', 'info@paxdesign.at');
     add_option('paxdesign_live_whatsapp_phone', '4368120543638');
-    add_option('paxdesign_live_whatsapp_callmebot_key', '3515631');
+    add_option('paxdesign_live_whatsapp_callmebot_key', '');
     add_option('paxdesign_live_notify_emails', "info@paxdesign.at\nal.kahalaf.ahmad@gmail.com");
 
     require_once PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/auth/class-paxdesign-auth-page.php';
@@ -1281,11 +1291,6 @@ function paxdesign_booking_upgrade_live_notify_defaults() {
 
     if (!get_option('paxdesign_live_whatsapp_phone')) {
         update_option('paxdesign_live_whatsapp_phone', '4368120543638', false);
-    }
-
-    $key = trim((string) get_option('paxdesign_live_whatsapp_callmebot_key', ''));
-    if ($key === '') {
-        update_option('paxdesign_live_whatsapp_callmebot_key', '3515631', false);
     }
 
     $emails = trim((string) get_option('paxdesign_live_notify_emails', ''));
@@ -1313,6 +1318,23 @@ function paxdesign_booking_upgrade_live_notify_defaults() {
     }
 
     update_option('paxdesign_live_notify_defaults_version', $defaults_version, false);
+}
+
+/**
+ * One-time security hardening migrations (webhook secrets, etc.).
+ */
+function paxdesign_booking_upgrade_security_defaults() {
+    $version = '1';
+    if (get_option('paxdesign_security_defaults_version') === $version) {
+        return;
+    }
+
+    $webhook_secret = (string) get_option('paxdesign_cybercrime_email_webhook_secret', '');
+    if ($webhook_secret === '' && defined('AUTH_KEY') && AUTH_KEY !== '') {
+        update_option('paxdesign_cybercrime_email_webhook_secret', AUTH_KEY, false);
+    }
+
+    update_option('paxdesign_security_defaults_version', $version, false);
 }
 
 /**

@@ -76,9 +76,14 @@
     // so availability changes in the admin are reflected immediately.
     let liveTeamMembers = paxdesignBooking.teamMembers;
 
+    function escapeHtml(value) {
+        return $('<div>').text(value == null ? '' : String(value)).html();
+    }
+
     function refreshTeamMembers(callback) {
         $.post(paxdesignBooking.ajaxUrl, {
-            action: 'paxdesign_get_team_members'
+            action: 'paxdesign_get_team_members',
+            nonce: paxdesignBooking.nonce
         }, function(response) {
             if (response && response.success && response.data && typeof response.data === 'object') {
                 liveTeamMembers = response.data;
@@ -1298,7 +1303,7 @@
                             '</svg>' +
                             '<div>' +
                             '<span class="paxdesign-booking-summary-label">Ansprechpartner</span>' +
-                            '<span class="paxdesign-booking-summary-value">' + member.name + '</span>' +
+                            '<span class="paxdesign-booking-summary-value">' + escapeHtml(member.name) + '</span>' +
                             '</div>' +
                             '</div>' +
                             '<div class="paxdesign-booking-summary-item">' +

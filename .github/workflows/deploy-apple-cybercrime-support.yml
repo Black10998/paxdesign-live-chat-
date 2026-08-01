@@ -32,7 +32,9 @@ on:
       - 'paxdesign-booking/assets/js/cybercrime-admin-notifications.js'
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php'
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-tickets.php'
-      - 'paxdesign-booking/includes/class-paxdesign-chat-live.php'
+      - 'paxdesign-booking/includes/class-paxdesign-link-scan-service.php'
+      - 'paxdesign-booking/includes/class-paxdesign-widget-performance.php'
+      - '.gitignore'
       - 'paxdesign-booking/includes/customer/class-paxdesign-customer-admin.php'
       - 'paxdesign-booking/assets/customer-auth/css/pdx-auth.css'
       - 'paxdesign-booking/assets/customer-auth/css/pdx-portal-apple.css'
@@ -151,6 +153,7 @@ jobs:
             paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php \
             paxdesign-booking/includes/class-paxdesign-cybercrime-tickets.php \
             paxdesign-booking/includes/class-paxdesign-chat-live.php \
+            paxdesign-booking/includes/class-paxdesign-link-scan-service.php \
             paxdesign-booking/includes/class-paxdesign-widget-performance.php \
             "${REMOTE}:${PLUGIN}/includes/"
 
@@ -219,8 +222,8 @@ jobs:
           test "$CHAT" = "200"
           test "$AUTH_JS" = "200"
           test "$WIDGET_LOADER" = "200"
-          grep -Eq "Version: 1\.4\.31" /tmp/style.css
-          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.31|apple-cybercrime-support\.js\?ver=1\.4\.31" /tmp/ccs-page.html
+          grep -Eq "Version: 1\.4\.32" /tmp/style.css
+          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.32|apple-cybercrime-support\.js\?ver=1\.4\.32" /tmp/ccs-page.html
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-country-search|pax-ccs-phone-code" /tmp/ccs-page.html
           grep -Eq "full-bleed Apple-style|--ccs-gutter|pax-ccs-portal__coverage-track" /tmp/apple-ccs.css
           grep -Eq "initCountryPicker|validateAllSteps|pax-ccs-country-search" /tmp/apple-ccs.js
@@ -231,8 +234,14 @@ jobs:
           grep -Eq "markStaffRead|paxdesign_cybercrime_admin_mark_read" /tmp/cybercrime-admin.js
           grep -Eq "paxCybercrimeAdminApplyUnread|paxdesign_cybercrime_admin_unread" /tmp/cybercrime-admin-notifications.js
           grep -Eq "paxdesign_cybercrime_admin_status|pax-cc-close-ticket|REQUEST_TIMEOUT_MS|markStaffRead" /tmp/cybercrime-admin.js
+          grep -Eq "Version: 3\.174\.59" /tmp/pax-plugin.php
+          grep -Eq "check_ajax_referer\('paxdesign_booking_nonce'" /tmp/pax-plugin.php
+          grep -Eq "paxdesign_security_defaults_version|paxdesign_booking_upgrade_security_defaults" /tmp/pax-plugin.php
           grep -Eq "queueBackgroundRealtimeSync|shouldSkipHistoryFetch|HISTORY_INITIAL" /tmp/chat-script.js
           grep -Eq "renderPortalRecordsSection|renderPortalCybercrimeDetail|cybercrime/reports" /tmp/pax-auth.js
           grep -A6 '#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {' /tmp/pdx-auth.css | grep -Eq 'background: #000|background-color: #000'
-          if [ "$BOOKING_JS" = "200" ]; then grep -Eq 'ensureChatReady' /tmp/booking-script.js; fi
+          if [ "$BOOKING_JS" = "200" ]; then
+            grep -Eq 'ensureChatReady' /tmp/booking-script.js
+            grep -Eq 'escapeHtml|paxdesign_get_team_members' /tmp/booking-script.js
+          fi
           echo "Cybercrime Support production verification passed."

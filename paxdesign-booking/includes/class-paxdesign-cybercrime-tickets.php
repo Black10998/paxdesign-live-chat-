@@ -2045,7 +2045,7 @@ class PAXdesign_Cybercrime_Tickets {
     public static function verify_email_webhook(WP_REST_Request $request) {
         $secret = (string) get_option('paxdesign_cybercrime_email_webhook_secret', '');
         if ($secret === '') {
-            $secret = (string) (defined('AUTH_KEY') ? AUTH_KEY : '');
+            return false;
         }
         $provided = (string) $request->get_header('x-pax-webhook-secret');
         if ($provided === '' && isset($_SERVER['HTTP_X_PAX_WEBHOOK_SECRET'])) {

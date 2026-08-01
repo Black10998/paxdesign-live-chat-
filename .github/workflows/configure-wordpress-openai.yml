@@ -37,8 +37,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Resolve OpenAI API key
-        id: key
+      - name: Install dependencies
+        run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
+
+      - name: Configure OpenAI on production via REST bootstrap
         env:
           INPUT_KEY: ${{ inputs.openai_api_key }}
           SECRET_KEY: ${{ secrets.PAX_OPENAI_API_KEY }}
@@ -51,29 +53,31 @@ jobs:
           elif [ -n "${INPUT_KEY:-}" ]; then
             KEY="$INPUT_KEY"
             echo "Using workflow_dispatch input"
-          elif [ -f .github/triggers/configure-wordpress-openai ] && grep -q '^OPENAI_KEY_B64=' .github/triggers/configure-wordpress-openai; then
-            KEY="$(grep '^OPENAI_KEY_B64=' .github/triggers/configure-wordpress-openai | cut -d= -f2- | base64 -d)"
-            echo "Using OPENAI_KEY_B64 from trigger file"
           fi
           if [ -z "$KEY" ]; then
-            echo "Missing OpenAI key source (secret, input, or trigger file OPENAI_KEY_B64=)" >&2
+            echo "Missing OpenAI key source (PAX_OPENAI_API_KEY secret or workflow_dispatch input)" >&2
             exit 1
           fi
-          echo "key=$KEY" >> "$GITHUB_OUTPUT"
-
-      - name: Install dependencies
-        run: python3 -m pip install --quiet --break-system-packages PyJWT cryptography
-
-      - name: Configure OpenAI on production via REST bootstrap
-        env:
-          PAX_OPENAI_API_KEY: ${{ steps.key.outputs.key }}
-        run: python3 scripts/configure-production-openai-remote.py
+          export PAX_OPENAI_API_KEY="$KEY"
+          python3 scripts/configure-production-openai-remote.py
 
       - name: Configure OpenAI on production via SSH fallback
         if: failure()
         env:
-          PAX_OPENAI_API_KEY: ${{ steps.key.outputs.key }}
+          INPUT_KEY: ${{ inputs.openai_api_key }}
+          SECRET_KEY: ${{ secrets.PAX_OPENAI_API_KEY }}
         run: |
           set -euo pipefail
+          KEY=""
+          if [ -n "${SECRET_KEY:-}" ]; then
+            KEY="$SECRET_KEY"
+          elif [ -n "${INPUT_KEY:-}" ]; then
+            KEY="$INPUT_KEY"
+          fi
+          if [ -z "$KEY" ]; then
+            echo "Missing OpenAI key source for SSH fallback" >&2
+            exit 1
+          fi
+          export PAX_OPENAI_API_KEY="$KEY"
           chmod +x scripts/configure-production-openai-key-ssh.sh
           ./scripts/configure-production-openai-key-ssh.sh

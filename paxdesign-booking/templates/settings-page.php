@@ -20,7 +20,7 @@ $live_notify_emails  = get_option(
     "info@paxdesign.at\nal.kahalaf.ahmad@gmail.com"
 );
 $live_whatsapp_phone = get_option('paxdesign_live_whatsapp_phone', '4368120543638');
-$live_whatsapp_key  = get_option('paxdesign_live_whatsapp_callmebot_key', '3515631');
+$live_whatsapp_key  = get_option('paxdesign_live_whatsapp_callmebot_key', '');
 $apns_key_id        = get_option('paxdesign_apns_key_id', '');
 $apns_team_id       = get_option('paxdesign_apns_team_id', '');
 $apns_bundle_id     = get_option('paxdesign_apns_bundle_id', 'at.paxdesign.livechat');
@@ -190,7 +190,7 @@ $chat_quick_links   = class_exists('PAXdesign_Chat_Quick_Links') ? PAXdesign_Cha
                      name="paxdesign_live_whatsapp_callmebot_key"
                      class="ps-input"
                      value="<?php echo esc_attr($live_whatsapp_key); ?>"
-                     placeholder="3515631"
+                     placeholder=""
                      autocomplete="new-password">
               <span class="ps-hint">Vorkonfiguriert und aktiv. Überschreibbar via Konstante <code>PAXDESIGN_WHATSAPP_CALLMEBOT_KEY</code> in wp-config.php.</span>
             </div>
