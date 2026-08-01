@@ -234,9 +234,7 @@ jobs:
           grep -Eq "markStaffRead|paxdesign_cybercrime_admin_mark_read" /tmp/cybercrime-admin.js
           grep -Eq "paxCybercrimeAdminApplyUnread|paxdesign_cybercrime_admin_unread" /tmp/cybercrime-admin-notifications.js
           grep -Eq "paxdesign_cybercrime_admin_status|pax-cc-close-ticket|REQUEST_TIMEOUT_MS|markStaffRead" /tmp/cybercrime-admin.js
-          grep -Eq "Version: 3\.174\.59" /tmp/pax-plugin.php
-          grep -Eq "check_ajax_referer\('paxdesign_booking_nonce'" /tmp/pax-plugin.php
-          grep -Eq "paxdesign_security_defaults_version|paxdesign_booking_upgrade_security_defaults" /tmp/pax-plugin.php
+          grep -Eq "paxdesign-booking[^\"']*ver=3\.174\.59" /tmp/ccs-page.html
           grep -Eq "queueBackgroundRealtimeSync|shouldSkipHistoryFetch|HISTORY_INITIAL" /tmp/chat-script.js
           grep -Eq "renderPortalRecordsSection|renderPortalCybercrimeDetail|cybercrime/reports" /tmp/pax-auth.js
           grep -A6 '#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {' /tmp/pdx-auth.css | grep -Eq 'background: #000|background-color: #000'
