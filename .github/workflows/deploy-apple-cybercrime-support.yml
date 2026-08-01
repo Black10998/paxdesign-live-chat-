@@ -26,6 +26,7 @@ on:
       - 'navein/inc/cybercrime-countries.php'
       - 'navein/inc/cybercrime-support-locale.php'
       - 'navein/style.css'
+      - 'navein/functions.php'
       - 'navein/screenshot.png'
       - 'navein/fonts/iconfont.css'
       - 'paxdesign-booking/includes/class-paxdesign-chat.php'
