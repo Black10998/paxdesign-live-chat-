@@ -243,8 +243,8 @@ jobs:
           grep -Eq 'id="navein-home-critical-css"' /tmp/home-page.html
           grep -Eq "iconfont-css|fonts/iconfont\.css" /tmp/home-page.html
           ! grep -Eq "paxdesign-booking-styles-css[^\"']*media='print' onload" /tmp/home-page.html
-          grep -Eq "Version: 1\.4\.39" /tmp/style.css
-          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.39|apple-cybercrime-support\.js\?ver=1\.4\.39" /tmp/ccs-page.html
+          grep -Eq "Version: 1\.4\.40" /tmp/style.css
+          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.40|apple-cybercrime-support\.js\?ver=1\.4\.40" /tmp/ccs-page.html
           grep -Eq "Official online service from our specialist team|Offizieller Online-Dienst unseres|خدمة إلكترونية رسمية من الفريق" /tmp/ccs-page.html
           grep -Eq "navein-cybercrime-mobile-layout-footer-fix" /tmp/ccs-page.html
           ! grep -Eq "PAXDesign is an official online service from the PAXDesign team|PAXDesign ist ein offizieller Online-Dienst des spezialisierten PAXDesign-Teams|PAXDesign خدمة إلكترونية رسمية تابعة لفريق PAXDesign" /tmp/ccs-page.html

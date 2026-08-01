@@ -1852,8 +1852,8 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
 
 /* Mobile: cancel sitewide inner-page title / main-wrapper offsets on this template. */
 @media (max-width: 768px) {
-  html body.page-template-template-apple-cybercrime-support.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap,
-  html body.page-template-template-apple-cybercrime-support-php.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap,
+  html body.page-template-template-apple-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap,
+  html body.page-template-template-apple-cybercrime-support-php #dtr-main-wrapper.pax-ccs-portal-wrap,
   html body.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap {
     padding: 0 !important;
     margin: 0 !important;

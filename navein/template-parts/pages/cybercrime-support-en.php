@@ -11,8 +11,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 return array(
 	'operator' => array(
-		'service' => 'PAXDesign · Cybercrime Support',
-		'disclaimer' => 'Official online service from our specialist team for cybercrime support and case follow-up — including extortion, compromised or stolen accounts, and other digital incidents.',
+		'service' => 'Cybercrime Support',
+		'disclaimer' => 'PAXDesign — Official online service from our specialist team for cybercrime support and case follow-up — including extortion, compromised or stolen accounts, and other digital incidents.',
 	),
 	'platforms_coverage' => array(
 		'label' => 'Platforms & online services — cybercrime coverage',

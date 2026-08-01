@@ -532,8 +532,8 @@ function navein_cybercrime_mobile_layout_fix() {
 	wp_add_inline_style(
 		'navein-cybercrime-mobile-layout-fix',
 		'@media (max-width:768px){' .
-		'html body.page-template-template-apple-cybercrime-support.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap,' .
-		'html body.page-template-template-apple-cybercrime-support-php.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap,' .
+		'html body.page-template-template-apple-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap,' .
+		'html body.page-template-template-apple-cybercrime-support-php #dtr-main-wrapper.pax-ccs-portal-wrap,' .
 		'html body.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap{' .
 		'padding:0!important;margin:0!important;}' .
 		'html body.page-template-template-apple-cybercrime-support #dtr-primary-section,' .
@@ -564,11 +564,16 @@ function navein_cybercrime_mobile_layout_footer_fix() {
 	}
 	echo '<style id="navein-cybercrime-mobile-layout-footer-fix">';
 	echo '@media (max-width:768px){';
-	echo 'html body.page-template-template-apple-cybercrime-support.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap,';
-	echo 'html body.page-template-template-apple-cybercrime-support-php.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap,';
+	echo 'html body.page-template-template-apple-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap,';
+	echo 'html body.page-template-template-apple-cybercrime-support-php #dtr-main-wrapper.pax-ccs-portal-wrap,';
 	echo 'html body.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap{';
 	echo 'padding:0!important;margin:0!important;width:100%!important;max-width:none!important;}';
+	echo 'html body.page-template-template-apple-cybercrime-support #dtr-primary-section,';
+	echo 'html body.page-template-template-apple-cybercrime-support-php #dtr-primary-section,';
+	echo 'html body.page-cybercrime-support #dtr-primary-section{';
+	echo 'padding:0!important;margin:0!important;}';
 	echo 'html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__servicebar,';
+	echo 'html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__servicebar,';
 	echo 'html body.page-cybercrime-support .pax-ccs-portal__servicebar{margin-top:0!important;}';
 	echo '}';
 	echo '</style>';

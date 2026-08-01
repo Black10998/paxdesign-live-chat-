@@ -12,12 +12,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 return array(
 	'operator' => array(
 		'service' => array(
-			'ar' => 'PAXDesign · Cybercrime Support',
-			'de' => 'PAXDesign · Cybercrime Support',
+			'ar' => 'Cybercrime Support',
+			'de' => 'Cybercrime Support',
 		),
 		'disclaimer' => array(
-			'ar' => 'خدمة إلكترونية رسمية من الفريق المتخصص في دعم ومتابعة حالات الجرائم الإلكترونية والابتزاز والحسابات المخترقة أو المسروقة وغيرها من الحالات الرقمية.',
-			'de' => 'Offizieller Online-Dienst unseres spezialisierten Teams für Unterstützung und Betreuung bei Cybercrime-Fällen — Erpressung, kompromittierte oder gestohlene Konten und weitere digitale Vorfälle.',
+			'ar' => 'PAXDesign — خدمة إلكترونية رسمية من الفريق المتخصص في دعم ومتابعة حالات الجرائم الإلكترونية والابتزاز والحسابات المخترقة أو المسروقة وغيرها من الحالات الرقمية.',
+			'de' => 'PAXDesign — Offizieller Online-Dienst unseres spezialisierten Teams für Unterstützung und Betreuung bei Cybercrime-Fällen — Erpressung, kompromittierte oder gestohlene Konten und weitere digitale Vorfälle.',
 		),
 	),
 	'platforms_coverage' => array(
