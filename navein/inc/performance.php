@@ -74,22 +74,31 @@ if ( ! function_exists( 'navein_home_lcp_image_url' ) ) {
 	}
 }
 
-if ( ! function_exists( 'navein_preload_lcp_image' ) ) {
+if ( ! function_exists( 'navein_preload_critical_assets' ) ) {
 	/**
-	 * Preload the homepage hero image to improve mobile LCP.
+	 * Preload LCP image and icon font to avoid visible placeholder boxes.
 	 */
-	function navein_preload_lcp_image() {
-		if ( ! is_front_page() ) {
+	function navein_preload_critical_assets() {
+		if ( is_admin() ) {
 			return;
 		}
-		$hero = navein_home_lcp_image_url();
+
+		if ( is_front_page() ) {
+			printf(
+				'<link rel="preload" as="image" href="%s" type="image/avif" fetchpriority="high">' . "\n",
+				esc_url( navein_home_lcp_image_url() )
+			);
+		}
+
+		$theme_version = wp_get_theme()->get( 'Version' );
+		$icon_font     = get_template_directory_uri() . '/fonts/icomoon.woff?ver=' . rawurlencode( (string) $theme_version );
 		printf(
-			'<link rel="preload" as="image" href="%s" type="image/avif" fetchpriority="high">' . "\n",
-			esc_url( $hero )
+			'<link rel="preload" as="font" href="%s" type="font/woff" crossorigin>' . "\n",
+			esc_url( $icon_font )
 		);
 	}
 }
-add_action( 'wp_head', 'navein_preload_lcp_image', 1 );
+add_action( 'wp_head', 'navein_preload_critical_assets', 1 );
 
 if ( ! function_exists( 'navein_home_critical_css' ) ) {
 	/**
@@ -124,8 +133,6 @@ if ( ! function_exists( 'navein_dequeue_unused_frontend_assets' ) ) {
 
 		if ( navein_is_apple_primary_route() ) {
 			wp_dequeue_script( 'slicknav' );
-			wp_dequeue_style( 'bootstrap' );
-			wp_dequeue_style( 'iconfont' );
 		}
 
 		if ( is_front_page() ) {
@@ -182,46 +189,6 @@ if ( ! function_exists( 'navein_defer_theme_scripts' ) ) {
 }
 add_action( 'wp_enqueue_scripts', 'navein_defer_theme_scripts', 10001 );
 
-if ( ! function_exists( 'navein_async_stylesheet_handles' ) ) {
-	/**
-	 * Stylesheets safe to load asynchronously (below-fold only — never layout-critical).
-	 *
-	 * @return string[]
-	 */
-	function navein_async_stylesheet_handles() {
-		return array(
-			'navein-apple-footer',
-			'navein-apple-hover',
-			'paxdesign-booking-styles',
-			'pax-auth-verified-badge',
-			'pax-auth-customer-ui',
-		);
-	}
-}
-
-if ( ! function_exists( 'navein_async_stylesheet_tag' ) ) {
-	/**
-	 * Load non-critical CSS without blocking first paint.
-	 */
-	function navein_async_stylesheet_tag( $html, $handle, $href, $media ) {
-		if ( is_admin() || ! in_array( $handle, navein_async_stylesheet_handles(), true ) ) {
-			return $html;
-		}
-		if ( false === strpos( $html, "rel='stylesheet'" ) && false === strpos( $html, 'rel="stylesheet"' ) ) {
-			return $html;
-		}
-
-		$async = str_replace(
-			array( "media='all'", 'media="all"' ),
-			array( "media='print' onload=\"this.media='all'\"", 'media="print" onload="this.media=\'all\'"' ),
-			$html
-		);
-
-		return $async . '<noscript>' . $html . '</noscript>';
-	}
-}
-add_filter( 'style_loader_tag', 'navein_async_stylesheet_tag', 10, 4 );
-
 if ( ! function_exists( 'navein_fonts_stylesheet_display_swap' ) ) {
 	/**
 	 * Append display=swap to any Google Fonts stylesheet link.
@@ -235,7 +202,7 @@ if ( ! function_exists( 'navein_fonts_stylesheet_display_swap' ) ) {
 		return str_replace( esc_url( $href ), esc_url( $swap_href ), $html );
 	}
 }
-add_filter( 'style_loader_tag', 'navein_fonts_stylesheet_display_swap', 11, 4 );
+add_filter( 'style_loader_tag', 'navein_fonts_stylesheet_display_swap', 10, 4 );
 
 if ( ! function_exists( 'navein_resource_hints' ) ) {
 	function navein_resource_hints( $urls, $relation_type ) {
