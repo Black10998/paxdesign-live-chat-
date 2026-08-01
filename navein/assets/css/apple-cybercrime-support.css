@@ -98,24 +98,33 @@ html body.page-cybercrime-support .pax-ccs-portal-wrap {
 
 .pax-ccs-portal__servicebar-inner {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  flex-wrap: nowrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 8px 20px;
+  gap: 12px 20px;
+}
+
+.pax-ccs-portal__service-disclaimer {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.78);
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  text-align: end;
+}
+
+.pax-ccs-portal[dir="rtl"] .pax-ccs-portal__service-disclaimer {
+  text-align: start;
 }
 
 .pax-ccs-portal__service-name {
   margin: 0;
   font: 600 13px/1.4 var(--ccs-font);
   letter-spacing: 0.02em;
-}
-
-.pax-ccs-portal__service-disclaimer {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.78);
-  max-width: 52ch;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .pax-ccs-portal__coverage {
@@ -869,14 +878,26 @@ html body.page-cybercrime-support .pax-ccs-portal-wrap {
     gap: 20px;
   }
 
+  .pax-ccs-portal__servicebar {
+    padding: 10px 0;
+  }
+
   .pax-ccs-portal__servicebar-inner {
     flex-direction: column;
     align-items: flex-start;
+    flex-wrap: wrap;
     gap: 6px;
+  }
+
+  .pax-ccs-portal__service-name {
+    white-space: normal;
   }
 
   .pax-ccs-portal__service-disclaimer {
     max-width: none;
+    font-size: 11px;
+    line-height: 1.4;
+    text-align: start;
   }
 
   .pax-ccs-portal__coverage-head {

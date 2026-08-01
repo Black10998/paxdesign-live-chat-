@@ -243,9 +243,10 @@ jobs:
           grep -Eq 'id="navein-home-critical-css"' /tmp/home-page.html
           grep -Eq "iconfont-css|fonts/iconfont\.css" /tmp/home-page.html
           ! grep -Eq "paxdesign-booking-styles-css[^\"']*media='print' onload" /tmp/home-page.html
-          grep -Eq "Version: 1\.4\.37" /tmp/style.css
-          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.37|apple-cybercrime-support\.js\?ver=1\.4\.37" /tmp/ccs-page.html
-          grep -Eq "independent online service|unabhängiger Online-Dienst|خدمة إلكترونية مستقلة" /tmp/ccs-page.html
+          grep -Eq "Version: 1\.4\.38" /tmp/style.css
+          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.38|apple-cybercrime-support\.js\?ver=1\.4\.38" /tmp/ccs-page.html
+          grep -Eq "official online service|offizieller Online-Dienst|خدمة إلكترونية رسمية" /tmp/ccs-page.html
+          ! grep -Eq "government authority|Behörde betrieben|جهة حكومية" /tmp/ccs-page.html
           grep -Eq "navein-cybercrime-mobile-layout-fix" /tmp/ccs-page.html
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-country-search|pax-ccs-phone-code" /tmp/ccs-page.html
           grep -Eq "full-bleed Apple-style|--ccs-gutter|pax-ccs-portal__coverage-track" /tmp/apple-ccs.css
