@@ -1,0 +1,38 @@
+name: Fix Cookie Consent Snippet
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fetch-and-fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch snippet from production
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          scp "${SSH_OPTS[@]}" scripts/fetch-cookie-consent-snippet.sh "${WP_SSH_USER}@${WP_SSH_HOST}:/tmp/fetch-cookie-consent-snippet.sh"
+          ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" "chmod +x /tmp/fetch-cookie-consent-snippet.sh && WP_PATH=$(printf '%q' "$WP_PATH") /tmp/fetch-cookie-consent-snippet.sh"
+
+          SNIPPET_ID="$(ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" "cd $(printf '%q' "$WP_PATH") && wp db query \"SELECT id FROM wp_snippets WHERE code LIKE '%PAXConsent%' LIMIT 1;\" --skip-column-names 2>/dev/null | tr -d '[:space:]'")"
+          echo "SNIPPET_ID=$SNIPPET_ID" >> "$GITHUB_ENV"
+          scp "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}:/tmp/cookie-consent-snippet-${SNIPPET_ID}.php" "./cookie-consent-snippet.php"
+          echo "=== Lines 510-535 ==="
+          sed -n '510,535p' cookie-consent-snippet.php
