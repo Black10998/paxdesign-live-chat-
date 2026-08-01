@@ -5,19 +5,43 @@ set -euo pipefail
 WP_PATH="${WP_PATH:?WP_PATH required}"
 cd "$WP_PATH"
 
-SNIPPET_ID="$(wp db query "SELECT id FROM wp_snippets WHERE code LIKE '%PAXConsent%' OR name LIKE '%Cookie%Consent%' ORDER BY id LIMIT 1;" --skip-column-names 2>/dev/null | tr -d '[:space:]' || true)"
+PREFIX="$(wp db prefix --skip-plugins --skip-themes 2>/dev/null || echo 'wp_')"
+SNIPPETS_TABLE="${PREFIX}snippets"
+
+echo "DB prefix: ${PREFIX}"
+echo "Snippets table: ${SNIPPETS_TABLE}"
+wp db query "SHOW TABLES LIKE '%snippets%';" 2>/dev/null || true
+
+SNIPPET_ID=""
+if wp db query "SELECT 1 FROM ${SNIPPETS_TABLE} LIMIT 1;" --skip-column-names >/dev/null 2>&1; then
+  SNIPPET_ID="$(wp db query "SELECT id FROM ${SNIPPETS_TABLE} WHERE code LIKE '%PAXConsent%' OR name LIKE '%Cookie%Consent%' ORDER BY id LIMIT 1;" --skip-column-names 2>/dev/null | tr -d '[:space:]' || true)"
+fi
 
 if [[ -z "$SNIPPET_ID" ]]; then
-  echo "Cookie Consent snippet not found in wp_snippets" >&2
+  echo "Searching wp_posts for Code Snippets legacy storage..."
+  SNIPPET_ID="$(wp db query "SELECT ID FROM ${PREFIX}posts WHERE post_type = 'snippet' AND (post_title LIKE '%Cookie%Consent%' OR post_content LIKE '%PAXConsent%') ORDER BY ID LIMIT 1;" --skip-column-names 2>/dev/null | tr -d '[:space:]' || true)"
+  STORAGE="post"
+fi
+
+if [[ -z "$SNIPPET_ID" ]]; then
+  echo "Listing candidate snippet rows..."
+  wp db query "SELECT id, name, scope, active FROM ${SNIPPETS_TABLE} WHERE code LIKE '%PAXConsent%' OR code LIKE '%pax-cookie-consent%' OR name LIKE '%Cookie%';" 2>/dev/null || true
+  wp db query "SELECT ID, post_title, post_status FROM ${PREFIX}posts WHERE post_type = 'snippet' AND (post_title LIKE '%Cookie%' OR post_content LIKE '%PAXConsent%');" 2>/dev/null || true
+  echo "Cookie Consent snippet not found" >&2
   exit 1
 fi
 
+STORAGE="${STORAGE:-table}"
 SRC="/tmp/cookie-consent-snippet-${SNIPPET_ID}.php"
 FIXED="/tmp/cookie-consent-snippet-${SNIPPET_ID}-fixed.php"
 
-wp db query "SELECT code FROM wp_snippets WHERE id = ${SNIPPET_ID};" --skip-column-names > "$SRC"
+if [[ "$STORAGE" == "post" ]]; then
+  wp db query "SELECT post_content FROM ${PREFIX}posts WHERE ID = ${SNIPPET_ID};" --skip-column-names > "$SRC"
+else
+  wp db query "SELECT code FROM ${SNIPPETS_TABLE} WHERE id = ${SNIPPET_ID};" --skip-column-names > "$SRC"
+fi
 
-echo "Snippet id: $SNIPPET_ID"
+echo "Snippet id: $SNIPPET_ID (storage: $STORAGE)"
 echo "Line count: $(wc -l < "$SRC")"
 echo "=== Lines 510-535 (before fix) ==="
 sed -n '510,535p' "$SRC"
@@ -88,7 +112,6 @@ foreach ($replacements as $search => $replace) {
     $code = str_replace($search, $replace, $code);
 }
 
-// Wrap common $_GET / $_COOKIE reads when passed to esc_* helpers.
 $code = preg_replace(
     '/esc_(html|attr|url)\(\s*\$_GET\[(\'[^\']+\'|"[^"]+")\]\s*\)/',
     'esc_$1( pax_consent_scalar( $_GET[$2] ) )',
@@ -99,15 +122,11 @@ $code = preg_replace(
     'esc_$1( pax_consent_scalar( $_COOKIE[$2] ) )',
     $code
 );
-
-// Fix concatenation patterns: . get_query_var('page') .
 $code = preg_replace(
     '/\.\s*get_query_var\(\s*([\'"])(page|pagename|name)\1\s*\)/',
     '. pax_consent_scalar(get_query_var($1$2$1))',
     $code
 );
-
-// Fix standalone assignments used as strings.
 $code = preg_replace(
     '/(\$[a-zA-Z_][\w]*)\s*=\s*get_query_var\(\s*([\'"])(page|pagename|name)\2\s*\)\s*;/',
     '$1 = pax_consent_scalar(get_query_var($2$3$2));',
@@ -140,10 +159,17 @@ php <<PHP
 <?php
 require '$WP_PATH/wp-load.php';
 global \$wpdb;
-\$table = \$wpdb->prefix . 'snippets';
 \$id = (int) '$SNIPPET_ID';
 \$code = file_get_contents('$FIXED');
-\$updated = \$wpdb->update(\$table, ['code' => \$code], ['id' => \$id], ['%s'], ['%d']);
+\$storage = '$STORAGE';
+\$table = \$wpdb->prefix . 'snippets';
+
+if (\$storage === 'post') {
+    \$updated = \$wpdb->update(\$wpdb->posts, ['post_content' => \$code], ['ID' => \$id], ['%s'], ['%d']);
+} else {
+    \$updated = \$wpdb->update(\$table, ['code' => \$code], ['id' => \$id], ['%s'], ['%d']);
+}
+
 if (\$updated === false) {
     fwrite(STDERR, "DB update failed: " . \$wpdb->last_error . PHP_EOL);
     exit(1);
