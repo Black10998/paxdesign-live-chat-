@@ -1,0 +1,85 @@
+name: Deploy Cookie Consent Snippet Fix
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/triggers/fix-cookie-consent-snippet'
+      - '.github/workflows/deploy-cookie-consent-snippet-fix.yml'
+      - 'scripts/deploy-cookie-consent-snippet-fix.sh'
+      - 'scripts/fetch-cookie-consent-snippet.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy cookie consent snippet fix
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          retry_ssh() {
+            local attempt
+            for attempt in 1 2 3 4; do
+              if "$@"; then
+                return 0
+              fi
+              echo "SSH attempt ${attempt} failed; retrying in $((attempt * 4))s..." >&2
+              sleep $((attempt * 4))
+            done
+            return 1
+          }
+
+          retry_ssh scp "${SSH_OPTS[@]}" \
+            scripts/deploy-cookie-consent-snippet-fix.sh \
+            scripts/fetch-cookie-consent-snippet.sh \
+            "${REMOTE}:/tmp/"
+
+          retry_ssh ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "chmod +x /tmp/deploy-cookie-consent-snippet-fix.sh /tmp/fetch-cookie-consent-snippet.sh && \
+             WP_PATH=$(printf '%q' "$WP_PATH") /tmp/deploy-cookie-consent-snippet-fix.sh"
+
+      - name: Verify live cybercrime page and cookie banner
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          URL="https://paxdesign.at/cybercrime-support?page&pagename=cybercrime-support&n=${stamp}"
+          CODE=$(curl -sSL -o /tmp/cc-verify.html -w '%{http_code}' "$URL")
+          echo "HTTP $CODE for $URL"
+          test "$CODE" = "200"
+          ! grep -qiE 'array to string conversion|fatal error|parse error|warning:' /tmp/cc-verify.html
+          grep -q 'id="pax-cookie-consent"' /tmp/cc-verify.html
+          grep -q 'PAXConsentConfig' /tmp/cc-verify.html
+          grep -q 'paxdesign-cookie-consent-inline-css' /tmp/cc-verify.html
+          echo "Cookie consent banner verification passed."
