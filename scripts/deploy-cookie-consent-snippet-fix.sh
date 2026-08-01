@@ -54,15 +54,27 @@ fi
 php <<PHP
 <?php
 require '$WP_PATH/wp-load.php';
+global \$wpdb;
 \$id = (int) '$SNIPPET_ID';
 \$code = file_get_contents('$FIXED');
-\$updated = wp_update_post(['ID' => \$id, 'post_content' => \$code], true);
-if (\$updated instanceof WP_Error) {
-    fwrite(STDERR, 'Update failed: ' . \$updated->get_error_message() . PHP_EOL);
+if (\$code === false || \$code === '') {
+    fwrite(STDERR, "Fixed snippet file is empty\n");
+    exit(1);
+}
+\$updated = \$wpdb->update(
+    \$wpdb->posts,
+    ['post_content' => \$code],
+    ['ID' => \$id],
+    ['%s'],
+    ['%d']
+);
+if (\$updated === false) {
+    fwrite(STDERR, 'DB update failed: ' . \$wpdb->last_error . PHP_EOL);
     exit(1);
 }
 delete_post_meta(\$id, '_wpcode_last_error');
-echo 'WPCode snippet updated on post ' . \$id . PHP_EOL;
+clean_post_cache(\$id);
+echo 'WPCode snippet updated on post ' . \$id . ' (rows: ' . (int) \$updated . ')' . PHP_EOL;
 PHP
 
 wp cache flush >/dev/null 2>&1 || true
