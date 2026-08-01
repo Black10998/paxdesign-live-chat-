@@ -227,8 +227,11 @@ jobs:
           test "$WIDGET_LOADER" = "200"
           test "$SCREENSHOT" = "200"
           file /tmp/screenshot.png | grep -Eq 'PNG image data'
-          grep -Eq "Version: 1\.4\.33" /tmp/style.css
-          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.33|apple-cybercrime-support\.js\?ver=1\.4\.33" /tmp/ccs-page.html
+          HOME=$(curl -sS -o /tmp/home-page.html -w '%{http_code}' "https://paxdesign.at/?n=${stamp}")
+          test "$HOME" = "200"
+          grep -Eq 'rel="preload" as="image"[^>]+code-2558220_1280\.avif' /tmp/home-page.html
+          grep -Eq "Version: 1\.4\.34" /tmp/style.css
+          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.34|apple-cybercrime-support\.js\?ver=1\.4\.34" /tmp/ccs-page.html
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-country-search|pax-ccs-phone-code" /tmp/ccs-page.html
           grep -Eq "full-bleed Apple-style|--ccs-gutter|pax-ccs-portal__coverage-track" /tmp/apple-ccs.css
           grep -Eq "initCountryPicker|validateAllSteps|pax-ccs-country-search" /tmp/apple-ccs.js

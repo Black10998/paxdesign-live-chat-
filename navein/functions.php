@@ -869,7 +869,7 @@ if ( ! function_exists( 'navein_fallback_fonts_url' ) ) {
         'family' => urlencode( implode( '|', $font_families ) ),
         );
         $fonts_url = add_query_arg( $query_args, 'https://fonts.googleapis.com/css' );
-        return esc_url_raw( $fonts_url );
+        return esc_url_raw( apply_filters( 'navein_fallback_fonts_url', $fonts_url ) );
     }
 }
 // redux fallback
