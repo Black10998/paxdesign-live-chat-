@@ -91,6 +91,25 @@ if ( ! function_exists( 'navein_preload_lcp_image' ) ) {
 }
 add_action( 'wp_head', 'navein_preload_lcp_image', 1 );
 
+if ( ! function_exists( 'navein_home_critical_css' ) ) {
+	/**
+	 * Reserve above-the-fold space before full stylesheets parse (prevents CLS).
+	 */
+	function navein_home_critical_css() {
+		if ( ! is_front_page() ) {
+			return;
+		}
+		echo "<style id=\"navein-home-critical-css\">\n";
+		echo '.pax-home .pax-sw-ribbon{min-height:52px;padding:18px 0;overflow:hidden}' . "\n";
+		echo '.pax-home-hero{position:relative;min-height:min(58vh,520px);display:flex;align-items:flex-end;overflow:hidden;color:#fff;background:#111}' . "\n";
+		echo '.pax-home-hero__media{position:absolute;inset:0}' . "\n";
+		echo '.pax-home-hero__media img{width:100%;height:100%;object-fit:cover;display:block}' . "\n";
+		echo '@media (min-width:993px){.pax-home-hero{min-height:min(92vh,920px)}}' . "\n";
+		echo "</style>\n";
+	}
+}
+add_action( 'wp_head', 'navein_home_critical_css', 2 );
+
 if ( ! function_exists( 'navein_dequeue_unused_frontend_assets' ) ) {
 	function navein_dequeue_unused_frontend_assets() {
 		if ( is_admin() ) {
@@ -105,6 +124,8 @@ if ( ! function_exists( 'navein_dequeue_unused_frontend_assets' ) ) {
 
 		if ( navein_is_apple_primary_route() ) {
 			wp_dequeue_script( 'slicknav' );
+			wp_dequeue_style( 'bootstrap' );
+			wp_dequeue_style( 'iconfont' );
 		}
 
 		if ( is_front_page() ) {
@@ -163,29 +184,17 @@ add_action( 'wp_enqueue_scripts', 'navein_defer_theme_scripts', 10001 );
 
 if ( ! function_exists( 'navein_async_stylesheet_handles' ) ) {
 	/**
-	 * Stylesheets safe to load asynchronously (below-fold / non-LCP).
+	 * Stylesheets safe to load asynchronously (below-fold only — never layout-critical).
 	 *
 	 * @return string[]
 	 */
 	function navein_async_stylesheet_handles() {
 		return array(
-			'bootstrap',
-			'iconfont',
-			'wp-block-library',
-			'wp-block-library-theme',
-			'classic-theme-styles',
-			'contact-form-7',
-			'font-awesome-5-all',
-			'font-awesome',
 			'navein-apple-footer',
 			'navein-apple-hover',
-			'navein-apple-mobile-nav',
-			'navein-apple-inner-page-title',
-			'navein-responsive',
-			'navein-inline-style',
-			'navein-fallback-font',
-			'redux-fallback',
 			'paxdesign-booking-styles',
+			'pax-auth-verified-badge',
+			'pax-auth-customer-ui',
 		);
 	}
 }
@@ -212,6 +221,21 @@ if ( ! function_exists( 'navein_async_stylesheet_tag' ) ) {
 	}
 }
 add_filter( 'style_loader_tag', 'navein_async_stylesheet_tag', 10, 4 );
+
+if ( ! function_exists( 'navein_fonts_stylesheet_display_swap' ) ) {
+	/**
+	 * Append display=swap to any Google Fonts stylesheet link.
+	 */
+	function navein_fonts_stylesheet_display_swap( $html, $handle, $href, $media ) {
+		unset( $handle, $media );
+		if ( false === strpos( $href, 'fonts.googleapis.com' ) || false !== strpos( $href, 'display=' ) ) {
+			return $html;
+		}
+		$swap_href = add_query_arg( 'display', 'swap', $href );
+		return str_replace( esc_url( $href ), esc_url( $swap_href ), $html );
+	}
+}
+add_filter( 'style_loader_tag', 'navein_fonts_stylesheet_display_swap', 11, 4 );
 
 if ( ! function_exists( 'navein_resource_hints' ) ) {
 	function navein_resource_hints( $urls, $relation_type ) {

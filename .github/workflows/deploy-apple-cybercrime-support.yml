@@ -19,12 +19,14 @@ on:
       - 'navein/template-parts/page-title/page-header-page.php'
       - 'navein/assets/css/apple-app-page.css'
       - 'navein/assets/css/apple-cybercrime-support.css'
+      - 'navein/assets/css/apple-homepage.css'
       - 'navein/assets/js/apple-app-page.js'
       - 'navein/assets/js/apple-cybercrime-support.js'
       - 'navein/inc/cybercrime-countries.php'
       - 'navein/inc/cybercrime-support-locale.php'
       - 'navein/style.css'
       - 'navein/screenshot.png'
+      - 'navein/fonts/iconfont.css'
       - 'paxdesign-booking/includes/class-paxdesign-chat.php'
       - 'paxdesign-booking/includes/class-paxdesign-chat-knowledge.php'
       - 'paxdesign-booking/assets/js/chat-script.js'
@@ -102,6 +104,7 @@ jobs:
               $(printf '%q' "$THEME/assets/css") \
               $(printf '%q' "$THEME/assets/js") \
               $(printf '%q' "$THEME/inc") \
+              $(printf '%q' "$THEME/fonts") \
               $(printf '%q' "$THEME/template-parts/pages") \
               $(printf '%q' "$THEME/template-parts/page-title") \
               $(printf '%q' "$THEME/scripts") \
@@ -113,6 +116,7 @@ jobs:
 
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/assets/css/apple-cybercrime-support.css \
+            navein/assets/css/apple-homepage.css \
             "${REMOTE}:${THEME}/assets/css/"
 
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
@@ -144,6 +148,10 @@ jobs:
             navein/style.css \
             navein/screenshot.png \
             "${REMOTE}:${THEME}/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/fonts/iconfont.css \
+            "${REMOTE}:${THEME}/fonts/"
 
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             scripts/assign-apple-cybercrime-support-template.sh \
@@ -230,8 +238,9 @@ jobs:
           HOME=$(curl -sS -o /tmp/home-page.html -w '%{http_code}' "https://paxdesign.at/?n=${stamp}")
           test "$HOME" = "200"
           grep -Eq 'rel="preload" as="image"[^>]+code-2558220_1280\.avif' /tmp/home-page.html
-          grep -Eq "Version: 1\.4\.34" /tmp/style.css
-          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.34|apple-cybercrime-support\.js\?ver=1\.4\.34" /tmp/ccs-page.html
+          grep -Eq 'id="navein-home-critical-css"' /tmp/home-page.html
+          grep -Eq "Version: 1\.4\.35" /tmp/style.css
+          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.35|apple-cybercrime-support\.js\?ver=1\.4\.35" /tmp/ccs-page.html
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-country-search|pax-ccs-phone-code" /tmp/ccs-page.html
           grep -Eq "full-bleed Apple-style|--ccs-gutter|pax-ccs-portal__coverage-track" /tmp/apple-ccs.css
           grep -Eq "initCountryPicker|validateAllSteps|pax-ccs-country-search" /tmp/apple-ccs.js
