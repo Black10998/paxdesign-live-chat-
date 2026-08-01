@@ -24,6 +24,7 @@ on:
       - 'navein/inc/cybercrime-countries.php'
       - 'navein/inc/cybercrime-support-locale.php'
       - 'navein/style.css'
+      - 'navein/screenshot.png'
       - 'paxdesign-booking/includes/class-paxdesign-chat.php'
       - 'paxdesign-booking/includes/class-paxdesign-chat-knowledge.php'
       - 'paxdesign-booking/assets/js/chat-script.js'
@@ -141,6 +142,7 @@ jobs:
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             navein/functions.php \
             navein/style.css \
+            navein/screenshot.png \
             "${REMOTE}:${THEME}/"
 
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
@@ -211,7 +213,8 @@ jobs:
           CHAT=$(curl -sS -o /tmp/chat-script.js -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/chat-script.js?n=${stamp}")
           AUTH_JS=$(curl -sS -o /tmp/pax-auth.js -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/customer-auth/js/pax-auth.js?n=${stamp}")
           WIDGET_LOADER=$(curl -sS -o /tmp/widget-loader.js -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/js/widget-loader.js?n=${stamp}")
-          echo "PAGE $PAGE | THEME_CSS $THEME_CSS | CCS_CSS $CCS_CSS | CCS_JS $CCS_JS | ADMIN_JS $ADMIN_JS | ADMIN_NOTIFY_JS $ADMIN_NOTIFY_JS | PLUGIN $PLUGIN | BOOKING_JS $BOOKING_JS | AUTH_CSS $AUTH_CSS | CHAT $CHAT | AUTH_JS $AUTH_JS | WIDGET_LOADER $WIDGET_LOADER"
+          SCREENSHOT=$(curl -sS -o /tmp/screenshot.png -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/screenshot.png?n=${stamp}")
+          echo "PAGE $PAGE | THEME_CSS $THEME_CSS | CCS_CSS $CCS_CSS | CCS_JS $CCS_JS | ADMIN_JS $ADMIN_JS | ADMIN_NOTIFY_JS $ADMIN_NOTIFY_JS | PLUGIN $PLUGIN | BOOKING_JS $BOOKING_JS | AUTH_CSS $AUTH_CSS | CHAT $CHAT | AUTH_JS $AUTH_JS | WIDGET_LOADER $WIDGET_LOADER | SCREENSHOT $SCREENSHOT"
           test "$PAGE" = "200"
           test "$THEME_CSS" = "200"
           test "$CCS_CSS" = "200"
@@ -222,8 +225,10 @@ jobs:
           test "$CHAT" = "200"
           test "$AUTH_JS" = "200"
           test "$WIDGET_LOADER" = "200"
-          grep -Eq "Version: 1\.4\.32" /tmp/style.css
-          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.32|apple-cybercrime-support\.js\?ver=1\.4\.32" /tmp/ccs-page.html
+          test "$SCREENSHOT" = "200"
+          file /tmp/screenshot.png | grep -Eq 'PNG image data'
+          grep -Eq "Version: 1\.4\.33" /tmp/style.css
+          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.33|apple-cybercrime-support\.js\?ver=1\.4\.33" /tmp/ccs-page.html
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-country-search|pax-ccs-phone-code" /tmp/ccs-page.html
           grep -Eq "full-bleed Apple-style|--ccs-gutter|pax-ccs-portal__coverage-track" /tmp/apple-ccs.css
           grep -Eq "initCountryPicker|validateAllSteps|pax-ccs-country-search" /tmp/apple-ccs.js
