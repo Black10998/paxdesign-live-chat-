@@ -69,8 +69,7 @@ jobs:
             "${REMOTE}:/tmp/"
 
           retry_ssh ssh "${SSH_OPTS[@]}" "$REMOTE" \
-            "chmod +x /tmp/deploy-cookie-consent-snippet-fix.sh /tmp/fetch-cookie-consent-snippet.sh && \
-             WP_PATH=$(printf '%q' "$WP_PATH") /tmp/deploy-cookie-consent-snippet-fix.sh"
+            "WP_PATH=$(printf '%q' "$WP_PATH") bash /tmp/deploy-cookie-consent-snippet-fix.sh"
 
       - name: Verify live cybercrime page and cookie banner
         run: |
