@@ -880,6 +880,7 @@ html body.page-cybercrime-support .pax-ccs-portal-wrap {
 
   .pax-ccs-portal__servicebar {
     padding: 10px 0;
+    margin-top: 0;
   }
 
   .pax-ccs-portal__servicebar-inner {
@@ -1851,11 +1852,21 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
 
 /* Mobile: cancel sitewide inner-page title / main-wrapper offsets on this template. */
 @media (max-width: 768px) {
-  html body.page-template-template-apple-cybercrime-support #dtr-main-wrapper,
-  html body.page-template-template-apple-cybercrime-support-php #dtr-main-wrapper,
-  html body.page-cybercrime-support #dtr-main-wrapper {
-    padding-top: 0 !important;
+  html body.page-template-template-apple-cybercrime-support.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap,
+  html body.page-template-template-apple-cybercrime-support-php.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap,
+  html body.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  html body.page-template-template-apple-cybercrime-support #dtr-primary-section,
+  html body.page-template-template-apple-cybercrime-support-php #dtr-primary-section,
+  html body.page-cybercrime-support #dtr-primary-section,
+  html body.page-template-template-apple-cybercrime-support .pax-ccs-portal,
+  html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal,
+  html body.page-cybercrime-support .pax-ccs-portal {
     margin-top: 0 !important;
+    padding-top: 0 !important;
   }
 
   html body.page-template-template-apple-cybercrime-support .dtr-page-title__section,

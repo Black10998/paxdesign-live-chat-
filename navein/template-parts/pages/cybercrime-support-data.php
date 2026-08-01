@@ -16,8 +16,8 @@ return array(
 			'de' => 'PAXDesign · Cybercrime Support',
 		),
 		'disclaimer' => array(
-			'ar' => 'PAXDesign خدمة إلكترونية رسمية تابعة لفريق PAXDesign المتخصص في دعم ومتابعة حالات الجرائم الإلكترونية والابتزاز والحسابات المخترقة أو المسروقة وغيرها من الحالات الرقمية.',
-			'de' => 'PAXDesign ist ein offizieller Online-Dienst des spezialisierten PAXDesign-Teams für Unterstützung und Betreuung bei Cybercrime-Fällen — Erpressung, kompromittierte oder gestohlene Konten und weitere digitale Vorfälle.',
+			'ar' => 'خدمة إلكترونية رسمية من الفريق المتخصص في دعم ومتابعة حالات الجرائم الإلكترونية والابتزاز والحسابات المخترقة أو المسروقة وغيرها من الحالات الرقمية.',
+			'de' => 'Offizieller Online-Dienst unseres spezialisierten Teams für Unterstützung und Betreuung bei Cybercrime-Fällen — Erpressung, kompromittierte oder gestohlene Konten und weitere digitale Vorfälle.',
 		),
 	),
 	'platforms_coverage' => array(
