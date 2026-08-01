@@ -1,71 +1,52 @@
 #!/usr/bin/env bash
-# Fix "Array to string conversion" in Cookie Consent Banner snippet.
+# Fix "Array to string conversion" in Cookie Consent Banner (WPCode snippet).
 set -euo pipefail
 
 WP_PATH="${WP_PATH:?WP_PATH required}"
 cd "$WP_PATH"
 
 PREFIX="$(wp db prefix --skip-plugins --skip-themes 2>/dev/null || echo 'wp_')"
-SNIPPETS_TABLE="${PREFIX}snippets"
 
 echo "DB prefix: ${PREFIX}"
-echo "Snippets table: ${SNIPPETS_TABLE}"
-wp db query "SHOW TABLES LIKE '%snippet%';" 2>/dev/null || true
 
 SNIPPET_ID=""
 STORAGE=""
 SRC="/tmp/cookie-consent-snippet.php"
 FIXED="/tmp/cookie-consent-snippet-fixed.php"
+META_KEY=""
 
-if wp db query "SELECT 1 FROM ${SNIPPETS_TABLE} LIMIT 1;" --skip-column-names >/dev/null 2>&1; then
-  SNIPPET_ID="$(wp db query "SELECT id FROM ${SNIPPETS_TABLE} WHERE code LIKE '%PAXConsent%' OR name LIKE '%Cookie%Consent%' ORDER BY id LIMIT 1;" --skip-column-names 2>/dev/null | tr -d '[:space:]' || true)"
-  STORAGE="table"
+# WPCode stores snippets as the wpcode post type.
+SNIPPET_ID="$(wp db query "SELECT ID FROM ${PREFIX}posts WHERE post_type = 'wpcode' AND (post_title LIKE '%Cookie%Consent%' OR post_content LIKE '%PAXConsent%') ORDER BY ID DESC LIMIT 1;" --skip-column-names 2>/dev/null | tr -d '[:space:]' || true)"
+
+if [[ -z "$SNIPPET_ID" ]]; then
+  SNIPPET_ID="$(wp db query "SELECT post_id FROM ${PREFIX}postmeta WHERE meta_key = '_wpcode_last_error' AND meta_value LIKE '%Array to string%' ORDER BY post_id DESC LIMIT 1;" --skip-column-names 2>/dev/null | tr -d '[:space:]' || true)"
 fi
 
 if [[ -z "$SNIPPET_ID" ]]; then
-  SNIPPET_ID="$(wp db query "SELECT ID FROM ${PREFIX}posts WHERE post_type = 'snippet' AND (post_title LIKE '%Cookie%Consent%' OR post_content LIKE '%PAXConsent%') ORDER BY ID LIMIT 1;" --skip-column-names 2>/dev/null | tr -d '[:space:]' || true)"
-  [[ -n "$SNIPPET_ID" ]] && STORAGE="post"
-fi
-
-if [[ -z "$SNIPPET_ID" ]]; then
-  echo "Searching database content for PAXConsent..."
-  wp db query "SELECT option_name FROM ${PREFIX}options WHERE option_value LIKE '%PAXConsent%' LIMIT 10;" 2>/dev/null || true
-  wp db query "SELECT post_id, meta_key FROM ${PREFIX}postmeta WHERE meta_value LIKE '%PAXConsent%' LIMIT 10;" 2>/dev/null || true
-fi
-
-FILE_PATH=""
-if [[ -z "$SNIPPET_ID" ]]; then
-  echo "Searching filesystem for Cookie Consent Banner source..."
-  while IFS= read -r candidate; do
-    if grep -q "PAXConsent" "$candidate" 2>/dev/null; then
-      FILE_PATH="$candidate"
-      STORAGE="file"
-      break
-    fi
-  done < <(find "$WP_PATH/wp-content" -type f \( -name '*.php' -o -name '*.inc' \) 2>/dev/null | head -5000)
-fi
-
-if [[ -z "$SNIPPET_ID" && -z "$FILE_PATH" ]]; then
-  echo "Broad grep for PAXConsent under wp-content..."
-  grep -Rsl "PAXConsent" "$WP_PATH/wp-content" --include='*.php' 2>/dev/null | head -20 || true
-  FILE_PATH="$(grep -Rsl "PAXConsent" "$WP_PATH/wp-content" --include='*.php' 2>/dev/null | head -1 || true)"
-  [[ -n "$FILE_PATH" ]] && STORAGE="file"
-fi
-
-if [[ -z "$SNIPPET_ID" && -z "$FILE_PATH" ]]; then
-  echo "Cookie Consent Banner source not found" >&2
+  echo "Listing WPCode candidates..."
+  wp db query "SELECT ID, post_title, post_status FROM ${PREFIX}posts WHERE post_type = 'wpcode' AND (post_title LIKE '%Cookie%' OR post_content LIKE '%PAXConsent%' OR post_content LIKE '%pax-cookie-consent%');" 2>/dev/null || true
+  echo "Cookie Consent Banner WPCode snippet not found" >&2
   exit 1
 fi
 
-if [[ "$STORAGE" == "file" ]]; then
-  cp "$FILE_PATH" "$SRC"
-  echo "Snippet file: $FILE_PATH"
-elif [[ "$STORAGE" == "post" ]]; then
-  wp db query "SELECT post_content FROM ${PREFIX}posts WHERE ID = ${SNIPPET_ID};" --skip-column-names > "$SRC"
-  echo "Snippet post ID: $SNIPPET_ID"
-else
-  wp db query "SELECT code FROM ${SNIPPETS_TABLE} WHERE id = ${SNIPPET_ID};" --skip-column-names > "$SRC"
-  echo "Snippet table ID: $SNIPPET_ID"
+echo "WPCode snippet post ID: $SNIPPET_ID"
+wp post get "$SNIPPET_ID" --field=post_title 2>/dev/null || true
+
+# WPCode keeps executable code in post meta when present.
+for key in _wpcode_code code _wpcode_snippet_code snippet_code; do
+  if wp post meta get "$SNIPPET_ID" "$key" >/dev/null 2>&1; then
+    META_KEY="$key"
+    wp post meta get "$SNIPPET_ID" "$key" > "$SRC"
+    STORAGE="wpcode_meta"
+    echo "Loaded code from post meta: $META_KEY"
+    break
+  fi
+done
+
+if [[ -z "$STORAGE" ]]; then
+  wp post get "$SNIPPET_ID" --field=post_content > "$SRC"
+  STORAGE="wpcode_post"
+  echo "Loaded code from post_content"
 fi
 
 echo "Line count: $(wc -l < "$SRC")"
@@ -178,30 +159,28 @@ sed -n '510,535p' "$FIXED"
 
 php -l "$FIXED" >/dev/null
 
-if [[ "$STORAGE" == "file" ]]; then
-  install -m 644 "$FIXED" "$FILE_PATH"
-  echo "Updated file: $FILE_PATH"
-else
-  php <<PHP
+php <<PHP
 <?php
 require '$WP_PATH/wp-load.php';
-global \$wpdb;
-\$id = (int) '${SNIPPET_ID:-0}';
+\$id = (int) '$SNIPPET_ID';
 \$code = file_get_contents('$FIXED');
 \$storage = '$STORAGE';
-if (\$storage === 'post') {
-    \$updated = \$wpdb->update(\$wpdb->posts, ['post_content' => \$code], ['ID' => \$id], ['%s'], ['%d']);
+\$meta_key = '$META_KEY';
+
+if (\$storage === 'wpcode_meta' && \$meta_key !== '') {
+    \$updated = update_post_meta(\$id, \$meta_key, \$code);
 } else {
-    \$table = \$wpdb->prefix . 'snippets';
-    \$updated = \$wpdb->update(\$table, ['code' => \$code], ['id' => \$id], ['%s'], ['%d']);
+    \$updated = wp_update_post(['ID' => \$id, 'post_content' => \$code], true);
 }
-if (\$updated === false) {
-    fwrite(STDERR, "DB update failed: " . \$wpdb->last_error . PHP_EOL);
+
+if (\$updated instanceof WP_Error) {
+    fwrite(STDERR, 'Update failed: ' . \$updated->get_error_message() . PHP_EOL);
     exit(1);
 }
-echo "Updated snippet row(s): " . (int) \$updated . PHP_EOL;
+
+delete_post_meta(\$id, '_wpcode_last_error');
+echo 'WPCode snippet updated on post ' . \$id . PHP_EOL;
 PHP
-fi
 
 wp cache flush >/dev/null 2>&1 || true
 echo "Cookie Consent snippet fix deployed."
