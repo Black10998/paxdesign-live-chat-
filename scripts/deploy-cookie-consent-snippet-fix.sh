@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Fix "Array to string conversion" in Cookie Consent Banner Code Snippets entry.
+# Fix "Array to string conversion" in Cookie Consent Banner snippet.
 set -euo pipefail
 
 WP_PATH="${WP_PATH:?WP_PATH required}"
@@ -10,38 +10,64 @@ SNIPPETS_TABLE="${PREFIX}snippets"
 
 echo "DB prefix: ${PREFIX}"
 echo "Snippets table: ${SNIPPETS_TABLE}"
-wp db query "SHOW TABLES LIKE '%snippets%';" 2>/dev/null || true
+wp db query "SHOW TABLES LIKE '%snippet%';" 2>/dev/null || true
 
 SNIPPET_ID=""
+STORAGE=""
+SRC="/tmp/cookie-consent-snippet.php"
+FIXED="/tmp/cookie-consent-snippet-fixed.php"
+
 if wp db query "SELECT 1 FROM ${SNIPPETS_TABLE} LIMIT 1;" --skip-column-names >/dev/null 2>&1; then
   SNIPPET_ID="$(wp db query "SELECT id FROM ${SNIPPETS_TABLE} WHERE code LIKE '%PAXConsent%' OR name LIKE '%Cookie%Consent%' ORDER BY id LIMIT 1;" --skip-column-names 2>/dev/null | tr -d '[:space:]' || true)"
+  STORAGE="table"
 fi
 
 if [[ -z "$SNIPPET_ID" ]]; then
-  echo "Searching wp_posts for Code Snippets legacy storage..."
   SNIPPET_ID="$(wp db query "SELECT ID FROM ${PREFIX}posts WHERE post_type = 'snippet' AND (post_title LIKE '%Cookie%Consent%' OR post_content LIKE '%PAXConsent%') ORDER BY ID LIMIT 1;" --skip-column-names 2>/dev/null | tr -d '[:space:]' || true)"
-  STORAGE="post"
+  [[ -n "$SNIPPET_ID" ]] && STORAGE="post"
 fi
 
 if [[ -z "$SNIPPET_ID" ]]; then
-  echo "Listing candidate snippet rows..."
-  wp db query "SELECT id, name, scope, active FROM ${SNIPPETS_TABLE} WHERE code LIKE '%PAXConsent%' OR code LIKE '%pax-cookie-consent%' OR name LIKE '%Cookie%';" 2>/dev/null || true
-  wp db query "SELECT ID, post_title, post_status FROM ${PREFIX}posts WHERE post_type = 'snippet' AND (post_title LIKE '%Cookie%' OR post_content LIKE '%PAXConsent%');" 2>/dev/null || true
-  echo "Cookie Consent snippet not found" >&2
+  echo "Searching database content for PAXConsent..."
+  wp db query "SELECT option_name FROM ${PREFIX}options WHERE option_value LIKE '%PAXConsent%' LIMIT 10;" 2>/dev/null || true
+  wp db query "SELECT post_id, meta_key FROM ${PREFIX}postmeta WHERE meta_value LIKE '%PAXConsent%' LIMIT 10;" 2>/dev/null || true
+fi
+
+FILE_PATH=""
+if [[ -z "$SNIPPET_ID" ]]; then
+  echo "Searching filesystem for Cookie Consent Banner source..."
+  while IFS= read -r candidate; do
+    if grep -q "PAXConsent" "$candidate" 2>/dev/null; then
+      FILE_PATH="$candidate"
+      STORAGE="file"
+      break
+    fi
+  done < <(find "$WP_PATH/wp-content" -type f \( -name '*.php' -o -name '*.inc' \) 2>/dev/null | head -5000)
+fi
+
+if [[ -z "$SNIPPET_ID" && -z "$FILE_PATH" ]]; then
+  echo "Broad grep for PAXConsent under wp-content..."
+  grep -Rsl "PAXConsent" "$WP_PATH/wp-content" --include='*.php' 2>/dev/null | head -20 || true
+  FILE_PATH="$(grep -Rsl "PAXConsent" "$WP_PATH/wp-content" --include='*.php' 2>/dev/null | head -1 || true)"
+  [[ -n "$FILE_PATH" ]] && STORAGE="file"
+fi
+
+if [[ -z "$SNIPPET_ID" && -z "$FILE_PATH" ]]; then
+  echo "Cookie Consent Banner source not found" >&2
   exit 1
 fi
 
-STORAGE="${STORAGE:-table}"
-SRC="/tmp/cookie-consent-snippet-${SNIPPET_ID}.php"
-FIXED="/tmp/cookie-consent-snippet-${SNIPPET_ID}-fixed.php"
-
-if [[ "$STORAGE" == "post" ]]; then
+if [[ "$STORAGE" == "file" ]]; then
+  cp "$FILE_PATH" "$SRC"
+  echo "Snippet file: $FILE_PATH"
+elif [[ "$STORAGE" == "post" ]]; then
   wp db query "SELECT post_content FROM ${PREFIX}posts WHERE ID = ${SNIPPET_ID};" --skip-column-names > "$SRC"
+  echo "Snippet post ID: $SNIPPET_ID"
 else
   wp db query "SELECT code FROM ${SNIPPETS_TABLE} WHERE id = ${SNIPPET_ID};" --skip-column-names > "$SRC"
+  echo "Snippet table ID: $SNIPPET_ID"
 fi
 
-echo "Snippet id: $SNIPPET_ID (storage: $STORAGE)"
 echo "Line count: $(wc -l < "$SRC")"
 echo "=== Lines 510-535 (before fix) ==="
 sed -n '510,535p' "$SRC"
@@ -63,9 +89,6 @@ if (strpos($code, 'function pax_consent_scalar') === false) {
     $helper = <<<'HELPER'
 
 if (!function_exists('pax_consent_scalar')) {
-    /**
-     * Normalize query/cookie values that may arrive as arrays on malformed URLs.
-     */
     function pax_consent_scalar($value, $default = '') {
         if (is_array($value)) {
             foreach ($value as $item) {
@@ -141,7 +164,7 @@ if (isset($lines[521])) {
 }
 
 if ($code === $original) {
-    echo "Warning: no replacements matched; manual inspection required.\n";
+    echo "Warning: no replacements matched.\n";
     if (isset($lines[521])) {
         echo "Original line 522: {$lines[521]}\n";
     }
@@ -155,27 +178,30 @@ sed -n '510,535p' "$FIXED"
 
 php -l "$FIXED" >/dev/null
 
-php <<PHP
+if [[ "$STORAGE" == "file" ]]; then
+  install -m 644 "$FIXED" "$FILE_PATH"
+  echo "Updated file: $FILE_PATH"
+else
+  php <<PHP
 <?php
 require '$WP_PATH/wp-load.php';
 global \$wpdb;
-\$id = (int) '$SNIPPET_ID';
+\$id = (int) '${SNIPPET_ID:-0}';
 \$code = file_get_contents('$FIXED');
 \$storage = '$STORAGE';
-\$table = \$wpdb->prefix . 'snippets';
-
 if (\$storage === 'post') {
     \$updated = \$wpdb->update(\$wpdb->posts, ['post_content' => \$code], ['ID' => \$id], ['%s'], ['%d']);
 } else {
+    \$table = \$wpdb->prefix . 'snippets';
     \$updated = \$wpdb->update(\$table, ['code' => \$code], ['id' => \$id], ['%s'], ['%d']);
 }
-
 if (\$updated === false) {
     fwrite(STDERR, "DB update failed: " . \$wpdb->last_error . PHP_EOL);
     exit(1);
 }
 echo "Updated snippet row(s): " . (int) \$updated . PHP_EOL;
 PHP
+fi
 
 wp cache flush >/dev/null 2>&1 || true
 echo "Cookie Consent snippet fix deployed."
