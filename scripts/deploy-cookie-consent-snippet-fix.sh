@@ -30,41 +30,46 @@ sed -n '522p' "$SRC"
 
 cp "$SRC" "$FIXED"
 
+set +e
 php <<'PHP' "$FIXED"
 <?php
 $file = $argv[1] ?? '';
 $code = file_get_contents($file);
 $original = $code;
 
-$old = '$url = strtolower( (string) $url );';
-$new = '$url = is_array( $url ) ? strtolower( (string) ( $url[\'href\'] ?? reset( $url ) ) ) : strtolower( (string) $url );';
+$replacement = '$url = is_array( $url ) ? strtolower( (string) ( $url[\'href\'] ?? reset( $url ) ) ) : strtolower( (string) $url );';
+$updated = preg_replace(
+    '/\$url\s*=\s*strtolower\(\s*\(\s*string\s*\)\s*\$url\s*\)\s*;/',
+    $replacement,
+    $code,
+    1,
+    $count
+);
 
-if (strpos($code, $old) !== false) {
-    $code = str_replace($old, $new, $code);
-    echo "Applied resource hint array guard on line 522 pattern.\n";
-} else {
-    echo "Primary line-522 pattern not found; no changes applied.\n";
+if ($count < 1) {
+    echo "Resource hint array guard pattern not found.\n";
+    exit(2);
 }
 
-$lines = preg_split("/\r\n|\n|\r/", $code);
+echo "Applied resource hint array guard (replacements: {$count}).\n";
+$lines = preg_split("/\r\n|\n|\r/", $updated);
 if (isset($lines[521])) {
     echo 'Line 522 after fix: ' . $lines[521] . "\n";
 }
 
-if ($code === $original) {
-    exit(2);
-}
-
-file_put_contents($file, $code);
+file_put_contents($file, $updated);
 PHP
-
 fix_status=$?
-if [[ "$fix_status" -eq 2 ]]; then
-  echo "Snippet already fixed or pattern missing; continuing to validate." >&2
-  cp "$SRC" "$FIXED"
-fi
+set -e
 
-php -l "$FIXED" >/dev/null
+if [[ "$fix_status" -eq 2 ]]; then
+  echo "Pattern missing; aborting without changes." >&2
+  exit 1
+fi
+if [[ "$fix_status" -ne 0 ]]; then
+  echo "Fix script failed with status $fix_status" >&2
+  exit 1
+fi
 
 php <<PHP
 <?php
