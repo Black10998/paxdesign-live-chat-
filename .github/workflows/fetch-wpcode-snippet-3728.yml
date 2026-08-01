@@ -1,0 +1,45 @@
+name: Fetch WPCode Snippet 3728
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch snippet from production
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          rsync -az -e "ssh ${SSH_OPTS[*]}" scripts/fetch-wpcode-snippet-3728.sh "${REMOTE}:/tmp/"
+          ssh "${SSH_OPTS[@]}" "$REMOTE" "WP_PATH=$(printf '%q' "$WP_PATH") bash /tmp/fetch-wpcode-snippet-3728.sh /tmp/cookie-consent-snippet-3728.php"
+          scp -P "$PORT" -i ~/.ssh/id_deploy -o StrictHostKeyChecking=yes "${REMOTE}:/tmp/cookie-consent-snippet-3728.php" "./scripts/snippets/paxdesign-cookie-consent-banner.php"
+          wc -l ./scripts/snippets/paxdesign-cookie-consent-banner.php
+          sed -n '518,526p' ./scripts/snippets/paxdesign-cookie-consent-banner.php
+
+      - name: Commit fetched snippet
+        run: |
+          git config user.name "cursor-agent"
+          git config user.email "cursoragent@cursor.com"
+          git add scripts/snippets/paxdesign-cookie-consent-banner.php
+          git diff --staged --quiet && echo "No changes" && exit 0
+          git commit -m "chore: export production Cookie Consent Banner snippet (WPCode 3728)"
+          git push origin HEAD
