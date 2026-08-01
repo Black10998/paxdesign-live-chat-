@@ -52,6 +52,32 @@
     return d.innerHTML;
   }
 
+  function customerPortalLang() {
+    var lang = (navigator.language || navigator.userLanguage || document.documentElement.lang || 'de').toLowerCase();
+    if (lang.indexOf('ar') === 0) return 'ar';
+    if (lang.indexOf('en') === 0) return 'en';
+    return 'de';
+  }
+
+  function t(key, fallback) {
+    var lang = customerPortalLang();
+    var pack = C.accountUiL10n || {};
+    var entry = pack[key];
+    if (entry && entry[lang]) return entry[lang];
+    if (entry && entry.en) return entry.en;
+    return fallback !== undefined ? fallback : key;
+  }
+
+  function applyAccountLocale() {
+    var lang = customerPortalLang();
+    var rtl = lang === 'ar';
+    if (accountAppEl) {
+      accountAppEl.setAttribute('dir', rtl ? 'rtl' : 'ltr');
+      accountAppEl.setAttribute('lang', lang);
+    }
+    document.body.classList.toggle('pdx-account-rtl', rtl && isAccountDashboard());
+  }
+
   function stripHtml(s) {
     if (!s) return '';
     var d = document.createElement('div');
@@ -103,8 +129,8 @@
 
   /** Server-driven PAXDesign verified badge — only when verified === true from API. */
   function accountStatusText(verified) {
-    if (user.is_admin) return 'Administrator';
-    return verified ? 'Verified' : 'Pending verification';
+    if (user.is_admin) return t('administrator', 'Administrator');
+    return verified ? t('verified', 'Verified') : t('pending_verification', 'Pending verification');
   }
 
   function verifiedBadgeHtml(verified, opts) {
@@ -114,7 +140,7 @@
 
   function nameWithBadge(name, verified, opts) {
     if (window.PDXVerifiedBadge) return window.PDXVerifiedBadge.nameWithBadge(name, verified, opts);
-    return escHtml(name || 'Account');
+    return escHtml(name || t('account', 'Account'));
   }
 
   function cxIcon(name, size) {
@@ -156,7 +182,7 @@
   }
 
   function cxLoading(label) {
-    return '<div class="pdx-cx-loading"><div class="pdx-cx-loading__spinner"></div><span>' + escHtml(label || 'Loading…') + '</span></div>';
+    return '<div class="pdx-cx-loading"><div class="pdx-cx-loading__spinner"></div><span>' + escHtml(label || t('loading', 'Loading…')) + '</span></div>';
   }
 
   function isRestNonceError(data) {
@@ -503,10 +529,10 @@
         '<div class="pdx-auth-menu" hidden>' +
           '<div class="pdx-auth-menu-head"></div>' +
           '<div class="pdx-auth-menu-actions">' +
-            '<button type="button" class="pdx-auth-menu-item" data-action="portal">' + cxIcon('dashboard', 16) + 'Customer Portal</button>' +
-            '<button type="button" class="pdx-auth-menu-item" data-action="profile">' + cxIcon('user', 16) + 'My Profile</button>' +
-            '<button type="button" class="pdx-auth-menu-item" data-action="account">' + cxIcon('settings', 16) + 'My Account</button>' +
-            '<button type="button" class="pdx-auth-menu-item pdx-auth-menu-item--logout" data-action="logout">' + cxIcon('logout', 16) + 'Logout</button>' +
+            '<button type="button" class="pdx-auth-menu-item" data-action="portal">' + cxIcon('dashboard', 16) + escHtml(t('customer_portal', 'Customer Portal')) + '</button>' +
+            '<button type="button" class="pdx-auth-menu-item" data-action="profile">' + cxIcon('user', 16) + escHtml(t('my_profile', 'My Profile')) + '</button>' +
+            '<button type="button" class="pdx-auth-menu-item" data-action="account">' + cxIcon('settings', 16) + escHtml(t('my_account', 'My Account')) + '</button>' +
+            '<button type="button" class="pdx-auth-menu-item pdx-auth-menu-item--logout" data-action="logout">' + cxIcon('logout', 16) + escHtml(t('logout', 'Logout')) + '</button>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -569,7 +595,7 @@
     var head = authMenu.querySelector('.pdx-auth-menu-head');
     var signupBtn = authBar ? authBar.querySelector('.pdx-auth-signup-btn') : null;
     var portalBtn = authBar ? authBar.querySelector('.pdx-auth-portal-btn') : null;
-    var label = user.logged_in ? (user.display_name || 'Account') : 'Account';
+    var label = user.logged_in ? (user.display_name || t('account', 'Account')) : t('account', 'Account');
 
     if (signupBtn) signupBtn.hidden = !!user.logged_in;
     if (accountBtn) accountBtn.hidden = !user.logged_in;
@@ -585,7 +611,7 @@
     }
     if (accountBtn) {
       accountBtn.classList.toggle('pdx-auth-account-btn--verified', user.logged_in && user.verified);
-      accountBtn.setAttribute('aria-label', user.logged_in ? 'Account menu' : 'Account');
+      accountBtn.setAttribute('aria-label', user.logged_in ? t('account_menu', 'Account menu') : t('account', 'Account'));
     }
 
     if (user.logged_in && head) {
@@ -710,7 +736,7 @@
           window.dispatchEvent(new CustomEvent('pdx-session-updated', { detail: { reason: 'logout' } }));
         } catch (e) {}
       }
-      notify('Logged out.', 'info');
+      notify(t('logged_out', 'Logged out.'), 'info');
       if (window.PDXDock && window.PDXDock.closePanel) window.PDXDock.closePanel();
     });
   }
@@ -1540,35 +1566,35 @@
   function accountNavGroups() {
     return [
       {
-        label: 'Account',
+        label: t('nav_group_account', 'Account'),
         items: [
-          { id: 'overview', label: 'Overview', icon: 'dashboard' },
-          { id: 'personal', label: 'Personal Information', icon: 'user' },
-          { id: 'security', label: 'Security', icon: 'lock' },
-          { id: 'settings', label: 'Settings', icon: 'settings' },
+          { id: 'overview', label: t('nav_overview', 'Overview'), icon: 'dashboard' },
+          { id: 'personal', label: t('nav_personal', 'Personal Information'), icon: 'user' },
+          { id: 'security', label: t('nav_security', 'Security'), icon: 'lock' },
+          { id: 'settings', label: t('nav_settings', 'Settings'), icon: 'settings' },
         ],
       },
       {
-        label: 'Your Work',
+        label: t('nav_group_work', 'Your Work'),
         items: [
-          { id: 'projects', label: 'Projects', icon: 'folder' },
-          { id: 'orders', label: 'Requests', icon: 'receipt' },
-          { id: 'records', label: 'Records / Ticket History', icon: 'file' },
-          { id: 'files', label: 'Files & Invoices', icon: 'file' },
+          { id: 'projects', label: t('nav_projects', 'Projects'), icon: 'folder' },
+          { id: 'orders', label: t('nav_orders', 'Requests'), icon: 'receipt' },
+          { id: 'records', label: t('nav_records', 'Records / Ticket History'), icon: 'file' },
+          { id: 'files', label: t('nav_files', 'Files & Invoices'), icon: 'file' },
         ],
       },
       {
-        label: 'Updates',
+        label: t('nav_group_updates', 'Updates'),
         items: [
-          { id: 'news', label: 'News', icon: 'news' },
-          { id: 'notifications', label: 'Alerts', icon: 'bell' },
+          { id: 'news', label: t('nav_news', 'News'), icon: 'news' },
+          { id: 'notifications', label: t('nav_notifications', 'Alerts'), icon: 'bell' },
         ],
       },
       {
-        label: 'Support',
+        label: t('nav_group_support', 'Support'),
         items: [
-          { id: 'support', label: 'Messages', icon: 'message' },
-          { id: 'services', label: 'Services', icon: 'package' },
+          { id: 'support', label: t('nav_support', 'Messages'), icon: 'message' },
+          { id: 'services', label: t('nav_services', 'Services'), icon: 'package' },
         ],
       },
     ];
@@ -1576,36 +1602,36 @@
 
   function accountSectionTitle(section) {
     var titles = {
-      overview: 'Overview',
-      personal: 'Personal Information',
-      security: 'Security',
-      settings: 'Settings',
-      projects: 'Projects',
-      orders: 'Requests',
-      records: 'Records / Ticket History',
-      files: 'Files & Invoices',
-      news: 'News',
-      notifications: 'Alerts',
-      support: 'Messages',
-      services: 'Services',
+      overview: t('nav_overview', 'Overview'),
+      personal: t('nav_personal', 'Personal Information'),
+      security: t('nav_security', 'Security'),
+      settings: t('nav_settings', 'Settings'),
+      projects: t('nav_projects', 'Projects'),
+      orders: t('nav_orders', 'Requests'),
+      records: t('nav_records', 'Records / Ticket History'),
+      files: t('nav_files', 'Files & Invoices'),
+      news: t('nav_news', 'News'),
+      notifications: t('nav_notifications', 'Alerts'),
+      support: t('nav_support', 'Messages'),
+      services: t('nav_services', 'Services'),
     };
-    return titles[section] || 'Account';
+    return titles[section] || t('account', 'Account');
   }
 
   function accountSectionLead(section) {
     var leads = {
-      overview: 'A snapshot of your projects, requests, and account activity.',
-      personal: 'Update your name and contact details.',
-      security: 'Manage your password and account security.',
-      settings: 'Control notifications and communication preferences.',
-      projects: 'Track active work and deliverables.',
-      orders: 'View requests, billing, and payment history.',
-      records: 'Review closed Cybercrime Support reports in read-only mode.',
-      files: 'Download shared files and invoices.',
-      news: 'Announcements and updates from PAXDesign.',
-      notifications: 'Your account alerts and activity notifications.',
-      support: 'Continue your conversation with PAXDesign.',
-      services: 'Browse services and start new requests.',
+      overview: t('lead_overview', 'A snapshot of your projects, requests, and account activity.'),
+      personal: t('lead_personal', 'Update your name and contact details.'),
+      security: t('lead_security', 'Manage your password and account security.'),
+      settings: t('lead_settings', 'Control notifications and communication preferences.'),
+      projects: t('lead_projects', 'Track active work and deliverables.'),
+      orders: t('lead_orders', 'View requests, billing, and payment history.'),
+      records: t('lead_records', 'Review closed Cybercrime Support reports in read-only mode.'),
+      files: t('lead_files', 'Download shared files and invoices.'),
+      news: t('lead_news', 'Announcements and updates from PAXDesign.'),
+      notifications: t('lead_notifications', 'Your account alerts and activity notifications.'),
+      support: t('lead_support', 'Continue your conversation with PAXDesign.'),
+      services: t('lead_services', 'Browse services and start new requests.'),
     };
     return leads[section] || '';
   }
@@ -1663,24 +1689,24 @@
   function renderAccountSidebar() {
     if (!accountSidebarEl) return;
     var html = '<div class="pdx-account-sidebar-user">' +
-      '<div class="pdx-account-sidebar-name">' + nameWithBadge(user.display_name || 'Account', user.verified, { size: 15, inline: true, context: 'account' }) + '</div>' +
+      '<div class="pdx-account-sidebar-name">' + nameWithBadge(user.display_name || t('account', 'Account'), user.verified, { size: 15, inline: true, context: 'account' }) + '</div>' +
       '<div class="pdx-account-sidebar-email">' + escHtml(user.email || '') + '</div>' +
       '<div class="pdx-account-sidebar-status">' + escHtml(accountStatusText(user.verified)) + '</div>' +
-    '</div>';
+    '</div><div class="pdx-account-sidebar-nav">';
     accountNavGroups().forEach(function (group) {
       html += '<div class="pdx-account-nav-group"><div class="pdx-account-nav-label">' + escHtml(group.label) + '</div>';
       group.items.forEach(function (item) {
         var active = accountState.section === item.id ? ' is-active' : '';
         html += '<button type="button" class="pdx-account-nav-btn' + active + '" data-account-section="' + item.id + '">' +
-          cxIcon(item.icon, 16) + escHtml(item.label) + '</button>';
+          cxIcon(item.icon, 16) + '<span class="pdx-account-nav-text">' + escHtml(item.label) + '</span></button>';
       });
       html += '</div>';
     });
-    html += '<div class="pdx-account-sidebar-footer">' +
+    html += '</div><div class="pdx-account-sidebar-footer">' +
       '<a class="pdx-portal-btn pdx-portal-btn--secondary pdx-portal-btn--full pdx-account-website-link" href="' + escHtml(homePageUrl()) + '">' +
-        cxIcon('chevron', 16) + escHtml('Continue to website') +
+        cxIcon('chevron', 16) + escHtml(t('continue_website', 'Continue to website')) +
       '</a>' +
-      '<button type="button" class="pdx-portal-btn pdx-portal-btn--destructive pdx-portal-btn--full pdx-account-signout">' + cxIcon('logout', 16) + escHtml('Sign Out') + '</button>' +
+      '<button type="button" class="pdx-portal-btn pdx-portal-btn--destructive pdx-portal-btn--full pdx-account-signout">' + cxIcon('logout', 16) + escHtml(t('sign_out', 'Sign Out')) + '</button>' +
     '</div>';
     accountSidebarEl.innerHTML = html;
     accountSidebarEl.querySelectorAll('[data-account-section]').forEach(function (btn) {
@@ -1695,23 +1721,23 @@
   function renderAccountPersonalSection(profile) {
     profile = profile || {};
     return '<div class="pdx-account-card">' +
-      '<div class="pdx-account-card-title">Personal Information</div>' +
+      '<div class="pdx-account-card-title">' + escHtml(t('personal_information', 'Personal Information')) + '</div>' +
       '<form id="pdx-customer-profile-form">' +
-        field('display_name', 'Display name', profile.display_name || user.display_name) +
-        field('email', 'Email', profile.email || user.email, 'email') +
-        '<div style="margin-top:12px">' + actionBtn('Save changes', { type: 'submit', icon: 'check', small: true, inline: true }) + '</div>' +
+        field('display_name', t('display_name', 'Display name'), profile.display_name || user.display_name) +
+        field('email', t('email', 'Email'), profile.email || user.email, 'email') +
+        '<div style="margin-top:12px">' + actionBtn(t('save_changes', 'Save changes'), { type: 'submit', icon: 'check', small: true, inline: true }) + '</div>' +
       '</form>' +
     '</div>';
   }
 
   function renderAccountSecuritySection() {
     return '<div class="pdx-account-card">' +
-      '<div class="pdx-account-card-title">Security</div>' +
+      '<div class="pdx-account-card-title">' + escHtml(t('nav_security', 'Security')) + '</div>' +
       '<form id="pdx-customer-security-form">' +
-        field('current_password', 'Current password', '', 'password') +
-        field('new_password', 'New password', '', 'password') +
-        field('confirm_password', 'Confirm new password', '', 'password') +
-        '<div style="margin-top:12px">' + actionBtn('Update password', { type: 'submit', icon: 'lock', small: true, inline: true }) + '</div>' +
+        field('current_password', t('current_password', 'Current password'), '', 'password') +
+        field('new_password', t('new_password', 'New password'), '', 'password') +
+        field('confirm_password', t('confirm_password', 'Confirm new password'), '', 'password') +
+        '<div style="margin-top:12px">' + actionBtn(t('update_password', 'Update password'), { type: 'submit', icon: 'lock', small: true, inline: true }) + '</div>' +
       '</form>' +
     '</div>';
   }
@@ -1720,14 +1746,14 @@
     settings = settings || {};
     var prefs = settings.notifications || {};
     var toggles = [
-      { key: 'chat', label: 'Message notifications' },
-      { key: 'project', label: 'Project updates' },
-      { key: 'order', label: 'Request updates' },
-      { key: 'news', label: 'News announcements' },
-      { key: 'security', label: 'Security alerts' },
-      { key: 'push_enabled', label: 'Push notifications (mobile app)' },
+      { key: 'chat', label: t('notify_chat', 'Message notifications') },
+      { key: 'project', label: t('notify_project', 'Project updates') },
+      { key: 'order', label: t('notify_order', 'Request updates') },
+      { key: 'news', label: t('notify_news', 'News announcements') },
+      { key: 'security', label: t('notify_security', 'Security alerts') },
+      { key: 'push_enabled', label: t('notify_push', 'Push notifications (mobile app)') },
     ];
-    var html = '<div class="pdx-account-card"><div class="pdx-account-card-title">Notification preferences</div>' +
+    var html = '<div class="pdx-account-card"><div class="pdx-account-card-title">' + escHtml(t('notification_preferences', 'Notification preferences')) + '</div>' +
       '<form id="pdx-customer-settings-form"><div class="pdx-portal-toggle-group">';
     toggles.forEach(function (t) {
       var checked = prefs[t.key] !== false ? ' checked' : '';
@@ -1740,7 +1766,7 @@
       '</label>';
     });
     html += '</div><div class="pdx-portal-btn-row">' +
-      actionBtn('Save preferences', { type: 'submit', icon: 'check', small: true }) +
+      actionBtn(t('save_preferences', 'Save preferences'), { type: 'submit', icon: 'check', small: true }) +
     '</div></form></div>';
     return html;
   }
@@ -1761,7 +1787,7 @@
           push_enabled: !!fd.get('push_enabled'),
         },
       }).then(function (data) {
-        notify((data && data.message) || 'Settings saved.', data && data._ok !== false ? 'info' : 'warn');
+        notify((data && data.message) || t('settings_saved', 'Settings saved.'), data && data._ok !== false ? 'info' : 'warn');
         if (data && data._ok !== false) {
           accountState.settings = data;
         }
@@ -1771,14 +1797,14 @@
 
   function renderAccountFilesSection(files) {
     files = files || [];
-    var html = '<div class="pdx-account-card"><div class="pdx-account-card-title">Files & Invoices</div>';
+    var html = '<div class="pdx-account-card"><div class="pdx-account-card-title">' + escHtml(t('files_invoices', 'Files & Invoices')) + '</div>';
     if (!files.length) {
-      html += '<p class="pdx-portal-empty">No shared files yet. Project deliverables and invoices appear here.</p>';
+      html += '<p class="pdx-portal-empty">' + escHtml(t('no_shared_files', 'No shared files yet. Project deliverables and invoices appear here.')) + '</p>';
     } else {
       files.forEach(function (file) {
         var href = file.download_url || file.url || '#';
         html += '<a class="pdx-portal-row pdx-portal-row--link" href="' + escHtml(href) + '" target="_blank" rel="noopener">' +
-          '<strong>' + escHtml(file.name || file.filename || 'File') + '</strong>' +
+          '<strong>' + escHtml(file.name || file.filename || t('file', 'File')) + '</strong>' +
           '<span>' + escHtml(file.project_title || file.type || '') + '</span></a>';
       });
     }
@@ -1795,7 +1821,7 @@
         display_name: fd.get('display_name'),
         email: fd.get('email'),
       }).then(function (data) {
-        notify((data && data.message) || 'Profile updated.', data && data._ok ? 'info' : 'warn');
+        notify((data && data.message) || t('profile_updated', 'Profile updated.'), data && data._ok ? 'info' : 'warn');
         if (data && data._ok) {
           refreshUser({ trigger: 'profile_update' });
           renderAccountApp();
@@ -1813,18 +1839,18 @@
       var p1 = String(fd.get('new_password') || '');
       var p2 = String(fd.get('confirm_password') || '');
       if (p1.length < 8) {
-        notify('Password must be at least 8 characters.', 'warn');
+        notify(t('password_min_length', 'Password must be at least 8 characters.'), 'warn');
         return;
       }
       if (p1 !== p2) {
-        notify('Passwords do not match.', 'warn');
+        notify(t('passwords_mismatch', 'Passwords do not match.'), 'warn');
         return;
       }
       customerApiFetch('POST', '/customer/profile', {
         current_password: fd.get('current_password'),
         new_password: p1,
       }).then(function (data) {
-        notify((data && data.message) || 'Security settings updated.', data && data._ok ? 'info' : 'warn');
+        notify((data && data.message) || t('security_updated', 'Security settings updated.'), data && data._ok ? 'info' : 'warn');
         if (data && data._ok) form.reset();
       });
     });
@@ -1870,7 +1896,7 @@
       renderAccountApp();
       return Promise.resolve(true);
     }
-    if (accountMainEl) accountMainEl.innerHTML = cxLoading('Loading your account…');
+    if (accountMainEl) accountMainEl.innerHTML = cxLoading(t('loading_account', 'Loading your account…'));
     return claimGuestSessionIfNeeded().then(function () {
       return Promise.all([
         customerApiFetch('GET', '/customer/dashboard'),
@@ -1881,11 +1907,11 @@
     }).then(function (results) {
       var dashboard = results[0];
       if (!dashboard || dashboard._status === 401) {
-        if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">Please sign in to continue.</p>';
+        if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('sign_in_continue', 'Please sign in to continue.')) + '</p>';
         return false;
       }
       if (dashboard.code === 'pdx_email_unverified') {
-        if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">Verify your email to access your account dashboard.</p>';
+        if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('verify_email_dashboard', 'Verify your email to access your account dashboard.')) + '</p>';
         return false;
       }
       accountState.dashboard = dashboard;
@@ -1897,13 +1923,14 @@
       renderAccountApp();
       return true;
     }).catch(function () {
-      if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">Unable to load your account. Please try again.</p>';
+      if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('load_account_error', 'Unable to load your account. Please try again.')) + '</p>';
       return false;
     });
   }
 
   function renderAccountApp() {
     if (!accountAppEl || !accountSidebarEl || !accountMainEl) return;
+    applyAccountLocale();
     renderAccountSidebar();
     renderAccountMain();
   }
@@ -2405,13 +2432,6 @@
   }
 
   /* ─── Public API ───────────────────────────────────────── */
-  function customerPortalLang() {
-    var lang = (document.documentElement.lang || navigator.language || 'de').toLowerCase();
-    if (lang.indexOf('ar') === 0) return 'ar';
-    if (lang.indexOf('en') === 0) return 'en';
-    return 'de';
-  }
-
   function withPortalLang(path) {
     var lang = encodeURIComponent(customerPortalLang());
     if (path.indexOf('/customer/news') === 0 || path.indexOf('/customer/dashboard') === 0) {
@@ -2512,7 +2532,7 @@
   }
 
   function portalBackBtn(label) {
-    return '<button type="button" class="pdx-portal-back" data-portal-back="1">&larr; ' + escHtml(label || 'Back') + '</button>';
+    return '<button type="button" class="pdx-portal-back" data-portal-back="1">&larr; ' + escHtml(label || t('back', 'Back')) + '</button>';
   }
 
   function bindPortalNav(container) {
@@ -2548,7 +2568,7 @@
       return;
     }
     if (!user.verified && !user.is_admin) {
-      notify('Please verify your email to access your account.', 'warn');
+      notify(t('verify_email_access', 'Please verify your email to access your account.'), 'warn');
       navigateToAuthPage('login');
       return;
     }
@@ -2561,7 +2581,7 @@
       window.location.href = accountPageUrl() + '#/' + section;
       return;
     }
-    notify('Account page is not configured.', 'warn');
+    notify(t('account_not_configured', 'Account page is not configured.'), 'warn');
   }
 
   function closeCustomerPortal() {
@@ -2780,32 +2800,32 @@
     var news = data.news || [];
     var unread = data.unread_count || 0;
     var chat = data.chat || {};
-    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('dashboard', 16) + 'Welcome</h3>';
-    html += '<p class="pdx-portal-lead">Your projects, requests, and conversations in one place.</p>';
+    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('dashboard', 16) + escHtml(t('welcome', 'Welcome')) + '</h3>';
+    html += '<p class="pdx-portal-lead">' + escHtml(t('overview_lead', 'Your projects, requests, and conversations in one place.')) + '</p>';
     html += '<div class="pdx-portal-stats">';
-    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="projects"><span>' + projects.length + '</span>Active projects</button>';
-    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="orders"><span>' + orders.length + '</span>Recent requests</button>';
-    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="notifications"><span>' + unread + '</span>Unread alerts</button>';
-    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="chat"><span>' + escHtml(chat.handler || 'ai') + '</span>Chat mode</button>';
+    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="projects"><span>' + projects.length + '</span>' + escHtml(t('active_projects', 'Active projects')) + '</button>';
+    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="orders"><span>' + orders.length + '</span>' + escHtml(t('recent_requests', 'Recent requests')) + '</button>';
+    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="notifications"><span>' + unread + '</span>' + escHtml(t('unread_alerts', 'Unread alerts')) + '</button>';
+    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="chat"><span>' + escHtml(chat.handler || 'ai') + '</span>' + escHtml(t('chat_mode', 'Chat mode')) + '</button>';
     html += '</div></section>';
-    html += '<section class="pdx-portal-section"><h3>' + cxIcon('folder', 16) + 'Active projects</h3>';
+    html += '<section class="pdx-portal-section"><h3>' + cxIcon('folder', 16) + escHtml(t('active_projects', 'Active projects')) + '</h3>';
     if (projects.length) {
       projects.slice(0, 4).forEach(function (p) {
         html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="project" data-portal-id="' + escHtml(String(p.id)) + '">' +
           '<strong>' + escHtml(p.title) + '</strong><span>' + escHtml(String(p.progress || 0)) + '% · ' + escHtml(p.status) + '</span></button>';
       });
     } else {
-      html += '<p class="pdx-portal-empty">No active projects yet. Browse services to request work.</p>';
+      html += '<p class="pdx-portal-empty">' + escHtml(t('no_active_projects_overview', 'No active projects yet. Browse services to request work.')) + '</p>';
     }
     html += '</section>';
-    html += '<section class="pdx-portal-section"><h3>' + cxIcon('news', 16) + 'Latest news</h3>';
+    html += '<section class="pdx-portal-section"><h3>' + cxIcon('news', 16) + escHtml(t('latest_news', 'Latest news')) + '</h3>';
     if (news.length) {
       news.slice(0, 3).forEach(function (n) {
         html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="news" data-portal-slug="' + escHtml(n.slug || '') + '">' +
           '<strong>' + escHtml(n.title) + '</strong></button>';
       });
     } else {
-      html += '<p class="pdx-portal-empty">No announcements right now.</p>';
+      html += '<p class="pdx-portal-empty">' + escHtml(t('no_announcements', 'No announcements right now.')) + '</p>';
     }
     html += '</section>';
     setTimeout(function () {
@@ -2830,59 +2850,59 @@
     var sessionId = (data.chat || {}).session_id || '';
     return '<section class="pdx-portal-section pdx-portal-chat">' +
       '<div class="pdx-portal-chat-head">' +
-        '<h3>' + cxIcon('message', 16) + 'Conversation</h3>' +
+        '<h3>' + cxIcon('message', 16) + escHtml(t('conversation', 'Conversation')) + '</h3>' +
       '</div>' +
-      '<div class="pdx-portal-chat-log" id="pdx-portal-chat-log">' + cxLoading('Loading messages…') + '</div>' +
+      '<div class="pdx-portal-chat-log" id="pdx-portal-chat-log">' + cxLoading(t('loading_messages', 'Loading messages…')) + '</div>' +
       '<div class="pdx-portal-chat-tools">' +
-        '<label class="pdx-portal-tool" title="Attach image"><input type="file" accept="image/*" id="pdx-portal-image-input" hidden />' + cxIcon('image', 16) + '</label>' +
-        '<label class="pdx-portal-tool" title="Attach file"><input type="file" id="pdx-portal-file-input" hidden />' + cxIcon('file', 16) + '</label>' +
-        '<button type="button" class="pdx-portal-tool" id="pdx-portal-voice-btn" title="Voice message">' + cxIcon('mic', 16) + '</button>' +
-        '<button type="button" class="pdx-portal-tool" id="pdx-portal-location-btn" title="Share location">' + cxIcon('location', 16) + '</button>' +
+        '<label class="pdx-portal-tool" title="' + escHtml(t('attach_image', 'Attach image')) + '"><input type="file" accept="image/*" id="pdx-portal-image-input" hidden />' + cxIcon('image', 16) + '</label>' +
+        '<label class="pdx-portal-tool" title="' + escHtml(t('attach_file', 'Attach file')) + '"><input type="file" id="pdx-portal-file-input" hidden />' + cxIcon('file', 16) + '</label>' +
+        '<button type="button" class="pdx-portal-tool" id="pdx-portal-voice-btn" title="' + escHtml(t('voice_message', 'Voice message')) + '">' + cxIcon('mic', 16) + '</button>' +
+        '<button type="button" class="pdx-portal-tool" id="pdx-portal-location-btn" title="' + escHtml(t('share_location', 'Share location')) + '">' + cxIcon('location', 16) + '</button>' +
       '</div>' +
       '<form class="pdx-portal-chat-form" id="pdx-portal-chat-form">' +
-        '<textarea rows="2" placeholder="Write a message…" aria-label="Message"></textarea>' +
-        actionBtn('Send', { type: 'submit', small: true, inline: true, icon: 'send' }) +
+        '<textarea rows="2" placeholder="' + escHtml(t('write_message', 'Write a message…')) + '" aria-label="' + escHtml(t('message', 'Message')) + '"></textarea>' +
+        actionBtn(t('send', 'Send'), { type: 'submit', small: true, inline: true, icon: 'send' }) +
       '</form></section>';
   }
 
   function renderPortalProjectsSection(data) {
     var projects = data.projects_active || [];
-    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('folder', 16) + 'Your projects</h3>';
+    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('folder', 16) + escHtml(t('your_projects', 'Your projects')) + '</h3>';
     if (projects.length) {
       projects.forEach(function (p) {
         html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="project" data-portal-id="' + escHtml(String(p.id)) + '">' +
           '<strong>' + escHtml(p.title) + '</strong><span>' + escHtml(String(p.progress || 0)) + '% · ' + escHtml(p.status) + '</span></button>';
       });
     } else {
-      html += '<p class="pdx-portal-empty">No active projects yet. Request a service to begin.</p>';
+      html += '<p class="pdx-portal-empty">' + escHtml(t('no_active_projects', 'No active projects yet. Request a service to begin.')) + '</p>';
     }
     return html + '</section>';
   }
 
   function renderPortalProjectDetail(project) {
-    var html = portalBackBtn('All projects');
+    var html = portalBackBtn(t('all_projects', 'All projects'));
     html += '<article class="pdx-portal-detail"><h3>' + escHtml(project.title) + '</h3>';
     html += '<p class="pdx-portal-meta">' + escHtml(project.ref) + ' · ' + escHtml(project.status) + ' · ' + escHtml(String(project.progress || 0)) + '%</p>';
     if (project.description) {
       html += '<div class="pdx-portal-body-text">' + escHtml(project.description) + '</div>';
     }
     if ((project.milestones || []).length) {
-      html += '<h4>Milestones</h4><ul class="pdx-portal-list">';
+      html += '<h4>' + escHtml(t('milestones', 'Milestones')) + '</h4><ul class="pdx-portal-list">';
       project.milestones.forEach(function (m) {
         html += '<li><strong>' + escHtml(m.title) + '</strong> — ' + escHtml(m.status) +
-          (m.due_date ? ' · due ' + escHtml(formatDate(m.due_date)) : '') + '</li>';
+          (m.due_date ? ' · ' + escHtml(t('due', 'due')) + ' ' + escHtml(formatDate(m.due_date)) : '') + '</li>';
       });
       html += '</ul>';
     }
     if ((project.notes || []).length) {
-      html += '<h4>Updates</h4><ul class="pdx-portal-list">';
+      html += '<h4>' + escHtml(t('updates', 'Updates')) + '</h4><ul class="pdx-portal-list">';
       project.notes.forEach(function (n) {
         html += '<li>' + escHtml(n.body) + '</li>';
       });
       html += '</ul>';
     }
     if ((project.files || []).length) {
-      html += '<h4>Files</h4><ul class="pdx-portal-list">';
+      html += '<h4>' + escHtml(t('files', 'Files')) + '</h4><ul class="pdx-portal-list">';
       project.files.forEach(function (f) {
         var dl = '/customer/projects/' + project.id + '/files/' + f.id + '/download';
         html += '<li><a href="' + escHtml((C.restUrl || '/wp-json/pdx/v1').replace(/\/$/, '') + dl) + '" target="_blank" rel="noopener">' + escHtml(f.file_name) + '</a></li>';
@@ -2890,9 +2910,9 @@
       html += '</ul>';
     }
     if ((project.assignees || []).length) {
-      html += '<h4>Your team</h4><ul class="pdx-portal-list">';
+      html += '<h4>' + escHtml(t('your_team', 'Your team')) + '</h4><ul class="pdx-portal-list">';
       project.assignees.forEach(function (a) {
-        html += '<li>' + escHtml(a.display_name || ('Staff #' + a.user_id)) + ' — ' + escHtml(a.role_label || 'Staff') + '</li>';
+        html += '<li>' + escHtml(a.display_name || (t('staff', 'Staff') + ' #' + a.user_id)) + ' — ' + escHtml(a.role_label || t('staff', 'Staff')) + '</li>';
       });
       html += '</ul>';
     }
@@ -2901,27 +2921,27 @@
 
   function renderPortalOrdersSection(data) {
     var orders = data.orders_recent || [];
-    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('receipt', 16) + 'Service requests</h3>';
+    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('receipt', 16) + escHtml(t('service_requests', 'Service requests')) + '</h3>';
     if (orders.length) {
       orders.forEach(function (o) {
         html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="order" data-portal-id="' + escHtml(String(o.id)) + '">' +
           '<strong>' + escHtml(o.service_label || o.ref) + '</strong><span>' + escHtml(o.status) + '</span></button>';
       });
     } else {
-      html += '<p class="pdx-portal-empty">No service requests yet.</p>';
+      html += '<p class="pdx-portal-empty">' + escHtml(t('no_service_requests', 'No service requests yet.')) + '</p>';
     }
     return html + '</section>';
   }
 
   function renderPortalOrderDetail(order) {
-    var html = portalBackBtn('All requests');
+    var html = portalBackBtn(t('all_requests', 'All requests'));
     html += '<article class="pdx-portal-detail"><h3>' + escHtml(order.service_label || order.ref) + '</h3>';
     html += '<p class="pdx-portal-meta">' + escHtml(order.ref) + ' · ' + escHtml(order.status) + '</p>';
     if (order.message) {
       html += '<div class="pdx-portal-body-text">' + escHtml(order.message) + '</div>';
     }
     if (order.notes && order.notes.length) {
-      html += '<h4>Notes</h4><ul class="pdx-portal-list">';
+      html += '<h4>' + escHtml(t('notes', 'Notes')) + '</h4><ul class="pdx-portal-list">';
       order.notes.forEach(function (n) {
         html += '<li>' + escHtml(n.body) + '</li>';
       });
@@ -2939,7 +2959,9 @@
       return String(value);
     }
     try {
-      return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+      var lang = customerPortalLang();
+      var locale = lang === 'ar' ? 'ar' : (lang === 'de' ? 'de-DE' : 'en-US');
+      return d.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
     } catch (e) {
       return String(value);
     }
@@ -2973,7 +2995,7 @@
   }
 
   function renderPortalRecordsSection() {
-    return '<section class="pdx-portal-section pdx-portal-records" id="pdx-portal-records">' + cxLoading('Loading records…') + '</section>';
+    return '<section class="pdx-portal-section pdx-portal-records" id="pdx-portal-records">' + cxLoading(t('loading_records', 'Loading records…')) + '</section>';
   }
 
   function bindPortalRecordsSection(container) {
@@ -2983,34 +3005,34 @@
     }
     customerApiFetch('GET', '/customer/cybercrime/reports').then(function (data) {
       if (!data || !data._ok) {
-        section.innerHTML = '<p class="pdx-auth-error">Records could not be loaded.</p>';
+        section.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('records_load_error', 'Records could not be loaded.')) + '</p>';
         return;
       }
       var history = Array.isArray(data.history) ? data.history : (data.reports || []).filter(function (report) {
         return report && !cybercrimeReportIsActive(report);
       });
       var active = data.active || null;
-      var html = '<h3>' + cxIcon('file', 16) + 'Cybercrime Support records</h3>';
-      html += '<p class="pdx-portal-lead">Closed reports stay read-only. Start a new report anytime if you need help again.</p>';
+      var html = '<h3>' + cxIcon('file', 16) + escHtml(t('cybercrime_records', 'Cybercrime Support records')) + '</h3>';
+      html += '<p class="pdx-portal-lead">' + escHtml(t('records_lead', 'Closed reports stay read-only. Start a new report anytime if you need help again.')) + '</p>';
       if (active && cybercrimeReportIsActive(active)) {
-        html += '<p class="pdx-portal-note">You currently have an open report (<code>' + escHtml(active.reference_id || '') + '</code>). ' +
-          '<a href="' + escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/?ref=' + encodeURIComponent(active.reference_id || '')) + '">View active report</a></p>';
+        html += '<p class="pdx-portal-note">' + escHtml(t('open_report_note', 'You currently have an open report')) + ' (<code>' + escHtml(active.reference_id || '') + '</code>). ' +
+          '<a href="' + escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/?ref=' + encodeURIComponent(active.reference_id || '')) + '">' + escHtml(t('view_active_report', 'View active report')) + '</a></p>';
       }
       if (history.length) {
         history.forEach(function (report) {
           html += '<button type="button" class="pdx-portal-row pdx-portal-row--link pdx-portal-row--records' +
             (cybercrimeReportIsActive(report) ? '' : ' is-closed') + '" data-portal-open="cybercrime" data-portal-id="' +
             escHtml(String(report.reference_id || '')) + '">' +
-            '<strong>' + escHtml(report.reference_id || 'Record') + '</strong>' +
+            '<strong>' + escHtml(report.reference_id || t('record', 'Record')) + '</strong>' +
             '<span>' + escHtml(report.status_label || report.status || '') + ' · ' + escHtml(portalFormatDate(report.updated_at || report.created_at)) + '</span>' +
             (report.category_label ? '<span class="pdx-portal-row-sub">' + escHtml(report.category_label) + '</span>' : '') +
             '</button>';
         });
       } else {
-        html += '<p class="pdx-portal-empty">No closed Cybercrime Support records yet.</p>';
+        html += '<p class="pdx-portal-empty">' + escHtml(t('no_closed_records', 'No closed Cybercrime Support records yet.')) + '</p>';
       }
       html += '<p class="pdx-portal-records-actions"><a class="pdx-portal-btn pdx-portal-btn--secondary" href="' +
-        escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/') + '">Start a new report</a></p>';
+        escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/') + '">' + escHtml(t('start_new_report', 'Start a new report')) + '</a></p>';
       section.innerHTML = html;
       section.querySelectorAll('[data-portal-open]').forEach(function (el) {
         el.addEventListener('click', function () {
@@ -3021,30 +3043,30 @@
   }
 
   function renderPortalCybercrimeDetail(report) {
-    var html = portalBackBtn('All records');
+    var html = portalBackBtn(t('all_records', 'All records'));
     var isActive = cybercrimeReportIsActive(report);
     html += '<article class="pdx-portal-detail pdx-portal-detail--cybercrime' + (isActive ? '' : ' is-closed') + '">';
-    html += '<h3>' + escHtml(report.reference_id || 'Cybercrime report') + '</h3>';
+    html += '<h3>' + escHtml(report.reference_id || t('cybercrime_report', 'Cybercrime report')) + '</h3>';
     html += '<p class="pdx-portal-meta">' + escHtml(report.status_label || report.status || '') +
       (report.category_label ? ' · ' + escHtml(report.category_label) : '') + '</p>';
     html += '<dl class="pdx-portal-records-meta">';
-    html += '<div><dt>Submitted</dt><dd>' + escHtml(portalFormatDate(report.created_at)) + '</dd></div>';
-    html += '<div><dt>Updated</dt><dd>' + escHtml(portalFormatDate(report.updated_at || report.created_at)) + '</dd></div>';
+    html += '<div><dt>' + escHtml(t('submitted', 'Submitted')) + '</dt><dd>' + escHtml(portalFormatDate(report.created_at)) + '</dd></div>';
+    html += '<div><dt>' + escHtml(t('updated', 'Updated')) + '</dt><dd>' + escHtml(portalFormatDate(report.updated_at || report.created_at)) + '</dd></div>';
     html += '</dl>';
     if (!isActive) {
-      html += '<p class="pdx-portal-note pdx-portal-note--closed">This record is closed and read-only. To request new help, start a new report.</p>';
+      html += '<p class="pdx-portal-note pdx-portal-note--closed">' + escHtml(t('record_closed_note', 'This record is closed and read-only. To request new help, start a new report.')) + '</p>';
     }
     if (report.description) {
-      html += '<h4>Summary</h4><div class="pdx-portal-body-text">' + escHtml(report.description) + '</div>';
+      html += '<h4>' + escHtml(t('summary', 'Summary')) + '</h4><div class="pdx-portal-body-text">' + escHtml(report.description) + '</div>';
     }
     if (report.platforms) {
-      html += '<h4>Platforms</h4><div class="pdx-portal-body-text">' + escHtml(report.platforms) + '</div>';
+      html += '<h4>' + escHtml(t('platforms', 'Platforms')) + '</h4><div class="pdx-portal-body-text">' + escHtml(report.platforms) + '</div>';
     }
     var timeline = cybercrimeVisibleTimeline(report);
     if (timeline.length) {
-      html += '<h4>Official updates</h4><ul class="pdx-portal-cybercrime-timeline">';
+      html += '<h4>' + escHtml(t('official_updates', 'Official updates')) + '</h4><ul class="pdx-portal-cybercrime-timeline">';
       timeline.forEach(function (entry) {
-        var author = entry.author_type === 'customer' ? 'You' : 'PAXDesign Support Team';
+        var author = entry.author_type === 'customer' ? t('you', 'You') : t('support_team', 'PAXDesign Support Team');
         html += '<li class="pdx-portal-cybercrime-timeline__item">' +
           '<p class="pdx-portal-cybercrime-timeline__meta"><strong>' + escHtml(author) + '</strong> · ' +
           escHtml(portalFormatDate(entry.created_at)) + '</p>' +
@@ -3053,7 +3075,7 @@
       html += '</ul>';
     }
     if ((report.attachments || []).length) {
-      html += '<h4>Attachments</h4><ul class="pdx-portal-list">';
+      html += '<h4>' + escHtml(t('attachments', 'Attachments')) + '</h4><ul class="pdx-portal-list">';
       report.attachments.forEach(function (file) {
         if (!file) {
           return;
@@ -3069,13 +3091,13 @@
     }
     if (!isActive) {
       html += '<p class="pdx-portal-records-actions"><a class="pdx-portal-btn pdx-portal-btn--secondary" href="' +
-        escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/') + '">Start a new report</a></p>';
+        escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/') + '">' + escHtml(t('start_new_report', 'Start a new report')) + '</a></p>';
     }
     return html + '</article>';
   }
 
   function renderPortalServicesSection() {
-    return '<section class="pdx-portal-section" id="pdx-portal-services">' + cxLoading('Loading services…') + '</section>';
+    return '<section class="pdx-portal-section" id="pdx-portal-services">' + cxLoading(t('loading_services', 'Loading services…')) + '</section>';
   }
 
   function bindPortalServicesSection(container) {
@@ -3083,16 +3105,16 @@
     if (!section) return;
     customerApiFetch('GET', '/customer/services').then(function (data) {
       if (!data || !data._ok) {
-        section.innerHTML = '<p class="pdx-auth-error">Services could not be loaded.</p>';
+        section.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('services_load_error', 'Services could not be loaded.')) + '</p>';
         return;
       }
-      var html = '<h3>' + cxIcon('package', 16) + 'Services catalog</h3>';
+      var html = '<h3>' + cxIcon('package', 16) + escHtml(t('services_catalog', 'Services catalog')) + '</h3>';
       (data.services || []).forEach(function (s) {
         html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="service" data-portal-slug="' + escHtml(s.slug) + '">' +
           '<strong>' + escHtml(s.name) + '</strong><span>' + escHtml(s.category || '') + '</span></button>';
       });
       if (!(data.services || []).length) {
-        html += '<p class="pdx-portal-empty">No services available yet.</p>';
+        html += '<p class="pdx-portal-empty">' + escHtml(t('no_services', 'No services available yet.')) + '</p>';
       }
       section.innerHTML = html;
       section.querySelectorAll('[data-portal-open]').forEach(function (el) {
@@ -3104,14 +3126,14 @@
   }
 
   function renderPortalServiceDetail(service) {
-    var html = portalBackBtn('All services');
+    var html = portalBackBtn(t('all_services', 'All services'));
     html += '<article class="pdx-portal-detail"><h3>' + escHtml(service.name) + '</h3>';
     if (service.description) {
       html += '<div class="pdx-portal-body-text">' + escHtml(service.description) + '</div>';
     }
     html += '<form class="pdx-portal-request-form" id="pdx-portal-request-form">' +
-      '<textarea rows="3" placeholder="Describe your request…" aria-label="Request message" required></textarea>' +
-      actionBtn('Submit request', { type: 'submit', small: true, inline: true, icon: 'send' }) +
+      '<textarea rows="3" placeholder="' + escHtml(t('describe_request', 'Describe your request…')) + '" aria-label="' + escHtml(t('request_message', 'Request message')) + '" required></textarea>' +
+      actionBtn(t('submit_request', 'Submit request'), { type: 'submit', small: true, inline: true, icon: 'send' }) +
       '</form></article>';
     setTimeout(function () {
       var form = document.getElementById('pdx-portal-request-form');
@@ -3124,7 +3146,7 @@
           service_slug: service.slug,
           message: message,
         }).then(function (res) {
-          notify(res.message || (res._ok ? 'Request submitted.' : 'Request failed.'), res._ok ? 'info' : 'error');
+          notify(res.message || (res._ok ? t('request_submitted', 'Request submitted.') : t('request_failed', 'Request failed.')), res._ok ? 'info' : 'error');
           if (res._ok) {
             portalState.tab = 'orders';
             portalState.detail = null;
@@ -3142,20 +3164,20 @@
 
   function renderPortalNewsSection(data) {
     var news = data.news || [];
-    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('news', 16) + 'News & announcements</h3>';
+    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('news', 16) + escHtml(t('news_announcements', 'News & announcements')) + '</h3>';
     if (news.length) {
       news.forEach(function (n) {
         html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="news" data-portal-slug="' + escHtml(n.slug || '') + '">' +
           '<strong>' + escHtml(n.title) + '</strong><span>' + escHtml(formatDate(n.published_at)) + '</span></button>';
       });
     } else {
-      html += '<p class="pdx-portal-empty">No announcements right now.</p>';
+      html += '<p class="pdx-portal-empty">' + escHtml(t('no_announcements', 'No announcements right now.')) + '</p>';
     }
     return html + '</section>';
   }
 
   function renderPortalNewsDetail(item) {
-    var html = portalBackBtn('All news');
+    var html = portalBackBtn(t('all_news', 'All news'));
     html += '<article class="pdx-portal-detail pdx-portal-detail--news">';
     if (item.image_url) {
       html += '<figure class="pdx-portal-news-hero">' +
@@ -3172,7 +3194,7 @@
   }
 
   function renderPortalNotificationsSection() {
-    return '<section class="pdx-portal-section" id="pdx-portal-notifications">' + cxLoading('Loading notifications…') + '</section>';
+    return '<section class="pdx-portal-section" id="pdx-portal-notifications">' + cxLoading(t('loading_notifications', 'Loading notifications…')) + '</section>';
   }
 
   function bindPortalNotificationsSection(container) {
@@ -3180,10 +3202,10 @@
     if (!section) return;
     customerApiFetch('GET', '/customer/notifications?limit=50').then(function (data) {
       if (!data || !data._ok) {
-        section.innerHTML = '<p class="pdx-auth-error">Notifications could not be loaded.</p>';
+        section.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('notifications_load_error', 'Notifications could not be loaded.')) + '</p>';
         return;
       }
-      var html = '<h3>' + cxIcon('bell', 16) + 'Notifications';
+      var html = '<h3>' + cxIcon('bell', 16) + escHtml(t('notifications', 'Notifications'));
       if (data.unread_count) {
         html += ' <span class="pdx-portal-badge">' + escHtml(String(data.unread_count)) + '</span>';
       }
@@ -3198,10 +3220,10 @@
         });
         html += '</div>';
         if (data.unread_count) {
-          html += portalBtn('Mark all read', { type: 'button', variant: 'secondary', small: true, id: 'pdx-portal-mark-read' });
+          html += portalBtn(t('mark_all_read', 'Mark all read'), { type: 'button', variant: 'secondary', small: true, id: 'pdx-portal-mark-read' });
         }
       } else {
-        html += '<p class="pdx-portal-empty">No notifications yet.</p>';
+        html += '<p class="pdx-portal-empty">' + escHtml(t('no_notifications', 'No notifications yet.')) + '</p>';
       }
       section.innerHTML = html;
       section.querySelectorAll('.pdx-portal-notify--unread').forEach(function (el) {

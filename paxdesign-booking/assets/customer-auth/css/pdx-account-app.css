@@ -30,10 +30,23 @@
   overflow: hidden;
 }
 
+.pdx-account-app[dir="rtl"] .pdx-account-sidebar {
+  border-right: 0;
+  border-left: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.pdx-account-sidebar-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .pdx-account-sidebar-user {
   padding: 6px 10px 18px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   margin-bottom: 12px;
+  flex-shrink: 0;
 }
 
 .pdx-account-sidebar-name {
@@ -85,8 +98,17 @@
   color: #1d1d1f;
   background: transparent;
   cursor: pointer;
-  text-align: left;
+  text-align: start;
   transition: background 0.15s ease;
+}
+
+.pdx-account-nav-text {
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.pdx-account-app[dir="rtl"] .pdx-account-nav-btn {
+  text-align: start;
 }
 
 .pdx-account-nav-btn:hover {
@@ -106,6 +128,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .pdx-account-website-link {
@@ -115,6 +138,10 @@
 
 .pdx-account-website-link .pdx-cx-icon {
   transform: rotate(-90deg);
+}
+
+.pdx-account-app[dir="rtl"] .pdx-account-website-link .pdx-cx-icon {
+  transform: rotate(90deg);
 }
 
 .pdx-account-main {
@@ -216,34 +243,113 @@
   padding: 0;
 }
 
+/* Mobile: persistent two-column layout — menu left, content right */
 @media (max-width: 900px) {
   .pdx-account-app {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-columns: minmax(118px, 36vw) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
     min-height: 0;
     height: 100%;
     max-height: 100%;
+    overflow: hidden;
   }
 
   .pdx-account-sidebar {
-    border-right: 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    padding-bottom: 10px;
-    max-height: 42svh;
-    overflow-y: auto;
+    border-bottom: 0;
+    padding: 8px 6px;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .pdx-account-sidebar-user {
+    padding: 4px 4px 8px;
+    margin-bottom: 8px;
+  }
+
+  .pdx-account-sidebar-name {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .pdx-account-sidebar-email {
+    font-size: 10px;
+    line-height: 1.2;
+  }
+
+  .pdx-account-sidebar-status {
+    font-size: 10px;
+    margin-top: 4px;
   }
 
   .pdx-account-nav-group {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 8px;
   }
 
   .pdx-account-nav-label {
-    grid-column: 1 / -1;
+    font-size: 9px;
+    padding: 0 4px 3px;
+    letter-spacing: 0.03em;
+  }
+
+  .pdx-account-nav-btn {
+    font-size: 11px;
+    min-height: 32px;
+    padding: 4px 6px;
+    gap: 5px;
+    border-radius: 8px;
+  }
+
+  .pdx-account-nav-btn .pdx-cx-icon {
+    flex-shrink: 0;
+    width: 14px;
+    height: 14px;
+  }
+
+  .pdx-account-sidebar-footer {
+    padding-top: 6px;
+    gap: 4px;
+  }
+
+  .pdx-account-signout,
+  .pdx-account-website-link {
+    font-size: 11px;
+    min-height: 32px;
+    padding-inline: 6px;
   }
 
   .pdx-account-main {
-    padding: 18px 16px 28px;
+    padding: 12px 10px 20px;
   }
+
+  .pdx-account-page-title {
+    font-size: clamp(18px, 4.5vw, 24px);
+  }
+
+  .pdx-account-page-lead {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 380px) {
+  .pdx-account-app {
+    grid-template-columns: minmax(104px, 34vw) minmax(0, 1fr);
+  }
+
+  .pdx-account-sidebar-email {
+    display: none;
+  }
+}
+
+/* RTL typography tuning */
+body.pdx-account-rtl .pdx-account-nav-label {
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+body.pdx-account-rtl .pdx-account-card-title {
+  letter-spacing: 0;
+  text-transform: none;
 }

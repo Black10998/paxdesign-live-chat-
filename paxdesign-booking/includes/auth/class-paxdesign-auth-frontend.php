@@ -93,6 +93,18 @@ class PAXdesign_Auth_Frontend {
     /**
      * @return array<string, mixed>
      */
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private static function account_ui_l10n() {
+        $path = PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/customer/data/account-ui-l10n.php';
+        if (!is_readable($path)) {
+            return array();
+        }
+        $strings = include $path;
+        return is_array($strings) ? $strings : array();
+    }
+
     private static function js_config() {
         $user_id = get_current_user_id();
         return array(
@@ -115,6 +127,7 @@ class PAXdesign_Auth_Frontend {
             'homeUrl'          => esc_url(home_url('/')),
             'logoUrl'          => class_exists('PAXdesign_Auth_Page') ? PAXdesign_Auth_Page::brand_logo_url() : '',
             'siteName'         => get_bloginfo('name'),
+            'accountUiL10n'    => self::account_ui_l10n(),
         );
     }
 }
