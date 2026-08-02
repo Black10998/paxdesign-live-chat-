@@ -218,7 +218,7 @@ class PAXdesign_Customer_Registry {
         if (user_can($user_id, 'manage_options')) {
             return false;
         }
-        if (class_exists('PDX_Customers') && !PDX_Customers::is_customer($user_id)) {
+        if (!PAXdesign_Customers::is_customer($user_id)) {
             return false;
         }
         return true;

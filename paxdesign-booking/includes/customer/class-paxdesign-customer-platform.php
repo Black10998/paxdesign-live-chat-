@@ -117,6 +117,7 @@ class PAXdesign_Customer_Platform {
         require_once $base . 'class-paxdesign-customer-avatar-vip-presets.php';
         require_once $base . 'class-paxdesign-customer-levels.php';
         require_once $base . 'class-paxdesign-customer-registry.php';
+        require_once $base . 'class-paxdesign-toolbar-migration.php';
         require_once $base . 'class-paxdesign-customer-master-admin.php';
         require_once $base . 'class-paxdesign-customer-master-rest.php';
         require_once $base . 'class-paxdesign-customer-site-menu.php';

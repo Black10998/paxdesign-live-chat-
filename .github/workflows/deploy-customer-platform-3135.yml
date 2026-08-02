@@ -25,9 +25,9 @@ on:
       - 'cursor/customer-email-sync-3a65'
       - 'cursor/customer-name-display-fix-3a65'
       - 'cursor/header-customer-name-fix-3a65'
+      - 'cursor/remove-paxdesign-toolbar-3a65'
     paths:
       - 'paxdesign-booking/**'
-      - 'paxdesign-toolbar/**'
       - '.github/triggers/deploy-customer-platform-*'
 
 permissions:
@@ -100,7 +100,7 @@ jobs:
           ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
             "WP_PATH=$(printf '%q' "$WP_PATH") bash -s" < scripts/backup-wp-production.sh | tee backup.log
 
-      - name: Deploy paxdesign-booking (toolbar-independent)
+      - name: Deploy paxdesign-booking
         env:
           WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
           WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
@@ -117,9 +117,9 @@ jobs:
           BOOKING_TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
           rsync -az --delete -e "ssh ${SSH_OPTS[*]}" paxdesign-booking/ "${WP_SSH_USER}@${WP_SSH_HOST}:${BOOKING_TARGET}/"
           ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
-            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp plugin deactivate paxdesign-toolbar --quiet 2>/dev/null || true) && (command -v wp >/dev/null && wp plugin activate paxdesign-booking && wp cache flush || true)"
+            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp plugin activate paxdesign-booking && wp cache flush || true)"
 
-      - name: Deploy paxdesign-toolbar (admin customer management)
+      - name: Migrate toolbar customers and remove paxdesign-toolbar
         env:
           WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
           WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
@@ -133,10 +133,12 @@ jobs:
           install -m 600 -D /dev/null ~/.ssh/id_deploy
           printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
           ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-          TOOLBAR_TARGET="${WP_PATH%/}/wp-content/plugins/paxdesign-toolbar"
-          rsync -az --delete -e "ssh ${SSH_OPTS[*]}" paxdesign-toolbar/ "${WP_SSH_USER}@${WP_SSH_HOST}:${TOOLBAR_TARGET}/"
           ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
-            "cd '$(printf '%q' "$WP_PATH")' && (command -v wp >/dev/null && wp plugin activate paxdesign-toolbar && wp cache flush || true)"
+            "cd '$(printf '%q' "$WP_PATH")' && \
+             (command -v wp >/dev/null && wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-toolbar-customer-migration.php || echo 'toolbar migration skipped — wp-cli unavailable') && \
+             (command -v wp >/dev/null && wp plugin deactivate paxdesign-toolbar --quiet 2>/dev/null || true) && \
+             rm -rf wp-content/plugins/paxdesign-toolbar wp-content/plugins/paxdesign-toolbar-* && \
+             (command -v wp >/dev/null && wp plugin activate paxdesign-booking && wp cache flush || true)"
 
       - name: Run customer database migrations
         env:

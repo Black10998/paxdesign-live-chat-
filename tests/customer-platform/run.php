@@ -230,7 +230,19 @@ cx_assert_true(strpos($pax_auth_js, 'isMasterAdminUser()') !== false && strpos($
 cx_assert_true(strpos($pax_auth_js, 'pdx-account-level-badge') !== false, 'Account JS must render level badges');
 cx_assert_true(strpos($pax_auth_js, 'administration') !== false, 'Account JS must include administration section');
 
-$pdx_customers = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-toolbar/includes/class-pdx-customers.php');
-cx_assert_true(strpos($pdx_customers, 'grant_vip_avatar') !== false, 'Admin customers must grant VIP avatars');
+$pdx_customers = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-customers.php');
+cx_assert_true(strpos($pdx_customers, 'META_ADMIN_NOTES') !== false, 'Booking customers must support admin notes without toolbar');
+cx_assert_true(strpos($pdx_customers, 'save_notes') !== false, 'Booking customers must save admin notes');
+
+$migration = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/customer/class-paxdesign-toolbar-migration.php');
+cx_assert_true(strpos($migration, 'PAXdesign_Toolbar_Migration') !== false, 'Toolbar migration class must exist');
+cx_assert_true(strpos($migration, 'pax_toolbar_migration_backup') !== false, 'Toolbar migration must export backup');
+
+$deploy = file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/deploy-customer-platform-3135.yml');
+cx_assert_true(strpos($deploy, 'rsync -az --delete -e "ssh ${SSH_OPTS[*]}" paxdesign-toolbar/') === false, 'Deploy workflow must not rsync toolbar');
+cx_assert_true(strpos($deploy, 'wp-eval-toolbar-customer-migration.php') !== false, 'Deploy workflow must run toolbar customer migration');
+
+$repo_root = dirname(__DIR__, 2);
+cx_assert_true(!is_dir($repo_root . '/paxdesign-toolbar'), 'paxdesign-toolbar directory must be removed from repository');
 
 echo "OK: customer platform static verification passed (" . count($files) . " modules)\n";

@@ -1,10 +1,10 @@
 # PAXDesign Customer Platform
 
-Implementation lives in `paxdesign-booking/includes/customer/` and extends the existing `pdx/v1` REST namespace shared with `paxdesign-toolbar`.
+Implementation lives in `paxdesign-booking/includes/customer/` and uses the native `pdx/v1` REST namespace in **paxdesign-booking** (toolbar-free).
 
 ## Authentication
 
-- **Website:** WordPress cookie session + `X-WP-Nonce` via `paxdesign-toolbar` `/auth/*` routes (`PDX_Auth`).
+- **Website:** WordPress cookie session + `X-WP-Nonce` via `paxdesign-booking` `/auth/*` routes (`PAXdesign_Auth_Native`).
 - **Mobile:** WordPress Application Password (HTTP Basic Auth) on `/pdx/v1/customer/*` — same `wp_users` records, no parallel auth store.
 - **Role:** `pdx_customer` (from toolbar `PDX_Auth::CUSTOMER_ROLE`), not a separate `pax_customer` role.
 - **Account status:** Suspended/pending accounts blocked via `PDX_Customers::is_login_allowed()`.
@@ -12,7 +12,7 @@ Implementation lives in `paxdesign-booking/includes/customer/` and extends the e
 
 ## Toolbar integration
 
-The full `paxdesign-toolbar` plugin (v9.1.0+) is included in this repository. Customer platform auth delegates to `PDX_Auth` and fires `pdx_user_logged_in` on toolbar login for chat session linking.
+Customer platform auth is provided by **paxdesign-booking** and fires `pdx_user_logged_in` on login for chat session linking.
 
 ## Guest chat migration
 
@@ -62,6 +62,6 @@ Customer portal endpoints and the iOS customer app exclude PayPal, billing check
 
 ## Deploy notes
 
-- Deploy both `paxdesign-toolbar` and `paxdesign-booking` (v3.134.0+).
+- Deploy **paxdesign-booking** only (v3.174.84+). The legacy `paxdesign-toolbar` plugin has been removed.
 - Run DB migration on activation or first load (`PAXdesign_Customer_DB::install()`).
 - Back up production database before first deploy.

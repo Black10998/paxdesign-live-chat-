@@ -4,7 +4,7 @@
 (function () {
   'use strict';
 
-  var C = typeof PAX_AUTH_CONFIG !== 'undefined' ? PAX_AUTH_CONFIG : (typeof PDX_CONFIG !== 'undefined' ? PDX_CONFIG : null);
+  var C = typeof PAX_AUTH_CONFIG !== 'undefined' ? PAX_AUTH_CONFIG : null;
   if (!C) return;
   var user = {
     logged_in: !!C.isLoggedIn,
