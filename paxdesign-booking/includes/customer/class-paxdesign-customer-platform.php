@@ -13,6 +13,7 @@ class PAXdesign_Customer_Platform {
         self::load_dependencies();
         PAXdesign_Customer_DB::init();
         PAXdesign_Customer_Avatar::init();
+        PAXdesign_Customer_Registry::init();
         PAXdesign_Customer_Master_Admin::init();
         PAXdesign_Customer_Master_REST::init();
         PAXdesign_Customer_Auth::init();
@@ -115,6 +116,7 @@ class PAXdesign_Customer_Platform {
         require_once $base . 'class-paxdesign-customer-avatar-presets.php';
         require_once $base . 'class-paxdesign-customer-avatar-vip-presets.php';
         require_once $base . 'class-paxdesign-customer-levels.php';
+        require_once $base . 'class-paxdesign-customer-registry.php';
         require_once $base . 'class-paxdesign-customer-master-admin.php';
         require_once $base . 'class-paxdesign-customer-master-rest.php';
         require_once $base . 'class-paxdesign-customer-site-menu.php';

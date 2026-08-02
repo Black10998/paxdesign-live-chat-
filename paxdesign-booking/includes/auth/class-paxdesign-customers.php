@@ -40,9 +40,21 @@ class PAXdesign_Customers {
         return self::STATUS_SUSPENDED !== self::account_status((int) $user_id);
     }
 
-    public static function record_login($user_id) {
+	public static function record_login($user_id) {
         if ($user_id > 0) {
             update_user_meta((int) $user_id, self::META_LAST_LOGIN, current_time('mysql'));
         }
+    }
+
+    /**
+     * @param int $user_id
+     * @return bool
+     */
+    public static function is_customer($user_id) {
+        $user_id = (int) $user_id;
+        if ($user_id <= 0 || user_can($user_id, 'manage_options')) {
+            return false;
+        }
+        return true;
     }
 }

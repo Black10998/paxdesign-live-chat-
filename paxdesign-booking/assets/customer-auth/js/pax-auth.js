@@ -35,6 +35,8 @@
     masterCustomer: null,
     masterLevels: null,
     masterSearch: '',
+    masterPage: 1,
+    masterPerPage: 50,
   };
   var accountMobileNavOpen = false;
   var accountMobileMenuBtn = null;
@@ -2734,7 +2736,7 @@
             '</div>' +
             renderCustomerLevelBadge(customer) +
             (customer.level_description ? '<div class="pdx-account-profile-level-desc">' + escHtml(customer.level_description) + '</div>' : '') +
-            '<div class="pdx-account-profile-email">' + escHtml(customer.email || '') + '</div>' +
+            '<div class="pdx-account-profile-email">' + renderAdminCustomerEmail(customer) + '</div>' +
           '</div>' +
         '</div>' +
         '<dl class="pdx-account-admin-meta">' +
@@ -2836,6 +2838,20 @@
     '</div>';
   }
 
+  function adminCustomerEmailLabel(customer) {
+    if (!customer) return '';
+    var email = String(customer.email || '').trim();
+    if (email) return email;
+    var login = String(customer.user_login || '').trim();
+    if (login.indexOf('@') !== -1) return login;
+    return '';
+  }
+
+  function renderAdminCustomerEmail(customer) {
+    var email = adminCustomerEmailLabel(customer);
+    return email ? escHtml(email) : escHtml(t('email_unavailable', 'Email unavailable'));
+  }
+
   function renderAccountAdminSection() {
     var customer = accountState.masterCustomer;
     if (customer && customer.id) {
@@ -2850,7 +2866,7 @@
             renderAdminCustomerAvatarHtml(customer, 'pdx-account-avatar--sidebar') +
             '<div><div class="pdx-account-card-title">' + escHtml(customer.display_name || customer.email || ('#' + customer.id)) + '</div>' +
             renderCustomerLevelBadge(customer) +
-            '<div class="pdx-account-admin-toolbar__email">' + escHtml(customer.email || '') + '</div></div>' +
+            '<div class="pdx-account-admin-toolbar__email">' + renderAdminCustomerEmail(customer) + '</div></div>' +
           '</div>' +
         '</div>' +
         renderAdminCustomerPreviewPanel(customer) +
@@ -2858,7 +2874,7 @@
           '<div class="pdx-account-admin-section-title">' + escHtml(t('admin_account_details', 'Account details')) + '</div>' +
           '<form id="pdx-master-customer-form" class="pdx-account-form">' +
             '<label class="pdx-label">' + escHtml(t('display_name', 'Display name')) + '<input class="pdx-input" name="display_name" value="' + escHtml(customer.display_name || '') + '" /></label>' +
-            '<label class="pdx-label">' + escHtml(t('email', 'Email')) + '<input class="pdx-input" name="email" type="email" value="' + escHtml(customer.email || '') + '" /></label>' +
+            '<label class="pdx-label">' + escHtml(t('email', 'Email')) + '<input class="pdx-input" name="email" type="email" value="' + escHtml(adminCustomerEmailLabel(customer)) + '" /></label>' +
             '<label class="pdx-label">' + escHtml(t('account_status', 'Account status')) +
               '<select class="pdx-select" name="account_status">' +
                 ['active', 'pending', 'suspended'].map(function (st) {
@@ -2883,13 +2899,18 @@
 
     var rows = (accountState.masterCustomers && accountState.masterCustomers.customers) || [];
     var total = accountState.masterCustomers && accountState.masterCustomers.total;
+    var page = accountState.masterCustomers && accountState.masterCustomers.page ? Number(accountState.masterCustomers.page) : accountState.masterPage;
+    var perPage = accountState.masterCustomers && accountState.masterCustomers.per_page ? Number(accountState.masterCustomers.per_page) : accountState.masterPerPage;
+    var totalPages = total > 0 ? Math.ceil(total / perPage) : 1;
     var html = '<div class="pdx-account-card">' +
       '<div class="pdx-account-admin-search">' +
         '<input type="search" class="pdx-input" id="pdx-master-customer-search" placeholder="' + escHtml(t('search_customers', 'Search customers…')) + '" value="' + escHtml(accountState.masterSearch || '') + '" />' +
         '<button type="button" class="pdx-portal-btn pdx-portal-btn--secondary" id="pdx-master-customer-search-btn">' + escHtml(t('search', 'Search')) + '</button>' +
       '</div>';
     if (typeof total === 'number') {
-      html += '<div class="pdx-account-admin-count">' + escHtml(String(total)) + ' ' + escHtml(t('customers_total', 'customers')) + '</div>';
+      html += '<div class="pdx-account-admin-count">' + escHtml(String(total)) + ' ' + escHtml(t('customers_total', 'customers')) +
+        (totalPages > 1 ? ' · ' + escHtml(t('page', 'Page')) + ' ' + escHtml(String(page)) + ' / ' + escHtml(String(totalPages)) : '') +
+      '</div>';
     }
     html += '<div class="pdx-account-admin-table-wrap"><table class="pdx-account-admin-table"><thead><tr>' +
         '<th></th><th>' + escHtml(t('customer', 'Customer')) + '</th><th>' + escHtml(t('email', 'Email')) + '</th><th>' + escHtml(t('level', 'Level')) + '</th><th>' + escHtml(t('status', 'Status')) + '</th><th></th>' +
@@ -2901,22 +2922,37 @@
         html += '<tr>' +
           '<td class="pdx-account-admin-table__avatar">' + renderAdminCustomerAvatarHtml(row, 'pdx-account-avatar--menu') + '</td>' +
           '<td><strong>' + escHtml(row.display_name || '—') + '</strong></td>' +
-          '<td>' + escHtml(row.email || '') + '</td>' +
+          '<td>' + renderAdminCustomerEmail(row) + '</td>' +
           '<td>' + (row.level_label ? escHtml(row.level_label) : '—') + '</td>' +
           '<td><span class="pdx-account-admin-status pdx-account-admin-status--' + escHtml(row.account_status || 'active') + '">' + escHtml(row.account_status || '') + '</span></td>' +
           '<td><button type="button" class="pdx-portal-btn pdx-portal-btn--secondary pdx-admin-open-customer" data-customer-id="' + escHtml(String(row.id)) + '">' + escHtml(t('manage', 'Manage')) + '</button></td>' +
         '</tr>';
       });
     }
-    html += '</tbody></table></div></div>';
+    html += '</tbody></table></div>';
+    if (totalPages > 1) {
+      html += '<div class="pdx-account-admin-pagination">' +
+        '<button type="button" class="pdx-portal-btn pdx-portal-btn--ghost pdx-admin-page-prev"' + (page <= 1 ? ' disabled' : '') + '>' + escHtml(t('previous', 'Previous')) + '</button>' +
+        '<span class="pdx-account-admin-pagination__label">' + escHtml(t('page', 'Page')) + ' ' + escHtml(String(page)) + ' / ' + escHtml(String(totalPages)) + '</span>' +
+        '<button type="button" class="pdx-portal-btn pdx-portal-btn--ghost pdx-admin-page-next"' + (page >= totalPages ? ' disabled' : '') + '>' + escHtml(t('next', 'Next')) + '</button>' +
+      '</div>';
+    }
+    html += '</div>';
     return html;
   }
 
-  function loadMasterAdminCustomers(search) {
-    accountState.masterSearch = search || accountState.masterSearch || '';
-    var q = accountState.masterSearch ? ('?search=' + encodeURIComponent(accountState.masterSearch)) : '';
+  function loadMasterAdminCustomers(search, page) {
+    accountState.masterSearch = search !== undefined ? (search || '') : accountState.masterSearch || '';
+    if (page !== undefined) accountState.masterPage = Math.max(1, Number(page) || 1);
+    var q = '?page=' + encodeURIComponent(String(accountState.masterPage)) +
+      '&per_page=' + encodeURIComponent(String(accountState.masterPerPage || 50)) +
+      '&_=' + Date.now();
+    if (accountState.masterSearch) q += '&search=' + encodeURIComponent(accountState.masterSearch);
     return customerApiFetch('GET', '/customer/master/customers' + q).then(function (data) {
-      if (data && data._ok !== false) accountState.masterCustomers = data;
+      if (data && data._ok !== false) {
+        accountState.masterCustomers = data;
+        if (data.page) accountState.masterPage = Number(data.page);
+      }
       return data;
     });
   }
@@ -2974,7 +3010,8 @@
     var searchInput = container.querySelector('#pdx-master-customer-search');
     if (searchBtn && searchInput) {
       var runSearch = function () {
-        loadMasterAdminCustomers(searchInput.value || '').then(function () { renderAccountApp(); });
+        accountState.masterPage = 1;
+        loadMasterAdminCustomers(searchInput.value || '', 1).then(function () { renderAccountApp(); });
       };
       searchBtn.addEventListener('click', runSearch);
       searchInput.addEventListener('keydown', function (e) {
@@ -2982,6 +3019,20 @@
           e.preventDefault();
           runSearch();
         }
+      });
+    }
+    var prevPageBtn = container.querySelector('.pdx-admin-page-prev');
+    var nextPageBtn = container.querySelector('.pdx-admin-page-next');
+    if (prevPageBtn) {
+      prevPageBtn.addEventListener('click', function () {
+        if (prevPageBtn.disabled) return;
+        loadMasterAdminCustomers(undefined, Math.max(1, accountState.masterPage - 1)).then(function () { renderAccountApp(); });
+      });
+    }
+    if (nextPageBtn) {
+      nextPageBtn.addEventListener('click', function () {
+        if (nextPageBtn.disabled) return;
+        loadMasterAdminCustomers(undefined, accountState.masterPage + 1).then(function () { renderAccountApp(); });
       });
     }
     container.querySelectorAll('.pdx-admin-grant-vip').forEach(function (btn) {
@@ -3073,7 +3124,9 @@
         }).then(function (data) {
           if (data && data._ok !== false && data.customer) {
             accountState.masterCustomer = data.customer;
-            renderAccountApp();
+            loadMasterAdminCustomers(undefined, accountState.masterPage).then(function () {
+              renderAccountApp();
+            });
             notify(t('customer_updated', 'Customer updated.'), 'info');
           } else {
             notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');

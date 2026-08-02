@@ -945,4 +945,24 @@ return array(
 		'de' => 'Nein',
 		'ar' => 'لا',
 	),
+	'email_unavailable' => array(
+		'en' => 'Email unavailable',
+		'de' => 'E-Mail nicht verfügbar',
+		'ar' => 'البريد غير متاح',
+	),
+	'page' => array(
+		'en' => 'Page',
+		'de' => 'Seite',
+		'ar' => 'صفحة',
+	),
+	'previous' => array(
+		'en' => 'Previous',
+		'de' => 'Zurück',
+		'ar' => 'السابق',
+	),
+	'next' => array(
+		'en' => 'Next',
+		'de' => 'Weiter',
+		'ar' => 'التالي',
+	),
 );

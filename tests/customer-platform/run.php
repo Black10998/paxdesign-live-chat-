@@ -204,11 +204,22 @@ cx_assert_true(strpos($apple_auth, 'find_master_user') !== false, 'Apple auth mu
 
 $master_rest = file_get_contents($customer_dir . '/class-paxdesign-customer-master-rest.php');
 cx_assert_true(strpos($master_rest, '/customer/master/customers') !== false, 'Master admin customer routes must exist');
+cx_assert_true(strpos($master_rest, 'PAXdesign_Customer_Registry') !== false, 'Master admin list must use customer registry');
+
+$registry = file_get_contents($customer_dir . '/class-paxdesign-customer-registry.php');
+cx_assert_true(strpos($registry, 'account_email') !== false, 'Customer registry must resolve account email');
+cx_assert_true(strpos($registry, 'ensure_portal_customer') !== false, 'Customer registry must auto-register portal customers');
+cx_assert_true(strpos($registry, 'backfill_existing_portal_customers') !== false, 'Customer registry must backfill existing customers');
+
+$apple_auth = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-auth-apple.php');
+cx_assert_true(strpos($apple_auth, 'maybe_sync_account_email') !== false, 'Apple auth must sync account email on login');
 
 $vip_presets_php = file_get_contents($customer_dir . '/class-paxdesign-customer-avatar-vip-presets.php');
 cx_assert_true(strpos($vip_presets_php, 'catalog_preview') !== false, 'VIP presets must expose admin preview catalog');
 
 cx_assert_true(strpos($pax_auth_js, 'renderAdminCustomerPreviewPanel') !== false, 'Account JS must render admin customer preview');
+cx_assert_true(strpos($pax_auth_js, 'adminCustomerEmailLabel') !== false, 'Account JS must resolve customer email for admin views');
+cx_assert_true(strpos($pax_auth_js, 'pdx-admin-page-next') !== false, 'Account JS must paginate admin customer list');
 cx_assert_true(strpos($pax_auth_js, 'renderAdminCustomerAvatarPickers') !== false, 'Account JS must render admin avatar pickers');
 cx_assert_true(strpos($pax_auth_js, 'isMasterAdminUser()') !== false && strpos($pax_auth_js, 'preset.locked && !isMasterAdminUser()') !== false, 'Master admin must preview unlocked VIP avatars');
 

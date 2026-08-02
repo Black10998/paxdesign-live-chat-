@@ -1551,6 +1551,20 @@ body.pdx-account-signout-confirm-open {
   border: 2px solid rgba(212, 175, 55, 0.45);
 }
 
+.pdx-account-admin-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.pdx-account-admin-pagination__label {
+  font-size: 12px;
+  color: #86868b;
+}
+
 @media (max-width: 720px) {
   .pdx-account-admin-meta div {
     grid-template-columns: 1fr;

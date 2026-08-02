@@ -45,40 +45,30 @@ class PAXdesign_Customer_Master_REST {
     public static function list_customers(WP_REST_Request $request) {
         $search = sanitize_text_field((string) $request->get_param('search'));
         $page = max(1, (int) $request->get_param('page'));
-        $per_page = min(50, max(1, (int) ($request->get_param('per_page') ?: 25)));
-        $offset = ($page - 1) * $per_page;
+        $per_page = min(100, max(1, (int) ($request->get_param('per_page') ?: 50)));
 
-        $args = array(
-            'number'         => $per_page,
-            'offset'         => $offset,
-            'orderby'        => 'registered',
-            'order'          => 'DESC',
-            'role__not_in'   => array('administrator'),
-            'search_columns' => array('user_login', 'user_email', 'display_name'),
-        );
-        if ($search !== '') {
-            $args['search'] = '*' . esc_attr($search) . '*';
-        }
-
-        $query = new WP_User_Query($args);
-        $users = $query->get_results();
+        $result = PAXdesign_Customer_Registry::query_manageable_customers($search, $page, $per_page);
         $items = array();
-        foreach ($users as $user) {
+        foreach ($result['users'] as $user) {
             if ($user instanceof WP_User) {
-                $items[] = self::customer_summary($user->ID);
+                $summary = self::customer_summary($user->ID);
+                if (!empty($summary)) {
+                    $items[] = $summary;
+                }
             }
         }
 
         return rest_ensure_response(array(
             'customers' => $items,
-            'total'     => (int) $query->get_total(),
-            'page'      => $page,
-            'per_page'  => $per_page,
+            'total'     => (int) $result['total'],
+            'page'      => (int) $result['page'],
+            'per_page'  => (int) $result['per_page'],
         ));
     }
 
     public static function get_customer(WP_REST_Request $request) {
         $user_id = absint($request->get_param('id'));
+        PAXdesign_Customer_Registry::ensure_portal_customer($user_id);
         if ($user_id <= 0 || !self::is_manageable_customer($user_id)) {
             return new WP_Error('invalid_customer', __('Customer not found.', 'paxdesign-booking'), array('status' => 404));
         }
@@ -157,6 +147,9 @@ class PAXdesign_Customer_Master_REST {
             PDX_Customers::save_notes($user_id, (string) $request->get_param('admin_notes'));
         }
 
+        PAXdesign_Customer_Registry::ensure_portal_customer($user_id);
+        update_user_meta($user_id, PAXdesign_Customer_Registry::META_SYNCED_AT, current_time('mysql'));
+
         return rest_ensure_response(array(
             'success'  => true,
             'customer' => self::customer_detail($user_id),
@@ -182,16 +175,18 @@ class PAXdesign_Customer_Master_REST {
         if (!$user instanceof WP_User) {
             return array();
         }
+        $email = PAXdesign_Customer_Registry::account_email($user_id);
         $level = PAXdesign_Customer_Levels::profile_fields($user_id);
         $avatar = class_exists('PAXdesign_Customer_Avatar') ? PAXdesign_Customer_Avatar::profile_fields($user_id) : array();
         return array_merge(
             array(
                 'id'                 => $user_id,
                 'display_name'       => $user->display_name,
-                'email'              => $user->user_email,
+                'email'              => $email,
+                'user_login'         => $user->user_login,
                 'registered'         => $user->user_registered,
                 'verified'           => class_exists('PAXdesign_Auth') ? PAXdesign_Auth::is_email_verified($user_id) : false,
-                'account_status'     => class_exists('PDX_Customers') ? PDX_Customers::account_status($user_id) : 'active',
+                'account_status'     => class_exists('PDX_Customers') ? PDX_Customers::account_status($user_id) : (class_exists('PAXdesign_Customers') ? PAXdesign_Customers::account_status($user_id) : 'active'),
                 'customer_level'     => $level['customer_level'],
                 'level_label'        => $level['level_label'],
                 'has_customer_level' => $level['has_customer_level'],
@@ -225,20 +220,6 @@ class PAXdesign_Customer_Master_REST {
      * @return bool
      */
     private static function is_manageable_customer($user_id) {
-        $user_id = absint($user_id);
-        if ($user_id <= 0) {
-            return false;
-        }
-        $user = get_userdata($user_id);
-        if (!$user instanceof WP_User) {
-            return false;
-        }
-        if (user_can($user, 'manage_options')) {
-            return false;
-        }
-        if (class_exists('PDX_Customers')) {
-            return PDX_Customers::is_customer($user_id);
-        }
-        return true;
+        return PAXdesign_Customer_Registry::is_manageable_by_master_admin($user_id);
     }
 }
