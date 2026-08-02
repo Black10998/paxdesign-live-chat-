@@ -304,7 +304,43 @@
   }
 
   function defaultAvatarUrl() {
-    return C.defaultAvatarUrl || '';
+    return normalizeAvatarAssetUrl(C.defaultAvatarUrl || '');
+  }
+
+  function normalizeAvatarAssetUrl(url) {
+    if (!url) return '';
+    var normalized = String(url).replace(/(\/avatars\/pax-\d{2})\.svg(\?.*)?$/i, '$1.gif');
+    if (normalized.indexOf('/avatars/pax-') !== -1 && /\.gif(\?|$)/i.test(normalized) && normalized.indexOf('?') === -1 && C.version) {
+      normalized += '?v=' + encodeURIComponent(C.version);
+    }
+    return normalized;
+  }
+
+  function accountAvatarPresetUrl(presetId) {
+    if (!presetId || presetId === 'pax-none') return '';
+    var presets = accountAvatarPresets();
+    for (var i = 0; i < presets.length; i++) {
+      if (presets[i].id === presetId) {
+        return normalizeAvatarAssetUrl(presets[i].url || '');
+      }
+    }
+    var sample = defaultAvatarUrl();
+    if (sample && /\/avatars\/pax-\d{2}\.gif/i.test(sample)) {
+      return normalizeAvatarAssetUrl(sample.replace(/pax-\d{2}\.gif/i, presetId + '.gif'));
+    }
+    return '';
+  }
+
+  function refreshAccountAvatarPresets() {
+    return customerApiFetch('GET', '/customer/profile/avatars?_=' + Date.now()).then(function (data) {
+      if (data && data._ok !== false && Array.isArray(data.presets) && data.presets.length) {
+        C.avatarPresets = data.presets.map(function (preset) {
+          if (!preset || preset.type === 'none' || preset.id === 'pax-none') return preset;
+          preset.url = normalizeAvatarAssetUrl(preset.url || '');
+          return preset;
+        });
+      }
+    }).catch(function () {});
   }
 
   function accountProfileData() {
@@ -318,7 +354,16 @@
   function accountAvatarUrl(profile) {
     profile = profile || accountProfileData();
     if (profile.avatar_has_image === false) return '';
+    if (profile.avatar_has_upload) {
+      return normalizeAvatarAssetUrl(profile.avatar_url || user.avatar_url || C.avatarUrl || '');
+    }
+    var presetId = profile.avatar_preset || user.avatar_preset || '';
+    if (presetId && presetId !== 'pax-none') {
+      var presetUrl = accountAvatarPresetUrl(presetId);
+      if (presetUrl) return presetUrl;
+    }
     var url = profile.avatar_url || user.avatar_url || C.avatarUrl || '';
+    url = normalizeAvatarAssetUrl(url);
     return url || defaultAvatarUrl();
   }
 
@@ -336,11 +381,27 @@
   function accountAvatarFallbackUrl(profile) {
     profile = profile || accountProfileData();
     if (!accountAvatarHasImage(profile)) return '';
-    return profile.avatar_fallback_url || C.avatarFallbackUrl || defaultAvatarUrl();
+    if (profile.avatar_has_upload) {
+      var presetId = profile.avatar_preset || user.avatar_preset || '';
+      if (presetId && presetId !== 'pax-none') {
+        var presetUrl = accountAvatarPresetUrl(presetId);
+        if (presetUrl) return presetUrl;
+      }
+    }
+    return normalizeAvatarAssetUrl(profile.avatar_fallback_url || C.avatarFallbackUrl || defaultAvatarUrl());
   }
 
   function accountAvatarPresets() {
-    return Array.isArray(C.avatarPresets) ? C.avatarPresets : [];
+    if (!Array.isArray(C.avatarPresets)) return [];
+    return C.avatarPresets.map(function (preset) {
+      if (!preset || preset.type === 'none' || preset.id === 'pax-none') return preset;
+      return {
+        id: preset.id,
+        label: preset.label,
+        url: normalizeAvatarAssetUrl(preset.url || ''),
+        type: preset.type,
+      };
+    });
   }
 
   function handleAccountAvatarImgError(img) {
@@ -421,7 +482,7 @@
         return;
       }
       html += '<button type="button" class="pdx-account-avatar-picker__item' + (selected ? ' is-selected' : '') + '" role="option" data-avatar-preset="' + escHtml(preset.id) + '" aria-label="' + escHtml(preset.label || preset.id) + '" aria-selected="' + (selected ? 'true' : 'false') + '" title="' + escHtml(preset.label || preset.id) + '">' +
-        '<img src="' + escHtml(preset.url) + '" alt="" width="48" height="48" loading="lazy" decoding="async" />' +
+        '<img src="' + escHtml(normalizeAvatarAssetUrl(preset.url || '')) + '" alt="" width="48" height="48" loading="lazy" decoding="async" />' +
       '</button>';
     });
     html += '</div></div>';
@@ -434,11 +495,11 @@
     if (payload.email) user.email = payload.email;
     if (payload.verified !== undefined) user.verified = !!payload.verified;
     if (payload.avatar_url !== undefined) {
-      user.avatar_url = payload.avatar_url;
-      C.avatarUrl = payload.avatar_url;
+      user.avatar_url = normalizeAvatarAssetUrl(payload.avatar_url);
+      C.avatarUrl = user.avatar_url;
     }
     if (payload.avatar_fallback_url !== undefined) {
-      C.avatarFallbackUrl = payload.avatar_fallback_url;
+      C.avatarFallbackUrl = normalizeAvatarAssetUrl(payload.avatar_fallback_url);
     }
     if (payload.avatar_has_image !== undefined) {
       user.avatar_has_image = !!payload.avatar_has_image;
@@ -594,7 +655,7 @@
     var u = data.user || data;
     if (u.logged_in !== undefined) {
       user = u;
-      if (u.avatar_url !== undefined) C.avatarUrl = u.avatar_url;
+      if (u.avatar_url !== undefined) C.avatarUrl = normalizeAvatarAssetUrl(u.avatar_url);
       if (u.avatar_has_image !== undefined) user.avatar_has_image = !!u.avatar_has_image;
       C.isLoggedIn = !!u.logged_in;
       C.emailVerified = !!u.verified;
@@ -2536,12 +2597,14 @@
     }
     if (accountMainEl) accountMainEl.innerHTML = cxLoading(t('loading_account', 'Loading your account…'));
     return claimGuestSessionIfNeeded().then(function () {
-      return Promise.all([
-        customerApiFetch('GET', '/customer/dashboard'),
-        customerApiFetch('GET', '/customer/profile'),
-        customerApiFetch('GET', '/customer/files'),
-        customerApiFetch('GET', '/customer/settings'),
-      ]);
+      return refreshAccountAvatarPresets().then(function () {
+        return Promise.all([
+          customerApiFetch('GET', '/customer/dashboard'),
+          customerApiFetch('GET', '/customer/profile?_=' + Date.now()),
+          customerApiFetch('GET', '/customer/files'),
+          customerApiFetch('GET', '/customer/settings'),
+        ]);
+      });
     }).then(function (results) {
       var dashboard = normalizeDashboardResponse(results[0]);
       if (!dashboard) {

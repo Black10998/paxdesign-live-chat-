@@ -132,8 +132,8 @@ class PAXdesign_Customer_Avatar {
         $user_id = absint($user_id);
         $preset_id = self::preset_id_for_user($user_id);
         return array(
-            'avatar_url'          => self::url_for_user($user_id),
-            'avatar_fallback_url' => self::fallback_url_for_user($user_id),
+            'avatar_url'          => PAXdesign_Customer_Avatar_Presets::normalize_asset_url(self::url_for_user($user_id)),
+            'avatar_fallback_url' => PAXdesign_Customer_Avatar_Presets::normalize_asset_url(self::fallback_url_for_user($user_id)),
             'avatar_preset'       => $preset_id,
             'avatar_has_upload'   => self::has_upload($user_id),
             'avatar_has_image'    => self::has_visible_avatar($user_id),

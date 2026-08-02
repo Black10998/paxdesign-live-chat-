@@ -32,7 +32,7 @@ class PAXdesign_Customer_Avatar_Presets {
             $items[] = array(
                 'id'    => $id,
                 'label' => isset($def['label']) ? (string) $def['label'] : $id,
-                'url'   => self::url_for_id($id),
+                'url'   => self::normalize_asset_url(self::url_for_id($id)),
                 'type'  => 'portrait',
             );
         }
@@ -63,7 +63,7 @@ class PAXdesign_Customer_Avatar_Presets {
                 return array(
                     'id'    => $id,
                     'label' => (string) ($def['label'] ?? $id),
-                    'url'   => self::url_for_id($id),
+                    'url'   => self::normalize_asset_url(self::url_for_id($id)),
                     'type'  => 'portrait',
                 );
             }
@@ -125,7 +125,29 @@ class PAXdesign_Customer_Avatar_Presets {
         if ($id === '' || !self::file_exists($id)) {
             return '';
         }
-        return esc_url_raw(PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/customer-auth/images/avatars/' . $id . '.gif');
+        $url = PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/customer-auth/images/avatars/' . $id . '.gif';
+        return esc_url_raw(add_query_arg('v', PAXDESIGN_BOOKING_VERSION, $url));
+    }
+
+    /**
+     * Rewrite legacy SVG preset paths to the current GIF assets.
+     *
+     * @param string $url
+     * @return string
+     */
+    public static function normalize_asset_url($url) {
+        $url = (string) $url;
+        if ($url === '') {
+            return '';
+        }
+        $normalized = preg_replace('#(/avatars/pax-\d{2})\.svg(\?|$)#i', '$1.gif$2', $url);
+        if ($normalized === null) {
+            return $url;
+        }
+        if ($normalized !== $url && strpos($normalized, '?') === false) {
+            return esc_url_raw(add_query_arg('v', PAXDESIGN_BOOKING_VERSION, $normalized));
+        }
+        return esc_url_raw($normalized);
     }
 
     /**

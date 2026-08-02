@@ -17,6 +17,7 @@ on:
       - 'cursor/account-dashboard-mobile-l10n-3a65'
       - 'cursor/mobile-profile-photo-fix-3a65'
       - 'cursor/premium-gif-avatars-3a65'
+      - 'cursor/gif-avatar-desktop-fix-3a65'
     paths:
       - 'paxdesign-booking/**'
       - '.github/triggers/deploy-customer-platform-*'

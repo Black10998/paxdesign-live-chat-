@@ -118,10 +118,10 @@ class PAXdesign_Auth_Frontend {
             'userName'      => is_user_logged_in() ? wp_get_current_user()->display_name : '',
             'userEmail'     => is_user_logged_in() ? wp_get_current_user()->user_email : '',
             'avatarUrl'     => (is_user_logged_in() && class_exists('PAXdesign_Customer_Avatar'))
-                ? PAXdesign_Customer_Avatar::url_for_user($user_id)
+                ? PAXdesign_Customer_Avatar_Presets::normalize_asset_url(PAXdesign_Customer_Avatar::url_for_user($user_id))
                 : '',
             'avatarFallbackUrl' => (is_user_logged_in() && class_exists('PAXdesign_Customer_Avatar'))
-                ? PAXdesign_Customer_Avatar::fallback_url_for_user($user_id)
+                ? PAXdesign_Customer_Avatar_Presets::normalize_asset_url(PAXdesign_Customer_Avatar::fallback_url_for_user($user_id))
                 : '',
             'avatarHasImage' => (is_user_logged_in() && class_exists('PAXdesign_Customer_Avatar'))
                 ? PAXdesign_Customer_Avatar::has_visible_avatar($user_id)
@@ -130,7 +130,7 @@ class PAXdesign_Auth_Frontend {
                 ? PAXdesign_Customer_Avatar_Presets::catalog()
                 : array(),
             'defaultAvatarUrl' => class_exists('PAXdesign_Customer_Avatar')
-                ? PAXdesign_Customer_Avatar::default_avatar_url()
+                ? PAXdesign_Customer_Avatar_Presets::normalize_asset_url(PAXdesign_Customer_Avatar::default_avatar_url())
                 : '',
             'publicModules' => PAXdesign_Auth_Native::public_modules(),
             'modules'       => array(),
