@@ -20,7 +20,7 @@ if (defined('PAXDESIGN_BOOKING_VERSION')) {
     return;
 }
 
-// Define plugin constants
+// Define plugin constants (customer platform)
 define('PAXDESIGN_BOOKING_VERSION', '3.174.68');
 define('PAXDESIGN_BOOKING_DB_VERSION', '2.1');
 define('PAXDESIGN_BOOKING_PLUGIN_DIR', plugin_dir_path(__FILE__));
