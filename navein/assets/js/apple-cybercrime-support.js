@@ -59,8 +59,16 @@
   var lastKnownTimelineCount = 0;
 
   var phoneCodeEl = document.getElementById('pax-ccs-phone-code');
+  var phoneCountryHiddenEl = document.getElementById('pax-ccs-phone-country');
   var phoneLocalEl = document.getElementById('pax-ccs-phone-local');
   var phoneHiddenEl = document.getElementById('pax-ccs-phone');
+  var phoneWrapEl = document.getElementById('pax-ccs-phone-wrap');
+  var phoneDialTrigger = document.getElementById('pax-ccs-phone-dial-trigger');
+  var phoneDialFlagEl = document.getElementById('pax-ccs-phone-dial-flag');
+  var phoneDialCodeEl = document.getElementById('pax-ccs-phone-dial-code');
+  var phoneDialPanel = document.getElementById('pax-ccs-phone-dial-panel');
+  var phoneDialSearchEl = document.getElementById('pax-ccs-phone-dial-search');
+  var phoneDialListEl = document.getElementById('pax-ccs-phone-dial-list');
   var countrySearchEl = document.getElementById('pax-ccs-country-search');
   var countryHiddenEl = document.getElementById('pax-ccs-country');
   var countryListEl = document.getElementById('pax-ccs-country-list');
@@ -69,8 +77,10 @@
   var emailInputEl = document.getElementById('pax-ccs-email');
   var emailFieldWrap = document.getElementById('pax-ccs-email-field-wrap');
   var countries = Array.isArray(config.countries) ? config.countries.slice() : [];
+  var phonePopular = Array.isArray(config.phonePopular) ? config.phonePopular.slice() : [];
   var countriesByCode = {};
   var selectedCountryCode = '';
+  var selectedPhoneCountryCode = '';
 
   countries.forEach(function (country) {
     if (country && country.code) {
@@ -90,6 +100,43 @@
     return country.name[lang] || country.name.en || country.name.de || '';
   }
 
+  function countryMatchesQuery(country, query) {
+    if (!query) {
+      return true;
+    }
+    var label = (country.flag + ' ' + countryName(country) + ' ' + (country.dial || '') + ' ' + (country.code || '')).toLowerCase();
+    return label.indexOf(query) !== -1;
+  }
+
+  function detectDefaultPhoneCountry() {
+    var fromConfig = String(config.defaultPhoneCountry || '').toUpperCase();
+    if (fromConfig && countriesByCode[fromConfig]) {
+      return fromConfig;
+    }
+    try {
+      var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+      var tzMap = {
+        'Europe/Vienna': 'AT', 'Europe/Berlin': 'DE', 'Europe/Zurich': 'CH', 'Europe/London': 'GB',
+        'Europe/Paris': 'FR', 'Europe/Rome': 'IT', 'Europe/Madrid': 'ES', 'Europe/Amsterdam': 'NL',
+        'Europe/Brussels': 'BE', 'Europe/Warsaw': 'PL', 'Europe/Istanbul': 'TR', 'Africa/Cairo': 'EG',
+        'Asia/Amman': 'JO', 'Asia/Beirut': 'LB', 'Asia/Dubai': 'AE', 'Asia/Riyadh': 'SA', 'Asia/Qatar': 'QA',
+        'Asia/Kuwait': 'KW', 'Asia/Muscat': 'OM', 'Asia/Bahrain': 'BH', 'America/New_York': 'US',
+        'America/Los_Angeles': 'US', 'America/Chicago': 'US'
+      };
+      if (tzMap[tz] && countriesByCode[tzMap[tz]]) {
+        return tzMap[tz];
+      }
+    } catch (e) { /* ignore */ }
+    var navLang = (navigator.language || '').split('-');
+    if (navLang.length > 1) {
+      var region = navLang[1].toUpperCase();
+      if (countriesByCode[region]) {
+        return region;
+      }
+    }
+    return countriesByCode.AT ? 'AT' : (countries[0] && countries[0].code ? countries[0].code : '');
+  }
+
   function syncPhoneField() {
     if (!phoneHiddenEl) {
       return;
@@ -99,22 +146,159 @@
     phoneHiddenEl.value = dial && local ? (dial + ' ' + local).trim() : local;
   }
 
+  function updatePhoneDialDisplay(code) {
+    var country = countriesByCode[code];
+    if (!country) {
+      return;
+    }
+    selectedPhoneCountryCode = code;
+    if (phoneCodeEl) {
+      phoneCodeEl.value = country.dial || '';
+    }
+    if (phoneCountryHiddenEl) {
+      phoneCountryHiddenEl.value = code;
+    }
+    if (phoneDialFlagEl) {
+      phoneDialFlagEl.textContent = country.flag || '';
+    }
+    if (phoneDialCodeEl) {
+      phoneDialCodeEl.textContent = country.dial || '';
+    }
+    syncPhoneField();
+  }
+
+  function renderPhoneDialOptions(filter) {
+    if (!phoneDialListEl) {
+      return;
+    }
+    var query = String(filter || '').trim().toLowerCase();
+    var popularSet = {};
+    phonePopular.forEach(function (code) {
+      popularSet[String(code || '').toUpperCase()] = true;
+    });
+    var matches = countries.filter(function (country) {
+      return countryMatchesQuery(country, query);
+    });
+    if (!query && phonePopular.length) {
+      var popular = [];
+      var rest = [];
+      matches.forEach(function (country) {
+        if (popularSet[country.code]) {
+          popular.push(country);
+        } else {
+          rest.push(country);
+        }
+      });
+      matches = popular.concat(rest);
+    }
+    phoneDialListEl.innerHTML = matches.map(function (country) {
+      var label = (country.flag || '') + ' ' + countryName(country) + ' (' + (country.dial || '') + ')';
+      var selected = country.code === selectedPhoneCountryCode ? ' aria-selected="true"' : '';
+      return '<li role="option" tabindex="-1" data-country-code="' + escapeHtml(country.code) + '"' + selected + '>' + escapeHtml(label) + '</li>';
+    }).join('');
+  }
+
+  function openPhoneDialPanel() {
+    if (!phoneDialPanel || !phoneDialTrigger) {
+      return;
+    }
+    renderPhoneDialOptions(phoneDialSearchEl ? phoneDialSearchEl.value : '');
+    phoneDialPanel.hidden = false;
+    phoneDialTrigger.setAttribute('aria-expanded', 'true');
+    if (phoneDialSearchEl) {
+      phoneDialSearchEl.setAttribute('aria-expanded', 'true');
+    }
+  }
+
+  function closePhoneDialPanel() {
+    if (!phoneDialPanel || !phoneDialTrigger) {
+      return;
+    }
+    phoneDialPanel.hidden = true;
+    phoneDialTrigger.setAttribute('aria-expanded', 'false');
+    if (phoneDialSearchEl) {
+      phoneDialSearchEl.setAttribute('aria-expanded', 'false');
+      phoneDialSearchEl.value = '';
+    }
+  }
+
+  function selectPhoneCountry(code) {
+    if (!countriesByCode[code]) {
+      return;
+    }
+    updatePhoneDialDisplay(code);
+    closePhoneDialPanel();
+    if (phoneWrapEl) {
+      phoneWrapEl.classList.remove('is-invalid');
+    }
+    if (phoneLocalEl) {
+      phoneLocalEl.focus();
+    }
+  }
+
+  function initPhoneDialPicker() {
+    if (!phoneDialTrigger || !phoneDialListEl) {
+      return;
+    }
+    updatePhoneDialDisplay(detectDefaultPhoneCountry());
+    phoneDialTrigger.addEventListener('click', function () {
+      if (phoneDialPanel && phoneDialPanel.hidden) {
+        openPhoneDialPanel();
+        if (phoneDialSearchEl) {
+          phoneDialSearchEl.focus();
+        }
+      } else {
+        closePhoneDialPanel();
+      }
+    });
+    if (phoneDialSearchEl) {
+      phoneDialSearchEl.addEventListener('input', function () {
+        renderPhoneDialOptions(phoneDialSearchEl.value);
+      });
+      phoneDialSearchEl.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          closePhoneDialPanel();
+          phoneDialTrigger.focus();
+          return;
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          var first = phoneDialListEl.querySelector('[data-country-code]');
+          if (first) {
+            selectPhoneCountry(first.getAttribute('data-country-code'));
+          }
+        }
+      });
+    }
+    phoneDialListEl.addEventListener('click', function (e) {
+      var item = e.target.closest('[data-country-code]');
+      if (!item) {
+        return;
+      }
+      selectPhoneCountry(item.getAttribute('data-country-code'));
+    });
+    document.addEventListener('click', function (e) {
+      var dialWrap = document.getElementById('pax-ccs-phone-dial');
+      if (!dialWrap || dialWrap.contains(e.target)) {
+        return;
+      }
+      closePhoneDialPanel();
+    });
+  }
+
   function renderCountryOptions(filter) {
     if (!countryListEl) {
       return;
     }
     var query = String(filter || '').trim().toLowerCase();
     var matches = countries.filter(function (country) {
-      if (!query) {
-        return true;
-      }
-      var label = (country.flag + ' ' + countryName(country)).toLowerCase();
-      return label.indexOf(query) !== -1 || String(country.code || '').toLowerCase().indexOf(query) !== -1;
-    }).slice(0, 40);
+      return countryMatchesQuery(country, query);
+    });
 
     countryListEl.innerHTML = matches.map(function (country) {
       var label = country.flag + ' ' + countryName(country);
-      return '<li role="option" tabindex="-1" data-country-code="' + escapeHtml(country.code) + '">' + escapeHtml(label) + '</li>';
+      var selected = country.code === selectedCountryCode ? ' aria-selected="true"' : '';
+      return '<li role="option" tabindex="-1" data-country-code="' + escapeHtml(country.code) + '"' + selected + '>' + escapeHtml(label) + '</li>';
     }).join('');
   }
 
@@ -202,9 +386,6 @@
     });
   }
 
-  if (phoneCodeEl) {
-    phoneCodeEl.addEventListener('change', syncPhoneField);
-  }
   if (phoneLocalEl) {
     phoneLocalEl.addEventListener('input', syncPhoneField);
   }
@@ -217,6 +398,7 @@
     });
   }
   initCountryPicker();
+  initPhoneDialPicker();
 
   function getLang() {
     var lang = root.getAttribute('data-ccs-lang') || 'ar';
@@ -1252,7 +1434,7 @@
       if (field.type === 'file' || field.name === 'website_trap') {
         return;
       }
-      if (field.id === 'pax-ccs-country-search' || field.id === 'pax-ccs-phone') {
+      if (field.id === 'pax-ccs-country-search' || field.id === 'pax-ccs-phone' || field.id === 'pax-ccs-phone-dial-search') {
         return;
       }
       if (field.type === 'checkbox') {
@@ -1284,7 +1466,9 @@
       syncPhoneField();
       if (phoneHiddenEl && phoneHiddenEl.value.replace(/\D/g, '').length < 6) {
         valid = false;
-        if (phoneLocalEl) {
+        if (phoneWrapEl) {
+          phoneWrapEl.classList.add('is-invalid');
+        } else if (phoneLocalEl) {
           markInvalid(phoneLocalEl);
         }
       }

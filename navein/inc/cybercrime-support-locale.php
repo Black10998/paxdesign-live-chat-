@@ -148,6 +148,31 @@ if ( ! function_exists( 'pax_ccs_country_by_code' ) ) {
 	}
 }
 
+if ( ! function_exists( 'pax_ccs_guess_visitor_country' ) ) {
+	/**
+	 * Best-effort ISO 3166-1 alpha-2 guess for phone/residence defaults.
+	 *
+	 * @return string
+	 */
+	function pax_ccs_guess_visitor_country() {
+		$code = '';
+		if ( ! empty( $_SERVER['HTTP_CF_IPCOUNTRY'] ) ) {
+			$code = strtoupper( sanitize_text_field( wp_unslash( (string) $_SERVER['HTTP_CF_IPCOUNTRY'] ) ) );
+		}
+		if ( $code && function_exists( 'pax_ccs_country_by_code' ) && pax_ccs_country_by_code( $code ) ) {
+			return $code;
+		}
+		$locale = function_exists( 'determine_locale' ) ? determine_locale() : get_locale();
+		if ( is_string( $locale ) && preg_match( '/[_-]([A-Z]{2})$/i', $locale, $m ) ) {
+			$code = strtoupper( $m[1] );
+			if ( function_exists( 'pax_ccs_country_by_code' ) && pax_ccs_country_by_code( $code ) ) {
+				return $code;
+			}
+		}
+		return 'AT';
+	}
+}
+
 if ( ! function_exists( 'pax_ccs_pick_lang' ) ) {
 	/**
 	 * @param array<string, mixed>|string $node

@@ -413,8 +413,11 @@ function navein_custom_scripts_styles() {
 				}
 			}
 			if ( function_exists( 'pax_ccs_countries_for_js' ) ) {
-				$ccs_config['countries'] = pax_ccs_countries_for_js();
-				$ccs_config['phonePopular'] = array( 'AT', 'DE', 'CH', 'US', 'GB', 'AE', 'SA', 'FR', 'IT', 'ES', 'NL', 'BE', 'PL', 'TR', 'EG', 'JO', 'LB', 'QA', 'KW', 'BH', 'OM' );
+				$ccs_config['countries']      = pax_ccs_countries_for_js();
+				$ccs_config['phonePopular']   = array( 'AT', 'DE', 'CH', 'US', 'GB', 'AE', 'SA', 'FR', 'IT', 'ES', 'NL', 'BE', 'PL', 'TR', 'EG', 'JO', 'LB', 'QA', 'KW', 'BH', 'OM' );
+				$ccs_config['defaultPhoneCountry'] = function_exists( 'pax_ccs_guess_visitor_country' )
+					? pax_ccs_guess_visitor_country()
+					: 'AT';
 			}
 			wp_localize_script(
 				'navein-apple-cybercrime-support',
@@ -592,6 +595,20 @@ function navein_apple_footer_body_class( $classes ) {
 	return $classes;
 }
 add_filter( 'body_class', 'navein_apple_footer_body_class' );
+
+/**
+ * Stable body class for Cybercrime Support template overrides.
+ *
+ * @param array $classes Body classes.
+ * @return array
+ */
+function navein_cybercrime_support_body_class( $classes ) {
+	if ( is_page_template( 'template-apple-cybercrime-support.php' ) || is_page( 'cybercrime-support' ) ) {
+		$classes[] = 'page-cybercrime-support';
+	}
+	return $classes;
+}
+add_filter( 'body_class', 'navein_cybercrime_support_body_class' );
 // navein_custom_scripts_styles ends
 
 /**

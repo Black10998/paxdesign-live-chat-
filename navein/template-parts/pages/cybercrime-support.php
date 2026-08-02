@@ -15,7 +15,6 @@ if ( function_exists( 'pax_ccs_bootstrap_locale_helpers' ) ) {
 
 $copy = function_exists( 'pax_ccs_portal_copy' ) ? pax_ccs_portal_copy() : include __DIR__ . '/cybercrime-support-data.php';
 $ccs_countries = function_exists( 'pax_ccs_countries' ) ? pax_ccs_countries() : array();
-$ccs_phone_popular = array( 'AT', 'DE', 'CH', 'US', 'GB', 'AE', 'SA', 'FR', 'IT', 'ES', 'NL', 'BE', 'PL', 'TR', 'EG', 'JO', 'LB', 'QA', 'KW', 'BH', 'OM' );
 $ccs_countries_by_code = array();
 foreach ( $ccs_countries as $ccs_country_row ) {
 	if ( ! empty( $ccs_country_row['code'] ) ) {
@@ -310,38 +309,23 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 						</div>
 						<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
 							<label for="pax-ccs-phone-local"><?php pax_ccs_bilingual( $copy['fields']['phone']['label'] ); ?></label>
-							<div class="pax-ccs-portal__phone-row">
-								<div class="pax-ccs-portal__phone-code">
-									<label class="pax-ccs-portal__sr-only" for="pax-ccs-phone-code"><?php pax_ccs_bilingual( $copy['fields']['phone_code']['label'] ); ?></label>
-									<select id="pax-ccs-phone-code" name="phone_country_code" required autocomplete="tel-country-code">
-										<?php if ( ! empty( $ccs_phone_popular ) ) : ?>
-											<optgroup label="<?php echo esc_attr( pax_ccs_text( array( 'ar' => 'شائعة', 'de' => 'Häufig', 'en' => 'Popular' ), 'ar' ) ); ?>">
-												<?php foreach ( $ccs_phone_popular as $popular_code ) :
-													$row = $ccs_countries_by_code[ strtoupper( $popular_code ) ] ?? null;
-													if ( ! $row ) {
-														continue;
-													}
-													$label = ( $row['flag'] ?? '' ) . ' ' . ( $row['dial'] ?? '' ) . ' ' . pax_ccs_text( $row['name'] ?? array(), 'ar' );
-													?>
-													<option value="<?php echo esc_attr( $row['dial'] ?? '' ); ?>" data-country-code="<?php echo esc_attr( $row['code'] ?? '' ); ?>"<?php selected( strtoupper( $popular_code ), 'AT' ); ?>><?php echo esc_html( $label ); ?></option>
-												<?php endforeach; ?>
-											</optgroup>
-										<?php endif; ?>
-										<optgroup label="<?php echo esc_attr( pax_ccs_text( array( 'ar' => 'جميع الدول', 'de' => 'Alle Länder', 'en' => 'All countries' ), 'ar' ) ); ?>">
-											<?php foreach ( $ccs_countries as $row ) :
-												if ( empty( $row['code'] ) || empty( $row['dial'] ) ) {
-													continue;
-												}
-												$label = ( $row['flag'] ?? '' ) . ' ' . ( $row['dial'] ?? '' ) . ' ' . pax_ccs_text( $row['name'] ?? array(), 'ar' );
-												?>
-												<option value="<?php echo esc_attr( $row['dial'] ); ?>" data-country-code="<?php echo esc_attr( $row['code'] ); ?>"><?php echo esc_html( $label ); ?></option>
-											<?php endforeach; ?>
-										</optgroup>
-									</select>
-								</div>
+							<div class="pax-ccs-portal__phone-unified" id="pax-ccs-phone-wrap">
 								<input type="tel" id="pax-ccs-phone-local" name="phone_local" required autocomplete="tel-national" inputmode="tel" placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['phone']['placeholder'], 'ar' ) ); ?>" data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['fields']['phone']['placeholder'], 'ar' ) ); ?>" data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['fields']['phone']['placeholder'], 'de' ) ); ?>" data-placeholder-en="<?php echo esc_attr( pax_ccs_text( $copy['fields']['phone']['placeholder'], 'en' ) ); ?>">
+								<div class="pax-ccs-portal__phone-dial" id="pax-ccs-phone-dial">
+									<button type="button" class="pax-ccs-portal__phone-dial-trigger" id="pax-ccs-phone-dial-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="pax-ccs-phone-dial-list">
+										<span class="pax-ccs-portal__phone-dial-flag" id="pax-ccs-phone-dial-flag" aria-hidden="true">🇦🇹</span>
+										<span class="pax-ccs-portal__phone-dial-code" id="pax-ccs-phone-dial-code">+43</span>
+										<span class="pax-ccs-portal__phone-dial-chevron" aria-hidden="true"></span>
+									</button>
+									<div class="pax-ccs-portal__phone-dial-panel" id="pax-ccs-phone-dial-panel" hidden>
+										<input type="search" id="pax-ccs-phone-dial-search" class="pax-ccs-portal__phone-dial-search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="pax-ccs-phone-dial-list" placeholder="<?php echo esc_attr( pax_ccs_text( array( 'ar' => 'ابحث عن الدولة أو رمز الاتصال', 'de' => 'Land oder Vorwahl suchen', 'en' => 'Search country or code' ), 'ar' ) ); ?>" data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( array( 'ar' => 'ابحث عن الدولة أو رمز الاتصال', 'de' => 'Land oder Vorwahl suchen', 'en' => 'Search country or code' ), 'ar' ) ); ?>" data-placeholder-de="<?php echo esc_attr( pax_ccs_text( array( 'ar' => 'ابحث عن الدولة أو رمز الاتصال', 'de' => 'Land oder Vorwahl suchen', 'en' => 'Search country or code' ), 'de' ) ); ?>" data-placeholder-en="<?php echo esc_attr( pax_ccs_text( array( 'ar' => 'ابحث عن الدولة أو رمز الاتصال', 'de' => 'Land oder Vorwahl suchen', 'en' => 'Search country or code' ), 'en' ) ); ?>">
+										<ul id="pax-ccs-phone-dial-list" class="pax-ccs-portal__phone-dial-list" role="listbox"></ul>
+									</div>
+								</div>
+								<input type="hidden" id="pax-ccs-phone-code" name="phone_country_code" value="+43">
+								<input type="hidden" id="pax-ccs-phone-country" name="phone_country" value="AT">
+								<input type="hidden" id="pax-ccs-phone" name="phone" value="">
 							</div>
-							<input type="hidden" id="pax-ccs-phone" name="phone" value="">
 						</div>
 						<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
 							<label for="pax-ccs-country-search"><?php pax_ccs_bilingual( $copy['fields']['country']['label'] ); ?></label>
