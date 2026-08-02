@@ -125,7 +125,7 @@ class PAXdesign_Customer_Avatar_Presets {
         if ($id === '' || !self::file_exists($id)) {
             return '';
         }
-        return esc_url_raw(PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/customer-auth/images/avatars/' . $id . '.svg');
+        return esc_url_raw(PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/customer-auth/images/avatars/' . $id . '.gif');
     }
 
     /**
@@ -137,7 +137,7 @@ class PAXdesign_Customer_Avatar_Presets {
         if ($id === '') {
             return false;
         }
-        $path = PAXDESIGN_BOOKING_PLUGIN_DIR . 'assets/customer-auth/images/avatars/' . $id . '.svg';
+        $path = PAXDESIGN_BOOKING_PLUGIN_DIR . 'assets/customer-auth/images/avatars/' . $id . '.gif';
         return is_readable($path);
     }
 

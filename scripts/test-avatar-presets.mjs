@@ -14,25 +14,32 @@ const css = [
   'pdx-portal-apple.css',
 ].map((f) => readFileSync(join(cssDir, f), 'utf8')).join('\n');
 
-const svgFiles = readdirSync(avatarDir).filter((f) => f.endsWith('.svg')).sort();
-if (svgFiles.length !== 50) {
-  console.error('Expected 50 face SVG avatars, found', svgFiles.length);
+const gifFiles = readdirSync(avatarDir).filter((f) => f.endsWith('.gif')).sort();
+const svgFiles = readdirSync(avatarDir).filter((f) => f.endsWith('.svg'));
+
+if (gifFiles.length !== 50) {
+  console.error('Expected 50 GIF avatars, found', gifFiles.length);
+  process.exit(1);
+}
+if (svgFiles.length > 0) {
+  console.error('Legacy SVG avatars still present:', svgFiles.length);
   process.exit(1);
 }
 
-const sample = readFileSync(join(avatarDir, 'pax-01.svg'), 'utf8');
-if (!sample.includes('ellipse') || sample.includes('Design Studio')) {
-  console.error('SVG avatars do not look like face portraits');
+const samplePath = join(avatarDir, 'pax-01.gif');
+const sampleBuf = readFileSync(samplePath);
+if (sampleBuf[0] !== 0x47 || sampleBuf[1] !== 0x49) {
+  console.error('pax-01.gif is not a valid GIF');
   process.exit(1);
 }
 
-const faceDataUri = `data:image/svg+xml,${encodeURIComponent(sample)}`;
+const sampleUri = `data:image/gif;base64,${sampleBuf.toString('base64')}`;
 
 const presets = [{ id: 'pax-none', label: 'No profile picture', url: '', type: 'none' }].concat(
-  svgFiles.map((file, index) => ({
-    id: file.replace('.svg', ''),
-    label: `Portrait ${index + 1}`,
-    url: faceDataUri,
+  gifFiles.map((file, index) => ({
+    id: file.replace('.gif', ''),
+    label: `Tech avatar ${index + 1}`,
+    url: sampleUri,
     type: 'portrait',
   }))
 );
@@ -43,7 +50,7 @@ const portraitButtons = presets.filter((p) => p.type !== 'none').slice(0, 12).ma
 }).join('');
 
 const noneBtn = `<button type="button" class="pdx-account-avatar-picker__item pdx-account-avatar-picker__item--none is-selected" data-avatar-preset="pax-none" aria-selected="true"><span class="pdx-account-avatar-picker__none-mark"></span><span class="pdx-account-avatar-picker__none-text">No profile picture</span></button>`;
-const faceUrl = presets[3].url;
+const gifUrl = presets[3].url;
 
 const html = `<!DOCTYPE html>
 <html class="pdx-auth-isolated">
@@ -56,9 +63,9 @@ const html = `<!DOCTYPE html>
 <div id="pdx-account-app" class="pdx-account-app" style="display:block;width:100%;min-height:100vh;">
   <main class="pdx-account-main" style="padding:20px;min-height:100vh;box-sizing:border-box;">
     <div class="pdx-account-card" style="padding:20px;max-width:640px;">
-      <div class="pdx-account-profile-identity" id="identity-with-face">
-        <span class="pdx-account-avatar pdx-account-avatar--profile-compact" style="width:64px;height:64px;max-width:64px;max-height:64px;flex:0 0 64px"><img class="pdx-account-avatar__img" src="${faceUrl}" width="64" height="64" /></span>
-        <div class="pdx-account-profile-identity-text"><div class="pdx-account-profile-name">With portrait</div></div>
+      <div class="pdx-account-profile-identity" id="identity-with-gif">
+        <span class="pdx-account-avatar pdx-account-avatar--profile-compact" style="width:64px;height:64px;max-width:64px;max-height:64px;flex:0 0 64px"><img class="pdx-account-avatar__img" src="${gifUrl}" width="64" height="64" /></span>
+        <div class="pdx-account-profile-identity-text"><div class="pdx-account-profile-name">With GIF preset</div></div>
       </div>
       <div class="pdx-account-profile-identity" id="identity-none" style="margin-top:16px;">
         <div class="pdx-account-profile-identity-text"><div class="pdx-account-profile-name">No profile picture</div></div>
@@ -84,32 +91,36 @@ async function runViewport(name, width, height) {
   await page.setContent(html, { waitUntil: 'networkidle0' });
 
   const metrics = await page.evaluate(() => {
-    const faceImg = document.querySelector('#identity-with-face img');
-    const faceWrap = document.querySelector('#identity-with-face .pdx-account-avatar');
+    const gifImg = document.querySelector('#identity-with-gif img');
+    const gifWrap = document.querySelector('#identity-with-gif .pdx-account-avatar');
     const noneIdentity = document.querySelector('#identity-none');
     const noneBtn = document.querySelector('.pdx-account-avatar-picker__item--none');
     const portraits = document.querySelectorAll('.pdx-account-avatar-picker__item:not(.pdx-account-avatar-picker__item--none)');
-    const faceRect = faceWrap ? faceWrap.getBoundingClientRect() : { width: 0, height: 0 };
-    const noneRect = noneBtn ? noneBtn.getBoundingClientRect() : { width: 0, height: 0 };
+    const imgStyle = gifImg ? getComputedStyle(gifImg) : null;
+    const wrapStyle = gifWrap ? getComputedStyle(gifWrap) : null;
     return {
-      faceSize: { w: faceRect.width, h: faceRect.height },
-      noneBtnVisible: !!noneBtn && noneRect.width > 40,
+      wrapWidth: wrapStyle ? parseFloat(wrapStyle.width) : 0,
+      noneBtnExists: !!noneBtn,
       noneSelected: noneBtn ? noneBtn.classList.contains('is-selected') : false,
       portraitCount: portraits.length,
       identityWithoutAvatar: noneIdentity ? noneIdentity.querySelectorAll('.pdx-account-avatar').length === 0 : false,
-      faceLoaded: faceImg ? faceImg.complete && faceImg.naturalWidth > 0 : false,
+      gifLoaded: gifImg ? gifImg.complete && gifImg.naturalWidth > 0 : false,
+      objectFit: imgStyle ? imgStyle.objectFit : '',
+      borderRadius: imgStyle ? imgStyle.borderRadius : '',
     };
   });
 
   await page.close();
 
   const ok =
-    metrics.faceLoaded &&
-    Math.abs(metrics.faceSize.w - 64) < 2 &&
-    metrics.noneBtnVisible &&
+    metrics.gifLoaded &&
+    metrics.wrapWidth >= 60 &&
+    metrics.noneBtnExists &&
     metrics.noneSelected &&
     metrics.portraitCount === 12 &&
-    metrics.identityWithoutAvatar;
+    metrics.identityWithoutAvatar &&
+    metrics.objectFit === 'cover' &&
+    parseFloat(metrics.borderRadius) >= 40;
 
   console.log(`[${name}]`, metrics, ok ? 'PASS' : 'FAIL');
   if (!ok) process.exitCode = 1;
@@ -120,5 +131,5 @@ await runViewport('mobile', 390, 844);
 await browser.close();
 
 if (!process.exitCode) {
-  console.log('Face portrait avatar tests passed.');
+  console.log('Tech GIF avatar preset tests passed.');
 }

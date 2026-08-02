@@ -12,199 +12,199 @@ if ( ! defined( 'ABSPATH' ) ) {
 return array(
 	array(
 		'id'    => 'pax-01',
-		'label' => 'Professional — neutral',
+		'label' => 'Terminal — command line',
 	),
 	array(
 		'id'    => 'pax-02',
-		'label' => 'Friendly — warm smile',
+		'label' => 'Code — brackets',
 	),
 	array(
 		'id'    => 'pax-03',
-		'label' => 'Serious — focused',
+		'label' => 'Cybersecurity — shield',
 	),
 	array(
 		'id'    => 'pax-04',
-		'label' => 'Playful — cheerful grin',
+		'label' => 'AI — neural network',
 	),
 	array(
 		'id'    => 'pax-05',
-		'label' => 'Professional — glasses',
+		'label' => 'Web — globe',
 	),
 	array(
 		'id'    => 'pax-06',
-		'label' => 'Friendly — soft waves',
+		'label' => 'Binary — data stream',
 	),
 	array(
 		'id'    => 'pax-07',
-		'label' => 'Serious — beard',
+		'label' => 'Circuit — microchip',
 	),
 	array(
 		'id'    => 'pax-08',
-		'label' => 'Creative — bold look',
+		'label' => 'Cloud — sync',
 	),
 	array(
 		'id'    => 'pax-09',
-		'label' => 'Professional — ponytail',
+		'label' => 'Database — storage',
 	),
 	array(
 		'id'    => 'pax-10',
-		'label' => 'Friendly — round glasses',
+		'label' => 'API — endpoints',
 	),
 	array(
 		'id'    => 'pax-11',
-		'label' => 'Calm — relaxed',
+		'label' => 'Firewall — protection',
 	),
 	array(
 		'id'    => 'pax-12',
-		'label' => 'Energetic — bright smile',
+		'label' => 'Encryption — secure key',
 	),
 	array(
 		'id'    => 'pax-13',
-		'label' => 'Executive — refined',
+		'label' => 'DevOps — pipeline',
 	),
 	array(
 		'id'    => 'pax-14',
-		'label' => 'Warm — welcoming',
+		'label' => 'Git — version control',
 	),
 	array(
 		'id'    => 'pax-15',
-		'label' => 'Thoughtful — studious',
+		'label' => 'Docker — container',
 	),
 	array(
 		'id'    => 'pax-16',
-		'label' => 'Confident — goatee',
+		'label' => 'Kubernetes — orchestration',
 	),
 	array(
 		'id'    => 'pax-17',
-		'label' => 'Approachable — dimples',
+		'label' => 'React — interface',
 	),
 	array(
 		'id'    => 'pax-18',
-		'label' => 'Minimal — clean cut',
+		'label' => 'Node.js — runtime',
 	),
 	array(
 		'id'    => 'pax-19',
-		'label' => 'Artistic — colorful hair',
+		'label' => 'Python — automation',
 	),
 	array(
 		'id'    => 'pax-20',
-		'label' => 'Reliable — full beard',
+		'label' => 'TypeScript — typed code',
 	),
 	array(
 		'id'    => 'pax-21',
-		'label' => 'Bright — optimistic',
+		'label' => 'JavaScript — dynamic web',
 	),
 	array(
 		'id'    => 'pax-22',
-		'label' => 'Composed — analyst',
+		'label' => 'HTML — structure',
 	),
 	array(
 		'id'    => 'pax-23',
-		'label' => 'Supportive — kind eyes',
+		'label' => 'CSS — design system',
 	),
 	array(
 		'id'    => 'pax-24',
-		'label' => 'Dynamic — modern fade',
+		'label' => 'SQL — query engine',
 	),
 	array(
 		'id'    => 'pax-25',
-		'label' => 'Precise — rectangular glasses',
+		'label' => 'GraphQL — data graph',
 	),
 	array(
 		'id'    => 'pax-26',
-		'label' => 'Gentle — soft features',
+		'label' => 'WebSocket — live stream',
 	),
 	array(
 		'id'    => 'pax-27',
-		'label' => 'Bold — statement beard',
+		'label' => 'HTTPS — secure web',
 	),
 	array(
 		'id'    => 'pax-28',
-		'label' => 'Upbeat — laughing',
+		'label' => 'VPN — private tunnel',
 	),
 	array(
 		'id'    => 'pax-29',
-		'label' => 'Focused — professional bun',
+		'label' => 'Pen test — scope scan',
 	),
 	array(
 		'id'    => 'pax-30',
-		'label' => 'Open — friendly gaze',
+		'label' => 'Blockchain — ledger',
 	),
 	array(
 		'id'    => 'pax-31',
-		'label' => 'Steady — classic look',
+		'label' => 'Machine learning — model',
 	),
 	array(
 		'id'    => 'pax-32',
-		'label' => 'Inventive — teal streak',
+		'label' => 'Robotics — automation',
 	),
 	array(
 		'id'    => 'pax-33',
-		'label' => 'Trusted — aviator glasses',
+		'label' => 'Processor — compute',
 	),
 	array(
 		'id'    => 'pax-34',
-		'label' => 'Graceful — elegant',
+		'label' => 'Wi‑Fi — connectivity',
 	),
 	array(
 		'id'    => 'pax-35',
-		'label' => 'Determined — sharp',
+		'label' => 'Satellite — network',
 	),
 	array(
 		'id'    => 'pax-36',
-		'label' => 'Sunny — radiant smile',
+		'label' => 'QR auth — identity',
 	),
 	array(
 		'id'    => 'pax-37',
-		'label' => 'Wise — silver hair',
+		'label' => 'Biometric — fingerprint',
 	),
 	array(
 		'id'    => 'pax-38',
-		'label' => 'Vibrant — curly afro',
+		'label' => 'Zero trust — access',
 	),
 	array(
 		'id'    => 'pax-39',
-		'label' => 'Cool — subtle smirk',
+		'label' => 'Bug bounty — debug',
 	),
 	array(
 		'id'    => 'pax-40',
-		'label' => 'Polished — corporate',
+		'label' => 'Deploy — rocket launch',
 	),
 	array(
 		'id'    => 'pax-41',
-		'label' => 'Caring — warm eyes',
+		'label' => 'Monitoring — telemetry',
 	),
 	array(
 		'id'    => 'pax-42',
-		'label' => 'Adventurous — stubble',
+		'label' => 'Cache — performance',
 	),
 	array(
 		'id'    => 'pax-43',
-		'label' => 'Distinctive — hoop earrings',
+		'label' => 'Microservices — mesh',
 	),
 	array(
 		'id'    => 'pax-44',
-		'label' => 'Measured — thoughtful',
+		'label' => 'Serverless — function',
 	),
 	array(
 		'id'    => 'pax-45',
-		'label' => 'Lively — playful wink',
+		'label' => 'IDE — workspace',
 	),
 	array(
 		'id'    => 'pax-46',
-		'label' => 'Grounded — steady',
+		'label' => 'Open source — community',
 	),
 	array(
 		'id'    => 'pax-47',
-		'label' => 'Refined — cat-eye glasses',
+		'label' => 'UX — interface design',
 	),
 	array(
 		'id'    => 'pax-48',
-		'label' => 'Easygoing — relaxed grin',
+		'label' => 'Mobile — responsive',
 	),
 	array(
 		'id'    => 'pax-49',
-		'label' => 'Leadership — distinguished',
+		'label' => 'Digital — pixel grid',
 	),
 	array(
 		'id'    => 'pax-50',
