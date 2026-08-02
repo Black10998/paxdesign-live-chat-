@@ -26,6 +26,7 @@ on:
       - 'cursor/customer-name-display-fix-3a65'
       - 'cursor/header-customer-name-fix-3a65'
       - 'cursor/remove-paxdesign-toolbar-3a65'
+      - 'cursor/final-platform-fixes-3a65'
     paths:
       - 'paxdesign-booking/**'
       - '.github/triggers/deploy-customer-platform-*'
