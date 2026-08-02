@@ -98,6 +98,28 @@
     if (closeIcon) closeIcon.hidden = !accountMobileNavOpen;
   }
 
+  function syncAccountMobileOverlayMount() {
+    if (!accountAppEl || !accountSidebarEl || !accountMobileBackdrop) return;
+    if (isAccountMobileViewport()) {
+      var dir = accountAppEl.getAttribute('dir') || (customerPortalLang() === 'ar' ? 'rtl' : 'ltr');
+      var lang = accountAppEl.getAttribute('lang') || customerPortalLang();
+      accountSidebarEl.setAttribute('dir', dir);
+      accountSidebarEl.setAttribute('lang', lang);
+      accountSidebarEl.classList.add('pdx-account-sidebar--mobile-overlay');
+      accountMobileBackdrop.classList.add('pdx-account-mobile-backdrop--portal');
+      if (accountSidebarEl.parentNode !== document.body) {
+        document.body.appendChild(accountMobileBackdrop);
+        document.body.appendChild(accountSidebarEl);
+      }
+    } else if (accountSidebarEl.parentNode === document.body) {
+      accountSidebarEl.classList.remove('pdx-account-sidebar--mobile-overlay');
+      accountMobileBackdrop.classList.remove('pdx-account-mobile-backdrop--portal');
+      accountAppEl.insertBefore(accountMobileBackdrop, accountMainEl);
+      accountAppEl.insertBefore(accountSidebarEl, accountMainEl);
+      closeAccountMobileNav();
+    }
+  }
+
   function syncAccountMobileMenuPosition() {
     if (!accountMobileMenuBtn) return;
     var header = document.getElementById('pdx-account-header');
@@ -111,22 +133,28 @@
       accountMobileMenuBtn.classList.add('pdx-account-mobile-menu--in-header');
     } else if (!useHeader && accountAppEl && accountMobileMenuBtn.parentNode !== accountAppEl) {
       accountMobileMenuBtn.classList.remove('pdx-account-mobile-menu--in-header');
-      accountAppEl.insertBefore(accountMobileMenuBtn, accountMobileBackdrop || accountSidebarEl);
+      accountAppEl.insertBefore(accountMobileMenuBtn, accountMobileBackdrop || accountSidebarEl || accountMainEl);
     }
+    syncAccountMobileOverlayMount();
   }
 
   function openAccountMobileNav() {
-    if (!accountAppEl || !isAccountMobileViewport()) return;
+    if (!isAccountMobileViewport()) return;
+    syncAccountMobileOverlayMount();
     accountMobileNavOpen = true;
-    accountAppEl.classList.add('is-mobile-nav-open');
     document.body.classList.add('pdx-account-mobile-nav-open');
+    if (accountSidebarEl) {
+      accountSidebarEl.setAttribute('aria-hidden', 'false');
+    }
     syncAccountMobileNavState();
   }
 
   function closeAccountMobileNav() {
     accountMobileNavOpen = false;
-    if (accountAppEl) accountAppEl.classList.remove('is-mobile-nav-open');
     document.body.classList.remove('pdx-account-mobile-nav-open');
+    if (accountSidebarEl) {
+      accountSidebarEl.setAttribute('aria-hidden', 'true');
+    }
     syncAccountMobileNavState();
   }
 
@@ -164,7 +192,11 @@
       });
     }
     syncAccountMobileMenuPosition();
+    syncAccountMobileOverlayMount();
     syncAccountMobileNavState();
+    if (accountSidebarEl && isAccountMobileViewport()) {
+      accountSidebarEl.setAttribute('aria-hidden', accountMobileNavOpen ? 'false' : 'true');
+    }
   }
 
   function stripHtml(s) {
@@ -2033,6 +2065,7 @@
     ensureAccountMobileChrome();
     renderAccountSidebar();
     renderAccountMain();
+    syncAccountMobileOverlayMount();
   }
 
   function initAccountApp(force) {

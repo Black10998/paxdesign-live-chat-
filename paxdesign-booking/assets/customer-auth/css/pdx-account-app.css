@@ -318,9 +318,8 @@
     transform: scale(0.96);
   }
 
-  .pdx-account-app[dir="rtl"] .pdx-account-mobile-menu {
-    left: auto;
-    right: max(16px, env(safe-area-inset-right, 0px));
+  .pdx-account-mobile-menu--in-header:active {
+    transform: scale(0.96);
   }
 
   .pdx-account-mobile-menu-icon {
@@ -329,7 +328,8 @@
     justify-content: center;
   }
 
-  .pdx-account-mobile-backdrop {
+  .pdx-account-mobile-backdrop,
+  .pdx-account-mobile-backdrop--portal {
     position: fixed;
     inset: 0;
     z-index: 100001;
@@ -339,11 +339,13 @@
     transition: opacity 0.28s ease;
   }
 
-  .pdx-account-app.is-mobile-nav-open .pdx-account-mobile-backdrop {
+  body.pdx-account-mobile-nav-open .pdx-account-mobile-backdrop,
+  body.pdx-account-mobile-nav-open .pdx-account-mobile-backdrop--portal {
     opacity: 1;
     pointer-events: auto;
   }
 
+  .pdx-account-sidebar--mobile-overlay,
   .pdx-account-sidebar {
     position: fixed;
     top: 0;
@@ -355,25 +357,58 @@
     padding: max(12px, env(safe-area-inset-top, 0px)) 16px max(20px, env(safe-area-inset-bottom, 0px));
     border-right: 0;
     border-left: 0;
+    box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    max-height: 100dvh;
     transform: translateX(-105%);
     transition: transform 0.34s cubic-bezier(0.32, 0.72, 0, 1);
-    box-shadow: none;
     overflow: hidden;
+    visibility: visible;
+    pointer-events: none;
   }
 
-  .pdx-account-app[dir="rtl"] .pdx-account-sidebar {
+  .pdx-account-sidebar--mobile-overlay[dir="rtl"] {
     left: auto;
     right: 0;
     transform: translateX(105%);
   }
 
-  .pdx-account-app.is-mobile-nav-open .pdx-account-sidebar {
+  body.pdx-account-mobile-nav-open .pdx-account-sidebar--mobile-overlay,
+  body.pdx-account-mobile-nav-open .pdx-account-sidebar {
     transform: translateX(0);
+    pointer-events: auto;
     box-shadow: 8px 0 32px rgba(0, 0, 0, 0.14);
   }
 
-  .pdx-account-app[dir="rtl"].is-mobile-nav-open .pdx-account-sidebar {
+  body.pdx-account-mobile-nav-open .pdx-account-sidebar--mobile-overlay[dir="rtl"],
+  body.pdx-account-mobile-nav-open .pdx-account-sidebar--mobile-overlay[dir="rtl"] {
     box-shadow: -8px 0 32px rgba(0, 0, 0, 0.14);
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-mobile-head,
+  .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-user,
+  .pdx-account-sidebar .pdx-account-sidebar-mobile-head,
+  .pdx-account-sidebar .pdx-account-sidebar-user {
+    flex-shrink: 0;
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-nav,
+  .pdx-account-sidebar .pdx-account-sidebar-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    padding-bottom: 8px;
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-footer,
+  .pdx-account-sidebar .pdx-account-sidebar-footer {
+    flex-shrink: 0;
+    margin-top: auto;
   }
 
   .pdx-account-sidebar-mobile-head {
