@@ -205,6 +205,119 @@ body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-sig
   max-width: 140px;
 }
 
+/* ─── Public site header identity (main website, not account dashboard) ─── */
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-label,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-trigger,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-trigger-label,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-name-with-badge,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-name-with-badge--account,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-public-user-name {
+  display: none !important;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn.pdx-auth-header-btn {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: min(240px, 38vw);
+  height: auto;
+  min-height: 32px;
+  line-height: 1.2;
+  align-items: center;
+  text-shadow: none !important;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-identity {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-identity {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(160px, 24vw);
+  text-shadow: none !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-account-level-badge--header {
+  display: block;
+  margin: 0;
+  max-width: min(160px, 24vw);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #5c4a1a;
+  background: linear-gradient(135deg, #fff7d6 0%, #f6d365 45%, #d4af37 100%);
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  align-self: flex-start;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 0;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-identity:not(:has(.pdx-account-avatar)) .pdx-header-user-text {
+  margin-inline-start: 0;
+}
+
+html[dir="rtl"] #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-identity,
+#pdx-auth-bar.pdx-auth-bar--header[dir="rtl"] .pdx-header-user-identity {
+  flex-direction: row-reverse;
+}
+
+html[dir="rtl"] #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-text,
+#pdx-auth-bar.pdx-auth-bar--header[dir="rtl"] .pdx-header-user-text {
+  align-items: flex-end;
+  text-align: end;
+}
+
+@media (max-width: 768px) {
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn.pdx-auth-header-btn {
+    max-width: none;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-text,
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-name,
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-account-level-badge--header {
+    display: none !important;
+  }
+}
+
 .pdx-auth-account-btn .pdx-public-user-identity {
   pointer-events: none;
 }

@@ -309,6 +309,38 @@
     '</span>';
   }
 
+  function cleanupLegacyHeaderIdentityNodes(accountBtn) {
+    if (!accountBtn) return;
+    accountBtn.querySelectorAll(
+      '.pdx-auth-account-label, .pdx-auth-trigger, .pdx-auth-trigger-label, .pdx-name-with-badge, .pdx-name-with-badge--account'
+    ).forEach(function (node) {
+      if (!node.closest('.pdx-auth-account-identity')) {
+        node.remove();
+      }
+    });
+  }
+
+  function renderHeaderUserIdentityHtml(opts) {
+    opts = opts || {};
+    var name = opts.name || user.display_name || t('account', 'Account');
+    var showName = opts.showName !== false;
+    var profile = opts.profile || accountProfileData();
+    var avatarHtml = renderAccountAvatarHtml({
+      sizeClass: 'pdx-account-avatar--header',
+      url: opts.url,
+      profile: profile,
+      alt: '',
+    });
+    var levelHtml = showName ? renderCustomerLevelBadge(profile, { compact: true, header: true }) : '';
+    var textHtml = showName
+      ? '<span class="pdx-header-user-text">' +
+          '<span class="pdx-header-user-name">' + escHtml(name) + '</span>' +
+          levelHtml +
+        '</span>'
+      : '';
+    return '<span class="pdx-header-user-identity">' + avatarHtml + textHtml + '</span>';
+  }
+
   function defaultAvatarUrl() {
     return normalizeAvatarAssetUrl(C.defaultAvatarUrl || '');
   }
@@ -387,8 +419,9 @@
     var level = accountLevelData(profile);
     if (!level.has_customer_level || !level.level_label) return '';
     var compact = opts.compact ? ' pdx-account-level-badge--compact' : '';
+    var header = opts.header ? ' pdx-account-level-badge--header' : '';
     var title = level.level_title ? ' title="' + escHtml(level.level_title + (level.level_description ? ' — ' + level.level_description : '')) + '"' : '';
-    return '<span class="pdx-account-level-badge' + compact + '"' + title + '>' + escHtml(level.level_label) + '</span>';
+    return '<span class="pdx-account-level-badge' + compact + header + '"' + title + '>' + escHtml(level.level_label) + '</span>';
   }
 
   function isMasterAdminUser() {
@@ -1041,6 +1074,7 @@
 
   function mountAuthBar() {
     removeLegacyTopbar();
+    dedupeAuthBars();
     authBar.classList.remove('pdx-auth-bar--topbar');
     if (isAuthPage()) {
       authBar.hidden = true;
@@ -1058,7 +1092,21 @@
     document.body.appendChild(authBar);
   }
 
+  function dedupeAuthBars() {
+    var bars = document.querySelectorAll('#pdx-auth-bar');
+    for (var i = 1; i < bars.length; i++) {
+      if (bars[i].parentNode) {
+        bars[i].parentNode.removeChild(bars[i]);
+      }
+    }
+  }
+
   function createAuthBar() {
+    dedupeAuthBars();
+    var staleBar = document.getElementById('pdx-auth-bar');
+    if (staleBar && staleBar.parentNode) {
+      staleBar.parentNode.removeChild(staleBar);
+    }
     authBar = document.createElement('div');
     authBar.id = 'pdx-auth-bar';
     authBar.className = 'pdx-cx-shell';
@@ -1122,6 +1170,13 @@
     updateAuthBar();
   }
 
+  function applyPublicHeaderLocale() {
+    if (!authBar) return;
+    var docDir = (document.documentElement.getAttribute('dir') || '').toLowerCase();
+    var rtl = docDir === 'rtl' || customerPortalLang() === 'ar';
+    authBar.setAttribute('dir', rtl ? 'rtl' : 'ltr');
+  }
+
   function accountStatusLabel() {
     if (!user.logged_in) return 'Guest';
     if (user.is_admin) return 'Administrator';
@@ -1145,15 +1200,18 @@
     /* Portal is in the account dropdown on desktop; standalone btn is mobile-only. */
     if (portalBtn) portalBtn.hidden = !user.logged_in || !window.matchMedia('(max-width: 768px)').matches;
 
+    if (accountBtn) {
+      cleanupLegacyHeaderIdentityNodes(accountBtn);
+    }
     if (identityEl) {
       if (user.logged_in) {
-        identityEl.innerHTML = renderPublicUserIdentityHtml({
+        identityEl.innerHTML = renderHeaderUserIdentityHtml({
           name: label,
-          avatarClass: 'pdx-account-avatar--header',
           showName: window.matchMedia('(min-width: 769px)').matches,
         });
       } else {
-        identityEl.textContent = label;
+        identityEl.textContent = '';
+        identityEl.innerHTML = '';
       }
     }
     if (accountBtn) {
@@ -1179,6 +1237,7 @@
     }
     if (authBar) bindAccountAvatarFallbacks(authBar);
     if (authMenu) bindAccountAvatarFallbacks(authMenu);
+    applyPublicHeaderLocale();
   }
 
   function openAuthMenu() {

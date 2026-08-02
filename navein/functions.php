@@ -991,6 +991,7 @@ if ( ! function_exists( 'navein_apple_header_username_contrast_footer' ) ) {
 		}
 		echo '<style id="navein-apple-auth-username-contrast">'
 			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn,'
+			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-name,'
 			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-label,'
 			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-name-with-badge,'
 			. 'html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-account-btn .pdx-name-with-badge,'

@@ -24,6 +24,7 @@ on:
       - 'cursor/master-admin-customer-editor-3a65'
       - 'cursor/customer-email-sync-3a65'
       - 'cursor/customer-name-display-fix-3a65'
+      - 'cursor/header-customer-name-fix-3a65'
     paths:
       - 'paxdesign-booking/**'
       - 'paxdesign-toolbar/**'
