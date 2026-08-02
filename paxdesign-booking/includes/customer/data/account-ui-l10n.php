@@ -910,6 +910,16 @@ return array(
 		'de' => 'Kundenlevel (01–10) zuweisen. Der passende VIP-Avatar wird automatisch freigeschaltet.',
 		'ar' => 'تعيين مستوى العميل (01–10). يتم منح صورة VIP المطابقة تلقائياً.',
 	),
+	'master_admin_premium_status' => array(
+		'en' => 'Master Administrator premium status',
+		'de' => 'Premium-Status Master-Administrator',
+		'ar' => 'حالة Premium للمسؤول الرئيسي',
+	),
+	'master_admin_premium_status_lead' => array(
+		'en' => 'Assign your own PAXDesign level and premium identity. All VIP avatars are available to you.',
+		'de' => 'Weisen Sie sich selbst ein PAXDesign Level und eine Premium-Identität zu. Alle VIP-Avatare stehen Ihnen zur Verfügung.',
+		'ar' => 'عيّن مستوى PAXDesign وهوية Premium الخاصة بك. جميع صور VIP متاحة لك.',
+	),
 	'admin_level_preview' => array(
 		'en' => 'Level preview',
 		'de' => 'Level-Vorschau',

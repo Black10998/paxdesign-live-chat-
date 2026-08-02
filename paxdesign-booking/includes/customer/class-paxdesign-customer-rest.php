@@ -487,6 +487,16 @@ class PAXdesign_Customer_REST {
         if (is_wp_error($result)) {
             return $result;
         }
+        if (
+            class_exists('PAXdesign_Customer_Avatar_Vip_Presets')
+            && class_exists('PAXdesign_Customer_Master_Admin')
+            && class_exists('PAXdesign_Customer_Levels')
+            && PAXdesign_Customer_Master_Admin::is_master_admin($uid)
+            && PAXdesign_Customer_Avatar_Vip_Presets::is_vip($preset_id)
+        ) {
+            $level = (int) preg_replace('/^pax-vip-/', '', $preset_id);
+            PAXdesign_Customer_Levels::set_level_for_user($uid, $level);
+        }
         $profile_response = self::get_profile();
         $profile_data = $profile_response->get_data();
         return rest_ensure_response(array(

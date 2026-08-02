@@ -40,6 +40,36 @@ class PAXdesign_Customer_Master_REST {
             'callback'            => array(__CLASS__, 'list_levels'),
             'permission_callback' => $guard['permission_callback'],
         ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/master/self/level', array(
+            'methods'             => WP_REST_Server::EDITABLE,
+            'callback'            => array(__CLASS__, 'update_self_level'),
+            'permission_callback' => $guard['permission_callback'],
+        ));
+    }
+
+    public static function update_self_level(WP_REST_Request $request) {
+        $user_id = get_current_user_id();
+        if ($user_id <= 0 || !PAXdesign_Customer_Master_Admin::is_master_admin($user_id)) {
+            return new WP_Error('rest_forbidden', __('Master administrator access required.', 'paxdesign-booking'), array('status' => 403));
+        }
+        if (!$request->has_param('customer_level')) {
+            return new WP_Error('missing_level', __('Please choose a PAXDesign level.', 'paxdesign-booking'), array('status' => 400));
+        }
+        $level = PAXdesign_Customer_Levels::sanitize_level((int) $request->get_param('customer_level'));
+        if ($level > 0) {
+            PAXdesign_Customer_Levels::set_level_for_user($user_id, $level);
+        } else {
+            PAXdesign_Customer_Levels::clear_level_for_user($user_id);
+        }
+        PAXdesign_Customer_Registry::ensure_portal_customer($user_id);
+        $profile = class_exists('PAXdesign_Customer_Avatar')
+            ? PAXdesign_Customer_Avatar::profile_fields($user_id)
+            : PAXdesign_Customer_Levels::profile_fields($user_id);
+        return rest_ensure_response(array(
+            'success' => true,
+            'profile' => $profile,
+        ));
     }
 
     public static function list_customers(WP_REST_Request $request) {

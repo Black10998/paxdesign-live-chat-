@@ -765,11 +765,53 @@ body.pdx-account-rtl .pdx-account-card-title {
 .pdx-account-signout-confirm__actions {
   display: flex;
   gap: 10px;
+  width: 100%;
 }
 
 .pdx-account-signout-confirm__actions .pdx-portal-btn {
   flex: 1 1 0;
+  min-width: 0;
   min-height: 44px;
+  width: auto;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  box-sizing: border-box;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+.pdx-account-signout-confirm__actions .pdx-account-signout-confirm__cancel {
+  color: #0071e3 !important;
+  background: rgba(0, 113, 227, 0.08) !important;
+  border: 1px solid rgba(0, 113, 227, 0.2) !important;
+}
+
+.pdx-account-signout-confirm__actions .pdx-account-signout-confirm__cancel:hover {
+  background: rgba(0, 113, 227, 0.12) !important;
+}
+
+.pdx-account-signout-confirm__actions .pdx-account-signout-confirm__confirm {
+  color: #ffffff !important;
+  background: #ff3b30 !important;
+  border: 0 !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.pdx-account-signout-confirm__actions .pdx-account-signout-confirm__confirm:hover {
+  background: #ff453a !important;
+}
+
+.pdx-account-signout-confirm__actions .pdx-account-signout-confirm__confirm:active {
+  background: #d70015 !important;
 }
 
 body.pdx-account-signout-confirm-open {

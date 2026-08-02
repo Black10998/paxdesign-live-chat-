@@ -534,6 +534,25 @@ html[dir="rtl"] #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-text,
   color: #ffe0a6;
 }
 
+.pdx-auth-menu .pdx-account-level-badge--menu {
+  display: inline-block;
+  margin: 2px 0 4px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #5c4a1a;
+  background: linear-gradient(135deg, #fff7d6 0%, #f6d365 45%, #d4af37 100%);
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
 .pdx-auth-menu-actions {
   display: flex;
   flex-direction: column;

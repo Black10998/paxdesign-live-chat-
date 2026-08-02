@@ -14,6 +14,12 @@
     id: C.userId || 0,
     avatar_url: C.avatarUrl || '',
     avatar_has_image: C.avatarHasImage !== false,
+    is_master_admin: !!C.isMasterAdmin,
+    customer_level: (C.customerLevel && C.customerLevel.customer_level) || 0,
+    level_label: (C.customerLevel && C.customerLevel.level_label) || '',
+    level_title: (C.customerLevel && C.customerLevel.level_title) || '',
+    level_description: (C.customerLevel && C.customerLevel.level_description) || '',
+    has_customer_level: !!(C.customerLevel && C.customerLevel.has_customer_level),
   };
   var returnModule = null;
   var currentView = 'login';
@@ -437,8 +443,9 @@
     if (!level.has_customer_level || !level.level_label) return '';
     var compact = opts.compact ? ' pdx-account-level-badge--compact' : '';
     var header = opts.header ? ' pdx-account-level-badge--header' : '';
+    var menu = opts.menu ? ' pdx-account-level-badge--menu' : '';
     var title = level.level_title ? ' title="' + escHtml(level.level_title + (level.level_description ? ' — ' + level.level_description : '')) + '"' : '';
-    return '<span class="pdx-account-level-badge' + compact + header + '"' + title + '>' + escHtml(level.level_label) + '</span>';
+    return '<span class="pdx-account-level-badge' + compact + header + menu + '"' + title + '>' + escHtml(level.level_label) + '</span>';
   }
 
   function isMasterAdminUser() {
@@ -637,6 +644,15 @@
     if (payload.is_master_admin !== undefined) {
       user.is_master_admin = !!payload.is_master_admin;
       C.isMasterAdmin = !!payload.is_master_admin;
+    }
+    if (payload.customer_level !== undefined || payload.level_label !== undefined || payload.has_customer_level !== undefined) {
+      C.customerLevel = {
+        customer_level: user.customer_level || 0,
+        level_label: user.level_label || '',
+        level_title: user.level_title || '',
+        level_description: user.level_description || '',
+        has_customer_level: !!user.has_customer_level,
+      };
     }
   }
 
@@ -1222,9 +1238,22 @@
     }
     if (identityEl) {
       if (user.logged_in) {
+        var headerProfile = accountProfileData();
+        if (!headerProfile || headerProfile.customer_level === undefined) {
+          headerProfile = Object.assign({}, headerProfile || {}, {
+            customer_level: user.customer_level,
+            level_label: user.level_label,
+            level_title: user.level_title,
+            level_description: user.level_description,
+            has_customer_level: user.has_customer_level,
+            avatar_url: user.avatar_url,
+            avatar_has_image: user.avatar_has_image,
+          });
+        }
         identityEl.innerHTML = renderHeaderUserIdentityHtml({
           name: label,
           showName: window.matchMedia('(min-width: 769px)').matches,
+          profile: headerProfile,
         });
       } else {
         identityEl.textContent = '';
@@ -1237,11 +1266,26 @@
     }
 
     if (user.logged_in && head) {
+      var menuProfile = accountProfileData();
+      if (!menuProfile || !menuProfile.display_name) {
+        menuProfile = Object.assign({}, menuProfile || {}, {
+          display_name: user.display_name,
+          email: user.email,
+          customer_level: user.customer_level,
+          level_label: user.level_label,
+          level_title: user.level_title,
+          level_description: user.level_description,
+          has_customer_level: user.has_customer_level,
+          avatar_url: user.avatar_url,
+          avatar_has_image: user.avatar_has_image,
+        });
+      }
       head.innerHTML =
         '<div class="pdx-auth-menu-identity">' +
-          renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--menu' }) +
+          renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--menu', profile: menuProfile }) +
           '<div class="pdx-auth-menu-identity-text">' +
             '<div class="pdx-auth-menu-name">' + escHtml(user.display_name || 'Account') + '</div>' +
+            renderCustomerLevelBadge(menuProfile, { compact: true, menu: true }) +
             '<div class="pdx-auth-menu-email">' + escHtml(user.email || '') + '</div>' +
             '<div class="pdx-auth-menu-status">' + escHtml(accountStatusLabel()) + '</div>' +
           '</div>' +
@@ -2469,6 +2513,38 @@
     }
   }
 
+  function renderMasterAdminSelfLevelPanel(profile) {
+    if (!isMasterAdminUser()) return '';
+    profile = profile || accountProfileData();
+    var levelOptions = (accountState.masterLevels || []).map(function (lvl) {
+      var selected = Number(profile.customer_level) === Number(lvl.level) ? ' selected' : '';
+      return '<option value="' + escHtml(String(lvl.level)) + '"' + selected + '>' + escHtml(lvl.label) + '</option>';
+    }).join('');
+    var selectedLevel = null;
+    (accountState.masterLevels || []).forEach(function (lvl) {
+      if (Number(lvl.level) === Number(profile.customer_level)) selectedLevel = lvl;
+    });
+    var previewHtml = '';
+    if (selectedLevel) {
+      previewHtml = '<div class="pdx-account-admin-level-preview">' +
+        '<div class="pdx-account-admin-level-preview__title">' + escHtml(t('admin_level_preview', 'Level preview')) + '</div>' +
+        renderCustomerLevelBadge({ level_label: selectedLevel.label, level_title: selectedLevel.title, level_description: selectedLevel.description, has_customer_level: true }) +
+        (selectedLevel.title ? '<div class="pdx-account-admin-level-preview__name">' + escHtml(selectedLevel.title) + '</div>' : '') +
+        (selectedLevel.description ? '<div class="pdx-account-admin-level-preview__desc">' + escHtml(selectedLevel.description) + '</div>' : '') +
+      '</div>';
+    }
+    return '<div class="pdx-account-card pdx-account-master-self-level">' +
+      '<div class="pdx-account-card-title">' + escHtml(t('master_admin_premium_status', 'Master Administrator premium status')) + '</div>' +
+      '<p class="pdx-account-admin-section-lead">' + escHtml(t('master_admin_premium_status_lead', 'Assign your own PAXDesign level and premium identity. All VIP avatars are available to you.')) + '</p>' +
+      previewHtml +
+      '<form id="pdx-master-self-level-form" class="pdx-account-form">' +
+        '<label class="pdx-label">' + escHtml(t('customer_level', 'PAXDesign level')) +
+          '<select class="pdx-select" name="customer_level" id="pdx-master-self-level-select"><option value="0">' + escHtml(t('no_level', 'No level')) + '</option>' + levelOptions + '</select></label>' +
+        '<button type="submit" class="pdx-portal-btn pdx-portal-btn--primary">' + escHtml(t('save_changes', 'Save changes')) + '</button>' +
+      '</form>' +
+    '</div>';
+  }
+
   function renderAccountPersonalSection(profile) {
     profile = profile || accountProfileData();
     var avatarUrl = accountAvatarUrl(profile);
@@ -2504,6 +2580,7 @@
         '</div>' +
       '</div>' +
       renderAccountAvatarPickerHtml(profile) +
+      (isMasterAdminUser() ? renderMasterAdminSelfLevelPanel(profile) : '') +
       '<form id="pdx-customer-profile-form">' +
         field('display_name', t('display_name', 'Display name'), profile.display_name || user.display_name) +
         field('email', t('email', 'Email'), profile.email || user.email, 'email') +
@@ -2708,6 +2785,48 @@
         });
       });
     });
+  }
+
+  function bindMasterAdminSelfLevelForm(container) {
+    if (!isMasterAdminUser()) return;
+    var form = container.querySelector('#pdx-master-self-level-form');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var fd = new FormData(form);
+      customerApiFetch('POST', '/customer/master/self/level', {
+        customer_level: fd.get('customer_level'),
+      }).then(function (data) {
+        if (data && data._ok !== false && data.profile) {
+          applyAccountProfileUpdate(data.profile);
+          notify(t('profile_updated', 'Profile updated.'), 'info');
+        } else {
+          notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+        }
+      });
+    });
+    var levelSelect = form.querySelector('#pdx-master-self-level-select');
+    if (levelSelect) {
+      levelSelect.addEventListener('change', function () {
+        var val = Number(levelSelect.value || 0);
+        var profile = accountProfileData();
+        var selected = null;
+        (accountState.masterLevels || []).forEach(function (lvl) {
+          if (Number(lvl.level) === val) selected = lvl;
+        });
+        profile.customer_level = val;
+        profile.has_customer_level = val > 0;
+        profile.level_label = selected ? selected.label : '';
+        profile.level_title = selected ? selected.title : '';
+        profile.level_description = selected ? selected.description : '';
+        accountState.profile = profile;
+        var card = container.querySelector('.pdx-account-master-self-level');
+        if (card) {
+          card.outerHTML = renderMasterAdminSelfLevelPanel(profile);
+          bindMasterAdminSelfLevelForm(container);
+        }
+      });
+    }
   }
 
   function bindAccountSecurityForm(container) {
@@ -3256,8 +3375,16 @@
       '<p class="pdx-account-page-lead">' + escHtml(accountSectionLead(section)) + '</p></div>';
 
     if (section === 'personal') {
-      accountMainEl.innerHTML = head + renderAccountPersonalSection(accountProfileData());
-      bindAccountPersonalForm(accountMainEl);
+      var renderPersonal = function () {
+        accountMainEl.innerHTML = head + renderAccountPersonalSection(accountProfileData());
+        bindAccountPersonalForm(accountMainEl);
+        bindMasterAdminSelfLevelForm(accountMainEl);
+      };
+      if (isMasterAdminUser() && (!accountState.masterLevels || !accountState.masterLevels.length)) {
+        loadMasterAdminCatalog().then(renderPersonal);
+      } else {
+        renderPersonal();
+      }
       return;
     }
     if (section === 'security') {
