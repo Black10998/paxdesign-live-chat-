@@ -49,6 +49,13 @@
   flex-shrink: 0;
 }
 
+.pdx-account-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
 .pdx-account-sidebar-name {
   font-size: 15px;
   font-weight: 700;
@@ -846,7 +853,6 @@ body.pdx-account-signout-confirm-open {
   min-height: 64px;
 }
 
-.pdx-account-identity,
 .pdx-auth-menu-identity,
 .pdx-profile-identity,
 .pdx-account-profile-identity,
@@ -860,6 +866,7 @@ body.pdx-account-signout-confirm-open {
 .pdx-account-sidebar-user {
   padding: 4px 2px 14px;
   margin-bottom: 8px;
+  border-bottom: 0;
 }
 
 .pdx-account-sidebar-name-row,
