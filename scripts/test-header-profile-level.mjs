@@ -7,7 +7,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const cssDir = join(__dirname, '../paxdesign-booking/assets/customer-auth/css');
 const css = ['pdx-auth.css', 'pdx-customer-ui.css', 'pdx-account-app.css'].map((f) => readFileSync(join(cssDir, f), 'utf8')).join('\n');
 
-const levelLabel = 'PAXDesign Level 01 — Gold';
+const levelLabel = 'Level 01 Gold';
 const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}
 #pdx-auth-bar { position: relative; padding: 20px; }
 .pdx-auth-menu { display: block !important; position: relative; top: 0; right: auto; }

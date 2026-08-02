@@ -40,7 +40,7 @@ function renderCustomerLevelBadge(profile, user, C, opts) {
 const masterAdmin = {
   id: 1,
   customer_level: 1,
-  level_label: 'PAXDesign Level 01 — Gold',
+  level_label: 'Level 01 Gold',
   has_customer_level: true,
 };
 
@@ -57,7 +57,7 @@ const alkhaCustomer = {
 const C = {
   customerLevel: {
     customer_level: 1,
-    level_label: 'PAXDesign Level 01 — Gold',
+    level_label: 'Level 01 Gold',
     has_customer_level: true,
   },
 };
@@ -68,14 +68,14 @@ if (badgeForAlkha !== '') {
 }
 
 const badgeForAdmin = renderCustomerLevelBadge(null, masterAdmin, C);
-if (!badgeForAdmin.includes('PAXDesign Level 01')) {
+if (!badgeForAdmin.includes('Level 01 Gold')) {
   throw new Error('Expected master admin own level badge when profile is null');
 }
 
 const leveledCustomer = {
   id: 482,
   customer_level: 3,
-  level_label: 'PAXDesign Level 03 — Diamond',
+  level_label: 'Level 03 Diamond',
   has_customer_level: true,
 };
 const badgeForLeveled = renderCustomerLevelBadge(leveledCustomer, masterAdmin, C);

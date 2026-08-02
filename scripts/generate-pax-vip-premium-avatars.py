@@ -211,7 +211,7 @@ def save_gif(level: dict, path: Path) -> None:
 
 def write_labels() -> None:
     entries = "\n".join(
-        f"\tarray(\n\t\t'id'    => 'pax-vip-{level['level']:02d}',\n\t\t'label' => 'PAXDesign Level {level['level']:02d} — {level['metal']}',\n\t),"
+        f"\tarray(\n\t\t'id'    => 'pax-vip-{level['level']:02d}',\n\t\t'label' => 'Level {level['level']:02d} {level['metal']}',\n\t),"
         for level in LEVELS
     )
     LABELS_FILE.write_text(

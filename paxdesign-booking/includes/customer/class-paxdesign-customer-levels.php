@@ -65,7 +65,7 @@ class PAXdesign_Customer_Levels {
             return '';
         }
         return sprintf(
-            __('PAXDesign Level %1$s — %2$s', 'paxdesign-booking'),
+            __('Level %1$s %2$s', 'paxdesign-booking'),
             sprintf('%02d', $level),
             (string) ($def['metal'] ?? '')
         );

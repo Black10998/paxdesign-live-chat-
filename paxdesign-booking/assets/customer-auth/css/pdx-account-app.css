@@ -1364,6 +1364,8 @@ body.pdx-account-signout-confirm-open {
   z-index: 0;
   flex-shrink: 0;
   align-self: flex-start;
+  text-decoration: none;
+  -webkit-text-decoration: none;
 }
 
 .pdx-account-level-badge--compact {
