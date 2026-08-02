@@ -1,5 +1,5 @@
 /**
- * PAXDesign Verified Badge — shield + checkmark (server-gated via verified flag).
+ * PAXDesign Verified Badge — LinkedIn-style shield + checkmark (account dashboard only).
  */
 (function (global) {
   'use strict';
@@ -18,8 +18,8 @@
 
   function svgMarkup(size) {
     return '<svg class="pdx-vb" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' +
-      '<path class="pdx-vb__shield" d="M12 2.4l7.2 2.8v5.8c0 4.9-3.1 9.2-7.2 10.8-4.1-1.6-7.2-5.9-7.2-10.8V5.2L12 2.4z"/>' +
-      '<path class="pdx-vb__check" d="M8.2 12.1l2.1 2.1 5.5-5.6"/>' +
+      '<path class="pdx-vb__shield" d="M12 1.8l8.2 3.2v6.1c0 5.4-3.5 10.2-8.2 11.9-4.7-1.7-8.2-6.5-8.2-11.9V5L12 1.8z"/>' +
+      '<path class="pdx-vb__check" d="M8.4 11.9l2.3 2.3 5.1-5.2"/>' +
     '</svg>';
   }
 
@@ -31,7 +31,7 @@
     opts = opts || {};
     if (!verified) return '';
 
-    var size = Math.max(12, Math.min(24, opts.size || 16));
+    var size = Math.max(12, Math.min(20, opts.size || 15));
     var context = opts.context || 'email';
     var tip = opts.tooltip || tooltipForContext(context);
     var cls = 'pdx-verified-badge' + (opts.inline ? ' pdx-verified-badge--inline' : '');

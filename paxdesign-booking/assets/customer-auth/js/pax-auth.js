@@ -280,6 +280,26 @@
     return escHtml(name || t('account', 'Account'));
   }
 
+  function accountDashboardNameWithBadge(name, verified, opts) {
+    opts = opts || {};
+    opts.context = opts.context || 'account';
+    return '<span class="pdx-name-with-badge pdx-name-with-badge--account">' +
+      escHtml(name || t('account', 'Account')) +
+      verifiedBadgeHtml(verified, opts) +
+    '</span>';
+  }
+
+  function renderPublicUserIdentityHtml(opts) {
+    opts = opts || {};
+    var name = opts.name || user.display_name || t('account', 'Account');
+    var avatarClass = opts.avatarClass || 'pdx-account-avatar--header';
+    var showName = opts.showName !== false;
+    return '<span class="pdx-public-user-identity">' +
+      renderAccountAvatarHtml({ sizeClass: avatarClass, url: opts.url }) +
+      (showName ? '<span class="pdx-public-user-name">' + escHtml(name) + '</span>' : '') +
+    '</span>';
+  }
+
   function defaultAvatarUrl() {
     return C.defaultAvatarUrl || '';
   }
@@ -786,7 +806,7 @@
       '<div class="pdx-auth-bar-inner">' +
         '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn">Sign In</button>' +
         '<button type="button" class="pdx-auth-account-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" aria-haspopup="true" aria-expanded="false" hidden>' +
-          '<span class="pdx-auth-account-label">Account</span>' +
+          '<span class="pdx-auth-account-identity"></span>' +
         '</button>' +
         '<button type="button" class="pdx-auth-portal-btn pdx-cx-btn pdx-auth-header-btn" hidden>Customer Portal</button>' +
         '<div class="pdx-auth-menu" hidden>' +
@@ -854,7 +874,7 @@
       authBar.hidden = true;
     }
     var accountBtn = authBar ? authBar.querySelector('.pdx-auth-account-btn') : null;
-    var labelEl = accountBtn ? accountBtn.querySelector('.pdx-auth-account-label') : null;
+    var identityEl = accountBtn ? accountBtn.querySelector('.pdx-auth-account-identity') : null;
     var head = authMenu.querySelector('.pdx-auth-menu-head');
     var signupBtn = authBar ? authBar.querySelector('.pdx-auth-signup-btn') : null;
     var portalBtn = authBar ? authBar.querySelector('.pdx-auth-portal-btn') : null;
@@ -865,24 +885,32 @@
     /* Portal is in the account dropdown on desktop; standalone btn is mobile-only. */
     if (portalBtn) portalBtn.hidden = !user.logged_in || !window.matchMedia('(max-width: 768px)').matches;
 
-    if (labelEl) {
+    if (identityEl) {
       if (user.logged_in) {
-        labelEl.innerHTML = nameWithBadge(label, user.verified, { size: 14, inline: true, context: 'account' });
+        identityEl.innerHTML = renderPublicUserIdentityHtml({
+          name: label,
+          avatarClass: 'pdx-account-avatar--header',
+          showName: window.matchMedia('(min-width: 769px)').matches,
+        });
       } else {
-        labelEl.textContent = label;
+        identityEl.textContent = label;
       }
     }
     if (accountBtn) {
-      accountBtn.classList.toggle('pdx-auth-account-btn--verified', user.logged_in && user.verified);
+      accountBtn.classList.remove('pdx-auth-account-btn--verified');
       accountBtn.setAttribute('aria-label', user.logged_in ? t('account_menu', 'Account menu') : t('account', 'Account'));
     }
 
     if (user.logged_in && head) {
       head.innerHTML =
-        renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--sidebar', url: accountAvatarUrl() }) +
-        '<div class="pdx-auth-menu-name">' + nameWithBadge(user.display_name || 'Account', user.verified, { size: 15, context: 'account' }) + '</div>' +
-        '<div class="pdx-auth-menu-email">' + escHtml(user.email || '') + '</div>' +
-        '<div class="pdx-auth-menu-status">' + escHtml(accountStatusLabel()) + '</div>';
+        '<div class="pdx-auth-menu-identity">' +
+          renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--menu' }) +
+          '<div class="pdx-auth-menu-identity-text">' +
+            '<div class="pdx-auth-menu-name">' + escHtml(user.display_name || 'Account') + '</div>' +
+            '<div class="pdx-auth-menu-email">' + escHtml(user.email || '') + '</div>' +
+            '<div class="pdx-auth-menu-status">' + escHtml(accountStatusLabel()) + '</div>' +
+          '</div>' +
+        '</div>';
       authMenu.removeAttribute('hidden');
     } else {
       if (head) head.innerHTML = '';
@@ -965,8 +993,13 @@
     }
     var body = profileOverlay.querySelector('.pdx-profile-card-body');
     body.innerHTML =
-      '<div class="pdx-profile-row"><span class="pdx-profile-label">Full Name</span><span class="pdx-profile-value">' + nameWithBadge(user.display_name || '—', user.verified, { size: 15, context: 'account' }) + '</span></div>' +
-      '<div class="pdx-profile-row"><span class="pdx-profile-label">Email</span><span class="pdx-profile-value">' + escHtml(user.email || '—') + '</span></div>' +
+      '<div class="pdx-profile-identity">' +
+        renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--profile-compact' }) +
+        '<div class="pdx-profile-identity-text">' +
+          '<div class="pdx-profile-identity-name">' + escHtml(user.display_name || '—') + '</div>' +
+          '<div class="pdx-profile-identity-email">' + escHtml(user.email || '—') + '</div>' +
+        '</div>' +
+      '</div>' +
       '<div class="pdx-profile-row"><span class="pdx-profile-label">Account Status</span><span class="pdx-profile-value pdx-profile-value--status">' + escHtml(accountStatusText(user.verified)) + '</span></div>' +
       '<div class="pdx-profile-row"><span class="pdx-profile-label">Login Status</span><span class="pdx-profile-value">' + (user.logged_in ? 'Signed in' : 'Signed out') + '</span></div>';
     profileOverlay.classList.add('is-open');
@@ -2044,11 +2077,13 @@
       '</button>' +
     '</div>' +
     '<div class="pdx-account-sidebar-user">' +
-      renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--sidebar' }) +
-      '<div class="pdx-account-sidebar-name-row">' +
-        '<div class="pdx-account-sidebar-name">' + nameWithBadge(user.display_name || t('account', 'Account'), user.verified, { size: 15, inline: true, context: 'account' }) + '</div>' +
-        '<div class="pdx-account-sidebar-email">' + escHtml(user.email || '') + '</div>' +
-        '<div class="pdx-account-sidebar-status">' + escHtml(accountStatusText(user.verified)) + '</div>' +
+      '<div class="pdx-account-identity">' +
+        renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--sidebar' }) +
+        '<div class="pdx-account-sidebar-name-row">' +
+          '<div class="pdx-account-sidebar-name">' + accountDashboardNameWithBadge(user.display_name || t('account', 'Account'), user.verified, { size: 14, inline: true, context: 'account' }) + '</div>' +
+          '<div class="pdx-account-sidebar-email">' + escHtml(user.email || '') + '</div>' +
+          '<div class="pdx-account-sidebar-status">' + escHtml(accountStatusText(user.verified)) + '</div>' +
+        '</div>' +
       '</div>' +
     '</div><div class="pdx-account-sidebar-nav">';
     accountNavGroups().forEach(function (group) {
@@ -2083,8 +2118,14 @@
     var avatarUrl = accountAvatarUrl(profile);
     return '<div class="pdx-account-card">' +
       '<div class="pdx-account-card-title">' + escHtml(t('personal_information', 'Personal Information')) + '</div>' +
+      '<div class="pdx-account-profile-identity">' +
+        renderAccountAvatarHtml({ url: avatarUrl, sizeClass: 'pdx-account-avatar--profile-compact', profile: profile }) +
+        '<div class="pdx-account-profile-identity-text">' +
+          '<div class="pdx-account-profile-name">' + accountDashboardNameWithBadge(profile.display_name || user.display_name || t('account', 'Account'), profile.verified !== undefined ? profile.verified : user.verified, { size: 14, inline: true, context: 'account' }) + '</div>' +
+          '<div class="pdx-account-profile-email">' + escHtml(profile.email || user.email || '') + '</div>' +
+        '</div>' +
+      '</div>' +
       '<div class="pdx-account-profile-avatar-block">' +
-        renderAccountAvatarHtml({ url: avatarUrl, sizeClass: 'pdx-account-avatar--profile', profile: profile }) +
         '<label class="pdx-account-avatar__change">' +
           escHtml(t('change_photo', 'Change photo')) +
           '<input type="file" id="pdx-profile-avatar-input" accept="image/jpeg,image/png,image/webp" hidden />' +

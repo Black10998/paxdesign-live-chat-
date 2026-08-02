@@ -109,7 +109,17 @@ body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-sig
 }
 
 .pdx-auth-account-btn {
-  max-width: min(160px, 26vw);
+  max-width: min(180px, 30vw);
+  padding-left: 6px;
+  padding-right: 10px;
+}
+
+.pdx-auth-account-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .pdx-auth-account-label {
