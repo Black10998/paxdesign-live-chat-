@@ -1347,6 +1347,226 @@ body.pdx-account-signout-confirm-open {
   background: rgba(0, 0, 0, 0.02);
 }
 
+.pdx-account-admin-editor {
+  display: grid;
+  gap: 16px;
+}
+
+.pdx-account-admin-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pdx-account-admin-toolbar__identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pdx-account-admin-toolbar__email {
+  font-size: 13px;
+  color: #6e6e73;
+  margin-top: 4px;
+}
+
+.pdx-account-admin-preview {
+  margin: 0;
+}
+
+.pdx-account-admin-preview__label,
+.pdx-account-admin-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1d1d1f;
+  margin: 0 0 6px;
+}
+
+.pdx-account-admin-preview__lead,
+.pdx-account-admin-section-lead {
+  font-size: 13px;
+  line-height: 1.45;
+  color: #6e6e73;
+  margin: 0 0 12px;
+}
+
+.pdx-account-admin-preview__card {
+  padding: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fafafa 0%, #fff 100%);
+}
+
+.pdx-account-admin-meta {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding: 0;
+}
+
+.pdx-account-admin-meta div {
+  display: grid;
+  grid-template-columns: minmax(120px, 34%) 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.pdx-account-admin-meta dt {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #86868b;
+}
+
+.pdx-account-admin-meta dd {
+  margin: 0;
+  font-size: 13px;
+  color: #1d1d1f;
+}
+
+.pdx-account-admin-meta--inline {
+  margin: 12px 0 16px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.pdx-account-admin-count {
+  font-size: 12px;
+  color: #86868b;
+  margin-bottom: 8px;
+}
+
+.pdx-account-admin-table__avatar {
+  width: 52px;
+}
+
+.pdx-account-admin-status {
+  display: inline-flex;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.pdx-account-admin-status--active {
+  color: #137333;
+  background: rgba(19, 115, 51, 0.1);
+}
+
+.pdx-account-admin-status--suspended {
+  color: #b42318;
+  background: rgba(180, 35, 24, 0.1);
+}
+
+.pdx-account-admin-status--pending {
+  color: #8a6116;
+  background: rgba(138, 97, 22, 0.12);
+}
+
+.pdx-account-admin-upload-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(0, 113, 227, 0.06);
+  border: 1px solid rgba(0, 113, 227, 0.12);
+  font-size: 13px;
+}
+
+.pdx-account-admin-vip-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.pdx-account-admin-vip-tile__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.pdx-account-admin-vip-tile__label {
+  font-size: 10px;
+  line-height: 1.2;
+  text-align: center;
+  color: #6e6e73;
+  max-width: 72px;
+}
+
+.pdx-account-admin-avatar-grid {
+  max-height: 320px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.pdx-account-admin-level-preview {
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.35);
+  background: linear-gradient(135deg, rgba(255, 247, 214, 0.35), rgba(255, 255, 255, 0.9));
+}
+
+.pdx-account-admin-level-preview__title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #86868b;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pdx-account-admin-level-preview__name {
+  margin-top: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #1d1d1f;
+}
+
+.pdx-account-admin-level-preview__desc {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #6e6e73;
+}
+
+.pdx-account-admin-level-preview__avatar {
+  margin-top: 10px;
+}
+
+.pdx-account-admin-level-preview__avatar img {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(212, 175, 55, 0.45);
+}
+
+@media (max-width: 720px) {
+  .pdx-account-admin-meta div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .pdx-account-admin-toolbar__identity {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pdx-account-admin-avatar-grid {
+    max-height: 240px;
+  }
+}
+
 .pdx-account-profile-identity:not(:has(.pdx-account-avatar)) .pdx-account-profile-identity-text,
 .pdx-account-identity:not(:has(.pdx-account-avatar)) .pdx-account-sidebar-name-row,
 .pdx-auth-menu-identity:not(:has(.pdx-account-avatar)) .pdx-auth-menu-identity-text,

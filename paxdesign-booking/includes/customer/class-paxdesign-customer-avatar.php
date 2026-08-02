@@ -209,7 +209,9 @@ class PAXdesign_Customer_Avatar {
             return new WP_Error('invalid_preset', __('Please choose a valid PAXDesign avatar.', 'paxdesign-booking'), array('status' => 400));
         }
         if (PAXdesign_Customer_Avatar_Vip_Presets::is_vip($preset_id)) {
-            if (!self::has_vip_grant($user_id, $preset_id)) {
+            $master_preview = class_exists('PAXdesign_Customer_Master_Admin')
+                && PAXdesign_Customer_Master_Admin::is_master_admin($user_id);
+            if (!$master_preview && !self::has_vip_grant($user_id, $preset_id)) {
                 return new WP_Error('vip_locked', __('This exclusive avatar is not available on your account.', 'paxdesign-booking'), array('status' => 403));
             }
         } elseif (!PAXdesign_Customer_Avatar_Presets::exists($preset_id)) {

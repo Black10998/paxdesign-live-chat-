@@ -542,7 +542,7 @@
       html += '<div class="pdx-account-avatar-picker__subtitle">' + escHtml(t('exclusive_level_avatars', 'PAXDesign Level avatars')) + '</div>' +
         '<div class="pdx-account-avatar-picker__grid pdx-account-avatar-picker__grid--vip" role="listbox" aria-label="' + escHtml(t('vip_avatars', 'VIP avatars')) + '">';
       vipPresets.forEach(function (preset) {
-        var locked = !!preset.locked;
+        var locked = !!preset.locked && !isMasterAdminUser();
         var selected = !hasUpload && !locked && preset.id === currentPreset;
         var lockLabel = t('vip_avatar_locked', 'Exclusive avatar — assigned by administrator only');
         html += '<button type="button" class="pdx-account-avatar-picker__item pdx-account-avatar-picker__item--vip' + (locked ? ' pdx-account-avatar-picker__item--locked' : '') + (selected ? ' is-selected' : '') + '" role="option"' +
@@ -2658,6 +2658,184 @@
     });
   }
 
+  function adminPresetUrlFromCatalog(presetId, presets, vipPresets) {
+    var all = (presets || []).concat(vipPresets || []);
+    for (var i = 0; i < all.length; i++) {
+      if (all[i] && all[i].id === presetId) {
+        return normalizeAvatarAssetUrl(all[i].url || '');
+      }
+    }
+    return accountAvatarPresetUrl(presetId);
+  }
+
+  function adminCustomerAvatarUrl(customer) {
+    if (!customer) return '';
+    if (customer.avatar_has_upload) {
+      return normalizeAvatarAssetUrl(customer.avatar_url || '');
+    }
+    var presetId = customer.avatar_preset || '';
+    if (presetId && presetId !== 'pax-none') {
+      var presetUrl = adminPresetUrlFromCatalog(presetId, customer.standard_presets, customer.vip_presets);
+      if (presetUrl) return presetUrl;
+    }
+    return normalizeAvatarAssetUrl(customer.avatar_url || '');
+  }
+
+  function adminCustomerHasAvatar(customer) {
+    if (!customer) return false;
+    if (customer.avatar_has_image === false) return false;
+    if (customer.avatar_has_upload) return true;
+    if (customer.avatar_preset === 'pax-none') return false;
+    return !!(adminCustomerAvatarUrl(customer) || customer.avatar_has_image);
+  }
+
+  function renderAdminCustomerAvatarHtml(customer, sizeClass) {
+    if (!adminCustomerHasAvatar(customer)) return '';
+    var url = adminCustomerAvatarUrl(customer);
+    if (!url) return '';
+    sizeClass = sizeClass || 'pdx-account-avatar--profile-compact';
+    var px = ACCOUNT_AVATAR_PX[sizeClass] || 64;
+    var fallback = adminPresetUrlFromCatalog(customer.avatar_preset, customer.standard_presets, customer.vip_presets) || url;
+    return '<span class="pdx-account-avatar ' + sizeClass + '" style="width:' + px + 'px;height:' + px + 'px;max-width:' + px + 'px;max-height:' + px + 'px;flex:0 0 ' + px + 'px">' +
+      '<img class="pdx-account-avatar__img" src="' + escHtml(url) + '" data-avatar-fallback="' + escHtml(fallback) + '" alt="" width="' + px + '" height="' + px + '" loading="lazy" decoding="async" onerror="window.__pdxAvatarFallback&&window.__pdxAvatarFallback(this)" />' +
+    '</span>';
+  }
+
+  function renderAdminCustomerPreviewPanel(customer) {
+    var avatarType = customer.avatar_has_upload
+      ? t('admin_avatar_uploaded', 'Personal uploaded photo')
+      : (customer.avatar_preset === 'pax-none'
+        ? t('no_profile_picture', 'No profile picture')
+        : t('admin_avatar_preset', 'PAXDesign avatar'));
+    var presetLabel = customer.avatar_preset || '—';
+    var presets = customer.standard_presets || [];
+    var vipPresets = customer.vip_presets || [];
+    for (var i = 0; i < presets.length; i++) {
+      if (presets[i].id === customer.avatar_preset) {
+        presetLabel = presets[i].label || presetLabel;
+        break;
+      }
+    }
+    for (var j = 0; j < vipPresets.length; j++) {
+      if (vipPresets[j].id === customer.avatar_preset) {
+        presetLabel = vipPresets[j].label || presetLabel;
+        break;
+      }
+    }
+    return '<div class="pdx-account-admin-preview">' +
+      '<div class="pdx-account-admin-preview__label">' + escHtml(t('admin_customer_preview', 'Customer account preview')) + '</div>' +
+      '<p class="pdx-account-admin-preview__lead">' + escHtml(t('admin_customer_preview_lead', 'Read-only view of how this customer sees their profile.')) + '</p>' +
+      '<div class="pdx-account-admin-preview__card">' +
+        '<div class="pdx-account-profile-identity">' +
+          renderAdminCustomerAvatarHtml(customer, 'pdx-account-avatar--profile-compact') +
+          '<div class="pdx-account-profile-identity-text">' +
+            '<div class="pdx-account-profile-name">' + escHtml(customer.display_name || t('account', 'Account')) +
+              (customer.verified ? ' <span class="pdx-verified-badge-inline" aria-label="' + escHtml(t('verified', 'Verified')) + '"></span>' : '') +
+            '</div>' +
+            renderCustomerLevelBadge(customer) +
+            (customer.level_description ? '<div class="pdx-account-profile-level-desc">' + escHtml(customer.level_description) + '</div>' : '') +
+            '<div class="pdx-account-profile-email">' + escHtml(customer.email || '') + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<dl class="pdx-account-admin-meta">' +
+          '<div><dt>' + escHtml(t('admin_avatar_type', 'Profile image')) + '</dt><dd>' + escHtml(avatarType) + '</dd></div>' +
+          '<div><dt>' + escHtml(t('admin_current_avatar', 'Current avatar')) + '</dt><dd>' + escHtml(presetLabel) + '</dd></div>' +
+          '<div><dt>' + escHtml(t('account_status', 'Account status')) + '</dt><dd>' + escHtml((customer.account_status || 'active').charAt(0).toUpperCase() + (customer.account_status || 'active').slice(1)) + '</dd></div>' +
+          (customer.last_login ? '<div><dt>' + escHtml(t('admin_last_login', 'Last login')) + '</dt><dd>' + escHtml(customer.last_login) + '</dd></div>' : '') +
+        '</dl>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderAdminCustomerAvatarPickers(customer) {
+    var presets = customer.standard_presets || accountState.masterStandardPresets || [];
+    var vipPresets = customer.vip_presets || [];
+    var currentPreset = customer.avatar_preset || '';
+    var hasUpload = !!customer.avatar_has_upload;
+    var html = '<div class="pdx-account-admin-avatars">' +
+      '<div class="pdx-account-admin-section-title">' + escHtml(t('admin_manage_avatars', 'Avatar assignment')) + '</div>' +
+      '<p class="pdx-account-admin-section-lead">' + escHtml(t('admin_manage_avatars_lead', 'Assign standard or VIP avatars. Locked VIP avatars require granting before the customer can use them.')) + '</p>';
+
+    if (hasUpload) {
+      html += '<div class="pdx-account-admin-upload-note">' +
+        '<span>' + escHtml(t('admin_customer_has_upload', 'This customer has a personal uploaded photo active.')) + '</span>' +
+        '<button type="button" class="pdx-portal-btn pdx-portal-btn--ghost pdx-admin-remove-upload">' + escHtml(t('admin_remove_upload', 'Remove uploaded photo')) + '</button>' +
+      '</div>';
+    }
+
+    html += '<div class="pdx-account-avatar-picker">' +
+      '<div class="pdx-account-avatar-picker__title">' + escHtml(t('paxdesign_avatars', 'PAXDesign avatars')) + '</div>' +
+      '<div class="pdx-account-avatar-picker__grid pdx-account-admin-avatar-grid" role="listbox">';
+    presets.forEach(function (preset) {
+      var isNone = preset.type === 'none' || preset.id === 'pax-none';
+      var selected = !hasUpload && preset.id === currentPreset;
+      if (isNone) {
+        html += '<button type="button" class="pdx-account-avatar-picker__item pdx-account-avatar-picker__item--none pdx-admin-assign-avatar' + (selected ? ' is-selected' : '') + '" data-avatar-preset="' + escHtml(preset.id) + '" title="' + escHtml(preset.label || t('no_profile_picture', 'No profile picture')) + '">' +
+          '<span class="pdx-account-avatar-picker__none-mark" aria-hidden="true"></span>' +
+          '<span class="pdx-account-avatar-picker__none-text">' + escHtml(preset.label || t('no_profile_picture', 'No profile picture')) + '</span></button>';
+        return;
+      }
+      html += '<button type="button" class="pdx-account-avatar-picker__item pdx-admin-assign-avatar' + (selected ? ' is-selected' : '') + '" data-avatar-preset="' + escHtml(preset.id) + '" title="' + escHtml(preset.label || preset.id) + '">' +
+        '<img src="' + escHtml(normalizeAvatarAssetUrl(preset.url || '')) + '" alt="" width="48" height="48" loading="lazy" decoding="async" /></button>';
+    });
+    html += '</div>';
+
+    if (vipPresets.length) {
+      html += '<div class="pdx-account-avatar-picker__subtitle">' + escHtml(t('exclusive_level_avatars', 'PAXDesign Level avatars')) + '</div>' +
+        '<div class="pdx-account-avatar-picker__grid pdx-account-avatar-picker__grid--vip pdx-account-admin-avatar-grid" role="listbox">';
+      vipPresets.forEach(function (preset) {
+        var locked = !!preset.locked;
+        var granted = (customer.vip_avatar_grants || []).indexOf(preset.id) !== -1;
+        var selected = !hasUpload && !locked && preset.id === currentPreset;
+        var lockLabel = t('vip_avatar_locked', 'Exclusive avatar — assigned by administrator only');
+        html += '<div class="pdx-account-admin-vip-tile">' +
+          '<button type="button" class="pdx-account-avatar-picker__item pdx-account-avatar-picker__item--vip pdx-admin-assign-avatar' +
+            (locked ? ' pdx-account-avatar-picker__item--locked' : '') +
+            (selected ? ' is-selected' : '') + '" data-avatar-preset="' + escHtml(preset.id) + '"' +
+            (locked ? ' data-avatar-locked="1" disabled aria-disabled="true"' : '') +
+            ' title="' + escHtml(locked ? lockLabel : (preset.label || preset.id)) + '">' +
+            '<img src="' + escHtml(preset.url || '') + '" alt="" width="48" height="48" loading="lazy" decoding="async" />' +
+            (locked ? '<span class="pdx-account-avatar-picker__lock" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V11a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v3H9V6a3 3 0 0 1 3-3z"/></svg></span>' : '') +
+          '</button>' +
+          '<div class="pdx-account-admin-vip-tile__meta">' +
+            '<span class="pdx-account-admin-vip-tile__label">' + escHtml(preset.label || preset.id) + '</span>' +
+            (granted
+              ? '<button type="button" class="pdx-portal-btn pdx-portal-btn--ghost pdx-admin-revoke-vip" data-vip-id="' + escHtml(preset.id) + '">' + escHtml(t('revoke', 'Revoke')) + '</button>'
+              : '<button type="button" class="pdx-portal-btn pdx-portal-btn--secondary pdx-admin-grant-vip" data-vip-id="' + escHtml(preset.id) + '">' + escHtml(t('grant', 'Grant')) + '</button>') +
+          '</div></div>';
+      });
+      html += '</div>';
+    }
+    html += '</div></div>';
+    return html;
+  }
+
+  function renderAdminLevelPanel(customer) {
+    var levelOptions = (accountState.masterLevels || []).map(function (lvl) {
+      var selected = Number(customer.customer_level) === Number(lvl.level) ? ' selected' : '';
+      return '<option value="' + escHtml(String(lvl.level)) + '"' + selected + '>' + escHtml(lvl.label) + '</option>';
+    }).join('');
+    var selectedLevel = null;
+    (accountState.masterLevels || []).forEach(function (lvl) {
+      if (Number(lvl.level) === Number(customer.customer_level)) selectedLevel = lvl;
+    });
+    var previewHtml = '';
+    if (selectedLevel) {
+      previewHtml = '<div class="pdx-account-admin-level-preview">' +
+        '<div class="pdx-account-admin-level-preview__title">' + escHtml(t('admin_level_preview', 'Level preview')) + '</div>' +
+        renderCustomerLevelBadge({ level_label: selectedLevel.label, level_title: selectedLevel.title, level_description: selectedLevel.description, has_customer_level: true }) +
+        (selectedLevel.title ? '<div class="pdx-account-admin-level-preview__name">' + escHtml(selectedLevel.title) + '</div>' : '') +
+        (selectedLevel.description ? '<div class="pdx-account-admin-level-preview__desc">' + escHtml(selectedLevel.description) + '</div>' : '') +
+        (selectedLevel.avatar_id ? '<div class="pdx-account-admin-level-preview__avatar"><img src="' + escHtml(adminPresetUrlFromCatalog(selectedLevel.avatar_id, customer.standard_presets, customer.vip_presets)) + '" alt="" width="64" height="64" loading="lazy" /></div>' : '') +
+      '</div>';
+    }
+    return '<div class="pdx-account-admin-levels">' +
+      '<div class="pdx-account-admin-section-title">' + escHtml(t('admin_manage_level', 'PAXDesign level')) + '</div>' +
+      '<p class="pdx-account-admin-section-lead">' + escHtml(t('admin_manage_level_lead', 'Assign a customer level (01–10). The matching VIP avatar is granted automatically.')) + '</p>' +
+      previewHtml +
+    '</div>';
+  }
+
   function renderAccountAdminSection() {
     var customer = accountState.masterCustomer;
     if (customer && customer.id) {
@@ -2665,53 +2843,69 @@
         var selected = Number(customer.customer_level) === Number(lvl.level) ? ' selected' : '';
         return '<option value="' + escHtml(String(lvl.level)) + '"' + selected + '>' + escHtml(lvl.label) + '</option>';
       }).join('');
-      var vipOptions = (accountState.masterLevels || []).map(function (lvl) {
-        var granted = (customer.vip_avatar_grants || []).indexOf(lvl.avatar_id) !== -1;
-        var active = customer.avatar_preset === lvl.avatar_id;
-        return '<div class="pdx-account-admin-vip-item">' +
-          '<span>' + escHtml(lvl.label) + (granted ? (active ? ' (Active)' : ' (Granted)') : '') + '</span>' +
-          '<button type="button" class="pdx-portal-btn pdx-portal-btn--secondary pdx-admin-grant-vip" data-vip-id="' + escHtml(lvl.avatar_id) + '">' + escHtml(t('assign', 'Assign')) + '</button>' +
-          (granted ? '<button type="button" class="pdx-portal-btn pdx-portal-btn--ghost pdx-admin-revoke-vip" data-vip-id="' + escHtml(lvl.avatar_id) + '">' + escHtml(t('revoke', 'Revoke')) + '</button>' : '') +
-        '</div>';
-      }).join('');
-      return '<div class="pdx-account-card">' +
-        '<button type="button" class="pdx-portal-btn pdx-portal-btn--ghost pdx-admin-back">' + escHtml(t('back_to_customers', 'Back to customers')) + '</button>' +
-        '<div class="pdx-account-card-title" style="margin-top:12px">' + escHtml(customer.display_name || customer.email || ('#' + customer.id)) + '</div>' +
-        (customer.level_label ? '<div style="margin:8px 0">' + renderCustomerLevelBadge(customer) + '</div>' : '') +
-        '<form id="pdx-master-customer-form" class="pdx-account-form">' +
-          '<label class="pdx-label">' + escHtml(t('display_name', 'Display name')) + '<input class="pdx-input" name="display_name" value="' + escHtml(customer.display_name || '') + '" /></label>' +
-          '<label class="pdx-label">' + escHtml(t('email', 'Email')) + '<input class="pdx-input" name="email" type="email" value="' + escHtml(customer.email || '') + '" /></label>' +
-          '<label class="pdx-label">' + escHtml(t('account_status', 'Account status')) +
-            '<select class="pdx-select" name="account_status">' +
-              ['active', 'pending', 'suspended'].map(function (st) {
-                return '<option value="' + st + '"' + (customer.account_status === st ? ' selected' : '') + '>' + escHtml(st.charAt(0).toUpperCase() + st.slice(1)) + '</option>';
-              }).join('') +
-            '</select></label>' +
-          '<label class="pdx-label">' + escHtml(t('customer_level', 'PAXDesign level')) +
-            '<select class="pdx-select" name="customer_level"><option value="0">' + escHtml(t('no_level', 'No level')) + '</option>' + levelOptions + '</select></label>' +
-          '<label class="pdx-label">' + escHtml(t('admin_notes', 'Internal notes')) + '<textarea class="pdx-input" name="admin_notes" rows="3">' + escHtml(customer.admin_notes || '') + '</textarea></label>' +
-          '<div class="pdx-account-admin-vip-grid">' + vipOptions + '</div>' +
-          '<button type="submit" class="pdx-portal-btn pdx-portal-btn--primary">' + escHtml(t('save_changes', 'Save changes')) + '</button>' +
-        '</form></div>';
+      return '<div class="pdx-account-admin-editor">' +
+        '<div class="pdx-account-card pdx-account-admin-toolbar">' +
+          '<button type="button" class="pdx-portal-btn pdx-portal-btn--ghost pdx-admin-back">' + escHtml(t('back_to_customers', 'Back to customers')) + '</button>' +
+          '<div class="pdx-account-admin-toolbar__identity">' +
+            renderAdminCustomerAvatarHtml(customer, 'pdx-account-avatar--sidebar') +
+            '<div><div class="pdx-account-card-title">' + escHtml(customer.display_name || customer.email || ('#' + customer.id)) + '</div>' +
+            renderCustomerLevelBadge(customer) +
+            '<div class="pdx-account-admin-toolbar__email">' + escHtml(customer.email || '') + '</div></div>' +
+          '</div>' +
+        '</div>' +
+        renderAdminCustomerPreviewPanel(customer) +
+        '<div class="pdx-account-card">' +
+          '<div class="pdx-account-admin-section-title">' + escHtml(t('admin_account_details', 'Account details')) + '</div>' +
+          '<form id="pdx-master-customer-form" class="pdx-account-form">' +
+            '<label class="pdx-label">' + escHtml(t('display_name', 'Display name')) + '<input class="pdx-input" name="display_name" value="' + escHtml(customer.display_name || '') + '" /></label>' +
+            '<label class="pdx-label">' + escHtml(t('email', 'Email')) + '<input class="pdx-input" name="email" type="email" value="' + escHtml(customer.email || '') + '" /></label>' +
+            '<label class="pdx-label">' + escHtml(t('account_status', 'Account status')) +
+              '<select class="pdx-select" name="account_status">' +
+                ['active', 'pending', 'suspended'].map(function (st) {
+                  return '<option value="' + st + '"' + (customer.account_status === st ? ' selected' : '') + '>' + escHtml(st.charAt(0).toUpperCase() + st.slice(1)) + '</option>';
+                }).join('') +
+              '</select></label>' +
+            '<label class="pdx-label">' + escHtml(t('customer_level', 'PAXDesign level')) +
+              '<select class="pdx-select" name="customer_level" id="pdx-admin-level-select"><option value="0">' + escHtml(t('no_level', 'No level')) + '</option>' + levelOptions + '</select></label>' +
+            '<label class="pdx-label">' + escHtml(t('admin_notes', 'Internal notes')) + '<textarea class="pdx-input" name="admin_notes" rows="3">' + escHtml(customer.admin_notes || '') + '</textarea></label>' +
+            '<dl class="pdx-account-admin-meta pdx-account-admin-meta--inline">' +
+              '<div><dt>' + escHtml(t('registered', 'Registered')) + '</dt><dd>' + escHtml(customer.registered || '—') + '</dd></div>' +
+              '<div><dt>' + escHtml(t('verified', 'Verified')) + '</dt><dd>' + escHtml(customer.verified ? t('yes', 'Yes') : t('no', 'No')) + '</dd></div>' +
+              (customer.last_login ? '<div><dt>' + escHtml(t('admin_last_login', 'Last login')) + '</dt><dd>' + escHtml(customer.last_login) + '</dd></div>' : '') +
+            '</dl>' +
+            '<button type="submit" class="pdx-portal-btn pdx-portal-btn--primary">' + escHtml(t('save_changes', 'Save changes')) + '</button>' +
+          '</form>' +
+        '</div>' +
+        '<div class="pdx-account-card">' + renderAdminLevelPanel(customer) + '</div>' +
+        '<div class="pdx-account-card">' + renderAdminCustomerAvatarPickers(customer) + '</div>' +
+      '</div>';
     }
 
     var rows = (accountState.masterCustomers && accountState.masterCustomers.customers) || [];
+    var total = accountState.masterCustomers && accountState.masterCustomers.total;
     var html = '<div class="pdx-account-card">' +
       '<div class="pdx-account-admin-search">' +
         '<input type="search" class="pdx-input" id="pdx-master-customer-search" placeholder="' + escHtml(t('search_customers', 'Search customers…')) + '" value="' + escHtml(accountState.masterSearch || '') + '" />' +
         '<button type="button" class="pdx-portal-btn pdx-portal-btn--secondary" id="pdx-master-customer-search-btn">' + escHtml(t('search', 'Search')) + '</button>' +
-      '</div>' +
-      '<div class="pdx-account-admin-table-wrap"><table class="pdx-account-admin-table"><thead><tr>' +
-        '<th>' + escHtml(t('customer', 'Customer')) + '</th><th>' + escHtml(t('email', 'Email')) + '</th><th>' + escHtml(t('level', 'Level')) + '</th><th>' + escHtml(t('status', 'Status')) + '</th><th></th>' +
+      '</div>';
+    if (typeof total === 'number') {
+      html += '<div class="pdx-account-admin-count">' + escHtml(String(total)) + ' ' + escHtml(t('customers_total', 'customers')) + '</div>';
+    }
+    html += '<div class="pdx-account-admin-table-wrap"><table class="pdx-account-admin-table"><thead><tr>' +
+        '<th></th><th>' + escHtml(t('customer', 'Customer')) + '</th><th>' + escHtml(t('email', 'Email')) + '</th><th>' + escHtml(t('level', 'Level')) + '</th><th>' + escHtml(t('status', 'Status')) + '</th><th></th>' +
       '</tr></thead><tbody>';
     if (!rows.length) {
-      html += '<tr><td colspan="5">' + escHtml(t('no_customers_found', 'No customers found.')) + '</td></tr>';
+      html += '<tr><td colspan="6">' + escHtml(t('no_customers_found', 'No customers found.')) + '</td></tr>';
     } else {
       rows.forEach(function (row) {
-        html += '<tr><td>' + escHtml(row.display_name || '—') + '</td><td>' + escHtml(row.email || '') + '</td><td>' +
-          (row.level_label ? escHtml(row.level_label) : '—') + '</td><td>' + escHtml(row.account_status || '') + '</td><td>' +
-          '<button type="button" class="pdx-portal-btn pdx-portal-btn--secondary pdx-admin-open-customer" data-customer-id="' + escHtml(String(row.id)) + '">' + escHtml(t('manage', 'Manage')) + '</button>' +
-          '</td></tr>';
+        html += '<tr>' +
+          '<td class="pdx-account-admin-table__avatar">' + renderAdminCustomerAvatarHtml(row, 'pdx-account-avatar--menu') + '</td>' +
+          '<td><strong>' + escHtml(row.display_name || '—') + '</strong></td>' +
+          '<td>' + escHtml(row.email || '') + '</td>' +
+          '<td>' + (row.level_label ? escHtml(row.level_label) : '—') + '</td>' +
+          '<td><span class="pdx-account-admin-status pdx-account-admin-status--' + escHtml(row.account_status || 'active') + '">' + escHtml(row.account_status || '') + '</span></td>' +
+          '<td><button type="button" class="pdx-portal-btn pdx-portal-btn--secondary pdx-admin-open-customer" data-customer-id="' + escHtml(String(row.id)) + '">' + escHtml(t('manage', 'Manage')) + '</button></td>' +
+        '</tr>';
       });
     }
     html += '</tbody></table></div></div>';
@@ -2742,11 +2936,24 @@
       if (data && data._ok !== false && Array.isArray(data.levels)) {
         accountState.masterLevels = data.levels;
       }
+      if (data && data._ok !== false && Array.isArray(data.standard_presets)) {
+        accountState.masterStandardPresets = data.standard_presets;
+      }
+      if (data && data._ok !== false && Array.isArray(data.vip_presets)) {
+        accountState.masterVipPresets = data.vip_presets.map(function (preset) {
+          if (!preset) return preset;
+          preset.url = normalizeAvatarAssetUrl(preset.url || '');
+          preset.locked = false;
+          return preset;
+        });
+      }
       return data;
     });
   }
 
   function bindAccountAdminSection(container) {
+    ensureAccountAvatarFallbackHandler();
+    bindAccountAvatarFallbacks(container);
     var backBtn = container.querySelector('.pdx-admin-back');
     if (backBtn) {
       backBtn.addEventListener('click', function () {
@@ -2766,8 +2973,15 @@
     var searchBtn = container.querySelector('#pdx-master-customer-search-btn');
     var searchInput = container.querySelector('#pdx-master-customer-search');
     if (searchBtn && searchInput) {
-      searchBtn.addEventListener('click', function () {
+      var runSearch = function () {
         loadMasterAdminCustomers(searchInput.value || '').then(function () { renderAccountApp(); });
+      };
+      searchBtn.addEventListener('click', runSearch);
+      searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          runSearch();
+        }
       });
     }
     container.querySelectorAll('.pdx-admin-grant-vip').forEach(function (btn) {
@@ -2775,11 +2989,15 @@
         var id = accountState.masterCustomer && accountState.masterCustomer.id;
         var vipId = btn.getAttribute('data-vip-id');
         if (!id || !vipId) return;
+        btn.disabled = true;
         customerApiFetch('POST', '/customer/master/customers/' + id, { vip_avatar_id: vipId }).then(function (data) {
           if (data && data._ok !== false && data.customer) {
             accountState.masterCustomer = data.customer;
             renderAccountApp();
             notify(t('vip_assigned', 'VIP avatar assigned.'), 'info');
+          } else {
+            notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+            btn.disabled = false;
           }
         });
       });
@@ -2789,15 +3007,56 @@
         var id = accountState.masterCustomer && accountState.masterCustomer.id;
         var vipId = btn.getAttribute('data-vip-id');
         if (!id || !vipId) return;
+        btn.disabled = true;
         customerApiFetch('POST', '/customer/master/customers/' + id, { revoke_vip_avatar_id: vipId }).then(function (data) {
           if (data && data._ok !== false && data.customer) {
             accountState.masterCustomer = data.customer;
             renderAccountApp();
             notify(t('vip_revoked', 'VIP avatar revoked.'), 'info');
+          } else {
+            notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+            btn.disabled = false;
           }
         });
       });
     });
+    container.querySelectorAll('.pdx-admin-assign-avatar').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (btn.getAttribute('data-avatar-locked') === '1' || btn.disabled) return;
+        var id = accountState.masterCustomer && accountState.masterCustomer.id;
+        var presetId = btn.getAttribute('data-avatar-preset');
+        if (!id || !presetId || btn.classList.contains('is-selected')) return;
+        btn.disabled = true;
+        customerApiFetch('POST', '/customer/master/customers/' + id, { vip_avatar_id: presetId }).then(function (data) {
+          if (data && data._ok !== false && data.customer) {
+            accountState.masterCustomer = data.customer;
+            renderAccountApp();
+            notify(t('avatar_preset_updated', 'Avatar updated.'), 'info');
+          } else {
+            notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+            btn.disabled = false;
+          }
+        });
+      });
+    });
+    var removeUploadBtn = container.querySelector('.pdx-admin-remove-upload');
+    if (removeUploadBtn) {
+      removeUploadBtn.addEventListener('click', function () {
+        var id = accountState.masterCustomer && accountState.masterCustomer.id;
+        if (!id) return;
+        removeUploadBtn.disabled = true;
+        customerApiFetch('POST', '/customer/master/customers/' + id, { remove_avatar_upload: true }).then(function (data) {
+          if (data && data._ok !== false && data.customer) {
+            accountState.masterCustomer = data.customer;
+            renderAccountApp();
+            notify(t('photo_removed', 'Photo removed. Your PAXDesign avatar is restored.'), 'info');
+          } else {
+            notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+            removeUploadBtn.disabled = false;
+          }
+        });
+      });
+    }
     var form = container.querySelector('#pdx-master-customer-form');
     if (form) {
       form.addEventListener('submit', function (e) {
@@ -2821,6 +3080,45 @@
           }
         });
       });
+      var levelSelect = form.querySelector('#pdx-admin-level-select');
+      if (levelSelect) {
+        levelSelect.addEventListener('change', function () {
+          var val = Number(levelSelect.value || 0);
+          var customer = accountState.masterCustomer;
+          if (!customer) return;
+          var selected = null;
+          (accountState.masterLevels || []).forEach(function (lvl) {
+            if (Number(lvl.level) === val) selected = lvl;
+          });
+          customer.customer_level = val;
+          customer.has_customer_level = val > 0;
+          customer.level_label = selected ? selected.label : '';
+          customer.level_title = selected ? selected.title : '';
+          customer.level_description = selected ? selected.description : '';
+          var levelPanel = container.closest('.pdx-account-admin-editor');
+          if (levelPanel) {
+            var card = levelPanel.querySelector('.pdx-account-admin-levels');
+            if (card && card.parentElement) {
+              card.parentElement.innerHTML = renderAdminLevelPanel(customer);
+            }
+            var previewCard = levelPanel.querySelector('.pdx-account-admin-preview__card');
+            if (previewCard) {
+              var badgeHost = previewCard.querySelector('.pdx-account-profile-identity-text');
+              if (badgeHost) {
+                var existingBadge = badgeHost.querySelector('.pdx-account-level-badge');
+                if (existingBadge) existingBadge.remove();
+                var existingDesc = badgeHost.querySelector('.pdx-account-profile-level-desc');
+                if (existingDesc) existingDesc.remove();
+                var badgeHtml = renderCustomerLevelBadge(customer);
+                if (badgeHtml) {
+                  var emailEl = badgeHost.querySelector('.pdx-account-profile-email');
+                  if (emailEl) emailEl.insertAdjacentHTML('beforebegin', badgeHtml + (customer.level_description ? '<div class="pdx-account-profile-level-desc">' + escHtml(customer.level_description) + '</div>' : ''));
+                }
+              }
+            }
+          }
+        });
+      }
     }
   }
 

@@ -845,4 +845,104 @@ return array(
 		'de' => 'Registrierte Kundenprofile, Level und Berechtigungen verwalten.',
 		'ar' => 'إدارة ملفات العملاء والمستويات والصلاحيات.',
 	),
+	'admin_customer_preview' => array(
+		'en' => 'Customer account preview',
+		'de' => 'Kundenkonto-Vorschau',
+		'ar' => 'معاينة حساب العميل',
+	),
+	'admin_customer_preview_lead' => array(
+		'en' => 'Read-only view of how this customer sees their profile.',
+		'de' => 'Schreibgeschützte Ansicht des Kundenprofils.',
+		'ar' => 'عرض للقراءة فقط لملف العميل.',
+	),
+	'admin_avatar_type' => array(
+		'en' => 'Profile image',
+		'de' => 'Profilbild',
+		'ar' => 'صورة الملف',
+	),
+	'admin_avatar_uploaded' => array(
+		'en' => 'Personal uploaded photo',
+		'de' => 'Persönlich hochgeladenes Foto',
+		'ar' => 'صورة شخصية مرفوعة',
+	),
+	'admin_avatar_preset' => array(
+		'en' => 'PAXDesign avatar',
+		'de' => 'PAXDesign-Avatar',
+		'ar' => 'صورة PAXDesign',
+	),
+	'admin_current_avatar' => array(
+		'en' => 'Current avatar',
+		'de' => 'Aktueller Avatar',
+		'ar' => 'الصورة الحالية',
+	),
+	'admin_last_login' => array(
+		'en' => 'Last login',
+		'de' => 'Letzte Anmeldung',
+		'ar' => 'آخر تسجيل دخول',
+	),
+	'admin_manage_avatars' => array(
+		'en' => 'Avatar assignment',
+		'de' => 'Avatar-Zuweisung',
+		'ar' => 'تعيين الصورة',
+	),
+	'admin_manage_avatars_lead' => array(
+		'en' => 'Assign standard or VIP avatars. Locked VIP avatars require granting before the customer can use them.',
+		'de' => 'Standard- oder VIP-Avatare zuweisen. Gesperrte VIP-Avatare müssen zuerst freigeschaltet werden.',
+		'ar' => 'تعيين صور عادية أو VIP. الصور المقفلة تحتاج منحاً قبل أن يستخدمها العميل.',
+	),
+	'admin_customer_has_upload' => array(
+		'en' => 'This customer has a personal uploaded photo active.',
+		'de' => 'Dieser Kunde hat ein persönlich hochgeladenes Foto aktiv.',
+		'ar' => 'هذا العميل لديه صورة شخصية مرفوعة نشطة.',
+	),
+	'admin_remove_upload' => array(
+		'en' => 'Remove uploaded photo',
+		'de' => 'Hochgeladenes Foto entfernen',
+		'ar' => 'إزالة الصورة المرفوعة',
+	),
+	'admin_manage_level' => array(
+		'en' => 'PAXDesign level',
+		'de' => 'PAXDesign Level',
+		'ar' => 'مستوى PAXDesign',
+	),
+	'admin_manage_level_lead' => array(
+		'en' => 'Assign a customer level (01–10). The matching VIP avatar is granted automatically.',
+		'de' => 'Kundenlevel (01–10) zuweisen. Der passende VIP-Avatar wird automatisch freigeschaltet.',
+		'ar' => 'تعيين مستوى العميل (01–10). يتم منح صورة VIP المطابقة تلقائياً.',
+	),
+	'admin_level_preview' => array(
+		'en' => 'Level preview',
+		'de' => 'Level-Vorschau',
+		'ar' => 'معاينة المستوى',
+	),
+	'admin_account_details' => array(
+		'en' => 'Account details',
+		'de' => 'Kontodetails',
+		'ar' => 'تفاصيل الحساب',
+	),
+	'customers_total' => array(
+		'en' => 'customers',
+		'de' => 'Kunden',
+		'ar' => 'عملاء',
+	),
+	'grant' => array(
+		'en' => 'Grant',
+		'de' => 'Freischalten',
+		'ar' => 'منح',
+	),
+	'registered' => array(
+		'en' => 'Registered',
+		'de' => 'Registriert',
+		'ar' => 'مسجل',
+	),
+	'yes' => array(
+		'en' => 'Yes',
+		'de' => 'Ja',
+		'ar' => 'نعم',
+	),
+	'no' => array(
+		'en' => 'No',
+		'de' => 'Nein',
+		'ar' => 'لا',
+	),
 );

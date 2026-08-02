@@ -17,6 +17,8 @@ class PAXdesign_Customer_Avatar_Vip_Presets {
      */
     public static function catalog_for_user($user_id = 0) {
         $user_id = absint($user_id);
+        $preview_all = class_exists('PAXdesign_Customer_Master_Admin')
+            && PAXdesign_Customer_Master_Admin::is_master_admin($user_id);
         $grants = class_exists('PAXdesign_Customer_Avatar')
             ? PAXdesign_Customer_Avatar::vip_grants_for_user($user_id)
             : array();
@@ -33,7 +35,33 @@ class PAXdesign_Customer_Avatar_Vip_Presets {
                     : (isset($def['label']) ? (string) $def['label'] : $id),
                 'url'    => self::url_for_id($id),
                 'type'   => 'vip',
-                'locked' => !in_array($id, $grants, true),
+                'locked' => $preview_all ? false : !in_array($id, $grants, true),
+                'level'  => (int) preg_replace('/^pax-vip-/', '', $id),
+            );
+        }
+        return $items;
+    }
+
+    /**
+     * Full VIP catalog with every avatar unlocked — for master administrator previews.
+     *
+     * @return array<int, array{id:string,label:string,url:string,type:string,locked:bool,level:int}>
+     */
+    public static function catalog_preview() {
+        $items = array();
+        foreach (self::definitions() as $def) {
+            $id = isset($def['id']) ? (string) $def['id'] : '';
+            if ($id === '' || !self::file_exists($id)) {
+                continue;
+            }
+            $items[] = array(
+                'id'     => $id,
+                'label'  => class_exists('PAXdesign_Customer_Levels')
+                    ? PAXdesign_Customer_Levels::label_for_level((int) preg_replace('/^pax-vip-/', '', $id))
+                    : (isset($def['label']) ? (string) $def['label'] : $id),
+                'url'    => self::url_for_id($id),
+                'type'   => 'vip',
+                'locked' => false,
                 'level'  => (int) preg_replace('/^pax-vip-/', '', $id),
             );
         }

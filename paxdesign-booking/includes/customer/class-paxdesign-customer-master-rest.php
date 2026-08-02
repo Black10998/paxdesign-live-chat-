@@ -146,6 +146,13 @@ class PAXdesign_Customer_Master_REST {
             }
         }
 
+        if ($request->has_param('remove_avatar_upload') && class_exists('PAXdesign_Customer_Avatar')) {
+            $remove = rest_sanitize_boolean($request->get_param('remove_avatar_upload'));
+            if ($remove) {
+                PAXdesign_Customer_Avatar::remove_upload_for_user($user_id);
+            }
+        }
+
         if ($request->has_param('admin_notes') && class_exists('PDX_Customers')) {
             PDX_Customers::save_notes($user_id, (string) $request->get_param('admin_notes'));
         }
@@ -159,7 +166,10 @@ class PAXdesign_Customer_Master_REST {
     public static function list_levels() {
         return rest_ensure_response(array(
             'levels'      => PAXdesign_Customer_Levels::catalog(),
-            'vip_presets' => PAXdesign_Customer_Avatar_Vip_Presets::catalog_for_user(0),
+            'vip_presets' => PAXdesign_Customer_Avatar_Vip_Presets::catalog_preview(),
+            'standard_presets' => class_exists('PAXdesign_Customer_Avatar_Presets')
+                ? PAXdesign_Customer_Avatar_Presets::catalog()
+                : array(),
         ));
     }
 
@@ -173,17 +183,23 @@ class PAXdesign_Customer_Master_REST {
             return array();
         }
         $level = PAXdesign_Customer_Levels::profile_fields($user_id);
-        return array(
-            'id'                 => $user_id,
-            'display_name'       => $user->display_name,
-            'email'              => $user->user_email,
-            'registered'         => $user->user_registered,
-            'verified'           => class_exists('PAXdesign_Auth') ? PAXdesign_Auth::is_email_verified($user_id) : false,
-            'account_status'     => class_exists('PDX_Customers') ? PDX_Customers::account_status($user_id) : 'active',
-            'customer_level'     => $level['customer_level'],
-            'level_label'        => $level['level_label'],
-            'has_customer_level' => $level['has_customer_level'],
-            'avatar_preset'      => class_exists('PAXdesign_Customer_Avatar') ? PAXdesign_Customer_Avatar::preset_id_for_user($user_id) : '',
+        $avatar = class_exists('PAXdesign_Customer_Avatar') ? PAXdesign_Customer_Avatar::profile_fields($user_id) : array();
+        return array_merge(
+            array(
+                'id'                 => $user_id,
+                'display_name'       => $user->display_name,
+                'email'              => $user->user_email,
+                'registered'         => $user->user_registered,
+                'verified'           => class_exists('PAXdesign_Auth') ? PAXdesign_Auth::is_email_verified($user_id) : false,
+                'account_status'     => class_exists('PDX_Customers') ? PDX_Customers::account_status($user_id) : 'active',
+                'customer_level'     => $level['customer_level'],
+                'level_label'        => $level['level_label'],
+                'has_customer_level' => $level['has_customer_level'],
+                'avatar_preset'      => isset($avatar['avatar_preset']) ? $avatar['avatar_preset'] : '',
+                'avatar_url'         => isset($avatar['avatar_url']) ? $avatar['avatar_url'] : '',
+                'avatar_has_image'   => !empty($avatar['avatar_has_image']),
+                'avatar_has_upload'  => !empty($avatar['avatar_has_upload']),
+            )
         );
     }
 
@@ -199,6 +215,8 @@ class PAXdesign_Customer_Master_REST {
             'admin_notes'       => class_exists('PDX_Customers') ? (string) get_user_meta($user_id, PDX_Customers::META_ADMIN_NOTES, true) : '',
             'vip_avatar_grants' => class_exists('PAXdesign_Customer_Avatar') ? PAXdesign_Customer_Avatar::vip_grants_for_user($user_id) : array(),
             'last_login'        => class_exists('PDX_Customers') ? (string) get_user_meta($user_id, PDX_Customers::META_LAST_LOGIN, true) : '',
+            'standard_presets'  => class_exists('PAXdesign_Customer_Avatar_Presets') ? PAXdesign_Customer_Avatar_Presets::catalog() : array(),
+            'vip_presets'       => class_exists('PAXdesign_Customer_Avatar_Vip_Presets') ? PAXdesign_Customer_Avatar_Vip_Presets::catalog_for_user($user_id) : array(),
         ));
     }
 

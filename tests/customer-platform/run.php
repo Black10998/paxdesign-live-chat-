@@ -205,6 +205,13 @@ cx_assert_true(strpos($apple_auth, 'find_master_user') !== false, 'Apple auth mu
 $master_rest = file_get_contents($customer_dir . '/class-paxdesign-customer-master-rest.php');
 cx_assert_true(strpos($master_rest, '/customer/master/customers') !== false, 'Master admin customer routes must exist');
 
+$vip_presets_php = file_get_contents($customer_dir . '/class-paxdesign-customer-avatar-vip-presets.php');
+cx_assert_true(strpos($vip_presets_php, 'catalog_preview') !== false, 'VIP presets must expose admin preview catalog');
+
+cx_assert_true(strpos($pax_auth_js, 'renderAdminCustomerPreviewPanel') !== false, 'Account JS must render admin customer preview');
+cx_assert_true(strpos($pax_auth_js, 'renderAdminCustomerAvatarPickers') !== false, 'Account JS must render admin avatar pickers');
+cx_assert_true(strpos($pax_auth_js, 'isMasterAdminUser()') !== false && strpos($pax_auth_js, 'preset.locked && !isMasterAdminUser()') !== false, 'Master admin must preview unlocked VIP avatars');
+
 cx_assert_true(strpos($pax_auth_js, 'pdx-account-level-badge') !== false, 'Account JS must render level badges');
 cx_assert_true(strpos($pax_auth_js, 'administration') !== false, 'Account JS must include administration section');
 
