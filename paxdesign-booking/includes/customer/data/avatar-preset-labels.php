@@ -12,202 +12,202 @@ if ( ! defined( 'ABSPATH' ) ) {
 return array(
 	array(
 		'id'    => 'pax-01',
-		'label' => 'Design Studio',
+		'label' => 'Professional — neutral',
 	),
 	array(
 		'id'    => 'pax-02',
-		'label' => 'Web Development',
+		'label' => 'Friendly — warm smile',
 	),
 	array(
 		'id'    => 'pax-03',
-		'label' => 'Brand Identity',
+		'label' => 'Serious — focused',
 	),
 	array(
 		'id'    => 'pax-04',
-		'label' => 'Digital Security',
+		'label' => 'Playful — cheerful grin',
 	),
 	array(
 		'id'    => 'pax-05',
-		'label' => 'Live Support',
+		'label' => 'Professional — glasses',
 	),
 	array(
 		'id'    => 'pax-06',
-		'label' => 'Project Delivery',
+		'label' => 'Friendly — soft waves',
 	),
 	array(
 		'id'    => 'pax-07',
-		'label' => 'Analytics',
+		'label' => 'Serious — beard',
 	),
 	array(
 		'id'    => 'pax-08',
-		'label' => 'Mobile Apps',
+		'label' => 'Creative — bold look',
 	),
 	array(
 		'id'    => 'pax-09',
-		'label' => 'SEO & Search',
+		'label' => 'Professional — ponytail',
 	),
 	array(
 		'id'    => 'pax-10',
-		'label' => 'E-Commerce',
+		'label' => 'Friendly — round glasses',
 	),
 	array(
 		'id'    => 'pax-11',
-		'label' => 'Logo Design',
+		'label' => 'Calm — relaxed',
 	),
 	array(
 		'id'    => 'pax-12',
-		'label' => 'Typography',
+		'label' => 'Energetic — bright smile',
 	),
 	array(
 		'id'    => 'pax-13',
-		'label' => 'Photography',
+		'label' => 'Executive — refined',
 	),
 	array(
 		'id'    => 'pax-14',
-		'label' => 'Video Production',
+		'label' => 'Warm — welcoming',
 	),
 	array(
 		'id'    => 'pax-15',
-		'label' => 'Social Media',
+		'label' => 'Thoughtful — studious',
 	),
 	array(
 		'id'    => 'pax-16',
-		'label' => 'Email Marketing',
+		'label' => 'Confident — goatee',
 	),
 	array(
 		'id'    => 'pax-17',
-		'label' => 'Cloud Hosting',
+		'label' => 'Approachable — dimples',
 	),
 	array(
 		'id'    => 'pax-18',
-		'label' => 'Server Ops',
+		'label' => 'Minimal — clean cut',
 	),
 	array(
 		'id'    => 'pax-19',
-		'label' => 'Cyber Protection',
+		'label' => 'Artistic — colorful hair',
 	),
 	array(
 		'id'    => 'pax-20',
-		'label' => 'Consulting',
+		'label' => 'Reliable — full beard',
 	),
 	array(
 		'id'    => 'pax-21',
-		'label' => 'UI/UX Design',
+		'label' => 'Bright — optimistic',
 	),
 	array(
 		'id'    => 'pax-22',
-		'label' => 'Wireframes',
+		'label' => 'Composed — analyst',
 	),
 	array(
 		'id'    => 'pax-23',
-		'label' => 'Prototyping',
+		'label' => 'Supportive — kind eyes',
 	),
 	array(
 		'id'    => 'pax-24',
-		'label' => 'Content Strategy',
+		'label' => 'Dynamic — modern fade',
 	),
 	array(
 		'id'    => 'pax-25',
-		'label' => 'Copywriting',
+		'label' => 'Precise — rectangular glasses',
 	),
 	array(
 		'id'    => 'pax-26',
-		'label' => 'Illustration',
+		'label' => 'Gentle — soft features',
 	),
 	array(
 		'id'    => 'pax-27',
-		'label' => 'Print Design',
+		'label' => 'Bold — statement beard',
 	),
 	array(
 		'id'    => 'pax-28',
-		'label' => 'Packaging',
+		'label' => 'Upbeat — laughing',
 	),
 	array(
 		'id'    => 'pax-29',
-		'label' => 'Marketing',
+		'label' => 'Focused — professional bun',
 	),
 	array(
 		'id'    => 'pax-30',
-		'label' => 'Campaigns',
+		'label' => 'Open — friendly gaze',
 	),
 	array(
 		'id'    => 'pax-31',
-		'label' => 'CRM Systems',
+		'label' => 'Steady — classic look',
 	),
 	array(
 		'id'    => 'pax-32',
-		'label' => 'Automation',
+		'label' => 'Inventive — teal streak',
 	),
 	array(
 		'id'    => 'pax-33',
-		'label' => 'Integrations',
+		'label' => 'Trusted — aviator glasses',
 	),
 	array(
 		'id'    => 'pax-34',
-		'label' => 'API Services',
+		'label' => 'Graceful — elegant',
 	),
 	array(
 		'id'    => 'pax-35',
-		'label' => 'Database',
+		'label' => 'Determined — sharp',
 	),
 	array(
 		'id'    => 'pax-36',
-		'label' => 'Performance',
+		'label' => 'Sunny — radiant smile',
 	),
 	array(
 		'id'    => 'pax-37',
-		'label' => 'Accessibility',
+		'label' => 'Wise — silver hair',
 	),
 	array(
 		'id'    => 'pax-38',
-		'label' => 'Localization',
+		'label' => 'Vibrant — curly afro',
 	),
 	array(
 		'id'    => 'pax-39',
-		'label' => 'Training',
+		'label' => 'Cool — subtle smirk',
 	),
 	array(
 		'id'    => 'pax-40',
-		'label' => 'Workshops',
+		'label' => 'Polished — corporate',
 	),
 	array(
 		'id'    => 'pax-41',
-		'label' => 'Strategy',
+		'label' => 'Caring — warm eyes',
 	),
 	array(
 		'id'    => 'pax-42',
-		'label' => 'Innovation',
+		'label' => 'Adventurous — stubble',
 	),
 	array(
 		'id'    => 'pax-43',
-		'label' => 'Quality Assurance',
+		'label' => 'Distinctive — hoop earrings',
 	),
 	array(
 		'id'    => 'pax-44',
-		'label' => 'Maintenance',
+		'label' => 'Measured — thoughtful',
 	),
 	array(
 		'id'    => 'pax-45',
-		'label' => 'Migration',
+		'label' => 'Lively — playful wink',
 	),
 	array(
 		'id'    => 'pax-46',
-		'label' => 'Backup & Recovery',
+		'label' => 'Grounded — steady',
 	),
 	array(
 		'id'    => 'pax-47',
-		'label' => 'Legal Compliance',
+		'label' => 'Refined — cat-eye glasses',
 	),
 	array(
 		'id'    => 'pax-48',
-		'label' => 'Invoicing',
+		'label' => 'Easygoing — relaxed grin',
 	),
 	array(
 		'id'    => 'pax-49',
-		'label' => 'Client Portal',
+		'label' => 'Leadership — distinguished',
 	),
 	array(
 		'id'    => 'pax-50',
-		'label' => 'PAXDesign Account',
+		'label' => 'PAXDesign — signature',
 	),
 );

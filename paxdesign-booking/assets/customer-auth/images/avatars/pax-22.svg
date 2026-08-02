@@ -1,11 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Wireframes">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Composed — analyst">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#868e96"/>
-      <stop offset="100%" stop-color="#495057"/>
+    <linearGradient id="bg-pax22" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#E8F5E9"/>
+      <stop offset="100%" stop-color="#C8E6C9"/>
     </linearGradient>
+    <clipPath id="clip-pax22"><circle cx="32" cy="32" r="32"/></clipPath>
   </defs>
-  <circle cx="32" cy="32" r="32" fill="url(#bg)"/>
-  <path d="M20 20h10v10H20zM34 20h10v10H34zM20 34h10v10H20zM34 34h6v10h-6z" fill="none" stroke="#fff" stroke-width="2.2"/>
+  <circle cx="32" cy="32" r="32" fill="url(#bg-pax22)"/>
+  <g clip-path="url(#clip-pax22)">
+    <ellipse cx="32" cy="58" rx="18" ry="10" fill="#4A5568" opacity=".18"/>
+    <path d="M17 28c0-9 8-14 15-14s15 5 15 14v6H17v-6z" fill="#1A1A2E"/><path d="M17 24c5-4 15-4 30 0" fill="none" stroke="#1A1A2E" stroke-width="3"/>
+    <ellipse cx="32" cy="38" rx="14" ry="16" fill="#C8956C"/>
+    <ellipse cx="32" cy="40" rx="11" ry="13" fill="#C8956C"/>
+    <path d="M22 28q4-2 8 0M34 28q4-2 8 0" fill="none" stroke="#2C1810" stroke-width="1.5" stroke-linecap="round" opacity=".7"/><ellipse cx="26" cy="33" rx="2.2" ry="2.8" fill="#2C1810"/><ellipse cx="38" cy="33" rx="2.2" ry="2.8" fill="#2C1810"/><ellipse cx="32" cy="39" rx="2" ry="1.5" fill="#D4956A" opacity=".45"/><path d="M27 44h10" stroke="#B5654A" stroke-width="1.8" stroke-linecap="round"/>
+    <g fill="none" stroke="#37474F" stroke-width="1.8" opacity=".92">
+    <circle cx="26" cy="33" r="5.5"/>
+    <circle cx="38" cy="33" r="5.5"/>
+    <path d="M31.5 33h1"/>
+    <path d="M20.5 32h2.5M41 32h2.5"/>
+  </g>
+    
+    
+  </g>
 </svg>

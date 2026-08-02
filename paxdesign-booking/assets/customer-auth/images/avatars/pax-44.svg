@@ -1,11 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Maintenance">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Measured — thoughtful">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#868e96"/>
-      <stop offset="100%" stop-color="#495057"/>
+    <linearGradient id="bg-pax44" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#F1F8E9"/>
+      <stop offset="100%" stop-color="#C5E1A5"/>
     </linearGradient>
+    <clipPath id="clip-pax44"><circle cx="32" cy="32" r="32"/></clipPath>
   </defs>
-  <circle cx="32" cy="32" r="32" fill="url(#bg)"/>
-  <path d="M36 22a8 8 0 00-10 10l-8 8 4 4 8-8a8 8 0 0010-10l-4 4-2-2 4-4z" fill="none" stroke="#fff" stroke-width="2.2"/>
+  <circle cx="32" cy="32" r="32" fill="url(#bg-pax44)"/>
+  <g clip-path="url(#clip-pax44)">
+    <ellipse cx="32" cy="58" rx="18" ry="10" fill="#4A5568" opacity=".18"/>
+    <path d="M17 28c0-10 7-16 15-16 5 0 9 3 11 7 1-8 7-12 14-12 6 0 11 5 12 12v5c-4-7-11-11-18-11s-16 4-20 11v4z" fill="#4E342E"/>
+    <ellipse cx="32" cy="38" rx="14" ry="16" fill="#FFE0BD"/>
+    <ellipse cx="32" cy="40" rx="11" ry="13" fill="#FFE0BD"/>
+    <path d="M22 29l8-1M34 28l8 1" fill="none" stroke="#2C1810" stroke-width="1.6" stroke-linecap="round" opacity=".75"/><rect x="24" y="31.5" width="4" height="2.5" rx="1" fill="#2C1810"/><rect x="36" y="31.5" width="4" height="2.5" rx="1" fill="#2C1810"/><ellipse cx="32" cy="39" rx="2" ry="1.5" fill="#D4956A" opacity=".45"/><path d="M28 45h8" stroke="#B5654A" stroke-width="2" stroke-linecap="round"/>
+    <g fill="none" stroke="#37474F" stroke-width="1.8" opacity=".92">
+    <circle cx="26" cy="33" r="5.5"/>
+    <circle cx="38" cy="33" r="5.5"/>
+    <path d="M31.5 33h1"/>
+    <path d="M20.5 32h2.5M41 32h2.5"/>
+  </g>
+    
+    
+  </g>
 </svg>

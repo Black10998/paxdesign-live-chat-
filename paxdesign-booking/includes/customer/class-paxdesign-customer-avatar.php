@@ -29,11 +29,11 @@ class PAXdesign_Customer_Avatar {
      * @return string
      */
     public static function default_avatar_url() {
-        return PAXdesign_Customer_Avatar_Presets::url_for_id('pax-50');
+        return PAXdesign_Customer_Avatar_Presets::url_for_id('pax-01');
     }
 
     /**
-     * Resolve avatar for a customer: manual upload > selected/auto PAXDesign preset.
+     * Resolve avatar for a customer: manual upload > selected portrait > none.
      *
      * @param int $user_id
      * @return string
@@ -50,6 +50,9 @@ class PAXdesign_Customer_Avatar {
                 return $url;
             }
         }
+        if (self::uses_none_preset($user_id)) {
+            return '';
+        }
         return self::preset_url_for_user($user_id);
     }
 
@@ -58,6 +61,9 @@ class PAXdesign_Customer_Avatar {
      * @return string
      */
     public static function fallback_url_for_user($user_id) {
+        if (self::uses_none_preset($user_id)) {
+            return '';
+        }
         return self::preset_url_for_user($user_id);
     }
 
@@ -84,9 +90,36 @@ class PAXdesign_Customer_Avatar {
 
     /**
      * @param int $user_id
+     * @return bool
+     */
+    public static function uses_none_preset($user_id) {
+        return PAXdesign_Customer_Avatar_Presets::is_none(self::preset_id_for_user($user_id));
+    }
+
+    /**
+     * @param int $user_id
+     * @return bool
+     */
+    public static function has_visible_avatar($user_id) {
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return true;
+        }
+        if (self::has_upload($user_id)) {
+            $attachment_id = absint(get_user_meta($user_id, self::META_ATTACHMENT_ID, true));
+            return self::optimized_attachment_url($attachment_id) !== '';
+        }
+        return !self::uses_none_preset($user_id);
+    }
+
+    /**
+     * @param int $user_id
      * @return string
      */
     public static function preset_url_for_user($user_id) {
+        if (self::uses_none_preset($user_id)) {
+            return '';
+        }
         $url = PAXdesign_Customer_Avatar_Presets::url_for_id(self::preset_id_for_user($user_id));
         return $url !== '' ? $url : self::default_avatar_url();
     }
@@ -100,9 +133,10 @@ class PAXdesign_Customer_Avatar {
         $preset_id = self::preset_id_for_user($user_id);
         return array(
             'avatar_url'          => self::url_for_user($user_id),
-            'avatar_fallback_url' => self::preset_url_for_user($user_id),
+            'avatar_fallback_url' => self::fallback_url_for_user($user_id),
             'avatar_preset'       => $preset_id,
             'avatar_has_upload'   => self::has_upload($user_id),
+            'avatar_has_image'    => self::has_visible_avatar($user_id),
         );
     }
 

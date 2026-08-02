@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Quality Assurance">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Distinctive — hoop earrings">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#20c997"/>
-      <stop offset="100%" stop-color="#087f5b"/>
+    <linearGradient id="bg-pax43" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FCE4EC"/>
+      <stop offset="100%" stop-color="#F48FB1"/>
     </linearGradient>
+    <clipPath id="clip-pax43"><circle cx="32" cy="32" r="32"/></clipPath>
   </defs>
-  <circle cx="32" cy="32" r="32" fill="url(#bg)"/>
-  <circle cx="32" cy="32" r="12" fill="none" stroke="#fff" stroke-width="2.2"/><path d="M26 32l4 4 8-9" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="32" cy="32" r="32" fill="url(#bg-pax43)"/>
+  <g clip-path="url(#clip-pax43)">
+    <ellipse cx="32" cy="58" rx="18" ry="10" fill="#4A5568" opacity=".18"/>
+    <path d="M20 28c0-9 7-14 12-14s12 5 12 14v5c-2-5-6-8-12-8s-10 3-12 8v-5z" fill="#1A1A1A"/>
+    <ellipse cx="32" cy="38" rx="14" ry="16" fill="#C8956C"/>
+    <ellipse cx="32" cy="40" rx="11" ry="13" fill="#C8956C"/>
+    <path d="M22 27.5q4-1 8 1M34 27.5q4-1 8 1" fill="none" stroke="#2C1810" stroke-width="1.5" stroke-linecap="round" opacity=".65"/><path d="M24 33q2-2 4 0M36 33q2-2 4 0" fill="none" stroke="#2C1810" stroke-width="1.8" stroke-linecap="round"/><path d="M26 33.5a2 2 0 004 0M34 33.5a2 2 0 004 0" fill="#2C1810"/><ellipse cx="32" cy="39" rx="2" ry="1.5" fill="#D4956A" opacity=".45"/><path d="M26 44q6 5 12 0" fill="none" stroke="#B5654A" stroke-width="1.8" stroke-linecap="round"/>
+    
+    
+    <circle cx="17" cy="36" r="2" fill="none" stroke="#FFD700" stroke-width="1.5"/><circle cx="47" cy="36" r="2" fill="none" stroke="#FFD700" stroke-width="1.5"/>
+  </g>
 </svg>

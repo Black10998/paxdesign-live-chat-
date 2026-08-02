@@ -805,4 +805,9 @@ return array(
 		'de' => 'Foto entfernt. Ihr PAXDesign-Avatar wurde wiederhergestellt.',
 		'ar' => 'تمت إزالة الصورة. تمت استعادة صورة PAXDesign.',
 	),
+	'no_profile_picture' => array(
+		'en' => 'No profile picture',
+		'de' => 'Kein Profilbild',
+		'ar' => 'بدون صورة شخصية',
+	),
 );

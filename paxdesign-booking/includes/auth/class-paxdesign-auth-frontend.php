@@ -123,6 +123,9 @@ class PAXdesign_Auth_Frontend {
             'avatarFallbackUrl' => (is_user_logged_in() && class_exists('PAXdesign_Customer_Avatar'))
                 ? PAXdesign_Customer_Avatar::fallback_url_for_user($user_id)
                 : '',
+            'avatarHasImage' => (is_user_logged_in() && class_exists('PAXdesign_Customer_Avatar'))
+                ? PAXdesign_Customer_Avatar::has_visible_avatar($user_id)
+                : false,
             'avatarPresets' => class_exists('PAXdesign_Customer_Avatar_Presets')
                 ? PAXdesign_Customer_Avatar_Presets::catalog()
                 : array(),

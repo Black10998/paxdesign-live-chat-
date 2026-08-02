@@ -13,6 +13,7 @@
     email: C.userEmail || '',
     id: C.userId || 0,
     avatar_url: C.avatarUrl || '',
+    avatar_has_image: C.avatarHasImage !== false,
   };
   var returnModule = null;
   var currentView = 'login';
@@ -294,8 +295,10 @@
     var name = opts.name || user.display_name || t('account', 'Account');
     var avatarClass = opts.avatarClass || 'pdx-account-avatar--header';
     var showName = opts.showName !== false;
+    var profile = opts.profile || accountProfileData();
+    var avatarHtml = renderAccountAvatarHtml({ sizeClass: avatarClass, url: opts.url, profile: profile });
     return '<span class="pdx-public-user-identity">' +
-      renderAccountAvatarHtml({ sizeClass: avatarClass, url: opts.url }) +
+      avatarHtml +
       (showName ? '<span class="pdx-public-user-name">' + escHtml(name) + '</span>' : '') +
     '</span>';
   }
@@ -314,11 +317,25 @@
 
   function accountAvatarUrl(profile) {
     profile = profile || accountProfileData();
-    return profile.avatar_url || user.avatar_url || C.avatarUrl || defaultAvatarUrl();
+    if (profile.avatar_has_image === false) return '';
+    var url = profile.avatar_url || user.avatar_url || C.avatarUrl || '';
+    return url || defaultAvatarUrl();
+  }
+
+  function accountAvatarHasImage(profile) {
+    profile = profile || accountProfileData();
+    if (profile && profile.avatar_has_image === false) return false;
+    if (profile && profile.avatar_has_image === true) return true;
+    if (user.avatar_has_image === false) return false;
+    if (profile.avatar_has_upload) return true;
+    if (profile.avatar_preset === 'pax-none') return false;
+    if (user.avatar_preset === 'pax-none') return false;
+    return !!(profile.avatar_url || user.avatar_url || C.avatarUrl || defaultAvatarUrl());
   }
 
   function accountAvatarFallbackUrl(profile) {
     profile = profile || accountProfileData();
+    if (!accountAvatarHasImage(profile)) return '';
     return profile.avatar_fallback_url || C.avatarFallbackUrl || defaultAvatarUrl();
   }
 
@@ -329,7 +346,11 @@
   function handleAccountAvatarImgError(img) {
     if (!img || img.dataset.pdxAvatarFailed === '1') return;
     var fallback = img.getAttribute('data-avatar-fallback') || defaultAvatarUrl();
-    if (!fallback) return;
+    if (!fallback) {
+      var wrap = img.closest('.pdx-account-avatar');
+      if (wrap) wrap.remove();
+      return;
+    }
     var current = img.currentSrc || img.src || '';
     if (current && current.indexOf(fallback) !== -1) return;
     img.dataset.pdxAvatarFailed = '1';
@@ -366,7 +387,11 @@
   function renderAccountAvatarHtml(opts) {
     opts = opts || {};
     var profile = opts.profile || accountProfileData();
+    if (opts.show === false || !accountAvatarHasImage(profile)) {
+      return '';
+    }
     var url = opts.url || accountAvatarUrl(profile);
+    if (!url) return '';
     var fallbackUrl = opts.fallbackUrl || accountAvatarFallbackUrl(profile);
     var sizeClass = opts.sizeClass || 'pdx-account-avatar--sidebar';
     var px = ACCOUNT_AVATAR_PX[sizeClass] || 40;
@@ -386,7 +411,15 @@
       '<div class="pdx-account-avatar-picker__title">' + escHtml(t('choose_paxdesign_avatar', 'Choose a PAXDesign avatar')) + '</div>' +
       '<div class="pdx-account-avatar-picker__grid" role="listbox" aria-label="' + escHtml(t('paxdesign_avatars', 'PAXDesign avatars')) + '">';
     presets.forEach(function (preset) {
+      var isNone = preset.type === 'none' || preset.id === 'pax-none';
       var selected = !hasUpload && preset.id === currentPreset;
+      if (isNone) {
+        html += '<button type="button" class="pdx-account-avatar-picker__item pdx-account-avatar-picker__item--none' + (selected ? ' is-selected' : '') + '" role="option" data-avatar-preset="' + escHtml(preset.id) + '" aria-label="' + escHtml(preset.label || t('no_profile_picture', 'No profile picture')) + '" aria-selected="' + (selected ? 'true' : 'false') + '" title="' + escHtml(preset.label || t('no_profile_picture', 'No profile picture')) + '">' +
+          '<span class="pdx-account-avatar-picker__none-mark" aria-hidden="true"></span>' +
+          '<span class="pdx-account-avatar-picker__none-text">' + escHtml(preset.label || t('no_profile_picture', 'No profile picture')) + '</span>' +
+        '</button>';
+        return;
+      }
       html += '<button type="button" class="pdx-account-avatar-picker__item' + (selected ? ' is-selected' : '') + '" role="option" data-avatar-preset="' + escHtml(preset.id) + '" aria-label="' + escHtml(preset.label || preset.id) + '" aria-selected="' + (selected ? 'true' : 'false') + '" title="' + escHtml(preset.label || preset.id) + '">' +
         '<img src="' + escHtml(preset.url) + '" alt="" width="48" height="48" loading="lazy" decoding="async" />' +
       '</button>';
@@ -400,12 +433,15 @@
     if (payload.display_name) user.display_name = payload.display_name;
     if (payload.email) user.email = payload.email;
     if (payload.verified !== undefined) user.verified = !!payload.verified;
-    if (payload.avatar_url) {
+    if (payload.avatar_url !== undefined) {
       user.avatar_url = payload.avatar_url;
       C.avatarUrl = payload.avatar_url;
     }
-    if (payload.avatar_fallback_url) {
+    if (payload.avatar_fallback_url !== undefined) {
       C.avatarFallbackUrl = payload.avatar_fallback_url;
+    }
+    if (payload.avatar_has_image !== undefined) {
+      user.avatar_has_image = !!payload.avatar_has_image;
     }
   }
 
@@ -558,7 +594,8 @@
     var u = data.user || data;
     if (u.logged_in !== undefined) {
       user = u;
-      if (u.avatar_url) C.avatarUrl = u.avatar_url;
+      if (u.avatar_url !== undefined) C.avatarUrl = u.avatar_url;
+      if (u.avatar_has_image !== undefined) user.avatar_has_image = !!u.avatar_has_image;
       C.isLoggedIn = !!u.logged_in;
       C.emailVerified = !!u.verified;
       C.userId = u.id || 0;

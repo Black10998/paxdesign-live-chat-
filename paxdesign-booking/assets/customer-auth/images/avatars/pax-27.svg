@@ -1,11 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Print Design">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Bold — statement beard">
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
-      <stop offset="0%" stop-color="#748ffc"/>
-      <stop offset="100%" stop-color="#364fc7"/>
+    <linearGradient id="bg-pax27" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#EFEBE9"/>
+      <stop offset="100%" stop-color="#BCAAA4"/>
     </linearGradient>
+    <clipPath id="clip-pax27"><circle cx="32" cy="32" r="32"/></clipPath>
   </defs>
-  <circle cx="32" cy="32" r="32" fill="url(#bg)"/>
-  <rect x="18" y="24" width="28" height="16" rx="2" fill="none" stroke="#fff" stroke-width="2.2"/><path d="M22 24v-4h20v4M22 40h20v4H22z" stroke="#fff" stroke-width="2"/>
+  <circle cx="32" cy="32" r="32" fill="url(#bg-pax27)"/>
+  <g clip-path="url(#clip-pax27)">
+    <ellipse cx="32" cy="58" rx="18" ry="10" fill="#4A5568" opacity=".18"/>
+    <path d="M19 27c0-9 5-14 13-14s13 5 13 14v4c-2-6-8-9-13-9s-11 3-13 9v-4z" fill="#2F1B0C"/>
+    <ellipse cx="32" cy="38" rx="14" ry="16" fill="#CD853F"/>
+    <ellipse cx="32" cy="40" rx="11" ry="13" fill="#CD853F"/>
+    <path d="M22 28q4-2 8 0M34 28q4-2 8 0" fill="none" stroke="#2C1810" stroke-width="1.5" stroke-linecap="round" opacity=".7"/><ellipse cx="26" cy="33" rx="2.2" ry="2.8" fill="#2C1810"/><ellipse cx="38" cy="33" rx="2.2" ry="2.8" fill="#2C1810"/><ellipse cx="32" cy="39" rx="2" ry="1.5" fill="#D4956A" opacity=".45"/><path d="M27 44h10" stroke="#B5654A" stroke-width="1.8" stroke-linecap="round"/>
+    
+    <path d="M22 42c2 8 7 12 10 12s8-4 10-12c-3 5-7 7-10 7s-7-2-10-7z" fill="#2F1B0C" opacity=".85"/>
+    
+  </g>
 </svg>

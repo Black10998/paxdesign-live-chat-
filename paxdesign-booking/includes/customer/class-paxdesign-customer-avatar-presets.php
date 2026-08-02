@@ -10,12 +10,20 @@ if (!defined('ABSPATH')) {
 class PAXdesign_Customer_Avatar_Presets {
 
     const COUNT = 50;
+    const PRESET_NONE = 'pax-none';
 
     /**
-     * @return array<int, array{id:string,label:string,url:string}>
+     * @return array<int, array{id:string,label:string,url:string,type?:string}>
      */
     public static function catalog() {
-        $items = array();
+        $items = array(
+            array(
+                'id'    => self::PRESET_NONE,
+                'label' => __('No profile picture', 'paxdesign-booking'),
+                'url'   => '',
+                'type'  => 'none',
+            ),
+        );
         foreach (self::definitions() as $def) {
             $id = isset($def['id']) ? (string) $def['id'] : '';
             if ($id === '' || !self::file_exists($id)) {
@@ -25,17 +33,29 @@ class PAXdesign_Customer_Avatar_Presets {
                 'id'    => $id,
                 'label' => isset($def['label']) ? (string) $def['label'] : $id,
                 'url'   => self::url_for_id($id),
+                'type'  => 'portrait',
             );
         }
         return $items;
     }
 
     /**
-     * @return array{id:string,label:string,url:string}|null
+     * @return array{id:string,label:string,url:string,type?:string}|null
      */
     public static function find($id) {
         $id = self::sanitize_id($id);
-        if ($id === '' || !self::file_exists($id)) {
+        if ($id === '') {
+            return null;
+        }
+        if (self::is_none($id)) {
+            return array(
+                'id'    => self::PRESET_NONE,
+                'label' => __('No profile picture', 'paxdesign-booking'),
+                'url'   => '',
+                'type'  => 'none',
+            );
+        }
+        if (!self::file_exists($id)) {
             return null;
         }
         foreach (self::definitions() as $def) {
@@ -44,6 +64,7 @@ class PAXdesign_Customer_Avatar_Presets {
                     'id'    => $id,
                     'label' => (string) ($def['label'] ?? $id),
                     'url'   => self::url_for_id($id),
+                    'type'  => 'portrait',
                 );
             }
         }
@@ -56,6 +77,9 @@ class PAXdesign_Customer_Avatar_Presets {
      */
     public static function sanitize_id($id) {
         $id = sanitize_key((string) $id);
+        if ($id === self::PRESET_NONE) {
+            return $id;
+        }
         if (preg_match('/^pax-\d{2}$/', $id)) {
             return $id;
         }
@@ -66,8 +90,19 @@ class PAXdesign_Customer_Avatar_Presets {
      * @param string $id
      * @return bool
      */
+    public static function is_none($id) {
+        return self::sanitize_id($id) === self::PRESET_NONE;
+    }
+
+    /**
+     * @param string $id
+     * @return bool
+     */
     public static function exists($id) {
         $id = self::sanitize_id($id);
+        if ($id === self::PRESET_NONE) {
+            return true;
+        }
         return $id !== '' && self::file_exists($id);
     }
 
