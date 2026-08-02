@@ -403,8 +403,25 @@
     }).catch(function () {});
   }
 
-  function accountLevelData(profile) {
+  function isExplicitCustomerProfile(profile) {
+    if (!profile || typeof profile !== 'object') return false;
+    if (profile.id && user && user.id && Number(profile.id) !== Number(user.id)) return true;
+    return profile.has_customer_level !== undefined || profile.customer_level !== undefined;
+  }
+
+  function accountLevelData(profile, opts) {
+    opts = opts || {};
     profile = profile || accountProfileData();
+    var strict = !!opts.strict || isExplicitCustomerProfile(profile);
+    if (strict) {
+      return {
+        customer_level: Number(profile.customer_level) || 0,
+        level_label: profile.level_label || '',
+        level_title: profile.level_title || '',
+        level_description: profile.level_description || '',
+        has_customer_level: !!profile.has_customer_level,
+      };
+    }
     return {
       customer_level: profile.customer_level || user.customer_level || (C.customerLevel && C.customerLevel.customer_level) || 0,
       level_label: profile.level_label || user.level_label || (C.customerLevel && C.customerLevel.level_label) || '',
@@ -416,7 +433,7 @@
 
   function renderCustomerLevelBadge(profile, opts) {
     opts = opts || {};
-    var level = accountLevelData(profile);
+    var level = accountLevelData(profile, opts);
     if (!level.has_customer_level || !level.level_label) return '';
     var compact = opts.compact ? ' pdx-account-level-badge--compact' : '';
     var header = opts.header ? ' pdx-account-level-badge--header' : '';
