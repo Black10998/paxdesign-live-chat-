@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Social Media">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#339af0"/>
+      <stop offset="100%" stop-color="#1864ab"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="32" fill="url(#bg)"/>
+  <circle cx="32" cy="22" r="3" fill="#fff"/><circle cx="22" cy="36" r="3" fill="#fff"/><circle cx="42" cy="36" r="3" fill="#fff"/><path d="M29 24l-5 10M35 24l5 10" stroke="#fff" stroke-width="2"/>
+</svg>

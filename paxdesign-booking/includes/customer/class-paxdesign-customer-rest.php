@@ -79,8 +79,27 @@ class PAXdesign_Customer_REST {
         ));
 
         register_rest_route(self::NS, '/customer/profile/avatar', array(
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array(__CLASS__, 'upload_profile_avatar'),
+                'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+            ),
+            array(
+                'methods'             => WP_REST_Server::DELETABLE,
+                'callback'            => array(__CLASS__, 'delete_profile_avatar'),
+                'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+            ),
+        ));
+
+        register_rest_route(self::NS, '/customer/profile/avatar/preset', array(
             'methods'             => WP_REST_Server::CREATABLE,
-            'callback'            => array(__CLASS__, 'upload_profile_avatar'),
+            'callback'            => array(__CLASS__, 'set_profile_avatar_preset'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
+        register_rest_route(self::NS, '/customer/profile/avatars', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'list_profile_avatars'),
             'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
         ));
 
@@ -438,15 +457,50 @@ class PAXdesign_Customer_REST {
     public static function get_profile() {
         $uid = PAXdesign_Customer_Auth::current_user_id();
         $user = get_user_by('id', $uid);
+        $avatar = class_exists('PAXdesign_Customer_Avatar') ? PAXdesign_Customer_Avatar::profile_fields($uid) : array();
         return rest_ensure_response(array(
-            'profile' => array(
+            'profile' => array_merge(array(
                 'id'           => $uid,
                 'display_name' => $user->display_name,
                 'email'        => $user->user_email,
                 'verified'     => PAXdesign_Customer_Auth::is_email_verified($uid),
                 'role'         => PAXdesign_Customer_Auth::resolve_portal_role($user),
-                'avatar_url'   => class_exists('PAXdesign_Customer_Avatar') ? PAXdesign_Customer_Avatar::url_for_user($uid) : '',
-            ),
+            ), $avatar),
+        ));
+    }
+
+    public static function list_profile_avatars() {
+        return rest_ensure_response(array(
+            'presets' => class_exists('PAXdesign_Customer_Avatar_Presets') ? PAXdesign_Customer_Avatar_Presets::catalog() : array(),
+        ));
+    }
+
+    public static function set_profile_avatar_preset(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $preset_id = sanitize_key((string) $request->get_param('preset_id'));
+        $result = PAXdesign_Customer_Avatar::set_preset_for_user($uid, $preset_id);
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        $profile_response = self::get_profile();
+        $profile_data = $profile_response->get_data();
+        return rest_ensure_response(array(
+            'success' => true,
+            'profile' => isset($profile_data['profile']) ? $profile_data['profile'] : array(),
+        ));
+    }
+
+    public static function delete_profile_avatar() {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $result = PAXdesign_Customer_Avatar::remove_upload_for_user($uid);
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        $profile_response = self::get_profile();
+        $profile_data = $profile_response->get_data();
+        return rest_ensure_response(array(
+            'success' => true,
+            'profile' => isset($profile_data['profile']) ? $profile_data['profile'] : array(),
         ));
     }
 

@@ -10,6 +10,7 @@ if (!defined('ABSPATH')) {
 class PAXdesign_Customer_Avatar {
 
     const META_ATTACHMENT_ID = 'pax_customer_avatar_id';
+    const META_PRESET_ID     = 'pax_customer_avatar_preset';
     const IMAGE_SIZE         = 'pax_customer_avatar';
     const DISPLAY_PX         = 128;
     const MAX_SOURCE_PX      = 512;
@@ -25,18 +26,14 @@ class PAXdesign_Customer_Avatar {
     }
 
     /**
-     * Default avatar when no upload or Gravatar is available.
-     *
      * @return string
      */
     public static function default_avatar_url() {
-        $url = PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/customer-auth/images/default-avatar.svg';
-        return esc_url_raw($url);
+        return PAXdesign_Customer_Avatar_Presets::url_for_id('pax-50');
     }
 
     /**
-     * Resolve avatar for a customer: manual upload > Gravatar/email provider > default.
-     * Always returns an optimized small image URL for UI display.
+     * Resolve avatar for a customer: manual upload > selected/auto PAXDesign preset.
      *
      * @param int $user_id
      * @return string
@@ -46,21 +43,99 @@ class PAXdesign_Customer_Avatar {
         if ($user_id <= 0) {
             return self::default_avatar_url();
         }
-        $attachment_id = absint(get_user_meta($user_id, self::META_ATTACHMENT_ID, true));
-        if ($attachment_id > 0) {
+        if (self::has_upload($user_id)) {
+            $attachment_id = absint(get_user_meta($user_id, self::META_ATTACHMENT_ID, true));
             $url = self::optimized_attachment_url($attachment_id);
             if ($url !== '') {
                 return $url;
             }
         }
-        $user = get_user_by('id', $user_id);
-        if ($user instanceof WP_User && $user->user_email !== '') {
-            return (string) get_avatar_url($user_id, array(
-                'size'    => self::DISPLAY_PX,
-                'default' => self::default_avatar_url(),
-            ));
+        return self::preset_url_for_user($user_id);
+    }
+
+    /**
+     * @param int $user_id
+     * @return string
+     */
+    public static function fallback_url_for_user($user_id) {
+        return self::preset_url_for_user($user_id);
+    }
+
+    /**
+     * @param int $user_id
+     * @return bool
+     */
+    public static function has_upload($user_id) {
+        return absint(get_user_meta(absint($user_id), self::META_ATTACHMENT_ID, true)) > 0;
+    }
+
+    /**
+     * @param int $user_id
+     * @return string
+     */
+    public static function preset_id_for_user($user_id) {
+        $user_id = absint($user_id);
+        $saved = get_user_meta($user_id, self::META_PRESET_ID, true);
+        if (is_string($saved) && PAXdesign_Customer_Avatar_Presets::exists($saved)) {
+            return $saved;
         }
-        return self::default_avatar_url();
+        return PAXdesign_Customer_Avatar_Presets::auto_id_for_user($user_id);
+    }
+
+    /**
+     * @param int $user_id
+     * @return string
+     */
+    public static function preset_url_for_user($user_id) {
+        $url = PAXdesign_Customer_Avatar_Presets::url_for_id(self::preset_id_for_user($user_id));
+        return $url !== '' ? $url : self::default_avatar_url();
+    }
+
+    /**
+     * @param int $user_id
+     * @return array<string, mixed>
+     */
+    public static function profile_fields($user_id) {
+        $user_id = absint($user_id);
+        $preset_id = self::preset_id_for_user($user_id);
+        return array(
+            'avatar_url'          => self::url_for_user($user_id),
+            'avatar_fallback_url' => self::preset_url_for_user($user_id),
+            'avatar_preset'       => $preset_id,
+            'avatar_has_upload'   => self::has_upload($user_id),
+        );
+    }
+
+    /**
+     * @param int $user_id
+     * @param string $preset_id
+     * @return true|WP_Error
+     */
+    public static function set_preset_for_user($user_id, $preset_id) {
+        $user_id = absint($user_id);
+        $preset_id = PAXdesign_Customer_Avatar_Presets::sanitize_id($preset_id);
+        if ($preset_id === '' || !PAXdesign_Customer_Avatar_Presets::exists($preset_id)) {
+            return new WP_Error('invalid_preset', __('Please choose a valid PAXDesign avatar.', 'paxdesign-booking'), array('status' => 400));
+        }
+        update_user_meta($user_id, self::META_PRESET_ID, $preset_id);
+        return true;
+    }
+
+    /**
+     * @param int $user_id
+     * @return true|WP_Error
+     */
+    public static function remove_upload_for_user($user_id) {
+        $user_id = absint($user_id);
+        $attachment_id = absint(get_user_meta($user_id, self::META_ATTACHMENT_ID, true));
+        delete_user_meta($user_id, self::META_ATTACHMENT_ID);
+        if ($attachment_id > 0) {
+            $prev_author = (int) get_post_field('post_author', $attachment_id);
+            if ($prev_author === $user_id) {
+                wp_delete_attachment($attachment_id, true);
+            }
+        }
+        return true;
     }
 
     /**
@@ -141,8 +216,6 @@ class PAXdesign_Customer_Avatar {
     }
 
     /**
-     * Resize, compress, and generate the dedicated avatar derivative.
-     *
      * @param int $attachment_id
      */
     private static function optimize_attachment($attachment_id) {
@@ -192,8 +265,6 @@ class PAXdesign_Customer_Avatar {
     }
 
     /**
-     * Ensure legacy/full-size uploads have a compact avatar derivative.
-     *
      * @param int $attachment_id
      */
     private static function ensure_optimized_attachment($attachment_id) {

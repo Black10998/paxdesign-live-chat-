@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="CRM Systems">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4c6ef5"/>
+      <stop offset="100%" stop-color="#364fc7"/>
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="32" fill="url(#bg)"/>
+  <circle cx="26" cy="28" r="4" fill="none" stroke="#fff" stroke-width="2.2"/><circle cx="38" cy="28" r="4" fill="none" stroke="#fff" stroke-width="2.2"/><path d="M18 40c0-5 4-8 8-8s8 3 8 8M34 40c0-5 4-8 8-8" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>
+</svg>

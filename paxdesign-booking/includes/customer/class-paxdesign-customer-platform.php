@@ -110,6 +110,7 @@ class PAXdesign_Customer_Platform {
         require_once $base . 'class-paxdesign-customer-contact.php';
         require_once $base . 'class-paxdesign-customer-legal.php';
         require_once $base . 'class-paxdesign-customer-avatar.php';
+        require_once $base . 'class-paxdesign-customer-avatar-presets.php';
         require_once $base . 'class-paxdesign-customer-site-menu.php';
         require_once $base . 'class-paxdesign-customer-projects.php';
         require_once $base . 'class-paxdesign-customer-orders.php';

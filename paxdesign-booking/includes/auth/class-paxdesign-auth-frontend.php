@@ -120,6 +120,12 @@ class PAXdesign_Auth_Frontend {
             'avatarUrl'     => (is_user_logged_in() && class_exists('PAXdesign_Customer_Avatar'))
                 ? PAXdesign_Customer_Avatar::url_for_user($user_id)
                 : '',
+            'avatarFallbackUrl' => (is_user_logged_in() && class_exists('PAXdesign_Customer_Avatar'))
+                ? PAXdesign_Customer_Avatar::fallback_url_for_user($user_id)
+                : '',
+            'avatarPresets' => class_exists('PAXdesign_Customer_Avatar_Presets')
+                ? PAXdesign_Customer_Avatar_Presets::catalog()
+                : array(),
             'defaultAvatarUrl' => class_exists('PAXdesign_Customer_Avatar')
                 ? PAXdesign_Customer_Avatar::default_avatar_url()
                 : '',

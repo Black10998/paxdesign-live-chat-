@@ -780,4 +780,29 @@ return array(
 		'de' => 'Profilbild konnte nicht hochgeladen werden.',
 		'ar' => 'تعذّر رفع صورة الملف الشخصي.',
 	),
+	'paxdesign_avatars'  => array(
+		'en' => 'PAXDesign avatars',
+		'de' => 'PAXDesign-Avatare',
+		'ar' => 'صور PAXDesign',
+	),
+	'choose_paxdesign_avatar' => array(
+		'en' => 'Choose a PAXDesign avatar',
+		'de' => 'PAXDesign-Avatar wählen',
+		'ar' => 'اختر صورة PAXDesign',
+	),
+	'avatar_preset_updated' => array(
+		'en' => 'Avatar updated.',
+		'de' => 'Avatar aktualisiert.',
+		'ar' => 'تم تحديث الصورة.',
+	),
+	'remove_photo'       => array(
+		'en' => 'Remove photo',
+		'de' => 'Foto entfernen',
+		'ar' => 'إزالة الصورة',
+	),
+	'photo_removed'      => array(
+		'en' => 'Photo removed. Your PAXDesign avatar is restored.',
+		'de' => 'Foto entfernt. Ihr PAXDesign-Avatar wurde wiederhergestellt.',
+		'ar' => 'تمت إزالة الصورة. تمت استعادة صورة PAXDesign.',
+	),
 );

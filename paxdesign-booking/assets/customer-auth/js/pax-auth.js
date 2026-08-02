@@ -317,6 +317,45 @@
     return profile.avatar_url || user.avatar_url || C.avatarUrl || defaultAvatarUrl();
   }
 
+  function accountAvatarFallbackUrl(profile) {
+    profile = profile || accountProfileData();
+    return profile.avatar_fallback_url || C.avatarFallbackUrl || defaultAvatarUrl();
+  }
+
+  function accountAvatarPresets() {
+    return Array.isArray(C.avatarPresets) ? C.avatarPresets : [];
+  }
+
+  function handleAccountAvatarImgError(img) {
+    if (!img || img.dataset.pdxAvatarFailed === '1') return;
+    var fallback = img.getAttribute('data-avatar-fallback') || defaultAvatarUrl();
+    if (!fallback) return;
+    var current = img.currentSrc || img.src || '';
+    if (current && current.indexOf(fallback) !== -1) return;
+    img.dataset.pdxAvatarFailed = '1';
+    img.src = fallback;
+  }
+
+  var accountAvatarFallbackBound = false;
+  function ensureAccountAvatarFallbackHandler() {
+    if (accountAvatarFallbackBound) return;
+    accountAvatarFallbackBound = true;
+    document.addEventListener('error', function (e) {
+      var img = e.target;
+      if (!img || !img.classList || !img.classList.contains('pdx-account-avatar__img')) return;
+      handleAccountAvatarImgError(img);
+    }, true);
+    window.__pdxAvatarFallback = handleAccountAvatarImgError;
+  }
+
+  function bindAccountAvatarFallbacks(root) {
+    ensureAccountAvatarFallbackHandler();
+    root = root || document;
+    root.querySelectorAll('.pdx-account-avatar__img[data-avatar-fallback]').forEach(function (img) {
+      img.removeAttribute('data-pdx-avatar-failed');
+    });
+  }
+
   var ACCOUNT_AVATAR_PX = {
     'pdx-account-avatar--header': 32,
     'pdx-account-avatar--menu': 44,
@@ -326,13 +365,34 @@
 
   function renderAccountAvatarHtml(opts) {
     opts = opts || {};
-    var url = opts.url || accountAvatarUrl(opts.profile);
+    var profile = opts.profile || accountProfileData();
+    var url = opts.url || accountAvatarUrl(profile);
+    var fallbackUrl = opts.fallbackUrl || accountAvatarFallbackUrl(profile);
     var sizeClass = opts.sizeClass || 'pdx-account-avatar--sidebar';
     var px = ACCOUNT_AVATAR_PX[sizeClass] || 40;
     var alt = opts.alt || user.display_name || t('account', 'Account');
     return '<span class="pdx-account-avatar ' + sizeClass + '" style="width:' + px + 'px;height:' + px + 'px;max-width:' + px + 'px;max-height:' + px + 'px;flex:0 0 ' + px + 'px">' +
-      '<img class="pdx-account-avatar__img" src="' + escHtml(url) + '" alt="' + escHtml(alt) + '" width="' + px + '" height="' + px + '" loading="lazy" decoding="async" />' +
+      '<img class="pdx-account-avatar__img" src="' + escHtml(url) + '" data-avatar-fallback="' + escHtml(fallbackUrl) + '" alt="' + escHtml(alt) + '" width="' + px + '" height="' + px + '" loading="lazy" decoding="async" onerror="window.__pdxAvatarFallback&&window.__pdxAvatarFallback(this)" />' +
     '</span>';
+  }
+
+  function renderAccountAvatarPickerHtml(profile) {
+    profile = profile || accountProfileData();
+    var presets = accountAvatarPresets();
+    if (!presets.length) return '';
+    var currentPreset = profile.avatar_preset || '';
+    var hasUpload = !!profile.avatar_has_upload;
+    var html = '<div class="pdx-account-avatar-picker">' +
+      '<div class="pdx-account-avatar-picker__title">' + escHtml(t('choose_paxdesign_avatar', 'Choose a PAXDesign avatar')) + '</div>' +
+      '<div class="pdx-account-avatar-picker__grid" role="listbox" aria-label="' + escHtml(t('paxdesign_avatars', 'PAXDesign avatars')) + '">';
+    presets.forEach(function (preset) {
+      var selected = !hasUpload && preset.id === currentPreset;
+      html += '<button type="button" class="pdx-account-avatar-picker__item' + (selected ? ' is-selected' : '') + '" role="option" data-avatar-preset="' + escHtml(preset.id) + '" aria-label="' + escHtml(preset.label || preset.id) + '" aria-selected="' + (selected ? 'true' : 'false') + '" title="' + escHtml(preset.label || preset.id) + '">' +
+        '<img src="' + escHtml(preset.url) + '" alt="" width="48" height="48" loading="lazy" decoding="async" />' +
+      '</button>';
+    });
+    html += '</div></div>';
+    return html;
   }
 
   function applyAccountUserFromPayload(payload) {
@@ -344,6 +404,16 @@
       user.avatar_url = payload.avatar_url;
       C.avatarUrl = payload.avatar_url;
     }
+    if (payload.avatar_fallback_url) {
+      C.avatarFallbackUrl = payload.avatar_fallback_url;
+    }
+  }
+
+  function applyAccountProfileUpdate(profile) {
+    accountState.profile = profile || {};
+    applyAccountUserFromPayload(accountState.profile);
+    renderAccountApp();
+    updateAuthBar();
   }
 
   function unwrapProfileResponse(raw) {
@@ -925,6 +995,8 @@
       closeAuthMenu();
       authMenu.setAttribute('hidden', 'hidden');
     }
+    if (authBar) bindAccountAvatarFallbacks(authBar);
+    if (authMenu) bindAccountAvatarFallbacks(authMenu);
   }
 
   function openAuthMenu() {
@@ -2124,6 +2196,10 @@
   function renderAccountPersonalSection(profile) {
     profile = profile || accountProfileData();
     var avatarUrl = accountAvatarUrl(profile);
+    var hasUpload = !!profile.avatar_has_upload;
+    var removePhotoBtn = hasUpload
+      ? '<button type="button" class="pdx-account-avatar__remove" id="pdx-profile-avatar-remove">' + escHtml(t('remove_photo', 'Remove photo')) + '</button>'
+      : '';
     return '<div class="pdx-account-card">' +
       '<div class="pdx-account-card-title">' + escHtml(t('personal_information', 'Personal Information')) + '</div>' +
       '<div class="pdx-account-profile-identity">' +
@@ -2138,7 +2214,9 @@
           escHtml(t('change_photo', 'Change photo')) +
           '<input type="file" id="pdx-profile-avatar-input" accept="image/jpeg,image/png,image/webp" hidden />' +
         '</label>' +
+        removePhotoBtn +
       '</div>' +
+      renderAccountAvatarPickerHtml(profile) +
       '<form id="pdx-customer-profile-form">' +
         field('display_name', t('display_name', 'Display name'), profile.display_name || user.display_name) +
         field('email', t('email', 'Email'), profile.email || user.email, 'email') +
@@ -2257,11 +2335,8 @@
         fd.append('avatar', file);
         customerApiFormData('/customer/profile/avatar', fd).then(function (data) {
           if (data && data._ok !== false && data.profile) {
-            accountState.profile = data.profile;
-            applyAccountUserFromPayload(data.profile);
+            applyAccountProfileUpdate(data.profile);
             notify(t('avatar_updated', 'Profile picture updated.'), 'info');
-            renderAccountApp();
-            updateAuthBar();
           } else {
             notify((data && data.message) || t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
           }
@@ -2272,6 +2347,43 @@
         });
       });
     }
+    var removeBtn = container.querySelector('#pdx-profile-avatar-remove');
+    if (removeBtn) {
+      removeBtn.addEventListener('click', function () {
+        removeBtn.disabled = true;
+        customerApiFetch('DELETE', '/customer/profile/avatar').then(function (data) {
+          if (data && data._ok !== false && data.profile) {
+            applyAccountProfileUpdate(data.profile);
+            notify(t('photo_removed', 'Photo removed. Your PAXDesign avatar is restored.'), 'info');
+          } else {
+            notify((data && data.message) || t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+            removeBtn.disabled = false;
+          }
+        }).catch(function () {
+          notify(t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+          removeBtn.disabled = false;
+        });
+      });
+    }
+    container.querySelectorAll('[data-avatar-preset]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var presetId = btn.getAttribute('data-avatar-preset');
+        if (!presetId || btn.classList.contains('is-selected')) return;
+        btn.disabled = true;
+        customerApiFetch('POST', '/customer/profile/avatar/preset', { preset_id: presetId }).then(function (data) {
+          if (data && data._ok !== false && data.profile) {
+            applyAccountProfileUpdate(data.profile);
+            notify(t('avatar_preset_updated', 'Avatar updated.'), 'info');
+          } else {
+            notify((data && data.message) || t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+            btn.disabled = false;
+          }
+        }).catch(function () {
+          notify(t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+          btn.disabled = false;
+        });
+      });
+    });
   }
 
   function bindAccountSecurityForm(container) {
@@ -2391,6 +2503,9 @@
     ensureAccountMobileChrome();
     renderAccountSidebar();
     renderAccountMain();
+    bindAccountAvatarFallbacks(accountAppEl);
+    if (authBar) bindAccountAvatarFallbacks(authBar);
+    if (authMenu) bindAccountAvatarFallbacks(authMenu);
     syncAccountMobileOverlayMount();
     syncAccountDashboardLayout();
   }
@@ -4125,6 +4240,7 @@
 
   window.PDXAuth = {
     init: function () {
+      ensureAccountAvatarFallbackHandler();
       createAuthBar();
       if (isAuthPage()) {
         initAuthPage();
