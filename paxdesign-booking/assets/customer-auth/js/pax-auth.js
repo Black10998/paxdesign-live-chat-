@@ -12,6 +12,7 @@
     display_name: C.userName || '',
     email: C.userEmail || '',
     id: C.userId || 0,
+    avatar_url: C.avatarUrl || '',
   };
   var returnModule = null;
   var currentView = 'login';
@@ -179,6 +180,7 @@
 
   function ensureAccountMobileChrome() {
     if (!accountAppEl || !accountSidebarEl) return;
+    bindAccountSidebarEvents();
     if (!accountMobileBackdrop) {
       accountMobileBackdrop = document.createElement('div');
       accountMobileBackdrop.className = 'pdx-account-mobile-backdrop';
@@ -278,6 +280,130 @@
     return escHtml(name || t('account', 'Account'));
   }
 
+  function defaultAvatarUrl() {
+    return C.defaultAvatarUrl || '';
+  }
+
+  function accountProfileData() {
+    var profile = accountState.profile || {};
+    if (profile.profile && typeof profile.profile === 'object') {
+      profile = profile.profile;
+    }
+    return profile;
+  }
+
+  function accountAvatarUrl(profile) {
+    profile = profile || accountProfileData();
+    return profile.avatar_url || user.avatar_url || C.avatarUrl || defaultAvatarUrl();
+  }
+
+  function renderAccountAvatarHtml(opts) {
+    opts = opts || {};
+    var url = opts.url || accountAvatarUrl(opts.profile);
+    var sizeClass = opts.sizeClass || 'pdx-account-avatar--sidebar';
+    var alt = opts.alt || user.display_name || t('account', 'Account');
+    return '<span class="pdx-account-avatar ' + sizeClass + '">' +
+      '<img class="pdx-account-avatar__img" src="' + escHtml(url) + '" alt="' + escHtml(alt) + '" loading="lazy" decoding="async" />' +
+    '</span>';
+  }
+
+  function applyAccountUserFromPayload(payload) {
+    if (!payload || typeof payload !== 'object') return;
+    if (payload.display_name) user.display_name = payload.display_name;
+    if (payload.email) user.email = payload.email;
+    if (payload.verified !== undefined) user.verified = !!payload.verified;
+    if (payload.avatar_url) {
+      user.avatar_url = payload.avatar_url;
+      C.avatarUrl = payload.avatar_url;
+    }
+  }
+
+  function unwrapProfileResponse(raw) {
+    if (!raw || raw._ok === false) return {};
+    if (raw.profile && typeof raw.profile === 'object') return raw.profile;
+    return raw;
+  }
+
+  function normalizeDashboardResponse(raw) {
+    if (!raw || raw._status === 401 || raw._ok === false) return null;
+    if (raw.code === 'pdx_email_unverified' || raw.code === 'pdx_account_suspended') return raw;
+    var dash = raw.dashboard && typeof raw.dashboard === 'object' ? raw.dashboard : raw;
+    if (!dash || typeof dash !== 'object') return null;
+    dash.projects_active = Array.isArray(dash.projects_active) ? dash.projects_active : [];
+    dash.projects_recent = Array.isArray(dash.projects_recent) ? dash.projects_recent : [];
+    dash.orders_recent = Array.isArray(dash.orders_recent) ? dash.orders_recent : [];
+    dash.news = Array.isArray(dash.news) ? dash.news : [];
+    dash.notifications = Array.isArray(dash.notifications) ? dash.notifications : [];
+    dash.unread_count = dash.unread_count || 0;
+    dash.chat = dash.chat || {};
+    if (dash.user) applyAccountUserFromPayload(dash.user);
+    return dash;
+  }
+
+  function enrichAccountDashboard(dashboard) {
+    if (!dashboard || dashboard.code) return Promise.resolve(dashboard);
+    var tasks = [];
+    if (!dashboard.news.length) {
+      tasks.push(customerApiFetch('GET', '/customer/news').then(function (data) {
+        if (data && data._ok !== false && Array.isArray(data.items) && data.items.length) {
+          dashboard.news = data.items;
+        }
+      }));
+    }
+    if (!dashboard.orders_recent.length) {
+      tasks.push(customerApiFetch('GET', '/customer/orders').then(function (data) {
+        if (data && data._ok !== false && Array.isArray(data.orders) && data.orders.length) {
+          dashboard.orders_recent = data.orders.slice(0, 5);
+        }
+      }));
+    }
+    if (!dashboard.projects_active.length) {
+      tasks.push(customerApiFetch('GET', '/customer/projects').then(function (data) {
+        if (data && data._ok !== false && Array.isArray(data.projects) && data.projects.length) {
+          dashboard.projects_active = data.projects.filter(function (p) {
+            return ['planning', 'in_progress', 'active', 'review'].indexOf(p.status) >= 0;
+          });
+          dashboard.projects_recent = data.projects.slice(0, 5);
+        }
+      }));
+    }
+    if (dashboard.unread_count === 0 && (!dashboard.notifications || !dashboard.notifications.length)) {
+      tasks.push(customerApiFetch('GET', '/customer/notifications?limit=10').then(function (data) {
+        if (data && data._ok !== false) {
+          if (Array.isArray(data.items)) dashboard.notifications = data.items;
+          if (data.unread_count) dashboard.unread_count = data.unread_count;
+        }
+      }));
+    }
+    return Promise.all(tasks).then(function () { return dashboard; });
+  }
+
+  var accountSidebarEventsBound = false;
+
+  function bindAccountSidebarEvents() {
+    if (!accountSidebarEl || accountSidebarEventsBound) return;
+    accountSidebarEventsBound = true;
+    accountSidebarEl.addEventListener('click', function (e) {
+      var closeBtn = e.target.closest('.pdx-account-sidebar-close');
+      if (closeBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeAccountMobileNav();
+        return;
+      }
+      var navBtn = e.target.closest('[data-account-section]');
+      if (navBtn) {
+        setAccountSection(navBtn.getAttribute('data-account-section'));
+        return;
+      }
+      var signOutBtn = e.target.closest('.pdx-account-signout');
+      if (signOutBtn) {
+        e.preventDefault();
+        promptAccountSignOut();
+      }
+    });
+  }
+
   function cxIcon(name, size) {
     if (window.PDXCustomerIcons) return window.PDXCustomerIcons.svg(name, size || 18);
     return '';
@@ -334,6 +460,7 @@
     var u = data.user || data;
     if (u.logged_in !== undefined) {
       user = u;
+      if (u.avatar_url) C.avatarUrl = u.avatar_url;
       C.isLoggedIn = !!u.logged_in;
       C.emailVerified = !!u.verified;
       C.userId = u.id || 0;
@@ -752,6 +879,7 @@
 
     if (user.logged_in && head) {
       head.innerHTML =
+        renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--sidebar', url: accountAvatarUrl() }) +
         '<div class="pdx-auth-menu-name">' + nameWithBadge(user.display_name || 'Account', user.verified, { size: 15, context: 'account' }) + '</div>' +
         '<div class="pdx-auth-menu-email">' + escHtml(user.email || '') + '</div>' +
         '<div class="pdx-auth-menu-status">' + escHtml(accountStatusLabel()) + '</div>';
@@ -1916,9 +2044,12 @@
       '</button>' +
     '</div>' +
     '<div class="pdx-account-sidebar-user">' +
-      '<div class="pdx-account-sidebar-name">' + nameWithBadge(user.display_name || t('account', 'Account'), user.verified, { size: 15, inline: true, context: 'account' }) + '</div>' +
-      '<div class="pdx-account-sidebar-email">' + escHtml(user.email || '') + '</div>' +
-      '<div class="pdx-account-sidebar-status">' + escHtml(accountStatusText(user.verified)) + '</div>' +
+      renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--sidebar' }) +
+      '<div class="pdx-account-sidebar-name-row">' +
+        '<div class="pdx-account-sidebar-name">' + nameWithBadge(user.display_name || t('account', 'Account'), user.verified, { size: 15, inline: true, context: 'account' }) + '</div>' +
+        '<div class="pdx-account-sidebar-email">' + escHtml(user.email || '') + '</div>' +
+        '<div class="pdx-account-sidebar-status">' + escHtml(accountStatusText(user.verified)) + '</div>' +
+      '</div>' +
     '</div><div class="pdx-account-sidebar-nav">';
     accountNavGroups().forEach(function (group) {
       html += '<div class="pdx-account-nav-group"><div class="pdx-account-nav-label">' + escHtml(group.label) + '</div>';
@@ -1945,21 +2076,20 @@
       accountSidebarEl.removeAttribute('aria-modal');
       accountSidebarEl.removeAttribute('aria-hidden');
     }
-    var sidebarClose = accountSidebarEl.querySelector('.pdx-account-sidebar-close');
-    if (sidebarClose) sidebarClose.addEventListener('click', closeAccountMobileNav);
-    accountSidebarEl.querySelectorAll('[data-account-section]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        setAccountSection(btn.getAttribute('data-account-section'));
-      });
-    });
-    var signOut = accountSidebarEl.querySelector('.pdx-account-signout');
-    if (signOut) signOut.addEventListener('click', promptAccountSignOut);
   }
 
   function renderAccountPersonalSection(profile) {
-    profile = profile || {};
+    profile = profile || accountProfileData();
+    var avatarUrl = accountAvatarUrl(profile);
     return '<div class="pdx-account-card">' +
       '<div class="pdx-account-card-title">' + escHtml(t('personal_information', 'Personal Information')) + '</div>' +
+      '<div class="pdx-account-profile-avatar-block">' +
+        renderAccountAvatarHtml({ url: avatarUrl, sizeClass: 'pdx-account-avatar--profile', profile: profile }) +
+        '<label class="pdx-account-avatar__change">' +
+          escHtml(t('change_photo', 'Change photo')) +
+          '<input type="file" id="pdx-profile-avatar-input" accept="image/jpeg,image/png,image/webp" hidden />' +
+        '</label>' +
+      '</div>' +
       '<form id="pdx-customer-profile-form">' +
         field('display_name', t('display_name', 'Display name'), profile.display_name || user.display_name) +
         field('email', t('email', 'Email'), profile.email || user.email, 'email') +
@@ -2051,21 +2181,48 @@
 
   function bindAccountPersonalForm(container) {
     var form = container.querySelector('#pdx-customer-profile-form');
-    if (!form) return;
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      var fd = new FormData(form);
-      customerApiFetch('POST', '/customer/profile', {
-        display_name: fd.get('display_name'),
-        email: fd.get('email'),
-      }).then(function (data) {
-        notify((data && data.message) || t('profile_updated', 'Profile updated.'), data && data._ok ? 'info' : 'warn');
-        if (data && data._ok) {
-          refreshUser({ trigger: 'profile_update' });
-          renderAccountApp();
-        }
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var fd = new FormData(form);
+        customerApiFetch('POST', '/customer/profile', {
+          display_name: fd.get('display_name'),
+          email: fd.get('email'),
+        }).then(function (data) {
+          notify((data && data.message) || t('profile_updated', 'Profile updated.'), data && data._ok ? 'info' : 'warn');
+          if (data && data._ok) {
+            accountState.profile = unwrapProfileResponse(data);
+            applyAccountUserFromPayload(accountState.profile);
+            refreshUser({ trigger: 'profile_update' });
+            renderAccountApp();
+          }
+        });
       });
-    });
+    }
+    var avatarInput = container.querySelector('#pdx-profile-avatar-input');
+    if (avatarInput) {
+      avatarInput.addEventListener('change', function () {
+        var file = avatarInput.files && avatarInput.files[0];
+        if (!file) return;
+        var fd = new FormData();
+        fd.append('avatar', file);
+        customerApiFormData('/customer/profile/avatar', fd).then(function (data) {
+          if (data && data._ok !== false && data.profile) {
+            accountState.profile = data.profile;
+            applyAccountUserFromPayload(data.profile);
+            notify(t('avatar_updated', 'Profile picture updated.'), 'info');
+            renderAccountApp();
+            updateAuthBar();
+          } else {
+            notify((data && data.message) || t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+          }
+          avatarInput.value = '';
+        }).catch(function () {
+          notify(t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+          avatarInput.value = '';
+        });
+      });
+    }
   }
 
   function bindAccountSecurityForm(container) {
@@ -2101,7 +2258,7 @@
       '<p class="pdx-account-page-lead">' + escHtml(accountSectionLead(section)) + '</p></div>';
 
     if (section === 'personal') {
-      accountMainEl.innerHTML = head + renderAccountPersonalSection(accountState.profile);
+      accountMainEl.innerHTML = head + renderAccountPersonalSection(accountProfileData());
       bindAccountPersonalForm(accountMainEl);
       return;
     }
@@ -2143,8 +2300,8 @@
         customerApiFetch('GET', '/customer/settings'),
       ]);
     }).then(function (results) {
-      var dashboard = results[0];
-      if (!dashboard || dashboard._status === 401) {
+      var dashboard = normalizeDashboardResponse(results[0]);
+      if (!dashboard) {
         if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('sign_in_continue', 'Please sign in to continue.')) + '</p>';
         return false;
       }
@@ -2152,14 +2309,17 @@
         if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('verify_email_dashboard', 'Verify your email to access your account dashboard.')) + '</p>';
         return false;
       }
-      accountState.dashboard = dashboard;
-      accountState.profile = (results[1] && results[1]._ok !== false) ? results[1] : {};
-      accountState.files = (results[2] && Array.isArray(results[2].files)) ? results[2].files : (Array.isArray(results[2]) ? results[2] : []);
-      accountState.settings = (results[3] && results[3]._ok !== false) ? results[3] : {};
-      accountState.loaded = true;
-      portalState.dashboard = dashboard;
-      renderAccountApp();
-      return true;
+      return enrichAccountDashboard(dashboard).then(function (enriched) {
+        accountState.dashboard = enriched;
+        accountState.profile = unwrapProfileResponse(results[1]);
+        applyAccountUserFromPayload(accountState.profile);
+        accountState.files = (results[2] && Array.isArray(results[2].files)) ? results[2].files : (Array.isArray(results[2]) ? results[2] : []);
+        accountState.settings = (results[3] && results[3]._ok !== false) ? results[3] : {};
+        accountState.loaded = true;
+        portalState.dashboard = enriched;
+        renderAccountApp();
+        return true;
+      });
     }).catch(function () {
       if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('load_account_error', 'Unable to load your account. Please try again.')) + '</p>';
       return false;
@@ -2685,7 +2845,7 @@
   /* ─── Public API ───────────────────────────────────────── */
   function withPortalLang(path) {
     var lang = encodeURIComponent(customerPortalLang());
-    if (path.indexOf('/customer/news') === 0 || path.indexOf('/customer/dashboard') === 0) {
+    if (path.indexOf('/customer/news') === 0 || path.indexOf('/customer/dashboard') === 0 || path.indexOf('/customer/orders') === 0 || path.indexOf('/customer/projects') === 0) {
       var join = path.indexOf('?') >= 0 ? '&' : '?';
       return path + join + 'lang=' + lang;
     }
@@ -3506,14 +3666,18 @@
             accountState.section = 'orders';
             accountState.detail = null;
             customerApiFetch('GET', '/customer/dashboard').then(function (dash) {
-              portalState.dashboard = dash;
-              accountState.dashboard = dash;
-              if (isAuthPage()) {
-                renderAccountApp();
-              } else {
-                var host = portalOverlay && portalOverlay.querySelector('.pdx-customer-portal-body');
-                if (host) renderCustomerPortalDashboard(host, dash);
-              }
+              dash = normalizeDashboardResponse(dash);
+              if (!dash) return;
+              enrichAccountDashboard(dash).then(function (enriched) {
+                portalState.dashboard = enriched;
+                accountState.dashboard = enriched;
+                if (isAuthPage()) {
+                  renderAccountApp();
+                } else {
+                  var host = portalOverlay && portalOverlay.querySelector('.pdx-customer-portal-body');
+                  if (host) renderCustomerPortalDashboard(host, enriched);
+                }
+              });
             });
           }
         });

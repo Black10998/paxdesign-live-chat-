@@ -117,6 +117,12 @@ class PAXdesign_Auth_Frontend {
             'emailVerified' => is_user_logged_in() ? PAXdesign_Auth::is_email_verified($user_id) : false,
             'userName'      => is_user_logged_in() ? wp_get_current_user()->display_name : '',
             'userEmail'     => is_user_logged_in() ? wp_get_current_user()->user_email : '',
+            'avatarUrl'     => (is_user_logged_in() && class_exists('PAXdesign_Customer_Avatar'))
+                ? PAXdesign_Customer_Avatar::url_for_user($user_id)
+                : '',
+            'defaultAvatarUrl' => class_exists('PAXdesign_Customer_Avatar')
+                ? PAXdesign_Customer_Avatar::default_avatar_url()
+                : '',
             'publicModules' => PAXdesign_Auth_Native::public_modules(),
             'modules'       => array(),
             'accountPageUrl'=> esc_url(PAXdesign_Auth_Page::page_url()),

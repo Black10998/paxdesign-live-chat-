@@ -144,6 +144,9 @@ class PAXdesign_Customer_Auth {
                 $payload['role'] = self::resolve_portal_role($user);
                 $payload['is_staff'] = PAXdesign_Live_Chat_Permissions::has_live_chat_access($user_id);
             }
+            if (class_exists('PAXdesign_Customer_Avatar')) {
+                $payload['avatar_url'] = PAXdesign_Customer_Avatar::url_for_user($user_id);
+            }
             $payload['nonce'] = wp_create_nonce('wp_rest');
             return $payload;
         }
@@ -161,6 +164,7 @@ class PAXdesign_Customer_Auth {
             'role'         => self::resolve_portal_role($user),
             'is_admin'     => user_can($user, 'manage_options'),
             'is_staff'     => PAXdesign_Live_Chat_Permissions::has_live_chat_access($user_id),
+            'avatar_url'   => class_exists('PAXdesign_Customer_Avatar') ? PAXdesign_Customer_Avatar::url_for_user($user_id) : '',
             'nonce'        => wp_create_nonce('wp_rest'),
         );
     }

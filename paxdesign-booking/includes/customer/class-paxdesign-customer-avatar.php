@@ -13,20 +13,41 @@ class PAXdesign_Customer_Avatar {
     const MAX_BYTES = 5242880;
 
     /**
+     * Default avatar when no upload or Gravatar is available.
+     *
+     * @return string
+     */
+    public static function default_avatar_url() {
+        $url = PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/customer-auth/images/default-avatar.svg';
+        return esc_url_raw($url);
+    }
+
+    /**
+     * Resolve avatar for a customer: manual upload > Gravatar/email provider > default.
+     *
      * @param int $user_id
      * @return string
      */
     public static function url_for_user($user_id) {
         $user_id = absint($user_id);
         if ($user_id <= 0) {
-            return '';
+            return self::default_avatar_url();
         }
         $attachment_id = absint(get_user_meta($user_id, self::META_ATTACHMENT_ID, true));
-        if ($attachment_id <= 0) {
-            return '';
+        if ($attachment_id > 0) {
+            $url = wp_get_attachment_image_url($attachment_id, 'thumbnail');
+            if ($url) {
+                return (string) $url;
+            }
         }
-        $url = wp_get_attachment_image_url($attachment_id, 'thumbnail');
-        return $url ? (string) $url : '';
+        $user = get_user_by('id', $user_id);
+        if ($user instanceof WP_User && $user->user_email !== '') {
+            return (string) get_avatar_url($user_id, array(
+                'size'    => 256,
+                'default' => self::default_avatar_url(),
+            ));
+        }
+        return self::default_avatar_url();
     }
 
     /**

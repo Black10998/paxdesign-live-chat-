@@ -1,5 +1,5 @@
 /**
- * PAXDesign Verified Badge — shared frontend renderer (server-gated via verified flag).
+ * PAXDesign Verified Badge — shield + checkmark (server-gated via verified flag).
  */
 (function (global) {
   'use strict';
@@ -18,8 +18,8 @@
 
   function svgMarkup(size) {
     return '<svg class="pdx-vb" width="' + size + '" height="' + size + '" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' +
-      '<circle class="pdx-vb__bg" cx="12" cy="12" r="10"/>' +
-      '<path class="pdx-vb__check" d="M7.6 12.3l2.5 2.5 6.3-6.4"/>' +
+      '<path class="pdx-vb__shield" d="M12 2.4l7.2 2.8v5.8c0 4.9-3.1 9.2-7.2 10.8-4.1-1.6-7.2-5.9-7.2-10.8V5.2L12 2.4z"/>' +
+      '<path class="pdx-vb__check" d="M8.2 12.1l2.1 2.1 5.5-5.6"/>' +
     '</svg>';
   }
 

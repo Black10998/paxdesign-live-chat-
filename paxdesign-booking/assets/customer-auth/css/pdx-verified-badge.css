@@ -64,14 +64,14 @@
   filter: drop-shadow(0 1px 1px var(--pdx-vb-glow));
 }
 
-.pdx-vb__bg {
+.pdx-vb__shield {
   fill: var(--pdx-vb-fill);
 }
 
 .pdx-vb__check {
   fill: none;
   stroke: var(--pdx-vb-check);
-  stroke-width: 2.4;
+  stroke-width: 2.2;
   stroke-linecap: round;
   stroke-linejoin: round;
   vector-effect: non-scaling-stroke;

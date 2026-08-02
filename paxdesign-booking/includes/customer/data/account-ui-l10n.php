@@ -755,4 +755,29 @@ return array(
 		'de' => 'Kontonavigation',
 		'ar' => 'تنقل الحساب',
 	),
+	'profile_picture'    => array(
+		'en' => 'Profile picture',
+		'de' => 'Profilbild',
+		'ar' => 'صورة الملف الشخصي',
+	),
+	'change_photo'       => array(
+		'en' => 'Change photo',
+		'de' => 'Foto ändern',
+		'ar' => 'تغيير الصورة',
+	),
+	'upload_photo'       => array(
+		'en' => 'Upload photo',
+		'de' => 'Foto hochladen',
+		'ar' => 'رفع صورة',
+	),
+	'avatar_updated'     => array(
+		'en' => 'Profile picture updated.',
+		'de' => 'Profilbild aktualisiert.',
+		'ar' => 'تم تحديث صورة الملف الشخصي.',
+	),
+	'avatar_upload_failed' => array(
+		'en' => 'Could not upload profile picture.',
+		'de' => 'Profilbild konnte nicht hochgeladen werden.',
+		'ar' => 'تعذّر رفع صورة الملف الشخصي.',
+	),
 );
