@@ -10,7 +10,19 @@ if (!defined('ABSPATH')) {
 class PAXdesign_Customer_Avatar {
 
     const META_ATTACHMENT_ID = 'pax_customer_avatar_id';
-    const MAX_BYTES = 5242880;
+    const IMAGE_SIZE         = 'pax_customer_avatar';
+    const DISPLAY_PX         = 128;
+    const MAX_SOURCE_PX      = 512;
+    const MAX_BYTES          = 5242880;
+    const JPEG_QUALITY       = 82;
+
+    public static function init() {
+        add_action('after_setup_theme', array(__CLASS__, 'register_image_size'), 20);
+    }
+
+    public static function register_image_size() {
+        add_image_size(self::IMAGE_SIZE, self::DISPLAY_PX, self::DISPLAY_PX, true);
+    }
 
     /**
      * Default avatar when no upload or Gravatar is available.
@@ -24,6 +36,7 @@ class PAXdesign_Customer_Avatar {
 
     /**
      * Resolve avatar for a customer: manual upload > Gravatar/email provider > default.
+     * Always returns an optimized small image URL for UI display.
      *
      * @param int $user_id
      * @return string
@@ -35,19 +48,37 @@ class PAXdesign_Customer_Avatar {
         }
         $attachment_id = absint(get_user_meta($user_id, self::META_ATTACHMENT_ID, true));
         if ($attachment_id > 0) {
-            $url = wp_get_attachment_image_url($attachment_id, 'thumbnail');
-            if ($url) {
-                return (string) $url;
+            $url = self::optimized_attachment_url($attachment_id);
+            if ($url !== '') {
+                return $url;
             }
         }
         $user = get_user_by('id', $user_id);
         if ($user instanceof WP_User && $user->user_email !== '') {
             return (string) get_avatar_url($user_id, array(
-                'size'    => 256,
+                'size'    => self::DISPLAY_PX,
                 'default' => self::default_avatar_url(),
             ));
         }
         return self::default_avatar_url();
+    }
+
+    /**
+     * @param int $attachment_id
+     * @return string
+     */
+    private static function optimized_attachment_url($attachment_id) {
+        $attachment_id = absint($attachment_id);
+        if ($attachment_id <= 0) {
+            return '';
+        }
+        self::ensure_optimized_attachment($attachment_id);
+        $url = wp_get_attachment_image_url($attachment_id, self::IMAGE_SIZE);
+        if ($url) {
+            return (string) $url;
+        }
+        $url = wp_get_attachment_image_url($attachment_id, 'thumbnail');
+        return $url ? (string) $url : '';
     }
 
     /**
@@ -100,17 +131,81 @@ class PAXdesign_Customer_Avatar {
             return new WP_Error('upload_failed', __('Could not save avatar.', 'paxdesign-booking'), array('status' => 500));
         }
 
-        $meta = wp_generate_attachment_metadata($attachment_id, $upload['file']);
-        if (is_array($meta)) {
-            wp_update_attachment_metadata($attachment_id, $meta);
-        }
-
+        self::optimize_attachment((int) $attachment_id);
         self::replace_avatar($user_id, (int) $attachment_id);
 
         return array(
-            'avatar_url' => self::url_for_user($user_id),
+            'avatar_url'    => self::url_for_user($user_id),
             'attachment_id' => (int) $attachment_id,
         );
+    }
+
+    /**
+     * Resize, compress, and generate the dedicated avatar derivative.
+     *
+     * @param int $attachment_id
+     */
+    private static function optimize_attachment($attachment_id) {
+        $attachment_id = absint($attachment_id);
+        if ($attachment_id <= 0) {
+            return;
+        }
+        $file = get_attached_file($attachment_id);
+        if (!$file || !is_string($file) || !file_exists($file)) {
+            return;
+        }
+
+        $editor = wp_get_image_editor($file);
+        if (is_wp_error($editor)) {
+            return;
+        }
+
+        if (method_exists($editor, 'set_quality')) {
+            $editor->set_quality(self::JPEG_QUALITY);
+        }
+
+        $size = $editor->get_size();
+        if (is_array($size)) {
+            $width = isset($size['width']) ? (int) $size['width'] : 0;
+            $height = isset($size['height']) ? (int) $size['height'] : 0;
+            if ($width > self::MAX_SOURCE_PX || $height > self::MAX_SOURCE_PX) {
+                $editor->resize(self::MAX_SOURCE_PX, self::MAX_SOURCE_PX, false);
+                $saved = $editor->save($file);
+                if (!is_wp_error($saved) && !empty($saved['path'])) {
+                    $file = $saved['path'];
+                    update_attached_file($attachment_id, $file);
+                    $editor = wp_get_image_editor($file);
+                    if (is_wp_error($editor)) {
+                        return;
+                    }
+                    if (method_exists($editor, 'set_quality')) {
+                        $editor->set_quality(self::JPEG_QUALITY);
+                    }
+                }
+            }
+        }
+
+        $meta = wp_generate_attachment_metadata($attachment_id, $file);
+        if (is_array($meta)) {
+            wp_update_attachment_metadata($attachment_id, $meta);
+        }
+    }
+
+    /**
+     * Ensure legacy/full-size uploads have a compact avatar derivative.
+     *
+     * @param int $attachment_id
+     */
+    private static function ensure_optimized_attachment($attachment_id) {
+        $attachment_id = absint($attachment_id);
+        if ($attachment_id <= 0) {
+            return;
+        }
+        $meta = wp_get_attachment_metadata($attachment_id);
+        if (is_array($meta) && !empty($meta['sizes'][self::IMAGE_SIZE]['file'])) {
+            return;
+        }
+        self::optimize_attachment($attachment_id);
     }
 
     /**

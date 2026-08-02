@@ -122,6 +122,93 @@ body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-sig
   max-width: 100%;
 }
 
+/* Compact circular avatars in header/menu (loaded on all public pages) */
+#pdx-auth-bar .pdx-account-avatar,
+.pdx-auth-menu .pdx-account-avatar,
+.pdx-profile-overlay .pdx-account-avatar {
+  position: relative;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+  border-radius: 50% !important;
+  box-sizing: border-box;
+  contain: layout size style paint;
+  background: #e8e8ed;
+}
+
+#pdx-auth-bar .pdx-account-avatar__img,
+.pdx-auth-menu .pdx-account-avatar__img,
+.pdx-profile-overlay .pdx-account-avatar__img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+}
+
+#pdx-auth-bar .pdx-account-avatar--header {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+}
+
+.pdx-auth-menu .pdx-account-avatar--menu,
+.pdx-profile-overlay .pdx-account-avatar--profile-compact {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  max-width: 44px !important;
+  max-height: 44px !important;
+}
+
+.pdx-auth-menu-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+}
+
+.pdx-auth-menu-identity-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  gap: 2px;
+}
+
+.pdx-public-user-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pdx-public-user-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.pdx-auth-account-btn .pdx-public-user-identity {
+  pointer-events: none;
+}
+
 .pdx-auth-account-label {
   display: inline-block;
   max-width: 100%;

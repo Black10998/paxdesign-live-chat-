@@ -317,13 +317,21 @@
     return profile.avatar_url || user.avatar_url || C.avatarUrl || defaultAvatarUrl();
   }
 
+  var ACCOUNT_AVATAR_PX = {
+    'pdx-account-avatar--header': 32,
+    'pdx-account-avatar--menu': 44,
+    'pdx-account-avatar--sidebar': 40,
+    'pdx-account-avatar--profile-compact': 64,
+  };
+
   function renderAccountAvatarHtml(opts) {
     opts = opts || {};
     var url = opts.url || accountAvatarUrl(opts.profile);
     var sizeClass = opts.sizeClass || 'pdx-account-avatar--sidebar';
+    var px = ACCOUNT_AVATAR_PX[sizeClass] || 40;
     var alt = opts.alt || user.display_name || t('account', 'Account');
-    return '<span class="pdx-account-avatar ' + sizeClass + '">' +
-      '<img class="pdx-account-avatar__img" src="' + escHtml(url) + '" alt="' + escHtml(alt) + '" loading="lazy" decoding="async" />' +
+    return '<span class="pdx-account-avatar ' + sizeClass + '" style="width:' + px + 'px;height:' + px + 'px;max-width:' + px + 'px;max-height:' + px + 'px;flex:0 0 ' + px + 'px">' +
+      '<img class="pdx-account-avatar__img" src="' + escHtml(url) + '" alt="' + escHtml(alt) + '" width="' + px + '" height="' + px + '" loading="lazy" decoding="async" />' +
     '</span>';
   }
 

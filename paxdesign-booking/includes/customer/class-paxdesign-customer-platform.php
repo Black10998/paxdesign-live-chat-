@@ -12,6 +12,7 @@ class PAXdesign_Customer_Platform {
     public static function init() {
         self::load_dependencies();
         PAXdesign_Customer_DB::init();
+        PAXdesign_Customer_Avatar::init();
         PAXdesign_Customer_Auth::init();
         PAXdesign_Customer_Chat_Bridge::init();
         PAXdesign_Customer_Services::init();
