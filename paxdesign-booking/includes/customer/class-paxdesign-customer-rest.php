@@ -470,14 +470,19 @@ class PAXdesign_Customer_REST {
     }
 
     public static function list_profile_avatars() {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
         return rest_ensure_response(array(
-            'presets' => class_exists('PAXdesign_Customer_Avatar_Presets') ? PAXdesign_Customer_Avatar_Presets::catalog() : array(),
+            'presets'     => class_exists('PAXdesign_Customer_Avatar_Presets') ? PAXdesign_Customer_Avatar_Presets::catalog() : array(),
+            'vip_presets' => class_exists('PAXdesign_Customer_Avatar_Vip_Presets') ? PAXdesign_Customer_Avatar_Vip_Presets::catalog_for_user($uid) : array(),
         ));
     }
 
     public static function set_profile_avatar_preset(WP_REST_Request $request) {
         $uid = PAXdesign_Customer_Auth::current_user_id();
         $preset_id = sanitize_key((string) $request->get_param('preset_id'));
+        if (class_exists('PAXdesign_Customer_Avatar')) {
+            $preset_id = PAXdesign_Customer_Avatar::sanitize_preset_id($preset_id);
+        }
         $result = PAXdesign_Customer_Avatar::set_preset_for_user($uid, $preset_id);
         if (is_wp_error($result)) {
             return $result;

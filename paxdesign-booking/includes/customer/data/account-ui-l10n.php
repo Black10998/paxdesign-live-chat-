@@ -810,4 +810,19 @@ return array(
 		'de' => 'Kein Profilbild',
 		'ar' => 'بدون صورة شخصية',
 	),
+	'exclusive_vip_avatars' => array(
+		'en' => 'Exclusive VIP avatars',
+		'de' => 'Exklusive VIP-Avatare',
+		'ar' => 'صور VIP حصرية',
+	),
+	'vip_avatars' => array(
+		'en' => 'VIP avatars',
+		'de' => 'VIP-Avatare',
+		'ar' => 'صور VIP',
+	),
+	'vip_avatar_locked' => array(
+		'en' => 'Exclusive avatar — assigned by administrator only',
+		'de' => 'Exklusiver Avatar — nur durch Administrator zuweisbar',
+		'ar' => 'صورة حصرية — يعينها المسؤول فقط',
+	),
 );

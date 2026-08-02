@@ -107,6 +107,46 @@ include __DIR__ . '/partials/header.php';
       </div>
     </div>
 
+    <?php
+    $vip_catalog = class_exists( 'PAXdesign_Customer_Avatar_Vip_Presets', false )
+      ? PAXdesign_Customer_Avatar_Vip_Presets::catalog_for_user( 0 )
+      : [];
+    $vip_grants  = $detail['vip_avatar_grants'] ?? [];
+    ?>
+    <?php if ( ! empty( $vip_catalog ) ) : ?>
+    <div class="pdx-card" style="margin-bottom:16px">
+      <div class="pdx-card__header"><h3>Exclusive VIP Avatars</h3></div>
+      <div class="pdx-card__body">
+        <p style="font-size:12px;color:#8b949e;margin:0 0 12px">Assign premium animated SVG avatars to this customer. Only administrators can grant these exclusive avatars.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:12px">
+          <?php foreach ( $vip_catalog as $vip ) :
+            $granted = in_array( $vip['id'], $vip_grants, true );
+            $active  = ( $detail['avatar_preset'] ?? '' ) === $vip['id'];
+          ?>
+          <div style="text-align:center;padding:10px;border:1px solid #30363d;border-radius:12px;background:#0d1117">
+            <img src="<?php echo esc_url( $vip['url'] ); ?>" alt="" width="64" height="64" style="border-radius:50%;display:block;margin:0 auto 8px;background:#161b22" />
+            <div style="font-size:11px;color:#c9d1d9;margin-bottom:8px;line-height:1.3"><?php echo esc_html( $vip['label'] ); ?></div>
+            <?php if ( $granted ) : ?>
+              <span style="display:inline-block;font-size:10px;color:#3fb950;margin-bottom:8px"><?php echo $active ? 'Active' : 'Granted'; ?></span>
+            <?php endif; ?>
+            <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="margin-top:4px">
+              <?php wp_nonce_field( 'pdx_customer_action', 'pdx_nonce' ); ?>
+              <input type="hidden" name="action" value="pdx_customer_action" />
+              <input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $customer_id ); ?>" />
+              <input type="hidden" name="vip_avatar_id" value="<?php echo esc_attr( $vip['id'] ); ?>" />
+              <?php if ( $granted ) : ?>
+                <button type="submit" name="customer_action" value="revoke_vip_avatar" class="pdx-btn-ghost" style="width:100%">Revoke</button>
+              <?php else : ?>
+                <button type="submit" name="customer_action" value="grant_vip_avatar" class="pdx-btn-primary" style="width:100%">Grant</button>
+              <?php endif; ?>
+            </form>
+          </div>
+          <?php endforeach; ?>
+        </div>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <?php if ( ! empty( $detail['orders'] ) ) : ?>
     <div class="pdx-card">
       <div class="pdx-card__header"><h3>Orders & Invoices</h3></div>

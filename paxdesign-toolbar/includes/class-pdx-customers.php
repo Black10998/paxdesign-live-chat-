@@ -117,6 +117,13 @@ class PDX_Customers {
 		$row['orders']      = PDX_Account::customer_orders( $user_id );
 		$row['purchases']   = PDX_Account::customer_purchases( $user_id );
 		$row['subscription']= PDX_Account::customer_subscription( $user_id );
+		if ( class_exists( 'PAXdesign_Customer_Avatar', false ) ) {
+			$row['vip_avatar_grants'] = PAXdesign_Customer_Avatar::vip_grants_for_user( $user_id );
+			$row['avatar_preset']     = PAXdesign_Customer_Avatar::preset_id_for_user( $user_id );
+		} else {
+			$row['vip_avatar_grants'] = [];
+			$row['avatar_preset']     = '';
+		}
 
 		return $row;
 	}
@@ -200,6 +207,34 @@ class PDX_Customers {
 			PDX_Audit::log( 'customers', 'revoke_access', [
 				'user_id'   => $user_id,
 				'module_id' => $module_id,
+			] );
+		}
+		return $ok;
+	}
+
+	public static function grant_vip_avatar( int $user_id, string $preset_id ): bool {
+		if ( ! self::is_customer( $user_id ) || ! class_exists( 'PAXdesign_Customer_Avatar', false ) ) {
+			return false;
+		}
+		$ok = PAXdesign_Customer_Avatar::grant_vip_avatar( $user_id, $preset_id, true );
+		if ( $ok ) {
+			PDX_Audit::log( 'customers', 'vip_avatar_granted', [
+				'user_id'   => $user_id,
+				'preset_id' => $preset_id,
+			] );
+		}
+		return $ok;
+	}
+
+	public static function revoke_vip_avatar( int $user_id, string $preset_id ): bool {
+		if ( ! self::is_customer( $user_id ) || ! class_exists( 'PAXdesign_Customer_Avatar', false ) ) {
+			return false;
+		}
+		$ok = PAXdesign_Customer_Avatar::revoke_vip_avatar( $user_id, $preset_id );
+		if ( $ok ) {
+			PDX_Audit::log( 'customers', 'vip_avatar_revoked', [
+				'user_id'   => $user_id,
+				'preset_id' => $preset_id,
 			] );
 		}
 		return $ok;

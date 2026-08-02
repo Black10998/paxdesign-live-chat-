@@ -464,6 +464,12 @@ class PDX_Admin {
 			case 'save_notes':
 				PDX_Customers::save_notes( $user_id, (string) ( $_POST['admin_notes'] ?? '' ) );
 				break;
+			case 'grant_vip_avatar':
+				PDX_Customers::grant_vip_avatar( $user_id, sanitize_key( (string) ( $_POST['vip_avatar_id'] ?? '' ) ) );
+				break;
+			case 'revoke_vip_avatar':
+				PDX_Customers::revoke_vip_avatar( $user_id, sanitize_key( (string) ( $_POST['vip_avatar_id'] ?? '' ) ) );
+				break;
 		}
 
 		wp_safe_redirect( $redirect );

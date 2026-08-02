@@ -11,6 +11,7 @@ class PAXdesign_Customer_Avatar {
 
     const META_ATTACHMENT_ID = 'pax_customer_avatar_id';
     const META_PRESET_ID     = 'pax_customer_avatar_preset';
+    const META_VIP_GRANTS    = 'pax_customer_vip_avatar_grants';
     const IMAGE_SIZE         = 'pax_customer_avatar';
     const DISPLAY_PX         = 128;
     const MAX_SOURCE_PX      = 512;
@@ -49,7 +50,7 @@ class PAXdesign_Customer_Avatar {
             return PAXdesign_Customer_Avatar_Presets::PRESET_NONE;
         }
         $saved = get_user_meta($user_id, self::META_PRESET_ID, true);
-        if (is_string($saved) && PAXdesign_Customer_Avatar_Presets::exists($saved)) {
+        if (is_string($saved) && self::saved_preset_is_valid($user_id, $saved)) {
             return $saved;
         }
         $preset_id = PAXdesign_Customer_Avatar_Presets::random_id();
@@ -121,7 +122,7 @@ class PAXdesign_Customer_Avatar {
             return PAXdesign_Customer_Avatar_Presets::auto_id_for_user(0);
         }
         $saved = get_user_meta($user_id, self::META_PRESET_ID, true);
-        if (is_string($saved) && PAXdesign_Customer_Avatar_Presets::exists($saved)) {
+        if (is_string($saved) && self::saved_preset_is_valid($user_id, $saved)) {
             return $saved;
         }
         return self::ensure_preset_assigned($user_id);
@@ -132,7 +133,8 @@ class PAXdesign_Customer_Avatar {
      * @return bool
      */
     public static function uses_none_preset($user_id) {
-        return PAXdesign_Customer_Avatar_Presets::is_none(self::preset_id_for_user($user_id));
+        $preset_id = get_user_meta(absint($user_id), self::META_PRESET_ID, true);
+        return is_string($preset_id) && PAXdesign_Customer_Avatar_Presets::is_none($preset_id);
     }
 
     /**
@@ -159,8 +161,20 @@ class PAXdesign_Customer_Avatar {
         if (self::uses_none_preset($user_id)) {
             return '';
         }
-        $url = PAXdesign_Customer_Avatar_Presets::url_for_id(self::preset_id_for_user($user_id));
+        $preset_id = self::preset_id_for_user($user_id);
+        $url = self::url_for_preset_id($preset_id);
         return $url !== '' ? $url : self::default_avatar_url();
+    }
+
+    /**
+     * @param string $preset_id
+     * @return string
+     */
+    public static function url_for_preset_id($preset_id) {
+        if (PAXdesign_Customer_Avatar_Vip_Presets::is_vip($preset_id)) {
+            return PAXdesign_Customer_Avatar_Vip_Presets::url_for_id($preset_id);
+        }
+        return PAXdesign_Customer_Avatar_Presets::url_for_id($preset_id);
     }
 
     /**
@@ -179,6 +193,7 @@ class PAXdesign_Customer_Avatar {
             'avatar_preset'       => $preset_id,
             'avatar_has_upload'   => self::has_upload($user_id),
             'avatar_has_image'    => self::has_visible_avatar($user_id),
+            'vip_avatar_grants'   => self::vip_grants_for_user($user_id),
         );
     }
 
@@ -189,12 +204,135 @@ class PAXdesign_Customer_Avatar {
      */
     public static function set_preset_for_user($user_id, $preset_id) {
         $user_id = absint($user_id);
-        $preset_id = PAXdesign_Customer_Avatar_Presets::sanitize_id($preset_id);
-        if ($preset_id === '' || !PAXdesign_Customer_Avatar_Presets::exists($preset_id)) {
+        $preset_id = self::sanitize_preset_id($preset_id);
+        if ($preset_id === '') {
+            return new WP_Error('invalid_preset', __('Please choose a valid PAXDesign avatar.', 'paxdesign-booking'), array('status' => 400));
+        }
+        if (PAXdesign_Customer_Avatar_Vip_Presets::is_vip($preset_id)) {
+            if (!self::has_vip_grant($user_id, $preset_id)) {
+                return new WP_Error('vip_locked', __('This exclusive avatar is not available on your account.', 'paxdesign-booking'), array('status' => 403));
+            }
+        } elseif (!PAXdesign_Customer_Avatar_Presets::exists($preset_id)) {
             return new WP_Error('invalid_preset', __('Please choose a valid PAXDesign avatar.', 'paxdesign-booking'), array('status' => 400));
         }
         update_user_meta($user_id, self::META_PRESET_ID, $preset_id);
         return true;
+    }
+
+    /**
+     * @param int $user_id
+     * @return array<int, string>
+     */
+    public static function vip_grants_for_user($user_id) {
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return array();
+        }
+        $raw = get_user_meta($user_id, self::META_VIP_GRANTS, true);
+        if (!is_array($raw)) {
+            return array();
+        }
+        $grants = array();
+        foreach ($raw as $preset_id) {
+            $preset_id = PAXdesign_Customer_Avatar_Vip_Presets::sanitize_id((string) $preset_id);
+            if ($preset_id !== '' && !in_array($preset_id, $grants, true)) {
+                $grants[] = $preset_id;
+            }
+        }
+        sort($grants);
+        return $grants;
+    }
+
+    /**
+     * @param int $user_id
+     * @param string $preset_id
+     * @return bool
+     */
+    public static function has_vip_grant($user_id, $preset_id) {
+        $preset_id = PAXdesign_Customer_Avatar_Vip_Presets::sanitize_id($preset_id);
+        if ($preset_id === '') {
+            return false;
+        }
+        return in_array($preset_id, self::vip_grants_for_user($user_id), true);
+    }
+
+    /**
+     * @param int $user_id
+     * @param string $preset_id
+     * @param bool $set_active
+     * @return bool
+     */
+    public static function grant_vip_avatar($user_id, $preset_id, $set_active = true) {
+        $user_id = absint($user_id);
+        $preset_id = PAXdesign_Customer_Avatar_Vip_Presets::sanitize_id($preset_id);
+        if ($user_id <= 0 || $preset_id === '') {
+            return false;
+        }
+        $grants = self::vip_grants_for_user($user_id);
+        if (!in_array($preset_id, $grants, true)) {
+            $grants[] = $preset_id;
+            update_user_meta($user_id, self::META_VIP_GRANTS, $grants);
+        }
+        if ($set_active) {
+            update_user_meta($user_id, self::META_PRESET_ID, $preset_id);
+        }
+        return true;
+    }
+
+    /**
+     * @param int $user_id
+     * @param string $preset_id
+     * @return bool
+     */
+    public static function revoke_vip_avatar($user_id, $preset_id) {
+        $user_id = absint($user_id);
+        $preset_id = PAXdesign_Customer_Avatar_Vip_Presets::sanitize_id($preset_id);
+        if ($user_id <= 0 || $preset_id === '') {
+            return false;
+        }
+        $grants = array_values(array_filter(
+            self::vip_grants_for_user($user_id),
+            static function ($id) use ($preset_id) {
+                return $id !== $preset_id;
+            }
+        ));
+        update_user_meta($user_id, self::META_VIP_GRANTS, $grants);
+        $active = get_user_meta($user_id, self::META_PRESET_ID, true);
+        if (is_string($active) && $active === $preset_id) {
+            update_user_meta($user_id, self::META_PRESET_ID, PAXdesign_Customer_Avatar_Presets::random_id());
+        }
+        return true;
+    }
+
+    /**
+     * @param string $preset_id
+     * @return string
+     */
+    public static function sanitize_preset_id($preset_id) {
+        $preset_id = sanitize_key((string) $preset_id);
+        if (PAXdesign_Customer_Avatar_Presets::is_none($preset_id)) {
+            return PAXdesign_Customer_Avatar_Presets::PRESET_NONE;
+        }
+        if (PAXdesign_Customer_Avatar_Vip_Presets::is_vip($preset_id)) {
+            return PAXdesign_Customer_Avatar_Vip_Presets::sanitize_id($preset_id);
+        }
+        return PAXdesign_Customer_Avatar_Presets::sanitize_id($preset_id);
+    }
+
+    /**
+     * @param int $user_id
+     * @param string $preset_id
+     * @return bool
+     */
+    private static function saved_preset_is_valid($user_id, $preset_id) {
+        $preset_id = (string) $preset_id;
+        if (PAXdesign_Customer_Avatar_Presets::exists($preset_id)) {
+            return true;
+        }
+        if (PAXdesign_Customer_Avatar_Vip_Presets::exists($preset_id)) {
+            return self::has_vip_grant($user_id, $preset_id);
+        }
+        return false;
     }
 
     /**

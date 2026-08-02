@@ -318,7 +318,7 @@
 
   function accountAvatarPresetUrl(presetId) {
     if (!presetId || presetId === 'pax-none') return '';
-    var presets = accountAvatarPresets();
+    var presets = accountAvatarPresets().concat(accountVipAvatarPresets());
     for (var i = 0; i < presets.length; i++) {
       if (presets[i].id === presetId) {
         return normalizeAvatarAssetUrl(presets[i].url || '');
@@ -328,7 +328,22 @@
     if (sample && /\/avatars\/pax-\d{2,3}\.gif/i.test(sample)) {
       return normalizeAvatarAssetUrl(sample.replace(/pax-\d{2,3}\.gif/i, presetId + '.gif'));
     }
+    if (/^pax-vip-\d{2}$/.test(presetId)) {
+      var vipSample = accountVipAvatarPresets()[0];
+      if (vipSample && vipSample.url) {
+        return normalizeAvatarAssetUrl(String(vipSample.url).replace(/pax-vip-\d{2}\.svg/i, presetId + '.svg'));
+      }
+    }
     return '';
+  }
+
+  function accountVipAvatarPresets() {
+    if (!Array.isArray(C.vipAvatarPresets)) return [];
+    return C.vipAvatarPresets.map(function (preset) {
+      if (!preset) return preset;
+      preset.url = normalizeAvatarAssetUrl(preset.url || '');
+      return preset;
+    });
   }
 
   function refreshAccountAvatarPresets() {
@@ -336,6 +351,13 @@
       if (data && data._ok !== false && Array.isArray(data.presets) && data.presets.length) {
         C.avatarPresets = data.presets.map(function (preset) {
           if (!preset || preset.type === 'none' || preset.id === 'pax-none') return preset;
+          preset.url = normalizeAvatarAssetUrl(preset.url || '');
+          return preset;
+        });
+      }
+      if (data && data._ok !== false && Array.isArray(data.vip_presets)) {
+        C.vipAvatarPresets = data.vip_presets.map(function (preset) {
+          if (!preset) return preset;
           preset.url = normalizeAvatarAssetUrl(preset.url || '');
           return preset;
         });
@@ -485,7 +507,30 @@
         '<img src="' + escHtml(normalizeAvatarAssetUrl(preset.url || '')) + '" alt="" width="48" height="48" loading="lazy" decoding="async" />' +
       '</button>';
     });
-    html += '</div></div>';
+    html += '</div>';
+
+    var vipPresets = accountVipAvatarPresets();
+    if (vipPresets.length) {
+      html += '<div class="pdx-account-avatar-picker__subtitle">' + escHtml(t('exclusive_vip_avatars', 'Exclusive VIP avatars')) + '</div>' +
+        '<div class="pdx-account-avatar-picker__grid pdx-account-avatar-picker__grid--vip" role="listbox" aria-label="' + escHtml(t('vip_avatars', 'VIP avatars')) + '">';
+      vipPresets.forEach(function (preset) {
+        var locked = !!preset.locked;
+        var selected = !hasUpload && !locked && preset.id === currentPreset;
+        var lockLabel = t('vip_avatar_locked', 'Exclusive avatar — assigned by administrator only');
+        html += '<button type="button" class="pdx-account-avatar-picker__item pdx-account-avatar-picker__item--vip' + (locked ? ' pdx-account-avatar-picker__item--locked' : '') + (selected ? ' is-selected' : '') + '" role="option"' +
+          ' data-avatar-preset="' + escHtml(preset.id) + '"' +
+          (locked ? ' data-avatar-locked="1" disabled aria-disabled="true"' : '') +
+          ' aria-label="' + escHtml(locked ? lockLabel : (preset.label || preset.id)) + '"' +
+          ' aria-selected="' + (selected ? 'true' : 'false') + '"' +
+          ' title="' + escHtml(locked ? lockLabel : (preset.label || preset.id)) + '">' +
+          '<img src="' + escHtml(preset.url || '') + '" alt="" width="48" height="48" loading="lazy" decoding="async" />' +
+          (locked ? '<span class="pdx-account-avatar-picker__lock" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V11a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v3H9V6a3 3 0 0 1 3-3z"/></svg></span>' : '') +
+        '</button>';
+      });
+      html += '</div>';
+    }
+
+    html += '</div>';
     return html;
   }
 
@@ -2510,6 +2555,7 @@
     if (removeMobileBtn) removeMobileBtn.addEventListener('click', removeHandler);
     container.querySelectorAll('[data-avatar-preset]').forEach(function (btn) {
       btn.addEventListener('click', function () {
+        if (btn.getAttribute('data-avatar-locked') === '1' || btn.disabled) return;
         var presetId = btn.getAttribute('data-avatar-preset');
         if (!presetId || btn.classList.contains('is-selected')) return;
         btn.disabled = true;

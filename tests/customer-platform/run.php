@@ -177,5 +177,20 @@ cx_assert_true(count($avatar_gifs) === 100, 'Expected 100 avatar GIF assets');
 
 $pax_auth_js = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/js/pax-auth.js');
 cx_assert_true(strpos($pax_auth_js, 'pax-\\d{2,3}') !== false, 'Account JS must support 3-digit avatar preset ids');
+cx_assert_true(strpos($pax_auth_js, 'pdx-account-avatar-picker__item--locked') !== false, 'Account JS must render locked VIP avatars');
+
+$vip_presets = file_get_contents($customer_dir . '/class-paxdesign-customer-avatar-vip-presets.php');
+cx_assert_true(strpos($vip_presets, 'const COUNT = 10') !== false, 'VIP avatar presets must define 10 exclusive avatars');
+
+$vip_avatar = file_get_contents($customer_dir . '/class-paxdesign-customer-avatar.php');
+cx_assert_true(strpos($vip_avatar, 'grant_vip_avatar') !== false, 'Customer avatar must support VIP grant');
+cx_assert_true(strpos($vip_avatar, 'META_VIP_GRANTS') !== false, 'Customer avatar must store VIP grants');
+
+$vip_dir = dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/images/avatars-vip';
+$vip_svgs = glob($vip_dir . '/pax-vip-*.svg') ?: array();
+cx_assert_true(count($vip_svgs) === 10, 'Expected 10 VIP SVG assets');
+
+$pdx_customers = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-toolbar/includes/class-pdx-customers.php');
+cx_assert_true(strpos($pdx_customers, 'grant_vip_avatar') !== false, 'Admin customers must grant VIP avatars');
 
 echo "OK: customer platform static verification passed (" . count($files) . " modules)\n";
