@@ -148,6 +148,9 @@ return array(
 			'label' => 'Email address',
 			'placeholder' => 'name@example.com',
 		),
+		'account_email_verified' => array(
+			'note' => 'Verified account email — used automatically for this report.',
+		),
 		'phone' => array(
 			'label' => 'Phone number',
 			'placeholder' => '660 1234567',
@@ -303,6 +306,9 @@ return array(
 			'none'     => '—',
 			'yes'      => 'Yes',
 			'no'       => 'No',
+		),
+		'account_email' => array(
+			'verified_note' => 'Verified account email',
 		),
 	),
 );

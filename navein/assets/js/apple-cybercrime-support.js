@@ -66,6 +66,8 @@
   var countryListEl = document.getElementById('pax-ccs-country-list');
   var countryPickerEl = document.getElementById('pax-ccs-country-picker');
   var identityDocEl = document.getElementById('pax-ccs-identity-doc');
+  var emailInputEl = document.getElementById('pax-ccs-email');
+  var emailFieldWrap = document.getElementById('pax-ccs-email-field-wrap');
   var countries = Array.isArray(config.countries) ? config.countries.slice() : [];
   var countriesByCode = {};
   var selectedCountryCode = '';
@@ -362,6 +364,69 @@
       return true;
     }
     return false;
+  }
+
+  function accountEmailAddress() {
+    if (config.accountEmail) {
+      return String(config.accountEmail);
+    }
+    if (window.PAX_AUTH_CONFIG && window.PAX_AUTH_CONFIG.userEmail) {
+      return String(window.PAX_AUTH_CONFIG.userEmail);
+    }
+    return '';
+  }
+
+  function isAccountEmailLocked() {
+    return isLoggedIn() && (config.emailLocked === true || !!accountEmailAddress());
+  }
+
+  function applyAccountEmailField() {
+    if (!emailInputEl || !isAccountEmailLocked()) {
+      return;
+    }
+    var email = accountEmailAddress();
+    if (!email) {
+      return;
+    }
+    emailInputEl.value = email;
+    emailInputEl.readOnly = true;
+    emailInputEl.setAttribute('aria-readonly', 'true');
+    emailInputEl.setAttribute('data-account-email-locked', '1');
+    if (emailFieldWrap) {
+      emailFieldWrap.classList.add('pax-ccs-portal__field--account-email-locked');
+    }
+  }
+
+  function initAccountEmailField() {
+    applyAccountEmailField();
+    if (!emailInputEl) {
+      return;
+    }
+    emailInputEl.addEventListener('input', function () {
+      if (isAccountEmailLocked()) {
+        applyAccountEmailField();
+      }
+    });
+    emailInputEl.addEventListener('paste', function (e) {
+      if (isAccountEmailLocked()) {
+        e.preventDefault();
+        applyAccountEmailField();
+      }
+    });
+    emailInputEl.addEventListener('drop', function (e) {
+      if (isAccountEmailLocked()) {
+        e.preventDefault();
+        applyAccountEmailField();
+      }
+    });
+  }
+
+  function accountEmailReviewValue(rawEmail) {
+    if (!isAccountEmailLocked()) {
+      return rawEmail;
+    }
+    var verified = i18nText('accountEmail.verifiedNote', 'Verified account email');
+    return rawEmail + ' (' + verified + ')';
   }
 
   function loginUrl() {
@@ -1133,6 +1198,7 @@
       activeReport = null;
       clearReportRefParam();
     }
+    applyAccountEmailField();
     setPhase('form');
     showStep(1);
     var firstField = form.querySelector('#pax-ccs-full-name');
@@ -1291,7 +1357,7 @@
     syncPhoneField();
     var rows = [
       { label: document.querySelector('label[for="pax-ccs-full-name"]'), value: fieldValue('full_name') },
-      { label: document.querySelector('label[for="pax-ccs-email"]'), value: fieldValue('email') },
+      { label: document.querySelector('label[for="pax-ccs-email"]'), value: accountEmailReviewValue(fieldValue('email')) },
       { label: document.querySelector('label[for="pax-ccs-phone-local"]'), value: fieldValue('phone') },
       { label: document.querySelector('label[for="pax-ccs-country-search"]'), value: countryDisplayValue() },
       { label: document.querySelector('label[for="pax-ccs-identity-doc"]'), value: fileSummary(identityDocEl) },
@@ -1611,6 +1677,17 @@
     saved = localStorage.getItem('pax-ccs-lang') || '';
   } catch (e) {}
   setLang(saved === 'de' || saved === 'en' ? saved : 'ar');
+  initAccountEmailField();
+  window.addEventListener('pdx-session-updated', function () {
+    if (window.PAX_AUTH_CONFIG) {
+      config.isLoggedIn = !!window.PAX_AUTH_CONFIG.isLoggedIn;
+      if (window.PAX_AUTH_CONFIG.userEmail) {
+        config.accountEmail = window.PAX_AUTH_CONFIG.userEmail;
+        config.emailLocked = !!window.PAX_AUTH_CONFIG.isLoggedIn;
+      }
+    }
+    applyAccountEmailField();
+  });
   bootstrapActiveReport().then(function (shown) {
     if (!shown) {
       setPhase('welcome');

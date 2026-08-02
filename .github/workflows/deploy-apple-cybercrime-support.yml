@@ -10,6 +10,7 @@ on:
       - 'cursor/cybercrime-ticket-workflow-db83'
       - 'cursor/cybercrime-admin-reply-hotfix-3a65'
       - 'cursor/cybercrime-disclaimer-mobile-3a65'
+      - 'cursor/account-dashboard-mobile-l10n-3a65'
     paths:
       - '.github/triggers/deploy-apple-cybercrime-support'
       - '.github/workflows/deploy-apple-cybercrime-support.yml'
@@ -243,15 +244,17 @@ jobs:
           grep -Eq 'id="navein-home-critical-css"' /tmp/home-page.html
           grep -Eq "iconfont-css|fonts/iconfont\.css" /tmp/home-page.html
           ! grep -Eq "paxdesign-booking-styles-css[^\"']*media='print' onload" /tmp/home-page.html
-          grep -Eq "Version: 1\.4\.40" /tmp/style.css
-          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.40|apple-cybercrime-support\.js\?ver=1\.4\.40" /tmp/ccs-page.html
+          grep -Eq "Version: 1\.4\.41" /tmp/style.css
+          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.41|apple-cybercrime-support\.js\?ver=1\.4\.41" /tmp/ccs-page.html
           grep -Eq "Official online service from our specialist team|Offizieller Online-Dienst unseres|خدمة إلكترونية رسمية من الفريق" /tmp/ccs-page.html
           grep -Eq "navein-cybercrime-mobile-layout-footer-fix" /tmp/ccs-page.html
           ! grep -Eq "PAXDesign is an official online service from the PAXDesign team|PAXDesign ist ein offizieller Online-Dienst des spezialisierten PAXDesign-Teams|PAXDesign خدمة إلكترونية رسمية تابعة لفريق PAXDesign" /tmp/ccs-page.html
           grep -Eq "navein-cybercrime-mobile-layout-fix" /tmp/ccs-page.html
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-country-search|pax-ccs-phone-code" /tmp/ccs-page.html
           grep -Eq "full-bleed Apple-style|--ccs-gutter|pax-ccs-portal__coverage-track" /tmp/apple-ccs.css
-          grep -Eq "initCountryPicker|validateAllSteps|pax-ccs-country-search" /tmp/apple-ccs.js
+          grep -Eq "applyAccountEmailField|data-account-email-locked|accountEmailAddress" /tmp/apple-ccs.js
+          grep -Eq "pax-ccs-portal__field--account-email-locked|pax-ccs-portal__account-email-verified" /tmp/apple-ccs.css
+          grep -Eq "data-account-email-locked|pax-ccs-portal__account-email-verified" /tmp/ccs-page.html
           grep -Eq "PAXdesignWidgetLoader" /tmp/widget-loader.js
           grep -Eq 'name="identity_document" required|pax-ccs-portal__required' /tmp/ccs-page.html
           grep -Eq "Sitewide isolated Sign In|background: #000 !important" /tmp/pdx-auth.css

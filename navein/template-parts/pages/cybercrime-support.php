@@ -23,6 +23,13 @@ foreach ( $ccs_countries as $ccs_country_row ) {
 	}
 }
 
+$ccs_logged_in     = is_user_logged_in();
+$ccs_account_email = '';
+if ( $ccs_logged_in ) {
+	$ccs_current_user = wp_get_current_user();
+	$ccs_account_email = sanitize_email( $ccs_current_user->user_email );
+}
+
 if ( ! function_exists( 'pax_ccs_text' ) ) {
 	function pax_ccs_text( $node, $lang ) {
 		if ( is_array( $node ) && isset( $node[ $lang ] ) ) {
@@ -285,9 +292,21 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 							<label for="pax-ccs-full-name"><?php pax_ccs_bilingual( $copy['fields']['full_name']['label'] ); ?></label>
 							<input type="text" id="pax-ccs-full-name" name="full_name" required autocomplete="name" placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'ar' ) ); ?>" data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'ar' ) ); ?>" data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'de' ) ); ?>" data-placeholder-en="<?php echo esc_attr( pax_ccs_text( $copy['fields']['full_name']['placeholder'], 'en' ) ); ?>">
 						</div>
-						<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
+						<div class="pax-ccs-portal__field pax-ccs-portal__field--full<?php echo $ccs_logged_in && is_email( $ccs_account_email ) ? ' pax-ccs-portal__field--account-email-locked' : ''; ?>" id="pax-ccs-email-field-wrap">
 							<label for="pax-ccs-email"><?php pax_ccs_bilingual( $copy['fields']['email']['label'] ); ?></label>
-							<input type="email" id="pax-ccs-email" name="email" required autocomplete="email" inputmode="email">
+							<?php if ( $ccs_logged_in && is_email( $ccs_account_email ) ) : ?>
+								<p class="pax-ccs-portal__account-email-verified" id="pax-ccs-email-verified-note">
+									<span class="pax-ccs-portal__account-email-verified-icon" aria-hidden="true">✓</span>
+									<span class="pax-ccs-portal__account-email-verified-text"><?php pax_ccs_bilingual( $copy['fields']['account_email_verified']['note'] ); ?></span>
+								</p>
+							<?php endif; ?>
+							<input type="email" id="pax-ccs-email" name="email" required autocomplete="email" inputmode="email"
+								value="<?php echo esc_attr( $ccs_account_email ); ?>"
+								<?php echo ( $ccs_logged_in && is_email( $ccs_account_email ) ) ? 'readonly aria-readonly="true" data-account-email-locked="1"' : ''; ?>
+								placeholder="<?php echo esc_attr( pax_ccs_text( $copy['fields']['email']['placeholder'], 'ar' ) ); ?>"
+								data-placeholder-ar="<?php echo esc_attr( pax_ccs_text( $copy['fields']['email']['placeholder'], 'ar' ) ); ?>"
+								data-placeholder-de="<?php echo esc_attr( pax_ccs_text( $copy['fields']['email']['placeholder'], 'de' ) ); ?>"
+								data-placeholder-en="<?php echo esc_attr( pax_ccs_text( $copy['fields']['email']['placeholder'], 'en' ) ); ?>">
 						</div>
 						<div class="pax-ccs-portal__field pax-ccs-portal__field--full">
 							<label for="pax-ccs-phone-local"><?php pax_ccs_bilingual( $copy['fields']['phone']['label'] ); ?></label>

@@ -644,6 +644,46 @@ html body.page-cybercrime-support .pax-ccs-portal-wrap {
   box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
 }
 
+.pax-ccs-portal__account-email-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0, 113, 227, 0.08);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #0071e3;
+}
+
+.pax-ccs-portal__account-email-verified-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #0071e3;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.pax-ccs-portal__field--account-email-locked input[type="email"][readonly] {
+  background: rgba(0, 113, 227, 0.04);
+  border-color: rgba(0, 113, 227, 0.22);
+  color: var(--ccs-ink);
+  cursor: default;
+  box-shadow: none;
+}
+
+.pax-ccs-portal__field--account-email-locked input[type="email"][readonly]:focus {
+  border-color: rgba(0, 113, 227, 0.22);
+  box-shadow: none;
+}
+
 .pax-ccs-portal__field textarea {
   resize: vertical;
   min-height: 140px;

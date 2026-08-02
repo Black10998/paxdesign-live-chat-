@@ -112,16 +112,27 @@ class PAXdesign_Cybercrime_Intake {
             ? add_query_arg('return_to', rawurlencode($resume_url), PAXdesign_Auth_Page::page_url())
             : wp_login_url($resume_url);
 
+        $user_id = get_current_user_id();
+        $account_email = '';
+        if ( $user_id > 0 ) {
+            $account_user = get_user_by( 'id', $user_id );
+            if ( $account_user instanceof WP_User ) {
+                $account_email = sanitize_email( $account_user->user_email );
+            }
+        }
+
         return array(
-            'ajaxUrl'       => admin_url('admin-ajax.php'),
-            'nonce'         => wp_create_nonce(self::NONCE_ACTION),
+            'ajaxUrl'       => admin_url( 'admin-ajax.php' ),
+            'nonce'         => wp_create_nonce( self::NONCE_ACTION ),
             'maxFiles'      => self::MAX_FILES,
-            'maxFileMb'     => (int) floor(self::MAX_FILE_BYTES / 1048576),
+            'maxFileMb'     => (int) floor( self::MAX_FILE_BYTES / 1048576 ),
             'categories'    => self::$categories,
             'urgencyLevels' => self::$urgency_levels,
             'requireLogin'  => true,
             'isLoggedIn'    => is_user_logged_in(),
-            'loginUrl'      => esc_url($login_url),
+            'accountEmail'  => is_email( $account_email ) ? $account_email : '',
+            'emailLocked'   => is_user_logged_in() && is_email( $account_email ),
+            'loginUrl'      => esc_url( $login_url ),
             'resumeParam'   => 'pdx_ccs_start',
             'activeReport'  => self::safe_active_report_for_current_user(),
         );
@@ -178,7 +189,7 @@ class PAXdesign_Cybercrime_Intake {
             }
         }
 
-        $parsed = self::parse_submission($_POST);
+        $parsed = self::parse_submission( $_POST, $user_id );
         if (is_wp_error($parsed)) {
             wp_send_json_error(array('message' => $parsed->get_error_message()), 400);
         }
@@ -270,11 +281,28 @@ class PAXdesign_Cybercrime_Intake {
 
     /**
      * @param array<string, mixed> $post
+     * @param int                  $user_id Authenticated customer user ID when available.
      * @return array<string, mixed>|WP_Error
      */
-    private static function parse_submission($post) {
-        $full_name = sanitize_text_field($post['full_name'] ?? '');
-        $email     = sanitize_email($post['email'] ?? '');
+    private static function parse_submission( $post, $user_id = 0 ) {
+        $full_name = sanitize_text_field( $post['full_name'] ?? '' );
+        $email     = sanitize_email( $post['email'] ?? '' );
+        $user_id   = absint( $user_id );
+        if ( $user_id <= 0 && is_user_logged_in() ) {
+            $user_id = get_current_user_id();
+        }
+        if ( $user_id > 0 ) {
+            $user = get_user_by( 'id', $user_id );
+            if ( ! $user instanceof WP_User ) {
+                return new WP_Error( 'invalid_user', __( 'Invalid account.', 'paxdesign-booking' ) );
+            }
+            $email = sanitize_email( $user->user_email );
+            if ( ! is_email( $email ) ) {
+                return new WP_Error( 'invalid_account_email', __( 'Your account does not have a valid email address.', 'paxdesign-booking' ) );
+            }
+        } elseif ( ! is_email( $email ) ) {
+            return new WP_Error( 'invalid_email', __( 'Please enter a valid email address.', 'paxdesign-booking' ) );
+        }
         $phone     = sanitize_text_field($post['phone'] ?? '');
         $phone_code = sanitize_text_field($post['phone_country_code'] ?? '');
         $phone_local = sanitize_text_field($post['phone_local'] ?? '');
@@ -288,11 +316,8 @@ class PAXdesign_Cybercrime_Intake {
         $financial_loss = isset($post['financial_loss']) ? sanitize_text_field($post['financial_loss']) : '';
         $financial_currency = sanitize_text_field($post['financial_currency'] ?? 'EUR');
 
-        if ($full_name === '' || strlen($full_name) < 2) {
-            return new WP_Error('invalid_name', __('Please enter your full legal name.', 'paxdesign-booking'));
-        }
-        if (!is_email($email)) {
-            return new WP_Error('invalid_email', __('Please enter a valid email address.', 'paxdesign-booking'));
+        if ( $full_name === '' || strlen( $full_name ) < 2 ) {
+            return new WP_Error( 'invalid_name', __( 'Please enter your full legal name.', 'paxdesign-booking' ) );
         }
         if ($phone === '') {
             $local_digits = preg_replace('/[^\d]/', '', $phone_local);

@@ -219,6 +219,11 @@ if ( ! function_exists( 'pax_ccs_portal_i18n' ) ) {
 			$review[ $key ] = $pick( $labels );
 		}
 
+		$account_email = array();
+		foreach ( (array) ( $copy['portal_js']['account_email'] ?? array() ) as $key => $labels ) {
+			$account_email[ $key ] = $pick( $labels );
+		}
+
 		$history = array();
 		foreach ( (array) ( $copy['ticket_history'] ?? array() ) as $key => $labels ) {
 			$history[ $key ] = $pick( $labels );
@@ -236,6 +241,7 @@ if ( ! function_exists( 'pax_ccs_portal_i18n' ) ) {
 			'urgency'         => $urgency,
 			'errors'          => $errors,
 			'review'          => $review,
+			'accountEmail'    => $account_email,
 			'ticketHistory'   => $history,
 			'activeReport'    => $pick( array(
 				'closed_title' => $copy['active_report']['closed_title'] ?? array(),

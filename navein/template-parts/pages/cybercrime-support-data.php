@@ -402,6 +402,12 @@ return array(
 			'label' => array( 'ar' => 'البريد الإلكتروني', 'de' => 'E-Mail-Adresse' ),
 			'placeholder' => array( 'ar' => 'name@example.com', 'de' => 'name@beispiel.com' ),
 		),
+		'account_email_verified' => array(
+			'note' => array(
+				'ar' => 'البريد الإلكتروني الموثّق لحسابك — يُستخدم تلقائياً لهذا البلاغ.',
+				'de' => 'Verifizierte Konto-E-Mail — wird automatisch für diese Meldung verwendet.',
+			),
+		),
 		'phone' => array(
 			'label' => array( 'ar' => 'رقم الهاتف', 'de' => 'Telefonnummer' ),
 			'placeholder' => array( 'ar' => '660 1234567', 'de' => '660 1234567' ),
@@ -690,6 +696,12 @@ return array(
 			'none'     => array( 'ar' => '—', 'de' => '—' ),
 			'yes'      => array( 'ar' => 'نعم', 'de' => 'Ja' ),
 			'no'       => array( 'ar' => 'لا', 'de' => 'Nein' ),
+		),
+		'account_email' => array(
+			'verified_note' => array(
+				'ar' => 'بريد الحساب الموثّق',
+				'de' => 'Verifizierte Konto-E-Mail',
+			),
 		),
 	),
 );
