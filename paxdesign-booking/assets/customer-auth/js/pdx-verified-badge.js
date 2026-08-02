@@ -46,7 +46,7 @@
     opts = opts || {};
     opts.context = opts.context || 'account';
     return '<span class="pdx-name-with-badge">' +
-      escHtml(name || 'Account') +
+      '<span class="pdx-account-name-text">' + escHtml(name || 'Account') + '</span>' +
       render(verified, opts) +
     '</span>';
   }

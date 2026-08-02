@@ -218,7 +218,11 @@ $vip_presets_php = file_get_contents($customer_dir . '/class-paxdesign-customer-
 cx_assert_true(strpos($vip_presets_php, 'catalog_preview') !== false, 'VIP presets must expose admin preview catalog');
 
 cx_assert_true(strpos($pax_auth_js, 'renderAdminCustomerPreviewPanel') !== false, 'Account JS must render admin customer preview');
-cx_assert_true(strpos($pax_auth_js, 'adminCustomerEmailLabel') !== false, 'Account JS must resolve customer email for admin views');
+cx_assert_true(strpos($pax_auth_js, 'pdx-account-name-line') !== false, 'Account JS must use dedicated name line wrapper');
+
+$verified_css = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/css/pdx-verified-badge.css');
+cx_assert_true(strpos($verified_css, 'pdx-account-name-line') !== false, 'Verified badge CSS must style account name line separately');
+cx_assert_true(strpos($verified_css, 'pdx-account-name-text') !== false, 'Verified badge CSS must style account name text');
 cx_assert_true(strpos($pax_auth_js, 'pdx-admin-page-next') !== false, 'Account JS must paginate admin customer list');
 cx_assert_true(strpos($pax_auth_js, 'renderAdminCustomerAvatarPickers') !== false, 'Account JS must render admin avatar pickers');
 cx_assert_true(strpos($pax_auth_js, 'isMasterAdminUser()') !== false && strpos($pax_auth_js, 'preset.locked && !isMasterAdminUser()') !== false, 'Master admin must preview unlocked VIP avatars');

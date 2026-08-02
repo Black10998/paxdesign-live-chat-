@@ -51,7 +51,7 @@
 
 .pdx-account-identity {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   min-width: 0;
 }
@@ -60,9 +60,18 @@
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.02em;
-  line-height: 1.3;
-  margin-bottom: 4px;
+  line-height: 1.35;
+  margin: 0;
   color: #1d1d1f;
+}
+
+.pdx-account-sidebar-name .pdx-account-name-text {
+  font-size: inherit;
+  font-weight: inherit;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+  max-height: calc(1.35em * 2);
 }
 
 .pdx-account-sidebar-email {
@@ -72,7 +81,7 @@
 }
 
 .pdx-account-sidebar-status {
-  margin-top: 6px;
+  margin-top: 0;
   font-size: 12px;
   color: #6e6e73;
 }
@@ -890,7 +899,7 @@ body.pdx-account-signout-confirm-open {
 .pdx-account-profile-identity,
 .pdx-public-user-identity {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
   min-width: 0;
 }
@@ -902,8 +911,23 @@ body.pdx-account-signout-confirm-open {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  flex: 1 1 auto;
   min-width: 0;
-  gap: 2px;
+  gap: 4px;
+}
+
+.pdx-account-profile-name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  color: #1d1d1f;
+  width: 100%;
+}
+
+.pdx-account-profile-name .pdx-account-name-text {
+  font-size: inherit;
+  font-weight: inherit;
 }
 
 .pdx-public-user-identity {
@@ -1280,7 +1304,7 @@ body.pdx-account-signout-confirm-open {
 .pdx-account-level-badge {
   display: inline-flex;
   align-items: center;
-  margin-top: 6px;
+  margin: 0;
   padding: 4px 10px;
   border-radius: 999px;
   font-size: 11px;
@@ -1290,19 +1314,29 @@ body.pdx-account-signout-confirm-open {
   background: linear-gradient(135deg, #fff7d6 0%, #f6d365 45%, #d4af37 100%);
   border: 1px solid rgba(212, 175, 55, 0.55);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  position: relative;
+  z-index: 0;
+  flex-shrink: 0;
+  align-self: flex-start;
 }
 
 .pdx-account-level-badge--compact {
-  margin-top: 4px;
+  margin: 0;
   font-size: 10px;
   padding: 3px 8px;
 }
 
 .pdx-account-profile-level-desc {
-  margin-top: 6px;
+  margin-top: 0;
   font-size: 12px;
   line-height: 1.45;
   color: #6e6e73;
+  width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .pdx-account-admin-search {
@@ -1585,7 +1619,34 @@ body.pdx-account-signout-confirm-open {
 .pdx-account-identity:not(:has(.pdx-account-avatar)) .pdx-account-sidebar-name-row,
 .pdx-auth-menu-identity:not(:has(.pdx-account-avatar)) .pdx-auth-menu-identity-text,
 .pdx-public-user-identity:not(:has(.pdx-account-avatar)) .pdx-public-user-name {
-  margin-left: 0;
+  margin-inline-start: 0;
+}
+
+.pdx-account-app[dir="rtl"] .pdx-account-identity,
+.pdx-account-app[dir="rtl"] .pdx-account-profile-identity,
+.pdx-account-app[dir="rtl"] .pdx-auth-menu-identity {
+  flex-direction: row-reverse;
+}
+
+.pdx-account-app[dir="rtl"] .pdx-account-sidebar-name-row,
+.pdx-account-app[dir="rtl"] .pdx-account-profile-identity-text,
+.pdx-account-app[dir="rtl"] .pdx-auth-menu-identity-text {
+  align-items: flex-end;
+  text-align: end;
+}
+
+.pdx-account-app[dir="rtl"] .pdx-account-name-line .pdx-name-with-badge,
+.pdx-account-app[dir="rtl"] .pdx-account-name-line .pdx-name-with-badge--account {
+  flex-direction: row-reverse;
+}
+
+.pdx-account-app[dir="rtl"] .pdx-account-level-badge,
+.pdx-account-app[dir="rtl"] .pdx-account-profile-level-desc,
+.pdx-account-app[dir="rtl"] .pdx-account-sidebar-email,
+.pdx-account-app[dir="rtl"] .pdx-account-sidebar-status,
+.pdx-account-app[dir="rtl"] .pdx-account-profile-email {
+  align-self: flex-end;
+  text-align: end;
 }
 
 @media (max-width: 480px) {
@@ -1593,22 +1654,6 @@ body.pdx-account-signout-confirm-open {
     grid-template-columns: repeat(auto-fill, minmax(48px, 1fr));
     gap: 6px;
   }
-}
-
-.pdx-account-sidebar-name {
-  font-size: 15px;
-  line-height: 1.3;
-  font-weight: 600;
-}
-
-.pdx-account-sidebar-email {
-  font-size: 12px;
-  line-height: 1.35;
-}
-
-.pdx-account-sidebar-status {
-  font-size: 11px;
-  margin-top: 2px;
 }
 
 .pdx-profile-identity {

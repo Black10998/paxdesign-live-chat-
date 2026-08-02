@@ -23,6 +23,7 @@ on:
       - 'cursor/vip-levels-master-admin-3a65'
       - 'cursor/master-admin-customer-editor-3a65'
       - 'cursor/customer-email-sync-3a65'
+      - 'cursor/customer-name-display-fix-3a65'
     paths:
       - 'paxdesign-booking/**'
       - 'paxdesign-toolbar/**'

@@ -33,13 +33,38 @@
 .pdx-name-with-badge--account,
 .pdx-account-status-row,
 .pdx-account-profile-head,
-.pdx-account-sidebar-name,
-.pdx-account-profile-name,
 .pdx-admin-name-with-badge {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   max-width: 100%;
+  min-width: 0;
+}
+
+.pdx-account-name-line {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.pdx-account-name-line .pdx-name-with-badge,
+.pdx-account-name-line .pdx-name-with-badge--account {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-width: 0;
+  vertical-align: top;
+}
+
+.pdx-account-name-text {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .pdx-account-status-row {
@@ -49,6 +74,7 @@
 
 #pdx-account-app .pdx-verified-badge {
   position: relative;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
@@ -57,10 +83,14 @@
   top: 0;
   cursor: help;
   outline: none;
+  isolation: isolate;
+  overflow: visible;
+  z-index: 1;
 }
 
 .pdx-verified-badge--inline {
-  margin-left: 1px;
+  margin-inline-start: 2px;
+  flex-shrink: 0;
 }
 
 .pdx-vb {

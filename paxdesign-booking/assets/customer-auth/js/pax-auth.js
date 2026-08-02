@@ -291,7 +291,7 @@
     opts = opts || {};
     opts.context = opts.context || 'account';
     return '<span class="pdx-name-with-badge pdx-name-with-badge--account">' +
-      escHtml(name || t('account', 'Account')) +
+      '<span class="pdx-account-name-text">' + escHtml(name || t('account', 'Account')) + '</span>' +
       verifiedBadgeHtml(verified, opts) +
     '</span>';
   }
@@ -2359,7 +2359,7 @@
       '<div class="pdx-account-identity">' +
         renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--sidebar' }) +
         '<div class="pdx-account-sidebar-name-row">' +
-          '<div class="pdx-account-sidebar-name">' + accountDashboardNameWithBadge(user.display_name || t('account', 'Account'), user.verified, { size: 14, inline: true, context: 'account' }) + '</div>' +
+          '<div class="pdx-account-name-line pdx-account-sidebar-name">' + accountDashboardNameWithBadge(user.display_name || t('account', 'Account'), user.verified, { size: 14, inline: true, context: 'account' }) + '</div>' +
           renderCustomerLevelBadge(null, { compact: true }) +
           '<div class="pdx-account-sidebar-email">' + escHtml(user.email || '') + '</div>' +
           '<div class="pdx-account-sidebar-status">' + escHtml(accountStatusText(user.verified)) + '</div>' +
@@ -2408,7 +2408,7 @@
       '<div class="pdx-account-profile-identity">' +
         renderAccountAvatarHtml({ url: avatarUrl, sizeClass: 'pdx-account-avatar--profile-compact', profile: profile }) +
         '<div class="pdx-account-profile-identity-text">' +
-          '<div class="pdx-account-profile-name">' + accountDashboardNameWithBadge(profile.display_name || user.display_name || t('account', 'Account'), profile.verified !== undefined ? profile.verified : user.verified, { size: 14, inline: true, context: 'account' }) + '</div>' +
+          '<div class="pdx-account-name-line pdx-account-profile-name">' + accountDashboardNameWithBadge(profile.display_name || user.display_name || t('account', 'Account'), profile.verified !== undefined ? profile.verified : user.verified, { size: 14, inline: true, context: 'account' }) + '</div>' +
           renderCustomerLevelBadge(profile) +
           (accountLevelData(profile).level_description ? '<div class="pdx-account-profile-level-desc">' + escHtml(accountLevelData(profile).level_description) + '</div>' : '') +
           '<div class="pdx-account-profile-email">' + escHtml(profile.email || user.email || '') + '</div>' +
@@ -2731,9 +2731,7 @@
         '<div class="pdx-account-profile-identity">' +
           renderAdminCustomerAvatarHtml(customer, 'pdx-account-avatar--profile-compact') +
           '<div class="pdx-account-profile-identity-text">' +
-            '<div class="pdx-account-profile-name">' + escHtml(customer.display_name || t('account', 'Account')) +
-              (customer.verified ? ' <span class="pdx-verified-badge-inline" aria-label="' + escHtml(t('verified', 'Verified')) + '"></span>' : '') +
-            '</div>' +
+            '<div class="pdx-account-name-line pdx-account-profile-name">' + accountDashboardNameWithBadge(customer.display_name || t('account', 'Account'), customer.verified, { size: 14, inline: true, context: 'account' }) + '</div>' +
             renderCustomerLevelBadge(customer) +
             (customer.level_description ? '<div class="pdx-account-profile-level-desc">' + escHtml(customer.level_description) + '</div>' : '') +
             '<div class="pdx-account-profile-email">' + renderAdminCustomerEmail(customer) + '</div>' +
