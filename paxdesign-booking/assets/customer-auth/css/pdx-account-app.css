@@ -243,6 +243,53 @@
   padding: 0;
 }
 
+/* Desktop: persistent left sidebar + main content (Hostinger-style panel) */
+@media (min-width: 901px) {
+  body.pdx-account-dashboard-body #pdx-account-app {
+    display: grid !important;
+    grid-template-columns: 260px minmax(0, 1fr);
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .pdx-account-sidebar {
+    position: static !important;
+    top: auto !important;
+    bottom: auto !important;
+    left: auto !important;
+    right: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: none !important;
+    transform: none !important;
+    pointer-events: auto !important;
+    visibility: visible !important;
+    box-shadow: none !important;
+    z-index: auto !important;
+    padding: 16px 12px;
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .pdx-account-app[dir="rtl"] .pdx-account-sidebar {
+    border-right: 0;
+    border-left: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .pdx-account-sidebar-mobile-head {
+    display: none !important;
+  }
+
+  .pdx-account-main {
+    display: block !important;
+    flex: none !important;
+    height: auto !important;
+    min-height: 0;
+    overflow: auto;
+  }
+}
+
 /* Mobile menu chrome — hidden on desktop */
 .pdx-account-mobile-menu,
 .pdx-account-mobile-backdrop,
@@ -304,6 +351,8 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    position: relative;
+    z-index: 30;
   }
 
   body.pdx-account-dashboard-body .pdx-account-header-home {
@@ -334,7 +383,7 @@
   .pdx-account-mobile-backdrop--portal {
     position: fixed;
     inset: 0;
-    z-index: 100001;
+    z-index: 20;
     background: rgba(0, 0, 0, 0.38);
     opacity: 0;
     pointer-events: none;
@@ -355,7 +404,7 @@
     left: 0;
     width: min(320px, 88vw);
     max-width: 88vw;
-    z-index: 100002;
+    z-index: 21;
     padding: max(12px, env(safe-area-inset-top, 0px)) 16px max(20px, env(safe-area-inset-bottom, 0px));
     border-right: 0;
     border-left: 0;

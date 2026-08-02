@@ -98,20 +98,33 @@
     if (closeIcon) closeIcon.hidden = !accountMobileNavOpen;
   }
 
+  function getAccountOverlayRoot() {
+    return document.getElementById('pdx-auth-isolated-shell') || document.body;
+  }
+
+  function isAccountSidebarPortaled() {
+    return !!(accountSidebarEl && accountAppEl && accountSidebarEl.parentNode !== accountAppEl);
+  }
+
   function syncAccountMobileOverlayMount() {
     if (!accountAppEl || !accountSidebarEl || !accountMobileBackdrop) return;
     if (isAccountMobileViewport()) {
       var dir = accountAppEl.getAttribute('dir') || (customerPortalLang() === 'ar' ? 'rtl' : 'ltr');
       var lang = accountAppEl.getAttribute('lang') || customerPortalLang();
+      var overlayRoot = getAccountOverlayRoot();
       accountSidebarEl.setAttribute('dir', dir);
       accountSidebarEl.setAttribute('lang', lang);
       accountSidebarEl.classList.add('pdx-account-sidebar--mobile-overlay');
       accountMobileBackdrop.classList.add('pdx-account-mobile-backdrop--portal');
-      if (accountSidebarEl.parentNode !== document.body) {
-        document.body.appendChild(accountMobileBackdrop);
-        document.body.appendChild(accountSidebarEl);
+      accountMobileBackdrop.hidden = false;
+      if (!isAccountSidebarPortaled()) {
+        overlayRoot.appendChild(accountMobileBackdrop);
+        overlayRoot.appendChild(accountSidebarEl);
+      } else if (accountSidebarEl.parentNode !== overlayRoot) {
+        overlayRoot.appendChild(accountMobileBackdrop);
+        overlayRoot.appendChild(accountSidebarEl);
       }
-    } else if (accountSidebarEl.parentNode === document.body) {
+    } else if (isAccountSidebarPortaled()) {
       accountSidebarEl.classList.remove('pdx-account-sidebar--mobile-overlay');
       accountMobileBackdrop.classList.remove('pdx-account-mobile-backdrop--portal');
       accountAppEl.insertBefore(accountMobileBackdrop, accountMainEl);
