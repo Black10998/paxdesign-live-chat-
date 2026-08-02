@@ -438,6 +438,91 @@
     box-shadow: -8px 0 32px rgba(0, 0, 0, 0.14);
   }
 
+  /* Solid Apple-style panel when portaled outside #pdx-account-app (CSS vars unavailable) */
+  .pdx-account-sidebar--mobile-overlay {
+    background: #ffffff !important;
+    color: #1d1d1f !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+    box-shadow: none;
+  }
+
+  .pdx-account-sidebar--mobile-overlay[dir="rtl"] {
+    border-right: 0;
+    border-left: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  body.pdx-account-mobile-nav-open .pdx-account-sidebar--mobile-overlay {
+    background: #ffffff !important;
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.16);
+  }
+
+  body.pdx-account-mobile-nav-open .pdx-account-sidebar--mobile-overlay[dir="rtl"] {
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.16);
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-mobile-head,
+  .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-user,
+  .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-nav,
+  .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-footer {
+    background: transparent;
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-mobile-title,
+  .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-name,
+  .pdx-account-sidebar--mobile-overlay .pdx-account-nav-btn,
+  .pdx-account-sidebar--mobile-overlay .pdx-account-nav-text {
+    color: #1d1d1f !important;
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-email,
+  .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-status {
+    color: #6e6e73 !important;
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-nav-label {
+    color: #86868b !important;
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-nav-btn.is-active {
+    color: #0071e3 !important;
+    background: rgba(0, 113, 227, 0.12) !important;
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-nav-btn .pdx-cx-icon {
+    color: #6e6e73 !important;
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-nav-btn.is-active .pdx-cx-icon {
+    color: #0071e3 !important;
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-close {
+    background: rgba(0, 0, 0, 0.06);
+    color: #1d1d1f !important;
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-footer {
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    background: #ffffff;
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-website-link {
+    color: #0071e3 !important;
+    background: rgba(0, 113, 227, 0.08) !important;
+    border: 1px solid rgba(0, 113, 227, 0.18);
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-signout {
+    color: #ffffff !important;
+    background: #ff3b30 !important;
+  }
+
+  .pdx-account-sidebar--mobile-overlay .pdx-account-signout .pdx-cx-icon {
+    color: #ffffff !important;
+  }
+
   .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-mobile-head,
   .pdx-account-sidebar--mobile-overlay .pdx-account-sidebar-user,
   .pdx-account-sidebar .pdx-account-sidebar-mobile-head,

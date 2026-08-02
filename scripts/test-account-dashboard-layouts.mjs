@@ -107,6 +107,9 @@ async function measure(label, width, height) {
     const sidebarRect = rect(sidebar);
     const mainRect = rect(main);
     const sidebarParent = sidebar && sidebar.parentElement ? sidebar.parentElement.id : null;
+    const sidebarBg = cs(sidebar)?.backgroundColor || '';
+    const sidebarBgOpaque = sidebarBg === 'rgb(255, 255, 255)' || sidebarBg === '#ffffff';
+    const navLabelColor = cs(sidebar?.querySelector('.pdx-account-nav-label'))?.color || '';
     return {
       appDisplay: cs(app)?.display,
       sidebarDisplay: cs(sidebar)?.display,
@@ -118,6 +121,9 @@ async function measure(label, width, height) {
       mainVisible: !!(mainRect && mainRect.width > 100 && mainRect.height > 100),
       mainLeft: mainRect ? Math.round(mainRect.left) : null,
       navItemCount: navBtns,
+      sidebarBg,
+      sidebarBgOpaque,
+      navLabelColor,
       bodyOpen: document.body.classList.contains('pdx-account-mobile-nav-open'),
       shellContainsSidebar: !!(shell && sidebar && shell.contains(sidebar)),
     };
@@ -138,6 +144,7 @@ if (!desktop.mainVisible || desktop.mainLeft < 200) { console.error('FAIL deskto
 if (!mobile.shellContainsSidebar) { console.error('FAIL mobile: sidebar should mount inside isolated shell'); failed++; }
 if (mobile.navItemCount < 12) { console.error('FAIL mobile: expected 12 nav items, got ' + mobile.navItemCount); failed++; }
 if (!mobile.sidebarVisible) { console.error('FAIL mobile: sidebar overlay should be visible when menu opens'); failed++; }
+if (!mobile.sidebarBgOpaque) { console.error('FAIL mobile: sidebar overlay background must be solid opaque white'); failed++; }
 if (!mobile.mainVisible) { console.error('FAIL mobile: main content should remain visible'); failed++; }
 
 await browser.close();
