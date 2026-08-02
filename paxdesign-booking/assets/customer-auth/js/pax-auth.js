@@ -2237,6 +2237,9 @@
     var removePhotoBtn = hasUpload
       ? '<button type="button" class="pdx-account-avatar__remove" id="pdx-profile-avatar-remove">' + escHtml(t('remove_photo', 'Remove photo')) + '</button>'
       : '';
+    var removePhotoMobileBtn = hasUpload
+      ? '<button type="button" class="pdx-account-avatar__remove pdx-account-avatar__remove--mobile" id="pdx-profile-avatar-remove-mobile">' + escHtml(t('remove_photo', 'Remove photo')) + '</button>'
+      : '';
     return '<div class="pdx-account-card">' +
       '<div class="pdx-account-card-title">' + escHtml(t('personal_information', 'Personal Information')) + '</div>' +
       '<div class="pdx-account-profile-identity">' +
@@ -2246,12 +2249,18 @@
           '<div class="pdx-account-profile-email">' + escHtml(profile.email || user.email || '') + '</div>' +
         '</div>' +
       '</div>' +
-      '<div class="pdx-account-profile-avatar-block">' +
+      '<div class="pdx-account-profile-avatar-block pdx-account-profile-avatar-block--desktop">' +
         '<label class="pdx-account-avatar__change">' +
           escHtml(t('change_photo', 'Change photo')) +
-          '<input type="file" id="pdx-profile-avatar-input" accept="image/jpeg,image/png,image/webp" hidden />' +
+          '<input type="file" id="pdx-profile-avatar-input" class="pdx-account-avatar__file-input" accept="image/jpeg,image/png,image/webp" hidden />' +
         '</label>' +
         removePhotoBtn +
+      '</div>' +
+      '<div class="pdx-account-profile-avatar-block pdx-account-profile-avatar-block--mobile">' +
+        '<div class="pdx-account-avatar-actions">' +
+          '<button type="button" class="pdx-account-avatar__change-btn" id="pdx-profile-avatar-change-mobile">' + escHtml(t('change_photo', 'Change photo')) + '</button>' +
+          removePhotoMobileBtn +
+        '</div>' +
       '</div>' +
       renderAccountAvatarPickerHtml(profile) +
       '<form id="pdx-customer-profile-form">' +
@@ -2343,6 +2352,59 @@
     return html + '</div>';
   }
 
+  function triggerProfileAvatarFilePicker(input) {
+    if (!input) return;
+    try {
+      input.click();
+    } catch (err) {
+      /* iOS Safari: ensure hidden inputs remain activatable from touch handlers. */
+      input.removeAttribute('hidden');
+      input.style.position = 'fixed';
+      input.style.left = '-9999px';
+      input.style.width = '1px';
+      input.style.height = '1px';
+      input.style.opacity = '0';
+      input.click();
+      input.setAttribute('hidden', 'hidden');
+      input.removeAttribute('style');
+    }
+  }
+
+  function uploadProfileAvatarFile(file, avatarInput) {
+    if (!file) return;
+    var fd = new FormData();
+    fd.append('avatar', file);
+    customerApiFormData('/customer/profile/avatar', fd).then(function (data) {
+      if (data && data._ok !== false && data.profile) {
+        applyAccountProfileUpdate(data.profile);
+        notify(t('avatar_updated', 'Profile picture updated.'), 'info');
+      } else {
+        notify((data && data.message) || t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+      }
+      if (avatarInput) avatarInput.value = '';
+    }).catch(function () {
+      notify(t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+      if (avatarInput) avatarInput.value = '';
+    });
+  }
+
+  function removeProfileAvatarPhoto(removeBtns) {
+    removeBtns = removeBtns || [];
+    removeBtns.forEach(function (btn) { if (btn) btn.disabled = true; });
+    customerApiFetch('DELETE', '/customer/profile/avatar').then(function (data) {
+      if (data && data._ok !== false && data.profile) {
+        applyAccountProfileUpdate(data.profile);
+        notify(t('photo_removed', 'Photo removed. Your PAXDesign avatar is restored.'), 'info');
+      } else {
+        notify((data && data.message) || t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+        removeBtns.forEach(function (btn) { if (btn) btn.disabled = false; });
+      }
+    }).catch(function () {
+      notify(t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+      removeBtns.forEach(function (btn) { if (btn) btn.disabled = false; });
+    });
+  }
+
   function bindAccountPersonalForm(container) {
     var form = container.querySelector('#pdx-customer-profile-form');
     if (form) {
@@ -2368,40 +2430,23 @@
       avatarInput.addEventListener('change', function () {
         var file = avatarInput.files && avatarInput.files[0];
         if (!file) return;
-        var fd = new FormData();
-        fd.append('avatar', file);
-        customerApiFormData('/customer/profile/avatar', fd).then(function (data) {
-          if (data && data._ok !== false && data.profile) {
-            applyAccountProfileUpdate(data.profile);
-            notify(t('avatar_updated', 'Profile picture updated.'), 'info');
-          } else {
-            notify((data && data.message) || t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
-          }
-          avatarInput.value = '';
-        }).catch(function () {
-          notify(t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
-          avatarInput.value = '';
-        });
+        uploadProfileAvatarFile(file, avatarInput);
+      });
+    }
+    var changeMobileBtn = container.querySelector('#pdx-profile-avatar-change-mobile');
+    if (changeMobileBtn && avatarInput) {
+      changeMobileBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        triggerProfileAvatarFilePicker(avatarInput);
       });
     }
     var removeBtn = container.querySelector('#pdx-profile-avatar-remove');
-    if (removeBtn) {
-      removeBtn.addEventListener('click', function () {
-        removeBtn.disabled = true;
-        customerApiFetch('DELETE', '/customer/profile/avatar').then(function (data) {
-          if (data && data._ok !== false && data.profile) {
-            applyAccountProfileUpdate(data.profile);
-            notify(t('photo_removed', 'Photo removed. Your PAXDesign avatar is restored.'), 'info');
-          } else {
-            notify((data && data.message) || t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
-            removeBtn.disabled = false;
-          }
-        }).catch(function () {
-          notify(t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
-          removeBtn.disabled = false;
-        });
-      });
-    }
+    var removeMobileBtn = container.querySelector('#pdx-profile-avatar-remove-mobile');
+    var removeHandler = function () {
+      removeProfileAvatarPhoto([removeBtn, removeMobileBtn]);
+    };
+    if (removeBtn) removeBtn.addEventListener('click', removeHandler);
+    if (removeMobileBtn) removeMobileBtn.addEventListener('click', removeHandler);
     container.querySelectorAll('[data-avatar-preset]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var presetId = btn.getAttribute('data-avatar-preset');

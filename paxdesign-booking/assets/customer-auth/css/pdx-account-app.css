@@ -962,6 +962,106 @@ body.pdx-account-signout-confirm-open {
   border-bottom: 0;
 }
 
+.pdx-account-profile-avatar-block--mobile {
+  display: none;
+}
+
+.pdx-account-avatar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+.pdx-account-avatar__change-btn,
+.pdx-account-avatar__remove--mobile {
+  flex: 1 1 calc(50% - 5px);
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s ease, transform 0.12s ease;
+}
+
+.pdx-account-avatar__change-btn {
+  background: rgba(0, 113, 227, 0.1);
+  color: #0071e3;
+}
+
+.pdx-account-avatar__change-btn:active {
+  background: rgba(0, 113, 227, 0.18);
+  transform: scale(0.98);
+}
+
+.pdx-account-avatar__remove--mobile {
+  margin-left: 0;
+  background: rgba(255, 59, 48, 0.08);
+  color: #ff3b30;
+}
+
+.pdx-account-avatar__remove--mobile:active {
+  background: rgba(255, 59, 48, 0.14);
+  transform: scale(0.98);
+}
+
+.pdx-account-avatar__remove--mobile:disabled {
+  opacity: 0.55;
+  cursor: default;
+  transform: none;
+}
+
+.pdx-account-avatar__file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 900px) {
+  .pdx-account-profile-avatar-block--desktop {
+    display: none !important;
+  }
+
+  .pdx-account-profile-avatar-block--mobile {
+    display: block;
+    margin-bottom: 20px;
+  }
+
+  .pdx-account-avatar-actions:not(:has(.pdx-account-avatar__remove--mobile)) .pdx-account-avatar__change-btn {
+    flex: 1 1 100%;
+  }
+
+  .pdx-account-avatar-picker__item {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .pdx-account-avatar-picker__item:active {
+    transform: scale(0.96);
+  }
+}
+
+@media (min-width: 901px) {
+  .pdx-account-profile-avatar-block--mobile {
+    display: none !important;
+  }
+}
+
 .pdx-account-avatar__change {
   display: inline-flex;
   align-items: center;
