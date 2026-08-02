@@ -1277,6 +1277,76 @@ body.pdx-account-signout-confirm-open {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
 }
 
+.pdx-account-level-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #5c4a1a;
+  background: linear-gradient(135deg, #fff7d6 0%, #f6d365 45%, #d4af37 100%);
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+}
+
+.pdx-account-level-badge--compact {
+  margin-top: 4px;
+  font-size: 10px;
+  padding: 3px 8px;
+}
+
+.pdx-account-profile-level-desc {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #6e6e73;
+}
+
+.pdx-account-admin-search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.pdx-account-admin-table-wrap {
+  overflow-x: auto;
+}
+
+.pdx-account-admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.pdx-account-admin-table th,
+.pdx-account-admin-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.pdx-account-admin-vip-grid {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+
+.pdx-account-admin-vip-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.02);
+}
+
 .pdx-account-profile-identity:not(:has(.pdx-account-avatar)) .pdx-account-profile-identity-text,
 .pdx-account-identity:not(:has(.pdx-account-avatar)) .pdx-account-sidebar-name-row,
 .pdx-auth-menu-identity:not(:has(.pdx-account-avatar)) .pdx-auth-menu-identity-text,

@@ -20,6 +20,7 @@ on:
       - 'cursor/gif-avatar-desktop-fix-3a65'
       - 'cursor/100-avatars-auto-assign-3a65'
       - 'cursor/vip-svg-avatars-3a65'
+      - 'cursor/vip-levels-master-admin-3a65'
     paths:
       - 'paxdesign-booking/**'
       - 'paxdesign-toolbar/**'

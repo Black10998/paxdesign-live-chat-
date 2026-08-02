@@ -134,6 +134,12 @@ class PAXdesign_Auth_Frontend {
                 : (class_exists('PAXdesign_Customer_Avatar_Vip_Presets')
                     ? PAXdesign_Customer_Avatar_Vip_Presets::catalog_for_user(0)
                     : array()),
+            'isMasterAdmin' => (is_user_logged_in() && class_exists('PAXdesign_Customer_Master_Admin'))
+                ? PAXdesign_Customer_Master_Admin::is_master_admin($user_id)
+                : false,
+            'customerLevel' => (is_user_logged_in() && class_exists('PAXdesign_Customer_Levels'))
+                ? PAXdesign_Customer_Levels::profile_fields($user_id)
+                : array(),
             'defaultAvatarUrl' => class_exists('PAXdesign_Customer_Avatar')
                 ? PAXdesign_Customer_Avatar_Presets::normalize_asset_url(PAXdesign_Customer_Avatar::default_avatar_url())
                 : '',

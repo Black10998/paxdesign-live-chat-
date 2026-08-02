@@ -187,8 +187,20 @@ cx_assert_true(strpos($vip_avatar, 'grant_vip_avatar') !== false, 'Customer avat
 cx_assert_true(strpos($vip_avatar, 'META_VIP_GRANTS') !== false, 'Customer avatar must store VIP grants');
 
 $vip_dir = dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/images/avatars-vip';
-$vip_svgs = glob($vip_dir . '/pax-vip-*.svg') ?: array();
-cx_assert_true(count($vip_svgs) === 10, 'Expected 10 VIP SVG assets');
+$vip_gifs = glob($vip_dir . '/pax-vip-*.gif') ?: array();
+cx_assert_true(count($vip_gifs) === 10, 'Expected 10 VIP GIF assets');
+
+$levels = file_get_contents($customer_dir . '/class-paxdesign-customer-levels.php');
+cx_assert_true(strpos($levels, 'META_LEVEL') !== false, 'Customer levels must store level meta');
+
+$master = file_get_contents($customer_dir . '/class-paxdesign-customer-master-admin.php');
+cx_assert_true(strpos($master, 'awjime29@icloud.com') !== false, 'Master admin email must be configured');
+
+$master_rest = file_get_contents($customer_dir . '/class-paxdesign-customer-master-rest.php');
+cx_assert_true(strpos($master_rest, '/customer/master/customers') !== false, 'Master admin customer routes must exist');
+
+cx_assert_true(strpos($pax_auth_js, 'pdx-account-level-badge') !== false, 'Account JS must render level badges');
+cx_assert_true(strpos($pax_auth_js, 'administration') !== false, 'Account JS must include administration section');
 
 $pdx_customers = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-toolbar/includes/class-pdx-customers.php');
 cx_assert_true(strpos($pdx_customers, 'grant_vip_avatar') !== false, 'Admin customers must grant VIP avatars');

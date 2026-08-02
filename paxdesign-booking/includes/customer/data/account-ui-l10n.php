@@ -825,4 +825,24 @@ return array(
 		'de' => 'Exklusiver Avatar — nur durch Administrator zuweisbar',
 		'ar' => 'صورة حصرية — يعينها المسؤول فقط',
 	),
+	'exclusive_level_avatars' => array(
+		'en' => 'PAXDesign Level avatars',
+		'de' => 'PAXDesign Level-Avatare',
+		'ar' => 'صور مستويات PAXDesign',
+	),
+	'nav_group_administration' => array(
+		'en' => 'Administration',
+		'de' => 'Administration',
+		'ar' => 'الإدارة',
+	),
+	'nav_administration' => array(
+		'en' => 'Customer Management',
+		'de' => 'Kundenverwaltung',
+		'ar' => 'إدارة العملاء',
+	),
+	'lead_administration' => array(
+		'en' => 'Manage registered customer profiles, levels, and permissions.',
+		'de' => 'Registrierte Kundenprofile, Level und Berechtigungen verwalten.',
+		'ar' => 'إدارة ملفات العملاء والمستويات والصلاحيات.',
+	),
 );

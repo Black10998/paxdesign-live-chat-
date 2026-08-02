@@ -187,14 +187,14 @@ class PAXdesign_Customer_Avatar {
             self::ensure_preset_assigned($user_id);
         }
         $preset_id = self::preset_id_for_user($user_id);
-        return array(
+        return array_merge(array(
             'avatar_url'          => PAXdesign_Customer_Avatar_Presets::normalize_asset_url(self::url_for_user($user_id)),
             'avatar_fallback_url' => PAXdesign_Customer_Avatar_Presets::normalize_asset_url(self::fallback_url_for_user($user_id)),
             'avatar_preset'       => $preset_id,
             'avatar_has_upload'   => self::has_upload($user_id),
             'avatar_has_image'    => self::has_visible_avatar($user_id),
             'vip_avatar_grants'   => self::vip_grants_for_user($user_id),
-        );
+        ), class_exists('PAXdesign_Customer_Levels') ? PAXdesign_Customer_Levels::profile_fields($user_id) : array());
     }
 
     /**

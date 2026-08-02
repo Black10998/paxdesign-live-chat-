@@ -12,42 +12,42 @@ if ( ! defined( 'ABSPATH' ) ) {
 return array(
 	array(
 		'id'    => 'pax-vip-01',
-		'label' => 'VIP — Quantum Nexus',
+		'label' => 'PAXDesign Level 01 — Gold',
 	),
 	array(
 		'id'    => 'pax-vip-02',
-		'label' => 'VIP — Cyber Crown',
+		'label' => 'PAXDesign Level 02 — Platinum',
 	),
 	array(
 		'id'    => 'pax-vip-03',
-		'label' => 'VIP — Neural Sovereign',
+		'label' => 'PAXDesign Level 03 — Diamond',
 	),
 	array(
 		'id'    => 'pax-vip-04',
-		'label' => 'VIP — Zero Trust Elite',
+		'label' => 'PAXDesign Level 04 — Titanium',
 	),
 	array(
 		'id'    => 'pax-vip-05',
-		'label' => 'VIP — AI Architect',
+		'label' => 'PAXDesign Level 05 — Sapphire',
 	),
 	array(
 		'id'    => 'pax-vip-06',
-		'label' => 'VIP — Cipher Phantom',
+		'label' => 'PAXDesign Level 06 — Emerald',
 	),
 	array(
 		'id'    => 'pax-vip-07',
-		'label' => 'VIP — Digital Apex',
+		'label' => 'PAXDesign Level 07 — Ruby',
 	),
 	array(
 		'id'    => 'pax-vip-08',
-		'label' => 'VIP — Sentinel Prime',
+		'label' => 'PAXDesign Level 08 — Obsidian',
 	),
 	array(
 		'id'    => 'pax-vip-09',
-		'label' => 'VIP — Code Oracle',
+		'label' => 'PAXDesign Level 09 — Celestial',
 	),
 	array(
 		'id'    => 'pax-vip-10',
-		'label' => 'VIP — PAXDesign Elite',
+		'label' => 'PAXDesign Level 10 — Sovereign',
 	),
 );

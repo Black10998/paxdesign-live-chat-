@@ -14,23 +14,23 @@ const css = [
   'pdx-portal-apple.css',
 ].map((f) => readFileSync(join(cssDir, f), 'utf8')).join('\n');
 
-const vipFiles = readdirSync(vipDir).filter((f) => f.endsWith('.svg')).sort();
+const vipFiles = readdirSync(vipDir).filter((f) => f.endsWith('.gif')).sort();
 if (vipFiles.length !== 10) {
-  console.error('Expected 10 VIP SVG avatars, found', vipFiles.length);
+  console.error('Expected 10 VIP GIF avatars, found', vipFiles.length);
   process.exit(1);
 }
 
 for (const file of vipFiles) {
-  const text = readFileSync(join(vipDir, file), 'utf8');
-  if (!text.includes('<animate') && !text.includes('<animateTransform')) {
-    console.error(`${file} is not animated`);
+  const buf = readFileSync(join(vipDir, file));
+  if (buf[0] !== 0x47 || buf[1] !== 0x49) {
+    console.error(`${file} is not a valid GIF`);
     process.exit(1);
   }
 }
 
-const sampleUri = `data:image/svg+xml;base64,${Buffer.from(readFileSync(join(vipDir, 'pax-vip-01.svg'))).toString('base64')}`;
+const sampleUri = `data:image/gif;base64,${readFileSync(join(vipDir, 'pax-vip-01.gif')).toString('base64')}`;
 const vipPresets = vipFiles.map((file, index) => ({
-  id: file.replace('.svg', ''),
+  id: file.replace('.gif', ''),
   label: `VIP avatar ${index + 1}`,
   url: sampleUri,
   type: 'vip',

@@ -28,10 +28,13 @@ class PAXdesign_Customer_Avatar_Vip_Presets {
             }
             $items[] = array(
                 'id'     => $id,
-                'label'  => isset($def['label']) ? (string) $def['label'] : $id,
+                'label'  => class_exists('PAXdesign_Customer_Levels')
+                    ? PAXdesign_Customer_Levels::label_for_level((int) preg_replace('/^pax-vip-/', '', $id))
+                    : (isset($def['label']) ? (string) $def['label'] : $id),
                 'url'    => self::url_for_id($id),
                 'type'   => 'vip',
                 'locked' => !in_array($id, $grants, true),
+                'level'  => (int) preg_replace('/^pax-vip-/', '', $id),
             );
         }
         return $items;
@@ -100,7 +103,7 @@ class PAXdesign_Customer_Avatar_Vip_Presets {
         if ($id === '' || !self::file_exists($id)) {
             return '';
         }
-        $url = PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/customer-auth/images/avatars-vip/' . $id . '.svg';
+        $url = PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/customer-auth/images/avatars-vip/' . $id . '.gif';
         return esc_url_raw(add_query_arg('v', PAXDESIGN_BOOKING_VERSION, $url));
     }
 
@@ -112,6 +115,10 @@ class PAXdesign_Customer_Avatar_Vip_Presets {
         $id = self::sanitize_id($id);
         if ($id === '') {
             return false;
+        }
+        $path = PAXDESIGN_BOOKING_PLUGIN_DIR . 'assets/customer-auth/images/avatars-vip/' . $id . '.gif';
+        if (is_readable($path)) {
+            return true;
         }
         $path = PAXDESIGN_BOOKING_PLUGIN_DIR . 'assets/customer-auth/images/avatars-vip/' . $id . '.svg';
         return is_readable($path);
