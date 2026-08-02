@@ -695,3 +695,101 @@ body.pdx-account-rtl .pdx-account-card-title {
   letter-spacing: 0;
   text-transform: none;
 }
+
+/* Sign-out confirmation (account dashboard) */
+.pdx-account-signout-confirm {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.pdx-account-signout-confirm[hidden] {
+  display: none !important;
+}
+
+.pdx-account-signout-confirm__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.pdx-account-signout-confirm__sheet {
+  position: relative;
+  z-index: 1;
+  width: min(360px, 100%);
+  padding: 22px 20px 18px;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  color: #1d1d1f;
+}
+
+.pdx-account-signout-confirm__title {
+  margin: 0 0 8px;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #1d1d1f;
+}
+
+.pdx-account-signout-confirm__message {
+  margin: 0 0 18px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #6e6e73;
+}
+
+.pdx-account-signout-confirm__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.pdx-account-signout-confirm__actions .pdx-portal-btn {
+  flex: 1 1 0;
+  min-height: 44px;
+}
+
+body.pdx-account-signout-confirm-open {
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .pdx-account-main .pdx-portal-section--services,
+  .pdx-account-portal-host .pdx-portal-section--services {
+    background: #ffffff !important;
+    color: #1d1d1f !important;
+  }
+
+  .pdx-account-portal-host .pdx-portal-section h3,
+  .pdx-account-portal-host .pdx-portal-section h4,
+  .pdx-account-portal-host .pdx-portal-row strong {
+    color: #1d1d1f !important;
+  }
+
+  .pdx-account-portal-host .pdx-portal-lead,
+  .pdx-account-portal-host .pdx-portal-row span,
+  .pdx-account-portal-host .pdx-portal-empty {
+    color: #6e6e73 !important;
+  }
+
+  .pdx-account-signout-confirm {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .pdx-account-signout-confirm__sheet {
+    width: 100%;
+    max-width: none;
+    border-radius: 16px 16px 0 0;
+    padding: 22px 20px max(22px, env(safe-area-inset-bottom, 0px));
+  }
+
+  .pdx-account-signout-confirm__actions {
+    flex-direction: column-reverse;
+  }
+}

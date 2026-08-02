@@ -160,6 +160,21 @@ return array(
 		'de' => 'Abmelden',
 		'ar' => 'تسجيل الخروج',
 	),
+	'sign_out_confirm_title' => array(
+		'en' => 'Sign Out?',
+		'de' => 'Abmelden?',
+		'ar' => 'تسجيل الخروج؟',
+	),
+	'sign_out_confirm_message' => array(
+		'en' => 'Are you sure you want to sign out? You will be signed out of your account.',
+		'de' => 'Möchten Sie sich wirklich abmelden? Sie werden von Ihrem Konto abgemeldet.',
+		'ar' => 'هل أنت متأكد أنك تريد تسجيل الخروج؟ سيتم تسجيل خروجك من حسابك.',
+	),
+	'cancel'             => array(
+		'en' => 'Cancel',
+		'de' => 'Abbrechen',
+		'ar' => 'إلغاء',
+	),
 	'account'            => array(
 		'en' => 'Account',
 		'de' => 'Konto',

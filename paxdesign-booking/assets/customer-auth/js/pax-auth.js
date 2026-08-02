@@ -33,6 +33,7 @@
   var accountMobileNavOpen = false;
   var accountMobileMenuBtn = null;
   var accountMobileBackdrop = null;
+  var accountSignOutConfirmEl = null;
   var sessionSyncInFlight = false;
   var sessionSyncTimer = null;
   var SESSION_SYNC_INTERVAL_MS = 45000;
@@ -351,6 +352,7 @@
       closeCustomerPortal();
       closeProfileOverlay();
       closeOverlay();
+      finalizeAccountLogoutUI();
     }
     try {
       var detail = Object.assign({}, user || {}, {
@@ -849,6 +851,86 @@
     document.body.classList.remove('pdx-no-scroll');
   }
 
+  function finalizeAccountLogoutUI() {
+    closeAccountMobileNav();
+    closeAccountSignOutConfirm();
+    document.body.classList.remove('pdx-account-dashboard-body', 'pdx-account-mobile-nav-open', 'pdx-account-rtl');
+    if (accountMobileBackdrop) {
+      accountMobileBackdrop.hidden = true;
+    }
+    if (accountSidebarEl) {
+      accountSidebarEl.setAttribute('aria-hidden', 'true');
+      accountSidebarEl.style.display = 'none';
+    }
+    if (accountAppEl) {
+      accountAppEl.hidden = true;
+    }
+    try {
+      window.history.replaceState({}, '', window.location.pathname + window.location.search);
+    } catch (e) {}
+    var guestPanel = document.getElementById('pdx-auth-page-guest');
+    if (guestPanel) {
+      guestPanel.hidden = false;
+      guestPanel.scrollIntoView({ block: 'start' });
+    }
+    syncAuthPageSegment();
+  }
+
+  function ensureAccountSignOutConfirm() {
+    if (accountSignOutConfirmEl) return accountSignOutConfirmEl;
+    accountSignOutConfirmEl = document.createElement('div');
+    accountSignOutConfirmEl.id = 'pdx-account-signout-confirm';
+    accountSignOutConfirmEl.className = 'pdx-account-signout-confirm';
+    accountSignOutConfirmEl.hidden = true;
+    accountSignOutConfirmEl.innerHTML =
+      '<div class="pdx-account-signout-confirm__backdrop" data-signout-dismiss="1"></div>' +
+      '<div class="pdx-account-signout-confirm__sheet" role="dialog" aria-modal="true" aria-labelledby="pdx-account-signout-confirm-title">' +
+        '<h2 class="pdx-account-signout-confirm__title" id="pdx-account-signout-confirm-title"></h2>' +
+        '<p class="pdx-account-signout-confirm__message"></p>' +
+        '<div class="pdx-account-signout-confirm__actions">' +
+          '<button type="button" class="pdx-portal-btn pdx-portal-btn--secondary pdx-account-signout-confirm__cancel"></button>' +
+          '<button type="button" class="pdx-portal-btn pdx-portal-btn--destructive pdx-account-signout-confirm__confirm"></button>' +
+        '</div>' +
+      '</div>';
+    var root = getAccountOverlayRoot();
+    root.appendChild(accountSignOutConfirmEl);
+    accountSignOutConfirmEl.querySelector('.pdx-account-signout-confirm__title').textContent = t('sign_out_confirm_title', 'Sign Out?');
+    accountSignOutConfirmEl.querySelector('.pdx-account-signout-confirm__message').textContent = t('sign_out_confirm_message', 'Are you sure you want to sign out? You will be signed out of your account.');
+    accountSignOutConfirmEl.querySelector('.pdx-account-signout-confirm__cancel').textContent = t('cancel', 'Cancel');
+    accountSignOutConfirmEl.querySelector('.pdx-account-signout-confirm__confirm').textContent = t('sign_out', 'Sign Out');
+    accountSignOutConfirmEl.querySelector('.pdx-account-signout-confirm__cancel').addEventListener('click', closeAccountSignOutConfirm);
+    accountSignOutConfirmEl.querySelector('[data-signout-dismiss]').addEventListener('click', closeAccountSignOutConfirm);
+    accountSignOutConfirmEl.querySelector('.pdx-account-signout-confirm__confirm').addEventListener('click', function () {
+      closeAccountSignOutConfirm();
+      doLogout();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && accountSignOutConfirmEl && !accountSignOutConfirmEl.hidden) {
+        closeAccountSignOutConfirm();
+      }
+    });
+    return accountSignOutConfirmEl;
+  }
+
+  function openAccountSignOutConfirm() {
+    var dialog = ensureAccountSignOutConfirm();
+    dialog.hidden = false;
+    document.body.classList.add('pdx-account-signout-confirm-open');
+    var confirmBtn = dialog.querySelector('.pdx-account-signout-confirm__confirm');
+    if (confirmBtn) confirmBtn.focus();
+  }
+
+  function closeAccountSignOutConfirm() {
+    if (!accountSignOutConfirmEl) return;
+    accountSignOutConfirmEl.hidden = true;
+    document.body.classList.remove('pdx-account-signout-confirm-open');
+  }
+
+  function promptAccountSignOut() {
+    closeAccountMobileNav();
+    openAccountSignOutConfirm();
+  }
+
   function doLogout() {
     apiFetch('POST', '/auth/logout').then(function (data) {
       if (data && data.nonce) {
@@ -865,6 +947,7 @@
         C.userEmail = '';
         updateAuthBar();
         updateAuthPagePanels();
+        finalizeAccountLogoutUI();
         broadcastSessionChange();
         try {
           window.dispatchEvent(new CustomEvent('pdx-session-updated', { detail: { reason: 'logout' } }));
@@ -1825,6 +1908,7 @@
 
   function renderAccountSidebar() {
     if (!accountSidebarEl) return;
+    accountSidebarEl.style.removeProperty('display');
     var html = '<div class="pdx-account-sidebar-mobile-head">' +
       '<span class="pdx-account-sidebar-mobile-title">' + escHtml(t('account_navigation', 'Account navigation')) + '</span>' +
       '<button type="button" class="pdx-account-sidebar-close" aria-label="' + escHtml(t('close', 'Close')) + '">' +
@@ -1869,7 +1953,7 @@
       });
     });
     var signOut = accountSidebarEl.querySelector('.pdx-account-signout');
-    if (signOut) signOut.addEventListener('click', doLogout);
+    if (signOut) signOut.addEventListener('click', promptAccountSignOut);
   }
 
   function renderAccountPersonalSection(profile) {
@@ -2630,7 +2714,7 @@
   }
 
   var portalOverlay = null;
-  var portalState = { tab: 'overview', dashboard: null, detail: null };
+  var portalState = { tab: 'overview', dashboard: null, detail: null, servicesCatalog: null };
 
   var GUEST_SESSION_KEY = 'paxdesign-chat-session';
   var GUEST_DEVICE_TOKEN_KEY = 'paxdesign-chat-device-token';
@@ -2910,12 +2994,12 @@
       return;
     }
     if (kind === 'service') {
-      body.innerHTML = renderPortalNav() + '<div class="pdx-portal-content">' + cxLoading('Loading service…') + '</div>';
-      customerApiFetch('GET', '/customer/services/' + encodeURIComponent(id)).then(function (service) {
+      body.innerHTML = renderPortalNav() + '<div class="pdx-portal-content">' + cxLoading(t('loading_services', 'Loading services…')) + '</div>';
+      resolveServiceBySlug(id).then(function (service) {
         if (!service || !service._ok) {
           portalState.detail = null;
           renderCustomerPortalDashboard(container, portalState.dashboard);
-          notify('Service could not be loaded.', 'warn');
+          notify(t('services_load_error', 'Services could not be loaded.'), 'warn');
           return;
         }
         portalState.detail.data = service;
@@ -3263,32 +3347,127 @@
     return html + '</article>';
   }
 
+  function activePortalHost() {
+    var container = activePortalContainer();
+    if (!container) return null;
+    return container.querySelector('.pdx-account-portal-host') || container;
+  }
+
+  function findCatalogServiceCard(slug) {
+    var catalog = portalState.servicesCatalog;
+    if (!catalog || !Array.isArray(catalog.cards)) return null;
+    var key = String(slug || '').toLowerCase();
+    for (var i = 0; i < catalog.cards.length; i++) {
+      var card = catalog.cards[i];
+      if (!card) continue;
+      if (String(card.order_slug || '').toLowerCase() === key || String(card.id || '').toLowerCase() === key) {
+        return card;
+      }
+    }
+    return null;
+  }
+
+  function catalogCardAsService(card) {
+    if (!card) return null;
+    return {
+      _ok: true,
+      slug: card.order_slug || card.id,
+      name: card.title || card.name || '',
+      description: card.description || '',
+      features: card.features || [],
+      category: card.category || '',
+      details: card.details || [],
+    };
+  }
+
+  function resolveServiceBySlug(slug) {
+    return customerApiFetch('GET', '/customer/services/' + encodeURIComponent(slug)).then(function (service) {
+      if (service && service._ok && service.slug) return service;
+      var card = findCatalogServiceCard(slug);
+      if (card) return catalogCardAsService(card);
+      return service;
+    }).catch(function () {
+      var card = findCatalogServiceCard(slug);
+      return card ? catalogCardAsService(card) : null;
+    });
+  }
+
+  function bindPortalServiceRows(container, scopeEl) {
+    if (!scopeEl) return;
+    scopeEl.querySelectorAll('[data-portal-open="service"]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        openPortalDetail(container, 'service', el.dataset.portalSlug || el.dataset.portalId || '');
+      });
+    });
+  }
+
+  function renderPortalServicesCatalogHtml(catalog, services) {
+    services = services || [];
+    var html = '';
+    if (catalog && catalog.title) {
+      html += '<p class="pdx-portal-lead">' + escHtml(catalog.subtitle || catalog.statement || '') + '</p>';
+    }
+    if (services.length) {
+      html += '<div class="pdx-portal-services-group"><h4>' + escHtml(t('services_catalog', 'Services catalog')) + '</h4>';
+      services.forEach(function (s) {
+        html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="service" data-portal-slug="' + escHtml(s.slug) + '">' +
+          '<strong>' + escHtml(s.name) + '</strong><span>' + escHtml(s.category || '') + '</span></button>';
+      });
+      html += '</div>';
+    }
+    if (catalog && Array.isArray(catalog.cards) && catalog.cards.length) {
+      html += '<div class="pdx-portal-services-group"><h4>' + escHtml(catalog.title || t('services_catalog', 'Services catalog')) + '</h4>';
+      catalog.cards.forEach(function (card) {
+        var slug = card.order_slug || card.id || '';
+        var badge = '';
+        if (card.badge && catalog.badges && catalog.badges[card.badge]) {
+          badge = catalog.badges[card.badge];
+        } else if (card.badge) {
+          badge = card.badge;
+        }
+        html += '<button type="button" class="pdx-portal-row pdx-portal-row--link' + (card.highlighted ? ' pdx-portal-row--featured' : '') + '" data-portal-open="service" data-portal-slug="' + escHtml(slug) + '">' +
+          '<strong>' + escHtml(card.title || '') + '</strong>' +
+          '<span>' + escHtml(badge || (card.description || '').slice(0, 72)) + '</span></button>';
+      });
+      html += '</div>';
+    }
+    if (!html) {
+      html = '<p class="pdx-portal-empty">' + escHtml(t('no_services', 'No services available yet.')) + '</p>';
+    }
+    return html;
+  }
+
   function renderPortalServicesSection() {
-    return '<section class="pdx-portal-section" id="pdx-portal-services">' + cxLoading(t('loading_services', 'Loading services…')) + '</section>';
+    return '<section class="pdx-portal-section pdx-portal-section--services" id="pdx-portal-services">' +
+      '<h3>' + cxIcon('package', 16) + escHtml(t('services_catalog', 'Services catalog')) + '</h3>' +
+      cxLoading(t('loading_services', 'Loading services…')) +
+    '</section>';
   }
 
   function bindPortalServicesSection(container) {
     var section = container.querySelector('#pdx-portal-services');
     if (!section) return;
-    customerApiFetch('GET', '/customer/services').then(function (data) {
-      if (!data || !data._ok) {
-        section.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('services_load_error', 'Services could not be loaded.')) + '</p>';
+    var lang = customerPortalLang();
+    Promise.all([
+      customerApiFetch('GET', '/customer/services'),
+      customerApiFetch('GET', '/content/services-catalog?lang=' + encodeURIComponent(lang)),
+    ]).then(function (results) {
+      var servicesData = results[0] || {};
+      var catalogData = results[1] || {};
+      portalState.servicesCatalog = (catalogData && catalogData._ok !== false && Array.isArray(catalogData.cards)) ? catalogData : null;
+      var services = (servicesData._ok !== false && Array.isArray(servicesData.services)) ? servicesData.services : [];
+      var catalog = portalState.servicesCatalog;
+      if (!services.length && !catalog) {
+        section.innerHTML = '<h3>' + cxIcon('package', 16) + escHtml(t('services_catalog', 'Services catalog')) + '</h3>' +
+          '<p class="pdx-auth-error">' + escHtml(t('services_load_error', 'Services could not be loaded.')) + '</p>';
         return;
       }
-      var html = '<h3>' + cxIcon('package', 16) + escHtml(t('services_catalog', 'Services catalog')) + '</h3>';
-      (data.services || []).forEach(function (s) {
-        html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="service" data-portal-slug="' + escHtml(s.slug) + '">' +
-          '<strong>' + escHtml(s.name) + '</strong><span>' + escHtml(s.category || '') + '</span></button>';
-      });
-      if (!(data.services || []).length) {
-        html += '<p class="pdx-portal-empty">' + escHtml(t('no_services', 'No services available yet.')) + '</p>';
-      }
-      section.innerHTML = html;
-      section.querySelectorAll('[data-portal-open]').forEach(function (el) {
-        el.addEventListener('click', function () {
-          openPortalDetail(container, 'service', el.dataset.portalSlug);
-        });
-      });
+      section.innerHTML = '<h3>' + cxIcon('package', 16) + escHtml(t('services_catalog', 'Services catalog')) + '</h3>' +
+        renderPortalServicesCatalogHtml(catalog, services);
+      bindPortalServiceRows(container, section);
+    }).catch(function () {
+      section.innerHTML = '<h3>' + cxIcon('package', 16) + escHtml(t('services_catalog', 'Services catalog')) + '</h3>' +
+        '<p class="pdx-auth-error">' + escHtml(t('services_load_error', 'Services could not be loaded.')) + '</p>';
     });
   }
 
@@ -3297,6 +3476,13 @@
     html += '<article class="pdx-portal-detail"><h3>' + escHtml(service.name) + '</h3>';
     if (service.description) {
       html += '<div class="pdx-portal-body-text">' + escHtml(service.description) + '</div>';
+    }
+    if (service.features && service.features.length) {
+      html += '<ul class="pdx-portal-list">';
+      service.features.forEach(function (feature) {
+        html += '<li>' + escHtml(feature) + '</li>';
+      });
+      html += '</ul>';
     }
     html += '<form class="pdx-portal-request-form" id="pdx-portal-request-form">' +
       '<textarea rows="3" placeholder="' + escHtml(t('describe_request', 'Describe your request…')) + '" aria-label="' + escHtml(t('request_message', 'Request message')) + '" required></textarea>' +
@@ -3317,10 +3503,17 @@
           if (res._ok) {
             portalState.tab = 'orders';
             portalState.detail = null;
+            accountState.section = 'orders';
+            accountState.detail = null;
             customerApiFetch('GET', '/customer/dashboard').then(function (dash) {
               portalState.dashboard = dash;
-              var body = portalOverlay && portalOverlay.querySelector('.pdx-customer-portal-body');
-              if (body) renderCustomerPortalDashboard(body, dash);
+              accountState.dashboard = dash;
+              if (isAuthPage()) {
+                renderAccountApp();
+              } else {
+                var host = portalOverlay && portalOverlay.querySelector('.pdx-customer-portal-body');
+                if (host) renderCustomerPortalDashboard(host, dash);
+              }
             });
           }
         });
