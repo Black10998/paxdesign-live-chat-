@@ -243,104 +243,271 @@
   padding: 0;
 }
 
-/* Mobile: persistent two-column layout — menu left, content right */
+/* Mobile menu chrome — hidden on desktop */
+.pdx-account-mobile-menu,
+.pdx-account-mobile-backdrop,
+.pdx-account-sidebar-mobile-head {
+  display: none;
+}
+
+/* Mobile: full-width content + slide-over navigation panel */
 @media (max-width: 900px) {
   .pdx-account-app {
-    grid-template-columns: minmax(118px, 36vw) minmax(0, 1fr);
-    grid-template-rows: minmax(0, 1fr);
+    display: block;
+    position: relative;
     min-height: 0;
     height: 100%;
     max-height: 100%;
     overflow: hidden;
   }
 
+  .pdx-account-mobile-menu,
+  .pdx-account-mobile-backdrop,
+  .pdx-account-sidebar-mobile-head {
+    display: flex;
+  }
+
+  .pdx-account-mobile-menu {
+    position: fixed;
+    top: max(14px, env(safe-area-inset-top, 0px));
+    left: max(16px, env(safe-area-inset-left, 0px));
+    z-index: 100003;
+    width: 44px;
+    height: 44px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.1);
+    align-items: center;
+    justify-content: center;
+    color: #1d1d1f;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+  }
+
+  .pdx-account-mobile-menu--in-header {
+    position: static;
+    top: auto;
+    left: auto;
+    flex-shrink: 0;
+    box-shadow: none;
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  body.pdx-account-dashboard-body .pdx-account-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  body.pdx-account-dashboard-body .pdx-account-header-home {
+    flex: 1 1 auto;
+    justify-content: center;
+    max-width: none;
+  }
+
+  body.pdx-account-rtl.pdx-account-dashboard-body .pdx-account-header-home {
+    justify-content: center;
+  }
+
+  .pdx-account-mobile-menu:active {
+    transform: scale(0.96);
+  }
+
+  .pdx-account-app[dir="rtl"] .pdx-account-mobile-menu {
+    left: auto;
+    right: max(16px, env(safe-area-inset-right, 0px));
+  }
+
+  .pdx-account-mobile-menu-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .pdx-account-mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 100001;
+    background: rgba(0, 0, 0, 0.38);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease;
+  }
+
+  .pdx-account-app.is-mobile-nav-open .pdx-account-mobile-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   .pdx-account-sidebar {
-    border-bottom: 0;
-    padding: 8px 6px;
-    min-height: 0;
-    max-height: none;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(320px, 88vw);
+    max-width: 88vw;
+    z-index: 100002;
+    padding: max(12px, env(safe-area-inset-top, 0px)) 16px max(20px, env(safe-area-inset-bottom, 0px));
+    border-right: 0;
+    border-left: 0;
+    transform: translateX(-105%);
+    transition: transform 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: none;
+    overflow: hidden;
+  }
+
+  .pdx-account-app[dir="rtl"] .pdx-account-sidebar {
+    left: auto;
+    right: 0;
+    transform: translateX(105%);
+  }
+
+  .pdx-account-app.is-mobile-nav-open .pdx-account-sidebar {
+    transform: translateX(0);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.14);
+  }
+
+  .pdx-account-app[dir="rtl"].is-mobile-nav-open .pdx-account-sidebar {
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.14);
+  }
+
+  .pdx-account-sidebar-mobile-head {
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    flex-shrink: 0;
+  }
+
+  .pdx-account-sidebar-mobile-title {
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #1d1d1f;
+  }
+
+  .pdx-account-sidebar-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.05);
+    color: #1d1d1f;
+    cursor: pointer;
   }
 
   .pdx-account-sidebar-user {
-    padding: 4px 4px 8px;
+    padding: 4px 2px 14px;
     margin-bottom: 8px;
   }
 
   .pdx-account-sidebar-name {
-    font-size: 12px;
-    line-height: 1.25;
+    font-size: 16px;
+    line-height: 1.3;
   }
 
   .pdx-account-sidebar-email {
-    font-size: 10px;
-    line-height: 1.2;
+    font-size: 13px;
+    line-height: 1.35;
+    margin-top: 2px;
   }
 
   .pdx-account-sidebar-status {
-    font-size: 10px;
-    margin-top: 4px;
+    font-size: 12px;
+    margin-top: 6px;
   }
 
   .pdx-account-nav-group {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    margin-bottom: 8px;
+    gap: 4px;
+    margin-bottom: 16px;
   }
 
   .pdx-account-nav-label {
-    font-size: 9px;
-    padding: 0 4px 3px;
-    letter-spacing: 0.03em;
+    font-size: 11px;
+    padding: 0 8px 6px;
   }
 
   .pdx-account-nav-btn {
-    font-size: 11px;
-    min-height: 32px;
-    padding: 4px 6px;
-    gap: 5px;
-    border-radius: 8px;
+    font-size: 15px;
+    min-height: 44px;
+    padding: 0 12px;
+    gap: 12px;
+    border-radius: 12px;
   }
 
   .pdx-account-nav-btn .pdx-cx-icon {
     flex-shrink: 0;
-    width: 14px;
-    height: 14px;
+    width: 18px;
+    height: 18px;
   }
 
   .pdx-account-sidebar-footer {
-    padding-top: 6px;
-    gap: 4px;
+    padding-top: 12px;
+    gap: 10px;
   }
 
   .pdx-account-signout,
   .pdx-account-website-link {
-    font-size: 11px;
-    min-height: 32px;
-    padding-inline: 6px;
+    font-size: 15px;
+    min-height: 44px;
+    padding-inline: 12px;
+    border-radius: 12px;
   }
 
   .pdx-account-main {
-    padding: 12px 10px 20px;
+    width: 100%;
+    max-width: 100%;
+    min-height: 0;
+    height: 100%;
+    padding: 20px 20px max(32px, env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pdx-account-page-head {
+    margin-bottom: 20px;
   }
 
   .pdx-account-page-title {
-    font-size: clamp(18px, 4.5vw, 24px);
+    font-size: clamp(26px, 7vw, 32px);
+    line-height: 1.12;
   }
 
   .pdx-account-page-lead {
-    font-size: 12px;
+    font-size: 15px;
+    line-height: 1.5;
+    margin-top: 6px;
+  }
+
+  .pdx-account-card {
+    padding: 20px 18px 18px;
+    border-radius: 16px;
+    margin-bottom: 16px;
+  }
+
+  .pdx-account-field input {
+    min-height: 44px;
+    font-size: 16px;
   }
 }
 
-@media (max-width: 380px) {
-  .pdx-account-app {
-    grid-template-columns: minmax(104px, 34vw) minmax(0, 1fr);
-  }
-
-  .pdx-account-sidebar-email {
-    display: none;
-  }
+body.pdx-account-mobile-nav-open {
+  overflow: hidden;
 }
 
 /* RTL typography tuning */

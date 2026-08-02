@@ -730,4 +730,14 @@ return array(
 		'de' => 'Schließen',
 		'ar' => 'إغلاق',
 	),
+	'menu'               => array(
+		'en' => 'Menu',
+		'de' => 'Menü',
+		'ar' => 'القائمة',
+	),
+	'account_navigation' => array(
+		'en' => 'Account navigation',
+		'de' => 'Kontonavigation',
+		'ar' => 'تنقل الحساب',
+	),
 );

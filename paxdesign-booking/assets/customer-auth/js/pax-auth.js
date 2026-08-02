@@ -30,6 +30,9 @@
     settings: null,
     loaded: false,
   };
+  var accountMobileNavOpen = false;
+  var accountMobileMenuBtn = null;
+  var accountMobileBackdrop = null;
   var sessionSyncInFlight = false;
   var sessionSyncTimer = null;
   var SESSION_SYNC_INTERVAL_MS = 45000;
@@ -76,6 +79,92 @@
       accountAppEl.setAttribute('lang', lang);
     }
     document.body.classList.toggle('pdx-account-rtl', rtl && isAccountDashboard());
+    syncAccountMobileMenuPosition();
+  }
+
+  function isAccountMobileViewport() {
+    return window.matchMedia('(max-width: 900px)').matches;
+  }
+
+  function syncAccountMobileNavState() {
+    if (!accountMobileMenuBtn) return;
+    accountMobileMenuBtn.setAttribute('aria-expanded', accountMobileNavOpen ? 'true' : 'false');
+    accountMobileMenuBtn.setAttribute('aria-label', accountMobileNavOpen
+      ? t('close', 'Close')
+      : t('account_menu', 'Account menu'));
+    var openIcon = accountMobileMenuBtn.querySelector('.pdx-account-mobile-menu-icon--menu');
+    var closeIcon = accountMobileMenuBtn.querySelector('.pdx-account-mobile-menu-icon--close');
+    if (openIcon) openIcon.hidden = accountMobileNavOpen;
+    if (closeIcon) closeIcon.hidden = !accountMobileNavOpen;
+  }
+
+  function syncAccountMobileMenuPosition() {
+    if (!accountMobileMenuBtn) return;
+    var header = document.getElementById('pdx-account-header');
+    var useHeader = isAccountMobileViewport() && header;
+    accountMobileMenuBtn.hidden = !isAccountMobileViewport();
+    if (accountMobileBackdrop) {
+      accountMobileBackdrop.hidden = !isAccountMobileViewport();
+    }
+    if (useHeader && accountMobileMenuBtn.parentNode !== header) {
+      header.insertBefore(accountMobileMenuBtn, header.firstChild);
+      accountMobileMenuBtn.classList.add('pdx-account-mobile-menu--in-header');
+    } else if (!useHeader && accountAppEl && accountMobileMenuBtn.parentNode !== accountAppEl) {
+      accountMobileMenuBtn.classList.remove('pdx-account-mobile-menu--in-header');
+      accountAppEl.insertBefore(accountMobileMenuBtn, accountMobileBackdrop || accountSidebarEl);
+    }
+  }
+
+  function openAccountMobileNav() {
+    if (!accountAppEl || !isAccountMobileViewport()) return;
+    accountMobileNavOpen = true;
+    accountAppEl.classList.add('is-mobile-nav-open');
+    document.body.classList.add('pdx-account-mobile-nav-open');
+    syncAccountMobileNavState();
+  }
+
+  function closeAccountMobileNav() {
+    accountMobileNavOpen = false;
+    if (accountAppEl) accountAppEl.classList.remove('is-mobile-nav-open');
+    document.body.classList.remove('pdx-account-mobile-nav-open');
+    syncAccountMobileNavState();
+  }
+
+  function toggleAccountMobileNav() {
+    if (accountMobileNavOpen) closeAccountMobileNav();
+    else openAccountMobileNav();
+  }
+
+  function ensureAccountMobileChrome() {
+    if (!accountAppEl || !accountSidebarEl) return;
+    if (!accountMobileBackdrop) {
+      accountMobileBackdrop = document.createElement('div');
+      accountMobileBackdrop.className = 'pdx-account-mobile-backdrop';
+      accountMobileBackdrop.hidden = true;
+      accountMobileBackdrop.addEventListener('click', closeAccountMobileNav);
+      accountAppEl.insertBefore(accountMobileBackdrop, accountSidebarEl);
+    }
+    if (!accountMobileMenuBtn) {
+      accountMobileMenuBtn = document.createElement('button');
+      accountMobileMenuBtn.type = 'button';
+      accountMobileMenuBtn.className = 'pdx-account-mobile-menu';
+      accountMobileMenuBtn.innerHTML =
+        '<span class="pdx-account-mobile-menu-icon pdx-account-mobile-menu-icon--menu">' + cxIcon('menu', 22) + '</span>' +
+        '<span class="pdx-account-mobile-menu-icon pdx-account-mobile-menu-icon--close" hidden>' + cxIcon('close', 22) + '</span>';
+      accountMobileMenuBtn.addEventListener('click', toggleAccountMobileNav);
+      if (accountAppEl) {
+        accountAppEl.insertBefore(accountMobileMenuBtn, accountMobileBackdrop);
+      }
+      window.addEventListener('resize', function () {
+        if (!isAccountMobileViewport()) closeAccountMobileNav();
+        syncAccountMobileMenuPosition();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && accountMobileNavOpen) closeAccountMobileNav();
+      });
+    }
+    syncAccountMobileMenuPosition();
+    syncAccountMobileNavState();
   }
 
   function stripHtml(s) {
@@ -1472,6 +1561,7 @@
     }
 
     mountShellLogoLink(link, 'pdx-account-header-home--official');
+    if (accountMobileMenuBtn) syncAccountMobileMenuPosition();
   }
 
   function ensureAuthShellHomeLogo(shell) {
@@ -1675,6 +1765,7 @@
         window.history.replaceState({}, '', window.location.pathname + window.location.search + '#/' + accountState.section);
       } catch (e) {}
     }
+    if (isAccountMobileViewport()) closeAccountMobileNav();
     renderAccountApp();
   }
 
@@ -1688,7 +1779,13 @@
 
   function renderAccountSidebar() {
     if (!accountSidebarEl) return;
-    var html = '<div class="pdx-account-sidebar-user">' +
+    var html = '<div class="pdx-account-sidebar-mobile-head">' +
+      '<span class="pdx-account-sidebar-mobile-title">' + escHtml(t('account_navigation', 'Account navigation')) + '</span>' +
+      '<button type="button" class="pdx-account-sidebar-close" aria-label="' + escHtml(t('close', 'Close')) + '">' +
+        cxIcon('close', 20) +
+      '</button>' +
+    '</div>' +
+    '<div class="pdx-account-sidebar-user">' +
       '<div class="pdx-account-sidebar-name">' + nameWithBadge(user.display_name || t('account', 'Account'), user.verified, { size: 15, inline: true, context: 'account' }) + '</div>' +
       '<div class="pdx-account-sidebar-email">' + escHtml(user.email || '') + '</div>' +
       '<div class="pdx-account-sidebar-status">' + escHtml(accountStatusText(user.verified)) + '</div>' +
@@ -1709,6 +1806,8 @@
       '<button type="button" class="pdx-portal-btn pdx-portal-btn--destructive pdx-portal-btn--full pdx-account-signout">' + cxIcon('logout', 16) + escHtml(t('sign_out', 'Sign Out')) + '</button>' +
     '</div>';
     accountSidebarEl.innerHTML = html;
+    var sidebarClose = accountSidebarEl.querySelector('.pdx-account-sidebar-close');
+    if (sidebarClose) sidebarClose.addEventListener('click', closeAccountMobileNav);
     accountSidebarEl.querySelectorAll('[data-account-section]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         setAccountSection(btn.getAttribute('data-account-section'));
@@ -1931,6 +2030,7 @@
   function renderAccountApp() {
     if (!accountAppEl || !accountSidebarEl || !accountMainEl) return;
     applyAccountLocale();
+    ensureAccountMobileChrome();
     renderAccountSidebar();
     renderAccountMain();
   }
