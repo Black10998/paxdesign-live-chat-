@@ -1576,9 +1576,10 @@
     if (!shell) return;
     var header = document.getElementById('pdx-account-header');
     if (!header) {
-      header = document.createElement('header');
+      header = document.createElement('div');
       header.id = 'pdx-account-header';
       header.className = 'pdx-account-header';
+      header.setAttribute('role', 'banner');
       shell.insertBefore(header, shell.firstChild);
     }
 
@@ -1838,6 +1839,15 @@
       '<button type="button" class="pdx-portal-btn pdx-portal-btn--destructive pdx-portal-btn--full pdx-account-signout">' + cxIcon('logout', 16) + escHtml(t('sign_out', 'Sign Out')) + '</button>' +
     '</div>';
     accountSidebarEl.innerHTML = html;
+    if (isAccountMobileViewport()) {
+      accountSidebarEl.setAttribute('role', 'dialog');
+      accountSidebarEl.setAttribute('aria-modal', 'true');
+      accountSidebarEl.setAttribute('aria-hidden', accountMobileNavOpen ? 'false' : 'true');
+    } else {
+      accountSidebarEl.removeAttribute('role');
+      accountSidebarEl.removeAttribute('aria-modal');
+      accountSidebarEl.removeAttribute('aria-hidden');
+    }
     var sidebarClose = accountSidebarEl.querySelector('.pdx-account-sidebar-close');
     if (sidebarClose) sidebarClose.addEventListener('click', closeAccountMobileNav);
     accountSidebarEl.querySelectorAll('[data-account-section]').forEach(function (btn) {
@@ -2059,6 +2069,16 @@
     });
   }
 
+  function syncAccountDashboardLayout() {
+    if (!accountAppEl || !accountMainEl) return;
+    accountAppEl.hidden = false;
+    accountAppEl.style.removeProperty('display');
+    accountMainEl.hidden = false;
+    accountMainEl.style.removeProperty('display');
+    accountMainEl.style.removeProperty('visibility');
+    accountMainEl.setAttribute('aria-hidden', 'false');
+  }
+
   function renderAccountApp() {
     if (!accountAppEl || !accountSidebarEl || !accountMainEl) return;
     applyAccountLocale();
@@ -2066,6 +2086,7 @@
     renderAccountSidebar();
     renderAccountMain();
     syncAccountMobileOverlayMount();
+    syncAccountDashboardLayout();
   }
 
   function initAccountApp(force) {

@@ -253,11 +253,13 @@
 /* Mobile: full-width content + slide-over navigation panel */
 @media (max-width: 900px) {
   .pdx-account-app {
-    display: block;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
     position: relative;
     min-height: 0;
-    height: 100%;
-    max-height: 100%;
+    height: auto;
+    max-height: none;
     overflow: hidden;
   }
 
@@ -506,11 +508,15 @@
   .pdx-account-main {
     width: 100%;
     max-width: 100%;
+    flex: 1 1 auto;
     min-height: 0;
-    height: 100%;
+    height: auto;
     padding: 20px 20px max(32px, env(safe-area-inset-bottom, 0px));
     box-sizing: border-box;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
+    position: relative;
+    z-index: 1;
     -webkit-overflow-scrolling: touch;
   }
 
