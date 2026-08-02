@@ -162,4 +162,20 @@ cx_assert_true(strpos($launch_view, 'Color.black') !== false, 'Launch screen mus
 $animated_logo = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios-live-chat/PAXDesignLiveChat/Features/Launch/PAXAnimatedLogoView.swift');
 cx_assert_true(strpos($animated_logo, 'holdDuration') !== false && strpos($animated_logo, '1.2') !== false, 'Logo animation must preserve website hold timing');
 
+$avatar_presets = file_get_contents($customer_dir . '/class-paxdesign-customer-avatar-presets.php');
+cx_assert_true(strpos($avatar_presets, 'const COUNT = 100') !== false, 'Avatar presets must support 100 GIF avatars');
+cx_assert_true(strpos($avatar_presets, 'random_id') !== false, 'Avatar presets must expose random_id()');
+
+$avatar = file_get_contents($customer_dir . '/class-paxdesign-customer-avatar.php');
+cx_assert_true(strpos($avatar, 'ensure_preset_assigned') !== false, 'Customer avatar must auto-assign presets');
+cx_assert_true(strpos($avatar, "add_action('pdx_user_logged_in'") !== false, 'Customer avatar must assign preset on login');
+cx_assert_true(strpos($avatar, "add_action('user_register'") !== false, 'Customer avatar must assign preset on register');
+
+$avatar_dir = dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/images/avatars';
+$avatar_gifs = glob($avatar_dir . '/pax-*.gif') ?: array();
+cx_assert_true(count($avatar_gifs) === 100, 'Expected 100 avatar GIF assets');
+
+$pax_auth_js = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/js/pax-auth.js');
+cx_assert_true(strpos($pax_auth_js, 'pax-\\d{2,3}') !== false, 'Account JS must support 3-digit avatar preset ids');
+
 echo "OK: customer platform static verification passed (" . count($files) . " modules)\n";

@@ -309,7 +309,7 @@
 
   function normalizeAvatarAssetUrl(url) {
     if (!url) return '';
-    var normalized = String(url).replace(/(\/avatars\/pax-\d{2})\.svg(\?.*)?$/i, '$1.gif');
+    var normalized = String(url).replace(/(\/avatars\/pax-\d{2,3})\.svg(\?.*)?$/i, '$1.gif');
     if (normalized.indexOf('/avatars/pax-') !== -1 && /\.gif(\?|$)/i.test(normalized) && normalized.indexOf('?') === -1 && C.version) {
       normalized += '?v=' + encodeURIComponent(C.version);
     }
@@ -325,8 +325,8 @@
       }
     }
     var sample = defaultAvatarUrl();
-    if (sample && /\/avatars\/pax-\d{2}\.gif/i.test(sample)) {
-      return normalizeAvatarAssetUrl(sample.replace(/pax-\d{2}\.gif/i, presetId + '.gif'));
+    if (sample && /\/avatars\/pax-\d{2,3}\.gif/i.test(sample)) {
+      return normalizeAvatarAssetUrl(sample.replace(/pax-\d{2,3}\.gif/i, presetId + '.gif'));
     }
     return '';
   }

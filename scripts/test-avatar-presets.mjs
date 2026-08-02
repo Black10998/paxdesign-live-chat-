@@ -17,8 +17,8 @@ const css = [
 const gifFiles = readdirSync(avatarDir).filter((f) => f.endsWith('.gif')).sort();
 const svgFiles = readdirSync(avatarDir).filter((f) => f.endsWith('.svg'));
 
-if (gifFiles.length !== 50) {
-  console.error('Expected 50 GIF avatars, found', gifFiles.length);
+if (gifFiles.length !== 100) {
+  console.error('Expected 100 GIF avatars, found', gifFiles.length);
   process.exit(1);
 }
 if (svgFiles.length > 0) {

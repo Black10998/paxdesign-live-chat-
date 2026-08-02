@@ -210,4 +210,204 @@ return array(
 		'id'    => 'pax-50',
 		'label' => 'PAXDesign — signature',
 	),
+	array(
+		'id'    => 'pax-51',
+		'label' => 'Ransomware — vault lock',
+	),
+	array(
+		'id'    => 'pax-52',
+		'label' => 'Phishing — hook alert',
+	),
+	array(
+		'id'    => 'pax-53',
+		'label' => 'Dark web — onion route',
+	),
+	array(
+		'id'    => 'pax-54',
+		'label' => 'Hash — SHA digest',
+	),
+	array(
+		'id'    => 'pax-55',
+		'label' => 'OAuth — token flow',
+	),
+	array(
+		'id'    => 'pax-56',
+		'label' => 'JWT — signed badge',
+	),
+	array(
+		'id'    => 'pax-57',
+		'label' => 'SAML — federation',
+	),
+	array(
+		'id'    => 'pax-58',
+		'label' => 'LDAP — directory tree',
+	),
+	array(
+		'id'    => 'pax-59',
+		'label' => 'SIEM — alert radar',
+	),
+	array(
+		'id'    => 'pax-60',
+		'label' => 'SOC — operations pulse',
+	),
+	array(
+		'id'    => 'pax-61',
+		'label' => 'Incident — response timer',
+	),
+	array(
+		'id'    => 'pax-62',
+		'label' => 'Forensics — magnifier scan',
+	),
+	array(
+		'id'    => 'pax-63',
+		'label' => 'Malware — quarantine',
+	),
+	array(
+		'id'    => 'pax-64',
+		'label' => 'Honeypot — trap jar',
+	),
+	array(
+		'id'    => 'pax-65',
+		'label' => 'DDoS — mitigation wave',
+	),
+	array(
+		'id'    => 'pax-66',
+		'label' => 'Load balancer — traffic split',
+	),
+	array(
+		'id'    => 'pax-67',
+		'label' => 'CDN — edge nodes',
+	),
+	array(
+		'id'    => 'pax-68',
+		'label' => 'DNS — resolver lookup',
+	),
+	array(
+		'id'    => 'pax-69',
+		'label' => 'TLS — handshake',
+	),
+	array(
+		'id'    => 'pax-70',
+		'label' => 'Certificate — PKI chain',
+	),
+	array(
+		'id'    => 'pax-71',
+		'label' => 'Quantum — qubit spin',
+	),
+	array(
+		'id'    => 'pax-72',
+		'label' => 'RAG — retrieval pipeline',
+	),
+	array(
+		'id'    => 'pax-73',
+		'label' => 'LLM — prompt stream',
+	),
+	array(
+		'id'    => 'pax-74',
+		'label' => 'Embeddings — vector space',
+	),
+	array(
+		'id'    => 'pax-75',
+		'label' => 'Guardrails — prompt shield',
+	),
+	array(
+		'id'    => 'pax-76',
+		'label' => 'Data lake — layered store',
+	),
+	array(
+		'id'    => 'pax-77',
+		'label' => 'ETL — extract transform',
+	),
+	array(
+		'id'    => 'pax-78',
+		'label' => 'Spark — cluster burst',
+	),
+	array(
+		'id'    => 'pax-79',
+		'label' => 'Kafka — event stream',
+	),
+	array(
+		'id'    => 'pax-80',
+		'label' => 'Pub/Sub — message bus',
+	),
+	array(
+		'id'    => 'pax-81',
+		'label' => 'Search — index query',
+	),
+	array(
+		'id'    => 'pax-82',
+		'label' => 'Prometheus — metrics ring',
+	),
+	array(
+		'id'    => 'pax-83',
+		'label' => 'Grafana — dashboard panel',
+	),
+	array(
+		'id'    => 'pax-84',
+		'label' => 'Ansible — playbook run',
+	),
+	array(
+		'id'    => 'pax-85',
+		'label' => 'Terraform — infra plan',
+	),
+	array(
+		'id'    => 'pax-86',
+		'label' => 'Helm — chart release',
+	),
+	array(
+		'id'    => 'pax-87',
+		'label' => 'Argo — continuous deploy',
+	),
+	array(
+		'id'    => 'pax-88',
+		'label' => 'Jenkins — build pipeline',
+	),
+	array(
+		'id'    => 'pax-89',
+		'label' => 'GitHub Actions — workflow',
+	),
+	array(
+		'id'    => 'pax-90',
+		'label' => 'CI/CD — infinite loop',
+	),
+	array(
+		'id'    => 'pax-91',
+		'label' => 'Code review — diff lens',
+	),
+	array(
+		'id'    => 'pax-92',
+		'label' => 'Merge — branch unify',
+	),
+	array(
+		'id'    => 'pax-93',
+		'label' => 'Protection — branch rules',
+	),
+	array(
+		'id'    => 'pax-94',
+		'label' => 'SemVer — release tag',
+	),
+	array(
+		'id'    => 'pax-95',
+		'label' => 'Package — module registry',
+	),
+	array(
+		'id'    => 'pax-96',
+		'label' => 'Rust — memory safe',
+	),
+	array(
+		'id'    => 'pax-97',
+		'label' => 'Go — concurrent routines',
+	),
+	array(
+		'id'    => 'pax-98',
+		'label' => 'WebAssembly — wasm cube',
+	),
+	array(
+		'id'    => 'pax-99',
+		'label' => 'Edge — fog compute',
+	),
+	array(
+		'id'    => 'pax-100',
+		'label' => 'PAXDesign — orbit signature',
+	),
 );

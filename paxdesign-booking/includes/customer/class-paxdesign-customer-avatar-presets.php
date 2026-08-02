@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 
 class PAXdesign_Customer_Avatar_Presets {
 
-    const COUNT = 50;
+    const COUNT = 100;
     const PRESET_NONE = 'pax-none';
 
     /**
@@ -80,8 +80,11 @@ class PAXdesign_Customer_Avatar_Presets {
         if ($id === self::PRESET_NONE) {
             return $id;
         }
-        if (preg_match('/^pax-\d{2}$/', $id)) {
-            return $id;
+        if (preg_match('/^pax-(\d{2,3})$/', $id, $matches)) {
+            $num = (int) $matches[1];
+            if ($num >= 1 && $num <= self::COUNT) {
+                return $num === 100 ? 'pax-100' : sprintf('pax-%02d', $num);
+            }
         }
         return '';
     }
@@ -113,7 +116,15 @@ class PAXdesign_Customer_Avatar_Presets {
     public static function auto_id_for_user($user_id) {
         $user_id = absint($user_id);
         $index = ($user_id % self::COUNT) + 1;
-        return sprintf('pax-%02d', $index);
+        return $index === 100 ? 'pax-100' : sprintf('pax-%02d', $index);
+    }
+
+    /**
+     * @return string
+     */
+    public static function random_id() {
+        $index = wp_rand(1, self::COUNT);
+        return $index === 100 ? 'pax-100' : sprintf('pax-%02d', $index);
     }
 
     /**
@@ -140,7 +151,7 @@ class PAXdesign_Customer_Avatar_Presets {
         if ($url === '') {
             return '';
         }
-        $normalized = preg_replace('#(/avatars/pax-\d{2})\.svg(\?|$)#i', '$1.gif$2', $url);
+        $normalized = preg_replace('#(/avatars/pax-\d{2,3})\.svg(\?|$)#i', '$1.gif$2', $url);
         if ($normalized === null) {
             return $url;
         }

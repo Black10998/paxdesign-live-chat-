@@ -19,6 +19,42 @@ class PAXdesign_Customer_Avatar {
 
     public static function init() {
         add_action('after_setup_theme', array(__CLASS__, 'register_image_size'), 20);
+        add_action('user_register', array(__CLASS__, 'on_user_register'), 20, 1);
+        add_action('pdx_user_logged_in', array(__CLASS__, 'on_user_logged_in'), 10, 1);
+    }
+
+    /**
+     * @param int $user_id
+     */
+    public static function on_user_register($user_id) {
+        self::ensure_preset_assigned($user_id);
+    }
+
+    /**
+     * @param int $user_id
+     */
+    public static function on_user_logged_in($user_id) {
+        self::ensure_preset_assigned($user_id);
+    }
+
+    /**
+     * Persist a random PAXDesign avatar preset when the account has none saved yet.
+     *
+     * @param int $user_id
+     * @return string Assigned or existing preset id.
+     */
+    public static function ensure_preset_assigned($user_id) {
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return PAXdesign_Customer_Avatar_Presets::PRESET_NONE;
+        }
+        $saved = get_user_meta($user_id, self::META_PRESET_ID, true);
+        if (is_string($saved) && PAXdesign_Customer_Avatar_Presets::exists($saved)) {
+            return $saved;
+        }
+        $preset_id = PAXdesign_Customer_Avatar_Presets::random_id();
+        update_user_meta($user_id, self::META_PRESET_ID, $preset_id);
+        return $preset_id;
     }
 
     public static function register_image_size() {
@@ -81,11 +117,14 @@ class PAXdesign_Customer_Avatar {
      */
     public static function preset_id_for_user($user_id) {
         $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return PAXdesign_Customer_Avatar_Presets::auto_id_for_user(0);
+        }
         $saved = get_user_meta($user_id, self::META_PRESET_ID, true);
         if (is_string($saved) && PAXdesign_Customer_Avatar_Presets::exists($saved)) {
             return $saved;
         }
-        return PAXdesign_Customer_Avatar_Presets::auto_id_for_user($user_id);
+        return self::ensure_preset_assigned($user_id);
     }
 
     /**
@@ -130,6 +169,9 @@ class PAXdesign_Customer_Avatar {
      */
     public static function profile_fields($user_id) {
         $user_id = absint($user_id);
+        if ($user_id > 0) {
+            self::ensure_preset_assigned($user_id);
+        }
         $preset_id = self::preset_id_for_user($user_id);
         return array(
             'avatar_url'          => PAXdesign_Customer_Avatar_Presets::normalize_asset_url(self::url_for_user($user_id)),
