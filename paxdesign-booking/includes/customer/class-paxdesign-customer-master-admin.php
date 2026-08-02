@@ -9,8 +9,25 @@ if (!defined('ABSPATH')) {
 
 class PAXdesign_Customer_Master_Admin {
 
+    /** Primary iCloud email for the Master Administrator account. */
     const MASTER_EMAIL = 'awjime29@icloud.com';
-    const META_FLAG    = 'pax_master_admin';
+
+    /** Apple Private Relay email for the same Master Administrator (Sign in with Apple). */
+    const MASTER_APPLE_RELAY_EMAIL = 'ftbkvmfy6g@privaterelay.appleid.com';
+
+    const META_FLAG = 'pax_master_admin';
+
+    /**
+     * All emails that identify the single Master Administrator account.
+     *
+     * @return array<int, string>
+     */
+    public static function master_emails() {
+        return array(
+            self::MASTER_EMAIL,
+            self::MASTER_APPLE_RELAY_EMAIL,
+        );
+    }
 
     public static function init() {
         add_action('pdx_user_logged_in', array(__CLASS__, 'ensure_master_flag'), 5, 1);
@@ -46,6 +63,38 @@ class PAXdesign_Customer_Master_Admin {
     }
 
     /**
+     * @param string $email
+     * @return bool
+     */
+    public static function is_master_email($email) {
+        $email = strtolower(trim((string) $email));
+        if ($email === '') {
+            return false;
+        }
+        foreach (self::master_emails() as $master_email) {
+            if ($email === strtolower($master_email)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Find the canonical Master Administrator WordPress user by any known email.
+     *
+     * @return WP_User|null
+     */
+    public static function find_master_user() {
+        foreach (self::master_emails() as $email) {
+            $user = get_user_by('email', $email);
+            if ($user instanceof WP_User) {
+                return $user;
+            }
+        }
+        return null;
+    }
+
+    /**
      * @param int $user_id
      * @return bool
      */
@@ -54,7 +103,7 @@ class PAXdesign_Customer_Master_Admin {
         if (!$user instanceof WP_User) {
             return false;
         }
-        return strtolower(trim($user->user_email)) === strtolower(self::MASTER_EMAIL);
+        return self::is_master_email($user->user_email);
     }
 
     /**

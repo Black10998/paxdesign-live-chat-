@@ -194,7 +194,13 @@ $levels = file_get_contents($customer_dir . '/class-paxdesign-customer-levels.ph
 cx_assert_true(strpos($levels, 'META_LEVEL') !== false, 'Customer levels must store level meta');
 
 $master = file_get_contents($customer_dir . '/class-paxdesign-customer-master-admin.php');
-cx_assert_true(strpos($master, 'awjime29@icloud.com') !== false, 'Master admin email must be configured');
+cx_assert_true(strpos($master, 'awjime29@icloud.com') !== false, 'Master admin iCloud email must be configured');
+cx_assert_true(strpos($master, 'ftbkvmfy6g@privaterelay.appleid.com') !== false, 'Master admin Apple relay email must be configured');
+cx_assert_true(strpos($master, 'master_emails') !== false, 'Master admin must expose master_emails()');
+cx_assert_true(strpos($master, 'find_master_user') !== false, 'Master admin must resolve canonical user by alias email');
+
+$apple_auth = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-auth-apple.php');
+cx_assert_true(strpos($apple_auth, 'find_master_user') !== false, 'Apple auth must link master admin relay login to existing account');
 
 $master_rest = file_get_contents($customer_dir . '/class-paxdesign-customer-master-rest.php');
 cx_assert_true(strpos($master_rest, '/customer/master/customers') !== false, 'Master admin customer routes must exist');

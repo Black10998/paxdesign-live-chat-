@@ -785,6 +785,15 @@ class PAXdesign_Auth_Apple {
 			}
 		}
 
+		// Same Master Administrator may sign in with iCloud or Apple Private Relay email.
+		if ( ! $user && $email !== '' && class_exists( 'PAXdesign_Customer_Master_Admin' ) && PAXdesign_Customer_Master_Admin::is_master_email( $email ) ) {
+			$master = PAXdesign_Customer_Master_Admin::find_master_user();
+			if ( $master instanceof WP_User ) {
+				update_user_meta( (int) $master->ID, self::META_APPLE_SUB, $sub );
+				$user = $master;
+			}
+		}
+
 		if ( ! $user ) {
 			if ( $email === '' ) {
 				$email = self::apple_account_email_for_sub( $sub );
