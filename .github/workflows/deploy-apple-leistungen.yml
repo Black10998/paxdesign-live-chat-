@@ -127,7 +127,7 @@ jobs:
           test "$PAGE" = "200"
           test "$CSS" = "200"
           test "$JS" = "200"
-          grep -Eq 'pax-ls|pax-ls-hero|pax-ls-stage|Maßgeschneiderte Leistungen' /tmp/ls-page.html
+          grep -Eq 'pax-ls|pax-ls-hero|pax-ls-stage|pax-ls-iphone|pax-ls-lineup__grid|Maßgeschneiderte Leistungen' /tmp/ls-page.html
           grep -Fq 'Get the highlights.' /tmp/ls-page.html
           grep -Fq 'Explore the lineup.' /tmp/ls-page.html
           grep -Fq 'href="https://paxdesign.at/visuelles-design/"' /tmp/ls-page.html

@@ -34,6 +34,38 @@ if ( ! function_exists( 'pax_leistungen_icon' ) ) {
 	}
 }
 
+if ( ! function_exists( 'pax_leistungen_iphone' ) ) {
+	/**
+	 * Realistic iPhone 16 Pro frame. Screen uses object-fit: contain so images are never cropped.
+	 *
+	 * @param string $src      Image URL.
+	 * @param string $modifier Extra class names.
+	 */
+	function pax_leistungen_iphone( $src, $modifier = '' ) {
+		$class = trim( 'pax-ls-iphone ' . $modifier );
+		?>
+		<div class="<?php echo esc_attr( $class ); ?>">
+			<div class="pax-ls-iphone__chassis">
+				<span class="pax-ls-iphone__btn pax-ls-iphone__btn--silent"></span>
+				<span class="pax-ls-iphone__btn pax-ls-iphone__btn--vol-up"></span>
+				<span class="pax-ls-iphone__btn pax-ls-iphone__btn--vol-down"></span>
+				<span class="pax-ls-iphone__btn pax-ls-iphone__btn--power"></span>
+				<div class="pax-ls-iphone__bezel">
+					<div class="pax-ls-iphone__glass">
+						<span class="pax-ls-iphone__island" aria-hidden="true">
+							<span class="pax-ls-iphone__lens"></span>
+						</span>
+						<div class="pax-ls-iphone__screen">
+							<img src="<?php echo esc_url( $src ); ?>" alt="" width="1179" height="2556" decoding="async">
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+		<?php
+	}
+}
+
 $contact  = home_url( '/kontakt/' );
 $pricing  = home_url( '/preise/' );
 $projects = home_url( '/referenzen/' );
@@ -218,18 +250,12 @@ $quotes = array(
 				</div>
 				<div class="pax-ls-laptop__base"></div>
 			</div>
-			<div class="pax-ls-phone">
-				<div class="pax-ls-phone__bezel">
-					<div class="pax-ls-phone__screen">
-						<img src="<?php echo esc_url( $mega . 'app.jpg' ); ?>" alt="" width="720" height="1280" decoding="async">
-					</div>
-				</div>
-			</div>
+			<?php pax_leistungen_iphone( $mega . 'app.jpg', 'pax-ls-iphone--hero' ); ?>
 		</div>
 	</header>
 
 	<section id="pax-ls-highlights" class="pax-ls-highlights" data-ls-reveal>
-		<div class="pax-ls-wrap pax-ls-highlights__head">
+		<div class="pax-ls-wrap pax-ls-wrap--wide pax-ls-highlights__head">
 			<div>
 				<p class="pax-ls-kicker pax-ls-kicker--on-dark">Get the highlights.</p>
 				<h2 class="pax-ls-display pax-ls-display--light">Ein Blick auf das Wesentliche.</h2>
@@ -254,7 +280,7 @@ $quotes = array(
 	</section>
 
 	<section class="pax-ls-film pax-ls-film--light" data-ls-reveal>
-		<div class="pax-ls-wrap pax-ls-film__grid">
+		<div class="pax-ls-wrap pax-ls-wrap--wide pax-ls-film__grid">
 			<div class="pax-ls-film__copy">
 				<p class="pax-ls-kicker">Webentwicklung</p>
 				<h2 class="pax-ls-display">Moderne Weblösungen für digitale Exzellenz.</h2>
@@ -278,7 +304,7 @@ $quotes = array(
 	</section>
 
 	<section class="pax-ls-film pax-ls-film--dark" data-ls-reveal>
-		<div class="pax-ls-wrap pax-ls-film__grid pax-ls-film__grid--reverse">
+		<div class="pax-ls-wrap pax-ls-wrap--wide pax-ls-film__grid pax-ls-film__grid--reverse">
 			<div class="pax-ls-film__copy">
 				<p class="pax-ls-kicker pax-ls-kicker--on-dark">App-Entwicklung</p>
 				<h2 class="pax-ls-display pax-ls-display--light">iOS, Android und TV. Aus einem System.</h2>
@@ -290,27 +316,15 @@ $quotes = array(
 			</div>
 			<div class="pax-ls-film__visual" aria-hidden="true">
 				<div class="pax-ls-phones">
-					<div class="pax-ls-phone pax-ls-phone--back">
-						<div class="pax-ls-phone__bezel">
-							<div class="pax-ls-phone__screen">
-								<img src="<?php echo esc_url( $mega . 'app.jpg' ); ?>" alt="" width="720" height="1280" loading="lazy" decoding="async">
-							</div>
-						</div>
-					</div>
-					<div class="pax-ls-phone pax-ls-phone--front">
-						<div class="pax-ls-phone__bezel">
-							<div class="pax-ls-phone__screen">
-								<img src="<?php echo esc_url( $product ); ?>" alt="" width="900" height="700" loading="lazy" decoding="async">
-							</div>
-						</div>
-					</div>
+					<?php pax_leistungen_iphone( $mega . 'app.jpg', 'pax-ls-iphone--back' ); ?>
+					<?php pax_leistungen_iphone( $product, 'pax-ls-iphone--front' ); ?>
 				</div>
 			</div>
 		</div>
 	</section>
 
 	<section class="pax-ls-film pax-ls-film--snow" data-ls-reveal>
-		<div class="pax-ls-wrap pax-ls-film__grid">
+		<div class="pax-ls-wrap pax-ls-wrap--wide pax-ls-film__grid">
 			<div class="pax-ls-film__copy">
 				<p class="pax-ls-kicker">Softwareentwicklung</p>
 				<h2 class="pax-ls-display">Individuelle Systeme, die mitwachsen.</h2>
@@ -334,39 +348,33 @@ $quotes = array(
 	</section>
 
 	<section id="pax-ls-lineup" class="pax-ls-lineup" data-ls-reveal>
-		<div class="pax-ls-wrap pax-ls-lineup__head">
-			<div>
-				<h2 class="pax-ls-display">Explore the lineup.</h2>
-				<p class="pax-ls-lede">Sechs Disziplinen. Ein Anspruch an Klarheit, Tempo und Präzision.</p>
+		<div class="pax-ls-wrap pax-ls-wrap--wide">
+			<h2 class="pax-ls-display">Explore the lineup.</h2>
+			<p class="pax-ls-lede">Sechs Disziplinen. Ein Anspruch an Klarheit, Tempo und Präzision.</p>
+			<div class="pax-ls-lineup__grid">
+				<?php foreach ( $lineup as $item ) : ?>
+					<article class="pax-ls-product">
+						<a class="pax-ls-product__media pax-ls-product__media--<?php echo esc_attr( $item['tone'] ); ?>" href="<?php echo esc_url( $item['href'] ); ?>">
+							<img src="<?php echo esc_url( $item['image'] ); ?>" alt="<?php echo esc_attr( $item['title'] ); ?>" width="1280" height="720" loading="lazy" decoding="async">
+						</a>
+						<h3><?php echo esc_html( $item['title'] ); ?></h3>
+						<p><?php echo esc_html( $item['lede'] ); ?></p>
+						<div class="pax-ls-product__links">
+							<a href="<?php echo esc_url( $item['href'] ); ?>">Mehr erfahren<?php pax_leistungen_icon( 'chevron' ); ?></a>
+							<a href="<?php echo esc_url( $contact ); ?>">Anfragen<?php pax_leistungen_icon( 'chevron' ); ?></a>
+						</div>
+					</article>
+				<?php endforeach; ?>
 			</div>
-			<div class="pax-ls-rail__nav pax-ls-rail__nav--on-light" data-ls-rail-nav="lineup">
-				<button type="button" class="pax-ls-rail__btn" data-ls-rail-prev aria-label="Zurück"><?php pax_leistungen_icon( 'chevron' ); ?></button>
-				<button type="button" class="pax-ls-rail__btn" data-ls-rail-next aria-label="Weiter"><?php pax_leistungen_icon( 'chevron' ); ?></button>
-			</div>
-		</div>
-		<div class="pax-ls-rail pax-ls-rail--lineup" data-ls-rail="lineup" tabindex="0" aria-label="Leistungs-Lineup">
-			<?php foreach ( $lineup as $item ) : ?>
-				<article class="pax-ls-product">
-					<a class="pax-ls-product__media pax-ls-product__media--<?php echo esc_attr( $item['tone'] ); ?>" href="<?php echo esc_url( $item['href'] ); ?>">
-						<img src="<?php echo esc_url( $item['image'] ); ?>" alt="<?php echo esc_attr( $item['title'] ); ?>" width="900" height="700" loading="lazy" decoding="async">
-					</a>
-					<h3><?php echo esc_html( $item['title'] ); ?></h3>
-					<p><?php echo esc_html( $item['lede'] ); ?></p>
-					<div class="pax-ls-product__links">
-						<a href="<?php echo esc_url( $item['href'] ); ?>">Mehr erfahren<?php pax_leistungen_icon( 'chevron' ); ?></a>
-						<a href="<?php echo esc_url( $contact ); ?>">Anfragen<?php pax_leistungen_icon( 'chevron' ); ?></a>
-					</div>
-				</article>
-			<?php endforeach; ?>
 		</div>
 	</section>
 
 	<section id="pax-ls-design" class="pax-ls-design" data-ls-reveal>
-		<div class="pax-ls-wrap">
+		<div class="pax-ls-wrap pax-ls-wrap--wide">
 			<h2 class="pax-ls-display">Get to know Design.</h2>
 			<p class="pax-ls-lede">Visuelle Systeme, die Marken stärken und Nutzer führen.</p>
 		</div>
-		<div class="pax-ls-wrap pax-ls-tiles">
+		<div class="pax-ls-wrap pax-ls-wrap--wide pax-ls-tiles">
 			<?php foreach ( $design as $item ) : ?>
 				<a class="pax-ls-tile" href="<?php echo esc_url( $item['href'] ); ?>">
 					<span class="pax-ls-tile__media">
@@ -383,7 +391,7 @@ $quotes = array(
 	</section>
 
 	<section class="pax-ls-why" data-ls-reveal>
-		<div class="pax-ls-wrap">
+		<div class="pax-ls-wrap pax-ls-wrap--wide">
 			<h2 class="pax-ls-display">Warum PAXDesign der richtige Ort ist.</h2>
 			<div class="pax-ls-why__grid">
 				<div>
@@ -452,18 +460,22 @@ $quotes = array(
 	</section>
 
 	<section class="pax-ls-pair" data-ls-reveal>
-		<div class="pax-ls-wrap pax-ls-pair__grid">
+		<div class="pax-ls-wrap pax-ls-wrap--wide pax-ls-pair__grid">
 			<a class="pax-ls-pair__tile" href="<?php echo esc_url( $projects ); ?>">
-				<img src="<?php echo esc_url( $folio_a ); ?>" alt="" width="1200" height="800" loading="lazy" decoding="async">
-				<span>
+				<span class="pax-ls-pair__media">
+					<img src="<?php echo esc_url( $folio_a ); ?>" alt="" width="1200" height="800" loading="lazy" decoding="async">
+				</span>
+				<span class="pax-ls-pair__copy">
 					<em>Referenzen</em>
 					<strong>Ausgewählte Projekte.</strong>
 					<b>Alle Projekte ansehen<?php pax_leistungen_icon( 'chevron' ); ?></b>
 				</span>
 			</a>
 			<a class="pax-ls-pair__tile" href="<?php echo esc_url( $cases ); ?>">
-				<img src="<?php echo esc_url( $folio_b ); ?>" alt="" width="1200" height="800" loading="lazy" decoding="async">
-				<span>
+				<span class="pax-ls-pair__media">
+					<img src="<?php echo esc_url( $folio_b ); ?>" alt="" width="1200" height="800" loading="lazy" decoding="async">
+				</span>
+				<span class="pax-ls-pair__copy">
 					<em>Cases</em>
 					<strong>Präzision in der Praxis.</strong>
 					<b>Cases entdecken<?php pax_leistungen_icon( 'chevron' ); ?></b>

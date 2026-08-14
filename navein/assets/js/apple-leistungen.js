@@ -117,7 +117,11 @@
       var prev = nav.querySelector('[data-ls-rail-prev]');
       var next = nav.querySelector('[data-ls-rail-next]');
       var amount = function () {
-        return Math.max(280, Math.round(rail.clientWidth * 0.78));
+        var card = rail.querySelector('.pax-ls-hl, .pax-ls-product');
+        if (card) {
+          return Math.round(card.getBoundingClientRect().width + 16);
+        }
+        return Math.max(320, Math.round(rail.clientWidth * 0.86));
       };
       var go = function (dir) {
         rail.scrollBy({
