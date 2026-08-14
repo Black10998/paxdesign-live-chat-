@@ -298,7 +298,7 @@ struct CustomerNotificationItem: Decodable, Identifiable, Equatable {
 
     @MainActor
     func overlayingLocalRead(userId: Int) -> CustomerNotificationItem {
-        guard !is_read, CustomerNotificationReadStore.isRead(userId: userId, notificationId: id) else {
+        guard !is_read, CustomerNotificationReadStore.isRead(userId: userId, notificationId: id, createdAt: created_at) else {
             return self
         }
         var copy = self

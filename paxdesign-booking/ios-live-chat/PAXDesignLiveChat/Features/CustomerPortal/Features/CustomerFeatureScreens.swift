@@ -721,6 +721,7 @@ struct CustomerNewsDetailView: View {
 struct CustomerNotificationsView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
+    @ObservedObject private var badgeStore = CustomerNotificationsBadgeStore.shared
     @State private var response: CustomerNotificationsResponse?
     @State private var error: String?
     @State private var filter: String = "all"
@@ -732,7 +733,8 @@ struct CustomerNotificationsView: View {
     }
 
     private var displayedUnreadCount: Int {
-        (response?.items.filter { !$0.is_read }.count) ?? 0
+        if badgeStore.unreadCount == 0 { return 0 }
+        return max(badgeStore.unreadCount, response?.items.filter { !$0.is_read }.count ?? 0)
     }
 
     var body: some View {
@@ -828,19 +830,23 @@ struct CustomerNotificationsView: View {
         return payload.overlayingLocalRead(userId: userId)
     }
 
-    private func applyLocalRead(ids: [Int]) {
+    private func applyLocalRead(ids: [Int], markAll: Bool = false) {
         let userId = AuthStore.shared.customerProfile?.id ?? 0
-        CustomerNotificationReadStore.markRead(userId: userId, ids: ids)
+        if markAll {
+            CustomerNotificationReadStore.markAllRead(userId: userId, ids: ids)
+        } else {
+            CustomerNotificationReadStore.markRead(userId: userId, ids: ids)
+        }
         guard var current = response else { return }
         let items = current.items.map { item -> CustomerNotificationItem in
-            guard ids.contains(item.id) else { return item }
+            guard markAll || ids.contains(item.id) else { return item }
             var copy = item
             copy.is_read = true
             return copy
         }
         current = CustomerNotificationsResponse(
             items: items,
-            unreadCount: items.filter { !$0.is_read }.count,
+            unreadCount: markAll ? 0 : items.filter { !$0.is_read }.count,
             success: current.success,
             marked: current.marked
         )
@@ -848,16 +854,39 @@ struct CustomerNotificationsView: View {
     }
 
     private func markAllRead() async {
-        guard let ids = response?.items.filter({ !$0.is_read }).map(\.id), !ids.isEmpty else { return }
-        applyLocalRead(ids: ids)
+        let ids = response?.items.map(\.id) ?? []
+        applyLocalRead(ids: ids, markAll: true)
         CustomerNotificationsBadgeStore.shared.clearAfterMarkAllRead(ids: ids)
         do {
-            let marked = try await api.markNotificationsRead(ids: ids)
-            if !marked.items.isEmpty {
-                response = overlay(marked)
+            let marked = try await api.markAllNotificationsRead(ids: ids)
+            let overlaid = overlay(marked)
+            if marked.unread_count == 0 {
+                let items = overlaid.items.map { item -> CustomerNotificationItem in
+                    var copy = item
+                    copy.is_read = true
+                    return copy
+                }
+                response = CustomerNotificationsResponse(
+                    items: items,
+                    unreadCount: 0,
+                    success: overlaid.success,
+                    marked: overlaid.marked
+                )
+                CustomerNotificationsBadgeStore.shared.applyServerUnreadCount(0)
+            } else {
+                response = overlaid
+                CustomerNotificationsBadgeStore.shared.applyServerUnreadCount(overlaid.unread_count)
             }
         } catch {
-            self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
+            do {
+                let marked = try await api.markNotificationsRead(ids: ids)
+                response = overlay(marked)
+                if overlay(marked).unread_count == 0 {
+                    CustomerNotificationsBadgeStore.shared.applyServerUnreadCount(0)
+                }
+            } catch {
+                self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
+            }
         }
         await CustomerNotificationsBadgeStore.shared.refresh(api: api)
     }

@@ -4,14 +4,16 @@ import XCTest
 @MainActor
 final class CustomerNotificationBadgeTests: XCTestCase {
     private let storageKey = "pax.customer.readNotificationIdsByUser"
+    private let maxIdKey = "pax.customer.markAllReadMaxIdByUser"
+    private let allReadAtKey = "pax.customer.markAllReadAtByUser"
 
     override func setUp() {
         super.setUp()
-        UserDefaults.standard.removeObject(forKey: storageKey)
+        clearStore()
     }
 
     override func tearDown() {
-        UserDefaults.standard.removeObject(forKey: storageKey)
+        clearStore()
         super.tearDown()
     }
 
@@ -42,9 +44,36 @@ final class CustomerNotificationBadgeTests: XCTestCase {
 
     func testReadStoreSurvivesReloadFromUserDefaults() {
         CustomerNotificationReadStore.markRead(userId: 5, ids: [88])
-        let stored = UserDefaults.standard.dictionary(forKey: storageKey) as? [String: [Int]]
-        XCTAssertEqual(stored?["5"], [88])
         XCTAssertTrue(CustomerNotificationReadStore.isRead(userId: 5, notificationId: 88))
+    }
+
+    func testReadStoreLoadsNSNumberArraysFromUserDefaults() {
+        UserDefaults.standard.set(["42": [NSNumber(value: 11), NSNumber(value: 12)]], forKey: storageKey)
+        XCTAssertTrue(CustomerNotificationReadStore.isRead(userId: 42, notificationId: 11))
+        XCTAssertTrue(CustomerNotificationReadStore.isRead(userId: 42, notificationId: 12))
+        XCTAssertFalse(CustomerNotificationReadStore.isRead(userId: 42, notificationId: 13))
+    }
+
+    func testMarkAllReadCoversOlderIdsOutsideVisiblePage() {
+        CustomerNotificationReadStore.markAllRead(userId: 8, ids: [50, 49, 48])
+        XCTAssertTrue(CustomerNotificationReadStore.isRead(userId: 8, notificationId: 12))
+        XCTAssertTrue(CustomerNotificationReadStore.isRead(userId: 8, notificationId: 50))
+        XCTAssertFalse(CustomerNotificationReadStore.isRead(userId: 8, notificationId: 51))
+        XCTAssertTrue(
+            CustomerNotificationReadStore.isRead(
+                userId: 8,
+                notificationId: 51,
+                createdAt: "2020-01-01T00:00:00Z"
+            )
+        )
+    }
+
+    func testMarkAllReadZerosBadgeImmediately() {
+        CustomerNotificationsBadgeStore.shared.bindUser(8)
+        CustomerNotificationsBadgeStore.shared.clearAfterMarkAllRead(ids: [50, 49])
+        XCTAssertEqual(CustomerNotificationsBadgeStore.shared.unreadCount, 0)
+        XCTAssertEqual(CustomerNotificationReadStore.persistedUnreadCount(userId: 8), 0)
+        CustomerNotificationsBadgeStore.shared.resetForLogout()
     }
 
     func testNotificationDecodesIntegerReadFlag() throws {
@@ -62,5 +91,27 @@ final class CustomerNotificationBadgeTests: XCTestCase {
         XCTAssertTrue(overlaid.items.first { $0.id == 11 }?.is_read == true)
         XCTAssertTrue(overlaid.items.first { $0.id == 12 }?.is_read == false)
         XCTAssertEqual(overlaid.unread_count, 1)
+    }
+
+    func testMarkAllOverlayZerosUnreadCount() {
+        CustomerNotificationReadStore.markAllRead(userId: 7, ids: [11, 12])
+        let json = Data(#"{"items":[{"id":11,"category":"news","title":"Hello","is_read":0,"created_at":"2026-01-01T00:00:00Z"},{"id":12,"category":"chat","title":"Ping","is_read":0,"created_at":"2026-01-01T00:00:00Z"}],"unread_count":2}"#.utf8)
+        let payload = try! JSONDecoder().decode(CustomerNotificationsResponse.self, from: json)
+        let overlaid = payload.overlayingLocalRead(userId: 7)
+        XCTAssertTrue(overlaid.items.allSatisfy(\.is_read))
+        XCTAssertEqual(overlaid.unread_count, 0)
+    }
+
+    private func clearStore() {
+        UserDefaults.standard.removeObject(forKey: storageKey)
+        UserDefaults.standard.removeObject(forKey: maxIdKey)
+        UserDefaults.standard.removeObject(forKey: allReadAtKey)
+        UserDefaults.standard.removeObject(forKey: "pax.customer.unreadNotificationCount.8")
+        UserDefaults.standard.removeObject(forKey: "pax.customer.unreadNotificationCount.42")
+        UserDefaults.standard.removeObject(forKey: "pax.customer.unreadNotificationCount.5")
+        UserDefaults.standard.removeObject(forKey: "pax.customer.unreadNotificationCount.7")
+        UserDefaults.standard.removeObject(forKey: "pax.customer.unreadNotificationCount.10")
+        UserDefaults.standard.removeObject(forKey: "pax.customer.unreadNotificationCount.20")
+        UserDefaults.standard.removeObject(forKey: "pax.customer.unreadNotificationCount.99")
     }
 }

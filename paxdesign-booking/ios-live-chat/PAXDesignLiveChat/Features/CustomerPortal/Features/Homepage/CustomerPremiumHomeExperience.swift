@@ -165,8 +165,8 @@ private struct CustomerHomeMetricsBoard: View {
                 compactMetric(
                     value: "\(badgeStore.unreadCount)",
                     label: String(localized: "Unread"),
-                    icon: "bell.badge.fill",
-                    tint: Color(uiColor: PAXDynamic.spend)
+                    icon: badgeStore.unreadCount > 0 ? "bell.badge.fill" : "bell",
+                    tint: badgeStore.unreadCount > 0 ? Color(uiColor: PAXDynamic.spend) : PAXTheme.textTertiary
                 )
                 compactMetric(
                     value: "\(dashboard.files_count ?? 0)",

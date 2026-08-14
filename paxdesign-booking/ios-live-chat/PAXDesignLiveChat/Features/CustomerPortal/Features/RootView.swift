@@ -87,6 +87,7 @@ struct CustomerTabView: View {
     @EnvironmentObject private var api: CustomerAPIClient
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @ObservedObject private var chatBadge = CustomerChatBadgeStore.shared
+    @ObservedObject private var notificationsBadge = CustomerNotificationsBadgeStore.shared
     @StateObject private var menuScrollState = UiverseMenuScrollState()
     @State private var loadedTabs: Set<Int> = CustomerTabView.initialLoadedTabs()
 
@@ -105,7 +106,7 @@ struct CustomerTabView: View {
 
     private var menuItems: [UiverseMenuBarItem] {
         [
-            UiverseMenuBarItem(tag: CustomerPortalTab.home.rawValue, icon: "house.fill", title: String(localized: "Home")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.home.rawValue, icon: "house.fill", title: String(localized: "Home"), badge: notificationsBadge.unreadCount),
             UiverseMenuBarItem(tag: CustomerPortalTab.services.rawValue, icon: "square.grid.2x2.fill", title: String(localized: "Services")),
             UiverseMenuBarItem(tag: CustomerPortalTab.portfolio.rawValue, icon: "photo.fill", title: String(localized: "Portfolio")),
             UiverseMenuBarItem(tag: CustomerPortalTab.chat.rawValue, icon: "headphones", title: String(localized: "Support"), badge: chatBadge.unreadCount),

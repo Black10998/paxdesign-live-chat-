@@ -169,10 +169,13 @@ cx_assert_true(strpos($auth_rest, '/auth/github/complete') !== false, 'Missing G
 
 $notifications = file_get_contents($customer_dir . '/class-paxdesign-customer-notifications.php');
 cx_assert_true(strpos($notifications, 'mark_read_many') !== false, 'Notifications must support bulk mark-read');
+cx_assert_true(strpos($notifications, 'function mark_all_read') !== false, 'Notifications must support mark-all-read');
 cx_assert_true(strpos($notifications, 'is_read = 1') !== false, 'Mark-read must persist is_read');
 
 cx_assert_true(strpos($rest, '/customer/notifications/read') !== false, 'Missing POST /customer/notifications/read alias');
+cx_assert_true(strpos($rest, '/customer/notifications/read-all') !== false, 'Missing POST /customer/notifications/read-all');
 cx_assert_true(strpos($rest, 'notification_ids_from_request') !== false, 'Mark-read must parse JSON ids robustly');
+cx_assert_true(strpos($rest, 'notification_mark_all_from_request') !== false, 'Mark-read must accept all=true');
 
 $ios_root = dirname(__DIR__, 2) . '/paxdesign-booking/ios-live-chat';
 $secret = '23161838e68470e36f9f6f38bf309d239fb988e5';
@@ -195,6 +198,23 @@ cx_assert_true(strpos($ios_login, 'PAXContinueWithGitHubButton') !== false, 'Log
 $ios_api = file_get_contents($ios_root . '/PAXDesignLiveChat/Features/CustomerPortal/Core/CustomerAPIClient.swift');
 cx_assert_true(strpos($ios_api, '/auth/github/complete') !== false, 'iOS client must complete GitHub login via backend ticket');
 cx_assert_true(strpos($ios_api, '/customer/notifications/read') !== false, 'iOS client must POST mark-read fallback');
+cx_assert_true(strpos($ios_api, '/customer/notifications/read-all') !== false, 'iOS client must POST mark-all-read');
+cx_assert_true(strpos($ios_api, 'markAllNotificationsRead') !== false, 'iOS client must expose mark-all-read');
+
+$ios_github_button = file_get_contents($ios_root . '/PAXDesignLiveChat/Features/Login/PAXContinueWithGitHubButton.swift');
+cx_assert_true(strpos($ios_github_button, 'GitHubMark') !== false, 'Continue with GitHub must use the official GitHubMark asset');
+cx_assert_true(strpos($ios_github_button, 'chevron.left.forwardslash.chevron.right') === false, 'Continue with GitHub must not use a generic SF Symbol');
+
+$github_mark = $ios_root . '/PAXDesignLiveChat/Resources/Assets.xcassets/PAXIcons/GitHubMark.imageset/GitHubMark.svg';
+cx_assert_true(is_file($github_mark), 'Official GitHub Invertocat SVG asset is missing');
+$github_svg = (string) file_get_contents($github_mark);
+cx_assert_true(strpos($github_svg, 'M12 .297c-6.63 0-12 5.373-12 12') !== false, 'GitHubMark.svg must use the official Invertocat path');
+$github_imageset = (string) file_get_contents($ios_root . '/PAXDesignLiveChat/Resources/Assets.xcassets/PAXIcons/GitHubMark.imageset/Contents.json');
+cx_assert_true(strpos($github_imageset, 'template-rendering-intent') !== false, 'GitHub mark must template-tint for Light/Dark');
+
+$ios_badge_store = file_get_contents($ios_root . '/PAXDesignLiveChat/Features/CustomerPortal/Core/CustomerNotificationsBadgeStore.swift');
+cx_assert_true(strpos($ios_badge_store, 'markAllRead') !== false, 'Badge store must persist a mark-all-read watermark');
+cx_assert_true(strpos($ios_badge_store, 'clearAfterMarkAllRead') !== false, 'Badge store must zero immediately after mark-all-read');
 
 $launch_view = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios-live-chat/PAXDesignLiveChat/Features/Launch/PAXLaunchView.swift');
 cx_assert_true(strpos($launch_view, 'PAXAnimatedLogoView') !== false, 'Launch screen must use PAXAnimatedLogoView');

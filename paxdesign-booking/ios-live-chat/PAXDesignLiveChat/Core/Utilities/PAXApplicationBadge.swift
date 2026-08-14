@@ -14,4 +14,9 @@ enum PAXApplicationBadge {
         UNUserNotificationCenter.current().setBadgeCount(0) { _ in }
         UIApplication.shared.applicationIconBadgeNumber = 0
     }
+
+    /// Customer-session home-screen badge: chat + notifications. Never overwrite with one source alone.
+    static func syncCustomerPortal() {
+        sync(total: CustomerChatBadgeStore.shared.unreadCount + CustomerNotificationsBadgeStore.shared.unreadCount)
+    }
 }

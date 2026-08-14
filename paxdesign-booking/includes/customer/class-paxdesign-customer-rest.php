@@ -266,6 +266,9 @@ class PAXdesign_Customer_REST {
                     'id'  => array(
                         'type' => 'integer',
                     ),
+                    'all' => array(
+                        'type' => 'boolean',
+                    ),
                 ),
             ),
         ));
@@ -282,7 +285,16 @@ class PAXdesign_Customer_REST {
                 'id'  => array(
                     'type' => 'integer',
                 ),
+                'all' => array(
+                    'type' => 'boolean',
+                ),
             ),
+        ));
+
+        register_rest_route(self::NS, '/customer/notifications/read-all', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'mark_all_notifications_read'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
         ));
 
         register_rest_route(self::NS, '/customer/chat/session', array(
@@ -705,8 +717,22 @@ class PAXdesign_Customer_REST {
 
     public static function mark_notifications_read(WP_REST_Request $request) {
         $uid = PAXdesign_Customer_Auth::current_user_id();
+        if (self::notification_mark_all_from_request($request)) {
+            return self::mark_all_notifications_read($request);
+        }
         $ids = self::notification_ids_from_request($request);
         $marked = PAXdesign_Customer_Notifications::mark_read_many($uid, $ids);
+        return rest_ensure_response(array(
+            'success'      => true,
+            'marked'       => $marked,
+            'unread_count' => PAXdesign_Customer_Notifications::unread_count($uid),
+            'items'        => PAXdesign_Customer_Notifications::list_for_user($uid, false, 50),
+        ));
+    }
+
+    public static function mark_all_notifications_read(WP_REST_Request $request) {
+        $uid = PAXdesign_Customer_Auth::current_user_id();
+        $marked = PAXdesign_Customer_Notifications::mark_all_read($uid);
         return rest_ensure_response(array(
             'success'      => true,
             'marked'       => $marked,
@@ -744,6 +770,30 @@ class PAXdesign_Customer_REST {
             }
         }
         return array_values(array_unique($clean));
+    }
+
+    /**
+     * @return bool
+     */
+    private static function notification_mark_all_from_request(WP_REST_Request $request) {
+        $all = $request->get_param('all');
+        if ($all === null) {
+            $json = $request->get_json_params();
+            if (is_array($json) && array_key_exists('all', $json)) {
+                $all = $json['all'];
+            }
+        }
+        if ($all === null) {
+            $body = json_decode((string) $request->get_body(), true);
+            if (is_array($body) && array_key_exists('all', $body)) {
+                $all = $body['all'];
+            }
+        }
+        if (is_string($all)) {
+            $all = strtolower(trim($all));
+            return $all === '1' || $all === 'true' || $all === 'yes';
+        }
+        return !empty($all);
     }
 
     /**

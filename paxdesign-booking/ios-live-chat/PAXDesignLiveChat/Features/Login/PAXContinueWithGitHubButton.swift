@@ -1,5 +1,19 @@
 import SwiftUI
 
+/// Official GitHub Invertocat, rendered as a template so Light/Dark login buttons invert correctly.
+struct GitHubMarkIcon: View {
+    var size: CGFloat = 20
+
+    var body: some View {
+        Image("GitHubMark")
+            .renderingMode(.template)
+            .resizable()
+            .scaledToFit()
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
+    }
+}
+
 struct PAXContinueWithGitHubButton: View {
     @ObservedObject private var settings = AppSettingsStore.shared
     @Environment(\.colorScheme) private var colorScheme
@@ -16,9 +30,7 @@ struct PAXContinueWithGitHubButton: View {
                         .progressViewStyle(.circular)
                         .tint(isDark ? .black : .white)
                 } else {
-                    Image(systemName: "chevron.left.forwardslash.chevron.right")
-                        .font(.system(size: 16, weight: .bold))
-                        .accessibilityHidden(true)
+                    GitHubMarkIcon(size: 20)
                     Text(String(localized: "Continue with GitHub"))
                         .font(PAXTypography.button)
                 }

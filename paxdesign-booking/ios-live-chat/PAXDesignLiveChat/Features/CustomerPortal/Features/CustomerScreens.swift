@@ -127,6 +127,7 @@ struct CustomerDashboardView: View {
     @State private var profileName = ""
     @State private var error: String?
     @State private var isLoading = true
+    @ObservedObject private var badgeStore = CustomerNotificationsBadgeStore.shared
 
     var body: some View {
         NavigationStack {
@@ -149,13 +150,13 @@ struct CustomerDashboardView: View {
                             }
                         }
 
-                        if let unread = dashboard.unread_count, unread > 0 {
+                        if badgeStore.unreadCount > 0 {
                             CustomerPortalCard {
                                 Button {
                                     navigation.openNotifications()
                                 } label: {
                                     HStack {
-                                        PAXLabel(String(localized: "\(unread) unread notifications"), icon: "bell.badge.fill")
+                                        PAXLabel(String(localized: "\(badgeStore.unreadCount) unread notifications"), icon: "bell.badge.fill")
                                             .font(.headline)
                                         Spacer()
                                         PAXIcon("chevron.right", size: .inline, emphasis: .secondary)

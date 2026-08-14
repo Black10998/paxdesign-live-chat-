@@ -111,6 +111,37 @@ class PAXdesign_Customer_Notifications {
     }
 
     /**
+     * Mark every unread notification for the customer as read, including rows
+     * outside the paginated list the client currently has.
+     *
+     * @return int Number of rows updated.
+     */
+    public static function mark_all_read($user_id) {
+        global $wpdb;
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return 0;
+        }
+
+        $table = PAXdesign_Customer_DB::table('notifications');
+        $now = current_time('mysql', true);
+        $updated = $wpdb->query($wpdb->prepare(
+            "UPDATE $table SET is_read = 1, read_at = COALESCE(read_at, %s) WHERE user_id = %d AND is_read = 0",
+            $now,
+            $user_id
+        ));
+        if ($updated === false) {
+            $updated = $wpdb->query($wpdb->prepare(
+                "UPDATE $table SET is_read = 1 WHERE user_id = %d AND is_read = 0",
+                $user_id
+            ));
+        }
+        $count = max(0, (int) $updated);
+        self::push_badge_sync($user_id);
+        return $count;
+    }
+
+    /**
      * Mark all unread notifications for an entity as read (e.g. cybercrime ticket opened).
      *
      * @return int Number of rows updated.

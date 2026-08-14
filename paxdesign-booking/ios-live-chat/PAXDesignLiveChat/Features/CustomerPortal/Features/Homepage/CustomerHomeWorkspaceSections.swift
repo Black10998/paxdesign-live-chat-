@@ -8,6 +8,7 @@ struct CustomerHomeWorkspaceSections: View {
 
     let dashboard: CustomerDashboard
     var profileName: String
+    @ObservedObject private var badgeStore = CustomerNotificationsBadgeStore.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
@@ -22,8 +23,8 @@ struct CustomerHomeWorkspaceSections: View {
                 requestsSection(orders)
             }
             filesSection
-            if let unread = dashboard.unread_count, unread > 0 {
-                notificationsSection(unread)
+            if badgeStore.unreadCount > 0 {
+                notificationsSection(badgeStore.unreadCount)
             }
             if let services = dashboard.services_featured, !services.isEmpty {
                 servicesSection(services)

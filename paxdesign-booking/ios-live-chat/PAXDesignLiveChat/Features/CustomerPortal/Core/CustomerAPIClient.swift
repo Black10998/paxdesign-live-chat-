@@ -471,6 +471,19 @@ final class CustomerAPIClient: ObservableObject {
         }
     }
 
+    func markAllNotificationsRead(ids: [Int] = []) async throws -> CustomerNotificationsResponse {
+        let payload: [String: Any] = ["all": true, "ids": ids]
+        do {
+            return try await requestJSON(path: "/customer/notifications/read-all", method: "POST", json: payload, as: CustomerNotificationsResponse.self)
+        } catch {
+            do {
+                return try await requestJSON(path: "/customer/notifications", method: "PATCH", json: payload, as: CustomerNotificationsResponse.self)
+            } catch {
+                return try await requestJSON(path: "/customer/notifications/read", method: "POST", json: payload, as: CustomerNotificationsResponse.self)
+            }
+        }
+    }
+
     func fetchSettings() async throws -> CustomerSettingsResponse {
         try await get("/customer/settings", as: CustomerSettingsResponse.self)
     }

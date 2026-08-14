@@ -39,6 +39,7 @@ final class CustomerChatBadgeStore: ObservableObject {
         }
         unreadCount = count
         persistState()
+        PAXApplicationBadge.syncCustomerPortal()
     }
 
     func clear() {
@@ -49,6 +50,7 @@ final class CustomerChatBadgeStore: ObservableObject {
         }
         unreadCount = 0
         persistState()
+        PAXApplicationBadge.syncCustomerPortal()
     }
 
     func update(from poll: CustomerChatPoll?) {
@@ -98,6 +100,7 @@ final class CustomerChatBadgeStore: ObservableObject {
         isChatForeground = false
         refreshTask?.cancel()
         refreshTask = nil
+        PAXApplicationBadge.syncCustomerPortal()
     }
 
     private var storageKeyPrefix: String {
