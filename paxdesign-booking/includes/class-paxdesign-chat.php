@@ -259,6 +259,11 @@ class PAXdesign_Chat {
                 'en' => 'Close',
                 'ar' => 'إغلاق',
             ),
+            'supportConnected' => array(
+                'de' => 'Support ist verbunden',
+                'en' => 'Support is connected',
+                'ar' => 'الدعم متصل',
+            ),
         );
         return array_merge($out, $readiness);
     }

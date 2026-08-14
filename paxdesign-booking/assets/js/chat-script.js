@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.90
+ * Version: 3.174.91
  */
 (function () {
   'use strict';
@@ -37,6 +37,7 @@
   var replyBar      = root.querySelector('.paxdesign-booking-chat-reply-bar');
   var replyPreview  = root.querySelector('.paxdesign-booking-chat-reply-preview');
   var replyClearBtn = root.querySelector('.paxdesign-booking-chat-reply-clear');
+  var supportStatusEl = root.querySelector('#paxdesignChatSupportStatus');
 
   var entryEl          = root.querySelector('#paxdesignChatEntry');
   var welcomeEl        = root.querySelector('.paxdesign-booking-chat-welcome');
@@ -1880,72 +1881,20 @@
   }
 
   function canCustomerEndChat() {
-    if (chatHandler === 'closed') return false;
-    return isHumanMode() || liveAgentPhase >= 1 || entryChoice === 'live' ||
-      root.classList.contains('paxdesign-has-chat-messages');
+    return false;
   }
 
   function updateEndButtonUi() {
-    if (!endWrapEl) return;
-    var show = canCustomerEndChat() && chatHandler !== 'closed';
-    endWrapEl.hidden = !show;
+    if (endWrapEl) endWrapEl.hidden = true;
+    if (endBtnEl) endBtnEl.hidden = true;
   }
 
   function customerCloseConversation() {
-    if (!window.confirm('Möchten Sie dieses Gespräch wirklich beenden?')) return;
-    if (!config.ajaxUrl) return;
-    var formData = new FormData();
-    formData.append('action', 'paxdesign_chat_live_customer_close');
-    formData.append('nonce', config.nonce);
-    stampChatRequest(formData);
-    formData.append('session_id', getSessionId());
-    fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
-      .then(function (res) { return safeJson(res).then(function (json) { return { ok: res.ok, json: json }; }); })
-      .then(function (result) {
-        var json = result.json;
-        if (!json || !json.success) {
-          if (json && json.data && json.data.message === 'Invalid nonce') {
-            showError('Sitzung abgelaufen. Bitte laden Sie die Seite neu.');
-          } else {
-            showError(json && json.data && json.data.message ? json.data.message : 'Beenden fehlgeschlagen.');
-          }
-          return;
-        }
-        stopCustomerStream();
-        var nextHandler = (json.data && json.data.handler) ? json.data.handler : 'closed';
-        if (json.data && json.data.message && !isDuplicateMessage(json.data.message)) {
-          domMsgIds[json.data.message.id] = true;
-          seenMsgId(json.data.message.id);
-          rememberMessageIdentity(json.data.message);
-          if (nextHandler !== 'ai' || !isPersistentAccountChat()) {
-            renderMessageDom(json.data.message.role, json.data.message.content, json.data.message.id, { skipPush: true });
-          }
-        }
-        if (nextHandler === 'ai' && isPersistentAccountChat()) {
-          applyHandlerState('ai', '');
-          customerEndedChat = false;
-          saveSessionSnapshot();
-          startCustomerStream();
-          return;
-        }
-        applyHandlerState(nextHandler, '');
-        if (nextHandler === 'closed') {
-          customerEndedChat = true;
-          showRatingUi();
-          archiveClosedSession();
-        }
-        saveSessionSnapshot();
-      })
-      .catch(function () { showError('Verbindungsfehler beim Beenden.'); });
+    return;
   }
 
   function initCustomerClose() {
-    if (endBtnEl) {
-      endBtnEl.addEventListener('click', function (e) {
-        e.preventDefault();
-        customerCloseConversation();
-      });
-    }
+    updateEndButtonUi();
   }
 
   function showRatingUi() {
@@ -2458,6 +2407,61 @@
       return window.crypto.randomUUID();
     }
     return 'web-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 12);
+  }
+
+  function detectDeviceLanguage() {
+    var list = [];
+    if (navigator.languages && navigator.languages.length) {
+      for (var i = 0; i < navigator.languages.length; i++) {
+        list.push(navigator.languages[i]);
+      }
+    }
+    if (navigator.language) list.push(navigator.language);
+    if (navigator.userLanguage) list.push(navigator.userLanguage);
+    for (var j = 0; j < list.length; j++) {
+      var lang = String(list[j] || '').toLowerCase();
+      if (lang.indexOf('ar') === 0) return 'ar';
+      if (lang.indexOf('en') === 0) return 'en';
+      if (lang.indexOf('de') === 0) return 'de';
+    }
+    return 'de';
+  }
+
+  function localizedDeviceI18n(key) {
+    if (!config || !config.i18n || !config.i18n[key]) return '';
+    var bucket = config.i18n[key];
+    var lang = detectDeviceLanguage();
+    if (bucket[lang]) return String(bucket[lang]);
+    if (bucket.en) return String(bucket.en);
+    if (bucket.de) return String(bucket.de);
+    return '';
+  }
+
+  function supportConnectedText() {
+    var localized = localizedDeviceI18n('supportConnected');
+    if (localized) return localized;
+    var lang = detectDeviceLanguage();
+    if (lang === 'ar') return 'الدعم متصل';
+    if (lang === 'en') return 'Support is connected';
+    return 'Support ist verbunden';
+  }
+
+  function updateSupportConnectedUi() {
+    var connected = chatHandler === 'admin';
+    if (form) {
+      form.classList.toggle('paxdesign-chat-support-connected', connected);
+    }
+    if (!supportStatusEl) return;
+    if (!connected) {
+      supportStatusEl.hidden = true;
+      supportStatusEl.textContent = '';
+      return;
+    }
+    var lang = detectDeviceLanguage();
+    supportStatusEl.hidden = false;
+    supportStatusEl.textContent = supportConnectedText();
+    supportStatusEl.lang = lang;
+    supportStatusEl.dir = lang === 'ar' ? 'rtl' : 'ltr';
   }
 
   function detectChatLanguage() {
@@ -3104,6 +3108,7 @@
     root.classList.toggle('paxdesign-chat-admin-active', chatHandler === 'admin');
     root.classList.toggle('paxdesign-chat-live-request', chatHandler === 'live_request');
     root.classList.toggle('paxdesign-chat-closed', chatHandler === 'closed');
+    updateSupportConnectedUi();
   }
 
   function updateInputState() {
