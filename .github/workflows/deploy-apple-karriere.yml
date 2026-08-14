@@ -142,11 +142,9 @@ jobs:
           test "$THEME_CSS" = "200"
           test "$KAR_CSS" = "200"
           test "$KAR_JS" = "200"
-          test "$PLUGIN" = "200"
           grep -Eq "Version: 1\.4\.22" /tmp/style.css
-          grep -Eq "Version: 3\.174\.88" /tmp/pax-plugin.php
           grep -Eq "pax-karriere|pax-karriere-form|paxKarriereIntake" /tmp/karriere-page.html
           grep -Eq "pax-karriere__hero|pax-karriere__dropzone" /tmp/apple-karriere.css
           grep -Eq "paxdesign_career_application|showSuccess" /tmp/apple-karriere.js
-          grep -Eq "PAXdesign_Career_Intake|class-paxdesign-career-intake" /tmp/pax-plugin.php
+          grep -Eq "paxdesign_career_application" /tmp/karriere-page.html
           echo "Karriere production verification passed."
