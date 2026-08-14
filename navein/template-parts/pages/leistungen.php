@@ -40,9 +40,11 @@ if ( ! function_exists( 'pax_leistungen_iphone' ) ) {
 	 *
 	 * @param string $src      Image URL.
 	 * @param string $modifier Extra class names.
+	 * @param bool   $eager    Load the screen image immediately.
 	 */
-	function pax_leistungen_iphone( $src, $modifier = '' ) {
+	function pax_leistungen_iphone( $src, $modifier = '', $eager = false ) {
 		$class = trim( 'pax-ls-iphone ' . $modifier );
+		$load  = $eager ? 'fetchpriority="high"' : 'loading="lazy"';
 		?>
 		<div class="<?php echo esc_attr( $class ); ?>">
 			<div class="pax-ls-iphone__chassis">
@@ -55,8 +57,8 @@ if ( ! function_exists( 'pax_leistungen_iphone' ) ) {
 						<span class="pax-ls-iphone__island" aria-hidden="true">
 							<span class="pax-ls-iphone__lens"></span>
 						</span>
-						<div class="pax-ls-iphone__screen">
-							<img src="<?php echo esc_url( $src ); ?>" alt="" width="1179" height="2556" decoding="async">
+						<div class="pax-ls-iphone__screen" style="background-image:url('<?php echo esc_url( $src ); ?>')">
+							<img src="<?php echo esc_url( $src ); ?>" alt="" width="1179" height="2556" decoding="async" <?php echo $load; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>>
 						</div>
 					</div>
 				</div>
@@ -249,7 +251,7 @@ $quotes = array(
 				</div>
 				<div class="pax-ls-laptop__base"></div>
 			</div>
-			<?php pax_leistungen_iphone( $mega . 'visual.jpg', 'pax-ls-iphone--hero' ); ?>
+			<?php pax_leistungen_iphone( $mega . 'visual.jpg', 'pax-ls-iphone--hero', true ); ?>
 		</div>
 	</header>
 
