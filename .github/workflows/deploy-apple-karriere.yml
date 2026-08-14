@@ -142,7 +142,7 @@ jobs:
           test "$THEME_CSS" = "200"
           test "$KAR_CSS" = "200"
           test "$KAR_JS" = "200"
-          grep -Eq "Version: 1\.4\.22" /tmp/style.css
+          grep -Eq "Version: 1\.4\.23" /tmp/style.css
           grep -Eq "pax-karriere|pax-karriere-form|paxKarriereIntake" /tmp/karriere-page.html
           grep -Eq "pax-karriere__hero|pax-karriere__dropzone" /tmp/apple-karriere.css
           grep -Eq "paxdesign_career_application|showSuccess" /tmp/apple-karriere.js
