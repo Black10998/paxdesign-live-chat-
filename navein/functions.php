@@ -377,6 +377,42 @@ function navein_custom_scripts_styles() {
 		$theme_version
 	);
 
+	$is_apple_karriere = is_page_template( 'template-apple-karriere.php' )
+		|| is_page( 'karriere' )
+		|| is_page( 2823 );
+
+	if ( $is_apple_karriere ) {
+		wp_enqueue_style(
+			'navein-apple-karriere',
+			get_template_directory_uri() . '/assets/css/apple-karriere.css',
+			array( 'navein-style', 'navein-apple-hover' ),
+			$theme_version
+		);
+		wp_add_inline_style(
+			'navein-apple-karriere',
+			'html body.page-template-template-apple-karriere #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-karriere-php #dtr-main-wrapper,' .
+			'html body.page-karriere #dtr-main-wrapper{' .
+			'width:100%!important;max-width:none!important;margin:0!important;' .
+			'padding:0!important;padding-left:0!important;padding-right:0!important;' .
+			'box-sizing:border-box!important;}'
+		);
+		wp_enqueue_script(
+			'navein-apple-karriere',
+			get_template_directory_uri() . '/assets/js/apple-karriere.js',
+			array(),
+			$theme_version,
+			true
+		);
+		if ( class_exists( 'PAXdesign_Career_Intake' ) ) {
+			wp_localize_script(
+				'navein-apple-karriere',
+				'paxKarriereIntake',
+				PAXdesign_Career_Intake::public_config()
+			);
+		}
+	}
+
 	if ( $is_apple_cybercrime ) {
 		wp_enqueue_style(
 			'navein-apple-cybercrime-support',
@@ -545,6 +581,7 @@ if ( ! function_exists( 'navein_force_apple_product_templates' ) ) :
 			'wartung-support'            => 'template-apple-wartung-support.php',
 			'webentwicklung'             => 'template-apple-webentwicklung.php',
 			'cybercrime-support'         => 'template-apple-cybercrime-support.php',
+			'karriere'                   => 'template-apple-karriere.php',
 			'impressum'                  => 'template-apple-impressum.php',
 			'unsere-experten'            => 'template-apple-unsere-experten.php',
 		);

@@ -1,0 +1,152 @@
+name: Deploy Apple Karriere page
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/career-page-redesign-3a65'
+    paths:
+      - '.github/triggers/deploy-apple-karriere'
+      - '.github/workflows/deploy-apple-karriere.yml'
+      - 'navein/template-apple-karriere.php'
+      - 'navein/template-parts/pages/karriere.php'
+      - 'navein/template-parts/page-title/page-header-page.php'
+      - 'navein/assets/css/apple-karriere.css'
+      - 'navein/assets/js/apple-karriere.js'
+      - 'navein/functions.php'
+      - 'navein/style.css'
+      - 'paxdesign-booking/includes/class-paxdesign-career-intake.php'
+      - 'paxdesign-booking/paxdesign-booking.php'
+      - 'scripts/assign-apple-karriere-template.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy theme, plugin, and assign page template
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          PLUGIN="${WP_PATH%/}/wp-content/plugins/paxdesign-booking"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          retry_ssh() {
+            local attempt
+            for attempt in 1 2 3 4; do
+              if "$@"; then
+                return 0
+              fi
+              echo "SSH/rsync attempt ${attempt} failed; retrying in $((attempt * 4))s..." >&2
+              sleep $((attempt * 4))
+            done
+            return 1
+          }
+
+          retry_ssh ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/assets/js") \
+              $(printf '%q' "$THEME/template-parts/pages") \
+              $(printf '%q' "$THEME/template-parts/page-title") \
+              $(printf '%q' "$THEME/scripts") \
+              $(printf '%q' "$PLUGIN/includes")"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-karriere.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/apple-karriere.js \
+            "${REMOTE}:${THEME}/assets/js/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-apple-karriere.php \
+            "${REMOTE}:${THEME}/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/pages/karriere.php \
+            "${REMOTE}:${THEME}/template-parts/pages/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/page-title/page-header-page.php \
+            "${REMOTE}:${THEME}/template-parts/page-title/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            navein/style.css \
+            "${REMOTE}:${THEME}/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            scripts/assign-apple-karriere-template.sh \
+            "${REMOTE}:${THEME}/scripts/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/includes/class-paxdesign-career-intake.php \
+            "${REMOTE}:${PLUGIN}/includes/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            paxdesign-booking/paxdesign-booking.php \
+            "${REMOTE}:${PLUGIN}/"
+
+          retry_ssh ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "chmod +x $(printf '%q' "$THEME/scripts/assign-apple-karriere-template.sh") && \
+             WP_PATH=$(printf '%q' "$WP_PATH") bash $(printf '%q' "$THEME/scripts/assign-apple-karriere-template.sh")"
+
+          retry_ssh ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
+
+          echo "Deployed Apple Karriere page + career intake backend"
+
+      - name: Verify live page
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          PAGE=$(curl -sS -o /tmp/karriere-page.html -w '%{http_code}' "https://paxdesign.at/karriere/?n=${stamp}")
+          THEME_CSS=$(curl -sS -o /tmp/style.css -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/style.css?n=${stamp}")
+          KAR_CSS=$(curl -sS -o /tmp/apple-karriere.css -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-karriere.css?n=${stamp}")
+          KAR_JS=$(curl -sS -o /tmp/apple-karriere.js -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-karriere.js?n=${stamp}")
+          PLUGIN=$(curl -sS -o /tmp/pax-plugin.php -w '%{http_code}' "https://paxdesign.at/wp-content/plugins/paxdesign-booking/paxdesign-booking.php?n=${stamp}")
+          echo "PAGE $PAGE | THEME_CSS $THEME_CSS | KAR_CSS $KAR_CSS | KAR_JS $KAR_JS | PLUGIN $PLUGIN"
+          test "$PAGE" = "200"
+          test "$THEME_CSS" = "200"
+          test "$KAR_CSS" = "200"
+          test "$KAR_JS" = "200"
+          test "$PLUGIN" = "200"
+          grep -Eq "Version: 1\.4\.22" /tmp/style.css
+          grep -Eq "Version: 3\.174\.88" /tmp/pax-plugin.php
+          grep -Eq "pax-karriere|pax-karriere-form|paxKarriereIntake" /tmp/karriere-page.html
+          grep -Eq "pax-karriere__hero|pax-karriere__dropzone" /tmp/apple-karriere.css
+          grep -Eq "paxdesign_career_application|showSuccess" /tmp/apple-karriere.js
+          grep -Eq "PAXdesign_Career_Intake|class-paxdesign-career-intake" /tmp/pax-plugin.php
+          echo "Karriere production verification passed."
