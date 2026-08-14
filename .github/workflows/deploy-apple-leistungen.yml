@@ -1,0 +1,140 @@
+name: Deploy Apple Leistungen page
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'cursor/revolut-full-redesign-b0ff'
+    paths:
+      - '.github/triggers/deploy-apple-leistungen'
+      - '.github/workflows/deploy-apple-leistungen.yml'
+      - 'navein/template-apple-leistungen.php'
+      - 'navein/template-parts/pages/leistungen.php'
+      - 'navein/template-parts/pages/homepage.php'
+      - 'navein/template-parts/page-title/page-header-page.php'
+      - 'navein/assets/css/apple-leistungen.css'
+      - 'navein/assets/js/apple-leistungen.js'
+      - 'navein/functions.php'
+      - 'scripts/assign-apple-leistungen-template.sh'
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          set -euo pipefail
+          for key in WP_SSH_HOST WP_SSH_USER WP_SSH_PRIVATE_KEY WP_PATH; do
+            [ -n "${!key:-}" ] || { echo "Missing $key"; exit 1; }
+          done
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+
+      - name: Deploy Leistungen theme files and assign template
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=30 -o ServerAliveInterval=15 -o ServerAliveCountMax=4)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          THEME="${WP_PATH%/}/wp-content/themes/navein"
+          REMOTE="${WP_SSH_USER}@${WP_SSH_HOST}"
+
+          retry_ssh() {
+            local attempt
+            for attempt in 1 2 3 4; do
+              if "$@"; then
+                return 0
+              fi
+              echo "SSH/rsync attempt ${attempt} failed; retrying in $((attempt * 4))s..." >&2
+              sleep $((attempt * 4))
+            done
+            return 1
+          }
+
+          retry_ssh ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "mkdir -p \
+              $(printf '%q' "$THEME/assets/css") \
+              $(printf '%q' "$THEME/assets/js") \
+              $(printf '%q' "$THEME/template-parts/pages") \
+              $(printf '%q' "$THEME/template-parts/page-title") \
+              $(printf '%q' "$THEME/scripts")"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/css/apple-leistungen.css \
+            "${REMOTE}:${THEME}/assets/css/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/assets/js/apple-leistungen.js \
+            "${REMOTE}:${THEME}/assets/js/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-apple-leistungen.php \
+            "${REMOTE}:${THEME}/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/pages/leistungen.php \
+            navein/template-parts/pages/homepage.php \
+            "${REMOTE}:${THEME}/template-parts/pages/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/template-parts/page-title/page-header-page.php \
+            "${REMOTE}:${THEME}/template-parts/page-title/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            navein/functions.php \
+            "${REMOTE}:${THEME}/"
+
+          retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
+            scripts/assign-apple-leistungen-template.sh \
+            "${REMOTE}:${THEME}/scripts/"
+
+          retry_ssh ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "chmod +x $(printf '%q' "$THEME/scripts/assign-apple-leistungen-template.sh") && \
+             WP_PATH=$(printf '%q' "$WP_PATH") bash $(printf '%q' "$THEME/scripts/assign-apple-leistungen-template.sh")"
+
+          retry_ssh ssh "${SSH_OPTS[@]}" "$REMOTE" \
+            "cd $(printf '%q' "$WP_PATH") && (wp cache flush >/dev/null 2>&1 || true)"
+
+          echo "Deployed Apple Leistungen page"
+
+      - name: Verify live Leistungen page
+        run: |
+          set -euo pipefail
+          stamp=$(date +%s)
+          PAGE=$(curl -sS -o /tmp/ls-page.html -w '%{http_code}' "https://paxdesign.at/leistungen/?n=${stamp}")
+          CSS=$(curl -sS -o /tmp/apple-ls.css -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/css/apple-leistungen.css?n=${stamp}")
+          JS=$(curl -sS -o /tmp/apple-ls.js -w '%{http_code}' "https://paxdesign.at/wp-content/themes/navein/assets/js/apple-leistungen.js?n=${stamp}")
+          echo "PAGE $PAGE | CSS $CSS | JS $JS"
+          test "$PAGE" = "200"
+          test "$CSS" = "200"
+          test "$JS" = "200"
+          grep -Eq 'pax-ls|pax-ls-hero|Maßgeschneiderte Leistungen' /tmp/ls-page.html
+          grep -Fq 'href="https://paxdesign.at/visuelles-design/"' /tmp/ls-page.html
+          grep -Fq 'href="https://paxdesign.at/webentwicklung/"' /tmp/ls-page.html
+          grep -Fq 'href="https://paxdesign.at/app-entwicklung/"' /tmp/ls-page.html
+          grep -Fq 'href="https://paxdesign.at/kontakt/"' /tmp/ls-page.html
+          grep -Fq 'href="https://paxdesign.at/preise/"' /tmp/ls-page.html
+          grep -Eq 'apple-leistungen\.css' /tmp/ls-page.html
+          grep -Eq 'prefers-color-scheme: dark|color-scheme: dark' /tmp/apple-ls.css
+          grep -Eq 'pax-ls-icon|currentColor' /tmp/ls-page.html
+          grep -Eq 'initReveal|IntersectionObserver' /tmp/apple-ls.js
+          echo "Apple Leistungen production verification passed."

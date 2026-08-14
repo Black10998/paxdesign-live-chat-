@@ -23,6 +23,7 @@ $skip_legacy_banner =
 	|| is_page_template( 'template-apple-cybercrime-support.php' )
 	|| is_page_template( 'template-apple-impressum.php' )
 	|| is_page_template( 'template-apple-unsere-experten.php' )
+	|| is_page_template( 'template-apple-leistungen.php' )
 	|| is_page( 'app-entwicklung' )
 	|| is_page( 'advanced-website-systems' )
 	|| is_page( 'softwareentwicklung' )
@@ -31,7 +32,9 @@ $skip_legacy_banner =
 	|| is_page( 'cybercrime-support' )
 	|| is_page( 'impressum' )
 	|| is_page( 'unsere-experten' )
-	|| is_page( 'it-consulting' );
+	|| is_page( 'it-consulting' )
+	|| is_page( 'leistungen' )
+	|| is_page( 787 );
 
 if ( $skip_legacy_banner ) {
 	return;

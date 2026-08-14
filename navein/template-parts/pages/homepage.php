@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 $contact   = home_url( '/kontakt/' );
-$services  = home_url( '/projektpreise/' );
+$services  = home_url( '/leistungen/' );
 $pricing   = home_url( '/preise/' );
 $about     = home_url( '/ueber-uns/' );
 $projects  = home_url( '/referenzen/' );

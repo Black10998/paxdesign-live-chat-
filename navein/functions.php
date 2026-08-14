@@ -356,6 +356,10 @@ function navein_custom_scripts_styles() {
 		);
 	}
 
+	$is_apple_leistungen = is_page_template( 'template-apple-leistungen.php' )
+		|| is_page( 'leistungen' )
+		|| is_page( 787 );
+
 	$is_apple_cybercrime = is_page_template( 'template-apple-cybercrime-support.php' )
 		|| is_page( 'cybercrime-support' );
 
@@ -366,6 +370,44 @@ function navein_custom_scripts_styles() {
 		array( 'navein-style', 'navein-apple-sticky-header', 'navein-apple-footer', 'navein-apple-mobile-nav' ),
 		$theme_version
 	);
+
+	if ( $is_apple_leistungen ) {
+		$ls_css = get_template_directory() . '/assets/css/apple-leistungen.css';
+		$ls_js  = get_template_directory() . '/assets/js/apple-leistungen.js';
+		$ls_ver = file_exists( $ls_css ) ? (string) filemtime( $ls_css ) : $theme_version;
+		$ls_js_ver = file_exists( $ls_js ) ? (string) filemtime( $ls_js ) : $theme_version;
+		wp_enqueue_style(
+			'navein-apple-leistungen',
+			get_template_directory_uri() . '/assets/css/apple-leistungen.css',
+			array( 'navein-style', 'navein-apple-sticky-header', 'navein-apple-hover' ),
+			$ls_ver
+		);
+		wp_add_inline_style(
+			'navein-apple-leistungen',
+			'html body.page-template-template-apple-leistungen #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-leistungen-php #dtr-main-wrapper,' .
+			'html body.page-leistungen #dtr-main-wrapper,' .
+			'html body.page-id-787 #dtr-main-wrapper,' .
+			'html body.page-template-template-apple-leistungen #dtr-primary-section,' .
+			'html body.page-template-template-apple-leistungen-php #dtr-primary-section,' .
+			'html body.page-leistungen #dtr-primary-section,' .
+			'html body.page-id-787 #dtr-primary-section,' .
+			'html body.page-template-template-apple-leistungen .dtr-content-area,' .
+			'html body.page-template-template-apple-leistungen-php .dtr-content-area,' .
+			'html body.page-leistungen .dtr-content-area,' .
+			'html body.page-id-787 .dtr-content-area{' .
+			'width:100%!important;max-width:none!important;margin:0!important;' .
+			'padding:0!important;padding-left:0!important;padding-right:0!important;' .
+			'float:none!important;box-sizing:border-box!important;}'
+		);
+		wp_enqueue_script(
+			'navein-apple-leistungen',
+			get_template_directory_uri() . '/assets/js/apple-leistungen.js',
+			array(),
+			$ls_js_ver,
+			true
+		);
+	}
 
 	if ( $is_apple_cybercrime ) {
 		wp_enqueue_style(
@@ -550,6 +592,7 @@ if ( ! function_exists( 'navein_force_apple_product_templates' ) ) :
 			'cybercrime-support'         => 'template-apple-cybercrime-support.php',
 			'impressum'                  => 'template-apple-impressum.php',
 			'unsere-experten'            => 'template-apple-unsere-experten.php',
+			'leistungen'                 => 'template-apple-leistungen.php',
 		);
 		foreach ( $map as $slug => $file ) {
 			if ( is_page( $slug ) ) {
