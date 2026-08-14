@@ -209,6 +209,7 @@ $github_mark = $ios_root . '/PAXDesignLiveChat/Resources/Assets.xcassets/PAXIcon
 cx_assert_true(is_file($github_mark), 'Official GitHub Invertocat SVG asset is missing');
 $github_svg = (string) file_get_contents($github_mark);
 cx_assert_true(strpos($github_svg, 'M12 .297c-6.63 0-12 5.373-12 12') !== false, 'GitHubMark.svg must use the official Invertocat path');
+cx_assert_true(preg_match('/[^\x00-\x7F]/', $github_svg) !== 1, 'GitHubMark.svg must be ASCII so Xcode asset catalogs can parse it');
 $github_imageset = (string) file_get_contents($ios_root . '/PAXDesignLiveChat/Resources/Assets.xcassets/PAXIcons/GitHubMark.imageset/Contents.json');
 cx_assert_true(strpos($github_imageset, 'template-rendering-intent') !== false, 'GitHub mark must template-tint for Light/Dark');
 
