@@ -1,10 +1,10 @@
 <?php
 /**
  * Template Name: Apple Leistungen
- * Premium Apple-inspired Leistungen page.
+ * Apple product-page presentation of PAXDesign services.
  *
  * @package NaveinTheme
- * @version 1.0.0
+ * @version 2.0.0
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

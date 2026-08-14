@@ -1,5 +1,5 @@
 /**
- * Apple Leistungen page — reveal, local nav, header offset.
+ * Apple Leistungen page — rails, reveal, sticky nav, reduced motion.
  */
 (function () {
   'use strict';
@@ -9,23 +9,24 @@
   }
 
   function headerOffset() {
-    var header = document.getElementById('dtr-main-header') || document.querySelector('header#dtr-header-global, #dtr-header-global');
+    var header = document.getElementById('dtr-main-header') || document.querySelector('#dtr-header-global');
     var height = header ? Math.round(header.getBoundingClientRect().height) : 52;
     if (height < 44) {
       height = 52;
     }
-    document.documentElement.style.setProperty('--ls-header-offset', height + 'px');
+    var value = height + 'px';
+    document.documentElement.style.setProperty('--ls-header-offset', value);
     if (document.body) {
-      document.body.style.setProperty('--ls-header-offset', height + 'px');
+      document.body.style.setProperty('--ls-header-offset', value);
     }
     var page = document.querySelector('.pax-ls');
     if (page) {
-      page.style.setProperty('--ls-header-offset', height + 'px');
+      page.style.setProperty('--ls-header-offset', value);
     }
   }
 
   function initReveal() {
-    var nodes = document.querySelectorAll('[data-ls-reveal]');
+    var nodes = document.querySelectorAll('[data-ls-reveal], [data-ls-stage]');
     if (!nodes.length) {
       return;
     }
@@ -44,7 +45,7 @@
           }
         });
       },
-      { root: null, rootMargin: '0px 0px -8% 0px', threshold: 0.12 }
+      { root: null, rootMargin: '0px 0px -10% 0px', threshold: 0.12 }
     );
     nodes.forEach(function (el) {
       io.observe(el);
@@ -72,7 +73,9 @@
   }
 
   function initSpy() {
-    var links = Array.prototype.slice.call(document.querySelectorAll('.pax-ls-localnav__links a[href^="#"]'));
+    var links = Array.prototype.slice.call(
+      document.querySelectorAll('.pax-ls-localnav__links a[href^="#"]')
+    );
     var sections = links
       .map(function (link) {
         return document.querySelector(link.getAttribute('href'));
@@ -81,7 +84,6 @@
     if (!links.length || !sections.length || !('IntersectionObserver' in window)) {
       return;
     }
-
     var current = '';
     var io = new IntersectionObserver(
       function (entries) {
@@ -98,10 +100,41 @@
           }
         });
       },
-      { root: null, rootMargin: '-35% 0px -55% 0px', threshold: 0 }
+      { root: null, rootMargin: '-30% 0px -55% 0px', threshold: 0 }
     );
     sections.forEach(function (section) {
       io.observe(section);
+    });
+  }
+
+  function initRails() {
+    document.querySelectorAll('[data-ls-rail]').forEach(function (rail) {
+      var name = rail.getAttribute('data-ls-rail');
+      var nav = document.querySelector('[data-ls-rail-nav="' + name + '"]');
+      if (!nav) {
+        return;
+      }
+      var prev = nav.querySelector('[data-ls-rail-prev]');
+      var next = nav.querySelector('[data-ls-rail-next]');
+      var amount = function () {
+        return Math.max(280, Math.round(rail.clientWidth * 0.78));
+      };
+      var go = function (dir) {
+        rail.scrollBy({
+          left: dir * amount(),
+          behavior: prefersReducedMotion() ? 'auto' : 'smooth'
+        });
+      };
+      if (prev) {
+        prev.addEventListener('click', function () {
+          go(-1);
+        });
+      }
+      if (next) {
+        next.addEventListener('click', function () {
+          go(1);
+        });
+      }
     });
   }
 
@@ -110,6 +143,7 @@
     initReveal();
     initAnchors();
     initSpy();
+    initRails();
     window.addEventListener('resize', headerOffset, { passive: true });
   }
 
