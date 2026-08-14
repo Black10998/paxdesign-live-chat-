@@ -14,6 +14,7 @@ on:
   push:
     branches:
       - main
+      - 'cursor/revolut-full-redesign-b0ff'
     paths:
       - 'paxdesign-booking/**'
       - '.github/triggers/deploy-customer-platform-*'
@@ -178,6 +179,28 @@ jobs:
              if [ -f apple-web-oauth-key.pem ]; then export PAX_APPLE_WEB_KEY_P8=\$(cat apple-web-oauth-key.pem); fi && \
              wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-apple-web-oauth-config.php && \
              rm -f apple-web-oauth-key.pem"
+
+      - name: Configure GitHub OAuth
+        env:
+          WP_SSH_HOST: ${{ secrets.WP_SSH_HOST }}
+          WP_SSH_PORT: ${{ secrets.WP_SSH_PORT }}
+          WP_SSH_USER: ${{ secrets.WP_SSH_USER }}
+          WP_SSH_PRIVATE_KEY: ${{ secrets.WP_SSH_PRIVATE_KEY }}
+          WP_PATH: ${{ secrets.WP_PATH }}
+          PAX_GITHUB_CLIENT_ID: Ov23lixDUzzbRfCy1a1a
+          PAX_GITHUB_CLIENT_SECRET: ${{ secrets.PAX_GITHUB_CLIENT_SECRET }}
+        run: |
+          set -euo pipefail
+          PORT="${WP_SSH_PORT:-22}"
+          SSH_OPTS=(-i ~/.ssh/id_deploy -p "$PORT" -o StrictHostKeyChecking=yes -o BatchMode=yes)
+          install -m 600 -D /dev/null ~/.ssh/id_deploy
+          printf '%s\n' "$WP_SSH_PRIVATE_KEY" > ~/.ssh/id_deploy
+          ssh-keyscan -p "$PORT" -H "$WP_SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh "${SSH_OPTS[@]}" "${WP_SSH_USER}@${WP_SSH_HOST}" \
+            "cd '$(printf '%q' "$WP_PATH")' && \
+             export PAX_GITHUB_CLIENT_ID=$(printf '%q' "${PAX_GITHUB_CLIENT_ID:-Ov23lixDUzzbRfCy1a1a}") && \
+             export PAX_GITHUB_CLIENT_SECRET=$(printf '%q' "${PAX_GITHUB_CLIENT_SECRET:-}") && \
+             wp eval-file wp-content/plugins/paxdesign-booking/scripts/wp-eval-github-oauth-config.php"
 
       - name: Diagnose Apple OAuth client secret
         continue-on-error: true

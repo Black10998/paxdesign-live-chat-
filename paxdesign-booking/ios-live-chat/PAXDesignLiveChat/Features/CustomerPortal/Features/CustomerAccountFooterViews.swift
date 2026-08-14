@@ -175,7 +175,7 @@ struct CustomerGitHubPrivateSheet: View {
                         .background(PAXTheme.accent.opacity(0.12))
                         .clipShape(Capsule())
 
-                    Text(String(localized: "Powered by GitHub — Not Open Source"))
+                    Text(String(localized: "Powered by GitHub. Not Open Source"))
                         .font(.title3.weight(.bold))
                         .multilineTextAlignment(.center)
 

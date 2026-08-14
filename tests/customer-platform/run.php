@@ -154,6 +154,47 @@ foreach ($plugin_php_files as $php_file) {
 
 $auth_frontend = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-auth-frontend.php');
 cx_assert_true(strpos($auth_frontend, 'PAX_AUTH_CONFIG') !== false, 'Booking auth frontend must localize PAX_AUTH_CONFIG');
+cx_assert_true(strpos($auth_frontend, 'githubWebEnabled') !== false, 'Auth frontend must expose GitHub login config');
+
+$github_auth = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-auth-github.php');
+cx_assert_true(strpos($github_auth, '/pdx/v1/auth/github/callback') !== false, 'GitHub OAuth must use the registered HTTPS callback');
+cx_assert_true(strpos($github_auth, "APP_CALLBACK_SCHEME   = 'paxlivechat'") !== false, 'GitHub iOS flow must return to the app scheme');
+cx_assert_true(strpos($github_auth, '://auth/github') !== false, 'GitHub iOS callback must use auth/github path');
+cx_assert_true(strpos($github_auth, 'mobile_login_for_user') !== false, 'GitHub iOS flow must mint a PAXDesign mobile session');
+
+$auth_rest = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-auth-rest.php');
+cx_assert_true(strpos($auth_rest, '/auth/github/start') !== false, 'Missing GitHub OAuth start route');
+cx_assert_true(strpos($auth_rest, '/auth/github/callback') !== false, 'Missing GitHub OAuth callback route');
+cx_assert_true(strpos($auth_rest, '/auth/github/complete') !== false, 'Missing GitHub iOS complete route');
+
+$notifications = file_get_contents($customer_dir . '/class-paxdesign-customer-notifications.php');
+cx_assert_true(strpos($notifications, 'mark_read_many') !== false, 'Notifications must support bulk mark-read');
+cx_assert_true(strpos($notifications, 'is_read = 1') !== false, 'Mark-read must persist is_read');
+
+cx_assert_true(strpos($rest, '/customer/notifications/read') !== false, 'Missing POST /customer/notifications/read alias');
+cx_assert_true(strpos($rest, 'notification_ids_from_request') !== false, 'Mark-read must parse JSON ids robustly');
+
+$ios_root = dirname(__DIR__, 2) . '/paxdesign-booking/ios-live-chat';
+$secret = '23161838e68470e36f9f6f38bf309d239fb988e5';
+$swift_iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($ios_root . '/PAXDesignLiveChat'));
+foreach ($swift_iterator as $file) {
+    if (!$file->isFile() || strtolower($file->getExtension()) !== 'swift') {
+        continue;
+    }
+    cx_assert_true(strpos((string) file_get_contents($file->getPathname()), $secret) === false, 'GitHub client secret must not appear in iOS source: ' . $file->getFilename());
+}
+
+$ios_home = file_get_contents($ios_root . '/PAXDesignLiveChat/Features/CustomerPortal/Features/Homepage/CustomerPremiumHomeExperience.swift');
+cx_assert_true(strpos($ios_home, 'PAXQuickActionButton') !== false, 'Home quick actions must use circular PAXQuickActionButton');
+cx_assert_true(strpos($ios_home, 'CustomerHomeUtilityRow') === false, 'Home must not use large horizontal utility chips');
+cx_assert_true(strpos($ios_home, 'CustomerHomeMetricsBoard') !== false, 'Home must include a metrics board');
+
+$ios_login = file_get_contents($ios_root . '/PAXDesignLiveChat/Features/Login/LoginView.swift');
+cx_assert_true(strpos($ios_login, 'PAXContinueWithGitHubButton') !== false, 'Login must include Continue with GitHub');
+
+$ios_api = file_get_contents($ios_root . '/PAXDesignLiveChat/Features/CustomerPortal/Core/CustomerAPIClient.swift');
+cx_assert_true(strpos($ios_api, '/auth/github/complete') !== false, 'iOS client must complete GitHub login via backend ticket');
+cx_assert_true(strpos($ios_api, '/customer/notifications/read') !== false, 'iOS client must POST mark-read fallback');
 
 $launch_view = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios-live-chat/PAXDesignLiveChat/Features/Launch/PAXLaunchView.swift');
 cx_assert_true(strpos($launch_view, 'PAXAnimatedLogoView') !== false, 'Launch screen must use PAXAnimatedLogoView');

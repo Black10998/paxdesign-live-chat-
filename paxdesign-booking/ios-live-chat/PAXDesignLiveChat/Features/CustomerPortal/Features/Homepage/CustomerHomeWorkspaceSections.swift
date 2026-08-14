@@ -48,7 +48,7 @@ struct CustomerHomeWorkspaceSections: View {
                     .foregroundStyle(theme.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text(String(localized: "Your projects, requests, and conversations — all in one place."))
+                Text(String(localized: "Your projects, requests, and conversations in one place."))
                     .font(.body)
                     .foregroundStyle(theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)

@@ -74,7 +74,7 @@ struct CustomerCybercrimePortalView: View {
                 .font(PAXTypography.titleLarge)
                 .foregroundStyle(PAXTheme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
-            Text(String(localized: "Fraud, account takeovers, phishing, malware, and identity theft are captured in one professional workflow — handled confidentially by the PAXDesign team."))
+            Text(String(localized: "Fraud, account takeovers, phishing, malware, and identity theft are captured in one professional workflow, handled confidentially by the PAXDesign team."))
                 .font(PAXTypography.body)
                 .foregroundStyle(PAXTheme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)

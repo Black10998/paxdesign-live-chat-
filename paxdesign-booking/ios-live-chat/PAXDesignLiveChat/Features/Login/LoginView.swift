@@ -8,12 +8,13 @@ struct LoginView: View {
     @State private var password = ""
     @State private var isLoading = false
     @State private var isAppleLoading = false
+    @State private var isGitHubLoading = false
     @State private var error: String?
     @State private var customerAuthMode: CustomerAuthContainerView.AuthMode?
     @State private var showCustomerAuth = false
     @State private var pendingVerifyEmail = ""
 
-    private var isBusy: Bool { isLoading || isAppleLoading }
+    private var isBusy: Bool { isLoading || isAppleLoading || isGitHubLoading }
 
     var body: some View {
         NavigationStack {
@@ -95,6 +96,11 @@ struct LoginView: View {
                     } onFailure: { appleError in
                         error = appleError.localizedDescription
                         PAXHaptics.warning()
+                    }
+                    .padding(.bottom, 12)
+
+                    PAXContinueWithGitHubButton(isLoading: isGitHubLoading) {
+                        signInWithGitHub()
                     }
 
                     HStack(spacing: 16) {
@@ -229,6 +235,27 @@ struct LoginView: View {
                 PAXHaptics.warning()
             }
             isAppleLoading = false
+        }
+    }
+
+    private func signInWithGitHub() {
+        guard !isBusy else { return }
+        PAXKeyboard.dismiss()
+        isGitHubLoading = true
+        error = nil
+        PAXHaptics.light()
+
+        Task {
+            do {
+                try await auth.loginWithGitHub()
+                PAXHaptics.success()
+            } catch {
+                if (error as? GitHubOAuthError) != .cancelled {
+                    self.error = error.localizedDescription
+                    PAXHaptics.warning()
+                }
+            }
+            isGitHubLoading = false
         }
     }
 }

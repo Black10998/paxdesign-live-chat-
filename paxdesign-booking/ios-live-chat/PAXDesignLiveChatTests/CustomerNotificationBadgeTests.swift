@@ -46,4 +46,21 @@ final class CustomerNotificationBadgeTests: XCTestCase {
         XCTAssertEqual(stored?["5"], [88])
         XCTAssertTrue(CustomerNotificationReadStore.isRead(userId: 5, notificationId: 88))
     }
+
+    func testNotificationDecodesIntegerReadFlag() throws {
+        let json = Data(#"{"id":11,"category":"news","title":"Hello","is_read":0,"created_at":"2026-01-01T00:00:00Z"}"#.utf8)
+        let item = try JSONDecoder().decode(CustomerNotificationItem.self, from: json)
+        XCTAssertEqual(item.id, 11)
+        XCTAssertFalse(item.is_read)
+    }
+
+    func testLocalReadOverlayMarksServerUnreadAsRead() {
+        CustomerNotificationReadStore.markRead(userId: 7, ids: [11])
+        let json = Data(#"{"items":[{"id":11,"category":"news","title":"Hello","is_read":0,"created_at":"2026-01-01T00:00:00Z"},{"id":12,"category":"chat","title":"Ping","is_read":0,"created_at":"2026-01-01T00:00:00Z"}],"unread_count":2}"#.utf8)
+        let payload = try! JSONDecoder().decode(CustomerNotificationsResponse.self, from: json)
+        let overlaid = payload.overlayingLocalRead(userId: 7)
+        XCTAssertTrue(overlaid.items.first { $0.id == 11 }?.is_read == true)
+        XCTAssertTrue(overlaid.items.first { $0.id == 12 }?.is_read == false)
+        XCTAssertEqual(overlaid.unread_count, 1)
+    }
 }

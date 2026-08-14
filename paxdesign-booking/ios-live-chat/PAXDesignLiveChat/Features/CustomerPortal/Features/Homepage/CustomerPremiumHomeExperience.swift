@@ -12,19 +12,14 @@ struct CustomerPremiumHomeExperience: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 28) {
-            CustomerHomeInsightHeader(profileName: profileName)
+            CustomerHomeInsightHeader(profileName: profileName, dashboard: dashboard)
                 .premiumHomeAppear(appeared, delay: 0)
 
-            CustomerCybercrimeAccessCard {
-                navigation.openCybercrime()
-            }
-            .premiumHomeAppear(appeared, delay: 0.02)
-
-            CustomerHomeLiveStatsRow(dashboard: dashboard)
-                .premiumHomeAppear(appeared, delay: 0.04)
+            CustomerHomeMetricsBoard(dashboard: dashboard)
+                .premiumHomeAppear(appeared, delay: 0.03)
 
             CustomerHomeQuickActionsGrid(dashboard: dashboard)
-                .premiumHomeAppear(appeared, delay: 0.08)
+                .premiumHomeAppear(appeared, delay: 0.07)
 
             if let preview = dashboard.chat?.last_preview, !preview.isEmpty {
                 CustomerHomeConversationSpotlight(
@@ -33,38 +28,40 @@ struct CustomerPremiumHomeExperience: View {
                     messageCount: dashboard.chat?.message_count ?? 0,
                     handler: dashboard.chat?.handler
                 )
-                .premiumHomeAppear(appeared, delay: 0.12)
+                .premiumHomeAppear(appeared, delay: 0.11)
             }
+
+            CustomerCybercrimeAccessCard(compact: true) {
+                navigation.openCybercrime()
+            }
+            .premiumHomeAppear(appeared, delay: 0.14)
 
             if let projects = dashboard.projects_active, !projects.isEmpty {
                 CustomerHomeProjectsCarousel(projects: projects)
-                    .premiumHomeAppear(appeared, delay: 0.16)
+                    .premiumHomeAppear(appeared, delay: 0.18)
             }
 
             if let orders = dashboard.orders_recent, !orders.isEmpty {
                 CustomerHomeRequestsPanel(orders: orders)
-                    .premiumHomeAppear(appeared, delay: 0.2)
+                    .premiumHomeAppear(appeared, delay: 0.22)
             }
 
             CustomerHomeFilesSpotlight(filesCount: dashboard.files_count ?? 0)
-                .premiumHomeAppear(appeared, delay: 0.22)
+                .premiumHomeAppear(appeared, delay: 0.25)
 
             if let services = dashboard.services_featured, !services.isEmpty {
                 CustomerHomeRecommendedServices(services: services)
-                    .premiumHomeAppear(appeared, delay: 0.26)
+                    .premiumHomeAppear(appeared, delay: 0.28)
             }
 
             if let portfolio = dashboard.portfolio, !portfolio.isEmpty {
                 CustomerHomeFeaturedWorkStrip(items: portfolio)
-                    .premiumHomeAppear(appeared, delay: 0.3)
+                    .premiumHomeAppear(appeared, delay: 0.31)
             }
-
-            CustomerHomeUtilityRow(dashboard: dashboard)
-                .premiumHomeAppear(appeared, delay: 0.34)
 
             if let news = dashboard.news, !news.isEmpty {
                 CustomerHomeNewsDigest(news: news)
-                    .premiumHomeAppear(appeared, delay: 0.38)
+                    .premiumHomeAppear(appeared, delay: 0.34)
             }
         }
         .padding(.horizontal, CustomerResponsiveLayout.screenPadding)
@@ -89,16 +86,18 @@ struct CustomerHomeWorkspaceLoadingStrip: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(theme.panel)
                 .frame(width: 180, height: 28)
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .fill(theme.panel)
-                .frame(height: 14)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(0..<3, id: \.self) { _ in
-                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .frame(height: 148)
+            HStack(spacing: 12) {
+                ForEach(0..<4, id: \.self) { _ in
+                    VStack(spacing: 8) {
+                        Circle().fill(theme.panel).frame(width: 64, height: 64)
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
                             .fill(theme.panel)
-                            .frame(width: 148, height: 96)
+                            .frame(width: 44, height: 10)
                     }
+                    .frame(maxWidth: .infinity)
                 }
             }
         }
@@ -113,76 +112,144 @@ struct CustomerHomeWorkspaceLoadingStrip: View {
 // MARK: - Insight header
 
 private struct CustomerHomeInsightHeader: View {
+    @ObservedObject private var badgeStore = CustomerNotificationsBadgeStore.shared
     let profileName: String
+    let dashboard: CustomerDashboard
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(String(localized: "Your workspace").uppercased())
+        VStack(alignment: .leading, spacing: 10) {
+            Text(headerDate.uppercased())
                 .font(PAXTypography.labelUpper)
-                .tracking(0.6)
+                .tracking(0.8)
                 .foregroundStyle(PAXTheme.textTertiary)
             Text(CustomerHomeGreeting.text(forName: profileName))
                 .font(PAXTypography.titleLarge)
                 .foregroundStyle(PAXTheme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
+            Text(statusLine)
+                .font(PAXTypography.meta)
+                .foregroundStyle(PAXTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+
+    private var headerDate: String {
+        Date.now.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
+    }
+
+    private var statusLine: String {
+        let projects = dashboard.projects_active?.count ?? 0
+        let unread = badgeStore.unreadCount
+        if projects == 0 && unread == 0 {
+            return String(localized: "Workspace is clear. Start a request or open chat.")
+        }
+        if unread > 0 {
+            return String(localized: "\(projects) active projects · \(unread) unread updates")
+        }
+        return String(localized: "\(projects) active projects in progress")
+    }
 }
 
-// MARK: - Live stats widgets
+// MARK: - Metrics board
 
-private struct CustomerHomeLiveStatsRow: View {
+private struct CustomerHomeMetricsBoard: View {
     @Environment(\.marketingTheme) private var theme
+    @ObservedObject private var badgeStore = CustomerNotificationsBadgeStore.shared
     let dashboard: CustomerDashboard
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                statTile(
-                    value: "\(dashboard.projects_active?.count ?? 0)",
-                    label: String(localized: "Active projects"),
-                    icon: "folder.fill",
-                    tint: theme.accent
-                )
-                statTile(
-                    value: "\(dashboard.orders_recent?.count ?? 0)",
-                    label: String(localized: "Recent requests"),
-                    icon: "doc.text",
-                    tint: Color(red: 0.35, green: 0.62, blue: 1)
-                )
-                statTile(
-                    value: "\(dashboard.unread_count ?? 0)",
+        HStack(alignment: .top, spacing: 12) {
+            primaryCard
+            VStack(spacing: 10) {
+                compactMetric(
+                    value: "\(badgeStore.unreadCount)",
                     label: String(localized: "Unread"),
                     icon: "bell.badge.fill",
-                    tint: Color(red: 1, green: 0.45, blue: 0.35)
+                    tint: Color(uiColor: PAXDynamic.spend)
                 )
-                statTile(
+                compactMetric(
                     value: "\(dashboard.files_count ?? 0)",
                     label: String(localized: "Files"),
-                    icon: "doc.on.doc",
-                    tint: Color(red: 0.55, green: 0.78, blue: 0.42)
+                    icon: "doc.on.doc.fill",
+                    tint: Color(uiColor: PAXDynamic.income)
+                )
+                compactMetric(
+                    value: "\(dashboard.orders_recent?.count ?? 0)",
+                    label: String(localized: "Requests"),
+                    icon: "doc.text.fill",
+                    tint: Color(red: 0.35, green: 0.62, blue: 1)
                 )
             }
-            .padding(.horizontal, 2)
+            .frame(maxWidth: .infinity)
         }
     }
 
-    private func statTile(value: String, label: String, icon: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            PAXRevolutGlyphAvatar(systemImage: icon, size: 36, tint: tint)
-            Text(value)
-                .font(PAXTypography.section)
+    private var primaryCard: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text(String(localized: "Workspace").uppercased())
+                    .font(PAXTypography.labelUpper)
+                    .tracking(0.6)
+                    .foregroundStyle(PAXTheme.textTertiary)
+                Spacer()
+                PAXIcon("chart.bar.fill", size: .inline, emphasis: .tertiary)
+            }
+            Text("\(dashboard.projects_active?.count ?? 0)")
+                .font(.system(size: 44, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(PAXTheme.textPrimary)
-            Text(label)
+            Text(String(localized: "Active projects"))
                 .font(PAXTypography.meta)
                 .foregroundStyle(PAXTheme.textSecondary)
-                .lineLimit(2)
+            progressTrack
         }
-        .padding(16)
-        .frame(width: 148, alignment: .leading)
-        .paxRevolutSurface(cornerRadius: 16, elevation: 0)
+        .padding(18)
+        .frame(maxWidth: .infinity, minHeight: 168, alignment: .leading)
+        .paxRevolutSurface(cornerRadius: 22, elevation: 1)
+    }
+
+    private var progressTrack: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(theme.border.opacity(0.35))
+                    Capsule()
+                        .fill(PAXBrandGradient.linear)
+                        .frame(width: max(8, geo.size.width * CGFloat(averageProgress) / 100))
+                }
+            }
+            .frame(height: 6)
+            Text(String(localized: "\(averageProgress)% average completion"))
+                .font(PAXTypography.caption)
+                .foregroundStyle(PAXTheme.textTertiary)
+                .monospacedDigit()
+        }
+    }
+
+    private var averageProgress: Int {
+        let projects = dashboard.projects_active ?? []
+        guard !projects.isEmpty else { return 0 }
+        return max(0, min(100, projects.map(\.progress).reduce(0, +) / projects.count))
+    }
+
+    private func compactMetric(value: String, label: String, icon: String, tint: Color) -> some View {
+        HStack(spacing: 10) {
+            PAXRevolutGlyphAvatar(systemImage: icon, size: 32, tint: tint)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(value)
+                    .font(.headline.weight(.bold))
+                    .monospacedDigit()
+                    .foregroundStyle(PAXTheme.textPrimary)
+                Text(label)
+                    .font(PAXTypography.caption)
+                    .foregroundStyle(PAXTheme.textSecondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .paxRevolutSurface(cornerRadius: 14, elevation: 0)
     }
 }
 
@@ -190,84 +257,75 @@ private struct CustomerHomeLiveStatsRow: View {
 
 private struct CustomerHomeQuickActionsGrid: View {
     @EnvironmentObject private var navigation: CustomerNavigationCoordinator
-    @Environment(\.marketingTheme) private var theme
+    @ObservedObject private var badgeStore = CustomerNotificationsBadgeStore.shared
     let dashboard: CustomerDashboard
 
-    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            PAXQuickActionButton(
-                title: String(localized: "Chat"),
-                systemImage: "bubble.left.and.bubble.right.fill",
-                emphasized: true
-            ) {
-                PAXHaptics.light()
-                navigation.openChat(sessionID: dashboard.chat?.session_id)
-            }
-            PAXQuickActionButton(
-                title: String(localized: "Request"),
-                systemImage: "plus"
-            ) {
-                PAXHaptics.light()
-                navigation.openOrdersList()
-            }
-            PAXQuickActionButton(
-                title: String(localized: "Projects"),
-                systemImage: "folder.fill"
-            ) {
-                PAXHaptics.light()
-                navigation.openProjectsList()
-            }
-            PAXQuickActionButton(
-                title: String(localized: "Files"),
-                systemImage: "doc.on.doc"
-            ) {
-                PAXHaptics.light()
-                navigation.openFiles()
-            }
-        }
-    }
-
-    private enum QuickActionStyle { case accent, neutral }
-
-    private func quickAction(
-        title: String,
-        subtitle: String,
-        icon: String,
-        style: QuickActionStyle,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button {
-            PAXHaptics.light()
-            action()
-        } label: {
-            VStack(alignment: .leading, spacing: 16) {
-                PAXIcon(icon, size: .display, emphasis: .primary)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(theme.textPrimary)
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundStyle(theme.textSecondary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
+        VStack(spacing: 18) {
+            HStack(alignment: .top, spacing: 8) {
+                PAXQuickActionButton(
+                    title: String(localized: "Chat"),
+                    systemImage: "bubble.left.and.bubble.right.fill",
+                    emphasized: true
+                ) {
+                    PAXHaptics.light()
+                    navigation.openChat(sessionID: dashboard.chat?.session_id)
+                }
+                PAXQuickActionButton(
+                    title: String(localized: "Request"),
+                    systemImage: "plus"
+                ) {
+                    PAXHaptics.light()
+                    navigation.openOrdersList()
+                }
+                PAXQuickActionButton(
+                    title: String(localized: "Projects"),
+                    systemImage: "folder.fill"
+                ) {
+                    PAXHaptics.light()
+                    navigation.openProjectsList()
+                }
+                PAXQuickActionButton(
+                    title: String(localized: "Files"),
+                    systemImage: "doc.on.doc"
+                ) {
+                    PAXHaptics.light()
+                    navigation.openFiles()
                 }
             }
-            .padding(20)
-            .frame(maxWidth: .infinity, minHeight: 132, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .fill(theme.cardBackground)
-                    .shadow(color: theme.shadowDark.opacity(style == .accent ? 0.14 : 0.08), radius: style == .accent ? 14 : 10, y: style == .accent ? 6 : 4)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(theme.border.opacity(style == .accent ? 0.45 : 0.28), lineWidth: 0.5)
-            )
+            HStack(alignment: .top, spacing: 8) {
+                PAXQuickActionButton(
+                    title: String(localized: "Alerts"),
+                    systemImage: "bell.fill",
+                    badge: badgeStore.unreadCount
+                ) {
+                    PAXHaptics.light()
+                    navigation.openNotifications()
+                }
+                PAXQuickActionButton(
+                    title: String(localized: "Cyber"),
+                    systemImage: "shield.checkered"
+                ) {
+                    PAXHaptics.light()
+                    navigation.openCybercrime()
+                }
+                PAXQuickActionButton(
+                    title: String(localized: "Services"),
+                    systemImage: "square.grid.2x2.fill"
+                ) {
+                    PAXHaptics.light()
+                    navigation.selectedTab = .services
+                }
+                PAXQuickActionButton(
+                    title: String(localized: "Account"),
+                    systemImage: "person.crop.circle.fill"
+                ) {
+                    PAXHaptics.light()
+                    navigation.selectedTab = .account
+                }
+            }
         }
-        .buttonStyle(PremiumHomePressStyle())
+        .accessibilityElement(children: .contain)
     }
 }
 
@@ -283,58 +341,57 @@ private struct CustomerHomeConversationSpotlight: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 8) {
-                PAXIcon("message.fill", size: .card, emphasis: .primary, tint: theme.accent)
-                Text(String(localized: "Latest conversation"))
-                    .font(.headline)
-                    .foregroundStyle(theme.textPrimary)
+            HStack(spacing: 10) {
+                PAXRevolutGlyphAvatar(systemImage: "message.fill", size: 36, tint: theme.accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(String(localized: "Live conversation"))
+                        .font(PAXTypography.rowTitle)
+                        .foregroundStyle(theme.textPrimary)
+                    Text(handlerLabel)
+                        .font(PAXTypography.caption)
+                        .foregroundStyle(theme.textSecondary)
+                }
                 Spacer()
+                if messageCount > 0 {
+                    Text("\(messageCount)")
+                        .font(.caption.weight(.bold).monospacedDigit())
+                        .foregroundStyle(theme.textPrimary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(theme.accent.opacity(0.14))
+                        .clipShape(Capsule())
+                }
             }
             Text(preview)
                 .font(.body)
                 .foregroundStyle(theme.textSecondary)
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
-            HStack {
-                if messageCount > 0 {
-                    Text(String(localized: "\(messageCount) messages"))
-                        .font(.caption)
-                        .foregroundStyle(theme.textSecondary)
-                }
-                Spacer()
-                Button(String(localized: "Continue in Chat")) {
-                    PAXHaptics.light()
-                    navigation.openChat(sessionID: sessionID)
-                }
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(theme.accentOnAccent)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-                .background(
-                    LinearGradient(
-                        colors: [Color(red: 0.83, green: 1, blue: 0.2), theme.accent],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .clipShape(Capsule())
+            Button(String(localized: "Continue in Chat")) {
+                PAXHaptics.light()
+                navigation.openChat(sessionID: sessionID)
             }
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(theme.accentOnAccent)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(PAXBrandGradient.linear)
+            .clipShape(Capsule())
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            LinearGradient(
-                colors: [theme.panel, theme.accent.opacity(0.06)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(theme.accent.opacity(0.25), lineWidth: 1)
-        )
-        .shadow(color: theme.shadowDark.opacity(0.18), radius: 16, y: 8)
+        .paxRevolutSurface(cornerRadius: 22, elevation: 1)
+    }
+
+    private var handlerLabel: String {
+        switch handler?.lowercased() {
+        case "admin", "live_request":
+            return String(localized: "Support online")
+        case "closed":
+            return String(localized: "Conversation closed")
+        default:
+            return String(localized: "AI assistant")
+        }
     }
 }
 
@@ -372,17 +429,17 @@ private struct CustomerHomeProjectsCarousel: View {
 
     private func projectCard(_ project: CustomerDashboard.ProjectSummary) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            ZStack(alignment: .bottomTrailing) {
+            ZStack {
                 Circle()
-                    .stroke(theme.border.opacity(0.4), lineWidth: 4)
-                    .frame(width: 52, height: 52)
+                    .stroke(theme.border.opacity(0.4), lineWidth: 5)
+                    .frame(width: 56, height: 56)
                 Circle()
                     .trim(from: 0, to: CGFloat(min(max(project.progress, 0), 100)) / 100)
-                    .stroke(theme.accent, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .stroke(theme.accent, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                     .rotationEffect(.degrees(-90))
-                    .frame(width: 52, height: 52)
+                    .frame(width: 56, height: 56)
                 Text("\(project.progress)%")
-                    .font(.caption2.weight(.bold))
+                    .font(.caption2.weight(.bold).monospacedDigit())
                     .foregroundStyle(theme.textPrimary)
             }
             Text(project.title)
@@ -395,13 +452,8 @@ private struct CustomerHomeProjectsCarousel: View {
                 .foregroundStyle(theme.textSecondary)
         }
         .padding(18)
-        .frame(width: 200, alignment: .leading)
-        .background(theme.panel)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(theme.border.opacity(0.3), lineWidth: 0.5)
-        )
+        .frame(width: 188, alignment: .leading)
+        .paxRevolutSurface(cornerRadius: 20, elevation: 0)
     }
 }
 
@@ -422,17 +474,12 @@ private struct CustomerHomeRequestsPanel: View {
                 navigation.openOrdersList()
             }
             VStack(spacing: 0) {
-                ForEach(Array(orders.prefix(4).enumerated()), id: \.element.id) { index, order in
+                ForEach(Array(orders.prefix(4).enumerated()), id: \.element.id) { _, order in
                     NavigationLink {
                         CustomerOrderDetailView(orderId: order.id)
                     } label: {
                         HStack(spacing: 14) {
-                            ZStack {
-                                Circle()
-                                    .fill(theme.accent.opacity(0.14))
-                                    .frame(width: 36, height: 36)
-                                PAXIcon("doc.text", size: .inline, emphasis: .primary, tint: theme.accent)
-                            }
+                            PAXRevolutGlyphAvatar(systemImage: "doc.text", size: 36, tint: theme.accent)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text(order.service_label)
                                     .font(.subheadline.weight(.semibold))
@@ -456,12 +503,7 @@ private struct CustomerHomeRequestsPanel: View {
                     .buttonStyle(.plain)
                 }
             }
-            .background(theme.panel)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(theme.border.opacity(0.3), lineWidth: 0.5)
-            )
+            .paxRevolutSurface(cornerRadius: 20, elevation: 0)
         }
     }
 }
@@ -479,20 +521,13 @@ private struct CustomerHomeFilesSpotlight: View {
             navigation.openFiles()
         } label: {
             HStack(spacing: 16) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color(red: 0.55, green: 0.78, blue: 0.42).opacity(0.2), theme.panel],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 52, height: 52)
-                    PAXIcon("doc.on.doc", size: .action, emphasis: .primary, tint: Color(red: 0.55, green: 0.78, blue: 0.42))
-                }
+                PAXRevolutGlyphAvatar(
+                    systemImage: "doc.on.doc",
+                    size: 48,
+                    tint: Color(uiColor: PAXDynamic.income)
+                )
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(String(localized: "Files & invoices"))
+                    Text(String(localized: "Files and invoices"))
                         .font(.headline)
                         .foregroundStyle(theme.textPrimary)
                     Text(filesCount > 0
@@ -506,12 +541,7 @@ private struct CustomerHomeFilesSpotlight: View {
                 PAXIcon("chevron.right", size: .inline, emphasis: .tertiary)
             }
             .padding(18)
-            .background(theme.cardBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                    .stroke(theme.border.opacity(0.3), lineWidth: 0.5)
-            )
+            .paxRevolutSurface(cornerRadius: 20, elevation: 0)
         }
         .buttonStyle(PremiumHomePressStyle())
     }
@@ -558,12 +588,7 @@ private struct CustomerHomeRecommendedServices: View {
         }
         .padding(16)
         .frame(width: 200, alignment: .leading)
-        .background(theme.panel)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .stroke(theme.border.opacity(0.3), lineWidth: 0.5)
-        )
+        .paxRevolutSurface(cornerRadius: 20, elevation: 0)
     }
 }
 
@@ -632,73 +657,6 @@ private struct CustomerHomeFeaturedWorkStrip: View {
     }
 }
 
-// MARK: - Utility row
-
-private struct CustomerHomeUtilityRow: View {
-    @EnvironmentObject private var navigation: CustomerNavigationCoordinator
-    @Environment(\.marketingTheme) private var theme
-    let dashboard: CustomerDashboard
-
-    var body: some View {
-        HStack(spacing: 12) {
-            utilityChip(
-                title: String(localized: "Notifications"),
-                icon: "bell.badge.fill",
-                badge: dashboard.unread_count
-            ) {
-                navigation.openNotifications()
-            }
-            utilityChip(
-                title: String(localized: "Cybercrime"),
-                icon: "shield.checkered",
-                badge: nil
-            ) {
-                navigation.openCybercrime()
-            }
-            utilityChip(
-                title: String(localized: "Services"),
-                icon: "square.grid.2x2.fill",
-                badge: nil
-            ) {
-                navigation.selectedTab = .services
-            }
-        }
-    }
-
-    private func utilityChip(title: String, icon: String, badge: Int?, action: @escaping () -> Void) -> some View {
-        Button {
-            PAXHaptics.light()
-            action()
-        } label: {
-            HStack(spacing: 10) {
-                PAXIcon(icon, size: .row, emphasis: .primary, tint: theme.textSecondary)
-                Text(title)
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(theme.textPrimary)
-                if let badge, badge > 0 {
-                    Text("\(badge)")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.red)
-                        .clipShape(Capsule())
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .frame(maxWidth: .infinity)
-            .background(theme.panel)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(theme.border.opacity(0.3), lineWidth: 0.5)
-            )
-        }
-        .buttonStyle(PremiumHomePressStyle())
-    }
-}
-
 // MARK: - News digest
 
 private struct CustomerHomeNewsDigest: View {
@@ -732,8 +690,7 @@ private struct CustomerHomeNewsDigest: View {
                         PAXIcon("chevron.right", size: .inline, emphasis: .tertiary)
                     }
                     .padding(16)
-                    .background(theme.panel)
-                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .paxRevolutSurface(cornerRadius: 16, elevation: 0)
                 }
                 .buttonStyle(PremiumHomePressStyle())
             }
@@ -750,23 +707,47 @@ struct CustomerHomeGuestPremiumStrip: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            HStack(spacing: 10) {
-                PAXRevolutGlyphAvatar(systemImage: "square.stack.3d.up.fill", size: 40, tint: theme.accent)
-                Text(String(localized: "Your digital workspace"))
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(theme.textPrimary)
-            }
-            Text(String(localized: "Sign in to track projects, submit requests, chat with our team, and access your files — all in one premium experience."))
+            Text(String(localized: "Platform access").uppercased())
+                .font(PAXTypography.labelUpper)
+                .tracking(0.7)
+                .foregroundStyle(PAXTheme.textTertiary)
+            Text(String(localized: "Your digital workspace"))
+                .font(.title2.weight(.bold))
+                .foregroundStyle(theme.textPrimary)
+            Text(String(localized: "Sign in to track projects, submit requests, chat with our team, and access your files in one premium experience."))
                 .font(.body)
                 .foregroundStyle(theme.textSecondary)
                 .lineSpacing(4)
-            HStack(spacing: 12) {
-                guestFeatureChip(icon: "folder.fill", label: String(localized: "Projects"))
-                guestFeatureChip(icon: "message.fill", label: String(localized: "Chat"))
-                guestFeatureChip(icon: "shield.checkered", label: String(localized: "Cybercrime"))
-            }
-            CustomerCybercrimeAccessCard(compact: true) {
-                navigation.openCybercrime()
+            HStack(alignment: .top, spacing: 8) {
+                PAXQuickActionButton(
+                    title: String(localized: "Services"),
+                    systemImage: "square.grid.2x2.fill",
+                    emphasized: true
+                ) {
+                    PAXHaptics.light()
+                    navigation.selectedTab = .services
+                }
+                PAXQuickActionButton(
+                    title: String(localized: "Cyber"),
+                    systemImage: "shield.checkered"
+                ) {
+                    PAXHaptics.light()
+                    navigation.openCybercrime()
+                }
+                PAXQuickActionButton(
+                    title: String(localized: "Chat"),
+                    systemImage: "bubble.left.and.bubble.right.fill"
+                ) {
+                    PAXHaptics.light()
+                    navigation.selectedTab = .account
+                }
+                PAXQuickActionButton(
+                    title: String(localized: "Sign in"),
+                    systemImage: "person.crop.circle"
+                ) {
+                    PAXHaptics.light()
+                    navigation.selectedTab = .account
+                }
             }
             HStack(spacing: 12) {
                 Button(String(localized: "Sign In")) {
@@ -786,25 +767,7 @@ struct CustomerHomeGuestPremiumStrip: View {
         }
         .padding(24)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            LinearGradient(
-                colors: [theme.panel, theme.accent.opacity(0.05)],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .stroke(
-                    LinearGradient(
-                        colors: [theme.accent.opacity(0.5), theme.accent.opacity(0.1)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1
-                )
-        )
+        .paxRevolutSurface(cornerRadius: 22, elevation: 1)
         .padding(.horizontal, CustomerResponsiveLayout.screenPadding)
         .padding(.vertical, 24)
         .premiumHomeAppear(appeared, delay: 0)
@@ -813,21 +776,6 @@ struct CustomerHomeGuestPremiumStrip: View {
                 appeared = true
             }
         }
-    }
-
-    private func guestFeatureChip(icon: String, label: String) -> some View {
-        VStack(spacing: 6) {
-            ZStack {
-                Circle()
-                    .fill(theme.accent.opacity(0.12))
-                    .frame(width: 40, height: 40)
-                PAXIcon(icon, size: .card, emphasis: .primary, tint: theme.accent)
-            }
-            Text(label)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(theme.textSecondary)
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 

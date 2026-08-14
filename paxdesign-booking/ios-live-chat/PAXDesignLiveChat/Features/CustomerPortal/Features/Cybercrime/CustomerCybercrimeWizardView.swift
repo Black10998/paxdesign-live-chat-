@@ -244,7 +244,7 @@ struct CustomerCybercrimeWizardView: View {
             Text(String(localized: "Identity document"))
                 .font(PAXTypography.rowTitle)
                 .foregroundStyle(PAXTheme.textPrimary)
-            Text(String(localized: "PDF or image — passport, ID card, or driver’s license. Required."))
+            Text(String(localized: "PDF or image. Passport, ID card, or driver’s license. Required."))
                 .font(PAXTypography.meta)
                 .foregroundStyle(PAXTheme.textSecondary)
             CustomerCybercrimeFileDrop(

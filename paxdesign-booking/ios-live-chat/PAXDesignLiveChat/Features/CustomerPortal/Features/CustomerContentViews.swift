@@ -105,7 +105,7 @@ struct CustomerDiscoverView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(String(localized: "PAXDesign"))
                     .font(.title.weight(.bold))
-                Text(String(localized: "Professional digital services — native, fast, and always up to date from our studio."))
+                Text(String(localized: "Professional digital services. Native, fast, and always up to date from our studio."))
                     .font(.subheadline)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
@@ -329,7 +329,7 @@ struct CustomerServicesCatalogView: View {
                                 VStack(alignment: .leading, spacing: 8) {
                                     Text(String(localized: "Services"))
                                         .font(.title2.weight(.bold))
-                                    Text(String(localized: "Every service from our studio — images, details, and native ordering."))
+                                    Text(String(localized: "Every service from our studio. Images, details, and native ordering."))
                                         .font(.subheadline)
                                         .foregroundStyle(PAXTheme.textSecondary)
                                 }

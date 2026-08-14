@@ -67,6 +67,10 @@ final class CustomerAPIClient: ObservableObject {
         try await publicPost("/auth/apple-login", json: payload, as: MobileLoginResponse.self)
     }
 
+    func authGitHubComplete(ticket: String) async throws -> MobileLoginResponse {
+        try await publicPost("/auth/github/complete", json: ["ticket": ticket], as: MobileLoginResponse.self)
+    }
+
     func authMobileLogout(appPasswordUUID: String) async throws {
         guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
         guard let url = endpointURL("/auth/mobile-logout") else { throw CustomerAPIError.invalidURL }
@@ -458,8 +462,13 @@ final class CustomerAPIClient: ObservableObject {
         return try await get(path, as: CustomerNotificationsResponse.self)
     }
 
-    func markNotificationsRead(ids: [Int]) async throws {
-        _ = try await requestJSON(path: "/customer/notifications", method: "PATCH", json: ["ids": ids], as: CustomerEmptyResponse.self)
+    func markNotificationsRead(ids: [Int]) async throws -> CustomerNotificationsResponse {
+        let payload: [String: Any] = ["ids": ids]
+        do {
+            return try await requestJSON(path: "/customer/notifications", method: "PATCH", json: payload, as: CustomerNotificationsResponse.self)
+        } catch {
+            return try await requestJSON(path: "/customer/notifications/read", method: "POST", json: payload, as: CustomerNotificationsResponse.self)
+        }
     }
 
     func fetchSettings() async throws -> CustomerSettingsResponse {

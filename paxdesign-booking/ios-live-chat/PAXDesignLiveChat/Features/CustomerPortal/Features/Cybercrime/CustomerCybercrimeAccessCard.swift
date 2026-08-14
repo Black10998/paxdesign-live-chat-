@@ -26,7 +26,7 @@ struct CustomerCybercrimeAccessCard: View {
                     PAXIcon("chevron.right", size: .inline, emphasis: .tertiary)
                 }
                 if !compact {
-                    Text(String(localized: "Submit a confidential report, follow its status, and talk with PAXDesign Support — the same workflow as the website, inside this app."))
+        Text(String(localized: "Submit a confidential report, follow its status, and talk with PAXDesign Support. The same workflow as the website, inside this app."))
                         .font(PAXTypography.meta)
                         .foregroundStyle(PAXTheme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)

@@ -142,6 +142,22 @@ final class AuthStore: ObservableObject {
         }
     }
 
+    func loginWithGitHub() async throws {
+        let ticket = try await GitHubOAuthSession.shared.signIn()
+        try await completeGitHubTicket(ticket)
+    }
+
+    func completeGitHubTicket(_ ticket: String) async throws {
+        let client = CustomerAPIClient()
+        client.useDefaultServer()
+        let response = try await client.authGitHubComplete(ticket: ticket)
+        try await completeMobileLogin(response: response)
+
+        if !isBootstrapping {
+            NotificationCenter.default.post(name: .paxInteractiveLoginSucceeded, object: nil)
+        }
+    }
+
     private func completeMobileLogin(response: MobileLoginResponse) async throws {
         guard response.success == true,
               let mode = response.session_mode,

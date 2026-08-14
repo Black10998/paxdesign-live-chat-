@@ -8,6 +8,7 @@ struct CustomerLoginView: View {
     var onRegister: (() -> Void)? = nil
     var onForgot: (() -> Void)? = nil
     @State private var isLoading = false
+    @State private var isGitHubLoading = false
 
     var body: some View {
         ScrollView {
@@ -60,7 +61,21 @@ struct CustomerLoginView: View {
                         isLoading = false
                     }
                 }
-                .disabled(isLoading || !network.isConnected)
+                .disabled(isLoading || isGitHubLoading || !network.isConnected)
+
+                VStack(spacing: 12) {
+                    HStack(spacing: 12) {
+                        Rectangle().fill(PAXTheme.divider).frame(height: 1)
+                        Text(String(localized: "or"))
+                            .font(PAXTypography.meta)
+                            .foregroundStyle(PAXTheme.textTertiary)
+                        Rectangle().fill(PAXTheme.divider).frame(height: 1)
+                    }
+                    PAXContinueWithGitHubButton(isLoading: isGitHubLoading) {
+                        signInWithGitHub()
+                    }
+                    .disabled(isLoading || !network.isConnected)
+                }
 
                 VStack(spacing: 10) {
                     if let onRegister {
@@ -81,6 +96,26 @@ struct CustomerLoginView: View {
         .paxScreenBackground()
         .navigationTitle(String(localized: "Sign in"))
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func signInWithGitHub() {
+        guard !isLoading, !isGitHubLoading else { return }
+        isGitHubLoading = true
+        auth.errorMessage = nil
+        PAXHaptics.light()
+        Task {
+            do {
+                try await AuthStore.shared.loginWithGitHub()
+                CustomerSessionController.shared.syncFromAuthStore(AuthStore.shared)
+                PAXHaptics.success()
+            } catch {
+                if (error as? GitHubOAuthError) != .cancelled {
+                    auth.errorMessage = error.localizedDescription
+                    PAXHaptics.warning()
+                }
+            }
+            isGitHubLoading = false
+        }
     }
 }
 

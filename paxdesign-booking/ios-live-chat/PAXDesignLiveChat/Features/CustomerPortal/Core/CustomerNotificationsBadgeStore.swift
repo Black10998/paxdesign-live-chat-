@@ -98,8 +98,10 @@ final class CustomerNotificationsBadgeStore: ObservableObject {
     }
 
     func markReadLocally(ids: [Int]) {
-        guard activeUserId > 0 else { return }
-        CustomerNotificationReadStore.markRead(userId: activeUserId, ids: ids)
+        let userId = AuthStore.shared.customerProfile?.id ?? activeUserId
+        guard userId > 0 else { return }
+        activeUserId = userId
+        CustomerNotificationReadStore.markRead(userId: userId, ids: ids)
         let newlyRead = ids.filter { $0 > 0 }.count
         if newlyRead > 0 {
             applyUnreadCount(max(0, unreadCount - newlyRead))

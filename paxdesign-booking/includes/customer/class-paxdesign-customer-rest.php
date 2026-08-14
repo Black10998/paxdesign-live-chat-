@@ -258,6 +258,30 @@ class PAXdesign_Customer_REST {
                 'methods'             => WP_REST_Server::EDITABLE,
                 'callback'            => array(__CLASS__, 'mark_notifications_read'),
                 'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+                'args'                => array(
+                    'ids' => array(
+                        'type'  => 'array',
+                        'items' => array('type' => 'integer'),
+                    ),
+                    'id'  => array(
+                        'type' => 'integer',
+                    ),
+                ),
+            ),
+        ));
+
+        register_rest_route(self::NS, '/customer/notifications/read', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'mark_notifications_read'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+            'args'                => array(
+                'ids' => array(
+                    'type'  => 'array',
+                    'items' => array('type' => 'integer'),
+                ),
+                'id'  => array(
+                    'type' => 'integer',
+                ),
             ),
         ));
 
@@ -681,14 +705,45 @@ class PAXdesign_Customer_REST {
 
     public static function mark_notifications_read(WP_REST_Request $request) {
         $uid = PAXdesign_Customer_Auth::current_user_id();
+        $ids = self::notification_ids_from_request($request);
+        $marked = PAXdesign_Customer_Notifications::mark_read_many($uid, $ids);
+        return rest_ensure_response(array(
+            'success'      => true,
+            'marked'       => $marked,
+            'unread_count' => PAXdesign_Customer_Notifications::unread_count($uid),
+            'items'        => PAXdesign_Customer_Notifications::list_for_user($uid, false, 50),
+        ));
+    }
+
+    /**
+     * @return int[]
+     */
+    private static function notification_ids_from_request(WP_REST_Request $request) {
         $ids = $request->get_param('ids');
+        if (!is_array($ids) || $ids === array()) {
+            $json = $request->get_json_params();
+            if (is_array($json) && isset($json['ids'])) {
+                $ids = $json['ids'];
+            }
+        }
+        if (!is_array($ids) || $ids === array()) {
+            $body = json_decode((string) $request->get_body(), true);
+            if (is_array($body) && isset($body['ids'])) {
+                $ids = $body['ids'];
+            }
+        }
         if (!is_array($ids)) {
-            $ids = array($request->get_param('id'));
+            $single = $request->get_param('id');
+            $ids = ($single !== null && $single !== '') ? array($single) : array();
         }
-        foreach ($ids as $id) {
-            PAXdesign_Customer_Notifications::mark_read($uid, (int) $id);
+        $clean = array();
+        foreach ((array) $ids as $id) {
+            $id = absint($id);
+            if ($id > 0) {
+                $clean[] = $id;
+            }
         }
-        return rest_ensure_response(array('success' => true));
+        return array_values(array_unique($clean));
     }
 
     /**

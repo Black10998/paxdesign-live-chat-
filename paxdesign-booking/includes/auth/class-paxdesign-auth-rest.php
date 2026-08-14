@@ -83,6 +83,35 @@ class PAXdesign_Auth_REST {
             'callback'            => array(__CLASS__, 'apple_web_complete'),
             'permission_callback' => $pub,
         ));
+        register_rest_route(self::NS, '/auth/github/start', array(
+            'methods'             => WP_REST_Server::READABLE,
+            'callback'            => array(__CLASS__, 'github_start'),
+            'permission_callback' => $pub,
+        ));
+        register_rest_route(self::NS, '/auth/github/callback', array(
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array(__CLASS__, 'github_callback'),
+                'permission_callback' => $pub,
+            ),
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array(__CLASS__, 'github_callback'),
+                'permission_callback' => $pub,
+            ),
+        ));
+        register_rest_route(self::NS, '/auth/github/complete', array(
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array(__CLASS__, 'github_complete'),
+                'permission_callback' => $pub,
+            ),
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array(__CLASS__, 'github_web_complete'),
+                'permission_callback' => $pub,
+            ),
+        ));
         register_rest_route(self::NS, '/auth/mobile-logout', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'mobile_logout'),
@@ -264,6 +293,91 @@ class PAXdesign_Auth_REST {
         nocache_headers();
         $redirect = PAXdesign_Auth_Apple::web_complete_login($request);
         wp_safe_redirect(PAXdesign_Auth_Apple::safe_redirect_url($redirect));
+        exit;
+    }
+
+    public static function github_start(WP_REST_Request $request) {
+        if (!defined('DONOTCACHEPAGE')) {
+            define('DONOTCACHEPAGE', true);
+        }
+        nocache_headers();
+
+        $limited = self::rate_limit('login');
+        if ($limited) {
+            $platform = strtolower((string) $request->get_param('platform')) === 'ios' ? 'ios' : 'web';
+            $redirect = PAXdesign_Auth_GitHub::error_redirect(
+                __('Too many attempts. Please try again later.', 'paxdesign-booking'),
+                $platform
+            );
+            if (PAXdesign_Auth_GitHub::is_app_redirect($redirect)) {
+                PAXdesign_Auth_GitHub::redirect_app($redirect);
+            }
+            wp_safe_redirect(PAXdesign_Auth_GitHub::safe_redirect_url($redirect));
+            exit;
+        }
+
+        $url = PAXdesign_Auth_GitHub::begin_authorization($request);
+        if (is_wp_error($url)) {
+            $platform = strtolower((string) $request->get_param('platform')) === 'ios' ? 'ios' : 'web';
+            $redirect = PAXdesign_Auth_GitHub::error_redirect($url->get_error_message(), $platform);
+            if (PAXdesign_Auth_GitHub::is_app_redirect($redirect)) {
+                PAXdesign_Auth_GitHub::redirect_app($redirect);
+            }
+            wp_safe_redirect(PAXdesign_Auth_GitHub::safe_redirect_url($redirect));
+            exit;
+        }
+
+        wp_redirect($url);
+        exit;
+    }
+
+    public static function github_callback(WP_REST_Request $request) {
+        if (!defined('DONOTCACHEPAGE')) {
+            define('DONOTCACHEPAGE', true);
+        }
+        nocache_headers();
+        $redirect = PAXdesign_Auth_GitHub::handle_callback($request);
+        if (PAXdesign_Auth_GitHub::is_app_redirect($redirect)) {
+            PAXdesign_Auth_GitHub::redirect_app($redirect);
+        }
+        wp_safe_redirect(PAXdesign_Auth_GitHub::safe_redirect_url($redirect));
+        exit;
+    }
+
+    public static function github_complete(WP_REST_Request $request) {
+        $limited = self::rate_limit('login');
+        if ($limited) {
+            return $limited;
+        }
+        $ticket = sanitize_text_field((string) $request->get_param('ticket'));
+        if ($ticket === '') {
+            $json = $request->get_json_params();
+            if (is_array($json)) {
+                $ticket = sanitize_text_field((string) ($json['ticket'] ?? ''));
+            }
+        }
+        $result = PAXdesign_Auth_GitHub::complete_ios_ticket($ticket);
+        $status = 200;
+        if (empty($result['success'])) {
+            $error = (string) ($result['error'] ?? '');
+            if (in_array($error, array('github_invalid', 'email_unverified', 'suspended'), true)) {
+                $status = 401;
+            } elseif ($error === 'locked') {
+                $status = 429;
+            } else {
+                $status = 400;
+            }
+        }
+        return new WP_REST_Response($result, $status);
+    }
+
+    public static function github_web_complete(WP_REST_Request $request) {
+        if (!defined('DONOTCACHEPAGE')) {
+            define('DONOTCACHEPAGE', true);
+        }
+        nocache_headers();
+        $redirect = PAXdesign_Auth_GitHub::complete_web_login($request);
+        wp_safe_redirect(PAXdesign_Auth_GitHub::safe_redirect_url($redirect));
         exit;
     }
 

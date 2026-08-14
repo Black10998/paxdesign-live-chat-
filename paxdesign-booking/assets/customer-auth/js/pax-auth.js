@@ -35,6 +35,7 @@
   var SESSION_SYNC_INTERVAL_MS = 45000;
   var authBroadcast = null;
   var pendingAppleError = '';
+  var pendingGitHubError = '';
 
   var SVG_GRADIENT = '<defs><linearGradient id="pdx-gradient-stroke" x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="black"></stop><stop offset="100%" stop-color="white"></stop></linearGradient></defs>';
   var SVG_EMAIL = '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">' + SVG_GRADIENT + '<g stroke="url(#pdx-gradient-stroke)" fill="none" stroke-width="1"><path d="M21.6365 5H3L12.2275 12.3636L21.6365 5Z"></path><path d="M16.5 11.5L22.5 6.5V17L16.5 11.5Z"></path><path d="M8 11.5L2 6.5V17L8 11.5Z"></path><path d="M9.5 12.5L2.81805 18.5002H21.6362L15 12.5L12 15L9.5 12.5Z"></path></g></svg>';
@@ -802,7 +803,7 @@
     html += '<div class="pdx-auth-msg-slot"></div>';
 
     if (currentView === 'login' && isAuthPageFormMount()) {
-      html += appleSignInTopBlockHtml();
+      html += socialSignInTopBlockHtml();
     }
 
     html += '<div class="pdx-auth-fields">';
@@ -830,7 +831,7 @@
         { view: 'register', label: 'Create account' },
       ]);
       if (!isAuthPageFormMount()) {
-        html += appleSignInButtonHtml();
+        html += socialSignInButtonHtml();
       }
     } else if (currentView === 'register') {
       html += submitBtn('Create Account', 'register');
@@ -855,7 +856,9 @@
       });
     });
     bindAppleSignInButton(mount);
+    bindGitHubSignInButton(mount);
     showPendingAppleError();
+    showPendingGitHubError();
   }
 
   function mountInlineAuth(container, view, options) {
@@ -994,20 +997,52 @@
       '</button>';
   }
 
-  function appleSignInTopBlockHtml() {
-    if (!C.appleWebEnabled || currentView !== 'login' || !isAuthPageFormMount()) return '';
-    return '<div class="pdx-auth-apple-wrap pdx-auth-apple-wrap--lead">' +
-      appleSignInButtonInnerHtml() +
+  function githubWebStartUrl() {
+    var base = C.githubStartUrl || ((C.restUrl || '') + '/auth/github/start');
+    if (!base) return '';
+    var returnTo = getReturnToParam() || (window.location.pathname + window.location.search + '#/overview');
+    var join = base.indexOf('?') >= 0 ? '&' : '?';
+    return base + join + 'platform=web&return_to=' + encodeURIComponent(returnTo);
+  }
+
+  function githubSignInButtonInnerHtml() {
+    return '<button type="button" class="pdx-auth-github-btn" data-pdx-github-signin="1">' +
+      '<span class="pdx-auth-github-icon" aria-hidden="true">' +
+      '<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" focusable="false">' +
+      '<path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82A7.6 7.6 0 0 1 8 4.77c.68.003 1.36.092 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>' +
+      '</svg></span>' +
+      'Continue with GitHub' +
+      '</button>';
+  }
+
+  function socialSignInTopBlockHtml() {
+    var buttons = '';
+    if (C.appleWebEnabled) buttons += appleSignInButtonInnerHtml();
+    if (C.githubWebEnabled) buttons += githubSignInButtonInnerHtml();
+    if (!buttons) return '';
+    return '<div class="pdx-auth-social-wrap pdx-auth-social-wrap--lead">' +
+      buttons +
       '</div>' +
       '<div class="pdx-auth-apple-divider pdx-auth-apple-divider--after-apple" aria-hidden="true"><span>or</span></div>';
   }
 
-  function appleSignInButtonHtml() {
-    if (!C.appleWebEnabled || currentView !== 'login' || !isAuthPageFormMount()) return '';
+  function socialSignInButtonHtml() {
+    var buttons = '';
+    if (C.appleWebEnabled) buttons += appleSignInButtonInnerHtml();
+    if (C.githubWebEnabled) buttons += githubSignInButtonInnerHtml();
+    if (!buttons) return '';
     return '<div class="pdx-auth-apple-divider" aria-hidden="true"><span>or</span></div>' +
-      '<div class="pdx-auth-apple-wrap">' +
-      appleSignInButtonInnerHtml() +
+      '<div class="pdx-auth-social-wrap">' +
+      buttons +
       '</div>';
+  }
+
+  function appleSignInTopBlockHtml() {
+    return socialSignInTopBlockHtml();
+  }
+
+  function appleSignInButtonHtml() {
+    return socialSignInButtonHtml();
   }
 
   function bindAppleSignInButton(root) {
@@ -1019,6 +1054,21 @@
       var url = appleWebStartUrl();
       if (!url) {
         showFormMessage('Sign in with Apple is not available right now.', 'error');
+        return;
+      }
+      window.location.href = url;
+    });
+  }
+
+  function bindGitHubSignInButton(root) {
+    if (!root) return;
+    var btn = root.querySelector('[data-pdx-github-signin]');
+    if (!btn) return;
+    btn.addEventListener('click', function () {
+      clearPendingGitHubError();
+      var url = githubWebStartUrl();
+      if (!url) {
+        showFormMessage('Continue with GitHub is not available right now.', 'error');
         return;
       }
       window.location.href = url;
@@ -1123,6 +1173,49 @@
       if (window.history && window.history.replaceState) {
         try {
           params.delete('pdx_apple');
+          params.delete('pdx_msg');
+          var cleanQuery = params.toString();
+          window.history.replaceState({}, '', window.location.pathname + (cleanQuery ? '?' + cleanQuery : '') + window.location.hash);
+        } catch (err) {}
+      }
+    }, 60000);
+  }
+
+  function clearPendingGitHubError() {
+    pendingGitHubError = '';
+    try { sessionStorage.removeItem('pdx_github_error'); } catch (e) {}
+    showFormMessage('', '');
+  }
+
+  function showPendingGitHubError() {
+    if (user.logged_in) {
+      clearPendingGitHubError();
+      return;
+    }
+    var msg = pendingGitHubError;
+    if (!msg) {
+      try { msg = sessionStorage.getItem('pdx_github_error') || ''; } catch (e) {}
+    }
+    if (!msg) return;
+    showFormMessage(msg, 'error');
+  }
+
+  function captureGitHubErrorFromUrl(params) {
+    if (!params || params.get('pdx_github') !== 'error') return;
+    var githubMsg = params.get('pdx_msg') || 'GitHub sign-in failed. Please try again.';
+    try {
+      githubMsg = decodeURIComponent(githubMsg.replace(/\+/g, ' '));
+    } catch (e) {}
+    pendingGitHubError = githubMsg;
+    try { sessionStorage.setItem('pdx_github_error', githubMsg); } catch (err) {}
+  }
+
+  function clearPendingGitHubErrorFromUrl(params) {
+    if (!params || params.get('pdx_github') !== 'error') return;
+    setTimeout(function () {
+      if (window.history && window.history.replaceState) {
+        try {
+          params.delete('pdx_github');
           params.delete('pdx_msg');
           var cleanQuery = params.toString();
           window.history.replaceState({}, '', window.location.pathname + (cleanQuery ? '?' + cleanQuery : '') + window.location.hash);
@@ -1510,12 +1603,17 @@
     var params = new URLSearchParams(window.location.search);
     if (user.logged_in) {
       clearPendingAppleError();
+      clearPendingGitHubError();
     } else if (params.get('pdx_apple') === 'error') {
       captureAppleErrorFromUrl(params);
+    } else if (params.get('pdx_github') === 'error') {
+      captureGitHubErrorFromUrl(params);
     } else {
       clearPendingAppleError();
+      clearPendingGitHubError();
     }
     clearPendingAppleErrorFromUrl(params);
+    clearPendingGitHubErrorFromUrl(params);
     var initialView = params.get('view') || 'login';
     if (initialView === 'reset' || params.get('pdx_reset') === '1') {
       currentView = 'reset';

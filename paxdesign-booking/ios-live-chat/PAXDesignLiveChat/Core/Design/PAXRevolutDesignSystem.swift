@@ -61,7 +61,7 @@ enum PAXSpacing {
     static let listRowHeightLarge: CGFloat = 72
     static let primaryButtonHeight: CGFloat = 52
     static let inputHeight: CGFloat = 56
-    static let quickActionSize: CGFloat = 56
+    static let quickActionSize: CGFloat = 64
     static let searchHeight: CGFloat = 44
     static let tabBarHeight: CGFloat = 56
     static let avatarRow: CGFloat = 40
@@ -224,25 +224,39 @@ struct PAXQuickActionVisual: View {
     let title: String
     let systemImage: String
     var emphasized = false
+    var badge: Int? = nil
 
     var body: some View {
         VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .fill(emphasized ? AnyShapeStyle(PAXBrandGradient.linear) : AnyShapeStyle(PAXTheme.surfaceElevated))
-                    .overlay {
-                        if !emphasized {
-                            Circle().strokeBorder(PAXTheme.divider, lineWidth: 1)
+            ZStack(alignment: .topTrailing) {
+                ZStack {
+                    Circle()
+                        .fill(emphasized ? AnyShapeStyle(PAXBrandGradient.linear) : AnyShapeStyle(PAXTheme.surfaceElevated))
+                        .overlay {
+                            if !emphasized {
+                                Circle().strokeBorder(PAXTheme.divider, lineWidth: 1)
+                            }
                         }
-                    }
-                    .shadow(color: emphasized ? PAXBrandGradient.glow : .clear, radius: 10, y: 4)
-                PAXIcon(
-                    systemImage,
-                    size: .action,
-                    tint: emphasized ? PAXTheme.onAccent : PAXTheme.textPrimary
-                )
+                        .shadow(color: emphasized ? PAXBrandGradient.glow : .clear, radius: 10, y: 4)
+                    PAXIcon(
+                        systemImage,
+                        size: .hero,
+                        tint: emphasized ? PAXTheme.onAccent : PAXTheme.textPrimary
+                    )
+                }
+                .frame(width: PAXSpacing.quickActionSize, height: PAXSpacing.quickActionSize)
+
+                if let badge, badge > 0 {
+                    Text(badge > 99 ? "99+" : "\(badge)")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, badge > 9 ? 5 : 4)
+                        .padding(.vertical, 2)
+                        .background(Color(uiColor: PAXDynamic.spend))
+                        .clipShape(Capsule())
+                        .offset(x: 4, y: -2)
+                }
             }
-            .frame(width: PAXSpacing.quickActionSize, height: PAXSpacing.quickActionSize)
 
             Text(title)
                 .font(PAXTypography.meta)
@@ -258,14 +272,16 @@ struct PAXQuickActionButton: View {
     let title: String
     let systemImage: String
     var emphasized = false
+    var badge: Int? = nil
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            PAXQuickActionVisual(title: title, systemImage: systemImage, emphasized: emphasized)
+            PAXQuickActionVisual(title: title, systemImage: systemImage, emphasized: emphasized, badge: badge)
         }
         .buttonStyle(PAXRevolutPressableStyle())
         .accessibilityLabel(title)
+        .accessibilityValue((badge ?? 0) > 0 ? String(localized: "\(badge ?? 0) unread") : "")
     }
 }
 

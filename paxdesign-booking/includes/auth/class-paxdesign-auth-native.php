@@ -630,7 +630,7 @@ class PAXdesign_Auth_Native {
 	 *
 	 * @return array<string, mixed>
 	 */
-	public static function mobile_login_for_user( int $user_id, string $device_label = '' ): array {
+	public static function mobile_login_for_user( int $user_id, string $device_label = '', string $provider = 'apple' ): array {
 		$user_id = absint( $user_id );
 		if ( $user_id <= 0 ) {
 			return [ 'success' => false, 'error' => 'invalid_user', 'message' => 'Invalid account.' ];
@@ -675,14 +675,18 @@ class PAXdesign_Auth_Native {
 			do_action( 'pdx_user_logged_in', $user_id );
 		}
 
-		$role = self::resolve_portal_role( $user_id );
+		$role     = self::resolve_portal_role( $user_id );
+		$provider = sanitize_key( $provider );
+		if ( $provider === '' ) {
+			$provider = 'apple';
+		}
 		if ( class_exists( 'PDX_Audit' ) ) {
-			PDX_Audit::log( 'auth', 'mobile_login', [ 'user_id' => $user_id, 'session_mode' => $session_mode, 'role' => $role, 'provider' => 'apple' ] );
+			PDX_Audit::log( 'auth', 'mobile_login', [ 'user_id' => $user_id, 'session_mode' => $session_mode, 'role' => $role, 'provider' => $provider ] );
 		}
 		if ( class_exists( 'PAXdesign_Auth_Log' ) ) {
 			PAXdesign_Auth_Log::event(
 				'mobile_login_success',
-				[ 'user_id' => $user_id, 'session_mode' => $session_mode, 'role' => $role, 'provider' => 'apple' ]
+				[ 'user_id' => $user_id, 'session_mode' => $session_mode, 'role' => $role, 'provider' => $provider ]
 			);
 		}
 

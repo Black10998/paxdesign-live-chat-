@@ -38,7 +38,7 @@ enum CustomerCybercrimeCatalog {
         .init(id: "low", title: String(localized: "Low"), tint: PAXTheme.textSecondary),
         .init(id: "medium", title: String(localized: "Medium"), tint: Color(uiColor: PAXDynamic.warn)),
         .init(id: "high", title: String(localized: "High"), tint: Color(uiColor: PAXDynamic.spend)),
-        .init(id: "critical", title: String(localized: "Critical — active now"), tint: Color(uiColor: PAXDynamic.spend)),
+        .init(id: "critical", title: String(localized: "Critical, active now"), tint: Color(uiColor: PAXDynamic.spend)),
     ]
 
     struct Country: Identifiable, Hashable {

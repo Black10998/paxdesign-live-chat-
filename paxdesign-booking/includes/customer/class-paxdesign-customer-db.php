@@ -9,7 +9,7 @@ if (!defined('ABSPATH')) {
 
 class PAXdesign_Customer_DB {
 
-    const SCHEMA_VERSION = '1.0.0';
+    const SCHEMA_VERSION = '1.0.1';
     const OPTION_VERSION = 'paxdesign_customer_db_version';
 
     public static function init() {
@@ -18,11 +18,26 @@ class PAXdesign_Customer_DB {
 
     public static function maybe_upgrade() {
         $current = get_option(self::OPTION_VERSION, '');
-        if ($current === self::SCHEMA_VERSION && self::schema_complete()) {
+        if ($current !== self::SCHEMA_VERSION || !self::schema_complete()) {
+            self::install();
+            update_option(self::OPTION_VERSION, self::SCHEMA_VERSION, false);
+        }
+        self::ensure_notification_read_columns();
+    }
+
+    /**
+     * Older installs may have created the notifications table without read_at.
+     */
+    private static function ensure_notification_read_columns() {
+        global $wpdb;
+        $table = self::table('notifications');
+        if ($wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table)) !== $table) {
             return;
         }
-        self::install();
-        update_option(self::OPTION_VERSION, self::SCHEMA_VERSION, false);
+        $col = $wpdb->get_results($wpdb->prepare("SHOW COLUMNS FROM `$table` LIKE %s", 'read_at'));
+        if (empty($col)) {
+            $wpdb->query("ALTER TABLE `$table` ADD COLUMN read_at datetime NULL");
+        }
     }
 
     /**

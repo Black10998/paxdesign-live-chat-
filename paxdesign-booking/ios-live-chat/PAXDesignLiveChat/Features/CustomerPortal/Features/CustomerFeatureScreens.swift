@@ -731,6 +731,10 @@ struct CustomerNotificationsView: View {
         return items.filter { $0.category.lowercased() == filter }
     }
 
+    private var displayedUnreadCount: Int {
+        (response?.items.filter { !$0.is_read }.count) ?? 0
+    }
+
     var body: some View {
         Group {
             if let response {
@@ -781,7 +785,7 @@ struct CustomerNotificationsView: View {
                 }
                 .navigationTitle(String(localized: "Notifications"))
                 .toolbar {
-                    if response.unread_count > 0 {
+                    if displayedUnreadCount > 0 {
                         ToolbarItem(placement: .topBarTrailing) {
                             Button(String(localized: "Mark all read")) {
                                 Task { await markAllRead() }
@@ -810,23 +814,71 @@ struct CustomerNotificationsView: View {
     }
 
     private func load() async {
-        do { response = try await api.fetchNotifications() }
-        catch { self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription }
+        do {
+            response = overlay(try await api.fetchNotifications())
+            error = nil
+        } catch {
+            self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
+        }
         await CustomerNotificationsBadgeStore.shared.refresh(api: api)
+    }
+
+    private func overlay(_ payload: CustomerNotificationsResponse) -> CustomerNotificationsResponse {
+        let userId = AuthStore.shared.customerProfile?.id ?? 0
+        return payload.overlayingLocalRead(userId: userId)
+    }
+
+    private func applyLocalRead(ids: [Int]) {
+        let userId = AuthStore.shared.customerProfile?.id ?? 0
+        CustomerNotificationReadStore.markRead(userId: userId, ids: ids)
+        guard var current = response else { return }
+        let items = current.items.map { item -> CustomerNotificationItem in
+            guard ids.contains(item.id) else { return item }
+            var copy = item
+            copy.is_read = true
+            return copy
+        }
+        current = CustomerNotificationsResponse(
+            items: items,
+            unreadCount: items.filter { !$0.is_read }.count,
+            success: current.success,
+            marked: current.marked
+        )
+        response = current
     }
 
     private func markAllRead() async {
         guard let ids = response?.items.filter({ !$0.is_read }).map(\.id), !ids.isEmpty else { return }
-        try? await api.markNotificationsRead(ids: ids)
+        applyLocalRead(ids: ids)
         CustomerNotificationsBadgeStore.shared.clearAfterMarkAllRead(ids: ids)
-        await load()
+        do {
+            let marked = try await api.markNotificationsRead(ids: ids)
+            if !marked.items.isEmpty {
+                response = overlay(marked)
+            }
+        } catch {
+            self.error = (error as? CustomerAPIError)?.localizedDescription ?? error.localizedDescription
+        }
+        await CustomerNotificationsBadgeStore.shared.refresh(api: api)
     }
 
     private func openNotification(_ item: CustomerNotificationItem) async {
         if !item.is_read {
-            try? await api.markNotificationsRead(ids: [item.id])
+            applyLocalRead(ids: [item.id])
             CustomerNotificationsBadgeStore.shared.markReadLocally(ids: [item.id])
-            await load()
+            Task {
+                do {
+                    let marked = try await api.markNotificationsRead(ids: [item.id])
+                    if !marked.items.isEmpty {
+                        await MainActor.run { response = overlay(marked) }
+                    }
+                    await CustomerNotificationsBadgeStore.shared.refresh(api: api)
+                } catch {
+                    #if DEBUG
+                    print("Mark notification read failed: \(error.localizedDescription)")
+                    #endif
+                }
+            }
         }
         if let link = CustomerDeepLink(notificationItem: item) {
             navigation.handle(deepLink: link)

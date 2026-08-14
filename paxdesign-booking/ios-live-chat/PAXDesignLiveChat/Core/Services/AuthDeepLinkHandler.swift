@@ -37,6 +37,21 @@ enum AuthDeepLinkHandler {
             return true
         }
 
+        if url.host?.lowercased() == "auth", url.path.lowercased().contains("github") {
+            Task { @MainActor in
+                do {
+                    let ticket = try GitHubOAuthSession.ticket(from: url)
+                    try await AuthStore.shared.completeGitHubTicket(ticket)
+                    CustomerSessionController.shared.syncFromAuthStore(AuthStore.shared)
+                } catch {
+                    #if DEBUG
+                    print("GitHub deep link login failed: \(error.localizedDescription)")
+                    #endif
+                }
+            }
+            return true
+        }
+
         return false
     }
 }

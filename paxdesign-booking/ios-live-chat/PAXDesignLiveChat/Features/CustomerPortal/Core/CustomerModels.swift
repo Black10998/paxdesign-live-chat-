@@ -268,7 +268,7 @@ struct CustomerNewsResponse: Decodable {
     let items: [CustomerNewsItem]
 }
 
-struct CustomerNotificationItem: Decodable, Identifiable {
+struct CustomerNotificationItem: Decodable, Identifiable, Equatable {
     let id: Int
     let category: String
     let title: String
@@ -276,13 +276,73 @@ struct CustomerNotificationItem: Decodable, Identifiable {
     let deep_link: String?
     let entity_type: String?
     let entity_id: String?
-    let is_read: Bool
+    var is_read: Bool
     let created_at: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, category, title, body, deep_link, entity_type, entity_id, is_read, created_at
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = CustomerPortalDecode.int(container, .id)
+        category = CustomerPortalDecode.string(container, .category)
+        title = CustomerPortalDecode.string(container, .title)
+        body = try container.decodeIfPresent(String.self, forKey: .body)
+        deep_link = try container.decodeIfPresent(String.self, forKey: .deep_link)
+        entity_type = try container.decodeIfPresent(String.self, forKey: .entity_type)
+        entity_id = try container.decodeIfPresent(String.self, forKey: .entity_id)
+        is_read = CustomerPortalDecode.optionalBool(container, .is_read) ?? false
+        created_at = CustomerPortalDecode.string(container, .created_at)
+    }
+
+    @MainActor
+    func overlayingLocalRead(userId: Int) -> CustomerNotificationItem {
+        guard !is_read, CustomerNotificationReadStore.isRead(userId: userId, notificationId: id) else {
+            return self
+        }
+        var copy = self
+        copy.is_read = true
+        return copy
+    }
 }
 
 struct CustomerNotificationsResponse: Decodable {
     let items: [CustomerNotificationItem]
     let unread_count: Int
+    let success: Bool?
+    let marked: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case items, unread_count, success, marked
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        items = (try? container.decode([CustomerNotificationItem].self, forKey: .items)) ?? []
+        let decodedCount = CustomerPortalDecode.optionalInt(container, .unread_count)
+        unread_count = decodedCount ?? items.filter { !$0.is_read }.count
+        success = CustomerPortalDecode.optionalBool(container, .success)
+        marked = CustomerPortalDecode.optionalInt(container, .marked)
+    }
+
+    @MainActor
+    func overlayingLocalRead(userId: Int) -> CustomerNotificationsResponse {
+        let overlaid = items.map { $0.overlayingLocalRead(userId: userId) }
+        return CustomerNotificationsResponse(
+            items: overlaid,
+            unreadCount: overlaid.filter { !$0.is_read }.count,
+            success: success,
+            marked: marked
+        )
+    }
+
+    init(items: [CustomerNotificationItem], unreadCount: Int, success: Bool? = nil, marked: Int? = nil) {
+        self.items = items
+        self.unread_count = unreadCount
+        self.success = success
+        self.marked = marked
+    }
 }
 
 struct CustomerFileLibraryItem: Decodable, Identifiable {

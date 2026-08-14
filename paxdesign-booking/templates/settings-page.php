@@ -31,6 +31,13 @@ $apple_web_key_p8     = get_option('paxdesign_apple_web_key_p8', '');
 $apple_web_callback_url = class_exists('PAXdesign_Auth_Apple')
     ? PAXdesign_Auth_Apple::web_callback_url()
     : rest_url('pdx/v1/auth/apple/callback');
+$github_client_id = get_option('paxdesign_github_client_id', '');
+$github_secret_configured = class_exists('PAXdesign_Auth_GitHub')
+    ? PAXdesign_Auth_GitHub::is_configured()
+    : (trim((string) get_option('paxdesign_github_client_secret', '')) !== '');
+$github_callback_url = class_exists('PAXdesign_Auth_GitHub')
+    ? PAXdesign_Auth_GitHub::callback_url()
+    : rest_url('pdx/v1/auth/github/callback');
 $live_agent_name    = get_option('paxdesign_live_chat_agent_name', PAXdesign_Chat_Live::get_agent_display_name());
 $live_agent_avatar  = get_option('paxdesign_live_chat_agent_avatar', PAXdesign_Chat_Live::get_agent_avatar_url());
 $live_agent_role    = get_option('paxdesign_live_chat_agent_role', PAXdesign_Chat_Live::get_agent_role());
@@ -254,6 +261,31 @@ $chat_quick_links   = class_exists('PAXdesign_Chat_Quick_Links') ? PAXdesign_Cha
               <input type="text" class="ps-input" readonly value="<?php echo esc_attr($apple_web_callback_url); ?>"
                      onclick="this.select();" style="cursor:pointer">
               <span class="ps-hint">Service ID → Sign in with Apple → Web Authentication Configuration → Return URLs. Also register domain: <?php echo esc_html(wp_parse_url(home_url('/'), PHP_URL_HOST) ?: 'your-domain'); ?></span>
+            </div>
+
+            <div class="ps-divider"></div>
+            <h3 class="ps-subheading">Continue with GitHub</h3>
+            <p class="ps-hint ps-hint--block">iOS and the website use the same GitHub OAuth App. GitHub redirects to the HTTPS callback below. The client secret stays on this server and is never returned by the API or included in the iOS app.</p>
+
+            <div class="ps-field">
+              <label class="ps-label" for="paxdesign_github_client_id">GitHub Client ID</label>
+              <input type="text" id="paxdesign_github_client_id" name="paxdesign_github_client_id"
+                     class="ps-input" value="<?php echo esc_attr($github_client_id); ?>" placeholder="Ov23li…">
+            </div>
+
+            <div class="ps-field">
+              <label class="ps-label" for="paxdesign_github_client_secret">GitHub Client Secret</label>
+              <input type="password" id="paxdesign_github_client_secret" name="paxdesign_github_client_secret"
+                     class="ps-input" value="" autocomplete="new-password"
+                     placeholder="<?php echo $github_secret_configured ? 'Configured on server' : 'Paste client secret'; ?>">
+              <span class="ps-hint">Leave blank to keep the current secret. The value is never shown after saving.</span>
+            </div>
+
+            <div class="ps-field">
+              <label class="ps-label">OAuth Callback URL (register in GitHub)</label>
+              <input type="text" class="ps-input" readonly value="<?php echo esc_attr($github_callback_url); ?>"
+                     onclick="this.select();" style="cursor:pointer">
+              <span class="ps-hint">GitHub OAuth App → Authorization callback URL. Must match exactly, including https and no trailing slash.</span>
             </div>
 
             <div class="ps-divider"></div>

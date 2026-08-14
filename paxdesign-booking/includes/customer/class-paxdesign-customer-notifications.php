@@ -62,17 +62,52 @@ class PAXdesign_Customer_Notifications {
 
     public static function mark_read($user_id, $notification_id) {
         global $wpdb;
-        $updated = (bool) $wpdb->update(
-            PAXdesign_Customer_DB::table('notifications'),
-            array('is_read' => 1, 'read_at' => current_time('mysql', true)),
-            array('id' => absint($notification_id), 'user_id' => absint($user_id)),
-            array('%d', '%s'),
-            array('%d', '%d')
-        );
-        if ($updated) {
-            self::push_badge_sync($user_id);
+        $user_id = absint($user_id);
+        $notification_id = absint($notification_id);
+        if ($user_id <= 0 || $notification_id <= 0) {
+            return false;
         }
-        return $updated;
+
+        $table = PAXdesign_Customer_DB::table('notifications');
+        $now = current_time('mysql', true);
+        $updated = $wpdb->query($wpdb->prepare(
+            "UPDATE $table SET is_read = 1, read_at = COALESCE(read_at, %s) WHERE id = %d AND user_id = %d AND is_read = 0",
+            $now,
+            $notification_id,
+            $user_id
+        ));
+        if ($updated === false) {
+            $updated = $wpdb->query($wpdb->prepare(
+                "UPDATE $table SET is_read = 1 WHERE id = %d AND user_id = %d",
+                $notification_id,
+                $user_id
+            ));
+        }
+        if ((int) $updated > 0) {
+            self::push_badge_sync($user_id);
+            return true;
+        }
+
+        $already = (int) $wpdb->get_var($wpdb->prepare(
+            "SELECT COUNT(1) FROM $table WHERE id = %d AND user_id = %d AND is_read = 1",
+            $notification_id,
+            $user_id
+        ));
+        return $already > 0;
+    }
+
+    /**
+     * @param int[] $ids
+     * @return int Number of notifications confirmed as read.
+     */
+    public static function mark_read_many($user_id, $ids) {
+        $count = 0;
+        foreach (array_values(array_unique(array_map('absint', (array) $ids))) as $id) {
+            if ($id > 0 && self::mark_read($user_id, $id)) {
+                $count++;
+            }
+        }
+        return $count;
     }
 
     /**
@@ -248,7 +283,7 @@ class PAXdesign_Customer_Notifications {
             'entity_type' => $row['entity_type'],
             'entity_id'   => $row['entity_id'],
             'deep_link'   => $row['deep_link'],
-            'is_read'     => !empty($row['is_read']),
+            'is_read'     => ((int) ($row['is_read'] ?? 0)) === 1,
             'created_at'  => $row['created_at'],
             'read_at'     => $row['read_at'],
         );
