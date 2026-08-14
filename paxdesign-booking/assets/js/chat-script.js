@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.174.0
+ * Version: 3.174.90
  */
 (function () {
   'use strict';
@@ -85,8 +85,12 @@
   var typingSoundActive  = false;
   var typingSoundLoopTimer = null;
   var typingSoundAudio   = null;
-  var TYPING_SOUND_VOLUME = 0.32;
-  var TYPING_SOUND_GAP_MS = 70;
+  var typingSourceNode   = null;
+  var TYPING_SOUND_VOLUME = 0.16;
+  var AVAILABLE_SOUND_VOLUME = 0.18;
+  var decodedSoundBuffers = {};
+  var decodedSoundWaiters = {};
+  var availableSoundPlayed = false;
   var messageReactions   = {};
   var chatMessageMap     = {};
   var replyToId          = 0;
@@ -105,7 +109,7 @@
 
   var SOUND_URLS = (config && config.sounds) ? config.sounds : {
     typing: 'https://paxdesign.at/wp-content/uploads/2026/06/freesound_community-writing-a-text-message-41141.mp3',
-    openClose: 'https://paxdesign.at/wp-content/uploads/2026/06/u_8e8ungop1x-intro_cinematic-270840.mp3',
+    openClose: 'https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/sounds/pax-chat-available.wav',
     incoming: ''
   };
 
@@ -141,6 +145,7 @@
   var RATING_DISLIKE = 1;
 
   var OPEN_CLOSE_SOUND_KEY = 'paxdesign-chat-openclose-sound';
+  var AVAILABLE_SOUND_KEY = 'paxdesign-chat-available-sound';
   var agentJoinSoundPlayed = false;
   var chatEndSoundPlayed   = false;
   var SESSION_KEY       = 'paxdesign-chat-session';
@@ -1615,6 +1620,7 @@
 
   function onWidgetOpen() {
     widgetOpen = true;
+    playAvailableSoundOnce();
     initAuthGate();
     if (!canUseChat()) {
       showAuthGate();
@@ -1678,14 +1684,14 @@
     if (agentJoinSoundPlayed || !soundEnabled) return;
     agentJoinSoundPlayed = true;
     saveOpenCloseSoundFlags();
-    playMp3Sound('openClose', { volume: 0.42 });
+    playMp3Sound('openClose', { volume: AVAILABLE_SOUND_VOLUME });
   }
 
   function playChatEndedSoundOnce() {
     if (chatEndSoundPlayed || !soundEnabled) return;
     chatEndSoundPlayed = true;
     saveOpenCloseSoundFlags();
-    playMp3Sound('openClose', { volume: 0.42 });
+    playMp3Sound('openClose', { volume: AVAILABLE_SOUND_VOLUME });
   }
 
   function loadCustomerName() {
@@ -1761,15 +1767,110 @@
     unlockAudio();
     var url = SOUND_URLS[kind];
     if (!url) return;
+    var volume = typeof options.volume === 'number' ? options.volume : AVAILABLE_SOUND_VOLUME;
+    playSoftUrl(kind, url, volume);
+  }
+
+  function prepareHtmlAudio(audio) {
+    audio.preload = 'auto';
+    audio.setAttribute('playsinline', 'true');
+    audio.setAttribute('webkit-playsinline', 'true');
+    try { audio.playsInline = true; } catch (e) {}
+  }
+
+  function finishSoundDecode(kind, buffer) {
+    if (buffer) decodedSoundBuffers[kind] = buffer;
+    var waiters = decodedSoundWaiters[kind] || [];
+    decodedSoundWaiters[kind] = null;
+    waiters.forEach(function (cb) {
+      try { cb(buffer || null); } catch (e) {}
+    });
+  }
+
+  function decodeSoundBuffer(kind, url, cb) {
+    if (!url) {
+      cb(null);
+      return;
+    }
+    if (decodedSoundBuffers[kind]) {
+      cb(decodedSoundBuffers[kind]);
+      return;
+    }
+    if (decodedSoundWaiters[kind]) {
+      decodedSoundWaiters[kind].push(cb);
+      return;
+    }
+    decodedSoundWaiters[kind] = [cb];
+    fetch(url, { mode: 'cors', credentials: 'omit' }).then(function (res) {
+      if (!res.ok) throw new Error('sound-fetch-failed');
+      return res.arrayBuffer();
+    }).then(function (arr) {
+      if (!audioCtx) {
+        finishSoundDecode(kind, null);
+        return;
+      }
+      var settled = false;
+      var done = function (buf) {
+        if (settled) return;
+        settled = true;
+        finishSoundDecode(kind, buf || null);
+      };
+      try {
+        var result = audioCtx.decodeAudioData(arr, done, function () { done(null); });
+        if (result && typeof result.then === 'function') {
+          result.then(done).catch(function () { done(null); });
+        }
+      } catch (e) {
+        done(null);
+      }
+    }).catch(function () {
+      finishSoundDecode(kind, null);
+    });
+  }
+
+  function playHtmlAudioFallback(kind, url, volume) {
     try {
       if (!mp3AudioCache[kind]) {
         mp3AudioCache[kind] = new Audio(url);
-        mp3AudioCache[kind].preload = 'auto';
+        prepareHtmlAudio(mp3AudioCache[kind]);
       }
       var audio = mp3AudioCache[kind].cloneNode();
-      audio.volume = typeof options.volume === 'number' ? options.volume : 0.45;
+      prepareHtmlAudio(audio);
+      audio.volume = volume;
       audio.play().catch(function () {});
     } catch (e) {}
+  }
+
+  function playSoftUrl(kind, url, volume) {
+    decodeSoundBuffer(kind, url, function (buffer) {
+      if (buffer && audioCtx) {
+        try {
+          var src = audioCtx.createBufferSource();
+          var gain = audioCtx.createGain();
+          src.buffer = buffer;
+          gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+          src.connect(gain);
+          gain.connect(audioCtx.destination);
+          src.start(0);
+          return;
+        } catch (e) {}
+      }
+      playHtmlAudioFallback(kind, url, volume);
+    });
+  }
+
+  function playAvailableSoundOnce() {
+    if (!soundEnabled) return;
+    if (availableSoundPlayed) return;
+    try {
+      if (sessionStorage.getItem(AVAILABLE_SOUND_KEY) === '1') {
+        availableSoundPlayed = true;
+        return;
+      }
+      sessionStorage.setItem(AVAILABLE_SOUND_KEY, '1');
+    } catch (e) {}
+    availableSoundPlayed = true;
+    playMp3Sound('openClose', { volume: AVAILABLE_SOUND_VOLUME });
   }
 
 
@@ -2711,6 +2812,8 @@
         source.connect(audioCtx.destination);
         source.start(0);
         audioUnlocked = true;
+        if (SOUND_URLS.openClose) decodeSoundBuffer('openClose', SOUND_URLS.openClose, function () {});
+        if (SOUND_URLS.typing) decodeSoundBuffer('typing', SOUND_URLS.typing, function () {});
       }
     } catch (e) {}
   }
@@ -2819,34 +2922,49 @@
     if (!SOUND_URLS.typing) return null;
     if (!typingSoundAudio) {
       typingSoundAudio = new Audio(SOUND_URLS.typing);
-      typingSoundAudio.preload = 'auto';
+      prepareHtmlAudio(typingSoundAudio);
     }
     return typingSoundAudio;
+  }
+
+  function stopTypingSource() {
+    if (typingSourceNode) {
+      try { typingSourceNode.stop(); } catch (e) {}
+      typingSourceNode = null;
+    }
   }
 
   function scheduleTypingSoundLoop() {
     if (!typingSoundActive || !soundEnabled) return;
     typingSoundLoopTimer = null;
-    var audio = ensureTypingSoundAudio();
-    if (!audio) return;
     unlockAudio();
-    audio.onended = null;
-    audio.pause();
-    audio.currentTime = 0;
-    audio.volume = TYPING_SOUND_VOLUME;
-    audio.onended = function () {
-      audio.onended = null;
+    decodeSoundBuffer('typing', SOUND_URLS.typing, function (buffer) {
       if (!typingSoundActive || !soundEnabled) return;
-      typingSoundLoopTimer = window.setTimeout(scheduleTypingSoundLoop, TYPING_SOUND_GAP_MS);
-    };
-    var playPromise = audio.play();
-    if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(function () {
-        if (typingSoundActive && soundEnabled) {
-          typingSoundLoopTimer = window.setTimeout(scheduleTypingSoundLoop, 420);
-        }
-      });
-    }
+      stopTypingSource();
+      if (buffer && audioCtx) {
+        try {
+          var src = audioCtx.createBufferSource();
+          var gain = audioCtx.createGain();
+          src.buffer = buffer;
+          gain.gain.setValueAtTime(TYPING_SOUND_VOLUME, audioCtx.currentTime);
+          src.connect(gain);
+          gain.connect(audioCtx.destination);
+          typingSourceNode = src;
+          src.onended = function () {
+            if (typingSourceNode === src) typingSourceNode = null;
+          };
+          src.start(0);
+          return;
+        } catch (e) {}
+      }
+      var audio = ensureTypingSoundAudio();
+      if (!audio) return;
+      audio.onended = null;
+      audio.pause();
+      audio.currentTime = 0;
+      audio.volume = TYPING_SOUND_VOLUME;
+      audio.play().catch(function () {});
+    });
   }
 
   function syncTypingSound(shouldPlay) {
@@ -2861,6 +2979,7 @@
       clearTimeout(typingSoundLoopTimer);
       typingSoundLoopTimer = null;
     }
+    stopTypingSource();
     if (typingSoundAudio) {
       typingSoundAudio.onended = null;
       typingSoundAudio.pause();

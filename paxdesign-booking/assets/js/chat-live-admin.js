@@ -502,14 +502,14 @@
     var adminTypingSoundActive = false;
     var adminTypingSoundLoopTimer = null;
     var adminTypingSoundAudio = null;
-    var ADMIN_TYPING_SOUND_VOLUME = 0.32;
-    var ADMIN_TYPING_SOUND_GAP_MS = 70;
+    var ADMIN_TYPING_SOUND_VOLUME = 0.16;
+    var ADMIN_TYPING_SOUND_GAP_MS = 1800;
     var suppressMessageSoundsUntil = 0;
     var mp3AudioCache = {};
     var uiLanguage = (localStorage.getItem('pax_live_ui_lang') || 'de').toLowerCase();
     var soundUrls = {
       typing: 'https://paxdesign.at/wp-content/uploads/2026/06/freesound_community-writing-a-text-message-41141.mp3',
-      openClose: 'https://paxdesign.at/wp-content/uploads/2026/06/u_8e8ungop1x-intro_cinematic-270840.mp3',
+      openClose: 'https://paxdesign.at/wp-content/plugins/paxdesign-booking/assets/sounds/pax-chat-available.wav',
     };
     var FEEDBACK_ICONS = {
       like: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>',
@@ -1239,7 +1239,7 @@
           mp3AudioCache[kind].preload = 'auto';
         }
         var audio = mp3AudioCache[kind].cloneNode();
-        audio.volume = typeof volume === 'number' ? volume : 0.42;
+        audio.volume = typeof volume === 'number' ? volume : 0.18;
         audio.play().catch(function () {});
       } catch (e) {}
     }
@@ -1263,19 +1263,7 @@
       audio.pause();
       audio.currentTime = 0;
       audio.volume = ADMIN_TYPING_SOUND_VOLUME;
-      audio.onended = function () {
-        audio.onended = null;
-        if (!adminTypingSoundActive) return;
-        adminTypingSoundLoopTimer = window.setTimeout(scheduleAdminTypingSoundLoop, ADMIN_TYPING_SOUND_GAP_MS);
-      };
-      var playPromise = audio.play();
-      if (playPromise && typeof playPromise.catch === 'function') {
-        playPromise.catch(function () {
-          if (adminTypingSoundActive) {
-            adminTypingSoundLoopTimer = window.setTimeout(scheduleAdminTypingSoundLoop, 420);
-          }
-        });
-      }
+      audio.play().catch(function () {});
     }
 
     function syncAdminTypingSound(shouldPlay) {
@@ -1306,7 +1294,7 @@
     }
 
     function playClosingSound() {
-      playMp3Sound('openClose', 0.42);
+      playMp3Sound('openClose', 0.18);
     }
 
     function setAssistVisible(visible) {

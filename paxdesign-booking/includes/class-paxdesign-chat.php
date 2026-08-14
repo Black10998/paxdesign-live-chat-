@@ -113,8 +113,8 @@ class PAXdesign_Chat {
             'liveEntryPrompt'    => 'Möchten Sie mit einem Live-Agent chatten?',
             'i18n'               => self::chat_widget_i18n(),
             'sounds'             => array(
-                'typing'    => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-typing.wav',
-                'openClose' => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-live-request.wav',
+                'typing'    => 'https://paxdesign.at/wp-content/uploads/2026/06/freesound_community-writing-a-text-message-41141.mp3',
+                'openClose' => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-chat-available.wav',
                 'incoming'  => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-message.wav',
                 'send'      => PAXDESIGN_BOOKING_PLUGIN_URL . 'assets/sounds/pax-send.wav',
             ),
