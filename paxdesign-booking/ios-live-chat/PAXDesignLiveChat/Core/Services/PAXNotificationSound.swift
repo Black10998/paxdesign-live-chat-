@@ -141,11 +141,20 @@ final class PAXNotificationSound {
 
     private func playerForBundleTone(_ tone: Tone, style: AppSettingsStore.NotificationToneStyle) -> AVAudioPlayer? {
         let baseNames = bundleToneCandidates(for: tone, style: style)
+        let subdirs: [String?] = [nil, "Sounds", "Resources/Sounds"]
         for name in baseNames {
             for ext in ["wav", "mp3", "caf", "aiff", "m4a"] {
-                guard let url = Bundle.main.url(forResource: name, withExtension: ext) else { continue }
-                if let player = try? AVAudioPlayer(contentsOf: url) {
-                    return player
+                for subdir in subdirs {
+                    let url: URL?
+                    if let subdir {
+                        url = Bundle.main.url(forResource: name, withExtension: ext, subdirectory: subdir)
+                    } else {
+                        url = Bundle.main.url(forResource: name, withExtension: ext)
+                    }
+                    guard let url else { continue }
+                    if let player = try? AVAudioPlayer(contentsOf: url) {
+                        return player
+                    }
                 }
             }
         }

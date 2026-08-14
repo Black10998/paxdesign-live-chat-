@@ -213,8 +213,6 @@ struct SettingsRootView: View {
         .paxScreenBackground()
         .navigationTitle(L10n.SettingsTitle)
         .navigationBarTitleDisplayMode(.large)
-        .toolbarBackground(PAXTheme.background, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
     }
 
     private var canManageUsersSection: Bool { auth.canManageUsers }

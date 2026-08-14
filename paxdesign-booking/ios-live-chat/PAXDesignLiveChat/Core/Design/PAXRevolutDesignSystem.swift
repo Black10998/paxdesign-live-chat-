@@ -448,7 +448,7 @@ struct PAXRevolutGlyphAvatar: View {
     var body: some View {
         ZStack {
             Circle().fill(PAXTheme.surfaceElevated)
-            PAXIcon(systemImage, size: size >= 48 ? .hero : .card, tint: tint)
+            PAXIcon(systemImage, size: size >= 72 ? .display : (size >= 48 ? .hero : .card), tint: tint)
         }
         .frame(width: size, height: size)
         .overlay(Circle().strokeBorder(PAXTheme.divider, lineWidth: 1))

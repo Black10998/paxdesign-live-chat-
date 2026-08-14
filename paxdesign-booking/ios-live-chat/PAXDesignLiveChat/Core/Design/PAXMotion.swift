@@ -37,12 +37,34 @@ extension View {
     }
 
     func paxScreenBackground() -> some View {
-        background(PAXBackground())
-            .toolbarBackground(PAXTheme.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(AppSettingsStore.shared.appearanceMode.colorScheme, for: .navigationBar)
+        modifier(PAXScreenBackgroundModifier())
     }
 
+    func paxRevolutGroupedList() -> some View {
+        listStyle(.insetGrouped)
+            .scrollContentBackground(.hidden)
+            .paxScreenBackground()
+    }
+}
+
+private struct PAXScreenBackgroundModifier: ViewModifier {
+    @ObservedObject private var settings = AppSettingsStore.shared
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var toolbarScheme: ColorScheme {
+        settings.resolvedIsDark(for: colorScheme) ? .dark : .light
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .background(PAXBackground())
+            .toolbarBackground(settings.palette.background(isDark: settings.resolvedIsDark(for: colorScheme)), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(toolbarScheme, for: .navigationBar)
+    }
+}
+
+extension View {
     func paxModuleTransition() -> some View {
         self
     }

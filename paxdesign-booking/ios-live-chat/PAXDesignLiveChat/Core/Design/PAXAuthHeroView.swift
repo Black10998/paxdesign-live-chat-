@@ -13,11 +13,10 @@ struct PAXAuthHeroView: View {
     var markWidth: CGFloat = 128
     var showsTitle: Bool = true
 
+    @ObservedObject private var settings = AppSettingsStore.shared
     @Environment(\.colorScheme) private var colorScheme
 
-    private var accent: Color {
-        PAXBrand.appearanceAccent(isDark: colorScheme == .dark)
-    }
+    private var isDark: Bool { settings.resolvedIsDark(for: colorScheme) }
 
     var body: some View {
         VStack(spacing: 18) {
@@ -38,6 +37,7 @@ struct PAXAuthHeroView: View {
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
+        .id(settings.themeRevision)
     }
 
     @ViewBuilder
@@ -48,25 +48,9 @@ struct PAXAuthHeroView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 4)
         case .icon(let name):
-            ZStack {
-                Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [accent.opacity(colorScheme == .dark ? 0.28 : 0.18), .clear],
-                            center: .center,
-                            startRadius: 8,
-                            endRadius: 56
-                        )
-                    )
-                    .frame(width: 112, height: 112)
-                Circle()
-                    .strokeBorder(accent.opacity(0.35), lineWidth: 1.2)
-                    .background(Circle().fill(.ultraThinMaterial))
-                    .frame(width: 88, height: 88)
-                PAXIcon(name, size: .display)
-                    .foregroundStyle(accent)
-            }
-            .accessibilityHidden(true)
+            PAXRevolutGlyphAvatar(systemImage: name, size: 88, tint: PAXTheme.accent)
+                .shadow(color: PAXBrandGradient.glow, radius: isDark ? 16 : 8, y: 6)
+                .accessibilityHidden(true)
         }
     }
 }
@@ -76,9 +60,8 @@ struct PAXOnboardingIllustration: View {
     var tint: Color = PAXTheme.accent
 
     var body: some View {
-        PAXIcon(systemImage, size: .display)
-            .foregroundStyle(tint)
-            .frame(width: 72, height: 72)
+        PAXRevolutGlyphAvatar(systemImage: systemImage, size: 88, tint: tint)
+            .shadow(color: tint.opacity(0.22), radius: 16, y: 8)
             .accessibilityHidden(true)
     }
 }

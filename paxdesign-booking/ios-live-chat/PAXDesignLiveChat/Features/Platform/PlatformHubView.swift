@@ -69,7 +69,7 @@ struct PlatformHubView: View {
     private func moduleSection(category: PlatformModuleCategory, modules: [PlatformModule]) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(category.title)
-                .font(.headline)
+                .font(PAXTypography.section)
                 .foregroundStyle(PAXTheme.textPrimary)
                 .padding(.horizontal, 4)
 
@@ -107,7 +107,7 @@ struct PlatformHubView: View {
 
                 VStack(alignment: .leading, spacing: 5) {
                     Text(auth.profile?.displayName ?? L10n.CommonAdministrator)
-                        .font(.title3.weight(.semibold))
+                        .font(PAXTypography.subsection)
                         .foregroundStyle(PAXTheme.textPrimary)
                     if auth.profile?.isSuperAdmin == true {
                         Text(L10n.RoleExecutiveDirector)
@@ -132,7 +132,7 @@ struct PlatformHubView: View {
     private var legalSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(L10n.PlatformLegal)
-                .font(.headline)
+                .font(PAXTypography.section)
                 .foregroundStyle(PAXTheme.textPrimary)
                 .padding(.horizontal, 4)
 
@@ -170,16 +170,13 @@ struct PlatformHubView: View {
                 }
             }
         }
-        .font(.body.weight(.semibold))
+        .font(PAXTypography.button)
+        .foregroundStyle(PAXTheme.danger)
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 14)
+        .padding(.vertical, 16)
         .background(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(PAXTheme.danger.opacity(0.14))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(PAXTheme.danger.opacity(0.28), lineWidth: 1)
-                )
+                .fill(PAXTheme.danger.opacity(0.12))
         )
         .padding(.top, 4)
     }

@@ -36,9 +36,21 @@ struct EmployeeDashboardView: View {
 
             Section(L10n.EmployeeToday) {
                 metricRow(L10n.EmployeeAssignedChats, value: "\(platform.employee?.assignedChats ?? mySessions.count)", icon: "bubble.left.and.bubble.right.fill", tint: PAXTheme.accent)
-                metricRow(L10n.EmployeeUnread, value: "\(platform.employee?.unreadChats ?? unreadCount)", icon: "envelope.badge.fill", tint: PAXTheme.accent)
-                metricRow(L10n.EmployeeOpenTasks, value: "\(platform.employee?.openTasks ?? tasks.openCount)", icon: "checklist", tint: PAXTheme.accent)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                metricRow(L10n.EmployeeUnread, value: "\(platform.employee?.unreadChats ?? unreadCount)", icon: "envelope.badge.fill", tint: unreadCount > 0 ? PAXTheme.danger : PAXTheme.accent)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                metricRow(L10n.EmployeeOpenTasks, value: "\(platform.employee?.openTasks ?? tasks.openCount)", icon: "checklist", tint: PAXTheme.success)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 metricRow(L10n.EmployeeRole, value: auth.roleLabel, icon: "person.badge.key.fill", tint: PAXTheme.accent)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
 
             Section(L10n.EmployeePermissions) {
@@ -68,9 +80,7 @@ struct EmployeeDashboardView: View {
             }
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .paxScreenBackground()
+        .paxRevolutGroupedList()
         .navigationTitle(L10n.ModuleEmployee)
         .navigationBarTitleDisplayMode(.large)
         .paxPremiumRefreshable(status: L10n.ModuleEmployee, rowCount: 4) {
@@ -89,12 +99,9 @@ struct EmployeeDashboardView: View {
     }
 
     private func metricRow(_ title: String, value: String, icon: String, tint: Color) -> some View {
-        HStack(spacing: 12) {
-            PAXIcon(icon, size: .row)
-            Text(title)
-            Spacer()
-            Text(value).font(.headline).foregroundStyle(PAXTheme.textPrimary)
-        }
+        PAXRevolutMetricTile(title: title, value: value, systemImage: icon, tint: tint)
+            .padding(.horizontal, PAXSpacing.screenHorizontal)
+            .padding(.vertical, 4)
     }
 }
 

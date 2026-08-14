@@ -3,7 +3,6 @@ import AuthenticationServices
 
 struct LoginView: View {
     @EnvironmentObject private var auth: AuthStore
-    @Environment(\.colorScheme) private var colorScheme
     @ObservedObject private var customerSession = CustomerSessionController.shared
     @State private var username = ""
     @State private var password = ""
@@ -115,9 +114,6 @@ struct LoginView: View {
             .scrollDismissesKeyboard(.interactively)
             .paxScreenBackground()
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(PAXTheme.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
-            .toolbarColorScheme(colorScheme, for: .navigationBar)
             .sheet(isPresented: $showCustomerAuth) {
                 NavigationStack {
                     customerAuthSheetContent

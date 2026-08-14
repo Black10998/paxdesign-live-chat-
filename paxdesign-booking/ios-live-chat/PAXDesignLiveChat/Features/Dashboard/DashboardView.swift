@@ -150,8 +150,6 @@ struct DashboardView: View {
         dashboardList
             .navigationTitle(L10n.ModuleDashboard)
             .navigationBarTitleDisplayMode(.large)
-            .toolbarBackground(PAXTheme.background, for: .navigationBar)
-            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 8) {
@@ -426,7 +424,7 @@ struct DashboardView: View {
     private var quickModules: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(L10n.DashboardQuickAccess)
-                .font(.headline)
+                .font(PAXTypography.section)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 ForEach(Array(PlatformModuleAccess.availableHubModules(auth: auth).filter { $0 != .dashboard }.prefix(6).enumerated()), id: \.element.id) { index, module in

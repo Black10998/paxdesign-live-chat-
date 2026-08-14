@@ -15,26 +15,55 @@ struct ProfileView: View {
     var body: some View {
         List {
             Section {
-                HStack(spacing: 18) {
-                    ProfileAvatarView(size: 80)
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(profile?.displayName ?? L10n.CommonAdministrator)
-                            .font(.title2.weight(.bold))
-                        roleBadge
+                VStack(alignment: .leading, spacing: 20) {
+                    HStack(spacing: 16) {
+                        ProfileAvatarView(size: 72)
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(profile?.displayName ?? L10n.CommonAdministrator)
+                                .font(PAXTypography.titleLarge)
+                                .foregroundStyle(PAXTheme.textPrimary)
+                            roleBadge
+                        }
                     }
-                    .padding(.vertical, 8)
+
+                    HStack(alignment: .top, spacing: 8) {
+                        NavigationLink {
+                            SettingsRootView()
+                        } label: {
+                            PAXQuickActionVisual(title: L10n.AccountSettings, systemImage: "gearshape.fill", emphasized: true)
+                        }
+                        .buttonStyle(PAXRevolutPressableStyle())
+
+                        NavigationLink {
+                            AppLockSettingsView()
+                        } label: {
+                            PAXQuickActionVisual(title: L10n.SettingsAppLock, systemImage: "lock.shield.fill")
+                        }
+                        .buttonStyle(PAXRevolutPressableStyle())
+
+                        NavigationLink {
+                            DeviceManagementView()
+                        } label: {
+                            PAXQuickActionVisual(title: L10n.PlatformDevices, systemImage: "iphone")
+                        }
+                        .buttonStyle(PAXRevolutPressableStyle())
+                    }
                 }
+                .padding(.vertical, 8)
+                .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
 
             Section(L10n.ProfileAccountInfo) {
                 LabeledContent(L10n.SettingsProfile, value: profile?.displayName ?? L10n.CommonAdministrator)
-                    .font(.subheadline)
+                    .font(PAXTypography.body)
                 if let email = profile?.email, !email.isEmpty {
                     LabeledContent(L10n.LoginUsername, value: email)
-                        .font(.subheadline)
+                        .font(PAXTypography.body)
                 } else if let username = profile?.displayUsernameIfDistinct {
                     LabeledContent(L10n.LoginUsername, value: username)
-                        .font(.subheadline)
+                        .font(PAXTypography.body)
                 }
                 Picker(L10n.ProfileGender, selection: $selectedGender) {
                     Text(L10n.ProfileGenderUnset).tag(Optional<UserGender>.none)
@@ -45,13 +74,13 @@ struct ProfileView: View {
                 .disabled(isSavingGender)
                 if let genderError, !genderError.isEmpty {
                     Text(genderError)
-                        .font(.caption)
+                        .font(PAXTypography.caption)
                         .foregroundStyle(PAXTheme.danger)
                 }
                 LabeledContent(L10n.CommonPlugin, value: profile?.pluginVer ?? "—")
-                    .font(.subheadline)
+                    .font(PAXTypography.body)
                 LabeledContent(L10n.CommonVersion, value: PAXAppInfo.fullVersion)
-                    .font(.subheadline)
+                    .font(PAXTypography.body)
             }
 
             if auth.canCustomizeHubProfile {
@@ -60,7 +89,7 @@ struct ProfileView: View {
                         .textInputAutocapitalization(.words)
                     if let hubNameError, !hubNameError.isEmpty {
                         Text(hubNameError)
-                            .font(.caption)
+                            .font(PAXTypography.caption)
                             .foregroundStyle(PAXTheme.danger)
                     }
                     Button(L10n.ProfileHubSave) {
@@ -75,14 +104,14 @@ struct ProfileView: View {
             }
 
             Section(L10n.ProfilePermissions) {
-        if profile?.isSuperAdmin == true {
-            HStack {
-                PAXIcon("star.fill", size: .row)
-                Text(L10n.RoleExecutiveDirector)
-                    .foregroundStyle(PAXTheme.accent)
+                if profile?.isSuperAdmin == true {
+                    HStack {
+                        PAXIcon("star.fill", size: .row, tint: PAXTheme.accent)
+                        Text(L10n.RoleExecutiveDirector)
+                            .foregroundStyle(PAXTheme.accent)
                         Spacer()
                         Text(L10n.CommonActive)
-                            .font(.caption.weight(.semibold))
+                            .font(PAXTypography.caption.weight(.semibold))
                             .foregroundStyle(PAXTheme.accent)
                     }
                 } else {
@@ -93,20 +122,7 @@ struct ProfileView: View {
             }
 
             Section {
-                NavigationLink {
-                    SettingsRootView()
-                } label: {
-                    Label { Text(L10n.AccountSettings) } icon: { PAXIcon("gearshape") }
-                }
-                NavigationLink {
-                    AppLockSettingsView()
-                } label: {
-                    Label { Text(L10n.SettingsAppLock) } icon: { PAXIcon("lock.shield") }
-                }
-            }
-
-            Section {
-                Button(L10n.SettingsSignOut) {
+                Button(role: .destructive) {
                     PAXDelete.confirm(
                         title: L10n.SettingsSignOut,
                         message: L10n.SettingsSignOutMessage,
@@ -117,12 +133,14 @@ struct ProfileView: View {
                             auth.logout()
                         }
                     }
+                } label: {
+                    Text(L10n.SettingsSignOut)
+                        .font(PAXTypography.button)
+                        .frame(maxWidth: .infinity)
                 }
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .paxScreenBackground()
+        .paxRevolutGroupedList()
         .navigationTitle(L10n.ProfileTitle)
         .navigationBarTitleDisplayMode(.large)
         .onAppear {

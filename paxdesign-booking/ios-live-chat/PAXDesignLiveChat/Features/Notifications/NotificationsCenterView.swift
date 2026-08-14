@@ -44,23 +44,28 @@ struct NotificationsCenterView: View {
                     systemImage: "bubble.left.and.bubble.right.fill",
                     tint: PAXTheme.accent
                 )
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
                 notificationMetric(
                     title: L10n.NotificationsLiveRequests,
                     count: platform.notifications?.liveRequests ?? coordinator.liveCount,
                     systemImage: "bell.and.waves.left.and.right.fill",
-                    tint: PAXTheme.accent
+                    tint: PAXTheme.danger
                 )
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
                 if let openTasks = platform.notifications?.openTasks {
                     notificationMetric(
                         title: L10n.DashboardMetricTasks,
                         count: openTasks,
                         systemImage: "checklist",
-                        tint: PAXTheme.accent
+                        tint: PAXTheme.success
                     )
-                }
-                LabeledContent(L10n.SettingsPush) {
-                    Text(settings.notificationsEnabled ? L10n.CommonActive : L10n.SettingsDisabled)
-                        .foregroundStyle(settings.notificationsEnabled ? PAXTheme.success : PAXTheme.textTertiary)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
 
@@ -108,9 +113,7 @@ struct NotificationsCenterView: View {
             }
             }
         }
-        .listStyle(.insetGrouped)
-        .scrollContentBackground(.hidden)
-        .paxScreenBackground()
+        .paxRevolutGroupedList()
         .navigationTitle(L10n.NotificationsCenterTitle)
         .navigationBarTitleDisplayMode(.large)
         .paxPremiumRefreshable(status: L10n.NotificationsCenterTitle, rowCount: 4) {
@@ -128,14 +131,14 @@ struct NotificationsCenterView: View {
     }
 
     private func notificationMetric(title: String, count: Int, systemImage: String, tint: Color) -> some View {
-        HStack(spacing: 14) {
-            PAXIcon(systemImage, size: .row)
-            Text(title)
-            Spacer()
-            Text("\(count)")
-                .font(.headline.weight(.semibold))
-                .foregroundStyle(count > 0 ? PAXTheme.textPrimary : PAXTheme.textTertiary)
-        }
+        PAXRevolutMetricTile(
+            title: title,
+            value: "\(count)",
+            systemImage: systemImage,
+            tint: tint
+        )
+        .padding(.horizontal, PAXSpacing.screenHorizontal)
+        .padding(.vertical, 4)
     }
 
     private func activityRow(_ session: LiveSession, badge: String, tint: Color) -> some View {

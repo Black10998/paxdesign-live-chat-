@@ -114,6 +114,22 @@ final class PushNotificationTests: XCTestCase {
     }
 
     @MainActor
+    func testCustomerLiveRequestUsesLiveSound() {
+        let payload: [AnyHashable: Any] = [
+            "pax": [
+                "category": "live_request",
+                "type": "live_request",
+                "event": "customer_waiting",
+                "session_id": "pax_live_1",
+            ],
+        ]
+
+        let parsed = CustomerPushService.shared.parseNotification(userInfo: payload)
+        XCTAssertEqual(parsed?.soundTone, .liveRequest)
+        XCTAssertEqual(CustomerPushService.shared.apnsSoundName(for: parsed!), "pax-live-request.wav")
+    }
+
+    @MainActor
     func testActiveSessionTrackingForPushSuppression() {
         AppRefreshPolicy.setActiveSession("pax_open_chat")
         XCTAssertEqual(AppRefreshPolicy.activeSessionId, "pax_open_chat")

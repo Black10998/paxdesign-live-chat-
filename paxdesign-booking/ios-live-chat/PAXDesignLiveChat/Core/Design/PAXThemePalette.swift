@@ -31,6 +31,25 @@ struct PAXThemePalette: Equatable {
         Color(isDark ? surfaceElevatedDark : surfaceElevatedLight)
     }
 
+    /// Tracks the live trait collection so Light/Dark never snapshot a stale scheme.
+    var dynamicBackground: Color {
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark ? backgroundDark : backgroundLight
+        })
+    }
+
+    var dynamicSurface: Color {
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark ? surfaceDark : surfaceLight
+        })
+    }
+
+    var dynamicSurfaceElevated: Color {
+        Color(uiColor: UIColor { traits in
+            traits.userInterfaceStyle == .dark ? surfaceElevatedDark : surfaceElevatedLight
+        })
+    }
+
     static func palette(for theme: AppSettingsStore.VisualTheme) -> PAXThemePalette {
         switch theme {
         case .classic:

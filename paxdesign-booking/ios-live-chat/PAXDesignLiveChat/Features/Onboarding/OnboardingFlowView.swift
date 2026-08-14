@@ -187,7 +187,7 @@ struct OnboardingFlowView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 24)
                     .padding(.top, 8)
-                    .background(.bar)
+                    .background(PAXTheme.background)
             }
             .paxScreenBackground()
             .navigationTitle(L10n.OnboardingNavWelcome)
@@ -211,13 +211,14 @@ struct OnboardingFlowView: View {
 
             VStack(spacing: 10) {
                 Text(page.title)
-                    .font(.title2.weight(.semibold))
+                    .font(PAXTypography.titleLarge)
+                    .foregroundStyle(PAXTheme.textPrimary)
                     .multilineTextAlignment(.center)
 
                 Text(page.subtitle)
-                    .font(.body)
+                    .font(PAXTypography.body)
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(PAXTheme.textSecondary)
                     .lineSpacing(3)
                     .padding(.horizontal, 12)
             }
@@ -235,24 +236,21 @@ struct OnboardingFlowView: View {
                     PAXHaptics.light()
                     withAnimation { pageIndex -= 1 }
                 }
-                .buttonStyle(.bordered)
+                .font(PAXTypography.button)
+                .foregroundStyle(PAXTheme.textSecondary)
+                .frame(minHeight: 52)
             }
 
-            Spacer()
-
             if pageIndex < pages.count - 1 {
-                Button(L10n.CommonNext) {
+                PAXRevolutPrimaryButton(title: L10n.CommonNext) {
                     PAXHaptics.light()
                     withAnimation { pageIndex += 1 }
                 }
-                .buttonStyle(.borderedProminent)
             } else {
-                Button(L10n.OnboardingGetStarted) {
+                PAXRevolutPrimaryButton(title: L10n.OnboardingGetStarted) {
                     PAXHaptics.success()
                     completeFirstLaunch()
                 }
-                .buttonStyle(.borderedProminent)
-                .fontWeight(.semibold)
             }
         }
     }
@@ -288,7 +286,7 @@ struct OnboardingFlowView: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 24)
                     .padding(.top, 12)
-                    .background(.bar)
+                    .background(PAXTheme.background)
             }
             .paxScreenBackground()
             .navigationTitle(L10n.OnboardingNavSetup)
@@ -415,31 +413,20 @@ struct OnboardingFlowView: View {
                     .font(.subheadline)
                     .frame(maxWidth: .infinity)
             } else {
-                Button {
+                PAXRevolutPrimaryButton(
+                    title: postLoginPrimaryButtonTitle,
+                    isLoading: isProcessingStep
+                ) {
                     focusedPasswordField = nil
                     Task { await handlePostLoginPrimaryAction() }
-                } label: {
-                    HStack(spacing: 8) {
-                        if isProcessingStep {
-                            ProgressView()
-                                .controlSize(.small)
-                        }
-                        Text(postLoginPrimaryButtonTitle)
-                            .fontWeight(.semibold)
-                    }
-                    .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
                 .disabled(!canProceedFromCurrentStep || isProcessingStep)
 
                 if postLoginShowsSkip {
-                    Button(postLoginSkipTitle) {
+                    PAXRevolutGhostButton(title: postLoginSkipTitle) {
                         focusedPasswordField = nil
                         Task { await handlePostLoginSkipAction() }
                     }
-                    .font(.subheadline.weight(.medium))
-                    .foregroundStyle(PAXTheme.textSecondary)
                     .disabled(isProcessingStep || isCompleting)
                 }
             }

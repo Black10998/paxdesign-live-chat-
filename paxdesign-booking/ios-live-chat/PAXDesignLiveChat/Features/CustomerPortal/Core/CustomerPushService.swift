@@ -18,7 +18,12 @@ struct CustomerPushPayload: Equatable {
             return .aiAlert
         case "chat":
             return .message
+        case "live", "live_request":
+            return .liveRequest
         default:
+            if type.contains("alert") || event.contains("alert") {
+                return .aiAlert
+            }
             return .message
         }
     }
@@ -214,8 +219,8 @@ final class CustomerPushService: NSObject, ObservableObject {
         switch payload.soundTone {
         case .aiAlert:
             return "pax-ai-alert.wav"
-        case .message:
-            return "pax-message.wav"
+        case .liveRequest:
+            return "pax-live-request.wav"
         default:
             return "pax-message.wav"
         }

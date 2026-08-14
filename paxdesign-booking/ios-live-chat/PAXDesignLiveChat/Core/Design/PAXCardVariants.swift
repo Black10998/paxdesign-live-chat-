@@ -36,6 +36,7 @@ private struct PAXCardVariantModifier: ViewModifier {
             content
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
+                .paxRevolutSurface(cornerRadius: 16, elevation: 0)
         case .accent:
             content
                 .padding(16)

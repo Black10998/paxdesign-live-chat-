@@ -156,8 +156,6 @@ struct SessionListView: View {
         .paxScreenBackground()
         .navigationTitle(L10n.SessionTitle)
         .navigationBarTitleDisplayMode(.large)
-        .toolbarBackground(PAXTheme.background, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 HStack(spacing: 12) {

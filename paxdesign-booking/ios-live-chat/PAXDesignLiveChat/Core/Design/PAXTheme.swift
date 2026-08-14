@@ -73,12 +73,14 @@ enum PAXGlassTier {
 }
 
 struct PAXBackground: View {
-    @EnvironmentObject private var settings: AppSettingsStore
+    @ObservedObject private var settings = AppSettingsStore.shared
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
+        // Resolve from appearanceMode immediately so Light/Dark never waits on a stale trait.
         settings.palette.background(isDark: settings.resolvedIsDark(for: colorScheme))
             .ignoresSafeArea()
+            .id(settings.themeRevision)
     }
 }
 

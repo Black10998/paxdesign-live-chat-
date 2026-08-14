@@ -60,7 +60,10 @@ enum PAXRevolutAppearance {
     static func applyTableView() {
         UITableView.appearance().backgroundColor = .clear
         UITableView.appearance().separatorColor = PAXDynamic.uiColor(PAXDynamic.dividerLight, PAXDynamic.dividerDark)
-        UITableViewCell.appearance().backgroundColor = .clear
+        UITableViewCell.appearance().backgroundColor = PAXDynamic.uiColor(
+            PAXDynamic.surface1Light,
+            PAXDynamic.surface1Dark
+        )
         UICollectionView.appearance().backgroundColor = .clear
     }
 

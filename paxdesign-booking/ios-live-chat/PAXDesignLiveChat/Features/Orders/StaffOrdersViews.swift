@@ -18,10 +18,10 @@ struct StaffOrdersListView: View {
                         systemImage: "exclamationmark.triangle",
                         description: Text(error)
                     )
-                    Button(String(localized: "Try again")) {
+                    PAXRevolutPrimaryButton(title: String(localized: "Try again")) {
                         Task { await coordinator.refresh(auth: auth) }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .padding(.horizontal, 24)
                 }
             } else if coordinator.orders.isEmpty {
                 PAXContentUnavailableView(
@@ -101,47 +101,25 @@ private struct StaffOrderCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(PAXTheme.accent.opacity(0.14))
-                        .frame(width: 44, height: 44)
-                    PAXIcon("doc.text.fill", size: .row, emphasis: .primary)
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(order.service_label)
-                        .font(.headline)
-                        .foregroundStyle(PAXTheme.textPrimary)
-                    Text(order.customer_name.isEmpty ? order.customer_email : order.customer_name)
-                        .font(.subheadline)
-                        .foregroundStyle(PAXTheme.textSecondary)
-                }
-                Spacer(minLength: 8)
-                if isUnread {
-                    Circle()
-                        .fill(Color.red)
-                        .frame(width: 10, height: 10)
-                        .accessibilityLabel(String(localized: "Unread"))
+        PAXRevolutListRow(
+            title: order.service_label,
+            subtitle: order.customer_name.isEmpty ? order.customer_email : order.customer_name,
+            highlighted: isUnread,
+            leading: {
+                PAXRevolutGlyphAvatar(systemImage: "doc.text.fill", size: 40, tint: isUnread ? PAXTheme.danger : PAXTheme.accent)
+            },
+            trailing: {
+                VStack(alignment: .trailing, spacing: 4) {
+                    Text(order.status.capitalized)
+                        .font(PAXTypography.caption.weight(.bold))
+                        .foregroundStyle(isUnread ? PAXTheme.danger : PAXTheme.accent)
+                    Text(order.ref)
+                        .font(PAXTypography.caption.monospaced())
+                        .foregroundStyle(PAXTheme.textTertiary)
                 }
             }
-
-            HStack {
-                Text(order.ref)
-                    .font(.caption.monospaced())
-                    .foregroundStyle(PAXTheme.textTertiary)
-                Spacer()
-                Text(order.status.capitalized)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(PAXTheme.accent)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(PAXTheme.accent.opacity(0.12))
-                    .clipShape(Capsule())
-            }
-        }
-        .padding(16)
-        .paxCard(.list, tint: isUnread ? PAXTheme.accent : PAXTheme.textSecondary)
+        )
+        .paxRevolutSurface(cornerRadius: 16, elevation: 0)
     }
 }
 

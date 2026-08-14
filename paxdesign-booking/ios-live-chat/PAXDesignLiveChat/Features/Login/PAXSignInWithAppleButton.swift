@@ -2,10 +2,13 @@ import SwiftUI
 import AuthenticationServices
 
 struct PAXSignInWithAppleButton: View {
+    @ObservedObject private var settings = AppSettingsStore.shared
     @Environment(\.colorScheme) private var colorScheme
     var isLoading = false
     let onCredential: (ASAuthorizationAppleIDCredential) -> Void
     let onFailure: (Error) -> Void
+
+    private var isDark: Bool { settings.resolvedIsDark(for: colorScheme) }
 
     var body: some View {
         SignInWithAppleButton(.signIn) { request in
@@ -25,9 +28,9 @@ struct PAXSignInWithAppleButton: View {
                 onFailure(error)
             }
         }
-        .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
-        .frame(height: 50)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .signInWithAppleButtonStyle(isDark ? .white : .black)
+        .frame(height: PAXSpacing.primaryButtonHeight)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .disabled(isLoading)
         .opacity(isLoading ? 0.65 : 1)
         .accessibilityLabel(String(localized: "Sign in with Apple"))
