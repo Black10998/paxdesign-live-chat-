@@ -18,7 +18,7 @@ struct PAXAppearanceQuickSwitch: View {
                 }
             }
         } label: {
-            PAXIcon(iconName(for: settings.appearanceMode), size: .row)
+            PAXIcon(iconName(for: settings.appearanceMode), size: .card)
                 .frame(width: 32, height: 32)
                 .contentShape(Rectangle())
         }

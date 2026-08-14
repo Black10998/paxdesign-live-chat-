@@ -12,6 +12,7 @@ struct PAXDesignLiveChatApp: App {
 
     init() {
         LaunchDiagnostics.mark("App.init")
+        PAXRevolutAppearance.apply()
         #if DEBUG
         if PAXLayoutVerification.isActive, let mode = PAXLayoutVerification.mode {
             AuthStore.shared.configureLayoutVerification(mode: mode)
@@ -65,6 +66,8 @@ struct PAXDesignLiveChatApp: App {
                         AppRefreshPolicy.update(scenePhase: .active)
                         PAXApplicationBadge.sync(
                             total: coordinator.unreadChatCount + coordinator.unreadTeamCount + coordinator.liveCount + StaffOrdersCoordinator.shared.unreadCount
+                                + CustomerChatBadgeStore.shared.unreadCount
+                                + CustomerNotificationsBadgeStore.shared.unreadCount
                         )
                         if auth.isLoggedIn, auth.isStaffSession {
                             Task {

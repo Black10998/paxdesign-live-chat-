@@ -96,7 +96,7 @@ struct AdaptiveShellView: View {
             .init(
                 tag: tags.dashboard,
                 title: L10n.TabDashboard,
-                icon: "dashboard.fill"
+                icon: "house.fill"
             )
         ]
 
@@ -105,7 +105,7 @@ struct AdaptiveShellView: View {
                 .init(
                     tag: chatsTag,
                     title: L10n.TabChats,
-                    icon: "chats.fill"
+                    icon: "bubble.left.and.bubble.right.fill"
                 )
             )
         }
@@ -115,7 +115,7 @@ struct AdaptiveShellView: View {
                 .init(
                     tag: teamTag,
                     title: L10n.TabTeam,
-                    icon: "team.fill"
+                    icon: "person.3.fill"
                 )
             )
         }
@@ -124,14 +124,14 @@ struct AdaptiveShellView: View {
             .init(
                 tag: tags.live,
                 title: L10n.TabLive,
-                icon: "live.fill"
+                icon: "bell.badge.fill"
             )
         )
         items.append(
             .init(
                 tag: tags.platform,
                 title: L10n.TabPlatform,
-                icon: "platform.fill"
+                icon: "square.grid.2x2.fill"
             )
         )
         return items

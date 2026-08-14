@@ -156,6 +156,8 @@ struct SessionListView: View {
         .paxScreenBackground()
         .navigationTitle(L10n.SessionTitle)
         .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(PAXTheme.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 HStack(spacing: 12) {
@@ -477,17 +479,19 @@ struct SessionListView: View {
                         PAXHaptics.light()
                     } label: {
                         Text(item.title)
-                            .font(.caption.weight(.semibold))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(
-                                Capsule()
-                                    .fill(filter == item ? PAXBrand.accent.opacity(0.18) : PAXTheme.surface.opacity(0.68))
-                            )
-                            .overlay(Capsule().stroke(filter == item ? PAXBrand.accent.opacity(0.5) : PAXTheme.border.opacity(0.55), lineWidth: 1))
-                            .foregroundStyle(filter == item ? PAXTheme.textPrimary : PAXTheme.textSecondary)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(filter == item ? PAXTheme.onAccent : PAXTheme.textSecondary)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .background {
+                                if filter == item {
+                                    Capsule().fill(PAXBrandGradient.linear)
+                                } else {
+                                    Capsule().fill(PAXTheme.surfaceElevated)
+                                }
+                            }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PAXRevolutPressableStyle())
                 }
             }
         }
@@ -575,49 +579,26 @@ private struct SessionRow: View {
     private var rowPadding: CGFloat { compact ? 10 : 12 }
 
     var body: some View {
-        PAXListCard(highlighted: isUnread, accent: PAXBrand.accent) {
-            HStack(alignment: .center, spacing: 14) {
+        PAXRevolutListRow(
+            title: session.displayName,
+            subtitle: previewText,
+            highlighted: isUnread,
+            leading: {
                 SessionAvatarView(
                     name: session.displayName,
-                    size: avatarSize,
+                    size: 40,
                     isLive: session.isLiveRequest,
                     isTeam: session.isTeamDM
                 )
-
-                VStack(alignment: .leading, spacing: compact ? 3 : 5) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(session.displayName)
-                            .font(.body.weight(isUnread ? .semibold : .regular))
-                            .foregroundStyle(PAXTheme.textPrimary)
-                            .lineLimit(1)
-
-                        Spacer(minLength: 4)
-
-                        if showTimestamp, let time = MessageTimeFormatter.relativeUpdatedLabel(from: session.updatedAt) {
-                            Text(time)
-                                .font(.caption)
-                                .foregroundStyle(isUnread ? PAXBrand.accent : PAXTheme.textTertiary)
-                                .lineLimit(1)
-                        }
+            },
+            trailing: {
+                VStack(alignment: .trailing, spacing: 6) {
+                    if showTimestamp, let time = MessageTimeFormatter.relativeUpdatedLabel(from: session.updatedAt) {
+                        Text(time)
+                            .font(PAXTypography.meta)
+                            .foregroundStyle(isUnread ? PAXTheme.accent : PAXTheme.textTertiary)
                     }
-
-                    HStack(alignment: .center, spacing: 8) {
-                        handlerStatusBadge
-
-                        if session.isTeamDM {
-                            teamBadge
-                        } else if showRating, let rating = SessionRatingBadge(rating: session.sessionRating) {
-                            rating
-                        }
-
-                        Text(previewText)
-                            .font(.subheadline)
-                            .fontWeight(isUnread ? .medium : .regular)
-                            .foregroundStyle(isUnread ? PAXTheme.textPrimary : PAXTheme.textSecondary)
-                            .lineLimit(isUnread ? 2 : 1)
-
-                        Spacer(minLength: 0)
-
+                    HStack(spacing: 6) {
                         if isMuted {
                             PAXIcon("bell.slash", size: .inline, emphasis: .tertiary)
                         }
@@ -626,15 +607,16 @@ private struct SessionRow: View {
                         }
                         if isUnread {
                             Circle()
-                                .fill(PAXBrand.accent)
+                                .fill(PAXBrandGradient.linear)
                                 .frame(width: 10, height: 10)
                         }
                     }
                 }
             }
+        )
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(PAXTheme.divider).frame(height: 1).padding(.leading, 68)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 3)
         .contentShape(Rectangle())
     }
 

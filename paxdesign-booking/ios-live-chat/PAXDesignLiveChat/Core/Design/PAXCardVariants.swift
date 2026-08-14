@@ -18,35 +18,33 @@ private struct PAXCardVariantModifier: ViewModifier {
     func body(content: Content) -> some View {
         switch variant {
         case .standard:
-            content
-                .paxPremiumGlass(tier: .standard, cornerRadius: 16)
+            content.paxRevolutSurface(cornerRadius: 16, elevation: 0)
         case .hero:
             content
-                .padding(18)
-                .paxPremiumGlass(tier: .standard, cornerRadius: 20)
+                .padding(20)
+                .paxRevolutSurface(cornerRadius: 20, elevation: 1)
         case .metric:
             content
-                .padding(14)
+                .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .paxPremiumGlass(tier: .standard, cornerRadius: 16)
+                .paxRevolutSurface(cornerRadius: 16, elevation: 0)
         case .feature:
             content
                 .padding(16)
-                .paxPremiumGlass(tier: .standard, cornerRadius: 18)
+                .paxRevolutSurface(cornerRadius: 16, elevation: 0)
         case .list:
             content
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .paxPremiumGlass(tier: .subtle, cornerRadius: 14)
         case .accent:
             content
                 .padding(16)
-                .paxPremiumGlass(tier: .standard, cornerRadius: 16)
+                .paxRevolutSurface(cornerRadius: 16, elevation: 1)
         case .compact:
             content
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
-                .paxPremiumGlass(tier: .subtle, cornerRadius: 12)
+                .paxRevolutSurface(cornerRadius: 12, elevation: 0)
         }
     }
 }
@@ -83,14 +81,14 @@ struct PAXHeroCard: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
-            PAXIcon(systemImage, size: .hero)
+            PAXRevolutGlyphAvatar(systemImage: systemImage, size: 48, tint: tint)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.title3.weight(.bold))
+                    .font(PAXTypography.subsection)
                     .foregroundStyle(PAXTheme.textPrimary)
                 Text(subtitle)
-                    .font(.subheadline)
+                    .font(PAXTypography.meta)
                     .foregroundStyle(PAXTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -122,10 +120,13 @@ struct PAXMetricCard: View {
                 }
             }
             Text(value)
-                .font(.title.weight(.bold))
+                .font(PAXTypography.balance)
+                .monospacedDigit()
                 .foregroundStyle(PAXTheme.textPrimary)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
             Text(title)
-                .font(.caption.weight(.medium))
+                .font(PAXTypography.meta)
                 .foregroundStyle(PAXTheme.textSecondary)
         }
         .paxCard(.metric, tint: tint)
@@ -143,25 +144,25 @@ struct PAXFeatureCard: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            PAXIcon(systemImage, size: .card)
+            PAXRevolutGlyphAvatar(systemImage: systemImage, size: 40, tint: tint)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(title)
-                        .font(.subheadline.weight(.semibold))
+                        .font(PAXTypography.rowTitle)
                         .foregroundStyle(PAXTheme.textPrimary)
                         .lineLimit(1)
                     if badge > 0 {
                         Text("\(badge)")
                             .font(.caption2.weight(.bold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(PAXTheme.onAccent)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Capsule().fill(tint))
+                            .background(Capsule().fill(PAXBrandGradient.linear))
                     }
                 }
                 Text(subtitle)
-                    .font(.caption)
+                    .font(PAXTypography.meta)
                     .foregroundStyle(PAXTheme.textSecondary)
                     .lineLimit(2)
             }

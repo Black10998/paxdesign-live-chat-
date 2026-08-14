@@ -3,13 +3,16 @@ import SwiftUI
 /// Pixel-accurate reproduction of the PAXdesign website header logo animation
 /// (`Paxdesign_Dtr_Header_Logo` v1.6.0).
 struct PAXAnimatedLogoView: View {
-    private let paxColor = Color(red: 204 / 255, green: 1, blue: 0)
+    private let paxColor = Color(uiColor: PAXDynamic.lime)
 
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @ObservedObject private var settings = AppSettingsStore.shared
 
     /// Matches website `--paxlogo-mark-w: clamp(118px, 44vw, 168px)` on mobile.
     var markWidth: CGFloat = 148
+    /// When true, wordmark/symbols stay light (launch screen is always black).
+    var forcesOnDarkCanvas = false
 
     private let holdDuration: TimeInterval = 1.2
     private let morphDuration: TimeInterval = 0.24
@@ -27,7 +30,15 @@ struct PAXAnimatedLogoView: View {
     private var iconSize: CGFloat { markWidth * 0.128 }
     private var wordmarkFontSize: CGFloat { markWidth * (38 / 148) }
     private var markForeground: Color {
-        colorScheme == .dark ? .white : Color(red: 0.12, green: 0.13, blue: 0.16)
+        if forcesOnDarkCanvas { return .white }
+        switch settings.appearanceMode {
+        case .dark:
+            return .white
+        case .light:
+            return Color(uiColor: PAXDynamic.textPrimaryLight)
+        case .system:
+            return colorScheme == .dark ? .white : Color(uiColor: PAXDynamic.textPrimaryLight)
+        }
     }
     private var designColor: Color { markForeground }
 
@@ -37,6 +48,7 @@ struct PAXAnimatedLogoView: View {
             wordmark
         }
         .environment(\.layoutDirection, .leftToRight)
+        .id("\(colorScheme)-\(settings.appearanceMode.rawValue)")
         .accessibilityLabel("PAXdesign")
         .onAppear { startAnimations() }
         .onDisappear { symbolTask?.cancel() }

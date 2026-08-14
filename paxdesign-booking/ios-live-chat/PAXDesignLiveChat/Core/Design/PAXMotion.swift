@@ -38,6 +38,9 @@ extension View {
 
     func paxScreenBackground() -> some View {
         background(PAXBackground())
+            .toolbarBackground(PAXTheme.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(AppSettingsStore.shared.appearanceMode.colorScheme, for: .navigationBar)
     }
 
     func paxModuleTransition() -> some View {

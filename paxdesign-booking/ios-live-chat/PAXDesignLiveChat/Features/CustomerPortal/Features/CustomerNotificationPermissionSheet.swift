@@ -27,39 +27,16 @@ struct CustomerNotificationPermissionSheet: View {
                     }
 
                     VStack(spacing: 12) {
-                        Button {
+                        PAXRevolutPrimaryButton(
+                            title: String(localized: "Enable notifications"),
+                            isLoading: isRequesting
+                        ) {
                             guard !isRequesting else { return }
                             isRequesting = true
                             onEnable()
                             isRequesting = false
-                        } label: {
-                            HStack(spacing: 8) {
-                                if isRequesting {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                        .tint(.white)
-                                }
-                                Text(String(localized: "Enable notifications"))
-                                    .fontWeight(.semibold)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .contentShape(Rectangle())
                         }
-                        .buttonStyle(CustomerPrimaryButtonStyleModifier(style: .filled))
-                        .disabled(isRequesting)
-
-                        Button {
-                            onSkip()
-                        } label: {
-                            Text(L10n.PermissionsNotNow)
-                                .font(.subheadline.weight(.medium))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(PAXTheme.textSecondary)
+                        PAXRevolutGhostButton(title: L10n.PermissionsNotNow, action: onSkip)
                     }
                     .padding(.top, 8)
                 }

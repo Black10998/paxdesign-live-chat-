@@ -18,24 +18,106 @@ struct LoginView: View {
 
     var body: some View {
         NavigationStack {
-            GeometryReader { proxy in
-                ScrollView {
-                    VStack(spacing: 0) {
-                        Spacer(minLength: max(24, (proxy.size.height - contentHeightEstimate) / 2))
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    PAXAnimatedLogoView(markWidth: 168)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 28)
+                        .padding(.bottom, 28)
 
-                        loginCard
-                            .frame(maxWidth: 420)
-                            .frame(maxWidth: .infinity)
+                    Text(L10n.LoginTitle)
+                        .font(PAXTypography.titleLarge)
+                        .foregroundStyle(PAXTheme.textPrimary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(L10n.LoginSubtitle)
+                        .font(PAXTypography.body)
+                        .foregroundStyle(PAXTheme.textSecondary)
+                        .padding(.top, 8)
+                        .padding(.bottom, 28)
 
-                        Spacer(minLength: max(24, (proxy.size.height - contentHeightEstimate) / 2))
+                    VStack(spacing: 12) {
+                        PAXRevolutField(
+                            title: L10n.LoginUsername,
+                            systemImage: "person",
+                            text: $username,
+                            keyboardType: .emailAddress,
+                            textContentType: .username
+                        )
+                        PAXRevolutField(
+                            title: L10n.LoginPassword,
+                            systemImage: "lock",
+                            text: $password,
+                            isSecure: true,
+                            textContentType: .password
+                        )
                     }
-                    .padding(.horizontal, 24)
-                    .frame(minHeight: proxy.size.height)
+
+                    if let error {
+                        Text(error)
+                            .font(PAXTypography.meta)
+                            .foregroundStyle(PAXTheme.danger)
+                            .padding(.top, 12)
+                    }
+
+                    PAXRevolutPrimaryButton(title: L10n.LoginSignIn, isLoading: isLoading) {
+                        signIn()
+                    }
+                    .disabled(isBusy)
+                    .padding(.top, 20)
+
+                    HStack {
+                        Button(L10n.LoginCreateAccount) {
+                            customerAuthMode = .register
+                            showCustomerAuth = true
+                        }
+                        .font(PAXTypography.meta.weight(.semibold))
+                        .foregroundStyle(PAXTheme.link)
+                        Spacer()
+                        Button(L10n.LoginForgotPassword) {
+                            customerAuthMode = .forgot
+                            showCustomerAuth = true
+                        }
+                        .font(PAXTypography.meta.weight(.semibold))
+                        .foregroundStyle(PAXTheme.textSecondary)
+                    }
+                    .padding(.top, 16)
+
+                    HStack(spacing: 12) {
+                        Rectangle().fill(PAXTheme.divider).frame(height: 1)
+                        Text(String(localized: "or"))
+                            .font(PAXTypography.meta)
+                            .foregroundStyle(PAXTheme.textTertiary)
+                        Rectangle().fill(PAXTheme.divider).frame(height: 1)
+                    }
+                    .padding(.vertical, 24)
+
+                    PAXSignInWithAppleButton(isLoading: isAppleLoading) { credential in
+                        signInWithApple(credential)
+                    } onFailure: { appleError in
+                        error = appleError.localizedDescription
+                        PAXHaptics.warning()
+                    }
+
+                    HStack(spacing: 16) {
+                        Link(L10n.LoginPrivacy, destination: PAXLegalLinks.privacyPolicy)
+                        Link(L10n.LoginTerms, destination: PAXLegalLinks.impressum)
+                    }
+                    .font(PAXTypography.caption)
+                    .foregroundStyle(PAXTheme.link)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 28)
+                    .padding(.bottom, 24)
                 }
+                .padding(.horizontal, PAXSpacing.screenHorizontal)
+                .frame(maxWidth: 480)
+                .frame(maxWidth: .infinity)
             }
             .scrollDismissesKeyboard(.interactively)
             .paxScreenBackground()
             .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(PAXTheme.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
+            .toolbarColorScheme(colorScheme, for: .navigationBar)
             .sheet(isPresented: $showCustomerAuth) {
                 NavigationStack {
                     customerAuthSheetContent
@@ -72,80 +154,6 @@ struct LoginView: View {
                 showCustomerAuth = true
             }
         }
-    }
-
-    private var contentHeightEstimate: CGFloat { 580 }
-
-    private var loginCard: some View {
-        VStack(spacing: 22) {
-            PAXAuthHeroView(
-                style: .animatedLogo,
-                title: L10n.LoginTitle,
-                subtitle: L10n.LoginSubtitle,
-                markWidth: 128,
-                showsTitle: false
-            )
-
-            VStack(spacing: 12) {
-                PAXField(title: L10n.LoginUsername, icon: "person", text: $username, keyboardType: .emailAddress)
-                PAXField(title: L10n.LoginPassword, icon: "lock", text: $password, isSecure: true)
-            }
-
-            if let error {
-                Text(error)
-                    .font(.footnote)
-                    .foregroundStyle(PAXTheme.danger)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-            }
-
-            PAXPrimaryButton(title: L10n.LoginSignIn, isLoading: isLoading) {
-                signIn()
-            }
-            .disabled(isBusy)
-
-            VStack(spacing: 10) {
-                Button(L10n.LoginCreateAccount) {
-                    customerAuthMode = .register
-                    showCustomerAuth = true
-                }
-                .font(.subheadline)
-                .foregroundStyle(PAXTheme.link)
-
-                Button(L10n.LoginForgotPassword) {
-                    customerAuthMode = .forgot
-                    showCustomerAuth = true
-                }
-                .font(.subheadline)
-                .foregroundStyle(PAXTheme.textSecondary)
-            }
-
-            HStack(spacing: 12) {
-                Rectangle().fill(PAXTheme.border.opacity(0.45)).frame(height: 1)
-                Text(String(localized: "or"))
-                    .font(.footnote)
-                    .foregroundStyle(PAXTheme.textSecondary)
-                Rectangle().fill(PAXTheme.border.opacity(0.45)).frame(height: 1)
-            }
-            .padding(.top, 4)
-
-            PAXSignInWithAppleButton(isLoading: isAppleLoading) { credential in
-                signInWithApple(credential)
-            } onFailure: { appleError in
-                error = appleError.localizedDescription
-                PAXHaptics.warning()
-            }
-
-            VStack(spacing: 8) {
-                Link(L10n.LoginPrivacy, destination: PAXLegalLinks.privacyPolicy)
-                    .foregroundStyle(PAXTheme.link)
-                Link(L10n.LoginTerms, destination: PAXLegalLinks.impressum)
-                    .foregroundStyle(PAXTheme.link)
-            }
-            .font(.footnote)
-            .padding(.top, 4)
-        }
-        .padding(.vertical, 8)
     }
 
     @ViewBuilder

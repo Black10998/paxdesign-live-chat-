@@ -8,42 +8,36 @@ enum PAXTheme {
     static func applyPalette(_ palette: PAXThemePalette, isDark: Bool) {
         cachedPalette = palette
         cachedIsDark = isDark
+        PAXRevolutAppearance.apply()
     }
 
-    static var accent: Color { PAXBrand.appearanceAccent(isDark: cachedIsDark) }
-    static var accentSecondary: Color { cachedPalette.accentSecondary }
-    static var success: Color { cachedPalette.success }
-    static var danger: Color { cachedPalette.danger }
-    static var adminBubble: Color { cachedPalette.adminBubble }
+    /// Brand accent — lime in Dark, system blue in Light. Always tracks live traits.
+    static var accent: Color { PAXBrand.adaptiveAccent }
+    static var accentSecondary: Color { PAXDynamic.color(UIColor.systemIndigo, UIColor(red: 0.55, green: 0.82, blue: 1, alpha: 1)) }
+    static var success: Color { Color(uiColor: PAXDynamic.income) }
+    static var danger: Color { Color(uiColor: PAXDynamic.spend) }
+    static var adminBubble: Color { accent }
 
-    static var border: Color { Color(.separator) }
-    static var textPrimary: Color { .primary }
-    static var textSecondary: Color {
-        cachedIsDark ? Color(UIColor.secondaryLabel) : Color(red: 0.16, green: 0.18, blue: 0.22)
-    }
-    static var textTertiary: Color {
-        cachedIsDark ? Color(UIColor.tertiaryLabel) : Color(red: 0.28, green: 0.30, blue: 0.34)
-    }
-    static var link: Color {
-        cachedIsDark ? accent : Color(uiColor: .systemBlue)
-    }
-    static var onAccent: Color {
-        PAXBrand.accentLabelColor(isDark: cachedIsDark)
-    }
-    static var icon: Color { .primary }
+    static var border: Color { PAXDynamic.color(PAXDynamic.dividerLight, PAXDynamic.dividerDark) }
+    static var borderSubtle: Color { PAXDynamic.color(PAXDynamic.borderLight, PAXDynamic.borderDark) }
+    static var divider: Color { border }
+    static var textPrimary: Color { PAXDynamic.color(PAXDynamic.textPrimaryLight, PAXDynamic.textPrimaryDark) }
+    static var textSecondary: Color { PAXDynamic.color(PAXDynamic.textSecondaryLight, PAXDynamic.textSecondaryDark) }
+    static var textTertiary: Color { PAXDynamic.color(PAXDynamic.textTertiaryLight, PAXDynamic.textTertiaryDark) }
+    static var link: Color { accent }
+    static var onAccent: Color { PAXBrand.adaptiveOnAccent }
+    static var icon: Color { textPrimary }
     static var iconSecondary: Color { textSecondary }
     static var iconTertiary: Color { textTertiary }
-    static var iconOnFill: Color { .white }
-    static var userBubble: Color { Color(.systemGray5) }
+    static var iconOnFill: Color { onAccent }
+    static var userBubble: Color { surfaceElevated }
 
-    static var background: Color {
-        cachedPalette.background(isDark: cachedIsDark)
-    }
-    static var surface: Color {
-        cachedPalette.surface(isDark: cachedIsDark)
-    }
-    static var surfaceElevated: Color {
-        cachedPalette.surfaceElevated(isDark: cachedIsDark)
+    static var background: Color { PAXDynamic.color(PAXDynamic.canvasLight, PAXDynamic.canvasDark) }
+    static var surface: Color { PAXDynamic.color(PAXDynamic.surface1Light, PAXDynamic.surface1Dark) }
+    static var surfaceElevated: Color { PAXDynamic.color(PAXDynamic.surface2Light, PAXDynamic.surface2Dark) }
+    static var surface3: Color { PAXDynamic.color(PAXDynamic.surface3Light, PAXDynamic.surface3Dark) }
+    static var cardShadow: Color {
+        PAXDynamic.color(UIColor.black.withAlphaComponent(0.06), UIColor.black.withAlphaComponent(0.45))
     }
 
     static var systemBubble: Color { accent.opacity(0.14) }
@@ -99,22 +93,15 @@ private struct PAXPremiumGlassModifier: ViewModifier {
     let cornerRadius: CGFloat
     let accent: Color?
 
-    @Environment(\.colorScheme) private var colorScheme
-
     func body(content: Content) -> some View {
-        let border = tier.borderOpacity(for: colorScheme)
-        let shadow = tier.shadowOpacity(for: colorScheme)
-
-        content
-            .background(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(tier.material)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .stroke(PAXTheme.border.opacity(border), lineWidth: 0.5)
-                    )
-            )
-            .shadow(color: .black.opacity(shadow), radius: 3, x: 0, y: 1)
+        let elevation: Int = {
+            switch tier {
+            case .subtle: return 0
+            case .standard, .tabBar: return 0
+            case .premium, .hero: return 1
+            }
+        }()
+        content.paxRevolutSurface(cornerRadius: cornerRadius, elevation: elevation)
     }
 }
 
@@ -174,7 +161,7 @@ struct PAXAppearanceObserver: ViewModifier {
     func body(content: Content) -> some View {
         content
             .environment(\.paxPalette, resolvedPalette)
-            .tint(PAXBrand.appearanceAccent(isDark: resolvedIsDark))
+            .tint(PAXBrand.adaptiveAccent)
             .preferredColorScheme(settings.appearanceMode.colorScheme)
             .onAppear {
                 syncTheme()
@@ -195,6 +182,7 @@ struct PAXAppearanceObserver: ViewModifier {
 
     private func syncTheme() {
         PAXTheme.applyPalette(resolvedPalette, isDark: resolvedIsDark)
+        PAXRevolutAppearance.apply()
     }
 }
 

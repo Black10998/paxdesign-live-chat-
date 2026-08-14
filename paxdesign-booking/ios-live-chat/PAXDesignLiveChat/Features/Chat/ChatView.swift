@@ -517,7 +517,7 @@ struct ChatView: View {
     private var canViewRatings: Bool { auth.canViewRatings }
 
     private var composer: some View {
-        HStack(alignment: .bottom, spacing: 8) {
+        HStack(alignment: .bottom, spacing: 10) {
             if thread.handler == "admin", canReply {
                 Menu {
                     Button {
@@ -544,20 +544,25 @@ struct ChatView: View {
                         }
                     }
                 } label: {
-                    PAXIcon("plus.circle", size: .card)
-                        .frame(width: 32, height: 32)
+                    ZStack {
+                        Circle().fill(PAXTheme.surfaceElevated)
+                        PAXIcon("plus", size: .card, emphasis: .primary)
+                    }
+                    .frame(width: 44, height: 44)
+                    .overlay(Circle().strokeBorder(PAXTheme.divider, lineWidth: 1))
                 }
                 .disabled(thread.isSending)
             }
 
             TextField(L10n.ChatMessagePlaceholder, text: $thread.draft, axis: .vertical)
-                .font(.subheadline)
+                .font(PAXTypography.body)
+                .foregroundStyle(PAXTheme.textPrimary)
                 .lineLimit(1...6)
-                .layoutPriority(0)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .frame(minHeight: 36)
-                .paxGlassCardStyle(cornerRadius: 20, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.08)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .frame(minHeight: 44)
+                .background(PAXTheme.surface, in: Capsule())
+                .overlay(Capsule().strokeBorder(PAXTheme.divider, lineWidth: 1))
                 .disabled(!canComposeInThread || !canReply)
                 .onChange(of: thread.draft) { _ in
                     thread.handleDraftChange(auth: auth)
@@ -571,9 +576,17 @@ struct ChatView: View {
                 }
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .paxGlassCardStyle(cornerRadius: 18, fillOpacity: 0.8, borderOpacity: 0.4, shadowOpacity: 0.14)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background {
+            Rectangle()
+                .fill(.regularMaterial)
+                .overlay(PAXTheme.background.opacity(0.72))
+                .ignoresSafeArea(edges: .bottom)
+        }
+        .overlay(alignment: .top) {
+            Rectangle().fill(PAXTheme.divider).frame(height: 0.5)
+        }
     }
 
     private var canComposeInThread: Bool {

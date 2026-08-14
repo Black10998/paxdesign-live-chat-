@@ -77,7 +77,7 @@ final class InAppNotificationCoordinator {
         let content = UNMutableNotificationContent()
         content.title = customerName.isEmpty ? String(localized: "New customer request") : customerName
         content.body = preview.isEmpty ? String(localized: "A customer submitted a new order.") : preview
-        content.sound = .default
+        content.sound = UNNotificationSound(named: UNNotificationSoundName("pax-message.wav"))
         content.userInfo = [
             "type": "customer_order",
             "event": "new_customer_order",
@@ -233,7 +233,8 @@ final class InAppNotificationCoordinator {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body
-        content.sound = .default
+        content.sound = UNNotificationSound(named: UNNotificationSoundName(Self.soundName(for: type)))
+        content.badge = NSNumber(value: UIApplication.shared.applicationIconBadgeNumber)
         content.userInfo = [
             "pax": [
                 "session_id": sessionId,
@@ -249,5 +250,16 @@ final class InAppNotificationCoordinator {
             trigger: nil
         )
         UNUserNotificationCenter.current().add(request)
+    }
+
+    private static func soundName(for type: String) -> String {
+        switch type {
+        case "live_request", "customer_waiting":
+            return "pax-live-request.wav"
+        case "ai_attention", "missed_chat", "new_lead_contact", "security_alert":
+            return "pax-ai-alert.wav"
+        default:
+            return "pax-message.wav"
+        }
     }
 }

@@ -558,7 +558,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
 
         var options: UNNotificationPresentationOptions = [.banner, .badge]
-        if AppSettingsStore.shared.messageSoundEnabled || payloadIsLiveRequest(notification) {
+        let isLive = payloadIsLiveRequest(notification) || payload?.type == "live_request"
+        if isLive {
+            if AppSettingsStore.shared.incomingCallSoundEnabled {
+                options.insert(.sound)
+            }
+        } else if AppSettingsStore.shared.messageSoundEnabled {
             options.insert(.sound)
         }
         return options
@@ -578,14 +583,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         didReceive response: UNNotificationResponse
     ) async {
         let info = response.notification.request.content.userInfo
-        if AuthStore.shared.isCustomerSession {
-            CustomerNotificationsBadgeStore.shared.scheduleRefresh(api: CustomerSessionController.shared.api)
-            if let link = CustomerPushService.shared.handleNotification(userInfo: info) {
-                await MainActor.run {
-                    CustomerDeepLinkRouter.shared.pending = link
-                }
+        if let link = CustomerPushService.shared.handleNotification(userInfo: info) {
+            await MainActor.run {
+                CustomerDeepLinkRouter.shared.pending = link
             }
-            return
+            if AuthStore.shared.isCustomerSession || AuthStore.shared.isBootstrapping {
+                return
+            }
         }
         if let order = PushService.shared.parseOrderNotification(userInfo: info) {
             var userInfo: [String: Any] = [

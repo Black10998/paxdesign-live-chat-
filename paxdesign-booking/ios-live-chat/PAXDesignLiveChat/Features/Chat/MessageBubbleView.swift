@@ -255,7 +255,7 @@ struct MessageBubbleView: View {
             return Color(red: 0.97, green: 0.98, blue: 0.99)
         }
         if isOutgoing {
-            return Color(red: 37 / 255, green: 114 / 255, blue: 135 / 255)
+            return PAXTheme.accent
         }
         return PAXMessageStyle.bubbleColor(role: message.role, isOutgoing: isOutgoing, palette: palette)
     }

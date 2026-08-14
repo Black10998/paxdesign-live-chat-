@@ -5,8 +5,11 @@ on:
   push:
     branches:
       - main
+      - 'cursor/revolut-full-redesign-b0ff'
     paths:
       - '.github/triggers/appstore-build'
+      - 'paxdesign-booking/ios-live-chat/**'
+      - '.github/workflows/release-appstore.yml'
 
 permissions:
   contents: read

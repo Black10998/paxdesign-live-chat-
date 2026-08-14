@@ -150,6 +150,8 @@ struct DashboardView: View {
         dashboardList
             .navigationTitle(L10n.ModuleDashboard)
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(PAXTheme.background, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 8) {
@@ -285,102 +287,119 @@ struct DashboardView: View {
     }
 
     private var heroHeader: some View {
-        PlatformHeroHeader(
-            title: L10n.DashboardWelcome(auth.profile?.displayName ?? L10n.CommonAdministrator),
-            subtitle: L10n.DashboardSubtitle,
-            systemImage: "chart.bar.doc.horizontal.fill",
-            tint: PAXTheme.accent
-        )
+        VStack(alignment: .leading, spacing: 20) {
+            Text(L10n.DashboardWelcome(auth.profile?.displayName ?? L10n.CommonAdministrator).uppercased())
+                .font(PAXTypography.labelUpper)
+                .tracking(0.6)
+                .foregroundStyle(PAXTheme.textTertiary)
+
+            Text("\(platform.dashboard?.sessionsTotal ?? customerSessions.count)")
+                .font(PAXTypography.balance)
+                .monospacedDigit()
+                .foregroundStyle(PAXTheme.textPrimary)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+
+            Text(L10n.DashboardMetricSessions)
+                .font(PAXTypography.subsection)
+                .foregroundStyle(PAXTheme.textSecondary)
+
+            HStack(alignment: .top, spacing: 8) {
+                NavigationLink {
+                    TasksModuleView()
+                } label: {
+                    PAXQuickActionVisual(title: L10n.DashboardMetricTasks, systemImage: "checklist", emphasized: true)
+                }
+                .buttonStyle(PAXRevolutPressableStyle())
+
+                NavigationLink {
+                    NotificationsCenterView()
+                } label: {
+                    PAXQuickActionVisual(title: L10n.PlatformNotifications, systemImage: "bell.badge.fill")
+                }
+                .buttonStyle(PAXRevolutPressableStyle())
+
+                NavigationLink {
+                    CalendarModuleView()
+                } label: {
+                    PAXQuickActionVisual(title: L10n.DashboardUpcoming, systemImage: "calendar")
+                }
+                .buttonStyle(PAXRevolutPressableStyle())
+
+                PAXQuickActionButton(title: L10n.GlobalSearchTitle, systemImage: "magnifyingglass") {
+                    showSearch = true
+                    PAXHaptics.light()
+                }
+            }
+        }
+        .padding(.horizontal, PAXSpacing.screenHorizontal)
+        .padding(.top, 8)
+        .padding(.bottom, 8)
         .paxStaggeredAppear(index: 0)
         .transition(PAXMotion.heroReveal)
     }
 
     private var metricsGrid: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-            PAXMetricCard(
-                title: L10n.DashboardMetricSessions,
-                value: "\(platform.dashboard?.sessionsTotal ?? customerSessions.count)",
-                icon: "bubble.left.and.bubble.right.fill",
-                tint: PAXTheme.accent,
-                helpText: L10n.DashboardMetricSessionsHelp,
-                trend: cachedTrends.sessionsPct
-            )
-            .paxStaggeredAppear(index: 0)
-            PAXMetricCard(
+        VStack(spacing: 12) {
+            PAXRevolutMetricTile(
                 title: L10n.DashboardMetricUnread,
                 value: "\(unreadCount)",
-                icon: "envelope.badge.fill",
-                tint: unreadCount > 0 ? PAXTheme.danger : PAXTheme.accentSecondary,
-                helpText: L10n.DashboardMetricUnreadHelp
+                systemImage: "envelope.badge.fill",
+                tint: unreadCount > 0 ? PAXTheme.danger : PAXTheme.accent
             )
-            .paxStaggeredAppear(index: 1)
-            PAXMetricCard(
+            PAXRevolutMetricTile(
                 title: L10n.DashboardMetricLive,
                 value: "\(platform.dashboard?.liveCount ?? coordinator.liveCount)",
-                icon: "bell.and.waves.left.and.right.fill",
+                systemImage: "bell.badge.fill",
                 tint: PAXTheme.danger,
-                helpText: L10n.DashboardMetricLiveHelp,
                 trend: cachedTrends.liveRequestsPct
             )
-            .paxStaggeredAppear(index: 2)
-            PAXMetricCard(
+            PAXRevolutMetricTile(
                 title: L10n.DashboardMetricTasks,
                 value: "\(platform.dashboard?.openTasks ?? tasks.openCount)",
-                icon: "checklist",
-                tint: .green,
-                helpText: L10n.DashboardMetricTasksHelp
+                systemImage: "checklist",
+                tint: PAXTheme.success,
+                trend: cachedTrends.sessionsPct
             )
-            .paxStaggeredAppear(index: 3)
         }
+        .padding(.horizontal, PAXSpacing.screenHorizontal)
     }
 
     private var activityFeed: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(L10n.DashboardActivityFeed)
-                    .font(.headline)
-                Spacer()
-                Text(L10n.DashboardActivityRealtime)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.mint)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.mint.opacity(0.18)))
-            }
+        VStack(alignment: .leading, spacing: 4) {
+            PAXRevolutSectionHeader(title: L10n.DashboardActivityFeed)
+                .padding(.horizontal, PAXSpacing.screenHorizontal)
 
             if recentActivityItems.isEmpty {
                 Text(L10n.DashboardActivityEmpty)
-                    .font(.subheadline)
+                    .font(PAXTypography.body)
                     .foregroundStyle(PAXTheme.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, PAXSpacing.screenHorizontal)
+                    .padding(.top, 8)
             } else {
-                VStack(spacing: 10) {
+                VStack(spacing: 0) {
                     ForEach(recentActivityItems, id: \.sessionId) { session in
-                        PAXListCard(highlighted: session.isLiveRequest, accent: session.isLiveRequest ? .red : PAXTheme.accent) {
-                            HStack(spacing: 10) {
-                                Circle()
-                                    .fill(session.isLiveRequest ? Color.red : PAXTheme.accent)
-                                    .frame(width: 9, height: 9)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(session.displayName)
-                                        .font(.subheadline.weight(.semibold))
-                                    Text(session.lastPreview.isEmpty ? session.detectedService : session.lastPreview)
-                                        .font(.caption)
-                                        .foregroundStyle(PAXTheme.textSecondary)
-                                        .lineLimit(1)
-                                }
-                                Spacer()
+                        PAXRevolutListRow(
+                            title: session.displayName,
+                            subtitle: session.lastPreview.isEmpty ? session.detectedService : session.lastPreview,
+                            highlighted: session.isLiveRequest,
+                            leading: {
+                                PAXAvatar(name: session.displayName, size: 40)
+                            },
+                            trailing: {
                                 Text(MessageTimeFormatter.relativeUpdatedLabel(from: MessageTimeFormatter.date(fromUpdatedAt: session.updatedAt) ?? Date()))
-                                    .font(.caption2)
-                                    .foregroundStyle(PAXTheme.textTertiary)
+                                    .font(PAXTypography.meta)
+                                    .foregroundStyle(session.isLiveRequest ? PAXTheme.danger : PAXTheme.textTertiary)
                             }
-                        }
+                        )
+                        Rectangle().fill(PAXTheme.divider).frame(height: 1).padding(.leading, 68)
                     }
                 }
+                .paxRevolutSurface(cornerRadius: 16, elevation: 0)
+                .padding(.horizontal, PAXSpacing.screenHorizontal)
             }
         }
-        .padding(16)
-        .paxPremiumGlass(tier: .premium, cornerRadius: 18, accent: .mint)
+        .padding(.top, 8)
     }
 
     private var activityChart: some View {

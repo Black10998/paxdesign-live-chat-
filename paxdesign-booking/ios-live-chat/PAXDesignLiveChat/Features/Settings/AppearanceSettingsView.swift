@@ -38,21 +38,26 @@ struct AppearanceSettingsView: View {
                         }
                     } label: {
                         Text(mode.title)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(settings.appearanceMode == mode ? Color.white : PAXTheme.textPrimary)
+                            .font(PAXTypography.button)
+                            .foregroundStyle(settings.appearanceMode == mode ? PAXTheme.onAccent : PAXTheme.textPrimary)
                             .frame(maxWidth: .infinity)
-                            .padding(.vertical, 11)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                    .fill(settings.appearanceMode == mode ? settings.palette.accent : Color(.tertiarySystemFill))
-                            )
+                            .padding(.vertical, 12)
+                            .background {
+                                if settings.appearanceMode == mode {
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(PAXBrandGradient.linear)
+                                } else {
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(PAXTheme.surfaceElevated)
+                                }
+                            }
                     }
                     .buttonStyle(.plain)
                 }
             }
         }
         .padding(16)
-        .paxPremiumGlass(tier: .standard, cornerRadius: 18)
+        .paxRevolutSurface(cornerRadius: 16, elevation: 0)
     }
 
     private var themeSection: some View {

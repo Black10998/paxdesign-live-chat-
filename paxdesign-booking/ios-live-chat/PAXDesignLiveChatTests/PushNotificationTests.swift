@@ -147,4 +147,26 @@ final class PushNotificationTests: XCTestCase {
 
         XCTAssertNil(coordinator.activeSessionId)
     }
+
+    func testIconCatalogMapsLegacyAssetsToSFSymbols() {
+        XCTAssertEqual(PAXIconCatalog.symbol(for: "dashboard.fill"), "house.fill")
+        XCTAssertEqual(PAXIconCatalog.symbol(for: "chats.fill"), "bubble.left.and.bubble.right.fill")
+        XCTAssertEqual(PAXIconCatalog.symbol(for: "team.fill"), "person.3.fill")
+        XCTAssertEqual(PAXIconCatalog.symbol(for: "live.fill"), "bell.badge.fill")
+        XCTAssertEqual(PAXIconCatalog.symbol(for: "platform.fill"), "square.grid.2x2.fill")
+        XCTAssertEqual(PAXIconCatalog.symbol(for: "profile.user"), "person.crop.circle.fill")
+        XCTAssertEqual(PAXIconCatalog.symbol(for: "magnifyingglass"), "magnifyingglass")
+    }
+
+    func testCustomerChatDeepLinkIncludesSession() {
+        let payload: [AnyHashable: Any] = [
+            "pax": [
+                "category": "chat",
+                "session_id": "pax_customer_99",
+                "deep_link": "/chat/pax_customer_99",
+            ],
+        ]
+        let link = CustomerPushService.shared.handleNotification(userInfo: payload)
+        XCTAssertEqual(link?.path, "/chat/pax_customer_99")
+    }
 }

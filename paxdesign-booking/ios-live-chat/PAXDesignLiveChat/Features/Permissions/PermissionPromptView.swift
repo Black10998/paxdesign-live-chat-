@@ -32,41 +32,21 @@ struct NotificationPermissionPromptView: View {
                     }
 
                     VStack(spacing: 12) {
-                        Button {
+                        PAXRevolutPrimaryButton(
+                            title: isRequesting ? L10n.PermissionsRequesting : L10n.PermissionsEnable,
+                            isLoading: isRequesting
+                        ) {
                             guard !isRequesting else { return }
                             isRequesting = true
                             Task {
                                 defer { isRequesting = false }
                                 _ = await permissions.requestNotifications(push: push)
                             }
-                        } label: {
-                            HStack(spacing: 8) {
-                                if isRequesting {
-                                    ProgressView()
-                                        .controlSize(.small)
-                                }
-                                Text(isRequesting ? L10n.PermissionsRequesting : L10n.PermissionsEnable)
-                                    .fontWeight(.semibold)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .contentShape(Rectangle())
                         }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
-                        .disabled(isRequesting)
 
-                        Button {
+                        PAXRevolutGhostButton(title: L10n.PermissionsNotNow) {
                             permissions.skipNotificationOnboarding()
-                        } label: {
-                            Text(L10n.PermissionsNotNow)
-                                .font(.subheadline.weight(.medium))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(PAXTheme.textSecondary)
                     }
                 }
                 .padding(24)

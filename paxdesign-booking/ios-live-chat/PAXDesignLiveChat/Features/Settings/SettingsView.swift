@@ -213,6 +213,8 @@ struct SettingsRootView: View {
         .paxScreenBackground()
         .navigationTitle(L10n.SettingsTitle)
         .navigationBarTitleDisplayMode(.large)
+        .toolbarBackground(PAXTheme.background, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
     }
 
     private var canManageUsersSection: Bool { auth.canManageUsers }
@@ -223,15 +225,16 @@ struct SettingsRootView: View {
                 ProfileAvatarView(size: 64)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(auth.profile?.displayName ?? L10n.CommonAdministrator)
-                        .font(.title3.weight(.semibold))
+                        .font(PAXTypography.subsection)
+                        .foregroundStyle(PAXTheme.textPrimary)
                     if auth.profile?.isSuperAdmin == true {
                         Text(L10n.RoleExecutiveDirector)
-                            .font(.caption2.weight(.semibold))
+                            .font(PAXTypography.meta.weight(.semibold))
                             .foregroundStyle(PAXTheme.accent)
                     }
                 }
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 8)
             .accessibilityElement(children: .combine)
         }
     }
@@ -243,20 +246,20 @@ struct SettingsRowLabel: View {
     let systemImage: String
 
     var body: some View {
-        HStack(spacing: 12) {
-            PAXIcon(systemImage, size: .row)
-                .frame(width: 28, height: 28)
-                .accessibilityHidden(true)
-
+        HStack(spacing: 14) {
+            PAXSettingsGlyph(systemImage: systemImage, tint: PAXTheme.accent)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
+                    .font(PAXTypography.rowTitle)
                     .foregroundStyle(PAXTheme.textPrimary)
                 Text(subtitle)
-                    .font(.caption)
+                    .font(PAXTypography.meta)
                     .foregroundStyle(PAXTheme.textSecondary)
             }
+            Spacer(minLength: 0)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 6)
+        .frame(minHeight: 56)
     }
 }
 

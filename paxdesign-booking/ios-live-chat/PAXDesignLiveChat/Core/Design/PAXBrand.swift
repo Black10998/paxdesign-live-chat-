@@ -11,6 +11,19 @@ enum PAXBrand {
     /// Branded splash duration before transitioning to the shell (3–4 seconds).
     static let launchDuration: TimeInterval = 3.5
 
+    /// Dynamic accent that always follows the live trait collection.
+    static var adaptiveAccent: Color {
+        PAXDynamic.color(UIColor.systemBlue, PAXDynamic.lime)
+    }
+
+    static var adaptiveOnAccent: Color {
+        PAXDynamic.color(.white, .black)
+    }
+
+    static var adaptiveLogoForeground: Color {
+        PAXDynamic.color(PAXDynamic.textPrimaryLight, .white)
+    }
+
     static func appearanceAccent(isDark: Bool) -> Color {
         isDark ? accent : lightModeAccent
     }

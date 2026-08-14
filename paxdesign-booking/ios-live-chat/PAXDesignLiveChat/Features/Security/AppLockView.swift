@@ -8,10 +8,7 @@ struct AppLockView: View {
 
     var body: some View {
         ZStack {
-            Rectangle()
-                .fill(.ultraThinMaterial)
-                .ignoresSafeArea()
-            PAXTheme.background.opacity(0.55).ignoresSafeArea()
+            PAXTheme.background.ignoresSafeArea()
 
             VStack(spacing: 28) {
                 Spacer()
@@ -19,33 +16,24 @@ struct AppLockView: View {
                 VStack(spacing: 16) {
                     PAXAppMarkView(size: 72, showGlow: true)
                     Text(L10n.ApplockLocked)
-                        .font(.title2.weight(.semibold))
+                        .font(PAXTypography.titleLarge)
                     Text(L10n.ApplockPrompt)
-                        .font(.subheadline)
+                        .font(PAXTypography.body)
                         .foregroundStyle(PAXTheme.textSecondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 32)
                 }
 
                 if appLock.biometricEnabled {
-                    Button {
+                    PAXRevolutPrimaryButton(
+                        title: appLock.canUseBiometrics ? appLock.biometricTypeLabel : L10n.ApplockDevicePasscode
+                    ) {
                         Task {
                             let success = await appLock.requestDeviceAuthentication()
                             if success { PAXHaptics.success() }
                         }
-                    } label: {
-                        Label {
-                            Text(appLock.canUseBiometrics ? appLock.biometricTypeLabel : L10n.ApplockDevicePasscode)
-                        } icon: {
-                            PAXIcon(biometricIcon)
-                        }
-                        .font(.headline)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(PAXTheme.accent)
-                    .padding(.horizontal, 40)
+                    .padding(.horizontal, 24)
                 }
 
                 if appLock.pinEnabled {

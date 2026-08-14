@@ -14,37 +14,15 @@ struct CustomerMarketingTheme: Equatable {
         PAXBrand.appearanceAccent(isDark: colorScheme == .dark)
     }
 
-    var background: Color {
-        colorScheme == .dark ? Color.black : Color(red: 0.96, green: 0.96, blue: 0.97)
-    }
+    var background: Color { PAXTheme.background }
+    var panel: Color { PAXTheme.surface }
+    var cardBackground: Color { PAXTheme.surface }
+    var border: Color { PAXTheme.divider }
+    var textPrimary: Color { PAXTheme.textPrimary }
+    var textSecondary: Color { PAXTheme.textSecondary }
 
-    var panel: Color {
-        colorScheme == .dark ? Color(red: 0.06, green: 0.06, blue: 0.06) : Color.white
-    }
-
-    var cardBackground: Color {
-        colorScheme == .dark ? Color(red: 0.09, green: 0.09, blue: 0.09) : Color.white
-    }
-
-    var border: Color {
-        colorScheme == .dark ? Color.white.opacity(0.12) : Color.black.opacity(0.12)
-    }
-
-    var textPrimary: Color {
-        colorScheme == .dark ? Color.white : Color(red: 0.06, green: 0.06, blue: 0.08)
-    }
-
-    var textSecondary: Color {
-        colorScheme == .dark ? Color(red: 0.78, green: 0.78, blue: 0.78) : Color(red: 0.16, green: 0.18, blue: 0.22)
-    }
-
-    var textTertiary: Color {
-        colorScheme == .dark ? Color(red: 0.62, green: 0.62, blue: 0.62) : Color(red: 0.28, green: 0.30, blue: 0.34)
-    }
-
-    var accentOnAccent: Color {
-        PAXBrand.accentLabelColor(isDark: colorScheme == .dark)
-    }
+    var textTertiary: Color { PAXTheme.textTertiary }
+    var accentOnAccent: Color { PAXTheme.onAccent }
 
     var shadowLight: Color {
         colorScheme == .dark ? Color(red: 0.12, green: 0.12, blue: 0.12) : Color.white

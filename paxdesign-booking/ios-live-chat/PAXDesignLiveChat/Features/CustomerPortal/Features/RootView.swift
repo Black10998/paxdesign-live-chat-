@@ -42,6 +42,12 @@ struct CustomerPortalShellView: View {
                 navigation.handle(deepLink: link)
                 deepLinks.pending = nil
             }
+            .onAppear {
+                if let link = deepLinks.pending {
+                    navigation.handle(deepLink: link)
+                    deepLinks.pending = nil
+                }
+            }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willEnterForegroundNotification)) { _ in
                 guard auth.isLoggedIn, auth.isCustomerSession, !auth.isBootstrapping else { return }
                 Task {
@@ -99,11 +105,11 @@ struct CustomerTabView: View {
 
     private var menuItems: [UiverseMenuBarItem] {
         [
-            UiverseMenuBarItem(tag: CustomerPortalTab.home.rawValue, icon: "dashboard.fill", title: String(localized: "Home")),
-            UiverseMenuBarItem(tag: CustomerPortalTab.services.rawValue, icon: "platform.fill", title: String(localized: "Services")),
-            UiverseMenuBarItem(tag: CustomerPortalTab.portfolio.rawValue, icon: "photo", title: String(localized: "Portfolio")),
-            UiverseMenuBarItem(tag: CustomerPortalTab.chat.rawValue, icon: "team.headset", title: String(localized: "Support"), badge: chatBadge.unreadCount),
-            UiverseMenuBarItem(tag: CustomerPortalTab.account.rawValue, icon: "profile.user", title: String(localized: "Account")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.home.rawValue, icon: "house.fill", title: String(localized: "Home")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.services.rawValue, icon: "square.grid.2x2.fill", title: String(localized: "Services")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.portfolio.rawValue, icon: "photo.fill", title: String(localized: "Portfolio")),
+            UiverseMenuBarItem(tag: CustomerPortalTab.chat.rawValue, icon: "headphones", title: String(localized: "Support"), badge: chatBadge.unreadCount),
+            UiverseMenuBarItem(tag: CustomerPortalTab.account.rawValue, icon: "person.crop.circle.fill", title: String(localized: "Account")),
         ]
     }
 

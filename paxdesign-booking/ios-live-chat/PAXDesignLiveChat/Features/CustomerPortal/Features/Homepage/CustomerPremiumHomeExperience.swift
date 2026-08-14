@@ -108,34 +108,17 @@ struct CustomerHomeWorkspaceLoadingStrip: View {
 // MARK: - Insight header
 
 private struct CustomerHomeInsightHeader: View {
-    @Environment(\.marketingTheme) private var theme
     let profileName: String
-    @State private var pulse = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(theme.accent)
-                    .frame(width: 8, height: 8)
-                    .scaleEffect(pulse ? 1.15 : 0.85)
-                    .opacity(pulse ? 1 : 0.55)
-                    .animation(.easeInOut(duration: 1.4).repeatForever(autoreverses: true), value: pulse)
-                    .onAppear { pulse = true }
-                Text(String(localized: "Your workspace"))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(theme.textSecondary)
-                    .textCase(.uppercase)
-                    .tracking(0.6)
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            Text(String(localized: "Your workspace").uppercased())
+                .font(PAXTypography.labelUpper)
+                .tracking(0.6)
+                .foregroundStyle(PAXTheme.textTertiary)
             Text(CustomerHomeGreeting.text(forName: profileName))
-                .font(.system(size: 28, weight: .bold, design: .rounded))
-                .foregroundStyle(theme.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-            Text(String(localized: "Everything you need — projects, requests, files, and direct contact with our team."))
-                .font(.body)
-                .foregroundStyle(theme.textSecondary)
-                .lineSpacing(3)
+                .font(PAXTypography.titleLarge)
+                .foregroundStyle(PAXTheme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -181,33 +164,20 @@ private struct CustomerHomeLiveStatsRow: View {
     }
 
     private func statTile(value: String, label: String, icon: String, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(tint.opacity(0.16))
-                        .frame(width: 36, height: 36)
-                    PAXIcon(icon, size: .card, emphasis: .primary, tint: tint)
-                }
-                Spacer(minLength: 0)
-                Text(value)
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(theme.textPrimary)
-            }
+        VStack(alignment: .leading, spacing: 8) {
+            PAXRevolutGlyphAvatar(systemImage: icon, size: 36, tint: tint)
+            Text(value)
+                .font(PAXTypography.section)
+                .monospacedDigit()
+                .foregroundStyle(PAXTheme.textPrimary)
             Text(label)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(theme.textSecondary)
+                .font(PAXTypography.meta)
+                .foregroundStyle(PAXTheme.textSecondary)
                 .lineLimit(2)
         }
-        .padding(14)
+        .padding(16)
         .frame(width: 148, alignment: .leading)
-        .background(theme.panel)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(theme.border.opacity(0.35), lineWidth: 0.5)
-        )
-        .shadow(color: theme.shadowDark.opacity(0.12), radius: 10, y: 4)
+        .paxRevolutSurface(cornerRadius: 16, elevation: 0)
     }
 }
 
@@ -221,37 +191,34 @@ private struct CustomerHomeQuickActionsGrid: View {
     private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 12) {
-            quickAction(
-                title: String(localized: "Open Chat"),
-                subtitle: String(localized: "Talk to our team"),
-                icon: "message.fill",
-                style: .accent
+        HStack(alignment: .top, spacing: 8) {
+            PAXQuickActionButton(
+                title: String(localized: "Chat"),
+                systemImage: "bubble.left.and.bubble.right.fill",
+                emphasized: true
             ) {
+                PAXHaptics.light()
                 navigation.openChat(sessionID: dashboard.chat?.session_id)
             }
-            quickAction(
-                title: String(localized: "New Request"),
-                subtitle: String(localized: "Start a project"),
-                icon: "plus.circle",
-                style: .neutral
+            PAXQuickActionButton(
+                title: String(localized: "Request"),
+                systemImage: "plus"
             ) {
+                PAXHaptics.light()
                 navigation.openOrdersList()
             }
-            quickAction(
+            PAXQuickActionButton(
                 title: String(localized: "Projects"),
-                subtitle: String(localized: "Track progress"),
-                icon: "folder.fill",
-                style: .neutral
+                systemImage: "folder.fill"
             ) {
+                PAXHaptics.light()
                 navigation.openProjectsList()
             }
-            quickAction(
+            PAXQuickActionButton(
                 title: String(localized: "Files"),
-                subtitle: String(localized: "Documents & invoices"),
-                icon: "doc.on.doc",
-                style: .neutral
+                systemImage: "doc.on.doc"
             ) {
+                PAXHaptics.light()
                 navigation.openFiles()
             }
         }

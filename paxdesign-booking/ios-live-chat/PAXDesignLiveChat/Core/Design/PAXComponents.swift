@@ -11,7 +11,7 @@ struct PAXGlassCard<Content: View>: View {
     var body: some View {
         content
             .padding(16)
-            .paxGlassCardStyle(cornerRadius: 14, fillOpacity: 0.82, borderOpacity: 0.46, shadowOpacity: 0.18)
+            .paxRevolutSurface(cornerRadius: 16, elevation: 0)
     }
 }
 
@@ -23,26 +23,13 @@ struct PAXField: View {
     var keyboardType: UIKeyboardType = .default
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Label { Text(title) } icon: { PAXIcon(icon) }
-                .font(.subheadline)
-                .foregroundStyle(PAXTheme.textSecondary)
-
-            Group {
-                if isSecure {
-                    SecureField("", text: $text)
-                } else {
-                    TextField("", text: $text)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(keyboardType)
-                }
-            }
-            .font(.body)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .paxGlassCardStyle(cornerRadius: 12, fillOpacity: 0.76, borderOpacity: 0.4, shadowOpacity: 0.1)
-        }
+        PAXRevolutField(
+            title: title,
+            systemImage: icon,
+            text: $text,
+            isSecure: isSecure,
+            keyboardType: keyboardType
+        )
     }
 }
 
@@ -52,19 +39,7 @@ struct PAXPrimaryButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                if isLoading {
-                    PAXInlineLoader(size: 18)
-                }
-                Text(title)
-                    .fontWeight(.semibold)
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .disabled(isLoading)
+        PAXRevolutPrimaryButton(title: title, isLoading: isLoading, action: action)
     }
 }
 
@@ -105,14 +80,17 @@ struct PAXSendButton: View {
 
     var body: some View {
         Button(action: action) {
-            PAXIcon("arrow.up.circle.fill", size: .action, emphasis: isEnabled ? .primary : .tertiary)
-                .frame(width: 36, height: 36)
-                .contentShape(Rectangle())
+            ZStack {
+                Circle()
+                    .fill(isEnabled ? AnyShapeStyle(PAXBrandGradient.linear) : AnyShapeStyle(PAXTheme.surface3))
+                PAXIcon("arrow.up.circle.fill", size: .card, tint: isEnabled ? PAXTheme.onAccent : PAXTheme.textTertiary)
+            }
+            .frame(width: 44, height: 44)
+            .shadow(color: isEnabled ? PAXBrandGradient.glow : .clear, radius: 8, y: 4)
+            .contentShape(Circle())
         }
-        .buttonStyle(PAXIconTapStyle())
+        .buttonStyle(PAXRevolutPressableStyle())
         .disabled(!isEnabled)
-        .opacity(isEnabled ? 1 : 0.55)
-        .layoutPriority(1)
         .accessibilityLabel(L10n.CommonSend)
     }
 }
@@ -522,8 +500,6 @@ private struct PAXShellBottomTabBarModifier: ViewModifier {
                     selection: $selection,
                     reduceMotion: reduceMotion
                 )
-                .scaleEffect(scrollState.barScale, anchor: .bottom)
-                .padding(.horizontal, UiverseMenuMetrics.horizontalMargin)
                 .accessibilityIdentifier("pax.shell.tabBar")
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }

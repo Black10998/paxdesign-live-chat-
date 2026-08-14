@@ -14,7 +14,7 @@ struct PAXLaunchView: View {
             ZStack {
                 Color.black.ignoresSafeArea()
 
-                PAXAnimatedLogoView(markWidth: markWidth)
+                PAXAnimatedLogoView(markWidth: markWidth, forcesOnDarkCanvas: true)
                     .opacity(logoOpacity)
                     .id(sequenceID)
                     .environment(\.layoutDirection, .leftToRight)

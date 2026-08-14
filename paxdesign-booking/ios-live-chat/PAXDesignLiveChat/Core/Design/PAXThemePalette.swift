@@ -45,12 +45,12 @@ struct PAXThemePalette: Equatable {
                 glowSecondary: accent.opacity(0.65),
                 glowTertiary: accent.opacity(0.35),
                 usesGlass: true,
-                backgroundLight: UIColor(red: 0.96, green: 0.97, blue: 0.98, alpha: 1),
-                backgroundDark: UIColor(red: 0.06, green: 0.07, blue: 0.09, alpha: 1),
-                surfaceLight: UIColor(red: 1.0, green: 1.0, blue: 1.0, alpha: 1),
-                surfaceDark: UIColor(red: 0.10, green: 0.11, blue: 0.14, alpha: 1),
-                surfaceElevatedLight: UIColor(red: 0.94, green: 0.95, blue: 0.97, alpha: 1),
-                surfaceElevatedDark: UIColor(red: 0.14, green: 0.15, blue: 0.19, alpha: 1)
+                backgroundLight: PAXDynamic.canvasLight,
+                backgroundDark: PAXDynamic.canvasDark,
+                surfaceLight: PAXDynamic.surface1Light,
+                surfaceDark: PAXDynamic.surface1Dark,
+                surfaceElevatedLight: PAXDynamic.surface2Light,
+                surfaceElevatedDark: PAXDynamic.surface2Dark
             )
         case .aurora:
             let accent = Color(red: 0.55, green: 0.35, blue: 0.98)

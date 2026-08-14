@@ -11,14 +11,17 @@ from pathlib import Path
 OUT = Path(__file__).resolve().parent.parent / "PAXDesignLiveChat" / "Resources" / "Sounds"
 OUT.mkdir(parents=True, exist_ok=True)
 
+# (filename, freq_hz, duration_s, volume, optional second beep)
 SPECS = {
-    "pax-message.wav": (880, 0.18, 0.28),
-    "pax-live-request.wav": (660, 0.24, 0.34),
-    "pax-ai-alert.wav": (990, 0.16, 0.32),
+    "pax-message.wav": (880, 0.18, 0.32, None),
+    "pax-live-request.wav": (660, 0.42, 0.38, 880),
+    "pax-ai-alert.wav": (990, 0.22, 0.34, 1240),
+    "pax-send.wav": (720, 0.10, 0.22, None),
+    "pax-typing.wav": (540, 0.08, 0.16, None),
 }
 
 
-def write_tone(path: Path, freq: float, duration: float, volume: float) -> None:
+def write_tone(path: Path, freq: float, duration: float, volume: float, second: float | None) -> None:
     rate = 44100
     frames = int(rate * duration)
     with wave.open(str(path), "w") as handle:
@@ -26,14 +29,18 @@ def write_tone(path: Path, freq: float, duration: float, volume: float) -> None:
         handle.setsampwidth(2)
         handle.setframerate(rate)
         for index in range(frames):
-            envelope = min(1.0, index / (rate * 0.02), (frames - index) / (rate * 0.05))
-            sample = int(32767 * volume * envelope * math.sin(2 * math.pi * freq * index / rate))
-            handle.writeframes(struct.pack("<h", sample))
+            envelope = min(1.0, index / (rate * 0.012), (frames - index) / (rate * 0.04))
+            t = index / rate
+            sample = math.sin(2 * math.pi * freq * t)
+            if second is not None and t > duration * 0.45:
+                sample = math.sin(2 * math.pi * second * t)
+            value = int(32767 * volume * envelope * sample)
+            handle.writeframes(struct.pack("<h", value))
 
 
 def main() -> None:
-    for name, (freq, duration, volume) in SPECS.items():
-        write_tone(OUT / name, freq, duration, volume)
+    for name, (freq, duration, volume, second) in SPECS.items():
+        write_tone(OUT / name, freq, duration, volume, second)
         print(f"Wrote {OUT / name}")
 
 

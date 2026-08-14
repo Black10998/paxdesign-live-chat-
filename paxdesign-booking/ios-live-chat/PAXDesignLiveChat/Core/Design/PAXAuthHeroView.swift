@@ -25,12 +25,12 @@ struct PAXAuthHeroView: View {
             VStack(spacing: 8) {
                 if showsTitle {
                     Text(title)
-                        .font(.title2.weight(.semibold))
+                        .font(PAXTypography.titleLarge)
                         .foregroundStyle(PAXTheme.textPrimary)
                         .multilineTextAlignment(.center)
                 }
                 Text(subtitle)
-                    .font(.subheadline)
+                    .font(PAXTypography.body)
                     .foregroundStyle(PAXTheme.textSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
