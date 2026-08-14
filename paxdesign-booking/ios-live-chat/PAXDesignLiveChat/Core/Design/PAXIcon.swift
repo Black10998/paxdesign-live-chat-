@@ -1,17 +1,27 @@
 import SwiftUI
 
-enum PAXIconSize: CGFloat {
-    case micro = 12
-    case inline = 16
-    case row = 20
-    case card = 22
-    case tab = 24
-    case hero = 26
-    case menuBar = 24
-    case action = 22
-    case display = 32
+enum PAXIconSize {
+    case micro
+    case inline
+    case row
+    case card
+    case tab
+    case hero
+    case menuBar
+    case action
+    case display
 
-    var length: CGFloat { rawValue }
+    var length: CGFloat {
+        switch self {
+        case .micro: return 12
+        case .inline: return 16
+        case .row: return 20
+        case .card, .action: return 22
+        case .tab, .menuBar: return 24
+        case .hero: return 26
+        case .display: return 32
+        }
+    }
 }
 
 enum PAXIconEmphasis {

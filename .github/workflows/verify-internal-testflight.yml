@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - 'cursor/revolut-full-redesign-b0ff'
     paths:
       - '.github/triggers/testflight-verify-internal'
 
