@@ -155,6 +155,23 @@ foreach ($plugin_php_files as $php_file) {
 $auth_frontend = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-auth-frontend.php');
 cx_assert_true(strpos($auth_frontend, 'PAX_AUTH_CONFIG') !== false, 'Booking auth frontend must localize PAX_AUTH_CONFIG');
 cx_assert_true(strpos($auth_frontend, 'githubWebEnabled') !== false, 'Auth frontend must expose GitHub login config');
+cx_assert_true(strpos($auth_frontend, 'customerLevel') !== false, 'Auth frontend must expose customer membership level');
+cx_assert_true(strpos($auth_frontend, 'appleWebEnabled') !== false, 'Auth frontend must keep Sign in with Apple');
+
+$auth_js = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/js/pax-auth.js');
+cx_assert_true(strpos($auth_js, 'renderHeaderUserIdentityHtml') !== false, 'Logged-in header must render customer identity');
+cx_assert_true(strpos($auth_js, 'pdx-auth-account-identity') !== false, 'Logged-in header must use account identity mount');
+cx_assert_true(strpos($auth_js, 'renderCustomerLevelBadge') !== false, 'Logged-in header must show membership level badge');
+cx_assert_true(strpos($auth_js, 'githubSignInButtonInnerHtml') !== false, 'GitHub login button must remain in web auth');
+cx_assert_true(strpos($auth_js, 'appleSignInButtonInnerHtml') !== false, 'Apple login button must remain in web auth');
+
+$auth_css = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/css/pdx-auth.css');
+cx_assert_true(strpos($auth_css, '.pdx-header-user-identity') !== false, 'Header CSS must style customer identity');
+cx_assert_true(strpos($auth_css, '.pdx-account-level-badge--header') !== false, 'Header CSS must style membership badge');
+
+$levels = file_get_contents($customer_dir . '/class-paxdesign-customer-levels.php');
+cx_assert_true(strpos($levels, 'function profile_fields') !== false, 'Customer levels must expose profile_fields');
+cx_assert_true(strpos($levels, "Level %1\$s %2\$s") !== false, 'Level badge text must be Level NN Metal without dashes');
 
 $github_auth = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-auth-github.php');
 cx_assert_true(strpos($github_auth, '/pdx/v1/auth/github/callback') !== false, 'GitHub OAuth must use the registered HTTPS callback');
@@ -166,6 +183,7 @@ $auth_rest = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/include
 cx_assert_true(strpos($auth_rest, '/auth/github/start') !== false, 'Missing GitHub OAuth start route');
 cx_assert_true(strpos($auth_rest, '/auth/github/callback') !== false, 'Missing GitHub OAuth callback route');
 cx_assert_true(strpos($auth_rest, '/auth/github/complete') !== false, 'Missing GitHub iOS complete route');
+cx_assert_true(strpos($auth_rest, 'PAXdesign_Customer_Auth::user_payload') !== false, '/auth/me must return full customer identity payload');
 
 $notifications = file_get_contents($customer_dir . '/class-paxdesign-customer-notifications.php');
 cx_assert_true(strpos($notifications, 'mark_read_many') !== false, 'Notifications must support bulk mark-read');

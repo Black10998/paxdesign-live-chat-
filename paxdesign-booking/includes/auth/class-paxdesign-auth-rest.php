@@ -163,6 +163,9 @@ class PAXdesign_Auth_REST {
     }
 
     public static function me() {
+        if (class_exists('PAXdesign_Customer_Auth')) {
+            return new WP_REST_Response(PAXdesign_Customer_Auth::user_payload(), 200);
+        }
         return new WP_REST_Response(array_merge(
             PAXdesign_Auth::user_payload(),
             array('nonce' => wp_create_nonce('wp_rest'))

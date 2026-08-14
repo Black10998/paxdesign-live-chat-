@@ -91,20 +91,65 @@ class PAXdesign_Auth_Frontend {
     }
 
     /**
+     * @return array<string, array<string, string>>
+     */
+    private static function account_ui_l10n() {
+        $path = PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/customer/data/account-ui-l10n.php';
+        if (!is_readable($path)) {
+            return array();
+        }
+        $strings = include $path;
+        return is_array($strings) ? $strings : array();
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private static function js_config() {
         $user_id = get_current_user_id();
+        $logged_in = is_user_logged_in();
+        $avatar_url = '';
+        $avatar_fallback = '';
+        $avatar_has_image = false;
+        if ($logged_in && class_exists('PAXdesign_Customer_Avatar')) {
+            $avatar_url = PAXdesign_Customer_Avatar::url_for_user($user_id);
+            $avatar_fallback = PAXdesign_Customer_Avatar::fallback_url_for_user($user_id);
+            $avatar_has_image = PAXdesign_Customer_Avatar::has_visible_avatar($user_id);
+            if (class_exists('PAXdesign_Customer_Avatar_Presets')) {
+                $avatar_url = PAXdesign_Customer_Avatar_Presets::normalize_asset_url($avatar_url);
+                $avatar_fallback = PAXdesign_Customer_Avatar_Presets::normalize_asset_url($avatar_fallback);
+            }
+        }
         return array(
             'version'       => PAXDESIGN_BOOKING_VERSION,
             'restUrl'       => esc_url(rest_url('pdx/v1')),
             'ajaxUrl'       => esc_url(admin_url('admin-ajax.php')),
             'nonce'         => wp_create_nonce('wp_rest'),
             'userId'        => $user_id,
-            'isLoggedIn'    => is_user_logged_in(),
-            'emailVerified' => is_user_logged_in() ? PAXdesign_Auth::is_email_verified($user_id) : false,
-            'userName'      => is_user_logged_in() ? wp_get_current_user()->display_name : '',
-            'userEmail'     => is_user_logged_in() ? wp_get_current_user()->user_email : '',
+            'isLoggedIn'    => $logged_in,
+            'emailVerified' => $logged_in ? PAXdesign_Auth::is_email_verified($user_id) : false,
+            'userName'      => $logged_in ? wp_get_current_user()->display_name : '',
+            'userEmail'     => $logged_in ? wp_get_current_user()->user_email : '',
+            'avatarUrl'     => $avatar_url,
+            'avatarFallbackUrl' => $avatar_fallback,
+            'avatarHasImage' => $avatar_has_image,
+            'avatarPresets' => class_exists('PAXdesign_Customer_Avatar_Presets')
+                ? PAXdesign_Customer_Avatar_Presets::catalog()
+                : array(),
+            'vipAvatarPresets' => class_exists('PAXdesign_Customer_Avatar_Vip_Presets')
+                ? PAXdesign_Customer_Avatar_Vip_Presets::catalog_for_user($logged_in ? $user_id : 0)
+                : array(),
+            'isMasterAdmin' => ($logged_in && class_exists('PAXdesign_Customer_Master_Admin'))
+                ? PAXdesign_Customer_Master_Admin::is_master_admin($user_id)
+                : false,
+            'customerLevel' => ($logged_in && class_exists('PAXdesign_Customer_Levels'))
+                ? PAXdesign_Customer_Levels::profile_fields($user_id)
+                : array(),
+            'defaultAvatarUrl' => class_exists('PAXdesign_Customer_Avatar')
+                ? (class_exists('PAXdesign_Customer_Avatar_Presets')
+                    ? PAXdesign_Customer_Avatar_Presets::normalize_asset_url(PAXdesign_Customer_Avatar::default_avatar_url())
+                    : PAXdesign_Customer_Avatar::default_avatar_url())
+                : '',
             'publicModules' => PAXdesign_Auth_Native::public_modules(),
             'modules'       => array(),
             'accountPageUrl'=> esc_url(PAXdesign_Auth_Page::page_url()),
@@ -118,6 +163,7 @@ class PAXdesign_Auth_Frontend {
             'homeUrl'          => esc_url(home_url('/')),
             'logoUrl'          => class_exists('PAXdesign_Auth_Page') ? PAXdesign_Auth_Page::brand_logo_url() : '',
             'siteName'         => get_bloginfo('name'),
+            'accountUiL10n'    => self::account_ui_l10n(),
         );
     }
 }

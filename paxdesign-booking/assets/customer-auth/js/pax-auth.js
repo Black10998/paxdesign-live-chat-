@@ -12,6 +12,14 @@
     display_name: C.userName || '',
     email: C.userEmail || '',
     id: C.userId || 0,
+    avatar_url: C.avatarUrl || '',
+    avatar_has_image: C.avatarHasImage !== false,
+    is_master_admin: !!C.isMasterAdmin,
+    customer_level: (C.customerLevel && C.customerLevel.customer_level) || 0,
+    level_label: (C.customerLevel && C.customerLevel.level_label) || '',
+    level_title: (C.customerLevel && C.customerLevel.level_title) || '',
+    level_description: (C.customerLevel && C.customerLevel.level_description) || '',
+    has_customer_level: !!(C.customerLevel && C.customerLevel.has_customer_level),
   };
   var returnModule = null;
   var currentView = 'login';
@@ -51,6 +59,18 @@
     var d = document.createElement('div');
     d.textContent = String(s);
     return d.innerHTML;
+  }
+
+  function t(key, fallback) {
+    var lang = (navigator.language || navigator.userLanguage || document.documentElement.lang || 'en').toLowerCase();
+    if (lang.indexOf('ar') === 0) lang = 'ar';
+    else if (lang.indexOf('en') === 0) lang = 'en';
+    else lang = 'de';
+    var pack = C.accountUiL10n || {};
+    var entry = pack[key];
+    if (entry && entry[lang]) return entry[lang];
+    if (entry && entry.en) return entry.en;
+    return fallback !== undefined ? fallback : key;
   }
 
   function stripHtml(s) {
@@ -115,7 +135,278 @@
 
   function nameWithBadge(name, verified, opts) {
     if (window.PDXVerifiedBadge) return window.PDXVerifiedBadge.nameWithBadge(name, verified, opts);
-    return escHtml(name || 'Account');
+    return escHtml(name || t('account', 'Account'));
+  }
+
+  function cleanupLegacyHeaderIdentityNodes(accountBtn) {
+    if (!accountBtn) return;
+    accountBtn.querySelectorAll(
+      '.pdx-auth-account-label, .pdx-auth-trigger, .pdx-auth-trigger-label, .pdx-name-with-badge, .pdx-name-with-badge--account'
+    ).forEach(function (node) {
+      if (!node.closest('.pdx-auth-account-identity')) {
+        node.remove();
+      }
+    });
+  }
+
+  function renderHeaderUserIdentityHtml(opts) {
+    opts = opts || {};
+    var name = opts.name || user.display_name || t('account', 'Account');
+    var showName = opts.showName !== false;
+    var profile = opts.profile || accountProfileData();
+    var avatarHtml = renderAccountAvatarHtml({
+      sizeClass: 'pdx-account-avatar--header',
+      url: opts.url,
+      profile: profile,
+      alt: '',
+    });
+    var levelHtml = showName ? renderCustomerLevelBadge(profile, { compact: true, header: true }) : '';
+    var textHtml = showName
+      ? '<span class="pdx-header-user-text">' +
+          '<span class="pdx-header-user-name">' + escHtml(name) + '</span>' +
+          levelHtml +
+        '</span>'
+      : '';
+    return '<span class="pdx-header-user-identity">' + avatarHtml + textHtml + '</span>';
+  }
+
+  function defaultAvatarUrl() {
+    return normalizeAvatarAssetUrl(C.defaultAvatarUrl || '');
+  }
+
+  function normalizeAvatarAssetUrl(url) {
+    if (!url) return '';
+    var normalized = String(url).replace(/(\/avatars\/pax-\d{2,3})\.svg(\?.*)?$/i, '$1.gif');
+    if (normalized.indexOf('/avatars/pax-') !== -1 && /\.gif(\?|$)/i.test(normalized) && normalized.indexOf('?') === -1 && C.version) {
+      normalized += '?v=' + encodeURIComponent(C.version);
+    }
+    return normalized;
+  }
+
+  function accountAvatarPresetUrl(presetId) {
+    if (!presetId || presetId === 'pax-none') return '';
+    var presets = accountAvatarPresets().concat(accountVipAvatarPresets());
+    for (var i = 0; i < presets.length; i++) {
+      if (presets[i] && presets[i].id === presetId) {
+        return normalizeAvatarAssetUrl(presets[i].url || '');
+      }
+    }
+    var sample = defaultAvatarUrl();
+    if (sample && /\/avatars\/pax-\d{2,3}\.gif/i.test(sample)) {
+      return normalizeAvatarAssetUrl(sample.replace(/pax-\d{2,3}\.gif/i, presetId + '.gif'));
+    }
+    if (/^pax-vip-\d{2}$/.test(presetId)) {
+      var vipSample = accountVipAvatarPresets()[0];
+      if (vipSample && vipSample.url) {
+        return normalizeAvatarAssetUrl(String(vipSample.url).replace(/pax-vip-\d{2}\.(svg|gif)/i, presetId + '.gif'));
+      }
+    }
+    return '';
+  }
+
+  function accountVipAvatarPresets() {
+    if (!Array.isArray(C.vipAvatarPresets)) return [];
+    return C.vipAvatarPresets.map(function (preset) {
+      if (!preset) return preset;
+      preset.url = normalizeAvatarAssetUrl(preset.url || '');
+      return preset;
+    });
+  }
+
+  function isExplicitCustomerProfile(profile) {
+    if (!profile || typeof profile !== 'object') return false;
+    if (profile.id && user && user.id && Number(profile.id) !== Number(user.id)) return true;
+    return profile.has_customer_level !== undefined || profile.customer_level !== undefined;
+  }
+
+  function accountLevelData(profile, opts) {
+    opts = opts || {};
+    profile = profile || accountProfileData();
+    var strict = !!opts.strict || isExplicitCustomerProfile(profile);
+    if (strict) {
+      return {
+        customer_level: Number(profile.customer_level) || 0,
+        level_label: profile.level_label || '',
+        level_title: profile.level_title || '',
+        level_description: profile.level_description || '',
+        has_customer_level: !!profile.has_customer_level,
+      };
+    }
+    return {
+      customer_level: profile.customer_level || user.customer_level || (C.customerLevel && C.customerLevel.customer_level) || 0,
+      level_label: profile.level_label || user.level_label || (C.customerLevel && C.customerLevel.level_label) || '',
+      level_title: profile.level_title || user.level_title || (C.customerLevel && C.customerLevel.level_title) || '',
+      level_description: profile.level_description || user.level_description || (C.customerLevel && C.customerLevel.level_description) || '',
+      has_customer_level: !!(profile.has_customer_level || user.has_customer_level || (C.customerLevel && C.customerLevel.has_customer_level)),
+    };
+  }
+
+  function renderCustomerLevelBadge(profile, opts) {
+    opts = opts || {};
+    var level = accountLevelData(profile, opts);
+    if (!level.has_customer_level || !level.level_label) return '';
+    var compact = opts.compact ? ' pdx-account-level-badge--compact' : '';
+    var header = opts.header ? ' pdx-account-level-badge--header' : '';
+    var menu = opts.menu ? ' pdx-account-level-badge--menu' : '';
+    var title = level.level_title ? ' title="' + escHtml(level.level_title + (level.level_description ? ' — ' + level.level_description : '')) + '"' : '';
+    return '<span class="pdx-account-level-badge' + compact + header + menu + '"' + title + '>' + escHtml(level.level_label) + '</span>';
+  }
+
+  function accountProfileData() {
+    var profile = accountState.profile || {};
+    if (profile.profile && typeof profile.profile === 'object') {
+      profile = profile.profile;
+    }
+    return profile;
+  }
+
+  function accountAvatarUrl(profile) {
+    profile = profile || accountProfileData();
+    if (profile.avatar_has_image === false) return '';
+    if (profile.avatar_has_upload) {
+      return normalizeAvatarAssetUrl(profile.avatar_url || user.avatar_url || C.avatarUrl || '');
+    }
+    var presetId = profile.avatar_preset || user.avatar_preset || '';
+    if (presetId && presetId !== 'pax-none') {
+      var presetUrl = accountAvatarPresetUrl(presetId);
+      if (presetUrl) return presetUrl;
+    }
+    var url = profile.avatar_url || user.avatar_url || C.avatarUrl || '';
+    url = normalizeAvatarAssetUrl(url);
+    return url || defaultAvatarUrl();
+  }
+
+  function accountAvatarHasImage(profile) {
+    profile = profile || accountProfileData();
+    if (profile && profile.avatar_has_image === false) return false;
+    if (profile && profile.avatar_has_image === true) return true;
+    if (user.avatar_has_image === false) return false;
+    if (profile.avatar_has_upload) return true;
+    if (profile.avatar_preset === 'pax-none') return false;
+    if (user.avatar_preset === 'pax-none') return false;
+    return !!(profile.avatar_url || user.avatar_url || C.avatarUrl || defaultAvatarUrl());
+  }
+
+  function accountAvatarFallbackUrl(profile) {
+    profile = profile || accountProfileData();
+    if (!accountAvatarHasImage(profile)) return '';
+    if (profile.avatar_has_upload) {
+      var presetId = profile.avatar_preset || user.avatar_preset || '';
+      if (presetId && presetId !== 'pax-none') {
+        var presetUrl = accountAvatarPresetUrl(presetId);
+        if (presetUrl) return presetUrl;
+      }
+    }
+    return normalizeAvatarAssetUrl(profile.avatar_fallback_url || C.avatarFallbackUrl || defaultAvatarUrl());
+  }
+
+  function accountAvatarPresets() {
+    if (!Array.isArray(C.avatarPresets)) return [];
+    return C.avatarPresets.map(function (preset) {
+      if (!preset || preset.type === 'none' || preset.id === 'pax-none') return preset;
+      return {
+        id: preset.id,
+        label: preset.label,
+        url: normalizeAvatarAssetUrl(preset.url || ''),
+        type: preset.type,
+      };
+    });
+  }
+
+  function handleAccountAvatarImgError(img) {
+    if (!img || img.dataset.pdxAvatarFailed === '1') return;
+    var fallback = img.getAttribute('data-avatar-fallback') || defaultAvatarUrl();
+    if (!fallback) {
+      var wrap = img.closest('.pdx-account-avatar');
+      if (wrap) wrap.remove();
+      return;
+    }
+    var current = img.currentSrc || img.src || '';
+    if (current && current.indexOf(fallback) !== -1) return;
+    img.dataset.pdxAvatarFailed = '1';
+    img.src = fallback;
+  }
+
+  var accountAvatarFallbackBound = false;
+  function ensureAccountAvatarFallbackHandler() {
+    if (accountAvatarFallbackBound) return;
+    accountAvatarFallbackBound = true;
+    document.addEventListener('error', function (e) {
+      var img = e.target;
+      if (!img || !img.classList || !img.classList.contains('pdx-account-avatar__img')) return;
+      handleAccountAvatarImgError(img);
+    }, true);
+    window.__pdxAvatarFallback = handleAccountAvatarImgError;
+  }
+
+  function bindAccountAvatarFallbacks(root) {
+    ensureAccountAvatarFallbackHandler();
+    root = root || document;
+    root.querySelectorAll('.pdx-account-avatar__img[data-avatar-fallback]').forEach(function (img) {
+      img.removeAttribute('data-pdx-avatar-failed');
+    });
+  }
+
+  var ACCOUNT_AVATAR_PX = {
+    'pdx-account-avatar--header': 32,
+    'pdx-account-avatar--menu': 44,
+    'pdx-account-avatar--sidebar': 40,
+    'pdx-account-avatar--profile-compact': 64,
+  };
+
+  function renderAccountAvatarHtml(opts) {
+    opts = opts || {};
+    var profile = opts.profile || accountProfileData();
+    if (opts.show === false || !accountAvatarHasImage(profile)) {
+      return '';
+    }
+    var url = opts.url || accountAvatarUrl(profile);
+    if (!url) return '';
+    var fallbackUrl = opts.fallbackUrl || accountAvatarFallbackUrl(profile);
+    var sizeClass = opts.sizeClass || 'pdx-account-avatar--sidebar';
+    var px = ACCOUNT_AVATAR_PX[sizeClass] || 40;
+    var alt = opts.alt !== undefined ? opts.alt : (user.display_name || t('account', 'Account'));
+    return '<span class="pdx-account-avatar ' + sizeClass + '" style="width:' + px + 'px;height:' + px + 'px;max-width:' + px + 'px;max-height:' + px + 'px;flex:0 0 ' + px + 'px">' +
+      '<img class="pdx-account-avatar__img" src="' + escHtml(url) + '" data-avatar-fallback="' + escHtml(fallbackUrl) + '" alt="' + escHtml(alt) + '" width="' + px + '" height="' + px + '" loading="lazy" decoding="async" onerror="window.__pdxAvatarFallback&&window.__pdxAvatarFallback(this)" />' +
+    '</span>';
+  }
+
+  function applyAccountUserFromPayload(payload) {
+    if (!payload || typeof payload !== 'object') return;
+    if (payload.display_name) user.display_name = payload.display_name;
+    if (payload.email) user.email = payload.email;
+    if (payload.verified !== undefined) user.verified = !!payload.verified;
+    if (payload.is_admin !== undefined) user.is_admin = !!payload.is_admin;
+    if (payload.role) user.role = payload.role;
+    if (payload.avatar_url !== undefined) {
+      user.avatar_url = normalizeAvatarAssetUrl(payload.avatar_url);
+      C.avatarUrl = user.avatar_url;
+    }
+    if (payload.avatar_fallback_url !== undefined) {
+      C.avatarFallbackUrl = normalizeAvatarAssetUrl(payload.avatar_fallback_url);
+    }
+    if (payload.avatar_has_image !== undefined) {
+      user.avatar_has_image = !!payload.avatar_has_image;
+    }
+    if (payload.avatar_preset !== undefined) user.avatar_preset = payload.avatar_preset;
+    if (payload.customer_level !== undefined) user.customer_level = payload.customer_level;
+    if (payload.level_label !== undefined) user.level_label = payload.level_label;
+    if (payload.level_title !== undefined) user.level_title = payload.level_title;
+    if (payload.level_description !== undefined) user.level_description = payload.level_description;
+    if (payload.has_customer_level !== undefined) user.has_customer_level = !!payload.has_customer_level;
+    if (payload.is_master_admin !== undefined) {
+      user.is_master_admin = !!payload.is_master_admin;
+      C.isMasterAdmin = !!payload.is_master_admin;
+    }
+    if (payload.customer_level !== undefined || payload.level_label !== undefined || payload.has_customer_level !== undefined) {
+      C.customerLevel = {
+        customer_level: user.customer_level || 0,
+        level_label: user.level_label || '',
+        level_title: user.level_title || '',
+        level_description: user.level_description || '',
+        has_customer_level: !!user.has_customer_level,
+      };
+    }
   }
 
   function cxIcon(name, size) {
@@ -179,8 +470,15 @@
       C.userId = u.id || 0;
       C.userName = u.display_name || '';
       C.userEmail = u.email || '';
+      applyAccountUserFromPayload(u);
       if (u.logged_in) {
         clearPendingAppleError();
+      } else {
+        C.customerLevel = {};
+        C.avatarUrl = '';
+        C.avatarFallbackUrl = '';
+        C.avatarHasImage = false;
+        C.isMasterAdmin = false;
       }
     }
     updateAuthBar();
@@ -498,7 +796,7 @@
       '<div class="pdx-auth-bar-inner">' +
         '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn">Sign In</button>' +
         '<button type="button" class="pdx-auth-account-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" aria-haspopup="true" aria-expanded="false" hidden>' +
-          '<span class="pdx-auth-account-label">Account</span>' +
+          '<span class="pdx-auth-account-identity"></span>' +
         '</button>' +
         '<button type="button" class="pdx-auth-portal-btn pdx-cx-btn pdx-auth-header-btn" hidden>Customer Portal</button>' +
         '<div class="pdx-auth-menu" hidden>' +
@@ -566,40 +864,85 @@
       authBar.hidden = true;
     }
     var accountBtn = authBar ? authBar.querySelector('.pdx-auth-account-btn') : null;
-    var labelEl = accountBtn ? accountBtn.querySelector('.pdx-auth-account-label') : null;
+    var identityEl = accountBtn ? accountBtn.querySelector('.pdx-auth-account-identity') : null;
     var head = authMenu.querySelector('.pdx-auth-menu-head');
     var signupBtn = authBar ? authBar.querySelector('.pdx-auth-signup-btn') : null;
     var portalBtn = authBar ? authBar.querySelector('.pdx-auth-portal-btn') : null;
-    var label = user.logged_in ? (user.display_name || 'Account') : 'Account';
+    var label = user.logged_in ? (user.display_name || t('account', 'Account')) : t('account', 'Account');
 
     if (signupBtn) signupBtn.hidden = !!user.logged_in;
     if (accountBtn) accountBtn.hidden = !user.logged_in;
     /* Portal is in the account dropdown on desktop; standalone btn is mobile-only. */
     if (portalBtn) portalBtn.hidden = !user.logged_in || !window.matchMedia('(max-width: 768px)').matches;
 
-    if (labelEl) {
+    if (accountBtn) {
+      cleanupLegacyHeaderIdentityNodes(accountBtn);
+    }
+    if (identityEl) {
       if (user.logged_in) {
-        labelEl.innerHTML = nameWithBadge(label, user.verified, { size: 14, inline: true, context: 'account' });
+        var headerProfile = accountProfileData();
+        if (!headerProfile || headerProfile.customer_level === undefined) {
+          headerProfile = Object.assign({}, headerProfile || {}, {
+            customer_level: user.customer_level,
+            level_label: user.level_label,
+            level_title: user.level_title,
+            level_description: user.level_description,
+            has_customer_level: user.has_customer_level,
+            avatar_url: user.avatar_url,
+            avatar_has_image: user.avatar_has_image,
+            avatar_preset: user.avatar_preset,
+          });
+        }
+        identityEl.innerHTML = renderHeaderUserIdentityHtml({
+          name: label,
+          showName: window.matchMedia('(min-width: 769px)').matches,
+          profile: headerProfile,
+        });
       } else {
-        labelEl.textContent = label;
+        identityEl.textContent = '';
+        identityEl.innerHTML = '';
       }
     }
     if (accountBtn) {
-      accountBtn.classList.toggle('pdx-auth-account-btn--verified', user.logged_in && user.verified);
-      accountBtn.setAttribute('aria-label', user.logged_in ? 'Account menu' : 'Account');
+      accountBtn.classList.remove('pdx-auth-account-btn--verified');
+      accountBtn.setAttribute('aria-label', user.logged_in ? t('account_menu', 'Account menu') : t('account', 'Account'));
     }
 
     if (user.logged_in && head) {
+      var menuProfile = accountProfileData();
+      if (!menuProfile || !menuProfile.display_name) {
+        menuProfile = Object.assign({}, menuProfile || {}, {
+          display_name: user.display_name,
+          email: user.email,
+          customer_level: user.customer_level,
+          level_label: user.level_label,
+          level_title: user.level_title,
+          level_description: user.level_description,
+          has_customer_level: user.has_customer_level,
+          avatar_url: user.avatar_url,
+          avatar_has_image: user.avatar_has_image,
+          avatar_preset: user.avatar_preset,
+        });
+      }
+      var roleLabel = user.role && user.role !== 'customer' ? user.role : accountStatusLabel();
       head.innerHTML =
-        '<div class="pdx-auth-menu-name">' + nameWithBadge(user.display_name || 'Account', user.verified, { size: 15, context: 'account' }) + '</div>' +
-        '<div class="pdx-auth-menu-email">' + escHtml(user.email || '') + '</div>' +
-        '<div class="pdx-auth-menu-status">' + escHtml(accountStatusLabel()) + '</div>';
+        '<div class="pdx-auth-menu-identity">' +
+          renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--menu', profile: menuProfile }) +
+          '<div class="pdx-auth-menu-identity-text">' +
+            '<div class="pdx-auth-menu-name">' + escHtml(user.display_name || 'Account') + '</div>' +
+            renderCustomerLevelBadge(menuProfile, { compact: true, menu: true }) +
+            '<div class="pdx-auth-menu-email">' + escHtml(user.email || '') + '</div>' +
+            '<div class="pdx-auth-menu-status">' + escHtml(roleLabel) + '</div>' +
+          '</div>' +
+        '</div>';
       authMenu.removeAttribute('hidden');
     } else {
       if (head) head.innerHTML = '';
       closeAuthMenu();
       authMenu.setAttribute('hidden', 'hidden');
     }
+    if (authBar) bindAccountAvatarFallbacks(authBar);
+    if (authMenu) bindAccountAvatarFallbacks(authMenu);
   }
 
   function openAuthMenu() {
@@ -678,6 +1021,9 @@
     body.innerHTML =
       '<div class="pdx-profile-row"><span class="pdx-profile-label">Full Name</span><span class="pdx-profile-value">' + nameWithBadge(user.display_name || '—', user.verified, { size: 15, context: 'account' }) + '</span></div>' +
       '<div class="pdx-profile-row"><span class="pdx-profile-label">Email</span><span class="pdx-profile-value">' + escHtml(user.email || '—') + '</span></div>' +
+      (accountLevelData().has_customer_level
+        ? '<div class="pdx-profile-row"><span class="pdx-profile-label">Membership</span><span class="pdx-profile-value">' + renderCustomerLevelBadge(null, { compact: true }) + '</span></div>'
+        : '') +
       '<div class="pdx-profile-row"><span class="pdx-profile-label">Account Status</span><span class="pdx-profile-value pdx-profile-value--status">' + escHtml(accountStatusText(user.verified)) + '</span></div>' +
       '<div class="pdx-profile-row"><span class="pdx-profile-label">Login Status</span><span class="pdx-profile-value">' + (user.logged_in ? 'Signed in' : 'Signed out') + '</span></div>';
     profileOverlay.classList.add('is-open');
@@ -1761,9 +2107,15 @@
   function renderAccountSidebar() {
     if (!accountSidebarEl) return;
     var html = '<div class="pdx-account-sidebar-user">' +
-      '<div class="pdx-account-sidebar-name">' + nameWithBadge(user.display_name || 'Account', user.verified, { size: 15, inline: true, context: 'account' }) + '</div>' +
-      '<div class="pdx-account-sidebar-email">' + escHtml(user.email || '') + '</div>' +
-      '<div class="pdx-account-sidebar-status">' + escHtml(accountStatusText(user.verified)) + '</div>' +
+      '<div class="pdx-account-identity">' +
+        renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--sidebar' }) +
+        '<div class="pdx-account-sidebar-name-row">' +
+          '<div class="pdx-account-sidebar-name">' + nameWithBadge(user.display_name || t('account', 'Account'), user.verified, { size: 15, inline: true, context: 'account' }) + '</div>' +
+          renderCustomerLevelBadge(null, { compact: true }) +
+          '<div class="pdx-account-sidebar-email">' + escHtml(user.email || '') + '</div>' +
+          '<div class="pdx-account-sidebar-status">' + escHtml(accountStatusText(user.verified)) + '</div>' +
+        '</div>' +
+      '</div>' +
     '</div>';
     accountNavGroups().forEach(function (group) {
       html += '<div class="pdx-account-nav-group"><div class="pdx-account-nav-label">' + escHtml(group.label) + '</div>';
@@ -1987,11 +2339,13 @@
         return false;
       }
       accountState.dashboard = dashboard;
-      accountState.profile = (results[1] && results[1]._ok !== false) ? results[1] : {};
+      accountState.profile = (results[1] && results[1].profile) ? results[1].profile : ((results[1] && results[1]._ok !== false) ? results[1] : {});
       accountState.files = (results[2] && Array.isArray(results[2].files)) ? results[2].files : (Array.isArray(results[2]) ? results[2] : []);
       accountState.settings = (results[3] && results[3]._ok !== false) ? results[3] : {};
       accountState.loaded = true;
       portalState.dashboard = dashboard;
+      applyAccountUserFromPayload(accountState.profile);
+      updateAuthBar();
       renderAccountApp();
       return true;
     }).catch(function () {

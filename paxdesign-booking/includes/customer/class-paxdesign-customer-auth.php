@@ -144,6 +144,22 @@ class PAXdesign_Customer_Auth {
                 $payload['role'] = self::resolve_portal_role($user);
                 $payload['is_staff'] = PAXdesign_Live_Chat_Permissions::has_live_chat_access($user_id);
             }
+            if (class_exists('PAXdesign_Customer_Avatar')) {
+                $avatar = PAXdesign_Customer_Avatar::profile_fields($user_id);
+                $payload = array_merge($payload, array(
+                    'avatar_url'         => $avatar['avatar_url'] ?? '',
+                    'avatar_has_image'   => !empty($avatar['avatar_has_image']),
+                    'avatar_preset'      => $avatar['avatar_preset'] ?? '',
+                    'customer_level'     => (int) ($avatar['customer_level'] ?? 0),
+                    'level_label'        => (string) ($avatar['level_label'] ?? ''),
+                    'level_title'        => (string) ($avatar['level_title'] ?? ''),
+                    'level_description'  => (string) ($avatar['level_description'] ?? ''),
+                    'has_customer_level' => !empty($avatar['has_customer_level']),
+                ));
+            }
+            if (class_exists('PAXdesign_Customer_Master_Admin')) {
+                $payload['is_master_admin'] = PAXdesign_Customer_Master_Admin::is_master_admin($user_id);
+            }
             $payload['nonce'] = wp_create_nonce('wp_rest');
             return $payload;
         }

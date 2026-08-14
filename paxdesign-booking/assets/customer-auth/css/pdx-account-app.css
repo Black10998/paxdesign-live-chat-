@@ -36,6 +36,65 @@
   margin-bottom: 12px;
 }
 
+.pdx-account-identity {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pdx-account-sidebar-name-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pdx-account-app .pdx-account-avatar--sidebar {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex: 0 0 40px;
+  background: #e8e8ed;
+}
+
+.pdx-account-app .pdx-account-avatar__img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pdx-account-level-badge {
+  display: inline-flex;
+  align-items: center;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #5c4a1a;
+  background: linear-gradient(135deg, #fff7d6 0%, #f6d365 45%, #d4af37 100%);
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.pdx-account-level-badge--compact {
+  font-size: 10px;
+  padding: 3px 8px;
+}
+
 .pdx-account-sidebar-name {
   font-size: 15px;
   font-weight: 700;

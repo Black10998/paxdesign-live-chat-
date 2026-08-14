@@ -193,7 +193,7 @@ class PAXdesign_Auth_Native {
 		if ( ! $user ) {
 			return [ 'logged_in' => false, 'verified' => false ];
 		}
-		return [
+		$payload = [
 			'logged_in'    => true,
 			'id'           => $user_id,
 			'display_name' => $user->display_name,
@@ -201,6 +201,15 @@ class PAXdesign_Auth_Native {
 			'verified'     => self::is_email_verified( $user_id ),
 			'is_admin'     => user_can( $user_id, 'manage_options' ),
 		];
+		if ( class_exists( 'PAXdesign_Customer_Avatar' ) ) {
+			$payload = array_merge( $payload, PAXdesign_Customer_Avatar::profile_fields( $user_id ) );
+		} elseif ( class_exists( 'PAXdesign_Customer_Levels' ) ) {
+			$payload = array_merge( $payload, PAXdesign_Customer_Levels::profile_fields( $user_id ) );
+		}
+		if ( class_exists( 'PAXdesign_Customer_Master_Admin' ) ) {
+			$payload['is_master_admin'] = PAXdesign_Customer_Master_Admin::is_master_admin( $user_id );
+		}
+		return $payload;
 	}
 
 	public static function module_requires_auth( string $module_id ): bool {
