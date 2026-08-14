@@ -490,24 +490,25 @@ struct ChatView: View {
     }
 
     private var chatInputBar: some View {
-        VStack(spacing: 0) {
-            if showAssistStrip {
-                assistStrip
-            }
-
-            if let reply = thread.replyToMessage {
-                ReplyBarView(
-                    message: reply,
-                    agentDisplayName: agentDisplayName,
-                    customerDisplayName: thread.customerName
-                ) {
-                    thread.clearReply()
+        PAXRevolutComposerBar {
+            VStack(spacing: 0) {
+                if showAssistStrip {
+                    assistStrip
                 }
-            }
 
-            composer
+                if let reply = thread.replyToMessage {
+                    ReplyBarView(
+                        message: reply,
+                        agentDisplayName: agentDisplayName,
+                        customerDisplayName: thread.customerName
+                    ) {
+                        thread.clearReply()
+                    }
+                }
+
+                composer
+            }
         }
-        .background(PAXBackground())
     }
 
     private var canReply: Bool { auth.canReplyChats }
@@ -551,13 +552,13 @@ struct ChatView: View {
             }
 
             TextField(L10n.ChatMessagePlaceholder, text: $thread.draft, axis: .vertical)
-                .font(.subheadline)
+                .font(PAXTypography.body)
                 .lineLimit(1...6)
                 .layoutPriority(0)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .frame(minHeight: 36)
-                .paxGlassCardStyle(cornerRadius: 20, fillOpacity: 0.78, borderOpacity: 0.42, shadowOpacity: 0.08)
+                .padding(.horizontal, PAXSpacing.sm + 2)
+                .padding(.vertical, PAXSpacing.sm)
+                .frame(minHeight: 44)
+                .paxRevolutSurface(cornerRadius: 22, elevation: 0)
                 .disabled(!canComposeInThread || !canReply)
                 .onChange(of: thread.draft) { _ in
                     thread.handleDraftChange(auth: auth)

@@ -40,9 +40,10 @@ struct PAXField: View {
             }
             .font(PAXTypography.body)
             .foregroundStyle(PAXTheme.textPrimary)
-            .padding(.horizontal, PAXSpacing.sm + 2)
-            .padding(.vertical, PAXSpacing.sm)
-            .paxRevolutSurface(cornerRadius: 12, elevation: 1)
+            .padding(.horizontal, PAXSpacing.md)
+            .padding(.vertical, PAXSpacing.sm + 2)
+            .frame(minHeight: 56)
+            .paxRevolutSurface(cornerRadius: 12, elevation: 0)
         }
     }
 }
@@ -515,8 +516,6 @@ private struct PAXShellBottomTabBarModifier: ViewModifier {
                     selection: $selection,
                     reduceMotion: reduceMotion
                 )
-                .scaleEffect(scrollState.barScale, anchor: .bottom)
-                .padding(.horizontal, UiverseMenuMetrics.horizontalMargin)
                 .accessibilityIdentifier("pax.shell.tabBar")
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }

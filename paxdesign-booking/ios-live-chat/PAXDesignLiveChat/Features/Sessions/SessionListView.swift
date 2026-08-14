@@ -457,39 +457,10 @@ struct SessionListView: View {
     }
 
     private var searchAndFilters: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            PAXNativeSearchField(
-                text: $searchText,
-                prompt: L10n.SearchPrompt,
-                isFocused: $isSearchFocused
-            )
+        VStack(alignment: .leading, spacing: PAXSpacing.sm) {
+            PAXRevolutSearchBar(text: $searchText, placeholder: L10n.SearchPrompt)
 
-            filterChips
-        }
-    }
-
-    private var filterChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(availableFilters, id: \.self) { item in
-                    Button {
-                        filter = item
-                        PAXHaptics.light()
-                    } label: {
-                        Text(item.title)
-                            .font(.caption.weight(.semibold))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(
-                                Capsule()
-                                    .fill(filter == item ? PAXBrand.accent.opacity(0.18) : PAXTheme.surface.opacity(0.68))
-                            )
-                            .overlay(Capsule().stroke(filter == item ? PAXBrand.accent.opacity(0.5) : PAXTheme.border.opacity(0.55), lineWidth: 1))
-                            .foregroundStyle(filter == item ? PAXTheme.textPrimary : PAXTheme.textSecondary)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
+            PAXRevolutSegmentedFilter(items: availableFilters, selection: $filter, title: \.title)
         }
     }
 
@@ -575,66 +546,65 @@ private struct SessionRow: View {
     private var rowPadding: CGFloat { compact ? 10 : 12 }
 
     var body: some View {
-        PAXListCard(highlighted: isUnread, accent: PAXBrand.accent) {
-            HStack(alignment: .center, spacing: 14) {
-                SessionAvatarView(
-                    name: session.displayName,
-                    size: avatarSize,
-                    isLive: session.isLiveRequest,
-                    isTeam: session.isTeamDM
-                )
+        HStack(alignment: .center, spacing: PAXSpacing.sm) {
+            SessionAvatarView(
+                name: session.displayName,
+                size: avatarSize,
+                isLive: session.isLiveRequest,
+                isTeam: session.isTeamDM
+            )
 
-                VStack(alignment: .leading, spacing: compact ? 3 : 5) {
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
-                        Text(session.displayName)
-                            .font(.body.weight(isUnread ? .semibold : .regular))
-                            .foregroundStyle(PAXTheme.textPrimary)
+            VStack(alignment: .leading, spacing: compact ? 2 : 4) {
+                HStack(alignment: .firstTextBaseline, spacing: PAXSpacing.xs) {
+                    Text(session.displayName)
+                        .font(PAXTypography.rowTitle)
+                        .fontWeight(isUnread ? .bold : .semibold)
+                        .foregroundStyle(PAXTheme.textPrimary)
+                        .lineLimit(1)
+
+                    Spacer(minLength: 4)
+
+                    if showTimestamp, let time = MessageTimeFormatter.relativeUpdatedLabel(from: session.updatedAt) {
+                        Text(time)
+                            .font(PAXTypography.meta)
+                            .foregroundStyle(isUnread ? PAXTheme.accent : PAXTheme.textTertiary)
                             .lineLimit(1)
+                    }
+                }
 
-                        Spacer(minLength: 4)
+                HStack(alignment: .center, spacing: PAXSpacing.xs) {
+                    handlerStatusBadge
 
-                        if showTimestamp, let time = MessageTimeFormatter.relativeUpdatedLabel(from: session.updatedAt) {
-                            Text(time)
-                                .font(.caption)
-                                .foregroundStyle(isUnread ? PAXBrand.accent : PAXTheme.textTertiary)
-                                .lineLimit(1)
-                        }
+                    if session.isTeamDM {
+                        teamBadge
+                    } else if showRating, let rating = SessionRatingBadge(rating: session.sessionRating) {
+                        rating
                     }
 
-                    HStack(alignment: .center, spacing: 8) {
-                        handlerStatusBadge
+                    Text(previewText)
+                        .font(PAXTypography.meta)
+                        .fontWeight(isUnread ? .semibold : .regular)
+                        .foregroundStyle(isUnread ? PAXTheme.textPrimary : PAXTheme.textSecondary)
+                        .lineLimit(isUnread ? 2 : 1)
 
-                        if session.isTeamDM {
-                            teamBadge
-                        } else if showRating, let rating = SessionRatingBadge(rating: session.sessionRating) {
-                            rating
-                        }
+                    Spacer(minLength: 0)
 
-                        Text(previewText)
-                            .font(.subheadline)
-                            .fontWeight(isUnread ? .medium : .regular)
-                            .foregroundStyle(isUnread ? PAXTheme.textPrimary : PAXTheme.textSecondary)
-                            .lineLimit(isUnread ? 2 : 1)
-
-                        Spacer(minLength: 0)
-
-                        if isMuted {
-                            PAXIcon("bell.slash", size: .inline, emphasis: .tertiary)
-                        }
-                        if isPinned {
-                            PAXIcon("pin.fill", size: .inline, emphasis: .tertiary)
-                        }
-                        if isUnread {
-                            Circle()
-                                .fill(PAXBrand.accent)
-                                .frame(width: 10, height: 10)
-                        }
+                    if isMuted {
+                        PAXIcon("bell.slash", size: .inline, emphasis: .tertiary)
+                    }
+                    if isPinned {
+                        PAXIcon("pin.fill", size: .inline, emphasis: .tertiary)
+                    }
+                    if isUnread {
+                        Circle()
+                            .fill(PAXTheme.accent)
+                            .frame(width: 10, height: 10)
                     }
                 }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 3)
+        .frame(minHeight: PAXSpacing.listRowHeight)
+        .padding(.horizontal, PAXSpacing.md)
         .contentShape(Rectangle())
     }
 

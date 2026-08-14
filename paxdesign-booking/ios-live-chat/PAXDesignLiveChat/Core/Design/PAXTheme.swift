@@ -196,6 +196,7 @@ struct PAXAppearanceObserver: ViewModifier {
 
     private func syncTheme() {
         PAXTheme.applyPalette(resolvedPalette, isDark: resolvedIsDark)
+        PAXRevolutAppearance.configure(isDark: resolvedIsDark)
     }
 }
 

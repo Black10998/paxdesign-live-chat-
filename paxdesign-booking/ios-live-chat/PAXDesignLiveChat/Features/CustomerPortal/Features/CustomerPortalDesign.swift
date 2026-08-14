@@ -112,7 +112,7 @@ struct CustomerPrimaryButtonStyleModifier: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
+            .font(PAXTypography.button)
             .padding(.vertical, 14)
             .padding(.horizontal, 18)
             .background(background(configuration.isPressed))

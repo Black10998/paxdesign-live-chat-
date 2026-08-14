@@ -12,6 +12,7 @@ struct PAXDesignLiveChatApp: App {
 
     init() {
         LaunchDiagnostics.mark("App.init")
+        PAXRevolutAppearance.configure(isDark: true)
         #if DEBUG
         if PAXLayoutVerification.isActive, let mode = PAXLayoutVerification.mode {
             AuthStore.shared.configureLayoutVerification(mode: mode)
