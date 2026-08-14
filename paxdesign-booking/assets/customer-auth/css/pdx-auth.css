@@ -325,14 +325,33 @@ html[dir="rtl"] #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-text,
   #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn.pdx-auth-header-btn {
     max-width: none;
     padding-left: 4px;
-    padding-right: 4px;
+    padding-right: 8px;
   }
 
-  #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-text,
-  #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-name,
-  #pdx-auth-bar.pdx-auth-bar--header .pdx-account-level-badge--header {
-    display: none !important;
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-name {
+    max-width: min(120px, 38vw);
+    font-size: 13px;
   }
+
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-account-level-badge--header {
+    max-width: min(120px, 38vw);
+    font-size: 9px;
+    padding: 1px 6px;
+  }
+}
+
+/* Never show email in the public site header identity. */
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn .pdx-auth-menu-email,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-identity .pdx-auth-menu-email {
+  display: none !important;
+}
+
+html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-name,
+html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-identity,
+html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-identity {
+  color: #000 !important;
+  text-shadow: none !important;
+  -webkit-text-fill-color: #000 !important;
 }
 
 .pdx-auth-account-label {

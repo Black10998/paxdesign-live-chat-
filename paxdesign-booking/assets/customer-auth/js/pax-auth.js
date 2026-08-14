@@ -19,6 +19,7 @@
     level_label: (C.customerLevel && C.customerLevel.level_label) || '',
     level_title: (C.customerLevel && C.customerLevel.level_title) || '',
     level_description: (C.customerLevel && C.customerLevel.level_description) || '',
+    level_metal: (C.customerLevel && C.customerLevel.level_metal) || '',
     has_customer_level: !!(C.customerLevel && C.customerLevel.has_customer_level),
   };
   var returnModule = null;
@@ -149,9 +150,35 @@
     });
   }
 
+  function looksLikeEmail(value) {
+    return /@/.test(String(value || ''));
+  }
+
+  function headerDisplayName() {
+    var name = String(user.display_name || '').trim();
+    if (name && !looksLikeEmail(name)) return name;
+    return t('account', 'Account');
+  }
+
+  function headerMembershipLabel(profile) {
+    var level = accountLevelData(profile);
+    if (level.level_metal) return String(level.level_metal);
+    if (level.level_label) {
+      var parts = String(level.level_label).trim().split(/\s+/);
+      var metal = parts[parts.length - 1] || '';
+      if (metal && !looksLikeEmail(metal) && !/^level$/i.test(metal) && !/^\d+$/.test(metal)) {
+        return metal;
+      }
+    }
+    if (user.is_master_admin || C.isMasterAdmin) return 'Premium';
+    if (user.is_admin) return 'Premium';
+    return '';
+  }
+
   function renderHeaderUserIdentityHtml(opts) {
     opts = opts || {};
-    var name = opts.name || user.display_name || t('account', 'Account');
+    var name = opts.name || headerDisplayName();
+    if (looksLikeEmail(name)) name = headerDisplayName();
     var showName = opts.showName !== false;
     var profile = opts.profile || accountProfileData();
     var avatarHtml = renderAccountAvatarHtml({
@@ -160,7 +187,10 @@
       profile: profile,
       alt: '',
     });
-    var levelHtml = showName ? renderCustomerLevelBadge(profile, { compact: true, header: true }) : '';
+    var membership = showName ? headerMembershipLabel(profile) : '';
+    var levelHtml = membership
+      ? '<span class="pdx-account-level-badge pdx-account-level-badge--compact pdx-account-level-badge--header">' + escHtml(membership) + '</span>'
+      : '';
     var textHtml = showName
       ? '<span class="pdx-header-user-text">' +
           '<span class="pdx-header-user-name">' + escHtml(name) + '</span>' +
@@ -229,6 +259,7 @@
         level_label: profile.level_label || '',
         level_title: profile.level_title || '',
         level_description: profile.level_description || '',
+        level_metal: profile.level_metal || '',
         has_customer_level: !!profile.has_customer_level,
       };
     }
@@ -237,6 +268,7 @@
       level_label: profile.level_label || user.level_label || (C.customerLevel && C.customerLevel.level_label) || '',
       level_title: profile.level_title || user.level_title || (C.customerLevel && C.customerLevel.level_title) || '',
       level_description: profile.level_description || user.level_description || (C.customerLevel && C.customerLevel.level_description) || '',
+      level_metal: profile.level_metal || user.level_metal || (C.customerLevel && C.customerLevel.level_metal) || '',
       has_customer_level: !!(profile.has_customer_level || user.has_customer_level || (C.customerLevel && C.customerLevel.has_customer_level)),
     };
   }
@@ -393,6 +425,7 @@
     if (payload.level_label !== undefined) user.level_label = payload.level_label;
     if (payload.level_title !== undefined) user.level_title = payload.level_title;
     if (payload.level_description !== undefined) user.level_description = payload.level_description;
+    if (payload.level_metal !== undefined) user.level_metal = payload.level_metal;
     if (payload.has_customer_level !== undefined) user.has_customer_level = !!payload.has_customer_level;
     if (payload.is_master_admin !== undefined) {
       user.is_master_admin = !!payload.is_master_admin;
@@ -404,6 +437,7 @@
         level_label: user.level_label || '',
         level_title: user.level_title || '',
         level_description: user.level_description || '',
+        level_metal: user.level_metal || '',
         has_customer_level: !!user.has_customer_level,
       };
     }
@@ -868,7 +902,7 @@
     var head = authMenu.querySelector('.pdx-auth-menu-head');
     var signupBtn = authBar ? authBar.querySelector('.pdx-auth-signup-btn') : null;
     var portalBtn = authBar ? authBar.querySelector('.pdx-auth-portal-btn') : null;
-    var label = user.logged_in ? (user.display_name || t('account', 'Account')) : t('account', 'Account');
+    var label = user.logged_in ? headerDisplayName() : t('account', 'Account');
 
     if (signupBtn) signupBtn.hidden = !!user.logged_in;
     if (accountBtn) accountBtn.hidden = !user.logged_in;
@@ -887,6 +921,7 @@
             level_label: user.level_label,
             level_title: user.level_title,
             level_description: user.level_description,
+            level_metal: user.level_metal,
             has_customer_level: user.has_customer_level,
             avatar_url: user.avatar_url,
             avatar_has_image: user.avatar_has_image,
@@ -895,7 +930,7 @@
         }
         identityEl.innerHTML = renderHeaderUserIdentityHtml({
           name: label,
-          showName: window.matchMedia('(min-width: 769px)').matches,
+          showName: true,
           profile: headerProfile,
         });
       } else {
@@ -918,6 +953,7 @@
           level_label: user.level_label,
           level_title: user.level_title,
           level_description: user.level_description,
+          level_metal: user.level_metal,
           has_customer_level: user.has_customer_level,
           avatar_url: user.avatar_url,
           avatar_has_image: user.avatar_has_image,
@@ -925,13 +961,16 @@
         });
       }
       var roleLabel = user.role && user.role !== 'customer' ? user.role : accountStatusLabel();
+      var menuMembership = renderCustomerLevelBadge(menuProfile, { compact: true, menu: true }) ||
+        (headerMembershipLabel(menuProfile)
+          ? '<span class="pdx-account-level-badge pdx-account-level-badge--compact pdx-account-level-badge--menu">' + escHtml(headerMembershipLabel(menuProfile)) + '</span>'
+          : '');
       head.innerHTML =
         '<div class="pdx-auth-menu-identity">' +
           renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--menu', profile: menuProfile }) +
           '<div class="pdx-auth-menu-identity-text">' +
-            '<div class="pdx-auth-menu-name">' + escHtml(user.display_name || 'Account') + '</div>' +
-            renderCustomerLevelBadge(menuProfile, { compact: true, menu: true }) +
-            '<div class="pdx-auth-menu-email">' + escHtml(user.email || '') + '</div>' +
+            '<div class="pdx-auth-menu-name">' + escHtml(headerDisplayName()) + '</div>' +
+            menuMembership +
             '<div class="pdx-auth-menu-status">' + escHtml(roleLabel) + '</div>' +
           '</div>' +
         '</div>';

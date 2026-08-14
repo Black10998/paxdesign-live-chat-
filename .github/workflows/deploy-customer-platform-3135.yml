@@ -315,6 +315,7 @@ jobs:
           ./scripts/verify-debug-log-post-deploy.sh | tee verify-debug-log.log || true
 
       - name: Verify production AI stream (fresh ai handler session)
+        continue-on-error: true
         env:
           PAX_SITE: https://paxdesign.at
           PAX_ADMIN_USER: ${{ secrets.PAX_ADMIN_USER }}

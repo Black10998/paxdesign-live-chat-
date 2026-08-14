@@ -162,6 +162,9 @@ $auth_js = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/assets/cu
 cx_assert_true(strpos($auth_js, 'renderHeaderUserIdentityHtml') !== false, 'Logged-in header must render customer identity');
 cx_assert_true(strpos($auth_js, 'pdx-auth-account-identity') !== false, 'Logged-in header must use account identity mount');
 cx_assert_true(strpos($auth_js, 'renderCustomerLevelBadge') !== false, 'Logged-in header must show membership level badge');
+cx_assert_true(strpos($auth_js, 'headerMembershipLabel') !== false, 'Header must render a compact Gold/Premium membership label');
+cx_assert_true(strpos($auth_js, 'headerDisplayName') !== false, 'Header must use a non-email customer display name');
+cx_assert_true(strpos($auth_js, "showName: true") !== false, 'Logged-in header must show name and membership on all viewports');
 cx_assert_true(strpos($auth_js, 'githubSignInButtonInnerHtml') !== false, 'GitHub login button must remain in web auth');
 cx_assert_true(strpos($auth_js, 'appleSignInButtonInnerHtml') !== false, 'Apple login button must remain in web auth');
 
