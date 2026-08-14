@@ -16,13 +16,17 @@ enum PAXTheme {
     static var danger: Color { cachedPalette.danger }
     static var adminBubble: Color { cachedPalette.adminBubble }
 
-    static var border: Color { Color(.separator) }
-    static var textPrimary: Color { .primary }
+    static var border: Color {
+        PAXRevolutColors.divider(isDark: cachedIsDark)
+    }
+    static var textPrimary: Color {
+        PAXRevolutColors.textPrimary(isDark: cachedIsDark)
+    }
     static var textSecondary: Color {
-        cachedIsDark ? Color(UIColor.secondaryLabel) : Color(red: 0.16, green: 0.18, blue: 0.22)
+        PAXRevolutColors.textSecondary(isDark: cachedIsDark)
     }
     static var textTertiary: Color {
-        cachedIsDark ? Color(UIColor.tertiaryLabel) : Color(red: 0.28, green: 0.30, blue: 0.34)
+        PAXRevolutColors.textTertiary(isDark: cachedIsDark)
     }
     static var link: Color {
         cachedIsDark ? accent : Color(uiColor: .systemBlue)
@@ -37,21 +41,22 @@ enum PAXTheme {
     static var userBubble: Color { Color(.systemGray5) }
 
     static var background: Color {
-        cachedPalette.background(isDark: cachedIsDark)
+        PAXRevolutColors.canvas(isDark: cachedIsDark)
     }
     static var surface: Color {
-        cachedPalette.surface(isDark: cachedIsDark)
+        PAXRevolutColors.surface1(isDark: cachedIsDark)
     }
     static var surfaceElevated: Color {
-        cachedPalette.surfaceElevated(isDark: cachedIsDark)
+        PAXRevolutColors.surface2(isDark: cachedIsDark)
     }
 
     static var systemBubble: Color { accent.opacity(0.14) }
     static var accentSoft: Color { accent.opacity(0.12) }
 
     static let spring = Animation.easeInOut(duration: 0.22)
-    static let quickSpring = Animation.easeOut(duration: 0.16)
+    static let quickSpring = Animation.easeOut(duration: 0.15)
     static let fade = Animation.easeInOut(duration: 0.2)
+    static let revolutSpring = Animation.timingCurve(0.34, 1.56, 0.64, 1, duration: 0.18)
 }
 
 enum PAXGlassTier {
@@ -83,7 +88,7 @@ struct PAXBackground: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        settings.palette.background(isDark: settings.resolvedIsDark(for: colorScheme))
+        PAXRevolutColors.canvas(isDark: settings.resolvedIsDark(for: colorScheme))
             .ignoresSafeArea()
     }
 }
@@ -101,20 +106,16 @@ private struct PAXPremiumGlassModifier: ViewModifier {
 
     @Environment(\.colorScheme) private var colorScheme
 
-    func body(content: Content) -> some View {
-        let border = tier.borderOpacity(for: colorScheme)
-        let shadow = tier.shadowOpacity(for: colorScheme)
+    private var elevation: Int {
+        switch tier {
+        case .subtle: return 0
+        case .standard, .tabBar: return 0
+        case .premium, .hero: return 1
+        }
+    }
 
-        content
-            .background(
-                RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                    .fill(tier.material)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                            .stroke(PAXTheme.border.opacity(border), lineWidth: 0.5)
-                    )
-            )
-            .shadow(color: .black.opacity(shadow), radius: 3, x: 0, y: 1)
+    func body(content: Content) -> some View {
+        content.paxRevolutSurface(cornerRadius: cornerRadius, elevation: elevation)
     }
 }
 

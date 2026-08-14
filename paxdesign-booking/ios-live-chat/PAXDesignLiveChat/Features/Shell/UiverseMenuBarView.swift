@@ -3,17 +3,16 @@ import SwiftUI
 // MARK: - Reference CSS tokens (Uiverse.io by mymiamo)
 
 enum UiverseMenuMetrics {
-    static let horizontalMargin: CGFloat = 8
+    static let horizontalMargin: CGFloat = 12
     static let maxWidth: CGFloat = 520
-    /// Small gap above the Home Indicator when the bar overlays the bottom edge.
-    static let homeIndicatorGap: CGFloat = 3
-    static let menuPadding: CGFloat = 4
-    static let itemGap: CGFloat = 3
-    static let itemPaddingVertical: CGFloat = 5
-    static let itemPaddingHorizontal: CGFloat = 3
-    static let iconSize: CGFloat = 19
+    static let homeIndicatorGap: CGFloat = 4
+    static let menuPadding: CGFloat = 6
+    static let itemGap: CGFloat = 4
+    static let itemPaddingVertical: CGFloat = 8
+    static let itemPaddingHorizontal: CGFloat = 4
+    static let iconSize: CGFloat = 24
     static let labelFontSize: CGFloat = 10
-    static let labelMarginTop: CGFloat = 2
+    static let labelMarginTop: CGFloat = 4
     static let pillRadius: CGFloat = 9_999
 
     static let scrollScaleFull: CGFloat = 1.0
@@ -86,67 +85,41 @@ final class UiverseMenuScrollState: ObservableObject {
     }
 }
 
-/// Adaptive glass palette — neutral system glass in Light/Dark, accent only on active tab.
+/// Revolut-inspired tab bar palette — PAXDesign accent on active tab.
 private struct UiverseMenuPalette {
     let colorScheme: ColorScheme
 
+    private var isDark: Bool { colorScheme == .dark }
+
     var menuBackground: Color {
-        Color(uiColor: UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: 0.14, green: 0.15, blue: 0.19, alpha: 0.58)
-                : UIColor(white: 1.0, alpha: 0.68)
-        })
+        PAXRevolutColors.surface1(isDark: isDark).opacity(isDark ? 0.94 : 0.98)
     }
 
     var inactiveColor: Color {
-        Color(uiColor: UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(white: 1, alpha: 0.74)
-                : UIColor(white: 0.42, alpha: 0.88)
-        })
+        PAXRevolutColors.textSecondary(isDark: isDark)
     }
 
     var activeColor: Color {
-        Color(uiColor: UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(red: 0.45, green: 0.78, blue: 1, alpha: 0.96)
-                : UIColor(red: 0, green: 0.478, blue: 1, alpha: 0.9)
-        })
+        PAXTheme.accent
     }
 
     var activeBackground: Color {
-        Color(uiColor: UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(white: 1, alpha: 0.14)
-                : UIColor(white: 0.92, alpha: 0.55)
-        })
+        PAXTheme.accent.opacity(isDark ? 0.14 : 0.10)
     }
 
     var glassBorder: Color {
-        Color(uiColor: UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(white: 1, alpha: 0.12)
-                : UIColor(white: 1, alpha: 0.35)
-        })
+        PAXRevolutColors.divider(isDark: isDark)
     }
 
     var menuShadow: Color {
-        Color(uiColor: UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(white: 0, alpha: 0.42)
-                : UIColor(white: 0, alpha: 0.06)
-        })
+        Color.black.opacity(isDark ? 0.45 : 0.08)
     }
 
     var insetHighlight: Color {
-        Color(uiColor: UIColor { traits in
-            traits.userInterfaceStyle == .dark
-                ? UIColor(white: 1, alpha: 0.08)
-                : UIColor(white: 1, alpha: 0.4)
-        })
+        Color.white.opacity(isDark ? 0.06 : 0.35)
     }
 
-    static let springAnimation = Animation.timingCurve(0.34, 1.56, 0.64, 1, duration: 0.18)
+    static let springAnimation = PAXTheme.revolutSpring
 }
 
 struct UiverseMenuBarItem: Identifiable {
@@ -253,8 +226,11 @@ private struct UiverseMenuGlassBackground: View {
 
     var body: some View {
         ZStack {
-            Rectangle()
-                .fill(colorScheme == .dark ? .regularMaterial : .thinMaterial)
+            if colorScheme == .dark {
+                Rectangle().fill(.regularMaterial)
+            } else {
+                Rectangle().fill(.thinMaterial)
+            }
             palette.menuBackground
         }
     }

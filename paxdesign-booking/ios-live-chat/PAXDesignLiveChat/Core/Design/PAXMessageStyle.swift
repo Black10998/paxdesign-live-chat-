@@ -29,16 +29,20 @@ enum PAXMessageStyle {
         endPoint: .bottomTrailing
     )
 
-    static func bubbleColor(role: String, isOutgoing: Bool, palette: PAXThemePalette) -> Color {
+    static func bubbleColor(role: String, isOutgoing: Bool, palette: PAXThemePalette, isDark: Bool = PAXTheme.cachedIsDark) -> Color {
         if isOutgoing { return palette.adminBubble }
         switch role {
-        case "user": return incomingFill
-        case "system": return palette.accent.opacity(0.14)
-        default: return incomingFill
+        case "user":
+            return PAXRevolutColors.surface2(isDark: isDark)
+        case "system":
+            return palette.accent.opacity(isDark ? 0.18 : 0.12)
+        default:
+            return PAXRevolutColors.surface2(isDark: isDark)
         }
     }
 
-    static func bubbleTextColor(isOutgoing: Bool) -> Color {
-        isOutgoing ? .white : Color.white.opacity(0.92)
+    static func bubbleTextColor(isOutgoing: Bool, isDark: Bool = PAXTheme.cachedIsDark) -> Color {
+        if isOutgoing { return .white }
+        return PAXRevolutColors.textPrimary(isDark: isDark)
     }
 }

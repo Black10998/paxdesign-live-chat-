@@ -10,8 +10,8 @@ struct PAXGlassCard<Content: View>: View {
 
     var body: some View {
         content
-            .padding(16)
-            .paxGlassCardStyle(cornerRadius: 14, fillOpacity: 0.82, borderOpacity: 0.46, shadowOpacity: 0.18)
+            .padding(PAXSpacing.md)
+            .paxRevolutSurface(cornerRadius: 16, elevation: 0)
     }
 }
 
@@ -23,9 +23,9 @@ struct PAXField: View {
     var keyboardType: UIKeyboardType = .default
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: PAXSpacing.xxs + 2) {
             Label { Text(title) } icon: { PAXIcon(icon) }
-                .font(.subheadline)
+                .font(PAXTypography.meta.weight(.medium))
                 .foregroundStyle(PAXTheme.textSecondary)
 
             Group {
@@ -38,10 +38,11 @@ struct PAXField: View {
                         .keyboardType(keyboardType)
                 }
             }
-            .font(.body)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .paxGlassCardStyle(cornerRadius: 12, fillOpacity: 0.76, borderOpacity: 0.4, shadowOpacity: 0.1)
+            .font(PAXTypography.body)
+            .foregroundStyle(PAXTheme.textPrimary)
+            .padding(.horizontal, PAXSpacing.sm + 2)
+            .padding(.vertical, PAXSpacing.sm)
+            .paxRevolutSurface(cornerRadius: 12, elevation: 1)
         }
     }
 }
@@ -52,19 +53,7 @@ struct PAXPrimaryButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                if isLoading {
-                    PAXInlineLoader(size: 18)
-                }
-                Text(title)
-                    .fontWeight(.semibold)
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-        .disabled(isLoading)
+        PAXRevolutPrimaryButton(title: title, isLoading: isLoading, action: action)
     }
 }
 
@@ -83,9 +72,13 @@ struct PAXStatusBadge: View {
 }
 
 struct PAXPressButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .opacity(configuration.isPressed ? 0.85 : 1)
+            .opacity(configuration.isPressed ? 0.88 : 1)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.98 : 1)
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }
 

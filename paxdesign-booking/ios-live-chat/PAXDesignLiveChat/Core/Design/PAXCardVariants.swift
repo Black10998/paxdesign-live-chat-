@@ -19,25 +19,25 @@ private struct PAXCardVariantModifier: ViewModifier {
         switch variant {
         case .standard:
             content
-                .paxPremiumGlass(tier: .standard, cornerRadius: 16)
+                .paxRevolutSurface(cornerRadius: 16, elevation: 0)
         case .hero:
             content
-                .padding(18)
-                .paxPremiumGlass(tier: .standard, cornerRadius: 20)
+                .padding(PAXSpacing.lg)
+                .paxRevolutSurface(cornerRadius: 20, elevation: 1)
         case .metric:
             content
-                .padding(14)
+                .padding(PAXSpacing.md - 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .paxPremiumGlass(tier: .standard, cornerRadius: 16)
+                .paxRevolutSurface(cornerRadius: 16, elevation: 0)
         case .feature:
             content
-                .padding(16)
-                .paxPremiumGlass(tier: .standard, cornerRadius: 18)
+                .padding(PAXSpacing.md)
+                .paxRevolutSurface(cornerRadius: 18, elevation: 0)
         case .list:
             content
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .paxPremiumGlass(tier: .subtle, cornerRadius: 14)
+                .padding(.horizontal, PAXSpacing.md)
+                .padding(.vertical, PAXSpacing.sm)
+                .paxRevolutSurface(cornerRadius: 14, elevation: 0)
         case .accent:
             content
                 .padding(16)
@@ -87,10 +87,10 @@ struct PAXHeroCard: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
-                    .font(.title3.weight(.bold))
+                    .font(PAXTypography.subsection)
                     .foregroundStyle(PAXTheme.textPrimary)
                 Text(subtitle)
-                    .font(.subheadline)
+                    .font(PAXTypography.meta)
                     .foregroundStyle(PAXTheme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -122,10 +122,10 @@ struct PAXMetricCard: View {
                 }
             }
             Text(value)
-                .font(.title.weight(.bold))
+                .font(PAXTypography.section)
                 .foregroundStyle(PAXTheme.textPrimary)
             Text(title)
-                .font(.caption.weight(.medium))
+                .font(PAXTypography.caption.weight(.medium))
                 .foregroundStyle(PAXTheme.textSecondary)
         }
         .paxCard(.metric, tint: tint)
