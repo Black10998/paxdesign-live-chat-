@@ -30,7 +30,16 @@
   overflow: hidden;
 }
 
+.pdx-account-sidebar-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 2px;
+}
+
 .pdx-account-sidebar-user {
+  flex: 0 0 auto;
   padding: 6px 10px 18px;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   margin-bottom: 12px;
@@ -159,6 +168,7 @@
 }
 
 .pdx-account-sidebar-footer {
+  flex: 0 0 auto;
   margin-top: auto;
   padding-top: 10px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
@@ -277,32 +287,70 @@
 
 @media (max-width: 900px) {
   .pdx-account-app {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+    grid-template-rows: none;
     min-height: 0;
     height: 100%;
     max-height: 100%;
   }
 
   .pdx-account-sidebar {
-    border-right: 0;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-    padding-bottom: 10px;
-    max-height: 42svh;
-    overflow-y: auto;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: min(86vw, 360px);
+    max-width: 360px;
+    max-height: none;
+    z-index: 50;
+    border-right: 1px solid rgba(0, 0, 0, 0.08);
+    border-bottom: 0;
+    padding:
+      max(12px, env(safe-area-inset-top))
+      14px
+      max(16px, env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+    transform: translateX(-105%);
+    transition: transform 0.34s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: none;
+    pointer-events: none;
+    visibility: hidden;
+    overflow: hidden;
+  }
+
+  body.pdx-account-nav-open .pdx-account-sidebar {
+    transform: translateX(0);
+    pointer-events: auto;
+    visibility: visible;
+    box-shadow: 18px 0 48px rgba(0, 0, 0, 0.18);
   }
 
   .pdx-account-nav-group {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-bottom: 12px;
+    padding: 6px;
+    background: #fff;
+    border-radius: 14px;
   }
 
   .pdx-account-nav-label {
-    grid-column: 1 / -1;
+    grid-column: auto;
+    padding: 0 10px 8px;
+  }
+
+  .pdx-account-nav-btn {
+    min-height: 44px;
+    border-radius: 12px;
+    font-size: 16px;
+    letter-spacing: -0.01em;
   }
 
   .pdx-account-main {
-    padding: 18px 16px 28px;
+    padding: 16px 16px 28px;
+    flex: 1 1 auto;
   }
 }

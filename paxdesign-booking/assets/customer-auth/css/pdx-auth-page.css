@@ -182,24 +182,214 @@ body.pdx-account-dashboard-body #pdx-auth-isolated-shell {
   background: #f5f5f7;
 }
 
-body.pdx-account-dashboard-body .pdx-auth-shell-home {
+body.pdx-account-dashboard-body #pdx-auth-shell-home {
   display: none !important;
 }
 
 .pdx-account-header {
   flex: 0 0 auto;
   position: relative;
-  z-index: 4;
+  z-index: 60;
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   min-height: 52px;
   padding:
     max(8px, env(safe-area-inset-top))
     max(16px, env(safe-area-inset-right))
     8px
-    max(16px, env(safe-area-inset-left));
+    max(12px, env(safe-area-inset-left));
   background: #fff;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  overflow: visible;
+}
+
+.pdx-account-header-leading,
+.pdx-account-header-trailing {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pdx-account-header-trailing {
+  flex: 0 1 auto;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.pdx-account-header-identity {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: min(360px, 52vw);
+}
+
+.pdx-account-header-identity .pdx-header-user-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pdx-account-header-identity .pdx-header-user-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pdx-account-header-identity .pdx-header-user-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #1d1d1f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(240px, 40vw);
+}
+
+.pdx-account-header-identity .pdx-account-level-badge--header {
+  max-width: min(140px, 28vw);
+}
+
+.pdx-account-header-signout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 980px;
+  background: #fff;
+  color: #1d1d1f;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pdx-account-header-signout:hover,
+.pdx-account-header-signout:focus-visible {
+  background: #f5f5f7;
+  outline: none;
+}
+
+.pdx-account-menu-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #1d1d1f;
+  cursor: pointer;
+}
+
+.pdx-account-menu-btn:hover,
+.pdx-account-menu-btn:focus-visible {
+  background: rgba(0, 0, 0, 0.04);
+  outline: none;
+}
+
+.pdx-account-menu-btn__icon {
+  position: relative;
+  display: block;
+  width: 18px;
+  height: 12px;
+}
+
+.pdx-account-menu-btn__icon span,
+.pdx-account-menu-btn__icon::before,
+.pdx-account-menu-btn__icon::after {
+  position: absolute;
+  left: 0;
+  display: block;
+  width: 18px;
+  height: 1.5px;
+  border-radius: 1px;
+  background: currentColor;
+  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1), top 0.22s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.16s ease;
+}
+
+.pdx-account-menu-btn__icon span {
+  top: 5.25px;
+}
+
+.pdx-account-menu-btn__icon::before,
+.pdx-account-menu-btn__icon::after {
+  content: "";
+}
+
+.pdx-account-menu-btn__icon::before {
+  top: 0;
+}
+
+.pdx-account-menu-btn__icon::after {
+  top: 10.5px;
+}
+
+.pdx-account-menu-btn.is-open .pdx-account-menu-btn__icon span {
+  opacity: 0;
+}
+
+.pdx-account-menu-btn.is-open .pdx-account-menu-btn__icon::before {
+  top: 5.25px;
+  transform: rotate(45deg);
+}
+
+.pdx-account-menu-btn.is-open .pdx-account-menu-btn__icon::after {
+  top: 5.25px;
+  transform: rotate(-45deg);
+}
+
+.pdx-account-nav-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.32);
+  backdrop-filter: saturate(140%) blur(8px);
+  -webkit-backdrop-filter: saturate(140%) blur(8px);
+  cursor: pointer;
+}
+
+body.pdx-account-nav-open .pdx-account-nav-overlay {
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .pdx-account-menu-btn {
+    display: inline-flex;
+  }
+
+  .pdx-account-header-signout {
+    display: none;
+  }
+
+  .pdx-account-header-identity .pdx-header-user-name {
+    max-width: min(110px, 34vw);
+    font-size: 12px;
+  }
+
+  .pdx-account-header {
+    padding-left: max(6px, env(safe-area-inset-left));
+  }
 }
 
 .pdx-account-header-home {
@@ -248,7 +438,7 @@ body.pdx-auth-page-body {
 }
 
 /* Hide theme chrome and floating widgets (Navein, Elementor, cookies, chat) */
-body.pdx-auth-isolated header,
+body.pdx-auth-isolated header:not(#pdx-account-header),
 body.pdx-auth-isolated footer,
 body.pdx-auth-isolated .site-header,
 body.pdx-auth-isolated .site-footer,
@@ -270,6 +460,12 @@ body.pdx-auth-isolated [id*="Cookie" i] {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
+}
+
+body.pdx-auth-isolated #pdx-account-header {
+  display: flex !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 body.pdx-account-dashboard-body,

@@ -26,6 +26,7 @@
   top: auto;
   right: auto;
   transform: none;
+  overflow: visible;
 }
 
 #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-bar-inner {
@@ -50,6 +51,28 @@
   max-width: min(180px, 28vw);
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  padding: 0 clamp(10px, 1vw, 14px);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  background: transparent;
+  color: #1d1d1f;
+  box-shadow: none;
+  font-weight: 600;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signout-btn:hover,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signout-btn:focus-visible {
+  background: rgba(0, 0, 0, 0.04);
+  outline: none;
 }
 
 #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
@@ -234,7 +257,7 @@ body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-sig
   white-space: normal;
   overflow: visible;
   text-overflow: clip;
-  max-width: min(240px, 38vw);
+  max-width: min(280px, 38vw);
   height: auto;
   min-height: 32px;
   line-height: 1.2;
@@ -276,7 +299,7 @@ body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-sig
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: min(160px, 24vw);
+  max-width: min(220px, 30vw);
   text-shadow: none !important;
   -webkit-text-fill-color: currentColor !important;
 }
@@ -284,7 +307,7 @@ body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-sig
 #pdx-auth-bar.pdx-auth-bar--header .pdx-account-level-badge--header {
   display: block;
   margin: 0;
-  max-width: min(160px, 24vw);
+  max-width: min(220px, 30vw);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -373,12 +396,30 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header
     gap: clamp(8px, 1.1vw, 16px) !important;
     max-width: 100%;
     box-sizing: border-box;
+    overflow: visible !important;
+  }
+
+  #dtr-main-header.pdx-header-has-auth {
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  .dtr-header-global-content.pdx-header-has-auth,
+  #dtr-header-global .dtr-header-global-content {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: clamp(8px, 1vw, 16px) !important;
+    overflow: visible !important;
+    max-width: 100%;
   }
 
   .pdx-header-has-auth > .site-logo,
   .pdx-header-has-auth > .site-branding,
   .pdx-header-has-auth > .custom-logo-link,
-  .pdx-header-has-auth > .header-image {
+  .pdx-header-has-auth > .header-image,
+  .dtr-header-global-content.pdx-header-has-auth > .dtr-header-left {
     flex: 0 0 auto;
     min-width: 0;
   }
@@ -386,7 +427,8 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header
   .pdx-header-has-auth #site-navigation,
   .pdx-header-has-auth .main-navigation,
   .pdx-header-has-auth nav[class*="navigation"],
-  .pdx-header-has-auth .menu-bar-items {
+  .pdx-header-has-auth .menu-bar-items,
+  .dtr-header-global-content.pdx-header-has-auth > .main-navigation {
     flex: 1 1 auto;
     min-width: 0;
     max-width: 100%;
@@ -397,13 +439,28 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header
   .pdx-header-has-auth .header-buttons,
   .pdx-header-has-auth .elementor-widget-button,
   .pdx-header-has-auth a.button,
-  .pdx-header-has-auth .pdx-header-cta {
+  .pdx-header-has-auth .pdx-header-cta,
+  .dtr-header-global-content.pdx-header-has-auth > .dtr-search-modal-trigger,
+  .dtr-header-global-content.pdx-header-has-auth > .dtr-header-btn {
     flex: 0 0 auto;
     min-width: 0;
   }
 
   #pdx-auth-bar.pdx-auth-bar--header {
     flex: 0 0 auto;
+    min-width: 0;
+    max-width: none;
+    overflow: visible;
+    margin-left: auto;
+  }
+
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-bar-inner {
+    overflow: visible;
+    flex-wrap: nowrap;
+  }
+
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn.pdx-auth-header-btn {
+    max-width: min(280px, 32vw);
   }
 
   /* Customer Portal via account menu on desktop — avoids crowding */
@@ -412,15 +469,50 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header
   }
 }
 
-@media (min-width: 769px) and (max-width: 1200px) {
-  .pdx-header-has-auth {
-    gap: clamp(6px, 0.9vw, 12px) !important;
+@media (min-width: 769px) and (max-width: 1280px) {
+  .pdx-header-has-auth,
+  .dtr-header-global-content.pdx-header-has-auth {
+    gap: clamp(6px, 0.8vw, 12px) !important;
   }
 
   .pdx-header-has-auth #site-navigation .main-nav > li > a,
-  .pdx-header-has-auth .main-navigation .menu > li > a {
-    padding-inline: clamp(6px, 0.7vw, 10px);
-    font-size: clamp(12px, 0.95vw, 14px);
+  .pdx-header-has-auth .main-navigation .menu > li > a,
+  .dtr-header-global-content.pdx-header-has-auth .dtr-nav > li > a {
+    padding-inline: clamp(4px, 0.55vw, 10px);
+    font-size: clamp(11px, 0.9vw, 13px);
+  }
+
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn.pdx-auth-header-btn {
+    max-width: min(220px, 28vw);
+    padding-left: 4px;
+    padding-right: 8px;
+  }
+
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-name,
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-account-level-badge--header {
+    max-width: min(120px, 18vw);
+  }
+
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signout-btn {
+    padding: 0 10px;
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-name {
+    max-width: min(96px, 16vw);
+    font-size: 12px;
+  }
+
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-account-level-badge--header {
+    max-width: min(96px, 16vw);
+    font-size: 9px;
+  }
+
+  .dtr-header-global-content.pdx-header-has-auth > .dtr-header-btn {
+    padding-inline: 10px;
+    font-size: 12px;
   }
 }
 
@@ -447,7 +539,8 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header
     max-width: min(160px, 36vw);
   }
 
-  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-portal-btn {
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-portal-btn,
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signout-btn {
     display: none !important;
   }
 }
@@ -530,7 +623,7 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header
   border-radius: 10px;
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
   padding: 10px;
-  z-index: 3;
+  z-index: 40;
   display: none;
 }
 

@@ -787,6 +787,8 @@
 
   function findHeaderMount() {
     var selectors = [
+      '#dtr-header-global .dtr-header-global-content',
+      '.dtr-header-global-content',
       'header .inside-header',
       '#masthead .inside-header',
       'header .header-inner',
@@ -832,6 +834,9 @@
         '<button type="button" class="pdx-auth-account-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" aria-haspopup="true" aria-expanded="false" hidden>' +
           '<span class="pdx-auth-account-identity"></span>' +
         '</button>' +
+        '<button type="button" class="pdx-auth-signout-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" hidden>' +
+          cxIcon('logout', 16) + '<span>Sign Out</span>' +
+        '</button>' +
         '<button type="button" class="pdx-auth-portal-btn pdx-cx-btn pdx-auth-header-btn" hidden>Customer Portal</button>' +
         '<div class="pdx-auth-menu" hidden>' +
           '<div class="pdx-auth-menu-head"></div>' +
@@ -867,11 +872,15 @@
 
     var signupBtn = authBar.querySelector('.pdx-auth-signup-btn');
     var portalBtn = authBar.querySelector('.pdx-auth-portal-btn');
+    var signOutBtn = authBar.querySelector('.pdx-auth-signout-btn');
     if (signupBtn) {
       signupBtn.addEventListener('click', function () { navigateToAuthPage('login'); });
     }
     if (portalBtn) {
       portalBtn.addEventListener('click', function () { openCustomerPortal(); });
+    }
+    if (signOutBtn) {
+      signOutBtn.addEventListener('click', function () { closeAuthMenu(); doLogout(); });
     }
 
     document.addEventListener('click', function (e) {
@@ -879,7 +888,14 @@
       if (!authBar.contains(e.target)) closeAuthMenu();
     });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') closeAuthMenu();
+      if (e.key === 'Escape') {
+        closeAuthMenu();
+        closeAccountNav();
+      }
+    });
+    window.addEventListener('resize', function () {
+      updateAuthBar();
+      if (!isAccountNavMobile()) closeAccountNav();
     });
 
     mountAuthBar();
@@ -902,10 +918,13 @@
     var head = authMenu.querySelector('.pdx-auth-menu-head');
     var signupBtn = authBar ? authBar.querySelector('.pdx-auth-signup-btn') : null;
     var portalBtn = authBar ? authBar.querySelector('.pdx-auth-portal-btn') : null;
+    var signOutBtn = authBar ? authBar.querySelector('.pdx-auth-signout-btn') : null;
     var label = user.logged_in ? headerDisplayName() : t('account', 'Account');
 
     if (signupBtn) signupBtn.hidden = !!user.logged_in;
     if (accountBtn) accountBtn.hidden = !user.logged_in;
+    /* Keep Sign Out visible on desktop instead of clipping it out of the header. */
+    if (signOutBtn) signOutBtn.hidden = !user.logged_in || window.matchMedia('(max-width: 768px)').matches;
     /* Portal is in the account dropdown on desktop; standalone btn is mobile-only. */
     if (portalBtn) portalBtn.hidden = !user.logged_in || !window.matchMedia('(max-width: 768px)').matches;
 
@@ -1849,10 +1868,82 @@
     }
   }
 
+  function isAccountNavMobile() {
+    return window.matchMedia('(max-width: 900px)').matches;
+  }
+
+  function ensureAccountNavOverlay() {
+    var overlay = document.getElementById('pdx-account-nav-overlay');
+    if (overlay) return overlay;
+    overlay = document.createElement('button');
+    overlay.type = 'button';
+    overlay.id = 'pdx-account-nav-overlay';
+    overlay.className = 'pdx-account-nav-overlay';
+    overlay.setAttribute('aria-label', 'Close account menu');
+    overlay.hidden = true;
+    overlay.addEventListener('click', closeAccountNav);
+    var shell = document.getElementById('pdx-auth-isolated-shell');
+    if (shell) shell.appendChild(overlay);
+    else document.body.appendChild(overlay);
+    return overlay;
+  }
+
+  function syncAccountNavUi() {
+    var open = document.body.classList.contains('pdx-account-nav-open');
+    var btn = document.getElementById('pdx-account-menu-btn');
+    var overlay = document.getElementById('pdx-account-nav-overlay');
+    var sidebar = document.getElementById('pdx-account-sidebar');
+    if (btn) {
+      btn.classList.toggle('is-open', open);
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      btn.setAttribute('aria-label', open ? 'Close account menu' : 'Account menu');
+    }
+    if (overlay) overlay.hidden = !open;
+    if (sidebar) {
+      sidebar.setAttribute('aria-hidden', isAccountNavMobile() && !open ? 'true' : 'false');
+    }
+  }
+
+  function openAccountNav() {
+    if (!isAuthPage() || !user.logged_in) return;
+    ensureAccountNavOverlay();
+    document.body.classList.add('pdx-account-nav-open');
+    syncAccountNavUi();
+  }
+
+  function closeAccountNav() {
+    document.body.classList.remove('pdx-account-nav-open');
+    syncAccountNavUi();
+  }
+
+  function toggleAccountNav() {
+    if (document.body.classList.contains('pdx-account-nav-open')) closeAccountNav();
+    else openAccountNav();
+  }
+
+  function updateAccountHeaderIdentity() {
+    var identity = document.getElementById('pdx-account-header-identity');
+    if (!identity) return;
+    if (!user.logged_in) {
+      identity.innerHTML = '';
+      return;
+    }
+    identity.innerHTML = renderHeaderUserIdentityHtml({
+      name: headerDisplayName(),
+      showName: true,
+      profile: accountProfileData(),
+    });
+  }
+
   function removeAccountDashboardHeader() {
+    closeAccountNav();
     var header = document.getElementById('pdx-account-header');
     if (header && header.parentNode) {
       header.parentNode.removeChild(header);
+    }
+    var overlay = document.getElementById('pdx-account-nav-overlay');
+    if (overlay && overlay.parentNode) {
+      overlay.parentNode.removeChild(overlay);
     }
   }
 
@@ -1913,17 +2004,69 @@
       shell.insertBefore(header, shell.firstChild);
     }
 
+    var leading = header.querySelector('.pdx-account-header-leading');
+    if (!leading) {
+      leading = document.createElement('div');
+      leading.className = 'pdx-account-header-leading';
+      header.insertBefore(leading, header.firstChild);
+    }
+
+    var menuBtn = document.getElementById('pdx-account-menu-btn');
+    if (!menuBtn) {
+      menuBtn = document.createElement('button');
+      menuBtn.type = 'button';
+      menuBtn.id = 'pdx-account-menu-btn';
+      menuBtn.className = 'pdx-account-menu-btn';
+      menuBtn.setAttribute('aria-controls', 'pdx-account-sidebar');
+      menuBtn.setAttribute('aria-expanded', 'false');
+      menuBtn.setAttribute('aria-label', 'Account menu');
+      menuBtn.innerHTML = '<span class="pdx-account-menu-btn__icon" aria-hidden="true"><span></span></span>';
+      menuBtn.addEventListener('click', toggleAccountNav);
+      leading.appendChild(menuBtn);
+    } else if (menuBtn.parentNode !== leading) {
+      leading.appendChild(menuBtn);
+    }
+
     var link = document.getElementById('pdx-account-header-home');
     if (!link) {
       link = document.createElement('a');
       link.id = 'pdx-account-header-home';
       link.className = 'pdx-account-header-home pdx-auth-shell-home';
-      header.appendChild(link);
-    } else if (link.parentNode !== header) {
-      header.appendChild(link);
+      leading.appendChild(link);
+    } else if (link.parentNode !== leading) {
+      leading.appendChild(link);
     }
 
+    var trailing = header.querySelector('.pdx-account-header-trailing');
+    if (!trailing) {
+      trailing = document.createElement('div');
+      trailing.className = 'pdx-account-header-trailing';
+      header.appendChild(trailing);
+    }
+
+    var identity = document.getElementById('pdx-account-header-identity');
+    if (!identity) {
+      identity = document.createElement('div');
+      identity.id = 'pdx-account-header-identity';
+      identity.className = 'pdx-account-header-identity';
+      trailing.appendChild(identity);
+    }
+
+    var signOut = document.getElementById('pdx-account-header-signout');
+    if (!signOut) {
+      signOut = document.createElement('button');
+      signOut.type = 'button';
+      signOut.id = 'pdx-account-header-signout';
+      signOut.className = 'pdx-account-header-signout';
+      signOut.addEventListener('click', doLogout);
+      trailing.appendChild(signOut);
+    }
+    signOut.innerHTML = cxIcon('logout', 16) + '<span>Sign Out</span>';
+
     mountShellLogoLink(link, 'pdx-account-header-home--official');
+    updateAccountHeaderIdentity();
+    ensureAccountNavOverlay();
+    syncAccountNavUi();
   }
 
   function ensureAuthShellHomeLogo(shell) {
@@ -2051,6 +2194,11 @@
         label: 'Support',
         items: [
           { id: 'support', label: 'Messages', icon: 'message' },
+        ],
+      },
+      {
+        label: 'Services',
+        items: [
           { id: 'services', label: 'Services', icon: 'package' },
         ],
       },
@@ -2156,6 +2304,7 @@
         '</div>' +
       '</div>' +
     '</div>';
+    html += '<nav class="pdx-account-sidebar-nav" aria-label="Account sections">';
     accountNavGroups().forEach(function (group) {
       html += '<div class="pdx-account-nav-group"><div class="pdx-account-nav-label">' + escHtml(group.label) + '</div>';
       group.items.forEach(function (item) {
@@ -2165,6 +2314,7 @@
       });
       html += '</div>';
     });
+    html += '</nav>';
     html += '<div class="pdx-account-sidebar-footer">' +
       '<a class="pdx-portal-btn pdx-portal-btn--secondary pdx-portal-btn--full pdx-account-website-link" href="' + escHtml(homePageUrl()) + '">' +
         cxIcon('chevron', 16) + escHtml('Continue to website') +
@@ -2175,10 +2325,13 @@
     accountSidebarEl.querySelectorAll('[data-account-section]').forEach(function (btn) {
       btn.addEventListener('click', function () {
         setAccountSection(btn.getAttribute('data-account-section'));
+        if (isAccountNavMobile()) closeAccountNav();
       });
     });
     var signOut = accountSidebarEl.querySelector('.pdx-account-signout');
     if (signOut) signOut.addEventListener('click', doLogout);
+    updateAccountHeaderIdentity();
+    syncAccountNavUi();
   }
 
   function renderAccountPersonalSection(profile) {
