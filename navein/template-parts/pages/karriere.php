@@ -17,7 +17,7 @@ $privacy_url = home_url( '/datenschutz/' );
 		<div class="pax-karriere__wrap">
 			<p class="pax-karriere__eyebrow">PAXdesign Karriere</p>
 			<h1 class="pax-karriere__title">Karriere bei PAXdesign</h1>
-			<p class="pax-karriere__subtitle">Werde Teil unseres Teams — entwickle digitale Produkte mit uns, in einem Umfeld, das Qualität, Klarheit und Verantwortung verbindet.</p>
+			<p class="pax-karriere__subtitle">Werde Teil unseres Teams und entwickle digitale Produkte mit uns, in einem Umfeld, das Qualität, Klarheit und Verantwortung verbindet.</p>
 			<ul class="pax-karriere__badges" aria-label="Vorteile">
 				<li class="pax-karriere__badge">Remote &amp; Hybrid</li>
 				<li class="pax-karriere__badge">Moderne Tech-Stacks</li>
@@ -32,7 +32,7 @@ $privacy_url = home_url( '/datenschutz/' );
 			<div class="pax-karriere__value-grid">
 				<div class="pax-karriere__value-card">
 					<h3 class="pax-karriere__value-title">Impact</h3>
-					<p class="pax-karriere__value-text">Du arbeitest an echten Projekten für Unternehmen und Organisationen — von Web-Apps bis zu komplexen Plattformen.</p>
+					<p class="pax-karriere__value-text">Du arbeitest an echten Projekten für Unternehmen und Organisationen, von Web-Apps bis zu komplexen Plattformen.</p>
 				</div>
 				<div class="pax-karriere__value-card">
 					<h3 class="pax-karriere__value-title">Qualität</h3>
@@ -40,7 +40,7 @@ $privacy_url = home_url( '/datenschutz/' );
 				</div>
 				<div class="pax-karriere__value-card">
 					<h3 class="pax-karriere__value-title">Wachstum</h3>
-					<p class="pax-karriere__value-text">Wir fördern Weiterbildung, offenen Austausch und Verantwortung — damit du dich fachlich und persönlich entwickeln kannst.</p>
+					<p class="pax-karriere__value-text">Wir fördern Weiterbildung, offenen Austausch und Verantwortung, damit du dich fachlich und persönlich entwickeln kannst.</p>
 				</div>
 			</div>
 		</div>
@@ -53,7 +53,7 @@ $privacy_url = home_url( '/datenschutz/' );
 				<p class="pax-karriere__form-intro">Fülle das Formular aus und lade deine Unterlagen hoch. Deine Bewerbung wird sicher an unser HR-Team übermittelt.</p>
 				<p class="pax-karriere__secure-badge" role="status">
 					<span class="pax-karriere__secure-dot" aria-hidden="true"></span>
-					Sichere Übermittlung · Verschlüsselte Verbindung
+					Sichere Übermittlung
 				</p>
 			</div>
 
@@ -159,9 +159,9 @@ $privacy_url = home_url( '/datenschutz/' );
 							<label for="pax-karriere-experience">Wie viele Jahre Berufserfahrung hast du?</label>
 							<select id="pax-karriere-experience" name="experience_years">
 								<option value="">Bitte wählen…</option>
-								<option value="0-1">0–1 Jahre</option>
-								<option value="1-3">1–3 Jahre</option>
-								<option value="3-5">3–5 Jahre</option>
+								<option value="0-1">0-1 Jahre</option>
+								<option value="1-3">1-3 Jahre</option>
+								<option value="3-5">3-5 Jahre</option>
 								<option value="5+">5+ Jahre</option>
 							</select>
 						</div>
