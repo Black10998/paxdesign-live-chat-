@@ -77,7 +77,6 @@ $hero_img = 'https://paxdesign.at/wp-content/uploads/2026/01/code-2558220_1280.a
 $award    = 'https://paxdesign.at/wp-content/uploads/2025/02/folio-item-img6.avif';
 $folio_a  = 'https://paxdesign.at/wp-content/uploads/2025/02/folio-item-img3.avif';
 $folio_b  = 'https://paxdesign.at/wp-content/uploads/2025/02/folio-item-img4.avif';
-$product  = 'https://paxdesign.at/wp-content/uploads/2025/02/Product-Card-Mockup-0.avif';
 
 $highlights = array(
 	array(
@@ -250,7 +249,7 @@ $quotes = array(
 				</div>
 				<div class="pax-ls-laptop__base"></div>
 			</div>
-			<?php pax_leistungen_iphone( $mega . 'app.jpg', 'pax-ls-iphone--hero' ); ?>
+			<?php pax_leistungen_iphone( $mega . 'visual.jpg', 'pax-ls-iphone--hero' ); ?>
 		</div>
 	</header>
 
@@ -316,8 +315,8 @@ $quotes = array(
 			</div>
 			<div class="pax-ls-film__visual" aria-hidden="true">
 				<div class="pax-ls-phones">
-					<?php pax_leistungen_iphone( $mega . 'app.jpg', 'pax-ls-iphone--back' ); ?>
-					<?php pax_leistungen_iphone( $product, 'pax-ls-iphone--front' ); ?>
+					<?php pax_leistungen_iphone( $mega . 'visual.jpg', 'pax-ls-iphone--back' ); ?>
+					<?php pax_leistungen_iphone( $mega . 'branding.jpg', 'pax-ls-iphone--front' ); ?>
 				</div>
 			</div>
 		</div>

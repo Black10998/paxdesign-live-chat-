@@ -27,6 +27,7 @@ body.page-id-787 {
   color-scheme: light;
   background: var(--ls-bg);
   color: var(--ls-ink);
+  overflow-x: hidden;
 }
 
 html[data-theme="dark"] body.page-template-template-apple-leistungen,
@@ -128,7 +129,8 @@ body.page-id-787 .dtr-apple-page-intro {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  overflow-x: clip;
+  overflow: visible;
+  max-width: 100%;
 }
 
 html:has(.pax-ls) {
@@ -140,18 +142,26 @@ html:has(.pax-ls) {
 }
 
 .pax-ls-iphone__screen img,
-.pax-ls-laptop__screen img,
 .pax-ls-product__media img,
 .pax-ls-tile__media img,
 .pax-ls-pair__media img,
 .pax-ls-pair__tile img,
-.pax-ls-hl img,
 .pax-ls-window img {
   width: 100% !important;
   height: 100% !important;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain !important;
+  object-position: center;
+}
+
+.pax-ls-laptop__screen img,
+.pax-ls-hl img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: none;
+  max-height: none;
+  object-fit: cover !important;
   object-position: center;
 }
 
@@ -432,18 +442,26 @@ html:has(.pax-ls) {
 /* Device stage — overlapping laptop + iPhone, never clipped */
 .pax-ls-stage {
   position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
   width: min(1480px, 100%);
   margin: 8px auto 0;
-  padding: 12px 4% 48px;
+  padding: 20px 4% 40px;
   overflow: visible;
-  min-height: clamp(340px, 54vw, 620px);
+}
+
+.pax-ls-laptop,
+.pax-ls-iphone--hero {
+  grid-area: 1 / 1;
 }
 
 .pax-ls-laptop {
   position: relative;
   z-index: 1;
-  width: min(78%, 760px);
-  margin: 0 auto 0 6%;
+  width: min(78%, 820px);
+  margin: 0 auto 0 4%;
+  align-self: center;
+  justify-self: start;
   filter: drop-shadow(0 28px 60px rgba(0, 0, 0, 0.28));
 }
 
@@ -464,7 +482,8 @@ html:has(.pax-ls) {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: center;
   background: #000;
 }
 
@@ -500,10 +519,14 @@ html:has(.pax-ls) {
 }
 
 .pax-ls-iphone--hero {
-  position: absolute;
-  right: 7%;
-  bottom: 18px;
-  --iphone-w: clamp(132px, 22vw, 228px);
+  position: relative;
+  z-index: 3;
+  right: auto;
+  bottom: auto;
+  justify-self: end;
+  align-self: end;
+  margin: 6% 10% 0 0;
+  --iphone-w: clamp(124px, 18.5vw, 200px);
 }
 
 .pax-ls-iphone__chassis {
@@ -511,7 +534,7 @@ html:has(.pax-ls) {
   width: 100%;
   height: 100%;
   border-radius: var(--iphone-r);
-  padding: 1.15%;
+  padding: 1.55%;
   background:
     linear-gradient(145deg, #d7d2cb 0%, #b7b1a9 18%, #8a847c 42%, #5c5854 68%, #3a3836 100%);
   box-shadow:
@@ -628,8 +651,8 @@ html:has(.pax-ls) {
   justify-content: center;
   width: min(100%, 720px);
   margin: 0 auto;
-  min-height: clamp(420px, 58vw, 640px);
-  padding: 28px 4% 12px;
+  min-height: 0;
+  padding: 36px 8% 28px;
   overflow: visible;
 }
 
@@ -776,7 +799,7 @@ html:has(.pax-ls) {
 
 .pax-ls-hl {
   position: relative;
-  flex: 0 0 min(88vw, 1120px);
+  flex: 0 0 min(92vw, 1280px);
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border-radius: 32px;
@@ -790,7 +813,7 @@ html:has(.pax-ls) {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: contain;
+  object-fit: cover;
   object-position: center;
   background: #111;
   transform: scale(1.01);
@@ -1413,19 +1436,18 @@ html body.page-id-787 .pax-ls a.pax-ls-tile:hover .pax-ls-tile__go {
   .pax-ls-stage {
     height: auto;
     min-height: 0;
-    padding: 8px 12px 56px;
-    display: block;
+    padding: 8px 12px 28px;
   }
 
   .pax-ls-laptop {
-    width: min(92%, 520px);
+    width: min(88%, 520px);
     margin: 0 auto;
+    justify-self: center;
   }
 
   .pax-ls-iphone--hero {
-    right: 6%;
-    bottom: 4px;
-    --iphone-w: clamp(108px, 34vw, 156px);
+    margin: 12% 4% 0 0;
+    --iphone-w: clamp(112px, 34vw, 158px);
   }
 
   .pax-ls-film__grid,
@@ -1517,19 +1539,18 @@ html body.page-id-787 .pax-ls a.pax-ls-tile:hover .pax-ls-tile__go {
 /* iPhone SE / 13 mini / compact */
 @media (max-width: 390px) {
   .pax-ls-stage {
-    padding-bottom: 64px;
+    padding-bottom: 24px;
   }
 
   .pax-ls-laptop {
-    width: 94%;
+    width: 90%;
     margin-left: auto;
     margin-right: auto;
   }
 
   .pax-ls-iphone--hero {
-    right: 4%;
-    bottom: 0;
-    --iphone-w: clamp(96px, 33.5vw, 132px);
+    margin-right: 2%;
+    --iphone-w: clamp(102px, 33vw, 140px);
   }
 
   .pax-ls-iphone--back {
@@ -1549,7 +1570,7 @@ html body.page-id-787 .pax-ls a.pax-ls-tile:hover .pax-ls-tile__go {
 
 @media (max-width: 360px) {
   .pax-ls-iphone--hero {
-    --iphone-w: clamp(90px, 32vw, 118px);
+    --iphone-w: clamp(96px, 32vw, 124px);
   }
 
   .pax-ls-hero__title {
