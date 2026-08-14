@@ -44,7 +44,7 @@ struct CustomerServicesCatalogScreen: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigation.servicesPath) {
             Group {
                 if isLoading && catalog == nil {
                     CustomerServicesCatalogSkeleton()
@@ -66,8 +66,14 @@ struct CustomerServicesCatalogScreen: View {
             }
             // No shared portal quick-menu chrome here — it crowded the bar and served no
             // Services-specific purpose (Account destinations remain on the Account tab).
+            .navigationDestination(for: CustomerPortalDestination.self) { destination in
+                CustomerCybercrimeDestinationView(destination: destination)
+            }
             .refreshable { await load(force: true) }
-            .task(id: language.rawValue) { await load(force: false) }
+            .task(id: language.rawValue) {
+                await load(force: false)
+                consumePendingServiceNavigation()
+            }
             .sheet(isPresented: $showRequestSheet) {
                 NavigationStack {
                     CustomerCreateOrderView(
@@ -78,17 +84,11 @@ struct CustomerServicesCatalogScreen: View {
                     .environmentObject(api)
                 }
             }
-            .onChange(of: navigation.pendingOrderSlug) { slug in
-                guard let slug, !slug.isEmpty else { return }
-                if let card = catalog?.cards.first(where: { $0.order_slug == slug || $0.id == slug }) {
-                    openRequest(for: card)
-                } else {
-                    requestSlug = slug
-                    requestTitle = ""
-                    requestDescription = CustomerCreateOrderView.templateDescription(title: slug, features: [])
-                    showRequestSheet = true
-                }
-                navigation.pendingOrderSlug = nil
+            .onChange(of: navigation.pendingOrderSlug) { _ in
+                consumePendingServiceNavigation()
+            }
+            .onAppear {
+                consumePendingServiceNavigation()
             }
         }
     }
@@ -99,6 +99,11 @@ struct CustomerServicesCatalogScreen: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     heroHeader(catalog)
+                    CustomerCybercrimeAccessCard {
+                        navigation.openCybercrime()
+                    }
+                    .padding(.horizontal, 22)
+                    .padding(.bottom, 20)
                     statementBand(catalog)
                     servicesList(catalog)
                     if !catalog.process_steps.isEmpty {
@@ -194,7 +199,7 @@ struct CustomerServicesCatalogScreen: View {
     }
 
     private func securityBreak(_ catalog: CustomerServicesCatalogResponse) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 16) {
             Text(catalog.security_section.title)
                 .font(.system(.title2, design: .default).weight(.semibold))
                 .foregroundStyle(ink)
@@ -202,6 +207,9 @@ struct CustomerServicesCatalogScreen: View {
                 .font(.system(.body, design: .default))
                 .foregroundStyle(inkSecondary)
                 .fixedSize(horizontal: false, vertical: true)
+            CustomerCybercrimeAccessCard(compact: true) {
+                navigation.openCybercrime()
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 22)
@@ -285,6 +293,24 @@ struct CustomerServicesCatalogScreen: View {
             expandedCardIDs.remove(id)
         } else {
             expandedCardIDs.insert(id)
+        }
+    }
+
+    private func consumePendingServiceNavigation() {
+        if let slug = navigation.pendingOrderSlug, !slug.isEmpty {
+            if let card = catalog?.cards.first(where: { $0.order_slug == slug || $0.id == slug }) {
+                openRequest(for: card)
+            } else {
+                requestSlug = slug
+                requestTitle = ""
+                requestDescription = CustomerCreateOrderView.templateDescription(title: slug, features: [])
+                showRequestSheet = true
+            }
+            navigation.pendingOrderSlug = nil
+        }
+        if let id = navigation.pendingServiceCardID, !id.isEmpty {
+            spotlightCardID = id
+            navigation.pendingServiceCardID = nil
         }
     }
 

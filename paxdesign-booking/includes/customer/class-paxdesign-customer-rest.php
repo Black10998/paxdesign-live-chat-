@@ -691,6 +691,24 @@ class PAXdesign_Customer_REST {
         return rest_ensure_response(array('success' => true));
     }
 
+    /**
+     * Attach Cybercrime (or other page) context so the AI assistant recognizes the report.
+     *
+     * @param string               $session_id
+     * @param array<string, mixed> $params
+     */
+    private static function apply_chat_page_context($session_id, $params) {
+        if (!class_exists('PAXdesign_Chat') || $session_id === '') {
+            return;
+        }
+        PAXdesign_Chat::get_instance()->set_session_page_context(
+            $session_id,
+            (string) ($params['page_context'] ?? ''),
+            (string) ($params['page_reference'] ?? ''),
+            (string) ($params['page_language'] ?? '')
+        );
+    }
+
     public static function chat_session() {
         $uid = PAXdesign_Customer_Auth::current_user_id();
         $session_id = PAXdesign_Customer_Chat_Bridge::lookup_primary_session_id($uid);
@@ -821,6 +839,7 @@ class PAXdesign_Customer_REST {
         if ($session_id === '') {
             $session_id = PAXdesign_Customer_Chat_Bridge::primary_session_id($uid);
         }
+        self::apply_chat_page_context($session_id, $params);
         $result = PAXdesign_Customer_Chat_Bridge::send_user_message(
             $uid,
             $session_id,
@@ -849,6 +868,7 @@ class PAXdesign_Customer_REST {
             return new WP_Error('forbidden', __('You do not have access to this conversation.', 'paxdesign-booking'), array('status' => 403));
         }
         PAXdesign_Customer_Chat_Bridge::materialize_session($session_id, $uid);
+        self::apply_chat_page_context($session_id, $params);
 
         $result = PAXdesign_Chat::get_instance()->stream_authenticated_customer_chat(
             $session_id,

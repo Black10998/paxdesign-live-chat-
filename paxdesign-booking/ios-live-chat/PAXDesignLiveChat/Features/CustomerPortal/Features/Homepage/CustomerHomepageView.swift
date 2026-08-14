@@ -19,7 +19,7 @@ struct CustomerHomepageView: View {
     @State private var carouselIndex = 0
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigation.homePath) {
             Group {
                 if isLoading && homepage == nil {
                     CustomerHomepageSkeleton()
@@ -35,6 +35,9 @@ struct CustomerHomepageView: View {
             .toolbarBackground(.visible, for: .navigationBar)
             .toolbarBackground(theme.background, for: .navigationBar)
             .customerPortalToolbar()
+            .navigationDestination(for: CustomerPortalDestination.self) { destination in
+                CustomerCybercrimeDestinationView(destination: destination)
+            }
             .refreshable { await load(force: true) }
             .task(id: language.rawValue) { await load(force: false) }
             .task(id: navigation.workspaceRefreshToken) { await loadWorkspace() }
@@ -74,8 +77,11 @@ struct CustomerHomepageView: View {
             LazyVStack(spacing: 0) {
                 CustomerHomepageHeroView(
                     hero: data.hero,
+                    services: data.service_carousel,
                     onPrimaryAction: { navigation.selectedTab = .services },
-                    onSecondaryAction: { showRequestSheet = true }
+                    onSecondaryAction: { showRequestSheet = true },
+                    onService: { navigation.openServiceRequest(slug: $0.order_slug) },
+                    onCybercrime: { navigation.openCybercrime() }
                 )
                 if auth.isAuthenticated {
                     if let workspace {
@@ -85,9 +91,6 @@ struct CustomerHomepageView: View {
                     }
                 } else {
                     CustomerHomeGuestPremiumStrip()
-                }
-                if !data.service_carousel.isEmpty {
-                    serviceCarouselSection(data.service_carousel)
                 }
                 capabilitiesSection(data.capabilities)
                 portfolioSection(data)

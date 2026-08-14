@@ -31,8 +31,6 @@ struct ChatMessageListView: View {
     @State private var animatedRowIds = Set<String>()
     @State private var selectedRowId: String?
 
-    private static let bottomAnchorId = "chat-bottom-anchor"
-
     private var displayRows: [MessageDisplayRow] {
         var messageLookup: [Int: LiveMessage] = [:]
         for message in messages {
@@ -61,8 +59,9 @@ struct ChatMessageListView: View {
 
     private var messageScrollView: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: PAXMessageStyle.threadSpacing) {
+            pinnedChatScroll {
+                VStack(spacing: 0) {
+                    LazyVStack(alignment: .leading, spacing: PAXMessageStyle.threadSpacing) {
                     ForEach(displayRows) { row in
                         AnimatedChatMessageRow(
                             row: row,
@@ -108,15 +107,15 @@ struct ChatMessageListView: View {
                         TypingIndicator(customerName: customerDisplayName)
                             .id("typing-indicator")
                     }
+                    }
                     Color.clear
-                        .frame(height: 1)
-                        .id(Self.bottomAnchorId)
+                        .frame(height: 12)
+                        .id(ChatScrollHelper.bottomAnchorId)
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
                 .padding(.bottom, 8)
             }
-            .scrollDismissesKeyboard(.interactively)
             .onChange(of: messagesRevision) { _ in
                 selectedRowId = nil
                 trackAndScroll(proxy: proxy)
@@ -125,30 +124,30 @@ struct ChatMessageListView: View {
                 trackAndScroll(proxy: proxy)
             }
             .onChange(of: layoutRevision) { _ in
-                scheduleScrollToBottom(proxy: proxy, animated: true)
+                ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: true, fallbackId: fallbackScrollId)
             }
             .onChange(of: userTyping) { typing in
                 if typing {
-                    scheduleScrollToBottom(proxy: proxy, animated: true)
+                    ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: true, fallbackId: fallbackScrollId)
                 }
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-                scheduleScrollToBottom(proxy: proxy, animated: true)
+                ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: true, fallbackId: fallbackScrollId)
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { _ in
-                scheduleScrollToBottom(proxy: proxy, animated: true)
+                ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: true, fallbackId: fallbackScrollId)
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardDidShowNotification)) { _ in
-                scheduleScrollToBottom(proxy: proxy, animated: true)
+                ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: true, fallbackId: fallbackScrollId)
             }
             .onReceive(NotificationCenter.default.publisher(for: .paxChatScrollToBottom)) { note in
                 guard shouldHandleScrollNotification(note) else { return }
-                scheduleScrollToBottom(proxy: proxy, animated: true)
+                ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: true, fallbackId: fallbackScrollId)
             }
             .onAppear {
                 lastTrackedMessageId = messages.last?.id
                 animatedRowIds = Set(displayRows.map(\.id))
-                scheduleScrollToBottom(proxy: proxy, animated: false)
+                ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: false, fallbackId: fallbackScrollId)
             }
         }
         .onAppear {
@@ -158,6 +157,27 @@ struct ChatMessageListView: View {
                 rowCount: displayRows.count,
                 revision: messagesRevision
             )
+        }
+    }
+
+    private var fallbackScrollId: String {
+        if userTyping { return "typing-indicator" }
+        return displayRows.last?.id ?? ChatScrollHelper.bottomAnchorId
+    }
+
+    @ViewBuilder
+    private func pinnedChatScroll<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        if #available(iOS 17.0, *) {
+            ScrollView {
+                content()
+            }
+            .defaultScrollAnchor(.bottom)
+            .scrollDismissesKeyboard(.interactively)
+        } else {
+            ScrollView {
+                content()
+            }
+            .scrollDismissesKeyboard(.interactively)
         }
     }
 
@@ -174,7 +194,7 @@ struct ChatMessageListView: View {
             revision: messagesRevision
         )
         lastTrackedMessageId = messages.last?.id
-        scheduleScrollToBottom(proxy: proxy, animated: true)
+        ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: true, fallbackId: fallbackScrollId)
     }
 
     private func messageRowId(_ message: LiveMessage) -> String {
@@ -182,28 +202,6 @@ struct ChatMessageListView: View {
             return "c:\(clientId)"
         }
         return "m:\(message.id)"
-    }
-
-    private func scheduleScrollToBottom(proxy: ScrollViewProxy, animated: Bool) {
-        let delays: [TimeInterval] = animated ? [0, 0.05, 0.12, 0.28] : [0]
-        for delay in delays {
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                scrollToBottom(proxy: proxy, animated: animated && delay > 0)
-            }
-        }
-    }
-
-    private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool) {
-        let action = {
-            proxy.scrollTo(Self.bottomAnchorId, anchor: .bottom)
-        }
-        if animated {
-            withAnimation(.spring(response: 0.34, dampingFraction: 0.88)) {
-                action()
-            }
-        } else {
-            action()
-        }
     }
 
     private func isOutgoingMessage(_ message: LiveMessage) -> Bool {
@@ -268,7 +266,7 @@ private struct AnimatedChatMessageRow: View {
                 isVisible = true
             } else {
                 animatedRowIds.insert(row.id)
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.84)) {
+                withAnimation(PAXMotion.chatInsertSpring) {
                     isVisible = true
                 }
             }
@@ -557,11 +555,36 @@ private struct TypingIndicator: View {
 }
 
 enum ChatScrollHelper {
+    static let bottomAnchorId = "chat-bottom-anchor"
+
     static func scrollToBottom(sessionId: String) {
         NotificationCenter.default.post(
             name: .paxChatScrollToBottom,
             object: nil,
             userInfo: ["session_id": sessionId]
         )
+    }
+
+    static func schedulePinToBottom(proxy: ScrollViewProxy, animated: Bool, fallbackId: String? = nil) {
+        let delays: [TimeInterval] = animated ? [0, 0.02, 0.08, 0.18, 0.36, 0.62] : [0, 0.04]
+        for delay in delays {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                pinToBottom(proxy: proxy, animated: animated && delay > 0, fallbackId: fallbackId)
+            }
+        }
+    }
+
+    static func pinToBottom(proxy: ScrollViewProxy, animated: Bool, fallbackId: String? = nil) {
+        let action = {
+            if let fallbackId {
+                proxy.scrollTo(fallbackId, anchor: .bottom)
+            }
+            proxy.scrollTo(bottomAnchorId, anchor: .bottom)
+        }
+        if animated {
+            withAnimation(PAXMotion.chatInsertSpring, action)
+        } else {
+            action()
+        }
     }
 }

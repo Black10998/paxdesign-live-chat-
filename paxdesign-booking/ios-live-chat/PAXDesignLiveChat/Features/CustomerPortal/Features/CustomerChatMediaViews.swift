@@ -5,6 +5,29 @@ import CoreLocation
 import UIKit
 import UniformTypeIdentifiers
 
+struct AnimatedCustomerChatBubble: View {
+    let message: CustomerChatPoll.ChatMessage
+    var otherReadSeq: Int = 0
+    var showReadReceipts: Bool = false
+    @State private var isVisible = false
+
+    var body: some View {
+        CustomerChatBubble(
+            message: message,
+            otherReadSeq: otherReadSeq,
+            showReadReceipts: showReadReceipts
+        )
+        .opacity(isVisible ? 1 : 0)
+        .scaleEffect(isVisible ? 1 : 0.94, anchor: message.role == "user" ? .bottomTrailing : .bottomLeading)
+        .offset(y: isVisible ? 0 : 8)
+        .onAppear {
+            withAnimation(PAXMotion.chatInsertSpring) {
+                isVisible = true
+            }
+        }
+    }
+}
+
 struct CustomerChatBubble: View {
     let message: CustomerChatPoll.ChatMessage
     var otherReadSeq: Int = 0

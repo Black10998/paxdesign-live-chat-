@@ -11,8 +11,13 @@ struct CustomerPushPayload: Equatable {
     let title: String
     let body: String
     let notificationId: Int
+    let entityType: String
+    let entityId: String
 
     var soundTone: PAXNotificationSound.Tone {
+        if entityType == "cybercrime" || category == "cybercrime" {
+            return .aiAlert
+        }
         switch category {
         case "security":
             return .aiAlert
@@ -134,6 +139,8 @@ final class CustomerPushService: NSObject, ObservableObject {
         let event = (pax["event"] as? String) ?? type
         let sessionId = (pax["session_id"] as? String) ?? ""
         let deepLink = (pax["deep_link"] as? String) ?? ""
+        let entityType = (pax["entity_type"] as? String) ?? ""
+        let entityId = (pax["entity_id"] as? String) ?? ""
         let notificationId = (pax["notification_id"] as? Int) ?? Int(pax["notification_id"] as? String ?? "") ?? 0
         let userId = (pax["user_id"] as? Int) ?? Int(pax["user_id"] as? String ?? "") ?? 0
 
@@ -168,7 +175,9 @@ final class CustomerPushService: NSObject, ObservableObject {
             deepLink: deepLink,
             title: title,
             body: body,
-            notificationId: notificationId
+            notificationId: notificationId,
+            entityType: entityType,
+            entityId: entityId
         )
     }
 
@@ -230,6 +239,12 @@ final class CustomerPushService: NSObject, ObservableObject {
         if !payload.deepLink.isEmpty {
             return CustomerDeepLink(path: payload.deepLink)
         }
+        if payload.entityType == "cybercrime" || payload.category == "cybercrime" {
+            if !payload.entityId.isEmpty {
+                return CustomerDeepLink(path: "/cybercrime/\(payload.entityId)")
+            }
+            return CustomerDeepLink(path: "/cybercrime")
+        }
         return deepLink(forCategory: payload.category)
     }
 
@@ -239,6 +254,7 @@ final class CustomerPushService: NSObject, ObservableObject {
         case "project": return CustomerDeepLink(path: "/projects")
         case "order": return CustomerDeepLink(path: "/requests")
         case "news": return CustomerDeepLink(path: "/news")
+        case "cybercrime": return CustomerDeepLink(path: "/cybercrime")
         default: return CustomerDeepLink(path: "/notifications")
         }
     }

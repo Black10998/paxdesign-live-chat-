@@ -146,6 +146,10 @@ struct CustomerDashboardView: View {
                             }
                         }
 
+                        CustomerCybercrimeAccessCard {
+                            navigation.openCybercrime()
+                        }
+
                         CustomerPortalCard {
                             VStack(alignment: .leading, spacing: 12) {
                                 CustomerPortalSectionHeader(title: String(localized: "Active Projects"))
@@ -565,59 +569,40 @@ struct CustomerChatView: View {
                 )
             }
             ScrollViewReader { proxy in
-                ScrollView {
-                    if isLoading && displayMessages.isEmpty {
-                        CustomerChatSkeleton()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if displayMessages.isEmpty && error == nil {
-                        CustomerChatEmptyState(isAI: !isHumanQueue)
-                            .padding(.top, 32)
+                Group {
+                    if #available(iOS 17.0, *) {
+                        customerChatScrollContent
+                            .defaultScrollAnchor(.bottom)
                     } else {
-                        LazyVStack(alignment: .leading, spacing: 12) {
-                            ForEach(displayMessages, id: \.id) { message in
-                                CustomerChatBubble(
-                                    message: message,
-                                    otherReadSeq: poll?.other_read_seq ?? 0,
-                                    showReadReceipts: isHumanQueue
-                                ).id(message.id)
-                            }
-                            if poll?.assistant_typing == true || (isStreamingAI && streamingAssistant.isEmpty), !isHumanQueue {
-                                CustomerChatTypingIndicator(label: String(localized: "Assistant is typing…"))
-                                    .id("ai-typing")
-                            }
-                            if !streamingAssistant.isEmpty {
-                                CustomerChatBubble(
-                                    message: CustomerChatPoll.ChatMessage(
-                                        seq: -1,
-                                        role: "assistant",
-                                        content: streamingAssistant,
-                                        sender_name: nil,
-                                        sender_id: nil,
-                                        sender_avatar: nil,
-                                        sender_role: "assistant"
-                                    ),
-                                    otherReadSeq: 0,
-                                    showReadReceipts: false
-                                )
-                                .id("streaming")
-                            }
-                            if poll?.admin_typing == true, isHumanQueue {
-                                CustomerChatTypingIndicator(label: String(localized: "Support is typing…"))
-                                    .id("typing")
-                            }
-                            Color.clear.frame(height: 1).id("chat-bottom")
-                        }
-                        .padding()
+                        customerChatScrollContent
                     }
                 }
                 .scrollDismissesKeyboard(.interactively)
-                .onChange(of: displayMessages.count) { _ in scrollToBottom(proxy: proxy, animated: true) }
-                .onChange(of: lastSeq) { _ in scrollToBottom(proxy: proxy, animated: true) }
-                .onChange(of: poll?.admin_typing) { _ in scrollToBottom(proxy: proxy, animated: true) }
-                .onChange(of: poll?.assistant_typing) { _ in scrollToBottom(proxy: proxy, animated: true) }
-                .onChange(of: streamingAssistant) { _ in scrollToBottom(proxy: proxy, animated: true) }
+                .onChange(of: displayMessages.count) { _ in
+                    ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: true, fallbackId: customerChatFallbackId)
+                }
+                .onChange(of: lastSeq) { _ in
+                    ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: true, fallbackId: customerChatFallbackId)
+                }
+                .onChange(of: poll?.admin_typing) { _ in
+                    ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: true, fallbackId: customerChatFallbackId)
+                }
+                .onChange(of: poll?.assistant_typing) { _ in
+                    ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: true, fallbackId: customerChatFallbackId)
+                }
+                .onChange(of: streamingAssistant) { _ in
+                    ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: true, fallbackId: customerChatFallbackId)
+                }
                 .onChange(of: isInputFocused) { focused in
-                    if focused { scrollToBottom(proxy: proxy, animated: true) }
+                    if focused {
+                        ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: true, fallbackId: customerChatFallbackId)
+                    }
+                }
+                .onReceive(NotificationCenter.default.publisher(for: .paxChatScrollToBottom)) { _ in
+                    ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: true, fallbackId: customerChatFallbackId)
+                }
+                .onAppear {
+                    ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: false, fallbackId: customerChatFallbackId)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -686,6 +671,70 @@ struct CustomerChatView: View {
             }
         }
         .refreshable { await refresh(full: true) }
+    }
+
+    private var customerChatFallbackId: String {
+        if !streamingAssistant.isEmpty { return "streaming" }
+        if poll?.assistant_typing == true || (isStreamingAI && streamingAssistant.isEmpty) { return "ai-typing" }
+        if poll?.admin_typing == true { return "typing" }
+        if let last = displayMessages.last { return "m:\(last.id)" }
+        return ChatScrollHelper.bottomAnchorId
+    }
+
+    private var customerChatScrollContent: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                if isLoading && displayMessages.isEmpty {
+                    CustomerChatSkeleton()
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 24)
+                } else if displayMessages.isEmpty && error == nil {
+                    CustomerChatEmptyState(isAI: !isHumanQueue)
+                        .padding(.top, 32)
+                } else {
+                    LazyVStack(alignment: .leading, spacing: 12) {
+                        ForEach(displayMessages, id: \.id) { message in
+                            AnimatedCustomerChatBubble(
+                                message: message,
+                                otherReadSeq: poll?.other_read_seq ?? 0,
+                                showReadReceipts: isHumanQueue
+                            )
+                            .id("m:\(message.id)")
+                            .transition(PAXMotion.chatInsert)
+                        }
+                        if poll?.assistant_typing == true || (isStreamingAI && streamingAssistant.isEmpty), !isHumanQueue {
+                            CustomerChatTypingIndicator(label: String(localized: "Assistant is typing…"))
+                                .id("ai-typing")
+                        }
+                        if !streamingAssistant.isEmpty {
+                            CustomerChatBubble(
+                                message: CustomerChatPoll.ChatMessage(
+                                    seq: -1,
+                                    role: "assistant",
+                                    content: streamingAssistant,
+                                    sender_name: nil,
+                                    sender_id: nil,
+                                    sender_avatar: nil,
+                                    sender_role: "assistant"
+                                ),
+                                otherReadSeq: 0,
+                                showReadReceipts: false
+                            )
+                            .id("streaming")
+                        }
+                        if poll?.admin_typing == true, isHumanQueue {
+                            CustomerChatTypingIndicator(label: String(localized: "Support is typing…"))
+                                .id("typing")
+                        }
+                    }
+                    .padding()
+                    .animation(PAXMotion.chatInsertSpring, value: displayMessages.count)
+                }
+                Color.clear
+                    .frame(height: 12)
+                    .id(ChatScrollHelper.bottomAnchorId)
+            }
+        }
     }
 
     private func dismissComposerKeyboard() {
@@ -817,22 +866,7 @@ struct CustomerChatView: View {
     }
 
     private func scrollToBottom(proxy: ScrollViewProxy, animated: Bool = true) {
-        let scroll = {
-            if !streamingAssistant.isEmpty {
-                proxy.scrollTo("streaming", anchor: .bottom)
-            } else if poll?.assistant_typing == true || (isStreamingAI && streamingAssistant.isEmpty) {
-                proxy.scrollTo("ai-typing", anchor: .bottom)
-            } else if poll?.admin_typing == true {
-                proxy.scrollTo("typing", anchor: .bottom)
-            } else {
-                proxy.scrollTo("chat-bottom", anchor: .bottom)
-            }
-        }
-        if animated {
-            withAnimation(.easeOut(duration: 0.25), scroll)
-        } else {
-            scroll()
-        }
+        ChatScrollHelper.schedulePinToBottom(proxy: proxy, animated: animated, fallbackId: customerChatFallbackId)
     }
 
     private func refresh(full: Bool = false) async -> Bool {
@@ -1292,6 +1326,8 @@ struct CustomerChatView: View {
         isSending = true
         error = nil
         notice = nil
+        appendOptimisticOutgoing(text)
+        MessageSendSound.shared.playIfEnabled()
         defer {
             isSending = false
             isStreamingAI = false
@@ -1356,6 +1392,7 @@ struct CustomerChatView: View {
             PAXHaptics.light()
         } catch {
             streamingAssistant = ""
+            removeOptimisticOutgoing()
             await handleChatError(error, savedDraft: savedDraft, duringSend: true)
             PAXHaptics.warning()
         }
@@ -1410,8 +1447,38 @@ struct CustomerChatView: View {
         }
     }
 
+    private func appendOptimisticOutgoing(_ text: String) {
+        let seq = -Int((Date().timeIntervalSince1970 * 1000).truncatingRemainder(dividingBy: 1_000_000_000))
+        applyInlineMessage(
+            CustomerChatPoll.ChatMessage(
+                seq: seq,
+                role: "user",
+                content: text,
+                sender_name: String(localized: "You"),
+                sender_role: "user"
+            )
+        )
+    }
+
+    private func removeOptimisticOutgoing() {
+        guard var messages = poll?.messages else { return }
+        messages.removeAll { $0.seq < 0 }
+        poll = CustomerChatPoll(
+            session_id: poll?.session_id,
+            handler: poll?.handler,
+            messages: messages,
+            message_count: poll?.message_count,
+            last_preview: poll?.last_preview,
+            notice: poll?.notice,
+            admin_typing: poll?.admin_typing,
+            assistant_typing: poll?.assistant_typing,
+            user_typing: poll?.user_typing,
+            other_read_seq: poll?.other_read_seq
+        )
+    }
+
     private func applySendResponse(_ response: CustomerSendResponse) {
-        var merged = poll?.messages ?? []
+        var merged = (poll?.messages ?? []).filter { $0.seq >= 0 }
         var existing = Set(merged.map(\.seq))
 
         func appendIfNew(_ message: CustomerChatPoll.ChatMessage?) {
@@ -1430,6 +1497,7 @@ struct CustomerChatView: View {
             message_count: poll?.message_count,
             last_preview: poll?.last_preview,
             admin_typing: poll?.admin_typing,
+            assistant_typing: poll?.assistant_typing,
             user_typing: poll?.user_typing,
             other_read_seq: poll?.other_read_seq
         )

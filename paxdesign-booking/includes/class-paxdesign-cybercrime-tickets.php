@@ -936,7 +936,7 @@ class PAXdesign_Cybercrime_Tickets {
                 $message,
                 'cybercrime',
                 $reference_id,
-                home_url('/cybercrime-support/?ref=' . rawurlencode($reference_id))
+                '/cybercrime/' . $reference_id
             );
             self::email_customer_update($row, $reference_id, $message, $status);
         }
@@ -1959,9 +1959,16 @@ class PAXdesign_Cybercrime_Tickets {
         ));
 
         register_rest_route(PAXdesign_Customer_REST::NS, '/customer/cybercrime/reports', array(
-            'methods'             => WP_REST_Server::READABLE,
-            'callback'            => array(__CLASS__, 'rest_list_reports'),
-            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+            array(
+                'methods'             => WP_REST_Server::READABLE,
+                'callback'            => array(__CLASS__, 'rest_list_reports'),
+                'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+            ),
+            array(
+                'methods'             => WP_REST_Server::CREATABLE,
+                'callback'            => array('PAXdesign_Cybercrime_Intake', 'rest_submit_report'),
+                'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+            ),
         ));
 
         register_rest_route(PAXdesign_Customer_REST::NS, '/customer/cybercrime/reports/(?P<reference>[A-Z0-9-]+)', array(
@@ -1973,6 +1980,12 @@ class PAXdesign_Cybercrime_Tickets {
         register_rest_route(PAXdesign_Customer_REST::NS, '/customer/cybercrime/reports/(?P<reference>[A-Z0-9-]+)/reply', array(
             'methods'             => WP_REST_Server::CREATABLE,
             'callback'            => array(__CLASS__, 'rest_customer_reply'),
+            'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
+        ));
+
+        register_rest_route(PAXdesign_Customer_REST::NS, '/customer/cybercrime/reports/(?P<reference>[A-Z0-9-]+)/read', array(
+            'methods'             => WP_REST_Server::CREATABLE,
+            'callback'            => array(__CLASS__, 'rest_mark_read'),
             'permission_callback' => array('PAXdesign_Customer_Auth', 'require_customer'),
         ));
 
@@ -2023,6 +2036,18 @@ class PAXdesign_Cybercrime_Tickets {
             return new WP_Error('not_found', __('Report not found.', 'paxdesign-booking'), array('status' => 404));
         }
         return rest_ensure_response(array('report' => $report));
+    }
+
+    public static function rest_mark_read(WP_REST_Request $request) {
+        $reference = strtoupper(sanitize_text_field((string) $request['reference']));
+        $user_id = PAXdesign_Customer_Auth::current_user_id();
+        $report = self::get_report_for_user($reference, $user_id);
+        if (!$report) {
+            return new WP_Error('not_found', __('Report not found.', 'paxdesign-booking'), array('status' => 404));
+        }
+        self::mark_read_for_audience($reference, 'customer', $user_id);
+        $report = self::get_report_for_user($reference, $user_id);
+        return rest_ensure_response(array('ok' => true, 'report' => $report));
     }
 
     public static function rest_customer_reply(WP_REST_Request $request) {

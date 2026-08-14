@@ -14,7 +14,7 @@ settings:
     SWIFT_VERSION: "5.9"
     TARGETED_DEVICE_FAMILY: "1,2"
     MARKETING_VERSION: "2.3.0"
-    CURRENT_PROJECT_VERSION: "192"
+    CURRENT_PROJECT_VERSION: "193"
     DEVELOPMENT_TEAM: ""
     CODE_SIGN_STYLE: Automatic
 targets:
@@ -42,7 +42,7 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_NSUserNotificationsUsageDescription: "Notifications for chat, projects, orders, and account updates."
         INFOPLIST_KEY_NSFaceIDUsageDescription: "Face ID is used to unlock the app after inactivity."
-        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Select photos from your library to send in chat."
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Select photos from your library to send in chat or attach to a Cybercrime Support report."
         INFOPLIST_KEY_NSCameraUsageDescription: "Take photos to send in chat conversations."
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Microphone access is used to record and send voice messages in chat."
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Location is used to verify device sign-ins, support secure staff device management, and share your position in team chat when you choose."
@@ -62,7 +62,7 @@ targets:
         NSFaceIDUsageDescription: "Face ID is used to unlock the app after inactivity."
         NSMicrophoneUsageDescription: "Microphone access is used to record and send voice messages in chat."
         NSLocationWhenInUseUsageDescription: "Location is used to verify device sign-ins, support secure staff device management, and share your position in team chat when you choose."
-        NSPhotoLibraryUsageDescription: "Select photos from your library to send in chat."
+        NSPhotoLibraryUsageDescription: "Select photos from your library to send in chat or attach to a Cybercrime Support report."
         NSUserNotificationsUsageDescription: "Notifications for chat, projects, orders, and account updates."
         ITSAppUsesNonExemptEncryption: false
         CFBundleLocalizations:

@@ -235,6 +235,11 @@ struct CustomerMoreView: View {
                     NavigationLink(String(localized: "My workspace")) {
                         CustomerDashboardView()
                     }
+                    NavigationLink {
+                        CustomerCybercrimePortalView()
+                    } label: {
+                        PAXLabel(String(localized: "Cybercrime Support"), icon: "shield.checkered")
+                    }
                     NavigationLink(String(localized: "Projects")) {
                         CustomerProjectsListView(useSplitLayout: false)
                     }
@@ -333,6 +338,10 @@ struct CustomerMoreView: View {
                     CustomerNewsListView()
                 case .conversations:
                     CustomerConversationsView()
+                case .cybercrime:
+                    CustomerCybercrimePortalView()
+                case .cybercrimeReport(let reference):
+                    CustomerCybercrimeReportDetailView(reference: reference)
                 }
             }
         }

@@ -289,6 +289,46 @@ final class CustomerAPIClient: ObservableObject {
         try await get("/customer/dashboard", as: CustomerDashboard.self)
     }
 
+    func fetchCybercrimeReports() async throws -> CustomerCybercrimeListResponse {
+        try await get("/customer/cybercrime/reports", as: CustomerCybercrimeListResponse.self)
+    }
+
+    func fetchCybercrimeActive() async throws -> CustomerCybercrimeActiveResponse {
+        try await get("/customer/cybercrime/active", as: CustomerCybercrimeActiveResponse.self)
+    }
+
+    func fetchCybercrimeReport(_ reference: String) async throws -> CustomerCybercrimeDetailResponse {
+        try await get("/customer/cybercrime/reports/\(reference)", as: CustomerCybercrimeDetailResponse.self)
+    }
+
+    func replyToCybercrimeReport(_ reference: String, message: String) async throws -> CustomerCybercrimeDetailResponse {
+        try await post(
+            "/customer/cybercrime/reports/\(reference)/reply",
+            body: ["message": message],
+            as: CustomerCybercrimeDetailResponse.self
+        )
+    }
+
+    func markCybercrimeReportRead(_ reference: String) async throws {
+        _ = try await post(
+            "/customer/cybercrime/reports/\(reference)/read",
+            body: [:],
+            as: CustomerEmptyResponse.self
+        )
+    }
+
+    func submitCybercrimeReport(
+        fields: [String: String],
+        files: [CustomerCybercrimeUpload]
+    ) async throws -> CustomerCybercrimeSubmitResponse {
+        try await uploadMultipartFiles(
+            path: "/customer/cybercrime/reports",
+            fields: fields,
+            files: files,
+            as: CustomerCybercrimeSubmitResponse.self
+        )
+    }
+
     func fetchServices(search: String? = nil, category: String? = nil) async throws -> CustomerServicesResponse {
         var path = "/customer/services"
         var query: [String] = []
@@ -512,6 +552,16 @@ final class CustomerAPIClient: ObservableObject {
         if let sessionID, !sessionID.isEmpty {
             body["session_id"] = sessionID
         }
+        if let context = CustomerNavigationCoordinator.shared.chatPageContext, !context.isEmpty {
+            body["page_context"] = context
+        }
+        if let reference = CustomerNavigationCoordinator.shared.chatPageReference, !reference.isEmpty {
+            body["page_reference"] = reference
+        }
+        let language = Locale.current.language.languageCode?.identifier ?? "en"
+        if ["en", "de", "ar"].contains(language) {
+            body["page_language"] = language
+        }
         return try await post("/customer/chat/messages", body: body, as: CustomerSendResponse.self)
     }
 
@@ -536,6 +586,16 @@ final class CustomerAPIClient: ObservableObject {
         ]
         if let sessionID, !sessionID.isEmpty {
             body["session_id"] = sessionID
+        }
+        if let context = CustomerNavigationCoordinator.shared.chatPageContext, !context.isEmpty {
+            body["page_context"] = context
+        }
+        if let reference = CustomerNavigationCoordinator.shared.chatPageReference, !reference.isEmpty {
+            body["page_reference"] = reference
+        }
+        let language = Locale.current.language.languageCode?.identifier ?? "en"
+        if ["en", "de", "ar"].contains(language) {
+            body["page_language"] = language
         }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -671,6 +731,45 @@ final class CustomerAPIClient: ObservableObject {
             throw CustomerAPIError.http((response as? HTTPURLResponse)?.statusCode ?? 0)
         }
         return try JSONDecoder().decode(T.self, from: responseData)
+    }
+
+    private func uploadMultipartFiles<T: Decodable>(
+        path: String,
+        fields: [String: String],
+        files: [CustomerCybercrimeUpload],
+        as type: T.Type
+    ) async throws -> T {
+        try await requireReadySession()
+        guard let auth, let header = auth.basicAuthHeader else { throw CustomerAPIError.unauthorized }
+        guard let url = endpointURL(path) else { throw CustomerAPIError.invalidURL }
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var body = Data()
+        for (key, value) in fields {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"\(key)\"\r\n\r\n".data(using: .utf8)!)
+            body.append("\(value)\r\n".data(using: .utf8)!)
+        }
+        for file in files {
+            body.append("--\(boundary)\r\n".data(using: .utf8)!)
+            body.append("Content-Disposition: form-data; name=\"\(file.field)\"; filename=\"\(file.filename)\"\r\n".data(using: .utf8)!)
+            body.append("Content-Type: \(file.mime)\r\n\r\n".data(using: .utf8)!)
+            body.append(file.data)
+            body.append("\r\n".data(using: .utf8)!)
+        }
+        body.append("--\(boundary)--\r\n".data(using: .utf8)!)
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 120
+        request.setValue(header, forHTTPHeaderField: "Authorization")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
+        let (responseData, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse else { throw CustomerAPIError.network }
+        guard (200..<300).contains(http.statusCode) else {
+            throw Self.parseHTTPError(data: responseData, statusCode: http.statusCode)
+        }
+        return try Self.decodeJSON(type, from: responseData)
     }
 
     private func request<T: Decodable>(_ path: String, method: String, body: [String: String]?, as type: T.Type, allowPreSession: Bool = false) async throws -> T {

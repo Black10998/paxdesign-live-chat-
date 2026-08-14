@@ -154,48 +154,89 @@ class PAXdesign_Cybercrime_Intake {
 
         check_ajax_referer(self::NONCE_ACTION, 'nonce');
 
-        if (!empty($_POST['website_trap'])) {
-            wp_send_json_error(array('message' => __('Request rejected.', 'paxdesign-booking')), 403);
+        $result = self::create_report($_POST, $_FILES, get_current_user_id());
+        if (is_wp_error($result)) {
+            $data = $result->get_error_data();
+            $payload = is_array($data) ? $data : array();
+            $payload['message'] = $result->get_error_message();
+            $payload['code'] = $result->get_error_code();
+            $status = isset($payload['status']) ? (int) $payload['status'] : 400;
+            unset($payload['status']);
+            wp_send_json_error($payload, $status);
+        }
+
+        wp_send_json_success($result);
+    }
+
+    /**
+     * Shared intake used by the website AJAX form and the customer iOS REST API.
+     *
+     * @param array<string, mixed> $post
+     * @param array<string, mixed> $files
+     * @param int                  $user_id
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function create_report($post, $files, $user_id) {
+        $post = is_array($post) ? $post : array();
+        $files = is_array($files) ? $files : array();
+        $user_id = absint($user_id);
+
+        if ($user_id <= 0) {
+            return new WP_Error(
+                'login_required',
+                __('Please sign in to submit a report.', 'paxdesign-booking'),
+                array('status' => 401)
+            );
+        }
+
+        if (!empty($post['website_trap'])) {
+            return new WP_Error('forbidden', __('Request rejected.', 'paxdesign-booking'), array('status' => 403));
         }
 
         if (!self::check_rate_limit()) {
-            wp_send_json_error(array(
-                'message' => __('Too many submissions. Please wait before trying again.', 'paxdesign-booking'),
-            ), 429);
+            return new WP_Error(
+                'rate_limited',
+                __('Too many submissions. Please wait before trying again.', 'paxdesign-booking'),
+                array('status' => 429, 'retry_after' => 3600)
+            );
         }
-
-        $user_id = get_current_user_id();
 
         if (class_exists('PAXdesign_Cybercrime_Tickets')) {
             PAXdesign_Cybercrime_Tickets::ensure_schema();
             $active = PAXdesign_Cybercrime_Tickets::get_active_report_for_user($user_id);
             if ($active) {
-                wp_send_json_error(array(
-                    'message'      => __('You already have an open report. View your existing report to add updates or messages.', 'paxdesign-booking'),
-                    'code'         => 'active_report_exists',
-                    'activeReport' => $active,
-                ), 409);
+                return new WP_Error(
+                    'active_report_exists',
+                    __('You already have an open report. View your existing report to add updates or messages.', 'paxdesign-booking'),
+                    array('status' => 409, 'activeReport' => $active)
+                );
             }
         }
 
-        $parsed = self::parse_submission($_POST);
+        $parsed = self::parse_submission($post);
         if (is_wp_error($parsed)) {
-            wp_send_json_error(array('message' => $parsed->get_error_message()), 400);
+            return new WP_Error(
+                $parsed->get_error_code(),
+                $parsed->get_error_message(),
+                array('status' => 400)
+            );
         }
 
-        if (
-            empty($_FILES['identity_document']['name'])
-            || (int) ($_FILES['identity_document']['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE
-        ) {
-            wp_send_json_error(array(
-                'message' => __('Please upload an identity document before submitting.', 'paxdesign-booking'),
-                'code'    => 'identity_document_required',
-            ), 400);
+        if (!self::has_uploaded_file($files, 'identity_document')) {
+            return new WP_Error(
+                'identity_document_required',
+                __('Please upload an identity document before submitting.', 'paxdesign-booking'),
+                array('status' => 400)
+            );
         }
 
-        $uploads = self::handle_uploads();
+        $uploads = self::handle_uploads($files);
         if (is_wp_error($uploads)) {
-            wp_send_json_error(array('message' => $uploads->get_error_message()), 400);
+            return new WP_Error(
+                $uploads->get_error_code(),
+                $uploads->get_error_message(),
+                array('status' => 400)
+            );
         }
 
         self::ensure_schema();
@@ -203,8 +244,7 @@ class PAXdesign_Cybercrime_Intake {
         $reference = self::generate_reference_id();
         $now = current_time('mysql', true);
         global $wpdb;
-        $user_id = get_current_user_id();
-        $chat_session_id = sanitize_text_field(wp_unslash($_POST['chat_session_id'] ?? ''));
+        $chat_session_id = sanitize_text_field(wp_unslash($post['chat_session_id'] ?? ''));
 
         $payload = array(
             'identity_accuracy'   => !empty($parsed['identity_accuracy']),
@@ -214,6 +254,7 @@ class PAXdesign_Cybercrime_Intake {
             'financial_currency'  => $parsed['financial_currency'],
             'declarations'        => $parsed['declarations'],
             'locale'              => $parsed['locale'],
+            'source'              => sanitize_key((string) ($post['source'] ?? 'web')),
         );
 
         $inserted = $wpdb->insert(
@@ -244,15 +285,16 @@ class PAXdesign_Cybercrime_Intake {
                 error_log('[PAXdesign Cybercrime] Insert failed: ' . $db_error);
             }
 
-            $response = array(
-                'message' => __('Could not save your report. Please try again or contact support.', 'paxdesign-booking'),
-                'code'    => 'db_insert_failed',
-            );
+            $error_data = array('status' => 500);
             if ($db_error !== '' && (defined('WP_DEBUG') && WP_DEBUG || current_user_can('manage_options'))) {
-                $response['detail'] = $db_error;
+                $error_data['detail'] = $db_error;
             }
 
-            wp_send_json_error($response, 500);
+            return new WP_Error(
+                'db_insert_failed',
+                __('Could not save your report. Please try again or contact support.', 'paxdesign-booking'),
+                $error_data
+            );
         }
 
         self::notify_admin($reference, $parsed, $uploads);
@@ -262,10 +304,73 @@ class PAXdesign_Cybercrime_Intake {
             PAXdesign_Cybercrime_Tickets::record_submission($reference, $user_id, $parsed, $chat_session_id);
         }
 
-        wp_send_json_success(array(
+        $report = null;
+        if (class_exists('PAXdesign_Cybercrime_Tickets')) {
+            $report = PAXdesign_Cybercrime_Tickets::get_report_for_user($reference, $user_id);
+        }
+
+        return array(
             'referenceId' => $reference,
             'message'     => __('Your report has been submitted securely.', 'paxdesign-booking'),
-        ));
+            'report'      => $report,
+        );
+    }
+
+    /**
+     * REST submit from the authenticated customer iOS app (same table as the website).
+     *
+     * @return WP_REST_Response|WP_Error
+     */
+    public static function rest_submit_report(WP_REST_Request $request) {
+        $post = $request->get_params();
+        if (!is_array($post)) {
+            $post = array();
+        }
+        if (!empty($_POST) && is_array($_POST)) {
+            foreach ($_POST as $key => $value) {
+                if (!array_key_exists($key, $post) || $post[$key] === '' || $post[$key] === null) {
+                    $post[$key] = wp_unslash($value);
+                }
+            }
+        }
+        $files = $request->get_file_params();
+        if ((!is_array($files) || empty($files)) && !empty($_FILES) && is_array($_FILES)) {
+            $files = $_FILES;
+        }
+        $result = self::create_report(
+            $post,
+            is_array($files) ? $files : array(),
+            PAXdesign_Customer_Auth::current_user_id()
+        );
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        return rest_ensure_response($result);
+    }
+
+    /**
+     * @param array<string, mixed> $files
+     * @param string               $field
+     */
+    private static function has_uploaded_file($files, $field) {
+        if (empty($files[$field]) || !is_array($files[$field])) {
+            return false;
+        }
+        $file = $files[$field];
+        $name = $file['name'] ?? '';
+        if (is_array($name)) {
+            foreach ($name as $item) {
+                if (is_string($item) && $item !== '') {
+                    return true;
+                }
+            }
+            return false;
+        }
+        if (!is_string($name) || $name === '') {
+            return false;
+        }
+        $error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
+        return $error !== UPLOAD_ERR_NO_FILE;
     }
 
     /**
@@ -399,8 +504,11 @@ class PAXdesign_Cybercrime_Intake {
     /**
      * @return array<int, array<string, string>>|WP_Error
      */
-    private static function handle_uploads() {
-        if (empty($_FILES) || !is_array($_FILES)) {
+    private static function handle_uploads($files = null) {
+        if ($files === null) {
+            $files = $_FILES;
+        }
+        if (empty($files) || !is_array($files)) {
             return array();
         }
 
@@ -427,7 +535,7 @@ class PAXdesign_Cybercrime_Intake {
         add_filter('upload_dir', array(__CLASS__, 'filter_upload_dir'));
 
         try {
-            foreach ($_FILES as $field => $file) {
+            foreach ($files as $field => $file) {
                 if (!is_array($file) || empty($file['name'])) {
                     continue;
                 }
@@ -617,7 +725,7 @@ class PAXdesign_Cybercrime_Intake {
             ),
             'cybercrime',
             $reference,
-            home_url('/cybercrime-support/')
+            '/cybercrime/' . $reference
         );
     }
 

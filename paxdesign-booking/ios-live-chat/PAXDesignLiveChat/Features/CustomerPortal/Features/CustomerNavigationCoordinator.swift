@@ -27,6 +27,8 @@ struct CustomerPortalDestination: Equatable, Hashable {
         case ordersList
         case newsList
         case conversations
+        case cybercrime
+        case cybercrimeReport(String)
     }
 
     let kind: Kind
@@ -38,11 +40,15 @@ final class CustomerNavigationCoordinator: ObservableObject {
 
     @Published var selectedTab: CustomerPortalTab = .home
     @Published var chatReturnTab: CustomerPortalTab = .home
+    @Published var homePath: [CustomerPortalDestination] = []
+    @Published var servicesPath: [CustomerPortalDestination] = []
     @Published var accountPath: [CustomerPortalDestination] = []
     @Published var chatSessionID: String?
     @Published var pendingChatFocus = false
     @Published var pendingServiceCardID: String?
     @Published var pendingOrderSlug: String?
+    @Published var chatPageContext: String?
+    @Published var chatPageReference: String?
     @Published private(set) var workspaceRefreshToken = UUID()
 
     func refreshWorkspace() {
@@ -62,8 +68,8 @@ final class CustomerNavigationCoordinator: ObservableObject {
     }
 
     func handle(deepLink: CustomerDeepLink) {
-        let normalized = deepLink.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
-        let parts = normalized.split(separator: "/").map(String.init)
+        let parsed = Self.parseDeepLink(deepLink.path)
+        let parts = parsed.pathParts
 
         guard let head = parts.first?.lowercased() else {
             selectedTab = .home
@@ -124,9 +130,43 @@ final class CustomerNavigationCoordinator: ObservableObject {
             if parts.count > 1 {
                 pendingServiceCardID = parts[1]
             }
+        case "cybercrime", "cybercrime-support":
+            openAccountCybercrime(reference: parsed.reference ?? (parts.count > 1 ? parts[1] : nil))
         default:
-            selectedTab = .home
+            if let reference = parsed.reference {
+                openAccountCybercrime(reference: reference)
+            } else {
+                selectedTab = .home
+            }
         }
+    }
+
+    private struct ParsedDeepLink {
+        let pathParts: [String]
+        let reference: String?
+    }
+
+    private static func parseDeepLink(_ raw: String) -> ParsedDeepLink {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let url: URL?
+        if trimmed.hasPrefix("http://") || trimmed.hasPrefix("https://") {
+            url = URL(string: trimmed)
+        } else if trimmed.hasPrefix("/") {
+            url = URL(string: "https://paxdesign.at\(trimmed)")
+        } else {
+            url = URL(string: "https://paxdesign.at/\(trimmed)")
+        }
+        let path = url?.path ?? trimmed
+        let normalized = path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let parts = normalized.split(separator: "/").map(String.init)
+        var reference: String?
+        if let items = URLComponents(url: url ?? URL(fileURLWithPath: "/"), resolvingAgainstBaseURL: false)?.queryItems {
+            reference = items.first(where: { $0.name == "ref" || $0.name == "reference" })?.value
+        }
+        if reference == nil, let last = parts.last, last.uppercased().hasPrefix("CCS-") {
+            reference = last.uppercased()
+        }
+        return ParsedDeepLink(pathParts: parts, reference: reference)
     }
 
     func openServiceRequest(slug: String) {
@@ -161,6 +201,8 @@ final class CustomerNavigationCoordinator: ObservableObject {
     func dismissChat() {
         selectedTab = chatReturnTab
         pendingChatFocus = false
+        chatPageContext = nil
+        chatPageReference = nil
     }
 
     func openChat(sessionID: String? = nil) {
@@ -182,12 +224,50 @@ final class CustomerNavigationCoordinator: ObservableObject {
     func openConversationsList() {
         openAccountDestination(CustomerPortalDestination(kind: .conversations))
     }
+
+    func openCybercrime(reference: String? = nil) {
+        let destination = cybercrimeDestination(reference: reference)
+        switch selectedTab {
+        case .home:
+            servicesPath = []
+            homePath = [destination]
+        case .services:
+            homePath = []
+            servicesPath = [destination]
+        default:
+            homePath = []
+            servicesPath = []
+            openAccountDestination(destination)
+        }
+    }
+
+    func openAccountCybercrime(reference: String? = nil) {
+        openAccountDestination(cybercrimeDestination(reference: reference))
+    }
+
+    private func cybercrimeDestination(reference: String?) -> CustomerPortalDestination {
+        if let reference, !reference.isEmpty {
+            return CustomerPortalDestination(kind: .cybercrimeReport(reference.uppercased()))
+        }
+        return CustomerPortalDestination(kind: .cybercrime)
+    }
+
+    func openChatFromCybercrime(reference: String?) {
+        chatPageContext = "cybercrime-support"
+        chatPageReference = reference
+        enterChat(from: selectedTab == .chat ? chatReturnTab : selectedTab, sessionID: nil)
+    }
 }
 
 extension CustomerDeepLink {
     init?(notificationItem: CustomerNotificationItem) {
         if let deep = notificationItem.deep_link, !deep.isEmpty {
-            self.init(path: deep.hasPrefix("/") ? deep : "/\(deep)")
+            self.init(path: deep.hasPrefix("/") || deep.hasPrefix("http") ? deep : "/\(deep)")
+            return
+        }
+        if notificationItem.entity_type?.lowercased() == "cybercrime",
+           let entity = notificationItem.entity_id, !entity.isEmpty {
+            self.init(path: "/cybercrime/\(entity)")
             return
         }
         switch notificationItem.category.lowercased() {
@@ -199,8 +279,14 @@ extension CustomerDeepLink {
             self.init(path: "/orders")
         case "news":
             self.init(path: "/news")
+        case "cybercrime":
+            self.init(path: "/cybercrime")
         case "account", "security":
-            self.init(path: "/profile")
+            if notificationItem.entity_type?.lowercased() == "cybercrime" {
+                self.init(path: "/cybercrime")
+            } else {
+                self.init(path: "/profile")
+            }
         default:
             self.init(path: "/notifications")
         }

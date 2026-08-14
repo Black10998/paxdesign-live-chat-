@@ -317,33 +317,43 @@ class PAXdesign_Chat {
     }
 
     /**
+     * Persist page context for a chat session (website POST or customer REST).
+     *
      * @param string $session_id
+     * @param string $context
+     * @param string $reference
+     * @param string $language
      */
-    private function persist_page_context_from_request($session_id) {
+    public function set_session_page_context($session_id, $context = '', $reference = '', $language = '') {
         $session_id = sanitize_text_field((string) $session_id);
         if ($session_id === '') {
             return;
         }
-
         $key = md5($session_id);
-        if (isset($_POST['page_context'])) {
-            $context = sanitize_key(wp_unslash($_POST['page_context']));
-            if ($context !== '') {
-                set_transient('pax_chat_page_ctx_' . $key, $context, DAY_IN_SECONDS);
-            }
+        $context = sanitize_key((string) $context);
+        if ($context !== '') {
+            set_transient('pax_chat_page_ctx_' . $key, $context, DAY_IN_SECONDS);
         }
-        if (isset($_POST['page_language'])) {
-            $language = sanitize_key(wp_unslash($_POST['page_language']));
-            if (in_array($language, array('de', 'en', 'ar'), true)) {
-                set_transient('pax_chat_page_lang_' . $key, $language, DAY_IN_SECONDS);
-            }
+        $language = sanitize_key((string) $language);
+        if (in_array($language, array('de', 'en', 'ar'), true)) {
+            set_transient('pax_chat_page_lang_' . $key, $language, DAY_IN_SECONDS);
         }
-        if (isset($_POST['page_reference'])) {
-            $reference = sanitize_text_field(wp_unslash($_POST['page_reference']));
-            if ($reference !== '') {
-                set_transient('pax_chat_page_ref_' . $key, $reference, DAY_IN_SECONDS);
-            }
+        $reference = sanitize_text_field((string) $reference);
+        if ($reference !== '') {
+            set_transient('pax_chat_page_ref_' . $key, $reference, DAY_IN_SECONDS);
         }
+    }
+
+    /**
+     * @param string $session_id
+     */
+    private function persist_page_context_from_request($session_id) {
+        $this->set_session_page_context(
+            $session_id,
+            isset($_POST['page_context']) ? wp_unslash($_POST['page_context']) : '',
+            isset($_POST['page_reference']) ? wp_unslash($_POST['page_reference']) : '',
+            isset($_POST['page_language']) ? wp_unslash($_POST['page_language']) : ''
+        );
     }
 
     /**

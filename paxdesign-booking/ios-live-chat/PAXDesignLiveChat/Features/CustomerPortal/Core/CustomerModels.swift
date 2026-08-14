@@ -274,6 +274,8 @@ struct CustomerNotificationItem: Decodable, Identifiable {
     let title: String
     let body: String?
     let deep_link: String?
+    let entity_type: String?
+    let entity_id: String?
     let is_read: Bool
     let created_at: String
 }

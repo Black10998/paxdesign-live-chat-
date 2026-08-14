@@ -15,6 +15,11 @@ struct CustomerPremiumHomeExperience: View {
             CustomerHomeInsightHeader(profileName: profileName)
                 .premiumHomeAppear(appeared, delay: 0)
 
+            CustomerCybercrimeAccessCard {
+                navigation.openCybercrime()
+            }
+            .premiumHomeAppear(appeared, delay: 0.02)
+
             CustomerHomeLiveStatsRow(dashboard: dashboard)
                 .premiumHomeAppear(appeared, delay: 0.04)
 
@@ -644,6 +649,13 @@ private struct CustomerHomeUtilityRow: View {
                 navigation.openNotifications()
             }
             utilityChip(
+                title: String(localized: "Cybercrime"),
+                icon: "shield.checkered",
+                badge: nil
+            ) {
+                navigation.openCybercrime()
+            }
+            utilityChip(
                 title: String(localized: "Services"),
                 icon: "square.grid.2x2.fill",
                 badge: nil
@@ -739,7 +751,7 @@ struct CustomerHomeGuestPremiumStrip: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 10) {
-                PAXIcon("sparkles", size: .hero, emphasis: .primary, tint: theme.accent)
+                PAXRevolutGlyphAvatar(systemImage: "square.stack.3d.up.fill", size: 40, tint: theme.accent)
                 Text(String(localized: "Your digital workspace"))
                     .font(.title2.weight(.bold))
                     .foregroundStyle(theme.textPrimary)
@@ -751,7 +763,10 @@ struct CustomerHomeGuestPremiumStrip: View {
             HStack(spacing: 12) {
                 guestFeatureChip(icon: "folder.fill", label: String(localized: "Projects"))
                 guestFeatureChip(icon: "message.fill", label: String(localized: "Chat"))
-                guestFeatureChip(icon: "doc.on.doc", label: String(localized: "Files"))
+                guestFeatureChip(icon: "shield.checkered", label: String(localized: "Cybercrime"))
+            }
+            CustomerCybercrimeAccessCard(compact: true) {
+                navigation.openCybercrime()
             }
             HStack(spacing: 12) {
                 Button(String(localized: "Sign In")) {

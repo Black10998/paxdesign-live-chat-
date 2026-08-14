@@ -66,18 +66,17 @@ struct UiverseMenuBarItem: Identifiable {
 }
 
 /// Full-width Revolut-style tab bar: 56pt + home indicator, blur material, 24pt SF Symbols.
+/// Active state is a soft circular fill + accent icon — no sliding line or capsule indicator.
 struct UiverseMenuBarView: View {
     let items: [UiverseMenuBarItem]
     @Binding var selection: Int
     let reduceMotion: Bool
 
-    @Namespace private var indicatorNS
-
     var body: some View {
         VStack(spacing: 0) {
             Rectangle()
-                .fill(PAXTheme.divider)
-                .frame(height: 0.5)
+                .fill(PAXTheme.divider.opacity(0.55))
+                .frame(height: PAXShellLayout.tabBarHairlineHeight)
 
             HStack(spacing: 0) {
                 ForEach(items) { item in
@@ -101,26 +100,25 @@ struct UiverseMenuBarView: View {
         let isActive = selection == item.tag
         return Button {
             guard selection != item.tag else { return }
-            selection = item.tag
+            withAnimation(reduceMotion ? nil : PAXMotion.tabSelect) {
+                selection = item.tag
+            }
             PAXHaptics.light()
         } label: {
             VStack(spacing: 4) {
                 ZStack(alignment: .topTrailing) {
                     ZStack {
-                        if isActive {
-                            Capsule()
-                                .fill(PAXBrandGradient.linear)
-                                .frame(width: 28, height: 3)
-                                .offset(y: -10)
-                                .matchedGeometryEffect(id: "tab-pill", in: indicatorNS)
-                        }
+                        Circle()
+                            .fill(isActive ? PAXTheme.accent.opacity(0.16) : Color.clear)
+                            .frame(width: 40, height: 40)
                         PAXIcon(
                             item.icon,
                             size: .tab,
-                            tint: isActive ? PAXTheme.textPrimary : PAXTheme.textTertiary
+                            tint: isActive ? PAXTheme.accent : PAXTheme.textTertiary
                         )
+                        .scaleEffect(isActive ? 1.0 : 0.96)
                     }
-                    .frame(width: 44, height: 28)
+                    .frame(width: 44, height: 36)
 
                     if item.badge > 0 {
                         Text(item.badge > 99 ? "99+" : "\(item.badge)")
@@ -130,7 +128,7 @@ struct UiverseMenuBarView: View {
                             .padding(.vertical, 2)
                             .background(Color(uiColor: PAXDynamic.spend))
                             .clipShape(Capsule())
-                            .offset(x: 10, y: -6)
+                            .offset(x: 10, y: -4)
                     }
                 }
 
@@ -144,7 +142,7 @@ struct UiverseMenuBarView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PAXRevolutPressableStyle())
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: isActive)
+        .animation(reduceMotion ? nil : PAXMotion.tabSelect, value: isActive)
         .accessibilityLabel(item.title)
         .accessibilityValue(isActive ? L10n.ShellSelected : "")
         .accessibilityAddTraits(isActive ? [.isSelected, .isButton] : .isButton)

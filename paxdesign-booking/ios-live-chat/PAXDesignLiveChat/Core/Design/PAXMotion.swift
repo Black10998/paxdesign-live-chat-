@@ -5,6 +5,14 @@ enum PAXMotion {
     static let cardAppear = AnyTransition.opacity.combined(with: .scale(scale: 0.97))
     static let modulePush = AnyTransition.opacity.combined(with: .move(edge: .trailing))
     static let heroReveal = AnyTransition.opacity.combined(with: .move(edge: .top))
+    static let chatInsert = AnyTransition.asymmetric(
+        insertion: .opacity.combined(with: .scale(scale: 0.94)).combined(with: .offset(y: 10)),
+        removal: .opacity
+    )
+
+    static let tabSelect = Animation.spring(response: 0.32, dampingFraction: 0.82)
+    static let chatInsertSpring = Animation.spring(response: 0.38, dampingFraction: 0.86)
+    static let buttonPress = Animation.easeOut(duration: 0.15)
 
     static func pressable<S: Shape>(_ shape: S, scale: CGFloat = 0.98) -> some ViewModifier {
         PressableModifier(shape: shape, scale: scale)

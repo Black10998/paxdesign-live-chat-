@@ -185,4 +185,29 @@ final class PushNotificationTests: XCTestCase {
         let link = CustomerPushService.shared.handleNotification(userInfo: payload)
         XCTAssertEqual(link?.path, "/chat/pax_customer_99")
     }
+
+    @MainActor
+    func testCybercrimePushDeepLinksToReport() {
+        let payload: [AnyHashable: Any] = [
+            "aps": [
+                "alert": [
+                    "title": "Cybercrime report received",
+                    "body": "Reference CCS-20260814-ABCDEF12",
+                ],
+                "sound": "pax-ai-alert.wav",
+            ],
+            "pax": [
+                "category": "security",
+                "type": "security_alert",
+                "entity_type": "cybercrime",
+                "entity_id": "CCS-20260814-ABCDEF12",
+                "deep_link": "/cybercrime/CCS-20260814-ABCDEF12",
+            ],
+        ]
+        let parsed = CustomerPushService.shared.parseNotification(userInfo: payload)
+        XCTAssertEqual(parsed?.entityType, "cybercrime")
+        XCTAssertEqual(parsed?.soundTone, .aiAlert)
+        let link = CustomerPushService.shared.handleNotification(userInfo: payload)
+        XCTAssertEqual(link?.path, "/cybercrime/CCS-20260814-ABCDEF12")
+    }
 }

@@ -31,7 +31,7 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Location is used to verify device sign-ins and support secure staff device management.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Select photos from your library to send in live chat.</string>
+	<string>Select photos from your library to send in chat or attach to a Cybercrime Support report.</string>
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>Notifications for live agent requests and new customer messages.</string>
 	<key>UIBackgroundModes</key>
