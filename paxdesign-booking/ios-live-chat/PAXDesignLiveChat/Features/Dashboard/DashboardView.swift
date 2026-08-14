@@ -232,6 +232,13 @@ struct DashboardView: View {
                 }
 
                 Section {
+                    quickActionsBar
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+
+                Section {
                     metricsGrid
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
@@ -285,14 +292,26 @@ struct DashboardView: View {
     }
 
     private var heroHeader: some View {
-        PlatformHeroHeader(
-            title: L10n.DashboardWelcome(auth.profile?.displayName ?? L10n.CommonAdministrator),
-            subtitle: L10n.DashboardSubtitle,
-            systemImage: "chart.bar.doc.horizontal.fill",
-            tint: PAXTheme.accent
+        PAXRevolutDashboardHero(
+            greeting: L10n.ModuleDashboard,
+            headline: L10n.DashboardWelcome(auth.profile?.displayName ?? L10n.CommonAdministrator),
+            subtitle: L10n.DashboardSubtitle
         )
         .paxStaggeredAppear(index: 0)
         .transition(PAXMotion.heroReveal)
+    }
+
+    private var quickActionsBar: some View {
+        HStack(spacing: 0) {
+            PAXRevolutQuickAction(icon: "magnifyingglass", title: L10n.GlobalSearchTitle, isPrimary: true) {
+                showSearch = true
+            }
+            PAXRevolutQuickAction(icon: "bell.and.waves.left.and.right.fill", title: L10n.TabLive) {}
+            PAXRevolutQuickAction(icon: "bubble.left.and.bubble.right.fill", title: L10n.TabChats) {}
+            PAXRevolutQuickAction(icon: "square.grid.2x2.fill", title: L10n.TabPlatform) {}
+        }
+        .padding(.horizontal, PAXSpacing.screenHorizontal)
+        .padding(.vertical, PAXSpacing.xs)
     }
 
     private var metricsGrid: some View {
@@ -335,52 +354,41 @@ struct DashboardView: View {
     }
 
     private var activityFeed: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(L10n.DashboardActivityFeed)
-                    .font(.headline)
-                Spacer()
-                Text(L10n.DashboardActivityRealtime)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.mint)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.mint.opacity(0.18)))
-            }
+        VStack(alignment: .leading, spacing: PAXSpacing.sm) {
+            PAXRevolutSectionHeader(title: L10n.DashboardActivityFeed)
 
             if recentActivityItems.isEmpty {
                 Text(L10n.DashboardActivityEmpty)
-                    .font(.subheadline)
+                    .font(PAXTypography.body)
                     .foregroundStyle(PAXTheme.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(PAXSpacing.md)
             } else {
-                VStack(spacing: 10) {
-                    ForEach(recentActivityItems, id: \.sessionId) { session in
-                        PAXListCard(highlighted: session.isLiveRequest, accent: session.isLiveRequest ? .red : PAXTheme.accent) {
-                            HStack(spacing: 10) {
-                                Circle()
-                                    .fill(session.isLiveRequest ? Color.red : PAXTheme.accent)
-                                    .frame(width: 9, height: 9)
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(session.displayName)
-                                        .font(.subheadline.weight(.semibold))
-                                    Text(session.lastPreview.isEmpty ? session.detectedService : session.lastPreview)
-                                        .font(.caption)
-                                        .foregroundStyle(PAXTheme.textSecondary)
-                                        .lineLimit(1)
-                                }
-                                Spacer()
-                                Text(MessageTimeFormatter.relativeUpdatedLabel(from: MessageTimeFormatter.date(fromUpdatedAt: session.updatedAt) ?? Date()))
-                                    .font(.caption2)
-                                    .foregroundStyle(PAXTheme.textTertiary)
-                            }
+                PAXRevolutGroupedList {
+                    ForEach(Array(recentActivityItems.enumerated()), id: \.element.sessionId) { index, session in
+                        PAXRevolutTransactionRow(
+                            title: session.displayName,
+                            subtitle: session.lastPreview.isEmpty ? session.detectedService : session.lastPreview,
+                            trailing: MessageTimeFormatter.relativeUpdatedLabel(from: MessageTimeFormatter.date(fromUpdatedAt: session.updatedAt) ?? Date()) ?? "",
+                            trailingColor: session.isLiveRequest ? PAXTheme.danger : PAXRevolutColors.textPrimary(isDark: PAXTheme.cachedIsDark)
+                        ) {
+                            SessionAvatarView(
+                                name: session.displayName,
+                                size: 40,
+                                isLive: session.isLiveRequest,
+                                isTeam: session.isTeamDM
+                            )
+                        }
+                        if index < recentActivityItems.count - 1 {
+                            Divider()
+                                .background(PAXRevolutColors.divider(isDark: PAXTheme.cachedIsDark))
+                                .padding(.leading, 68)
                         }
                     }
                 }
             }
         }
-        .padding(16)
-        .paxPremiumGlass(tier: .premium, cornerRadius: 18, accent: .mint)
+        .padding(.horizontal, PAXSpacing.screenHorizontal)
     }
 
     private var activityChart: some View {

@@ -12,17 +12,17 @@ struct PAXContentUnavailableView: View {
     }
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: PAXSpacing.sm + 2) {
             PAXIcon(systemImage, size: .display, emphasis: .secondary)
             Text(title)
-                .font(.headline)
+                .font(PAXTypography.subsection)
                 .foregroundStyle(PAXTheme.textPrimary)
             description
-                .font(.subheadline)
+                .font(PAXTypography.body)
                 .foregroundStyle(PAXTheme.textSecondary)
                 .multilineTextAlignment(.center)
         }
-        .padding(24)
+        .padding(PAXSpacing.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

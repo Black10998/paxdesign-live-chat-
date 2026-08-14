@@ -19,34 +19,34 @@ private struct PAXCardVariantModifier: ViewModifier {
         switch variant {
         case .standard:
             content
-                .paxPremiumGlass(tier: .standard, cornerRadius: 16)
+                .paxRevolutSurface(cornerRadius: 16, elevation: 0)
         case .hero:
             content
-                .padding(18)
-                .paxPremiumGlass(tier: .standard, cornerRadius: 20)
+                .padding(PAXSpacing.lg)
+                .paxRevolutSurface(cornerRadius: 20, elevation: 1)
         case .metric:
             content
-                .padding(14)
+                .padding(PAXSpacing.md - 2)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .paxPremiumGlass(tier: .standard, cornerRadius: 16)
+                .paxRevolutSurface(cornerRadius: 16, elevation: 0)
         case .feature:
             content
-                .padding(16)
-                .paxPremiumGlass(tier: .standard, cornerRadius: 18)
+                .padding(PAXSpacing.md)
+                .paxRevolutSurface(cornerRadius: 18, elevation: 0)
         case .list:
             content
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .paxPremiumGlass(tier: .subtle, cornerRadius: 14)
+                .padding(.horizontal, PAXSpacing.md)
+                .padding(.vertical, PAXSpacing.sm)
+                .paxRevolutSurface(cornerRadius: 14, elevation: 0)
         case .accent:
             content
-                .padding(16)
-                .paxPremiumGlass(tier: .standard, cornerRadius: 16)
+                .padding(PAXSpacing.md)
+                .paxRevolutSurface(cornerRadius: 16, elevation: 1)
         case .compact:
             content
-                .padding(.horizontal, 12)
-                .padding(.vertical, 9)
-                .paxPremiumGlass(tier: .subtle, cornerRadius: 12)
+                .padding(.horizontal, PAXSpacing.sm)
+                .padding(.vertical, PAXSpacing.xxs + 5)
+                .paxRevolutSurface(cornerRadius: 12, elevation: 0)
         }
     }
 }
@@ -82,21 +82,26 @@ struct PAXHeroCard: View {
     var helpText: String?
 
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            PAXIcon(systemImage, size: .hero)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.title3.weight(.bold))
-                    .foregroundStyle(PAXTheme.textPrimary)
-                Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(PAXTheme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: PAXSpacing.sm) {
+            HStack(spacing: PAXSpacing.sm) {
+                ZStack {
+                    Circle()
+                        .fill(PAXRevolutColors.surface2(isDark: PAXTheme.cachedIsDark))
+                        .frame(width: 48, height: 48)
+                    PAXIcon(systemImage, size: .card, tint: tint)
+                }
+                Spacer(minLength: 0)
             }
 
-            Spacer(minLength: 0)
+            Text(title)
+                .font(PAXTypography.section)
+                .foregroundStyle(PAXTheme.textPrimary)
+            Text(subtitle)
+                .font(PAXTypography.meta)
+                .foregroundStyle(PAXTheme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .paxCard(.hero, tint: tint)
         .modifier(OptionalCardHelp(helpText: helpText))
     }
@@ -122,10 +127,12 @@ struct PAXMetricCard: View {
                 }
             }
             Text(value)
-                .font(.title.weight(.bold))
+                .font(PAXTypography.balance)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
                 .foregroundStyle(PAXTheme.textPrimary)
             Text(title)
-                .font(.caption.weight(.medium))
+                .font(PAXTypography.caption.weight(.medium))
                 .foregroundStyle(PAXTheme.textSecondary)
         }
         .paxCard(.metric, tint: tint)

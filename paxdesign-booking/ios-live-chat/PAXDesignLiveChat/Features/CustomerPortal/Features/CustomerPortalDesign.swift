@@ -2,7 +2,7 @@ import SwiftUI
 
 enum CustomerPortalDesign {
     static let cardRadius: CGFloat = 16
-    static let sectionSpacing: CGFloat = 16
+    static let sectionSpacing: CGFloat = PAXSpacing.sectionGap
 }
 
 struct CustomerPortalCard<Content: View>: View {
@@ -10,14 +10,9 @@ struct CustomerPortalCard<Content: View>: View {
 
     var body: some View {
         content
-            .padding(16)
+            .padding(PAXSpacing.md)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(PAXTheme.surfaceElevated)
-            .clipShape(RoundedRectangle(cornerRadius: CustomerPortalDesign.cardRadius, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: CustomerPortalDesign.cardRadius, style: .continuous)
-                    .stroke(PAXTheme.border.opacity(0.35), lineWidth: 0.5)
-            )
+            .paxRevolutSurface(cornerRadius: CustomerPortalDesign.cardRadius, elevation: 0)
     }
 }
 
@@ -29,11 +24,13 @@ struct CustomerPortalSectionHeader: View {
     var body: some View {
         HStack {
             Text(title)
-                .font(.title3.weight(.semibold))
+                .font(PAXTypography.subsection)
+                .foregroundStyle(PAXTheme.textPrimary)
             Spacer()
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
-                    .font(.subheadline.weight(.medium))
+                    .font(PAXTypography.meta.weight(.semibold))
+                    .foregroundStyle(PAXTheme.link)
             }
         }
     }
@@ -115,7 +112,7 @@ struct CustomerPrimaryButtonStyleModifier: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
+            .font(PAXTypography.button)
             .padding(.vertical, 14)
             .padding(.horizontal, 18)
             .background(background(configuration.isPressed))
@@ -126,13 +123,13 @@ struct CustomerPrimaryButtonStyleModifier: ButtonStyle {
     }
 
     private var foreground: Color {
-        style == .filled ? .white : PAXTheme.accent
+        style == .filled ? PAXTheme.onAccent : PAXTheme.accent
     }
 
     private func background(_ pressed: Bool) -> Color {
         switch style {
         case .filled:
-            return PAXTheme.accent.opacity(pressed ? 0.85 : 1)
+            return PAXTheme.accent.opacity(pressed ? 0.88 : 1)
         case .tinted:
             return PAXTheme.accentSoft.opacity(pressed ? 0.9 : 1)
         }

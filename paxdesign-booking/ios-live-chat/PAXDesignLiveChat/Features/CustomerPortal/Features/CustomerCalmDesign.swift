@@ -2,11 +2,11 @@ import SwiftUI
 
 /// Shared calm Apple-style spacing and surfaces for coordinated marketing screens.
 enum CustomerCalmDesign {
-    static let sectionSpacing: CGFloat = 32
-    static let cardSpacing: CGFloat = 24
-    static let cardRadius: CGFloat = 22
-    static let shellRadius: CGFloat = 24
-    static let contentPadding: CGFloat = 20
+    static let sectionSpacing: CGFloat = PAXSpacing.sectionGap
+    static let cardSpacing: CGFloat = PAXSpacing.lg
+    static let cardRadius: CGFloat = 16
+    static let shellRadius: CGFloat = 16
+    static let contentPadding: CGFloat = PAXSpacing.md
 }
 
 struct CustomerCalmTagRow: View {
@@ -47,8 +47,8 @@ struct CustomerCalmSectionIntro: View {
                 CustomerCalmTagRow(tags: tags)
             }
             Text(title)
-                .font(.largeTitle.weight(.bold))
-                .tracking(-0.6)
+                .font(PAXTypography.titleLarge)
+                .tracking(-0.4)
                 .foregroundStyle(theme.textPrimary)
                 .multilineTextAlignment(.leading)
                 .minimumScaleFactor(0.85)
