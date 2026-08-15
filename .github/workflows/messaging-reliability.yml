@@ -52,5 +52,11 @@ jobs:
       - name: Customer platform static tests
         run: php tests/customer-platform/run.php
 
+      - name: CCS AI workflow tests
+        run: php tests/ccs-ai/run.php
+
+      - name: Merge-integration regression guard
+        run: php tests/merge-integration/run.php
+
       - name: Run durability, concurrency and reconnect tests
         run: php tests/messaging/run.php
