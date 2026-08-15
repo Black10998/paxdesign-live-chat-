@@ -262,8 +262,8 @@ jobs:
           grep -Eq 'id="navein-home-critical-css"' /tmp/home-page.html
           grep -Eq "iconfont-css|fonts/iconfont\.css" /tmp/home-page.html
           ! grep -Eq "paxdesign-booking-styles-css[^\"']*media='print' onload" /tmp/home-page.html
-          grep -Eq "Version: 1\.4\.38" /tmp/style.css
-          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.38|apple-cybercrime-support\.js\?ver=1\.4\.38" /tmp/ccs-page.html
+          grep -Eq "Version: 1\.4\.42" /tmp/style.css
+          grep -Eq "apple-cybercrime-support\.css\?ver=1\.4\.42|apple-cybercrime-support\.js\?ver=1\.4\.42" /tmp/ccs-page.html
           grep -Eq "pax-ccs-portal|pax-ccs-intake-form|pax-ccs-country-search|pax-ccs-phone-code" /tmp/ccs-page.html
           grep -Eq "pax-ccs-category-cards|pax-ccs-case-dossier|pax-ccs-resubmit|pax-ccs-evidence-coach" /tmp/ccs-page.html
           grep -Eq "pax-ccs-continue-form" /tmp/ccs-page.html
@@ -279,7 +279,7 @@ jobs:
           grep -Eq "markStaffRead|paxdesign_cybercrime_admin_mark_read" /tmp/cybercrime-admin.js
           grep -Eq "paxCybercrimeAdminApplyUnread|paxdesign_cybercrime_admin_unread" /tmp/cybercrime-admin-notifications.js
           grep -Eq "paxdesign_cybercrime_admin_status|pax-cc-close-ticket|REQUEST_TIMEOUT_MS|markStaffRead" /tmp/cybercrime-admin.js
-          grep -Eq "paxdesign-booking[^\"']*ver=3\.175\.1" /tmp/ccs-page.html
+          grep -Eq "paxdesign-booking[^\"']*ver=3\.176\.0" /tmp/ccs-page.html
           grep -Eq "queueBackgroundRealtimeSync|shouldSkipHistoryFetch|HISTORY_INITIAL" /tmp/chat-script.js
           grep -Eq "isCybercrimeCaseChat|dispatchCcsCaseUpdate" /tmp/chat-script.js
           grep -Eq "renderPortalRecordsSection|renderPortalCybercrimeDetail|cybercrime/reports" /tmp/pax-auth.js
