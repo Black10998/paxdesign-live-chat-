@@ -302,6 +302,12 @@ class PAXdesign_Chat {
         $user_id = absint($user_id);
         $page_context = $this->resolve_page_context($session_id);
         $focus_reference = ($page_context === 'cybercrime-support') ? $this->resolve_page_reference($session_id) : '';
+        if ($page_context === 'cybercrime-support' && $focus_reference === '' && $user_id > 0 && class_exists('PAXdesign_Cybercrime_Tickets')) {
+            $active = PAXdesign_Cybercrime_Tickets::get_active_report_for_user($user_id);
+            if (is_array($active) && !empty($active['reference_id'])) {
+                $focus_reference = (string) $active['reference_id'];
+            }
+        }
 
         if ($user_id > 0 && class_exists('PAXdesign_Chat_Knowledge')) {
             $context = PAXdesign_Chat_Knowledge::build_customer_account_context_block($user_id, $session_id, $focus_reference);
@@ -319,6 +325,51 @@ class PAXdesign_Chat {
         }
 
         return $prompt;
+    }
+
+    /**
+     * Write authenticated CCS chat facts into the customer's real case before the model replies.
+     *
+     * @param string $session_id
+     * @param int    $user_id
+     * @param string $user_message
+     * @return array<string, mixed>|WP_Error|null
+     */
+    private function ingest_ccs_case_from_chat($session_id, $user_id, $user_message) {
+        if (!class_exists('PAXdesign_Cybercrime_AI_Case') || !PAXdesign_Cybercrime_AI_Case::is_ccs_session($session_id)) {
+            return null;
+        }
+        $user_id = absint($user_id);
+        if ($user_id <= 0) {
+            return new WP_Error(
+                'login_required',
+                __('Sign in to use Cybercrime Support AI.', 'paxdesign-booking'),
+                array('status' => 401) + PAXdesign_Cybercrime_AI_Case::login_required_payload()
+            );
+        }
+        return PAXdesign_Cybercrime_AI_Case::ingest_chat_message(
+            $user_id,
+            $session_id,
+            $user_message,
+            $this->resolve_page_reference($session_id)
+        );
+    }
+
+    /**
+     * @param array<string, mixed>|WP_Error|null $report
+     */
+    private function emit_ccs_case_sse($report) {
+        if (is_wp_error($report) || !is_array($report) || empty($report['reference_id'])) {
+            return;
+        }
+        if (!class_exists('PAXdesign_Cybercrime_AI_Case')) {
+            return;
+        }
+        echo 'data: ' . wp_json_encode(array(
+            'type'   => 'ccs_case',
+            'report' => PAXdesign_Cybercrime_AI_Case::public_case_sync_payload($report),
+        )) . "\n\n";
+        $this->flush_sse_output();
     }
 
     /**
@@ -505,11 +556,17 @@ class PAXdesign_Chat {
 
         $session_id = isset($_POST['session_id']) ? sanitize_text_field(wp_unslash($_POST['session_id'])) : '';
         $this->persist_page_context_from_request($session_id);
-        if (get_option('paxdesign_customer_require_login_for_chat', '1') === '1' && get_current_user_id() <= 0) {
-            wp_send_json_error(array(
-                'message' => __('Sign in or create an account to use Live Chat.', 'paxdesign-booking'),
-                'code'    => 'login_required',
-            ), 401);
+        $ccs_chat = class_exists('PAXdesign_Cybercrime_AI_Case')
+            && PAXdesign_Cybercrime_AI_Case::is_ccs_session($session_id);
+        $require_login = get_option('paxdesign_customer_require_login_for_chat', '1') === '1' || $ccs_chat;
+        if ($require_login && get_current_user_id() <= 0) {
+            $payload = $ccs_chat
+                ? PAXdesign_Cybercrime_AI_Case::login_required_payload()
+                : array(
+                    'message' => __('Sign in or create an account to use Live Chat.', 'paxdesign-booking'),
+                    'code'    => 'login_required',
+                );
+            wp_send_json_error($payload, 401);
         }
         if (get_current_user_id() > 0 && class_exists('PAXdesign_Customer_Chat_Bridge')) {
             $live = PAXdesign_Chat_Live::get_instance();
@@ -624,6 +681,11 @@ class PAXdesign_Chat {
     }
 
     private function stream_chat_response($messages, $session_id = '', $assistant_client_id = '') {
+        if (class_exists('PAXdesign_Cybercrime_AI_Case') && PAXdesign_Cybercrime_AI_Case::is_ccs_session($session_id) && get_current_user_id() <= 0) {
+            status_header(401);
+            wp_send_json_error(PAXdesign_Cybercrime_AI_Case::login_required_payload(), 401);
+        }
+
         $validated = $this->validate_messages($messages);
         if (is_wp_error($validated)) {
             status_header(400);
@@ -1120,6 +1182,11 @@ class PAXdesign_Chat {
             return new WP_Error('send_failed', __('Could not save your message.', 'paxdesign-booking'), array('status' => 500));
         }
 
+        $ccs_report = $this->ingest_ccs_case_from_chat($session_id, $user_id, $user_message);
+        if (is_wp_error($ccs_report)) {
+            return $ccs_report;
+        }
+
         $customer_language = $this->resolve_and_persist_customer_language($session_id, $user_message);
 
         if (
@@ -1142,6 +1209,7 @@ class PAXdesign_Chat {
                     : '',
             )) . "\n\n";
             $this->flush_sse_output();
+            $this->emit_ccs_case_sse($ccs_report);
             echo "data: [DONE]\n\n";
             exit;
         }
@@ -1162,6 +1230,7 @@ class PAXdesign_Chat {
             $this->send_sse_headers();
             echo 'data: ' . wp_json_encode(array('type' => 'user', 'message' => $entry)) . "\n\n";
             $this->flush_sse_output();
+            $this->emit_ccs_case_sse($ccs_report);
             $this->proxy_to_worker($worker_url, $validated, $customer_language, $user_id, $session_id);
             exit;
         }
@@ -1174,6 +1243,7 @@ class PAXdesign_Chat {
         $this->send_sse_headers();
         echo 'data: ' . wp_json_encode(array('type' => 'user', 'message' => $entry)) . "\n\n";
         $this->flush_sse_output();
+        $this->emit_ccs_case_sse($ccs_report);
         $this->stream_openai_response(
             $api_key,
             $validated,
@@ -1266,6 +1336,11 @@ class PAXdesign_Chat {
             return new WP_Error('send_failed', __('Your message could not be sent. Please try again.', 'paxdesign-booking'), array('status' => 500));
         }
 
+        $ccs_report = $this->ingest_ccs_case_from_chat($session_id, $user_id, $user_message);
+        if (is_wp_error($ccs_report)) {
+            return $ccs_report;
+        }
+
         if (
             class_exists('PAXdesign_Language_Routing')
             && PAXdesign_Language_Routing::is_live_agent_intent($user_message)
@@ -1307,6 +1382,9 @@ class PAXdesign_Chat {
                 'assistant'  => $formatted_assistant,
                 'notice'     => $notice_text,
                 'handoff'    => true,
+                'ccs_case'   => (class_exists('PAXdesign_Cybercrime_AI_Case') && is_array($ccs_report))
+                    ? PAXdesign_Cybercrime_AI_Case::public_case_sync_payload($ccs_report)
+                    : null,
             );
         }
 
@@ -1363,6 +1441,9 @@ class PAXdesign_Chat {
             'handler'    => $live->get_handler($session_id),
             'message'    => $formatted_user,
             'assistant'  => $formatted_assistant,
+            'ccs_case'   => (class_exists('PAXdesign_Cybercrime_AI_Case') && is_array($ccs_report))
+                ? PAXdesign_Cybercrime_AI_Case::public_case_sync_payload($ccs_report)
+                : null,
         );
     }
 

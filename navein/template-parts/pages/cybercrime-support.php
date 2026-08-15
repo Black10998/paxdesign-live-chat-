@@ -221,6 +221,9 @@ if ( ! function_exists( 'pax_ccs_bilingual' ) ) {
 						<section class="pax-ccs-portal__dossier-block" id="pax-ccs-next-action-block">
 							<h3 class="pax-ccs-portal__subsection-title pax-ccs-portal__subsection-title--compact"><?php pax_ccs_bilingual( $copy['active_report']['next_heading'] ); ?></h3>
 							<p id="pax-ccs-next-action" class="pax-ccs-portal__dossier-text"></p>
+							<button type="button" class="pax-ccs-portal__btn pax-ccs-portal__btn--ghost pax-ccs-portal__btn--compact" id="pax-ccs-continue-form" hidden>
+								<?php pax_ccs_bilingual( $copy['active_report']['continue_form'] ); ?>
+							</button>
 						</section>
 						<section class="pax-ccs-portal__dossier-block">
 							<h3 class="pax-ccs-portal__subsection-title pax-ccs-portal__subsection-title--compact"><?php pax_ccs_bilingual( $copy['active_report']['original_heading'] ); ?></h3>

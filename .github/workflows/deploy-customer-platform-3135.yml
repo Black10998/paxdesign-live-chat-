@@ -40,6 +40,7 @@ jobs:
           php -l paxdesign-booking/includes/class-paxdesign-cybercrime-tickets.php
           php -l paxdesign-booking/includes/class-paxdesign-cybercrime-document-checks.php
           php -l paxdesign-booking/includes/class-paxdesign-cybercrime-admin-reminders.php
+          php -l paxdesign-booking/includes/class-paxdesign-cybercrime-ai-case.php
           php -l paxdesign-booking/includes/class-paxdesign-chat-knowledge.php
 
       - name: Customer platform static tests

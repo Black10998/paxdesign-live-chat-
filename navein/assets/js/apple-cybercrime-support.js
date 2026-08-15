@@ -72,6 +72,7 @@
   var platformsInputEl = document.getElementById('pax-ccs-platforms');
   var evidenceCoachEl = document.getElementById('pax-ccs-evidence-coach');
   var caseDossierEl = document.getElementById('pax-ccs-case-dossier');
+  var continueFormBtn = document.getElementById('pax-ccs-continue-form');
   var originalRequestEl = document.getElementById('pax-ccs-original-request');
   var checksListEl = document.getElementById('pax-ccs-checks-list');
   var nextActionEl = document.getElementById('pax-ccs-next-action');
@@ -922,6 +923,103 @@
     return activeReportText('check_accepted', 'Accepted for review');
   }
 
+  function firstIncompleteStep(report) {
+    var orig = (report && report.original_request) || {};
+    if (!orig.reporter_phone || !orig.reporter_country) {
+      return 1;
+    }
+    if (!orig.category || !orig.incident_at || !orig.platforms || !orig.description) {
+      return 2;
+    }
+    return 3;
+  }
+
+  function prefillFormFromReport(report) {
+    if (!report || !form) {
+      return;
+    }
+    var orig = report.original_request || {};
+    var nameEl = document.getElementById('pax-ccs-full-name');
+    var emailEl = document.getElementById('pax-ccs-email');
+    if (nameEl && orig.reporter_name) {
+      nameEl.value = orig.reporter_name;
+    }
+    if (emailEl && orig.reporter_email) {
+      emailEl.value = orig.reporter_email;
+    }
+    if (orig.category) {
+      setCategory(orig.category);
+    }
+    var dateEl = document.getElementById('pax-ccs-incident-date');
+    var timeEl = document.getElementById('pax-ccs-incident-time');
+    var dateVal = orig.incident_date || (orig.incident_at ? String(orig.incident_at).slice(0, 10) : '');
+    if (dateEl && dateVal) {
+      dateEl.value = dateVal;
+    }
+    if (timeEl && orig.incident_time) {
+      timeEl.value = orig.incident_time;
+    }
+    if (platformsInputEl && orig.platforms) {
+      platformsInputEl.value = orig.platforms;
+      syncPlatformChips();
+    }
+    var descEl = document.getElementById('pax-ccs-description');
+    if (descEl && orig.description) {
+      descEl.value = orig.description;
+    }
+    var lossEl = document.getElementById('pax-ccs-financial-loss');
+    if (lossEl && orig.financial_loss) {
+      lossEl.value = orig.financial_loss;
+    }
+    var urgencyEl = document.getElementById('pax-ccs-urgency');
+    if (urgencyEl && orig.urgency) {
+      urgencyEl.value = orig.urgency;
+    }
+    var chatSession = document.getElementById('pax-ccs-chat-session');
+    if (!chatSession) {
+      chatSession = document.createElement('input');
+      chatSession.type = 'hidden';
+      chatSession.name = 'chat_session_id';
+      chatSession.id = 'pax-ccs-chat-session';
+      form.appendChild(chatSession);
+    }
+    if (window.PAXdesignChat && report.chat_session_id) {
+      chatSession.value = report.chat_session_id;
+    }
+  }
+
+  function continueDraftOnPage() {
+    if (!activeReport || !(activeReport.is_draft || activeReport.status === 'draft')) {
+      return;
+    }
+    var hasId = (activeReport.attachments || []).some(function (file) {
+      return file && file.field === 'identity_document';
+    });
+    if (identityDocEl) {
+      identityDocEl.required = !hasId;
+    }
+    prefillFormFromReport(activeReport);
+    setPhase('form');
+    showStep(firstIncompleteStep(activeReport));
+  }
+
+  function onCcsCaseUpdated(report) {
+    if (!report || !report.reference_id || !isLoggedIn()) {
+      return;
+    }
+    fetchActiveReport(report.reference_id).then(function (full) {
+      var next = full || report;
+      if (!next || !next.reference_id) {
+        return;
+      }
+      if (phase === 'active-report' && activeReport && activeReport.reference_id === next.reference_id) {
+        applyReportRefresh(next);
+        return;
+      }
+      showActiveReport(next, false);
+    });
+  }
+
   function renderCaseDossier(report) {
     if (!caseDossierEl || !report) {
       return;
@@ -929,6 +1027,9 @@
     caseDossierEl.hidden = false;
     if (nextActionEl) {
       nextActionEl.textContent = report.next_action || '';
+    }
+    if (continueFormBtn) {
+      continueFormBtn.hidden = !(report.is_draft || report.status === 'draft');
     }
     if (originalRequestEl) {
       var orig = report.original_request || {};
@@ -1795,6 +1896,17 @@
         });
     });
   }
+
+  if (continueFormBtn) {
+    continueFormBtn.addEventListener('click', function () {
+      continueDraftOnPage();
+    });
+  }
+
+  window.addEventListener('pax-ccs-case-updated', function (event) {
+    var report = event && event.detail ? event.detail.report : null;
+    onCcsCaseUpdated(report);
+  });
 
   if (activeChatBtn) {
     activeChatBtn.addEventListener('click', function () {

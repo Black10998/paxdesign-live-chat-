@@ -693,10 +693,15 @@ class PAXdesign_Customer_Chat_Bridge {
             $handler = $live->get_handler($session_id);
         }
         if (!$live->is_human_queue($session_id)) {
-            return new WP_Error('use_ai_stream', __('Attachments are available during human support.', 'paxdesign-booking'), array('status' => 409));
+            $ccs_session = class_exists('PAXdesign_Cybercrime_AI_Case')
+                && PAXdesign_Cybercrime_AI_Case::is_ccs_session($session_id);
+            if (!$ccs_session) {
+                return new WP_Error('use_ai_stream', __('Attachments are available during human support.', 'paxdesign-booking'), array('status' => 409));
+            }
         }
 
         $message_extra = array();
+        $upload = null;
         if (!empty($extra['client_msg_id'])) {
             $message_extra['client_msg_id'] = sanitize_text_field($extra['client_msg_id']);
         }
@@ -746,6 +751,9 @@ class PAXdesign_Customer_Chat_Bridge {
         }
         if (empty($entry['_deduplicated']) && class_exists('PAXdesign_Live_Chat_PWA')) {
             PAXdesign_Live_Chat_PWA::notify_new_customer_message($session_id, $caption !== '' ? $caption : '[' . $kind . ']');
+        }
+        if (!empty($upload) && is_array($upload) && class_exists('PAXdesign_Cybercrime_AI_Case') && PAXdesign_Cybercrime_AI_Case::is_ccs_session($session_id)) {
+            PAXdesign_Cybercrime_AI_Case::attach_chat_upload($user_id, $session_id, $upload, $kind, $caption);
         }
         $payload = array(
             'message'    => $entry,

@@ -103,7 +103,7 @@ return array(
 		'closed_note' => 'This report is closed. New messages cannot be added.',
 		'chat' => 'AI assistant',
 		'ai_heading' => 'AI assistant — questions & guidance',
-		'ai_note' => 'Separate chat for questions and explanations. Not saved as official ticket replies.',
+		'ai_note' => 'AI chat is another interface for this same CCS case. Facts you share there are saved on this page.',
 		'refresh' => 'Refresh',
 		'closed_title' => 'Closed report (read-only)',
 		'read_only' => 'This report is closed. You can view the full history only.',
@@ -112,6 +112,7 @@ return array(
 		'checks_heading' => 'Document checks (preliminary)',
 		'checks_disclaimer' => 'Automated quality checks only — not legal verification. Uncertain items are reviewed by the team.',
 		'next_heading' => 'What is needed now',
+		'continue_form' => 'Continue on this page',
 		'resubmit_heading' => 'Correct or add files on this same case',
 		'resubmit_hint' => 'Your reference number does not change. Upload only the files that are required.',
 		'resubmit_identity' => 'Replace identity document',
@@ -291,6 +292,9 @@ return array(
 		'submit'   => 'Could not submit the report. Please try again.',
 	),
 	'status_badges' => array(
+		'collecting' => array(
+			'label' => 'Collecting information',
+		),
 		'under_review' => array(
 			'label' => 'Under Review',
 		),

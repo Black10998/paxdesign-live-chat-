@@ -14,6 +14,7 @@ class PAXdesign_Cybercrime_Tickets {
 
     /** @var list<string> Canonical workflow statuses (admin + database). */
     private static $workflow_statuses = array(
+        'draft',
         'submitted',
         'in_review',
         'waiting_for_customer',
@@ -125,6 +126,10 @@ class PAXdesign_Cybercrime_Tickets {
      */
     public static function workflow_steps() {
         return array(
+            'draft' => array(
+                'label'       => __('Collecting', 'paxdesign-booking'),
+                'description' => __('Information is being collected on this case', 'paxdesign-booking'),
+            ),
             'submitted' => array(
                 'label'       => __('New', 'paxdesign-booking'),
                 'description' => __('New report received', 'paxdesign-booking'),
@@ -195,6 +200,8 @@ class PAXdesign_Cybercrime_Tickets {
     public static function customer_status_key($status) {
         $status = self::normalize_workflow_status($status);
         switch ($status) {
+            case 'draft':
+                return 'collecting';
             case 'waiting_for_customer':
                 return 'waiting_for_customer';
             case 'resolved':
@@ -436,11 +443,6 @@ class PAXdesign_Cybercrime_Tickets {
             ? PAXdesign_Cybercrime_Document_Checks::customer_view($checks)
             : array();
 
-        $next_action = (string) ($guided['next_action'] ?? $checks['next_action'] ?? '');
-        if ($next_action === '') {
-            $next_action = self::default_next_action($workflow_status, $customer_checks);
-        }
-
         $out['original_request'] = array(
             'reporter_name'       => (string) ($row['reporter_name'] ?? ''),
             'reporter_email'      => (string) ($row['reporter_email'] ?? ''),
@@ -457,11 +459,20 @@ class PAXdesign_Cybercrime_Tickets {
             'financial_loss'      => (string) ($payload['financial_loss'] ?? ''),
             'financial_currency'  => (string) ($payload['financial_currency'] ?? 'EUR'),
         );
+
+        $next_action = (string) ($guided['next_action'] ?? $checks['next_action'] ?? '');
+        if ($workflow_status === 'draft') {
+            $next_action = self::draft_next_action($out['original_request'], $attachments);
+        } elseif ($next_action === '') {
+            $next_action = self::default_next_action($workflow_status, $customer_checks);
+        }
         $out['checks'] = $timeline_audience === 'admin' ? $checks : $customer_checks;
         $out['needs_human_review'] = !empty($row['needs_human_review']) || !empty($checks['needs_human_review']);
         $out['next_action'] = $next_action;
         $out['correction_required'] = array_values((array) ($customer_checks['customer_corrections'] ?? array()));
         $out['can_resubmit'] = self::is_active_status($raw_status);
+        $out['is_draft'] = ($raw_status === 'draft' || $workflow_status === 'draft');
+        $out['missing_fields'] = self::missing_case_fields($out, $row, $payload);
         $out['case_summary'] = self::build_case_summary_text($out);
 
         if ($with_timeline) {
@@ -499,6 +510,8 @@ class PAXdesign_Cybercrime_Tickets {
             return __('Replace the rejected files on this same case, then wait for administrator review.', 'paxdesign-booking');
         }
         switch ($status) {
+            case 'draft':
+                return __('Share what happened in chat or continue on this page. Facts are saved to this same case.', 'paxdesign-booking');
             case 'waiting_for_customer':
                 return __('The team asked for more information. Reply or upload the requested files on this same reference.', 'paxdesign-booking');
             case 'in_review':
@@ -529,6 +542,74 @@ class PAXdesign_Cybercrime_Tickets {
             $text .= '. ' . $next;
         }
         return $text;
+    }
+
+    /**
+     * @param array<string, mixed>               $original
+     * @param array<int, array<string, mixed>>   $attachments
+     * @return string
+     */
+    public static function draft_next_action($original, $attachments = array()) {
+        $missing = self::missing_case_fields(array('original_request' => $original, 'attachments' => $attachments), array(), array());
+        if (empty($missing)) {
+            return __('Review the saved details on this page, then submit the case or add evidence.', 'paxdesign-booking');
+        }
+        return sprintf(
+            /* translators: %s: comma-separated missing fields */
+            __('Still needed on this same case: %s.', 'paxdesign-booking'),
+            implode(', ', $missing)
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @param array<string, mixed> $row
+     * @param array<string, mixed> $payload
+     * @return list<string>
+     */
+    public static function missing_case_fields($report, $row = array(), $payload = array()) {
+        $original = is_array($report['original_request'] ?? null) ? $report['original_request'] : array();
+        $attachments = is_array($report['attachments'] ?? null) ? $report['attachments'] : array();
+        if (empty($attachments) && is_array($row)) {
+            $decoded = json_decode((string) ($row['attachments'] ?? ''), true);
+            if (is_array($decoded)) {
+                $attachments = $decoded;
+            }
+        }
+        $missing = array();
+        if (trim((string) ($original['category'] ?? $report['category'] ?? '')) === '') {
+            $missing[] = __('incident type', 'paxdesign-booking');
+        }
+        if (trim((string) ($original['incident_at'] ?? $original['incident_date'] ?? $report['incident_at'] ?? '')) === '') {
+            $missing[] = __('incident date', 'paxdesign-booking');
+        }
+        if (trim((string) ($original['platforms'] ?? $report['platforms'] ?? '')) === '') {
+            $missing[] = __('affected platforms', 'paxdesign-booking');
+        }
+        if (strlen(trim((string) ($original['description'] ?? $report['description'] ?? ''))) < 20) {
+            $missing[] = __('incident description', 'paxdesign-booking');
+        }
+        $has_id = false;
+        $has_evidence = false;
+        foreach ($attachments as $file) {
+            if (!is_array($file)) {
+                continue;
+            }
+            $field = sanitize_key((string) ($file['field'] ?? ''));
+            if ($field === 'identity_document') {
+                $has_id = true;
+            } else {
+                $has_evidence = true;
+            }
+        }
+        if (!$has_id) {
+            $missing[] = __('identity document', 'paxdesign-booking');
+        }
+        if (!$has_evidence) {
+            $missing[] = __('evidence files', 'paxdesign-booking');
+        }
+        unset($payload);
+        return $missing;
     }
 
     /**
@@ -1365,6 +1446,8 @@ class PAXdesign_Cybercrime_Tickets {
             '- Last update: ' . ($detail['updated_at'] ?? ''),
             '- Reason/summary: ' . wp_html_excerpt((string) ($detail['description'] ?? ''), 400, '…'),
             '- Next action for the customer: ' . (string) ($detail['next_action'] ?? ''),
+            '- Draft / collecting: ' . (!empty($detail['is_draft']) ? 'yes — not yet submitted for administrator review' : 'no'),
+            '- Missing fields (ask ONLY these if still empty): ' . (empty($detail['missing_fields']) ? 'none' : implode(', ', (array) $detail['missing_fields'])),
             '- Needs administrator review: ' . (!empty($detail['needs_human_review']) ? 'yes' : 'no'),
             '- Stay on this same reference for the entire workflow: submission → document checks → corrections → administrator review → status changes → customer communication → final outcome.',
             '- Never ask the customer to restart or re-explain facts already listed here.',

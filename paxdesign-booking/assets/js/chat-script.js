@@ -846,7 +846,26 @@
   }
 
   function isLoginGateEnabled() {
+    if (isCybercrimeCaseChat()) return true;
     return !!(config && config.requireLogin);
+  }
+
+  function isCybercrimeCaseChat() {
+    if (window.PAXdesignPageContext && window.PAXdesignPageContext.intent === 'cybercrime-support') {
+      return true;
+    }
+    try {
+      return window.location.pathname.indexOf('cybercrime-support') !== -1;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function dispatchCcsCaseUpdate(report) {
+    if (!report || !report.reference_id) return;
+    try {
+      window.dispatchEvent(new CustomEvent('pax-ccs-case-updated', { detail: { report: report } }));
+    } catch (e) {}
   }
 
   function getAuthUserId() {
@@ -1333,6 +1352,12 @@
 
   function updateAuthGateUi() {
     if (!authGateEl) return;
+    if (isCybercrimeCaseChat()) {
+      var titleEl = root.querySelector('#paxdesignChatAuthGateTitle');
+      var subEl = root.querySelector('#paxdesignChatAuthGateSubtitle');
+      if (titleEl) titleEl.textContent = 'Sign in to use Cybercrime Support AI';
+      if (subEl) subEl.textContent = 'You must be signed in so we can save information to your own case. Guests cannot start this chat.';
+    }
     var needsVerify = isLoginGateEnabled() && isLoggedIn() && !isVerifiedAccount();
     if (authGateVerifyEl) authGateVerifyEl.hidden = !needsVerify;
     if (needsVerify) {
@@ -4845,6 +4870,10 @@
   function handleAuthGateResponse(json) {
     if (!isLoginRequiredResponse(json)) return false;
     showAuthGate();
+    var loginUrl = json && json.data && json.data.login_url;
+    if (isCybercrimeCaseChat() && loginUrl && !(window.PDXAuth && typeof window.PDXAuth.mountInlineAuth === 'function')) {
+      window.location.href = loginUrl;
+    }
     return true;
   }
 
@@ -4857,6 +4886,9 @@
     }
     if (data && data.handler) {
       applyHandlerState(data.handler, data.admin_name || '');
+    }
+    if (data && data.ccs_case) {
+      dispatchCcsCaseUpdate(data.ccs_case);
     }
     if (data && data.assistant) {
       var assistantPayload = data.assistant;
@@ -5169,6 +5201,8 @@
                   flushStreamBubble();
                 }
               }
+            } else if (data.type === 'ccs_case' && data.report) {
+              dispatchCcsCaseUpdate(data.report);
             } else if (data.type === 'handoff') {
               if (data.handler) applyHandlerState(data.handler, '');
               if (data.assistant) {
@@ -5288,6 +5322,11 @@
     }
     if (opts.referenceId) {
       window.PAXdesignPageContext.referenceId = opts.referenceId;
+    }
+    initAuthGate();
+    updateAuthGateUi();
+    if (!canUseChat()) {
+      showAuthGate();
     }
     setEntryChoice('ai');
     if (window.PAXdesignBooking && typeof window.PAXdesignBooking.open === 'function') {

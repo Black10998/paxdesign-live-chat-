@@ -295,8 +295,8 @@ return array(
 			'de' => 'KI-Assistent — Fragen & Orientierung',
 		),
 		'ai_note' => array(
-			'ar' => 'محادثة منفصلة للأسئلة والشرح. لا تُسجّل كردود رسمية على البلاغ.',
-			'de' => 'Separater Chat für Fragen und Erklärungen. Wird nicht als offizielle Ticket-Antwort gespeichert.',
+			'ar' => 'المحادثة الذكية واجهة لنفس بلاغ CCS. المعلومات التي تشاركها تُحفظ في هذه الصفحة.',
+			'de' => 'Der KI-Chat ist eine zweite Oberfläche desselben CCS-Falls. Angaben aus dem Chat erscheinen hier.',
 		),
 		'refresh' => array(
 			'ar' => 'تحديث',
@@ -329,6 +329,10 @@ return array(
 		'next_heading' => array(
 			'ar' => 'المطلوب الآن',
 			'de' => 'Als Nächstes',
+		),
+		'continue_form' => array(
+			'ar' => 'متابعة على هذه الصفحة',
+			'de' => 'Auf dieser Seite fortfahren',
 		),
 		'resubmit_heading' => array(
 			'ar' => 'تصحيح أو إرفاق ملفات على نفس البلاغ',
@@ -677,12 +681,20 @@ return array(
 		),
 	),
 	'status_badge_map' => array(
+		'collecting'           => array( 'draft' ),
 		'under_review'         => array( 'submitted', 'in_review' ),
 		'waiting_for_customer' => array( 'waiting_for_customer', 'needs_info' ),
 		'resolved'             => array( 'resolved' ),
 		'closed'               => array( 'closed' ),
 	),
 	'status_badges' => array(
+		'collecting' => array(
+			'emoji' => '🟡',
+			'label' => array(
+				'ar' => 'جارٍ جمع المعلومات',
+				'de' => 'Angaben werden erfasst',
+			),
+		),
 		'under_review' => array(
 			'emoji' => '🟠',
 			'label' => array(
