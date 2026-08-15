@@ -624,27 +624,115 @@ class PAXdesign_Chat {
     }
 
     /**
-     * Reuse the latest user row when the same customer text is processed twice
-     * (mobile send + stream, desktop + phone, or a retry).
+     * Assistant that immediately follows this customer message. Null if a newer
+     * customer message came first (this turn is no longer the latest).
      *
-     * @param string               $session_id
-     * @param string               $user_message
+     * @param string                    $session_id
+     * @param array<string, mixed>|null $user_entry
+     * @param array<int, array<string, mixed>>|null $recent
+     * @return array<string, mixed>|null
+     */
+    private function assistant_following_user($session_id, $user_entry, $recent = null) {
+        if (!is_array($user_entry)) {
+            return null;
+        }
+        $user_seq = absint($user_entry['id'] ?? $user_entry['seq'] ?? 0);
+        if ($user_seq <= 0) {
+            return null;
+        }
+        if (!is_array($recent)) {
+            if (!class_exists('PAXdesign_Message_Store')) {
+                return null;
+            }
+            $recent = PAXdesign_Message_Store::latest_messages($session_id, 24, 'customer');
+        }
+        if (!is_array($recent)) {
+            return null;
+        }
+        foreach ($recent as $msg) {
+            if (!is_array($msg)) {
+                continue;
+            }
+            $seq = absint($msg['id'] ?? $msg['seq'] ?? 0);
+            if ($seq <= $user_seq) {
+                continue;
+            }
+            $role = (string) ($msg['role'] ?? '');
+            if ($role === 'user') {
+                return null;
+            }
+            if ($role === 'assistant') {
+                return $msg;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * @param string                    $session_id
+     * @param array<string, mixed>|null $user_entry
+     * @return string lock name when acquired, otherwise empty
+     */
+    private function lock_customer_turn($session_id, $user_entry) {
+        if (!class_exists('PAXdesign_DB')) {
+            return '';
+        }
+        $id = is_array($user_entry) ? absint($user_entry['id'] ?? 0) : 0;
+        $cid = is_array($user_entry) ? sanitize_text_field((string) ($user_entry['client_msg_id'] ?? '')) : '';
+        $key = $id > 0 ? (string) $id : $cid;
+        if ($key === '') {
+            return '';
+        }
+        $name = 'pax_turn_' . md5(sanitize_text_field((string) $session_id) . ':' . $key);
+        $got = PAXdesign_DB::acquire_named_lock($name, 20);
+        return $got === 1 ? $name : '';
+    }
+
+    /**
+     * @param string $name
+     */
+    private function unlock_customer_turn($name) {
+        $name = sanitize_text_field((string) $name);
+        if ($name !== '' && class_exists('PAXdesign_DB')) {
+            PAXdesign_DB::release_named_lock($name);
+        }
+    }
+
+    /**
+     * Reuse a stored customer row instead of inserting a second turn.
+     * Looks up client_msg_id first so a stale retry of an older message cannot
+     * be appended after a newer phone/desktop message.
+     *
+     * @param string $session_id
+     * @param string $user_message
+     * @param string $client_msg_id
      * @return array{user:array<string,mixed>,assistant:?array<string,mixed>}|null
      */
-    private function matching_user_turn($session_id, $user_message) {
+    private function matching_user_turn($session_id, $user_message, $client_msg_id = '') {
         if (!class_exists('PAXdesign_Message_Store')) {
             return null;
         }
         $user_message = trim((string) $user_message);
-        if ($session_id === '' || $user_message === '') {
+        $client_msg_id = sanitize_text_field((string) $client_msg_id);
+        if ($session_id === '' || ($user_message === '' && $client_msg_id === '')) {
             return null;
         }
-        $recent = PAXdesign_Message_Store::latest_messages($session_id, 16, 'customer');
+        if ($client_msg_id !== '') {
+            $by_id = PAXdesign_Message_Store::find_by_client_id($session_id, $client_msg_id);
+            if (is_array($by_id) && (($by_id['role'] ?? '') === 'user')) {
+                return array(
+                    'user'      => $by_id,
+                    'assistant' => $this->assistant_following_user($session_id, $by_id),
+                );
+            }
+        }
+        $recent = PAXdesign_Message_Store::latest_messages($session_id, 24, 'customer');
         if (!is_array($recent) || empty($recent)) {
             return null;
         }
         $last_user = null;
         $assistant_after = null;
+        $answered_same_text = null;
         foreach ($recent as $msg) {
             if (!is_array($msg)) {
                 continue;
@@ -655,15 +743,24 @@ class PAXdesign_Chat {
                 $assistant_after = null;
             } elseif ($role === 'assistant' && is_array($last_user)) {
                 $assistant_after = $msg;
+                if (trim((string) ($last_user['content'] ?? '')) === $user_message) {
+                    $answered_same_text = array(
+                        'user'      => $last_user,
+                        'assistant' => $msg,
+                    );
+                }
             }
         }
-        if (!is_array($last_user) || trim((string) ($last_user['content'] ?? '')) !== $user_message) {
-            return null;
+        if (is_array($last_user) && trim((string) ($last_user['content'] ?? '')) === $user_message) {
+            return array(
+                'user'      => $last_user,
+                'assistant' => is_array($assistant_after) ? $assistant_after : null,
+            );
         }
-        return array(
-            'user'      => $last_user,
-            'assistant' => is_array($assistant_after) ? $assistant_after : null,
-        );
+        if (is_array($answered_same_text)) {
+            return $answered_same_text;
+        }
+        return null;
     }
 
     /**
@@ -671,22 +768,47 @@ class PAXdesign_Chat {
      * @param string              $session_id
      * @param string              $user_message
      * @param array<string, mixed> $extra
-     * @return array{entry:array<string,mixed>|WP_Error|null,assistant:?array<string,mixed>}
+     * @return array{entry:array<string,mixed>|WP_Error|null,assistant:?array<string,mixed>,lock:string}
      */
     private function resolve_user_turn($live, $session_id, $user_message, $extra) {
-        $match = $this->matching_user_turn($session_id, $user_message);
+        $client_msg_id = sanitize_text_field((string) ($extra['client_msg_id'] ?? ''));
+        $match = $this->matching_user_turn($session_id, $user_message, $client_msg_id);
         if (is_array($match) && !empty($match['user'])) {
             $user = $match['user'];
             $user['_deduplicated'] = true;
+            $assistant = is_array($match['assistant'] ?? null) ? $match['assistant'] : null;
+            $lock = '';
+            if (empty($assistant['id'])) {
+                $lock = $this->lock_customer_turn($session_id, $user);
+                $again = $this->assistant_following_user($session_id, $user);
+                if (is_array($again) && !empty($again['id'])) {
+                    $assistant = $again;
+                    $this->unlock_customer_turn($lock);
+                    $lock = '';
+                }
+            }
             return array(
                 'entry'     => $user,
-                'assistant' => is_array($match['assistant'] ?? null) ? $match['assistant'] : null,
+                'assistant' => $assistant,
+                'lock'      => $lock,
             );
         }
         $entry = $live->append_message($session_id, 'user', $user_message, $extra);
+        $lock = '';
+        $assistant = null;
+        if (is_array($entry) && !empty($entry['id'])) {
+            $lock = $this->lock_customer_turn($session_id, $entry);
+            $again = $this->assistant_following_user($session_id, $entry);
+            if (is_array($again) && !empty($again['id'])) {
+                $assistant = $again;
+                $this->unlock_customer_turn($lock);
+                $lock = '';
+            }
+        }
         return array(
             'entry'     => $entry,
-            'assistant' => null,
+            'assistant' => $assistant,
+            'lock'      => $lock,
         );
     }
 
@@ -1715,6 +1837,8 @@ class PAXdesign_Chat {
 
         $turn = $this->resolve_user_turn($live, $session_id, $user_message, $extra);
         $entry = $turn['entry'];
+        $lock = (string) ($turn['lock'] ?? '');
+        try {
         if (is_wp_error($entry)) {
             return $entry;
         }
@@ -1816,6 +1940,9 @@ class PAXdesign_Chat {
             $user_id
         );
         exit;
+        } finally {
+            $this->unlock_customer_turn($lock);
+        }
     }
 
     /**
@@ -1893,6 +2020,8 @@ class PAXdesign_Chat {
 
         $turn = $this->resolve_user_turn($live, $session_id, $user_message, $extra);
         $entry = $turn['entry'];
+        $lock = (string) ($turn['lock'] ?? '');
+        try {
         if (is_wp_error($entry)) {
             return $entry;
         }
@@ -2020,10 +2149,15 @@ class PAXdesign_Chat {
             return $completion;
         }
 
-        $assistant_extra = array('client_msg_id' => sanitize_text_field((string) $assistant_client_id));
-        $assistant = $live->append_message($session_id, 'assistant', $completion['content'], $assistant_extra);
-        if (is_wp_error($assistant)) {
-            return $assistant;
+        $already = $this->assistant_following_user($session_id, is_array($entry) ? $entry : null);
+        if (is_array($already) && !empty($already['id'])) {
+            $assistant = $already;
+        } else {
+            $assistant_extra = array('client_msg_id' => sanitize_text_field((string) $assistant_client_id));
+            $assistant = $live->append_message($session_id, 'assistant', $completion['content'], $assistant_extra);
+            if (is_wp_error($assistant)) {
+                return $assistant;
+            }
         }
 
         $row = $live->get_session_row($session_id);
@@ -2060,6 +2194,9 @@ class PAXdesign_Chat {
                 ? PAXdesign_Cybercrime_AI_Case::public_case_sync_payload($ccs_report)
                 : null,
         );
+        } finally {
+            $this->unlock_customer_turn($lock);
+        }
     }
 
     /**

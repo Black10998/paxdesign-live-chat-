@@ -395,7 +395,7 @@ cx_assert_true(strpos($ccs_widget, 'ccs_operation') !== false, 'Chat must render
 cx_assert_true(strpos($ccs_widget, 'upsertCcsOperationMessage') !== false, 'Chat must keep the same processing message across follow-ups');
 
 $plugin_bootstrap = file_get_contents($ccs_root . '/paxdesign-booking.php');
-cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.12')") !== false, 'Plugin version must be 3.175.12');
+cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.13')") !== false, 'Plugin version must be 3.175.13');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-i18n.php') !== false, 'Plugin must load CCS localization');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-document-checks.php') !== false, 'Plugin must load document checks');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-case.php') !== false, 'Plugin must load AI case sync');
@@ -558,16 +558,24 @@ cx_assert_true(strpos($chat_src, 'reset_ccs_conversation_epoch') !== false, 'A n
 cx_assert_true(strpos($chat_src, 'explicitly started a NEW Cybercrime Support case') !== false, 'The model prompt for a new case must forbid reusing the previous CCS reference');
 cx_assert_true(strpos($chat_src, 'get_reference_for_session($session_id)') !== false, 'Stale page_reference must not override the session-bound CCS case');
 cx_assert_true(strpos($chat_src, 'function matching_user_turn') !== false, 'The same customer text must not be processed as a second turn');
+cx_assert_true(strpos($chat_src, 'function assistant_following_user') !== false, 'An assistant reply must be bound to the customer message it answers');
+cx_assert_true(strpos($chat_src, 'find_by_client_id($session_id, $client_msg_id)') !== false, 'Retries must look up the original customer message by client_msg_id');
+cx_assert_true(strpos($chat_src, 'function lock_customer_turn') !== false, 'Mobile and desktop must not generate two replies for one customer turn');
 cx_assert_true(strpos($chat_src, 'function assistant_client_id_for_turn') !== false, 'Each customer turn must have a stable assistant message id');
 cx_assert_true(strpos($chat_src, "isset(\$_POST['message'])") !== false, 'The latest posted customer message must be processed, not a stale history item');
 cx_assert_true(strpos($chat_src, "'text' => \$reply") === false, 'Skip-LLM CCS replies must not also emit a duplicate streaming text event');
 cx_assert_true(strpos($ops_src, '$client_msg_id = \'\'') !== false, 'Assistant CCS replies must persist with a client_msg_id');
 cx_assert_true(strpos($ops_src, 'find_by_client_id($session_id, $client_msg_id)') !== false, 'A retry with the same assistant client_msg_id must not insert a second row');
+cx_assert_true(strpos($ops_src, 'function assistant_for_latest_user_turn') !== false, 'A second persist for the same latest customer turn must reuse the existing assistant row');
+cx_assert_true(strpos($ops_src, 'trim((string) ($msg[\'content\'] ?? \'\')) === $content') === false, 'Identical assistant text from a previous turn must not be reused as the reply to a new customer message');
 $wf_src = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-ai-workflow.php');
 cx_assert_true(strpos($wf_src, "\$state['fresh_start'] = false") !== false, 'Follow-up CCS turns must not replay the new-case opening copy');
 cx_assert_true(strpos($ccs_widget, "formData.append('message', text)") !== false, 'Website chat must send the latest customer message explicitly');
 cx_assert_true(strpos($ccs_widget, "formData.append('client_msg_id', clientMsgId)") !== false, 'Website chat must send a unique customer message id');
 cx_assert_true(strpos($ccs_widget, 'if (persistedAssistantMessage)') !== false, 'Streaming text events must not redraw an assistant reply that was already finalized');
+cx_assert_true(strpos($ccs_widget, 'var alreadyShown = isDuplicateMessage(data.message)') !== false, 'A reused previous assistant payload must not create another bubble');
+cx_assert_true(strpos($ccs_widget, 'function adoptServerMessageIdentity') !== false, 'Poll and WebSocket must adopt the server id instead of drawing a second copy');
+cx_assert_true(strpos($ccs_widget, 'pollSeq = Math.max(pollSeq, localMsgId)') === false, 'Optimistic local ids must not skip the latest server messages during poll');
 $prompt_state = PAXdesign_Cybercrime_AI_Operations::prompt_state_block(array(
     'payload' => json_encode(array(
         'ai_workflow' => array('step' => 'review'),

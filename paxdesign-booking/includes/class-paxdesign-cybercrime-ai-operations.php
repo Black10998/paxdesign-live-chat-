@@ -435,19 +435,10 @@ class PAXdesign_Cybercrime_AI_Operations {
             }
         }
         if (class_exists('PAXdesign_Message_Store')) {
-            $recent = PAXdesign_Message_Store::latest_messages($session_id, 8, 'customer');
-            if (is_array($recent)) {
-                for ($i = count($recent) - 1; $i >= 0; $i--) {
-                    $msg = $recent[$i];
-                    if (!is_array($msg) || (($msg['role'] ?? '') !== 'assistant')) {
-                        continue;
-                    }
-                    if (trim((string) ($msg['content'] ?? '')) === $content) {
-                        $msg['_deduplicated'] = true;
-                        return $msg;
-                    }
-                    break;
-                }
+            $already = self::assistant_for_latest_user_turn($session_id);
+            if (is_array($already) && !empty($already['id'])) {
+                $already['_deduplicated'] = true;
+                return $already;
             }
         }
         $extra = array();
@@ -463,6 +454,40 @@ class PAXdesign_Cybercrime_AI_Operations {
         }
         $saved = PAXdesign_Chat_Live::get_instance()->append_message($session_id, 'assistant', $content, $extra);
         return is_array($saved) ? $saved : null;
+    }
+
+    /**
+     * One assistant row per latest customer turn. A second persist (mobile +
+     * website, or a retry) must reuse that row instead of inserting another.
+     *
+     * @param string $session_id
+     * @return array<string, mixed>|null
+     */
+    public static function assistant_for_latest_user_turn($session_id) {
+        $session_id = sanitize_text_field((string) $session_id);
+        if ($session_id === '' || !class_exists('PAXdesign_Message_Store')) {
+            return null;
+        }
+        $recent = PAXdesign_Message_Store::latest_messages($session_id, 24, 'customer');
+        if (!is_array($recent) || empty($recent)) {
+            return null;
+        }
+        $last_user_seq = 0;
+        $assistant_after = null;
+        foreach ($recent as $msg) {
+            if (!is_array($msg)) {
+                continue;
+            }
+            $role = (string) ($msg['role'] ?? '');
+            $seq = absint($msg['id'] ?? $msg['seq'] ?? 0);
+            if ($role === 'user') {
+                $last_user_seq = $seq;
+                $assistant_after = null;
+            } elseif ($role === 'assistant' && $last_user_seq > 0) {
+                $assistant_after = $msg;
+            }
+        }
+        return is_array($assistant_after) && !empty($assistant_after['id']) ? $assistant_after : null;
     }
 
     /**

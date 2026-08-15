@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.175.12
+ * Version: 3.175.13
  */
 (function () {
   'use strict';
@@ -2475,13 +2475,12 @@
       localMsgId = maxId;
     }
     if (typeof serverSeq === 'number') {
-      pollSeq = Math.max(pollSeq, serverSeq, localMsgId);
+      pollSeq = Math.max(pollSeq, serverSeq);
     }
   }
 
   function nextLocalId() {
     localMsgId += 1;
-    pollSeq = Math.max(pollSeq, localMsgId);
     return localMsgId;
   }
 
@@ -2646,8 +2645,16 @@
     var dedupKey = messageDedupKey(msg);
     if (dedupKey && domClientMsgIds[dedupKey]) return true;
     if (msg.role === 'system' && msg.content === 'Chat-Session gestartet.') return true;
+    var text = messageText(msg.content || msg);
+    if (msg.role === 'user' && text) {
+      for (var u = messages.length - 1; u >= 0; u--) {
+        if (messages[u] && messages[u].role === 'user') {
+          if (messageText(messages[u].content) === text) return true;
+          break;
+        }
+      }
+    }
     if (msg.role === 'assistant' || msg.role === 'admin') {
-      var text = messageText(msg.content || msg);
       if (text) {
         var lastAsst = null;
         for (var i = messages.length - 1; i >= 0; i--) {
@@ -2669,14 +2676,44 @@
     return false;
   }
 
-  function rememberMessageIdentity(msg) {
+  function rememberMessageIdentity(msg, opts) {
     if (!msg) return;
+    opts = opts || {};
     if (msg.id) {
       domMsgIds[msg.id] = true;
-      seenMsgId(msg.id);
+      if (!opts.optimistic) seenMsgId(msg.id);
     }
     var dedupKey = messageDedupKey(msg);
     if (dedupKey) domClientMsgIds[dedupKey] = msg.id || true;
+  }
+
+  function adoptServerMessageIdentity(msg) {
+    if (!msg || !msg.id) return;
+    rememberMessageIdentity(msg);
+    var dedupKey = messageDedupKey(msg);
+    var local = null;
+    if (dedupKey) {
+      local = messages.find(function (m) { return m.client_msg_id === dedupKey; });
+    }
+    if (!local && (msg.role === 'user' || msg.role === 'assistant')) {
+      var incomingText = messageText(msg.content || msg);
+      for (var i = messages.length - 1; i >= 0; i--) {
+        if (messages[i] && messages[i].role === msg.role && messageText(messages[i].content) === incomingText) {
+          local = messages[i];
+          break;
+        }
+      }
+    }
+    if (local && local.id !== msg.id) {
+      var el = threadEl && threadEl.querySelector('[data-msg-id="' + local.id + '"]');
+      if (el) {
+        el.setAttribute('data-msg-id', String(msg.id));
+        delete domMsgIds[local.id];
+        domMsgIds[msg.id] = true;
+      }
+      local.id = msg.id;
+      if (msg.client_msg_id) local.client_msg_id = msg.client_msg_id;
+    }
   }
 
   function loadConsultationLogged(sessionId) {
@@ -3698,9 +3735,14 @@
       if (!msg || !msg.id) return;
       msg = maskCustomerLinkScanMessage(msg);
       if (isMessagePermanentlyDeleted(msg.id)) return;
-      if (isDuplicateMessage(msg)) return;
-      if (msg.role === 'user') return;
-      if (msg.role === 'assistant' && isStreaming && !msg.ccs_operation_id) return;
+      if (isDuplicateMessage(msg)) {
+        adoptServerMessageIdentity(msg);
+        return;
+      }
+      if (msg.role === 'assistant' && isStreaming && !msg.ccs_operation_id) {
+        rememberMessageIdentity(msg);
+        return;
+      }
       if (msg.role === 'assistant' && streamingMsgId && msg.id === streamingMsgId) return;
 
       rememberMessageIdentity(msg);
@@ -3736,8 +3778,13 @@
         renderMessageDom(msg.role, messageText(msg.content), msg.id, messageRenderOpts(msg));
       }
 
-      if (msg.role === 'assistant' || msg.role === 'admin') {
-        messages.push({ role: msg.role, content: messageText(msg.content), id: msg.id });
+      if (msg.role === 'assistant' || msg.role === 'admin' || msg.role === 'user') {
+        messages.push({
+          role: msg.role,
+          content: messageText(msg.content),
+          id: msg.id,
+          client_msg_id: msg.client_msg_id || ''
+        });
       } else if (msg.role === 'system') {
         messages.push({ role: 'system', content: messageText(msg.content), id: msg.id });
       }
@@ -5014,7 +5061,6 @@
     var userId = nextLocalId();
     var clientMsgId = opts.clientMsgId || newClientMessageId();
     domMsgIds[userId] = true;
-    seenMsgId(userId);
     var urls = extractUrlsFromText(text);
     var renderOpts = {};
     if (urls.length) {
@@ -5022,6 +5068,7 @@
     }
     renderMessageDom('user', text, userId, renderOpts);
     messages.push({ role: 'user', content: text, id: userId, client_msg_id: clientMsgId });
+    rememberMessageIdentity({ id: userId, role: 'user', content: text, client_msg_id: clientMsgId }, { optimistic: true });
     if (!opts.skipSync) {
       lastUserSyncPromise = syncChatLog();
     }
@@ -5048,12 +5095,19 @@
         pendingMessageEl.setAttribute('data-msg-id', String(id));
         attachMessageChrome(pendingMessageEl, pendingBubble, 'assistant', cleanText, id, '');
       }
-      messages.push({
-        role: 'assistant',
-        content: cleanText,
-        id: id,
-        client_msg_id: meta.clientMsgId || newClientMessageId()
+      var alreadyStored = messages.some(function (m) {
+        if (!m || m.role !== 'assistant') return false;
+        if (m.id === id) return true;
+        return messageText(m.content) === cleanText;
       });
+      if (!alreadyStored) {
+        messages.push({
+          role: 'assistant',
+          content: cleanText,
+          id: id,
+          client_msg_id: (meta.serverMessage && meta.serverMessage.client_msg_id) || meta.clientMsgId || newClientMessageId()
+        });
+      }
     }
 
     streamingMsgId = 0;
@@ -5315,11 +5369,12 @@
 
     if (handleLiveAgentFlow(text)) return;
 
+    isStreaming = true;
+    updateSendButton();
+
     if (isHumanMode()) {
       var clientMsgId = newClientMessageId();
       var userMsgId = appendUserMessage(text, { skipSync: true, clientMsgId: clientMsgId });
-      isStreaming = true;
-      updateSendButton();
       sendHumanModeMessage(text, clientMsgId)
         .then(function (serverMessage) {
           clearMessageFailed(threadEl.querySelector('[data-msg-id="' + userMsgId + '"]'));
@@ -5346,29 +5401,22 @@
       return;
     }
 
-    appendUserMessage(text);
-    lastUserSyncPromise.then(function () {
-      isStreaming = true;
-      updateSendButton();
-      showTyping();
-      var clientMsgId = newClientMessageId();
-      var last = messages[messages.length - 1];
-      if (last && last.role === 'user' && last.content === text) {
-        last.client_msg_id = last.client_msg_id || clientMsgId;
-        clientMsgId = last.client_msg_id;
-      }
-      var assistantClientMsgId = newClientMessageId();
+    var clientMsgId = newClientMessageId();
+    var assistantClientMsgId = newClientMessageId();
+    appendUserMessage(text, { skipSync: true, clientMsgId: clientMsgId });
+    showTyping();
+    syncChatLog();
 
-      var formData = new FormData();
-      formData.append('action', 'paxdesign_chat');
-      formData.append('nonce', config.nonce);
-      stampChatRequest(formData);
-      formData.append('session_id', getSessionId());
-      formData.append('message', text);
-      formData.append('client_msg_id', clientMsgId);
-      formData.append('assistant_client_msg_id', assistantClientMsgId);
-      formData.append('messages', JSON.stringify(messages.filter(function (m) {
-        return m.role === 'user' || m.role === 'assistant';
+    var formData = new FormData();
+    formData.append('action', 'paxdesign_chat');
+    formData.append('nonce', config.nonce);
+    stampChatRequest(formData);
+    formData.append('session_id', getSessionId());
+    formData.append('message', text);
+    formData.append('client_msg_id', clientMsgId);
+    formData.append('assistant_client_msg_id', assistantClientMsgId);
+    formData.append('messages', JSON.stringify(messages.filter(function (m) {
+      return m.role === 'user' || m.role === 'assistant';
     })));
     formData.append('website', honeypot ? honeypot.value : '');
     abortCtrl = new AbortController();
@@ -5429,7 +5477,6 @@
           removeTyping();
           streamingMsgId = nextLocalId();
           domMsgIds[streamingMsgId] = true;
-          seenMsgId(streamingMsgId);
           var rendered = renderMessageDom('assistant', '', streamingMsgId);
           bubble = rendered.bubble;
           messageEl = rendered.messageEl;
@@ -5474,9 +5521,19 @@
                 scheduleStreamUpdate(bubble, fullText);
               }
             } else if (data.type === 'done' && data.message) {
+              var alreadyShown = isDuplicateMessage(data.message);
               persistedAssistantMessage = data.message;
               rememberMessageIdentity(data.message);
-              if (!gotFirstChunk && data.message) {
+              if (alreadyShown) {
+                gotFirstChunk = true;
+                if (bubble && messageEl && messageEl.parentElement && !fullText) {
+                  messageEl.parentElement.remove();
+                  bubble = null;
+                  messageEl = null;
+                  if (streamingMsgId) delete domMsgIds[streamingMsgId];
+                  streamingMsgId = 0;
+                }
+              } else if (!gotFirstChunk && data.message) {
                 var doneText = messageText(data.message);
                 if (doneText) {
                   gotFirstChunk = true;
@@ -5487,7 +5544,7 @@
                   flushStreamBubble();
                 }
               }
-              if (data.message.id && messageEl) {
+              if (!alreadyShown && data.message.id && messageEl) {
                 if (streamingMsgId && streamingMsgId !== data.message.id) {
                   delete domMsgIds[streamingMsgId];
                 }
@@ -5578,7 +5635,6 @@
         pendingMessageEl = null;
         updateSendButton();
       });
-    });
   }
 
   function handleSend(e) {
