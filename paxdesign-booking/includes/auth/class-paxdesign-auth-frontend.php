@@ -60,8 +60,9 @@ class PAXdesign_Auth_Frontend {
         );
         wp_add_inline_style(
             'pax-auth-ui',
-            'html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn{background:#000!important;background-color:#000!important;color:#fff!important;border:0!important;box-shadow:none!important;border-radius:980px!important;background-image:none!important}' .
-            'html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus{background:#1d1d1f!important;color:#fff!important;border:0!important;text-decoration:none!important}'
+            'html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn{background:#000!important;background-color:#000!important;color:#fff!important;border:0!important;box-shadow:none!important;border-radius:980px!important;background-image:none!important}' .
+            'html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:hover,html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:focus{background:#1d1d1f!important;color:#fff!important;border:0!important;text-decoration:none!important}' .
+            'html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn{background:transparent!important;background-color:transparent!important;color:inherit!important;border:0!important;box-shadow:none!important;-webkit-text-fill-color:currentColor!important}'
         );
 
         $script_args = array('strategy' => 'defer', 'in_footer' => true);
@@ -112,18 +113,29 @@ class PAXdesign_Auth_Frontend {
             . '@media (max-width:992px){'
             . 'html body #pdx-auth-bar,html body #pdx-auth-bar.pdx-auth-bar--header{'
             . 'max-width:none!important;width:auto!important;transform:none!important;overflow:visible!important}'
+            . 'html body #pdx-auth-bar .pdx-auth-signin-btn:not([hidden]),'
+            . 'html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:not([hidden]),'
             . 'html body #pdx-auth-bar .pdx-auth-signup-btn:not([hidden]),'
             . 'html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:not([hidden]){'
             . 'display:inline-flex!important;max-width:none!important;overflow:visible!important;'
-            . 'text-overflow:clip!important;white-space:nowrap!important;font-size:13px!important}'
+            . 'text-overflow:clip!important;white-space:nowrap!important}'
+            . 'html body #pdx-auth-bar .pdx-auth-signin-btn:not([hidden]){font-size:13px!important;padding:0 14px!important}'
+            . 'html body #pdx-auth-bar .pdx-auth-signup-btn:not([hidden]){font-size:12px!important;padding:0 8px!important}'
+            . 'html body #pdx-auth-bar .pdx-auth-signin-btn::before,html body #pdx-auth-bar .pdx-auth-signin-btn::after,'
             . 'html body #pdx-auth-bar .pdx-auth-signup-btn::before,html body #pdx-auth-bar .pdx-auth-signup-btn::after{'
             . 'content:none!important;display:none!important}'
-            . 'html body #pdx-auth-bar .pdx-is-hidden,html body #pdx-auth-bar [hidden],'
-            . 'html body #pdx-auth-bar .pdx-auth-signin-btn{'
+            . 'html body #pdx-auth-bar .pdx-is-hidden,html body #pdx-auth-bar [hidden]{'
             . 'display:none!important;visibility:hidden!important}'
             . 'html body #pdx-auth-bar .pdx-auth-menu:not(.is-open),html body #pdx-auth-bar .pdx-auth-menu[hidden]{'
             . 'display:none!important;visibility:hidden!important}'
             . '}'
+            . 'html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn{'
+            . 'background:#000!important;color:#fff!important;-webkit-text-fill-color:#fff!important}'
+            . 'html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,'
+            . 'html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,'
+            . 'html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn{'
+            . 'background:transparent!important;color:inherit!important;-webkit-text-fill-color:currentColor!important;'
+            . 'border:0!important;box-shadow:none!important}'
             . '</style>' . "\n";
     }
 

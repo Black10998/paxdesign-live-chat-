@@ -53,7 +53,7 @@
   text-overflow: ellipsis;
 }
 
-#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn {
   border: 0;
   background: #000;
   background-color: #000;
@@ -67,22 +67,38 @@
   white-space: nowrap;
 }
 
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn::before,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn::after,
 #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn::before,
 #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn::after {
   content: none !important;
   display: none !important;
 }
 
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
+  border: 0;
+  background: transparent;
+  background-color: transparent;
+  background-image: none;
+  color: inherit;
+  box-shadow: none;
+  border-radius: 980px;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
 #pdx-auth-bar .pdx-is-hidden,
-#pdx-auth-bar [hidden],
-#pdx-auth-bar .pdx-auth-signin-btn {
+#pdx-auth-bar [hidden] {
   display: none !important;
   visibility: hidden !important;
   pointer-events: none !important;
 }
 
-#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
-#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:hover,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:focus {
   border: 0;
   background: #1d1d1f;
   background-color: #1d1d1f;
@@ -93,11 +109,19 @@
   text-decoration: none;
 }
 
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
+  background: rgba(0, 0, 0, 0.06);
+  color: inherit;
+  outline: none;
+  text-decoration: none;
+}
+
 /* Remove legacy gold / page-specific Sign In variants */
 @media (prefers-color-scheme: light) {
-  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
-  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
-  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn,
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:hover,
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:focus {
     background: #000;
     background-color: #000;
     background-image: none;
@@ -107,12 +131,12 @@
   }
 }
 
-body.pdx-auth-page-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
-body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
-body.pdx-auth-page-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
-body.pdx-auth-page-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus,
-body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
-body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
+body.pdx-auth-page-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn,
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn,
+body.pdx-auth-page-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:hover,
+body.pdx-auth-page-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:focus,
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:hover,
+body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:focus {
   background: #000;
   background-color: #000;
   background-image: none;
@@ -373,6 +397,18 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header
   -webkit-text-fill-color: #000 !important;
 }
 
+html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  background: #000 !important;
+}
+
+html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
+  color: #000 !important;
+  -webkit-text-fill-color: #000 !important;
+  background: transparent !important;
+}
+
 .pdx-auth-account-label {
   display: inline-block;
   max-width: 100%;
@@ -539,6 +575,8 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header
     max-width: min(220px, 58vw);
   }
 
+  html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:not([hidden]),
+  html body #pdx-auth-bar .pdx-auth-signin-btn:not([hidden]),
   html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:not([hidden]),
   html body #pdx-auth-bar .pdx-auth-signup-btn:not([hidden]) {
     display: inline-flex !important;
@@ -551,9 +589,17 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header
     white-space: nowrap !important;
     font-size: 13px !important;
     line-height: 1 !important;
-    padding: 0 14px !important;
     height: 34px;
     min-height: 34px;
+  }
+
+  html body #pdx-auth-bar .pdx-auth-signin-btn:not([hidden]) {
+    padding: 0 14px !important;
+  }
+
+  html body #pdx-auth-bar .pdx-auth-signup-btn:not([hidden]) {
+    padding: 0 10px !important;
+    font-weight: 600 !important;
   }
 
   #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-portal-btn,
@@ -584,9 +630,15 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header
     max-width: min(200px, 62vw);
   }
 
-  html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:not([hidden]) {
+  html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:not([hidden]) {
     font-size: 13px !important;
     padding: 0 14px !important;
+    max-width: none !important;
+  }
+
+  html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:not([hidden]) {
+    font-size: 12px !important;
+    padding: 0 8px !important;
     max-width: none !important;
   }
 }
@@ -1499,9 +1551,9 @@ html body header button.pdx-auth-trigger {
 }
 
 /* Sitewide isolated Sign In pill — beats theme, pdx-cx-btn tokens, and page CSS */
-html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn.pdx-cx-btn.pdx-auth-header-btn,
-html body #pdx-auth-bar.pdx-auth-bar--header button.pdx-auth-signup-btn,
-html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
+html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn.pdx-cx-btn.pdx-auth-header-btn,
+html body #pdx-auth-bar.pdx-auth-bar--header button.pdx-auth-signin-btn,
+html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn {
   background: #000 !important;
   background-color: #000 !important;
   background-image: none !important;
@@ -1513,12 +1565,12 @@ html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
   -webkit-text-fill-color: #fff !important;
 }
 
-html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn.pdx-cx-btn.pdx-auth-header-btn:hover,
-html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn.pdx-cx-btn.pdx-auth-header-btn:focus,
-html body #pdx-auth-bar.pdx-auth-bar--header button.pdx-auth-signup-btn:hover,
-html body #pdx-auth-bar.pdx-auth-bar--header button.pdx-auth-signup-btn:focus,
-html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
-html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
+html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn.pdx-cx-btn.pdx-auth-header-btn:hover,
+html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn.pdx-cx-btn.pdx-auth-header-btn:focus,
+html body #pdx-auth-bar.pdx-auth-bar--header button.pdx-auth-signin-btn:hover,
+html body #pdx-auth-bar.pdx-auth-bar--header button.pdx-auth-signin-btn:focus,
+html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:hover,
+html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:focus {
   background: #1d1d1f !important;
   background-color: #1d1d1f !important;
   background-image: none !important;
@@ -1529,18 +1581,32 @@ html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
   outline: none !important;
 }
 
+html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn.pdx-cx-btn.pdx-auth-header-btn,
+html body #pdx-auth-bar.pdx-auth-bar--header button.pdx-auth-signup-btn,
+html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
+html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
+html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
 @media (prefers-color-scheme: dark) {
-  html body:not(.dtr-apple-sticky-header):not(.dtr-apple-mobile-nav) #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn.pdx-cx-btn.pdx-auth-header-btn,
-  html body:not(.dtr-apple-sticky-header):not(.dtr-apple-mobile-nav) #pdx-auth-bar.pdx-auth-bar--header button.pdx-auth-signup-btn,
-  html body:not(.dtr-apple-sticky-header):not(.dtr-apple-mobile-nav) #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {
+  html body:not(.dtr-apple-sticky-header):not(.dtr-apple-mobile-nav) #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn.pdx-cx-btn.pdx-auth-header-btn,
+  html body:not(.dtr-apple-sticky-header):not(.dtr-apple-mobile-nav) #pdx-auth-bar.pdx-auth-bar--header button.pdx-auth-signin-btn,
+  html body:not(.dtr-apple-sticky-header):not(.dtr-apple-mobile-nav) #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn {
     background: #fff !important;
     background-color: #fff !important;
     color: #000 !important;
     -webkit-text-fill-color: #000 !important;
   }
 
-  html body:not(.dtr-apple-sticky-header):not(.dtr-apple-mobile-nav) #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
-  html body:not(.dtr-apple-sticky-header):not(.dtr-apple-mobile-nav) #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:focus {
+  html body:not(.dtr-apple-sticky-header):not(.dtr-apple-mobile-nav) #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:hover,
+  html body:not(.dtr-apple-sticky-header):not(.dtr-apple-mobile-nav) #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn:focus {
     background: #f5f5f7 !important;
     background-color: #f5f5f7 !important;
     color: #000 !important;

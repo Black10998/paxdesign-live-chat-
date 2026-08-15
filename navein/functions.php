@@ -536,8 +536,8 @@ function navein_custom_scripts_styles() {
 		);
 		wp_add_inline_style(
 			'navein-apple-homepage',
-			'html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,' .
-			'html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn{' .
+			'html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn,' .
+			'html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signin-btn{' .
 			'background:#000!important;background-color:#000!important;background-image:none!important;' .
 			'color:#fff!important;border:0!important;box-shadow:none!important;border-radius:980px!important;}'
 		);

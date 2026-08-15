@@ -652,11 +652,11 @@ body.page-template-template-apple-homepage-php .dtr-page-title--section {
   background: #fff;
 }
 
-/* Header Sign Up — beat Customizer transparent override */
-html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn.pdx-auth-header-btn,
-html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
-html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn.pdx-auth-header-btn,
-html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn {
+/* Header Sign In — primary CTA; Sign Up stays secondary */
+html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn.pdx-auth-header-btn,
+html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signin-btn,
+html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signin-btn.pdx-auth-header-btn,
+html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signin-btn {
   border: 0 !important;
   background: #000 !important;
   background-color: #000 !important;
@@ -670,15 +670,28 @@ html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-b
   letter-spacing: -0.01em !important;
 }
 
-html body.home #pdx-auth-bar .pdx-auth-signup-btn:hover,
-html body.home #pdx-auth-bar .pdx-auth-signup-btn:focus,
-html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn:hover,
-html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn:focus {
+html body.home #pdx-auth-bar .pdx-auth-signin-btn:hover,
+html body.home #pdx-auth-bar .pdx-auth-signin-btn:focus,
+html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signin-btn:hover,
+html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signin-btn:focus {
   background: #1d1d1f !important;
   background-color: #1d1d1f !important;
   background-image: none !important;
   color: #fff !important;
   outline: none !important;
+}
+
+html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn.pdx-auth-header-btn,
+html body.home #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn,
+html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn.pdx-auth-header-btn,
+html body.page-template-template-apple-homepage #pdx-auth-bar .pdx-auth-signup-btn {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+  color: inherit !important;
+  -webkit-text-fill-color: currentColor !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 
 /* Footer subscribe — Apple clean form on homepage */
