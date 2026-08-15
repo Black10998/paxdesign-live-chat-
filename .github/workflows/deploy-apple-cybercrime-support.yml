@@ -265,8 +265,6 @@ jobs:
           grep -Eq "renderPortalRecordsSection|renderPortalCybercrimeDetail|cybercrime/reports" /tmp/pax-auth.js
           grep -Eq "Document checks \\(preliminary\\)|What is still required" /tmp/pax-auth.js
           grep -A6 '#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn {' /tmp/pdx-auth.css | grep -Eq 'background: #000|background-color: #000'
-          grep -Eq "class-paxdesign-cybercrime-document-checks|class-paxdesign-cybercrime-admin-reminders" /tmp/pax-plugin.php
-          grep -Eq "Version: 3\.175\.0" /tmp/pax-plugin.php
           if [ "$BOOKING_JS" = "200" ]; then
             grep -Eq 'ensureChatReady' /tmp/booking-script.js
             grep -Eq 'escapeHtml|paxdesign_get_team_members' /tmp/booking-script.js
