@@ -258,28 +258,7 @@ body.pdx-account-dashboard-body #pdx-auth-shell-home {
 }
 
 .pdx-account-header-signout {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-  min-height: 32px;
-  padding: 0 12px;
-  border: 1px solid rgba(0, 0, 0, 0.12);
-  border-radius: 980px;
-  background: #fff;
-  color: #1d1d1f;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.pdx-account-header-signout:hover,
-.pdx-account-header-signout:focus-visible {
-  background: #f5f5f7;
-  outline: none;
+  display: none !important;
 }
 
 .pdx-account-menu-btn {
@@ -376,10 +355,6 @@ body.pdx-account-nav-open .pdx-account-nav-overlay {
 @media (max-width: 900px) {
   .pdx-account-menu-btn {
     display: inline-flex;
-  }
-
-  .pdx-account-header-signout {
-    display: none;
   }
 
   .pdx-account-header-identity .pdx-header-user-name {

@@ -785,7 +785,23 @@
     document.body.classList.remove('pdx-has-account-topbar');
   }
 
+  function isCompactSiteHeader() {
+    return window.matchMedia('(max-width: 992px)').matches;
+  }
+
   function findHeaderMount() {
+    if (isCompactSiteHeader()) {
+      var compactSelectors = [
+        '#dtr-main-header',
+        '#dtr-responsive-header .container',
+        '#dtr-responsive-header',
+        'header'
+      ];
+      for (var c = 0; c < compactSelectors.length; c++) {
+        var compact = document.querySelector(compactSelectors[c]);
+        if (compact) return compact;
+      }
+    }
     var selectors = [
       '#dtr-header-global .dtr-header-global-content',
       '.dtr-header-global-content',
@@ -814,10 +830,13 @@
     }
     authBar.hidden = false;
     var mount = findHeaderMount();
+    document.querySelectorAll('.pdx-header-has-auth').forEach(function (el) {
+      if (el !== mount) el.classList.remove('pdx-header-has-auth');
+    });
     if (mount) {
       mount.classList.add('pdx-header-has-auth');
       authBar.classList.add('pdx-auth-bar--header');
-      mount.appendChild(authBar);
+      if (authBar.parentNode !== mount) mount.appendChild(authBar);
       return;
     }
     authBar.classList.add('pdx-auth-bar--header');
@@ -830,12 +849,9 @@
     authBar.className = 'pdx-cx-shell';
     authBar.innerHTML =
       '<div class="pdx-auth-bar-inner">' +
-        '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn">Sign In</button>' +
+        '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn">Sign Up</button>' +
         '<button type="button" class="pdx-auth-account-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" aria-haspopup="true" aria-expanded="false" hidden>' +
           '<span class="pdx-auth-account-identity"></span>' +
-        '</button>' +
-        '<button type="button" class="pdx-auth-signout-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" hidden>' +
-          cxIcon('logout', 16) + '<span>Sign Out</span>' +
         '</button>' +
         '<button type="button" class="pdx-auth-portal-btn pdx-cx-btn pdx-auth-header-btn" hidden>Customer Portal</button>' +
         '<div class="pdx-auth-menu" hidden>' +
@@ -844,7 +860,7 @@
             '<button type="button" class="pdx-auth-menu-item" data-action="portal">' + cxIcon('dashboard', 16) + 'Customer Portal</button>' +
             '<button type="button" class="pdx-auth-menu-item" data-action="profile">' + cxIcon('user', 16) + 'My Profile</button>' +
             '<button type="button" class="pdx-auth-menu-item" data-action="account">' + cxIcon('settings', 16) + 'My Account</button>' +
-            '<button type="button" class="pdx-auth-menu-item pdx-auth-menu-item--logout" data-action="logout">' + cxIcon('logout', 16) + 'Logout</button>' +
+            '<button type="button" class="pdx-auth-menu-item pdx-auth-menu-item--logout" data-action="logout">' + cxIcon('logout', 16) + 'Sign Out</button>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -872,15 +888,11 @@
 
     var signupBtn = authBar.querySelector('.pdx-auth-signup-btn');
     var portalBtn = authBar.querySelector('.pdx-auth-portal-btn');
-    var signOutBtn = authBar.querySelector('.pdx-auth-signout-btn');
     if (signupBtn) {
-      signupBtn.addEventListener('click', function () { navigateToAuthPage('login'); });
+      signupBtn.addEventListener('click', function () { navigateToAuthPage('register'); });
     }
     if (portalBtn) {
       portalBtn.addEventListener('click', function () { openCustomerPortal(); });
-    }
-    if (signOutBtn) {
-      signOutBtn.addEventListener('click', function () { closeAuthMenu(); doLogout(); });
     }
 
     document.addEventListener('click', function (e) {
@@ -894,6 +906,7 @@
       }
     });
     window.addEventListener('resize', function () {
+      mountAuthBar();
       updateAuthBar();
       if (!isAccountNavMobile()) closeAccountNav();
     });
@@ -918,15 +931,12 @@
     var head = authMenu.querySelector('.pdx-auth-menu-head');
     var signupBtn = authBar ? authBar.querySelector('.pdx-auth-signup-btn') : null;
     var portalBtn = authBar ? authBar.querySelector('.pdx-auth-portal-btn') : null;
-    var signOutBtn = authBar ? authBar.querySelector('.pdx-auth-signout-btn') : null;
     var label = user.logged_in ? headerDisplayName() : t('account', 'Account');
 
     if (signupBtn) signupBtn.hidden = !!user.logged_in;
     if (accountBtn) accountBtn.hidden = !user.logged_in;
-    /* Keep Sign Out visible on desktop instead of clipping it out of the header. */
-    if (signOutBtn) signOutBtn.hidden = !user.logged_in || window.matchMedia('(max-width: 768px)').matches;
-    /* Portal is in the account dropdown on desktop; standalone btn is mobile-only. */
-    if (portalBtn) portalBtn.hidden = !user.logged_in || !window.matchMedia('(max-width: 768px)').matches;
+    /* Portal is in the account dropdown on desktop; standalone btn is compact-header only. */
+    if (portalBtn) portalBtn.hidden = !user.logged_in || !isCompactSiteHeader();
 
     if (accountBtn) {
       cleanupLegacyHeaderIdentityNodes(accountBtn);
@@ -2052,16 +2062,10 @@
       trailing.appendChild(identity);
     }
 
-    var signOut = document.getElementById('pdx-account-header-signout');
-    if (!signOut) {
-      signOut = document.createElement('button');
-      signOut.type = 'button';
-      signOut.id = 'pdx-account-header-signout';
-      signOut.className = 'pdx-account-header-signout';
-      signOut.addEventListener('click', doLogout);
-      trailing.appendChild(signOut);
+    var leftoverSignOut = document.getElementById('pdx-account-header-signout');
+    if (leftoverSignOut && leftoverSignOut.parentNode) {
+      leftoverSignOut.parentNode.removeChild(leftoverSignOut);
     }
-    signOut.innerHTML = cxIcon('logout', 16) + '<span>Sign Out</span>';
 
     mountShellLogoLink(link, 'pdx-account-header-home--official');
     updateAccountHeaderIdentity();
