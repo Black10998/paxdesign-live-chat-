@@ -192,5 +192,16 @@ cx_assert_true(strpos($ccs_js, 'function ensureCcsOpeningPrompt') !== false, 'Op
 cx_assert_true(strpos($ccs_js, 'paxdesign_chat_ccs_bootstrap') !== false, 'Website CCS chat must call the bootstrap endpoint');
 cx_assert_true(strpos($ccs_js, 'config.greeting && !isCybercrimeCaseChat()') !== false, 'CCS chat must not insert the sales greeting');
 cx_assert_true(strpos($ccs_js, 'pollSeq = Math.max(pollSeq, localMsgId)') === false, 'Optimistic local ids must not skip server messages during poll');
+cx_assert_true(strpos($ccs_js, 'function isNearBottom') !== false, 'Chat must detect when the customer is already at the latest messages');
+cx_assert_true(strpos($ccs_js, 'var stickToBottom') !== false, 'Auto-scroll must stop while the customer reads older messages');
+cx_assert_true(strpos($ccs_js, 'scrollToBottom(true)') !== false, 'Opening and sending must pin the thread to the latest message');
+cx_assert_true(strpos($ccs_js, 'anchor.scrollIntoView') === false, 'Chat must not use scrollIntoView which jumps the page on mobile');
+cx_assert_true(strpos($ccs_js, 'window.setTimeout(run, 80)') === false, 'Chat must not keep forcing delayed scroll jumps');
+cx_assert_true(strpos($ccs_js, 'return assistantAlreadyShownForLatestTurn(msg)') !== false, 'CCS duplicate detection must not hide a new reply that only matches an older prompt');
+cx_assert_true(strpos($ccs_js, 'skipScroll: true') !== false, 'History restore must not scroll once per restored row');
+
+$ccs_css = file_get_contents($ccs_root . '/assets/css/booking-styles.css');
+cx_assert_true(strpos($ccs_css, 'margin-top: auto') !== false, 'The chat thread must pin the latest messages to the bottom');
+cx_assert_true(strpos($ccs_css, 'scroll-behavior: smooth') === false || !preg_match('/\.paxdesign-booking-chat-messages\s*\{[^}]*scroll-behavior:\s*smooth/s', $ccs_css), 'Programmatic chat scroll must not use CSS smooth scrolling');
 
 echo "OK: customer platform static verification passed (" . count($files) . " modules)\n";

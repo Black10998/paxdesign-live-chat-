@@ -2187,7 +2187,7 @@ body.paxdesign-agent-profile-open {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  scroll-behavior: smooth;
+  scroll-behavior: auto;
   overscroll-behavior: contain;
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
@@ -2198,7 +2198,9 @@ body.paxdesign-agent-profile-open {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
+  width: 100%;
+  margin-top: auto;
   min-height: 0;
   background: transparent;
 }
@@ -2215,7 +2217,6 @@ body.paxdesign-agent-profile-open {
   flex-direction: column;
   max-width: 88%;
   width: fit-content;
-  animation: paxdesign-fade-slide-up 0.2s ease both;
 }
 
 #paxdesign-booking-root .paxdesign-booking-chat-message--user {
