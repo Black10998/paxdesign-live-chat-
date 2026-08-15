@@ -210,4 +210,87 @@ $ccs_css = file_get_contents($ccs_root . '/assets/css/booking-styles.css');
 cx_assert_true(strpos($ccs_css, 'margin-top: auto') !== false, 'The chat thread must pin the latest messages to the bottom');
 cx_assert_true(strpos($ccs_css, 'scroll-behavior: smooth') === false || !preg_match('/\.paxdesign-booking-chat-messages\s*\{[^}]*scroll-behavior:\s*smooth/s', $ccs_css), 'Programmatic chat scroll must not use CSS smooth scrolling');
 
+$avatar_presets = file_get_contents($customer_dir . '/class-paxdesign-customer-avatar-presets.php');
+cx_assert_true(strpos($avatar_presets, 'const COUNT = 100') !== false, 'Avatar presets must support 100 GIF avatars');
+cx_assert_true(strpos($avatar_presets, 'random_id') !== false, 'Avatar presets must expose random_id()');
+
+$avatar = file_get_contents($customer_dir . '/class-paxdesign-customer-avatar.php');
+cx_assert_true(strpos($avatar, 'ensure_preset_assigned') !== false, 'Customer avatar must auto-assign presets');
+cx_assert_true(strpos($avatar, "add_action('pdx_user_logged_in'") !== false, 'Customer avatar must assign preset on login');
+cx_assert_true(strpos($avatar, "add_action('user_register'") !== false, 'Customer avatar must assign preset on register');
+
+$avatar_dir = dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/images/avatars';
+$avatar_gifs = glob($avatar_dir . '/pax-*.gif') ?: array();
+cx_assert_true(count($avatar_gifs) === 100, 'Expected 100 avatar GIF assets');
+
+$pax_auth_js = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/js/pax-auth.js');
+cx_assert_true(strpos($pax_auth_js, 'pax-\\d{2,3}') !== false, 'Account JS must support 3-digit avatar preset ids');
+cx_assert_true(strpos($pax_auth_js, 'pdx-account-avatar-picker__item--locked') !== false, 'Account JS must render locked VIP avatars');
+
+$vip_presets = file_get_contents($customer_dir . '/class-paxdesign-customer-avatar-vip-presets.php');
+cx_assert_true(strpos($vip_presets, 'const COUNT = 10') !== false, 'VIP avatar presets must define 10 exclusive avatars');
+
+$vip_avatar = file_get_contents($customer_dir . '/class-paxdesign-customer-avatar.php');
+cx_assert_true(strpos($vip_avatar, 'grant_vip_avatar') !== false, 'Customer avatar must support VIP grant');
+cx_assert_true(strpos($vip_avatar, 'META_VIP_GRANTS') !== false, 'Customer avatar must store VIP grants');
+
+$vip_dir = dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/images/avatars-vip';
+$vip_gifs = glob($vip_dir . '/pax-vip-*.gif') ?: array();
+cx_assert_true(count($vip_gifs) === 10, 'Expected 10 VIP GIF assets');
+
+$levels = file_get_contents($customer_dir . '/class-paxdesign-customer-levels.php');
+cx_assert_true(strpos($levels, 'META_LEVEL') !== false, 'Customer levels must store level meta');
+
+$master = file_get_contents($customer_dir . '/class-paxdesign-customer-master-admin.php');
+cx_assert_true(strpos($master, 'awjime29@icloud.com') !== false, 'Master admin iCloud email must be configured');
+cx_assert_true(strpos($master, 'ftbkvmfy6g@privaterelay.appleid.com') !== false, 'Master admin Apple relay email must be configured');
+cx_assert_true(strpos($master, 'master_emails') !== false, 'Master admin must expose master_emails()');
+cx_assert_true(strpos($master, 'find_master_user') !== false, 'Master admin must resolve canonical user by alias email');
+
+$apple_auth = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-auth-apple.php');
+cx_assert_true(strpos($apple_auth, 'find_master_user') !== false, 'Apple auth must link master admin relay login to existing account');
+
+$master_rest = file_get_contents($customer_dir . '/class-paxdesign-customer-master-rest.php');
+cx_assert_true(strpos($master_rest, '/customer/master/customers') !== false, 'Master admin customer routes must exist');
+cx_assert_true(strpos($master_rest, 'PAXdesign_Customer_Registry') !== false, 'Master admin list must use customer registry');
+
+$registry = file_get_contents($customer_dir . '/class-paxdesign-customer-registry.php');
+cx_assert_true(strpos($registry, 'account_email') !== false, 'Customer registry must resolve account email');
+cx_assert_true(strpos($registry, 'ensure_portal_customer') !== false, 'Customer registry must auto-register portal customers');
+cx_assert_true(strpos($registry, 'backfill_existing_portal_customers') !== false, 'Customer registry must backfill existing customers');
+
+$apple_auth = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-auth-apple.php');
+cx_assert_true(strpos($apple_auth, 'maybe_sync_account_email') !== false, 'Apple auth must sync account email on login');
+
+$vip_presets_php = file_get_contents($customer_dir . '/class-paxdesign-customer-avatar-vip-presets.php');
+cx_assert_true(strpos($vip_presets_php, 'catalog_preview') !== false, 'VIP presets must expose admin preview catalog');
+
+cx_assert_true(strpos($pax_auth_js, 'renderAdminCustomerPreviewPanel') !== false, 'Account JS must render admin customer preview');
+cx_assert_true(strpos($pax_auth_js, 'pdx-account-name-line') !== false, 'Account JS must use dedicated name line wrapper');
+
+$verified_css = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/css/pdx-verified-badge.css');
+cx_assert_true(strpos($verified_css, 'pdx-account-name-line') !== false, 'Verified badge CSS must style account name line separately');
+cx_assert_true(strpos($verified_css, 'pdx-account-name-text') !== false, 'Verified badge CSS must style account name text');
+cx_assert_true(strpos($pax_auth_js, 'pdx-admin-page-next') !== false, 'Account JS must paginate admin customer list');
+cx_assert_true(strpos($pax_auth_js, 'renderAdminCustomerAvatarPickers') !== false, 'Account JS must render admin avatar pickers');
+cx_assert_true(strpos($pax_auth_js, 'isMasterAdminUser()') !== false && strpos($pax_auth_js, 'preset.locked && !isMasterAdminUser()') !== false, 'Master admin must preview unlocked VIP avatars');
+
+cx_assert_true(strpos($pax_auth_js, 'pdx-account-level-badge') !== false, 'Account JS must render level badges');
+cx_assert_true(strpos($pax_auth_js, 'administration') !== false, 'Account JS must include administration section');
+
+$pdx_customers = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/auth/class-paxdesign-customers.php');
+cx_assert_true(strpos($pdx_customers, 'META_ADMIN_NOTES') !== false, 'Booking customers must support admin notes without toolbar');
+cx_assert_true(strpos($pdx_customers, 'save_notes') !== false, 'Booking customers must save admin notes');
+
+$migration = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/customer/class-paxdesign-toolbar-migration.php');
+cx_assert_true(strpos($migration, 'PAXdesign_Toolbar_Migration') !== false, 'Toolbar migration class must exist');
+cx_assert_true(strpos($migration, 'pax_toolbar_migration_backup') !== false, 'Toolbar migration must export backup');
+
+$deploy = file_get_contents(dirname(__DIR__, 2) . '/.github/workflows/deploy-customer-platform-3135.yml');
+cx_assert_true(strpos($deploy, 'rsync -az --delete -e "ssh ${SSH_OPTS[*]}" paxdesign-toolbar/') === false, 'Deploy workflow must not rsync toolbar');
+cx_assert_true(strpos($deploy, 'wp-eval-toolbar-customer-migration.php') !== false, 'Deploy workflow must run toolbar customer migration');
+
+$repo_root = dirname(__DIR__, 2);
+cx_assert_true(!is_dir($repo_root . '/paxdesign-toolbar'), 'paxdesign-toolbar directory must be removed from repository');
+
 echo "OK: customer platform static verification passed (" . count($files) . " modules)\n";

@@ -785,6 +785,15 @@ class PAXdesign_Auth_Apple {
 			}
 		}
 
+		// Same Master Administrator may sign in with iCloud or Apple Private Relay email.
+		if ( ! $user && $email !== '' && class_exists( 'PAXdesign_Customer_Master_Admin' ) && PAXdesign_Customer_Master_Admin::is_master_email( $email ) ) {
+			$master = PAXdesign_Customer_Master_Admin::find_master_user();
+			if ( $master instanceof WP_User ) {
+				update_user_meta( (int) $master->ID, self::META_APPLE_SUB, $sub );
+				$user = $master;
+			}
+		}
+
 		if ( ! $user ) {
 			if ( $email === '' ) {
 				$email = self::apple_account_email_for_sub( $sub );
@@ -794,6 +803,8 @@ class PAXdesign_Auth_Apple {
 				return $created;
 			}
 			$user = $created;
+		} else {
+			self::maybe_sync_account_email( (int) $user->ID, $email );
 		}
 
 		if ( ! PAXdesign_Customers::is_login_allowed( (int) $user->ID ) ) {
@@ -807,7 +818,60 @@ class PAXdesign_Auth_Apple {
 			PAXdesign_Customers::set_account_status( (int) $user->ID, PAXdesign_Customers::STATUS_ACTIVE );
 		}
 
+		if ( class_exists( 'PAXdesign_Customer_Registry' ) ) {
+			PAXdesign_Customer_Registry::ensure_portal_customer( (int) $user->ID );
+		}
+
 		return $user;
+	}
+
+	/**
+	 * Keep the WordPress account email aligned with Apple Sign in (including Private Relay).
+	 *
+	 * @param int $user_id
+	 * @param string $email
+	 */
+	private static function maybe_sync_account_email( int $user_id, string $email ): void {
+		$email = sanitize_email( $email );
+		if ( $user_id <= 0 || $email === '' || ! is_email( $email ) ) {
+			return;
+		}
+
+		$user = get_userdata( $user_id );
+		if ( ! $user instanceof WP_User ) {
+			return;
+		}
+
+		$current = trim( (string) $user->user_email );
+		if ( $current === $email ) {
+			return;
+		}
+
+		$should_update = ( $current === '' || ! is_email( $current ) || self::is_generated_apple_email( $current ) );
+		if ( ! $should_update ) {
+			return;
+		}
+
+		$existing = email_exists( $email );
+		if ( $existing && (int) $existing !== $user_id ) {
+			return;
+		}
+
+		wp_update_user(
+			array(
+				'ID'         => $user_id,
+				'user_email' => $email,
+			)
+		);
+	}
+
+	/**
+	 * @param string $email
+	 * @return bool
+	 */
+	private static function is_generated_apple_email( string $email ): bool {
+		$email = strtolower( trim( $email ) );
+		return (bool) preg_match( '/^apple\+[a-f0-9]{32}@id\.paxdesign\.at$/', $email );
 	}
 
 	/**

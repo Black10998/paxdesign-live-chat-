@@ -248,7 +248,7 @@ body.pdx-auth-page-body {
 }
 
 /* Hide theme chrome and floating widgets (Navein, Elementor, cookies, chat) */
-body.pdx-auth-isolated header,
+body.pdx-auth-isolated header:not(#pdx-account-header),
 body.pdx-auth-isolated footer,
 body.pdx-auth-isolated .site-header,
 body.pdx-auth-isolated .site-footer,
@@ -313,6 +313,33 @@ body.pdx-account-dashboard-body .pdx-auth-page {
   padding: 0;
   overflow: hidden;
   background: #f5f5f7;
+}
+
+body.pdx-account-dashboard-body #pdx-account-header {
+  display: flex !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+@media (max-width: 900px) {
+  body.pdx-account-dashboard-body .pdx-auth-page {
+    flex: 1 1 0;
+    flex-direction: column;
+  }
+
+  body.pdx-account-dashboard-body #pdx-account-app {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  body.pdx-account-dashboard-body #pdx-account-main {
+    display: block !important;
+    visibility: visible !important;
+    flex: 1 1 auto;
+    min-height: 0;
+  }
 }
 
 .pdx-auth-page-guest {

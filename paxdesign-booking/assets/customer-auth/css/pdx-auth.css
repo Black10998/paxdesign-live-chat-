@@ -109,7 +109,217 @@ body.pdx-account-dashboard-body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-sig
 }
 
 .pdx-auth-account-btn {
-  max-width: min(160px, 26vw);
+  max-width: min(180px, 30vw);
+  padding-left: 6px;
+  padding-right: 10px;
+}
+
+.pdx-auth-account-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Compact circular avatars in header/menu (loaded on all public pages) */
+#pdx-auth-bar .pdx-account-avatar,
+.pdx-auth-menu .pdx-account-avatar,
+.pdx-profile-overlay .pdx-account-avatar {
+  position: relative;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  overflow: hidden !important;
+  border-radius: 50% !important;
+  box-sizing: border-box;
+  contain: layout size style paint;
+  background: #e8e8ed;
+}
+
+#pdx-auth-bar .pdx-account-avatar__img,
+.pdx-auth-menu .pdx-account-avatar__img,
+.pdx-profile-overlay .pdx-account-avatar__img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  object-position: center center !important;
+}
+
+#pdx-auth-bar .pdx-account-avatar--header {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  max-width: 32px !important;
+  max-height: 32px !important;
+}
+
+.pdx-auth-menu .pdx-account-avatar--menu,
+.pdx-profile-overlay .pdx-account-avatar--profile-compact {
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  max-width: 44px !important;
+  max-height: 44px !important;
+}
+
+.pdx-auth-menu-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+}
+
+.pdx-auth-menu-identity-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  gap: 2px;
+}
+
+.pdx-public-user-identity {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pdx-public-user-name {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+/* ─── Public site header identity (main website, not account dashboard) ─── */
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-label,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-trigger,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-trigger-label,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-name-with-badge,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-name-with-badge--account,
+#pdx-auth-bar.pdx-auth-bar--header .pdx-public-user-name {
+  display: none !important;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn.pdx-auth-header-btn {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  max-width: min(240px, 38vw);
+  height: auto;
+  min-height: 32px;
+  line-height: 1.2;
+  align-items: center;
+  text-shadow: none !important;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-identity {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-identity {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-name {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  color: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(160px, 24vw);
+  text-shadow: none !important;
+  -webkit-text-fill-color: currentColor !important;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-account-level-badge--header {
+  display: block;
+  margin: 0;
+  max-width: min(160px, 24vw);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #5c4a1a;
+  background: linear-gradient(135deg, #fff7d6 0%, #f6d365 45%, #d4af37 100%);
+  border: 1px solid rgba(212, 175, 55, 0.55);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.65);
+  align-self: flex-start;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 0;
+}
+
+#pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-identity:not(:has(.pdx-account-avatar)) .pdx-header-user-text {
+  margin-inline-start: 0;
+}
+
+html[dir="rtl"] #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-identity,
+#pdx-auth-bar.pdx-auth-bar--header[dir="rtl"] .pdx-header-user-identity {
+  flex-direction: row-reverse;
+}
+
+html[dir="rtl"] #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-text,
+#pdx-auth-bar.pdx-auth-bar--header[dir="rtl"] .pdx-header-user-text {
+  align-items: flex-end;
+  text-align: end;
+}
+
+@media (max-width: 768px) {
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn.pdx-auth-header-btn {
+    max-width: none;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-text,
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-name,
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-account-level-badge--header {
+    display: none !important;
+  }
+}
+
+.pdx-auth-account-btn .pdx-public-user-identity {
+  pointer-events: none;
 }
 
 .pdx-auth-account-label {

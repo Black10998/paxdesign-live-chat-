@@ -413,8 +413,11 @@ function navein_custom_scripts_styles() {
 				}
 			}
 			if ( function_exists( 'pax_ccs_countries_for_js' ) ) {
-				$ccs_config['countries'] = pax_ccs_countries_for_js();
-				$ccs_config['phonePopular'] = array( 'AT', 'DE', 'CH', 'US', 'GB', 'AE', 'SA', 'FR', 'IT', 'ES', 'NL', 'BE', 'PL', 'TR', 'EG', 'JO', 'LB', 'QA', 'KW', 'BH', 'OM' );
+				$ccs_config['countries']      = pax_ccs_countries_for_js();
+				$ccs_config['phonePopular']   = array( 'AT', 'DE', 'CH', 'US', 'GB', 'AE', 'SA', 'FR', 'IT', 'ES', 'NL', 'BE', 'PL', 'TR', 'EG', 'JO', 'LB', 'QA', 'KW', 'BH', 'OM' );
+				$ccs_config['defaultPhoneCountry'] = function_exists( 'pax_ccs_guess_visitor_country' )
+					? pax_ccs_guess_visitor_country()
+					: 'AT';
 			}
 			wp_localize_script(
 				'navein-apple-cybercrime-support',
@@ -518,6 +521,70 @@ endif;
 add_action( 'wp_enqueue_scripts', 'navein_custom_scripts_styles', 20 );
 
 /**
+ * Load after sitewide custom CSS so Cybercrime Support has no mobile header gap.
+ */
+if ( ! function_exists( 'navein_cybercrime_mobile_layout_fix' ) ) :
+function navein_cybercrime_mobile_layout_fix() {
+	if ( ! is_page_template( 'template-apple-cybercrime-support.php' ) && ! is_page( 'cybercrime-support' ) ) {
+		return;
+	}
+
+	$theme_version = wp_get_theme()->get( 'Version' );
+	wp_register_style( 'navein-cybercrime-mobile-layout-fix', false, array(), $theme_version );
+	wp_enqueue_style( 'navein-cybercrime-mobile-layout-fix' );
+	wp_add_inline_style(
+		'navein-cybercrime-mobile-layout-fix',
+		'@media (max-width:768px){' .
+		'html body.page-template-template-apple-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap,' .
+		'html body.page-template-template-apple-cybercrime-support-php #dtr-main-wrapper.pax-ccs-portal-wrap,' .
+		'html body.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap{' .
+		'padding:0!important;margin:0!important;}' .
+		'html body.page-template-template-apple-cybercrime-support #dtr-primary-section,' .
+		'html body.page-template-template-apple-cybercrime-support-php #dtr-primary-section,' .
+		'html body.page-cybercrime-support #dtr-primary-section,' .
+		'html body.page-template-template-apple-cybercrime-support .pax-ccs-portal,' .
+		'html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal,' .
+		'html body.page-cybercrime-support .pax-ccs-portal{' .
+		'margin-top:0!important;padding-top:0!important;}' .
+		'html body.page-template-template-apple-cybercrime-support .dtr-page-title__section,' .
+		'html body.page-template-template-apple-cybercrime-support-php .dtr-page-title__section,' .
+		'html body.page-cybercrime-support .dtr-page-title__section,' .
+		'html body.page-template-template-apple-cybercrime-support .dtr-page-title--section,' .
+		'html body.page-template-template-apple-cybercrime-support-php .dtr-page-title--section,' .
+		'html body.page-cybercrime-support .dtr-page-title--section{' .
+		'display:none!important;margin:0!important;padding:0!important;' .
+		'min-height:0!important;height:0!important;overflow:hidden!important;}' .
+		'}'
+	);
+}
+endif;
+add_action( 'wp_enqueue_scripts', 'navein_cybercrime_mobile_layout_fix', 999 );
+
+if ( ! function_exists( 'navein_cybercrime_mobile_layout_footer_fix' ) ) :
+function navein_cybercrime_mobile_layout_footer_fix() {
+	if ( ! is_page_template( 'template-apple-cybercrime-support.php' ) && ! is_page( 'cybercrime-support' ) ) {
+		return;
+	}
+	echo '<style id="navein-cybercrime-mobile-layout-footer-fix">';
+	echo '@media (max-width:768px){';
+	echo 'html body.page-template-template-apple-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap,';
+	echo 'html body.page-template-template-apple-cybercrime-support-php #dtr-main-wrapper.pax-ccs-portal-wrap,';
+	echo 'html body.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap{';
+	echo 'padding:0!important;margin:0!important;width:100%!important;max-width:none!important;}';
+	echo 'html body.page-template-template-apple-cybercrime-support #dtr-primary-section,';
+	echo 'html body.page-template-template-apple-cybercrime-support-php #dtr-primary-section,';
+	echo 'html body.page-cybercrime-support #dtr-primary-section{';
+	echo 'padding:0!important;margin:0!important;}';
+	echo 'html body.page-template-template-apple-cybercrime-support .pax-ccs-portal__servicebar,';
+	echo 'html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal__servicebar,';
+	echo 'html body.page-cybercrime-support .pax-ccs-portal__servicebar{margin-top:0!important;}';
+	echo '}';
+	echo '</style>';
+}
+endif;
+add_action( 'wp_footer', 'navein_cybercrime_mobile_layout_footer_fix', 9999 );
+
+/**
  * Mark body for Apple footer styling (sitewide).
  *
  * @param array $classes Body classes.
@@ -528,6 +595,20 @@ function navein_apple_footer_body_class( $classes ) {
 	return $classes;
 }
 add_filter( 'body_class', 'navein_apple_footer_body_class' );
+
+/**
+ * Stable body class for Cybercrime Support template overrides.
+ *
+ * @param array $classes Body classes.
+ * @return array
+ */
+function navein_cybercrime_support_body_class( $classes ) {
+	if ( is_page_template( 'template-apple-cybercrime-support.php' ) || is_page( 'cybercrime-support' ) ) {
+		$classes[] = 'page-cybercrime-support';
+	}
+	return $classes;
+}
+add_filter( 'body_class', 'navein_cybercrime_support_body_class' );
 // navein_custom_scripts_styles ends
 
 /**
@@ -910,6 +991,7 @@ if ( ! function_exists( 'navein_apple_header_username_contrast_footer' ) ) {
 		}
 		echo '<style id="navein-apple-auth-username-contrast">'
 			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-btn,'
+			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header-user-name,'
 			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-account-label,'
 			. 'html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-name-with-badge,'
 			. 'html body.dtr-apple-sticky-header #pdx-auth-bar .pdx-auth-account-btn .pdx-name-with-badge,'

@@ -98,24 +98,33 @@ html body.page-cybercrime-support .pax-ccs-portal-wrap {
 
 .pax-ccs-portal__servicebar-inner {
   display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
+  flex-wrap: nowrap;
+  align-items: center;
   justify-content: space-between;
-  gap: 8px 20px;
+  gap: 12px 20px;
+}
+
+.pax-ccs-portal__service-disclaimer {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.78);
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: none;
+  text-align: end;
+}
+
+.pax-ccs-portal[dir="rtl"] .pax-ccs-portal__service-disclaimer {
+  text-align: start;
 }
 
 .pax-ccs-portal__service-name {
   margin: 0;
   font: 600 13px/1.4 var(--ccs-font);
   letter-spacing: 0.02em;
-}
-
-.pax-ccs-portal__service-disclaimer {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.45;
-  color: rgba(255, 255, 255, 0.78);
-  max-width: 52ch;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .pax-ccs-portal__coverage {
@@ -635,6 +644,46 @@ html body.page-cybercrime-support .pax-ccs-portal-wrap {
   box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
 }
 
+.pax-ccs-portal__account-email-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0, 113, 227, 0.08);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #0071e3;
+}
+
+.pax-ccs-portal__account-email-verified-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #0071e3;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.pax-ccs-portal__field--account-email-locked input[type="email"][readonly] {
+  background: rgba(0, 113, 227, 0.04);
+  border-color: rgba(0, 113, 227, 0.22);
+  color: var(--ccs-ink);
+  cursor: default;
+  box-shadow: none;
+}
+
+.pax-ccs-portal__field--account-email-locked input[type="email"][readonly]:focus {
+  border-color: rgba(0, 113, 227, 0.22);
+  box-shadow: none;
+}
+
 .pax-ccs-portal__field textarea {
   resize: vertical;
   min-height: 140px;
@@ -869,14 +918,27 @@ html body.page-cybercrime-support .pax-ccs-portal-wrap {
     gap: 20px;
   }
 
+  .pax-ccs-portal__servicebar {
+    padding: 10px 0;
+    margin-top: 0;
+  }
+
   .pax-ccs-portal__servicebar-inner {
     flex-direction: column;
     align-items: flex-start;
+    flex-wrap: wrap;
     gap: 6px;
+  }
+
+  .pax-ccs-portal__service-name {
+    white-space: normal;
   }
 
   .pax-ccs-portal__service-disclaimer {
     max-width: none;
+    font-size: 11px;
+    line-height: 1.4;
+    text-align: start;
   }
 
   .pax-ccs-portal__coverage-head {
@@ -1844,28 +1906,145 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
   vertical-align: middle;
 }
 
-.pax-ccs-portal__phone-row {
-  display: grid;
-  grid-template-columns: minmax(132px, 168px) minmax(0, 1fr);
-  gap: 10px;
+.pax-ccs-portal__phone-unified {
+  display: flex;
   align-items: stretch;
-}
-
-.pax-ccs-portal__phone-code select {
   width: 100%;
   box-sizing: border-box;
-  appearance: none;
   border: 1px solid var(--ccs-line-strong);
   border-radius: 12px;
-  padding: 14px 12px;
-  font: 500 15px/1.2 var(--ccs-font);
-  color: var(--ccs-ink);
   background: #fff;
+  overflow: visible;
   min-height: 52px;
+  position: relative;
 }
 
-.pax-ccs-portal__phone-row input[type="tel"] {
-  min-height: 52px;
+.pax-ccs-portal__phone-unified:focus-within {
+  border-color: var(--ccs-blue);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.15);
+}
+
+.pax-ccs-portal__phone-unified input[type="tel"] {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 12px 0 0 12px;
+  padding: 14px 16px;
+  font: 400 16px/1.35 var(--ccs-font);
+  color: var(--ccs-ink);
+  min-height: 50px;
+}
+
+[dir="rtl"] .pax-ccs-portal__phone-unified input[type="tel"] {
+  border-radius: 0 12px 12px 0;
+}
+
+.pax-ccs-portal__phone-unified input[type="tel"]:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.pax-ccs-portal__phone-dial {
+  position: relative;
+  flex: 0 0 auto;
+  border-inline-start: 1px solid var(--ccs-line);
+}
+
+.pax-ccs-portal__phone-dial-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+  min-height: 50px;
+  padding: 0 12px;
+  border: none;
+  background: var(--ccs-snow);
+  cursor: pointer;
+  font: 500 15px/1.2 var(--ccs-font);
+  color: var(--ccs-ink);
+  border-radius: 0 12px 12px 0;
+  white-space: nowrap;
+}
+
+[dir="rtl"] .pax-ccs-portal__phone-dial-trigger {
+  border-radius: 12px 0 0 12px;
+}
+
+.pax-ccs-portal__phone-dial-trigger:focus {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(0, 113, 227, 0.35);
+}
+
+.pax-ccs-portal__phone-dial-flag {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.pax-ccs-portal__phone-dial-code {
+  font-variant-numeric: tabular-nums;
+}
+
+.pax-ccs-portal__phone-dial-chevron {
+  width: 8px;
+  height: 8px;
+  border-inline-end: 1.5px solid var(--ccs-muted);
+  border-bottom: 1.5px solid var(--ccs-muted);
+  transform: rotate(45deg);
+  margin-inline-start: 2px;
+  opacity: 0.75;
+}
+
+.pax-ccs-portal__phone-dial-panel {
+  position: absolute;
+  z-index: 25;
+  inset-inline-end: 0;
+  top: calc(100% + 6px);
+  width: min(320px, 92vw);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--ccs-line);
+  overflow: hidden;
+}
+
+.pax-ccs-portal__phone-dial-search {
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  border-bottom: 1px solid var(--ccs-line);
+  padding: 12px 14px;
+  font: 400 15px/1.35 var(--ccs-font);
+  color: var(--ccs-ink);
+  background: #fff;
+}
+
+.pax-ccs-portal__phone-dial-search:focus {
+  outline: none;
+  box-shadow: inset 0 -2px 0 var(--ccs-blue);
+}
+
+.pax-ccs-portal__phone-dial-list {
+  max-height: min(280px, 50vh);
+  overflow: auto;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+}
+
+.pax-ccs-portal__phone-dial-list li {
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.pax-ccs-portal__phone-dial-list li:hover,
+.pax-ccs-portal__phone-dial-list li:focus,
+.pax-ccs-portal__phone-dial-list li[aria-selected="true"] {
+  background: var(--ccs-snow);
 }
 
 .pax-ccs-portal__country-picker {
@@ -1922,15 +2101,42 @@ html body.page-cybercrime-support .pax-ccs-portal__accordion-item.is-open .pax-c
 }
 
 .pax-ccs-portal__country-picker.is-invalid .pax-ccs-portal__country-search,
-.pax-ccs-portal__field.is-invalid .pax-ccs-portal__phone-row input,
-.pax-ccs-portal__field.is-invalid .pax-ccs-portal__phone-code select,
+.pax-ccs-portal__phone-unified.is-invalid,
 .pax-ccs-portal__field.is-invalid input[type="file"] {
   border-color: #d70015;
 }
 
-@media (max-width: 640px) {
-  .pax-ccs-portal__phone-row {
-    grid-template-columns: 1fr;
+/* Mobile: cancel sitewide inner-page title / main-wrapper offsets on this template. */
+@media (max-width: 768px) {
+  html body.page-template-template-apple-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap,
+  html body.page-template-template-apple-cybercrime-support-php #dtr-main-wrapper.pax-ccs-portal-wrap,
+  html body.page-cybercrime-support #dtr-main-wrapper.pax-ccs-portal-wrap {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  html body.page-template-template-apple-cybercrime-support #dtr-primary-section,
+  html body.page-template-template-apple-cybercrime-support-php #dtr-primary-section,
+  html body.page-cybercrime-support #dtr-primary-section,
+  html body.page-template-template-apple-cybercrime-support .pax-ccs-portal,
+  html body.page-template-template-apple-cybercrime-support-php .pax-ccs-portal,
+  html body.page-cybercrime-support .pax-ccs-portal {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+  }
+
+  html body.page-template-template-apple-cybercrime-support .dtr-page-title__section,
+  html body.page-template-template-apple-cybercrime-support-php .dtr-page-title__section,
+  html body.page-cybercrime-support .dtr-page-title__section,
+  html body.page-template-template-apple-cybercrime-support .dtr-page-title--section,
+  html body.page-template-template-apple-cybercrime-support-php .dtr-page-title--section,
+  html body.page-cybercrime-support .dtr-page-title--section {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-height: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
   }
 }
 

@@ -149,7 +149,7 @@ class PAXdesign_Auth_Page {
         if (!self::is_auth_page()) {
             return;
         }
-        echo '<style id="pdx-auth-isolated-critical">html.pdx-auth-isolated,body.pdx-auth-isolated{height:100svh;overflow:hidden;background:#fff!important}body.pdx-auth-isolated>*:not(#pdx-auth-isolated-shell):not(#wpadminbar){display:none!important}#pdx-auth-isolated-shell{position:fixed;inset:0;z-index:2147483000;background:#fff;display:flex;overflow:hidden}body.pdx-auth-guest-body #pdx-auth-isolated-shell{align-items:center;justify-content:center}body.pdx-account-dashboard-body #pdx-auth-isolated-shell{flex-direction:column;align-items:stretch;justify-content:flex-start;padding:0;background:#f5f5f7}body.pdx-auth-guest-body #pdx-auth-page{min-height:0;height:auto;max-height:100svh;overflow:auto}#paxdesign-booking-root,#pdx-auth-bar,[class*="cookie" i],[id*="cookie" i]{display:none!important}</style>';
+        echo '<style id="pdx-auth-isolated-critical">html.pdx-auth-isolated,body.pdx-auth-isolated{height:100svh;overflow:hidden;background:#fff!important}body.pdx-auth-isolated>*:not(#pdx-auth-isolated-shell):not(#wpadminbar){display:none!important}#pdx-auth-isolated-shell{position:fixed;inset:0;z-index:2147483000;background:#fff;display:flex;overflow:hidden}body.pdx-auth-guest-body #pdx-auth-isolated-shell{align-items:center;justify-content:center}body.pdx-account-dashboard-body #pdx-auth-isolated-shell{flex-direction:column;align-items:stretch;justify-content:flex-start;padding:0;background:#f5f5f7}body.pdx-account-dashboard-body #pdx-account-header{display:flex!important;visibility:visible!important;pointer-events:auto!important}body.pdx-account-dashboard-body #pdx-account-main{display:block!important;visibility:visible!important;flex:1 1 auto;min-height:0}body.pdx-auth-guest-body #pdx-auth-page{min-height:0;height:auto;max-height:100svh;overflow:auto}#paxdesign-booking-root,#pdx-auth-bar,[class*="cookie" i],[id*="cookie" i]{display:none!important}</style>';
     }
 
     public static function enqueue_page_assets() {
@@ -232,7 +232,7 @@ class PAXdesign_Auth_Page {
             </div>
             <div id="pdx-account-app" class="pdx-account-app" hidden>
                 <aside class="pdx-account-sidebar" id="pdx-account-sidebar" aria-label="<?php echo esc_attr__('Account navigation', 'paxdesign-booking'); ?>"></aside>
-                <main class="pdx-account-main" id="pdx-account-main" tabindex="-1"></main>
+                <div role="main" class="pdx-account-main" id="pdx-account-main" tabindex="-1"></div>
             </div>
         </div>
         <?php

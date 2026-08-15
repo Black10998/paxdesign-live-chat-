@@ -93,6 +93,18 @@ class PAXdesign_Auth_Frontend {
     /**
      * @return array<string, mixed>
      */
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private static function account_ui_l10n() {
+        $path = PAXDESIGN_BOOKING_PLUGIN_DIR . 'includes/customer/data/account-ui-l10n.php';
+        if (!is_readable($path)) {
+            return array();
+        }
+        $strings = include $path;
+        return is_array($strings) ? $strings : array();
+    }
+
     private static function js_config() {
         $user_id = get_current_user_id();
         return array(
@@ -105,6 +117,32 @@ class PAXdesign_Auth_Frontend {
             'emailVerified' => is_user_logged_in() ? PAXdesign_Auth::is_email_verified($user_id) : false,
             'userName'      => is_user_logged_in() ? wp_get_current_user()->display_name : '',
             'userEmail'     => is_user_logged_in() ? wp_get_current_user()->user_email : '',
+            'avatarUrl'     => (is_user_logged_in() && class_exists('PAXdesign_Customer_Avatar'))
+                ? PAXdesign_Customer_Avatar_Presets::normalize_asset_url(PAXdesign_Customer_Avatar::url_for_user($user_id))
+                : '',
+            'avatarFallbackUrl' => (is_user_logged_in() && class_exists('PAXdesign_Customer_Avatar'))
+                ? PAXdesign_Customer_Avatar_Presets::normalize_asset_url(PAXdesign_Customer_Avatar::fallback_url_for_user($user_id))
+                : '',
+            'avatarHasImage' => (is_user_logged_in() && class_exists('PAXdesign_Customer_Avatar'))
+                ? PAXdesign_Customer_Avatar::has_visible_avatar($user_id)
+                : false,
+            'avatarPresets' => class_exists('PAXdesign_Customer_Avatar_Presets')
+                ? PAXdesign_Customer_Avatar_Presets::catalog()
+                : array(),
+            'vipAvatarPresets' => (is_user_logged_in() && class_exists('PAXdesign_Customer_Avatar_Vip_Presets'))
+                ? PAXdesign_Customer_Avatar_Vip_Presets::catalog_for_user($user_id)
+                : (class_exists('PAXdesign_Customer_Avatar_Vip_Presets')
+                    ? PAXdesign_Customer_Avatar_Vip_Presets::catalog_for_user(0)
+                    : array()),
+            'isMasterAdmin' => (is_user_logged_in() && class_exists('PAXdesign_Customer_Master_Admin'))
+                ? PAXdesign_Customer_Master_Admin::is_master_admin($user_id)
+                : false,
+            'customerLevel' => (is_user_logged_in() && class_exists('PAXdesign_Customer_Levels'))
+                ? PAXdesign_Customer_Levels::profile_fields($user_id)
+                : array(),
+            'defaultAvatarUrl' => class_exists('PAXdesign_Customer_Avatar')
+                ? PAXdesign_Customer_Avatar_Presets::normalize_asset_url(PAXdesign_Customer_Avatar::default_avatar_url())
+                : '',
             'publicModules' => PAXdesign_Auth_Native::public_modules(),
             'modules'       => array(),
             'accountPageUrl'=> esc_url(PAXdesign_Auth_Page::page_url()),
@@ -115,6 +153,7 @@ class PAXdesign_Auth_Frontend {
             'homeUrl'          => esc_url(home_url('/')),
             'logoUrl'          => class_exists('PAXdesign_Auth_Page') ? PAXdesign_Auth_Page::brand_logo_url() : '',
             'siteName'         => get_bloginfo('name'),
+            'accountUiL10n'    => self::account_ui_l10n(),
         );
     }
 }

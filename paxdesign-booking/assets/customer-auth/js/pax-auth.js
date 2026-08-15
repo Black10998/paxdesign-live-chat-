@@ -4,7 +4,7 @@
 (function () {
   'use strict';
 
-  var C = typeof PAX_AUTH_CONFIG !== 'undefined' ? PAX_AUTH_CONFIG : (typeof PDX_CONFIG !== 'undefined' ? PDX_CONFIG : null);
+  var C = typeof PAX_AUTH_CONFIG !== 'undefined' ? PAX_AUTH_CONFIG : null;
   if (!C) return;
   var user = {
     logged_in: !!C.isLoggedIn,
@@ -12,6 +12,8 @@
     display_name: C.userName || '',
     email: C.userEmail || '',
     id: C.userId || 0,
+    avatar_url: C.avatarUrl || '',
+    avatar_has_image: C.avatarHasImage !== false,
   };
   var returnModule = null;
   var currentView = 'login';
@@ -29,7 +31,17 @@
     files: null,
     settings: null,
     loaded: false,
+    masterCustomers: null,
+    masterCustomer: null,
+    masterLevels: null,
+    masterSearch: '',
+    masterPage: 1,
+    masterPerPage: 50,
   };
+  var accountMobileNavOpen = false;
+  var accountMobileMenuBtn = null;
+  var accountMobileBackdrop = null;
+  var accountSignOutConfirmEl = null;
   var sessionSyncInFlight = false;
   var sessionSyncTimer = null;
   var SESSION_SYNC_INTERVAL_MS = 45000;
@@ -50,6 +62,164 @@
     var d = document.createElement('div');
     d.textContent = String(s);
     return d.innerHTML;
+  }
+
+  function customerPortalLang() {
+    var lang = (navigator.language || navigator.userLanguage || document.documentElement.lang || 'de').toLowerCase();
+    if (lang.indexOf('ar') === 0) return 'ar';
+    if (lang.indexOf('en') === 0) return 'en';
+    return 'de';
+  }
+
+  function t(key, fallback) {
+    var lang = customerPortalLang();
+    var pack = C.accountUiL10n || {};
+    var entry = pack[key];
+    if (entry && entry[lang]) return entry[lang];
+    if (entry && entry.en) return entry.en;
+    return fallback !== undefined ? fallback : key;
+  }
+
+  function applyAccountLocale() {
+    var lang = customerPortalLang();
+    var rtl = lang === 'ar';
+    if (accountAppEl) {
+      accountAppEl.setAttribute('dir', rtl ? 'rtl' : 'ltr');
+      accountAppEl.setAttribute('lang', lang);
+    }
+    document.body.classList.toggle('pdx-account-rtl', rtl && isAccountDashboard());
+    syncAccountMobileMenuPosition();
+  }
+
+  function isAccountMobileViewport() {
+    return window.matchMedia('(max-width: 900px)').matches;
+  }
+
+  function syncAccountMobileNavState() {
+    if (!accountMobileMenuBtn) return;
+    accountMobileMenuBtn.setAttribute('aria-expanded', accountMobileNavOpen ? 'true' : 'false');
+    accountMobileMenuBtn.setAttribute('aria-label', accountMobileNavOpen
+      ? t('close', 'Close')
+      : t('account_menu', 'Account menu'));
+    var openIcon = accountMobileMenuBtn.querySelector('.pdx-account-mobile-menu-icon--menu');
+    var closeIcon = accountMobileMenuBtn.querySelector('.pdx-account-mobile-menu-icon--close');
+    if (openIcon) openIcon.hidden = accountMobileNavOpen;
+    if (closeIcon) closeIcon.hidden = !accountMobileNavOpen;
+  }
+
+  function getAccountOverlayRoot() {
+    return document.getElementById('pdx-auth-isolated-shell') || document.body;
+  }
+
+  function isAccountSidebarPortaled() {
+    return !!(accountSidebarEl && accountAppEl && accountSidebarEl.parentNode !== accountAppEl);
+  }
+
+  function syncAccountMobileOverlayMount() {
+    if (!accountAppEl || !accountSidebarEl || !accountMobileBackdrop) return;
+    if (isAccountMobileViewport()) {
+      var dir = accountAppEl.getAttribute('dir') || (customerPortalLang() === 'ar' ? 'rtl' : 'ltr');
+      var lang = accountAppEl.getAttribute('lang') || customerPortalLang();
+      var overlayRoot = getAccountOverlayRoot();
+      accountSidebarEl.setAttribute('dir', dir);
+      accountSidebarEl.setAttribute('lang', lang);
+      accountSidebarEl.classList.add('pdx-account-sidebar--mobile-overlay');
+      accountMobileBackdrop.classList.add('pdx-account-mobile-backdrop--portal');
+      accountMobileBackdrop.hidden = false;
+      if (!isAccountSidebarPortaled()) {
+        overlayRoot.appendChild(accountMobileBackdrop);
+        overlayRoot.appendChild(accountSidebarEl);
+      } else if (accountSidebarEl.parentNode !== overlayRoot) {
+        overlayRoot.appendChild(accountMobileBackdrop);
+        overlayRoot.appendChild(accountSidebarEl);
+      }
+    } else if (isAccountSidebarPortaled()) {
+      accountSidebarEl.classList.remove('pdx-account-sidebar--mobile-overlay');
+      accountMobileBackdrop.classList.remove('pdx-account-mobile-backdrop--portal');
+      accountAppEl.insertBefore(accountMobileBackdrop, accountMainEl);
+      accountAppEl.insertBefore(accountSidebarEl, accountMainEl);
+      closeAccountMobileNav();
+    }
+  }
+
+  function syncAccountMobileMenuPosition() {
+    if (!accountMobileMenuBtn) return;
+    var header = document.getElementById('pdx-account-header');
+    var useHeader = isAccountMobileViewport() && header;
+    accountMobileMenuBtn.hidden = !isAccountMobileViewport();
+    if (accountMobileBackdrop) {
+      accountMobileBackdrop.hidden = !isAccountMobileViewport();
+    }
+    if (useHeader && accountMobileMenuBtn.parentNode !== header) {
+      header.insertBefore(accountMobileMenuBtn, header.firstChild);
+      accountMobileMenuBtn.classList.add('pdx-account-mobile-menu--in-header');
+    } else if (!useHeader && accountAppEl && accountMobileMenuBtn.parentNode !== accountAppEl) {
+      accountMobileMenuBtn.classList.remove('pdx-account-mobile-menu--in-header');
+      accountAppEl.insertBefore(accountMobileMenuBtn, accountMobileBackdrop || accountSidebarEl || accountMainEl);
+    }
+    syncAccountMobileOverlayMount();
+  }
+
+  function openAccountMobileNav() {
+    if (!isAccountMobileViewport()) return;
+    syncAccountMobileOverlayMount();
+    accountMobileNavOpen = true;
+    document.body.classList.add('pdx-account-mobile-nav-open');
+    if (accountSidebarEl) {
+      accountSidebarEl.setAttribute('aria-hidden', 'false');
+    }
+    syncAccountMobileNavState();
+  }
+
+  function closeAccountMobileNav() {
+    accountMobileNavOpen = false;
+    document.body.classList.remove('pdx-account-mobile-nav-open');
+    if (accountSidebarEl) {
+      accountSidebarEl.setAttribute('aria-hidden', 'true');
+    }
+    syncAccountMobileNavState();
+  }
+
+  function toggleAccountMobileNav() {
+    if (accountMobileNavOpen) closeAccountMobileNav();
+    else openAccountMobileNav();
+  }
+
+  function ensureAccountMobileChrome() {
+    if (!accountAppEl || !accountSidebarEl) return;
+    bindAccountSidebarEvents();
+    if (!accountMobileBackdrop) {
+      accountMobileBackdrop = document.createElement('div');
+      accountMobileBackdrop.className = 'pdx-account-mobile-backdrop';
+      accountMobileBackdrop.hidden = true;
+      accountMobileBackdrop.addEventListener('click', closeAccountMobileNav);
+      accountAppEl.insertBefore(accountMobileBackdrop, accountSidebarEl);
+    }
+    if (!accountMobileMenuBtn) {
+      accountMobileMenuBtn = document.createElement('button');
+      accountMobileMenuBtn.type = 'button';
+      accountMobileMenuBtn.className = 'pdx-account-mobile-menu';
+      accountMobileMenuBtn.innerHTML =
+        '<span class="pdx-account-mobile-menu-icon pdx-account-mobile-menu-icon--menu">' + cxIcon('menu', 22) + '</span>' +
+        '<span class="pdx-account-mobile-menu-icon pdx-account-mobile-menu-icon--close" hidden>' + cxIcon('close', 22) + '</span>';
+      accountMobileMenuBtn.addEventListener('click', toggleAccountMobileNav);
+      if (accountAppEl) {
+        accountAppEl.insertBefore(accountMobileMenuBtn, accountMobileBackdrop);
+      }
+      window.addEventListener('resize', function () {
+        if (!isAccountMobileViewport()) closeAccountMobileNav();
+        syncAccountMobileMenuPosition();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && accountMobileNavOpen) closeAccountMobileNav();
+      });
+    }
+    syncAccountMobileMenuPosition();
+    syncAccountMobileOverlayMount();
+    syncAccountMobileNavState();
+    if (accountSidebarEl && isAccountMobileViewport()) {
+      accountSidebarEl.setAttribute('aria-hidden', accountMobileNavOpen ? 'false' : 'true');
+    }
   }
 
   function stripHtml(s) {
@@ -103,8 +273,8 @@
 
   /** Server-driven PAXDesign verified badge — only when verified === true from API. */
   function accountStatusText(verified) {
-    if (user.is_admin) return 'Administrator';
-    return verified ? 'Verified' : 'Pending verification';
+    if (user.is_admin) return t('administrator', 'Administrator');
+    return verified ? t('verified', 'Verified') : t('pending_verification', 'Pending verification');
   }
 
   function verifiedBadgeHtml(verified, opts) {
@@ -114,7 +284,453 @@
 
   function nameWithBadge(name, verified, opts) {
     if (window.PDXVerifiedBadge) return window.PDXVerifiedBadge.nameWithBadge(name, verified, opts);
-    return escHtml(name || 'Account');
+    return escHtml(name || t('account', 'Account'));
+  }
+
+  function accountDashboardNameWithBadge(name, verified, opts) {
+    opts = opts || {};
+    opts.context = opts.context || 'account';
+    return '<span class="pdx-name-with-badge pdx-name-with-badge--account">' +
+      '<span class="pdx-account-name-text">' + escHtml(name || t('account', 'Account')) + '</span>' +
+      verifiedBadgeHtml(verified, opts) +
+    '</span>';
+  }
+
+  function renderPublicUserIdentityHtml(opts) {
+    opts = opts || {};
+    var name = opts.name || user.display_name || t('account', 'Account');
+    var avatarClass = opts.avatarClass || 'pdx-account-avatar--header';
+    var showName = opts.showName !== false;
+    var profile = opts.profile || accountProfileData();
+    var avatarHtml = renderAccountAvatarHtml({ sizeClass: avatarClass, url: opts.url, profile: profile });
+    return '<span class="pdx-public-user-identity">' +
+      avatarHtml +
+      (showName ? '<span class="pdx-public-user-name">' + escHtml(name) + '</span>' : '') +
+    '</span>';
+  }
+
+  function cleanupLegacyHeaderIdentityNodes(accountBtn) {
+    if (!accountBtn) return;
+    accountBtn.querySelectorAll(
+      '.pdx-auth-account-label, .pdx-auth-trigger, .pdx-auth-trigger-label, .pdx-name-with-badge, .pdx-name-with-badge--account'
+    ).forEach(function (node) {
+      if (!node.closest('.pdx-auth-account-identity')) {
+        node.remove();
+      }
+    });
+  }
+
+  function renderHeaderUserIdentityHtml(opts) {
+    opts = opts || {};
+    var name = opts.name || user.display_name || t('account', 'Account');
+    var showName = opts.showName !== false;
+    var profile = opts.profile || accountProfileData();
+    var avatarHtml = renderAccountAvatarHtml({
+      sizeClass: 'pdx-account-avatar--header',
+      url: opts.url,
+      profile: profile,
+      alt: '',
+    });
+    var levelHtml = showName ? renderCustomerLevelBadge(profile, { compact: true, header: true }) : '';
+    var textHtml = showName
+      ? '<span class="pdx-header-user-text">' +
+          '<span class="pdx-header-user-name">' + escHtml(name) + '</span>' +
+          levelHtml +
+        '</span>'
+      : '';
+    return '<span class="pdx-header-user-identity">' + avatarHtml + textHtml + '</span>';
+  }
+
+  function defaultAvatarUrl() {
+    return normalizeAvatarAssetUrl(C.defaultAvatarUrl || '');
+  }
+
+  function normalizeAvatarAssetUrl(url) {
+    if (!url) return '';
+    var normalized = String(url).replace(/(\/avatars\/pax-\d{2,3})\.svg(\?.*)?$/i, '$1.gif');
+    if (normalized.indexOf('/avatars/pax-') !== -1 && /\.gif(\?|$)/i.test(normalized) && normalized.indexOf('?') === -1 && C.version) {
+      normalized += '?v=' + encodeURIComponent(C.version);
+    }
+    return normalized;
+  }
+
+  function accountAvatarPresetUrl(presetId) {
+    if (!presetId || presetId === 'pax-none') return '';
+    var presets = accountAvatarPresets().concat(accountVipAvatarPresets());
+    for (var i = 0; i < presets.length; i++) {
+      if (presets[i].id === presetId) {
+        return normalizeAvatarAssetUrl(presets[i].url || '');
+      }
+    }
+    var sample = defaultAvatarUrl();
+    if (sample && /\/avatars\/pax-\d{2,3}\.gif/i.test(sample)) {
+      return normalizeAvatarAssetUrl(sample.replace(/pax-\d{2,3}\.gif/i, presetId + '.gif'));
+    }
+    if (/^pax-vip-\d{2}$/.test(presetId)) {
+      var vipSample = accountVipAvatarPresets()[0];
+      if (vipSample && vipSample.url) {
+        return normalizeAvatarAssetUrl(String(vipSample.url).replace(/pax-vip-\d{2}\.(svg|gif)/i, presetId + '.gif'));
+      }
+    }
+    return '';
+  }
+
+  function accountVipAvatarPresets() {
+    if (!Array.isArray(C.vipAvatarPresets)) return [];
+    return C.vipAvatarPresets.map(function (preset) {
+      if (!preset) return preset;
+      preset.url = normalizeAvatarAssetUrl(preset.url || '');
+      return preset;
+    });
+  }
+
+  function refreshAccountAvatarPresets() {
+    return customerApiFetch('GET', '/customer/profile/avatars?_=' + Date.now()).then(function (data) {
+      if (data && data._ok !== false && Array.isArray(data.presets) && data.presets.length) {
+        C.avatarPresets = data.presets.map(function (preset) {
+          if (!preset || preset.type === 'none' || preset.id === 'pax-none') return preset;
+          preset.url = normalizeAvatarAssetUrl(preset.url || '');
+          return preset;
+        });
+      }
+      if (data && data._ok !== false && Array.isArray(data.vip_presets)) {
+        C.vipAvatarPresets = data.vip_presets.map(function (preset) {
+          if (!preset) return preset;
+          preset.url = normalizeAvatarAssetUrl(preset.url || '');
+          return preset;
+        });
+      }
+    }).catch(function () {});
+  }
+
+  function isExplicitCustomerProfile(profile) {
+    if (!profile || typeof profile !== 'object') return false;
+    if (profile.id && user && user.id && Number(profile.id) !== Number(user.id)) return true;
+    return profile.has_customer_level !== undefined || profile.customer_level !== undefined;
+  }
+
+  function accountLevelData(profile, opts) {
+    opts = opts || {};
+    profile = profile || accountProfileData();
+    var strict = !!opts.strict || isExplicitCustomerProfile(profile);
+    if (strict) {
+      return {
+        customer_level: Number(profile.customer_level) || 0,
+        level_label: profile.level_label || '',
+        level_title: profile.level_title || '',
+        level_description: profile.level_description || '',
+        has_customer_level: !!profile.has_customer_level,
+      };
+    }
+    return {
+      customer_level: profile.customer_level || user.customer_level || (C.customerLevel && C.customerLevel.customer_level) || 0,
+      level_label: profile.level_label || user.level_label || (C.customerLevel && C.customerLevel.level_label) || '',
+      level_title: profile.level_title || user.level_title || (C.customerLevel && C.customerLevel.level_title) || '',
+      level_description: profile.level_description || user.level_description || (C.customerLevel && C.customerLevel.level_description) || '',
+      has_customer_level: !!(profile.has_customer_level || user.has_customer_level || (C.customerLevel && C.customerLevel.has_customer_level)),
+    };
+  }
+
+  function renderCustomerLevelBadge(profile, opts) {
+    opts = opts || {};
+    var level = accountLevelData(profile, opts);
+    if (!level.has_customer_level || !level.level_label) return '';
+    var compact = opts.compact ? ' pdx-account-level-badge--compact' : '';
+    var header = opts.header ? ' pdx-account-level-badge--header' : '';
+    var title = level.level_title ? ' title="' + escHtml(level.level_title + (level.level_description ? ' — ' + level.level_description : '')) + '"' : '';
+    return '<span class="pdx-account-level-badge' + compact + header + '"' + title + '>' + escHtml(level.level_label) + '</span>';
+  }
+
+  function isMasterAdminUser() {
+    return !!(user.is_master_admin || C.isMasterAdmin);
+  }
+
+  function accountProfileData() {
+    var profile = accountState.profile || {};
+    if (profile.profile && typeof profile.profile === 'object') {
+      profile = profile.profile;
+    }
+    return profile;
+  }
+
+  function accountAvatarUrl(profile) {
+    profile = profile || accountProfileData();
+    if (profile.avatar_has_image === false) return '';
+    if (profile.avatar_has_upload) {
+      return normalizeAvatarAssetUrl(profile.avatar_url || user.avatar_url || C.avatarUrl || '');
+    }
+    var presetId = profile.avatar_preset || user.avatar_preset || '';
+    if (presetId && presetId !== 'pax-none') {
+      var presetUrl = accountAvatarPresetUrl(presetId);
+      if (presetUrl) return presetUrl;
+    }
+    var url = profile.avatar_url || user.avatar_url || C.avatarUrl || '';
+    url = normalizeAvatarAssetUrl(url);
+    return url || defaultAvatarUrl();
+  }
+
+  function accountAvatarHasImage(profile) {
+    profile = profile || accountProfileData();
+    if (profile && profile.avatar_has_image === false) return false;
+    if (profile && profile.avatar_has_image === true) return true;
+    if (user.avatar_has_image === false) return false;
+    if (profile.avatar_has_upload) return true;
+    if (profile.avatar_preset === 'pax-none') return false;
+    if (user.avatar_preset === 'pax-none') return false;
+    return !!(profile.avatar_url || user.avatar_url || C.avatarUrl || defaultAvatarUrl());
+  }
+
+  function accountAvatarFallbackUrl(profile) {
+    profile = profile || accountProfileData();
+    if (!accountAvatarHasImage(profile)) return '';
+    if (profile.avatar_has_upload) {
+      var presetId = profile.avatar_preset || user.avatar_preset || '';
+      if (presetId && presetId !== 'pax-none') {
+        var presetUrl = accountAvatarPresetUrl(presetId);
+        if (presetUrl) return presetUrl;
+      }
+    }
+    return normalizeAvatarAssetUrl(profile.avatar_fallback_url || C.avatarFallbackUrl || defaultAvatarUrl());
+  }
+
+  function accountAvatarPresets() {
+    if (!Array.isArray(C.avatarPresets)) return [];
+    return C.avatarPresets.map(function (preset) {
+      if (!preset || preset.type === 'none' || preset.id === 'pax-none') return preset;
+      return {
+        id: preset.id,
+        label: preset.label,
+        url: normalizeAvatarAssetUrl(preset.url || ''),
+        type: preset.type,
+      };
+    });
+  }
+
+  function handleAccountAvatarImgError(img) {
+    if (!img || img.dataset.pdxAvatarFailed === '1') return;
+    var fallback = img.getAttribute('data-avatar-fallback') || defaultAvatarUrl();
+    if (!fallback) {
+      var wrap = img.closest('.pdx-account-avatar');
+      if (wrap) wrap.remove();
+      return;
+    }
+    var current = img.currentSrc || img.src || '';
+    if (current && current.indexOf(fallback) !== -1) return;
+    img.dataset.pdxAvatarFailed = '1';
+    img.src = fallback;
+  }
+
+  var accountAvatarFallbackBound = false;
+  function ensureAccountAvatarFallbackHandler() {
+    if (accountAvatarFallbackBound) return;
+    accountAvatarFallbackBound = true;
+    document.addEventListener('error', function (e) {
+      var img = e.target;
+      if (!img || !img.classList || !img.classList.contains('pdx-account-avatar__img')) return;
+      handleAccountAvatarImgError(img);
+    }, true);
+    window.__pdxAvatarFallback = handleAccountAvatarImgError;
+  }
+
+  function bindAccountAvatarFallbacks(root) {
+    ensureAccountAvatarFallbackHandler();
+    root = root || document;
+    root.querySelectorAll('.pdx-account-avatar__img[data-avatar-fallback]').forEach(function (img) {
+      img.removeAttribute('data-pdx-avatar-failed');
+    });
+  }
+
+  var ACCOUNT_AVATAR_PX = {
+    'pdx-account-avatar--header': 32,
+    'pdx-account-avatar--menu': 44,
+    'pdx-account-avatar--sidebar': 40,
+    'pdx-account-avatar--profile-compact': 64,
+  };
+
+  function renderAccountAvatarHtml(opts) {
+    opts = opts || {};
+    var profile = opts.profile || accountProfileData();
+    if (opts.show === false || !accountAvatarHasImage(profile)) {
+      return '';
+    }
+    var url = opts.url || accountAvatarUrl(profile);
+    if (!url) return '';
+    var fallbackUrl = opts.fallbackUrl || accountAvatarFallbackUrl(profile);
+    var sizeClass = opts.sizeClass || 'pdx-account-avatar--sidebar';
+    var px = ACCOUNT_AVATAR_PX[sizeClass] || 40;
+    var alt = opts.alt || user.display_name || t('account', 'Account');
+    return '<span class="pdx-account-avatar ' + sizeClass + '" style="width:' + px + 'px;height:' + px + 'px;max-width:' + px + 'px;max-height:' + px + 'px;flex:0 0 ' + px + 'px">' +
+      '<img class="pdx-account-avatar__img" src="' + escHtml(url) + '" data-avatar-fallback="' + escHtml(fallbackUrl) + '" alt="' + escHtml(alt) + '" width="' + px + '" height="' + px + '" loading="lazy" decoding="async" onerror="window.__pdxAvatarFallback&&window.__pdxAvatarFallback(this)" />' +
+    '</span>';
+  }
+
+  function renderAccountAvatarPickerHtml(profile) {
+    profile = profile || accountProfileData();
+    var presets = accountAvatarPresets();
+    if (!presets.length) return '';
+    var currentPreset = profile.avatar_preset || '';
+    var hasUpload = !!profile.avatar_has_upload;
+    var html = '<div class="pdx-account-avatar-picker">' +
+      '<div class="pdx-account-avatar-picker__title">' + escHtml(t('choose_paxdesign_avatar', 'Choose a PAXDesign avatar')) + '</div>' +
+      '<div class="pdx-account-avatar-picker__grid" role="listbox" aria-label="' + escHtml(t('paxdesign_avatars', 'PAXDesign avatars')) + '">';
+    presets.forEach(function (preset) {
+      var isNone = preset.type === 'none' || preset.id === 'pax-none';
+      var selected = !hasUpload && preset.id === currentPreset;
+      if (isNone) {
+        html += '<button type="button" class="pdx-account-avatar-picker__item pdx-account-avatar-picker__item--none' + (selected ? ' is-selected' : '') + '" role="option" data-avatar-preset="' + escHtml(preset.id) + '" aria-label="' + escHtml(preset.label || t('no_profile_picture', 'No profile picture')) + '" aria-selected="' + (selected ? 'true' : 'false') + '" title="' + escHtml(preset.label || t('no_profile_picture', 'No profile picture')) + '">' +
+          '<span class="pdx-account-avatar-picker__none-mark" aria-hidden="true"></span>' +
+          '<span class="pdx-account-avatar-picker__none-text">' + escHtml(preset.label || t('no_profile_picture', 'No profile picture')) + '</span>' +
+        '</button>';
+        return;
+      }
+      html += '<button type="button" class="pdx-account-avatar-picker__item' + (selected ? ' is-selected' : '') + '" role="option" data-avatar-preset="' + escHtml(preset.id) + '" aria-label="' + escHtml(preset.label || preset.id) + '" aria-selected="' + (selected ? 'true' : 'false') + '" title="' + escHtml(preset.label || preset.id) + '">' +
+        '<img src="' + escHtml(normalizeAvatarAssetUrl(preset.url || '')) + '" alt="" width="48" height="48" loading="lazy" decoding="async" />' +
+      '</button>';
+    });
+    html += '</div>';
+
+    var vipPresets = accountVipAvatarPresets();
+    if (vipPresets.length) {
+      html += '<div class="pdx-account-avatar-picker__subtitle">' + escHtml(t('exclusive_level_avatars', 'PAXDesign Level avatars')) + '</div>' +
+        '<div class="pdx-account-avatar-picker__grid pdx-account-avatar-picker__grid--vip" role="listbox" aria-label="' + escHtml(t('vip_avatars', 'VIP avatars')) + '">';
+      vipPresets.forEach(function (preset) {
+        var locked = !!preset.locked && !isMasterAdminUser();
+        var selected = !hasUpload && !locked && preset.id === currentPreset;
+        var lockLabel = t('vip_avatar_locked', 'Exclusive avatar — assigned by administrator only');
+        html += '<button type="button" class="pdx-account-avatar-picker__item pdx-account-avatar-picker__item--vip' + (locked ? ' pdx-account-avatar-picker__item--locked' : '') + (selected ? ' is-selected' : '') + '" role="option"' +
+          ' data-avatar-preset="' + escHtml(preset.id) + '"' +
+          (locked ? ' data-avatar-locked="1" disabled aria-disabled="true"' : '') +
+          ' aria-label="' + escHtml(locked ? lockLabel : (preset.label || preset.id)) + '"' +
+          ' aria-selected="' + (selected ? 'true' : 'false') + '"' +
+          ' title="' + escHtml(locked ? lockLabel : (preset.label || preset.id)) + '">' +
+          '<img src="' + escHtml(preset.url || '') + '" alt="" width="48" height="48" loading="lazy" decoding="async" />' +
+          (locked ? '<span class="pdx-account-avatar-picker__lock" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V11a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v3H9V6a3 3 0 0 1 3-3z"/></svg></span>' : '') +
+        '</button>';
+      });
+      html += '</div>';
+    }
+
+    html += '</div>';
+    return html;
+  }
+
+  function applyAccountUserFromPayload(payload) {
+    if (!payload || typeof payload !== 'object') return;
+    if (payload.display_name) user.display_name = payload.display_name;
+    if (payload.email) user.email = payload.email;
+    if (payload.verified !== undefined) user.verified = !!payload.verified;
+    if (payload.avatar_url !== undefined) {
+      user.avatar_url = normalizeAvatarAssetUrl(payload.avatar_url);
+      C.avatarUrl = user.avatar_url;
+    }
+    if (payload.avatar_fallback_url !== undefined) {
+      C.avatarFallbackUrl = normalizeAvatarAssetUrl(payload.avatar_fallback_url);
+    }
+    if (payload.avatar_has_image !== undefined) {
+      user.avatar_has_image = !!payload.avatar_has_image;
+    }
+    if (payload.customer_level !== undefined) user.customer_level = payload.customer_level;
+    if (payload.level_label !== undefined) user.level_label = payload.level_label;
+    if (payload.level_title !== undefined) user.level_title = payload.level_title;
+    if (payload.level_description !== undefined) user.level_description = payload.level_description;
+    if (payload.has_customer_level !== undefined) user.has_customer_level = !!payload.has_customer_level;
+    if (payload.is_master_admin !== undefined) {
+      user.is_master_admin = !!payload.is_master_admin;
+      C.isMasterAdmin = !!payload.is_master_admin;
+    }
+  }
+
+  function applyAccountProfileUpdate(profile) {
+    accountState.profile = profile || {};
+    applyAccountUserFromPayload(accountState.profile);
+    renderAccountApp();
+    updateAuthBar();
+  }
+
+  function unwrapProfileResponse(raw) {
+    if (!raw || raw._ok === false) return {};
+    if (raw.profile && typeof raw.profile === 'object') return raw.profile;
+    return raw;
+  }
+
+  function normalizeDashboardResponse(raw) {
+    if (!raw || raw._status === 401 || raw._ok === false) return null;
+    if (raw.code === 'pdx_email_unverified' || raw.code === 'pdx_account_suspended') return raw;
+    var dash = raw.dashboard && typeof raw.dashboard === 'object' ? raw.dashboard : raw;
+    if (!dash || typeof dash !== 'object') return null;
+    dash.projects_active = Array.isArray(dash.projects_active) ? dash.projects_active : [];
+    dash.projects_recent = Array.isArray(dash.projects_recent) ? dash.projects_recent : [];
+    dash.orders_recent = Array.isArray(dash.orders_recent) ? dash.orders_recent : [];
+    dash.news = Array.isArray(dash.news) ? dash.news : [];
+    dash.notifications = Array.isArray(dash.notifications) ? dash.notifications : [];
+    dash.unread_count = dash.unread_count || 0;
+    dash.chat = dash.chat || {};
+    if (dash.user) applyAccountUserFromPayload(dash.user);
+    return dash;
+  }
+
+  function enrichAccountDashboard(dashboard) {
+    if (!dashboard || dashboard.code) return Promise.resolve(dashboard);
+    var tasks = [];
+    if (!dashboard.news.length) {
+      tasks.push(customerApiFetch('GET', '/customer/news').then(function (data) {
+        if (data && data._ok !== false && Array.isArray(data.items) && data.items.length) {
+          dashboard.news = data.items;
+        }
+      }));
+    }
+    if (!dashboard.orders_recent.length) {
+      tasks.push(customerApiFetch('GET', '/customer/orders').then(function (data) {
+        if (data && data._ok !== false && Array.isArray(data.orders) && data.orders.length) {
+          dashboard.orders_recent = data.orders.slice(0, 5);
+        }
+      }));
+    }
+    if (!dashboard.projects_active.length) {
+      tasks.push(customerApiFetch('GET', '/customer/projects').then(function (data) {
+        if (data && data._ok !== false && Array.isArray(data.projects) && data.projects.length) {
+          dashboard.projects_active = data.projects.filter(function (p) {
+            return ['planning', 'in_progress', 'active', 'review'].indexOf(p.status) >= 0;
+          });
+          dashboard.projects_recent = data.projects.slice(0, 5);
+        }
+      }));
+    }
+    if (dashboard.unread_count === 0 && (!dashboard.notifications || !dashboard.notifications.length)) {
+      tasks.push(customerApiFetch('GET', '/customer/notifications?limit=10').then(function (data) {
+        if (data && data._ok !== false) {
+          if (Array.isArray(data.items)) dashboard.notifications = data.items;
+          if (data.unread_count) dashboard.unread_count = data.unread_count;
+        }
+      }));
+    }
+    return Promise.all(tasks).then(function () { return dashboard; });
+  }
+
+  var accountSidebarEventsBound = false;
+
+  function bindAccountSidebarEvents() {
+    if (!accountSidebarEl || accountSidebarEventsBound) return;
+    accountSidebarEventsBound = true;
+    accountSidebarEl.addEventListener('click', function (e) {
+      var closeBtn = e.target.closest('.pdx-account-sidebar-close');
+      if (closeBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeAccountMobileNav();
+        return;
+      }
+      var navBtn = e.target.closest('[data-account-section]');
+      if (navBtn) {
+        setAccountSection(navBtn.getAttribute('data-account-section'));
+        return;
+      }
+      var signOutBtn = e.target.closest('.pdx-account-signout');
+      if (signOutBtn) {
+        e.preventDefault();
+        promptAccountSignOut();
+      }
+    });
   }
 
   function cxIcon(name, size) {
@@ -156,7 +772,7 @@
   }
 
   function cxLoading(label) {
-    return '<div class="pdx-cx-loading"><div class="pdx-cx-loading__spinner"></div><span>' + escHtml(label || 'Loading…') + '</span></div>';
+    return '<div class="pdx-cx-loading"><div class="pdx-cx-loading__spinner"></div><span>' + escHtml(label || t('loading', 'Loading…')) + '</span></div>';
   }
 
   function isRestNonceError(data) {
@@ -173,6 +789,8 @@
     var u = data.user || data;
     if (u.logged_in !== undefined) {
       user = u;
+      if (u.avatar_url !== undefined) C.avatarUrl = normalizeAvatarAssetUrl(u.avatar_url);
+      if (u.avatar_has_image !== undefined) user.avatar_has_image = !!u.avatar_has_image;
       C.isLoggedIn = !!u.logged_in;
       C.emailVerified = !!u.verified;
       C.userId = u.id || 0;
@@ -191,6 +809,7 @@
       closeCustomerPortal();
       closeProfileOverlay();
       closeOverlay();
+      finalizeAccountLogoutUI();
     }
     try {
       var detail = Object.assign({}, user || {}, {
@@ -472,6 +1091,7 @@
 
   function mountAuthBar() {
     removeLegacyTopbar();
+    dedupeAuthBars();
     authBar.classList.remove('pdx-auth-bar--topbar');
     if (isAuthPage()) {
       authBar.hidden = true;
@@ -489,7 +1109,21 @@
     document.body.appendChild(authBar);
   }
 
+  function dedupeAuthBars() {
+    var bars = document.querySelectorAll('#pdx-auth-bar');
+    for (var i = 1; i < bars.length; i++) {
+      if (bars[i].parentNode) {
+        bars[i].parentNode.removeChild(bars[i]);
+      }
+    }
+  }
+
   function createAuthBar() {
+    dedupeAuthBars();
+    var staleBar = document.getElementById('pdx-auth-bar');
+    if (staleBar && staleBar.parentNode) {
+      staleBar.parentNode.removeChild(staleBar);
+    }
     authBar = document.createElement('div');
     authBar.id = 'pdx-auth-bar';
     authBar.className = 'pdx-cx-shell';
@@ -497,16 +1131,16 @@
       '<div class="pdx-auth-bar-inner">' +
         '<button type="button" class="pdx-auth-signup-btn pdx-cx-btn pdx-auth-header-btn">Sign In</button>' +
         '<button type="button" class="pdx-auth-account-btn pdx-cx-btn pdx-cx-btn--ghost pdx-auth-header-btn" aria-haspopup="true" aria-expanded="false" hidden>' +
-          '<span class="pdx-auth-account-label">Account</span>' +
+          '<span class="pdx-auth-account-identity"></span>' +
         '</button>' +
         '<button type="button" class="pdx-auth-portal-btn pdx-cx-btn pdx-auth-header-btn" hidden>Customer Portal</button>' +
         '<div class="pdx-auth-menu" hidden>' +
           '<div class="pdx-auth-menu-head"></div>' +
           '<div class="pdx-auth-menu-actions">' +
-            '<button type="button" class="pdx-auth-menu-item" data-action="portal">' + cxIcon('dashboard', 16) + 'Customer Portal</button>' +
-            '<button type="button" class="pdx-auth-menu-item" data-action="profile">' + cxIcon('user', 16) + 'My Profile</button>' +
-            '<button type="button" class="pdx-auth-menu-item" data-action="account">' + cxIcon('settings', 16) + 'My Account</button>' +
-            '<button type="button" class="pdx-auth-menu-item pdx-auth-menu-item--logout" data-action="logout">' + cxIcon('logout', 16) + 'Logout</button>' +
+            '<button type="button" class="pdx-auth-menu-item" data-action="portal">' + cxIcon('dashboard', 16) + escHtml(t('customer_portal', 'Customer Portal')) + '</button>' +
+            '<button type="button" class="pdx-auth-menu-item" data-action="profile">' + cxIcon('user', 16) + escHtml(t('my_profile', 'My Profile')) + '</button>' +
+            '<button type="button" class="pdx-auth-menu-item" data-action="account">' + cxIcon('settings', 16) + escHtml(t('my_account', 'My Account')) + '</button>' +
+            '<button type="button" class="pdx-auth-menu-item pdx-auth-menu-item--logout" data-action="logout">' + cxIcon('logout', 16) + escHtml(t('logout', 'Logout')) + '</button>' +
           '</div>' +
         '</div>' +
       '</div>';
@@ -553,6 +1187,13 @@
     updateAuthBar();
   }
 
+  function applyPublicHeaderLocale() {
+    if (!authBar) return;
+    var docDir = (document.documentElement.getAttribute('dir') || '').toLowerCase();
+    var rtl = docDir === 'rtl' || customerPortalLang() === 'ar';
+    authBar.setAttribute('dir', rtl ? 'rtl' : 'ltr');
+  }
+
   function accountStatusLabel() {
     if (!user.logged_in) return 'Guest';
     if (user.is_admin) return 'Administrator';
@@ -565,40 +1206,55 @@
       authBar.hidden = true;
     }
     var accountBtn = authBar ? authBar.querySelector('.pdx-auth-account-btn') : null;
-    var labelEl = accountBtn ? accountBtn.querySelector('.pdx-auth-account-label') : null;
+    var identityEl = accountBtn ? accountBtn.querySelector('.pdx-auth-account-identity') : null;
     var head = authMenu.querySelector('.pdx-auth-menu-head');
     var signupBtn = authBar ? authBar.querySelector('.pdx-auth-signup-btn') : null;
     var portalBtn = authBar ? authBar.querySelector('.pdx-auth-portal-btn') : null;
-    var label = user.logged_in ? (user.display_name || 'Account') : 'Account';
+    var label = user.logged_in ? (user.display_name || t('account', 'Account')) : t('account', 'Account');
 
     if (signupBtn) signupBtn.hidden = !!user.logged_in;
     if (accountBtn) accountBtn.hidden = !user.logged_in;
     /* Portal is in the account dropdown on desktop; standalone btn is mobile-only. */
     if (portalBtn) portalBtn.hidden = !user.logged_in || !window.matchMedia('(max-width: 768px)').matches;
 
-    if (labelEl) {
+    if (accountBtn) {
+      cleanupLegacyHeaderIdentityNodes(accountBtn);
+    }
+    if (identityEl) {
       if (user.logged_in) {
-        labelEl.innerHTML = nameWithBadge(label, user.verified, { size: 14, inline: true, context: 'account' });
+        identityEl.innerHTML = renderHeaderUserIdentityHtml({
+          name: label,
+          showName: window.matchMedia('(min-width: 769px)').matches,
+        });
       } else {
-        labelEl.textContent = label;
+        identityEl.textContent = '';
+        identityEl.innerHTML = '';
       }
     }
     if (accountBtn) {
-      accountBtn.classList.toggle('pdx-auth-account-btn--verified', user.logged_in && user.verified);
-      accountBtn.setAttribute('aria-label', user.logged_in ? 'Account menu' : 'Account');
+      accountBtn.classList.remove('pdx-auth-account-btn--verified');
+      accountBtn.setAttribute('aria-label', user.logged_in ? t('account_menu', 'Account menu') : t('account', 'Account'));
     }
 
     if (user.logged_in && head) {
       head.innerHTML =
-        '<div class="pdx-auth-menu-name">' + nameWithBadge(user.display_name || 'Account', user.verified, { size: 15, context: 'account' }) + '</div>' +
-        '<div class="pdx-auth-menu-email">' + escHtml(user.email || '') + '</div>' +
-        '<div class="pdx-auth-menu-status">' + escHtml(accountStatusLabel()) + '</div>';
+        '<div class="pdx-auth-menu-identity">' +
+          renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--menu' }) +
+          '<div class="pdx-auth-menu-identity-text">' +
+            '<div class="pdx-auth-menu-name">' + escHtml(user.display_name || 'Account') + '</div>' +
+            '<div class="pdx-auth-menu-email">' + escHtml(user.email || '') + '</div>' +
+            '<div class="pdx-auth-menu-status">' + escHtml(accountStatusLabel()) + '</div>' +
+          '</div>' +
+        '</div>';
       authMenu.removeAttribute('hidden');
     } else {
       if (head) head.innerHTML = '';
       closeAuthMenu();
       authMenu.setAttribute('hidden', 'hidden');
     }
+    if (authBar) bindAccountAvatarFallbacks(authBar);
+    if (authMenu) bindAccountAvatarFallbacks(authMenu);
+    applyPublicHeaderLocale();
   }
 
   function openAuthMenu() {
@@ -675,8 +1331,13 @@
     }
     var body = profileOverlay.querySelector('.pdx-profile-card-body');
     body.innerHTML =
-      '<div class="pdx-profile-row"><span class="pdx-profile-label">Full Name</span><span class="pdx-profile-value">' + nameWithBadge(user.display_name || '—', user.verified, { size: 15, context: 'account' }) + '</span></div>' +
-      '<div class="pdx-profile-row"><span class="pdx-profile-label">Email</span><span class="pdx-profile-value">' + escHtml(user.email || '—') + '</span></div>' +
+      '<div class="pdx-profile-identity">' +
+        renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--profile-compact' }) +
+        '<div class="pdx-profile-identity-text">' +
+          '<div class="pdx-profile-identity-name">' + escHtml(user.display_name || '—') + '</div>' +
+          '<div class="pdx-profile-identity-email">' + escHtml(user.email || '—') + '</div>' +
+        '</div>' +
+      '</div>' +
       '<div class="pdx-profile-row"><span class="pdx-profile-label">Account Status</span><span class="pdx-profile-value pdx-profile-value--status">' + escHtml(accountStatusText(user.verified)) + '</span></div>' +
       '<div class="pdx-profile-row"><span class="pdx-profile-label">Login Status</span><span class="pdx-profile-value">' + (user.logged_in ? 'Signed in' : 'Signed out') + '</span></div>';
     profileOverlay.classList.add('is-open');
@@ -687,6 +1348,86 @@
     if (!profileOverlay) return;
     profileOverlay.classList.remove('is-open');
     document.body.classList.remove('pdx-no-scroll');
+  }
+
+  function finalizeAccountLogoutUI() {
+    closeAccountMobileNav();
+    closeAccountSignOutConfirm();
+    document.body.classList.remove('pdx-account-dashboard-body', 'pdx-account-mobile-nav-open', 'pdx-account-rtl');
+    if (accountMobileBackdrop) {
+      accountMobileBackdrop.hidden = true;
+    }
+    if (accountSidebarEl) {
+      accountSidebarEl.setAttribute('aria-hidden', 'true');
+      accountSidebarEl.style.display = 'none';
+    }
+    if (accountAppEl) {
+      accountAppEl.hidden = true;
+    }
+    try {
+      window.history.replaceState({}, '', window.location.pathname + window.location.search);
+    } catch (e) {}
+    var guestPanel = document.getElementById('pdx-auth-page-guest');
+    if (guestPanel) {
+      guestPanel.hidden = false;
+      guestPanel.scrollIntoView({ block: 'start' });
+    }
+    syncAuthPageSegment();
+  }
+
+  function ensureAccountSignOutConfirm() {
+    if (accountSignOutConfirmEl) return accountSignOutConfirmEl;
+    accountSignOutConfirmEl = document.createElement('div');
+    accountSignOutConfirmEl.id = 'pdx-account-signout-confirm';
+    accountSignOutConfirmEl.className = 'pdx-account-signout-confirm';
+    accountSignOutConfirmEl.hidden = true;
+    accountSignOutConfirmEl.innerHTML =
+      '<div class="pdx-account-signout-confirm__backdrop" data-signout-dismiss="1"></div>' +
+      '<div class="pdx-account-signout-confirm__sheet" role="dialog" aria-modal="true" aria-labelledby="pdx-account-signout-confirm-title">' +
+        '<h2 class="pdx-account-signout-confirm__title" id="pdx-account-signout-confirm-title"></h2>' +
+        '<p class="pdx-account-signout-confirm__message"></p>' +
+        '<div class="pdx-account-signout-confirm__actions">' +
+          '<button type="button" class="pdx-portal-btn pdx-portal-btn--secondary pdx-account-signout-confirm__cancel"></button>' +
+          '<button type="button" class="pdx-portal-btn pdx-portal-btn--destructive pdx-account-signout-confirm__confirm"></button>' +
+        '</div>' +
+      '</div>';
+    var root = getAccountOverlayRoot();
+    root.appendChild(accountSignOutConfirmEl);
+    accountSignOutConfirmEl.querySelector('.pdx-account-signout-confirm__title').textContent = t('sign_out_confirm_title', 'Sign Out?');
+    accountSignOutConfirmEl.querySelector('.pdx-account-signout-confirm__message').textContent = t('sign_out_confirm_message', 'Are you sure you want to sign out? You will be signed out of your account.');
+    accountSignOutConfirmEl.querySelector('.pdx-account-signout-confirm__cancel').textContent = t('cancel', 'Cancel');
+    accountSignOutConfirmEl.querySelector('.pdx-account-signout-confirm__confirm').textContent = t('sign_out', 'Sign Out');
+    accountSignOutConfirmEl.querySelector('.pdx-account-signout-confirm__cancel').addEventListener('click', closeAccountSignOutConfirm);
+    accountSignOutConfirmEl.querySelector('[data-signout-dismiss]').addEventListener('click', closeAccountSignOutConfirm);
+    accountSignOutConfirmEl.querySelector('.pdx-account-signout-confirm__confirm').addEventListener('click', function () {
+      closeAccountSignOutConfirm();
+      doLogout();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && accountSignOutConfirmEl && !accountSignOutConfirmEl.hidden) {
+        closeAccountSignOutConfirm();
+      }
+    });
+    return accountSignOutConfirmEl;
+  }
+
+  function openAccountSignOutConfirm() {
+    var dialog = ensureAccountSignOutConfirm();
+    dialog.hidden = false;
+    document.body.classList.add('pdx-account-signout-confirm-open');
+    var confirmBtn = dialog.querySelector('.pdx-account-signout-confirm__confirm');
+    if (confirmBtn) confirmBtn.focus();
+  }
+
+  function closeAccountSignOutConfirm() {
+    if (!accountSignOutConfirmEl) return;
+    accountSignOutConfirmEl.hidden = true;
+    document.body.classList.remove('pdx-account-signout-confirm-open');
+  }
+
+  function promptAccountSignOut() {
+    closeAccountMobileNav();
+    openAccountSignOutConfirm();
   }
 
   function doLogout() {
@@ -705,12 +1446,13 @@
         C.userEmail = '';
         updateAuthBar();
         updateAuthPagePanels();
+        finalizeAccountLogoutUI();
         broadcastSessionChange();
         try {
           window.dispatchEvent(new CustomEvent('pdx-session-updated', { detail: { reason: 'logout' } }));
         } catch (e) {}
       }
-      notify('Logged out.', 'info');
+      notify(t('logged_out', 'Logged out.'), 'info');
       if (window.PDXDock && window.PDXDock.closePanel) window.PDXDock.closePanel();
     });
   }
@@ -1429,9 +2171,10 @@
     if (!shell) return;
     var header = document.getElementById('pdx-account-header');
     if (!header) {
-      header = document.createElement('header');
+      header = document.createElement('div');
       header.id = 'pdx-account-header';
       header.className = 'pdx-account-header';
+      header.setAttribute('role', 'banner');
       shell.insertBefore(header, shell.firstChild);
     }
 
@@ -1446,6 +2189,7 @@
     }
 
     mountShellLogoLink(link, 'pdx-account-header-home--official');
+    if (accountMobileMenuBtn) syncAccountMobileMenuPosition();
   }
 
   function ensureAuthShellHomeLogo(shell) {
@@ -1538,74 +2282,85 @@
   }
 
   function accountNavGroups() {
-    return [
+    var groups = [
       {
-        label: 'Account',
+        label: t('nav_group_account', 'Account'),
         items: [
-          { id: 'overview', label: 'Overview', icon: 'dashboard' },
-          { id: 'personal', label: 'Personal Information', icon: 'user' },
-          { id: 'security', label: 'Security', icon: 'lock' },
-          { id: 'settings', label: 'Settings', icon: 'settings' },
+          { id: 'overview', label: t('nav_overview', 'Overview'), icon: 'dashboard' },
+          { id: 'personal', label: t('nav_personal', 'Personal Information'), icon: 'user' },
+          { id: 'security', label: t('nav_security', 'Security'), icon: 'lock' },
+          { id: 'settings', label: t('nav_settings', 'Settings'), icon: 'settings' },
         ],
       },
       {
-        label: 'Your Work',
+        label: t('nav_group_work', 'Your Work'),
         items: [
-          { id: 'projects', label: 'Projects', icon: 'folder' },
-          { id: 'orders', label: 'Requests', icon: 'receipt' },
-          { id: 'records', label: 'Records / Ticket History', icon: 'file' },
-          { id: 'files', label: 'Files & Invoices', icon: 'file' },
+          { id: 'projects', label: t('nav_projects', 'Projects'), icon: 'folder' },
+          { id: 'orders', label: t('nav_orders', 'Requests'), icon: 'receipt' },
+          { id: 'records', label: t('nav_records', 'Records / Ticket History'), icon: 'file' },
+          { id: 'files', label: t('nav_files', 'Files & Invoices'), icon: 'file' },
         ],
       },
       {
-        label: 'Updates',
+        label: t('nav_group_updates', 'Updates'),
         items: [
-          { id: 'news', label: 'News', icon: 'news' },
-          { id: 'notifications', label: 'Alerts', icon: 'bell' },
+          { id: 'news', label: t('nav_news', 'News'), icon: 'news' },
+          { id: 'notifications', label: t('nav_notifications', 'Alerts'), icon: 'bell' },
         ],
       },
       {
-        label: 'Support',
+        label: t('nav_group_support', 'Support'),
         items: [
-          { id: 'support', label: 'Messages', icon: 'message' },
-          { id: 'services', label: 'Services', icon: 'package' },
+          { id: 'support', label: t('nav_support', 'Messages'), icon: 'message' },
+          { id: 'services', label: t('nav_services', 'Services'), icon: 'package' },
         ],
       },
     ];
+    if (isMasterAdminUser()) {
+      groups.push({
+        label: t('nav_group_administration', 'Administration'),
+        items: [
+          { id: 'administration', label: t('nav_administration', 'Customer Management'), icon: 'settings' },
+        ],
+      });
+    }
+    return groups;
   }
 
   function accountSectionTitle(section) {
     var titles = {
-      overview: 'Overview',
-      personal: 'Personal Information',
-      security: 'Security',
-      settings: 'Settings',
-      projects: 'Projects',
-      orders: 'Requests',
-      records: 'Records / Ticket History',
-      files: 'Files & Invoices',
-      news: 'News',
-      notifications: 'Alerts',
-      support: 'Messages',
-      services: 'Services',
+      overview: t('nav_overview', 'Overview'),
+      personal: t('nav_personal', 'Personal Information'),
+      security: t('nav_security', 'Security'),
+      settings: t('nav_settings', 'Settings'),
+      administration: t('nav_administration', 'Customer Management'),
+      projects: t('nav_projects', 'Projects'),
+      orders: t('nav_orders', 'Requests'),
+      records: t('nav_records', 'Records / Ticket History'),
+      files: t('nav_files', 'Files & Invoices'),
+      news: t('nav_news', 'News'),
+      notifications: t('nav_notifications', 'Alerts'),
+      support: t('nav_support', 'Messages'),
+      services: t('nav_services', 'Services'),
     };
-    return titles[section] || 'Account';
+    return titles[section] || t('account', 'Account');
   }
 
   function accountSectionLead(section) {
     var leads = {
-      overview: 'A snapshot of your projects, requests, and account activity.',
-      personal: 'Update your name and contact details.',
-      security: 'Manage your password and account security.',
-      settings: 'Control notifications and communication preferences.',
-      projects: 'Track active work and deliverables.',
-      orders: 'View requests, billing, and payment history.',
-      records: 'Review closed Cybercrime Support reports in read-only mode.',
-      files: 'Download shared files and invoices.',
-      news: 'Announcements and updates from PAXDesign.',
-      notifications: 'Your account alerts and activity notifications.',
-      support: 'Continue your conversation with PAXDesign.',
-      services: 'Browse services and start new requests.',
+      overview: t('lead_overview', 'A snapshot of your projects, requests, and account activity.'),
+      personal: t('lead_personal', 'Update your name and contact details.'),
+      security: t('lead_security', 'Manage your password and account security.'),
+      settings: t('lead_settings', 'Control notifications and communication preferences.'),
+      administration: t('lead_administration', 'Manage registered customer profiles, levels, and permissions.'),
+      projects: t('lead_projects', 'Track active work and deliverables.'),
+      orders: t('lead_orders', 'View requests, billing, and payment history.'),
+      records: t('lead_records', 'Review closed Cybercrime Support reports in read-only mode.'),
+      files: t('lead_files', 'Download shared files and invoices.'),
+      news: t('lead_news', 'Announcements and updates from PAXDesign.'),
+      notifications: t('lead_notifications', 'Your account alerts and activity notifications.'),
+      support: t('lead_support', 'Continue your conversation with PAXDesign.'),
+      services: t('lead_services', 'Browse services and start new requests.'),
     };
     return leads[section] || '';
   }
@@ -1649,6 +2404,13 @@
         window.history.replaceState({}, '', window.location.pathname + window.location.search + '#/' + accountState.section);
       } catch (e) {}
     }
+    if (isAccountMobileViewport()) closeAccountMobileNav();
+    if (section === 'administration' && isMasterAdminUser()) {
+      Promise.all([loadMasterAdminLevels(), loadMasterAdminCustomers()]).then(function () {
+        renderAccountApp();
+      });
+      return;
+    }
     renderAccountApp();
   }
 
@@ -1662,56 +2424,102 @@
 
   function renderAccountSidebar() {
     if (!accountSidebarEl) return;
-    var html = '<div class="pdx-account-sidebar-user">' +
-      '<div class="pdx-account-sidebar-name">' + nameWithBadge(user.display_name || 'Account', user.verified, { size: 15, inline: true, context: 'account' }) + '</div>' +
-      '<div class="pdx-account-sidebar-email">' + escHtml(user.email || '') + '</div>' +
-      '<div class="pdx-account-sidebar-status">' + escHtml(accountStatusText(user.verified)) + '</div>' +
-    '</div>';
+    accountSidebarEl.style.removeProperty('display');
+    var html = '<div class="pdx-account-sidebar-mobile-head">' +
+      '<span class="pdx-account-sidebar-mobile-title">' + escHtml(t('account_navigation', 'Account navigation')) + '</span>' +
+      '<button type="button" class="pdx-account-sidebar-close" aria-label="' + escHtml(t('close', 'Close')) + '">' +
+        cxIcon('close', 20) +
+      '</button>' +
+    '</div>' +
+    '<div class="pdx-account-sidebar-user">' +
+      '<div class="pdx-account-identity">' +
+        renderAccountAvatarHtml({ sizeClass: 'pdx-account-avatar--sidebar' }) +
+        '<div class="pdx-account-sidebar-name-row">' +
+          '<div class="pdx-account-name-line pdx-account-sidebar-name">' + accountDashboardNameWithBadge(user.display_name || t('account', 'Account'), user.verified, { size: 14, inline: true, context: 'account' }) + '</div>' +
+          renderCustomerLevelBadge(null, { compact: true }) +
+          '<div class="pdx-account-sidebar-email">' + escHtml(user.email || '') + '</div>' +
+          '<div class="pdx-account-sidebar-status">' + escHtml(accountStatusText(user.verified)) + '</div>' +
+        '</div>' +
+      '</div>' +
+    '</div><div class="pdx-account-sidebar-nav">';
     accountNavGroups().forEach(function (group) {
       html += '<div class="pdx-account-nav-group"><div class="pdx-account-nav-label">' + escHtml(group.label) + '</div>';
       group.items.forEach(function (item) {
         var active = accountState.section === item.id ? ' is-active' : '';
         html += '<button type="button" class="pdx-account-nav-btn' + active + '" data-account-section="' + item.id + '">' +
-          cxIcon(item.icon, 16) + escHtml(item.label) + '</button>';
+          cxIcon(item.icon, 16) + '<span class="pdx-account-nav-text">' + escHtml(item.label) + '</span></button>';
       });
       html += '</div>';
     });
-    html += '<div class="pdx-account-sidebar-footer">' +
+    html += '</div><div class="pdx-account-sidebar-footer">' +
       '<a class="pdx-portal-btn pdx-portal-btn--secondary pdx-portal-btn--full pdx-account-website-link" href="' + escHtml(homePageUrl()) + '">' +
-        cxIcon('chevron', 16) + escHtml('Continue to website') +
+        cxIcon('chevron', 16) + escHtml(t('continue_website', 'Continue to website')) +
       '</a>' +
-      '<button type="button" class="pdx-portal-btn pdx-portal-btn--destructive pdx-portal-btn--full pdx-account-signout">' + cxIcon('logout', 16) + escHtml('Sign Out') + '</button>' +
+      '<button type="button" class="pdx-portal-btn pdx-portal-btn--destructive pdx-portal-btn--full pdx-account-signout">' + cxIcon('logout', 16) + escHtml(t('sign_out', 'Sign Out')) + '</button>' +
     '</div>';
     accountSidebarEl.innerHTML = html;
-    accountSidebarEl.querySelectorAll('[data-account-section]').forEach(function (btn) {
-      btn.addEventListener('click', function () {
-        setAccountSection(btn.getAttribute('data-account-section'));
-      });
-    });
-    var signOut = accountSidebarEl.querySelector('.pdx-account-signout');
-    if (signOut) signOut.addEventListener('click', doLogout);
+    if (isAccountMobileViewport()) {
+      accountSidebarEl.setAttribute('role', 'dialog');
+      accountSidebarEl.setAttribute('aria-modal', 'true');
+      accountSidebarEl.setAttribute('aria-hidden', accountMobileNavOpen ? 'false' : 'true');
+    } else {
+      accountSidebarEl.removeAttribute('role');
+      accountSidebarEl.removeAttribute('aria-modal');
+      accountSidebarEl.removeAttribute('aria-hidden');
+    }
   }
 
   function renderAccountPersonalSection(profile) {
-    profile = profile || {};
+    profile = profile || accountProfileData();
+    var avatarUrl = accountAvatarUrl(profile);
+    var hasUpload = !!profile.avatar_has_upload;
+    var removePhotoBtn = hasUpload
+      ? '<button type="button" class="pdx-account-avatar__remove" id="pdx-profile-avatar-remove">' + escHtml(t('remove_photo', 'Remove photo')) + '</button>'
+      : '';
+    var removePhotoMobileBtn = hasUpload
+      ? '<button type="button" class="pdx-account-avatar__remove pdx-account-avatar__remove--mobile" id="pdx-profile-avatar-remove-mobile">' + escHtml(t('remove_photo', 'Remove photo')) + '</button>'
+      : '';
     return '<div class="pdx-account-card">' +
-      '<div class="pdx-account-card-title">Personal Information</div>' +
+      '<div class="pdx-account-card-title">' + escHtml(t('personal_information', 'Personal Information')) + '</div>' +
+      '<div class="pdx-account-profile-identity">' +
+        renderAccountAvatarHtml({ url: avatarUrl, sizeClass: 'pdx-account-avatar--profile-compact', profile: profile }) +
+        '<div class="pdx-account-profile-identity-text">' +
+          '<div class="pdx-account-name-line pdx-account-profile-name">' + accountDashboardNameWithBadge(profile.display_name || user.display_name || t('account', 'Account'), profile.verified !== undefined ? profile.verified : user.verified, { size: 14, inline: true, context: 'account' }) + '</div>' +
+          renderCustomerLevelBadge(profile) +
+          (accountLevelData(profile).level_description ? '<div class="pdx-account-profile-level-desc">' + escHtml(accountLevelData(profile).level_description) + '</div>' : '') +
+          '<div class="pdx-account-profile-email">' + escHtml(profile.email || user.email || '') + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="pdx-account-profile-avatar-block pdx-account-profile-avatar-block--desktop">' +
+        '<label class="pdx-account-avatar__change">' +
+          escHtml(t('change_photo', 'Change photo')) +
+          '<input type="file" id="pdx-profile-avatar-input" class="pdx-account-avatar__file-input" accept="image/jpeg,image/png,image/webp" hidden />' +
+        '</label>' +
+        removePhotoBtn +
+      '</div>' +
+      '<div class="pdx-account-profile-avatar-block pdx-account-profile-avatar-block--mobile">' +
+        '<div class="pdx-account-avatar-actions">' +
+          '<button type="button" class="pdx-account-avatar__change-btn" id="pdx-profile-avatar-change-mobile">' + escHtml(t('change_photo', 'Change photo')) + '</button>' +
+          removePhotoMobileBtn +
+        '</div>' +
+      '</div>' +
+      renderAccountAvatarPickerHtml(profile) +
       '<form id="pdx-customer-profile-form">' +
-        field('display_name', 'Display name', profile.display_name || user.display_name) +
-        field('email', 'Email', profile.email || user.email, 'email') +
-        '<div style="margin-top:12px">' + actionBtn('Save changes', { type: 'submit', icon: 'check', small: true, inline: true }) + '</div>' +
+        field('display_name', t('display_name', 'Display name'), profile.display_name || user.display_name) +
+        field('email', t('email', 'Email'), profile.email || user.email, 'email') +
+        '<div style="margin-top:12px">' + actionBtn(t('save_changes', 'Save changes'), { type: 'submit', icon: 'check', small: true, inline: true }) + '</div>' +
       '</form>' +
     '</div>';
   }
 
   function renderAccountSecuritySection() {
     return '<div class="pdx-account-card">' +
-      '<div class="pdx-account-card-title">Security</div>' +
+      '<div class="pdx-account-card-title">' + escHtml(t('nav_security', 'Security')) + '</div>' +
       '<form id="pdx-customer-security-form">' +
-        field('current_password', 'Current password', '', 'password') +
-        field('new_password', 'New password', '', 'password') +
-        field('confirm_password', 'Confirm new password', '', 'password') +
-        '<div style="margin-top:12px">' + actionBtn('Update password', { type: 'submit', icon: 'lock', small: true, inline: true }) + '</div>' +
+        field('current_password', t('current_password', 'Current password'), '', 'password') +
+        field('new_password', t('new_password', 'New password'), '', 'password') +
+        field('confirm_password', t('confirm_password', 'Confirm new password'), '', 'password') +
+        '<div style="margin-top:12px">' + actionBtn(t('update_password', 'Update password'), { type: 'submit', icon: 'lock', small: true, inline: true }) + '</div>' +
       '</form>' +
     '</div>';
   }
@@ -1720,14 +2528,14 @@
     settings = settings || {};
     var prefs = settings.notifications || {};
     var toggles = [
-      { key: 'chat', label: 'Message notifications' },
-      { key: 'project', label: 'Project updates' },
-      { key: 'order', label: 'Request updates' },
-      { key: 'news', label: 'News announcements' },
-      { key: 'security', label: 'Security alerts' },
-      { key: 'push_enabled', label: 'Push notifications (mobile app)' },
+      { key: 'chat', label: t('notify_chat', 'Message notifications') },
+      { key: 'project', label: t('notify_project', 'Project updates') },
+      { key: 'order', label: t('notify_order', 'Request updates') },
+      { key: 'news', label: t('notify_news', 'News announcements') },
+      { key: 'security', label: t('notify_security', 'Security alerts') },
+      { key: 'push_enabled', label: t('notify_push', 'Push notifications (mobile app)') },
     ];
-    var html = '<div class="pdx-account-card"><div class="pdx-account-card-title">Notification preferences</div>' +
+    var html = '<div class="pdx-account-card"><div class="pdx-account-card-title">' + escHtml(t('notification_preferences', 'Notification preferences')) + '</div>' +
       '<form id="pdx-customer-settings-form"><div class="pdx-portal-toggle-group">';
     toggles.forEach(function (t) {
       var checked = prefs[t.key] !== false ? ' checked' : '';
@@ -1740,7 +2548,7 @@
       '</label>';
     });
     html += '</div><div class="pdx-portal-btn-row">' +
-      actionBtn('Save preferences', { type: 'submit', icon: 'check', small: true }) +
+      actionBtn(t('save_preferences', 'Save preferences'), { type: 'submit', icon: 'check', small: true }) +
     '</div></form></div>';
     return html;
   }
@@ -1761,7 +2569,7 @@
           push_enabled: !!fd.get('push_enabled'),
         },
       }).then(function (data) {
-        notify((data && data.message) || 'Settings saved.', data && data._ok !== false ? 'info' : 'warn');
+        notify((data && data.message) || t('settings_saved', 'Settings saved.'), data && data._ok !== false ? 'info' : 'warn');
         if (data && data._ok !== false) {
           accountState.settings = data;
         }
@@ -1771,35 +2579,133 @@
 
   function renderAccountFilesSection(files) {
     files = files || [];
-    var html = '<div class="pdx-account-card"><div class="pdx-account-card-title">Files & Invoices</div>';
+    var html = '<div class="pdx-account-card"><div class="pdx-account-card-title">' + escHtml(t('files_invoices', 'Files & Invoices')) + '</div>';
     if (!files.length) {
-      html += '<p class="pdx-portal-empty">No shared files yet. Project deliverables and invoices appear here.</p>';
+      html += '<p class="pdx-portal-empty">' + escHtml(t('no_shared_files', 'No shared files yet. Project deliverables and invoices appear here.')) + '</p>';
     } else {
       files.forEach(function (file) {
         var href = file.download_url || file.url || '#';
         html += '<a class="pdx-portal-row pdx-portal-row--link" href="' + escHtml(href) + '" target="_blank" rel="noopener">' +
-          '<strong>' + escHtml(file.name || file.filename || 'File') + '</strong>' +
+          '<strong>' + escHtml(file.name || file.filename || t('file', 'File')) + '</strong>' +
           '<span>' + escHtml(file.project_title || file.type || '') + '</span></a>';
       });
     }
     return html + '</div>';
   }
 
+  function triggerProfileAvatarFilePicker(input) {
+    if (!input) return;
+    try {
+      input.click();
+    } catch (err) {
+      /* iOS Safari: ensure hidden inputs remain activatable from touch handlers. */
+      input.removeAttribute('hidden');
+      input.style.position = 'fixed';
+      input.style.left = '-9999px';
+      input.style.width = '1px';
+      input.style.height = '1px';
+      input.style.opacity = '0';
+      input.click();
+      input.setAttribute('hidden', 'hidden');
+      input.removeAttribute('style');
+    }
+  }
+
+  function uploadProfileAvatarFile(file, avatarInput) {
+    if (!file) return;
+    var fd = new FormData();
+    fd.append('avatar', file);
+    customerApiFormData('/customer/profile/avatar', fd).then(function (data) {
+      if (data && data._ok !== false && data.profile) {
+        applyAccountProfileUpdate(data.profile);
+        notify(t('avatar_updated', 'Profile picture updated.'), 'info');
+      } else {
+        notify((data && data.message) || t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+      }
+      if (avatarInput) avatarInput.value = '';
+    }).catch(function () {
+      notify(t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+      if (avatarInput) avatarInput.value = '';
+    });
+  }
+
+  function removeProfileAvatarPhoto(removeBtns) {
+    removeBtns = removeBtns || [];
+    removeBtns.forEach(function (btn) { if (btn) btn.disabled = true; });
+    customerApiFetch('DELETE', '/customer/profile/avatar').then(function (data) {
+      if (data && data._ok !== false && data.profile) {
+        applyAccountProfileUpdate(data.profile);
+        notify(t('photo_removed', 'Photo removed. Your PAXDesign avatar is restored.'), 'info');
+      } else {
+        notify((data && data.message) || t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+        removeBtns.forEach(function (btn) { if (btn) btn.disabled = false; });
+      }
+    }).catch(function () {
+      notify(t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+      removeBtns.forEach(function (btn) { if (btn) btn.disabled = false; });
+    });
+  }
+
   function bindAccountPersonalForm(container) {
     var form = container.querySelector('#pdx-customer-profile-form');
-    if (!form) return;
-    form.addEventListener('submit', function (e) {
-      e.preventDefault();
-      var fd = new FormData(form);
-      customerApiFetch('POST', '/customer/profile', {
-        display_name: fd.get('display_name'),
-        email: fd.get('email'),
-      }).then(function (data) {
-        notify((data && data.message) || 'Profile updated.', data && data._ok ? 'info' : 'warn');
-        if (data && data._ok) {
-          refreshUser({ trigger: 'profile_update' });
-          renderAccountApp();
-        }
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var fd = new FormData(form);
+        customerApiFetch('POST', '/customer/profile', {
+          display_name: fd.get('display_name'),
+          email: fd.get('email'),
+        }).then(function (data) {
+          notify((data && data.message) || t('profile_updated', 'Profile updated.'), data && data._ok ? 'info' : 'warn');
+          if (data && data._ok) {
+            accountState.profile = unwrapProfileResponse(data);
+            applyAccountUserFromPayload(accountState.profile);
+            refreshUser({ trigger: 'profile_update' });
+            renderAccountApp();
+          }
+        });
+      });
+    }
+    var avatarInput = container.querySelector('#pdx-profile-avatar-input');
+    if (avatarInput) {
+      avatarInput.addEventListener('change', function () {
+        var file = avatarInput.files && avatarInput.files[0];
+        if (!file) return;
+        uploadProfileAvatarFile(file, avatarInput);
+      });
+    }
+    var changeMobileBtn = container.querySelector('#pdx-profile-avatar-change-mobile');
+    if (changeMobileBtn && avatarInput) {
+      changeMobileBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        triggerProfileAvatarFilePicker(avatarInput);
+      });
+    }
+    var removeBtn = container.querySelector('#pdx-profile-avatar-remove');
+    var removeMobileBtn = container.querySelector('#pdx-profile-avatar-remove-mobile');
+    var removeHandler = function () {
+      removeProfileAvatarPhoto([removeBtn, removeMobileBtn]);
+    };
+    if (removeBtn) removeBtn.addEventListener('click', removeHandler);
+    if (removeMobileBtn) removeMobileBtn.addEventListener('click', removeHandler);
+    container.querySelectorAll('[data-avatar-preset]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (btn.getAttribute('data-avatar-locked') === '1' || btn.disabled) return;
+        var presetId = btn.getAttribute('data-avatar-preset');
+        if (!presetId || btn.classList.contains('is-selected')) return;
+        btn.disabled = true;
+        customerApiFetch('POST', '/customer/profile/avatar/preset', { preset_id: presetId }).then(function (data) {
+          if (data && data._ok !== false && data.profile) {
+            applyAccountProfileUpdate(data.profile);
+            notify(t('avatar_preset_updated', 'Avatar updated.'), 'info');
+          } else {
+            notify((data && data.message) || t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+            btn.disabled = false;
+          }
+        }).catch(function () {
+          notify(t('avatar_upload_failed', 'Could not upload profile picture.'), 'error');
+          btn.disabled = false;
+        });
       });
     });
   }
@@ -1813,21 +2719,534 @@
       var p1 = String(fd.get('new_password') || '');
       var p2 = String(fd.get('confirm_password') || '');
       if (p1.length < 8) {
-        notify('Password must be at least 8 characters.', 'warn');
+        notify(t('password_min_length', 'Password must be at least 8 characters.'), 'warn');
         return;
       }
       if (p1 !== p2) {
-        notify('Passwords do not match.', 'warn');
+        notify(t('passwords_mismatch', 'Passwords do not match.'), 'warn');
         return;
       }
       customerApiFetch('POST', '/customer/profile', {
         current_password: fd.get('current_password'),
         new_password: p1,
       }).then(function (data) {
-        notify((data && data.message) || 'Security settings updated.', data && data._ok ? 'info' : 'warn');
+        notify((data && data.message) || t('security_updated', 'Security settings updated.'), data && data._ok ? 'info' : 'warn');
         if (data && data._ok) form.reset();
       });
     });
+  }
+
+  function adminPresetUrlFromCatalog(presetId, presets, vipPresets) {
+    var all = (presets || []).concat(vipPresets || []);
+    for (var i = 0; i < all.length; i++) {
+      if (all[i] && all[i].id === presetId) {
+        return normalizeAvatarAssetUrl(all[i].url || '');
+      }
+    }
+    return accountAvatarPresetUrl(presetId);
+  }
+
+  function adminCustomerAvatarUrl(customer) {
+    if (!customer) return '';
+    if (customer.avatar_has_upload) {
+      return normalizeAvatarAssetUrl(customer.avatar_url || '');
+    }
+    var presetId = customer.avatar_preset || '';
+    if (presetId && presetId !== 'pax-none') {
+      var presetUrl = adminPresetUrlFromCatalog(presetId, customer.standard_presets, customer.vip_presets);
+      if (presetUrl) return presetUrl;
+    }
+    return normalizeAvatarAssetUrl(customer.avatar_url || '');
+  }
+
+  function adminCustomerHasAvatar(customer) {
+    if (!customer) return false;
+    if (customer.avatar_has_image === false) return false;
+    if (customer.avatar_has_upload) return true;
+    if (customer.avatar_preset === 'pax-none') return false;
+    return !!(adminCustomerAvatarUrl(customer) || customer.avatar_has_image);
+  }
+
+  function renderAdminCustomerAvatarHtml(customer, sizeClass) {
+    if (!adminCustomerHasAvatar(customer)) return '';
+    var url = adminCustomerAvatarUrl(customer);
+    if (!url) return '';
+    sizeClass = sizeClass || 'pdx-account-avatar--profile-compact';
+    var px = ACCOUNT_AVATAR_PX[sizeClass] || 64;
+    var fallback = adminPresetUrlFromCatalog(customer.avatar_preset, customer.standard_presets, customer.vip_presets) || url;
+    return '<span class="pdx-account-avatar ' + sizeClass + '" style="width:' + px + 'px;height:' + px + 'px;max-width:' + px + 'px;max-height:' + px + 'px;flex:0 0 ' + px + 'px">' +
+      '<img class="pdx-account-avatar__img" src="' + escHtml(url) + '" data-avatar-fallback="' + escHtml(fallback) + '" alt="" width="' + px + '" height="' + px + '" loading="lazy" decoding="async" onerror="window.__pdxAvatarFallback&&window.__pdxAvatarFallback(this)" />' +
+    '</span>';
+  }
+
+  function renderAdminCustomerPreviewPanel(customer) {
+    var avatarType = customer.avatar_has_upload
+      ? t('admin_avatar_uploaded', 'Personal uploaded photo')
+      : (customer.avatar_preset === 'pax-none'
+        ? t('no_profile_picture', 'No profile picture')
+        : t('admin_avatar_preset', 'PAXDesign avatar'));
+    var presetLabel = customer.avatar_preset || '—';
+    var presets = customer.standard_presets || [];
+    var vipPresets = customer.vip_presets || [];
+    for (var i = 0; i < presets.length; i++) {
+      if (presets[i].id === customer.avatar_preset) {
+        presetLabel = presets[i].label || presetLabel;
+        break;
+      }
+    }
+    for (var j = 0; j < vipPresets.length; j++) {
+      if (vipPresets[j].id === customer.avatar_preset) {
+        presetLabel = vipPresets[j].label || presetLabel;
+        break;
+      }
+    }
+    return '<div class="pdx-account-admin-preview">' +
+      '<div class="pdx-account-admin-preview__label">' + escHtml(t('admin_customer_preview', 'Customer account preview')) + '</div>' +
+      '<p class="pdx-account-admin-preview__lead">' + escHtml(t('admin_customer_preview_lead', 'Read-only view of how this customer sees their profile.')) + '</p>' +
+      '<div class="pdx-account-admin-preview__card">' +
+        '<div class="pdx-account-profile-identity">' +
+          renderAdminCustomerAvatarHtml(customer, 'pdx-account-avatar--profile-compact') +
+          '<div class="pdx-account-profile-identity-text">' +
+            '<div class="pdx-account-name-line pdx-account-profile-name">' + accountDashboardNameWithBadge(customer.display_name || t('account', 'Account'), customer.verified, { size: 14, inline: true, context: 'account' }) + '</div>' +
+            renderCustomerLevelBadge(customer) +
+            (customer.level_description ? '<div class="pdx-account-profile-level-desc">' + escHtml(customer.level_description) + '</div>' : '') +
+            '<div class="pdx-account-profile-email">' + renderAdminCustomerEmail(customer) + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<dl class="pdx-account-admin-meta">' +
+          '<div><dt>' + escHtml(t('admin_avatar_type', 'Profile image')) + '</dt><dd>' + escHtml(avatarType) + '</dd></div>' +
+          '<div><dt>' + escHtml(t('admin_current_avatar', 'Current avatar')) + '</dt><dd>' + escHtml(presetLabel) + '</dd></div>' +
+          '<div><dt>' + escHtml(t('account_status', 'Account status')) + '</dt><dd>' + escHtml((customer.account_status || 'active').charAt(0).toUpperCase() + (customer.account_status || 'active').slice(1)) + '</dd></div>' +
+          (customer.last_login ? '<div><dt>' + escHtml(t('admin_last_login', 'Last login')) + '</dt><dd>' + escHtml(customer.last_login) + '</dd></div>' : '') +
+        '</dl>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function renderAdminCustomerAvatarPickers(customer) {
+    var presets = customer.standard_presets || accountState.masterStandardPresets || [];
+    var vipPresets = customer.vip_presets || [];
+    var currentPreset = customer.avatar_preset || '';
+    var hasUpload = !!customer.avatar_has_upload;
+    var html = '<div class="pdx-account-admin-avatars">' +
+      '<div class="pdx-account-admin-section-title">' + escHtml(t('admin_manage_avatars', 'Avatar assignment')) + '</div>' +
+      '<p class="pdx-account-admin-section-lead">' + escHtml(t('admin_manage_avatars_lead', 'Assign standard or VIP avatars. Locked VIP avatars require granting before the customer can use them.')) + '</p>';
+
+    if (hasUpload) {
+      html += '<div class="pdx-account-admin-upload-note">' +
+        '<span>' + escHtml(t('admin_customer_has_upload', 'This customer has a personal uploaded photo active.')) + '</span>' +
+        '<button type="button" class="pdx-portal-btn pdx-portal-btn--ghost pdx-admin-remove-upload">' + escHtml(t('admin_remove_upload', 'Remove uploaded photo')) + '</button>' +
+      '</div>';
+    }
+
+    html += '<div class="pdx-account-avatar-picker">' +
+      '<div class="pdx-account-avatar-picker__title">' + escHtml(t('paxdesign_avatars', 'PAXDesign avatars')) + '</div>' +
+      '<div class="pdx-account-avatar-picker__grid pdx-account-admin-avatar-grid" role="listbox">';
+    presets.forEach(function (preset) {
+      var isNone = preset.type === 'none' || preset.id === 'pax-none';
+      var selected = !hasUpload && preset.id === currentPreset;
+      if (isNone) {
+        html += '<button type="button" class="pdx-account-avatar-picker__item pdx-account-avatar-picker__item--none pdx-admin-assign-avatar' + (selected ? ' is-selected' : '') + '" data-avatar-preset="' + escHtml(preset.id) + '" title="' + escHtml(preset.label || t('no_profile_picture', 'No profile picture')) + '">' +
+          '<span class="pdx-account-avatar-picker__none-mark" aria-hidden="true"></span>' +
+          '<span class="pdx-account-avatar-picker__none-text">' + escHtml(preset.label || t('no_profile_picture', 'No profile picture')) + '</span></button>';
+        return;
+      }
+      html += '<button type="button" class="pdx-account-avatar-picker__item pdx-admin-assign-avatar' + (selected ? ' is-selected' : '') + '" data-avatar-preset="' + escHtml(preset.id) + '" title="' + escHtml(preset.label || preset.id) + '">' +
+        '<img src="' + escHtml(normalizeAvatarAssetUrl(preset.url || '')) + '" alt="" width="48" height="48" loading="lazy" decoding="async" /></button>';
+    });
+    html += '</div>';
+
+    if (vipPresets.length) {
+      html += '<div class="pdx-account-avatar-picker__subtitle">' + escHtml(t('exclusive_level_avatars', 'PAXDesign Level avatars')) + '</div>' +
+        '<div class="pdx-account-avatar-picker__grid pdx-account-avatar-picker__grid--vip pdx-account-admin-avatar-grid" role="listbox">';
+      vipPresets.forEach(function (preset) {
+        var locked = !!preset.locked;
+        var granted = (customer.vip_avatar_grants || []).indexOf(preset.id) !== -1;
+        var selected = !hasUpload && !locked && preset.id === currentPreset;
+        var lockLabel = t('vip_avatar_locked', 'Exclusive avatar — assigned by administrator only');
+        html += '<div class="pdx-account-admin-vip-tile">' +
+          '<button type="button" class="pdx-account-avatar-picker__item pdx-account-avatar-picker__item--vip pdx-admin-assign-avatar' +
+            (locked ? ' pdx-account-avatar-picker__item--locked' : '') +
+            (selected ? ' is-selected' : '') + '" data-avatar-preset="' + escHtml(preset.id) + '"' +
+            (locked ? ' data-avatar-locked="1" disabled aria-disabled="true"' : '') +
+            ' title="' + escHtml(locked ? lockLabel : (preset.label || preset.id)) + '">' +
+            '<img src="' + escHtml(preset.url || '') + '" alt="" width="48" height="48" loading="lazy" decoding="async" />' +
+            (locked ? '<span class="pdx-account-avatar-picker__lock" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12 1a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V11a2 2 0 0 0-2-2h-1V6a5 5 0 0 0-5-5zm0 2a3 3 0 0 1 3 3v3H9V6a3 3 0 0 1 3-3z"/></svg></span>' : '') +
+          '</button>' +
+          '<div class="pdx-account-admin-vip-tile__meta">' +
+            '<span class="pdx-account-admin-vip-tile__label">' + escHtml(preset.label || preset.id) + '</span>' +
+            (granted
+              ? '<button type="button" class="pdx-portal-btn pdx-portal-btn--ghost pdx-admin-revoke-vip" data-vip-id="' + escHtml(preset.id) + '">' + escHtml(t('revoke', 'Revoke')) + '</button>'
+              : '<button type="button" class="pdx-portal-btn pdx-portal-btn--secondary pdx-admin-grant-vip" data-vip-id="' + escHtml(preset.id) + '">' + escHtml(t('grant', 'Grant')) + '</button>') +
+          '</div></div>';
+      });
+      html += '</div>';
+    }
+    html += '</div></div>';
+    return html;
+  }
+
+  function renderAdminLevelPanel(customer) {
+    var levelOptions = (accountState.masterLevels || []).map(function (lvl) {
+      var selected = Number(customer.customer_level) === Number(lvl.level) ? ' selected' : '';
+      return '<option value="' + escHtml(String(lvl.level)) + '"' + selected + '>' + escHtml(lvl.label) + '</option>';
+    }).join('');
+    var selectedLevel = null;
+    (accountState.masterLevels || []).forEach(function (lvl) {
+      if (Number(lvl.level) === Number(customer.customer_level)) selectedLevel = lvl;
+    });
+    var previewHtml = '';
+    if (selectedLevel) {
+      previewHtml = '<div class="pdx-account-admin-level-preview">' +
+        '<div class="pdx-account-admin-level-preview__title">' + escHtml(t('admin_level_preview', 'Level preview')) + '</div>' +
+        renderCustomerLevelBadge({ level_label: selectedLevel.label, level_title: selectedLevel.title, level_description: selectedLevel.description, has_customer_level: true }) +
+        (selectedLevel.title ? '<div class="pdx-account-admin-level-preview__name">' + escHtml(selectedLevel.title) + '</div>' : '') +
+        (selectedLevel.description ? '<div class="pdx-account-admin-level-preview__desc">' + escHtml(selectedLevel.description) + '</div>' : '') +
+        (selectedLevel.avatar_id ? '<div class="pdx-account-admin-level-preview__avatar"><img src="' + escHtml(adminPresetUrlFromCatalog(selectedLevel.avatar_id, customer.standard_presets, customer.vip_presets)) + '" alt="" width="64" height="64" loading="lazy" /></div>' : '') +
+      '</div>';
+    }
+    return '<div class="pdx-account-admin-levels">' +
+      '<div class="pdx-account-admin-section-title">' + escHtml(t('admin_manage_level', 'PAXDesign level')) + '</div>' +
+      '<p class="pdx-account-admin-section-lead">' + escHtml(t('admin_manage_level_lead', 'Assign a customer level (01–10). The matching VIP avatar is granted automatically.')) + '</p>' +
+      previewHtml +
+    '</div>';
+  }
+
+  function adminCustomerEmailLabel(customer) {
+    if (!customer) return '';
+    var email = String(customer.email || '').trim();
+    if (email) return email;
+    var login = String(customer.user_login || '').trim();
+    if (login.indexOf('@') !== -1) return login;
+    return '';
+  }
+
+  function renderAdminCustomerEmail(customer) {
+    var email = adminCustomerEmailLabel(customer);
+    return email ? escHtml(email) : escHtml(t('email_unavailable', 'Email unavailable'));
+  }
+
+  function renderAccountAdminSection() {
+    var customer = accountState.masterCustomer;
+    if (customer && customer.id) {
+      var levelOptions = (accountState.masterLevels || []).map(function (lvl) {
+        var selected = Number(customer.customer_level) === Number(lvl.level) ? ' selected' : '';
+        return '<option value="' + escHtml(String(lvl.level)) + '"' + selected + '>' + escHtml(lvl.label) + '</option>';
+      }).join('');
+      return '<div class="pdx-account-admin-editor">' +
+        '<div class="pdx-account-card pdx-account-admin-toolbar">' +
+          '<button type="button" class="pdx-portal-btn pdx-portal-btn--ghost pdx-admin-back">' + escHtml(t('back_to_customers', 'Back to customers')) + '</button>' +
+          '<div class="pdx-account-admin-toolbar__identity">' +
+            renderAdminCustomerAvatarHtml(customer, 'pdx-account-avatar--sidebar') +
+            '<div><div class="pdx-account-card-title">' + escHtml(customer.display_name || customer.email || ('#' + customer.id)) + '</div>' +
+            renderCustomerLevelBadge(customer) +
+            '<div class="pdx-account-admin-toolbar__email">' + renderAdminCustomerEmail(customer) + '</div></div>' +
+          '</div>' +
+        '</div>' +
+        renderAdminCustomerPreviewPanel(customer) +
+        '<div class="pdx-account-card">' +
+          '<div class="pdx-account-admin-section-title">' + escHtml(t('admin_account_details', 'Account details')) + '</div>' +
+          '<form id="pdx-master-customer-form" class="pdx-account-form">' +
+            '<label class="pdx-label">' + escHtml(t('display_name', 'Display name')) + '<input class="pdx-input" name="display_name" value="' + escHtml(customer.display_name || '') + '" /></label>' +
+            '<label class="pdx-label">' + escHtml(t('email', 'Email')) + '<input class="pdx-input" name="email" type="email" value="' + escHtml(adminCustomerEmailLabel(customer)) + '" /></label>' +
+            '<label class="pdx-label">' + escHtml(t('account_status', 'Account status')) +
+              '<select class="pdx-select" name="account_status">' +
+                ['active', 'pending', 'suspended'].map(function (st) {
+                  return '<option value="' + st + '"' + (customer.account_status === st ? ' selected' : '') + '>' + escHtml(st.charAt(0).toUpperCase() + st.slice(1)) + '</option>';
+                }).join('') +
+              '</select></label>' +
+            '<label class="pdx-label">' + escHtml(t('customer_level', 'PAXDesign level')) +
+              '<select class="pdx-select" name="customer_level" id="pdx-admin-level-select"><option value="0">' + escHtml(t('no_level', 'No level')) + '</option>' + levelOptions + '</select></label>' +
+            '<label class="pdx-label">' + escHtml(t('admin_notes', 'Internal notes')) + '<textarea class="pdx-input" name="admin_notes" rows="3">' + escHtml(customer.admin_notes || '') + '</textarea></label>' +
+            '<dl class="pdx-account-admin-meta pdx-account-admin-meta--inline">' +
+              '<div><dt>' + escHtml(t('registered', 'Registered')) + '</dt><dd>' + escHtml(customer.registered || '—') + '</dd></div>' +
+              '<div><dt>' + escHtml(t('verified', 'Verified')) + '</dt><dd>' + escHtml(customer.verified ? t('yes', 'Yes') : t('no', 'No')) + '</dd></div>' +
+              (customer.last_login ? '<div><dt>' + escHtml(t('admin_last_login', 'Last login')) + '</dt><dd>' + escHtml(customer.last_login) + '</dd></div>' : '') +
+            '</dl>' +
+            '<button type="submit" class="pdx-portal-btn pdx-portal-btn--primary">' + escHtml(t('save_changes', 'Save changes')) + '</button>' +
+          '</form>' +
+        '</div>' +
+        '<div class="pdx-account-card">' + renderAdminLevelPanel(customer) + '</div>' +
+        '<div class="pdx-account-card">' + renderAdminCustomerAvatarPickers(customer) + '</div>' +
+      '</div>';
+    }
+
+    var rows = (accountState.masterCustomers && accountState.masterCustomers.customers) || [];
+    var total = accountState.masterCustomers && accountState.masterCustomers.total;
+    var page = accountState.masterCustomers && accountState.masterCustomers.page ? Number(accountState.masterCustomers.page) : accountState.masterPage;
+    var perPage = accountState.masterCustomers && accountState.masterCustomers.per_page ? Number(accountState.masterCustomers.per_page) : accountState.masterPerPage;
+    var totalPages = total > 0 ? Math.ceil(total / perPage) : 1;
+    var html = '<div class="pdx-account-card">' +
+      '<div class="pdx-account-admin-search">' +
+        '<input type="search" class="pdx-input" id="pdx-master-customer-search" placeholder="' + escHtml(t('search_customers', 'Search customers…')) + '" value="' + escHtml(accountState.masterSearch || '') + '" />' +
+        '<button type="button" class="pdx-portal-btn pdx-portal-btn--secondary" id="pdx-master-customer-search-btn">' + escHtml(t('search', 'Search')) + '</button>' +
+      '</div>';
+    if (typeof total === 'number') {
+      html += '<div class="pdx-account-admin-count">' + escHtml(String(total)) + ' ' + escHtml(t('customers_total', 'customers')) +
+        (totalPages > 1 ? ' · ' + escHtml(t('page', 'Page')) + ' ' + escHtml(String(page)) + ' / ' + escHtml(String(totalPages)) : '') +
+      '</div>';
+    }
+    html += '<div class="pdx-account-admin-table-wrap"><table class="pdx-account-admin-table"><thead><tr>' +
+        '<th></th><th>' + escHtml(t('customer', 'Customer')) + '</th><th>' + escHtml(t('email', 'Email')) + '</th><th>' + escHtml(t('level', 'Level')) + '</th><th>' + escHtml(t('status', 'Status')) + '</th><th></th>' +
+      '</tr></thead><tbody>';
+    if (!rows.length) {
+      html += '<tr><td colspan="6">' + escHtml(t('no_customers_found', 'No customers found.')) + '</td></tr>';
+    } else {
+      rows.forEach(function (row) {
+        html += '<tr>' +
+          '<td class="pdx-account-admin-table__avatar">' + renderAdminCustomerAvatarHtml(row, 'pdx-account-avatar--menu') + '</td>' +
+          '<td><strong>' + escHtml(row.display_name || '—') + '</strong></td>' +
+          '<td>' + renderAdminCustomerEmail(row) + '</td>' +
+          '<td>' + (row.level_label ? escHtml(row.level_label) : '—') + '</td>' +
+          '<td><span class="pdx-account-admin-status pdx-account-admin-status--' + escHtml(row.account_status || 'active') + '">' + escHtml(row.account_status || '') + '</span></td>' +
+          '<td><button type="button" class="pdx-portal-btn pdx-portal-btn--secondary pdx-admin-open-customer" data-customer-id="' + escHtml(String(row.id)) + '">' + escHtml(t('manage', 'Manage')) + '</button></td>' +
+        '</tr>';
+      });
+    }
+    html += '</tbody></table></div>';
+    if (totalPages > 1) {
+      html += '<div class="pdx-account-admin-pagination">' +
+        '<button type="button" class="pdx-portal-btn pdx-portal-btn--ghost pdx-admin-page-prev"' + (page <= 1 ? ' disabled' : '') + '>' + escHtml(t('previous', 'Previous')) + '</button>' +
+        '<span class="pdx-account-admin-pagination__label">' + escHtml(t('page', 'Page')) + ' ' + escHtml(String(page)) + ' / ' + escHtml(String(totalPages)) + '</span>' +
+        '<button type="button" class="pdx-portal-btn pdx-portal-btn--ghost pdx-admin-page-next"' + (page >= totalPages ? ' disabled' : '') + '>' + escHtml(t('next', 'Next')) + '</button>' +
+      '</div>';
+    }
+    html += '</div>';
+    return html;
+  }
+
+  function loadMasterAdminCustomers(search, page) {
+    accountState.masterSearch = search !== undefined ? (search || '') : accountState.masterSearch || '';
+    if (page !== undefined) accountState.masterPage = Math.max(1, Number(page) || 1);
+    var q = '?page=' + encodeURIComponent(String(accountState.masterPage)) +
+      '&per_page=' + encodeURIComponent(String(accountState.masterPerPage || 50)) +
+      '&_=' + Date.now();
+    if (accountState.masterSearch) q += '&search=' + encodeURIComponent(accountState.masterSearch);
+    return customerApiFetch('GET', '/customer/master/customers' + q).then(function (data) {
+      if (data && data._ok !== false) {
+        accountState.masterCustomers = data;
+        if (data.page) accountState.masterPage = Number(data.page);
+      }
+      return data;
+    });
+  }
+
+  function loadMasterAdminCustomer(id) {
+    return customerApiFetch('GET', '/customer/master/customers/' + encodeURIComponent(String(id))).then(function (data) {
+      if (data && data._ok !== false && data.customer) accountState.masterCustomer = data.customer;
+      return data;
+    });
+  }
+
+  function loadMasterAdminLevels() {
+    if (accountState.masterLevels && accountState.masterLevels.length) {
+      return Promise.resolve(accountState.masterLevels);
+    }
+    return customerApiFetch('GET', '/customer/master/levels').then(function (data) {
+      if (data && data._ok !== false && Array.isArray(data.levels)) {
+        accountState.masterLevels = data.levels;
+      }
+      if (data && data._ok !== false && Array.isArray(data.standard_presets)) {
+        accountState.masterStandardPresets = data.standard_presets;
+      }
+      if (data && data._ok !== false && Array.isArray(data.vip_presets)) {
+        accountState.masterVipPresets = data.vip_presets.map(function (preset) {
+          if (!preset) return preset;
+          preset.url = normalizeAvatarAssetUrl(preset.url || '');
+          preset.locked = false;
+          return preset;
+        });
+      }
+      return data;
+    });
+  }
+
+  function bindAccountAdminSection(container) {
+    ensureAccountAvatarFallbackHandler();
+    bindAccountAvatarFallbacks(container);
+    var backBtn = container.querySelector('.pdx-admin-back');
+    if (backBtn) {
+      backBtn.addEventListener('click', function () {
+        accountState.masterCustomer = null;
+        loadMasterAdminCustomers().then(function () { renderAccountApp(); });
+      });
+    }
+    container.querySelectorAll('.pdx-admin-open-customer').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = btn.getAttribute('data-customer-id');
+        if (!id) return;
+        Promise.all([loadMasterAdminLevels(), loadMasterAdminCustomer(id)]).then(function () {
+          renderAccountApp();
+        });
+      });
+    });
+    var searchBtn = container.querySelector('#pdx-master-customer-search-btn');
+    var searchInput = container.querySelector('#pdx-master-customer-search');
+    if (searchBtn && searchInput) {
+      var runSearch = function () {
+        accountState.masterPage = 1;
+        loadMasterAdminCustomers(searchInput.value || '', 1).then(function () { renderAccountApp(); });
+      };
+      searchBtn.addEventListener('click', runSearch);
+      searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          runSearch();
+        }
+      });
+    }
+    var prevPageBtn = container.querySelector('.pdx-admin-page-prev');
+    var nextPageBtn = container.querySelector('.pdx-admin-page-next');
+    if (prevPageBtn) {
+      prevPageBtn.addEventListener('click', function () {
+        if (prevPageBtn.disabled) return;
+        loadMasterAdminCustomers(undefined, Math.max(1, accountState.masterPage - 1)).then(function () { renderAccountApp(); });
+      });
+    }
+    if (nextPageBtn) {
+      nextPageBtn.addEventListener('click', function () {
+        if (nextPageBtn.disabled) return;
+        loadMasterAdminCustomers(undefined, accountState.masterPage + 1).then(function () { renderAccountApp(); });
+      });
+    }
+    container.querySelectorAll('.pdx-admin-grant-vip').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = accountState.masterCustomer && accountState.masterCustomer.id;
+        var vipId = btn.getAttribute('data-vip-id');
+        if (!id || !vipId) return;
+        btn.disabled = true;
+        customerApiFetch('POST', '/customer/master/customers/' + id, { vip_avatar_id: vipId }).then(function (data) {
+          if (data && data._ok !== false && data.customer) {
+            accountState.masterCustomer = data.customer;
+            renderAccountApp();
+            notify(t('vip_assigned', 'VIP avatar assigned.'), 'info');
+          } else {
+            notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+            btn.disabled = false;
+          }
+        });
+      });
+    });
+    container.querySelectorAll('.pdx-admin-revoke-vip').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = accountState.masterCustomer && accountState.masterCustomer.id;
+        var vipId = btn.getAttribute('data-vip-id');
+        if (!id || !vipId) return;
+        btn.disabled = true;
+        customerApiFetch('POST', '/customer/master/customers/' + id, { revoke_vip_avatar_id: vipId }).then(function (data) {
+          if (data && data._ok !== false && data.customer) {
+            accountState.masterCustomer = data.customer;
+            renderAccountApp();
+            notify(t('vip_revoked', 'VIP avatar revoked.'), 'info');
+          } else {
+            notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+            btn.disabled = false;
+          }
+        });
+      });
+    });
+    container.querySelectorAll('.pdx-admin-assign-avatar').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (btn.getAttribute('data-avatar-locked') === '1' || btn.disabled) return;
+        var id = accountState.masterCustomer && accountState.masterCustomer.id;
+        var presetId = btn.getAttribute('data-avatar-preset');
+        if (!id || !presetId || btn.classList.contains('is-selected')) return;
+        btn.disabled = true;
+        customerApiFetch('POST', '/customer/master/customers/' + id, { vip_avatar_id: presetId }).then(function (data) {
+          if (data && data._ok !== false && data.customer) {
+            accountState.masterCustomer = data.customer;
+            renderAccountApp();
+            notify(t('avatar_preset_updated', 'Avatar updated.'), 'info');
+          } else {
+            notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+            btn.disabled = false;
+          }
+        });
+      });
+    });
+    var removeUploadBtn = container.querySelector('.pdx-admin-remove-upload');
+    if (removeUploadBtn) {
+      removeUploadBtn.addEventListener('click', function () {
+        var id = accountState.masterCustomer && accountState.masterCustomer.id;
+        if (!id) return;
+        removeUploadBtn.disabled = true;
+        customerApiFetch('POST', '/customer/master/customers/' + id, { remove_avatar_upload: true }).then(function (data) {
+          if (data && data._ok !== false && data.customer) {
+            accountState.masterCustomer = data.customer;
+            renderAccountApp();
+            notify(t('photo_removed', 'Photo removed. Your PAXDesign avatar is restored.'), 'info');
+          } else {
+            notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+            removeUploadBtn.disabled = false;
+          }
+        });
+      });
+    }
+    var form = container.querySelector('#pdx-master-customer-form');
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var id = accountState.masterCustomer && accountState.masterCustomer.id;
+        if (!id) return;
+        var fd = new FormData(form);
+        customerApiFetch('POST', '/customer/master/customers/' + id, {
+          display_name: fd.get('display_name'),
+          email: fd.get('email'),
+          account_status: fd.get('account_status'),
+          customer_level: fd.get('customer_level'),
+          admin_notes: fd.get('admin_notes'),
+        }).then(function (data) {
+          if (data && data._ok !== false && data.customer) {
+            accountState.masterCustomer = data.customer;
+            loadMasterAdminCustomers(undefined, accountState.masterPage).then(function () {
+              renderAccountApp();
+            });
+            notify(t('customer_updated', 'Customer updated.'), 'info');
+          } else {
+            notify((data && data.message) || t('update_failed', 'Update failed.'), 'error');
+          }
+        });
+      });
+      var levelSelect = form.querySelector('#pdx-admin-level-select');
+      if (levelSelect) {
+        levelSelect.addEventListener('change', function () {
+          var val = Number(levelSelect.value || 0);
+          var customer = accountState.masterCustomer;
+          if (!customer) return;
+          var selected = null;
+          (accountState.masterLevels || []).forEach(function (lvl) {
+            if (Number(lvl.level) === val) selected = lvl;
+          });
+          customer.customer_level = val;
+          customer.has_customer_level = val > 0;
+          customer.level_label = selected ? selected.label : '';
+          customer.level_title = selected ? selected.title : '';
+          customer.level_description = selected ? selected.description : '';
+          var levelPanel = container.closest('.pdx-account-admin-editor');
+          if (levelPanel) {
+            var card = levelPanel.querySelector('.pdx-account-admin-levels');
+            if (card && card.parentElement) {
+              card.parentElement.innerHTML = renderAdminLevelPanel(customer);
+            }
+            var previewCard = levelPanel.querySelector('.pdx-account-admin-preview__card');
+            if (previewCard) {
+              var badgeHost = previewCard.querySelector('.pdx-account-profile-identity-text');
+              if (badgeHost) {
+                var existingBadge = badgeHost.querySelector('.pdx-account-level-badge');
+                if (existingBadge) existingBadge.remove();
+                var existingDesc = badgeHost.querySelector('.pdx-account-profile-level-desc');
+                if (existingDesc) existingDesc.remove();
+                var badgeHtml = renderCustomerLevelBadge(customer);
+                if (badgeHtml) {
+                  var emailEl = badgeHost.querySelector('.pdx-account-profile-email');
+                  if (emailEl) emailEl.insertAdjacentHTML('beforebegin', badgeHtml + (customer.level_description ? '<div class="pdx-account-profile-level-desc">' + escHtml(customer.level_description) + '</div>' : ''));
+                }
+              }
+            }
+          }
+        });
+      }
+    }
   }
 
   function renderAccountMain() {
@@ -1837,7 +3256,7 @@
       '<p class="pdx-account-page-lead">' + escHtml(accountSectionLead(section)) + '</p></div>';
 
     if (section === 'personal') {
-      accountMainEl.innerHTML = head + renderAccountPersonalSection(accountState.profile);
+      accountMainEl.innerHTML = head + renderAccountPersonalSection(accountProfileData());
       bindAccountPersonalForm(accountMainEl);
       return;
     }
@@ -1855,6 +3274,15 @@
       accountMainEl.innerHTML = head + renderAccountFilesSection(accountState.files);
       return;
     }
+    if (section === 'administration') {
+      if (!isMasterAdminUser()) {
+        accountMainEl.innerHTML = head + '<p class="pdx-auth-error">' + escHtml(t('access_denied', 'Access denied.')) + '</p>';
+        return;
+      }
+      accountMainEl.innerHTML = head + renderAccountAdminSection();
+      bindAccountAdminSection(accountMainEl);
+      return;
+    }
 
     portalState.tab = accountSectionToPortalTab(section);
     portalState.detail = accountState.detail;
@@ -1870,42 +3298,64 @@
       renderAccountApp();
       return Promise.resolve(true);
     }
-    if (accountMainEl) accountMainEl.innerHTML = cxLoading('Loading your account…');
+    if (accountMainEl) accountMainEl.innerHTML = cxLoading(t('loading_account', 'Loading your account…'));
     return claimGuestSessionIfNeeded().then(function () {
-      return Promise.all([
-        customerApiFetch('GET', '/customer/dashboard'),
-        customerApiFetch('GET', '/customer/profile'),
-        customerApiFetch('GET', '/customer/files'),
-        customerApiFetch('GET', '/customer/settings'),
-      ]);
+      return refreshAccountAvatarPresets().then(function () {
+        return Promise.all([
+          customerApiFetch('GET', '/customer/dashboard'),
+          customerApiFetch('GET', '/customer/profile?_=' + Date.now()),
+          customerApiFetch('GET', '/customer/files'),
+          customerApiFetch('GET', '/customer/settings'),
+        ]);
+      });
     }).then(function (results) {
-      var dashboard = results[0];
-      if (!dashboard || dashboard._status === 401) {
-        if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">Please sign in to continue.</p>';
+      var dashboard = normalizeDashboardResponse(results[0]);
+      if (!dashboard) {
+        if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('sign_in_continue', 'Please sign in to continue.')) + '</p>';
         return false;
       }
       if (dashboard.code === 'pdx_email_unverified') {
-        if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">Verify your email to access your account dashboard.</p>';
+        if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('verify_email_dashboard', 'Verify your email to access your account dashboard.')) + '</p>';
         return false;
       }
-      accountState.dashboard = dashboard;
-      accountState.profile = (results[1] && results[1]._ok !== false) ? results[1] : {};
-      accountState.files = (results[2] && Array.isArray(results[2].files)) ? results[2].files : (Array.isArray(results[2]) ? results[2] : []);
-      accountState.settings = (results[3] && results[3]._ok !== false) ? results[3] : {};
-      accountState.loaded = true;
-      portalState.dashboard = dashboard;
-      renderAccountApp();
-      return true;
+      return enrichAccountDashboard(dashboard).then(function (enriched) {
+        accountState.dashboard = enriched;
+        accountState.profile = unwrapProfileResponse(results[1]);
+        applyAccountUserFromPayload(accountState.profile);
+        accountState.files = (results[2] && Array.isArray(results[2].files)) ? results[2].files : (Array.isArray(results[2]) ? results[2] : []);
+        accountState.settings = (results[3] && results[3]._ok !== false) ? results[3] : {};
+        accountState.loaded = true;
+        portalState.dashboard = enriched;
+        renderAccountApp();
+        return true;
+      });
     }).catch(function () {
-      if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">Unable to load your account. Please try again.</p>';
+      if (accountMainEl) accountMainEl.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('load_account_error', 'Unable to load your account. Please try again.')) + '</p>';
       return false;
     });
   }
 
+  function syncAccountDashboardLayout() {
+    if (!accountAppEl || !accountMainEl) return;
+    accountAppEl.hidden = false;
+    accountAppEl.style.removeProperty('display');
+    accountMainEl.hidden = false;
+    accountMainEl.style.removeProperty('display');
+    accountMainEl.style.removeProperty('visibility');
+    accountMainEl.setAttribute('aria-hidden', 'false');
+  }
+
   function renderAccountApp() {
     if (!accountAppEl || !accountSidebarEl || !accountMainEl) return;
+    applyAccountLocale();
+    ensureAccountMobileChrome();
     renderAccountSidebar();
     renderAccountMain();
+    bindAccountAvatarFallbacks(accountAppEl);
+    if (authBar) bindAccountAvatarFallbacks(authBar);
+    if (authMenu) bindAccountAvatarFallbacks(authMenu);
+    syncAccountMobileOverlayMount();
+    syncAccountDashboardLayout();
   }
 
   function initAccountApp(force) {
@@ -2405,16 +3855,9 @@
   }
 
   /* ─── Public API ───────────────────────────────────────── */
-  function customerPortalLang() {
-    var lang = (document.documentElement.lang || navigator.language || 'de').toLowerCase();
-    if (lang.indexOf('ar') === 0) return 'ar';
-    if (lang.indexOf('en') === 0) return 'en';
-    return 'de';
-  }
-
   function withPortalLang(path) {
     var lang = encodeURIComponent(customerPortalLang());
-    if (path.indexOf('/customer/news') === 0 || path.indexOf('/customer/dashboard') === 0) {
+    if (path.indexOf('/customer/news') === 0 || path.indexOf('/customer/dashboard') === 0 || path.indexOf('/customer/orders') === 0 || path.indexOf('/customer/projects') === 0) {
       var join = path.indexOf('?') >= 0 ? '&' : '?';
       return path + join + 'lang=' + lang;
     }
@@ -2443,7 +3886,7 @@
   }
 
   var portalOverlay = null;
-  var portalState = { tab: 'overview', dashboard: null, detail: null };
+  var portalState = { tab: 'overview', dashboard: null, detail: null, servicesCatalog: null };
 
   var GUEST_SESSION_KEY = 'paxdesign-chat-session';
   var GUEST_DEVICE_TOKEN_KEY = 'paxdesign-chat-device-token';
@@ -2512,7 +3955,7 @@
   }
 
   function portalBackBtn(label) {
-    return '<button type="button" class="pdx-portal-back" data-portal-back="1">&larr; ' + escHtml(label || 'Back') + '</button>';
+    return '<button type="button" class="pdx-portal-back" data-portal-back="1">&larr; ' + escHtml(label || t('back', 'Back')) + '</button>';
   }
 
   function bindPortalNav(container) {
@@ -2548,7 +3991,7 @@
       return;
     }
     if (!user.verified && !user.is_admin) {
-      notify('Please verify your email to access your account.', 'warn');
+      notify(t('verify_email_access', 'Please verify your email to access your account.'), 'warn');
       navigateToAuthPage('login');
       return;
     }
@@ -2561,7 +4004,7 @@
       window.location.href = accountPageUrl() + '#/' + section;
       return;
     }
-    notify('Account page is not configured.', 'warn');
+    notify(t('account_not_configured', 'Account page is not configured.'), 'warn');
   }
 
   function closeCustomerPortal() {
@@ -2723,12 +4166,12 @@
       return;
     }
     if (kind === 'service') {
-      body.innerHTML = renderPortalNav() + '<div class="pdx-portal-content">' + cxLoading('Loading service…') + '</div>';
-      customerApiFetch('GET', '/customer/services/' + encodeURIComponent(id)).then(function (service) {
+      body.innerHTML = renderPortalNav() + '<div class="pdx-portal-content">' + cxLoading(t('loading_services', 'Loading services…')) + '</div>';
+      resolveServiceBySlug(id).then(function (service) {
         if (!service || !service._ok) {
           portalState.detail = null;
           renderCustomerPortalDashboard(container, portalState.dashboard);
-          notify('Service could not be loaded.', 'warn');
+          notify(t('services_load_error', 'Services could not be loaded.'), 'warn');
           return;
         }
         portalState.detail.data = service;
@@ -2780,32 +4223,32 @@
     var news = data.news || [];
     var unread = data.unread_count || 0;
     var chat = data.chat || {};
-    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('dashboard', 16) + 'Welcome</h3>';
-    html += '<p class="pdx-portal-lead">Your projects, requests, and conversations in one place.</p>';
+    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('dashboard', 16) + escHtml(t('welcome', 'Welcome')) + '</h3>';
+    html += '<p class="pdx-portal-lead">' + escHtml(t('overview_lead', 'Your projects, requests, and conversations in one place.')) + '</p>';
     html += '<div class="pdx-portal-stats">';
-    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="projects"><span>' + projects.length + '</span>Active projects</button>';
-    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="orders"><span>' + orders.length + '</span>Recent requests</button>';
-    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="notifications"><span>' + unread + '</span>Unread alerts</button>';
-    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="chat"><span>' + escHtml(chat.handler || 'ai') + '</span>Chat mode</button>';
+    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="projects"><span>' + projects.length + '</span>' + escHtml(t('active_projects', 'Active projects')) + '</button>';
+    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="orders"><span>' + orders.length + '</span>' + escHtml(t('recent_requests', 'Recent requests')) + '</button>';
+    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="notifications"><span>' + unread + '</span>' + escHtml(t('unread_alerts', 'Unread alerts')) + '</button>';
+    html += '<button type="button" class="pdx-portal-stat" data-portal-tab-jump="chat"><span>' + escHtml(chat.handler || 'ai') + '</span>' + escHtml(t('chat_mode', 'Chat mode')) + '</button>';
     html += '</div></section>';
-    html += '<section class="pdx-portal-section"><h3>' + cxIcon('folder', 16) + 'Active projects</h3>';
+    html += '<section class="pdx-portal-section"><h3>' + cxIcon('folder', 16) + escHtml(t('active_projects', 'Active projects')) + '</h3>';
     if (projects.length) {
       projects.slice(0, 4).forEach(function (p) {
         html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="project" data-portal-id="' + escHtml(String(p.id)) + '">' +
           '<strong>' + escHtml(p.title) + '</strong><span>' + escHtml(String(p.progress || 0)) + '% · ' + escHtml(p.status) + '</span></button>';
       });
     } else {
-      html += '<p class="pdx-portal-empty">No active projects yet. Browse services to request work.</p>';
+      html += '<p class="pdx-portal-empty">' + escHtml(t('no_active_projects_overview', 'No active projects yet. Browse services to request work.')) + '</p>';
     }
     html += '</section>';
-    html += '<section class="pdx-portal-section"><h3>' + cxIcon('news', 16) + 'Latest news</h3>';
+    html += '<section class="pdx-portal-section"><h3>' + cxIcon('news', 16) + escHtml(t('latest_news', 'Latest news')) + '</h3>';
     if (news.length) {
       news.slice(0, 3).forEach(function (n) {
         html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="news" data-portal-slug="' + escHtml(n.slug || '') + '">' +
           '<strong>' + escHtml(n.title) + '</strong></button>';
       });
     } else {
-      html += '<p class="pdx-portal-empty">No announcements right now.</p>';
+      html += '<p class="pdx-portal-empty">' + escHtml(t('no_announcements', 'No announcements right now.')) + '</p>';
     }
     html += '</section>';
     setTimeout(function () {
@@ -2830,59 +4273,59 @@
     var sessionId = (data.chat || {}).session_id || '';
     return '<section class="pdx-portal-section pdx-portal-chat">' +
       '<div class="pdx-portal-chat-head">' +
-        '<h3>' + cxIcon('message', 16) + 'Conversation</h3>' +
+        '<h3>' + cxIcon('message', 16) + escHtml(t('conversation', 'Conversation')) + '</h3>' +
       '</div>' +
-      '<div class="pdx-portal-chat-log" id="pdx-portal-chat-log">' + cxLoading('Loading messages…') + '</div>' +
+      '<div class="pdx-portal-chat-log" id="pdx-portal-chat-log">' + cxLoading(t('loading_messages', 'Loading messages…')) + '</div>' +
       '<div class="pdx-portal-chat-tools">' +
-        '<label class="pdx-portal-tool" title="Attach image"><input type="file" accept="image/*" id="pdx-portal-image-input" hidden />' + cxIcon('image', 16) + '</label>' +
-        '<label class="pdx-portal-tool" title="Attach file"><input type="file" id="pdx-portal-file-input" hidden />' + cxIcon('file', 16) + '</label>' +
-        '<button type="button" class="pdx-portal-tool" id="pdx-portal-voice-btn" title="Voice message">' + cxIcon('mic', 16) + '</button>' +
-        '<button type="button" class="pdx-portal-tool" id="pdx-portal-location-btn" title="Share location">' + cxIcon('location', 16) + '</button>' +
+        '<label class="pdx-portal-tool" title="' + escHtml(t('attach_image', 'Attach image')) + '"><input type="file" accept="image/*" id="pdx-portal-image-input" hidden />' + cxIcon('image', 16) + '</label>' +
+        '<label class="pdx-portal-tool" title="' + escHtml(t('attach_file', 'Attach file')) + '"><input type="file" id="pdx-portal-file-input" hidden />' + cxIcon('file', 16) + '</label>' +
+        '<button type="button" class="pdx-portal-tool" id="pdx-portal-voice-btn" title="' + escHtml(t('voice_message', 'Voice message')) + '">' + cxIcon('mic', 16) + '</button>' +
+        '<button type="button" class="pdx-portal-tool" id="pdx-portal-location-btn" title="' + escHtml(t('share_location', 'Share location')) + '">' + cxIcon('location', 16) + '</button>' +
       '</div>' +
       '<form class="pdx-portal-chat-form" id="pdx-portal-chat-form">' +
-        '<textarea rows="2" placeholder="Write a message…" aria-label="Message"></textarea>' +
-        actionBtn('Send', { type: 'submit', small: true, inline: true, icon: 'send' }) +
+        '<textarea rows="2" placeholder="' + escHtml(t('write_message', 'Write a message…')) + '" aria-label="' + escHtml(t('message', 'Message')) + '"></textarea>' +
+        actionBtn(t('send', 'Send'), { type: 'submit', small: true, inline: true, icon: 'send' }) +
       '</form></section>';
   }
 
   function renderPortalProjectsSection(data) {
     var projects = data.projects_active || [];
-    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('folder', 16) + 'Your projects</h3>';
+    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('folder', 16) + escHtml(t('your_projects', 'Your projects')) + '</h3>';
     if (projects.length) {
       projects.forEach(function (p) {
         html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="project" data-portal-id="' + escHtml(String(p.id)) + '">' +
           '<strong>' + escHtml(p.title) + '</strong><span>' + escHtml(String(p.progress || 0)) + '% · ' + escHtml(p.status) + '</span></button>';
       });
     } else {
-      html += '<p class="pdx-portal-empty">No active projects yet. Request a service to begin.</p>';
+      html += '<p class="pdx-portal-empty">' + escHtml(t('no_active_projects', 'No active projects yet. Request a service to begin.')) + '</p>';
     }
     return html + '</section>';
   }
 
   function renderPortalProjectDetail(project) {
-    var html = portalBackBtn('All projects');
+    var html = portalBackBtn(t('all_projects', 'All projects'));
     html += '<article class="pdx-portal-detail"><h3>' + escHtml(project.title) + '</h3>';
     html += '<p class="pdx-portal-meta">' + escHtml(project.ref) + ' · ' + escHtml(project.status) + ' · ' + escHtml(String(project.progress || 0)) + '%</p>';
     if (project.description) {
       html += '<div class="pdx-portal-body-text">' + escHtml(project.description) + '</div>';
     }
     if ((project.milestones || []).length) {
-      html += '<h4>Milestones</h4><ul class="pdx-portal-list">';
+      html += '<h4>' + escHtml(t('milestones', 'Milestones')) + '</h4><ul class="pdx-portal-list">';
       project.milestones.forEach(function (m) {
         html += '<li><strong>' + escHtml(m.title) + '</strong> — ' + escHtml(m.status) +
-          (m.due_date ? ' · due ' + escHtml(formatDate(m.due_date)) : '') + '</li>';
+          (m.due_date ? ' · ' + escHtml(t('due', 'due')) + ' ' + escHtml(formatDate(m.due_date)) : '') + '</li>';
       });
       html += '</ul>';
     }
     if ((project.notes || []).length) {
-      html += '<h4>Updates</h4><ul class="pdx-portal-list">';
+      html += '<h4>' + escHtml(t('updates', 'Updates')) + '</h4><ul class="pdx-portal-list">';
       project.notes.forEach(function (n) {
         html += '<li>' + escHtml(n.body) + '</li>';
       });
       html += '</ul>';
     }
     if ((project.files || []).length) {
-      html += '<h4>Files</h4><ul class="pdx-portal-list">';
+      html += '<h4>' + escHtml(t('files', 'Files')) + '</h4><ul class="pdx-portal-list">';
       project.files.forEach(function (f) {
         var dl = '/customer/projects/' + project.id + '/files/' + f.id + '/download';
         html += '<li><a href="' + escHtml((C.restUrl || '/wp-json/pdx/v1').replace(/\/$/, '') + dl) + '" target="_blank" rel="noopener">' + escHtml(f.file_name) + '</a></li>';
@@ -2890,9 +4333,9 @@
       html += '</ul>';
     }
     if ((project.assignees || []).length) {
-      html += '<h4>Your team</h4><ul class="pdx-portal-list">';
+      html += '<h4>' + escHtml(t('your_team', 'Your team')) + '</h4><ul class="pdx-portal-list">';
       project.assignees.forEach(function (a) {
-        html += '<li>' + escHtml(a.display_name || ('Staff #' + a.user_id)) + ' — ' + escHtml(a.role_label || 'Staff') + '</li>';
+        html += '<li>' + escHtml(a.display_name || (t('staff', 'Staff') + ' #' + a.user_id)) + ' — ' + escHtml(a.role_label || t('staff', 'Staff')) + '</li>';
       });
       html += '</ul>';
     }
@@ -2901,27 +4344,27 @@
 
   function renderPortalOrdersSection(data) {
     var orders = data.orders_recent || [];
-    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('receipt', 16) + 'Service requests</h3>';
+    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('receipt', 16) + escHtml(t('service_requests', 'Service requests')) + '</h3>';
     if (orders.length) {
       orders.forEach(function (o) {
         html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="order" data-portal-id="' + escHtml(String(o.id)) + '">' +
           '<strong>' + escHtml(o.service_label || o.ref) + '</strong><span>' + escHtml(o.status) + '</span></button>';
       });
     } else {
-      html += '<p class="pdx-portal-empty">No service requests yet.</p>';
+      html += '<p class="pdx-portal-empty">' + escHtml(t('no_service_requests', 'No service requests yet.')) + '</p>';
     }
     return html + '</section>';
   }
 
   function renderPortalOrderDetail(order) {
-    var html = portalBackBtn('All requests');
+    var html = portalBackBtn(t('all_requests', 'All requests'));
     html += '<article class="pdx-portal-detail"><h3>' + escHtml(order.service_label || order.ref) + '</h3>';
     html += '<p class="pdx-portal-meta">' + escHtml(order.ref) + ' · ' + escHtml(order.status) + '</p>';
     if (order.message) {
       html += '<div class="pdx-portal-body-text">' + escHtml(order.message) + '</div>';
     }
     if (order.notes && order.notes.length) {
-      html += '<h4>Notes</h4><ul class="pdx-portal-list">';
+      html += '<h4>' + escHtml(t('notes', 'Notes')) + '</h4><ul class="pdx-portal-list">';
       order.notes.forEach(function (n) {
         html += '<li>' + escHtml(n.body) + '</li>';
       });
@@ -2939,7 +4382,9 @@
       return String(value);
     }
     try {
-      return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+      var lang = customerPortalLang();
+      var locale = lang === 'ar' ? 'ar' : (lang === 'de' ? 'de-DE' : 'en-US');
+      return d.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
     } catch (e) {
       return String(value);
     }
@@ -2973,7 +4418,7 @@
   }
 
   function renderPortalRecordsSection() {
-    return '<section class="pdx-portal-section pdx-portal-records" id="pdx-portal-records">' + cxLoading('Loading records…') + '</section>';
+    return '<section class="pdx-portal-section pdx-portal-records" id="pdx-portal-records">' + cxLoading(t('loading_records', 'Loading records…')) + '</section>';
   }
 
   function bindPortalRecordsSection(container) {
@@ -2983,34 +4428,34 @@
     }
     customerApiFetch('GET', '/customer/cybercrime/reports').then(function (data) {
       if (!data || !data._ok) {
-        section.innerHTML = '<p class="pdx-auth-error">Records could not be loaded.</p>';
+        section.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('records_load_error', 'Records could not be loaded.')) + '</p>';
         return;
       }
       var history = Array.isArray(data.history) ? data.history : (data.reports || []).filter(function (report) {
         return report && !cybercrimeReportIsActive(report);
       });
       var active = data.active || null;
-      var html = '<h3>' + cxIcon('file', 16) + 'Cybercrime Support records</h3>';
-      html += '<p class="pdx-portal-lead">Closed reports stay read-only. Start a new report anytime if you need help again.</p>';
+      var html = '<h3>' + cxIcon('file', 16) + escHtml(t('cybercrime_records', 'Cybercrime Support records')) + '</h3>';
+      html += '<p class="pdx-portal-lead">' + escHtml(t('records_lead', 'Closed reports stay read-only. Start a new report anytime if you need help again.')) + '</p>';
       if (active && cybercrimeReportIsActive(active)) {
-        html += '<p class="pdx-portal-note">You currently have an open report (<code>' + escHtml(active.reference_id || '') + '</code>). ' +
-          '<a href="' + escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/?ref=' + encodeURIComponent(active.reference_id || '')) + '">View active report</a></p>';
+        html += '<p class="pdx-portal-note">' + escHtml(t('open_report_note', 'You currently have an open report')) + ' (<code>' + escHtml(active.reference_id || '') + '</code>). ' +
+          '<a href="' + escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/?ref=' + encodeURIComponent(active.reference_id || '')) + '">' + escHtml(t('view_active_report', 'View active report')) + '</a></p>';
       }
       if (history.length) {
         history.forEach(function (report) {
           html += '<button type="button" class="pdx-portal-row pdx-portal-row--link pdx-portal-row--records' +
             (cybercrimeReportIsActive(report) ? '' : ' is-closed') + '" data-portal-open="cybercrime" data-portal-id="' +
             escHtml(String(report.reference_id || '')) + '">' +
-            '<strong>' + escHtml(report.reference_id || 'Record') + '</strong>' +
+            '<strong>' + escHtml(report.reference_id || t('record', 'Record')) + '</strong>' +
             '<span>' + escHtml(report.status_label || report.status || '') + ' · ' + escHtml(portalFormatDate(report.updated_at || report.created_at)) + '</span>' +
             (report.category_label ? '<span class="pdx-portal-row-sub">' + escHtml(report.category_label) + '</span>' : '') +
             '</button>';
         });
       } else {
-        html += '<p class="pdx-portal-empty">No closed Cybercrime Support records yet.</p>';
+        html += '<p class="pdx-portal-empty">' + escHtml(t('no_closed_records', 'No closed Cybercrime Support records yet.')) + '</p>';
       }
       html += '<p class="pdx-portal-records-actions"><a class="pdx-portal-btn pdx-portal-btn--secondary" href="' +
-        escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/') + '">Start a new report</a></p>';
+        escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/') + '">' + escHtml(t('start_new_report', 'Start a new report')) + '</a></p>';
       section.innerHTML = html;
       section.querySelectorAll('[data-portal-open]').forEach(function (el) {
         el.addEventListener('click', function () {
@@ -3021,30 +4466,30 @@
   }
 
   function renderPortalCybercrimeDetail(report) {
-    var html = portalBackBtn('All records');
+    var html = portalBackBtn(t('all_records', 'All records'));
     var isActive = cybercrimeReportIsActive(report);
     html += '<article class="pdx-portal-detail pdx-portal-detail--cybercrime' + (isActive ? '' : ' is-closed') + '">';
-    html += '<h3>' + escHtml(report.reference_id || 'Cybercrime report') + '</h3>';
+    html += '<h3>' + escHtml(report.reference_id || t('cybercrime_report', 'Cybercrime report')) + '</h3>';
     html += '<p class="pdx-portal-meta">' + escHtml(report.status_label || report.status || '') +
       (report.category_label ? ' · ' + escHtml(report.category_label) : '') + '</p>';
     html += '<dl class="pdx-portal-records-meta">';
-    html += '<div><dt>Submitted</dt><dd>' + escHtml(portalFormatDate(report.created_at)) + '</dd></div>';
-    html += '<div><dt>Updated</dt><dd>' + escHtml(portalFormatDate(report.updated_at || report.created_at)) + '</dd></div>';
+    html += '<div><dt>' + escHtml(t('submitted', 'Submitted')) + '</dt><dd>' + escHtml(portalFormatDate(report.created_at)) + '</dd></div>';
+    html += '<div><dt>' + escHtml(t('updated', 'Updated')) + '</dt><dd>' + escHtml(portalFormatDate(report.updated_at || report.created_at)) + '</dd></div>';
     html += '</dl>';
     if (!isActive) {
-      html += '<p class="pdx-portal-note pdx-portal-note--closed">This record is closed and read-only. To request new help, start a new report.</p>';
+      html += '<p class="pdx-portal-note pdx-portal-note--closed">' + escHtml(t('record_closed_note', 'This record is closed and read-only. To request new help, start a new report.')) + '</p>';
     }
     if (report.description) {
-      html += '<h4>Summary</h4><div class="pdx-portal-body-text">' + escHtml(report.description) + '</div>';
+      html += '<h4>' + escHtml(t('summary', 'Summary')) + '</h4><div class="pdx-portal-body-text">' + escHtml(report.description) + '</div>';
     }
     if (report.platforms) {
-      html += '<h4>Platforms</h4><div class="pdx-portal-body-text">' + escHtml(report.platforms) + '</div>';
+      html += '<h4>' + escHtml(t('platforms', 'Platforms')) + '</h4><div class="pdx-portal-body-text">' + escHtml(report.platforms) + '</div>';
     }
     var timeline = cybercrimeVisibleTimeline(report);
     if (timeline.length) {
-      html += '<h4>Official updates</h4><ul class="pdx-portal-cybercrime-timeline">';
+      html += '<h4>' + escHtml(t('official_updates', 'Official updates')) + '</h4><ul class="pdx-portal-cybercrime-timeline">';
       timeline.forEach(function (entry) {
-        var author = entry.author_type === 'customer' ? 'You' : 'PAXDesign Support Team';
+        var author = entry.author_type === 'customer' ? t('you', 'You') : t('support_team', 'PAXDesign Support Team');
         html += '<li class="pdx-portal-cybercrime-timeline__item">' +
           '<p class="pdx-portal-cybercrime-timeline__meta"><strong>' + escHtml(author) + '</strong> · ' +
           escHtml(portalFormatDate(entry.created_at)) + '</p>' +
@@ -3053,7 +4498,7 @@
       html += '</ul>';
     }
     if ((report.attachments || []).length) {
-      html += '<h4>Attachments</h4><ul class="pdx-portal-list">';
+      html += '<h4>' + escHtml(t('attachments', 'Attachments')) + '</h4><ul class="pdx-portal-list">';
       report.attachments.forEach(function (file) {
         if (!file) {
           return;
@@ -3069,49 +4514,151 @@
     }
     if (!isActive) {
       html += '<p class="pdx-portal-records-actions"><a class="pdx-portal-btn pdx-portal-btn--secondary" href="' +
-        escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/') + '">Start a new report</a></p>';
+        escHtml(homePageUrl().replace(/\/$/, '') + '/cybercrime-support/') + '">' + escHtml(t('start_new_report', 'Start a new report')) + '</a></p>';
     }
     return html + '</article>';
   }
 
+  function activePortalHost() {
+    var container = activePortalContainer();
+    if (!container) return null;
+    return container.querySelector('.pdx-account-portal-host') || container;
+  }
+
+  function findCatalogServiceCard(slug) {
+    var catalog = portalState.servicesCatalog;
+    if (!catalog || !Array.isArray(catalog.cards)) return null;
+    var key = String(slug || '').toLowerCase();
+    for (var i = 0; i < catalog.cards.length; i++) {
+      var card = catalog.cards[i];
+      if (!card) continue;
+      if (String(card.order_slug || '').toLowerCase() === key || String(card.id || '').toLowerCase() === key) {
+        return card;
+      }
+    }
+    return null;
+  }
+
+  function catalogCardAsService(card) {
+    if (!card) return null;
+    return {
+      _ok: true,
+      slug: card.order_slug || card.id,
+      name: card.title || card.name || '',
+      description: card.description || '',
+      features: card.features || [],
+      category: card.category || '',
+      details: card.details || [],
+    };
+  }
+
+  function resolveServiceBySlug(slug) {
+    return customerApiFetch('GET', '/customer/services/' + encodeURIComponent(slug)).then(function (service) {
+      if (service && service._ok && service.slug) return service;
+      var card = findCatalogServiceCard(slug);
+      if (card) return catalogCardAsService(card);
+      return service;
+    }).catch(function () {
+      var card = findCatalogServiceCard(slug);
+      return card ? catalogCardAsService(card) : null;
+    });
+  }
+
+  function bindPortalServiceRows(container, scopeEl) {
+    if (!scopeEl) return;
+    scopeEl.querySelectorAll('[data-portal-open="service"]').forEach(function (el) {
+      el.addEventListener('click', function () {
+        openPortalDetail(container, 'service', el.dataset.portalSlug || el.dataset.portalId || '');
+      });
+    });
+  }
+
+  function renderPortalServicesCatalogHtml(catalog, services) {
+    services = services || [];
+    var html = '';
+    if (catalog && catalog.title) {
+      html += '<p class="pdx-portal-lead">' + escHtml(catalog.subtitle || catalog.statement || '') + '</p>';
+    }
+    if (services.length) {
+      html += '<div class="pdx-portal-services-group"><h4>' + escHtml(t('services_catalog', 'Services catalog')) + '</h4>';
+      services.forEach(function (s) {
+        html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="service" data-portal-slug="' + escHtml(s.slug) + '">' +
+          '<strong>' + escHtml(s.name) + '</strong><span>' + escHtml(s.category || '') + '</span></button>';
+      });
+      html += '</div>';
+    }
+    if (catalog && Array.isArray(catalog.cards) && catalog.cards.length) {
+      html += '<div class="pdx-portal-services-group"><h4>' + escHtml(catalog.title || t('services_catalog', 'Services catalog')) + '</h4>';
+      catalog.cards.forEach(function (card) {
+        var slug = card.order_slug || card.id || '';
+        var badge = '';
+        if (card.badge && catalog.badges && catalog.badges[card.badge]) {
+          badge = catalog.badges[card.badge];
+        } else if (card.badge) {
+          badge = card.badge;
+        }
+        html += '<button type="button" class="pdx-portal-row pdx-portal-row--link' + (card.highlighted ? ' pdx-portal-row--featured' : '') + '" data-portal-open="service" data-portal-slug="' + escHtml(slug) + '">' +
+          '<strong>' + escHtml(card.title || '') + '</strong>' +
+          '<span>' + escHtml(badge || (card.description || '').slice(0, 72)) + '</span></button>';
+      });
+      html += '</div>';
+    }
+    if (!html) {
+      html = '<p class="pdx-portal-empty">' + escHtml(t('no_services', 'No services available yet.')) + '</p>';
+    }
+    return html;
+  }
+
   function renderPortalServicesSection() {
-    return '<section class="pdx-portal-section" id="pdx-portal-services">' + cxLoading('Loading services…') + '</section>';
+    return '<section class="pdx-portal-section pdx-portal-section--services" id="pdx-portal-services">' +
+      '<h3>' + cxIcon('package', 16) + escHtml(t('services_catalog', 'Services catalog')) + '</h3>' +
+      cxLoading(t('loading_services', 'Loading services…')) +
+    '</section>';
   }
 
   function bindPortalServicesSection(container) {
     var section = container.querySelector('#pdx-portal-services');
     if (!section) return;
-    customerApiFetch('GET', '/customer/services').then(function (data) {
-      if (!data || !data._ok) {
-        section.innerHTML = '<p class="pdx-auth-error">Services could not be loaded.</p>';
+    var lang = customerPortalLang();
+    Promise.all([
+      customerApiFetch('GET', '/customer/services'),
+      customerApiFetch('GET', '/content/services-catalog?lang=' + encodeURIComponent(lang)),
+    ]).then(function (results) {
+      var servicesData = results[0] || {};
+      var catalogData = results[1] || {};
+      portalState.servicesCatalog = (catalogData && catalogData._ok !== false && Array.isArray(catalogData.cards)) ? catalogData : null;
+      var services = (servicesData._ok !== false && Array.isArray(servicesData.services)) ? servicesData.services : [];
+      var catalog = portalState.servicesCatalog;
+      if (!services.length && !catalog) {
+        section.innerHTML = '<h3>' + cxIcon('package', 16) + escHtml(t('services_catalog', 'Services catalog')) + '</h3>' +
+          '<p class="pdx-auth-error">' + escHtml(t('services_load_error', 'Services could not be loaded.')) + '</p>';
         return;
       }
-      var html = '<h3>' + cxIcon('package', 16) + 'Services catalog</h3>';
-      (data.services || []).forEach(function (s) {
-        html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="service" data-portal-slug="' + escHtml(s.slug) + '">' +
-          '<strong>' + escHtml(s.name) + '</strong><span>' + escHtml(s.category || '') + '</span></button>';
-      });
-      if (!(data.services || []).length) {
-        html += '<p class="pdx-portal-empty">No services available yet.</p>';
-      }
-      section.innerHTML = html;
-      section.querySelectorAll('[data-portal-open]').forEach(function (el) {
-        el.addEventListener('click', function () {
-          openPortalDetail(container, 'service', el.dataset.portalSlug);
-        });
-      });
+      section.innerHTML = '<h3>' + cxIcon('package', 16) + escHtml(t('services_catalog', 'Services catalog')) + '</h3>' +
+        renderPortalServicesCatalogHtml(catalog, services);
+      bindPortalServiceRows(container, section);
+    }).catch(function () {
+      section.innerHTML = '<h3>' + cxIcon('package', 16) + escHtml(t('services_catalog', 'Services catalog')) + '</h3>' +
+        '<p class="pdx-auth-error">' + escHtml(t('services_load_error', 'Services could not be loaded.')) + '</p>';
     });
   }
 
   function renderPortalServiceDetail(service) {
-    var html = portalBackBtn('All services');
+    var html = portalBackBtn(t('all_services', 'All services'));
     html += '<article class="pdx-portal-detail"><h3>' + escHtml(service.name) + '</h3>';
     if (service.description) {
       html += '<div class="pdx-portal-body-text">' + escHtml(service.description) + '</div>';
     }
+    if (service.features && service.features.length) {
+      html += '<ul class="pdx-portal-list">';
+      service.features.forEach(function (feature) {
+        html += '<li>' + escHtml(feature) + '</li>';
+      });
+      html += '</ul>';
+    }
     html += '<form class="pdx-portal-request-form" id="pdx-portal-request-form">' +
-      '<textarea rows="3" placeholder="Describe your request…" aria-label="Request message" required></textarea>' +
-      actionBtn('Submit request', { type: 'submit', small: true, inline: true, icon: 'send' }) +
+      '<textarea rows="3" placeholder="' + escHtml(t('describe_request', 'Describe your request…')) + '" aria-label="' + escHtml(t('request_message', 'Request message')) + '" required></textarea>' +
+      actionBtn(t('submit_request', 'Submit request'), { type: 'submit', small: true, inline: true, icon: 'send' }) +
       '</form></article>';
     setTimeout(function () {
       var form = document.getElementById('pdx-portal-request-form');
@@ -3124,14 +4671,25 @@
           service_slug: service.slug,
           message: message,
         }).then(function (res) {
-          notify(res.message || (res._ok ? 'Request submitted.' : 'Request failed.'), res._ok ? 'info' : 'error');
+          notify(res.message || (res._ok ? t('request_submitted', 'Request submitted.') : t('request_failed', 'Request failed.')), res._ok ? 'info' : 'error');
           if (res._ok) {
             portalState.tab = 'orders';
             portalState.detail = null;
+            accountState.section = 'orders';
+            accountState.detail = null;
             customerApiFetch('GET', '/customer/dashboard').then(function (dash) {
-              portalState.dashboard = dash;
-              var body = portalOverlay && portalOverlay.querySelector('.pdx-customer-portal-body');
-              if (body) renderCustomerPortalDashboard(body, dash);
+              dash = normalizeDashboardResponse(dash);
+              if (!dash) return;
+              enrichAccountDashboard(dash).then(function (enriched) {
+                portalState.dashboard = enriched;
+                accountState.dashboard = enriched;
+                if (isAuthPage()) {
+                  renderAccountApp();
+                } else {
+                  var host = portalOverlay && portalOverlay.querySelector('.pdx-customer-portal-body');
+                  if (host) renderCustomerPortalDashboard(host, enriched);
+                }
+              });
             });
           }
         });
@@ -3142,20 +4700,20 @@
 
   function renderPortalNewsSection(data) {
     var news = data.news || [];
-    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('news', 16) + 'News & announcements</h3>';
+    var html = '<section class="pdx-portal-section"><h3>' + cxIcon('news', 16) + escHtml(t('news_announcements', 'News & announcements')) + '</h3>';
     if (news.length) {
       news.forEach(function (n) {
         html += '<button type="button" class="pdx-portal-row pdx-portal-row--link" data-portal-open="news" data-portal-slug="' + escHtml(n.slug || '') + '">' +
           '<strong>' + escHtml(n.title) + '</strong><span>' + escHtml(formatDate(n.published_at)) + '</span></button>';
       });
     } else {
-      html += '<p class="pdx-portal-empty">No announcements right now.</p>';
+      html += '<p class="pdx-portal-empty">' + escHtml(t('no_announcements', 'No announcements right now.')) + '</p>';
     }
     return html + '</section>';
   }
 
   function renderPortalNewsDetail(item) {
-    var html = portalBackBtn('All news');
+    var html = portalBackBtn(t('all_news', 'All news'));
     html += '<article class="pdx-portal-detail pdx-portal-detail--news">';
     if (item.image_url) {
       html += '<figure class="pdx-portal-news-hero">' +
@@ -3172,7 +4730,7 @@
   }
 
   function renderPortalNotificationsSection() {
-    return '<section class="pdx-portal-section" id="pdx-portal-notifications">' + cxLoading('Loading notifications…') + '</section>';
+    return '<section class="pdx-portal-section" id="pdx-portal-notifications">' + cxLoading(t('loading_notifications', 'Loading notifications…')) + '</section>';
   }
 
   function bindPortalNotificationsSection(container) {
@@ -3180,10 +4738,10 @@
     if (!section) return;
     customerApiFetch('GET', '/customer/notifications?limit=50').then(function (data) {
       if (!data || !data._ok) {
-        section.innerHTML = '<p class="pdx-auth-error">Notifications could not be loaded.</p>';
+        section.innerHTML = '<p class="pdx-auth-error">' + escHtml(t('notifications_load_error', 'Notifications could not be loaded.')) + '</p>';
         return;
       }
-      var html = '<h3>' + cxIcon('bell', 16) + 'Notifications';
+      var html = '<h3>' + cxIcon('bell', 16) + escHtml(t('notifications', 'Notifications'));
       if (data.unread_count) {
         html += ' <span class="pdx-portal-badge">' + escHtml(String(data.unread_count)) + '</span>';
       }
@@ -3198,10 +4756,10 @@
         });
         html += '</div>';
         if (data.unread_count) {
-          html += portalBtn('Mark all read', { type: 'button', variant: 'secondary', small: true, id: 'pdx-portal-mark-read' });
+          html += portalBtn(t('mark_all_read', 'Mark all read'), { type: 'button', variant: 'secondary', small: true, id: 'pdx-portal-mark-read' });
         }
       } else {
-        html += '<p class="pdx-portal-empty">No notifications yet.</p>';
+        html += '<p class="pdx-portal-empty">' + escHtml(t('no_notifications', 'No notifications yet.')) + '</p>';
       }
       section.innerHTML = html;
       section.querySelectorAll('.pdx-portal-notify--unread').forEach(function (el) {
@@ -3530,6 +5088,7 @@
 
   window.PDXAuth = {
     init: function () {
+      ensureAccountAvatarFallbackHandler();
       createAuthBar();
       if (isAuthPage()) {
         initAuthPage();
