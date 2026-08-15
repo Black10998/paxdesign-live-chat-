@@ -89,6 +89,13 @@ class PAXdesign_Cybercrime_AI_Operations {
             );
         }
 
+        if (class_exists('PAXdesign_Cybercrime_AI_Workflow')) {
+            $workflow = PAXdesign_Cybercrime_AI_Workflow::decide_turn($row, $user_message, $language, $user_id);
+            if (is_array($workflow) && !empty($workflow['action']) && $workflow['action'] !== 'continue') {
+                return $workflow;
+            }
+        }
+
         if ($same_case) {
             $latest = self::latest_operation($row);
             $reply = self::continuation_copy($language, $row, $latest);
@@ -504,7 +511,9 @@ class PAXdesign_Cybercrime_AI_Operations {
         $lines = array(
             '## Persistent conversation and operation state (authoritative)',
             '- This is a CONTINUATION of the same authenticated Cybercrime Support conversation and the same CCS case. Never greet as a new chat (no “Guten Tag”, “Wie kann ich Ihnen helfen?”, “Hello, how can I help?”, “مرحباً! كيف يمكنني مساعدتك اليوم؟”).',
-            '- Load this case before answering: current CCS case, conversation history, workflow step, completed steps, missing information, uploaded files, file verification results, active operations, case status, and language preference.',
+            '- The website form is the source of truth. Chat completes the SAME 4 steps: 1 Identity, 2 Incident, 3 Evidence, 4 Review / Submission.',
+            '- Fill website fields from natural language. Ask only for genuinely missing required fields. Never restart unless the customer explicitly requests a new case.',
+            '- At Review, summarize what will be submitted and what is still missing. Submit this same CCS case when all requirements are satisfied and the customer confirms.',
             '- A language-preference message (arabic / English / Deutsch / العربية) only switches reply language. Keep this same case. Do not greet. Do not restart intake. Recap the last result in the requested language.',
             '- Short follow-ups (?, نعم, تابع, ماذا حدث؟, ماذا بقي؟) continue this same case. They never start a new conversation.',
             '- Start a new case or conversation only when the customer explicitly asks (Start a new case / New report / أريد فتح بلاغ جديد).',

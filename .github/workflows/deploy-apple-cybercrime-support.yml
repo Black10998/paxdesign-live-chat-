@@ -42,6 +42,7 @@ on:
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-admin-reminders.php'
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-ai-case.php'
       - 'paxdesign-booking/includes/class-paxdesign-cybercrime-ai-operations.php'
+      - 'paxdesign-booking/includes/class-paxdesign-cybercrime-ai-workflow.php'
       - 'paxdesign-booking/includes/class-paxdesign-message-store.php'
       - 'paxdesign-booking/includes/class-paxdesign-link-scan-service.php'
       - 'paxdesign-booking/includes/class-paxdesign-widget-performance.php'
@@ -176,6 +177,7 @@ jobs:
             paxdesign-booking/includes/class-paxdesign-cybercrime-admin-reminders.php \
             paxdesign-booking/includes/class-paxdesign-cybercrime-ai-case.php \
             paxdesign-booking/includes/class-paxdesign-cybercrime-ai-operations.php \
+            paxdesign-booking/includes/class-paxdesign-cybercrime-ai-workflow.php \
             paxdesign-booking/includes/class-paxdesign-chat-live.php \
             paxdesign-booking/includes/class-paxdesign-message-store.php \
             paxdesign-booking/includes/class-paxdesign-link-scan-service.php \

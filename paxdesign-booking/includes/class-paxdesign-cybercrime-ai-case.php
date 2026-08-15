@@ -159,19 +159,42 @@ class PAXdesign_Cybercrime_AI_Case {
             !$skip_extract
             && class_exists('PAXdesign_Cybercrime_AI_Operations')
             && PAXdesign_Cybercrime_AI_Operations::is_same_case_continuation($message)
+            && !(class_exists('PAXdesign_Cybercrime_AI_Workflow') && (
+                PAXdesign_Cybercrime_AI_Workflow::is_submit_intent($message)
+                || PAXdesign_Cybercrime_AI_Workflow::is_workflow_help_intent($message)
+            ))
         ) {
             $skip_extract = true;
         }
 
+        $extracted = array();
         if ($message !== '' && !$skip_extract) {
             $existing = self::case_fields_from_row($row);
             $extracted = self::extract_fields_from_message($message, $existing);
-            if (!empty($extracted)) {
-                $updated = self::apply_extracted_fields($reference, $user_id, $extracted, 'chat');
-                if (!is_wp_error($updated) && is_array($updated)) {
-                    $row = $updated;
-                }
+        }
+        if ($message !== '' && class_exists('PAXdesign_Cybercrime_AI_Workflow')) {
+            $wf_fields = PAXdesign_Cybercrime_AI_Workflow::extract_from_message(
+                $message,
+                PAXdesign_Cybercrime_AI_Workflow::state_from_row($row)
+            );
+            unset($wf_fields['submit_intent']);
+            if (!empty($wf_fields)) {
+                $extracted = array_merge($extracted, $wf_fields);
             }
+        }
+        if (!empty($extracted)) {
+            $updated = self::apply_extracted_fields($reference, $user_id, $extracted, 'chat');
+            if (!is_wp_error($updated) && is_array($updated)) {
+                $row = $updated;
+            }
+        }
+        if (class_exists('PAXdesign_Cybercrime_AI_Workflow')) {
+            $payload_now = json_decode((string) ($row['payload'] ?? ''), true);
+            $locale = is_array($payload_now) ? sanitize_key((string) ($payload_now['locale'] ?? '')) : '';
+            $row = PAXdesign_Cybercrime_AI_Workflow::persist_snapshot(
+                $row,
+                PAXdesign_Cybercrime_AI_Workflow::snapshot($row, $locale)
+            );
         }
 
         if (class_exists('PAXdesign_Chat')) {
@@ -442,6 +465,48 @@ class PAXdesign_Cybercrime_AI_Case {
             $payload['financial_currency'] = strtoupper(sanitize_text_field((string) $fields['financial_currency']));
         }
 
+        if (!empty($fields['reporter_name'])) {
+            $name = sanitize_text_field((string) $fields['reporter_name']);
+            if (strlen($name) >= 2 && $name !== (string) ($row['reporter_name'] ?? '')) {
+                $update['reporter_name'] = $name;
+                $changed[] = 'full legal name';
+            }
+        }
+        if (!empty($fields['reporter_email'])) {
+            $email = sanitize_email((string) $fields['reporter_email']);
+            $valid = $email !== '' && (function_exists('is_email') ? is_email($email) : (bool) preg_match('/^[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}$/i', $email));
+            if ($valid && strcasecmp($email, (string) ($row['reporter_email'] ?? '')) !== 0) {
+                $update['reporter_email'] = $email;
+                $changed[] = 'email';
+            }
+        }
+        if (!empty($fields['identity_accuracy']) && empty($payload['identity_accuracy'])) {
+            $payload['identity_accuracy'] = true;
+            $changed[] = 'identity accuracy';
+        }
+        if (!empty($fields['declarations']) && is_array($fields['declarations'])) {
+            $next_decl = array(
+                'truthful'      => !empty($fields['declarations']['truthful']),
+                'false_reports' => !empty($fields['declarations']['false_reports']),
+                'verification'  => !empty($fields['declarations']['verification']),
+            );
+            $current_decl = is_array($payload['declarations'] ?? null) ? $payload['declarations'] : array();
+            if ($next_decl !== array(
+                'truthful' => !empty($current_decl['truthful']),
+                'false_reports' => !empty($current_decl['false_reports']),
+                'verification' => !empty($current_decl['verification']),
+            )) {
+                $payload['declarations'] = $next_decl;
+                $changed[] = 'review declarations';
+            }
+        }
+        if (!empty($fields['country_code'])) {
+            $code = strtoupper(sanitize_text_field((string) $fields['country_code']));
+            if (preg_match('/^[A-Z]{2}$/', $code)) {
+                $payload['country_code'] = $code;
+            }
+        }
+
         if (!empty($fields['reporter_phone'])) {
             $phone = sanitize_text_field((string) $fields['reporter_phone']);
             if ($phone !== '' && $phone !== (string) ($row['reporter_phone'] ?? '')) {
@@ -606,6 +671,12 @@ class PAXdesign_Cybercrime_AI_Case {
         );
 
         $fresh = PAXdesign_Cybercrime_Tickets::get_report_row($reference);
+        if (is_array($fresh) && class_exists('PAXdesign_Cybercrime_AI_Workflow')) {
+            $fresh = PAXdesign_Cybercrime_AI_Workflow::persist_snapshot(
+                $fresh,
+                PAXdesign_Cybercrime_AI_Workflow::snapshot($fresh)
+            );
+        }
         PAXdesign_Cybercrime_Tickets::add_message(
             $reference,
             'system',
@@ -657,7 +728,11 @@ class PAXdesign_Cybercrime_AI_Case {
             'created_at'       => (string) ($report['created_at'] ?? ''),
             'updated_at'       => (string) ($report['updated_at'] ?? ''),
             'rejection'        => is_array($report['rejection'] ?? null) ? $report['rejection'] : null,
+            'workflow'         => is_array($report['workflow'] ?? null) ? $report['workflow'] : null,
         );
+        if (empty($out['workflow']) && class_exists('PAXdesign_Cybercrime_AI_Workflow') && ($out['is_draft'] || isset($report['payload']))) {
+            $out['workflow'] = PAXdesign_Cybercrime_AI_Workflow::snapshot($report, (string) ($report['locale'] ?? ''));
+        }
         if (class_exists('PAXdesign_Cybercrime_AI_Operations')) {
             $operation = is_array($report['ai_operation'] ?? null) ? $report['ai_operation'] : null;
             if (!$operation) {
@@ -739,11 +814,16 @@ class PAXdesign_Cybercrime_AI_Case {
             $payload = array();
         }
         return array(
-            'category'    => (string) ($row['category'] ?? ''),
-            'urgency'     => (string) ($row['urgency'] ?? ''),
-            'incident_at' => (string) ($row['incident_at'] ?? ''),
-            'platforms'   => (string) ($payload['platforms'] ?? ''),
-            'description' => (string) ($payload['description'] ?? ''),
+            'category'           => (string) ($row['category'] ?? ''),
+            'urgency'            => (string) ($row['urgency'] ?? ''),
+            'incident_at'        => (string) ($row['incident_at'] ?? ''),
+            'platforms'          => (string) ($payload['platforms'] ?? ''),
+            'description'        => (string) ($payload['description'] ?? ''),
+            'full_name'          => (string) ($row['reporter_name'] ?? ''),
+            'email'              => (string) ($row['reporter_email'] ?? ''),
+            'phone'              => (string) ($row['reporter_phone'] ?? ''),
+            'country'            => (string) ($row['reporter_country'] ?? ''),
+            'identity_accuracy'  => !empty($payload['identity_accuracy']),
         );
     }
 

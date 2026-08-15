@@ -392,11 +392,12 @@ cx_assert_true(strpos($ccs_widget, 'ccs_operation') !== false, 'Chat must render
 cx_assert_true(strpos($ccs_widget, 'upsertCcsOperationMessage') !== false, 'Chat must keep the same processing message across follow-ups');
 
 $plugin_bootstrap = file_get_contents($ccs_root . '/paxdesign-booking.php');
-cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.7')") !== false, 'Plugin version must be 3.175.7');
+cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.8')") !== false, 'Plugin version must be 3.175.8');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-i18n.php') !== false, 'Plugin must load CCS localization');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-document-checks.php') !== false, 'Plugin must load document checks');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-case.php') !== false, 'Plugin must load AI case sync');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-operations.php') !== false, 'Plugin must load AI operation state');
+cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-workflow.php') !== false, 'Plugin must load the 4-step CCS AI workflow');
 cx_assert_true(strpos($plugin_bootstrap, 'PAXdesign_Cybercrime_Admin_Reminders::init') !== false, 'Plugin must boot admin review reminders');
 
 if (!defined('ABSPATH')) {
@@ -479,7 +480,7 @@ cx_assert_true(PAXdesign_Language_Routing::detect_language_preference('Deutsch')
 cx_assert_true(PAXdesign_Language_Routing::detect_language_preference('العربية') === 'ar', 'العربية must switch session language to Arabic');
 cx_assert_true(PAXdesign_Language_Routing::detect_language_preference('in Arabic') === 'ar', 'in Arabic must be a language preference, not a new chat');
 cx_assert_true(PAXdesign_Language_Routing::detect_language_preference('auf Deutsch') === 'de', 'auf Deutsch must be a language preference, not a new chat');
-cx_assert_true(PAXdesign_Language_Routing::detect_language_preference('An arabic hacker stole my GitHub account yesterday') === '', 'Incident text mentioning a language must not be treated as a language switch');
+cx_assert_true(PAXdesign_Language_Routing::detect_language_preference('Ich wohne in Deutschland') === '', 'A German address must not be treated as a language switch');
 cx_assert_true(PAXdesign_Language_Routing::resolve_session_language('', 'arabic') === 'ar', 'Session language must persist Arabic from a preference message');
 cx_assert_true(PAXdesign_Language_Routing::resolve_session_language('', 'English') === 'en', 'Session language must persist English from a preference message');
 cx_assert_true(PAXdesign_Language_Routing::resolve_session_language('', 'Deutsch') === 'de', 'Session language must persist German from a preference message');
@@ -539,5 +540,114 @@ $public_op = PAXdesign_Cybercrime_AI_Operations::public_operation(array(
 ));
 cx_assert_true(($public_op['status'] ?? '') === 'running', 'Public operation payload must expose running status');
 cx_assert_true(($public_op['reference_id'] ?? '') === 'CCS-20260815-18FF0B59', 'Public operation payload must stay on the same CCS reference');
+
+require_once $ccs_root . '/includes/class-paxdesign-cybercrime-ai-workflow.php';
+$en_id = PAXdesign_Cybercrime_AI_Workflow::extract_from_message(
+    'My name is Jane Doe. Email jane@example.com. Phone +43 6601234567. I live in Austria.'
+);
+cx_assert_true(($en_id['reporter_name'] ?? '') === 'Jane Doe', 'English identity extract must save the legal name');
+cx_assert_true(($en_id['reporter_email'] ?? '') === 'jane@example.com', 'English identity extract must save the email');
+cx_assert_true(strpos((string) ($en_id['reporter_phone'] ?? ''), '6601234567') !== false, 'English identity extract must save the phone');
+cx_assert_true(($en_id['country_code'] ?? '') === 'AT', 'English identity extract must save Austria as AT');
+$ar_id = PAXdesign_Cybercrime_AI_Workflow::extract_from_message(
+    'اسمي محمد علي. البريد ali@example.com. هاتف +201001234567. البلد مصر.'
+);
+cx_assert_true(($ar_id['reporter_name'] ?? '') === 'محمد علي', 'Arabic identity extract must save the legal name');
+cx_assert_true(($ar_id['country_code'] ?? '') === 'EG', 'Arabic identity extract must save Egypt as EG');
+$de_id = PAXdesign_Cybercrime_AI_Workflow::extract_from_message(
+    'Mein Name ist Anna Schmidt. Ich wohne in Deutschland. Tel +49 1701234567.'
+);
+cx_assert_true(($de_id['reporter_name'] ?? '') === 'Anna Schmidt', 'German identity extract must save the legal name');
+cx_assert_true(($de_id['country_code'] ?? '') === 'DE', 'German identity extract must save Germany as DE');
+cx_assert_true(PAXdesign_Cybercrime_AI_Workflow::is_submit_intent('Submit report') === true, 'Submit report must be a submit intent');
+cx_assert_true(PAXdesign_Cybercrime_AI_Workflow::is_submit_intent('أرسل البلاغ') === true, 'أرسل البلاغ must be a submit intent');
+cx_assert_true(PAXdesign_Cybercrime_AI_Workflow::is_submit_intent('Bericht absenden') === true, 'Bericht absenden must be a submit intent');
+cx_assert_true(PAXdesign_Cybercrime_AI_Workflow::is_workflow_help_intent('Help me submit a report') === true, 'Help submitting a report must start the website workflow');
+
+$empty_row = array(
+    'reference_id' => 'CCS-20260815-WFLOW001',
+    'status' => 'draft',
+    'reporter_name' => '',
+    'reporter_email' => '',
+    'reporter_phone' => '',
+    'reporter_country' => '',
+    'category' => '',
+    'urgency' => '',
+    'incident_at' => '',
+    'payload' => json_encode(array()),
+    'attachments' => json_encode(array()),
+);
+$empty_state = PAXdesign_Cybercrime_AI_Workflow::state_from_row($empty_row);
+cx_assert_true(PAXdesign_Cybercrime_AI_Workflow::current_step($empty_state) === 1, 'An empty CCS draft must start at Identity');
+$identity_state = array_merge($empty_state, array(
+    'full_name' => 'Jane Doe',
+    'email' => 'jane@example.com',
+    'phone' => '+43 6601234567',
+    'phone_digits' => '436601234567',
+    'country' => 'Austria',
+    'country_code' => 'AT',
+    'identity_document' => true,
+    'identity_accuracy' => true,
+));
+cx_assert_true(PAXdesign_Cybercrime_AI_Workflow::current_step($identity_state) === 2, 'Complete Identity must advance to Incident');
+$incident_state = array_merge($identity_state, array(
+    'category' => 'account_takeover',
+    'incident_date' => '2026-08-12',
+    'incident_at' => '2026-08-12 00:00:00',
+    'platforms' => 'GitHub, Gmail',
+    'description' => 'My GitHub and Gmail accounts were taken over on August 12.',
+    'urgency' => 'high',
+));
+cx_assert_true(PAXdesign_Cybercrime_AI_Workflow::current_step($incident_state) === 3, 'Complete Incident must advance to Evidence');
+$evidence_state = array_merge($incident_state, array(
+    'has_evidence' => true,
+    'evidence_files' => array('screenshot.png'),
+));
+cx_assert_true(PAXdesign_Cybercrime_AI_Workflow::current_step($evidence_state) === 4, 'Complete Evidence must advance to Review');
+cx_assert_true(PAXdesign_Cybercrime_AI_Workflow::can_submit($evidence_state) === false, 'Review declarations are required before submit');
+$ready_state = array_merge($evidence_state, array(
+    'decl_truthful' => true,
+    'decl_false_reports' => true,
+    'decl_verification' => true,
+));
+cx_assert_true(PAXdesign_Cybercrime_AI_Workflow::can_submit($ready_state) === true, 'All four website steps must allow submit of the same CCS case');
+$post = PAXdesign_Cybercrime_AI_Workflow::build_submit_post($ready_state, 'en');
+cx_assert_true(($post['full_name'] ?? '') === 'Jane Doe', 'Submit payload must include the legal name from Identity');
+cx_assert_true(($post['country'] ?? '') === 'AT', 'Submit payload must send the ISO country code used by the website form');
+cx_assert_true(($post['category'] ?? '') === 'account_takeover', 'Submit payload must include the incident category');
+cx_assert_true(($post['identity_accuracy'] ?? 0) === 1, 'Submit payload must confirm identity accuracy');
+cx_assert_true(!empty($post['decl_truthful']) && !empty($post['decl_false_reports']) && !empty($post['decl_verification']), 'Submit payload must include the three Review declarations');
+$review_ar = PAXdesign_Cybercrime_AI_Workflow::assistant_copy(
+    PAXdesign_Cybercrime_AI_Workflow::snapshot(array(
+        'reference_id' => 'CCS-20260815-WFLOW001',
+        'status' => 'draft',
+        'reporter_name' => 'Jane Doe',
+        'reporter_email' => 'jane@example.com',
+        'reporter_phone' => '+43 6601234567',
+        'reporter_country' => 'Austria',
+        'category' => 'account_takeover',
+        'urgency' => 'high',
+        'incident_at' => '2026-08-12 00:00:00',
+        'payload' => json_encode(array(
+            'country_code' => 'AT',
+            'identity_accuracy' => true,
+            'incident_date' => '2026-08-12',
+            'platforms' => 'GitHub',
+            'description' => 'My GitHub account was taken over on August 12.',
+            'declarations' => array('truthful' => true, 'false_reports' => true, 'verification' => true),
+        )),
+        'attachments' => json_encode(array(
+            array('field' => 'identity_document', 'name' => 'id.pdf'),
+            array('field' => 'evidence_screenshots', 'name' => 'shot.png'),
+        )),
+    ), 'ar'),
+    $ready_state,
+    'ar',
+    false
+);
+cx_assert_true(strpos($review_ar, 'المراجعة') !== false || strpos($review_ar, 'سيتم إرساله') !== false, 'Arabic Review copy must summarize the same CCS case');
+cx_assert_true(strpos($chat_knowledge, 'Identity → Incident → Evidence → Review') !== false, 'CCS prompt must follow the website 4-step workflow');
+$ccs_js_src = file_get_contents(dirname(__DIR__, 2) . '/navein/assets/js/apple-cybercrime-support.js');
+cx_assert_true(strpos($ccs_js_src, 'workflow.step') !== false, 'The CCS page must follow the AI workflow step without replacing the 4-step form');
 
 echo "OK: customer platform static verification passed (" . count($files) . " modules)\n";

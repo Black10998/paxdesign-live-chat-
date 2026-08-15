@@ -373,6 +373,12 @@ class PAXdesign_Chat {
         if (!class_exists('PAXdesign_Cybercrime_AI_Case')) {
             return;
         }
+        if (class_exists('PAXdesign_Cybercrime_Tickets') && empty($report['original_request']) && isset($report['payload'])) {
+            $formatted = PAXdesign_Cybercrime_Tickets::format_report_row($report, true);
+            if (is_array($formatted) && !empty($formatted['reference_id'])) {
+                $report = $formatted;
+            }
+        }
         echo 'data: ' . wp_json_encode(array(
             'type'   => 'ccs_case',
             'report' => PAXdesign_Cybercrime_AI_Case::public_case_sync_payload($report),
@@ -439,7 +445,35 @@ class PAXdesign_Chat {
             return $out;
         }
 
-        if ($action === 'status' || $action === 'continue_case') {
+        if ($action === 'status' || $action === 'continue_case' || $action === 'submit_case') {
+            if ($action === 'submit_case' && class_exists('PAXdesign_Cybercrime_AI_Workflow')) {
+                $submitted = PAXdesign_Cybercrime_AI_Workflow::submit_case(
+                    is_array($decision['report'] ?? null) ? $decision['report'] : $ccs_report,
+                    $user_id,
+                    $language
+                );
+                if (is_wp_error($submitted)) {
+                    $reply = $submitted->get_error_message();
+                    $decision['report'] = is_array($decision['report'] ?? null) ? $decision['report'] : $ccs_report;
+                } else {
+                    $reference = (string) ($submitted['referenceId'] ?? $submitted['reference_id'] ?? '');
+                    $reply = class_exists('PAXdesign_Cybercrime_AI_Workflow')
+                        ? PAXdesign_Cybercrime_AI_Workflow::submitted_copy(
+                            (string) ($submitted['message'] ?? ''),
+                            $reference,
+                            $language
+                        )
+                        : (string) ($submitted['message'] ?? '');
+                    if (is_array($submitted['report'] ?? null)) {
+                        $decision['report'] = $submitted['report'];
+                    }
+                    $out['report'] = $decision['report'] ?? $ccs_report;
+                    if ($streaming) {
+                        $this->emit_ccs_case_sse($out['report']);
+                    }
+                }
+                $decision['reply'] = $reply;
+            }
             $reply = (string) ($decision['reply'] ?? '');
             $operation = is_array($decision['operation'] ?? null) ? $decision['operation'] : array();
             $assistant = PAXdesign_Cybercrime_AI_Operations::persist_assistant_reply($session_id, $reply, $operation);
@@ -1520,6 +1554,7 @@ class PAXdesign_Chat {
             $ccs_report = $ccs_ops['report'];
         }
         if (!empty($ccs_ops['skip_llm'])) {
+            $this->emit_ccs_case_sse($ccs_report);
             echo "data: [DONE]\n\n";
             exit;
         }

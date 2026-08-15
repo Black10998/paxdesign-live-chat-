@@ -530,6 +530,12 @@ class PAXdesign_Cybercrime_Tickets {
                 ? PAXdesign_Cybercrime_I18n::missing_field_label($item, $lang)
                 : $item;
         }
+        if (class_exists('PAXdesign_Cybercrime_AI_Workflow') && ($out['is_draft'] || $workflow_status === 'draft')) {
+            $out['workflow'] = PAXdesign_Cybercrime_AI_Workflow::snapshot($row, $lang);
+            if (!empty($out['workflow']['missing_labels'])) {
+                $out['missing_fields'] = array_values((array) $out['workflow']['missing_labels']);
+            }
+        }
         $out['case_summary'] = self::build_case_summary_text($out);
         $out['rejection'] = self::public_rejection($payload, $workflow_status, $lang);
         if ($workflow_status === 'rejected' && is_array($out['rejection'])) {
@@ -722,6 +728,13 @@ class PAXdesign_Cybercrime_Tickets {
         }
         if (!$has_id) {
             $missing[] = __('identity document', 'paxdesign-booking');
+        }
+        if (trim((string) ($original['reporter_phone'] ?? $report['reporter_phone'] ?? $row['reporter_phone'] ?? '')) === '') {
+            $missing[] = 'phone';
+        }
+        $country = trim((string) ($original['reporter_country'] ?? $report['reporter_country'] ?? $row['reporter_country'] ?? $payload['country_code'] ?? ''));
+        if ($country === '') {
+            $missing[] = 'country';
         }
         if (!$has_evidence) {
             $missing[] = __('evidence files', 'paxdesign-booking');
@@ -1812,6 +1825,7 @@ class PAXdesign_Cybercrime_Tickets {
             '- Next action for the customer: ' . (string) ($detail['next_action'] ?? ''),
             '- Draft / collecting: ' . (!empty($detail['is_draft']) ? 'yes — not yet submitted for administrator review' : 'no'),
             '- Missing fields (ask ONLY these if still empty): ' . (empty($detail['missing_fields']) ? 'none' : implode(', ', (array) $detail['missing_fields'])),
+            '- Website workflow (source of truth): Identity → Incident → Evidence → Review / Submission. Chat fills and submits this same form.',
             '- Needs administrator review: ' . (!empty($detail['needs_human_review']) ? 'yes' : 'no'),
             '- Stay on this same reference for the entire workflow: submission → document checks → corrections → administrator review → status changes → customer communication → final outcome.',
             '- Never ask the customer to restart or re-explain facts already listed here.',

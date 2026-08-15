@@ -158,6 +158,12 @@ class PAXdesign_Cybercrime_I18n {
             'identity_document'    => 'field.identity_document',
             'evidence files'       => 'field.evidence_files',
             'evidence_files'       => 'field.evidence_files',
+            'full_name'            => 'field.full_name',
+            'email'                => 'field.email',
+            'phone'                => 'field.phone',
+            'country'              => 'field.country',
+            'identity_accuracy'    => 'field.identity_accuracy',
+            'declarations'         => 'field.declarations',
         );
         $key = $map[strtolower($item)] ?? $map[$item] ?? '';
         return $key !== '' ? self::t($key, $lang) : self::localize_canned($item, $lang);
@@ -898,6 +904,36 @@ class PAXdesign_Cybercrime_I18n {
                 'ar' => 'وثيقة الهوية',
                 'de' => 'Ausweisdokument',
                 'en' => 'Identity document',
+            ),
+            'field.full_name' => array(
+                'ar' => 'الاسم القانوني الكامل',
+                'de' => 'Vollständiger gesetzlicher Name',
+                'en' => 'Full legal name',
+            ),
+            'field.email' => array(
+                'ar' => 'البريد الإلكتروني',
+                'de' => 'E-Mail-Adresse',
+                'en' => 'Email address',
+            ),
+            'field.phone' => array(
+                'ar' => 'رقم الهاتف',
+                'de' => 'Telefonnummer',
+                'en' => 'Phone number',
+            ),
+            'field.country' => array(
+                'ar' => 'البلد',
+                'de' => 'Land',
+                'en' => 'Country',
+            ),
+            'field.identity_accuracy' => array(
+                'ar' => 'تأكيد صحة بيانات الهوية',
+                'de' => 'Bestätigung der Identitätsangaben',
+                'en' => 'Identity accuracy confirmation',
+            ),
+            'field.declarations' => array(
+                'ar' => 'إقرارات المراجعة',
+                'de' => 'Prüferklärungen',
+                'en' => 'Review declarations',
             ),
             'field.evidence_other' => array(
                 'ar' => 'أدلة أخرى',

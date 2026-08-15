@@ -87,9 +87,9 @@ class PAXdesign_Language_Routing {
         }
 
         $patterns = array(
-            'ar' => '/(?:reply|respond|speak|talk|continue|write|switch|change|answer|use)\s+(?:in\s+|to\s+)?(?:arabic|arabisch)|(?:in|auf)\s+(?:arabic|arabisch)|بالعربية|بالعربي|تحدث بالعربية|جاوب بالعربي|العربية من فضلك/u',
-            'en' => '/(?:reply|respond|speak|talk|continue|write|switch|change|answer|use)\s+(?:in\s+|to\s+)?english|(?:in|auf)\s+english|بالإنجليزية|بالانجليزية/u',
-            'de' => '/(?:reply|respond|speak|talk|continue|write|switch|change|answer|use)\s+(?:in\s+|to\s+)?(?:german|deutsch)|(?:in|auf)\s+(?:german|deutsch)|بالألمانية|بالالمانية/u',
+            'ar' => '/(?:reply|respond|speak|talk|continue|write|switch|change|answer|use)\s+(?:in\s+|to\s+)?(?:arabic|arabisch)\b|(?:in|auf)\s+(?:arabic|arabisch)\b|بالعربية|بالعربي|تحدث بالعربية|جاوب بالعربي|العربية من فضلك/u',
+            'en' => '/(?:reply|respond|speak|talk|continue|write|switch|change|answer|use)\s+(?:in\s+|to\s+)?english\b|(?:in|auf)\s+english\b|بالإنجليزية|بالانجليزية/u',
+            'de' => '/(?:reply|respond|speak|talk|continue|write|switch|change|answer|use)\s+(?:in\s+|to\s+)?(?:german|deutsch)\b|(?:in|auf)\s+(?:german|deutsch)\b|بالألمانية|بالالمانية/u',
         );
         foreach ($patterns as $lang => $pattern) {
             if (preg_match($pattern, $normalized)) {

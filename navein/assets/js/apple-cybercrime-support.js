@@ -945,7 +945,15 @@
     if (!options.force && activeReport && caseSyncFingerprint(merged) === caseSyncFingerprint(activeReport)) {
       return;
     }
-    if (phase === 'active-report' && activeReport && activeReport.reference_id === merged.reference_id) {
+    if (phase === 'form' && (merged.is_draft || merged.status === 'draft')) {
+      prefillFormFromReport(merged);
+      var wfStep = merged.workflow && parseInt(merged.workflow.step, 10);
+      if (wfStep >= 1 && wfStep <= 4) {
+        showStep(wfStep);
+      }
+    } else if (!merged.is_draft && merged.status && merged.status !== 'draft' && (phase === 'form' || phase === 'welcome')) {
+      showActiveReport(merged, false);
+    } else if (phase === 'active-report' && activeReport && activeReport.reference_id === merged.reference_id) {
       applyReportRefresh(merged, options);
     } else if (phase === 'active-report' || options.show) {
       showActiveReport(merged, false);
@@ -1177,6 +1185,12 @@
   }
 
   function firstIncompleteStep(report) {
+    if (report && report.workflow && report.workflow.step) {
+      var wf = parseInt(report.workflow.step, 10);
+      if (wf >= 1 && wf <= 4) {
+        return wf;
+      }
+    }
     var orig = (report && report.original_request) || {};
     if (!orig.reporter_phone || !orig.reporter_country) {
       return 1;
