@@ -683,8 +683,9 @@ class PAXdesign_Cybercrime_AI_Case {
         }
         if (!empty($fields['country_code'])) {
             $code = strtoupper(sanitize_text_field((string) $fields['country_code']));
-            if (preg_match('/^[A-Z]{2}$/', $code)) {
+            if (preg_match('/^[A-Z]{2}$/', $code) && $code !== strtoupper((string) ($payload['country_code'] ?? ''))) {
                 $payload['country_code'] = $code;
+                $changed[] = 'country';
             }
         }
 

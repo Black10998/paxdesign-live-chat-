@@ -173,9 +173,15 @@ cx_assert_true(strpos($ccs_wf, 'Still missing:') === false, 'Workflow replies mu
 cx_assert_true(substr_count($ccs_wf, 'apply_extracted_fields(') === 1, 'A CCS turn must save extracted fields once');
 
 $ccs_ops = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-ai-operations.php');
+$ccs_store = file_get_contents($ccs_root . '/includes/class-paxdesign-message-store.php');
 cx_assert_true(strpos($ccs_ops, 'pax_ccs_asst_lock_') !== false, 'Assistant persist must lock one reply per session turn');
-cx_assert_true(strpos($ccs_ops, 'function assistant_for_latest_user_turn') !== false, 'A second persist must reuse the assistant for the latest customer turn');
+cx_assert_true(strpos($ccs_ops, 'function reuse_assistant_row') !== false, 'Reused assistant rows must update stale repeated text');
+cx_assert_true(strpos($ccs_store, 'function update_message_content') !== false, 'Assistant persist must be able to replace stale reply text');
 cx_assert_true(strpos($ccs_ops, 'function latest_user_message') !== false, 'Assistant replies must bind to the latest customer message');
+cx_assert_true(strpos($ccs_wf, 'merge_extracted_into_state') !== false, 'Extracted facts must merge into the live CCS state even if a DB write is skipped');
+cx_assert_true(strpos($ccs_wf, 'should_use_model') !== false, 'Unparsed questions must use the model instead of repeating the last prompt');
+cx_assert_true(strpos($chat_knowledge, 'COMPLETE latest message') !== false, 'The CCS assistant must read the complete latest customer message');
+cx_assert_true(strpos($chat_knowledge, 'Never repeat your previous question') !== false, 'The CCS assistant must not repeat the previous question');
 
 $ccs_chat = file_get_contents($ccs_root . '/includes/class-paxdesign-chat.php');
 cx_assert_true(strpos($ccs_chat, 'paxdesign_chat_ccs_bootstrap') !== false, 'CCS chat open must have a bootstrap next-prompt endpoint');

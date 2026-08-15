@@ -153,6 +153,9 @@ class PAXdesign_Cybercrime_AI_Operations {
 
         if ($is_draft && class_exists('PAXdesign_Cybercrime_AI_Workflow')) {
             $workflow = PAXdesign_Cybercrime_AI_Workflow::decide_turn($row, $user_message, $language, $user_id);
+            if (is_array($workflow) && ($workflow['action'] ?? '') === 'continue' && empty($workflow['skip_llm'])) {
+                return $workflow;
+            }
             if (is_array($workflow) && !empty($workflow['action']) && $workflow['action'] !== 'continue') {
                 return $workflow;
             }
@@ -436,15 +439,13 @@ class PAXdesign_Cybercrime_AI_Operations {
         if ($client_msg_id !== '' && class_exists('PAXdesign_Message_Store')) {
             $existing = PAXdesign_Message_Store::find_by_client_id($session_id, $client_msg_id);
             if (is_array($existing) && !empty($existing['id'])) {
-                $existing['_deduplicated'] = true;
-                return $existing;
+                return self::reuse_assistant_row($session_id, $existing, $content);
             }
         }
         if (class_exists('PAXdesign_Message_Store')) {
             $already = self::assistant_for_latest_user_turn($session_id);
             if (is_array($already) && !empty($already['id'])) {
-                $already['_deduplicated'] = true;
-                return $already;
+                return self::reuse_assistant_row($session_id, $already, $content);
             }
         }
         set_transient($lock_key, '1', 15);
@@ -452,15 +453,13 @@ class PAXdesign_Cybercrime_AI_Operations {
             if ($client_msg_id !== '' && class_exists('PAXdesign_Message_Store')) {
                 $existing = PAXdesign_Message_Store::find_by_client_id($session_id, $client_msg_id);
                 if (is_array($existing) && !empty($existing['id'])) {
-                    $existing['_deduplicated'] = true;
-                    return $existing;
+                    return self::reuse_assistant_row($session_id, $existing, $content);
                 }
             }
             if (class_exists('PAXdesign_Message_Store')) {
                 $already = self::assistant_for_latest_user_turn($session_id);
                 if (is_array($already) && !empty($already['id'])) {
-                    $already['_deduplicated'] = true;
-                    return $already;
+                    return self::reuse_assistant_row($session_id, $already, $content);
                 }
             }
             $extra = array();
@@ -483,6 +482,33 @@ class PAXdesign_Cybercrime_AI_Operations {
         } finally {
             delete_transient($lock_key);
         }
+    }
+
+    /**
+     * Reuse the assistant row for this customer turn, but never keep stale text.
+     *
+     * @param string               $session_id
+     * @param array<string, mixed> $existing
+     * @param string               $content
+     * @return array<string, mixed>
+     */
+    private static function reuse_assistant_row($session_id, $existing, $content) {
+        $existing['_deduplicated'] = true;
+        $previous = trim((string) ($existing['content'] ?? ''));
+        $content = trim((string) $content);
+        if ($content === '' || strcasecmp($previous, $content) === 0) {
+            return $existing;
+        }
+        $seq = absint($existing['id'] ?? $existing['seq'] ?? 0);
+        if ($seq > 0 && class_exists('PAXdesign_Message_Store')) {
+            $updated = PAXdesign_Message_Store::update_message_content($session_id, $seq, $content, 'customer');
+            if (is_array($updated) && !empty($updated['id'])) {
+                $updated['_deduplicated'] = true;
+                return $updated;
+            }
+        }
+        $existing['content'] = $content;
+        return $existing;
     }
 
     /**
