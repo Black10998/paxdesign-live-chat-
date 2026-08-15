@@ -409,11 +409,7 @@
     }
     updateStartButtonLabel();
     if (phase === 'active-report') {
-      if (isActive) {
-        startReportPolling();
-      } else {
-        stopReportPolling();
-      }
+      startReportPolling();
     }
   }
 
@@ -693,8 +689,11 @@
     if (!config.ajaxUrl || !config.nonce || !isLoggedIn()) {
       return Promise.resolve([]);
     }
-    var url = config.ajaxUrl + '?action=paxdesign_cybercrime_report_list&nonce=' + encodeURIComponent(config.nonce);
-    return fetch(url, { credentials: 'same-origin' })
+    var url = config.ajaxUrl;
+    var body = new FormData();
+    body.append('action', 'paxdesign_cybercrime_report_list');
+    body.append('nonce', config.nonce);
+    return fetch(url, { method: 'POST', body: body, credentials: 'same-origin', cache: 'no-store' })
       .then(function (res) { return res.json(); })
       .then(function (json) {
         if (!json || !json.success || !json.data) {
@@ -766,11 +765,20 @@
     if (!config.ajaxUrl || !config.nonce || !isLoggedIn()) {
       return Promise.resolve(null);
     }
-    var url = config.ajaxUrl + '?action=paxdesign_cybercrime_active_report&nonce=' + encodeURIComponent(config.nonce);
+    var body = new FormData();
+    body.append('nonce', config.nonce);
     if (reference) {
-      url = config.ajaxUrl + '?action=paxdesign_cybercrime_report_detail&nonce=' + encodeURIComponent(config.nonce) + '&reference=' + encodeURIComponent(reference);
+      body.append('action', 'paxdesign_cybercrime_report_detail');
+      body.append('reference', reference);
+    } else {
+      body.append('action', 'paxdesign_cybercrime_active_report');
     }
-    return fetch(url, { credentials: 'same-origin' })
+    return fetch(config.ajaxUrl, {
+      method: 'POST',
+      body: body,
+      credentials: 'same-origin',
+      cache: 'no-store'
+    })
       .then(function (res) { return res.json(); })
       .then(function (json) {
         if (!json || !json.success) {
@@ -785,6 +793,88 @@
         return null;
       })
       .catch(function () { return null; });
+  }
+
+  function mergeCaseUpdate(incoming) {
+    if (!incoming || !incoming.reference_id) {
+      return incoming;
+    }
+    var current = activeReport;
+    if (!current || current.reference_id !== incoming.reference_id) {
+      return incoming;
+    }
+    var merged = {};
+    Object.keys(current).forEach(function (key) {
+      merged[key] = current[key];
+    });
+    Object.keys(incoming).forEach(function (key) {
+      var value = incoming[key];
+      if (value == null) {
+        return;
+      }
+      if ((key === 'timeline' || key === 'attachments' || key === 'original_request' || key === 'checks') && (!value || (Array.isArray(value) && !value.length))) {
+        return;
+      }
+      merged[key] = value;
+    });
+    return merged;
+  }
+
+  function caseSyncTimestamp(report) {
+    if (!report || !report.updated_at) {
+      return 0;
+    }
+    var parsed = Date.parse(String(report.updated_at));
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  function caseSyncFingerprint(report) {
+    if (!report) {
+      return '';
+    }
+    var rejection = report.rejection && typeof report.rejection === 'object' ? report.rejection : {};
+    var timeline = Array.isArray(report.timeline) ? report.timeline : null;
+    return [
+      report.reference_id || '',
+      report.status || '',
+      report.customer_status || '',
+      report.is_active === false || report.is_active === 0 || report.is_active === '0' ? '0' : '1',
+      report.updated_at || '',
+      report.next_action || '',
+      report.unread_count || 0,
+      rejection.reason_key || '',
+      rejection.reason || '',
+      rejection.explanation || '',
+      rejection.decided_at || '',
+      timeline ? (String(timeline.length) + ':' + (getNewestTimelineEntryId(timeline) || '')) : 'compact'
+    ].join('|');
+  }
+
+  function applyIncomingReport(report, options) {
+    if (!report || !report.reference_id || !isLoggedIn()) {
+      return;
+    }
+    options = options || {};
+    if (!options.force && activeReport && activeReport.reference_id === report.reference_id) {
+      var incomingTs = caseSyncTimestamp(report);
+      var currentTs = caseSyncTimestamp(activeReport);
+      if (incomingTs > 0 && currentTs > 0 && incomingTs < currentTs) {
+        return;
+      }
+    }
+    var merged = mergeCaseUpdate(report);
+    var statusChanged = !!(activeReport && (activeReport.status || '') !== (merged.status || ''));
+    if (!options.force && activeReport && caseSyncFingerprint(merged) === caseSyncFingerprint(activeReport)) {
+      return;
+    }
+    if (phase === 'active-report' && activeReport && activeReport.reference_id === merged.reference_id) {
+      applyReportRefresh(merged, options);
+    } else if (phase === 'active-report' || options.show) {
+      showActiveReport(merged, false);
+    }
+    if (statusChanged) {
+      fetchReportHistory();
+    }
   }
 
   function timelineText(key) {
@@ -1092,16 +1182,11 @@
     if (!report || !report.reference_id || !isLoggedIn()) {
       return;
     }
+    applyIncomingReport(report);
     fetchActiveReport(report.reference_id).then(function (full) {
-      var next = full || report;
-      if (!next || !next.reference_id) {
-        return;
+      if (full) {
+        applyIncomingReport(full);
       }
-      if (phase === 'active-report' && activeReport && activeReport.reference_id === next.reference_id) {
-        applyReportRefresh(next);
-        return;
-      }
-      showActiveReport(next, false);
     });
   }
 
@@ -1233,28 +1318,38 @@
   }
 
   var reportVisibilityBound = false;
+  var REPORT_POLL_MS = 2000;
+  var reportFetchSeq = 0;
+
+  function pollActiveReport() {
+    if (phase !== 'active-report' || !activeReport || !activeReport.reference_id) {
+      return;
+    }
+    var seq = ++reportFetchSeq;
+    var ref = activeReport.reference_id;
+    fetchActiveReport(ref).then(function (report) {
+      if (seq !== reportFetchSeq) {
+        return;
+      }
+      if (report) {
+        applyIncomingReport(report);
+      }
+    });
+  }
 
   function startReportPolling() {
-    stopReportPolling();
     if (!activeReport || !activeReport.reference_id) {
       return;
     }
-    var poll = function () {
-      if (phase !== 'active-report' || !activeReport || !activeReport.reference_id) {
-        return;
-      }
-      fetchActiveReport(activeReport.reference_id).then(function (report) {
-        if (report) {
-          applyReportRefresh(report);
-        }
-      });
-    };
-    reportPollTimer = window.setInterval(poll, 5000);
+    if (!reportPollTimer) {
+      pollActiveReport();
+      reportPollTimer = window.setInterval(pollActiveReport, REPORT_POLL_MS);
+    }
     if (!reportVisibilityBound) {
       reportVisibilityBound = true;
       document.addEventListener('visibilitychange', function () {
         if (!document.hidden && phase === 'active-report') {
-          poll();
+          pollActiveReport();
         }
       });
     }
@@ -2050,7 +2145,7 @@
       }
       fetchActiveReport(activeReport.reference_id).then(function (report) {
         if (report) {
-          applyReportRefresh(report);
+          applyIncomingReport(report, { force: true });
         }
       });
     });

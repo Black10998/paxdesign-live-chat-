@@ -347,7 +347,9 @@ cx_assert_true(strpos($ccs_i18n, "'ar' => 'تمت الموافقة'") !== false,
 cx_assert_true(strpos($ccs_i18n, 'status_icon_svg') !== false, 'Professional status icons must be SVG');
 cx_assert_true(strpos($ccs_i18n, 'reject.reason.unclear_document') !== false, 'Rejection reasons must be localized');
 
-cx_assert_true(strpos($ccs_tickets, 'apply_rejection') !== false, 'Admin rejection must store reason on the same CCS case');
+cx_assert_true(strpos($ccs_tickets, 'public_case_sync_for_session') !== false, 'Chat poll must be able to read the same CCS case status');
+cx_assert_true(strpos($ccs_tickets, 'send_customer_nocache_headers') !== false, 'Customer case AJAX must not be cached');
+cx_assert_true(strpos($ccs_tickets, 'LIVE STATUS') !== false, 'AI chat must read the live CCS status on every reply');
 cx_assert_true(strpos($ccs_tickets, 'public_rejection') !== false, 'Customer payload must expose the rejection decision');
 cx_assert_true(strpos($ccs_tickets, "'reason_i18n'") !== false, 'Rejection reasons must be stored in AR/DE/EN');
 
@@ -356,6 +358,12 @@ cx_assert_true(strpos($ccs_js, 'initGuidedInterview') !== false, 'Website intake
 cx_assert_true(strpos($ccs_js, 'renderCaseDossier') !== false, 'Returning customers must see the existing case dossier');
 cx_assert_true(strpos($ccs_js, 'paxdesign_cybercrime_customer_resubmit') !== false, 'Website must allow same-case file corrections');
 cx_assert_true(strpos($ccs_js, 'pax-ccs-case-updated') !== false, 'Case page must refresh when chat saves the same case');
+cx_assert_true(strpos($ccs_js, "cache: 'no-store'") !== false, 'Case status polling must bypass cached GET responses');
+cx_assert_true(strpos($ccs_js, "method: 'POST'") !== false, 'Case status polling must use POST');
+cx_assert_true(strpos($ccs_js, 'applyIncomingReport') !== false, 'Live admin status changes must apply without a manual refresh');
+cx_assert_true(strpos($ccs_js, 'pollActiveReport') !== false, 'The open CCS case must keep polling while it is on screen');
+cx_assert_true(strpos($ccs_js, 'REPORT_POLL_MS') !== false, 'Customer case polling interval must be defined');
+cx_assert_true(strpos($ccs_js, 'caseSyncTimestamp') !== false, 'Live case updates must ignore stale overlapping responses');
 cx_assert_true(strpos($ccs_js, 'continueDraftOnPage') !== false, 'Draft cases must remain completable on the existing page');
 cx_assert_true(strpos($ccs_js, 'isStructuredCaseDescription') !== false, 'Case dossier must hide pasted chat paragraphs');
 cx_assert_true(strpos($ccs_js, 'rejected') !== false, 'Customer case view must treat Rejected as a closed status');
@@ -373,11 +381,12 @@ cx_assert_true(strpos($ccs_page, 'pax-ccs-decision-card') !== false, 'Case page 
 $ccs_widget = file_get_contents($ccs_root . '/assets/js/chat-script.js');
 cx_assert_true(strpos($ccs_widget, 'isCybercrimeCaseChat') !== false, 'CCS chat must force the Sign In gate');
 cx_assert_true(strpos($ccs_widget, 'dispatchCcsCaseUpdate') !== false, 'Chat must notify the case page after a save');
+cx_assert_true(strpos($ccs_widget, "dispatchCcsCaseUpdate(data.ccs_case);") !== false, 'Chat poll must push the live CCS case status to the website');
 cx_assert_true(strpos($ccs_widget, 'ccs_operation') !== false, 'Chat must render a processing state for CCS operations');
 cx_assert_true(strpos($ccs_widget, 'upsertCcsOperationMessage') !== false, 'Chat must keep the same processing message across follow-ups');
 
 $plugin_bootstrap = file_get_contents($ccs_root . '/paxdesign-booking.php');
-cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.4')") !== false, 'Plugin version must be 3.175.4');
+cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.5')") !== false, 'Plugin version must be 3.175.5');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-i18n.php') !== false, 'Plugin must load CCS localization');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-document-checks.php') !== false, 'Plugin must load document checks');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-case.php') !== false, 'Plugin must load AI case sync');

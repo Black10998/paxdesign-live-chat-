@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.175.4
+ * Version: 3.175.5
  */
 (function () {
   'use strict';
@@ -2279,7 +2279,7 @@
       formData.append('full', '1');
       formData.append('history_limit', String(HISTORY_INITIAL));
     }
-    return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
+    return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin', cache: 'no-store' })
       .then(function (res) { return safeJson(res).then(function (json) { return { res: res, json: json }; }); })
       .then(function (result) {
         var json = result.json;
@@ -2310,6 +2310,9 @@
         if (Array.isArray(data.messages) && data.messages.length) applyRestoredMessages(data.messages);
         syncHistoryPaginationFromPoll(data);
         if (data.reactions) applyReactionStates(data.reactions);
+        if (data.ccs_case) {
+          dispatchCcsCaseUpdate(data.ccs_case);
+        }
         if (typeof data.seq === 'number') {
           pollSeq = Math.max(pollSeq, data.seq);
           syncLocalMessageCursor(messages, data.seq);
@@ -3356,6 +3359,9 @@
     if (data.reactions && typeof data.reactions === 'object') {
       applyReactionStates(data.reactions);
     }
+    if (data.ccs_case) {
+      dispatchCcsCaseUpdate(data.ccs_case);
+    }
     if (typeof data.seq === 'number') {
       pollSeq = Math.max(pollSeq, data.seq);
     }
@@ -3380,7 +3386,7 @@
     formData.append('session_id', getSessionId());
     formData.append('since', String(pollSeq));
 
-    return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
+    return fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin', cache: 'no-store' })
       .then(function (res) {
         return res.text().then(function (text) {
           if (isEdgeForbiddenResponse(res, text)) {

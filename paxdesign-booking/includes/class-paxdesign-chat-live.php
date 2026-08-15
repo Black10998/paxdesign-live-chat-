@@ -3382,7 +3382,7 @@ class PAXdesign_Chat_Live {
             ? PAXdesign_Message_Store::latest_seq($session_id, 'customer')
             : (isset($row->message_seq) ? (int) $row->message_seq : 0);
 
-        return array(
+        $detail = array(
             'session_id'       => isset($row->session_id) ? (string) $row->session_id : '',
             'handler'          => $handler,
             'handler_label'    => self::handler_label($handler, $agent['admin_name']),
@@ -3407,6 +3407,14 @@ class PAXdesign_Chat_Live {
                 ? PAXdesign_Language_Routing::session_language_from_row($row)
                 : '',
         );
+        if (class_exists('PAXdesign_Cybercrime_Tickets')) {
+            $ccs_user_id = isset($row->wp_user_id) ? (int) $row->wp_user_id : (int) get_current_user_id();
+            $ccs_case = PAXdesign_Cybercrime_Tickets::public_case_sync_for_session($session_id, $ccs_user_id);
+            if (is_array($ccs_case) && !empty($ccs_case['reference_id'])) {
+                $detail['ccs_case'] = $ccs_case;
+            }
+        }
+        return $detail;
     }
 
     /**
@@ -3564,6 +3572,13 @@ class PAXdesign_Chat_Live {
             'auth_user_id'     => $wp_user_id,
             'wp_user_id'       => $wp_user_id,
         );
+        if (class_exists('PAXdesign_Cybercrime_Tickets')) {
+            $ccs_user_id = $wp_user_id > 0 ? $wp_user_id : (int) get_current_user_id();
+            $ccs_case = PAXdesign_Cybercrime_Tickets::public_case_sync_for_session($session_id, $ccs_user_id);
+            if (is_array($ccs_case) && !empty($ccs_case['reference_id'])) {
+                $payload['ccs_case'] = $ccs_case;
+            }
+        }
         if ($history_window) {
             $payload['has_older'] = $has_older;
             $payload['oldest_seq'] = $oldest_seq;

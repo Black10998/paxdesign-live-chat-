@@ -1707,7 +1707,8 @@ class PAXdesign_Cybercrime_Tickets {
         $detail = self::format_report_row($report, true);
         $lines = array(
             '## Cybercrime ticket context (authoritative — reference ' . $reference_id . ')',
-            '- Status: ' . ($detail['status_label'] ?? '') . ' (' . ($detail['status'] ?? '') . ')',
+            '- LIVE STATUS (authoritative right now — do not use any older status from chat history): ' . ($detail['status_label'] ?? '') . ' (' . ($detail['status'] ?? '') . ')',
+            '- Customer-facing status: ' . ($detail['customer_status'] ?? ''),
             '- Category: ' . ($detail['category_label'] ?? ''),
             '- Submitted: ' . ($detail['created_at'] ?? ''),
             '- Last update: ' . ($detail['updated_at'] ?? ''),
@@ -1719,6 +1720,15 @@ class PAXdesign_Cybercrime_Tickets {
             '- Stay on this same reference for the entire workflow: submission → document checks → corrections → administrator review → status changes → customer communication → final outcome.',
             '- Never ask the customer to restart or re-explain facts already listed here.',
         );
+
+        $rejection = is_array($detail['rejection'] ?? null) ? $detail['rejection'] : array();
+        if (($detail['status'] ?? '') === 'rejected' && !empty($rejection)) {
+            $lines[] = '- Rejection decision (live): reason=' . (string) ($rejection['reason'] ?? $rejection['reason_key'] ?? '');
+            if (!empty($rejection['explanation'])) {
+                $lines[] = '- Rejection explanation: ' . wp_html_excerpt((string) $rejection['explanation'], 400, '…');
+            }
+            $lines[] = '- If the customer asks why the case was rejected or what the current status is, answer from this live decision. Do not say the case is still under review.';
+        }
 
         $original = is_array($detail['original_request'] ?? null) ? $detail['original_request'] : array();
         if (!empty($original)) {
@@ -1783,6 +1793,39 @@ class PAXdesign_Cybercrime_Tickets {
         }
 
         return implode("\n", $lines);
+    }
+
+    /**
+     * Compact case snapshot for live customer/chat polling (no timeline).
+     *
+     * @param string $session_id
+     * @param int    $user_id
+     * @return array<string, mixed>|null
+     */
+    public static function public_case_sync_for_session($session_id, $user_id = 0) {
+        $session_id = sanitize_text_field((string) $session_id);
+        $user_id = absint($user_id);
+        if ($user_id <= 0 || $session_id === '') {
+            return null;
+        }
+        $reference = self::get_reference_for_session($session_id);
+        if ($reference === '') {
+            return null;
+        }
+        $row = self::get_report_row($reference);
+        if (!is_array($row)) {
+            return null;
+        }
+        if ($user_id > 0 && !self::user_can_view_report($row, $user_id)) {
+            return null;
+        }
+        $report = self::format_report_row($row, false);
+        if (!is_array($report) || empty($report['reference_id'])) {
+            return null;
+        }
+        return class_exists('PAXdesign_Cybercrime_AI_Case')
+            ? PAXdesign_Cybercrime_AI_Case::public_case_sync_payload($report)
+            : $report;
     }
 
     /**
@@ -2597,11 +2640,23 @@ class PAXdesign_Cybercrime_Tickets {
         ));
     }
 
+    private static function send_customer_nocache_headers() {
+        if (function_exists('nocache_headers')) {
+            nocache_headers();
+        }
+        if (!headers_sent()) {
+            header('Cache-Control: no-store, private, max-age=0, must-revalidate');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+        }
+    }
+
     public static function ajax_report_list() {
         if (!is_user_logged_in()) {
             wp_send_json_error(array('message' => __('Please sign in.', 'paxdesign-booking'), 'code' => 'login_required'), 401);
         }
         check_ajax_referer(PAXdesign_Cybercrime_Intake::NONCE_ACTION, 'nonce');
+        self::send_customer_nocache_headers();
 
         $reports = self::list_reports_for_user(get_current_user_id(), 30);
         $active = null;
@@ -2631,6 +2686,7 @@ class PAXdesign_Cybercrime_Tickets {
             wp_send_json_error(array('message' => __('Please sign in.', 'paxdesign-booking'), 'code' => 'login_required'), 401);
         }
         check_ajax_referer(PAXdesign_Cybercrime_Intake::NONCE_ACTION, 'nonce');
+        self::send_customer_nocache_headers();
 
         $report = self::get_active_report_for_user(get_current_user_id());
         if (!$report) {
@@ -2644,6 +2700,7 @@ class PAXdesign_Cybercrime_Tickets {
             wp_send_json_error(array('message' => __('Please sign in.', 'paxdesign-booking'), 'code' => 'login_required'), 401);
         }
         check_ajax_referer(PAXdesign_Cybercrime_Intake::NONCE_ACTION, 'nonce');
+        self::send_customer_nocache_headers();
 
         $reference = sanitize_text_field(wp_unslash($_GET['reference'] ?? $_POST['reference'] ?? ''));
         $report = self::get_report_for_user($reference, get_current_user_id());
