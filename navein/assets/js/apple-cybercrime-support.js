@@ -978,6 +978,9 @@
       }
     }
     var merged = mergeCaseUpdate(report);
+    if (merged.reference_id) {
+      setPageContext(root.getAttribute('data-ccs-lang') || 'ar', merged.reference_id);
+    }
     var statusChanged = !!(activeReport && (activeReport.status || '') !== (merged.status || ''));
     if (!options.force && activeReport && caseSyncFingerprint(merged) === caseSyncFingerprint(activeReport)) {
       return;

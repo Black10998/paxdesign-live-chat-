@@ -526,6 +526,8 @@ class PAXdesign_Cybercrime_Tickets {
             : array_values((array) ($customer_checks['customer_corrections'] ?? array()));
         $out['can_resubmit'] = self::is_active_status($raw_status);
         $out['is_draft'] = ($raw_status === 'draft' || $workflow_status === 'draft');
+        $out['fresh_start'] = !empty($payload['fresh_start']);
+        $out['replaces_reference'] = sanitize_text_field((string) ($payload['replaces_reference'] ?? ''));
         $missing_keys = self::missing_case_fields($out, $row, $payload);
         $out['missing_fields'] = array();
         foreach ($missing_keys as $item) {
@@ -2041,9 +2043,15 @@ class PAXdesign_Cybercrime_Tickets {
      * @param int    $message_id
      */
     public static function on_chat_message($session_id, $role, $content, $message_id = 0) {
-        unset($role, $content, $message_id);
+        unset($role, $message_id);
         $session_id = sanitize_text_field((string) $session_id);
         if ($session_id === '') {
+            return;
+        }
+        if (
+            class_exists('PAXdesign_Cybercrime_AI_Case')
+            && PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request((string) $content)
+        ) {
             return;
         }
 

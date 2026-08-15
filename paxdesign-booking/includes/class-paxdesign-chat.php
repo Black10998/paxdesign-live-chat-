@@ -436,7 +436,13 @@ class PAXdesign_Chat {
             return $out;
         }
 
-        $decision = PAXdesign_Cybercrime_AI_Operations::decide_turn($session_id, $user_id, $user_message, $language);
+        $decision = PAXdesign_Cybercrime_AI_Operations::decide_turn(
+            $session_id,
+            $user_id,
+            $user_message,
+            $language,
+            is_array($ccs_report) ? $ccs_report : null
+        );
         $action = (string) ($decision['action'] ?? 'continue');
         if ($action === 'continue') {
             if (!empty($decision['operation'])) {
@@ -599,12 +605,50 @@ class PAXdesign_Chat {
      * @param string $session_id
      */
     private function persist_page_context_from_request($session_id) {
+        $session_id = sanitize_text_field((string) $session_id);
+        $reference = isset($_POST['page_reference']) ? sanitize_text_field(wp_unslash($_POST['page_reference'])) : '';
+        $last_user = $this->last_user_message_from_request();
+        if (
+            class_exists('PAXdesign_Cybercrime_AI_Case')
+            && PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request($last_user)
+        ) {
+            $reference = '';
+        } elseif ($reference !== '' && $session_id !== '' && class_exists('PAXdesign_Cybercrime_Tickets')) {
+            $bound = PAXdesign_Cybercrime_Tickets::get_reference_for_session($session_id);
+            if (is_string($bound) && $bound !== '' && strcasecmp($bound, $reference) !== 0) {
+                $reference = $bound;
+            }
+        }
         $this->set_session_page_context(
             $session_id,
             isset($_POST['page_context']) ? wp_unslash($_POST['page_context']) : '',
-            isset($_POST['page_reference']) ? wp_unslash($_POST['page_reference']) : '',
+            $reference,
             isset($_POST['page_language']) ? wp_unslash($_POST['page_language']) : ''
         );
+    }
+
+    /**
+     * @return string
+     */
+    private function last_user_message_from_request() {
+        if (isset($_POST['message'])) {
+            $direct = trim(sanitize_textarea_field(wp_unslash($_POST['message'])));
+            if ($direct !== '') {
+                return $direct;
+            }
+        }
+        $messages_raw = isset($_POST['messages']) ? wp_unslash($_POST['messages']) : '';
+        $messages = is_string($messages_raw) ? json_decode($messages_raw, true) : $messages_raw;
+        if (!is_array($messages)) {
+            return '';
+        }
+        for ($i = count($messages) - 1; $i >= 0; $i--) {
+            if (!is_array($messages[$i]) || (($messages[$i]['role'] ?? '') !== 'user')) {
+                continue;
+            }
+            return trim(sanitize_textarea_field((string) ($messages[$i]['content'] ?? '')));
+        }
+        return '';
     }
 
     /**

@@ -143,7 +143,17 @@ class PAXdesign_Cybercrime_AI_Case {
             return new WP_Error('unavailable', __('Cybercrime Support is temporarily unavailable.', 'paxdesign-booking'), array('status' => 503));
         }
 
-        $row = self::ensure_case_for_user($user_id, $session_id, $focus_reference, $message);
+        $explicit_new = self::is_explicit_new_case_request($message);
+        $previous_reference = '';
+        if ($explicit_new) {
+            $previous_reference = self::peek_current_reference($user_id, $session_id);
+            if ($previous_reference === '') {
+                $previous_reference = sanitize_text_field((string) $focus_reference);
+            }
+            $row = self::open_new_case_for_user($user_id, $session_id, $previous_reference);
+        } else {
+            $row = self::ensure_case_for_user($user_id, $session_id, $focus_reference, $message);
+        }
         if (is_wp_error($row)) {
             return $row;
         }
@@ -152,9 +162,15 @@ class PAXdesign_Cybercrime_AI_Case {
         }
 
         $reference = (string) $row['reference_id'];
+        if ($explicit_new && $previous_reference !== '' && strcasecmp($reference, $previous_reference) === 0) {
+            return new WP_Error(
+                'reuse_blocked',
+                __('A new Cybercrime Support case was not created. The previous reference cannot be reused.', 'paxdesign-booking'),
+                array('status' => 500)
+            );
+        }
         self::bind_session($reference, $session_id, $user_id);
 
-        $explicit_new = self::is_explicit_new_case_request($message);
         if ($explicit_new && class_exists('PAXdesign_Chat')) {
             PAXdesign_Chat::get_instance()->reset_ccs_conversation_epoch($session_id);
         }
@@ -176,15 +192,15 @@ class PAXdesign_Cybercrime_AI_Case {
         if ($message !== '' && !$skip_extract) {
             $existing = self::case_fields_from_row($row);
             $extracted = self::extract_fields_from_message($message, $existing);
-        }
-        if ($message !== '' && class_exists('PAXdesign_Cybercrime_AI_Workflow')) {
-            $wf_fields = PAXdesign_Cybercrime_AI_Workflow::extract_from_message(
-                $message,
-                PAXdesign_Cybercrime_AI_Workflow::state_from_row($row)
-            );
-            unset($wf_fields['submit_intent']);
-            if (!empty($wf_fields)) {
-                $extracted = array_merge($extracted, $wf_fields);
+            if (class_exists('PAXdesign_Cybercrime_AI_Workflow')) {
+                $wf_fields = PAXdesign_Cybercrime_AI_Workflow::extract_from_message(
+                    $message,
+                    PAXdesign_Cybercrime_AI_Workflow::state_from_row($row)
+                );
+                unset($wf_fields['submit_intent']);
+                if (!empty($wf_fields)) {
+                    $extracted = array_merge($extracted, $wf_fields);
+                }
             }
         }
         if (!empty($extracted)) {
@@ -208,10 +224,22 @@ class PAXdesign_Cybercrime_AI_Case {
             set_transient('pax_chat_page_ref_' . md5($session_id), $reference, DAY_IN_SECONDS);
         }
 
-        return PAXdesign_Cybercrime_Tickets::format_report_row(
+        $formatted = PAXdesign_Cybercrime_Tickets::format_report_row(
             is_array($row) && isset($row['payload']) ? $row : PAXdesign_Cybercrime_Tickets::get_report_row($reference),
             true
         );
+        if (!is_array($formatted)) {
+            return $formatted;
+        }
+        if ($explicit_new) {
+            if ($previous_reference === '') {
+                $previous_reference = sanitize_text_field((string) ($formatted['replaces_reference'] ?? $row['replaces_reference'] ?? ''));
+            }
+            $formatted['previous_reference'] = $previous_reference;
+            $formatted['replaces_reference'] = $previous_reference;
+            $formatted['fresh_start'] = true;
+        }
+        return $formatted;
     }
 
     /**
@@ -234,14 +262,17 @@ class PAXdesign_Cybercrime_AI_Case {
         $session_id = sanitize_text_field((string) $session_id);
         $focus_reference = sanitize_text_field((string) $focus_reference);
 
-        if ($focus_reference !== '' && !$explicit_new) {
-            $focused = PAXdesign_Cybercrime_Tickets::get_report_row($focus_reference);
-            if (is_array($focused) && PAXdesign_Cybercrime_Tickets::user_can_view_report($focused, $user_id)) {
-                return $focused;
+        if ($explicit_new) {
+            $previous = self::peek_current_reference($user_id, $session_id);
+            if ($previous === '' && $focus_reference !== '') {
+                $previous = $focus_reference;
             }
+            return self::open_new_case_for_user($user_id, $session_id, $previous);
         }
 
-        if ($session_id !== '' && !$explicit_new) {
+        // The live chat session is the source of truth. Stale page_reference from
+        // the CCS page (the previous CCS id) must not steal the conversation back.
+        if ($session_id !== '') {
             $bound_ref = PAXdesign_Cybercrime_Tickets::get_reference_for_session($session_id);
             if (is_string($bound_ref) && $bound_ref !== '') {
                 $bound = PAXdesign_Cybercrime_Tickets::get_report_row($bound_ref);
@@ -251,15 +282,160 @@ class PAXdesign_Cybercrime_AI_Case {
             }
         }
 
+        if ($focus_reference !== '') {
+            $focused = PAXdesign_Cybercrime_Tickets::get_report_row($focus_reference);
+            if (is_array($focused) && PAXdesign_Cybercrime_Tickets::user_can_view_report($focused, $user_id)) {
+                return $focused;
+            }
+        }
+
         $active = PAXdesign_Cybercrime_Tickets::get_active_report_for_user($user_id);
-        if (is_array($active) && !empty($active['reference_id']) && !$explicit_new) {
+        if (is_array($active) && !empty($active['reference_id'])) {
             $row = PAXdesign_Cybercrime_Tickets::get_report_row((string) $active['reference_id']);
             if (is_array($row) && PAXdesign_Cybercrime_Tickets::user_can_view_report($row, $user_id)) {
                 return $row;
             }
         }
 
-        return PAXdesign_Cybercrime_Intake::create_draft_for_user($user_id, $session_id, $explicit_new);
+        return PAXdesign_Cybercrime_Intake::create_draft_for_user($user_id, $session_id, false);
+    }
+
+    /**
+     * CCS reference currently pinned to this conversation (session, page, or active).
+     *
+     * @param int    $user_id
+     * @param string $session_id
+     * @return string
+     */
+    public static function peek_current_reference($user_id, $session_id = '') {
+        $session_id = sanitize_text_field((string) $session_id);
+        $user_id = absint($user_id);
+
+        if ($session_id !== '' && class_exists('PAXdesign_Cybercrime_Tickets')) {
+            $bound = PAXdesign_Cybercrime_Tickets::get_reference_for_session($session_id);
+            if (is_string($bound) && $bound !== '') {
+                return sanitize_text_field($bound);
+            }
+        }
+
+        if ($session_id !== '') {
+            $stored = get_transient('pax_chat_page_ref_' . md5($session_id));
+            if (is_string($stored) && $stored !== '') {
+                return sanitize_text_field($stored);
+            }
+        }
+
+        if (isset($_POST['page_reference'])) {
+            $posted = sanitize_text_field(wp_unslash($_POST['page_reference']));
+            if ($posted !== '') {
+                return $posted;
+            }
+        }
+
+        if ($user_id > 0 && class_exists('PAXdesign_Cybercrime_Tickets')) {
+            $active = PAXdesign_Cybercrime_Tickets::get_active_report_for_user($user_id);
+            if (is_array($active) && !empty($active['reference_id'])) {
+                return sanitize_text_field((string) $active['reference_id']);
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * True when $row is a brand-new draft whose CCS reference is not $previous_reference.
+     *
+     * @param array<string, mixed>|null $row
+     * @param string                    $previous_reference
+     * @return bool
+     */
+    public static function is_verified_new_draft($row, $previous_reference = '') {
+        if (!is_array($row)) {
+            return false;
+        }
+        $reference = sanitize_text_field((string) ($row['reference_id'] ?? ''));
+        if ($reference === '') {
+            return false;
+        }
+        $previous = sanitize_text_field((string) $previous_reference);
+        if ($previous !== '' && strcasecmp($reference, $previous) === 0) {
+            return false;
+        }
+        $status = sanitize_key((string) ($row['status'] ?? ''));
+        if ($status !== '' && $status !== 'draft') {
+            return false;
+        }
+        $payload = $row['payload'] ?? null;
+        if (is_string($payload)) {
+            $decoded = json_decode($payload, true);
+            $payload = is_array($decoded) ? $decoded : array();
+        } elseif (!is_array($payload)) {
+            $payload = array();
+        }
+        $fresh = !empty($payload['fresh_start']) || !empty($row['fresh_start']);
+        $replaces = sanitize_text_field((string) ($payload['replaces_reference'] ?? $row['replaces_reference'] ?? $row['previous_reference'] ?? ''));
+        if ($previous !== '') {
+            return $fresh || ($replaces !== '' && strcasecmp($replaces, $previous) === 0);
+        }
+        return $fresh;
+    }
+
+    /**
+     * Create a new CCS draft for this conversation and bind it, replacing the previous reference.
+     *
+     * @param int    $user_id
+     * @param string $session_id
+     * @param string $previous_reference
+     * @return array<string, mixed>|WP_Error
+     */
+    public static function open_new_case_for_user($user_id, $session_id = '', $previous_reference = '') {
+        $user_id = absint($user_id);
+        $session_id = sanitize_text_field((string) $session_id);
+        $previous_reference = sanitize_text_field((string) $previous_reference);
+        if ($user_id <= 0) {
+            return new WP_Error('login_required', __('Please sign in.', 'paxdesign-booking'), array('status' => 401));
+        }
+        if ($previous_reference === '') {
+            $previous_reference = self::peek_current_reference($user_id, $session_id);
+        }
+        if (!class_exists('PAXdesign_Cybercrime_Intake')) {
+            return new WP_Error('unavailable', __('Cybercrime Support is temporarily unavailable.', 'paxdesign-booking'), array('status' => 503));
+        }
+
+        $opened = PAXdesign_Cybercrime_Intake::create_draft_for_user($user_id, $session_id, true, $previous_reference);
+        if (is_wp_error($opened)) {
+            return $opened;
+        }
+        $new_reference = is_array($opened) ? sanitize_text_field((string) ($opened['reference_id'] ?? '')) : '';
+        if ($previous_reference !== '' && strcasecmp($new_reference, $previous_reference) === 0) {
+            $opened = PAXdesign_Cybercrime_Intake::create_draft_for_user($user_id, $session_id, true, $previous_reference);
+            if (is_wp_error($opened)) {
+                return $opened;
+            }
+            $new_reference = is_array($opened) ? sanitize_text_field((string) ($opened['reference_id'] ?? '')) : '';
+        }
+        if ($new_reference === '' || ($previous_reference !== '' && strcasecmp($new_reference, $previous_reference) === 0)) {
+            return new WP_Error(
+                'reuse_blocked',
+                __('A new Cybercrime Support case was not created. The previous reference cannot be reused.', 'paxdesign-booking'),
+                array('status' => 500)
+            );
+        }
+
+        self::bind_session($new_reference, $session_id, $user_id);
+        if (class_exists('PAXdesign_Chat')) {
+            PAXdesign_Chat::get_instance()->set_session_page_context($session_id, self::CONTEXT, $new_reference, '');
+            PAXdesign_Chat::get_instance()->reset_ccs_conversation_epoch($session_id);
+        } elseif ($session_id !== '') {
+            set_transient('pax_chat_page_ref_' . md5($session_id), $new_reference, DAY_IN_SECONDS);
+        }
+
+        if (is_array($opened)) {
+            $opened['previous_reference'] = $previous_reference;
+            $opened['replaces_reference'] = $previous_reference;
+            $opened['fresh_start'] = true;
+        }
+        return $opened;
     }
 
     /**
@@ -281,11 +457,8 @@ class PAXdesign_Cybercrime_AI_Case {
             return false;
         }
         $len = function_exists('mb_strlen') ? mb_strlen($normalized) : strlen($normalized);
-        if ($len > 140) {
-            return false;
-        }
         $explicit = (bool) preg_match(
-            '/(?:start (?:a |the )?(?:brand )?new (?:case|report|conversation|chat)|open (?:a |the )?new (?:case|report)|submit (?:a |the )?new (?:case|report)|file (?:a |the )?new (?:case|report)|start (?:over|from scratch)|from scratch|brand new (?:case|report)|want (?:a |to (?:start|open|file|submit) (?:a )?)?new (?:case|report)|أريد (?:فتح|تقديم|إرسال|ارسال) بلاغ جديد|اريد (?:فتح|تقديم|ارسال) بلاغ جديد|افتح بلاغ جديد|أبدأ (?:من الصفر|من جديد|بلاغ جديد)|ابدأ (?:من الصفر|من جديد|بلاغ جديد)|ابدا (?:من الصفر|من جديد|بلاغ جديد)|ابدئي (?:من الصفر|من جديد)|من الصفر|حالة جديدة تماما|تقرير جديد تماما|neuen fall (?:starten|eroffnen|eröffnen)|neuen bericht|von vorne|von neuem|neu beginnen|neuer fall|neue meldung)/u',
+            '/(?:start (?:a |the )?(?:brand )?new (?:case|report|conversation|chat)|open (?:a |the )?new (?:case|report)|submit (?:a |the )?new (?:case|report)|file (?:a |the )?new (?:case|report)|start (?:over|from scratch)|from scratch|brand new (?:case|report)|(?:want|need) (?:a |to (?:start|open|file|submit) (?:a )?)?new (?:case|report)|another (?:case|report)|(?:فتح|تقديم|إرسال|ارسال) بلاغ جديد|أريد (?:فتح|تقديم|إرسال|ارسال)? ?بلاغ جديد|اريد (?:فتح|تقديم|ارسال)? ?بلاغ جديد|افتح بلاغ جديد|أبدأ (?:من الصفر|من جديد|بلاغ جديد)|ابدأ (?:من الصفر|من جديد|بلاغ جديد)|ابدا (?:من الصفر|من جديد|بلاغ جديد)|ابدئي (?:من الصفر|من جديد)|من الصفر|بلاغ جديد|حالة جديدة|تقرير جديد|حالة جديدة تماما|تقرير جديد تماما|neuen fall (?:starten|eroffnen|eröffnen)|neuen bericht|von vorne|von neuem|neu beginnen|neuer fall|neue meldung)/u',
             $normalized
         );
         $short = $len <= 48 && (bool) preg_match(
@@ -737,7 +910,12 @@ class PAXdesign_Cybercrime_AI_Case {
             'updated_at'       => (string) ($report['updated_at'] ?? ''),
             'rejection'        => is_array($report['rejection'] ?? null) ? $report['rejection'] : null,
             'workflow'         => is_array($report['workflow'] ?? null) ? $report['workflow'] : null,
+            'fresh_start'      => !empty($report['fresh_start']),
+            'replaces_reference' => sanitize_text_field((string) ($report['replaces_reference'] ?? $report['previous_reference'] ?? '')),
         );
+        if (!empty($report['previous_reference'])) {
+            $out['previous_reference'] = sanitize_text_field((string) $report['previous_reference']);
+        }
         if (empty($out['workflow']) && class_exists('PAXdesign_Cybercrime_AI_Workflow') && ($out['is_draft'] || isset($report['payload']))) {
             $out['workflow'] = PAXdesign_Cybercrime_AI_Workflow::snapshot($report, (string) ($report['locale'] ?? ''));
         }

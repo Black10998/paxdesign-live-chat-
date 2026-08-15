@@ -875,10 +875,23 @@ class PAXdesign_Customer_REST {
         if (!class_exists('PAXdesign_Chat') || $session_id === '') {
             return;
         }
+        $reference = sanitize_text_field((string) ($params['page_reference'] ?? ''));
+        $message = trim((string) ($params['message'] ?? $params['content'] ?? ''));
+        if (
+            class_exists('PAXdesign_Cybercrime_AI_Case')
+            && PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request($message)
+        ) {
+            $reference = '';
+        } elseif ($reference !== '' && class_exists('PAXdesign_Cybercrime_Tickets')) {
+            $bound = PAXdesign_Cybercrime_Tickets::get_reference_for_session($session_id);
+            if (is_string($bound) && $bound !== '' && strcasecmp($bound, $reference) !== 0) {
+                $reference = $bound;
+            }
+        }
         PAXdesign_Chat::get_instance()->set_session_page_context(
             $session_id,
             (string) ($params['page_context'] ?? ''),
-            (string) ($params['page_reference'] ?? ''),
+            $reference,
             (string) ($params['page_language'] ?? '')
         );
     }

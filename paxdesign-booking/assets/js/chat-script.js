@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.175.10
+ * Version: 3.175.11
  */
 (function () {
   'use strict';
@@ -863,6 +863,11 @@
 
   function dispatchCcsCaseUpdate(report) {
     if (!report || !report.reference_id) return;
+    try {
+      window.PAXdesignPageContext = window.PAXdesignPageContext || {};
+      window.PAXdesignPageContext.intent = 'cybercrime-support';
+      window.PAXdesignPageContext.referenceId = report.reference_id;
+    } catch (e) {}
     try {
       window.dispatchEvent(new CustomEvent('pax-ccs-case-updated', { detail: { report: report } }));
     } catch (e) {}

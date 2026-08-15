@@ -919,9 +919,10 @@ class PAXdesign_Cybercrime_Intake {
      * @param int    $user_id
      * @param string $session_id
      * @param bool   $force_new When true, never reuse an existing CCS reference.
+     * @param string $previous_reference Conversation case that must not be reused.
      * @return array<string, mixed>|WP_Error
      */
-    public static function create_draft_for_user($user_id, $session_id = '', $force_new = false) {
+    public static function create_draft_for_user($user_id, $session_id = '', $force_new = false, $previous_reference = '') {
         $user_id = absint($user_id);
         if ($user_id <= 0) {
             return new WP_Error(
@@ -933,6 +934,7 @@ class PAXdesign_Cybercrime_Intake {
 
         $session_id = sanitize_text_field((string) $session_id);
         $force_new = (bool) $force_new;
+        $previous_reference = sanitize_text_field((string) $previous_reference);
         $replaced_reference = '';
 
         if (class_exists('PAXdesign_Cybercrime_Tickets')) {
@@ -951,6 +953,10 @@ class PAXdesign_Cybercrime_Intake {
             }
         }
 
+        if ($replaced_reference === '' && $previous_reference !== '') {
+            $replaced_reference = $previous_reference;
+        }
+
         $user = get_user_by('id', $user_id);
         if (!$user instanceof WP_User) {
             return new WP_Error('invalid_user', __('Account not found.', 'paxdesign-booking'), array('status' => 403));
@@ -958,6 +964,18 @@ class PAXdesign_Cybercrime_Intake {
 
         self::ensure_schema();
         $reference = self::generate_reference_id();
+        $tries = 0;
+        while ($replaced_reference !== '' && strcasecmp($reference, $replaced_reference) === 0 && $tries < 5) {
+            $reference = self::generate_reference_id();
+            $tries++;
+        }
+        if ($replaced_reference !== '' && strcasecmp($reference, $replaced_reference) === 0) {
+            return new WP_Error(
+                'reuse_blocked',
+                __('Could not open a new Cybercrime Support case. The previous reference was not replaced.', 'paxdesign-booking'),
+                array('status' => 500)
+            );
+        }
         $now = current_time('mysql', true);
         $session_id = sanitize_text_field((string) $session_id);
         $payload = array(

@@ -23,13 +23,14 @@ class PAXdesign_Cybercrime_AI_Operations {
     /**
      * Decide how this authenticated CCS turn should be handled.
      *
-     * @param string $session_id
-     * @param int    $user_id
-     * @param string $user_message
-     * @param string $language de|en|ar
+     * @param string                         $session_id
+     * @param int                            $user_id
+     * @param string                         $user_message
+     * @param string                         $language de|en|ar
+     * @param array<string, mixed>|null      $known_report Case already loaded by ingest this turn
      * @return array<string, mixed>
      */
-    public static function decide_turn($session_id, $user_id, $user_message, $language = '') {
+    public static function decide_turn($session_id, $user_id, $user_message, $language = '', $known_report = null) {
         $session_id = sanitize_text_field((string) $session_id);
         $user_id = absint($user_id);
         $user_message = trim((string) $user_message);
@@ -47,9 +48,78 @@ class PAXdesign_Cybercrime_AI_Operations {
             return $empty;
         }
 
-        $row = self::load_case_row($session_id, $user_id);
+        $row = null;
+        if (is_array($known_report) && !empty($known_report['reference_id'])) {
+            $loaded = PAXdesign_Cybercrime_Tickets::get_report_row((string) $known_report['reference_id']);
+            $row = is_array($loaded) && !empty($loaded['reference_id']) ? $loaded : $known_report;
+        }
+        if (!is_array($row) || empty($row['reference_id'])) {
+            $row = self::load_case_row($session_id, $user_id);
+        }
         if (!is_array($row) || empty($row['reference_id'])) {
             return $empty;
+        }
+
+        if (
+            class_exists('PAXdesign_Cybercrime_AI_Case')
+            && PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request($user_message)
+        ) {
+            $previous = '';
+            if (is_array($known_report)) {
+                $previous = sanitize_text_field((string) ($known_report['previous_reference'] ?? $known_report['replaces_reference'] ?? ''));
+            }
+            if ($previous === '') {
+                $payload_prev = is_array($row['payload'] ?? null)
+                    ? $row['payload']
+                    : json_decode((string) ($row['payload'] ?? ''), true);
+                if (is_array($payload_prev)) {
+                    $previous = sanitize_text_field((string) ($payload_prev['replaces_reference'] ?? ''));
+                }
+            }
+            if ($previous === '' && !PAXdesign_Cybercrime_AI_Case::is_verified_new_draft($row, '')) {
+                $previous = sanitize_text_field((string) ($row['reference_id'] ?? ''));
+            }
+            if (!PAXdesign_Cybercrime_AI_Case::is_verified_new_draft($row, $previous)) {
+                $opened = PAXdesign_Cybercrime_AI_Case::open_new_case_for_user($user_id, $session_id, $previous);
+                if (is_array($opened) && !empty($opened['reference_id'])) {
+                    $fresh = PAXdesign_Cybercrime_Tickets::get_report_row((string) $opened['reference_id']);
+                    if (is_array($fresh) && !empty($fresh['reference_id'])) {
+                        $row = $fresh;
+                    } else {
+                        $row = $opened;
+                    }
+                    if ($previous === '') {
+                        $previous = sanitize_text_field((string) ($opened['previous_reference'] ?? ''));
+                    }
+                }
+            }
+            $new_reference = sanitize_text_field((string) ($row['reference_id'] ?? ''));
+            if ($new_reference === '' || ($previous !== '' && strcasecmp($new_reference, $previous) === 0) || !PAXdesign_Cybercrime_AI_Case::is_verified_new_draft($row, $previous)) {
+                return array(
+                    'action'    => 'continue_case',
+                    'skip_llm'  => true,
+                    'operation' => null,
+                    'reply'     => __('A new Cybercrime Support case was not created. The previous reference cannot be reused. Please send “new report” again.', 'paxdesign-booking'),
+                    'report'    => $row,
+                );
+            }
+            self::remember_ccs_session($session_id, $new_reference);
+            $snapshot = class_exists('PAXdesign_Cybercrime_AI_Workflow')
+                ? PAXdesign_Cybercrime_AI_Workflow::snapshot($row, $language)
+                : array();
+            $state = class_exists('PAXdesign_Cybercrime_AI_Workflow')
+                ? PAXdesign_Cybercrime_AI_Workflow::state_from_row($row)
+                : array();
+            $reply = class_exists('PAXdesign_Cybercrime_AI_Workflow')
+                ? PAXdesign_Cybercrime_AI_Workflow::new_case_opened_copy($snapshot, $state, $language)
+                : '';
+            return array(
+                'action'    => 'continue_case',
+                'skip_llm'  => true,
+                'operation' => null,
+                'reply'     => $reply,
+                'report'    => $row,
+            );
         }
 
         self::remember_ccs_session($session_id, (string) $row['reference_id']);

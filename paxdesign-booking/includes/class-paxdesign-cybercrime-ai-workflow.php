@@ -547,6 +547,14 @@ class PAXdesign_Cybercrime_AI_Workflow {
 
         $language = self::normalize_lang($language);
         if (class_exists('PAXdesign_Cybercrime_AI_Case') && PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request($user_message)) {
+            $previous = '';
+            $payload = json_decode((string) ($row['payload'] ?? ''), true);
+            if (is_array($payload)) {
+                $previous = sanitize_text_field((string) ($payload['replaces_reference'] ?? ''));
+            }
+            if (!PAXdesign_Cybercrime_AI_Case::is_verified_new_draft($row, $previous)) {
+                return null;
+            }
             $snapshot = self::snapshot($row, $language);
             $row = self::persist_snapshot($row, $snapshot);
             $state = self::state_from_row($row);
