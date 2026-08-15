@@ -21,6 +21,7 @@
   var statusSelect = document.getElementById('pax-cc-status');
   var statusFeedback = document.getElementById('pax-cc-status-feedback');
   var closeTicketBtn = document.getElementById('pax-cc-close-ticket');
+  var rejectTicketBtn = document.getElementById('pax-cc-reject-ticket');
   var replySection = document.getElementById('pax-cc-reply-section');
   var replyForm = document.getElementById('pax-cc-reply-form');
   var replyFeedback = document.getElementById('pax-cc-reply-feedback');
@@ -37,7 +38,7 @@
 
   var lastSavedStatus = statusSelect ? statusSelect.value : '';
   var statusSaveTimer = null;
-  var closedStatuses = ['resolved', 'closed'];
+  var closedStatuses = ['resolved', 'closed', 'rejected'];
 
   function isClosedStatus(status) {
     return closedStatuses.indexOf(status || '') !== -1;
@@ -253,15 +254,23 @@
     if (!workflowEl) {
       return;
     }
+    var steps = workflowEl.querySelectorAll('.pax-cc-workflow__step');
+    if (currentStatus === 'rejected') {
+      steps.forEach(function (step) {
+        step.classList.remove('is-current');
+        step.classList.add('is-done');
+      });
+      return;
+    }
     var currentIndex = workflowOrder.indexOf(currentStatus);
     if (currentIndex < 0) {
-      currentIndex = 0;
+      currentIndex = currentStatus === 'draft' ? -1 : 0;
     }
-    workflowEl.querySelectorAll('.pax-cc-workflow__step').forEach(function (step, index) {
+    steps.forEach(function (step, index) {
       step.classList.remove('is-current', 'is-done');
       if (index === currentIndex) {
         step.classList.add('is-current');
-      } else if (index < currentIndex) {
+      } else if (currentIndex >= 0 && index < currentIndex) {
         step.classList.add('is-done');
       }
     });
@@ -331,11 +340,14 @@
     if (closeTicketBtn) {
       closeTicketBtn.hidden = closed;
     }
+    if (rejectTicketBtn) {
+      rejectTicketBtn.hidden = closed;
+    }
     if (replySection) {
       replySection.hidden = closed;
     }
     if (statusSelect) {
-      statusSelect.disabled = closed;
+      statusSelect.disabled = closed && (report.status || '') !== 'rejected';
     }
   }
 
@@ -411,6 +423,18 @@
         statusSelect.value = 'closed';
       }
       saveStatus('closed');
+    });
+  }
+
+  if (rejectTicketBtn) {
+    rejectTicketBtn.addEventListener('click', function () {
+      if (!window.confirm(text('rejectConfirm', 'Reject this case? The customer will see the Rejected status on this same CCS reference.'))) {
+        return;
+      }
+      if (statusSelect) {
+        statusSelect.value = 'rejected';
+      }
+      saveStatus('rejected');
     });
   }
 

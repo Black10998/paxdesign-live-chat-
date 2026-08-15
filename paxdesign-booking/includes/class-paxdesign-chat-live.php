@@ -1197,8 +1197,9 @@ class PAXdesign_Chat_Live {
 
         $content = sanitize_textarea_field($content);
         $has_image = !empty($extra['image_url']);
+        $has_file = !empty($extra['file_url']);
         $has_link_card = !empty($extra['attachment_type']) && $extra['attachment_type'] === 'link_card';
-        if ($content === '' && !$has_image && !$has_link_card) {
+        if ($content === '' && !$has_image && !$has_file && !$has_link_card) {
             return null;
         }
 
@@ -1216,6 +1217,12 @@ class PAXdesign_Chat_Live {
         if ($has_image) {
             $extra['image_url']       = esc_url_raw($extra['image_url']);
             $extra['attachment_type'] = 'image';
+        }
+        if ($has_file) {
+            $extra['file_url']        = esc_url_raw((string) $extra['file_url']);
+            $extra['file_name']       = sanitize_file_name((string) ($extra['file_name'] ?? ''));
+            $extra['file_mime']       = sanitize_text_field((string) ($extra['file_mime'] ?? ''));
+            $extra['attachment_type'] = 'file';
         }
         if ($has_link_card) {
             $extra['link_url']   = esc_url_raw((string) ($extra['link_url'] ?? ''));
@@ -3196,6 +3203,15 @@ class PAXdesign_Chat_Live {
             }
             if (!empty($msg['image_url'])) {
                 $entry['image_url'] = esc_url_raw($msg['image_url']);
+            }
+            if (!empty($msg['file_url'])) {
+                $entry['file_url'] = esc_url_raw((string) $msg['file_url']);
+            }
+            if (!empty($msg['file_name'])) {
+                $entry['file_name'] = sanitize_file_name((string) $msg['file_name']);
+            }
+            if (!empty($msg['file_mime'])) {
+                $entry['file_mime'] = sanitize_text_field((string) $msg['file_mime']);
             }
             if (!empty($msg['reply_to'])) {
                 $entry['reply_to'] = (int) $msg['reply_to'];

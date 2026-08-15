@@ -20,6 +20,7 @@ class PAXdesign_Cybercrime_Tickets {
         'waiting_for_customer',
         'resolved',
         'closed',
+        'rejected',
     );
 
     /** @var list<string> Legacy values normalized on read/write. */
@@ -30,7 +31,7 @@ class PAXdesign_Cybercrime_Tickets {
     );
 
     /** @var list<string> */
-    private static $closed_statuses = array('resolved', 'closed');
+    private static $closed_statuses = array('resolved', 'closed', 'rejected');
 
     /** @var list<array<string, mixed>> */
     private static $deferred_customer_notifications = array();
@@ -150,6 +151,10 @@ class PAXdesign_Cybercrime_Tickets {
                 'label'       => __('Closed', 'paxdesign-booking'),
                 'description' => __('Ticket completed', 'paxdesign-booking'),
             ),
+            'rejected' => array(
+                'label'       => __('Rejected', 'paxdesign-booking'),
+                'description' => __('This case was rejected', 'paxdesign-booking'),
+            ),
         );
     }
 
@@ -195,7 +200,7 @@ class PAXdesign_Cybercrime_Tickets {
      * Customer portal badge key (4 simple states).
      *
      * @param string $status
-     * @return string under_review|waiting_for_customer|resolved|closed
+     * @return string collecting|under_review|waiting_for_customer|resolved|closed|rejected
      */
     public static function customer_status_key($status) {
         $status = self::normalize_workflow_status($status);
@@ -208,6 +213,8 @@ class PAXdesign_Cybercrime_Tickets {
                 return 'resolved';
             case 'closed':
                 return 'closed';
+            case 'rejected':
+                return 'rejected';
             default:
                 return 'under_review';
         }
@@ -427,6 +434,12 @@ class PAXdesign_Cybercrime_Tickets {
             'chat_session_id' => (string) ($row['chat_session_id'] ?? ''),
         );
 
+        $display_desc = self::display_case_description($out, $payload);
+        if ($display_desc['replaced']) {
+            $out['description'] = $display_desc['text'];
+            $out['description_raw'] = $display_desc['raw'];
+        }
+
         $customer_display_name = self::resolve_customer_display_name($row);
         $out['customer_display_name'] = $customer_display_name;
         $read_audience = $unread_audience !== ''
@@ -459,6 +472,9 @@ class PAXdesign_Cybercrime_Tickets {
             'financial_loss'      => (string) ($payload['financial_loss'] ?? ''),
             'financial_currency'  => (string) ($payload['financial_currency'] ?? 'EUR'),
         );
+        if (!empty($out['description_raw'])) {
+            $out['original_request']['description'] = $out['description'];
+        }
 
         $next_action = (string) ($guided['next_action'] ?? $checks['next_action'] ?? '');
         if ($workflow_status === 'draft') {
@@ -528,6 +544,8 @@ class PAXdesign_Cybercrime_Tickets {
                 return __('This case is resolved. You can review the outcome on this reference.', 'paxdesign-booking');
             case 'closed':
                 return __('This case is closed. Start a new report only if you need help with a new incident.', 'paxdesign-booking');
+            case 'rejected':
+                return __('This case was rejected. Review the outcome on this reference, or start a new report for a new incident.', 'paxdesign-booking');
             default:
                 return __('Stay on this reference. The team will update the official conversation when there is news.', 'paxdesign-booking');
         }
@@ -592,7 +610,12 @@ class PAXdesign_Cybercrime_Tickets {
         if (trim((string) ($original['platforms'] ?? $report['platforms'] ?? '')) === '') {
             $missing[] = __('affected platforms', 'paxdesign-booking');
         }
-        if (strlen(trim((string) ($original['description'] ?? $report['description'] ?? ''))) < 20) {
+        $description = trim((string) ($original['description'] ?? $report['description'] ?? ''));
+        $category = trim((string) ($original['category'] ?? $report['category'] ?? ''));
+        $incident_date = trim((string) ($original['incident_at'] ?? $original['incident_date'] ?? $report['incident_at'] ?? ''));
+        $platforms = trim((string) ($original['platforms'] ?? $report['platforms'] ?? ''));
+        $has_structured_core = $category !== '' && $incident_date !== '' && $platforms !== '';
+        if (strlen($description) < 20 && ! $has_structured_core) {
             $missing[] = __('incident description', 'paxdesign-booking');
         }
         $has_id = false;
@@ -616,6 +639,40 @@ class PAXdesign_Cybercrime_Tickets {
         }
         unset($payload);
         return $missing;
+    }
+
+    /**
+     * Case page / admin display copy — never a pasted chat transcript.
+     *
+     * @param array<string, mixed> $report
+     * @param array<string, mixed> $payload
+     * @return array{text:string,raw:string,replaced:bool}
+     */
+    public static function display_case_description($report, $payload = array()) {
+        $raw = trim((string) ($report['description'] ?? $payload['description'] ?? ''));
+        $empty = array('text' => $raw, 'raw' => '', 'replaced' => false);
+        if ($raw === '' || !class_exists('PAXdesign_Cybercrime_AI_Case')) {
+            return $empty;
+        }
+        if (!PAXdesign_Cybercrime_AI_Case::is_chat_dump_description($raw)) {
+            return $empty;
+        }
+        $summary = PAXdesign_Cybercrime_AI_Case::structured_summary(array(), array(
+            'category'            => (string) ($report['category'] ?? ''),
+            'incident_date'       => (string) ($payload['incident_date'] ?? ''),
+            'incident_at'         => (string) ($report['incident_at'] ?? ''),
+            'platforms'           => (string) ($report['platforms'] ?? ''),
+            'financial_loss'      => (string) ($report['financial_loss'] ?? ''),
+            'financial_currency'  => (string) ($report['financial_currency'] ?? ''),
+        ));
+        if ($summary === '') {
+            return $empty;
+        }
+        return array(
+            'text'     => $summary,
+            'raw'      => $raw,
+            'replaced' => true,
+        );
     }
 
     /**
@@ -1024,7 +1081,7 @@ class PAXdesign_Cybercrime_Tickets {
                     'event'               => 'status_change',
                     'from'                => $old_status,
                     'to'                  => $new_status,
-                    'visible_to_customer' => $summary !== '',
+                    'visible_to_customer' => $summary !== '' || $new_status === 'rejected',
                 )
             );
         }

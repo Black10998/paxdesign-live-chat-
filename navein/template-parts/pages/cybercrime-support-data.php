@@ -686,6 +686,7 @@ return array(
 		'waiting_for_customer' => array( 'waiting_for_customer', 'needs_info' ),
 		'resolved'             => array( 'resolved' ),
 		'closed'               => array( 'closed' ),
+		'rejected'             => array( 'rejected' ),
 	),
 	'status_badges' => array(
 		'collecting' => array(
@@ -721,6 +722,13 @@ return array(
 			'label' => array(
 				'ar' => 'مغلق',
 				'de' => 'Geschlossen',
+			),
+		),
+		'rejected' => array(
+			'emoji' => '🔴',
+			'label' => array(
+				'ar' => 'مرفوض',
+				'de' => 'Abgelehnt',
 			),
 		),
 	),
@@ -773,6 +781,10 @@ return array(
 			'status_closed' => array(
 				'ar' => 'مغلق',
 				'de' => 'Geschlossen',
+			),
+			'status_rejected' => array(
+				'ar' => 'مرفوض',
+				'de' => 'Abgelehnt',
 			),
 		),
 	),

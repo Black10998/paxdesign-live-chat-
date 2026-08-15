@@ -33,6 +33,7 @@ class PAXdesign_Chat {
     private function __construct() {
         add_action('wp_ajax_paxdesign_chat', array($this, 'handle_chat'));
         add_action('wp_ajax_nopriv_paxdesign_chat', array($this, 'handle_chat'));
+        add_action('wp_ajax_paxdesign_chat_ccs_attach', array($this, 'handle_ccs_attach'));
         add_action('wp_ajax_paxdesign_test_openai', array($this, 'handle_test_openai'));
         add_action('rest_api_init', array($this, 'register_rest_routes'));
     }
@@ -770,6 +771,146 @@ class PAXdesign_Chat {
             ? sanitize_text_field(wp_unslash($_POST['assistant_client_msg_id']))
             : '';
         $this->stream_chat_response($messages, $session_id, $assistant_client_id);
+    }
+
+    /**
+     * Authenticated CCS chat: attach evidence/documents to the same CCS case.
+     */
+    public function handle_ccs_attach() {
+        if (!$this->is_enabled()) {
+            wp_send_json_error(array('message' => 'Chat ist derzeit nicht verfügbar.'), 503);
+        }
+
+        $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+        if (!$nonce || !wp_verify_nonce($nonce, 'paxdesign_chat_nonce')) {
+            status_header(403);
+            wp_send_json_error(array('message' => 'Sitzung abgelaufen. Bitte laden Sie die Seite neu.'), 403);
+        }
+
+        $user_id = get_current_user_id();
+        if ($user_id <= 0) {
+            $payload = class_exists('PAXdesign_Cybercrime_AI_Case')
+                ? PAXdesign_Cybercrime_AI_Case::login_required_payload()
+                : array(
+                    'message' => __('Sign in or create an account to use Live Chat.', 'paxdesign-booking'),
+                    'code'    => 'login_required',
+                );
+            wp_send_json_error($payload, 401);
+        }
+
+        $session_id = isset($_POST['session_id']) ? sanitize_text_field(wp_unslash($_POST['session_id'])) : '';
+        $this->persist_page_context_from_request($session_id);
+        if (class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            $session_id = PAXdesign_Customer_Chat_Bridge::resolve_ajax_session($user_id, $session_id);
+        }
+        if ($session_id === '' || !class_exists('PAXdesign_Cybercrime_AI_Case') || !PAXdesign_Cybercrime_AI_Case::is_ccs_session($session_id)) {
+            wp_send_json_error(array(
+                'message' => __('File uploads in this chat are only available for your Cybercrime Support case.', 'paxdesign-booking'),
+            ), 400);
+        }
+
+        if (empty($_FILES['file']) || !is_array($_FILES['file'])) {
+            wp_send_json_error(array('message' => __('Please choose a file to upload.', 'paxdesign-booking')), 400);
+        }
+
+        $file = $_FILES['file'];
+        $kind = $this->detect_ccs_upload_kind($file);
+        if (!class_exists('PAXdesign_Customer_Media')) {
+            wp_send_json_error(array('message' => __('Upload is not available.', 'paxdesign-booking')), 500);
+        }
+
+        $upload = PAXdesign_Customer_Media::handle_upload($file, $kind);
+        if (is_wp_error($upload)) {
+            wp_send_json_error(array('message' => $upload->get_error_message()), 400);
+        }
+
+        if (class_exists('PAXdesign_Customer_Chat_Bridge')) {
+            PAXdesign_Customer_Chat_Bridge::materialize_session($session_id, $user_id);
+        }
+
+        $client_msg_id = isset($_POST['client_msg_id'])
+            ? sanitize_text_field(wp_unslash($_POST['client_msg_id']))
+            : '';
+        $caption = isset($_POST['caption']) ? sanitize_textarea_field(wp_unslash($_POST['caption'])) : '';
+        $filename = sanitize_file_name((string) ($upload['name'] ?? ($file['name'] ?? 'file')));
+        if ($caption === '') {
+            $caption = $filename;
+        }
+
+        $message_extra = array(
+            'attachment_type' => $kind,
+            'client_msg_id'   => $client_msg_id,
+        );
+        if ($kind === 'image') {
+            $message_extra['image_url'] = $upload['url'];
+        } else {
+            $message_extra['file_url']  = $upload['url'];
+            $message_extra['file_name'] = $filename;
+            $message_extra['file_mime'] = (string) ($upload['mime'] ?? '');
+        }
+
+        $live = PAXdesign_Chat_Live::get_instance();
+        $entry = $live->append_message($session_id, 'user', $caption, $message_extra);
+        if (is_wp_error($entry) || !$entry) {
+            wp_send_json_error(array('message' => __('Could not attach the file to this conversation.', 'paxdesign-booking')), 500);
+        }
+
+        $upload['size'] = isset($file['size']) ? (string) $file['size'] : (string) ($upload['size'] ?? '');
+        $case_row = PAXdesign_Cybercrime_AI_Case::attach_chat_upload($user_id, $session_id, $upload, $kind, $caption);
+        if (is_wp_error($case_row)) {
+            wp_send_json_error(array('message' => $case_row->get_error_message()), 400);
+        }
+
+        $language = $this->resolve_page_language($session_id);
+        $response = array(
+            'message'   => $entry,
+            'ccs_case'  => PAXdesign_Cybercrime_AI_Case::public_case_sync_payload(
+                class_exists('PAXdesign_Cybercrime_Tickets') && is_array($case_row)
+                    ? PAXdesign_Cybercrime_Tickets::format_report_row($case_row, false)
+                    : $case_row
+            ),
+        );
+
+        if (class_exists('PAXdesign_Cybercrime_AI_Operations')) {
+            $decision = PAXdesign_Cybercrime_AI_Operations::decide_turn($session_id, $user_id, 'please check the uploaded files', $language);
+            if ((string) ($decision['action'] ?? '') === 'start_document_check') {
+                $op_turn = $this->apply_ccs_operation_turn($session_id, $user_id, 'please check the uploaded files', $language, $case_row, false);
+                if (!empty($op_turn['operation'])) {
+                    $response['ccs_operation'] = $op_turn['operation'];
+                }
+                if (!empty($op_turn['processing'])) {
+                    $response['processing'] = $op_turn['processing'];
+                }
+                if (!empty($op_turn['assistant'])) {
+                    $response['assistant'] = $op_turn['assistant'];
+                }
+                if (!empty($op_turn['report']) && is_array($op_turn['report'])) {
+                    $response['ccs_case'] = PAXdesign_Cybercrime_AI_Case::public_case_sync_payload(
+                        PAXdesign_Cybercrime_Tickets::format_report_row($op_turn['report'], false)
+                    );
+                }
+            }
+        }
+
+        wp_send_json_success($response);
+    }
+
+    /**
+     * @param array<string, mixed> $file
+     * @return string image|file
+     */
+    private function detect_ccs_upload_kind($file) {
+        $name = isset($file['name']) ? strtolower((string) $file['name']) : '';
+        $ext = pathinfo($name, PATHINFO_EXTENSION);
+        $image = array('jpg', 'jpeg', 'jpe', 'png', 'webp', 'gif', 'heic', 'heif');
+        if (in_array($ext, $image, true)) {
+            return 'image';
+        }
+        $type = isset($file['type']) ? strtolower((string) $file['type']) : '';
+        if (strpos($type, 'image/') === 0) {
+            return 'image';
+        }
+        return 'file';
     }
 
     /**

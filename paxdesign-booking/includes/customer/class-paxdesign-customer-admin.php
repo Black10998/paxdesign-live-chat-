@@ -164,11 +164,13 @@ class PAXdesign_Customer_Admin {
             'view'      => $view,
             'reference' => $reference,
             'statusClasses' => array(
+                'draft'                 => 'pax-cc-status--draft',
                 'submitted'             => 'pax-cc-status--submitted',
                 'in_review'             => 'pax-cc-status--in_review',
                 'waiting_for_customer'  => 'pax-cc-status--waiting_for_customer',
                 'resolved'              => 'pax-cc-status--resolved',
                 'closed'                => 'pax-cc-status--closed',
+                'rejected'              => 'pax-cc-status--rejected',
             ),
             'i18n' => array(
                 'statusSaved' => __('Status saved.', 'paxdesign-booking'),
@@ -182,6 +184,8 @@ class PAXdesign_Customer_Admin {
                 'noTimeline'  => __('No timeline entries yet.', 'paxdesign-booking'),
                 'closeTicket' => __('Close ticket', 'paxdesign-booking'),
                 'closeConfirm'=> __('Close this ticket? The customer can start a new report.', 'paxdesign-booking'),
+                'rejectTicket'=> __('Reject case', 'paxdesign-booking'),
+                'rejectConfirm'=> __('Reject this case? The customer will see the Rejected status on this same CCS reference.', 'paxdesign-booking'),
             ),
         ));
     }
@@ -745,12 +749,13 @@ class PAXdesign_Customer_Admin {
         echo '<th>' . esc_html__('Reference', 'paxdesign-booking') . '</th>';
         echo '<th>' . esc_html__('Reporter', 'paxdesign-booking') . '</th>';
         echo '<th>' . esc_html__('Category', 'paxdesign-booking') . '</th>';
+        echo '<th>' . esc_html__('Incident date', 'paxdesign-booking') . '</th>';
         echo '<th>' . esc_html__('Status', 'paxdesign-booking') . '</th>';
         echo '<th>' . esc_html__('Updated', 'paxdesign-booking') . '</th>';
         echo '<th>' . esc_html__('Alerts', 'paxdesign-booking') . '</th>';
         echo '</tr></thead><tbody id="pax-cc-admin-list-body">';
         if (empty($reports)) {
-            echo '<tr><td colspan="6">' . esc_html__('No reports yet.', 'paxdesign-booking') . '</td></tr>';
+            echo '<tr><td colspan="7">' . esc_html__('No reports yet.', 'paxdesign-booking') . '</td></tr>';
         }
         foreach ($reports as $report) {
             $url = admin_url('admin.php?page=' . self::MENU_SLUG . '&tab=cybercrime&reference=' . rawurlencode((string) $report['reference_id']));
@@ -762,6 +767,7 @@ class PAXdesign_Customer_Admin {
             echo '<td><a href="' . esc_url($url) . '"><code>' . esc_html($ref) . '</code></a></td>';
             echo '<td>' . esc_html((string) ($report['reporter_name'] ?? '')) . '<br><small>' . esc_html((string) ($report['reporter_email'] ?? '')) . '</small></td>';
             echo '<td>' . esc_html((string) ($report['category_label'] ?? '')) . '</td>';
+            echo '<td>' . esc_html(self::format_admin_incident_date($report)) . '</td>';
             echo '<td><span class="' . esc_attr(PAXdesign_Cybercrime_Tickets::admin_status_badge_class($status)) . '">' . esc_html((string) ($report['status_label'] ?? '')) . '</span></td>';
             echo '<td>' . esc_html((string) ($report['updated_at'] ?? '')) . '</td>';
             echo '<td>';
@@ -811,10 +817,12 @@ class PAXdesign_Customer_Admin {
         .pax-cc-timeline__body{font-size:14px;line-height:1.5;color:#1d2327}
         .pax-cc-status{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:600;line-height:1.3}
         .pax-cc-status--submitted{background:#f0f0f1;color:#50575e}
+        .pax-cc-status--draft{background:#f0f0f1;color:#50575e}
         .pax-cc-status--in_review{background:#f0f6fc;color:#135e96}
         .pax-cc-status--waiting_for_customer{background:#fcf9e8;color:#9d6e00}
         .pax-cc-status--resolved{background:#edfaef;color:#007017}
         .pax-cc-status--closed{background:#f6f7f7;color:#646970}
+        .pax-cc-status--rejected{background:#fcf0f1;color:#8a2424}
         .pax-cc-form .large-text{width:100%}
         .pax-cc-form p{margin:0 0 12px}
         .pax-cc-form label{font-weight:500;font-size:13px}
@@ -845,6 +853,26 @@ class PAXdesign_Customer_Admin {
         .pax-cc-checks__status--review{color:#9d6e00}
         .pax-cc-checks__status--pass{color:#007017}
         .pax-cc-checks__disclaimer{margin:0 0 12px;font-size:12px;color:#646970}
+        .pax-cc-evidence{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin:0;padding:0;list-style:none}
+        .pax-cc-evidence__item{margin:0;border:1px solid #dcdcde;border-radius:10px;background:#f6f7f7;overflow:hidden;display:flex;flex-direction:column}
+        .pax-cc-evidence__thumb{display:block;aspect-ratio:4/3;background:#1d2327;overflow:hidden}
+        .pax-cc-evidence__thumb img{display:block;width:100%;height:100%;object-fit:cover}
+        .pax-cc-evidence__doc{display:flex;flex-direction:column;gap:4px;padding:12px;min-height:96px;text-decoration:none;color:#1d2327}
+        .pax-cc-evidence__name{font-size:13px;font-weight:600;word-break:break-word}
+        .pax-cc-evidence__type{font-size:11px;color:#646970;text-transform:uppercase;letter-spacing:.04em}
+        .pax-cc-evidence__meta{padding:8px 10px;font-size:12px;border-top:1px solid #dcdcde;background:#fff}
+        .pax-cc-evidence__check{display:inline-block;margin-top:4px;font-size:11px;font-weight:700;text-transform:uppercase}
+        .pax-cc-evidence__check--fail,.pax-cc-evidence__check--rejected{color:#b32d2e}
+        .pax-cc-evidence__check--review{color:#9d6e00}
+        .pax-cc-evidence__check--pass{color:#007017}
+        .pax-cc-admin__facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0}
+        .pax-cc-admin__facts dt{margin:0 0 2px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#646970}
+        .pax-cc-admin__facts dd{margin:0;font-size:14px;font-weight:500}
+        .pax-cc-admin__missing{margin:8px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px;list-style:none}
+        .pax-cc-admin__missing li{padding:3px 8px;border-radius:999px;background:#fcf0f1;color:#8a2424;font-size:12px}
+        .pax-cc-admin details{margin-top:12px}
+        .pax-cc-admin details summary{cursor:pointer;font-size:13px;color:#646970}
+        .pax-cc-workflow__step.is-rejected{border-color:#b32d2e;background:#fcf0f1}
         </style>';
     }
 
@@ -864,6 +892,9 @@ class PAXdesign_Customer_Admin {
         }
 
         foreach ($order as $index => $slug) {
+            if ($slug === 'rejected') {
+                continue;
+            }
             if (!isset($steps[$slug])) {
                 continue;
             }
@@ -905,16 +936,42 @@ class PAXdesign_Customer_Admin {
 
         echo '<div class="pax-cc-admin__card">';
         echo '<h2 class="pax-cc-admin__title"><code>' . esc_html((string) $report['reference_id']) . '</code></h2>';
-        echo '<dl class="pax-cc-admin__meta">';
+        echo '<dl class="pax-cc-admin__facts">';
         echo '<div><dt>' . esc_html__('Reporter', 'paxdesign-booking') . '</dt><dd>' . esc_html((string) $report['reporter_name']) . '<br><small>' . esc_html((string) $report['reporter_email']) . '</small></dd></div>';
-        echo '<div><dt>' . esc_html__('Category', 'paxdesign-booking') . '</dt><dd>' . esc_html((string) $report['category_label']) . '</dd></div>';
+        echo '<div><dt>' . esc_html__('CCS reference', 'paxdesign-booking') . '</dt><dd><code>' . esc_html((string) $report['reference_id']) . '</code></dd></div>';
+        echo '<div><dt>' . esc_html__('Incident type', 'paxdesign-booking') . '</dt><dd>' . esc_html((string) ($report['category_label'] ?: '—')) . '</dd></div>';
+        echo '<div><dt>' . esc_html__('Incident date', 'paxdesign-booking') . '</dt><dd>' . esc_html(self::format_admin_incident_date($report) ?: '—') . '</dd></div>';
+        echo '<div><dt>' . esc_html__('Affected platforms', 'paxdesign-booking') . '</dt><dd>' . esc_html((string) (($report['platforms'] ?? '') !== '' ? $report['platforms'] : '—')) . '</dd></div>';
+        echo '<div><dt>' . esc_html__('Financial loss', 'paxdesign-booking') . '</dt><dd>' . esc_html(self::format_admin_financial_loss($report)) . '</dd></div>';
         echo '<div><dt>' . esc_html__('Status', 'paxdesign-booking') . '</dt><dd><span id="pax-cc-admin-status-badge" class="' . esc_attr(PAXdesign_Cybercrime_Tickets::admin_status_badge_class($status)) . '">' . esc_html((string) $report['status_label']) . '</span></dd></div>';
+        echo '<div><dt>' . esc_html__('Verification', 'paxdesign-booking') . '</dt><dd>' . esc_html(self::format_admin_verification_status($report)) . '</dd></div>';
         echo '<div><dt>' . esc_html__('Submitted', 'paxdesign-booking') . '</dt><dd>' . esc_html((string) $report['created_at']) . '</dd></div>';
         echo '<div><dt>' . esc_html__('Updated', 'paxdesign-booking') . '</dt><dd>' . esc_html((string) $report['updated_at']) . '</dd></div>';
         if (!empty($report['needs_human_review'])) {
             echo '<div><dt>' . esc_html__('Review', 'paxdesign-booking') . '</dt><dd><span class="pax-cc-review-flag">' . esc_html__('Needs human review', 'paxdesign-booking') . '</span></dd></div>';
         }
         echo '</dl>';
+        $missing = array_values(array_filter(array_map('strval', (array) ($report['missing_fields'] ?? array()))));
+        if (!empty($missing)) {
+            echo '<p class="pax-cc-form__hint" style="margin-top:12px">' . esc_html__('Required / missing', 'paxdesign-booking') . '</p>';
+            echo '<ul class="pax-cc-admin__missing">';
+            foreach ($missing as $item) {
+                echo '<li>' . esc_html($item) . '</li>';
+            }
+            echo '</ul>';
+        }
+        if (!empty($report['next_action'])) {
+            echo '<p class="pax-cc-form__hint" style="margin-top:12px">' . esc_html__('Next action: ', 'paxdesign-booking') . esc_html((string) $report['next_action']) . '</p>';
+        }
+        $operation = is_array($report['ai_operation'] ?? null) ? $report['ai_operation'] : array();
+        if (!empty($operation['label']) || !empty($operation['status'])) {
+            echo '<p class="pax-cc-form__hint">' . esc_html__('AI processing: ', 'paxdesign-booking') . esc_html(trim((string) ($operation['label'] ?? '') . ' · ' . (string) ($operation['status'] ?? ''), ' ·')) . '</p>';
+        }
+        if (!empty($report['description_raw'])) {
+            echo '<details><summary>' . esc_html__('Customer narrative (expand)', 'paxdesign-booking') . '</summary>';
+            echo '<p style="margin:8px 0 0;max-width:720px;line-height:1.55;color:#646970">' . nl2br(esc_html((string) $report['description_raw'])) . '</p>';
+            echo '</details>';
+        }
         echo '</div>';
 
         echo '<div class="pax-cc-admin__card" id="pax-cc-admin-workflow-card">';
@@ -947,13 +1004,10 @@ class PAXdesign_Customer_Admin {
             echo '</div>';
         }
 
-        if (!empty($report['description'])) {
+        if (!empty($report['description']) && empty($report['description_raw'])) {
             echo '<div class="pax-cc-admin__card">';
-            echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Report summary', 'paxdesign-booking') . '</h3>';
-            echo '<p style="margin:0;max-width:720px;line-height:1.55">' . nl2br(esc_html((string) $report['description'])) . '</p>';
-            if (!empty($report['next_action'])) {
-                echo '<p class="pax-cc-form__hint" style="margin-top:12px">' . esc_html__('Next action: ', 'paxdesign-booking') . esc_html((string) $report['next_action']) . '</p>';
-            }
+            echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Case summary', 'paxdesign-booking') . '</h3>';
+            echo '<p style="margin:0;max-width:720px;line-height:1.55">' . esc_html((string) $report['description']) . '</p>';
             echo '</div>';
         }
 
@@ -993,20 +1047,9 @@ class PAXdesign_Customer_Admin {
 
         if (!empty($report['attachments']) && is_array($report['attachments'])) {
             echo '<div class="pax-cc-admin__card">';
-            echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Attachments', 'paxdesign-booking') . '</h3><ul style="margin:0">';
-            foreach ($report['attachments'] as $file) {
-                if (!is_array($file)) {
-                    continue;
-                }
-                $name = (string) ($file['name'] ?? 'file');
-                $url = (string) ($file['url'] ?? '');
-                if ($url !== '') {
-                    echo '<li><a href="' . esc_url($url) . '" target="_blank" rel="noopener">' . esc_html($name) . '</a></li>';
-                } else {
-                    echo '<li>' . esc_html($name) . '</li>';
-                }
-            }
-            echo '</ul></div>';
+            echo '<h3 class="pax-cc-admin__card-title">' . esc_html__('Evidence / documents', 'paxdesign-booking') . '</h3>';
+            self::render_cybercrime_evidence_gallery($report);
+            echo '</div>';
         }
 
         echo '<div class="pax-cc-admin__grid">';
@@ -1038,6 +1081,7 @@ class PAXdesign_Customer_Admin {
         }
         echo '</select>';
         echo '<button type="button" class="button" id="pax-cc-close-ticket"' . (PAXdesign_Cybercrime_Tickets::is_active_status($status) ? '' : ' hidden') . '>' . esc_html__('Close ticket', 'paxdesign-booking') . '</button>';
+        echo '<button type="button" class="button" id="pax-cc-reject-ticket"' . (PAXdesign_Cybercrime_Tickets::is_active_status($status) ? '' : ' hidden') . '>' . esc_html__('Reject case', 'paxdesign-booking') . '</button>';
         echo '</div>';
         echo '<p class="pax-cc-actions__feedback" id="pax-cc-status-feedback" aria-live="polite"></p>';
         echo '<p class="pax-cc-form__hint">' . esc_html__('Changes save automatically. Closing a ticket lets the customer start a new report.', 'paxdesign-booking') . '</p>';
@@ -1055,6 +1099,7 @@ class PAXdesign_Customer_Admin {
         echo '<option value="in_review"' . selected($status, 'in_review', false) . '>' . esc_html__('In Review', 'paxdesign-booking') . '</option>';
         echo '<option value="resolved">' . esc_html__('Resolved', 'paxdesign-booking') . '</option>';
         echo '<option value="closed">' . esc_html__('Closed', 'paxdesign-booking') . '</option>';
+        echo '<option value="rejected">' . esc_html__('Rejected', 'paxdesign-booking') . '</option>';
         echo '</select>';
         echo '<span class="pax-cc-form__hint">' . esc_html__('The reply appears on the customer timeline immediately.', 'paxdesign-booking') . '</span></p>';
         echo '<p><button type="submit" class="button button-primary" id="pax-cc-reply-submit">' . esc_html__('Send reply', 'paxdesign-booking') . '</button></p>';
@@ -1089,6 +1134,137 @@ class PAXdesign_Customer_Admin {
         echo '</p>';
         echo '<div class="pax-cc-timeline__body">' . nl2br(esc_html((string) ($entry['body'] ?? ''))) . '</div>';
         echo '</li>';
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @return string
+     */
+    private static function format_admin_incident_date($report) {
+        $original = is_array($report['original_request'] ?? null) ? $report['original_request'] : array();
+        $date = trim((string) ($original['incident_date'] ?? ''));
+        if ($date === '') {
+            $at = trim((string) ($original['incident_at'] ?? $report['incident_at'] ?? ''));
+            $date = $at !== '' ? substr($at, 0, 10) : '';
+        }
+        return $date;
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @return string
+     */
+    private static function format_admin_financial_loss($report) {
+        $original = is_array($report['original_request'] ?? null) ? $report['original_request'] : array();
+        $loss = trim((string) ($original['financial_loss'] ?? $report['financial_loss'] ?? ''));
+        if ($loss === '') {
+            return '—';
+        }
+        if (strcasecmp($loss, 'No') === 0 || $loss === '0') {
+            return __('No', 'paxdesign-booking');
+        }
+        $currency = strtoupper(trim((string) ($original['financial_currency'] ?? $report['financial_currency'] ?? '')));
+        return trim($loss . ($currency !== '' ? ' ' . $currency : ''));
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     * @return string
+     */
+    private static function format_admin_verification_status($report) {
+        $checks = is_array($report['checks'] ?? null) ? $report['checks'] : array();
+        $files = is_array($checks['files'] ?? null) ? $checks['files'] : array();
+        if (!empty($report['needs_human_review'])) {
+            return __('Needs further review', 'paxdesign-booking');
+        }
+        $rejected = (int) ($checks['rejected_count'] ?? 0);
+        if ($rejected > 0) {
+            return __('Documents invalid or incomplete', 'paxdesign-booking');
+        }
+        if (empty($files) && empty($report['attachments'])) {
+            return __('Pending evidence', 'paxdesign-booking');
+        }
+        if (empty($files)) {
+            return __('Awaiting preliminary checks', 'paxdesign-booking');
+        }
+        return __('Preliminary checks complete', 'paxdesign-booking');
+    }
+
+    /**
+     * @param array<string, mixed> $file
+     * @return bool
+     */
+    private static function is_admin_image_attachment($file) {
+        $type = strtolower((string) ($file['type'] ?? $file['mime'] ?? ''));
+        if (strpos($type, 'image/') === 0) {
+            return true;
+        }
+        $name = strtolower((string) ($file['name'] ?? $file['original_name'] ?? ''));
+        return (bool) preg_match('/\.(jpe?g|png|gif|webp|heic|heif)$/i', $name);
+    }
+
+    /**
+     * @param array<string, mixed> $report
+     */
+    private static function render_cybercrime_evidence_gallery($report) {
+        $attachments = is_array($report['attachments'] ?? null) ? $report['attachments'] : array();
+        $checks = is_array($report['checks'] ?? null) ? $report['checks'] : array();
+        $check_files = is_array($checks['files'] ?? null) ? $checks['files'] : array();
+        $check_map = array();
+        foreach ($check_files as $checked) {
+            if (!is_array($checked)) {
+                continue;
+            }
+            $key = strtolower((string) ($checked['filename'] ?? $checked['name'] ?? ''));
+            if ($key !== '') {
+                $check_map[$key] = $checked;
+            }
+        }
+
+        echo '<ul class="pax-cc-evidence">';
+        foreach ($attachments as $file) {
+            if (!is_array($file)) {
+                continue;
+            }
+            $name = (string) ($file['name'] ?? $file['original_name'] ?? 'file');
+            $url = (string) ($file['url'] ?? '');
+            $type = (string) ($file['type'] ?? $file['mime'] ?? '');
+            $field = sanitize_key((string) ($file['field'] ?? ''));
+            $checked = $check_map[strtolower($name)] ?? array();
+            $check_status = sanitize_key((string) ($checked['customer_status'] ?? $checked['status'] ?? ''));
+            $check_label = $check_status !== '' ? $check_status : '';
+            if ($check_status === 'accepted_for_review' || $check_status === 'pass') {
+                $check_label = __('Readable', 'paxdesign-booking');
+            } elseif ($check_status === 'rejected' || $check_status === 'fail') {
+                $check_label = __('Invalid / incomplete', 'paxdesign-booking');
+            } elseif ($check_status === 'pending_review' || $check_status === 'review') {
+                $check_label = __('Needs further review', 'paxdesign-booking');
+            }
+
+            echo '<li class="pax-cc-evidence__item">';
+            if (self::is_admin_image_attachment($file) && $url !== '') {
+                echo '<a class="pax-cc-evidence__thumb" href="' . esc_url($url) . '" target="_blank" rel="noopener">';
+                echo '<img src="' . esc_url($url) . '" alt="' . esc_attr($name) . '">';
+                echo '</a>';
+            } else {
+                echo '<a class="pax-cc-evidence__doc" href="' . ($url !== '' ? esc_url($url) : '#') . '" target="_blank" rel="noopener">';
+                echo '<span class="pax-cc-evidence__name">' . esc_html($name) . '</span>';
+                echo '<span class="pax-cc-evidence__type">' . esc_html($type !== '' ? $type : __('Document', 'paxdesign-booking')) . '</span>';
+                echo '</a>';
+            }
+            echo '<div class="pax-cc-evidence__meta">';
+            echo esc_html($field !== '' ? str_replace('_', ' ', $field) : __('Evidence', 'paxdesign-booking'));
+            if ($check_label !== '') {
+                echo '<br><span class="pax-cc-evidence__check pax-cc-evidence__check--' . esc_attr($check_status) . '">' . esc_html($check_label) . '</span>';
+            }
+            if ($url !== '' && self::is_admin_image_attachment($file)) {
+                echo '<br><a href="' . esc_url($url) . '" target="_blank" rel="noopener">' . esc_html($name) . '</a>';
+            } elseif ($url !== '') {
+                echo '<br><a href="' . esc_url($url) . '" target="_blank" rel="noopener">' . esc_html__('Open / download', 'paxdesign-booking') . '</a>';
+            }
+            echo '</div></li>';
+        }
+        echo '</ul>';
     }
 
     private static function verify_admin($action) {

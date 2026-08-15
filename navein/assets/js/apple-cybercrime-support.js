@@ -366,7 +366,7 @@
       return false;
     }
     var status = String(report.status || report.customer_status || '');
-    return status !== 'closed' && status !== 'resolved';
+    return status !== 'closed' && status !== 'resolved' && status !== 'rejected';
   }
 
   function clearReportRefParam() {
@@ -1020,6 +1020,17 @@
     });
   }
 
+  function isStructuredCaseDescription(desc) {
+    desc = String(desc || '').trim();
+    if (!desc) {
+      return true;
+    }
+    if (/\b(Date:|Platforms:|Financial loss:)\b/i.test(desc)) {
+      return true;
+    }
+    return desc.length > 220;
+  }
+
   function renderCaseDossier(report) {
     if (!caseDossierEl || !report) {
       return;
@@ -1033,19 +1044,36 @@
     }
     if (originalRequestEl) {
       var orig = report.original_request || {};
+      var incidentDate = orig.incident_date || '';
+      if (!incidentDate && (orig.incident_at || report.incident_at)) {
+        incidentDate = String(orig.incident_at || report.incident_at).slice(0, 10);
+      }
+      var loss = orig.financial_loss || report.financial_loss || '';
+      var lossText = '';
+      if (loss) {
+        if (String(loss).toLowerCase() === 'no' || loss === '0') {
+          lossText = i18nText('review.no_loss', 'No');
+        } else {
+          lossText = String(loss);
+          var curr = orig.financial_currency || report.financial_currency || '';
+          if (curr) lossText += ' ' + curr;
+        }
+      }
       var rows = [
-        [activeReportText('category', 'Category'), categoryLabel(orig.category || report.category || '')],
-        [i18nText('review.incident', 'Incident'), orig.incident_at || report.incident_at || ''],
-        [i18nText('review.identity', 'Identity'), orig.reporter_name || report.reporter_name || ''],
-        ['', orig.platforms || report.platforms || '']
+        [activeReportText('category', 'Incident type'), categoryLabel(orig.category || report.category || '')],
+        [i18nText('review.incident', 'Incident date'), incidentDate],
+        [i18nText('review.platforms', 'Affected platforms'), orig.platforms || report.platforms || ''],
+        [i18nText('review.loss', 'Financial loss'), lossText],
+        [i18nText('review.identity', 'Identity'), orig.reporter_name || report.reporter_name || '']
       ];
       var desc = orig.description || report.description || '';
+      var showDesc = desc && !isStructuredCaseDescription(desc);
       originalRequestEl.innerHTML = rows.filter(function (row) {
         return row[1];
       }).map(function (row) {
         return '<div class="pax-ccs-portal__active-meta-row"><dt>' + escapeHtml(row[0] || '') + '</dt><dd>' + escapeHtml(String(row[1])) + '</dd></div>';
-      }).join('') + (desc
-        ? '<div class="pax-ccs-portal__active-meta-row pax-ccs-portal__active-meta-row--desc"><dt></dt><dd>' + escapeHtml(desc) + '</dd></div>'
+      }).join('') + (showDesc
+        ? '<div class="pax-ccs-portal__active-meta-row pax-ccs-portal__active-meta-row--desc"><dt>' + escapeHtml(i18nText('review.notes', 'Notes')) + '</dt><dd>' + escapeHtml(desc) + '</dd></div>'
         : '');
     }
     if (checksListEl) {

@@ -34,6 +34,8 @@ class PAXdesign_Customer_Media {
                     'png'          => 'image/png',
                     'webp'         => 'image/webp',
                     'gif'          => 'image/gif',
+                    'heic'         => 'image/heic',
+                    'heif'         => 'image/heif',
                 ),
                 'max' => self::MAX_IMAGE_BYTES,
             ),

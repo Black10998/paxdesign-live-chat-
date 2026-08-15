@@ -272,13 +272,11 @@ class PAXdesign_Cybercrime_AI_Case {
             }
         }
 
-        $narrative = self::narrative_for_description($text, $fields);
-        if ($narrative !== '') {
+        $summary = self::structured_summary($fields, $existing);
+        if ($summary !== '') {
             $existing_desc = trim((string) ($existing['description'] ?? ''));
-            if ($existing_desc === '') {
-                $fields['description'] = $narrative;
-            } elseif (stripos($existing_desc, $narrative) === false && strlen($narrative) >= 20) {
-                $fields['description_append'] = $narrative;
+            if (self::should_replace_description($existing_desc, $summary, $text)) {
+                $fields['description'] = $summary;
             }
         }
 
@@ -376,14 +374,7 @@ class PAXdesign_Cybercrime_AI_Case {
             $desc = sanitize_textarea_field((string) $fields['description']);
             if ($desc !== '' && $desc !== (string) ($payload['description'] ?? '')) {
                 $payload['description'] = $desc;
-                $changed[] = 'description';
-            }
-        } elseif (!empty($fields['description_append'])) {
-            $append = sanitize_textarea_field((string) $fields['description_append']);
-            $current = trim((string) ($payload['description'] ?? ''));
-            if ($append !== '' && ($current === '' || stripos($current, $append) === false)) {
-                $payload['description'] = trim($current . ($current !== '' ? "\n\n" : '') . $append);
-                $changed[] = 'description';
+                $changed[] = 'summary';
             }
         }
 
@@ -605,6 +596,7 @@ class PAXdesign_Cybercrime_AI_Case {
             'category_label'   => (string) ($report['category_label'] ?? ''),
             'incident_at'      => (string) ($report['incident_at'] ?? ''),
             'platforms'        => (string) ($report['platforms'] ?? ''),
+            'financial_loss'   => (string) ($report['financial_loss'] ?? ''),
             'description'      => (string) ($report['description'] ?? ''),
             'next_action'      => (string) ($report['next_action'] ?? ''),
             'missing_fields'   => array_values((array) ($report['missing_fields'] ?? array())),
@@ -899,6 +891,10 @@ class PAXdesign_Cybercrime_AI_Case {
      * @return array{amount:string,currency:string}|null
      */
     private static function detect_financial_loss($text) {
+        $normalized = self::normalize_match_text($text);
+        if (preg_match('/\b(did not lose( any)?( money)?|no money (was )?lost|no financial loss|lost nothing|kein(e)? (geld|verlust)|keine finanzielle|لم (أخسر|اخسر)|بدون خسارة)\b/u', $normalized)) {
+            return array('amount' => 'No', 'currency' => '');
+        }
         if (preg_match('/(?:lost|stole|stolen|loss of|خسارت|verlust)\s*(?:about\s*)?(€|eur|usd|\$|£)?\s*([0-9]{1,7}(?:[.,][0-9]{1,2})?)/iu', $text, $m)) {
             $amount = str_replace(',', '.', $m[2]);
             $symbol = strtoupper(trim($m[1]));
@@ -914,19 +910,92 @@ class PAXdesign_Cybercrime_AI_Case {
     }
 
     /**
-     * @param string               $text
+     * Compact structured summary for the case page — never the raw chat message.
+     *
      * @param array<string, mixed> $fields
+     * @param array<string, mixed> $existing
      * @return string
      */
-    private static function narrative_for_description($text, $fields) {
-        unset($fields);
-        $text = trim(preg_replace('/\s+/', ' ', (string) $text));
-        if (strlen($text) < 20) {
-            return '';
+    public static function structured_summary($fields, $existing = array()) {
+        $fields = is_array($fields) ? $fields : array();
+        $existing = is_array($existing) ? $existing : array();
+        $category = sanitize_key((string) ($fields['category'] ?? $existing['category'] ?? ''));
+        $label = '';
+        if ($category !== '' && class_exists('PAXdesign_Cybercrime_Intake')) {
+            $label = PAXdesign_Cybercrime_Intake::category_label($category);
+        } elseif ($category !== '') {
+            $label = str_replace('_', ' ', $category);
         }
-        if (preg_match('/^(yes|no|ok|okay|thanks|thank you|نعم|لا|حسنا|danke)[.!\s]*$/iu', $text)) {
-            return '';
+        $date = sanitize_text_field((string) ($fields['incident_date'] ?? $existing['incident_date'] ?? ''));
+        if ($date === '' && !empty($fields['incident_at'])) {
+            $date = substr((string) $fields['incident_at'], 0, 10);
         }
-        return $text;
+        if ($date === '' && !empty($existing['incident_at'])) {
+            $date = substr((string) $existing['incident_at'], 0, 10);
+        }
+        $platforms = sanitize_textarea_field((string) ($fields['platforms'] ?? $existing['platforms'] ?? ''));
+        $loss = sanitize_text_field((string) ($fields['financial_loss'] ?? $existing['financial_loss'] ?? ''));
+
+        $parts = array();
+        if ($label !== '') {
+            $parts[] = $label;
+        }
+        if ($date !== '') {
+            $parts[] = 'Date: ' . $date;
+        }
+        if ($platforms !== '') {
+            $parts[] = 'Platforms: ' . $platforms;
+        }
+        if ($loss !== '') {
+            $loss_label = (strcasecmp($loss, 'No') === 0 || $loss === '0') ? 'No' : $loss;
+            if (!empty($fields['financial_currency']) && $loss_label !== 'No') {
+                $loss_label .= ' ' . strtoupper((string) $fields['financial_currency']);
+            }
+            $parts[] = 'Financial loss: ' . $loss_label;
+        }
+
+        return implode('. ', $parts);
+    }
+
+    /**
+     * @param string $existing
+     * @param string $summary
+     * @param string $raw_message
+     * @return bool
+     */
+    public static function should_replace_description($existing, $summary, $raw_message = '') {
+        $existing = trim((string) $existing);
+        $summary = trim((string) $summary);
+        if ($summary === '') {
+            return false;
+        }
+        if ($existing === '' || strcasecmp($existing, $summary) === 0) {
+            return true;
+        }
+        $raw_message = trim((string) $raw_message);
+        if ($raw_message !== '' && stripos($existing, $raw_message) !== false) {
+            return true;
+        }
+        if (preg_match('/\b(Platforms:|Date:|Financial loss:)\b/i', $existing)) {
+            return true;
+        }
+        return strlen($existing) <= 180;
+    }
+
+    /**
+     * True when a stored description is a pasted chat transcript rather than structured case facts.
+     *
+     * @param string $text
+     * @return bool
+     */
+    public static function is_chat_dump_description($text) {
+        $text = trim((string) $text);
+        if ($text === '') {
+            return false;
+        }
+        if (preg_match('/\b(Date:|Platforms:|Financial loss:)\b/i', $text) && strlen($text) <= 280) {
+            return false;
+        }
+        return strlen($text) > 220;
     }
 }

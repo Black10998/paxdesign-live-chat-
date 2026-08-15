@@ -307,6 +307,9 @@ return array(
 		'closed' => array(
 			'label' => 'Closed',
 		),
+		'rejected' => array(
+			'label' => 'Rejected',
+		),
 	),
 	'timeline_i18n' => array(
 		'support_team' => 'PAXDesign Support Team',
@@ -322,6 +325,7 @@ return array(
 			'status_waiting_for_staff' => 'Waiting for staff',
 			'status_resolved' => 'Resolved',
 			'status_closed' => 'Closed',
+			'status_rejected' => 'Rejected',
 		),
 	),
 	'portal_js' => array(

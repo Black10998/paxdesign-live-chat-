@@ -1,6 +1,6 @@
 /**
  * PAXdesign AI Chat — Sales & Booking Assistant
- * Version: 3.175.2
+ * Version: 3.175.3
  */
 (function () {
   'use strict';
@@ -1565,7 +1565,7 @@
     initCustomerClose();
     initRatingUi();
     initSoundToggle();
-    if (!isPersistentAccountChat()) {
+    if (isCybercrimeCaseChat() || !isPersistentAccountChat()) {
       initPlusToggle();
     } else {
       root.classList.add('paxdesign-chat-direct-mode');
@@ -3624,6 +3624,9 @@
       reaction: msg.reaction || '',
       reply_to: msg.reply_to || 0,
       image_url: msg.image_url || '',
+      file_url: msg.file_url || '',
+      file_name: msg.file_name || '',
+      file_mime: msg.file_mime || '',
       attachment_type: msg.attachment_type || '',
       link_url: msg.link_url || '',
       link_label: msg.link_label || '',
@@ -4426,6 +4429,14 @@
     if (opts.image_url) {
       html += '<div class="paxdesign-booking-chat-message-image"><img src="' + escapeHtml(opts.image_url) + '" alt="Foto" loading="lazy" decoding="async"></div>';
     }
+    if (opts.file_url || (opts.attachment_type === 'file' && opts.file_name)) {
+      var fileHref = opts.file_url && opts.file_url !== '#' ? opts.file_url : '';
+      var fileName = opts.file_name || 'Document';
+      html += '<a class="paxdesign-booking-chat-file-chip"' + (fileHref ? ' href="' + escapeHtml(fileHref) + '" target="_blank" rel="noopener"' : '') + '>' +
+        '<span class="paxdesign-booking-chat-file-chip__icon" aria-hidden="true"></span>' +
+        '<span class="paxdesign-booking-chat-file-chip__name">' + escapeHtml(fileName) + '</span>' +
+        '</a>';
+    }
     if (opts.ccs_operation_status === 'running' || (opts.ccs_operation_id && opts.ccs_operation_status === 'running')) {
       var opLabel = opts.ccs_operation_label || content || 'Checking uploaded files…';
       html += '<div class="paxdesign-booking-chat-ccs-op" data-ccs-op-status="running" role="status" aria-live="polite">' +
@@ -4506,7 +4517,7 @@
       meta.textContent = formatMsgTime(opts.ts || Math.floor(Date.now() / 1000));
       msg.appendChild(meta);
     }
-    if (String(content || '').trim() || opts.image_url) {
+    if (String(content || '').trim() || opts.image_url || opts.file_url) {
       attachMessageChrome(msg, bubble, role, content, msgId, opts.reaction || '');
     }
     if (msgId) {
@@ -4536,8 +4547,136 @@
     return { bubble: bubble, messageEl: msg };
   }
 
+  function ccsAttachLabel() {
+    var lang = '';
+    try {
+      lang = (window.PAXdesignPageContext && window.PAXdesignPageContext.language) || '';
+    } catch (e) {}
+    if (lang === 'de') return 'Nachweis anhängen';
+    if (lang === 'ar') return 'إرفاق دليل';
+    return 'Attach evidence';
+  }
+
+  function initCcsAttachButton() {
+    if (!plusBtn) return;
+    root.classList.add('paxdesign-ccs-attach');
+    var label = ccsAttachLabel();
+    plusBtn.setAttribute('aria-label', label);
+    plusBtn.setAttribute('title', label);
+    plusBtn.removeAttribute('aria-expanded');
+    var tip = plusBtn.querySelector('.paxdesign-booking-chat-plus-tooltip');
+    if (tip) tip.textContent = label;
+    if (quickActions) quickActions.hidden = true;
+
+    var input = root.querySelector('#paxdesignCcsChatAttach');
+    if (!input) {
+      input = document.createElement('input');
+      input.type = 'file';
+      input.id = 'paxdesignCcsChatAttach';
+      input.className = 'paxdesign-ccs-chat-attach-input';
+      input.accept = 'image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,.pdf,.doc,.docx,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.txt';
+      input.setAttribute('aria-hidden', 'true');
+      input.tabIndex = -1;
+      plusBtn.parentNode.appendChild(input);
+    }
+    plusBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      unlockAudio();
+      if (!canUseChat()) {
+        showAuthGate();
+        return;
+      }
+      input.click();
+    });
+    input.addEventListener('change', function () {
+      var file = input.files && input.files[0];
+      input.value = '';
+      if (!file) return;
+      uploadCcsChatFile(file);
+    });
+  }
+
+  function uploadCcsChatFile(file) {
+    if (!file || isStreaming) return;
+    if (!isLoggedIn()) {
+      showAuthGate();
+      return;
+    }
+    var isImage = /^image\//.test(file.type) || /\.(jpe?g|png|gif|webp|heic|heif)$/i.test(file.name || '');
+    var localUrl = '';
+    try {
+      if (isImage) localUrl = URL.createObjectURL(file);
+    } catch (e) {}
+    var clientMsgId = newClientMessageId();
+    var localId = nextLocalId();
+    var caption = file.name || 'file';
+    renderMessageDom('user', isImage ? '' : caption, localId, {
+      image_url: localUrl,
+      file_url: isImage ? '' : '#',
+      file_name: caption,
+      attachment_type: isImage ? 'image' : 'file',
+      client_msg_id: clientMsgId,
+      ts: Math.floor(Date.now() / 1000)
+    });
+    messages.push({
+      role: 'user',
+      content: caption,
+      id: localId,
+      client_msg_id: clientMsgId,
+      image_url: localUrl,
+      file_name: caption,
+      attachment_type: isImage ? 'image' : 'file'
+    });
+    rememberMessageIdentity({ id: localId, role: 'user', content: caption, client_msg_id: clientMsgId });
+    scrollToBottom();
+
+    var formData = new FormData();
+    formData.append('action', 'paxdesign_chat_ccs_attach');
+    formData.append('nonce', config.nonce);
+    stampChatRequest(formData);
+    formData.append('session_id', getSessionId());
+    formData.append('client_msg_id', clientMsgId);
+    formData.append('caption', caption);
+    formData.append('file', file, file.name);
+
+    fetch(config.ajaxUrl, { method: 'POST', body: formData, credentials: 'same-origin' })
+      .then(function (res) { return safeJson(res); })
+      .then(function (json) {
+        if (handleAuthGateResponse(json)) {
+          throw new Error('login_required');
+        }
+        if (!json || !json.success) {
+          throw new Error(json && json.data && json.data.message ? json.data.message : 'Upload failed.');
+        }
+        var data = json.data || {};
+        if (data.message && data.message.id) {
+          var localEl = threadEl.querySelector('[data-msg-id="' + localId + '"]');
+          if (localEl) localEl.setAttribute('data-msg-id', String(data.message.id));
+          rememberMessageIdentity(data.message);
+          indexChatMessage(data.message);
+          pollSeq = Math.max(pollSeq, data.message.id);
+        }
+        handleAuthenticatedChatJsonSuccess(data);
+        saveSessionSnapshot();
+      })
+      .catch(function (err) {
+        var failed = threadEl.querySelector('[data-msg-id="' + localId + '"]');
+        if (failed) {
+          var bubble = failed.querySelector('.paxdesign-booking-chat-message-bubble');
+          if (bubble) {
+            bubble.insertAdjacentHTML('beforeend', '<span class="paxdesign-ccs-attach-error">' + escapeHtml(err && err.message ? err.message : 'Upload failed.') + '</span>');
+          }
+        }
+      });
+  }
+
   function initPlusToggle() {
-    if (!plusBtn || !quickActions) return;
+    if (!plusBtn) return;
+    if (isCybercrimeCaseChat()) {
+      initCcsAttachButton();
+      return;
+    }
+    if (!quickActions) return;
     plusBtn.addEventListener('click', function (e) {
       e.preventDefault();
       unlockAudio();

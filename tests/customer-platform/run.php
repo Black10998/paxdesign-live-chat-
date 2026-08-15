@@ -308,6 +308,12 @@ cx_assert_true(strpos($ccs_chat_php, 'ingest_ccs_case_from_chat') !== false, 'Au
 cx_assert_true(strpos($ccs_chat_php, 'ccs_case') !== false, 'Chat must emit case sync events to the page');
 cx_assert_true(strpos($ccs_chat_php, 'apply_ccs_operation_turn') !== false, 'Chat must load CCS operation state before replying');
 cx_assert_true(strpos($ccs_chat_php, 'ccs_operation') !== false, 'Chat must emit a visible processing operation to the conversation');
+cx_assert_true(strpos($ccs_chat_php, 'paxdesign_chat_ccs_attach') !== false, 'CCS chat must accept evidence uploads on the same case');
+
+$ccs_chat_js = file_get_contents($ccs_root . '/assets/js/chat-script.js');
+cx_assert_true(strpos($ccs_chat_js, 'uploadCcsChatFile') !== false, 'CCS chat + button must upload evidence in-conversation');
+cx_assert_true(strpos($ccs_chat_js, 'initCcsAttachButton') !== false, 'CCS chat must use an attachment + button');
+cx_assert_true(strpos($ccs_chat_js, 'paxdesign_chat_ccs_attach') !== false, 'Website CCS chat must post uploads to the same CCS case');
 
 $ccs_intake = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-intake.php');
 cx_assert_true(strpos($ccs_intake, 'document_checks') !== false, 'Intake must store document check results on the case');
@@ -322,10 +328,15 @@ cx_assert_true(strpos($ccs_tickets, 'original_request') !== false, 'Case payload
 cx_assert_true(strpos($ccs_tickets, 'needs_human_review') !== false, 'Tickets must expose human-review flags');
 cx_assert_true(strpos($ccs_tickets, "'draft'") !== false, 'Draft status must remain an active CCS case');
 cx_assert_true(strpos($ccs_tickets, 'missing_case_fields') !== false, 'Case page must expose missing fields to chat');
+cx_assert_true(strpos($ccs_tickets, "'rejected'") !== false, 'Rejected must be a supported CCS case status');
+cx_assert_true(strpos($ccs_tickets, 'display_case_description') !== false, 'Case display must replace pasted chat dumps with structured facts');
 
 $ccs_admin = file_get_contents($ccs_root . '/includes/customer/class-paxdesign-customer-admin.php');
 cx_assert_true(strpos($ccs_admin, 'Needs human review') !== false, 'Admin list must flag cases that need human review');
 cx_assert_true(strpos($ccs_admin, 'Preliminary document checks') !== false, 'Admin case view must show preliminary document checks');
+cx_assert_true(strpos($ccs_admin, 'Evidence / documents') !== false, 'Admin case view must show an evidence gallery');
+cx_assert_true(strpos($ccs_admin, 'pax-cc-evidence') !== false, 'Admin evidence must use preview cards');
+cx_assert_true(strpos($ccs_admin, 'pax-cc-reject-ticket') !== false, 'Admin must be able to reject a CCS case');
 
 $ccs_js = file_get_contents(dirname(__DIR__, 2) . '/navein/assets/js/apple-cybercrime-support.js');
 cx_assert_true(strpos($ccs_js, 'initGuidedInterview') !== false, 'Website intake must run a guided interview');
@@ -333,6 +344,8 @@ cx_assert_true(strpos($ccs_js, 'renderCaseDossier') !== false, 'Returning custom
 cx_assert_true(strpos($ccs_js, 'paxdesign_cybercrime_customer_resubmit') !== false, 'Website must allow same-case file corrections');
 cx_assert_true(strpos($ccs_js, 'pax-ccs-case-updated') !== false, 'Case page must refresh when chat saves the same case');
 cx_assert_true(strpos($ccs_js, 'continueDraftOnPage') !== false, 'Draft cases must remain completable on the existing page');
+cx_assert_true(strpos($ccs_js, 'isStructuredCaseDescription') !== false, 'Case dossier must hide pasted chat paragraphs');
+cx_assert_true(strpos($ccs_js, 'rejected') !== false, 'Customer case view must treat Rejected as a closed status');
 
 $ccs_page = file_get_contents(dirname(__DIR__, 2) . '/navein/template-parts/pages/cybercrime-support.php');
 cx_assert_true(strpos($ccs_page, 'pax-ccs-category-cards') !== false, 'Intake must present category as guided choices');
@@ -347,7 +360,7 @@ cx_assert_true(strpos($ccs_widget, 'ccs_operation') !== false, 'Chat must render
 cx_assert_true(strpos($ccs_widget, 'upsertCcsOperationMessage') !== false, 'Chat must keep the same processing message across follow-ups');
 
 $plugin_bootstrap = file_get_contents($ccs_root . '/paxdesign-booking.php');
-cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.2')") !== false, 'Plugin version must be 3.175.2');
+cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.3')") !== false, 'Plugin version must be 3.175.3');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-document-checks.php') !== false, 'Plugin must load document checks');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-case.php') !== false, 'Plugin must load AI case sync');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-operations.php') !== false, 'Plugin must load AI operation state');
@@ -385,13 +398,18 @@ if (!function_exists('mb_strpos')) {
 }
 require_once $ccs_root . '/includes/class-paxdesign-cybercrime-ai-case.php';
 $extracted = PAXdesign_Cybercrime_AI_Case::extract_fields_from_message(
-    'My account was compromised on August 10. GitHub and my email were affected.',
+    'My account was compromised on August 12. GitHub and my email were affected. I did not lose any money.',
     array()
 );
 cx_assert_true(($extracted['category'] ?? '') === 'account_takeover', 'Extractor must detect incident type from a natural message');
-cx_assert_true(($extracted['incident_date'] ?? '') === gmdate('Y') . '-08-10', 'Extractor must detect the incident date');
+cx_assert_true(($extracted['incident_date'] ?? '') === gmdate('Y') . '-08-12', 'Extractor must detect the incident date');
 cx_assert_true(strpos((string) ($extracted['platforms'] ?? ''), 'GitHub') !== false, 'Extractor must detect GitHub');
 cx_assert_true(stripos((string) ($extracted['platforms'] ?? ''), 'Email') !== false, 'Extractor must detect email as an affected platform');
+cx_assert_true(($extracted['financial_loss'] ?? '') === 'No', 'Extractor must detect that no money was lost');
+cx_assert_true(strpos((string) ($extracted['description'] ?? ''), 'My account was compromised') === false, 'Case description must not copy the full customer chat message');
+cx_assert_true(strpos((string) ($extracted['description'] ?? ''), 'Date:') !== false, 'Case description must be a structured summary');
+cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_chat_dump_description('My account was compromised on August 12. GitHub and my email were affected. I did not lose any money.') === false, 'A single short message is not treated as a dump by length');
+cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_chat_dump_description(str_repeat('Customer chat dump. ', 40)) === true, 'Long pasted chat transcripts must be treated as dumps');
 
 $merged = PAXdesign_Cybercrime_AI_Case::merge_platform_list('GitHub', array('Gmail'), false);
 cx_assert_true($merged === 'GitHub, Gmail' || strpos($merged, 'Gmail') !== false, 'Additional platforms must merge into the same case');
