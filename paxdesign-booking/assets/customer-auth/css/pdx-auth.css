@@ -61,6 +61,10 @@
   color: #fff;
   box-shadow: none;
   border-radius: 980px;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: nowrap;
 }
 
 #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:hover,
@@ -492,35 +496,68 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header
 /* Compact header: floating Sign Up / account identity beside the theme menu toggle.
    Theme hides #dtr-header-global at 992px, so this must start at the same breakpoint. */
 @media (max-width: 992px) {
-  #pdx-auth-bar.pdx-auth-bar--header {
-    position: fixed;
-    top: max(10px, env(safe-area-inset-top, 10px));
-    right: max(56px, calc(env(safe-area-inset-right, 12px) + 44px));
-    transform: none;
+  html body #pdx-auth-bar.pdx-auth-bar--header:not([hidden]),
+  html body #pdx-auth-bar:not([hidden]) {
+    position: fixed !important;
+    top: max(10px, env(safe-area-inset-top, 10px)) !important;
+    right: max(56px, calc(env(safe-area-inset-right, 12px) + 44px)) !important;
+    left: auto !important;
+    transform: none !important;
     pointer-events: auto;
     z-index: 99996;
-    margin: 0;
-    display: flex;
-    overflow: visible;
+    margin: 0 !important;
+    display: flex !important;
+    overflow: visible !important;
+    max-width: none !important;
+    width: auto !important;
+    min-width: 0 !important;
   }
 
-  body.admin-bar #pdx-auth-bar.pdx-auth-bar--header {
-    top: calc(46px + max(8px, env(safe-area-inset-top, 8px)));
+  body.admin-bar #pdx-auth-bar.pdx-auth-bar--header,
+  body.admin-bar #pdx-auth-bar {
+    top: calc(46px + max(8px, env(safe-area-inset-top, 8px))) !important;
   }
 
   .pdx-auth-header-btn {
     min-height: 34px;
     padding: 0 12px;
     font-size: 12px;
-    max-width: min(160px, 36vw);
+    max-width: min(220px, 58vw);
   }
 
-  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:not([hidden]) {
+  html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:not([hidden]),
+  html body #pdx-auth-bar .pdx-auth-signup-btn:not([hidden]) {
     display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    max-width: none !important;
+    min-width: 0;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    font-size: 13px !important;
+    line-height: 1 !important;
+    padding: 0 14px !important;
+    height: 34px;
+    min-height: 34px;
   }
 
   #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-portal-btn,
-  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signout-btn {
+  #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signout-btn,
+  #pdx-auth-bar .pdx-auth-portal-btn,
+  #pdx-auth-bar .pdx-auth-signout-btn {
+    display: none !important;
+  }
+
+  html body #pdx-auth-bar .pdx-auth-menu:not(.is-open),
+  html body #pdx-auth-bar .pdx-auth-menu[hidden] {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
+  /* Compact public menu: actions only. Identity already lives in the header chip. */
+  html body #pdx-auth-bar .pdx-auth-menu.is-open .pdx-auth-menu-head {
     display: none !important;
   }
 }
@@ -529,8 +566,14 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header
   .pdx-auth-header-btn {
     min-height: 32px;
     padding: 0 10px;
-    font-size: 11px;
-    max-width: min(120px, 34vw);
+    font-size: 12px;
+    max-width: min(200px, 62vw);
+  }
+
+  html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:not([hidden]) {
+    font-size: 13px !important;
+    padding: 0 14px !important;
+    max-width: none !important;
   }
 }
 
@@ -538,55 +581,26 @@ html body.dtr-apple-sticky-header #pdx-auth-bar.pdx-auth-bar--header .pdx-header
   position: relative;
 }
 
-.pdx-auth-trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 10px 0 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.35);
-  color: #e8e8e8;
-  cursor: pointer;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1;
-  transition: border-color 0.15s ease, background 0.15s ease;
-}
-
-.pdx-auth-trigger:hover,
-.pdx-auth-trigger:focus {
-  border-color: rgba(255, 224, 166, 0.35);
-  background: rgba(255, 224, 166, 0.08);
-  outline: none;
-}
-
-.pdx-auth-trigger-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  color: #ffe0a6;
-}
-
-.pdx-auth-trigger-icon svg {
-  width: 18px;
-  height: 18px;
-  display: block;
-}
-
-.pdx-auth-trigger-label {
-  max-width: 96px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pdx-auth-trigger--logged-in .pdx-auth-trigger-label {
-  max-width: 110px;
+/* Legacy login trigger — never show the old clipped "Sign" control. */
+html body .pdx-auth-trigger,
+html body .pdx-auth-trigger-label,
+html body #pdx-auth-bar .pdx-auth-trigger,
+html body #pdx-auth-bar .pdx-auth-trigger-label,
+html body header .pdx-auth-trigger,
+html body header button.pdx-auth-trigger {
+  display: none !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  font-size: 0 !important;
+  opacity: 0 !important;
 }
 
 .pdx-auth-menu-status {

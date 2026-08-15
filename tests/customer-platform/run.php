@@ -157,6 +157,7 @@ cx_assert_true(strpos($auth_frontend, 'PAX_AUTH_CONFIG') !== false, 'Booking aut
 cx_assert_true(strpos($auth_frontend, 'githubWebEnabled') !== false, 'Auth frontend must expose GitHub login config');
 cx_assert_true(strpos($auth_frontend, 'customerLevel') !== false, 'Auth frontend must expose customer membership level');
 cx_assert_true(strpos($auth_frontend, 'appleWebEnabled') !== false, 'Auth frontend must keep Sign in with Apple');
+cx_assert_true(strpos($auth_frontend, 'pdx-auth-mobile-header-fix') !== false, 'Auth frontend must override leftover mobile Sign trigger CSS');
 
 $auth_js = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/js/pax-auth.js');
 cx_assert_true(strpos($auth_js, 'renderHeaderUserIdentityHtml') !== false, 'Logged-in header must render customer identity');
@@ -167,10 +168,23 @@ cx_assert_true(strpos($auth_js, 'headerDisplayName') !== false, 'Header must use
 cx_assert_true(strpos($auth_js, "showName: true") !== false, 'Logged-in header must show name and membership on all viewports');
 cx_assert_true(strpos($auth_js, 'githubSignInButtonInnerHtml') !== false, 'GitHub login button must remain in web auth');
 cx_assert_true(strpos($auth_js, 'appleSignInButtonInnerHtml') !== false, 'Apple login button must remain in web auth');
+cx_assert_true(strpos($auth_js, 'removeLegacyAuthControls') !== false, 'Mobile header must strip leftover Sign/trigger controls');
+cx_assert_true(strpos($auth_js, 'syncAccountHeaderOffset') !== false, 'Account drawer must sit below the measured header');
+cx_assert_true(strpos($auth_js, 'class="pdx-auth-trigger"') === false, 'Auth bar markup must not include the legacy Sign trigger');
+cx_assert_true(strpos($auth_js, 'Sign Up') !== false, 'Logged-out header must keep the Sign Up control');
 
 $auth_css = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/css/pdx-auth.css');
 cx_assert_true(strpos($auth_css, '.pdx-header-user-identity') !== false, 'Header CSS must style customer identity');
 cx_assert_true(strpos($auth_css, '.pdx-account-level-badge--header') !== false, 'Header CSS must style membership badge');
+cx_assert_true(strpos($auth_css, 'html body .pdx-auth-trigger') !== false, 'Header CSS must hide the leftover Sign trigger');
+cx_assert_true(strpos($auth_css, 'text-overflow: clip') !== false, 'Sign Up must not be clipped to Sign on compact headers');
+
+$account_app_css = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/css/pdx-account-app.css');
+cx_assert_true(strpos($account_app_css, '--pdx-account-header-height') !== false, 'Mobile account drawer must start below the header');
+cx_assert_true(strpos($account_app_css, '.pdx-account-sidebar-user') !== false, 'Mobile account drawer must not duplicate header identity');
+
+$auth_page_css = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/assets/customer-auth/css/pdx-auth-page.css');
+cx_assert_true(strpos($auth_page_css, '--pdx-account-header-height') !== false, 'Account overlay must start below the header');
 
 $levels = file_get_contents($customer_dir . '/class-paxdesign-customer-levels.php');
 cx_assert_true(strpos($levels, 'function profile_fields') !== false, 'Customer levels must expose profile_fields');

@@ -189,7 +189,7 @@ body.pdx-account-dashboard-body #pdx-auth-shell-home {
 .pdx-account-header {
   flex: 0 0 auto;
   position: relative;
-  z-index: 60;
+  z-index: 80;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -203,6 +203,7 @@ body.pdx-account-dashboard-body #pdx-auth-shell-home {
   background: #fff;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   overflow: visible;
+  isolation: isolate;
 }
 
 .pdx-account-header-leading,
@@ -363,7 +364,13 @@ body.pdx-account-nav-open .pdx-account-nav-overlay {
   }
 
   .pdx-account-header {
+    z-index: 80;
     padding-left: max(6px, env(safe-area-inset-left));
+  }
+
+  .pdx-account-nav-overlay {
+    top: var(--pdx-account-header-height, 52px);
+    z-index: 55;
   }
 }
 

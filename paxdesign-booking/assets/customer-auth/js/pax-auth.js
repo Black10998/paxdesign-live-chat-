@@ -150,6 +150,17 @@
     });
   }
 
+  function removeLegacyAuthControls() {
+    document.querySelectorAll('.pdx-auth-trigger, .pdx-auth-signout-btn, #pdx-account-header-signout').forEach(function (node) {
+      if (node && node.parentNode) node.parentNode.removeChild(node);
+    });
+    document.querySelectorAll('#pdx-auth-bar').forEach(function (bar, index) {
+      if (authBar && bar === authBar) return;
+      if (!authBar && index === 0) return;
+      if (bar && bar.parentNode) bar.parentNode.removeChild(bar);
+    });
+  }
+
   function looksLikeEmail(value) {
     return /@/.test(String(value || ''));
   }
@@ -844,6 +855,16 @@
   }
 
   function createAuthBar() {
+    removeLegacyAuthControls();
+    if (authBar && document.body.contains(authBar)) {
+      mountAuthBar();
+      updateAuthBar();
+      return;
+    }
+    var leftoverBar = document.getElementById('pdx-auth-bar');
+    if (leftoverBar && leftoverBar.parentNode) {
+      leftoverBar.parentNode.removeChild(leftoverBar);
+    }
     authBar = document.createElement('div');
     authBar.id = 'pdx-auth-bar';
     authBar.className = 'pdx-cx-shell';
@@ -908,7 +929,15 @@
     window.addEventListener('resize', function () {
       mountAuthBar();
       updateAuthBar();
+      syncAccountHeaderOffset();
       if (!isAccountNavMobile()) closeAccountNav();
+    });
+    window.addEventListener('orientationchange', function () {
+      window.setTimeout(function () {
+        mountAuthBar();
+        updateAuthBar();
+        syncAccountHeaderOffset();
+      }, 120);
     });
 
     mountAuthBar();
@@ -1003,12 +1032,13 @@
             '<div class="pdx-auth-menu-status">' + escHtml(roleLabel) + '</div>' +
           '</div>' +
         '</div>';
-      authMenu.removeAttribute('hidden');
+      if (!authMenuOpen) authMenu.setAttribute('hidden', 'hidden');
     } else {
       if (head) head.innerHTML = '';
       closeAuthMenu();
       authMenu.setAttribute('hidden', 'hidden');
     }
+    removeLegacyAuthControls();
     if (authBar) bindAccountAvatarFallbacks(authBar);
     if (authMenu) bindAccountAvatarFallbacks(authMenu);
   }
@@ -1024,6 +1054,7 @@
   function closeAuthMenu() {
     if (!authMenu || !authBtn) return;
     authMenu.classList.remove('is-open');
+    authMenu.setAttribute('hidden', 'hidden');
     authBtn.setAttribute('aria-expanded', 'false');
     authMenuOpen = false;
   }
@@ -1898,6 +1929,16 @@
     return overlay;
   }
 
+  function syncAccountHeaderOffset() {
+    var header = document.getElementById('pdx-account-header');
+    var shell = document.getElementById('pdx-auth-isolated-shell');
+    var height = header ? Math.ceil(header.getBoundingClientRect().height) : 0;
+    if (height < 44) height = 52;
+    var value = height + 'px';
+    if (shell) shell.style.setProperty('--pdx-account-header-height', value);
+    document.documentElement.style.setProperty('--pdx-account-header-height', value);
+  }
+
   function syncAccountNavUi() {
     var open = document.body.classList.contains('pdx-account-nav-open');
     var btn = document.getElementById('pdx-account-menu-btn');
@@ -1917,6 +1958,7 @@
   function openAccountNav() {
     if (!isAuthPage() || !user.logged_in) return;
     ensureAccountNavOverlay();
+    syncAccountHeaderOffset();
     document.body.classList.add('pdx-account-nav-open');
     syncAccountNavUi();
   }
@@ -2070,6 +2112,7 @@
     mountShellLogoLink(link, 'pdx-account-header-home--official');
     updateAccountHeaderIdentity();
     ensureAccountNavOverlay();
+    syncAccountHeaderOffset();
     syncAccountNavUi();
   }
 
@@ -2335,6 +2378,7 @@
     var signOut = accountSidebarEl.querySelector('.pdx-account-signout');
     if (signOut) signOut.addEventListener('click', doLogout);
     updateAccountHeaderIdentity();
+    syncAccountHeaderOffset();
     syncAccountNavUi();
   }
 

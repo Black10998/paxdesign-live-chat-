@@ -236,14 +236,7 @@
 
 /* ─── Auth bar & dropdown ───────────────────────────────── */
 #pdx-auth-bar.pdx-cx-shell .pdx-auth-trigger {
-  height: 36px;
-  padding: 0 12px 0 10px;
-  border-radius: var(--pdx-cx-radius-pill);
-  border: 1px solid var(--pdx-cx-border-muted);
-  background: var(--pdx-cx-bg-elev);
-  color: var(--pdx-cx-text);
-  backdrop-filter: blur(8px);
-  transition: border-color var(--pdx-cx-ease), background var(--pdx-cx-ease), box-shadow var(--pdx-cx-ease);
+  display: none !important;
 }
 
 #pdx-auth-bar.pdx-cx-shell .pdx-auth-trigger:hover,

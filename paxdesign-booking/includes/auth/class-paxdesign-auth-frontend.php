@@ -11,6 +11,7 @@ class PAXdesign_Auth_Frontend {
 
     public static function init() {
         add_action('wp_enqueue_scripts', array(__CLASS__, 'enqueue'), 20);
+        add_action('wp_footer', array(__CLASS__, 'print_mobile_header_overrides'), 99999);
     }
 
     private static function asset_version($relative_path) {
@@ -88,6 +89,37 @@ class PAXdesign_Auth_Frontend {
         );
 
         wp_localize_script('pax-auth-ui', 'PAX_AUTH_CONFIG', self::js_config());
+    }
+
+    /**
+     * Beat leftover Customizer / snippet CSS that still forces the old clipped
+     * ".pdx-auth-trigger" login control ("Sign") onto the mobile header.
+     */
+    public static function print_mobile_header_overrides() {
+        if (is_admin()) {
+            return;
+        }
+        echo '<style id="pdx-auth-mobile-header-fix">'
+            . 'html body .pdx-auth-trigger,html body .pdx-auth-trigger-label,'
+            . 'html body #pdx-auth-bar .pdx-auth-trigger,html body #pdx-auth-bar .pdx-auth-trigger-label,'
+            . 'html body header .pdx-auth-trigger,html body header button.pdx-auth-trigger,'
+            . 'html body #pdx-auth-bar.pdx-cx-shell .pdx-auth-trigger,'
+            . 'html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-trigger{'
+            . 'display:none!important;visibility:hidden!important;pointer-events:none!important;'
+            . 'width:0!important;height:0!important;overflow:hidden!important;opacity:0!important}'
+            . 'html body #pdx-auth-bar .pdx-auth-signout-btn,html body .pdx-account-header-signout{'
+            . 'display:none!important}'
+            . '@media (max-width:992px){'
+            . 'html body #pdx-auth-bar,html body #pdx-auth-bar.pdx-auth-bar--header{'
+            . 'max-width:none!important;width:auto!important;transform:none!important;overflow:visible!important}'
+            . 'html body #pdx-auth-bar .pdx-auth-signup-btn:not([hidden]),'
+            . 'html body #pdx-auth-bar.pdx-auth-bar--header .pdx-auth-signup-btn:not([hidden]){'
+            . 'display:inline-flex!important;max-width:none!important;overflow:visible!important;'
+            . 'text-overflow:clip!important;white-space:nowrap!important;font-size:13px!important}'
+            . 'html body #pdx-auth-bar .pdx-auth-menu:not(.is-open),html body #pdx-auth-bar .pdx-auth-menu[hidden]{'
+            . 'display:none!important;visibility:hidden!important}'
+            . '}'
+            . '</style>' . "\n";
     }
 
     /**
