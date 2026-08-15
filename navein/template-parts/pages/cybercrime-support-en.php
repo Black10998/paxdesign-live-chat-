@@ -103,11 +103,27 @@ return array(
 		'closed_note' => 'This report is closed. New messages cannot be added.',
 		'chat' => 'AI assistant',
 		'ai_heading' => 'AI assistant — questions & guidance',
-		'ai_note' => 'Separate chat for questions and explanations. Not saved as official ticket replies.',
+		'ai_note' => 'AI chat is another interface for this same CCS case. Facts you share there are saved on this page.',
 		'refresh' => 'Refresh',
 		'closed_title' => 'Closed report (read-only)',
 		'read_only' => 'This report is closed. You can view the full history only.',
 		'back_history' => 'Back to ticket history',
+		'original_heading' => 'Original request',
+		'checks_heading' => 'Document checks (preliminary)',
+		'checks_disclaimer' => 'Automated quality checks only — not legal verification. Uncertain items are reviewed by the team.',
+		'next_heading' => 'What is needed now',
+		'continue_form' => 'Continue on this page',
+		'resubmit_heading' => 'Correct or add files on this same case',
+		'resubmit_hint' => 'Your reference number does not change. Upload only the files that are required.',
+		'resubmit_identity' => 'Replace identity document',
+		'resubmit_evidence' => 'Additional evidence',
+		'resubmit_submit' => 'Submit correction',
+		'check_accepted' => 'Accepted for review',
+		'check_rejected' => 'Rejected — correction needed',
+		'check_review' => 'Pending team review',
+		'rejection_heading' => 'Rejection reason',
+		'rejected_next_heading' => 'Next action',
+		'rejected_next' => 'No further action is required on this reference. You can start a new report if you have a new incident.',
 	),
 	'login_gate' => array(
 		'title' => 'Sign in required',
@@ -207,6 +223,33 @@ return array(
 		'evidence_other' => array(
 			'label' => 'Additional evidence',
 		),
+		'evidence_required' => array(
+			'label' => 'Please attach at least one piece of evidence before continuing.',
+		),
+	),
+	'guided' => array(
+		'ask' => 'Current question',
+		'missing' => 'Still needed in this step',
+		'identity_q' => 'Who are you? Enter your legal details as on the official document, then upload a clear photo of the full document.',
+		'incident_q' => 'What happened? Choose the type, then add when, which platforms, and a description in your own words.',
+		'evidence_q' => 'What proves it? Upload screenshots, messages, or statements that match this incident type.',
+		'review_q' => 'Review the summary, then confirm accuracy. After submit you receive a fixed reference number for this case.',
+		'category_hint' => 'Choose what best describes the incident. You can add detail in the description.',
+		'id_why' => 'We need a complete, readable identity document to match your name to the case. Automated checks are quality-only — the team makes the final decision.',
+		'continue_blocked' => 'Complete the required answers in this step before continuing.',
+	),
+	'evidence_coach' => array(
+		'account_takeover' => 'Most useful: email/phone change notices, recovery messages, unknown session screenshots.',
+		'phishing_fraud' => 'Most useful: the message or link, sender address, and any payment you made.',
+		'identity_theft' => 'Most useful: accounts opened in your name, credit alerts, platform notices.',
+		'malware_ransomware' => 'Most useful: ransom note, encrypted file extensions, antivirus alert. Do not upload runnable malware.',
+		'social_media_recovery' => 'Most useful: username, profile screenshots, platform emails, last known activity.',
+		'financial_fraud' => 'Most useful: bank notice or statement, transaction ID, scammer chat. Hide full card numbers.',
+		'data_breach' => 'Most useful: breach notice, what data leaked, and where it appeared.',
+		'other' => 'Upload anything that shows the sequence: screenshots, messages, or documents.',
+	),
+	'platform_chips' => array(
+		'other' => 'Other',
 	),
 	'categories' => array(
 		'account_takeover'      => 'Account takeover',
@@ -252,6 +295,9 @@ return array(
 		'submit'   => 'Could not submit the report. Please try again.',
 	),
 	'status_badges' => array(
+		'collecting' => array(
+			'label' => 'Collecting information',
+		),
 		'under_review' => array(
 			'label' => 'Under Review',
 		),
@@ -259,16 +305,20 @@ return array(
 			'label' => 'Waiting for Your Reply',
 		),
 		'resolved' => array(
-			'label' => 'Resolved',
+			'label' => 'Approved',
 		),
 		'closed' => array(
 			'label' => 'Closed',
+		),
+		'rejected' => array(
+			'label' => 'Rejected',
 		),
 	),
 	'timeline_i18n' => array(
 		'support_team' => 'PAXDesign Support Team',
 		'customer_fallback' => 'Customer',
 		'empty_timeline' => 'No updates yet.',
+		'status_changed' => 'Status changed to %s.',
 		'subjects' => array(
 			'report_submitted' => 'Report submitted',
 			'status_submitted' => 'New report',
@@ -277,8 +327,9 @@ return array(
 			'status_waiting_for_customer' => 'Waiting for customer',
 			'status_customer_replied' => 'Customer replied',
 			'status_waiting_for_staff' => 'Waiting for staff',
-			'status_resolved' => 'Resolved',
+			'status_resolved' => 'Approved',
 			'status_closed' => 'Closed',
+			'status_rejected' => 'Rejected',
 		),
 	),
 	'portal_js' => array(
@@ -303,6 +354,9 @@ return array(
 			'none'     => '—',
 			'yes'      => 'Yes',
 			'no'       => 'No',
+		),
+		'guided' => array(
+			'files' => 'files',
 		),
 	),
 );

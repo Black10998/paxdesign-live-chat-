@@ -1197,8 +1197,9 @@ class PAXdesign_Chat_Live {
 
         $content = sanitize_textarea_field($content);
         $has_image = !empty($extra['image_url']);
+        $has_file = !empty($extra['file_url']);
         $has_link_card = !empty($extra['attachment_type']) && $extra['attachment_type'] === 'link_card';
-        if ($content === '' && !$has_image && !$has_link_card) {
+        if ($content === '' && !$has_image && !$has_file && !$has_link_card) {
             return null;
         }
 
@@ -1216,6 +1217,12 @@ class PAXdesign_Chat_Live {
         if ($has_image) {
             $extra['image_url']       = esc_url_raw($extra['image_url']);
             $extra['attachment_type'] = 'image';
+        }
+        if ($has_file) {
+            $extra['file_url']        = esc_url_raw((string) $extra['file_url']);
+            $extra['file_name']       = sanitize_file_name((string) ($extra['file_name'] ?? ''));
+            $extra['file_mime']       = sanitize_text_field((string) ($extra['file_mime'] ?? ''));
+            $extra['attachment_type'] = 'file';
         }
         if ($has_link_card) {
             $extra['link_url']   = esc_url_raw((string) ($extra['link_url'] ?? ''));
@@ -3197,6 +3204,15 @@ class PAXdesign_Chat_Live {
             if (!empty($msg['image_url'])) {
                 $entry['image_url'] = esc_url_raw($msg['image_url']);
             }
+            if (!empty($msg['file_url'])) {
+                $entry['file_url'] = esc_url_raw((string) $msg['file_url']);
+            }
+            if (!empty($msg['file_name'])) {
+                $entry['file_name'] = sanitize_file_name((string) $msg['file_name']);
+            }
+            if (!empty($msg['file_mime'])) {
+                $entry['file_mime'] = sanitize_text_field((string) $msg['file_mime']);
+            }
             if (!empty($msg['reply_to'])) {
                 $entry['reply_to'] = (int) $msg['reply_to'];
             }
@@ -3256,6 +3272,18 @@ class PAXdesign_Chat_Live {
             }
             if ($role === 'user' && !empty($msg['link_scan_original_content'])) {
                 $entry['link_scan_original_content'] = sanitize_textarea_field((string) $msg['link_scan_original_content']);
+            }
+            if (!empty($msg['ccs_operation_id'])) {
+                $entry['ccs_operation_id'] = sanitize_text_field((string) $msg['ccs_operation_id']);
+            }
+            if (!empty($msg['ccs_operation_status'])) {
+                $entry['ccs_operation_status'] = sanitize_key((string) $msg['ccs_operation_status']);
+            }
+            if (!empty($msg['ccs_operation_type'])) {
+                $entry['ccs_operation_type'] = sanitize_key((string) $msg['ccs_operation_type']);
+            }
+            if (!empty($msg['ccs_operation_label'])) {
+                $entry['ccs_operation_label'] = sanitize_text_field((string) $msg['ccs_operation_label']);
             }
             if ($role === 'admin') {
                 $sender_id = !empty($msg['sender_id']) ? absint($msg['sender_id']) : 0;
@@ -3354,7 +3382,7 @@ class PAXdesign_Chat_Live {
             ? PAXdesign_Message_Store::latest_seq($session_id, 'customer')
             : (isset($row->message_seq) ? (int) $row->message_seq : 0);
 
-        return array(
+        $detail = array(
             'session_id'       => isset($row->session_id) ? (string) $row->session_id : '',
             'handler'          => $handler,
             'handler_label'    => self::handler_label($handler, $agent['admin_name']),
@@ -3379,6 +3407,14 @@ class PAXdesign_Chat_Live {
                 ? PAXdesign_Language_Routing::session_language_from_row($row)
                 : '',
         );
+        if (class_exists('PAXdesign_Cybercrime_Tickets')) {
+            $ccs_user_id = isset($row->wp_user_id) ? (int) $row->wp_user_id : (int) get_current_user_id();
+            $ccs_case = PAXdesign_Cybercrime_Tickets::public_case_sync_for_session($session_id, $ccs_user_id);
+            if (is_array($ccs_case) && !empty($ccs_case['reference_id'])) {
+                $detail['ccs_case'] = $ccs_case;
+            }
+        }
+        return $detail;
     }
 
     /**
@@ -3536,6 +3572,13 @@ class PAXdesign_Chat_Live {
             'auth_user_id'     => $wp_user_id,
             'wp_user_id'       => $wp_user_id,
         );
+        if (class_exists('PAXdesign_Cybercrime_Tickets')) {
+            $ccs_user_id = $wp_user_id > 0 ? $wp_user_id : (int) get_current_user_id();
+            $ccs_case = PAXdesign_Cybercrime_Tickets::public_case_sync_for_session($session_id, $ccs_user_id);
+            if (is_array($ccs_case) && !empty($ccs_case['reference_id'])) {
+                $payload['ccs_case'] = $ccs_case;
+            }
+        }
         if ($history_window) {
             $payload['has_older'] = $has_older;
             $payload['oldest_seq'] = $oldest_seq;

@@ -1188,6 +1188,7 @@ class PAXdesign_Message_Store {
     private static function sanitize_meta($extra) {
         $allowed = array(
             'image_url', 'audio_url', 'audio_duration', 'audio_waveform', 'attachment_type', 'reply_to', 'reaction',
+            'file_url', 'file_name', 'file_mime',
             'location_lat', 'location_lng', 'location_label',
             'sender_id', 'sender_name', 'sender_avatar', 'sender_role', 'sender_email',
             'link_url', 'link_label', 'link_icon',
@@ -1196,6 +1197,7 @@ class PAXdesign_Message_Store {
             'link_scan_completed_at', 'link_scan_provider',
             'link_scan_frame', 'link_scan_label', 'link_scan_analysis',
             'link_scan_original_content',
+            'ccs_operation_id', 'ccs_operation_status', 'ccs_operation_type', 'ccs_operation_label',
         );
         $meta = array();
         foreach ($allowed as $key) {

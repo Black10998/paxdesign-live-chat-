@@ -295,8 +295,8 @@ return array(
 			'de' => 'KI-Assistent — Fragen & Orientierung',
 		),
 		'ai_note' => array(
-			'ar' => 'محادثة منفصلة للأسئلة والشرح. لا تُسجّل كردود رسمية على البلاغ.',
-			'de' => 'Separater Chat für Fragen und Erklärungen. Wird nicht als offizielle Ticket-Antwort gespeichert.',
+			'ar' => 'المحادثة الذكية واجهة لنفس بلاغ CCS. المعلومات التي تشاركها تُحفظ في هذه الصفحة.',
+			'de' => 'Der KI-Chat ist eine zweite Oberfläche desselben CCS-Falls. Angaben aus dem Chat erscheinen hier.',
 		),
 		'refresh' => array(
 			'ar' => 'تحديث',
@@ -313,6 +313,70 @@ return array(
 		'back_history' => array(
 			'ar' => 'العودة إلى سجل البلاغات',
 			'de' => 'Zurück zum Meldungsverlauf',
+		),
+		'original_heading' => array(
+			'ar' => 'الطلب الأصلي',
+			'de' => 'Ursprüngliche Anfrage',
+		),
+		'checks_heading' => array(
+			'ar' => 'فحوصات المستندات (أولية)',
+			'de' => 'Dokumentprüfung (vorläufig)',
+		),
+		'checks_disclaimer' => array(
+			'ar' => 'هذه فحوصات جودة آلية أولية وليست تحققاً قانونياً. يراجع الفريق أي بند غير مؤكد.',
+			'de' => 'Automatisierte Qualitätsprüfungen — keine rechtliche Verifizierung. Unklare Punkte prüft das Team.',
+		),
+		'next_heading' => array(
+			'ar' => 'المطلوب الآن',
+			'de' => 'Als Nächstes',
+		),
+		'continue_form' => array(
+			'ar' => 'متابعة على هذه الصفحة',
+			'de' => 'Auf dieser Seite fortfahren',
+		),
+		'resubmit_heading' => array(
+			'ar' => 'تصحيح أو إرفاق ملفات على نفس البلاغ',
+			'de' => 'Dateien auf derselben Meldung nachreichen',
+		),
+		'resubmit_hint' => array(
+			'ar' => 'رقم المرجع لا يتغيّر. أرفق الملفات المطلوبة فقط.',
+			'de' => 'Die Referenznummer bleibt gleich. Laden Sie nur die angeforderten Dateien hoch.',
+		),
+		'resubmit_identity' => array(
+			'ar' => 'استبدال وثيقة الهوية',
+			'de' => 'Ausweis ersetzen',
+		),
+		'resubmit_evidence' => array(
+			'ar' => 'أدلة إضافية',
+			'de' => 'Weitere Nachweise',
+		),
+		'resubmit_submit' => array(
+			'ar' => 'إرسال التصحيح',
+			'de' => 'Korrektur senden',
+		),
+		'check_accepted' => array(
+			'ar' => 'مقبول للمراجعة',
+			'de' => 'Zur Prüfung angenommen',
+		),
+		'check_rejected' => array(
+			'ar' => 'مرفوض — يلزم التصحيح',
+			'de' => 'Abgelehnt — Korrektur nötig',
+		),
+		'check_review' => array(
+			'ar' => 'بانتظار مراجعة الفريق',
+			'de' => 'Wartet auf Teamprüfung',
+		),
+		'rejection_heading' => array(
+			'ar' => 'سبب الرفض',
+			'de' => 'Ablehnungsgrund',
+		),
+		'rejected_next_heading' => array(
+			'ar' => 'الإجراء التالي',
+			'de' => 'Nächster Schritt',
+		),
+		'rejected_next' => array(
+			'ar' => 'لا يلزم إجراء إضافي على هذا المرجع. يمكنك بدء بلاغ جديد إذا كانت لديك حادثة جديدة.',
+			'de' => 'Für diese Referenz ist keine weitere Aktion erforderlich. Starten Sie eine neue Meldung, wenn ein neuer Vorfall vorliegt.',
 		),
 	),
 	'login_gate' => array(
@@ -473,6 +537,87 @@ return array(
 		'evidence_other' => array(
 			'label' => array( 'ar' => 'أدلة إضافية', 'de' => 'Weitere Anhänge' ),
 		),
+		'evidence_required' => array(
+			'label' => array(
+				'ar' => 'أرفق دليلاً واحداً على الأقل قبل المتابعة.',
+				'de' => 'Bitte mindestens einen Nachweis hochladen, bevor Sie fortfahren.',
+			),
+		),
+	),
+	'guided' => array(
+		'ask' => array(
+			'ar' => 'السؤال الحالي',
+			'de' => 'Aktuelle Frage',
+		),
+		'missing' => array(
+			'ar' => 'ينقص لإكمال هذه الخطوة',
+			'de' => 'Noch erforderlich in diesem Schritt',
+		),
+		'identity_q' => array(
+			'ar' => 'من أنت؟ أدخل بياناتك القانونية كما في الوثيقة الرسمية، ثم ارفع صورة واضحة للوثيقة كاملة.',
+			'de' => 'Wer sind Sie? Tragen Sie Ihre gesetzlichen Daten wie im Ausweis ein und laden Sie ein vollständiges, lesbares Dokument hoch.',
+		),
+		'incident_q' => array(
+			'ar' => 'ماذا حدث؟ اختر النوع، ثم حدّد الوقت والمنصات واكتب ما حدث بكلماتك.',
+			'de' => 'Was ist passiert? Wählen Sie die Art, Zeitpunkt und Plattformen, und beschreiben Sie den Vorfall in Ihren Worten.',
+		),
+		'evidence_q' => array(
+			'ar' => 'ما الذي يثبت ذلك؟ ارفع لقطات أو رسائل أو كشوفات تطابق نوع الحادث.',
+			'de' => 'Was belegt den Vorfall? Laden Sie passende Screenshots, Nachrichten oder Belege hoch.',
+		),
+		'review_q' => array(
+			'ar' => 'راجع الملخص ثم أكّد الدقة. بعد الإرسال ستحصل على رقم مرجع ثابت لهذا البلاغ.',
+			'de' => 'Prüfen Sie die Zusammenfassung und bestätigen Sie die Angaben. Danach erhalten Sie eine feste Referenznummer.',
+		),
+		'category_hint' => array(
+			'ar' => 'اختر ما يصف الحادث بأقرب شكل. يمكنك التوضيح في الوصف لاحقاً.',
+			'de' => 'Wählen Sie die treffendste Kategorie. Details folgen in der Beschreibung.',
+		),
+		'id_why' => array(
+			'ar' => 'نحتاج وثيقة هوية كاملة وواضحة لمطابقة اسمك مع البلاغ. الفحص الآلي جودة أولية فقط — القرار النهائي للفريق.',
+			'de' => 'Wir benötigen ein vollständiges, lesbares Ausweisdokument. Die automatische Prüfung ist nur eine Qualitätskontrolle — die Entscheidung trifft das Team.',
+		),
+		'continue_blocked' => array(
+			'ar' => 'أكمل الحقول المطلوبة في هذه الخطوة قبل المتابعة.',
+			'de' => 'Bitte füllen Sie die erforderlichen Angaben in diesem Schritt aus, bevor Sie fortfahren.',
+		),
+	),
+	'evidence_coach' => array(
+		'account_takeover' => array(
+			'ar' => 'مفيد جداً: إشعارات تغيير البريد/الهاتف، رسائل الاسترداد، لقطات لجلسات غير معروفة.',
+			'de' => 'Besonders hilfreich: Hinweise zu E-Mail-/Telefonänderung, Wiederherstellungsmails, unbekannte Sitzungen.',
+		),
+		'phishing_fraud' => array(
+			'ar' => 'مفيد جداً: رابط أو لقطة للرسالة، عنوان المرسل، وأي تحويل تم.',
+			'de' => 'Besonders hilfreich: Link oder Screenshot der Nachricht, Absender, durchgeführte Zahlungen.',
+		),
+		'identity_theft' => array(
+			'ar' => 'مفيد جداً: حسابات فُتحت باسمك، إشعارات ائتمان، مراسلات المنصة.',
+			'de' => 'Besonders hilfreich: Konten auf Ihren Namen, Kreditwarnungen, Plattform-Nachrichten.',
+		),
+		'malware_ransomware' => array(
+			'ar' => 'مفيد جداً: رسالة الفدية، امتداد الملفات المشفرة، تنبيه مضاد الفيروسات. لا ترفع ملفات خبيثة قابلة للتشغيل.',
+			'de' => 'Besonders hilfreich: Lösegeldforderung, Dateiendungen, Antivirus-Meldung. Keine lauffähigen Schaddateien hochladen.',
+		),
+		'social_media_recovery' => array(
+			'ar' => 'مفيد جداً: اسم المستخدم، لقطات الملف الشخصي، إيميلات المنصة، آخر نشاط تعرفه.',
+			'de' => 'Besonders hilfreich: Nutzername, Profilscreenshots, Plattform-E-Mails, letzte bekannte Aktivität.',
+		),
+		'financial_fraud' => array(
+			'ar' => 'مفيد جداً: كشف أو إشعار البنك، رقم العملية، محادثات المحتال. أخفِ أرقام البطاقات الكاملة.',
+			'de' => 'Besonders hilfreich: Kontoauszug oder Bankhinweis, Transaktions-ID, Täterchat. Keine vollständigen Kartennummern.',
+		),
+		'data_breach' => array(
+			'ar' => 'مفيد جداً: إشعار التسريب، ما الذي سُرّب، وأين ظهر.',
+			'de' => 'Besonders hilfreich: Breach-Hinweis, welche Daten betroffen sind, wo sie aufgetaucht sind.',
+		),
+		'other' => array(
+			'ar' => 'ارفع أي ملف يوضح التسلسل: لقطات، رسائل، أو مستندات.',
+			'de' => 'Laden Sie alles hoch, das den Ablauf zeigt: Screenshots, Nachrichten oder Dokumente.',
+		),
+	),
+	'platform_chips' => array(
+		'other' => array( 'ar' => 'أخرى', 'de' => 'Andere' ),
 	),
 	'categories' => array(
 		'account_takeover'       => array( 'ar' => 'استيلاء على حساب', 'de' => 'Kontoübernahme' ),
@@ -548,38 +693,54 @@ return array(
 		),
 	),
 	'status_badge_map' => array(
+		'collecting'           => array( 'draft' ),
 		'under_review'         => array( 'submitted', 'in_review' ),
 		'waiting_for_customer' => array( 'waiting_for_customer', 'needs_info' ),
 		'resolved'             => array( 'resolved' ),
 		'closed'               => array( 'closed' ),
+		'rejected'             => array( 'rejected' ),
 	),
 	'status_badges' => array(
+		'collecting' => array(
+			'emoji' => '',
+			'label' => array(
+				'ar' => 'جارٍ جمع المعلومات',
+				'de' => 'Angaben werden erfasst',
+			),
+		),
 		'under_review' => array(
-			'emoji' => '🟠',
+			'emoji' => '',
 			'label' => array(
 				'ar' => 'قيد المراجعة',
 				'de' => 'In Prüfung',
 			),
 		),
 		'waiting_for_customer' => array(
-			'emoji' => '🔵',
+			'emoji' => '',
 			'label' => array(
 				'ar' => 'بانتظار ردك',
 				'de' => 'Wartet auf Ihre Antwort',
 			),
 		),
 		'resolved' => array(
-			'emoji' => '🟢',
+			'emoji' => '',
 			'label' => array(
-				'ar' => 'تم الحل',
-				'de' => 'Gelöst',
+				'ar' => 'تمت الموافقة',
+				'de' => 'Genehmigt',
 			),
 		),
 		'closed' => array(
-			'emoji' => '🔴',
+			'emoji' => '',
 			'label' => array(
 				'ar' => 'مغلق',
 				'de' => 'Geschlossen',
+			),
+		),
+		'rejected' => array(
+			'emoji' => '',
+			'label' => array(
+				'ar' => 'مرفوض',
+				'de' => 'Abgelehnt',
 			),
 		),
 	),
@@ -595,6 +756,10 @@ return array(
 		'empty_timeline' => array(
 			'ar' => 'لا توجد تحديثات بعد.',
 			'de' => 'Noch keine Updates.',
+		),
+		'status_changed' => array(
+			'ar' => 'تم تغيير الحالة إلى %s.',
+			'de' => 'Status geändert zu %s.',
 		),
 		'subjects' => array(
 			'report_submitted' => array(
@@ -626,12 +791,16 @@ return array(
 				'de' => 'Wartet auf Support',
 			),
 			'status_resolved' => array(
-				'ar' => 'تم الحل',
-				'de' => 'Gelöst',
+				'ar' => 'تمت الموافقة',
+				'de' => 'Genehmigt',
 			),
 			'status_closed' => array(
 				'ar' => 'مغلق',
 				'de' => 'Geschlossen',
+			),
+			'status_rejected' => array(
+				'ar' => 'مرفوض',
+				'de' => 'Abgelehnt',
 			),
 		),
 	),
@@ -690,6 +859,9 @@ return array(
 			'none'     => array( 'ar' => '—', 'de' => '—' ),
 			'yes'      => array( 'ar' => 'نعم', 'de' => 'Ja' ),
 			'no'       => array( 'ar' => 'لا', 'de' => 'Nein' ),
+		),
+		'guided' => array(
+			'files' => array( 'ar' => 'ملفات', 'de' => 'Dateien' ),
 		),
 	),
 );

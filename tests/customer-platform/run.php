@@ -162,4 +162,35 @@ cx_assert_true(strpos($launch_view, 'Color.black') !== false, 'Launch screen mus
 $animated_logo = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/ios-live-chat/PAXDesignLiveChat/Features/Launch/PAXAnimatedLogoView.swift');
 cx_assert_true(strpos($animated_logo, 'holdDuration') !== false && strpos($animated_logo, '1.2') !== false, 'Logo animation must preserve website hold timing');
 
+$ccs_root = dirname(__DIR__, 2) . '/paxdesign-booking';
+$ccs_wf = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-ai-workflow.php');
+cx_assert_true(strpos($ccs_wf, 'class PAXdesign_Cybercrime_AI_Workflow') !== false, 'CCS AI workflow class must exist');
+cx_assert_true(strpos($ccs_wf, 'أعطني رقم الهاتف.') !== false, 'Arabic phone prompt must be a single short request');
+cx_assert_true(strpos($ccs_wf, 'ما البلد؟') !== false, 'Arabic country prompt must be a single short question');
+cx_assert_true(strpos($ccs_wf, 'ارفع وثيقة الهوية من زر +.') !== false, 'Arabic identity upload prompt must point at the + button');
+cx_assert_true(strpos($ccs_wf, 'Current website workflow step') === false, 'Workflow replies must not recap the 4-step form');
+cx_assert_true(strpos($ccs_wf, 'Still missing:') === false, 'Workflow replies must not list every missing field');
+cx_assert_true(substr_count($ccs_wf, 'apply_extracted_fields(') === 1, 'A CCS turn must save extracted fields once');
+
+$ccs_ops = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-ai-operations.php');
+cx_assert_true(strpos($ccs_ops, 'pax_ccs_asst_lock_') !== false, 'Assistant persist must lock one reply per session turn');
+cx_assert_true(strpos($ccs_ops, 'function assistant_for_latest_user_turn') !== false, 'A second persist must reuse the assistant for the latest customer turn');
+cx_assert_true(strpos($ccs_ops, 'function latest_user_message') !== false, 'Assistant replies must bind to the latest customer message');
+
+$ccs_chat = file_get_contents($ccs_root . '/includes/class-paxdesign-chat.php');
+cx_assert_true(strpos($ccs_chat, 'paxdesign_chat_ccs_bootstrap') !== false, 'CCS chat open must have a bootstrap next-prompt endpoint');
+cx_assert_true(strpos($ccs_chat, 'emit_ccs_operation_sse($operation, null)') !== false, 'Skip-LLM CCS replies must not also emit the assistant on the operation event');
+cx_assert_true(strpos($ccs_chat, "'text' => \$reply") === false, 'Skip-LLM CCS replies must not also emit a duplicate streaming text event');
+cx_assert_true(strpos($ccs_chat, 'please check the uploaded files') === false, 'File uploads must continue the workflow instead of starting a second document-check turn');
+
+$ccs_case = file_get_contents($ccs_root . '/includes/class-paxdesign-cybercrime-ai-case.php');
+cx_assert_true(strpos($ccs_case, 'class_exists(\'PAXdesign_Cybercrime_AI_Workflow\')') !== false, 'Ingest must skip duplicate field extraction when the workflow will save the turn');
+
+$ccs_js = file_get_contents($ccs_root . '/assets/js/chat-script.js');
+cx_assert_true(strpos($ccs_js, 'function assistantAlreadyShownForLatestTurn') !== false, 'The UI must keep one assistant bubble per customer turn');
+cx_assert_true(strpos($ccs_js, 'function ensureCcsOpeningPrompt') !== false, 'Opening CCS chat must request the next missing prompt once');
+cx_assert_true(strpos($ccs_js, 'paxdesign_chat_ccs_bootstrap') !== false, 'Website CCS chat must call the bootstrap endpoint');
+cx_assert_true(strpos($ccs_js, 'config.greeting && !isCybercrimeCaseChat()') !== false, 'CCS chat must not insert the sales greeting');
+cx_assert_true(strpos($ccs_js, 'pollSeq = Math.max(pollSeq, localMsgId)') === false, 'Optimistic local ids must not skip server messages during poll');
+
 echo "OK: customer platform static verification passed (" . count($files) . " modules)\n";
