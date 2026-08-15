@@ -29,6 +29,7 @@ on:
       - 'navein/fonts/iconfont.css'
       - 'paxdesign-booking/includes/class-paxdesign-chat.php'
       - 'paxdesign-booking/includes/class-paxdesign-chat-knowledge.php'
+      - 'paxdesign-booking/includes/class-paxdesign-language-routing.php'
       - 'paxdesign-booking/assets/js/chat-script.js'
       - 'paxdesign-booking/assets/js/booking-script.js'
       - 'paxdesign-booking/assets/js/cybercrime-admin.js'
@@ -167,6 +168,7 @@ jobs:
           retry_ssh rsync -az -e "ssh ${SSH_OPTS[*]}" \
             paxdesign-booking/includes/class-paxdesign-chat.php \
             paxdesign-booking/includes/class-paxdesign-chat-knowledge.php \
+            paxdesign-booking/includes/class-paxdesign-language-routing.php \
             paxdesign-booking/includes/class-paxdesign-cybercrime-intake.php \
             paxdesign-booking/includes/class-paxdesign-cybercrime-tickets.php \
             paxdesign-booking/includes/class-paxdesign-cybercrime-i18n.php \

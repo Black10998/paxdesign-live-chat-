@@ -77,18 +77,19 @@ class PAXdesign_Cybercrime_AI_Operations {
         $needs_check = self::case_needs_document_check($row);
         $probe = self::is_status_probe($user_message);
         $asks_check = self::is_check_request($user_message);
+        $same_case = self::is_same_case_continuation($user_message);
 
         if ($needs_check) {
             return array(
                 'action'    => 'start_document_check',
-                'skip_llm'  => $probe || $asks_check || self::is_short_followup($user_message) || self::last_assistant_claimed_processing($session_id),
+                'skip_llm'  => $probe || $same_case || $asks_check || self::is_short_followup($user_message) || self::last_assistant_claimed_processing($session_id),
                 'operation' => null,
                 'reply'     => '',
                 'report'    => $row,
             );
         }
 
-        if ($probe) {
+        if ($same_case) {
             $latest = self::latest_operation($row);
             $reply = self::continuation_copy($language, $row, $latest);
             return array(
@@ -385,13 +386,45 @@ class PAXdesign_Cybercrime_AI_Operations {
         if (preg_match('/^[?؟!.\s]+$/u', $text)) {
             return true;
         }
-        if (mb_strlen($normalized) > 80) {
+        if ($normalized === '' || mb_strlen($normalized) > 80) {
             return false;
         }
         return (bool) preg_match(
-            '/^(status|update|any (news|update)|still (there|checking|running|processing)|hello\??|hi\??|ping|and\??|so\??|well\??|ok\??|okay\??|status\??|update\??|läuft noch|fertig\??|und\??|noch da\??|was ist los|any progress|checking\??|done\??|جاهز\??|شو صار|وينك)$/u',
+            '/^(status|update|any (news|update)|still (there|checking|running|processing)|hello|hi|ping|and|so|well|ok|okay|läuft noch|fertig|und|noch da|was ist los|was ist passiert|was bleibt|wie geht(?:e)?s weiter|any progress|checking|done|what happened|what(?:\'s| is) (?:next|left|remaining)|keep going|go (?:on|ahead)|proceed|continue|weiter|fortsetzen|mach weiter|جاهز|شو صار|وينك|ماذا حدث|ماذا حصل|ماذا بقي|ما الذي حدث|ماذا تبقى|تابع|استمر|كمل|أكمل|نعم|ايوا|أيوة|أيوا)$/u',
             $normalized
         );
+    }
+
+    /**
+     * True when the message belongs to the current CCS case instead of a new chat.
+     *
+     * Language-preference names, status probes, and continue/yes follow-ups
+     * must not reset the conversation.
+     *
+     * @param string $text
+     * @return bool
+     */
+    public static function is_same_case_continuation($text) {
+        $text = trim((string) $text);
+        if ($text === '') {
+            return false;
+        }
+        if (
+            class_exists('PAXdesign_Cybercrime_AI_Case')
+            && PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request($text)
+        ) {
+            return false;
+        }
+        if (self::is_status_probe($text)) {
+            return true;
+        }
+        if (class_exists('PAXdesign_Language_Routing')) {
+            $preference = PAXdesign_Language_Routing::detect_language_preference($text);
+            if ($preference !== '') {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -470,7 +503,11 @@ class PAXdesign_Cybercrime_AI_Operations {
         $workflow = is_array($payload['ai_workflow'] ?? null) ? $payload['ai_workflow'] : array();
         $lines = array(
             '## Persistent conversation and operation state (authoritative)',
-            '- This is a CONTINUATION of the same authenticated Cybercrime Support conversation and the same CCS case. Never greet as a new chat (no “Guten Tag”, “Wie kann ich Ihnen helfen?”, “Hello, how can I help?”).',
+            '- This is a CONTINUATION of the same authenticated Cybercrime Support conversation and the same CCS case. Never greet as a new chat (no “Guten Tag”, “Wie kann ich Ihnen helfen?”, “Hello, how can I help?”, “مرحباً! كيف يمكنني مساعدتك اليوم؟”).',
+            '- Load this case before answering: current CCS case, conversation history, workflow step, completed steps, missing information, uploaded files, file verification results, active operations, case status, and language preference.',
+            '- A language-preference message (arabic / English / Deutsch / العربية) only switches reply language. Keep this same case. Do not greet. Do not restart intake. Recap the last result in the requested language.',
+            '- Short follow-ups (?, نعم, تابع, ماذا حدث؟, ماذا بقي؟) continue this same case. They never start a new conversation.',
+            '- Start a new case or conversation only when the customer explicitly asks (Start a new case / New report / أريد فتح بلاغ جديد).',
             '- Never restart the questionnaire. Never ask for facts already saved on this case.',
             '- Never claim you are checking, processing, uploading, or reviewing unless a tracked operation below is status=running.',
             '- If a tracked operation is running, tell the customer it is still running and that results will appear in this same conversation.',
@@ -932,7 +969,8 @@ class PAXdesign_Cybercrime_AI_Operations {
     private static function normalize_match_text($text) {
         $text = strtolower(trim((string) $text));
         $text = str_replace(array('’', '‘', '`'), "'", $text);
+        $text = preg_replace('/[?؟!.]+$/u', '', $text);
         $text = preg_replace('/\s+/', ' ', $text);
-        return is_string($text) ? $text : '';
+        return is_string($text) ? trim($text) : '';
     }
 }

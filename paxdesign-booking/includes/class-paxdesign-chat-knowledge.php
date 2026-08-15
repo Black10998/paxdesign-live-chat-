@@ -570,6 +570,12 @@ class PAXdesign_Chat_Knowledge {
             '- If you start checking, processing, uploading, or reviewing anything, the backend already created a tracked operation on this same CCS case. Never say “please wait” unless that tracked operation is running.',
             '- If a tracked operation is running, tell the customer the files are still being checked and that results will appear in this same conversation. Do not restart.',
             '- A follow-up such as “?” is a status check on THIS same case and conversation — never greet as a new visitor.',
+            '- If an active CCS case exists, this is NEVER a new conversation. Do not greet (no “مرحباً! كيف يمكنني مساعدتك اليوم؟”, “Hello, how can I help?”, “Guten Tag”).',
+            '- Before every reply, use the live case: current CCS case, entire conversation history, previous AI and customer messages, current workflow step, completed steps, missing information, uploaded files, file verification results, active operations, case status, and language preference.',
+            '- A language-preference message (arabic, English, Deutsch, العربية, in Arabic, auf Deutsch) only changes reply language. Keep the same CCS case and the same conversation. Recap the last result in that language. Do not restart intake.',
+            '- Short messages such as “نعم”, “تابع”, “ماذا حدث؟”, “ماذا بقي؟”, or “?” continue this same case. They never reset context.',
+            '- Start a new case or conversation only when the customer explicitly asks (“Start a new case”, “New report”, “أريد فتح بلاغ جديد”). Otherwise every message belongs to the existing case.',
+            '- Do not use a generic fallback greeting while an active CCS case exists.',
             '- If something is uncertain, say an administrator will review it.',
             '- Do NOT pitch unrelated services unless the visitor explicitly asks.',
             '- Treat all details as sensitive; never ask for passwords, OTP codes, seed phrases, or full payment card numbers.',
@@ -639,11 +645,11 @@ class PAXdesign_Chat_Knowledge {
         }
         switch ($lang) {
             case 'en':
-                return $prompt . "\n\n## Language\n- Detect the customer's language from their latest message and ALWAYS reply in that same language (German, English, or Arabic).\n- If they write in English, reply in English.\n- If they write in Arabic, reply in Arabic.\n- If they write in German, reply in German.\n- Match the customer's tone and keep answers concise.";
+                return $prompt . "\n\n## Language\n- Detect the customer's language from their latest message and ALWAYS reply in that same language (German, English, or Arabic).\n- If they write in English, reply in English.\n- If they write in Arabic, reply in Arabic.\n- If they write in German, reply in German.\n- If the latest message is only a language name or a request to switch language, keep the existing conversation and reply in the requested language. Do not greet as if the chat just started.\n- Match the customer's tone and keep answers concise.";
             case 'ar':
-                return $prompt . "\n\n## اللغة\n- حدّد لغة العميل من رسالته الأخيرة ورد دائماً بنفس اللغة (العربية أو الإنجليزية أو الألمانية).\n- إذا كتب بالعربية فأجب بالعربية.\n- إذا كتب بالإنجليزية فأجب بالإنجليزية.\n- إذا كتب بالألمانية فأجب بالألمانية.\n- استخدم أسلوباً مهنياً وواضحاً وموجزاً.";
+                return $prompt . "\n\n## اللغة\n- حدّد لغة العميل من رسالته الأخيرة ورد دائماً بنفس اللغة (العربية أو الإنجليزية أو الألمانية).\n- إذا كتب بالعربية فأجب بالعربية.\n- إذا كتب بالإنجليزية فأجب بالإنجليزية.\n- إذا كتب بالألمانية فأجب بالألمانية.\n- إذا كانت الرسالة اسماً للغة أو طلباً لتغيير اللغة فقط، تابع نفس المحادثة ورد باللغة المطلوبة. لا تبدأ بتحية كأنها محادثة جديدة.\n- استخدم أسلوباً مهنياً وواضحاً وموجزاً.";
             default:
-                return $prompt . "\n\n## Sprache\n- Erkenne die Sprache des Kunden anhand der letzten Nachricht und antworte IMMER in derselben Sprache (Deutsch, Englisch oder Arabisch).\n- Schreibt der Kunde auf Deutsch, antworte auf Deutsch.\n- Schreibt der Kunde auf Englisch, antworte auf Englisch.\n- Schreibt der Kunde auf Arabisch, antworte auf Arabisch.\n- Professionell, freundlich und präzise.";
+                return $prompt . "\n\n## Sprache\n- Erkenne die Sprache des Kunden anhand der letzten Nachricht und antworte IMMER in derselben Sprache (Deutsch, Englisch oder Arabisch).\n- Schreibt der Kunde auf Deutsch, antworte auf Deutsch.\n- Schreibt der Kunde auf Englisch, antworte auf Englisch.\n- Schreibt der Kunde auf Arabisch, antworte auf Arabisch.\n- Ist die letzte Nachricht nur ein Sprachname oder ein Sprachwechsel, bleibe in derselben Unterhaltung und antworte in der gewünschten Sprache. Keine Begrüßung wie am Anfang eines neuen Chats.\n- Professionell, freundlich und präzise.";
         }
     }
 }

@@ -143,7 +143,7 @@ class PAXdesign_Cybercrime_AI_Case {
             return new WP_Error('unavailable', __('Cybercrime Support is temporarily unavailable.', 'paxdesign-booking'), array('status' => 503));
         }
 
-        $row = self::ensure_case_for_user($user_id, $session_id, $focus_reference);
+        $row = self::ensure_case_for_user($user_id, $session_id, $focus_reference, $message);
         if (is_wp_error($row)) {
             return $row;
         }
@@ -154,7 +154,16 @@ class PAXdesign_Cybercrime_AI_Case {
         $reference = (string) $row['reference_id'];
         self::bind_session($reference, $session_id, $user_id);
 
-        if ($message !== '') {
+        $skip_extract = self::is_explicit_new_case_request($message);
+        if (
+            !$skip_extract
+            && class_exists('PAXdesign_Cybercrime_AI_Operations')
+            && PAXdesign_Cybercrime_AI_Operations::is_same_case_continuation($message)
+        ) {
+            $skip_extract = true;
+        }
+
+        if ($message !== '' && !$skip_extract) {
             $existing = self::case_fields_from_row($row);
             $extracted = self::extract_fields_from_message($message, $existing);
             if (!empty($extracted)) {
@@ -181,9 +190,10 @@ class PAXdesign_Cybercrime_AI_Case {
      * @param int    $user_id
      * @param string $session_id
      * @param string $focus_reference
+     * @param string $latest_message
      * @return array<string, mixed>|WP_Error
      */
-    public static function ensure_case_for_user($user_id, $session_id = '', $focus_reference = '') {
+    public static function ensure_case_for_user($user_id, $session_id = '', $focus_reference = '', $latest_message = '') {
         $user_id = absint($user_id);
         if ($user_id <= 0) {
             return new WP_Error('login_required', __('Please sign in.', 'paxdesign-booking'), array('status' => 401));
@@ -192,16 +202,29 @@ class PAXdesign_Cybercrime_AI_Case {
         PAXdesign_Cybercrime_Tickets::ensure_schema();
         PAXdesign_Cybercrime_Intake::ensure_schema();
 
+        $explicit_new = self::is_explicit_new_case_request($latest_message);
+        $session_id = sanitize_text_field((string) $session_id);
         $focus_reference = sanitize_text_field((string) $focus_reference);
-        if ($focus_reference !== '') {
+
+        if ($focus_reference !== '' && !$explicit_new) {
             $focused = PAXdesign_Cybercrime_Tickets::get_report_row($focus_reference);
             if (is_array($focused) && PAXdesign_Cybercrime_Tickets::user_can_view_report($focused, $user_id)) {
                 return $focused;
             }
         }
 
+        if ($session_id !== '' && !$explicit_new) {
+            $bound_ref = PAXdesign_Cybercrime_Tickets::get_reference_for_session($session_id);
+            if (is_string($bound_ref) && $bound_ref !== '') {
+                $bound = PAXdesign_Cybercrime_Tickets::get_report_row($bound_ref);
+                if (is_array($bound) && PAXdesign_Cybercrime_Tickets::user_can_view_report($bound, $user_id)) {
+                    return $bound;
+                }
+            }
+        }
+
         $active = PAXdesign_Cybercrime_Tickets::get_active_report_for_user($user_id);
-        if (is_array($active) && !empty($active['reference_id'])) {
+        if (is_array($active) && !empty($active['reference_id']) && !$explicit_new) {
             $row = PAXdesign_Cybercrime_Tickets::get_report_row((string) $active['reference_id']);
             if (is_array($row) && PAXdesign_Cybercrime_Tickets::user_can_view_report($row, $user_id)) {
                 return $row;
@@ -209,6 +232,36 @@ class PAXdesign_Cybercrime_AI_Case {
         }
 
         return PAXdesign_Cybercrime_Intake::create_draft_for_user($user_id, $session_id);
+    }
+
+    /**
+     * A new CCS case/conversation starts only on an explicit customer request.
+     *
+     * @param string $text
+     * @return bool
+     */
+    public static function is_explicit_new_case_request($text) {
+        $text = trim((string) $text);
+        if ($text === '') {
+            return false;
+        }
+        $normalized = self::normalize_match_text($text);
+        if ($normalized === '') {
+            return false;
+        }
+        $len = function_exists('mb_strlen') ? mb_strlen($normalized) : strlen($normalized);
+        if ($len > 96) {
+            return false;
+        }
+        $explicit = (bool) preg_match(
+            '/(?:start a new (?:case|report|conversation|chat)|open a new (?:case|report)|أريد فتح بلاغ جديد|افتح بلاغ جديد|neuen fall (?:starten|eröffnen))/u',
+            $normalized
+        );
+        $short = $len <= 40 && (bool) preg_match(
+            '/^(?:new report|new case|بلاغ جديد|تقرير جديد|حالة جديدة|neuen fall|neuen bericht|neues (?:gespräch|ticket))$/u',
+            $normalized
+        );
+        return $explicit || $short;
     }
 
     /**

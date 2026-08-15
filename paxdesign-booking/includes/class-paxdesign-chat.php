@@ -633,6 +633,7 @@ class PAXdesign_Chat {
         }
         $language = PAXdesign_Language_Routing::resolve_session_language($session_id, $user_message);
         PAXdesign_Language_Routing::persist_session_language($session_id, $language);
+        $this->set_session_page_context($session_id, '', '', $language);
         return $language;
     }
 
@@ -1523,25 +1524,19 @@ class PAXdesign_Chat {
             exit;
         }
 
-        $messages = $this->build_openai_messages_from_session($session_id);
-        $validated = $this->validate_messages($messages);
-        if (is_wp_error($validated)) {
-            $validated = $this->validate_messages(array(
-                array('role' => 'user', 'content' => $user_message),
-            ));
-            if (is_wp_error($validated)) {
-                echo 'data: ' . wp_json_encode(array(
-                    'type'    => 'error',
-                    'message' => $validated->get_error_message(),
-                )) . "\n\n";
-                echo "data: [DONE]\n\n";
-                exit;
-            }
+        $messages = $this->prepare_authenticated_llm_messages($session_id, $user_message, $ccs_report);
+        if (is_wp_error($messages)) {
+            echo 'data: ' . wp_json_encode(array(
+                'type'    => 'error',
+                'message' => $messages->get_error_message(),
+            )) . "\n\n";
+            echo "data: [DONE]\n\n";
+            exit;
         }
 
         $worker_url = trim(get_option('paxdesign_chat_worker_url', ''));
         if ($worker_url !== '') {
-            $this->proxy_to_worker($worker_url, $validated, $customer_language, $user_id, $session_id);
+            $this->proxy_to_worker($worker_url, $messages, $customer_language, $user_id, $session_id);
             exit;
         }
 
@@ -1557,7 +1552,7 @@ class PAXdesign_Chat {
 
         $this->stream_openai_response(
             $api_key,
-            $validated,
+            $messages,
             $session_id,
             sanitize_text_field((string) $assistant_client_id),
             $customer_language,
@@ -1749,19 +1744,13 @@ class PAXdesign_Chat {
             );
         }
 
-        $messages = $this->build_openai_messages_from_session($session_id);
-        $validated = $this->validate_messages($messages);
-        if (is_wp_error($validated)) {
-            $validated = $this->validate_messages(array(
-                array('role' => 'user', 'content' => $user_message),
-            ));
-            if (is_wp_error($validated)) {
-                return $validated;
-            }
+        $messages = $this->prepare_authenticated_llm_messages($session_id, $user_message, $ccs_report);
+        if (is_wp_error($messages)) {
+            return $messages;
         }
 
         $live->mark_assistant_typing($session_id);
-        $completion = $this->request_openai_completion($validated, $customer_language, $user_id, $session_id);
+        $completion = $this->request_openai_completion($messages, $customer_language, $user_id, $session_id);
         $live->clear_assistant_typing($session_id);
         if (is_wp_error($completion)) {
             return $completion;
@@ -1900,6 +1889,37 @@ class PAXdesign_Chat {
         }
 
         return $messages;
+    }
+
+    /**
+     * Keep CCS conversation history when preparing the model prompt.
+     * Never fall back to a single isolated user message while a case is active.
+     *
+     * @param string                         $session_id
+     * @param string                         $user_message
+     * @param array<string, mixed>|WP_Error|null $ccs_report
+     * @return array<int, array{role:string,content:string}>|WP_Error
+     */
+    private function prepare_authenticated_llm_messages($session_id, $user_message, $ccs_report = null) {
+        $history = $this->trim_conversation_history($this->build_openai_messages_from_session($session_id), 24);
+        $validated = $this->validate_messages($history);
+        if (!is_wp_error($validated) && !empty($validated)) {
+            return $validated;
+        }
+
+        $fallback = trim((string) $user_message);
+        if (is_array($ccs_report) && !empty($ccs_report['reference_id'])) {
+            $reference = sanitize_text_field((string) $ccs_report['reference_id']);
+            $status = sanitize_key((string) ($ccs_report['status'] ?? ''));
+            $fallback = 'Continue CCS case ' . $reference
+                . ($status !== '' ? ' (status: ' . $status . ')' : '')
+                . ' in this same conversation. Do not greet as a new chat. Do not restart intake. Customer message: '
+                . trim((string) $user_message);
+        }
+
+        return $this->validate_messages(array(
+            array('role' => 'user', 'content' => $fallback),
+        ));
     }
 
     /**

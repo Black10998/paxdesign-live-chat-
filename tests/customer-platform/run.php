@@ -57,13 +57,17 @@ cx_assert_true(strpos($chat, 'stream_authenticated_customer_chat') !== false, 'M
 cx_assert_true(strpos($chat, 'build_openai_payload($model, $openai_messages, false)') !== false, 'Non-streaming OpenAI completion must disable stream mode');
 cx_assert_true(strpos($chat, 'build_ai_system_prompt') !== false, 'Chat must build AI system prompt with account context');
 cx_assert_true(strpos($chat, 'resolve_and_persist_customer_language') !== false, 'Chat must persist detected customer language per session');
+cx_assert_true(strpos($chat, 'prepare_authenticated_llm_messages') !== false, 'Authenticated CCS chat must keep session history instead of isolating the latest message');
 
 $language_routing = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/class-paxdesign-language-routing.php');
 cx_assert_true(strpos($language_routing, 'resolve_session_language') !== false, 'Language routing must resolve sticky session language');
 cx_assert_true(strpos($language_routing, 'persist_session_language') !== false, 'Language routing must persist session language');
+cx_assert_true(strpos($language_routing, 'detect_language_preference') !== false, 'Language routing must detect language-preference messages');
 
 $chat_knowledge = file_get_contents(dirname(__DIR__, 2) . '/paxdesign-booking/includes/class-paxdesign-chat-knowledge.php');
 cx_assert_true(strpos($chat_knowledge, 'build_customer_account_context_block') !== false, 'Chat knowledge must build customer account context block');
+cx_assert_true(strpos($chat_knowledge, 'this is NEVER a new conversation') !== false, 'CCS prompt must forbid generic greetings while a case is active');
+cx_assert_true(strpos($chat_knowledge, 'language-preference message') !== false, 'CCS prompt must treat language names as a switch on the same case');
 
 $customer_orders = file_get_contents($customer_dir . '/class-paxdesign-customer-orders.php');
 cx_assert_true(strpos($customer_orders, 'upcoming_bookings_for_user') !== false, 'Customer orders must expose upcoming bookings for AI context');
@@ -388,7 +392,7 @@ cx_assert_true(strpos($ccs_widget, 'ccs_operation') !== false, 'Chat must render
 cx_assert_true(strpos($ccs_widget, 'upsertCcsOperationMessage') !== false, 'Chat must keep the same processing message across follow-ups');
 
 $plugin_bootstrap = file_get_contents($ccs_root . '/paxdesign-booking.php');
-cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.6')") !== false, 'Plugin version must be 3.175.6');
+cx_assert_true(strpos($plugin_bootstrap, "define('PAXDESIGN_BOOKING_VERSION', '3.175.7')") !== false, 'Plugin version must be 3.175.7');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-i18n.php') !== false, 'Plugin must load CCS localization');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-document-checks.php') !== false, 'Plugin must load document checks');
 cx_assert_true(strpos($plugin_bootstrap, 'class-paxdesign-cybercrime-ai-case.php') !== false, 'Plugin must load AI case sync');
@@ -467,10 +471,49 @@ if (!function_exists('mb_strlen')) {
         return strlen((string) $string);
     }
 }
+require_once $ccs_root . '/includes/class-paxdesign-language-routing.php';
 require_once $ccs_root . '/includes/class-paxdesign-cybercrime-ai-operations.php';
+cx_assert_true(PAXdesign_Language_Routing::detect_language_preference('arabic') === 'ar', 'arabic must switch session language to Arabic');
+cx_assert_true(PAXdesign_Language_Routing::detect_language_preference('English') === 'en', 'English must switch session language to English');
+cx_assert_true(PAXdesign_Language_Routing::detect_language_preference('Deutsch') === 'de', 'Deutsch must switch session language to German');
+cx_assert_true(PAXdesign_Language_Routing::detect_language_preference('العربية') === 'ar', 'العربية must switch session language to Arabic');
+cx_assert_true(PAXdesign_Language_Routing::detect_language_preference('in Arabic') === 'ar', 'in Arabic must be a language preference, not a new chat');
+cx_assert_true(PAXdesign_Language_Routing::detect_language_preference('auf Deutsch') === 'de', 'auf Deutsch must be a language preference, not a new chat');
+cx_assert_true(PAXdesign_Language_Routing::detect_language_preference('An arabic hacker stole my GitHub account yesterday') === '', 'Incident text mentioning a language must not be treated as a language switch');
+cx_assert_true(PAXdesign_Language_Routing::resolve_session_language('', 'arabic') === 'ar', 'Session language must persist Arabic from a preference message');
+cx_assert_true(PAXdesign_Language_Routing::resolve_session_language('', 'English') === 'en', 'Session language must persist English from a preference message');
+cx_assert_true(PAXdesign_Language_Routing::resolve_session_language('', 'Deutsch') === 'de', 'Session language must persist German from a preference message');
 cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_status_probe('?') === true, 'A lone ? must be treated as a status probe on the same case');
 cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_status_probe('still checking') === true, 'A checking follow-up must stay on the running operation');
 cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_status_probe('Guten Tag! Wie kann ich Ihnen helfen?') === false, 'A greeting must not be classified as a status probe');
+cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_status_probe('ماذا حدث؟') === true, 'ماذا حدث؟ must recap the same CCS case');
+cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_status_probe('تابع') === true, 'تابع must continue the same CCS workflow');
+cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_status_probe('نعم') === true, 'نعم must stay on the same CCS case');
+cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_same_case_continuation('arabic') === true, 'arabic must continue the same CCS case after switching language');
+cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_same_case_continuation('English') === true, 'English must continue the same CCS case after switching language');
+cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_same_case_continuation('Deutsch') === true, 'Deutsch must continue the same CCS case after switching language');
+cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_same_case_continuation('ماذا بقي؟') === true, 'ماذا بقي؟ must ask what remains on the same case');
+cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('Start a new case') === true, 'Start a new case must be recognized as an explicit new-case request');
+cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('New report') === true, 'New report must be recognized as an explicit new-case request');
+cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('أريد فتح بلاغ جديد') === true, 'أريد فتح بلاغ جديد must be recognized as an explicit new-case request');
+cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('arabic') === false, 'A language switch must not open a new CCS case');
+cx_assert_true(PAXdesign_Cybercrime_AI_Case::is_explicit_new_case_request('My GitHub account was taken over') === false, 'Incident facts must not be treated as a new-case command');
+$prompt_state = PAXdesign_Cybercrime_AI_Operations::prompt_state_block(array(
+    'payload' => json_encode(array(
+        'ai_workflow' => array('step' => 'review'),
+        'ai_operations' => array(
+            array(
+                'id' => 'op-test',
+                'type' => 'document_check',
+                'status' => 'complete',
+                'label' => 'Checking uploaded files…',
+                'result_summary' => 'id.pdf passed preliminary checks',
+            ),
+        ),
+    )),
+));
+cx_assert_true(strpos($prompt_state, 'Never greet as a new chat') !== false, 'Operation prompt must forbid a generic greeting');
+cx_assert_true(strpos($prompt_state, 'language-preference message') !== false, 'Operation prompt must keep language switches on the same case');
 cx_assert_true(PAXdesign_Cybercrime_AI_Operations::is_check_request('Please check the uploaded files') === true, 'A verify-files request must start a tracked check');
 cx_assert_true(
     PAXdesign_Cybercrime_AI_Operations::attachments_need_check(
